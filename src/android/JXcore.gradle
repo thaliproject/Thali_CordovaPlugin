@@ -1,0 +1,10 @@
+repositories {
+    mavenLocal()
+}
+
+dependencies {
+    compile('org.thaliproject.p2p.btconnectorlib:btconnectorlib2:0.0.0')
+}
+
+
+
