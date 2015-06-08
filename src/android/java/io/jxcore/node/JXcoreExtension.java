@@ -47,12 +47,20 @@ public class JXcoreExtension {
 
       final BtConnectorHelper mBtConnectorHelper = new BtConnectorHelper();
 
-
       jxcore.RegisterMethod("GetDeviceName", new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId){
               ArrayList<Object> args = new ArrayList<Object>();
               args.add(mBtConnectorHelper.GetDeviceName());
+              jxcore.CallJSMethod(callbackId, args.toArray());
+          }
+      });
+
+      jxcore.RegisterMethod("getFreePort", new JXcoreCallback() {
+          @Override
+          public void Receiver(ArrayList<Object> params, String callbackId){
+              ArrayList<Object> args = new ArrayList<Object>();
+              args.add(mBtConnectorHelper.getFreePort());
               jxcore.CallJSMethod(callbackId, args.toArray());
 
           }
@@ -106,12 +114,13 @@ public class JXcoreExtension {
       jxcore.RegisterMethod("StartPeerCommunications", new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
-              if(params.size() > 1) {
+              if(params.size() > 2) {
                   String peerId = params.get(0).toString();
                   String peerName = params.get(1).toString();
+                  String port = params.get(2).toString();
 
                   boolean started = true;
-                  mBtConnectorHelper.Start(peerId, peerName);
+                  mBtConnectorHelper.Start(peerId, peerName,Integer.decode(port));
 
                   ArrayList<Object> args = new ArrayList<Object>();
                   args.add(started);
@@ -142,7 +151,6 @@ public class JXcoreExtension {
           }
       });
 
-
       jxcore.RegisterMethod("ConnectToDevice", new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
@@ -165,29 +173,24 @@ public class JXcoreExtension {
           }
       });
 
-      jxcore.RegisterMethod("SendMessage", new JXcoreCallback() {
+
+      final LifeCycleMonitor mLifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.onLCEventCallback(){
+
           @Override
-          public void Receiver(ArrayList<Object> params, String callbackId) {
-              ArrayList<Object> args = new ArrayList<Object>();
-
-              if (params.size() > 0) {
-                  String message = params.get(0).toString();
-                  if (mBtConnectorHelper.SendMessage(message)) {
-                      args.add("Ok");
-                  } else {
-                      args.add("ERROR");
-                      args.add("No connections available");
+          public void onEvent(String eventString,boolean stopped) {
+              final String messageTmp = eventString;
+              jxcore.activity.runOnUiThread(new Runnable(){
+                  public void run() {
+                      String reply = "{\"lifecycleevent\":\"" + messageTmp + "\"}";
+                      jxcore.CallJSMethod("onLifeCycleEvent",reply);
                   }
-              } else {
-                  args.add("ERROR");
-                  args.add("Required parameters missing");
-              }
+              });
 
-              jxcore.CallJSMethod(callbackId, args.toArray());
+              if(stopped){
+                  mBtConnectorHelper.Stop();
+              }
           }
       });
-
-      final LifeCycleMonitor mLifeCycleMonitor = new LifeCycleMonitor();
       mLifeCycleMonitor.Start();
   }
 }

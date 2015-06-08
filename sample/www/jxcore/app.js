@@ -148,7 +148,59 @@ function peerConnectionStateChanged(peerIdentifier, state) {
   };
 
 
+/*
+HTTP related functionality
+*/
 
+
+function sendGetRequest() {
+// http://stackoverflow.com/questions/10895901/how-to-send-consecutive-requests-with-http-keep-alive-in-node-js
+
+    var options = {
+        port: httpRequestport,
+        method: 'GET',
+        headers: {
+            accept: 'application/json'
+        }
+    };
+
+    console.log("sendRequest now to: " + httpRequestport);
+    var x = http.request(options,function(res){
+                console.log("Connected");
+                res.on('data',function(data){
+                    console.log("Request reply Data " + data);
+                });
+                res.on('end', function () {
+                    console.log("Request ended");
+                });
+            });
+    x.end();
+}
+
+function sendPostRequest(message) {
+// http://stackoverflow.com/questions/10895901/how-to-send-consecutive-requests-with-http-keep-alive-in-node-js
+
+    var options = {
+        port: httpRequestport,
+        method: 'POST',
+        keepAlive: true,
+        headers: {
+            accept: 'application/json',
+            'Connection':'keep-alive'
+        },
+        agent: agent
+    };
+
+    console.log("sendRequest now to: " + httpRequestport);
+    var x = http.request(options,function(res){
+                console.log("Connected");
+                res.on('data',function(data){
+                    console.log("Request reply Data " + data);
+                });
+            });
+    x.write(message)
+    x.end();
+}
 
 /*
 Registred native functions for conenctivity & peers change events
@@ -170,6 +222,8 @@ cordova('peerGotConnection').registerToNative(function (peerId,port) {
         httpRequestport = port;
         peerConnectionStateChanged(peerId,"Connected");
 
+      //  sendPostRequest("hello my friend, my name is " + peerName + ", my id is: " + peerIdentifier);
+        sendGetRequest();
   });
 
   // Register peerNotConnected callback.
@@ -245,6 +299,90 @@ cordova('onLifeCycleEvent').registerToNative(function(message){
         }
 
         console.log("App is in foregound " + isInForeground);
+});
+
+/*
+funtions for Cordova app usage
+*/
+var MessageCallback;
+
+function gotMessage(message) {
+    console.log("gotMessage : " + message);
+
+    if(isFunction(MessageCallback)){
+        MessageCallback(message);
+    }else{
+        console.log("MessageCallback not set !!!!");
+    }
+}
+
+cordova('SendMessage').registerAsync(function(message,callback){
+    console.log("SendMessage : " + message);
+    sendGetRequest();
+    //sendPostRequest(message);
+});
+
+
+
+
+cordova('setMessageCallback').registerAsync(function(callback){
+    console.log("setMessageCallback  : " + callback);
+    MessageCallback = callback;
+});
+
+
+var peerConnectionStatusCallback;
+cordova('setConnectionStatusCallback').registerAsync(function(callback){
+    console.log("setConnectionStatusCallback  : " + callback);
+    peerConnectionStatusCallback = callback;
+});
+
+var peerChangedCallback;
+
+cordova('setPeerChangedCallback').registerAsync(function(callback){
+    console.log("setConnectionStatusCallback  : " + callback);
+    peerChangedCallback = callback;
+});
+
+
+cordova('StartConnector').registerAsync(function(){
+    logInCordova("StartConnector: ");
+    startPeerCommunications(peerIdentifier,peerName);
+});
+
+cordova('StopConnector').registerAsync(function(){
+    console.log("StopConnector called");
+    stopPeerCommunications(peerIdentifier,peerName);
+});
+
+cordova('ConnectToDevice').registerAsync(function(address,callback){
+    console.log("ConnectToDevice address : " + address);
+    ConnectToDevice(address);
+});
+
+cordova('DisconnectPeer').registerAsync(function(address,callback){
+    console.log("DisconnectPeer address : " + address);
+    DisconnectPeer(address);
+});
+
+
+cordova('ShowToast').registerAsync(function(message,isLong,callback){
+    cordova('ShowToast').callNative(message,isLong,function(){
+        //callback(arguments);
+    });
+});
+
+/*
+Debug stuff
+*/
+cordova('OnMessagingEvent').registerToNative(function(message){
+    console.log("On-MessagingEvent:" + arguments.length + " arguments : msg: " + message);
+
+    if(isFunction(MessageCallback)){
+        MessageCallback(message);
+    }else{
+        console.log("MessageCallback not set !!!!");
+    }
 });
 
 

@@ -156,7 +156,7 @@ function peersConnectionStateCallback(peerId, state) {
         document.getElementById('RemNameBox').value = "";
         document.getElementById('RemAddrBox').value = "";
         ClearMessages();
-    }else if(state == "Connected"){
+    }else if(state == "Connected" || state == "peerGotConnection"){
         document.getElementById('RemAddrBox').value = peerId;
         for(var key in _peers){
             if(_peers[key]. peerIdentifier  == peerId){
@@ -235,16 +235,15 @@ function ClearMessages(){
     document.getElementById('ReplyBox').value = "";
 }
 
-function SendMessageCallback(myJson){
+function SendMessageCallback(data){
+    console.log("SendMessageCallback " + data);
 
-    console.log("SendMessageCallback " + myJson);
-
-    if(myJson.readMessage){
-        addChatLine(document.getElementById('RemNameBox').value, myJson.readMessage);
-    }
-
-    if(myJson.writeMessage){
-        addChatLine("ME",myJson.writeMessage);
+    if(data.readMessage){
+            addChatLine(document.getElementById('RemNameBox').value, data.readMessage);
+    }else if(data.writeMessage){
+        addChatLine("ME",data.writeMessage);
+    }else{
+        addChatLine(document.getElementById('RemNameBox').value, data);
     }
 }
 
@@ -253,6 +252,7 @@ function SendMessage(){
 
     jxcore('SendMessage').call(message,SendMessageCallback);
 
+    addChatLine("ME",message);
     document.getElementById('MessageBox').value = ""
 }
 
