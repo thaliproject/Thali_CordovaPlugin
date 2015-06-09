@@ -16,7 +16,7 @@ This project is intended to ;
 
 Get maven and install it locally: http://maven.apache.org/download.cgi
 
-get the library from: https://github.com/DrJukka/JxCore_BluetoothChat/tree/master/BtConnectorLib
+get the library from: https://github.com/thaliproject/Thali_CordovaPlugin_BtLibrary
 
 go to root of the library project and build with "gradlew build install" and the library should be visible in <user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.0
 
