@@ -34,7 +34,7 @@ go to root of the library project and build with "gradlew build install" and the
    * from thaliTest\plugins\org.thaliproject.p2p\src\android\java\io\jxcore\node copy the JXcoreExtension.java to thaliTest\platforms\android\src\io\jxcore\node 
 (replace file, or copy the plug-in code and add it to existing file)
 5. Add example code into the app
-   * from thaliTest\plugins\org.thaliproject.p2p\sample\www copy the content into thaliTest\www (replaces index.html and adds myScripts.js into the js folder)
+   * from thaliTest\plugins\org.thaliproject.p2p\sample\www copy the content into thaliTest\www (replaces index.html and adds myScripts.js into the js folder, and also adds app.js to the jxcore folder)
 6. build the project 
    * cordova build android
 7. run the example in device (note that for chat app, you do need at least two devices):
