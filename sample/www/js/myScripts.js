@@ -144,6 +144,7 @@ function peersChangedCallback(myJson) {
     }
 }
 
+var incomingConnection = false;
 
 function peersConnectionStateCallback(peerId, state) {
 
@@ -156,7 +157,16 @@ function peersConnectionStateCallback(peerId, state) {
         document.getElementById('RemNameBox').value = "";
         document.getElementById('RemAddrBox').value = "";
         ClearMessages();
-    }else if(state == "Connected" || state == "peerGotConnection"){
+    }else if(state == "Connected"){
+        incomingConnection = false;
+        document.getElementById('RemAddrBox').value = peerId;
+        for(var key in _peers){
+            if(_peers[key]. peerIdentifier  == peerId){
+                document.getElementById('RemNameBox').value = _peers[key].peerName;
+            }
+        }
+    }else if(state == "peerGotConnection"){
+        incomingConnection = true;
         document.getElementById('RemAddrBox').value = peerId;
         for(var key in _peers){
             if(_peers[key]. peerIdentifier  == peerId){
@@ -166,6 +176,13 @@ function peersConnectionStateCallback(peerId, state) {
     }
 
     if(document.getElementById('RemAddrBox').value.length > 0){
+
+        if(incomingConnection == true){
+            document.getElementById('mySendMessageDiv').style.display = 'none';
+        }else{
+            document.getElementById('mySendMessageDiv').style.display = 'block';
+        }
+
         document.getElementById('myRemoteDevice').style.display = 'block';
         document.getElementById('myDeviceSelection').style.display = 'none';
     }else{

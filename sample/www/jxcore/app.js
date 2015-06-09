@@ -69,6 +69,9 @@ var server = http.createServer(function(request, response) {
     console.log('HTTP request called : ' + request.method);
     console.log(request.headers);
 
+    var urlDecoded = decodeURIComponent(request.url);
+
+
     if(request.method.localeCompare("GET")  == 0){
 
     }else{
@@ -83,11 +86,15 @@ var server = http.createServer(function(request, response) {
           response.write("</head>");
           response.write("<body>");
           response.write("Hello from " + peerName + ", my id is: " + peerIdentifier);
+          response.write("Url fetched : " + request.url);
           response.write("</body>");
           response.write("</html>");
           response.end();
 
   console.log("response sent");
+
+  gotMessage("request url:" + urlDecoded);
+
 });
 var closeServerHandle = 0;
 server.on("listening", function () {closeServerHandle = server});
@@ -153,10 +160,11 @@ HTTP related functionality
 */
 
 
-function sendGetRequest() {
+function sendGetRequest(message) {
 // http://stackoverflow.com/questions/10895901/how-to-send-consecutive-requests-with-http-keep-alive-in-node-js
 
     var options = {
+        path:'/' + encodeURIComponent('data?message=' + message),
         port: httpRequestport,
         method: 'GET',
         headers: {
@@ -164,41 +172,21 @@ function sendGetRequest() {
         }
     };
 
+var replydata = "";
+
     console.log("sendRequest now to: " + httpRequestport);
     var x = http.request(options,function(res){
                 console.log("Connected");
                 res.on('data',function(data){
                     console.log("Request reply Data " + data);
+                    replydata = replydata + data;
                 });
                 res.on('end', function () {
                     console.log("Request ended");
+                    gotMessage(replydata);
+                    replydata = "";
                 });
             });
-    x.end();
-}
-
-function sendPostRequest(message) {
-// http://stackoverflow.com/questions/10895901/how-to-send-consecutive-requests-with-http-keep-alive-in-node-js
-
-    var options = {
-        port: httpRequestport,
-        method: 'POST',
-        keepAlive: true,
-        headers: {
-            accept: 'application/json',
-            'Connection':'keep-alive'
-        },
-        agent: agent
-    };
-
-    console.log("sendRequest now to: " + httpRequestport);
-    var x = http.request(options,function(res){
-                console.log("Connected");
-                res.on('data',function(data){
-                    console.log("Request reply Data " + data);
-                });
-            });
-    x.write(message)
     x.end();
 }
 
@@ -222,8 +210,6 @@ cordova('peerGotConnection').registerToNative(function (peerId,port) {
         httpRequestport = port;
         peerConnectionStateChanged(peerId,"Connected");
 
-      //  sendPostRequest("hello my friend, my name is " + peerName + ", my id is: " + peerIdentifier);
-        sendGetRequest();
   });
 
   // Register peerNotConnected callback.
@@ -318,8 +304,7 @@ function gotMessage(message) {
 
 cordova('SendMessage').registerAsync(function(message,callback){
     console.log("SendMessage : " + message);
-    sendGetRequest();
-    //sendPostRequest(message);
+    sendGetRequest(message);
 });
 
 

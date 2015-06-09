@@ -101,9 +101,14 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         return ret;
     }
 
-    public void ReStart(){
+    public void ReStart(String peerId){
         print_debug("ReStart connector");
-        Stop();
+        if(mBTConnector != null){
+            mBTConnector.Stop();
+            mBTConnector = null;
+        }
+
+        Disconnect(peerId);
         mBTConnector = new BTConnector(context,this,this,conSettings,instanceEncryptionPWD);
         mBTConnector.Start(this.myPeerIdentifier,this.myPeerName);
     }
@@ -418,15 +423,17 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 break;
                 case BtToRequestSocket.SOCKET_DISCONNEDTED:
                 case BtToServerSocket.SOCKET_DISCONNEDTED: {
+
+                    String peerId = "";
                     if (mBtToServerSocket != null) {
-                        String peerId = mBtToServerSocket.GetPeerId();
+                        peerId = mBtToServerSocket.GetPeerId();
                         mBtToServerSocket.Stop();
                         mBtToServerSocket = null;
                         ArrayList<Object> args = new ArrayList<Object>();
                         args.add(peerId);
                         jxcore.CallJSMethod("peerNotConnected", args.toArray());
                     }else if(mBtToRequestSocket != null) {
-                        String peerId = mBtToRequestSocket.GetPeerId();
+                        peerId = mBtToRequestSocket.GetPeerId();
                         mBtToRequestSocket.Stop();
                         mBtToRequestSocket = null;
                         ArrayList<Object> args = new ArrayList<Object>();
@@ -435,7 +442,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                     }
 
                     if(mBTConnector != null) {
-                        ReStart();
+                        ReStart(peerId);
                     }
                 }
                 break;
