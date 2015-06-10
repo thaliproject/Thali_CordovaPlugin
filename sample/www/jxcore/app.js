@@ -96,8 +96,34 @@ var server = http.createServer(function(request, response) {
   gotMessage("request url:" + urlDecoded);
 
 });
+server.on("connection", function (socket) {
+    console.log("server connection event");
+    closeServerHandle = server;
+});
+
+server.on("close", function () {
+    console.log("server is closed");
+    closeServerHandle = server;
+});
+
+server.on("connect", function (request, socket, head) {
+    console.log("server connect");
+    closeServerHandle = server;
+});
+
+server.on("clientError", function (exception, socket) {
+    console.log("server has clientError : " + exception);
+    closeServerHandle = server;
+});
+
+
 var closeServerHandle = 0;
-server.on("listening", function () {closeServerHandle = server});
+server.on("listening", function () {
+    console.log("server is listening");
+    closeServerHandle = server;
+});
+
+
 
 
 // Starts peer communications.
@@ -168,7 +194,8 @@ function sendGetRequest(message) {
         port: httpRequestport,
         method: 'GET',
         headers: {
-            accept: 'application/json'
+            accept: 'application/json',
+            connection: 'close'
         }
     };
 

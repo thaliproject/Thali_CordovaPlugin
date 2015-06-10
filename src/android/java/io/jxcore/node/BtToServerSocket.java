@@ -4,15 +4,10 @@ import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.util.Log;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketAddress;
 
 /**
  * Created by juksilve on 15.5.2015.
@@ -41,7 +36,7 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
 
     final String TAG  = "BTConnectedThread";
 
-    private int mHTTPPort = 6654; //todo fix me later
+    private int mHTTPPort = 0;
 
     boolean mStopped = false;
 
@@ -59,7 +54,9 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
             tmpIn = mmSocket.getInputStream();
             tmpOut = mmSocket.getOutputStream();
         } catch (Exception e) {
-            print_debug("Creating temp sockets failed: " + e.toString());
+            print_debug("Creating Bluetooth input streams failed: " + e.toString());
+            mStopped = true;
+            mHandler.obtainMessage(SOCKET_DISCONNEDTED, -1, -1, "creating Bluetooth input streams failed").sendToTarget();
         }
         mmInStream = tmpIn;
         mmOutStream = tmpOut;
@@ -70,6 +67,10 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
     }
 
     public void run() {
+        DoOneRunRound();
+    }
+    public void DoOneRunRound() {
+        print_debug("--DoOneRunRound started");
         InputStream tmpInputStream = null;
         OutputStream tmpOutputStream = null;
         try {
@@ -86,29 +87,42 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
             tmpOutputStream = localHostSocket.getOutputStream();
 
         } catch (Exception e) {
-            print_debug("Creating temp sockets failed: " + e.toString());
-        }
-        LocalInputStream = tmpInputStream;
-        LocalOutputStream = tmpOutputStream;
-
-        if (mmInStream != null && LocalInputStream != null
-         && mmOutStream != null && LocalOutputStream != null
-         && localHostSocket != null) {
-
-            SendingThread = new StreamCopyingThread(this,LocalInputStream, mmOutStream);
-            SendingThread.setDebugTag("--Sending");
-            SendingThread.start();
-
-            ReceivingThread = new StreamCopyingThread(this,mmInStream, LocalOutputStream);
-            ReceivingThread.setDebugTag("--Receiving");
-            ReceivingThread.start();
-
-            print_debug("Stream Threads are running");
-        }else{
+            print_debug("Creating local input streams failed: " + e.toString());
             mStopped = true;
-            print_debug("at least one stream is null");
-            mHandler.obtainMessage(SOCKET_DISCONNEDTED, -1, -1, "at least one stream is null").sendToTarget();
+            mHandler.obtainMessage(SOCKET_DISCONNEDTED, -1, -1, "creating local input streams failed").sendToTarget();
         }
+        if(!mStopped) {
+            LocalInputStream = tmpInputStream;
+            LocalOutputStream = tmpOutputStream;
+
+            if (mmInStream != null && LocalInputStream != null
+                    && mmOutStream != null && LocalOutputStream != null
+                    && localHostSocket != null) {
+
+                if (SendingThread != null) {
+                    SendingThread.setStreams(LocalInputStream, mmOutStream);
+                } else {
+                    SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
+                    SendingThread.setDebugTag("--Sending");
+                    SendingThread.start();
+                }
+
+                if (ReceivingThread != null) {
+                    ReceivingThread.setStreams(mmInStream, LocalOutputStream);
+                } else {
+                    ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
+                    ReceivingThread.setDebugTag("--Receiving");
+                    ReceivingThread.start();
+                }
+                print_debug("Stream Threads are running");
+            } else {
+                mStopped = true;
+                print_debug("at least one stream is null");
+                mHandler.obtainMessage(SOCKET_DISCONNEDTED, -1, -1, "at least one stream is null").sendToTarget();
+            }
+        }
+
+        print_debug("--DoOneRunRound ended");
     }
 
     @Override
@@ -121,20 +135,19 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
             mStopped = true;
             mHandler.obtainMessage(SOCKET_DISCONNEDTED, -1, -1, "creating serve socket failed").sendToTarget();
         }else if(who == SendingThread){
+        //Sending socket has local input stream, thus if it is giving error we are getting local disconnection
+        // thus we should do round to get new local connection
             print_debug("SendingThread thread got error: " + error);
+            if(SendingThread != null){
+                print_debug("Stop SendingThread");
+                SendingThread.Stop();
+                SendingThread = null;
+            }
+            if(!mStopped) {
+                DoOneRunRound();
+            }
         }else{
             print_debug("Dunno which thread got error: " + error);
-        }
-    }
-
-    @Override
-    public void StreamCopyStopped(StreamCopyingThread who, String message) {
-        if(who == SendingThread){
-            print_debug("SendingThread Stopped: " + message);
-        }else if(who == ReceivingThread){
-            print_debug("ReceivingThread Stopped: " + message);
-        }else{
-            print_debug("Dunno which thread Stopped: " + message);
         }
     }
 

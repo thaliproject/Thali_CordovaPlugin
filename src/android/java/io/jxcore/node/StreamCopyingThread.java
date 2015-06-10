@@ -15,7 +15,6 @@ public class StreamCopyingThread extends Thread {
     interface CopyThreadCallback
     {
         public void StreamCopyError(StreamCopyingThread who, String error);
-        public void StreamCopyStopped(StreamCopyingThread who, String message);
     }
 
     CopyThreadCallback callback = null;
@@ -39,7 +38,7 @@ public class StreamCopyingThread extends Thread {
         mOutputStream = mmOutStreamt;
     }
 
-    public void setDebugTag(String debugtag){
+    public void setDebugTag(String debugtag) {
         TAG = debugtag;
     }
 
@@ -52,17 +51,16 @@ public class StreamCopyingThread extends Thread {
                     if (mInputStream != null && mOutputStream != null) {
                         int n = 0;
                         while (-1 != (n = mInputStream.read(buffer)) && !mStopped) {
-                         //   String dbgMessage = new String(buffer,0,n);
-                         //   print_debug(" Copying " + n + " bytes, data: " + dbgMessage);
+                          //  String dbgMessage = "";//new String(buffer,0,n);
+                          //  print_debug(" Copying " + n + " bytes, data: " + dbgMessage);
                             mOutputStream.write(buffer, 0, n);
                         }
-                    } else {
-                        mStopped = true;
-                        callback.StreamCopyStopped(this, "at least one of the streams is null");
+
+                        if(n == -1){
+                            mStopped = true;
+                            callback.StreamCopyError(this, "input stream got -1 on read");
+                        }
                     }
-                } else {
-                    mStopped = true;
-                    callback.StreamCopyStopped(this, "we are stopped");
                 }
             } catch (IOException e) {
                 if (!mStopped) {
@@ -71,6 +69,7 @@ public class StreamCopyingThread extends Thread {
                 }
             }
         }
+
         print_debug("run ended");
     }
 
