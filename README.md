@@ -2,7 +2,7 @@ Thali p2p plug-in, requires jxcore plug-in (automatically installed with the plu
 
 <Work on progress, not near release quality !!>
 ### Goals
-This project is intended to ;
+This project is intended to:
  - create an easy to use p2p plug-in for JxCore (Android, iOS)
 
 ### pre-requirements
