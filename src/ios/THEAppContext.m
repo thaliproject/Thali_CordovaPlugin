@@ -29,8 +29,8 @@
 #include "jx.h"
 #import "JXcore.h"
 #import "THEAtomicFlag.h"
-#import "THEThreading.h""
-#import <NPReachability.h>
+#import "THEThreading.h"
+#import "NPReachability.h"
 #import "THEPeerBluetooth.h"
 #import "THEPeerNetworking.h"
 #import "THEAppContext.h"
