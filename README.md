@@ -10,8 +10,8 @@ mobile applicatons in JavaScript for Node.JS.
 
 ## Prerequisites
 
-* For iOS, [Xcode 6](https://developer.apple.com/xcode/), or later
 * For Android, [Android Studio](http://developer.android.com/sdk/index.html)
+* For iOS, [Xcode 6](https://developer.apple.com/xcode/), or later
 
 ## Getting Started
 
@@ -60,20 +60,18 @@ Once built the library should be visible in:
 
 ### Using the Thali Cordova Plugin
 
-
-#### iOS
-
+Follow the instructions below to use the Thali Cordova Plugin on Android and iOS.
 
 #### Android
 
-1. Create new project and add android platform
+1. Create new project and add the Android platform
    * cordova create thaliTest com.test.thaliTest thaliTest
    * cd thaliTest
    * cordova platform add android
 2. Fix manifest min-sdk issue
    * go to thaliTest\platforms\android and in AndroidManifest.xml change android:minSdkVersion="10" to
     android:minSdkVersion="16"
-3. add the plugin
+3. Add the plugin
    * cordova plugin add https://github.com/thaliproject/Thali_Codovaplugin
 4. Fix issue on can not replace existing file
    * from thaliTest\plugins\org.thaliproject.p2p\src\android\java\io\jxcore\node copy 
@@ -83,15 +81,17 @@ Once built the library should be visible in:
    * from thaliTest\plugins\org.thaliproject.p2p\sample\www copy the content 
    into thaliTest\www (replaces index.html and adds myScripts.js into the js folder, 
    and also adds app.js to the jxcore folder)
-6. Add nodejs modules into the app
+6. Add Node.js modules into the app
    * go to www\jxcore\ folder and run "npm install" (there is package.json file 
    specifying which modules are needed to be installed)
 7. Remove any gz-file from the module packages (instaled by npm under the www/jxcore folder)
    * The build process fails if the gz files are present, thus search & delete them 
-8. build the project 
+8. Build the project 
    * cordova build android
-9. run the example in device (note that for chat app, you do need at least two devices):
+9. Tun the example in device (note that for chat app, you do need at least two devices):
    * cordova run android
+
+#### iOS
 
 ### Contributing
 If you see a mistake, find a bug, or you think there is a better way to do something, feel free to contribute.
