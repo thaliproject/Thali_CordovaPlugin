@@ -27,48 +27,32 @@
 
 (function () {
 
-
-// Logs in Cordova.
-      function logInCordova(logEntry) {
-        var logEntriesDiv = document.getElementById('logEntries');
-        if (logEntriesDiv) {
-          var logEntryDiv = document.createElement('div');
-          logEntryDiv.className = 'logEntry';
-          logEntryDiv.innerHTML = logEntry;
-          logEntriesDiv.appendChild(logEntryDiv);
+    // Find out when JXcore is loaded.
+    var jxcoreLoadedInterval = setInterval(function () {
+        // HACK Repeat until jxcore is defined. When it is, it's loaded.
+        if (typeof jxcore == 'undefined') {
+            return;
         }
-      }
 
-  // Find out when JXcore is loaded.
-  var jxcoreLoadedInterval = setInterval(function () {
-    // HACK Repeat until jxcore is defined. When it is, it's loaded.
-    if (typeof jxcore == 'undefined') {
-      return;
-    }
+        // JXcore is loaded. Stop interval.
+        clearInterval(jxcoreLoadedInterval);
 
-    // JXcore is loaded. Stop interval.
-    clearInterval(jxcoreLoadedInterval);
-
-    // Set the ready function.
-    jxcore.isReady(function () {
-      // Log that JXcore is ready.
-      logInCordova('JXcore ready');
-
-      // Register logging function.
-      jxcore('logInCordova').register(logInCordova);
-
-      // Load app.js.
-      jxcore('app.js').loadMainFile(function (ret, err) {
-        if (err) {
-          alert('Error loading ThaliMobile app.js');
-          alert(err);
-        } else {
-            logInCordova('Loaded');
-            jxcore_ready();
-        }
-      });
-    });
-  }, 10);
+        // Set the ready function.
+        jxcore.isReady(function () {
+            // Log that JXcore is ready.
+            //logInCordova('JXcore ready');
+            // Load app.js.
+            jxcore('app.js').loadMainFile(function (ret, err) {
+                if (err) {
+                    alert('Error loading ThaliMobile app.js');
+                    alert(err);
+                } else {
+                   // logInCordova('Loaded');
+                    jxcore_ready();
+                }
+            });
+        });
+    }, 10);
 
 
     function jxcore_ready() {
@@ -78,120 +62,121 @@
         document.getElementById("SendButton").addEventListener("click", SendMessage);
         document.getElementById("ClearMessagesButton").addEventListener("click", ClearMessages);
         document.getElementById("DisconnectButton").addEventListener("click", DisconnectPeer);
+        document.getElementById("ReplicateButton").addEventListener("click", replicatedbnow);
+        document.getElementById("SynchButton").addEventListener("click", synchdbnow);
     }
 
 //   alert('button is set');
 //    jxcore('ShowToast').call('Hello',true, myCallback);
 //   jxcore('ShowToast').call('Hello',false, myCallback);
 
-function startConnector()
-{
-    jxcore('setMessageCallback').call(SendMessageCallback);
-    jxcore('setConnectionStatusCallback').call(peersConnectionStateCallback);
-    jxcore('setPeerChangedCallback').call(peersChangedCallback);
+    function startConnector() {
+        jxcore('setMessageCallback').call(SendMessageCallback);
+        jxcore('setConnectionStatusCallback').call(peersConnectionStateCallback);
+        jxcore('setPeerChangedCallback').call(peersChangedCallback);
 
-    jxcore('StartConnector').call();
-    document.getElementById('StateBox').value = "Running";
-    document.getElementById('stopButton').style.display = 'block';
-    document.getElementById('startButton').style.display = 'none';
-}
+        jxcore('StartConnector').call();
+        document.getElementById('StateBox').value = "Running";
+        document.getElementById('stopButton').style.display = 'block';
+        document.getElementById('startButton').style.display = 'none';
+    }
 
-function stopConnector(){
+    function stopConnector() {
 
-    jxcore('StopConnector').call(peersChangedCallback);
-    document.getElementById('StateBox').value = "Stopped";
+        jxcore('StopConnector').call(peersChangedCallback);
+        document.getElementById('StateBox').value = "Stopped";
 
-    document.getElementById('stopButton').style.display = 'none';
-    document.getElementById('startButton').style.display = 'block';
-    document.getElementById('myRemoteDevice').style.display = 'none';
-    document.getElementById('myDeviceSelection').style.display = 'none';
-}
+        document.getElementById('stopButton').style.display = 'none';
+        document.getElementById('startButton').style.display = 'block';
+        document.getElementById('myRemoteDevice').style.display = 'none';
+        document.getElementById('myDeviceSelection').style.display = 'none';
+    }
 
 // Peers that we know about.
-var _peers = {};
+    var _peers = {};
 
-function peersChangedCallback(myJson) {
+    function peersChangedCallback(myJson) {
 
-  //  alert("Got myJson :" + myJson);
+        //  alert("Got myJson :" + myJson);
 
-    for (var i = 0; i < myJson.length; i++) {
-        var peer = myJson[i];
-        _peers[peer.peerIdentifier] = peer;
+        for (var i = 0; i < myJson.length; i++) {
+            var peer = myJson[i];
+            _peers[peer.peerIdentifier] = peer;
 //        alert("Got peer : " + peer.peerIdentifier + ", peerAvailable: "  + peer.peerAvailable);
-    }
-
-    //Lets clear the old list first
-    var butEntries = document.getElementById('peerListSelector');
-    butEntries.innerHTML = "";
-
-    for(var key in _peers){
-        if(_peers[key].peerAvailable == "true"){
-            addButton(_peers[key]);
         }
-    }
-    for(var key in _peers){
-        if(_peers[key].peerAvailable != "true"){
-            addButton(_peers[key]);
-        }
-    }
 
-    if( document.getElementById('RemAddrBox').value.length > 0){
-        document.getElementById('myRemoteDevice').style.display = 'block';
-        document.getElementById('myDeviceSelection').style.display = 'none';
-    }else{
-        document.getElementById('myRemoteDevice').style.display = 'none';
-        document.getElementById('myDeviceSelection').style.display = 'block';
-    }
-}
+        //Lets clear the old list first
+        var butEntries = document.getElementById('peerListSelector');
+        butEntries.innerHTML = "";
 
-var incomingConnection = false;
-
-function peersConnectionStateCallback(peerId, state) {
-
-    // alert("Got connection peer : " + peerId + ", state: "  + state);
-
-    if(state == "Connecting"){
-        jxcore('ShowToast').call('Connecting  to ' + peerId,false);
-    }else if(state == "Disconnected"){
-        jxcore('ShowToast').call('Disconnected from ' + peerId,true);
-        document.getElementById('RemNameBox').value = "";
-        document.getElementById('RemAddrBox').value = "";
-        ClearMessages();
-    }else if(state == "Connected"){
-        incomingConnection = false;
-        document.getElementById('RemAddrBox').value = peerId;
-        for(var key in _peers){
-            if(_peers[key]. peerIdentifier  == peerId){
-                document.getElementById('RemNameBox').value = _peers[key].peerName;
+        for (var key in _peers) {
+            if (_peers[key].peerAvailable == "true") {
+                addButton(_peers[key]);
             }
         }
-    }else if(state == "peerGotConnection"){
-        incomingConnection = true;
-        document.getElementById('RemAddrBox').value = peerId;
-        for(var key in _peers){
-            if(_peers[key]. peerIdentifier  == peerId){
-                document.getElementById('RemNameBox').value = _peers[key].peerName;
+        for (var key in _peers) {
+            if (_peers[key].peerAvailable != "true") {
+                addButton(_peers[key]);
             }
         }
+
+        if (document.getElementById('RemAddrBox').value.length > 0) {
+            document.getElementById('myRemoteDevice').style.display = 'block';
+            document.getElementById('myDeviceSelection').style.display = 'none';
+        } else {
+            document.getElementById('myRemoteDevice').style.display = 'none';
+            document.getElementById('myDeviceSelection').style.display = 'block';
+        }
     }
 
-    if(document.getElementById('RemAddrBox').value.length > 0){
+    var incomingConnection = false;
 
-        if(incomingConnection == true){
-            document.getElementById('mySendMessageDiv').style.display = 'none';
-        }else{
-            document.getElementById('mySendMessageDiv').style.display = 'block';
+    function peersConnectionStateCallback(peerId, state) {
+
+        // alert("Got connection peer : " + peerId + ", state: "  + state);
+
+        if (state == "Connecting") {
+            jxcore('ShowToast').call('Connecting  to ' + peerId, false);
+        } else if (state == "Disconnected") {
+            jxcore('ShowToast').call('Disconnected from ' + peerId, true);
+            document.getElementById('RemNameBox').value = "";
+            document.getElementById('RemAddrBox').value = "";
+            ClearMessages();
+        } else if (state == "Connected") {
+            incomingConnection = false;
+            document.getElementById('RemAddrBox').value = peerId;
+            for (var key in _peers) {
+                if (_peers[key].peerIdentifier == peerId) {
+                    document.getElementById('RemNameBox').value = _peers[key].peerName;
+                }
+            }
+        } else if (state == "peerGotConnection") {
+            incomingConnection = true;
+            document.getElementById('RemAddrBox').value = peerId;
+            for (var key in _peers) {
+                if (_peers[key].peerIdentifier == peerId) {
+                    document.getElementById('RemNameBox').value = _peers[key].peerName;
+                }
+            }
         }
 
-        document.getElementById('myRemoteDevice').style.display = 'block';
-        document.getElementById('myDeviceSelection').style.display = 'none';
-    }else{
-        document.getElementById('myRemoteDevice').style.display = 'none';
-        document.getElementById('myDeviceSelection').style.display = 'block';
-    }
-}
+        if (document.getElementById('RemAddrBox').value.length > 0) {
 
-function addButton(peer) {
+            if (incomingConnection == true) {
+                document.getElementById('mySendMessageDiv').style.display = 'none';
+            } else {
+                document.getElementById('mySendMessageDiv').style.display = 'block';
+            }
+
+            document.getElementById('myRemoteDevice').style.display = 'block';
+            document.getElementById('myDeviceSelection').style.display = 'none';
+        } else {
+            document.getElementById('myRemoteDevice').style.display = 'none';
+            document.getElementById('myDeviceSelection').style.display = 'block';
+        }
+    }
+
+    function addButton(peer) {
 
         var butEntries = document.getElementById('peerListSelector');
 
@@ -200,17 +185,18 @@ function addButton(peer) {
             var hrelem1 = document.createElement('hr');
             holdingdiv.appendChild(hrelem1);
 
-            if(peer.peerAvailable == "true"){
+            if (peer.peerAvailable == "true") {
                 var button = document.createElement('button');
                 button.innerHTML = 'Connect to ' + peer.peerName;
-                button.onclick = function(){
-                    ConnectToDevice(peer.peerIdentifier);return false;
+                button.onclick = function () {
+                    ConnectToDevice(peer.peerIdentifier);
+                    return false;
                 };
 
                 holdingdiv.appendChild(button);
-            }else{
+            } else {
                 var statediv = document.createElement('div');
-                statediv.innerHTML = peer.peerName + " Unavailable, id: " +peer.peerIdentifier;
+                statediv.innerHTML = peer.peerName + " Unavailable, id: " + peer.peerIdentifier;
 
                 holdingdiv.appendChild(statediv);
             }
@@ -220,57 +206,69 @@ function addButton(peer) {
 
             butEntries.appendChild(holdingdiv);
 
-         }
-      }
-function DisconnectPeer(){
+        }
+    }
+
+    function DisconnectPeer() {
 // could use document.getElementById('RemAddrBox').value as peerId as well
-    jxcore('DisconnectPeer').call("",ConnectCallback);
-}
-
-function ConnectToDevice(peerid){
-
-    if(peerid.length > 0){
- //       document.getElementById('myRemoteDevice').style.display = 'block';
- //       document.getElementById('myDeviceSelection').style.display = 'none';
-        jxcore('ConnectToDevice').call(peerid,ConnectCallback);
-
-    }else{
-        alert("No device selected to connect to");
+        jxcore('DisconnectPeer').call("", ConnectCallback);
     }
-}
-function ConnectCallback(status,errorString){
-    if(errorString.length > 0){
-        alert("Connection " + status + ", details: " + errorString);
+
+    function ConnectToDevice(peerid) {
+
+        if (peerid.length > 0) {
+            //       document.getElementById('myRemoteDevice').style.display = 'block';
+            //       document.getElementById('myDeviceSelection').style.display = 'none';
+            jxcore('ConnectToDevice').call(peerid, ConnectCallback);
+
+        } else {
+            alert("No device selected to connect to");
+        }
     }
-}
 
-function addChatLine(who, message){
-    document.getElementById('ReplyBox').value = document.getElementById('ReplyBox').value + "\n" + who + " : " +message;
-}
+    function ConnectCallback(status, errorString) {
+        if (errorString.length > 0) {
+            alert("Connection " + status + ", details: " + errorString);
+        }
+    }
 
-function ClearMessages(){
-    document.getElementById('ReplyBox').value = "";
-}
+    function addChatLine(who, message) {
+        document.getElementById('ReplyBox').value = document.getElementById('ReplyBox').value + "\n" + who + " : " + message;
+    }
 
-function SendMessageCallback(data){
-    console.log("SendMessageCallback " + data);
+    function ClearMessages() {
+        document.getElementById('ReplyBox').value = "";
+    }
 
-    if(data.readMessage){
+    function SendMessageCallback(data) {
+        console.log("SendMessageCallback " + data);
+
+        if (data.readMessage) {
             addChatLine(document.getElementById('RemNameBox').value, data.readMessage);
-    }else if(data.writeMessage){
-        addChatLine("ME",data.writeMessage);
-    }else{
-        addChatLine(document.getElementById('RemNameBox').value, data);
+        } else if (data.writeMessage) {
+            addChatLine("ME", data.writeMessage);
+        } else {
+            addChatLine(document.getElementById('RemNameBox').value, data);
+        }
     }
-}
 
-function SendMessage(){
-    var message = document.getElementById('MessageBox').value;
+    function synchdbnow() {
+        jxcore('SynchDBNow').call(SendMessageCallback);
+        addChatLine("ME", "synching");
+    }
 
-    jxcore('SendMessage').call(message,SendMessageCallback);
+    function replicatedbnow() {
+        jxcore('ReplicateDBNow').call(SendMessageCallback);
+        addChatLine("ME", "replicating");
+    }
 
-    addChatLine("ME",message);
-    document.getElementById('MessageBox').value = ""
-}
+    function SendMessage() {
+        var message = document.getElementById('MessageBox').value;
+
+        jxcore('SendMessage').call(message, SendMessageCallback);
+
+        addChatLine("ME", message);
+        document.getElementById('MessageBox').value = ""
+    }
 
 })();

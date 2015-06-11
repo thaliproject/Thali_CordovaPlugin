@@ -1,0 +1,20 @@
+{
+  "name": "PostCardApp",
+  "version": "1.0.0",
+  "description": "Sample app to demosntrate the Thali framework",
+  "main": "app.js",
+  "dependencies": {
+    "ejs": "^2.3.1",
+    "ejs-locals": "^1.0.2",
+    "express": "^4.12.3",
+    "express-pouchdb": "^0.14.2",
+    "memdown": "^1.0.0",
+    "pouchdb": "^3.6.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

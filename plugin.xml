@@ -10,7 +10,6 @@
 
     <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova" />
     
-
     <engines>
       <engine name="cordova-android" version=">=3.2.0" />
       <engine name="android-sdk" version=">=19" />

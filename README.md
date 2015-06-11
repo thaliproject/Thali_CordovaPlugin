@@ -7,8 +7,8 @@ This project is intended to ;
 
 ### pre-requirements
  1. You need to have Android SDK installed. You can get Android studio from: http://developer.android.com/sdk/index.html
- 2. You need to have Cordova installed, more details see: http://cordova.apache.org/docs/en/2.3.0/guide_getting-started_android_index.md.html  
- 
+ 2. Follow the instructions here to install node.js, Cordova and whatever platforms you require (e.g. cordova plafrom add android).
+  
 ### Additional requirements
 1. For command line build process, you should use gradle, thus you need to set system environment variable ANDROID_BUILD to gradle
 
@@ -35,9 +35,13 @@ go to root of the library project and build with "gradlew build install" and the
 (replace file, or copy the plug-in code and add it to existing file)
 5. Add example code into the app
    * from thaliTest\plugins\org.thaliproject.p2p\sample\www copy the content into thaliTest\www (replaces index.html and adds myScripts.js into the js folder, and also adds app.js to the jxcore folder)
-6. build the project 
+6. Add nodejs modules into the app
+   * go to www\jxcore\ folder and run "npm install" (there is package.json file specifying which modules are needed to be installed)
+7. Remove any gz-file from the module packages (instaled by npm under the www/jxcore folder)
+   * The build process fails if the gz files are present, thus search & delete them 
+8. build the project 
    * cordova build android
-7. run the example in device (note that for chat app, you do need at least two devices):
+9. run the example in device (note that for chat app, you do need at least two devices):
    * cordova run android
 
 ### Contribution
