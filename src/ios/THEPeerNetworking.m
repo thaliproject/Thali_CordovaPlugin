@@ -28,7 +28,7 @@
 #import <pthread.h>
 #include "jx.h"
 #import "JXcore.h"
-#import <TSNThreading.h>
+#import "THEThreading.h"
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 #import "THEPeerNetworking.h"
 

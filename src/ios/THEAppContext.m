@@ -28,8 +28,8 @@
 #import <pthread.h>
 #include "jx.h"
 #import "JXcore.h"
-#import <THEAtomicFlag.h>
-#import <TSNThreading.h>
+#import "THEAtomicFlag.h"
+#import "THEThreading.h""
 #import <NPReachability.h>
 #import "THEPeerBluetooth.h"
 #import "THEPeerNetworking.h"
