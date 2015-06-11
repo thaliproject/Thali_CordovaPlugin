@@ -64,22 +64,21 @@ Follow the instructions below to use the Thali Cordova Plugin on Android and iOS
 
 #### Android
 
-1. Create new project and add the Android platform
-   * cordova create thaliTest com.test.thaliTest thaliTest
-   * cd thaliTest
+1. Add the Android platform
+   * cd ThaliTest
    * cordova platform add android
 2. Fix manifest min-sdk issue
-   * go to thaliTest\platforms\android and in AndroidManifest.xml change android:minSdkVersion="10" to
+   * go to ThaliTest\platforms\android and in AndroidManifest.xml change android:minSdkVersion="10" to
     android:minSdkVersion="16"
 3. Add the plugin
    * cordova plugin add https://github.com/thaliproject/Thali_Codovaplugin
 4. Fix issue on can not replace existing file
-   * from thaliTest\plugins\org.thaliproject.p2p\src\android\java\io\jxcore\node copy 
-   the JXcoreExtension.java to thaliTest\platforms\android\src\io\jxcore\node 
+   * from ThaliTest\plugins\org.thaliproject.p2p\src\android\java\io\jxcore\node copy 
+   the JXcoreExtension.java to ThaliTest\platforms\android\src\io\jxcore\node 
 (replace file, or copy the plug-in code and add it to existing file)
 5. Add example code into the app
-   * from thaliTest\plugins\org.thaliproject.p2p\sample\www copy the content 
-   into thaliTest\www (replaces index.html and adds myScripts.js into the js folder, 
+   * from ThaliTest\plugins\org.thaliproject.p2p\sample\www copy the content 
+   into ThaliTest\www (replaces index.html and adds myScripts.js into the js folder, 
    and also adds app.js to the jxcore folder)
 6. Add Node.js modules into the app
    * go to www\jxcore\ folder and run "npm install" (there is package.json file 
@@ -92,6 +91,12 @@ Follow the instructions below to use the Thali Cordova Plugin on Android and iOS
    * cordova run android
 
 #### iOS
+
+1. Add the Thali Cordova Plugin to the Cordova project:
+ * `cordova plugin add https://github.com/thaliproject/Thali_CordovaPlugin.git`
+2. Add the iOS platform:
+ * `cordova platform add ios`
+3. Open the iOS Cordova project (e.g. `<project_root>/platforms/ios/ThaliTest.xcodeproj`) in Xcode.
 
 ### Contributing
 If you see a mistake, find a bug, or you think there is a better way to do something, feel free to contribute.
