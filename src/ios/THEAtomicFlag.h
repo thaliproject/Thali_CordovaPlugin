@@ -22,36 +22,25 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeer.h
+//  THEAtomicFlag.h
 //
 
 #import <Foundation/Foundation.h>
-#import <CoreLocation/CoreLocation.h>
+#import "libkern/OSAtomic.h"
 
-// THEPeerState enumeration.
-typedef NS_ENUM(NSUInteger, THEPeerState)
-{
-    THEPeerStateUnavailable     = 0,
-    THEPeerStateAvailable       = 1,
-    THEPeerStateConnecting      = 2,
-    THEPeerStateConnectFailed   = 3,
-    THEPeerStateConnected       = 4,
-    THEPeerStateDisconnected    = 5,
-};
+// THEAtomicFlag interface.
+@interface THEAtomicFlag : NSObject
 
-// THEPeer interface.
-@interface THEPeer : NSObject
+// Returns YES, if the flag is clear; otherwise, NO.
+- (BOOL)isClear;
 
-// Properties.
-@property (nonatomic, readonly) NSUUID * identifier;
-@property (nonatomic, readonly) NSString * name;
-@property (nonatomic) BOOL available;
+// Returns YES, if the flag is set; otherwise, NO.
+- (BOOL)isSet;
 
-// Class initializer.
-- (instancetype)initWithIdentifier:(NSUUID *)peerIdentifier
-                              name:(NSString *)name;
+// Tries to set the flag. Returns YES, if the flag was successfully set; otherwise, NO.
+- (BOOL)trySet;
 
-// Converts THEPeer to JSON.
-- (NSString *)JSON;
+// Tries to clear the flag. Returns YES, if the flag was successfully cleared; otherwise, NO.
+- (BOOL)tryClear;
 
 @end

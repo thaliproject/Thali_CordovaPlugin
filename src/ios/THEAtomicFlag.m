@@ -22,36 +22,65 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeer.h
+//  THEAtomicFlag.m
 //
 
-#import <Foundation/Foundation.h>
-#import <CoreLocation/CoreLocation.h>
+#import "THEAtomicFlag.h"
 
-// THEPeerState enumeration.
-typedef NS_ENUM(NSUInteger, THEPeerState)
+// THEAtomicFlag (Internal) interface.
+@interface THEAtomicFlag (Internal)
+@end
+
+// THEAtomicFlag implementation.
+@implementation THEAtomicFlag
 {
-    THEPeerStateUnavailable     = 0,
-    THEPeerStateAvailable       = 1,
-    THEPeerStateConnecting      = 2,
-    THEPeerStateConnectFailed   = 3,
-    THEPeerStateConnected       = 4,
-    THEPeerStateDisconnected    = 5,
-};
-
-// THEPeer interface.
-@interface THEPeer : NSObject
-
-// Properties.
-@property (nonatomic, readonly) NSUUID * identifier;
-@property (nonatomic, readonly) NSString * name;
-@property (nonatomic) BOOL available;
+@private
+    // The flag.
+    volatile int32_t _flag;
+}
 
 // Class initializer.
-- (instancetype)initWithIdentifier:(NSUUID *)peerIdentifier
-                              name:(NSString *)name;
+- (instancetype)init
+{
+    // Initialize superclass.
+    self = [super init];
+    
+    // Handle errors.
+    if (!self)
+    {
+        return nil;
+    }
+    
+    // Done.
+    return self;
+}
 
-// Converts THEPeer to JSON.
-- (NSString *)JSON;
+// Returns YES, if the flag is clear; otherwise, NO.
+- (BOOL)isClear
+{
+    return OSAtomicCompareAndSwap32Barrier(0, 0, &_flag);
+}
 
+// Returns YES, if the flag is set; otherwise, NO.
+- (BOOL)isSet
+{
+    return OSAtomicCompareAndSwap32Barrier(1, 1, &_flag);
+}
+
+// Tries to set the flag. Returns YES, if the flag was successfully set; otherwise, NO.
+- (BOOL)trySet
+{
+    return OSAtomicCompareAndSwap32Barrier(0, 1, &_flag);
+}
+
+// Tries to clear the flag. Returns YES, if the flag was successfully cleared; otherwise, NO.
+- (BOOL)tryClear
+{
+    return OSAtomicCompareAndSwap32Barrier(1, 0, &_flag);
+}
+
+@end
+
+// THEAtomicFlag (Internal) implementation.
+@implementation THEAtomicFlag (Internal)
 @end

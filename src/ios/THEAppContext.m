@@ -21,14 +21,14 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
-//  ThaliMobile
+//  Thali CordovaPlugin
 //  THEAppContext.m
 //
 
 #import <pthread.h>
 #include "jx.h"
 #import "JXcore.h"
-#import <TSNAtomicFlag.h>
+#import <THEAtomicFlag.h>
 #import <TSNThreading.h>
 #import <NPReachability.h>
 #import "THEPeerBluetooth.h"
@@ -75,7 +75,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 {
 @private
     // The communications enabled atomic flag.
-    TSNAtomicFlag * _atomicFlagCommunicationsEnabled;
+    THEAtomicFlag * _atomicFlagCommunicationsEnabled;
     
     // The reachability handler reference.
     id reachabilityHandlerReference;
@@ -621,7 +621,7 @@ peerClientNotConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier
     }
     
     // Intialize.
-    _atomicFlagCommunicationsEnabled = [[TSNAtomicFlag alloc] init];
+    _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
     
     // Allocate and initialize the service type.
     NSUUID * serviceType = [[NSUUID alloc] initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
