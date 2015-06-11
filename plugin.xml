@@ -37,6 +37,7 @@
         </config-file>
         <framework src="MultipeerConnectivity.framework" />
         <framework src="CoreBluetooth.framework" />
+        <framework src="SystemConfiguration.framework" />
         <header-file src="src/ios/THEThreading.h" />
         <header-file src="src/ios/THEAtomicFlag.h" />
         <source-file src="src/ios/THEAtomicFlag.m" />
