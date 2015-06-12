@@ -103,7 +103,8 @@ All commands are issued from the the root of the project folder.
 4. Build Cordova:
  * `~/Code/ThaliTest> cordova build`
 3. Open the iOS Cordova project in Xcode
- * (e.g. `<project_root>/platforms/ios/ThaliTest.xcodeproj`) 
+ * (e.g. `<project_root>/platforms/ios/ThaliTest.xcodeproj`)
+ * `~/Code/ThaliTest> open platforms/ios/ThaliTest.xcodeproj`
 
 ### Contributing
 If you see a mistake, find a bug, or you think there is a better way to do something, feel free to contribute.
