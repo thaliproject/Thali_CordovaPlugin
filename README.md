@@ -77,8 +77,8 @@ Follow the instructions below to use the Thali Cordova Plugin on Android and iOS
    the JXcoreExtension.java to ThaliTest\platforms\android\src\io\jxcore\node 
 (replace file, or copy the plug-in code and add it to existing file)
 5. Add example code into the app
-   * from ThaliTest\plugins\org.thaliproject.p2p\sample\www copy the content 
-   into ThaliTest\www (replaces index.html and adds myScripts.js into the js folder, 
+   * from ThaliTest\plugins\org.thaliproject.p2p\sample\android\www copy the content 
+   into ThaliTest\www (replaces index.html with index.html adds sample.js into the js folder, 
    and also adds app.js to the jxcore folder)
 6. Add Node.js modules into the app
    * go to www\jxcore\ folder and run "npm install" (there is package.json file 
