@@ -92,15 +92,23 @@ Follow the instructions below to use the Thali Cordova Plugin on Android and iOS
 
 #### iOS
 
+All commands are issued from the the root of the project folder.
+
 1. Add the Thali Cordova Plugin to the Cordova project:
- * `cordova plugin add https://github.com/thaliproject/Thali_CordovaPlugin.git`
+ * `~/Code/ThaliTest> cordova plugin add https://github.com/thaliproject/Thali_CordovaPlugin.git`
 2. Add the iOS platform:
- * `cordova platform add ios`
-3. Open the iOS Cordova project (e.g. `<project_root>/platforms/ios/ThaliTest.xcodeproj`) in Xcode.
+ * `~/Code/ThaliTest> cordova platform add ios`
+3. Copy Thali Cordova Plugin sample to the Cordova project:
+ * `~/Code/ThaliTest> cp -a -R -v plugins/org.thaliproject.p2p/sample/ios/www ./`
+4. Build Cordova:
+ * `~/Code/ThaliTest> cordova build`
+3. Open the iOS Cordova project in Xcode
+ * (e.g. `<project_root>/platforms/ios/ThaliTest.xcodeproj`) 
 
 ### Contributing
 If you see a mistake, find a bug, or you think there is a better way to do something, feel free to contribute.
-Email [thali-talk@thaliproject.org](mailto:thali-talk@thaliproject.org) to get started.
+Email [thali-talk@thaliproject.org](mailto:thali-talk@thaliproject.org) to connect with other contributors and
+get started with Thali.
 
 ### License
 MIT
