@@ -21,8 +21,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
-//  JCoreTest
-//  myScripts.js
+//  Thali Cordova Plugin
+//  thali_main.js
 //
 
 (function () {

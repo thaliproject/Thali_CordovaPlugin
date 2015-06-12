@@ -21,8 +21,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
-//  ThaliMobile
-//  thali_mobile.js
+//  Thali Cordova Plugin
+//  thali_main.js
 //
 
 (function () {

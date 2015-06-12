@@ -1,5 +1,8 @@
 (function () {
   
+  // The peer identifier key. This is a temporary setting we're using to ensure that
+  // each time the sample is run on a device it uses the same peer identifier. In an
+  // actual Thali app, this value would come from the app in some way.
   var _peerIdentifierKey = 'PeerIdentifier';
   
   // Peers that we know about.
