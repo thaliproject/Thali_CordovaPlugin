@@ -38,8 +38,7 @@
         <framework src="MultipeerConnectivity.framework" />
         <framework src="CoreBluetooth.framework" />
         <framework src="SystemConfiguration.framework" />
-        <header-file src="src/ios/JXcoreAppInitialization.h" />
-        <source-file src="src/ios/JXcoreAppInitialization.m" />
+        <source-file src="src/ios/JXcoreExtension.m" />
         <header-file src="src/ios/THEThreading.h" />
         <header-file src="src/ios/THEAtomicFlag.h" />
         <source-file src="src/ios/THEAtomicFlag.m" />

@@ -22,13 +22,18 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  JXcoreAppInitialization.h
+//  JXcoreExtension.m
 //
 
-#import <Foundation/Foundation.h>
-#import "JXcoreAppInitializationProtocol.h"
+#import "JXcoreExtension.h"
+#import "THEAppContext.h"
 
-// JXcoreAppInitialization interface.
-@interface JXcoreAppInitialization : NSObject <JXcoreAppInitializationProtocol>
+// JXcoreExtension implementation.
+@implementation JXcoreExtension
+
++ (void)defineMethods
+{
+    [[THEAppContext singleton] defineJavaScriptExtensions];
+}
 
 @end
