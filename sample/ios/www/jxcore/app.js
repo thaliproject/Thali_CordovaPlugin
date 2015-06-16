@@ -108,8 +108,6 @@
   // Register to native for networkChanged.
   cordova('networkChanged').registerToNative(function (args) {
     var network = args[0];
-    logInCordova(JSON.stringify(network));
-    
     if (network.isReachable) {
       logInCordova('****** NETWORK REACHABLE');
     } else {
