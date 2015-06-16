@@ -32,7 +32,7 @@
 @implementation JXcoreExtension
 
 // Defines methods.
-+ (void)defineMethods
+- (void)defineMethods
 {
     [[THEAppContext singleton] defineJavaScriptExtensions];
 }
