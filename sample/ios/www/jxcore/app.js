@@ -91,23 +91,22 @@
   };
 
   // Register to native for appEnteringBackground.
-  cordova('appEnteringBackground').registerToNative(function (callback, args) {
-    logInCordova(callback + ' called');
+  cordova('appEnteringBackground').registerToNative(function (args) {
+    logInCordova('App entering background.');
   });
 
   // Register to native for appEnteredForeground.
-  cordova('appEnteredForeground').registerToNative(function (callback, args) {
-    logInCordova(callback + ' called');
+  cordova('appEnteredForeground').registerToNative(function (args) {
+    logInCordova('App entered foreground.');
   });
 
   // Register to native for logInCordova.
-  cordova('logInCordova').registerToNative(function (callback, args) {
+  cordova('logInCordova').registerToNative(function (args) {
     logInCordova(args[0]);
   });
 
   // Register to native for networkChanged.
-  cordova('networkChanged').registerToNative(function (callback, args) {
-    logInCordova(callback + ' called');
+  cordova('networkChanged').registerToNative(function (args) {
     var network = args[0];
     logInCordova(JSON.stringify(network));
     
@@ -119,7 +118,7 @@
   });
     
   // Register to native for peerAvailabilityChanged.
-  cordova('peerAvailabilityChanged').registerToNative(function (callback, args) {
+  cordova('peerAvailabilityChanged').registerToNative(function (args) {
     // Process each peer availability change.
     var peers = args[0];
     for (var i = 0; i < peers.length; i++) {
@@ -154,13 +153,13 @@
   };
   
   // Register to native for connectingToPeerServer.
-  cordova('connectingToPeerServer').registerToNative(function (callback, args) {
+  cordova('connectingToPeerServer').registerToNative(function (args) {
     var peerIdentifier = args[0];
     logInCordova('    Connecting to peer server ' + peerIdentifier);
   });
   
   // Register to native for connectedToPeerServer.
-  cordova('connectedToPeerServer').registerToNative(function (callback, args) {
+  cordova('connectedToPeerServer').registerToNative(function (args) {
     var peerIdentifier = args[0];
     logInCordova('    Connected to peer server ' + peerIdentifier);
 
@@ -168,7 +167,7 @@
   });
 
   // Register to native for notConnectedToPeerServer.
-  cordova('notConnectedToPeerServer').registerToNative(function (callback, args) {
+  cordova('notConnectedToPeerServer').registerToNative(function (args) {
     var peerIdentifier = args[0];
     logInCordova('    Not connected to peer server ' + peerIdentifier);
 
@@ -181,19 +180,19 @@
   });
   
   // Register to native for peerClientConnecting.
-  cordova('peerClientConnecting').registerToNative(function (callback, args) {
+  cordova('peerClientConnecting').registerToNative(function (args) {
     var peerIdentifier = args[0];
     logInCordova('    Peer client connecting ' + peerIdentifier);
   });
   
   // Register to native for peerClientConnected.
-  cordova('peerClientConnected').registerToNative(function (callback, args) {
+  cordova('peerClientConnected').registerToNative(function (args) {
     var peerIdentifier = args[0];
     logInCordova('    Peer client connected ' + peerIdentifier);
   });
 
   // Register to native for peerClientNotConnected.
-  cordova('peerClientNotConnected').registerToNative(function (callback, args) {
+  cordova('peerClientNotConnected').registerToNative(function (args) {
     var peerIdentifier = args[0];
     logInCordova('    Peer client not connected ' + peerIdentifier);
   });
