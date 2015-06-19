@@ -3,9 +3,22 @@ var inherits = require('util').inherits;
 
 function ThaliEmitter() {
   EventEmitter.call(this);
+  this._init();
 }
 
 inherits(ThaliEmitter, EventEmitter);
+
+ThaliEmitter.prototype._init = function () {
+  var self;
+  cordova('connectingToPeerServer').registerToNative(function (peerIdentifier) {
+    self.emit('connectingToPeerServer', peerIdentifier);
+  });
+
+  cordova('peerClientConnecting').registerToNative(function (peerIdentifier) {
+    self.emit('peerClientConnecting', peerIdentifier);
+  });
+};
+
 
 ThaliEmitter.prototype.getDeviceName = function (cb) {
   cordova('GetDeviceName').callNative(function (deviceName) {
@@ -36,6 +49,20 @@ ThaliEmitter.getPeerIdentifier = function (cb) {
       })
     }
   })
+};
+
+// Starts peer communications.
+ThaliEmitter.startPeerCommunications = function(peerIdentifier, peerName, cb) {
+  cordova('StartPeerCommunications').callNative(peerIdentifier, peerName, function (value) {
+    cb(Boolean(value));
+  });
+};
+
+// Stops peer communications.
+ThaliEmitter.startPeerCommunications = function(peerIdentifier, peerName, cb) {
+  cordova('StopPeerCommunications').callNative(function () {
+    cb();
+  });
 };
 
 module.exports = ThaliEmitter;
