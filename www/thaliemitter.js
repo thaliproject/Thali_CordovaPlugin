@@ -14,8 +14,15 @@ ThaliEmitter.PEER_EVENTS = [
   'notConnectedToPeerServer',
   'peerClientConnecting',
   'peerClientConnected',
-  'peerClientNotConnected'
-]
+  'peerClientNotConnected',
+  'peerAvailabilityChanged',
+  'networkChanged'
+];
+
+var PARSE_EVENTS = [
+  'peerAvailabilityChanged',
+  'networkChanged'
+];
 
 ThaliEmitter.prototype._init = function () {
   var self = this;
@@ -24,7 +31,7 @@ ThaliEmitter.prototype._init = function () {
     function emitEvent(eventName) {
       return function handler(arg) {
         // Hack to handle JSON for multiple values
-        if (eventName === 'peerAvailabilityChanged') {
+        if (PARSE_EVENTS.indexOf(eventName) !== -1) {
           arg = JSON.parse(arg);
         }
 
