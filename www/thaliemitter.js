@@ -45,20 +45,71 @@ ThaliEmitter.prototype._init = function () {
   ThaliEmitter.PEER_EVENTS.forEach(registerCordovaPeerEvent);
 };
 
+// Starts peer communications.
+ThaliEmitter.startDeviceAdvertising = function(cb) {
+  getPeerIdentifier(function (err, peerIdentifier) {
+    getDeviceName(function (err, deviceName) {
+      cordova('StartPeerCommunications').callNative(peerIdentifier, deviceName, function (value) {
+        // TODO: This needs to be an error or something
+        if (!value) {
+          cb(new Error('Cannot start device advertising'));
+        } else {
+          cb(null);
+        }
+      });
+    })
+  });
+};
 
-ThaliEmitter.prototype.getDeviceName = function (cb) {
+// Stops peer communications.
+ThaliEmitter.stopDeviceAdvertising = function(cb) {
+  cordova('StopPeerCommunications').callNative(function (value) {
+    // TODO: This needs to be an error or something
+    if (!value) {
+      cb(new Error('Cannot stop device advertising'));
+    } else {
+      cb(null);
+    }
+  });
+};
+
+ThaliEmitter.prototype.beginCommunicationWithPeer = function (peerIdentifier) {
+  cordova('BeginConnectToPeerServer').callNative(peerIdentifier, function (value) {
+    // TODO: This needs to be an error or something
+    if (!value) {
+      cb(new Error('Cannot start communication with peer'));
+    } else {
+      // Should have a port number
+      cb(null, 0);
+    }
+  });
+};
+
+ThaliEmitter.prototype.stopCommunicationWithPeer = function (peerIdentifier) {
+  cordova('DisconnectFromPeerServer').callNative(peerIdentifier, function (value) {
+    // TODO: This needs to be an error or something
+    if (!value) {
+      cb(new Error('Cannot stop communication with peer'));
+    } else {
+      cb(null);
+    }
+  });
+};
+
+/* Begin Utility Methods */
+function getDeviceName(cb) {
   cordova('GetDeviceName').callNative(function (deviceName) {
     cb(null, deviceName);
   });
 };
 
-ThaliEmitter.prototype.getFreePort = function (cb) {
+function getFreePort(cb) {
   cordova('getFreePort').callNative(function (freePort) {
     cb(null, freePort);
   });
-};
+}
 
-ThaliEmitter.getPeerIdentifier = function (cb) {
+function getPeerIdentifier(cb) {
   var key = 'PeerIdentifier';
   cordova('GetKeyValue').callNative(key, function (value) {
     if (value !== undefined) {
@@ -75,20 +126,7 @@ ThaliEmitter.getPeerIdentifier = function (cb) {
       })
     }
   })
-};
-
-// Starts peer communications.
-ThaliEmitter.startPeerCommunications = function(peerIdentifier, peerName, cb) {
-  cordova('StartPeerCommunications').callNative(peerIdentifier, peerName, function (value) {
-    cb(null, true); // Always true according to the code
-  });
-};
-
-// Stops peer communications.
-ThaliEmitter.stopPeerCommunications = function(peerIdentifier, peerName, cb) {
-  cordova('StopPeerCommunications').callNative(function () {
-    cb();
-  });
-};
+}
+/* End Utility Methods */
 
 module.exports = ThaliEmitter;
