@@ -85,7 +85,7 @@ ThaliEmitter.startPeerCommunications = function(peerIdentifier, peerName, cb) {
 };
 
 // Stops peer communications.
-ThaliEmitter.startPeerCommunications = function(peerIdentifier, peerName, cb) {
+ThaliEmitter.stopPeerCommunications = function(peerIdentifier, peerName, cb) {
   cordova('StopPeerCommunications').callNative(function () {
     cb();
   });
