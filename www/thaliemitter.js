@@ -8,15 +8,34 @@ function ThaliEmitter() {
 
 inherits(ThaliEmitter, EventEmitter);
 
-ThaliEmitter.prototype._init = function () {
-  var self;
-  cordova('connectingToPeerServer').registerToNative(function (peerIdentifier) {
-    self.emit('connectingToPeerServer', peerIdentifier);
-  });
+ThaliEmitter.PEER_EVENTS = [
+  'connectingToPeerServer',
+  'connectedToPeerServer',
+  'notConnectedToPeerServer',
+  'peerClientConnecting',
+  'peerClientConnected',
+  'peerClientNotConnected'
+]
 
-  cordova('peerClientConnecting').registerToNative(function (peerIdentifier) {
-    self.emit('peerClientConnecting', peerIdentifier);
-  });
+ThaliEmitter.prototype._init = function () {
+  var self = this;
+
+  function registerCordovaPeerEvent(eventName) {
+    function emitEvent(eventName) {
+      return function handler(arg) {
+        // Hack to handle JSON for multiple values
+        if (eventName === 'peerAvailabilityChanged') {
+          arg = JSON.parse(arg);
+        }
+
+        self.emit(eventName, arg);
+      };
+    }
+
+    cordova(eventName).registerToNative(emitEvent(eventName));
+  }
+
+  ThaliEmitter.PEER_EVENTS.forEach(registerCordovaPeerEvent);
 };
 
 
@@ -54,7 +73,7 @@ ThaliEmitter.getPeerIdentifier = function (cb) {
 // Starts peer communications.
 ThaliEmitter.startPeerCommunications = function(peerIdentifier, peerName, cb) {
   cordova('StartPeerCommunications').callNative(peerIdentifier, peerName, function (value) {
-    cb(Boolean(value));
+    cb(null, true); // Always true according to the code
   });
 };
 
