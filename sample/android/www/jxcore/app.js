@@ -1,5 +1,10 @@
 (function () {
 
+    // Per the readme you have to copy sockettest.js from the test directory
+    // to the same directory that this file, app.js, is in.
+    var sockettest = require("./sockettest.js");
+    sockettest.nodeJSTest();
+
     /*
      Helper functions and variables
      */
@@ -235,7 +240,7 @@ Helper functions
             closeServerHandle.close();
             closeServerHandle = 0;
         }
-    };
+    }
 
 
 // inform connection status.
@@ -247,7 +252,7 @@ Helper functions
         } else {
             console.log("peerConnectionStatusCallback not set !!!!");
         }
-    };
+    }
 
 
 
