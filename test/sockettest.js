@@ -15,6 +15,14 @@ exports.startSocketServer = function(port) {
         incomingClientSocket.on('end', function() {
             console.log("We lost a incomingClientSocket connection.");
         });
+
+        incomingClientSocket.on('data', function(data) {
+            // BUGBUG: On the desktop this event listener is not necessary. But on JXCore on Android
+            // we have to include this handler or no data will ever arrive at the server.
+            // Please see https://github.com/jxcore/jxcore/issues/411
+            // console.log("We received data on the socket the server is listening on - " + data);
+        });
+
         incomingClientSocket.pipe(incomingClientSocket);
     });
 
@@ -151,7 +159,7 @@ function manageMessagePasses(getServerPortFunction, messageSize, remainingPasses
 }
 
 exports.startSocketClient = function(getServerPortFunction) {
-    var messageSize = 100;
+    var messageSize = 1024 * 5;
     var maxPasses = 5;
     return manageMessagePasses(getServerPortFunction, messageSize, maxPasses);
 };
