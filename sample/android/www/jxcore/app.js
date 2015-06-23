@@ -55,7 +55,7 @@
 
 /*----------------------------------------------------------------------------------
      Start- HTTP related functionality
------------------------------------------------------------------------------------*/
+-----------------------------------------------------------------------------------
 
     var http = require("http");
     var server = http.createServer(function (request, response) {
@@ -126,67 +126,80 @@
         });
         x.end();
     }
+    */
 /*----------------------------------------------------------------------------------
 End- HTTP related functionality
-Start- PouchDB related functionality
+Start- TCP/IP related functionality
  -----------------------------------------------------------------------------------*/
+    // var sockettest = require('./sockettest');
 
-    var express = require('express'),
-        app     = express(),
-        PouchDB = require('pouchdb');
+    var net = require('net');
 
-// Remove powered by
-    app.disable('x-powered-by');
+    var server = 0;
+    function startServerSocket(port) {
 
-// Add postcard database
-    app.use('/db', require('express-pouchdb')(PouchDB));
-    var db = new PouchDB('postcard');
-    var id = new Date().toISOString();
+        if(server != 0){
+            server.close();
+            server = 0;
+        }
 
-    db.put({
-        _id: id,
-        message: 'Hello from Thali at ' + id
-    }, function (err, doc) {
-        console.log(doc);
-    });
+        server = net.createServer(function (c) { //'connection' listener
+             console.log('TCP/IP server connected');
+             c.on('end', function () {
+                 console.log('TCP/IP server is disconnected');
+             });
 
-    app.listen(3000);
+             c.on('data', function (data) {
+                 // BUGBUG: On the desktop this event listener is not necessary. But on JXCore on Android
+                 // we have to include this handler or no data will ever arrive at the server.
+                 // Please see https://github.com/jxcore/jxcore/issues/411
+                 console.log("We received data on the socket the server is listening on - " + data.toString());
+                 gotMessage("data: " + data.toString());
+                 c.write("Got data : " + data.toString());
+             });
 
-    function sync(remoteCouch) {
-        console.log("synch databse with : " + remoteCouch);
+            // c.pipe(c);
+         });
 
-        var opts = {continuous: true, complete: syncError};
-        db.replicate.to(remoteCouch, opts);
-        db.replicate.from(remoteCouch, opts);
-    }
-    function syncError(err) {
-        console.log(err);
-    }
+         server.listen(port, function() { //'listening' listener
+             console.log('server is bound to : ' + port);
+         });
+     }
 
-    function replicate(remoteCouch) {
-        console.log("replicate databse with : " + remoteCouch);
-
-        var rep = PouchDB.replicate('postcard',remoteCouch, {
-            live: true,
-            retry: true
-        }).on('change', function (info) {
-            console.log("-**-remoteCouch : change, "  + info);
-        }).on('paused', function () {
-            console.log("-**-remoteCouch : paused");
-        }).on('active', function () {
-            console.log("-**-remoteCouch : active");
-        }).on('denied', function (info) {
-            console.log("-**-remoteCouch : denied, " + info);
-        }).on('complete', function (info) {
-            console.log("-**-remoteCouch : complete, " + info);
-        }).on('error', function (err) {
-            console.log("-**-remoteCouch : error, " + err);
+    var clientSocket = 0;
+    function startClientSocket(port) {
+        if(clientSocket != 0) {
+            clientSocket.end();
+            clientSocket = 0;
+        }
+        clientSocket = net.connect(port, function () { //'connect' listener
+            console.log("We have successfully connected to the server.");
+        });
+        clientSocket.on('data', function (data) {
+            console.log("clientSocket got data: " + data.toString());
+            gotMessage("data: " + data.toString());
+        });
+        clientSocket.on('end', function () {
+            console.log('clientSocket is disconnected');
         });
     }
+    function sendGetRequest(message) {
+        clientSocket.write(message);
+    }
 
+    function closeSockets() {
+        if(clientSocket != 0){
+            clientSocket.end();
+            clientSocket = 0;
+        }
+        if(server != 0){
+            server.close();
+            server = 0;
+        }
+    }
 
-/*----------------------------------------------------------------------------------
-     End- PouchDB related functionality
+ /*----------------------------------------------------------------------------------
+ End- TCP/IP related functionality
  -----------------------------------------------------------------------------------*/
 
 /*
@@ -205,8 +218,9 @@ Helper functions
             if (result) {
                 console.log(" server listens port :" + serverport);
                 //start HTTP server for incoming queries
-                closeServerHandle = 0;
-                server.listen(serverport);
+                //closeServerHandle = 0;
+                //server.listen(serverport);
+                startServerSocket(serverport);
             }
         });
         return result;
@@ -223,6 +237,11 @@ Helper functions
     function DisconnectPeer(address) {
         cordova('DisconnectPeer').callNative(address, function () {
             console.log("DisconnectPeer callback with " + arguments.length + " arguments");
+
+            if(clientSocket != 0) {
+                clientSocket.end();
+                clientSocket = 0;
+            }
         });
     };
 
@@ -231,10 +250,7 @@ Helper functions
         cordova('StopPeerCommunications').callNative(function () {
         });
 
-        if (closeServerHandle != 0) {
-            closeServerHandle.close();
-            closeServerHandle = 0;
-        }
+        closeSockets();
     };
 
 
@@ -271,6 +287,8 @@ Helper functions
         console.log('peerAvailabilityChanged called with port:' + port);
         httpRequestport = port;
         peerConnectionStateChanged(peerId, "Connected");
+
+        startClientSocket(httpRequestport);
 
     });
 

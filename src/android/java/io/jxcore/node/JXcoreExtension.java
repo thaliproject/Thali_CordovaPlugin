@@ -145,7 +145,7 @@ public class JXcoreExtension {
               if(params.size() > 0) {
                   peerId = params.get(0).toString();
               }
-              mBtConnectorHelper.ReStart(peerId);
+              mBtConnectorHelper.Disconnect(peerId);
 
           }
       });
