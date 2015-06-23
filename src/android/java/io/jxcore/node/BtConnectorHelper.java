@@ -72,12 +72,11 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
     public boolean Disconnect(String peerId){
 
-        print_debug("Disconnect");
         boolean ret = false;
         if (mBtToServerSocket != null) {
             String currentpeerId = mBtToServerSocket.GetPeerId();
+            print_debug("Disconnect : " + peerId + ", current Server : " + currentpeerId);
             if(peerId.length() == 0 || peerId.equalsIgnoreCase(currentpeerId)) {
-
                 print_debug("Disconnect:::Stop :" + currentpeerId);
                 mBtToServerSocket.Stop();
                 mBtToServerSocket = null;
@@ -86,8 +85,11 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 jxcore.CallJSMethod("peerNotConnected", args.toArray());
                 ret = true;
             }
-        }else if(mBtToRequestSocket != null) {
+        }
+
+        if(mBtToRequestSocket != null) {
             String currentpeerId = mBtToRequestSocket.GetPeerId();
+            print_debug("Disconnect : " + peerId + ", current request : " + currentpeerId);
             if(peerId.length() == 0 || peerId.equalsIgnoreCase(currentpeerId)) {
                 print_debug("Disconnect:::Stop :" + currentpeerId);
                 mBtToRequestSocket.Stop();
@@ -98,9 +100,10 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 ret = true;
             }
         }
+
         return ret;
     }
-
+/*
     public void ReStart(String peerId){
         print_debug("ReStart connector");
         if(mBTConnector != null){
@@ -111,7 +114,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         Disconnect(peerId);
         mBTConnector = new BTConnector(context,this,this,conSettings,instanceEncryptionPWD);
         mBTConnector.Start(this.myPeerIdentifier,this.myPeerName);
-    }
+    }*/
 
     public String GetDeviceName(){
 
@@ -197,43 +200,43 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     public void Connected(BluetoothSocket bluetoothSocket, boolean incoming,String peerId,String peerName,String peerAddress) {
 
         if(bluetoothSocket != null) {
+            // See when we could support multiple connections
+            if (mBtToRequestSocket != null  || mBtToServerSocket != null) {
+                print_debug("Got connection while having old one, will disconnect" );
+                try{
+                    bluetoothSocket.close();
+                }catch (Exception e){
+                    print_debug("Errro while disconnecting : " + e.toString());
+                }
+            }else {
 
-            if (mBtToRequestSocket != null) {
-                mBtToRequestSocket.Stop();
-                mBtToRequestSocket = null;
-            }
+                AddPeerIfNotDiscovered(bluetoothSocket, peerId, peerName, peerAddress);
+                ArrayList<Object> args = new ArrayList<Object>();
+                args.add(peerId);
 
-            if (mBtToServerSocket != null) {
-                mBtToServerSocket.Stop();
-                mBtToServerSocket = null;
-            }
+                print_debug("Staring the connected thread incoming : " + incoming);
 
-            AddPeerIfNotDiscovered(bluetoothSocket, peerId, peerName, peerAddress);
-            ArrayList<Object> args = new ArrayList<Object>();
-            args.add(peerId);
+                if (incoming) {
+                    mBtToServerSocket = new BtToServerSocket(bluetoothSocket, mHandler);
+                    mBtToServerSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
+                    mBtToServerSocket.setPort(this.mServerPort);
+                    mBtToServerSocket.start();
 
-            print_debug("Staring the connected thread incoming : " + incoming);
+                    int port = mBtToServerSocket.GetLocalHostPort();
+                    print_debug("Server socket is using : " + port);
+                    args.add(port);
+                    jxcore.CallJSMethod("peerGotConnection", args.toArray());
+                } else {
+                    mBtToRequestSocket = new BtToRequestSocket(bluetoothSocket, mHandler);
+                    mBtToRequestSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
+                    mBtToRequestSocket.setPort(getFreePort());
+                    mBtToRequestSocket.start();
 
-            if(incoming) {
-                mBtToServerSocket = new BtToServerSocket(bluetoothSocket, mHandler);
-                mBtToServerSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
-                mBtToServerSocket.setPort(this.mServerPort);
-                mBtToServerSocket.start();
-
-                int port = mBtToServerSocket.GetLocalHostPort();
-                print_debug("Server socket is using : " + port);
-                args.add(port);
-                jxcore.CallJSMethod("peerGotConnection", args.toArray());
-            }else{
-                mBtToRequestSocket = new BtToRequestSocket(bluetoothSocket, mHandler);
-                mBtToRequestSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
-                mBtToRequestSocket.setPort(getFreePort());
-                mBtToRequestSocket.start();
-
-                int port = mBtToRequestSocket.GetLocalHostPort();
-                print_debug("Server socket is using : " + port);
-                args.add(port);
-                jxcore.CallJSMethod("peerConnected", args.toArray());
+                    int port = mBtToRequestSocket.GetLocalHostPort();
+                    print_debug("Server socket is using : " + port);
+                    args.add(port);
+                    jxcore.CallJSMethod("peerConnected", args.toArray());
+                }
             }
         }
     }
@@ -441,9 +444,9 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                         jxcore.CallJSMethod("peerNotConnected", args.toArray());
                     }
 
-                    if(mBTConnector != null) {
+               /*     if(mBTConnector != null) {
                         ReStart(peerId);
-                    }
+                    }*/
                 }
                 break;
             }
