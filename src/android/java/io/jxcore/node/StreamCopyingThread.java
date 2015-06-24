@@ -51,8 +51,8 @@ public class StreamCopyingThread extends Thread {
                     if (mInputStream != null && mOutputStream != null) {
                         int n = 0;
                         while (-1 != (n = mInputStream.read(buffer)) && !mStopped) {
-                          //  String dbgMessage = "";//new String(buffer,0,n);
-                          //  print_debug(" Copying " + n + " bytes, data: " + dbgMessage);
+                            String dbgMessage = new String(buffer,0,n);
+                            print_debug(" Copying " + n + " bytes, data: " + dbgMessage);
                             mOutputStream.write(buffer, 0, n);
                         }
 

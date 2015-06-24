@@ -14,8 +14,6 @@ import java.net.Socket;
  */
 public class BtToServerSocket extends Thread implements StreamCopyingThread.CopyThreadCallback {
 
-    public static final int MESSAGE_READ         = 0x11;
-    public static final int MESSAGE_WRITE        = 0x22;
     public static final int SOCKET_DISCONNEDTED  = 0x33;
 
     private BluetoothSocket mmSocket = null;;

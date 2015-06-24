@@ -138,6 +138,7 @@
         if (state == "Connecting") {
             jxcore('ShowToast').call('Connecting  to ' + peerId, false);
         } else if (state == "Disconnected") {
+            incomingConnection = true;
             jxcore('ShowToast').call('Disconnected from ' + peerId, true);
             document.getElementById('RemNameBox').value = "";
             document.getElementById('RemAddrBox').value = "";
@@ -151,7 +152,6 @@
                 }
             }
         } else if (state == "peerGotConnection") {
-            incomingConnection = true;
             document.getElementById('RemAddrBox').value = peerId;
             for (var key in _peers) {
                 if (_peers[key].peerIdentifier == peerId) {

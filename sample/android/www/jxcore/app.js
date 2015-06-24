@@ -39,13 +39,12 @@
         return peerIdentifier;
     };
 
-    function getFreePort() {
-        var freePortNumber;
-        cordova('getFreePort').callNative(function (portno) {
+    function getFreePort(callback) {
+
+        cordova('GetFreePort').callNative(function (portno) {
             console.log('getFreePort return was ' + portno);
-            freePortNumber = portno;
+            callback(portno);
         });
-        return freePortNumber;
     };
 
     var peerIdentifier = getPeerIdentifier();
@@ -60,7 +59,7 @@
 
 /*----------------------------------------------------------------------------------
      Start- HTTP related functionality
------------------------------------------------------------------------------------*/
+-----------------------------------------------------------------------------------
 
     var http = require("http");
     var server = http.createServer(function (request, response) {
@@ -131,123 +130,196 @@
         });
         x.end();
     }
+    */
 /*----------------------------------------------------------------------------------
 End- HTTP related functionality
-Start- PouchDB related functionality
+Start- TCP/IP related functionality
  -----------------------------------------------------------------------------------*/
+    // var sockettest = require('./sockettest');
 
-    var express = require('express'),
-        app     = express(),
-        PouchDB = require('pouchdb');
+    var net = require('net');
 
-// Remove powered by
-    app.disable('x-powered-by');
+    var server = 0;
+    function startServerSocket(port) {
 
-// Add postcard database
-    app.use('/db', require('express-pouchdb')(PouchDB));
-    var db = new PouchDB('postcard');
-    var id = new Date().toISOString();
+        if(server != 0){
+            server.close();
+            server = 0;
+        }
 
-    db.put({
-        _id: id,
-        message: 'Hello from Thali at ' + id
-    }, function (err, doc) {
-        console.log(doc);
-    });
+        server = net.createServer(function (c) { //'connection' listener
+             console.log('TCP/IP server connected');
+             peerConnectionStateChanged("debug","peerGotConnection");
 
-    app.listen(3000);
+             c.on('end', function () {
+                console.log('TCP/IP server is ended');
+            });
+            c.on('close', function () {
+                console.log('TCP/IP server is close');
+              //  peerConnectionStateChanged("debug","Disconnected");
+            });
+            c.on('error', function (err) {
+                console.log('TCP/IP server got error : ' + err);
+        //      peerConnectionStateChanged("debug","Disconnected");
+            });
 
-    function sync(remoteCouch) {
-        console.log("synch databse with : " + remoteCouch);
+             c.on('data', function (data) {
+                 // BUGBUG: On the desktop this event listener is not necessary. But on JXCore on Android
+                 // we have to include this handler or no data will ever arrive at the server.
+                 // Please see https://github.com/jxcore/jxcore/issues/411
+                 console.log("We received data on the socket the server is listening on - " + data.toString());
+                 gotMessage("data: " + data.toString());
+                 c.write("Got data : " + data.toString());
+             });
 
-        var opts = {continuous: true, complete: syncError};
-        db.replicate.to(remoteCouch, opts);
-        db.replicate.from(remoteCouch, opts);
-    }
-    function syncError(err) {
-        console.log(err);
-    }
+            // c.pipe(c);
+         });
 
-    function replicate(remoteCouch) {
-        console.log("replicate databse with : " + remoteCouch);
+        server.on('error', function (data) {
+            console.log("serverSocket error: " + data.toString());
+       //     peerConnectionStateChanged("debug","Disconnected");
+        });
+        server.on('close', function () {
+          //  peerConnectionStateChanged("debug","Disconnected");
+            console.log('server socket is disconnected');
+        });
 
-        var rep = PouchDB.replicate('postcard',remoteCouch, {
-            live: true,
-            retry: true
-        }).on('change', function (info) {
-            console.log("-**-remoteCouch : change, "  + info);
-        }).on('paused', function () {
-            console.log("-**-remoteCouch : paused");
-        }).on('active', function () {
-            console.log("-**-remoteCouch : active");
-        }).on('denied', function (info) {
-            console.log("-**-remoteCouch : denied, " + info);
-        }).on('complete', function (info) {
-            console.log("-**-remoteCouch : complete, " + info);
-        }).on('error', function (err) {
-            console.log("-**-remoteCouch : error, " + err);
+         server.listen(port, function() { //'listening' listener
+             console.log('server is bound to : ' + port);
+         });
+     }
+
+    var clientSocket = 0;
+    function startClientSocket(port) {
+        if(clientSocket != 0) {
+            clientSocket.end();
+            clientSocket = 0;
+        }
+        clientSocket = net.connect(port, function () { //'connect' listener
+            peerConnectionStateChanged("debug","Connected");
+            console.log("We have successfully connected to the server.");
+        });
+        clientSocket.on('data', function (data) {
+            console.log("clientSocket got data: " + data.toString());
+            gotMessage("data: " + data.toString());
+        });
+        clientSocket.on('close', function () {
+            // peerConnectionStateChanged("debug","Disconnected");
+            console.log('clientSocket is closed');
         });
     }
+    function sendGetRequest(message) {
+        clientSocket.write(message);
+    }
+
+    function closeSockets() {
+        if(clientSocket != 0){
+            clientSocket.end();
+            clientSocket = 0;
+        }
+        if(server != 0){
+            server.close();
+            server = 0;
+        }
+    }
 
 
-/*----------------------------------------------------------------------------------
-     End- PouchDB related functionality
- -----------------------------------------------------------------------------------*/
+        /*----------------------------------------------------------------------------------
+         End- TCP/IP related functionality
+         -----------------------------------------------------------------------------------*/
 
-/*
-Helper functions
- */
+        /*
+         Helper functions
+         */
 
 // Starts peer communications.
+//
     function startPeerCommunications(peerIdentifier, peerName) {
-        var result;
-        // find free port we can use for the HTTP server
-        var serverport = getFreePort();
+            
+            // find free port we can use for the HTTP server
+        getFreePort(function (serverport){
+            console.log(" server listens port :" + serverport);
+                startServerSocket(serverport);;
 
-        cordova('StartPeerCommunications').callNative(peerIdentifier, peerName, serverport, function (value) {
-            result = Boolean(value);
-            console.log("StartPeerCommunications returned : " + result);
-            if (result) {
-                console.log(" server listens port :" + serverport);
-                //start HTTP server for incoming queries
-                closeServerHandle = 0;
-                server.listen(serverport);
-            }
+                cordova('StartBroadcasting').callNative(peerIdentifier, peerName, serverport, function (err) {
+                    console.log("StartPeerCommunications returned : " + err + ", port: " + port);
+                    if (err != null && err.length > 0) {
+                        cordova('ShowToast').callNative("Can not Start boardcasting: " + err, true, function () {
+                            //callback(arguments);
+                        });
+                    }
+                })
         });
-        return result;
     };
 
 // Connect to the device.
     function ConnectToDevice(address) {
-        cordova('ConnectToDevice').callNative(address, function () {
-            console.log("ConnectToDevice called");
+        cordova('Connect').callNative(address, function (err, port) {
+            console.log("ConnectToDevice called with port " + port + ", error: " + err);
+
+            if (err != null && err.length > 0) {
+                cordova('ShowToast').callNative("Can not Connect: " + err, true, function () {
+                    //callback(arguments);
+                });
+            }else if (port > 0){
+                console.log("Starting client socket at : " + port);
+                startClientSocket(port);
+            }
         });
     };
 
+    /**
+     * Jukka debug helper -start
+     */
+    cordova('GotIncomingConnection').registerToNative(function (peerId) {
+        console.log('GotIncomingConnection called with peer id: ' + peerId);
+
+        cordova('Connect').callNative(peerId, function (err, port) {
+            console.log("ConnectToDevice called with port " + port + ", error: " + err);
+
+            if (err != null && err.length > 0) {
+                cordova('ShowToast').callNative("Can not Connect: " + err, true, function () {
+                    //callback(arguments);
+                });
+            }else if (port > 0){
+                startClientSocket(port);
+            }
+        });
+    });
+    /**
+     * Jukka debug helper -end
+     */
+
 // Connect to the device.
     function DisconnectPeer(address) {
-        cordova('DisconnectPeer').callNative(address, function () {
-            console.log("DisconnectPeer callback with " + arguments.length + " arguments");
+
+        //debug stuff
+        peerConnectionStateChanged("debug","Disconnected");
+    // debug time I use "" as peer address, it disconnects al
+        cordova('Disconnect').callNative("", function (err) {
+            console.log("DisconnectPeer callback with err: " + err);
+
+            if(clientSocket != 0) {
+                clientSocket.end();
+                clientSocket = 0;
+            }
         });
     };
 
 // Stops peer communications.
     function stopPeerCommunications(peerIdentifier, peerName) {
-        cordova('StopPeerCommunications').callNative(function () {
+        cordova('StopBroadcasting').callNative(function () {
         });
 
-        if (closeServerHandle != 0) {
-            closeServerHandle.close();
-            closeServerHandle = 0;
-        }
-    }
+        closeSockets();
+    };
 
 
-// inform connection status.
+// inform connection status, helpper for debug
     function peerConnectionStateChanged(peerIdentifier, state) {
 
-        console.log("peerConnectionStateChanged " + peerIdentifier + " to  state " + state);
         if (isFunction(peerConnectionStatusCallback)) {
+            console.log("peerConnectionStateChanged " + peerIdentifier + " to  state " + state);
             peerConnectionStatusCallback(peerIdentifier, state);
         } else {
             console.log("peerConnectionStatusCallback not set !!!!");
@@ -255,60 +327,20 @@ Helper functions
     }
 
 
+    /*
+     Registred event handlers
+     */
 
-
- /*
- Registred native functions for conenctivity & peers change events
- */
-
-// Register peerGotConnection callback.
-    cordova('peerGotConnection').registerToNative(function (peerId, port) {
-        console.log('peerAvailabilityChanged called with port : ' + port);
-
-        //inform the UI of the connectivity change
-        peerConnectionStateChanged(peerId, "peerGotConnection");
-
-    });
-
-
-// Register peerConnected callback.
-    cordova('peerConnected').registerToNative(function (peerId, port) {
-        console.log('peerAvailabilityChanged called with port:' + port);
-        httpRequestport = port;
-        peerConnectionStateChanged(peerId, "Connected");
-
-    });
-
-    // Register peerNotConnected callback.
-    cordova('peerNotConnected').registerToNative(function (peerId) {
-        console.log('peerAvailabilityChanged called');
-
-        peerConnectionStateChanged(peerId, "Disconnected");
-    });
-
-    // Register peerConnecting callback.
-    cordova('peerConnecting').registerToNative(function (peerId) {
-        console.log('peerAvailabilityChanged called');
-
-        peerConnectionStateChanged(peerId, "Connecting");
-    });
-
-    // Register peerAvailabilityChanged callback.
+// Register peerAvailabilityChanged callback.
     cordova('peerAvailabilityChanged').registerToNative(function (args) {
         console.log('peerAvailabilityChanged called');
-        var peers = args[0];
 
-        console.log("peerChanged " + peers);
         if (isFunction(peerChangedCallback)) {
             peerChangedCallback(args);
         } else {
             console.log("peerChangedCallback not set !!!!");
         }
     });
-
-    /*
-     other Registred native functions
-     */
 
     cordova('networkChanged').registerToNative(function (args) {
         console.log('networkChanged called');
@@ -318,40 +350,14 @@ Helper functions
         if (network.isReachable) {
             console.log('****** NETWORK REACHABLE!!!');
         }
-
-    });
-
-    var isInForeground = false;
-
-    cordova('onLifeCycleEvent').registerToNative(function (message) {
-        console.log("LifeCycleEvent :" + message.lifecycleevent);
-
-        if (message.lifecycleevent.localeCompare("onActivityCreated") == 0) {
-            console.log("Activity was created");
-            isInForeground = true;
-        } else if (message.lifecycleevent.localeCompare("onActivityStarted") == 0) {
-            console.log("Activity was started");
-            isInForeground = true;
-        } else if (message.lifecycleevent.localeCompare("onActivityResumed") == 0) {
-            console.log("Activity was resumed");
-            isInForeground = true;
-        } else if (message.lifecycleevent.localeCompare("onActivityPaused") == 0) {
-            console.log("Activity was paused");
-            isInForeground = false;
-        } else if (message.lifecycleevent.localeCompare("onActivityStopped") == 0) {
-            console.log("Activity was stopped");
-            isInForeground = false;
-        } else if (message.lifecycleevent.localeCompare("onActivitySaveInstanceState") == 0) {
-            console.log("Activity was save on instance event");
-        } else if (message.lifecycleevent.localeCompare("onActivityDestroyed") == 0) {
-            console.log("Activity was destroyed");
-            isInForeground = false;
-        } else {
-            console.log("unknown LifeCycleEvent received !!!");
+        if(network.isWiFi){
+            console.log('****** WIFI is on!!!');
         }
 
-        console.log("App is in foregound " + isInForeground);
     });
+
+
+
 
     /*
      funtions for Cordova app usage
@@ -374,16 +380,11 @@ Helper functions
     });
 
     cordova('SynchDBNow').registerAsync(function(callback){
-        console.log("SynchDBNow Called");
-        sync("/localhost:" + httpRequestport + "/postcard");
-        //sync("http://localhost:" + httpRequestport + "/");
+        console.log("SynchDBNow  not implemented yet");
     });
 
     cordova('ReplicateDBNow').registerAsync(function(callback){
-        console.log("ReplicateDBNow called");
-
-        replicate("/localhost:" + httpRequestport + "/postcard");
-        //'http://127.0.0.1:5984/postcard'
+        console.log("ReplicateDBNow not implemented yet");
     });
 
 
@@ -433,19 +434,6 @@ Helper functions
         cordova('ShowToast').callNative(message, isLong, function () {
             //callback(arguments);
         });
-    });
-
-    /*
-     Debug stuff
-     */
-    cordova('OnMessagingEvent').registerToNative(function (message) {
-        console.log("On-MessagingEvent:" + arguments.length + " arguments : msg: " + message);
-
-        if (isFunction(MessageCallback)) {
-            MessageCallback(message);
-        } else {
-            console.log("MessageCallback not set !!!!");
-        }
     });
 
 
