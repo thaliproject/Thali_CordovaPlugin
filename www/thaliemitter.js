@@ -13,11 +13,6 @@ ThaliEmitter.events = {
   NETWORK_CHANGED: 'networkChanged'
 };
 
-var JSON_EVENTS = [
-  'peerAvailabilityChanged',
-  'networkChanged'
-];
-
 ThaliEmitter.prototype._init = function () {
   var self = this;
 
@@ -38,15 +33,13 @@ ThaliEmitter.prototype._init = function () {
 };
 
 // Starts peer communications.
-ThaliEmitter.startBroadcasting = function(port, cb) {
-    getDeviceName(function (deviceName) {
-    cordova('StartBroadcasting').callNative(deviceName, port, function (err) {
-      if (err) {
-        cb(new Error(err));
-      } else {
-        cb();
-      }
-    });
+ThaliEmitter.startBroadcasting = function(deviceName, port, cb) {
+  cordova('StartBroadcasting').callNative(deviceName, port, function (err) {
+    if (err) {
+      cb(new Error(err));
+    } else {
+      cb();
+    }
   });
 };
 
@@ -70,23 +63,5 @@ ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
     }
   });
 };
-
-ThaliEmitter.prototype.disconnect = function (peerIdentifier, cb) {
-  cordova('Disconnect').callNative(peerIdentifier, function (err) {
-    if (err) {
-      cb(new Error(err));
-    } else {
-      cb();
-    }
-  });
-};
-
-/* Begin Utility Methods */
-function getDeviceName(cb) {
-  cordova('GetDeviceName').callNative(function (deviceName) {
-    cb(deviceName);
-  });
-};
-/* End Utility Methods */
 
 module.exports = ThaliEmitter;
