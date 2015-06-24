@@ -14,26 +14,16 @@ ThaliReplicationManager.prototype.start = function (cb) {
   var self = this;
 
   this._isStarted = true;
-  this._changes = db.changes({
-    since: 'now',
-    live: true,
-    include_docs: true
-  }).on('change', function() {
-
-  }).on('error', function (err) {
-    cb(err);
-  });
 
   this._emitter.startBroadcasting(function (err) {
     if (err) { return cb(err); }
-    self._emitter.addListener(PEER_AVAILABILITY_CHANGED, replacePeers.bind(self));
+    self._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(self));
   });
 };
 
 ThaliReplicationManager.prototype.stop = function (cb) {
   if (!this._isStarted) { throw new Error('.start must be called before stop'); }
 
-  // TODO: Stop replications
   var self = this;
   this._emitter.stopBroadcasting(function (err) {
     if (err) { return cb(err); }
@@ -43,7 +33,7 @@ ThaliReplicationManager.prototype.stop = function (cb) {
   });
 };
 
-function replacePeers(peers) {
+function syncPeers(peers) {
   for(var i = 0, len = peers.length; i < len; i++) {
     var peer = peers[i];
     var isFound = false;

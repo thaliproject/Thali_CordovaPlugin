@@ -9,12 +9,6 @@ function ThaliEmitter() {
 inherits(ThaliEmitter, EventEmitter);
 
 ThaliEmitter.events = {
-  CONNECTING_TO_PEER_SERVER: 'connectingToPeerServer',
-  CONNECTED_TO_PEER_SERVER: 'connectedToPeerServer',
-  NOT_CONNECTED_TO_PEER_SERVER: 'notConnectedToPeerServer',
-  PEER_CLIENT_CONNECTING: 'peerClientConnecting',
-  PEER_CLIENT_CONNECTED: 'peerClientConnected',
-  PEER_CLIENT_NOT_CONNECTED: 'peerClientNotConnected',
   PEER_AVAILABILITY_CHANGED: 'peerAvailabilityChanged',
   NETWORK_CHANGED: 'networkChanged'
 };
@@ -30,12 +24,7 @@ ThaliEmitter.prototype._init = function () {
   function registerCordovaPeerEvent(eventName) {
     function emitEvent(eventName) {
       return function handler(arg) {
-        // Parse if it's a JSON object
-        if (JSON_EVENTS.indexOf(eventName) !== -1) {
-          arg = JSON.parse(arg);
-        }
-
-        self.emit(eventName, arg);
+        self.emit(eventName, JSON.parse(arg));
       };
     }
 
@@ -49,15 +38,14 @@ ThaliEmitter.prototype._init = function () {
 };
 
 // Starts peer communications.
-ThaliEmitter.startBroadcasting = function(cb) {
+ThaliEmitter.startBroadcasting = function(port, cb) {
   getPeerIdentifier(function (err, peerIdentifier) {
     getDeviceName(function (err, deviceName) {
-      cordova('StartPeerCommunications').callNative(peerIdentifier, deviceName, function (value) {
-        // TODO: This needs to be an error or something
-        if (!value) {
-          cb(new Error('Cannot start device advertising'));
+      cordova('StartBroadcasting').callNative(peerIdentifier, deviceName, port, function (err) {
+        if (err) {
+          cb(new Error(err));
         } else {
-          cb(null);
+          cb();
         }
       });
     })
@@ -66,35 +54,31 @@ ThaliEmitter.startBroadcasting = function(cb) {
 
 // Stops peer communications.
 ThaliEmitter.stopBroadcasting = function(cb) {
-  cordova('StopPeerCommunications').callNative(function (value) {
-    // TODO: This needs to be an error or something
-    if (!value) {
-      cb(new Error('Cannot stop device advertising'));
+  cordova('StopBroadcasting').callNative(function (err) {
+    if (err) {
+      cb(new Error(err));
     } else {
-      cb(null);
+      cb();
     }
   });
 };
 
-ThaliEmitter.prototype.beginCommunicationWithPeer = function (peerIdentifier) {
-  cordova('BeginConnectToPeerServer').callNative(peerIdentifier, function (value) {
-    // TODO: This needs to be an error or something
-    if (!value) {
-      cb(new Error('Cannot start communication with peer'));
+ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
+  cordova('Connect').callNative(peerIdentifier, function (err, port) {
+    if (err) {
+      cb(new Error(err));
     } else {
-      // Should have a port number
-      cb(null, 0);
+      cb(null, port);
     }
   });
 };
 
-ThaliEmitter.prototype.stopCommunicationWithPeer = function (peerIdentifier) {
-  cordova('DisconnectFromPeerServer').callNative(peerIdentifier, function (value) {
-    // TODO: This needs to be an error or something
-    if (!value) {
-      cb(new Error('Cannot stop communication with peer'));
+ThaliEmitter.prototype.disconnect = function (peerIdentifier, cb) {
+  cordova('Disconnect').callNative(peerIdentifier, function (err) {
+    if (err) {
+      cb(new Error(err));
     } else {
-      cb(null);
+      cb();
     }
   });
 };
@@ -119,9 +103,9 @@ function getPeerIdentifier(cb) {
       cb(null, value);
     } else {
       cordova('MakeGUID').callNative(function (guid) {
-        cordova('SetKeyValue').callNative(key, guid, function (response) {
+        cordova('SetKeyValue').callNative(key, guid, function (err) {
           if (!response.result) {
-            cb(new Error('Failed to save peer identifier'));
+            cb(new Error(err));
           } else {
             cb(null, guid);
           }
