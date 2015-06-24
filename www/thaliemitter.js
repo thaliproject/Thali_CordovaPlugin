@@ -39,16 +39,14 @@ ThaliEmitter.prototype._init = function () {
 
 // Starts peer communications.
 ThaliEmitter.startBroadcasting = function(port, cb) {
-  getPeerIdentifier(function (err, peerIdentifier) {
-    getDeviceName(function (err, deviceName) {
-      cordova('StartBroadcasting').callNative(peerIdentifier, deviceName, port, function (err) {
-        if (err) {
-          cb(new Error(err));
-        } else {
-          cb();
-        }
-      });
-    })
+    getDeviceName(function (deviceName) {
+    cordova('StartBroadcasting').callNative(deviceName, port, function (err) {
+      if (err) {
+        cb(new Error(err));
+      } else {
+        cb();
+      }
+    });
   });
 };
 
@@ -86,34 +84,9 @@ ThaliEmitter.prototype.disconnect = function (peerIdentifier, cb) {
 /* Begin Utility Methods */
 function getDeviceName(cb) {
   cordova('GetDeviceName').callNative(function (deviceName) {
-    cb(null, deviceName);
+    cb(deviceName);
   });
 };
-
-function getFreePort(cb) {
-  cordova('getFreePort').callNative(function (freePort) {
-    cb(null, freePort);
-  });
-}
-
-function getPeerIdentifier(cb) {
-  var key = 'PeerIdentifier';
-  cordova('GetKeyValue').callNative(key, function (value) {
-    if (value !== undefined) {
-      cb(null, value);
-    } else {
-      cordova('MakeGUID').callNative(function (guid) {
-        cordova('SetKeyValue').callNative(key, guid, function (err) {
-          if (!response.result) {
-            cb(new Error(err));
-          } else {
-            cb(null, guid);
-          }
-        })
-      })
-    }
-  })
-}
 /* End Utility Methods */
 
 module.exports = ThaliEmitter;
