@@ -14,13 +14,9 @@ import android.net.NetworkInfo;
 public class ConnectivityMonitor {
 
     BroadcastReceiver receiver = null;
-
-  //  BtConnectorHelper.jxCallBack jxcore = null; // remove the line
     Activity activity = jxcore.activity;
 
-    public ConnectivityMonitor(/*Activity Context, BtConnectorHelper.jxCallBack callBack*/){
-/*        jxcore = callBack;
-        activity = Context;*/
+    public ConnectivityMonitor(){
     }
 
     public void Start(){
@@ -64,12 +60,12 @@ public class ConnectivityMonitor {
 
                 String reply = "";
                 if (isConnected) {
-                    reply = "{\"isReachable\":\"" + isConnected + "\", " + "\"isWiFi\":\"" + isWiFi + "\"}";
+                    reply = "{\"" + JXcoreExtension.EVENTVALUESTRING_REACHABLE + "\":\"" + isConnected + "\", " + "\"" + JXcoreExtension.EVENTVALUESTRING_WIFI + "\":\"" + isWiFi + "\"}";
                 } else {
-                    reply = "{\"isReachable\":\"" + isConnected + "\"}";
+                    reply = "{\"" + JXcoreExtension.EVENTVALUESTRING_REACHABLE + "\":\"" + isConnected + "\"}";
                 }
 
-                jxcore.CallJSMethod("networkChanged", reply);
+                jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_NETWORKCHANGED, reply);
             }
         });
     }

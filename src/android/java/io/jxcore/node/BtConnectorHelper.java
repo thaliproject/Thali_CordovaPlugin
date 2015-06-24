@@ -51,14 +51,14 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     }
 
 
-    public void Start(String peerIdentifier, String peerName,int port){
+    public BTConnector.WifiBtStatus Start(String peerIdentifier, String peerName,int port){
         this.mServerPort = port;
         this.myPeerIdentifier= peerIdentifier;
         this.myPeerName = peerName;
         this.lastAvailableList.clear();
         Stop();
         mBTConnector = new BTConnector(context,this,this,conSettings,instanceEncryptionPWD);
-        mBTConnector.Start(this.myPeerIdentifier,this.myPeerName);
+        return mBTConnector.Start(this.myPeerIdentifier,this.myPeerName);
     }
 
     public void Stop(){
@@ -80,9 +80,6 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 print_debug("Disconnect:::Stop :" + currentpeerId);
                 mBtToServerSocket.Stop();
                 mBtToServerSocket = null;
-                ArrayList<Object> args = new ArrayList<Object>();
-                args.add(currentpeerId);
-                jxcore.CallJSMethod("peerNotConnected", args.toArray());
                 ret = true;
             }
         }
@@ -94,27 +91,12 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 print_debug("Disconnect:::Stop :" + currentpeerId);
                 mBtToRequestSocket.Stop();
                 mBtToRequestSocket = null;
-                ArrayList<Object> args = new ArrayList<Object>();
-                args.add(currentpeerId);
-                jxcore.CallJSMethod("peerNotConnected", args.toArray());
                 ret = true;
             }
         }
 
         return ret;
     }
-/*
-    public void ReStart(String peerId){
-        print_debug("ReStart connector");
-        if(mBTConnector != null){
-            mBTConnector.Stop();
-            mBTConnector = null;
-        }
-
-        Disconnect(peerId);
-        mBTConnector = new BTConnector(context,this,this,conSettings,instanceEncryptionPWD);
-        mBTConnector.Start(this.myPeerIdentifier,this.myPeerName);
-    }*/
 
     public String GetDeviceName(){
 
@@ -131,7 +113,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         try {
             ServerSocket s = new ServerSocket(0);
             ret = s.getLocalPort();
-            print_debug("srvSocket got port: " +ret);
+            //print_debug("srvSocket got port: " +ret);
             s.close();
         }catch (Exception e){
             print_debug("create ServerSocket failed: "  + e.toString());
@@ -165,43 +147,63 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         return UUID.randomUUID().toString();
     }
 
-    public boolean BeginConnectPeer(String toPeerId) {
-        boolean ret = false;
-        ServiceItem selectedDevice = null;
-        if (lastAvailableList != null) {
-            for (int i = 0; i < lastAvailableList.size(); i++) {
-                if (lastAvailableList.get(i).peerId.contentEquals(toPeerId)) {
-                    selectedDevice = lastAvailableList.get(i);
-                    break;
+    ConnectStatusCallback mConnectStatusCallback = null;
+    public interface ConnectStatusCallback{
+        void ConnectionStatusUpdate(String Error, int port);
+    }
+
+    public void BeginConnectPeer(String toPeerId, ConnectStatusCallback connectStatusCallback) {
+        ConnectStatusCallback tmpCallback = connectStatusCallback;
+
+        if(tmpCallback == null) {
+            //nothing we should do, since we can not update progress
+            print_debug("BeginConnectPeer callback is NULL !!!!!!");
+        }else if(mBtToRequestSocket != null) {
+            tmpCallback.ConnectionStatusUpdate("Already connected to " + mBtToRequestSocket.GetPeerId(),-1);
+        }else {
+            ServiceItem selectedDevice = null;
+            if (lastAvailableList != null) {
+                for (int i = 0; i < lastAvailableList.size(); i++) {
+                    if (lastAvailableList.get(i).peerId.contentEquals(toPeerId)) {
+                        selectedDevice = lastAvailableList.get(i);
+                        break;
+                    }
                 }
             }
+
+            if (selectedDevice != null) {
+                if (mBTConnector != null) {
+                    BTConnector.TryConnectReturnValues retVal = mBTConnector.TryConnect(selectedDevice);
+                    if (retVal == BTConnector.TryConnectReturnValues.Connecting) {
+                        //all is ok, lets wait callbacks, and for them lets copy the callback here
+                        mConnectStatusCallback = connectStatusCallback;
+                    } else if (retVal == BTConnector.TryConnectReturnValues.NoSelectedDevice) {
+                        // we do check this already, thus we should not get this ever.
+                        tmpCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.",-1);
+                    } else if (retVal == BTConnector.TryConnectReturnValues.AlreadyAttemptingToConnect) {
+                        tmpCallback.ConnectionStatusUpdate("There is already one connection attempt progressing.",-1);
+                    } else if (retVal == BTConnector.TryConnectReturnValues.BTDeviceFetchFailed) {
+                        tmpCallback.ConnectionStatusUpdate("Bluetooth API failed to get Bluetooth device for the address : " + selectedDevice.peerAddress,-1);
+                    }
+
+                } else {
+                    tmpCallback.ConnectionStatusUpdate("Device conenctivity not started, please call StartBroadcasting before attempting to connnect",-1);
+                }
+            } else {
+                tmpCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.",-1);
+            }
         }
-
-        String peerId = toPeerId;
-        if(selectedDevice != null){
-            peerId = selectedDevice.peerId;
-        }
-
-        ArrayList<Object> args = new ArrayList<Object>();
-        args.add(peerId);
-
-        if (selectedDevice != null && mBTConnector != null  && mBTConnector.TryConnect(selectedDevice)) {
-            // we are ok, and status-callback will be delivering the events.
-            jxcore.CallJSMethod("peerConnecting", args.toArray());
-            ret = true;
-        } else {
-            jxcore.CallJSMethod("peerNotConnected", args.toArray());
-        }
-
-        return ret;
     }
 
     @Override
     public void Connected(BluetoothSocket bluetoothSocket, boolean incoming,String peerId,String peerName,String peerAddress) {
 
         if(bluetoothSocket != null) {
+
+            boolean okToContinue = true;
+
             // See when we could support multiple connections
-            if (mBtToRequestSocket != null  || mBtToServerSocket != null) {
+            if(incoming && mBtToServerSocket != null) {
                 print_debug("Got connection while having old one, will disconnect" );
                 try{
                     bluetoothSocket.close();
@@ -210,11 +212,13 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 }
             }else {
 
-                AddPeerIfNotDiscovered(bluetoothSocket, peerId, peerName, peerAddress);
-                ArrayList<Object> args = new ArrayList<Object>();
-                args.add(peerId);
+                // basically we should never get to make successful connection
+                // if we already have one outgoing, so the old if it would somehow be there
+                // would be invalid, so lets get rid of it if we are having new outgoing connection.
+                //if (!incoming && mBtToRequestSocket != null)
 
-                print_debug("Staring the connected thread incoming : " + incoming);
+                AddPeerIfNotDiscovered(bluetoothSocket, peerId, peerName, peerAddress);
+                print_debug("Starting the connected thread incoming : " + incoming);
 
                 if (incoming) {
                     mBtToServerSocket = new BtToServerSocket(bluetoothSocket, mHandler);
@@ -223,19 +227,35 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                     mBtToServerSocket.start();
 
                     int port = mBtToServerSocket.GetLocalHostPort();
-                    print_debug("Server socket is using : " + port);
-                    args.add(port);
-                    jxcore.CallJSMethod("peerGotConnection", args.toArray());
+                    print_debug("Server socket is using : " + port + ", and is now connected.");
+
+                    // todo remove this when done with it !!!!
+                    //in end product there would be communications between the devices to identify each other
+                    // but as we don't have that now, we would need to figure way to know who conneccted in
+                    // thus for testing time I'm raising an event here !!
+
+                    ArrayList<Object> args = new ArrayList<Object>();
+                    args.add(peerId);
+                    jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_INCOMINGCONNECTION, args.toArray());
+
                 } else {
+
+                    if(mBtToRequestSocket != null){
+                        mBtToRequestSocket.Stop();
+                        mBtToRequestSocket = null;
+                    }
+
                     mBtToRequestSocket = new BtToRequestSocket(bluetoothSocket, mHandler);
                     mBtToRequestSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
                     mBtToRequestSocket.setPort(getFreePort());
                     mBtToRequestSocket.start();
 
                     int port = mBtToRequestSocket.GetLocalHostPort();
-                    print_debug("Server socket is using : " + port);
-                    args.add(port);
-                    jxcore.CallJSMethod("peerConnected", args.toArray());
+                    print_debug("Request socket is using : " + port);
+                    if(mConnectStatusCallback != null){
+                        print_debug("Calling ConnectionStatusUpdate with port :" + port);
+                        mConnectStatusCallback.ConnectionStatusUpdate(null,port);
+                    }
                 }
             }
         }
@@ -256,21 +276,28 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             }
         }
         if (!isDiscovered) {
-            ServiceItem tmpSrv = new ServiceItem(peerId,peerName,peerAddress, "", "","");
+            String BtAddress = peerAddress;
+            if(bluetoothSocket != null){
+                if(bluetoothSocket.getRemoteDevice() != null){
+                    BtAddress = bluetoothSocket.getRemoteDevice().getAddress();
+                }
+            }
+
+            ServiceItem tmpSrv = new ServiceItem(peerId,peerName,BtAddress, "", "","");
             lastAvailableList.add(tmpSrv);
 
             String reply = "[";
             reply = reply + getAvailabilityStatus(tmpSrv, true);
             reply = reply +"]";
-            jxcore.CallJSMethod("peerChanged", reply);
+            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_PEERAVAILABILITY, reply);
         }
     }
 
     @Override
     public void ConnectionFailed(String peerId, String peerName, String peerAddress) {
-        ArrayList<Object> args = new ArrayList<Object>();
-        args.add(peerId);
-        jxcore.CallJSMethod("peerNotConnected", args.toArray());
+        if(mConnectStatusCallback != null){
+            mConnectStatusCallback.ConnectionStatusUpdate("Connection to " + peerId + " failed",-1);
+        }
     }
 
     @Override
@@ -296,9 +323,9 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
     }
 
-    // this is called with a fulllist of peer-services we see, its takes time to get,
+    // this is called with a full list of peer-services we see, its takes time to get,
     // since there is time spend between each peer we discover
-    // anyway, this list can be sued for determioning whether the peer we saw earlier has now disappeared
+    // anyway, this list can be used for determining whether the peer we saw earlier has now disappeared
     // will be called null or empty list, if no services are found during some time period.
 
     @Override
@@ -350,7 +377,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         // lets not sent any empty arrays up.
         if(reply.length() > 5) {
-            jxcore.CallJSMethod("peerChanged", reply);
+            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_PEERAVAILABILITY, reply);
         }
         return null;
     }
@@ -371,82 +398,37 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         if (!wasPrevouslyAvailable) {
             lastAvailableList.add(serviceItem);
             String stateReply = "[" + getAvailabilityStatus(serviceItem, true) + "]";
-            jxcore.CallJSMethod("peerAvailabilityChanged", stateReply);
+            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_PEERAVAILABILITY, stateReply);
         }
     }
-    /*
-        {
-            "peerIdentifier": "F50F4805-A2AB-4249-9E2F-4AF7420DF5C7",
-            "peerName": "Her Phone",
-            "state": "Available"
-        }
-    */
+
     private String getAvailabilityStatus(ServiceItem item, boolean available) {
         String reply = "";
         if(item != null) {
-            reply = "{\"peerIdentifier\":\"" + item.peerId + "\", " + "\"peerName\":\"" + item.peerName + "\", " + "\"peerAvailable\":\"" + available + "\"}";
+            reply = "{\"" + JXcoreExtension.EVENTVALUESTRING_PEERID + "\":\"" + item.peerId + "\", " + "\"" + JXcoreExtension.EVENTVALUESTRING_PEERNAME + "\":\"" + item.peerName + "\", " + "\"" + JXcoreExtension.EVENTVALUESTRING_PEERAVAILABLE + "\":\"" + available + "\"}";
         }
         return reply;
     }
 
-    private String getStatusItem(String peerId, String peerName, String state) {
-        String reply = "";
-        reply = "{\"peerIdentifier\":\"" + peerId + "\", " + "\"peerName\":\"" + peerName + "\", " + "\"state\":\"" + state + "\"}";
-        return reply;
-    }
-
-        // The Handler that gets information back from the BluetoothChatService
+    // The Handler that gets disconnection events
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-                case BtToServerSocket.MESSAGE_WRITE:
-                {
-                    byte[] writeBuf = (byte[]) msg.obj;// construct a string from the buffer
-                    String writeMessage = new String(writeBuf);
-
-                    ArrayList<Object> args = new ArrayList<Object>();
-                    args.add(writeMessage);
-
-                    //String reply = "{ \"writeMessage\": \"" + writeMessage + "\"}";
-                    jxcore.CallJSMethod("OnMessagingEvent", args.toArray());
-                }
-                break;
-                case BtToServerSocket.MESSAGE_READ:
-                {
-                    byte[] readBuf = (byte[]) msg.obj;// construct a string from the valid bytes in the buffer
-                    String readMessage = new String(readBuf, 0, msg.arg1);
-
-                    ArrayList<Object> args = new ArrayList<Object>();
-                    args.add(readMessage);
-
-                    //String reply = "{ \"readMessage\": \"" + readMessage + "\"}";
-                    jxcore.CallJSMethod("OnMessagingEvent", args.toArray());
-                }
-                break;
-                case BtToRequestSocket.SOCKET_DISCONNEDTED:
-                case BtToServerSocket.SOCKET_DISCONNEDTED: {
-
-                    String peerId = "";
-                    if (mBtToServerSocket != null) {
-                        peerId = mBtToServerSocket.GetPeerId();
-                        mBtToServerSocket.Stop();
-                        mBtToServerSocket = null;
-                        ArrayList<Object> args = new ArrayList<Object>();
-                        args.add(peerId);
-                        jxcore.CallJSMethod("peerNotConnected", args.toArray());
-                    }else if(mBtToRequestSocket != null) {
-                        peerId = mBtToRequestSocket.GetPeerId();
+                case BtToRequestSocket.SOCKET_DISCONNEDTED:{
+                    if(mBtToRequestSocket != null) {
+                        print_debug("BT Request socket disconnected");
                         mBtToRequestSocket.Stop();
                         mBtToRequestSocket = null;
-                        ArrayList<Object> args = new ArrayList<Object>();
-                        args.add(peerId);
-                        jxcore.CallJSMethod("peerNotConnected", args.toArray());
                     }
-
-               /*     if(mBTConnector != null) {
-                        ReStart(peerId);
-                    }*/
+                }
+                break;
+                case BtToServerSocket.SOCKET_DISCONNEDTED: {
+                    if (mBtToServerSocket != null) {
+                        print_debug("BT Server socket disconnected");
+                        mBtToServerSocket.Stop();
+                        mBtToServerSocket = null;
+                    }
                 }
                 break;
             }
