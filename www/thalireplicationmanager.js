@@ -10,6 +10,10 @@ function ThaliReplicationManager(db, emitter) {
   this._isStarted = false;
 }
 
+/**
+* Starts the Thali replication manager
+* @param {Function} cb a callback function which returns an error if one occurred.
+*/
 ThaliReplicationManager.prototype.start = function (cb) {
   var self = this;
   this._emitter.startBroadcasting(function (err) {
@@ -17,12 +21,16 @@ ThaliReplicationManager.prototype.start = function (cb) {
       self._isStarted = false;
       cb(err);
     }
-    self._isStarted;
+    self._isStarted = true;
     self._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(self));
     cb();
   });
 };
 
+/**
+* Stops the Thali replication manager
+* @param {Function} cb a callback function which returns an error if one occurred.
+*/
 ThaliReplicationManager.prototype.stop = function (cb) {
   if (!this._isStarted) { throw new Error('.start must be called before stop'); }
 
@@ -53,7 +61,11 @@ function syncPeers(peers) {
     if (isReplicating && !peer.isAvailable) {
       peers[0].replication.cancel();
       peers[1].replication.cancel();
+
       this._replcations.splice(this._replcations.findIndex(findPeer), 2);
+      this._emitter.disconnect(peer.peerIdentifier, function (err) {
+        // TODO: Log error
+      });
     }
 
   }, this);

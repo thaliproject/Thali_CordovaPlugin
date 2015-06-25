@@ -21,10 +21,10 @@ This method starts advertising or broadcasting its availability at the following
 
 #### Arguments:
 
-1. deviceName : `String` – obtained via the cordova(‘GetDeviceName).callNative(cb) call
-2. portNumber : `Number` – obtained by the user of the code which indicates the port number of our local PouchDB/Express-PouchDB
-3. callback : `Function` – must be in the form of the following, `function (err)` where:
-  - err : String – a string value containing the error if one occurred, else `null`
+1. `deviceName` : `String` – the device name.
+2. `portNumber` : `Number` – obtained by the user of the code which indicates the port number of our local PouchDB/Express-PouchDB
+3. `callback` : `Function` – must be in the form of the following, `function (err)` where:
+  - `err` : `String` – a string value containing the error if one occurred, else `null`
 
 ***
 
@@ -35,20 +35,32 @@ This method stops advertising or broadcasting of its availability.
 #### Arguments:
 
 1. `callback` : `Function` – must be in the form of the following, function (err) where:
-    - `err` : `String` – a string value containing the error if one occurred, else null
+    - `err` : `String` – a string value containing the error if one occurred, else `null`
 
 ***
 
-### `Connect(peerIdentifier, callback)``
+### `Connect(peerIdentifier, callback)`
 
 This method begins a connection to the given peer found during discoverability.  If this is called twice with the same peer identifier, an error will be thrown that it is in process.
 
 #### Arguments:
 
-1. `peerIdentifier` : `String` – peer identifier found during the peerAvailabilityChanged event.
+1. `peerIdentifier` : `String` – peer identifier found during the `peerAvailabilityChanged` event.
 2. `callback` : `Function` – must be in the form of the following, `function (err, port)` where:
     - `err` : `String` – a string value containing the error if one occurred, else null
     - `port` : `Number` – the port to connect to the other server for PouchDB synchronization, e.g. 5678 so that we can synchronize to `http://localhost:5678/dbname`
+
+***
+
+### `Disconnect(peerIdentifier, callback)`
+
+This method disconnects from the given peer by the given peer identifier.  If the peer is already disconnected, then no error shall be thrown.
+
+#### Arguments:
+
+1. `peerIdentifier` : `String` – peer identifier found during the peerAvailabilityChanged event.
+2. `callback` : `Function` – must be in the form of the following, `function (err)` where:
+    - `err` : `String` – a string value containing the error if one occurred, else `null`
 
 ***
 
@@ -66,6 +78,8 @@ This event is called when a peer’s availability has changed.
     - `peerIdentifier` : `String` – the peer identifier
     - `peerName` : `String` – the name of the peer
     - `peerAvailable` : `Boolean` – whether the peer is available or not
+
+***
 
 ### `networkChanged`
 
