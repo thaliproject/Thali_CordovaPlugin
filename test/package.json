@@ -1,0 +1,20 @@
+{
+  "name": "thali-cordova-plugin-test",
+  "version": "1.0.0",
+  "description": "Thali Cordoa Plugin Tests",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "Thali",
+    "PouchDB",
+    "Cordova"
+  ],
+  "author": "Microsoft Corporation",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^3.0.0",
+    "mocha": "^2.2.5"
+  }
+}
