@@ -41,7 +41,7 @@ ThaliEmitter.prototype._init = function () {
 * @param {Number} port the port number to broadcast.
 * @param {Function} cb the callback which returns an error if one has occurred.
 */
-ThaliEmitter.startBroadcasting = function(deviceName, port, cb) {
+ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
   Mobile('StartBroadcasting').callNative(deviceName, port, function (err) {
     if (err) {
       cb(new Error(err));
@@ -55,7 +55,7 @@ ThaliEmitter.startBroadcasting = function(deviceName, port, cb) {
 * Starts broadcasting the availability of the current device.
 * @param {Function} cb the callback which returns an error if one has occurred.
 */
-ThaliEmitter.stopBroadcasting = function(cb) {
+ThaliEmitter.prototype.stopBroadcasting = function(cb) {
   Mobile('StopBroadcasting').callNative(function (err) {
     if (err) {
       cb(new Error(err));
@@ -90,7 +90,7 @@ ThaliEmitter.prototype.disconnect = function (peerIdentifier, cb) {
     if (err) {
       cb(new Error(err));
     } else {
-      cb(null, port);
+      cb();
     }
   });
 };

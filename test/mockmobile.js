@@ -10,8 +10,8 @@ Mobile.invokeNative = function (key, arg) {
 };
 
 function invokeCallback(key, args) {
-  var args = keys[key].callNativeArguments;
-  var cb = args[args.length - 1];
+  var localArgs = keys[key].callNativeArguments;
+  var cb = localArgs[localArgs.length - 1];
   cb.apply(null, args);
 }
 
