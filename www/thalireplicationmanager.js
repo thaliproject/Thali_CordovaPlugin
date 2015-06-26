@@ -1,52 +1,84 @@
 require('./polyfills');
 var ThaliEmitter = require('./thaliemitter');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
 
 var PEER_AVAILABILITY_CHANGED = ThaliEmitter.events.PEER_AVAILABILITY_CHANGED;
+var NETWORK_CHANGED = ThaliEmitter.events.NETWORK_CHANGED;
+
+inherits(ThaliReplicationManager, EventEmitter);
 
 function ThaliReplicationManager(db, emitter) {
   this._db = db;
   this._emitter = (emitter || new ThaliEmitter());
   this._replications = [];
   this._isStarted = false;
+  EventEmitter.call(this);
+}
+
+ThaliReplicationManager.events = {
+  STARTING = 'starting',
+  STARTED = 'started',
+  STOPPING = 'stopping',
+  STOPPED = 'stopped',
+  START_ERROR = 'startError',
+  STOP_ERROR = 'stopError',
+  CONNECT_ERROR = 'connectError',
+  DISCONNECT_ERROR = 'disconnectError',
+  SYNC_ERROR = 'syncError'
 }
 
 /**
 * Starts the Thali replication manager
-* @param {Function} cb a callback function which returns an error if one occurred.
 */
-ThaliReplicationManager.prototype.start = function (cb) {
-  var self = this;
+ThaliReplicationManager.prototype.start = function () {
+  var this = this;
+  this.emit(ThaliReplicationManager.eevents.STARTING);
   this._emitter.startBroadcasting(function (err) {
     if (err) {
-      self._isStarted = false;
-      cb(err);
+      this._isStarted = false;
+      this.emit(ThaliReplicationManager.events.START_ERROR, err);
+    } else {
+      this._isStarted = true;
+      this._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(this));
+      this._emitter.addListener(NETWORK_CHANGED, networkChanged.bind(this));
+      this.emit(ThaliReplicationManager.events.STARTED);
     }
-    self._isStarted = true;
-    self._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(self));
-    cb();
-  });
+  }.bind(this));
 };
 
 /**
 * Stops the Thali replication manager
 * @param {Function} cb a callback function which returns an error if one occurred.
 */
-ThaliReplicationManager.prototype.stop = function (cb) {
+ThaliReplicationManager.prototype.stop = function () {
   if (!this._isStarted) { throw new Error('.start must be called before stop'); }
-
-  var self = this;
+  this.emit(ThaliReplicationManager.events.STOPPING);
+  var this = this;
   this._emitter.stopBroadcasting(function (err) {
-    if (err) { return cb(err); }
-    self._emitter.removeAllListeners(PEER_AVAILABILITY_CHANGED);
-    self.replications.forEach(function (item) { item.replication.cancel(); });
-    self._isStarted = false;
-    cb();
+    if (err) {
+      this.emit(ThaliReplicationManager.events.STOP_ERROR, err);
+    } else {
+      this._emitter.removeAllListeners(PEER_AVAILABILITY_CHANGED);
+      this._emitter.removeAllListeners(NETWORK_CHANGED);
+      this.replications.forEach(function (item) { item.replication.cancel(); });
+      this._isStarted = false;
+      this.emit(ThaliReplicationManager.events.STOPPED);
+    }
   });
 };
 
-function syncPeers(peers) {
-  var self = this;
+function networkChanged(status) {
+  if (!status.isAvailable && this._isStarted) {
+    this.stop();
+  }
 
+  if (status.isAvailable && !this._isStarted) {
+    this.start();
+  }
+}
+
+function syncPeers(peers) {
   peers.forEach(function (peer) {
 
     // Check if already in replication, and if not, add it
@@ -64,35 +96,35 @@ function syncPeers(peers) {
 
       this._replcations.splice(this._replcations.findIndex(findPeer), 2);
       this._emitter.disconnect(peer.peerIdentifier, function (err) {
-        // TODO: Log error
-      });
+        this.emit(ThaliReplicationManager.events.DISCONNECT_ERROR, err);
+      }.bind(this));
     }
 
   }, this);
 }
 
 function syncPeer(peer, error) {
-  var self = this;
-
-  // TODO: Check the incoming error
+  if (error) {
+    this.emit(ThaliReplicationManager.events.SYNC_ERROR, error);
+  }
 
   this._emitter.connect(peer.peerIdentifier, function (err, port) {
     if (err) {
-      // TODO: Handle error
+      this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
     } else {
-      var remoteDB = 'http://localhost:' + port + '/' + self.db._db_name;
+      var remoteDB = 'http://localhost:' + port + '/' + this.db._db_name;
       var options = { live: true };
-      self._replications.push({
-        replication: self._db.replicate.from(remoteDB, options)
-          .on('error', syncPeer.bind(self, peer)),
+      this._replications.push({
+        replication: this._db.replicate.from(remoteDB, options)
+          .on('error', syncPeer.bind(this, peer)),
         peerIdentifier: peer.peerIdentifier
       }, {
-        replication: self._db.replicate.to(remoteDB, options)
-          .on('error', syncPeer.bind(self, peer)),
+        replication: this._db.replicate.to(remoteDB, options)
+          .on('error', syncPeer.bind(this, peer)),
         peerIdentifier: peer.peerIdentifier
       })
     }
-  });
+  }.bind(this));
 }
 
 module.exports = ThaliReplicationManager;
