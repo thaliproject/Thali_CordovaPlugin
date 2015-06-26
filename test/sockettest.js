@@ -1,8 +1,45 @@
 "use strict";
 
+// A workaround for https://github.com/jxcore/jxcore/issues/415 that breaks Bluebird
+global.self = global;
+
 var net = require('net');
 var randomstring = require('randomstring');
 var Promise = require('bluebird');
+var multiplex = require('multiplex');
+
+// BUGBUG - Both getDeviceName and getPeerIdentifier should go away
+// Gets the device name.
+function getDeviceName() {
+    var deviceNameResult;
+    cordova('GetDeviceName').callNative(function (deviceName) {
+        console.log('GetDeviceName return was ' + deviceName);
+        deviceNameResult = deviceName;
+    });
+    return deviceNameResult;
+}
+
+// Gets the peer identifier.
+function getPeerIdentifier() {
+    var _peerIdentifierKey = 'PeerIdentifier';
+    var peerIdentifier;
+    cordova('GetKeyValue').callNative(_peerIdentifierKey, function (value) {
+        peerIdentifier = value;
+        if (peerIdentifier == undefined) {
+            cordova('MakeGUID').callNative(function (guid) {
+                peerIdentifier = guid;
+                cordova('SetKeyValue').callNative(_peerIdentifierKey, guid, function (response) {
+                    if (!response.result) {
+                        alert('Failed to save the peer identifier');
+                    }
+                });
+            });
+        }
+    });
+    return peerIdentifier;
+}
+
+
 
 // BUGBUG - This is really just one time use test code but I really should change the code to close the server and
 // client socket to use the bluebird using/disposer pattern.
@@ -20,10 +57,7 @@ exports.startSocketServer = function(port) {
         });
 
         incomingClientSocket.on('data', function(data) {
-            // BUGBUG: On the desktop this event listener is not necessary. But on JXCore on Android
-            // we have to include this handler or no data will ever arrive at the server.
-            // Please see https://github.com/jxcore/jxcore/issues/411
-            // console.log("We received data on the socket the server is listening on - " + data);
+            console.log("We got data on the server side - " + data);
         });
 
         incomingClientSocket.pipe(incomingClientSocket);
@@ -91,7 +125,7 @@ function socketClientTest(getServerPortFunction, messageSize) {
                 // It's very difficult to know for sure when the current thread will lose control since we call into
                 // functions like destroy and rejectWithRetryError that do things like throw exceptions that can
                 // potentially cause odd changes in thread control. So we make sure to set retryAttempted to true
-                // before doing anything "interesting" to make sure we have set up effectively a locked section that
+                // before doing anything "interesting" to make we have set up effectively a locked section that
                 // will make sure that we only retry any particular attempt exactly once. In other words even if the
                 // restartIfTestNotPassed function on the same instance of socketClientTest is called multiple times
                 // by different event listeners we are guaranteed that one and only one call will result in a retry.
@@ -118,6 +152,7 @@ function socketClientTest(getServerPortFunction, messageSize) {
             var currentMessage = "";
 
             clientSocket.on('data', function(data) {
+                console.log("We have received the following data from the server - " + data);
                 currentMessage += data;
                 testPassed = testMessageState(testMessage, currentMessage, clientSocket, resolve, reject);
             });
@@ -137,6 +172,8 @@ function socketClientTest(getServerPortFunction, messageSize) {
             clientSocket.on('close', function() {
                 restartIfTestNotPassed(testPassed, "Close before Passing", clientSocket, reject);
             });
+        }).catch(function(err) {
+            console.log("socketClientTest-Catch for call to getServerPortFunction with error - " + err);
         });
     });
 }
@@ -163,7 +200,7 @@ function manageMessagePasses(getServerPortFunction, messageSize, remainingPasses
 }
 
 exports.startSocketClient = function(getServerPortFunction) {
-    var messageSize = 1024 * 5;
+    var messageSize = 200;
     var maxPasses = 5;
     return manageMessagePasses(getServerPortFunction, messageSize, maxPasses);
 };
@@ -174,7 +211,7 @@ function testSuccessOrFailure(server, getServerPortFunction) {
     exports.startSocketClient(getServerPortFunction)
         .then(function() {
             console.log("All tests ended successfully!");
-            server.close();
+            //server.close();
         }).catch(function(error) {
             console.log("Test failed with: " + error);
             server.close();
@@ -190,48 +227,177 @@ exports.nodeJSTest = function() {
     return testSuccessOrFailure(server, function() { return Promise.resolve(serverPort); });
 };
 
+function tcpProxyServer(port, serverPlex) {
+    var server = net.createServer(function(incomingClientSocket) {
+        console.log("We have a incomingClientSocket connection!");
+
+        incomingClientSocket.on('end', function() {
+            console.log("We lost a incomingClientSocket connection.");
+        });
+
+        incomingClientSocket.on('data', function(data) {
+            console.log("We got data on the server side - " + data);
+        });
+
+        incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
+    });
+
+    server.listen(port);
+
+    return server;
+}
+
+function muxServerBridge(localP2PTcpServerPort, tcpEndpointServerPort) {
+    var serverPlex = multiplex({}, function(stream, id) {
+        console.log("Server received stream id " + id);
+        var clientSocket = net.createConnection({port: tcpEndpointServerPort});
+        stream.pipe(clientSocket).pipe(stream);
+
+        stream.on('data', function(data) {
+            console.log("We got data on the muxServerBridge serverPlex - " + data);
+        });
+    });
+
+    var server = net.createServer(function(incomingClientSocket) {
+        console.log("We have a incomingClientSocket connection!");
+
+        incomingClientSocket.on('end', function() {
+            console.log("We lost a incomingClientSocket connection.");
+        });
+
+        incomingClientSocket.on('data', function(data) {
+            console.log("We got data on the server side - " + data);
+        });
+
+        incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
+    });
+
+    server.listen(localP2PTcpServerPort);
+
+    return server;
+}
+
+function muxClientBridge(muxServerPort, localP2PTcpServerPort) {
+    var clientPlex = multiplex();
+    var clientSocket = net.createConnection({port: localP2PTcpServerPort});
+
+    var server = net.createServer(function(incomingClientSocket) {
+        console.log("We have a incomingClientSocket connection!");
+
+        incomingClientSocket.on('end', function() {
+            console.log("We lost a incomingClientSocket connection.");
+        });
+
+        incomingClientSocket.on('data', function(data) {
+            console.log("We got data on the server side - " + data);
+        });
+
+        var clientStream = clientPlex.createStream();
+        incomingClientSocket.pipe(clientStream).pipe(incomingClientSocket);
+    });
+
+    server.listen(muxServerPort);
+
+    clientPlex.pipe(clientSocket).pipe(clientPlex);
+
+    return server;
+}
+
+exports.multiplexPlusTCPTest = function() {
+    var serverPort = 9998;
+    var server = exports.startSocketServer(serverPort);
+
+    var localP2PTcpServerPort = 9000;
+    muxServerBridge(localP2PTcpServerPort, serverPort);
+    var muxServerPort = 9001;
+    muxClientBridge(muxServerPort, localP2PTcpServerPort);
+
+    // This is a test to see if node.js will close the mux client bridge's TCP client
+    // connection to the mux Server Bridge's TCP front end server when it is idle for
+    // a whole second.
+    setTimeout(function() {
+        testSuccessOrFailure(server, function() { return Promise.resolve(muxServerPort); });
+        testSuccessOrFailure(server, function() { return Promise.resolve(muxServerPort); });
+        testSuccessOrFailure(server, function() { return Promise.resolve(muxServerPort); });
+    }, 1000);
+
+};
+
+/*
+ I write to multiplex client stream directly
+ client plex ->  tcp/ip client socket -> tcp/ip server socket -> server plex
+ */
+exports.multiplexTest = function() {
+    var serverPort = 9998;
+    var clientPlex = multiplex();
+    var serverPlex = multiplex({}, function(stream, id) {
+        console.log("Server received stream id " + id);
+        stream.on('data', function(data) {
+            stream.write(data);
+        });
+    });
+
+    var serverSocket = tcpProxyServer(serverPort, serverPlex);
+
+    var clientSocket = net.createConnection({port: serverPort});
+
+    clientPlex.pipe(clientSocket).pipe(clientPlex);
+
+    var yoDogStream = clientPlex.createStream("Yo Dog!");
+
+    yoDogStream.on('data', function(data) {
+        console.log("Client received back data: " + data.toString());
+    });
+
+    yoDogStream.write("This is a test");
+};
+
 // This is a mock up of what the actual test function for story -1 should look like. It's a mock up because
 // the native functions don't actually work yet. But this should give a sense of what things should look like.
 // Note that we should wrap the native function calls into promise based wrappers. It would make the code below
 // massively more readable. Nested callbacks suck. :(
 exports.realTest = function() {
     var serverPort = 9998;
-    var server = exports.startSocketClient(serverPort);
+    var server = exports.startSocketServer(serverPort);
     var peerIdentifier = getPeerIdentifier();
     var peerName = getDeviceName();
     var peersWeAreTestingAgainst = [];
-    cordova('StartPeerCommunications').callNative(peerIdentifier, peerName, serverPort,
-        function(startPeerCommunicationsValue) {
-            var result = JSON.parse(startPeerCommunicationsValue);
-            if (result.result) {
-                cordova('peerAvailabilityChanged').registerToNative(function(peerAvailabilityChangedResult) {
-                    var peers = JSON.parse(peerAvailabilityChangedResult);
-                    for(var i = 0; i < peers.length; i++) {
-                        var peer = peerAvailabilityChangedResult[i];
-                        if (peer.peerAvailable &&
-                            (peersWeAreTestingAgainst.indexOf(peer.peerIdentifier) == -1)) {
-                            peersWeAreTestingAgainst.push(peer.peerIdentifier);
-                            testSuccessOrFailure(server, function() {
-                                return new Promise(function(resolve, reject) {
-                                    cordova('ConnectToDevice').callNative(peer.peerIdentifier,
-                                        function(connectToDeviceValue) {
-                                            var connectToDeviceValueArray = JSON.parse(connectToDeviceValue);
-                                            if (connectToDeviceValueArray[0] == "TRUE") {
-                                                resolve(connectToDeviceValueArray[1]);
-                                            } else {
-                                                reject("Attempt to get port to connect to remote device failed" +
-                                                " because of " + connectToDeviceValueArray[1]);
-                                            }
-                                        });
-                                });
+    console.log("realtest - About to start real test and call StartBroadcasting");
+    cordova('StartBroadcasting').callNative(peerIdentifier, peerName, serverPort,
+        function(err) {
+            if (err != null && err.length > 0) {
+                throw new Error("Call to StartBroadcasting failed! Error - " + err);
+            }
 
-                            })
-
-                        }
+            console.log("realtest - About to call peerAvailabilityChanged");
+            cordova('peerAvailabilityChanged').registerToNative(function(peers) {
+                console.log("realtest - Got peers! - " + JSON.stringify(peers));
+                peers.forEach(function(peer) {
+                    cordova('realtest - peer: ' + JSON.stringify(peer));
+                    if (peer.peerAvailable &&
+                        (peersWeAreTestingAgainst.indexOf(peer.peerIdentifier) == -1)) {
+                        console.log("realtest - About to push peer id - " + peer.peerIdentifier)
+                        peersWeAreTestingAgainst.push(peer.peerIdentifier);
+                        console.log("realtest - About to call testSuccessOrFailure.");
+                        testSuccessOrFailure(server, function() {
+                            return new Promise(function(resolve, reject) {
+                                console.log("realtest - About to call connect on peer - " + JSON.stringify(peer));
+                                cordova('Connect').callNative(peer.peerIdentifier,
+                                    function(err, port) {
+                                        console.log("realtest - Connect called back with - err: " + err + ", port: " + port);
+                                        if (err != null && err.length > 0) {
+                                            reject("Attempt to get port to connect to remote device failed" +
+                                                " because of " + err);
+                                        } else if (port == 0) {
+                                            reject("Got port == 0 when attempting to connect to peer!");
+                                        } else {
+                                            resolve(port);
+                                        }
+                                    });
+                            });
+                        })
                     }
                 });
-            } else {
-                throw new Error("Call to StartPeerCommunications failed!");
-            }
+            });
         });
 };

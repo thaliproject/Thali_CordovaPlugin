@@ -47,7 +47,7 @@
                     alert('Error loading ThaliMobile app.js');
                     alert(err);
                 } else {
-                   // logInCordova('Loaded');
+                    // logInCordova('Loaded');
                     jxcore_ready();
                 }
             });
@@ -57,13 +57,13 @@
 
     function jxcore_ready() {
 
-        document.getElementById("startButton").addEventListener("click", startConnector);
-        document.getElementById("stopButton").addEventListener("click", stopConnector);
-        document.getElementById("SendButton").addEventListener("click", SendMessage);
-        document.getElementById("ClearMessagesButton").addEventListener("click", ClearMessages);
-        document.getElementById("DisconnectButton").addEventListener("click", DisconnectPeer);
-        document.getElementById("ReplicateButton").addEventListener("click", replicatedbnow);
-        document.getElementById("SynchButton").addEventListener("click", synchdbnow);
+        //document.getElementById("startButton").addEventListener("click", startConnector);
+        //document.getElementById("stopButton").addEventListener("click", stopConnector);
+        //document.getElementById("SendButton").addEventListener("click", SendMessage);
+        //document.getElementById("ClearMessagesButton").addEventListener("click", ClearMessages);
+        //document.getElementById("DisconnectButton").addEventListener("click", DisconnectPeer);
+        //document.getElementById("ReplicateButton").addEventListener("click", replicatedbnow);
+        //document.getElementById("SynchButton").addEventListener("click", synchdbnow);
     }
 
 //   alert('button is set');
