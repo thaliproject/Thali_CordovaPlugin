@@ -62,8 +62,6 @@
         document.getElementById("SendButton").addEventListener("click", SendMessage);
         document.getElementById("ClearMessagesButton").addEventListener("click", ClearMessages);
         document.getElementById("DisconnectButton").addEventListener("click", DisconnectPeer);
-        document.getElementById("ReplicateButton").addEventListener("click", replicatedbnow);
-        document.getElementById("SynchButton").addEventListener("click", synchdbnow);
     }
 
 //   alert('button is set');
@@ -75,8 +73,9 @@
         jxcore('setConnectionStatusCallback').call(peersConnectionStateCallback);
         jxcore('setPeerChangedCallback').call(peersChangedCallback);
 
-        jxcore('StartConnector').call();
-        document.getElementById('StateBox').value = "Running";
+
+
+        jxcore('StartConnector').call(document.getElementById('nameBox').value);
         document.getElementById('stopButton').style.display = 'block';
         document.getElementById('startButton').style.display = 'none';
     }
@@ -84,7 +83,6 @@
     function stopConnector() {
 
         jxcore('StopConnector').call(peersChangedCallback);
-        document.getElementById('StateBox').value = "Stopped";
 
         document.getElementById('stopButton').style.display = 'none';
         document.getElementById('startButton').style.display = 'block';
@@ -251,17 +249,6 @@
             addChatLine(document.getElementById('RemNameBox').value, data);
         }
     }
-
-    function synchdbnow() {
-        jxcore('SynchDBNow').call(SendMessageCallback);
-        addChatLine("ME", "synching");
-    }
-
-    function replicatedbnow() {
-        jxcore('ReplicateDBNow').call(SendMessageCallback);
-        addChatLine("ME", "replicating");
-    }
-
     function SendMessage() {
         var message = document.getElementById('MessageBox').value;
 

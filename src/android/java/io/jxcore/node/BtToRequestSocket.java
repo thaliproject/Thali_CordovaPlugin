@@ -35,7 +35,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
 
     private int mHTTPPort = 0;
 
-    final String TAG = "--BtCon-Req-Socket";
+    final String TAG = "--BtCon-CLIENT-Socket";
 
     boolean mStopped = false;
 
@@ -67,7 +67,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
 
     public void run() {
         try {
-            print_debug("start ServerSocket with port: " + mHTTPPort);
+            print_debug("start Socket with port: " + mHTTPPort);
             srvSocket = new ServerSocket(mHTTPPort);
             mHTTPPort = srvSocket.getLocalPort();
             print_debug("mHTTPPort  set to : " + mHTTPPort);
@@ -85,6 +85,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
 
         if (srvSocket != null) {
             try {
+                print_debug("Now accepting connections");
                 Socket tmpSocket = srvSocket.accept();
                 CloseSocketAndStreams();
                 localHostSocket = tmpSocket;
@@ -131,8 +132,8 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
             }
         } else {
             mStopped = true;
-            print_debug("creating serve socket failed");
-            mHandler.obtainMessage(SOCKET_DISCONNEDTED, -1, -1, "creating serve socket failed").sendToTarget();
+            print_debug("creating  socket failed");
+            mHandler.obtainMessage(SOCKET_DISCONNEDTED, -1, -1, "creating socket failed").sendToTarget();
         }
 
         print_debug("rin ended ---------------------------;");
