@@ -16,10 +16,6 @@ import org.thaliproject.p2p.btconnectorlib.BTConnector;
 
 public class JXcoreExtension {
 
-    /*Jukka's debug event -- start*/
-    public static String EVENTSTRING_INCOMINGCONNECTION = "GotIncomingConnection";
-    /*Jukka's debug event -- end*/
-
     public static String EVENTSTRING_PEERAVAILABILITY   = "peerAvailabilityChanged";
     public static String EVENTVALUESTRING_PEERID        = "peerIdentifier";
     public static String EVENTVALUESTRING_PEERNAME      = "peerName";
@@ -30,13 +26,6 @@ public class JXcoreExtension {
     public static String EVENTVALUESTRING_WIFI          = "isWiFi";
 
     public static String METHODSTRING_SHOWTOAST         = "ShowToast";
-    public static String METHODSTRING_GETDEVICENAME     = "GetDeviceName";
-    public static String METHODSTRING_SETDEVICENAME     = "SetDeviceName";
-
-    public static String METHODSTRING_GETFREEPORT       = "GetFreePort";
-    public static String METHODSTRING_SETKEYVALUE       = "SetKeyValue";
-    public static String METHODSTRING_GETKEYVALUE       = "GetKeyValue";
-    public static String METHODSTRING_MAKEGUID          = "MakeGUID";
 
     public static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
     public static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
@@ -77,95 +66,15 @@ public class JXcoreExtension {
 
       final BtConnectorHelper mBtConnectorHelper = new BtConnectorHelper();
 
-      jxcore.RegisterMethod(METHODSTRING_GETDEVICENAME, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId){
-              ArrayList<Object> args = new ArrayList<Object>();
-              args.add(mBtConnectorHelper.GetDeviceName());
-              jxcore.CallJSMethod(callbackId, args.toArray());
-          }
-      });
-
-      jxcore.RegisterMethod(METHODSTRING_SETDEVICENAME, new JXcoreCallback() {
-            @Override
-            public void Receiver(ArrayList<Object> params, String callbackId) {
-                ArrayList<Object> args = new ArrayList<Object>();
-                boolean saved = false;
-                if (params.size() > 1) {
-                    String name = params.get(0).toString();
-                    saved = mBtConnectorHelper.SetDeviceName(name);
-                }
-                args.add(saved);
-                jxcore.CallJSMethod(callbackId, args.toArray());
-
-            }
-      });
-
-      jxcore.RegisterMethod(METHODSTRING_GETFREEPORT, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId){
-              ArrayList<Object> args = new ArrayList<Object>();
-              args.add(mBtConnectorHelper.getFreePort());
-              jxcore.CallJSMethod(callbackId, args.toArray());
-
-          }
-      });
-
-      jxcore.RegisterMethod(METHODSTRING_SETKEYVALUE, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId){
-
-              if(params.size() > 1) {
-                  String key = params.get(0).toString();
-                  String value = params.get(1).toString();
-
-                  boolean saved = true;
-                  mBtConnectorHelper.SetKeyValue(key, value);
-
-                  ArrayList<Object> args = new ArrayList<Object>();
-                  args.add(saved);
-                  jxcore.CallJSMethod(callbackId, args.toArray());
-              }
-          }
-      });
-
-      jxcore.RegisterMethod(METHODSTRING_GETKEYVALUE, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId){
-              if(params.size() > 0) {
-                  String key = params.get(0).toString();
-                  String value = mBtConnectorHelper.GetKeyValue(key);
-
-                  ArrayList<Object> args = new ArrayList<Object>();
-                  if (value != null) {
-                      args.add(value);
-                  }
-                  jxcore.CallJSMethod(callbackId, args.toArray());
-              }
-          }
-      });
-
-      jxcore.RegisterMethod(METHODSTRING_MAKEGUID, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId){
-              ArrayList<Object> args = new ArrayList<Object>();
-              args.add(mBtConnectorHelper.MakeGUID());
-              jxcore.CallJSMethod(callbackId, args.toArray());
-          }
-      });
-
-
-
       jxcore.RegisterMethod(METHODSTRING_STARTBROADCAST, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
-              if(params.size() > 2) {
-                  String peerId = params.get(0).toString();
-                  String peerName = params.get(1).toString();
-                  String port = params.get(2).toString();
+              if(params.size() > 1) {
+                  String peerName = params.get(0).toString();
+                  String port = params.get(1).toString();
 
                   boolean started = true;
-                  BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerId, peerName, Integer.decode(port));
+                  BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, Integer.decode(port));
 
                   ArrayList<Object> args = new ArrayList<Object>();
                   if(retVal.isWifiEnabled && retVal.isWifiOk

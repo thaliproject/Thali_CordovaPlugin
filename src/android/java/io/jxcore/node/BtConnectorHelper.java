@@ -51,9 +51,9 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     }
 
 
-    public BTConnector.WifiBtStatus Start(String peerIdentifier, String peerName,int port){
+    public BTConnector.WifiBtStatus Start(String peerName,int port){
         this.mServerPort = port;
-        this.myPeerIdentifier= peerIdentifier;
+        this.myPeerIdentifier= GetBluetoothAddress();
         this.myPeerName = peerName;
         this.lastAvailableList.clear();
         Stop();
@@ -67,22 +67,25 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             mBTConnector = null;
         }
 
-        Disconnect("");
+        if (mBtToServerSocket != null) {
+            print_debug("Disconnect:::Stop : mBtToServerSocket");
+            mBtToServerSocket.Stop();
+            mBtToServerSocket = null;
+        }
+
+        if(mBtToRequestSocket != null) {
+            print_debug("Disconnect:::Stop : mBtToRequestSocket");
+            mBtToRequestSocket.Stop();
+            mBtToRequestSocket = null;
+        }
     }
 
     public boolean Disconnect(String peerId){
 
         boolean ret = false;
-        if (mBtToServerSocket != null) {
-            String currentpeerId = mBtToServerSocket.GetPeerId();
-            print_debug("Disconnect : " + peerId + ", current Server : " + currentpeerId);
-            if(peerId.length() == 0 || peerId.equalsIgnoreCase(currentpeerId)) {
-                print_debug("Disconnect:::Stop :" + currentpeerId);
-                mBtToServerSocket.Stop();
-                mBtToServerSocket = null;
-                ret = true;
-            }
-        }
+
+// we only cut off our outgoing connections, incoming ones are cut off from the other end.
+// if we want to cut off whole communications, we'll do Stop
 
         if(mBtToRequestSocket != null) {
             String currentpeerId = mBtToRequestSocket.GetPeerId();
@@ -93,6 +96,16 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 mBtToRequestSocket = null;
                 ret = true;
             }
+        }
+
+        return ret;
+    }
+    public String GetBluetoothAddress(){
+
+        String ret= "";
+        BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
+        if(bluetooth != null){
+            ret = bluetooth.getAddress();
         }
 
         return ret;
@@ -228,15 +241,6 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
                     int port = mBtToServerSocket.GetLocalHostPort();
                     print_debug("Server socket is using : " + port + ", and is now connected.");
-
-                    // todo remove this when done with it !!!!
-                    //in end product there would be communications between the devices to identify each other
-                    // but as we don't have that now, we would need to figure way to know who conneccted in
-                    // thus for testing time I'm raising an event here !!
-
-                    ArrayList<Object> args = new ArrayList<Object>();
-                    args.add(peerId);
-                    jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_INCOMINGCONNECTION, args.toArray());
 
                 } else {
 
