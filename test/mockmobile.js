@@ -1,7 +1,7 @@
 var keys = {};
 
 function Mobile(key) {
-  keys[key] || (key[keys] = new NativeCall(key));
+  keys[key] || (keys[key] = new NativeCall(key));
   return keys[key];
 }
 
@@ -36,7 +36,7 @@ Mobile.invokeStartBroadcasting = function () {
 Mobile.invokeStopBroadcasting = function () {
   var len = arguments.length, args = new Array(len);
   for (var i = 0; i < len; i++) { args[i] = arguments[i]; }
-  invokeCallback('StopBroadcasting', args);  
+  invokeCallback('StopBroadcasting', args);
 };
 
 function NativeCall(key) {
@@ -46,7 +46,7 @@ function NativeCall(key) {
 }
 
 NativeCall.prototype = {
-  registerNative: function (cb) {
+  registerToNative: function (cb) {
     this.registerNativeCallback = cb;
   },
   callNative: function () {
