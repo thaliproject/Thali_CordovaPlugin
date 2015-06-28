@@ -52,12 +52,17 @@ exports.startSocketServer = function(port) {
     var server = net.createServer(function(incomingClientSocket) {
         console.log("We have a incomingClientSocket connection!");
 
+        incomingClientSocket.on('error', function(err) {
+            console.log("We got an error on incomingClientSocket connection - " + err);
+        });
+
         incomingClientSocket.on('end', function() {
             console.log("We lost a incomingClientSocket connection.");
         });
 
         incomingClientSocket.on('data', function(data) {
             console.log("We got data on the server side - " + data);
+
         });
 
         incomingClientSocket.pipe(incomingClientSocket);
@@ -247,29 +252,77 @@ function tcpProxyServer(port, serverPlex) {
     return server;
 }
 
+function cleanUpSocket(socket, cleanUpCallBack) {
+    var triedToClose = false;
+
+    socket.on('end', function() {
+        console.log("We got an end on incomingClientsocket");
+        cleanUpCallBack();
+        triedToClose = true;
+    });
+
+    socket.on('error', function() {
+        console.log("We got an error on incomingclientsocket!");
+        cleanUpCallBack();
+        triedToClose = true;
+    });
+
+    socket.on('close', function() {
+        console.log("We lost a incomingClientSocket connection.");
+        if (!triedToClose) {
+            cleanUpCallBack();
+            triedToClose = true;
+        }
+    });
+}
+
+function listenForStreamEvents(stream, prefixName) {
+    stream.on('error', function(err) {
+        console.log(prefixName + " error - " + err);
+    });
+
+    stream.on('end', function() {
+        console.log(prefixName + " end");
+    });
+
+    stream.on('close', function() {
+        console.log(prefixName + " close");
+    });
+
+    stream.on('data', function(data) {
+        console.log(prefixName + "  data  " + data);
+    });
+}
+
 function muxServerBridge(localP2PTcpServerPort, tcpEndpointServerPort) {
     var serverPlex = multiplex({}, function(stream, id) {
         console.log("Server received stream id " + id);
         var clientSocket = net.createConnection({port: tcpEndpointServerPort});
         stream.pipe(clientSocket).pipe(stream);
-
-        stream.on('data', function(data) {
-            console.log("We got data on the muxServerBridge serverPlex - " + data);
+        listenForStreamEvents(stream, "muxServerBridge + MuxStream");
+        listenForStreamEvents(clientSocket, "muxServerBridge + ClientSocket");
+        cleanUpSocket(clientSocket, function() {
+            stream.destroy();
+        });
+        cleanUpSocket(stream, function() {
+            clientSocket.destroy();
         });
     });
 
     var server = net.createServer(function(incomingClientSocket) {
         console.log("We have a incomingClientSocket connection!");
-
-        incomingClientSocket.on('end', function() {
-            console.log("We lost a incomingClientSocket connection.");
+        listenForStreamEvents(incomingClientSocket, "muxServerBridge + incomingClientSocket");
+        cleanUpSocket(incomingClientSocket, function() {
+            serverPlex.destroy();
+            server.close();
         });
-
-        incomingClientSocket.on('data', function(data) {
-            console.log("We got data on the server side - " + data);
-        });
-
         incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
+    });
+
+    listenForStreamEvents(server, "muxServerBridge - server");
+    cleanUpSocket(server, function() {
+        serverPlex.destroy();
+        server.close();
     });
 
     server.listen(localP2PTcpServerPort);
@@ -277,24 +330,43 @@ function muxServerBridge(localP2PTcpServerPort, tcpEndpointServerPort) {
     return server;
 }
 
+process.on('uncaughtException', function(err) {
+    console.log("Uncaught process exception! - " + err);
+});
+
+
 function muxClientBridge(muxServerPort, localP2PTcpServerPort) {
     var clientPlex = multiplex();
     var clientSocket = net.createConnection({port: localP2PTcpServerPort});
+    var incomingTCPConnectionSocketArray = {};
+    var socketIdCounter = 0;
 
     var server = net.createServer(function(incomingClientSocket) {
         console.log("We have a incomingClientSocket connection!");
-
-        incomingClientSocket.on('end', function() {
-            console.log("We lost a incomingClientSocket connection.");
-        });
-
-        incomingClientSocket.on('data', function(data) {
-            console.log("We got data on the server side - " + data);
-        });
+        var localSocketId = socketIdCounter;
+        socketIdCounter += 1;
+        incomingTCPConnectionSocketArray[localSocketId] = incomingClientSocket;
 
         var clientStream = clientPlex.createStream();
         incomingClientSocket.pipe(clientStream).pipe(incomingClientSocket);
+
+        listenForStreamEvents(incomingClientSocket, "muxClientBridge + incomingClientSocket");
+        listenForStreamEvents(clientStream, "muxClientBridge + clientStream");
+        cleanUpSocket(incomingClientSocket, function() {
+            clientStream.destroy();
+            delete incomingTCPConnectionSocketArray[localSocketId];
+        });
     });
+
+    listenForStreamEvents(clientSocket, "muxClientBridge + clientSocket");
+    cleanUpSocket(clientSocket, function() {
+        clientPlex.destroy();
+        server.close();
+        incomingTCPConnectionSocketArray.foreach(function(socketId) {
+            incomingTCPConnectionSocketArray[socketId].destroy();
+        })
+    });
+    listenForStreamEvents(server, "muxClientBridge + server");
 
     server.listen(muxServerPort);
 
