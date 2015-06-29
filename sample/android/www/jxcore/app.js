@@ -61,6 +61,7 @@ Start- TCP/IP related functionality
          });
      }
 
+    var clientConnectTrials;
     var clientSocket = 0;
     function startClientSocket(port,tmpAddress) {
         if(clientSocket != 0) {
@@ -84,6 +85,12 @@ Start- TCP/IP related functionality
         clientSocket.on('error', function(ex) {
             console.log("clientSocket got error : " + ex);
             DisconnectPeer(tmpAddress);
+
+       /*     //fixing ECONNREFUSED when request socket for some reason is not ready
+            if(clientConnectTrials < 2){
+                clientConnectTrials = clientConnectTrials + 1;
+                startClientSocket(port,tmpAddress);
+                }*/
         });
     }
     function sendGetRequest(message) {
@@ -143,6 +150,7 @@ Start- TCP/IP related functionality
                 });
             }else if (port > 0){
                 console.log("Starting client socket at : " + port);
+                clientConnectTrials = 0;
                 startClientSocket(port,tmpAddress);
             }
         });
@@ -152,7 +160,13 @@ Start- TCP/IP related functionality
 // Connect to the device.
     function DisconnectPeer(address) {
 
-    // debug time I use "" as peer address, it disconnects al
+        if(clientSocket != 0){
+            console.log("Disconnect clientSocket now.");
+            clientSocket.end();
+            clientSocket = 0;
+        }
+/*
+    // debug time I use "" as peer address, it disconnects all
         Mobile('Disconnect').callNative("", function (err) {
             console.log("DisconnectPeer callback with err: " + err);
 
@@ -160,7 +174,7 @@ Start- TCP/IP related functionality
                 clientSocket.end();
                 clientSocket = 0;
             }
-        });
+        });*/
     };
 
 // Stops peer communications.
