@@ -47,7 +47,6 @@
                     alert('Error loading ThaliMobile app.js');
                     alert(err);
                 } else {
-                   // logInCordova('Loaded');
                     jxcore_ready();
                 }
             });
@@ -73,9 +72,6 @@
         jxcore('setConnectionStatusCallback').call(peersConnectionStateCallback);
         jxcore('setPeerChangedCallback').call(peersChangedCallback);
 
-
-
-        jxcore('StartConnector').call(document.getElementById('nameBox').value);
         document.getElementById('stopButton').style.display = 'block';
         document.getElementById('startButton').style.display = 'none';
     }

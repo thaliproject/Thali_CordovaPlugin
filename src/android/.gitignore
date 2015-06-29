@@ -1,0 +1,5 @@
+android.iml
+.gradle/
+gradle/
+gradlew
+gradlew.bat
