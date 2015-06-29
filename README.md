@@ -12,7 +12,7 @@ mobile applicatons in JavaScript for Node.JS.
 
 * For Android, [Android Studio](http://developer.android.com/sdk/index.html)
 * Make sure to set your ANDROID_HOME environment variable
- * On mac this is typically set in ~/.bashrc by putting in the line "export ANDROID_HOME=~/Library/Android/sdk". If you don't start a new terminal window then make sure to run "source ~/.bashrc" to load the settings.  
+ * On mac this is typically set in ~/.bash_profile by putting in the line "export ANDROID_HOME=~/Library/Android/sdk". If you don't start a new terminal window then make sure to run "source ~/.bashrc" to load the settings.  
 * For iOS, [Xcode 6](https://developer.apple.com/xcode/), or later
 
 ## Getting Started
