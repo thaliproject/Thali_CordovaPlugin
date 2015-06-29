@@ -71,7 +71,7 @@ Follow the instructions below to use the Thali Cordova Plugin on Android and iOS
    * go to ThaliTest\platforms\android and in AndroidManifest.xml change android:minSdkVersion="10" to
     android:minSdkVersion="16"
 3. Add the plugin
-   * cordova plugin add https://github.com/thaliproject/Thali_Codovaplugin
+   * cordova plugin add https://github.com/thaliproject/Thali_Cordovaplugin
 4. Fix issue on can not replace existing file
    * from ThaliTest\plugins\org.thaliproject.p2p\src\android\java\io\jxcore\node copy 
    the JXcoreExtension.java to ThaliTest\platforms\android\src\io\jxcore\node 
