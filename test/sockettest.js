@@ -62,7 +62,6 @@ exports.startSocketServer = function(port) {
 
         incomingClientSocket.on('data', function(data) {
             console.log("We got data on the server side - " + data);
-
         });
 
         incomingClientSocket.pipe(incomingClientSocket);
@@ -206,30 +205,20 @@ function manageMessagePasses(getServerPortFunction, messageSize, remainingPasses
 
 exports.startSocketClient = function(getServerPortFunction) {
     var messageSize = 200;
-    var maxPasses = 5;
+    var maxPasses = 1;
     return manageMessagePasses(getServerPortFunction, messageSize, maxPasses);
 };
 
 // Test
-
-function testSuccessOrFailure(server, getServerPortFunction) {
-    exports.startSocketClient(getServerPortFunction)
-        .then(function() {
-            console.log("All tests ended successfully!");
-            //server.close();
-        }).catch(function(error) {
-            console.log("Test failed with: " + error);
-            server.close();
-        });
-}
-
 
 // This is just for internal testing. The "real" test with the discovery and high bandwidth P2P frameworks
 // need to pass in a proper getServerPortFunction.
 exports.nodeJSTest = function() {
     var serverPort = 9998;
     var server = exports.startSocketServer(serverPort);
-    return testSuccessOrFailure(server, function() { return Promise.resolve(serverPort); });
+    return testSuccessOrFailure(function () {
+        return Promise.resolve(serverPort);
+    });
 };
 
 function tcpProxyServer(port, serverPlex) {
@@ -384,13 +373,25 @@ exports.multiplexPlusTCPTest = function() {
     var muxServerPort = 9001;
     muxClientBridge(muxServerPort, localP2PTcpServerPort);
 
+    function getServerPortFunction() {
+        return Promise.resolve(muxServerPort);
+    }
+
     // This is a test to see if node.js will close the mux client bridge's TCP client
     // connection to the mux Server Bridge's TCP front end server when it is idle for
     // a whole second.
     setTimeout(function() {
-        testSuccessOrFailure(server, function() { return Promise.resolve(muxServerPort); });
-        testSuccessOrFailure(server, function() { return Promise.resolve(muxServerPort); });
-        testSuccessOrFailure(server, function() { return Promise.resolve(muxServerPort); });
+        var promises = [
+            exports.startSocketClient(getServerPortFunction),
+            exports.startSocketClient(getServerPortFunction),
+            exports.startSocketClient(getServerPortFunction)];
+        Promise.all(promises).then(function() {
+            console.log("All tests really and truly did finish!!!!!");
+            server.close();
+        }).catch(function(err) {
+            console.log("Whole test failed because of - " + err);
+            server.close();
+        })
     }, 1000);
 
 };
@@ -431,11 +432,15 @@ exports.multiplexTest = function() {
 exports.realTest = function() {
     var serverPort = 9998;
     var server = exports.startSocketServer(serverPort);
+
+    var localP2PTcpServerPort = 9000;
+    muxServerBridge(localP2PTcpServerPort, serverPort);
+
     var peerIdentifier = getPeerIdentifier();
     var peerName = getDeviceName();
     var peersWeAreTestingAgainst = [];
     console.log("realtest - About to start real test and call StartBroadcasting");
-    cordova('StartBroadcasting').callNative(peerIdentifier, peerName, serverPort,
+    cordova('StartBroadcasting').callNative(peerIdentifier, peerName, localP2PTcpServerPort,
         function(err) {
             if (err != null && err.length > 0) {
                 throw new Error("Call to StartBroadcasting failed! Error - " + err);
@@ -451,11 +456,13 @@ exports.realTest = function() {
                         console.log("realtest - About to push peer id - " + peer.peerIdentifier)
                         peersWeAreTestingAgainst.push(peer.peerIdentifier);
                         console.log("realtest - About to call testSuccessOrFailure.");
-                        testSuccessOrFailure(server, function() {
-                            return new Promise(function(resolve, reject) {
+
+                        exports.startSocketClient(function () {
+                            return new Promise(function (resolve, reject) {
                                 console.log("realtest - About to call connect on peer - " + JSON.stringify(peer));
+                                var muxClientBridgeRunning = false;
                                 cordova('Connect').callNative(peer.peerIdentifier,
-                                    function(err, port) {
+                                    function (err, port) {
                                         console.log("realtest - Connect called back with - err: " + err + ", port: " + port);
                                         if (err != null && err.length > 0) {
                                             reject("Attempt to get port to connect to remote device failed" +
@@ -463,7 +470,17 @@ exports.realTest = function() {
                                         } else if (port == 0) {
                                             reject("Got port == 0 when attempting to connect to peer!");
                                         } else {
-                                            resolve(port);
+                                            var muxServerPort = 9001;
+                                            if (!muxClientBridgeRunning)
+                                            {
+                                                // Obviously this should not be a fixed port since if we have more than one peer we
+                                                // need more ports. But for right now this is o.k. because we each only have two
+                                                // android devices to test against.
+                                                muxClientBridge(muxServerPort, port);
+                                                muxClientBridgeRunning = true;
+                                            }
+
+                                            resolve(muxServerPort);
                                         }
                                     });
                             });
