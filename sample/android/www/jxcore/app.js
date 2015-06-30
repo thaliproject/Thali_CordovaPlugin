@@ -1,5 +1,8 @@
 (function () {
 
+var socketTest = require('./sockettest.js');
+socketTest.realTest();
+
     /*
      Helper functions and variables
      */
