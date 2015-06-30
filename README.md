@@ -11,6 +11,8 @@ mobile applicatons in JavaScript for Node.JS.
 ## Prerequisites
 
 * For Android, [Android Studio](http://developer.android.com/sdk/index.html)
+* Make sure to set your ANDROID_HOME environment variable
+ * On mac this is typically set in ~/.bash_profile by putting in the line "export ANDROID_HOME=~/Library/Android/sdk". If you don't start a new terminal window then make sure to run "source ~/.bashrc" to load the settings.  
 * For iOS, [Xcode 6](https://developer.apple.com/xcode/), or later
 
 ## Getting Started
@@ -51,9 +53,21 @@ Follow the instructions here: http://maven.apache.org/download.cgi
 `git clone https://github.com/thaliproject/Thali_CordovaPlugin_BtLibrary.git`  
 
 #### Build the Thali Cordova Plugin library
-At the root of the Thali Cordova Plugin:  
+At the root of the Thali Cordova Plugin Library that you just git cloned:  
 
-`gradlew build install`  
+`cd BtConnectorLib`
+
+Note: On OS/X (and probably linux) the gradlew file is cloned without execution permissions. So you have to run:
+
+`chmod u+x gradlew`
+
+before you will be able to run the next command.
+
+`./gradlew build install`  
+
+Once built the library should be visible in:  
+`<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.0`
+
 
 Once built the library should be visible in:  
 `<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.0`
