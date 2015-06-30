@@ -13,9 +13,8 @@ socketTest.realTest();
     }
 
 /*----------------------------------------------------------------------------------
-Start- TCP/IP related functionality
+TCP/IP server side handling code
  -----------------------------------------------------------------------------------*/
-    // var sockettest = require('./sockettest');
 
     var net = require('net');
 
@@ -49,6 +48,8 @@ Start- TCP/IP related functionality
                  c.write("Got data : " + data.toString());
              });
 
+            // when using piping, I don't get 'data' events, and as in debug time I want to log them
+            // I'm doing write operations in the data event, instead doing the piping
             // c.pipe(c);
          });
 
@@ -63,6 +64,10 @@ Start- TCP/IP related functionality
              console.log('server is bound to : ' + port);
          });
      }
+
+/*----------------------------------------------------------------------------------
+TCP/IP Client socket side handling code
+-----------------------------------------------------------------------------------*/
 
     var clientSocket = 0;
     function startClientSocket(port,tmpAddress) {
@@ -86,7 +91,8 @@ Start- TCP/IP related functionality
 
         clientSocket.on('error', function(ex) {
             console.log("clientSocket got error : " + ex);
-            DisconnectPeer(tmpAddress);
+            // we got error, the close should follow automatically.
+            // DisconnectPeer(tmpAddress);
         });
     }
     function sendGetRequest(message) {
@@ -103,18 +109,11 @@ Start- TCP/IP related functionality
             server = 0;
         }
     }
+    
+ /****************************************************************************************
+ Functions using the native methods
+ ****************************************************************************************/
 
-
-        /*----------------------------------------------------------------------------------
-         End- TCP/IP related functionality
-         -----------------------------------------------------------------------------------*/
-
-        /*
-         Helper functions
-         */
-
-// Starts peer communications.
-//
     function startPeerCommunications(peerName) {
 
         // start server with port zero so it will get new port for us.
@@ -126,9 +125,7 @@ Start- TCP/IP related functionality
         Mobile('StartBroadcasting').callNative(peerName, serverport, function (err) {
             console.log("StartPeerCommunications returned : " + err + ", port: " + port);
             if (err != null && err.length > 0) {
-                Mobile('ShowToast').callNative("Can not Start boardcasting: " + err, true, function () {
-                    //callback(arguments);
-                });
+                console.log("Can not Start boardcasting: " + err);
             }
         });
     };
@@ -141,11 +138,11 @@ Start- TCP/IP related functionality
             console.log("ConnectToDevice called with port " + port + ", error: " + err);
 
             if (err != null && err.length > 0) {
-                Mobile('ShowToast').callNative("Can not Connect: " + err, true, function () {
-                    //callback(arguments);
-                });
+                console.log("Can not Connect: " + err);
             }else if (port > 0){
                 console.log("Starting client socket at : " + port);
+
+                // start client socket which will be then connected by native code;
                 startClientSocket(port,tmpAddress);
             }
         });
@@ -155,7 +152,16 @@ Start- TCP/IP related functionality
 // Connect to the device.
     function DisconnectPeer(address) {
 
-    // debug time I use "" as peer address, it disconnects al
+        // with -1 story we actually use disconnect, not dsconnect by socket
+        // but with zero we are definerely haing this, thus we should have both
+        // disconnect by TCP client socket closing as well as by Disconnect method
+        if(clientSocket != 0){
+            console.log("Disconnect clientSocket now.");
+            clientSocket.end();
+            clientSocket = 0;
+        }
+/*
+    // debug time I use "" as peer address, it disconnects all,
         Mobile('Disconnect').callNative("", function (err) {
             console.log("DisconnectPeer callback with err: " + err);
 
@@ -163,37 +169,25 @@ Start- TCP/IP related functionality
                 clientSocket.end();
                 clientSocket = 0;
             }
-        });
+        });*/
     };
 
 // Stops peer communications.
     function stopPeerCommunications() {
         Mobile('StopBroadcasting').callNative(function () {
         });
-
         closeSockets();
     };
 
-
-// inform connection status, helpper for debug
-    function peerConnectionStateChanged(peerIdentifier, state) {
-
-        if (isFunction(peerConnectionStatusCallback)) {
-            console.log("peerConnectionStateChanged " + peerIdentifier + " to  state " + state);
-            peerConnectionStatusCallback(peerIdentifier, state);
-        } else {
-            console.log("peerConnectionStatusCallback not set !!!!");
-        }
-    };
-
-    /*
+/****************************************************************************************
      Registred event handlers
-     */
+****************************************************************************************/
 
 // Register peerAvailabilityChanged callback.
     Mobile('peerAvailabilityChanged').registerToNative(function (args) {
         console.log('peerAvailabilityChanged called');
 
+        // peer list is handled in cordova app, so we simply forward it there
         if (isFunction(peerChangedCallback)) {
             peerChangedCallback(args);
         } else {
@@ -214,9 +208,26 @@ Start- TCP/IP related functionality
         }
     });
 
-    /*
-     functions for Mobile app usage
-     */
+
+/***************************************************************************************
+     functions for Cordova side application usage only
+ ***************************************************************************************/
+
+function isFunction(functionToCheck) {
+    var getType = {};
+    return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+}
+
+// simply used to update UI in connected state vs. non-connected
+    function peerConnectionStateChanged(peerIdentifier, state) {
+
+        if (isFunction(peerConnectionStatusCallback)) {
+            console.log("peerConnectionStateChanged " + peerIdentifier + " to  state " + state);
+            peerConnectionStatusCallback(peerIdentifier, state);
+        } else {
+            console.log("peerConnectionStatusCallback not set !!!!");
+        }
+    };
     var MessageCallback;
 
     function gotMessage(message) {
@@ -273,13 +284,7 @@ Start- TCP/IP related functionality
         console.log("DisconnectPeer address : " + address);
         DisconnectPeer(address);
     });
-
-    Mobile('ShowToast').registerAsync(function (message, isLong, callback) {
-        Mobile('ShowToast').callNative(message, isLong, function () {
-            //callback(arguments);
-        });
-    });
-
+    
     // Log that the app.js file was loaded.
     console.log('ThaliMobile app.js loaded');
 
