@@ -22,7 +22,8 @@ ThaliEmitter.prototype._init = function () {
   function registerMobilePeerEvent(eventName) {
     function emitEvent(eventName) {
       return function handler(arg) {
-        self.emit(eventName, JSON.parse(arg));
+        console.log('arg: %s', JSON.stringify(arg));
+        self.emit(eventName, arg);
       };
     }
 
