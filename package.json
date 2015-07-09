@@ -1,10 +1,10 @@
 {
-  "name": "thali-cordova-pluging-jxcore",
+  "name": "thali-cordova-plugin-jxcore",
   "version": "1.0.0",
   "description": "Thali Cordova Plugin JXCore",
-  "main": "thalireplicationmanager.js",
+  "main": "lib/thalireplicationmanager.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jasmine"
   },
   "keywords": [
     "Thali",
@@ -16,5 +16,8 @@
   "license": "MIT",
   "dependencies": {
     "multiplex": "^6.2.2"
-  }
+  },
+  "devDependencies": {
+    "jasmine": "^2.3.1"
+  }  
 }

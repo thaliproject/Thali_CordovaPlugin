@@ -14,7 +14,6 @@
   "author": "Microsoft Corporation",
   "license": "MIT",
   "devDependencies": {
-    "chai": "^3.0.0",
-    "mocha": "^2.2.5"
+    "jasmine": "^2.3.1"
   }
 }
