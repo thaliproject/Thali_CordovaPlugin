@@ -44,13 +44,15 @@ ThaliEmitter.prototype._init = function () {
 * @param {Function} cb the callback which returns an error if one has occurred.
 */
 ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
+  if (this._isBroadcasting) { throw new Error('Thali is already broadcasting'); }
   Mobile('StartBroadcasting').callNative(deviceName, port, function (err) {
     if (err) {
       cb(new Error(err));
     } else {
+      this._isBroadcasting = true;
       cb();
     }
-  });
+  }.bind(this));
 };
 
 /**
@@ -58,13 +60,15 @@ ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
 * @param {Function} cb the callback which returns an error if one has occurred.
 */
 ThaliEmitter.prototype.stopBroadcasting = function(cb) {
+  if (!this._isBroadcasting) { throw new Error('Thali has already stopped broadcasting'); }
   Mobile('StopBroadcasting').callNative(function (err) {
     if (err) {
       cb(new Error(err));
     } else {
+      this._isBroadcasting = false;
       cb();
     }
-  });
+  }.bind(this));
 };
 
 /**
@@ -73,13 +77,15 @@ ThaliEmitter.prototype.stopBroadcasting = function(cb) {
 * @param {Function} cb the callback which returns an error if one occurred and a port number used for synchronization.
 */
 ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
+  if (!!this._connections[peerIdentifier]) { throw new Error('This peer identifier has already been connected'); }
   Mobile('Connect').callNative(peerIdentifier, function (err, port) {
     if (err) {
       cb(new Error(err));
     } else {
+      this._connections[peerIdentifier] = port;
       cb(null, port);
     }
-  });
+  }.bind(this));
 };
 
 /**
@@ -88,13 +94,15 @@ ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
 * @param {Function} cb the callback which returns an error if one occurred.
 */
 ThaliEmitter.prototype.disconnect = function (peerIdentifier, cb) {
+  if (!this._connections[peerIdentifier]) { throw new Error('This peer identifier is not connected'); }
   Mobile('Disconnect').callNative(peerIdentifier, function (err) {
     if (err) {
       cb(new Error(err));
     } else {
+      delete this._connections[peerIdentifier];
       cb();
     }
-  });
+  }.bind(this));
 };
 
 module.exports = ThaliEmitter;
