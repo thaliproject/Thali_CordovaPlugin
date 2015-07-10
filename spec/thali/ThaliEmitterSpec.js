@@ -1,5 +1,5 @@
 require('./mockmobile');
-var ThaliEmitter = require('../../lib/thaliemitter');
+var ThaliEmitter = require('../../thali/thaliemitter');
 
 describe('ThaliEmitter', function () {
   describe('#init', function () {
