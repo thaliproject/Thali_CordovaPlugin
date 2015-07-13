@@ -8,6 +8,8 @@
 Events:
 - `peerAvailabilityChanged`
 - `networkChanged`
+- `clientClosed`
+- `serverClosed`
 
 ***
 
@@ -90,3 +92,25 @@ This event is called when the network has changed.
 1. `networkChanged` : `NetworkChanged` where it has the following properties:
     - `isAvailable` : `Boolean` – whether the network is available
     - `isWifi` : `Boolean` – whether or not the network is WiFi
+
+***
+
+### `serverClosed`
+
+This event is called when the server closes.
+
+#### Callback Arguments:
+
+1. - `peerIdentifier` : `String` – the peer identifier
+
+***
+
+### `clientClosed`
+
+This event is called when the client closes.
+
+#### Callback Arguments:
+
+1. - `peerIdentifier` : `String` – the peer identifier
+
+***

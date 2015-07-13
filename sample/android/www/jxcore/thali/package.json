@@ -1,0 +1,17 @@
+{
+  "name": "thali",
+  "version": "1.0.0",
+  "description": "Thali Cordova Plugin JXCore",
+  "main": "thalireplicationmanager.js",
+  "keywords": [
+    "Thali",
+    "JXCore",
+    "PouchDB",
+    "Multiplex"
+  ],
+  "author": "Microsoft Corporation",
+  "license": "MIT",
+  "dependencies": {
+    "multiplex": "^6.2.2"
+  }
+}
