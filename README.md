@@ -6,7 +6,7 @@
 
 The Thali Cordova Plugin is an easy-to-use [Cordova](http://cordova.apache.org/) plugin for building peer-to-peer (P2P) networking apps on Android and iOS.
 
-The Thali Cordova Plugin is layered on the [JXcore Cordova plugin](https://github.com/jxcore/jxcore-cordova), which uses JXcore to allow one to build mobile applicatons in JavaScript for Node.JS.  
+The Thali Cordova Plugin is layered on the [JXcore Cordova plugin](https://github.com/jxcore/jxcore-cordova), which uses [JXcore](http://jxcore.com/home/) to allow one to build mobile applicatons in JavaScript for Node.JS.  
 
 ## Prerequisites
 
