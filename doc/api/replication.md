@@ -4,12 +4,12 @@
 - `StartBroadcasting`
 - `StopBroadcasting`
 - `Connect`
+- `Disconnect`
+- `KillConnection`
 
 Events:
 - `peerAvailabilityChanged`
 - `networkChanged`
-- `clientClosed`
-- `serverClosed`
 
 ***
 
@@ -66,6 +66,18 @@ This method disconnects from the given peer by the given peer identifier.  If th
 
 ***
 
+### `KillConnection(peerIdentifier, callback)`
+
+This method kills the connection for the given peer identifier to simulate crashes.  This is not intended for use in production code.
+
+#### Arguments:
+
+1. `peerIdentifier` : `String` – peer identifier found during the peerAvailabilityChanged event.
+2. `callback` : `Function` – must be in the form of the following, `function (err)` where:
+    - `err` : `String` – a string value containing the error if one occurred, else `null`
+
+***
+
 EVENTS:
 
 ***
@@ -92,25 +104,3 @@ This event is called when the network has changed.
 1. `networkChanged` : `NetworkChanged` where it has the following properties:
     - `isAvailable` : `Boolean` – whether the network is available
     - `isWifi` : `Boolean` – whether or not the network is WiFi
-
-***
-
-### `serverClosed`
-
-This event is called when the server closes.
-
-#### Callback Arguments:
-
-1. - `peerIdentifier` : `String` – the peer identifier
-
-***
-
-### `clientClosed`
-
-This event is called when the client closes.
-
-#### Callback Arguments:
-
-1. - `peerIdentifier` : `String` – the peer identifier
-
-***
