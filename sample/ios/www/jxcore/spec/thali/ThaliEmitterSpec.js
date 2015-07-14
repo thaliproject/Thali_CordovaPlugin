@@ -1,7 +1,7 @@
 // Disable for on Android and iOS
 var isMobile = true;
 if (process.platform !== 'android' && process.platform !== 'ios') {
-  require('./mockmobile');
+  require('../../thali/mockmobile');
   isMobile = false;
 }
 var ThaliEmitter = require('../../thali/thaliemitter');
