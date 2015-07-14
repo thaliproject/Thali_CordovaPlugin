@@ -107,6 +107,28 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         return ret;
     }
+
+    //test time implementation to simulate 'peer disappearing'
+    public boolean  DisconnectIncomingConnections(){
+
+        boolean ret = false;
+        if (mServerSocketList != null) {
+            for(int i = 0; i < mServerSocketList.size(); i++) {
+                BtToServerSocket tmp = mServerSocketList.get(i);
+                if (tmp != null) {
+                    print_debug("Disconnect:::Stop : mBtToServerSocket :" + tmp.getName());
+                    tmp.Stop();
+                    tmp = null;
+                    mServerSocketList.set(i, tmp);
+                    ret = true;
+                }
+            }
+
+            mServerSocketList.clear();
+        }
+        return ret;
+    }
+
     public String GetBluetoothAddress(){
 
         String ret= "";

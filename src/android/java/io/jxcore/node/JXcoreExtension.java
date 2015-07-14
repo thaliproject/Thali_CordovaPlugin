@@ -32,6 +32,8 @@ public class JXcoreExtension {
 
     public static String METHODSTRING_CONNECTTOPEER     = "Connect";
     public static String METHODSTRING_DISCONNECTPEER    = "Disconnect";
+    public static String METHODSTRING_KILLCONNECTION    = "KillConnection";
+
 
     public static void LoadExtensions() {
 
@@ -130,6 +132,24 @@ public class JXcoreExtension {
 
           }
       });
+
+        jxcore.RegisterMethod(METHODSTRING_KILLCONNECTION, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+
+
+                ArrayList<Object> args = new ArrayList<Object>();
+                if(mBtConnectorHelper.DisconnectIncomingConnections()){
+                    args.add(null);
+                }else{
+                    args.add("No incoming connection to disconnect");
+                }
+                jxcore.CallJSMethod(callbackId, args.toArray());
+
+            }
+        });
+
+
 
       jxcore.RegisterMethod(METHODSTRING_CONNECTTOPEER, new JXcoreCallback() {
           @Override
