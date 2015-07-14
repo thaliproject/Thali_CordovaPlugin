@@ -1,12 +1,10 @@
 # Thali Cordova Plugin
 
-<Work on progress, not near release quality !!>
+This project is a work in progress and not yet production-level quality.
 
-## Goals
+The Thali Cordova Plugin is a [Cordova](http://cordova.apache.org/) plugin for building peer-to-peer (P2P) networking apps on Android and iOS.
 
-The Thali Cordova Plugin is an easy-to-use [Cordova](http://cordova.apache.org/) plugin for building peer-to-peer (P2P) networking apps on Android and iOS.
-
-The Thali Cordova Plugin is layered on the [JXcore Cordova plugin](https://github.com/jxcore/jxcore-cordova), which uses [JXcore](http://jxcore.com/home/) to allow one to build mobile applicatons in JavaScript for Node.JS.  
+The Thali Cordova Plugin is layered on the [JXcore Cordova plugin](https://github.com/jxcore/jxcore-cordova), which uses [JXcore](http://jxcore.com/home/) to allow one to build mobile applications in JavaScript for Node.JS.  
 
 ## Prerequisites
 
@@ -68,19 +66,19 @@ $ sudo npm install -g cordova
 
 ### Android Requirements
 
-### Use Gradle
+#### Use Gradle
 
 For the command line build process, you should use gradle. Set the system environment variable `ANDROID_BUILD` to `gradle`.
 
-### Build the P2P library to local Maven
+#### Build the P2P library to local Maven
 
-#### Install Maven locally
+##### Install Maven locally
 Follow the instructions here: http://maven.apache.org/download.cgi
 
-#### Clone the Thali Cordova Plugin library
+##### Clone the Thali Cordova Plugin library
 `git clone https://github.com/thaliproject/Thali_CordovaPlugin_BtLibrary.git`  
 
-#### Build the Thali Cordova Plugin library
+##### Build the Thali Cordova Plugin library
 At the root of the Thali Cordova Plugin Library that you just git cloned:  
 
 `cd BtConnectorLib`
