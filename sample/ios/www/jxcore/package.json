@@ -1,17 +1,22 @@
 {
-  "name": "PostCardApp",
+  "name": "thali-cordova-plugin-jxcore",
   "version": "1.0.0",
-  "description": "Sample app to demonstrate the Thali framework",
-  "main": "app.js",
+  "description": "Thali Cordova Plugin JXCore",
+  "main": "lib/thalireplicationmanager.js",
+  "scripts": {
+    "test": "tape test/thaliemitterspec.js"
+  },
+  "keywords": [
+    "Thali",
+    "JXCore",
+    "Multiplex"
+  ],
+  "author": "Microsoft Corporation",
+  "license": "MIT",
   "dependencies": {
     "multiplex": "^6.2.2"
   },
   "devDependencies": {
-    "jasmine": "^2.3.1"
-  },
-  "scripts": {
-    "test": "jasmine"
-  },
-  "author": "",
-  "license": "MIT"
+    "tape": "^4.0.0"
+  }
 }
