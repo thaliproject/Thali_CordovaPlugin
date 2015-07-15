@@ -4,6 +4,10 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var validations = require('./validations');
 
+function thrower(err) {
+  if (err) { throw err; }
+}
+
 /**
  * Creates a new instance of the ThaliEmitter which is an EventEmitter to call the underlying native layer.
  */
@@ -49,7 +53,7 @@ ThaliEmitter.prototype._init = function () {
 ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
   validations.ensureNonNullOrEmptyString(deviceName, 'deviceName');
   validations.ensureValidPort(port);
-  validations.ensureIsFunction(cb);
+  cb || (cb = thrower);
 
   if (this._isBroadcasting) { throw new Error('Thali is already broadcasting'); }
   Mobile('StartBroadcasting').callNative(deviceName, port, function (err) {
@@ -67,7 +71,7 @@ ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
 * @param {Function} cb the callback which returns an error if one has occurred.
 */
 ThaliEmitter.prototype.stopBroadcasting = function(cb) {
-  validations.ensureIsFunction(cb);
+  cb || (cb = thrower);
 
   if (!this._isBroadcasting) { throw new Error('Thali has already stopped broadcasting'); }
   Mobile('StopBroadcasting').callNative(function (err) {
@@ -107,7 +111,7 @@ ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
 */
 ThaliEmitter.prototype.disconnect = function (peerIdentifier, cb) {
   validations.ensureNonNullOrEmptyString(peerIdentifier, 'peerIdentifier');
-  validations.ensureIsFunction(cb);
+  cb || (cb = thrower);
 
   if (this._connections[peerIdentifier] === undefined) { throw new Error('This peer identifier is not connected'); }
   Mobile('Disconnect').callNative(peerIdentifier, function (err) {

@@ -1,0 +1,34 @@
+{
+  "name": "thali-cordova-plugin-test",
+  "version": "1.0.0",
+  "description": "Thali Cordova Plugin Test",
+  "main": "thaliscenarios.js",
+  "scripts": {
+    "test": "tape thaliscenarios.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thaliproject/Thali_CordovaPlugin.git"
+  },
+  "keywords": [
+    "Thali",
+    "PouchDB",
+    "Android",
+    "iOS"
+  ],
+  "author": "Microsoft Corporation",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/thaliproject/Thali_CordovaPlugin/issues"
+  },
+  "homepage": "https://github.com/thaliproject/Thali_CordovaPlugin#readme",
+  "dependencies": {
+    "express": "^4.13.1",
+    "express-pouchdb": "^0.14.2",
+    "leveldown-mobile": "^1.0.10",
+    "pouchdb": "^3.6.0"
+  },
+  "devDependencies": {
+    "tape": "^4.0.0"
+  }
+}

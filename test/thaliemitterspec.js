@@ -34,6 +34,84 @@ test('#init should register the networkChanged event', function (t) {
   });
 });
 
+test('#startBroadcasting should throw on null device name', function (t) {
+  var emitter = new ThaliEmitter();
+
+  var deviceName = null,
+      port = 9001;
+
+  t.throws(function () {
+    emitter.startBroadcasting(deviceName, port, noop);
+  });
+
+  t.end();
+});
+
+test('#startBroadcasting should throw on empty string device name', function (t) {
+  var emitter = new ThaliEmitter();
+
+  var deviceName = '',
+      port = 9001;
+
+  t.throws(function () {
+    emitter.startBroadcasting(deviceName, port, noop);
+  });
+
+  t.end();
+});
+
+test('#startBroadcasting should throw on non-number port', function (t) {
+  var emitter = new ThaliEmitter();
+
+  var deviceName = 'foo',
+      port = '9001';
+
+  t.throws(function () {
+    emitter.startBroadcasting(deviceName, port, noop);
+  });
+
+  t.end();
+});
+
+test('#startBroadcasting should throw on NaN port', function (t) {
+  var emitter = new ThaliEmitter();
+
+  var deviceName = 'foo',
+      port = NaN;
+
+  t.throws(function () {
+    emitter.startBroadcasting(deviceName, port, noop);
+  });
+
+  t.end();
+});
+
+test('#startBroadcasting should throw on negative port', function (t) {
+  var emitter = new ThaliEmitter();
+
+  var deviceName = 'foo',
+      port = -1;
+
+  t.throws(function () {
+    emitter.startBroadcasting(deviceName, port, noop);
+  });
+
+  t.end();
+});
+
+test('#startBroadcasting should throw on too large port', function (t) {
+  var emitter = new ThaliEmitter();
+
+  var deviceName = 'foo',
+      port = 65537;
+
+  t.throws(function () {
+    emitter.startBroadcasting(deviceName, port, noop);
+  });
+
+  t.end();
+});
+
 test('#startBroadcasting should call Mobile("StartBroadcasting") without an error', function (t) {
   var emitter = new ThaliEmitter();
 
