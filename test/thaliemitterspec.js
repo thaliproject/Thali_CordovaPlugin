@@ -8,14 +8,14 @@ test('#init should register the peerAvailabilityChanged event', function (t) {
   var emitter = new ThaliEmitter();
 
   emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (data) {
-    t.equal(data[0].peerIdentifier, 12345);
+    t.equal(data[0].peerIdentifier, '12345');
     t.equal(data[0].peerName, 'foo');
     t.equal(data[0].peerAvailable, true);
     t.end();
   });
 
   Mobile.invokeNative(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, [{
-    peerIdentifier: 12345,
+    peerIdentifier: '12345',
     peerName: 'foo',
     peerAvailable: true
   }]);
@@ -141,7 +141,7 @@ test('#stopBroadcasting should call Mobile("StopBroadcasting") and handle an err
 test('#connect should call Mobile("Connect") with a port and without an error', function (t) {
   var emitter = new ThaliEmitter();
 
-  var peerIdentifier = 123,
+  var peerIdentifier = '123',
       errorMessage = null,
       port = 9001;
 
@@ -158,7 +158,7 @@ test('#connect should call Mobile("Connect") with a port and without an error', 
 test('#connect should call Mobile("Connect") and handle an error', function (t) {
   var emitter = new ThaliEmitter();
 
-  var peerIdentifier = 123,
+  var peerIdentifier = '123',
       errorMessage = 'fail',
       port = 9001;
 
@@ -174,7 +174,7 @@ test('#connect should call Mobile("Connect") and handle an error', function (t) 
 test('#connect should call Mobile("Connect") twice with same peer identifier and throw an error', function (t) {
   var emitter = new ThaliEmitter();
 
-  var peerIdentifier = 123,
+  var peerIdentifier = '123',
       errorMessage = null,
       port = 9001;
 
@@ -195,8 +195,8 @@ test('#connect should call Mobile("Connect") twice with same peer identifier and
 test('#connect should call Mobile("Connect") twice with different peer identifier and not throw an error', function (t) {
   var emitter = new ThaliEmitter();
 
-  var peerIdentifier1 = 123,
-      peerIdentifier2 = 456,
+  var peerIdentifier1 = '123',
+      peerIdentifier2 = '456',
       errorMessage = null,
       port = 9001;
 
@@ -217,7 +217,7 @@ test('#connect should call Mobile("Connect") twice with different peer identifie
 test('should call throw an error if Mobile("Disconnect") called before Mobile("Connects")', function (t) {
   var emitter = new ThaliEmitter();
 
-  var peerIdentifier = 123;
+  var peerIdentifier = '123';
 
   t.throws(function () {
     emitter.disconnect(peerIdentifier, noop);
@@ -231,7 +231,7 @@ test('should call throw an error if Mobile("Disconnect") called before Mobile("C
 test('should call Mobile("Disconnect") without an error', function (t) {
   var emitter = new ThaliEmitter();
 
-  var peerIdentifier = 123,
+  var peerIdentifier = '123',
       port = 9001;
 
   emitter.connect(peerIdentifier, function () {
@@ -251,7 +251,7 @@ test('should call Mobile("Disconnect") without an error', function (t) {
 test('should call Mobile("Disconnect") and handle an error', function (t) {
   var emitter = new ThaliEmitter();
 
-  var peerIdentifier = 123,
+  var peerIdentifier = '123',
       port = 9001,
       errorMessage = 'fail';
 

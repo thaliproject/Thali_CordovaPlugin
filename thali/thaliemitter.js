@@ -1,5 +1,8 @@
+'use strict';
+
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
+var validations = require('./validations');
 
 /**
  * Creates a new instance of the ThaliEmitter which is an EventEmitter to call the underlying native layer.
@@ -44,6 +47,10 @@ ThaliEmitter.prototype._init = function () {
 * @param {Function} cb the callback which returns an error if one has occurred.
 */
 ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
+  validations.ensureNonNullOrEmptyString(deviceName, 'deviceName');
+  validations.ensureValidPort(port);
+  validations.ensureIsFunction(cb);
+
   if (this._isBroadcasting) { throw new Error('Thali is already broadcasting'); }
   Mobile('StartBroadcasting').callNative(deviceName, port, function (err) {
     if (err) {
@@ -60,6 +67,8 @@ ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
 * @param {Function} cb the callback which returns an error if one has occurred.
 */
 ThaliEmitter.prototype.stopBroadcasting = function(cb) {
+  validations.ensureIsFunction(cb);
+
   if (!this._isBroadcasting) { throw new Error('Thali has already stopped broadcasting'); }
   Mobile('StopBroadcasting').callNative(function (err) {
     if (err) {
@@ -77,6 +86,9 @@ ThaliEmitter.prototype.stopBroadcasting = function(cb) {
 * @param {Function} cb the callback which returns an error if one occurred and a port number used for synchronization.
 */
 ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
+  validations.ensureNonNullOrEmptyString(peerIdentifier, 'peerIdentifier');
+  validations.ensureIsFunction(cb);
+
   if (this._connections[peerIdentifier] !== undefined) { throw new Error('This peer identifier has already been connected'); }
   Mobile('Connect').callNative(peerIdentifier, function (err, port) {
     if (err) {
@@ -94,6 +106,9 @@ ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
 * @param {Function} cb the callback which returns an error if one occurred.
 */
 ThaliEmitter.prototype.disconnect = function (peerIdentifier, cb) {
+  validations.ensureNonNullOrEmptyString(peerIdentifier, 'peerIdentifier');
+  validations.ensureIsFunction(cb);
+
   if (this._connections[peerIdentifier] === undefined) { throw new Error('This peer identifier is not connected'); }
   Mobile('Disconnect').callNative(peerIdentifier, function (err) {
     if (err) {
