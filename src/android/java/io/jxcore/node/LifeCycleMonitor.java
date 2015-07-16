@@ -12,7 +12,7 @@ public class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks 
     Application MyApp = null;
 
     public interface onLCEventCallback{
-        public void onEvent(String eventString,boolean stopped);
+        public void onEvent(String eventString, boolean stopped);
     }
 
     public final String ACTIVITY_CREATED   = "onActivityCreated";

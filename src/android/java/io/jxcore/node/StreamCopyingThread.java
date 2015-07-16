@@ -33,11 +33,6 @@ public class StreamCopyingThread extends Thread {
         mOutputStream = mmOutStreamt;
     }
 
-    public void setStreams(InputStream mmInStream,OutputStream mmOutStreamt){
-        mInputStream = mmInStream;
-        mOutputStream = mmOutStreamt;
-    }
-
     public void setDebugTag(String debugtag) {
         TAG = debugtag;
     }
@@ -51,8 +46,8 @@ public class StreamCopyingThread extends Thread {
                     if (mInputStream != null && mOutputStream != null) {
                         int n = 0;
                         while (-1 != (n = mInputStream.read(buffer)) && !mStopped) {
-                            String dbgMessage = new String(buffer,0,n);
-                            print_debug(" Copying " + n + " bytes, data: " + dbgMessage);
+                         //   String dbgMessage = new String(buffer,0,n);
+                         //   print_debug(" Copying " + n + " bytes, data: " + dbgMessage);
                             mOutputStream.write(buffer, 0, n);
                         }
 
@@ -78,6 +73,6 @@ public class StreamCopyingThread extends Thread {
     }
 
     public void print_debug(String message){
-        Log.i(TAG, message);
+    //    Log.i(TAG, message);
     }
 }

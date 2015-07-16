@@ -82,10 +82,6 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
             srvSocket = null;
         }
 
-        DoOneRunRound();
-    }
-
-    public void DoOneRunRound() {
         InputStream tmpInputStream = null;
         OutputStream tmpOutputStream = null;
 
@@ -116,24 +112,17 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
                 LocalOutputStream = tmpOutputStream;
 
                 if (mmInStream != null && LocalInputStream != null
-                        && mmOutStream != null && LocalOutputStream != null
-                        && localHostSocket != null) {
+                 && mmOutStream != null && LocalOutputStream != null
+                 && localHostSocket != null) {
 
-                    if (SendingThread != null) {
-                        SendingThread.setStreams(LocalInputStream, mmOutStream);
-                    } else {
-                        SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
-                        SendingThread.setDebugTag("--Sending");
-                        SendingThread.start();
-                    }
+                    SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
+                    SendingThread.setDebugTag("--Sending");
+                    SendingThread.start();
 
-                    if (ReceivingThread != null) {
-                        ReceivingThread.setStreams(mmInStream, LocalOutputStream);
-                    } else {
-                        ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
-                        ReceivingThread.setDebugTag("--Receiving");
-                        ReceivingThread.start();
-                    }
+                    ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
+                    ReceivingThread.setDebugTag("--Receiving");
+                    ReceivingThread.start();
+
                     print_debug("Stream Threads are running");
                 } else {
                     mStopped = true;
@@ -167,13 +156,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
                 SendingThread.Stop();
                 SendingThread = null;
             }
-            // if we would want to handle local disconnect events, and simply do reconned to them
-            // we could do this by calling the DoOneRunRound.
-            /*
-            if(!mStopped) {
-                DoOneRunRound();
-            }*/
-
+            mStopped = true;
             // with this app we want to disconnect the Bluetooth once we lose local sockets
             mHandler.Disconnected(that,error);
 
@@ -276,7 +259,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
     }
 
     public void print_debug(String message){
-        Log.i(TAG, message);
+        //Log.i(TAG, message);
     }
 
 }

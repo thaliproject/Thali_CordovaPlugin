@@ -63,10 +63,7 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
     }
 
     public void run() {
-        DoOneRunRound();
-    }
 
-    public void DoOneRunRound() {
         print_debug("--DoOneRunRound started");
         InputStream tmpInputStream = null;
         OutputStream tmpOutputStream = null;
@@ -96,21 +93,13 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
                     && mmOutStream != null && LocalOutputStream != null
                     && localHostSocket != null) {
 
-                if (SendingThread != null) {
-                    SendingThread.setStreams(LocalInputStream, mmOutStream);
-                } else {
-                    SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
-                    SendingThread.setDebugTag("--Sending");
-                    SendingThread.start();
-                }
+                SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
+                SendingThread.setDebugTag("--Sending");
+                SendingThread.start();
 
-                if (ReceivingThread != null) {
-                    ReceivingThread.setStreams(mmInStream, LocalOutputStream);
-                } else {
-                    ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
-                    ReceivingThread.setDebugTag("--Receiving");
-                    ReceivingThread.start();
-                }
+                ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
+                ReceivingThread.setDebugTag("--Receiving");
+                ReceivingThread.start();
                 print_debug("Stream Threads are running");
             } else {
                 mStopped = true;
@@ -140,9 +129,9 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
                 SendingThread.Stop();
                 SendingThread = null;
             }
-            if(!mStopped) {
-                DoOneRunRound();
-            }
+
+            mStopped = true;
+            mHandler.Disconnected(that,"creating serve socket failed");
         }else{
             print_debug("Dunno which thread got error: " + error);
         }

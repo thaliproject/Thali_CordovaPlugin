@@ -71,31 +71,35 @@ public class JXcoreExtension {
       jxcore.RegisterMethod(METHODSTRING_STARTBROADCAST, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
+
               if(params.size() > 1) {
                   String peerName = params.get(0).toString();
                   String port = params.get(1).toString();
 
-                  boolean started = true;
-                  BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, Integer.decode(port));
-
                   ArrayList<Object> args = new ArrayList<Object>();
-                  if(retVal.isWifiEnabled && retVal.isWifiOk
-                  && retVal.isBtEnabled && retVal.isBtOk) {
-                      args.add(null);
-                  }else {
-                      String errString = "";
-                      if (!retVal.isBtOk) {
-                          errString = "Bluetooth is not supported on this hardware platform, ";
-                      } else if (!retVal.isBtEnabled) {
-                          errString = "Bluetooth is disabled, ";
-                      }
 
-                      if (!retVal.isWifiOk) {
-                          errString = "Wi-Fi Direct is not supported on this hardware platform.";
-                      } else if (!retVal.isWifiEnabled) {
-                          errString = "Wi-Fi is disabled.";
+                  if(!mBtConnectorHelper.isRunning()) {
+                      BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, Integer.decode(port));
+
+                      if (retVal.isWifiEnabled && retVal.isWifiOk && retVal.isBtEnabled && retVal.isBtOk) {
+                          args.add(null);
+                      } else {
+                          String errString = "";
+                          if (!retVal.isBtOk) {
+                              errString = "Bluetooth is not supported on this hardware platform, ";
+                          } else if (!retVal.isBtEnabled) {
+                              errString = "Bluetooth is disabled, ";
+                          }
+
+                          if (!retVal.isWifiOk) {
+                              errString = "Wi-Fi Direct is not supported on this hardware platform.";
+                          } else if (!retVal.isWifiEnabled) {
+                              errString = "Wi-Fi is disabled.";
+                          }
+                          args.add(errString);
                       }
-                      args.add(errString);
+                  }else{
+                      args.add("Already running, not re-starting.");
                   }
                   jxcore.CallJSMethod(callbackId, args.toArray());
               }

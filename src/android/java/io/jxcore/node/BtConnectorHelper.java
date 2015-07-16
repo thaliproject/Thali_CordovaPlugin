@@ -24,7 +24,6 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
     Context context = null;
 
-    final String instanceEncryptionPWD = "CHANGEYOURPASSWRODHERE";
     final String serviceTypeIdentifier = "Cordovap2p._tcp";
     final String BtUUID                = "fa87c0d0-afac-11de-8a39-0800200c9a66";
     final String Bt_NAME               = "Thaili_Bluetooth";
@@ -57,10 +56,17 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         this.myPeerName = peerName;
         this.lastAvailableList.clear();
         Stop();
-        mBTConnector = new BTConnector(context,this,this,conSettings,instanceEncryptionPWD);
+        mBTConnector = new BTConnector(context,this,this,conSettings);
         return mBTConnector.Start(this.myPeerIdentifier,this.myPeerName);
     }
 
+    public boolean isRunning(){
+        if(mBTConnector != null){
+            return true;
+        }else{
+            return false;
+        }
+    }
     public void Stop(){
         if(mBTConnector != null){
             mBTConnector.Stop();
@@ -150,19 +156,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         return ret;
     }
-    public int getFreePort() {
-        int ret =-1;
-        try {
-            ServerSocket s = new ServerSocket(0);
-            ret = s.getLocalPort();
-            //print_debug("srvSocket got port: " +ret);
-            s.close();
-        }catch (Exception e){
-            print_debug("create ServerSocket failed: "  + e.toString());
-        }
 
-        return ret;
-    }
     public boolean SetDeviceName(String name){
 
         boolean  ret= false;
@@ -296,7 +290,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                     }
                 });
                 mBtToRequestSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
-                mBtToRequestSocket.setPort(getFreePort());
+                mBtToRequestSocket.setPort(0);// setting port to zero, should automatically assign it later on.
                 mBtToRequestSocket.start();
             }
         }
