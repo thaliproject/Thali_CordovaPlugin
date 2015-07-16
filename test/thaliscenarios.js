@@ -37,7 +37,7 @@ test('ThaliEmitter calls startBroadcasting twice with error', function (t) {
       t.assert(!!err2, err2.message);
 
       e.stopBroadcasting(function (err3) {
-        t.notOk(err2);
+        t.notOk(err3);
         t.end();
       });
     });
