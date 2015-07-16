@@ -1,13 +1,18 @@
+'use strict';
+
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
+var validations = require('./validations');
+
+function thrower(err) {
+  if (err) { throw err; }
+}
 
 /**
  * Creates a new instance of the ThaliEmitter which is an EventEmitter to call the underlying native layer.
  */
 function ThaliEmitter() {
   EventEmitter.call(this);
-  this._isBroadcasting = false;
-  this._connections = {};
   this._init();
 }
 
@@ -44,15 +49,17 @@ ThaliEmitter.prototype._init = function () {
 * @param {Function} cb the callback which returns an error if one has occurred.
 */
 ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
-  if (this._isBroadcasting) { throw new Error('Thali is already broadcasting'); }
+  validations.ensureNonNullOrEmptyString(deviceName, 'deviceName');
+  validations.ensureValidPort(port);
+  cb || (cb = thrower);
+
   Mobile('StartBroadcasting').callNative(deviceName, port, function (err) {
     if (err) {
       cb(new Error(err));
     } else {
-      this._isBroadcasting = true;
       cb();
     }
-  }.bind(this));
+  });
 };
 
 /**
@@ -60,15 +67,15 @@ ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
 * @param {Function} cb the callback which returns an error if one has occurred.
 */
 ThaliEmitter.prototype.stopBroadcasting = function(cb) {
-  if (!this._isBroadcasting) { throw new Error('Thali has already stopped broadcasting'); }
+  cb || (cb = thrower);
+
   Mobile('StopBroadcasting').callNative(function (err) {
     if (err) {
       cb(new Error(err));
     } else {
-      this._isBroadcasting = false;
       cb();
     }
-  }.bind(this));
+  });
 };
 
 /**
@@ -77,15 +84,16 @@ ThaliEmitter.prototype.stopBroadcasting = function(cb) {
 * @param {Function} cb the callback which returns an error if one occurred and a port number used for synchronization.
 */
 ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
-  if (this._connections[peerIdentifier] !== undefined) { throw new Error('This peer identifier has already been connected'); }
+  validations.ensureNonNullOrEmptyString(peerIdentifier, 'peerIdentifier');
+  validations.ensureIsFunction(cb);
+
   Mobile('Connect').callNative(peerIdentifier, function (err, port) {
     if (err) {
       cb(new Error(err));
     } else {
-      this._connections[peerIdentifier] = port;
       cb(null, port);
     }
-  }.bind(this));
+  });
 };
 
 /**
@@ -94,15 +102,16 @@ ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
 * @param {Function} cb the callback which returns an error if one occurred.
 */
 ThaliEmitter.prototype.disconnect = function (peerIdentifier, cb) {
-  if (this._connections[peerIdentifier] === undefined) { throw new Error('This peer identifier is not connected'); }
+  validations.ensureNonNullOrEmptyString(peerIdentifier, 'peerIdentifier');
+  cb || (cb = thrower);
+
   Mobile('Disconnect').callNative(peerIdentifier, function (err) {
     if (err) {
       cb(new Error(err));
     } else {
-      delete this._connections[peerIdentifier];
       cb();
     }
-  }.bind(this));
+  });
 };
 
 module.exports = ThaliEmitter;

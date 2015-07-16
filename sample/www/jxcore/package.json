@@ -9,12 +9,14 @@
   "keywords": [
     "Thali",
     "JXCore",
+    "PouchDB",
     "Multiplex"
   ],
   "author": "Microsoft Corporation",
   "license": "MIT",
   "dependencies": {
-    "multiplex": "^6.2.2"
+    "multiplex": "^6.2.2",
+    "express": "^4.13.1"
   },
   "devDependencies": {
     "tape": "^4.0.0"

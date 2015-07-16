@@ -5,6 +5,7 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var net = require('net');
 var multiplex = require('multiplex');
+var validations = require('./validations');
 
 var e = new EventEmitter();
 
@@ -42,6 +43,10 @@ ThaliReplicationManager.events = {
 * @param {Number} port the port number used for synchronization.
 */
 ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
+  validations.ensureNonNullOrEmptyString(deviceName, 'deviceName');
+  validations.ensureValidPort(port);
+  validations.ensureNonNullOrEmptyString(dbName, 'dbName');
+
   this.emit(ThaliReplicationManager.events.STARTING);
 
   this._port = port;

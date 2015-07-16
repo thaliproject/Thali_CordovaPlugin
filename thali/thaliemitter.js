@@ -13,8 +13,6 @@ function thrower(err) {
  */
 function ThaliEmitter() {
   EventEmitter.call(this);
-  this._isBroadcasting = false;
-  this._connections = {};
   this._init();
 }
 
@@ -55,15 +53,13 @@ ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
   validations.ensureValidPort(port);
   cb || (cb = thrower);
 
-  if (this._isBroadcasting) { throw new Error('Thali is already broadcasting'); }
   Mobile('StartBroadcasting').callNative(deviceName, port, function (err) {
     if (err) {
       cb(new Error(err));
     } else {
-      this._isBroadcasting = true;
       cb();
     }
-  }.bind(this));
+  });
 };
 
 /**
@@ -73,15 +69,13 @@ ThaliEmitter.prototype.startBroadcasting = function(deviceName, port, cb) {
 ThaliEmitter.prototype.stopBroadcasting = function(cb) {
   cb || (cb = thrower);
 
-  if (!this._isBroadcasting) { throw new Error('Thali has already stopped broadcasting'); }
   Mobile('StopBroadcasting').callNative(function (err) {
     if (err) {
       cb(new Error(err));
     } else {
-      this._isBroadcasting = false;
       cb();
     }
-  }.bind(this));
+  });
 };
 
 /**
@@ -93,15 +87,13 @@ ThaliEmitter.prototype.connect = function (peerIdentifier, cb) {
   validations.ensureNonNullOrEmptyString(peerIdentifier, 'peerIdentifier');
   validations.ensureIsFunction(cb);
 
-  if (this._connections[peerIdentifier] !== undefined) { throw new Error('This peer identifier has already been connected'); }
   Mobile('Connect').callNative(peerIdentifier, function (err, port) {
     if (err) {
       cb(new Error(err));
     } else {
-      this._connections[peerIdentifier] = port;
       cb(null, port);
     }
-  }.bind(this));
+  });
 };
 
 /**
@@ -113,15 +105,13 @@ ThaliEmitter.prototype.disconnect = function (peerIdentifier, cb) {
   validations.ensureNonNullOrEmptyString(peerIdentifier, 'peerIdentifier');
   cb || (cb = thrower);
 
-  if (this._connections[peerIdentifier] === undefined) { throw new Error('This peer identifier is not connected'); }
   Mobile('Disconnect').callNative(peerIdentifier, function (err) {
     if (err) {
       cb(new Error(err));
     } else {
-      delete this._connections[peerIdentifier];
       cb();
     }
-  }.bind(this));
+  });
 };
 
 module.exports = ThaliEmitter;
