@@ -5,9 +5,8 @@ var express = require('express');
 var app = express();
 app.disable('x-powered-by');
 
-app.listen(9001, function () {
-  console.log('Listening on port 9001');
-});
+app.listen(9001);
+console.log('Listening on port 9001');
 
 test('ThaliEmitter can call startBroadcasting and endBroadcasting without error', { timeout: 5000 }, function (t) {
   var e = new ThaliEmitter();
@@ -15,10 +14,10 @@ test('ThaliEmitter can call startBroadcasting and endBroadcasting without error'
   t.plan(2);
 
   e.startBroadcasting(String(Date.now), 9001, function (err1) {
-    t.err(err1);
+    t.notOk(err1);
 
     e.stopBroadcasting(function (err2) {
-      t.err(err2);
+      t.notOk(err2);
     });
   });
 });
@@ -40,14 +39,14 @@ test('ThaliEmitter calls startBroadcasting twice with error', { timeout: 5000 },
   t.plan(3);
 
   e.startBroadcasting(String(Date.now), 9001, function (err1) {
-    t.err(err1);
+    t.notOk(err1);
 
     e.startBroadcasting(String(Date.now), 9001, function (err2) {
 
       t.assert(!!err2, err2.message);
 
       e.stopBroadcasting(function (err3) {
-        t.err(err2);
+        t.notOk(err2);
       });
     });
   });
@@ -59,13 +58,13 @@ test('ThaliEmitter throws on connection to bad peer', { timeout: 5000 }, functio
   t.plan(3);
 
   e.startBroadcasting(String(Date.now), 9001, function (err1) {
-    t.err(err1);
+    t.notOk(err1);
 
     e.connect('foobar', function (err2, port) {
       t.assert(!!err2, err2.message);
 
       e.stopBroadcasting(function (err3) {
-        t.err(err3);
+        t.notOk(err3);
       });
     });
   });
@@ -77,13 +76,13 @@ test('ThaliEmitter throws on disconnect to bad peer', { timeout: 5000 }, functio
   t.plan(3);
 
   e.startBroadcasting(String(Date.now), 9001, function (err1) {
-    t.err(err1);
+    t.notOk(err1);
 
     e.disconnect('foobar', function (err2, port) {
       t.assert(err2, err2.message);
 
       e.stopBroadcasting(function (err3) {
-        t.err(err3);
+        t.notOk(err3);
       });
     });
   });
