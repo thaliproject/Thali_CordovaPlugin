@@ -1,6 +1,8 @@
 var test = require('tape');
 var ThaliEmitter = require('../thali/thaliemitter');
 
+var express = require('express');
+
 test('ThaliEmitter can call startBroadcasting and endBroadcasting without error', function (t) {
   var e = new ThaliEmitter();
 

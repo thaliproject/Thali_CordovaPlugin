@@ -33,42 +33,12 @@
     <meta name="msapplication-tap-highlight" content="no">
     <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
     <link rel="stylesheet" type="text/css" href="css/index.css">
-    <title>Hello World</title>
+    <title>Thali Unit Tests</title>
 </head>
 <body>
-<div id="myAppDiv">
-    <h1>Bt Connector App</h1>
-    <button id="startButton">Start Connector</button>
-    <button id="stopButton" style="display: none;">Stop Connector</button>
-    </Br>
-    <h1 >Name:</h1>
-    <textarea rows="1" id="nameBox">MyName</textarea>
-    </Br>
-    <div id="myDeviceSelection" style="display: none;">
-        <div id='peerListSelector'>
-        </div>
-    </div>
-    <div id="myRemoteDevice" style="display: none;">
-        <h1 >Remote party</h1>
-        <textarea readonly rows="1" id="RemNameBox"></textarea>
-        <textarea readonly rows="1" id="RemAddrBox"></textarea>
-        </Br>
-        <button id="DisconnectButton">Disconnect</button>
-        </Br>
-        <textarea rows="3" cols="40" id="MessageBox"></textarea>
-        </Br>
-        <div id="mySendMessageDiv" style="display: none;">
-            <button id="SendButton">Send Message</button>
-            </Br>
-        </div>
-        <h1 >Messages</h1>
-        <button id="ClearMessagesButton">Clear Messages</button>
-        <textarea readonly rows="20"  cols="40" id="ReplyBox">
-        </textarea>
-    </div>
-</div>
+
+<iframe id="thalitestFrame" style="position: absolute; height: 80%; width: 100%; border: none" />
 <script type="text/javascript" src="cordova.js"></script>
-<!--<script type="text/javascript" src="js/index.js"></script>-->
-<script type="text/javascript" src="js/thali_main.js"></script>
+<script type="text/javascript" src="jxcore.js"></script>
 </body>
 </html>
