@@ -38,15 +38,13 @@ Download [Xcode 6](https://developer.apple.com/xcode/), or later.
 
 ## Getting Started
 
-### Install latest Node.JS
+### Install latest JXCore
 
-Follow the instructions at [https://nodejs.org/](https://nodejs.org/). When you're done, check that the
+Follow the instructions at [http://jxcore.com/downloads/](http://jxcore.com/downloads/). When you're done, check that the
 installation worked:
 ```
-$ node -v
-v0.12.7
-$ npm -v
-2.11.3
+$ jx -jxv
+v Beta-0.3.0.3
 ```
 
 ### Install Cordova
@@ -55,7 +53,7 @@ $ npm -v
 and [iOS Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_ios_index.md.html#iOS%20Platform%20Guide) for detailed instructions.)
 
 ```
-$ sudo npm install -g cordova
+$ sudo jx install -g cordova
 ```
 
 ### Create a Cordova project
@@ -111,7 +109,7 @@ Follow the instructions below to use the Thali Cordova Plugin on Android and iOS
    * go to `ThaliTest\platforms\android` and in `AndroidManifest.xml` change `android:minSdkVersion="10"` to
     `android:minSdkVersion="16"`
 3. Add the plugin
-   * `cordova plugin add https://github.com/thaliproject/Thali_Codovaplugin`
+   * `cordova plugin add https://github.com/thaliproject/Thali_Cordovaplugin`
 4. Fix issue on can not replace existing file
    * from `ThaliTest\plugins\org.thaliproject.p2p\src\android\java\io\jxcore\node` copy
    the `JXcoreExtension.java` to `ThaliTest\platforms\android\src\io\jxcore\node`
@@ -137,34 +135,30 @@ All commands are issued from the the root of the project folder.
 
 ### Unit Testing the Thali Cordova Plugin
 
-The Thali Cordova plugin uses the [Jasmine](http://jasmine.github.io/) Behavior Driven Development framework for JavaScript.
+The Thali Cordova plugin uses the [Tape](https://www.npmjs.com/package/tape) tap-producing test harness for node and browsers.
 
 #### Desktop Testing
 
 Testing is available on the desktop for the Thali Cordova Plugin which uses a mock object to simulate the native Cordova `Mobile` calls.
 
-To get started, install, Jasmine:
+To run the tests navigate to Thali_CordovaPlugin/sample/www/jxcore/test and run
 ```
-$ sudo [npm] install -g jasmine
-```
-
-Next, simply run Jasmine which then looks at the specifications in the `specs` folder.  
-```
-$ jasmine
+$ jx install --autoremove "*.gz"
+$ jx thaliemitterspec.js
 ```
 
-#### Mobile Testing
+### Mobile Testing
 
 Testing is also available on the mobile devices as well.  This will use the regular `Mobile` calls directly through Cordova to talk to the underlying system.
 
-To get started, copy the files from `sample/android/www` or `sample/ios/www` to the `www` folder.
+To get started, copy the files from `plugins/org.thaliproject.p2p/sample/www` to the `www` folder of your Cordova project.
 
-Next, install the requirements for testing:
+Next, inside the www root folder of your Cordova project, install the requirements for testing:
 ```
-$ jx install
+$ jx install --autoremove "*.gz"
 ```
 
-Finally, build the application and run it on your device.  The test results should be shown in your developer console.
+Finally, build the application using `cordova build` and run it on your device. The test results should be shown in your developer console.
 
 ### Documentation
 
