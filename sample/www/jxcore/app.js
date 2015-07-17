@@ -26,4 +26,11 @@ app.get('/', function (req, res) {
   require('./test/thaliscenarios');
 });
 
+test.createStream({ objectMode: true })
+  .on('data', function (row) {
+    console.log(JSON.stringify(row));
+  });
+
+require('./test/thaliscenarios');
+
 app.listen(5000);
