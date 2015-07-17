@@ -1,38 +1,70 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
-    <link rel="stylesheet" type="text/css" href="css/index.css">
-    <title>Thali Unit Tests</title>
+    <meta charset="utf-8"/>
+    <meta name="format-detection" content="telephone=no"/>
+    <meta name="msapplication-tap-highlight" content="no"/>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; media-src *">
+    <!-- WARNING: for iOS 7, remove the width=device-width and height=device-height attributes. See https://issues.apache.org/jira/browse/CB-4323 -->
+    <meta name="viewport"
+          content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi"/>
+    <title>Hello World</title>
+
+    <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+    <script type="text/javascript" charset="utf-8" src="jxcore.js"></script>
 </head>
 <body>
+<div class="app">
+    <h1>Cordova and JXcore</h1>
+</div>
 
-<iframe id="thalitestFrame" style="position: absolute; height: 100%; width: 100%; border: none" />
-<script type="text/javascript" src="cordova.js"></script>
-<script type="text/javascript" src="jxcore.js"></script>
-<script>
-// This JavaScript files runs on Cordova UI
-console.log('loading app.js');
-var inter = setInterval(function() {
-  if (typeof jxcore == 'undefined')
-    return;
+<br/>
 
-  clearInterval(inter);
+<p id='txt'>
+    Hello World!!
+</p>
 
-  jxcore.isReady(function() {
-    console.log('READY');
-    // register log method from UI to jxcore instance
+<script type="text/javascript" charset="utf-8">
 
-    jxcore('app.js').loadMainFile(function(ret, err) {
-      if (err) {
-        alert(JSON.stringify(err));
-      } else {
-        console.log('Loaded');
-        document.getElementById('thalitestFrame').src = 'http://localhost:5000';
-      }
-    });
-  });
-}, 5);
+try{
+
+    function log(x) {
+      var txt = document.getElementById('txt');
+      if (txt)
+        txt.innerHTML += "<BR/>" + x;
+    }
+
+    // silly but reliable on multiple environments.
+    // it tries until the jxcore reference is ready.
+    var inter = setInterval(function() {
+      if (typeof jxcore == 'undefined') return;
+
+      clearInterval(inter);
+
+      // sign-up for jxcore.isReady event
+      jxcore.isReady(function(){
+        // register log method from UI to jxcore instance
+        // so you can call it (app.js) cordova('log').cal(...)
+        jxcore('log').register(log);
+
+        // set the main file and load.
+        jxcore('app.js').loadMainFile(function (ret, err) {
+          if(err) {
+            var msg;
+            if (!err || err.replace)
+              msg = err;
+            else
+              msg = JSON && JSON.stringify ? JSON.stringify(err) : err;
+
+            alert(msg);
+          } else {
+          }
+        });
+      });
+    }, 5);
+} catch(e) { alert(e)}
 </script>
+
 </body>
 </html>
