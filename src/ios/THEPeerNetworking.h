@@ -34,10 +34,13 @@
 // Properties.
 @property (nonatomic, weak) id<THEPeerNetworkingDelegate> delegate;
 
+
+
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSUUID *)peerIdentifier
-                           peerName:(NSString *)peerName;
+                           peerName:(NSString *)peerName
+                               port:(int)port;
 
 // Starts peer networking.
 - (void)start;

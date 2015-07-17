@@ -54,6 +54,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 @property (nonatomic) MCPeerID * peerID;
 @property (nonatomic) NSUUID * peerIdentifier;
 @property (nonatomic) NSString * peerName;
+@property int port;
 @property (nonatomic) BOOL found;
 @property (nonatomic) THEPeerDescriptorState serverState;
 @property (nonatomic) THEPeerDescriptorState clientState;
@@ -67,7 +68,8 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 // Class initializer.
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
                 peerIdentifier:(NSUUID *)peerIdentifier
-                      peerName:(NSString *)peerName;
+                      peerName:(NSString *)peerName
+                          port:(int)port;
 
 @end
 
@@ -81,6 +83,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
                 peerIdentifier:(NSUUID *)peerIdentifier
                       peerName:(NSString *)peerName
+                          port:(int)port
 {
     // Initialize superclass.
     self = [super init];
@@ -95,6 +98,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     _peerID = peerID;
     _peerIdentifier = peerIdentifier;
     _peerName = peerName;
+    _port = port;
     
     // Done.
     return self;
@@ -158,6 +162,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSUUID *)peerIdentifier
                            peerName:(NSString *)peerName
+                               port:(int)port
 {
     // Initialize superclass.
     self = [super init];
@@ -371,7 +376,8 @@ withDiscoveryInfo:(NSDictionary *)info
     {
         peerDescriptor = [[THEPeerDescriptor alloc]initWithPeerID:peerID
                                                    peerIdentifier:[[NSUUID alloc] initWithUUIDString:info[PEER_IDENTIFIER]]
-                                                         peerName:info[PEER_NAME]];
+                                                         peerName:info[PEER_NAME]
+                                                            port:0];
         [peerDescriptor setFound:YES];
         _peers[peerID] = peerDescriptor;
     }

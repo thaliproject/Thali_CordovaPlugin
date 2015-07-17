@@ -205,10 +205,11 @@ API for Cordova (story -1)
 // Starts peer communications. Was StartConnector / startPeerCommunications(peerIdentifier, peerName)
 Mobile('StartBroadcasting').registerAsync(function (peerIdentifier, peerName) {
   startServerSocket(0); // start server with port zero so it will get new port for us.
-  serverport = server.address().port;
+  serverport = server.address().port; // fix
   logInCordova("@server listens port :" + serverport);
   var result;
-  Mobile('StartPeerCommunications').callNative(peerIdentifier, peerName, function (value) {
+  Mobile('StartPeerCommunications').callNative(peerIdentifier, peerName, serverport, function (value) {
+    nslog("*** StartPeerCommunications ***");
     result = Boolean(value);
     logInCordova('Started peer communications');
     logInCordova('This peer is ' + peerIdentifier);
@@ -303,7 +304,7 @@ Mobile('peerAvailabilityChanged').registerToNative(function (args) {
 
 var peerChangedCallback;// calls cordova callback function
 Mobile('setPeerChangedCallback').registerAsync(function (callback) {
-  console.log("setConnectionStatusCallback");
+  console.log("setPeerChangedCallback");
   peerChangedCallback = callback;
 });
 

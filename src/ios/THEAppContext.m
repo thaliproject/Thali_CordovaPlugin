@@ -198,15 +198,19 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     
     // StartPeerCommunications native block.
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || ![params[1] isKindOfClass:[NSString class]])
+        if ([params count] != 4 || ![params[0] isKindOfClass:[NSString class]] || ![params[1] isKindOfClass:[NSString class]] || ![params[2] isKindOfClass:[NSNumber class]])
         {
+            // Fail condition (remember to check against failed calls in app.js)
             [JXcore callEventCallback:callbackId
                            withParams:@[@(false)]];
         }
         else
         {
+            int port = (int)[params[2] integerValue];
+            
             [self startCommunicationsWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:params[0]]
-                                               peerName:params[1]];
+                                               peerName:params[1]
+                                                   port:port];
             [JXcore callEventCallback:callbackId
                            withParams:@[@(true)]];
         }
@@ -249,6 +253,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 // Starts communications.
 - (void)startCommunicationsWithPeerIdentifier:(NSUUID *)peerIdentifier
                                      peerName:(NSString *)peerName
+                                         port:(int)port
 {
     if ([_atomicFlagCommunicationsEnabled trySet])
     {
@@ -264,7 +269,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
         // Allocate and initialize peer networking.
         _peerNetworking = [[THEPeerNetworking alloc] initWithServiceType:@"Thali"
                                                           peerIdentifier:peerIdentifier
-                                                                peerName:peerName];
+                                                                peerName:peerName
+                                                                    port:port];
         [_peerNetworking setDelegate:(id<THEPeerNetworkingDelegate>)self];
 
         // Start peer Bluetooth and peer networking.
@@ -655,10 +661,10 @@ peerClientNotConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier
     [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
     
     // Allocate and initialize peer networking.
-    _peerNetworking = [[THEPeerNetworking alloc] initWithServiceType:@"Thali"
-                                                      peerIdentifier:peerIdentifier
-                                                            peerName:[[UIDevice currentDevice] name]];
-    [_peerNetworking setDelegate:(id<THEPeerNetworkingDelegate>)self];
+//    _peerNetworking = [[THEPeerNetworking alloc] initWithServiceType:@"Thali"
+//                                                      peerIdentifier:peerIdentifier
+//                                                            peerName:[[UIDevice currentDevice] name]];
+//    [_peerNetworking setDelegate:(id<THEPeerNetworkingDelegate>)self];
     
     // Initialize the the mutex and peers dictionary.
     pthread_mutex_init(&_mutex, NULL);
