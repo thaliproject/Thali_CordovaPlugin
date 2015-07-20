@@ -54,7 +54,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 @property (nonatomic) MCPeerID * peerID;
 @property (nonatomic) NSUUID * peerIdentifier;
 @property (nonatomic) NSString * peerName;
-@property int port;
+@property uint port;
 @property (nonatomic) BOOL found;
 @property (nonatomic) THEPeerDescriptorState serverState;
 @property (nonatomic) THEPeerDescriptorState clientState;
@@ -70,6 +70,9 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
                 peerIdentifier:(NSUUID *)peerIdentifier
                       peerName:(NSString *)peerName
                           port:(int)port;
+// TODO
+-(void)checkIfTCPClient;
+-(void)setServerInputStream:(NSInputStream *)serverInputStream;
 
 @end
 
@@ -102,6 +105,20 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     
     // Done.
     return self;
+}
+
+-(void)checkIfTCPClient
+{
+    if (_serverInputStream != nil && _serverOutputStream != nil)
+    {
+        // go create TCP client
+    }
+}
+
+-(void)setServerInputStream:(NSInputStream *)serverInputStream
+{
+    NSLog(@"x setServerInputStream");
+    _serverOutputStream = (NSOutputStream *)serverInputStream;
 }
 
 @end
@@ -162,7 +179,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSUUID *)peerIdentifier
                            peerName:(NSString *)peerName
-                               port:(int)port
+                               port:(uint)port
 {
     // Initialize superclass.
     self = [super init];

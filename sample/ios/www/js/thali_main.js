@@ -51,7 +51,7 @@
           alert('Error loading ThaliMobile app.js');
           alert(err);
         } else {
-          addChatLine("*** LOADED ***"); // logInCordova('Loaded');
+          addChatLine("Cordova", "*** LOADED ***"); // logInCordova('Loaded');
           jxcore_ready();
         }
       });
@@ -61,7 +61,10 @@
   // Enable these functions for use within app.js
   function registerCordovaFunctions() {
     jxcore('alert').register(function(msg){ alert(msg); });
-    jxcore('logInCordova').register(logInCordova);
+    jxcore('logInCordova').register(logInCordova); // takes function name
+    // JX calls to Cordova UI functions
+    jxcore('peerClientConnectionCallback').register(peerClientConnectionCallback);
+    jxcore('peerServerConnectionCallback').register(peerServerConnectionCallback);
   }
 
   // Device name and identifier
@@ -177,8 +180,19 @@
     }
   }
 
+  // not used with iOS - iOS triggers registerToNative calls
   function peersConnectionStateCallback(peerId, state) {
     alert("Got connection peer : " + peerId + ", state: "  + state);
+  }
+  function peerClientConnectionCallback(peerId) {
+    nslog("cor peerClientConnectionCallback : " + peerId); // <--@
+
+    document.getElementById(myRemoteDeviceId).style.display = 'block';
+  }
+  function peerServerConnectionCallback(peerId) {
+    nslog("cor peerServerConnectionCallback : " + peerId); // <--@
+
+    document.getElementById(myRemoteDeviceId).style.display = 'block';
   }
 
   function addButton(peer) {

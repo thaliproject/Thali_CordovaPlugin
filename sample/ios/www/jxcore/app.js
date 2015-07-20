@@ -155,7 +155,9 @@ Mobile('connectingToPeerServer').registerToNative(function (args) {
 // Register to native for connectedToPeerServer.
 Mobile('connectedToPeerServer').registerToNative(function (args) {
   var peerIdentifier = args;
-  logInCordova('    Connected to peer server ' + peerIdentifier);
+  logInCordova('Connected to peer server ' + peerIdentifier);
+
+  peerServerConnectionCallback(peerIdentifier);
 
   //setTimeout(makePeerServerDisconnector(peerIdentifier), 30 * 1000);
 });
@@ -189,7 +191,9 @@ Mobile('peerClientConnecting').registerToNative(function (args) {
 // Register to native for peerClientConnected.
 Mobile('peerClientConnected').registerToNative(function (args) {
   var peerIdentifier = args;
-  logInCordova('    Peer client connected ' + peerIdentifier);
+  logInCordova('Peer client connected ' + peerIdentifier);
+
+  peerClientConnectionCallback(peerIdentifier);
 });
 
 // Register to native for peerClientNotConnected.
@@ -323,11 +327,6 @@ Mobile('appEnteredForeground').registerToNative(function (args) {
   logInCordova('App entered foreground.');
 });
 
-// jukka
-/*
-var peerConnectionStatusCallback;
-//*/
-
 /****************************************************************************
 Helpers
 *****************************************************************************/
@@ -370,6 +369,16 @@ Mobile('print').registerSync( function(object, message) {
 //
 // jxcore->cordova helper functions. (shares functions in 'thali_main.js')
 //
+
+function peerClientConnectionCallback(peerIdentifier) {
+  nslog("jx peerClientConnectionCallback:"+peerIdentifier);
+  Mobile('peerClientConnectionCallback').call(peerIdentifier);
+}
+
+function peerServerConnectionCallback(peerIdentifier) {
+  nslog("jx peerServerConnectionCallback:"+peerIdentifier);
+  Mobile('peerServerConnectionCallback').call(peerIdentifier);
+}
 
 function alert(message) {
   Mobile('alert').call(message);

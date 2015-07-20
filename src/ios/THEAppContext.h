@@ -38,7 +38,8 @@
 
 // Starts communications.
 - (void)startCommunicationsWithPeerIdentifier:(NSUUID *)peerIdentifier
-                                     peerName:(NSString *)peerName;
+                                     peerName:(NSString *)peerName
+                                        port:(uint)port;
 
 // Stops communications.
 - (void)stopCommunications;

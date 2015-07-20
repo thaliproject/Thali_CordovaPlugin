@@ -253,7 +253,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 // Starts communications.
 - (void)startCommunicationsWithPeerIdentifier:(NSUUID *)peerIdentifier
                                      peerName:(NSString *)peerName
-                                         port:(int)port
+                                         port:(uint)port
 {
     if ([_atomicFlagCommunicationsEnabled trySet])
     {

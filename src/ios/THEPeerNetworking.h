@@ -40,7 +40,7 @@
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSUUID *)peerIdentifier
                            peerName:(NSString *)peerName
-                               port:(int)port;
+                               port:(uint)port;
 
 // Starts peer networking.
 - (void)start;
@@ -53,5 +53,6 @@
 
 // Connects from the peer server with the specified peer identifier.
 - (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+
 
 @end
