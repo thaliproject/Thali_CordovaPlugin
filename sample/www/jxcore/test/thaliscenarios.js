@@ -78,7 +78,7 @@ test('ThaliEmitter throws on disconnect to bad peer', function (t) {
   });
 });
 
-test('ThaliEmitter can discover and connect to peers', function () {
+test('ThaliEmitter can discover and connect to peers', function (t) {
   var e = new ThaliEmitter();
 
   e.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (peers) {
