@@ -4,7 +4,8 @@ This script will do the following tasks
 1. Add the Android platform
 2. Fix manifest min-sdk issue
 3. Fix issue on "can not replace existing file"
-4: Create a dummy file to prevent future execution by other plugin add operation
+4. Install the thali node module to global (until we get thali in npm repo)
+5: Create a dummy file to prevent future execution by other plugin add operation
  */
 
 
@@ -42,6 +43,16 @@ function isFirstTime(){
     else
         return true;
 }
+//Install thali node modules to global
+//once we have the thali module available in npm repo, this is step is not required
+function installThaliModules(){
+    var thaliPath = rootdir + '/../plugins/org.thaliproject.p2p/thali';
+    var currentFolder = process.cwd();
+    process.chdir(thaliPath);
+    //exec('jx install -g --autoremove "*.gz"'); // https://github.com/jxcore/jxcore/issues/429
+    exec('jx install -g');
+    process.chdir(currentFolder);
+}
 
 if(isFirstTime())
     console.log('Starting the Thali_Cordova plugin pre-requisites configuration..');
@@ -65,6 +76,9 @@ updateAndroidSDKVersion();
 console.log('Replacing JXcoreExtension.java..');
 replaceJXCoreExtension();
 
+//4. Install the thali node module to global (until we get thali in npm repo)
+console.log('Installing thali node modules to global..');
+installThaliModules();
 
 console.log('Completed the Thali_Cordova plugin Pre-requisites configuration..');
 //Creating a dummy file to prevent the future execution of the entire script
