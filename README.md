@@ -107,7 +107,7 @@ Follow the instructions below to use the Thali Cordova Plugin on Android and iOS
    * `cordova platform add android`
 2. Fix manifest min-sdk issue
    * go to `ThaliTest\platforms\android` and in `AndroidManifest.xml` change `android:minSdkVersion="10"` to
-    `android:minSdkVersion="16"`
+    `android:minSdkVersion="19"`
 3. Add the plugin
    * `cordova plugin add https://github.com/thaliproject/Thali_Cordovaplugin`
 4. Fix issue on can not replace existing file
