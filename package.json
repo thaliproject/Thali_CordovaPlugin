@@ -1,0 +1,24 @@
+{
+  "name": "thali-cordova-plugin-jxcore",
+  "version": "1.0.0",
+  "description": "Thali Cordova Plugin JXCore",
+  "main": "lib/thalireplicationmanager.js",
+  "scripts": {
+    "test": "tape test/thaliemitterspec.js"
+  },
+  "keywords": [
+    "Thali",
+    "JXCore",
+    "PouchDB",
+    "Multiplex"
+  ],
+  "author": "Microsoft Corporation",
+  "license": "MIT",
+  "dependencies": {
+    "multiplex": "^6.2.2",
+    "express": "^4.13.1"
+  },
+  "devDependencies": {
+    "tape": "^4.0.0"
+  }
+}

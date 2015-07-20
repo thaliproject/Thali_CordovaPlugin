@@ -1,5 +1,11 @@
 # Mac OS X
 *.DS_Store
-**/.idea
-**/.gradle
-**/.iml
+.idea/
+.gradle
+**/*.iml
+
+# Nodejs
+node_modules
+npm-debug.log
+
+out/
