@@ -3,22 +3,30 @@
 
 @implementation THENetworkingClientRelay
 {
-@private
+    @private
     NSInputStream *aInputStream;
     NSOutputStream *aOutputStream;
     uint aPort;
+    NSUUID *peerIdentifier;
+    
+    pthread_mutex_t _mutex;
 }
 
 -(instancetype)initWithMPInputStream:(NSInputStream *)inputStream
                   withMPOutputStream:(NSOutputStream *)outputStream
                             withPort:(uint)port
 {
-    if (!self) {
-        
-        aInputStream = inputStream;
-        aOutputStream = outputStream;
-        aPort = port;
+    self = [super init];
+    // Handle errors.
+    if (!self)
+    {
+        return nil;
     }
+    
+    aInputStream = inputStream;
+    aOutputStream = outputStream;
+    aPort = port;
+    
     return self;
 }
 
@@ -65,7 +73,7 @@
 -(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
     if (aStream == aInputStream) {
-        NSLog(@"Client relay aStream aInputStream");
+        NSLog(@"Client relay aStream aInputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
                 break;
@@ -83,7 +91,7 @@
     }
     else if (aStream == aOutputStream)
     {
-        NSLog(@"Client relay aStream aOutputStream");
+        NSLog(@"Client relay aStream aOutputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
                 break;
@@ -123,6 +131,7 @@
         // Error in connect function:
         // GCDAsyncSocketErrorDomain Code=7 "Socket closed by remote peer" (same device)
         // NSPOSIXErrorDomain Code=61 "Connection refused" (no listener setup)
+        // NSPOSIXErrorDomain Code=49 "Can't assign requested address"
     }
 }
 

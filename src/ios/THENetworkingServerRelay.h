@@ -13,7 +13,8 @@
 
 -(instancetype)initWithMPInputStream:(NSInputStream *)inputStream
                   withMPOutputStream:(NSOutputStream *)outputStream
-                            withPort:(uint)port;
+                            withPort:(uint)port
+                  withPeerIdentifier:(NSUUID *)peerIdentifier;
 
 -(BOOL)start;
 

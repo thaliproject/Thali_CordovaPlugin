@@ -7,18 +7,28 @@
     NSInputStream *aInputStream;
     NSOutputStream *aOutputStream;
     uint aPort;
+    NSUUID *aPeerIdentifier;
+    
+    pthread_mutex_t _mutex;
 }
 
 -(instancetype)initWithMPInputStream:(NSInputStream *)inputStream
                   withMPOutputStream:(NSOutputStream *)outputStream
                             withPort:(uint)port
+                  withPeerIdentifier:(NSUUID *)peerIdentifier
 {
-    if (!self) {
-        
-        aInputStream = inputStream;
-        aOutputStream = outputStream;
-        aPort = port;
+    self = [super init];
+    // Handle errors.
+    if (!self)
+    {
+        return nil;
     }
+    
+    aInputStream = inputStream;
+    aOutputStream = outputStream;
+    aPort = port;
+    aPeerIdentifier = peerIdentifier;
+    
     return self;
 }
 
@@ -46,12 +56,12 @@
         else
         {
             UInt16 port = [asyncSocket localPort];
-            NSLog(@"Server relay socket got localPort: %u", port);
+            NSLog(@"Server relay socket got localPort: %u ", port);
             
             // Pass event didGetPort by notifing the delegate
-            if ([[self delegate] respondsToSelector:@selector(networkingServerRelay:didGetLocalPort:)])
+            if ([[self delegate] respondsToSelector:@selector(networkingServerRelay:didGetLocalPort:withPeerIdentifier:)])
             {
-                [[self delegate] networkingServerRelay:self didGetLocalPort:port];
+                [[self delegate] networkingServerRelay:self didGetLocalPort:port withPeerIdentifier:aPeerIdentifier];
             }
             
             return YES;
@@ -68,7 +78,7 @@
 -(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
     if (aStream == aInputStream) {
-        NSLog(@"aStream aInputStream");
+        NSLog(@"Server Relay aStream aInputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
                 break;
@@ -86,7 +96,7 @@
     }
     else if (aStream == aOutputStream)
     {
-        NSLog(@"aStream aOutputStream");
+        NSLog(@"Server Relay aStream aOutputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
                 break;
@@ -110,9 +120,9 @@
 {
     NSLog(@"listenerSocket accepted new Socket: host:%@ port:%hu", newSocket.connectedHost, (uint16_t)newSocket.connectedPort); // newSocket client port
     
-    [newSocket writeData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:1]; // needed
+    [newSocket writeData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0]; // needed
     
-    [newSocket readDataWithTimeout:-1 tag:0];
+    [newSocket readDataWithTimeout:-1 tag:1]; // NB: Inifinite timeouts will timeout after 10 mins
 }
 
 -(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
@@ -124,7 +134,7 @@
 {
     NSLog(@"listenerSocket socketDidDisconnect");
     if (err) {
-        NSLog(@"listenerSocket Socket Error: %@", err);
+        NSLog(@"listenerSocket Socket Error: %@", [err description]);
     }
 }
 

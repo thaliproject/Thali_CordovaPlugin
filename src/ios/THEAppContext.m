@@ -35,6 +35,8 @@
 #import "THEPeerNetworking.h"
 #import "THEAppContext.h"
 #import "THEPeer.h"
+#import "THENetworkingServerRelay.h"
+#import "THENetworkingClientRelay.h"
 
 // JavaScript callbacks.
 NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
@@ -45,12 +47,17 @@ NSString * const kPeerClientConnecting      = @"peerClientConnecting";
 NSString * const kPeerClientConnected       = @"peerClientConnected";
 NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
+
 // THEAppContext (THEPeerBluetoothDelegate) interface.
 @interface THEAppContext (THEPeerBluetoothDelegate)
 @end
 
 // THEAppContext (THEPeerNetworkingDelegate) interface.
 @interface THEAppContext (THEPeerNetworkingDelegate)
+@end
+
+// WIP
+@interface THEAppContext (THENetworkingServerRelayDelegate)
 @end
 
 // THEAppContext (Internal) interface.
@@ -223,10 +230,11 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
                        withParams:nil];
     } withName:@"StopPeerCommunications"];
 
-    // BeginConnectToPeerServer native block.
+    // BeginConnectToPeerServer native block. [WIP]
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
         // Obtain the peer identifier.
         NSString * peerIdentifier = params[0];
+        NSLog(@"Connect peerId:%@ callbackId:%@", peerIdentifier, callbackId );
         
         // Connect to the the peer server.
         BOOL result = [self connectToPeerServerWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:peerIdentifier]];
@@ -605,6 +613,23 @@ peerClientNotConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier
         OnMainThread(^{
             [JXcore callEventCallback:kPeerClientNotConnected
                            withParams:@[[[peer identifier] UUIDString]]];
+        });
+    }
+}
+
+@end
+
+// THEAppContext (THENetworkingServerRelayDelegate) implementation.
+@implementation THEAppContext (THENetworkingServerRelayDelegate)
+
+- (void)networkingServerRelay:(THENetworkingServerRelay *)serverRelay didGetLocalPort:(uint)port withPeerIdentifier:(NSUUID *)peerIdentifier
+{
+    NSLog(@"THEAppContext delegate didGetLocalPort:%u withPeerIdentifier:%@", port, [peerIdentifier UUIDString]);
+    if (port>0)
+    {
+        // return (err, port) [NSNumber numberWithUnsignedInt:port]
+        OnMainThread(^{
+            [JXcore callEventCallback:@"peerDidGetLocalPort" withJSON:[NSString stringWithFormat:@"{\"err\":null,\"port\":%u,\"peerIdentifier\":\"%@\"}",port,[peerIdentifier UUIDString]]];
         });
     }
 }

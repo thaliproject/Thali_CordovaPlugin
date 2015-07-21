@@ -3,7 +3,7 @@
 (function () {
 
   /****************************************************************************
-  node - TCP/IP server side handling code
+  node - TCP/IP Server side handling code
   *****************************************************************************/
 
   var net = require('net');
@@ -67,7 +67,6 @@ function startClientSocket(port,tmpAddress) {
     clientSocket.end();
     clientSocket = 0;
   }
-
   clientSocket = net.connect(port, function () { //'connect' listener
   peerConnectionStateChanged(tmpAddress,"Connected");
   console.log("We have successfully connected to the server.");
@@ -80,15 +79,19 @@ clientSocket.on('close', function () {
   peerConnectionStateChanged(tmpAddress,"Disconnected");
   console.log('clientSocket is closed');
 });
-
 clientSocket.on('error', function(ex) {
   console.log("clientSocket got error : " + ex);
   // we got error, the close should follow automatically.
   // DisconnectPeer(tmpAddress);
 });
 }
+
 function sendGetRequest(message) {
-  clientSocket.write(message);
+  if(clientSocket != 0) {
+    clientSocket.write(message);
+  } else {
+    console.log("opps, clientSocket not setup to send message...");
+  }
 }
 
 function closeSockets() {
@@ -146,6 +149,10 @@ Mobile('notifyUser').registerSync(function (title, message) {
   return result;
 });
 
+/****************************************************************************
+Native methods
+*****************************************************************************/
+
 // Register to native for connectingToPeerServer.
 Mobile('connectingToPeerServer').registerToNative(function (args) {
   var peerIdentifier = args;
@@ -202,6 +209,23 @@ Mobile('peerClientNotConnected').registerToNative(function (args) {
   logInCordova('    Peer client not connected ' + peerIdentifier);
 });
 
+// Register to native for peerClientNotConnected.
+Mobile('peerDidGetLocalPort').registerToNative(function (args) {
+  print(args, 'peerDidGetLocalPort');
+  if(args.err == null)
+  {
+    var port = args.port;
+    var peerIdentifier = args.peerIdentifier;
+    nslog("Connect->port:"+port + " peerIdentifier:" + peerIdentifier);
+    // start client socket which will be then connected by native code;
+    startClientSocket(port,peerIdentifier);
+  }
+  else
+  {
+    console.log("Error setting up native local port.");
+  }
+});
+
 /****************************************************************************
 API for Cordova (story -1)
 *****************************************************************************/
@@ -233,8 +257,11 @@ Mobile('StopBroadcasting').registerAsync(function (peerIdentifier, peerName) {
 // Begins connecting to a peer server. was beginConnectToPeerServer(peerIdentifier)
 Mobile('Connect').registerAsync(function (peerIdentifier) {
   var result;
+  nslog("Connect peerIdentifier:"+peerIdentifier);
+  // TODO return err, port
   Mobile('BeginConnectToPeerServer').callNative(peerIdentifier, function (value) {
     result = Boolean(value);
+    // uses callback function to return (err,port)
   });
   return result;
 });
@@ -306,18 +333,6 @@ Mobile('peerAvailabilityChanged').registerToNative(function (args) {
   }
 });
 
-var peerChangedCallback;// calls cordova callback function
-Mobile('setPeerChangedCallback').registerAsync(function (callback) {
-  console.log("setPeerChangedCallback");
-  peerChangedCallback = callback;
-});
-
-var peerConnectionStatusCallback;// calls cordova callback function
-Mobile('setConnectionStatusCallback').registerAsync(function (callback) {
-  console.log("setConnectionStatusCallback");
-  peerConnectionStatusCallback = callback;
-});
-
 Mobile('appEnteringBackground').registerToNative(function (args) {
   logInCordova('App entering background.');
 });
@@ -326,6 +341,60 @@ Mobile('appEnteringBackground').registerToNative(function (args) {
 Mobile('appEnteredForeground').registerToNative(function (args) {
   logInCordova('App entered foreground.');
 });
+
+/****************************************************************************
+Cordova UI actions
+*****************************************************************************/
+
+// simply used to update UI in connected state vs. non-connected
+function peerConnectionStateChanged(peerIdentifier, state) {
+  if (isFunction(peerConnectionStatusCallback)) {
+    console.log("peerConnectionStateChanged " + peerIdentifier + " to  state " + state);
+    peerConnectionStatusCallback(peerIdentifier, state);
+  } else {
+    console.log("peerConnectionStatusCallback not set !!!!");
+  }
+};
+
+Mobile('SendMessage').registerAsync(function (message, callback) {
+  console.log("SendMessage : " + message);
+  sendGetRequest(message); // -> node
+});
+
+/****************************************************************************
+Cordova callbacks
+*****************************************************************************/
+
+var peerChangedCallback; // calls cordova callback function
+Mobile('setPeerChangedCallback').registerAsync(function (callback) {
+  console.log("setPeerChangedCallback");
+  peerChangedCallback = callback;
+});
+
+var peerConnectionStatusCallback; // calls cordova callback function
+Mobile('setConnectionStatusCallback').registerAsync(function (callback) {
+  console.log("setConnectionStatusCallback");
+  peerConnectionStatusCallback = callback;
+});
+
+var messageCallback; // calls cordova callback function
+Mobile('setMessageCallback').registerAsync(function (callback) {
+  console.log("setMessageCallback");
+  messageCallback = callback;
+});
+
+/****************************************************************************
+node functions
+*****************************************************************************/
+
+function gotMessage(message) {
+  console.log("gotMessage: " + message);
+  if (isFunction(messageCallback)) {
+    messageCallback(message);
+  } else {
+    console.log("MessageCallback not set !!!!");
+  }
+}
 
 /****************************************************************************
 Helpers

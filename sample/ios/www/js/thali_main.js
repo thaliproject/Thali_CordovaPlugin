@@ -74,7 +74,7 @@
   // each time the sample is run on a device it uses the same peer identifier. In an
   // actual Thali app, this value would come from the app in some way.
   var _peerIdentifier = null,
-      _peerIdentifierKey = 'PeerIdentifier';
+  _peerIdentifierKey = 'PeerIdentifier';
 
   // UI element ids
   var startButtonId = "startButton",
@@ -88,7 +88,8 @@
       peerListSelectorId = "peerListSelector",
       myRemoteDeviceId = "myRemoteDevice",
       myDeviceSelectionId = "myDeviceSelection",
-      remAddrBoxId = "remAddrBox";
+      remAddrBoxId = "remAddrBox",
+      messageBoxId = "messageBox";
 
   // UI events (index.html)
   function jxcore_ready() {
@@ -124,6 +125,7 @@
     // set cordova callbacks
     jxcore('setPeerChangedCallback').call(peersChangedCallback);
     jxcore('setConnectionStatusCallback').call(peersConnectionStateCallback);
+    jxcore('setMessageCallback').call(sendMessageCallback);
 
     // start connector
     jxcore('StartBroadcasting').call(_peerIdentifier, _peerName);
@@ -143,11 +145,23 @@
   }
 
   function sendMessage() {
-    nslog("sendMessage");
+    var message = document.getElementById(messageBoxId).value;
+    nslog("sendMessage:" + message);
+
+    jxcore('SendMessage').call(message, sendMessageCallback);
+    addChatLine("ME", message);
+
+    document.getElementById(messageBoxId).value = "";
+  }
+
+  function sendMessageCallback(data) {
+    //console.log("sendMessageCallback " + data);
+    nslog("sendMessageCallback " + data);
   }
 
   function clearMessages() {
     nslog("clearMessages");
+    document.getElementById(replyBoxId).value = "";
   }
 
   function disconnectPeer() {
@@ -186,77 +200,66 @@
   }
   function peerClientConnectionCallback(peerId) {
     nslog("cor peerClientConnectionCallback : " + peerId); // <--@
-
     document.getElementById(myRemoteDeviceId).style.display = 'block';
   }
   function peerServerConnectionCallback(peerId) {
     nslog("cor peerServerConnectionCallback : " + peerId); // <--@
-
     document.getElementById(myRemoteDeviceId).style.display = 'block';
   }
 
   function addButton(peer) {
-        var butEntries = document.getElementById(peerListSelectorId);
+    var butEntries = document.getElementById(peerListSelectorId);
 
-        if (butEntries) {
-            var holdingdiv = document.createElement('div');
-            var hrelem1 = document.createElement('hr');
-            holdingdiv.appendChild(hrelem1);
+    if (butEntries) {
+      var holdingdiv = document.createElement('div');
+      var hrelem1 = document.createElement('hr');
+      holdingdiv.appendChild(hrelem1);
 
-            print(peer, "addButton");
-            nslog("peerAvailable:" + peer.peerAvailable + " id:" + peer.peerIdentifier);
+      print(peer, "addButton");
+      nslog("peerAvailable:" + peer.peerAvailable + " id:" + peer.peerIdentifier);
 
-            // (peer.peerAvailable == "true")
-            if (peer.peerAvailable == true) {
-                var button = document.createElement('button');
-                button.innerHTML = 'Connect to ' + peer.peerName;
-                button.onclick = function () {
-                    connectToDevice(peer.peerIdentifier);
-                    return false;
-                };
+      // (peer.peerAvailable == "true")
+      if (peer.peerAvailable == true) {
+        var button = document.createElement('button');
+        button.innerHTML = 'Connect to ' + peer.peerName;
+        button.onclick = function () {
+          connectToDevice(peer.peerIdentifier);
+          return false;
+        };
 
-                holdingdiv.appendChild(button);
-            } else {
-                var statediv = document.createElement('div');
-                statediv.innerHTML = peer.peerName + " Unavailable, id: " + peer.peerIdentifier;
-
-                holdingdiv.appendChild(statediv);
-            }
-
-            var hrelem2 = document.createElement('hr');
-            holdingdiv.appendChild(hrelem2);
-
-            butEntries.appendChild(holdingdiv);
-        }
-    }
-
-    function connectToDevice(peerId) {
-      if (peerId.length > 0) {
-        nslog("connectToDevice:" + peerId);
-        jxcore('Connect').call(peerId, connectCallback);
+        holdingdiv.appendChild(button);
       } else {
-        alert("No device selected to connect to");
+        var statediv = document.createElement('div');
+        statediv.innerHTML = peer.peerName + " Unavailable, id: " + peer.peerIdentifier;
+
+        holdingdiv.appendChild(statediv);
       }
+
+      var hrelem2 = document.createElement('hr');
+      holdingdiv.appendChild(hrelem2);
+
+      butEntries.appendChild(holdingdiv);
     }
+  }
 
-    function connectCallback(status, errorString) {
-        if (errorString.length > 0) {
-            alert("Connection " + status + ", details: " + errorString);
-        }
+  function connectToDevice(peerId) {
+    if (peerId.length > 0) {
+      nslog("connectToDevice:" + peerId);
+      jxcore('Connect').call(peerId, connectCallback);
+    } else {
+      alert("No device selected to connect to");
     }
+  }
 
+  function connectCallback(status, errorString) {
+    if (errorString.length > 0) {
+      alert("Connection " + status + ", details: " + errorString);
+    }
+  }
 
-
-
-
-  //alert('thali_main.js end');
-
-
-  // jukka
-  /*
-  var incomingConnection = false;
-  //*/
-
+  //
+  // cordova helper functions.
+  //
 
   function logInCordova(message) {
     console.log("logInCordova: " + message);
@@ -276,7 +279,7 @@
   }
 
   //
-  // cordova->jxcore helper functions. (shares functions in 'app.js')
+  // jxcore helper functions. (calls functions in 'app.js')
   //
 
   function nslog(message) {

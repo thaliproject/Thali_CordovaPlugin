@@ -31,6 +31,9 @@
 #import "THEThreading.h"
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 #import "THEPeerNetworking.h"
+#import "THENetworkingClientRelay.h"
+#import "THENetworkingServerRelay.h"
+#import "THEAppContext.h"
 
 // Static declarations.
 static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
@@ -65,14 +68,17 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 @property (nonatomic) NSInputStream * serverInputStream;
 @property (nonatomic) NSOutputStream * serverOutputStream;
 
+@property (nonatomic, strong) THENetworkingClientRelay * clientRelay;
+@property (nonatomic, strong) THENetworkingServerRelay * serverRelay;
+
 // Class initializer.
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
                 peerIdentifier:(NSUUID *)peerIdentifier
                       peerName:(NSString *)peerName
                           port:(int)port;
 // TODO
--(void)checkIfTCPClient;
--(void)setServerInputStream:(NSInputStream *)serverInputStream;
+-(void)tryCreateTCPClient;
+-(void)tryCreateTCPServer;
 
 @end
 
@@ -107,19 +113,86 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     return self;
 }
 
--(void)checkIfTCPClient
+// peer client
+-(void)setClientInputStream:(NSInputStream *)clientInputStream
 {
-    if (_serverInputStream != nil && _serverOutputStream != nil)
+    NSLog(@"setClientInputStream - peer client [A]");
+    _clientInputStream = clientInputStream;
+    [self tryCreateTCPClient];
+}
+-(void)setClientOutputStream:(NSOutputStream *)clientOutputStream
+{
+    NSLog(@"setClientOutputStream - peer client [A]");
+    _clientOutputStream = clientOutputStream;
+    [self tryCreateTCPClient];
+}
+-(void)tryCreateTCPClient
+{
+    if (_clientInputStream != nil && _clientOutputStream != nil)
     {
-        // go create TCP client
+        // creates TCP listener on localport
+        if (_serverRelay == nil)
+        {
+            _serverRelay = [[THENetworkingServerRelay alloc] initWithMPInputStream:_clientInputStream withMPOutputStream:_clientOutputStream withPort:_port withPeerIdentifier:_peerIdentifier];
+            [_serverRelay setDelegate:(id<THENetworkingServerRelayDelegate>)[[THEAppContext singleton] self]]; // Notify the delegate didGetLocalPort...
+            
+            if([_serverRelay start])
+            {
+                NSLog(@"Did start TCP Peer Client relay!");
+            }
+            else
+            {
+                NSLog(@"Error failed to start TCP Peer Client relay!");
+            }
+        }
+        else
+        {
+            NSLog(@"• Error already setup a TCP Peer Client bridge!");
+        }
     }
 }
 
+// peer server
 -(void)setServerInputStream:(NSInputStream *)serverInputStream
 {
-    NSLog(@"x setServerInputStream");
-    _serverOutputStream = (NSOutputStream *)serverInputStream;
+    NSLog(@"setServerInputStream - peer server [B]");
+    _serverInputStream = serverInputStream;
+    [self tryCreateTCPServer];
 }
+-(void)setServerOutputStream:(NSOutputStream *)serverOutputStream
+{
+    NSLog(@"setServerOutputStream - peer server [B]");
+    _serverOutputStream = serverOutputStream;
+    [self tryCreateTCPServer];
+}
+-(void)tryCreateTCPServer
+{
+    if (_serverInputStream != nil && _serverOutputStream != nil)
+    {
+        // creates TCP listener on localport
+        if (_serverRelay == nil)
+        {
+            _serverRelay = [[THENetworkingServerRelay alloc] initWithMPInputStream:_serverInputStream withMPOutputStream:_serverOutputStream withPort:_port withPeerIdentifier:_peerIdentifier];
+            [_serverRelay setDelegate:(id<THENetworkingServerRelayDelegate>)[[THEAppContext singleton] self]]; // Notify the delegate didGetLocalPort...
+            
+            if([_serverRelay start]) // [_clientRelay start]
+            {
+                NSLog(@"Did start TCP ClientRelay!");
+            }
+            else
+            {
+                NSLog(@"Error failed to start TCP Peer Server Relay!");
+            }
+        }
+        else
+        {
+            NSLog(@"• Error already setup a TCP ClientRelay bridge!");
+        }
+    }
+}
+
+
+
 
 @end
 
@@ -580,6 +653,7 @@ didReceiveStream:(NSInputStream *)inputStream
                     [peerDescriptor setServerState:THEPeerDescriptorStateNotConnected];
                     [peerDescriptor setServerInputStream:nil];
                     [peerDescriptor setServerOutputStream:nil];
+                    [peerDescriptor setServerRelay:nil];
                     
                     // Unlock.
                     pthread_mutex_unlock(&_mutex);
@@ -657,6 +731,7 @@ didReceiveStream:(NSInputStream *)inputStream
                     [peerDescriptor setClientState:THEPeerDescriptorStateNotConnected];
                     [peerDescriptor setClientOutputStream:nil];
                     [peerDescriptor setClientInputStream:nil];
+                    [peerDescriptor setClientRelay:nil];
                     
                     // Unlock.
                     pthread_mutex_unlock(&_mutex);
