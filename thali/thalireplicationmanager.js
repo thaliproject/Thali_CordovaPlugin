@@ -6,6 +6,7 @@ var inherits = require('util').inherits;
 var net = require('net');
 var multiplex = require('multiplex');
 var validations = require('./validations');
+var addressPrefix = 'addressbook-'
 
 var e = new EventEmitter();
 
@@ -38,36 +39,70 @@ ThaliReplicationManager.events = {
 };
 
 /**
-* Starts the Thali replication manager with the given device name and port number
-* @param {String} deviceName the device name to advertise.
+* Starts the Thali replication manager with the given port number and db name
 * @param {Number} port the port number used for synchronization.
+* @param {String} dbName the db name to sync.
 */
-ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
-  validations.ensureNonNullOrEmptyString(deviceName, 'deviceName');
+ThaliReplicationManager.prototype.start = function (port, dbName) {
   validations.ensureValidPort(port);
   validations.ensureNonNullOrEmptyString(dbName, 'dbName');
 
-  this.emit(ThaliReplicationManager.events.STARTING);
+  var cryptomanager = require('./thalicryptomanager');
+  // get the device public-key-hash
+  cryptomanager.getPublicKeyHash(function (publicKeyHash) {
+    var currentAddrEntry;
+    if (publicKeyHash == null) {
+      console.log('got null for publicKeyHash');
+      this._isStarted = false;
+      this.emit(ThaliReplicationManager.events.START_ERROR, 'could not generate public-key-hash');
+      return;
+    } else {
+      console.log('got a valid publicKeyHash');
+      currentAddrEntry = addressPrefix + publicKeyHash;
+    }
 
-  this._port = port;
-  this._deviceName = deviceName;
-  this._dbName = dbName;
-  this._serverBridge = muxServerBridge.call(this, port);
-  this._serverBridge.listen(function () {
-    this._serverBridgePort = this._serverBridge.address().port;
-
-    this._emitter.startBroadcasting(deviceName, this._serverBridgePort, function (err) {
-      if (err) {
-        this._isStarted = false;
-        this.emit(ThaliReplicationManager.events.START_ERROR, err);
-      } else {
-        this._isStarted = true;
-        this._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(this));
-        this._emitter.addListener(NETWORK_CHANGED, networkChanged.bind(this));
-        this.emit(ThaliReplicationManager.events.STARTED);
+    // check if the db already has an addressbook entry for the public-key-hash
+    this._db.allDocs({
+      include_docs: true,
+      attachments: true
+    }).then(function (result) {
+      var currentAdddrFound = false;
+      result.rows.forEach(function(element) {
+        if(element.doc._id == currentAddrEntry) {
+          console.log('found current device address in db');
+          currentAdddrFound = true;
+        }
+      });
+      if(!currentAdddrFound) {
+        console.log('did not find current device address, adding it now');
+        this._db.put({_id: currentAddrEntry, author: '', destination: '', content: ''});
+        //TODO: handle error for this db-put operation
       }
-    }.bind(this));
-  }.bind(this));
+      
+      this.emit(ThaliReplicationManager.events.STARTING);
+      
+      this._port = port;
+      this._deviceName = currentAddrEntry;
+      this._dbName = dbName;
+      this._serverBridge = muxServerBridge.call(this, port);
+      this._serverBridge.listen(function () {
+        this._serverBridgePort = this._serverBridge.address().port;
+  
+        this._emitter.startBroadcasting(currentAddrEntry, this._serverBridgePort, function (err) {
+          if (err) {
+            this._isStarted = false;
+            this.emit(ThaliReplicationManager.events.START_ERROR, err);
+          } else {
+            this._isStarted = true;
+            this._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(this));
+            this._emitter.addListener(NETWORK_CHANGED, networkChanged.bind(this));
+            this.emit(ThaliReplicationManager.events.STARTED);
+          }
+        }.bind(this)); //startBroadcasting
+      }.bind(this)); //listen
+    }.bind(this)); //allDocs result
+  }.bind(this)); //getPublicKeyHash
+
 };
 
 /**
