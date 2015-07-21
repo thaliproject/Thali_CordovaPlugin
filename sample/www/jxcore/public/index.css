@@ -1,0 +1,55 @@
+.ok {
+  display:block;
+  color:grey;
+}
+
+.ok:before {
+  content: "\2713";
+  padding:10px 10px 0 20px;
+  color:green;
+}
+
+.ok:hover, .fail:hover {
+  background:#333;
+  cursor:pointer;
+}
+
+.fail {
+  display:block;
+  color:grey;
+}
+
+.fail:before {
+  content: "\2717";
+  padding:10px 10px 0 20px;
+  color:red;
+}
+
+.msg {
+  display:block;
+  margin-top:20px;
+  margin-bottom:10px;
+  color:white;
+}
+
+.total-msg {
+  display:block;
+  margin-top:20px;
+  color:white;
+}
+
+.total-fail {
+    color:red;
+}
+
+.total-ok {
+    color:green;
+}
+
+body {
+  background:black;
+  margin-left:20px;
+  font-family: source-code-pro, sans-serif;
+  user-select:none;
+  font-size:1.2em;
+}

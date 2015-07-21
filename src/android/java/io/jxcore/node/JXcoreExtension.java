@@ -8,6 +8,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Point;
 import android.provider.Settings.SettingNotFoundException;
+import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
 import android.widget.Toast;
@@ -32,6 +33,8 @@ public class JXcoreExtension {
 
     public static String METHODSTRING_CONNECTTOPEER     = "Connect";
     public static String METHODSTRING_DISCONNECTPEER    = "Disconnect";
+    public static String METHODSTRING_KILLCONNECTION    = "KillConnection";
+
 
     public static void LoadExtensions() {
 
@@ -69,32 +72,38 @@ public class JXcoreExtension {
       jxcore.RegisterMethod(METHODSTRING_STARTBROADCAST, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
+
               if(params.size() > 1) {
                   String peerName = params.get(0).toString();
                   String port = params.get(1).toString();
 
-                  boolean started = true;
-                  BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, Integer.decode(port));
-
+                  String errString = "";
                   ArrayList<Object> args = new ArrayList<Object>();
-                  if(retVal.isWifiEnabled && retVal.isWifiOk
-                  && retVal.isBtEnabled && retVal.isBtOk) {
-                      args.add(null);
-                  }else {
-                      String errString = "";
-                      if (!retVal.isBtOk) {
-                          errString = "Bluetooth is not supported on this hardware platform, ";
-                      } else if (!retVal.isBtEnabled) {
-                          errString = "Bluetooth is disabled, ";
-                      }
 
-                      if (!retVal.isWifiOk) {
-                          errString = "Wi-Fi Direct is not supported on this hardware platform.";
-                      } else if (!retVal.isWifiEnabled) {
-                          errString = "Wi-Fi is disabled.";
+                  if(!mBtConnectorHelper.isRunning()) {
+                      BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, Integer.decode(port));
+
+                      if (retVal.isWifiEnabled && retVal.isWifiOk && retVal.isBtEnabled && retVal.isBtOk) {
+                          args.add(null);
+                      } else {
+                          if (!retVal.isBtOk) {
+                              errString = "Bluetooth is not supported on this hardware platform, ";
+                          } else if (!retVal.isBtEnabled) {
+                              errString = "Bluetooth is disabled, ";
+                          }
+
+                          if (!retVal.isWifiOk) {
+                              errString = "Wi-Fi Direct is not supported on this hardware platform.";
+                          } else if (!retVal.isWifiEnabled) {
+                              errString = "Wi-Fi is disabled.";
+                          }
+                          args.add(errString);
                       }
+                  }else{
+                      errString ="Already running, not re-starting.";
                       args.add(errString);
                   }
+                  Log.i("DEBUG-TEST" , METHODSTRING_STARTBROADCAST + "called, we return Err string as : " + errString);
                   jxcore.CallJSMethod(callbackId, args.toArray());
               }
           }
@@ -103,10 +112,18 @@ public class JXcoreExtension {
       jxcore.RegisterMethod(METHODSTRING_STOPBROADCAST, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
-              mBtConnectorHelper.Stop();
-              // todo do I really need to call this with null to inform that all is ok ?
+
+              String errString = "";
               ArrayList<Object> args = new ArrayList<Object>();
-              args.add(null);
+              if (mBtConnectorHelper.isRunning()) {
+                  mBtConnectorHelper.Stop();
+                  args.add(null);
+              } else {
+                  errString ="Already stopped.";
+                  args.add("Already stopped.");
+              }
+
+              Log.i("DEBUG-TEST" , METHODSTRING_STOPBROADCAST + " returning Err  as : " + errString);
               jxcore.CallJSMethod(callbackId, args.toArray());
           }
       });
@@ -130,6 +147,24 @@ public class JXcoreExtension {
 
           }
       });
+
+        jxcore.RegisterMethod(METHODSTRING_KILLCONNECTION, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+
+
+                ArrayList<Object> args = new ArrayList<Object>();
+                if(mBtConnectorHelper.DisconnectIncomingConnections()){
+                    args.add(null);
+                }else{
+                    args.add("No incoming connection to disconnect");
+                }
+                jxcore.CallJSMethod(callbackId, args.toArray());
+
+            }
+        });
+
+
 
       jxcore.RegisterMethod(METHODSTRING_CONNECTTOPEER, new JXcoreCallback() {
           @Override

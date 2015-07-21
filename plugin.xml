@@ -13,7 +13,7 @@
         <engine name="cordova-android" version=">=3.2.0" />
         <engine name="android-sdk" version=">=19" />
     </engines>
-    
+
     <!-- Android -->
     <platform name="android">
         <config-file target="AndroidManifest.xml" parent="/*">
@@ -57,5 +57,7 @@
         <header-file src="src/ios/THEPeerNetworking.h" />
         <source-file src="src/ios/THEPeerNetworking.m" />
     </platform>
-    
+    <!-- Cordova hook for Thali pre-requisite -->
+    <hook type="after_plugin_add" src="scripts/thaliPrerequisite.js" />
+
 </plugin>
