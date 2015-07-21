@@ -1,24 +1,33 @@
 {
-  "name": "thali-cordova-plugin-jxcore",
+  "name": "thali",
   "version": "1.0.0",
-  "description": "Thali Cordova Plugin JXCore",
-  "main": "lib/thalireplicationmanager.js",
+  "description": "Thali Cordova Plugin",
+  "main": "thali/thalireplicationmanager.js",
+  "dependencies": {
+    "multiplex": "^6.2.2"
+  },
+  "devDependencies": {
+    "copy-dir": "0.0.7"
+  },
   "scripts": {
-    "test": "tape test/thaliemitterspec.js"
+    "test": "node build/deploytest.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thaliproject/Thali_CordovaPlugin.git"
   },
   "keywords": [
     "Thali",
-    "JXCore",
-    "PouchDB",
-    "Multiplex"
+    "Cordova",
+    "Plugin",
+    "P2P",
+    "BlueTooth",
+    "WiFi-Direct"
   ],
   "author": "Microsoft Corporation",
   "license": "MIT",
-  "dependencies": {
-    "multiplex": "^6.2.2",
-    "express": "^4.13.1"
+  "bugs": {
+    "url": "https://github.com/thaliproject/Thali_CordovaPlugin/issues"
   },
-  "devDependencies": {
-    "tape": "^4.0.0"
-  }
+  "homepage": "https://github.com/thaliproject/Thali_CordovaPlugin#readme"
 }

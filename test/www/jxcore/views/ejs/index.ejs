@@ -14,13 +14,17 @@
         <div class="msg"><%= row.name %></div>
       <% } %>
 
-      <% if (row.type === 'assert' && row.ok) { %>
-        <div class="ok"><%= row.name %></div>
-      <% } %>
+      <% if (row.type === 'assert') { %>
 
-    <% if (row.type === 'assert' && !row.ok) { %>
-      <div class="fail"><%= row.name %></div>
-    <% } %>
+        <% if (row.ok) { %>
+          <div class="ok"><%= row.name %></div>
+        <% } %>
+
+        <% if (!row.ok) { %>
+          <div class="fail"><%= row.name %></div>
+        <% } %>
+
+      <% }); %>
 
     <% }); %>
 
