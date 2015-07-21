@@ -2,10 +2,9 @@
 /*
 This script will do the following tasks
 1. Add the Android platform
-2. Fix manifest min-sdk issue
-3. Fix issue on "can not replace existing file"
-4. Install the thali node module to global (until we get thali in npm repo)
-5: Create a dummy file to prevent future execution by other plugin add operation
+2. Fix issue on "can not replace existing file"
+3. Install the thali node module to global (until we get thali in npm repo)
+4: Create a dummy file to prevent future execution by other plugin add operation
  */
 
 
@@ -15,17 +14,6 @@ var exec = require('child_process').execSync;
 var rootdir = process.argv[2];
 //Dummy file to prevent the execution of this script when the developer add other Cordova plugins
 var dummyFile = rootdir + '/../plugins/org.thaliproject.p2p/dummy.js';
-
-//Update the Android SDK version
-// ..\platforms\android and in AndroidManifest.xml change android:minSdkVersion="10" to android:minSdkVersion="16"
-function updateAndroidSDKVersion() {
-    var to_replace = 'android:minSdkVersion=\"10\"';
-    var replace_with = 'android:minSdkVersion=\"16\"';
-    var filename = rootdir + '/../platforms/android/AndroidManifest.xml';
-    var data = fs.readFileSync(filename, 'utf8');
-    var result = data.replace(new RegExp(to_replace, "g"), replace_with);
-    fs.writeFileSync(filename, result, 'utf8');
-}
 
 //Replace JXcoreExtension.java
 //Copy from \plugins\org.thaliproject.p2p\src\android\java\io\jxcore\node to \platforms\android\src\io\jxcore\node
@@ -68,20 +56,16 @@ catch(ex){
     console.log(ex.message);
 }
 
- //2. Fix manifest min-sdk issue
-console.log('Updating the SDK version in AndroidManifest in Android platform..');
-updateAndroidSDKVersion();
-
-//3. Fix issue on "can not replace existing file"
+//2. Fix issue on "can not replace existing file"
 console.log('Replacing JXcoreExtension.java..');
 replaceJXCoreExtension();
 
-//4. Install the thali node module to global (until we get thali in npm repo)
+//3. Install the thali node module to global (until we get thali in npm repo)
 console.log('Installing thali node modules to global..');
 installThaliModules();
 
+//4. Creating a dummy file to prevent the future execution of the entire script
 console.log('Completed the Thali_Cordova plugin Pre-requisites configuration..');
-//Creating a dummy file to prevent the future execution of the entire script
 fs.writeFileSync(dummyFile, '', 'utf8');
 
 
