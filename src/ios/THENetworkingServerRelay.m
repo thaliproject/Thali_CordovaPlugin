@@ -50,13 +50,13 @@
         NSError *err = nil;
         if (![asyncSocket acceptOnPort:aPort error:&err])
         {
-            NSLog(@"Server relay setup error on port:%u %@", aPort, err);
+            NSLog(@"ServerRelay setup error on port:%u %@", aPort, err);
             return NO;
         }
         else
         {
             UInt16 port = [asyncSocket localPort];
-            NSLog(@"Server relay socket got localPort: %u ", port);
+            NSLog(@"ServerRelay socket got localPort: %u ", port);
             
             // Pass event didGetPort by notifing the delegate
             if ([[self delegate] respondsToSelector:@selector(networkingServerRelay:didGetLocalPort:withPeerIdentifier:)])
@@ -78,7 +78,7 @@
 -(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
     if (aStream == aInputStream) {
-        NSLog(@"Server Relay aStream aInputStream: %lu", (unsigned long)eventCode);
+        NSLog(@"ServerRelay aStream aInputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
                 break;
@@ -96,7 +96,7 @@
     }
     else if (aStream == aOutputStream)
     {
-        NSLog(@"Server Relay aStream aOutputStream: %lu", (unsigned long)eventCode);
+        NSLog(@"ServerRelay aStream aOutputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
                 break;
@@ -118,7 +118,7 @@
 
 -(void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)newSocket
 {
-    NSLog(@"listenerSocket accepted new Socket: host:%@ port:%hu", newSocket.connectedHost, (uint16_t)newSocket.connectedPort); // newSocket client port
+    NSLog(@"ServerRelay accepted new Socket: host:%@ port:%hu", newSocket.connectedHost, (uint16_t)newSocket.connectedPort); // newSocket client port
     
     [newSocket writeData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0]; // needed
     
@@ -127,26 +127,26 @@
 
 -(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
 {
-    NSLog(@"listenerSocket Connected! socket:%p host:%@ port:%hu", sock, host, port);
+    NSLog(@"ServerRelay Connected! socket:%p host:%@ port:%hu", sock, host, port);
 }
 
 -(void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
 {
-    NSLog(@"listenerSocket socketDidDisconnect");
+    NSLog(@"ServerRelay socketDidDisconnect");
     if (err) {
-        NSLog(@"listenerSocket Socket Error: %@", [err description]);
+        NSLog(@"ServerRelay Socket Error: %@", [err description]);
     }
 }
 
 -(void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag
 {
-    NSLog(@"listenerSocket didWriteDataWithTag:%ld", tag);
+    NSLog(@"ServerRelay didWriteDataWithTag:%ld", tag);
 }
 
 -(void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
     NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    NSLog(@"listenerSocket didReadDataWithTag:%ld %@", tag, str);
+    NSLog(@"ServerRelay didReadDataWithTag:%ld %@", tag, str);
     
     [sock writeData:data withTimeout:-1 tag:tag];
     

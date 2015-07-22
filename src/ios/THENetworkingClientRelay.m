@@ -25,7 +25,7 @@
     
     aInputStream = inputStream;
     aOutputStream = outputStream;
-    aPort = port;
+    aPort = 53815; //port;
     
     return self;
 }
@@ -48,16 +48,16 @@
         NSError *err = nil;
         if (![asyncSocket connectToHost:@"localhost" onPort:aPort withTimeout:-1 error:&err])
         {
-            NSLog(@"Client relay setup error on port:%u %@", aPort, err);
+            NSLog(@"ClientRelay setup error on port:%u %@", aPort, err);
             return NO;
         }
         else
         {
             NSData *data = [@"World" dataUsingEncoding:NSUTF8StringEncoding];
+            NSLog(@"ClientRelay data via port:%u data:%@", aPort, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] );
+            
             [asyncSocket writeData:data withTimeout:-1 tag:1];
             [asyncSocket readDataToData:data withTimeout:-1 tag:1];
-            
-            NSLog(@"Client relay data on port:%u data:%@", aPort, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] );
             
             return YES;
         }
@@ -73,7 +73,7 @@
 -(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
     if (aStream == aInputStream) {
-        NSLog(@"Client relay aStream aInputStream: %lu", (unsigned long)eventCode);
+        NSLog(@"ClientRelay aStream aInputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
                 break;
@@ -91,7 +91,7 @@
     }
     else if (aStream == aOutputStream)
     {
-        NSLog(@"Client relay aStream aOutputStream: %lu", (unsigned long)eventCode);
+        NSLog(@"ClientRelay aStream aOutputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
                 break;
@@ -113,23 +113,22 @@
 
 -(void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)newSocket
 {
-    NSLog(@"Client relay accepted new Socket: host:%@ port:%hu", newSocket.connectedHost, (uint16_t)newSocket.connectedPort);
+    NSLog(@"ClientRelay accepted new Socket: host:%@ port:%hu", newSocket.connectedHost, (uint16_t)newSocket.connectedPort);
 }
 
 -(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
 {
-    NSLog(@"Client relay connected! socket:%p host:%@ port:%hu", sock, host, port);
+    NSLog(@"ClientRelay connected! socket:%p host:%@ port:%hu", sock, host, port);
     
     [sock readDataWithTimeout:-1 tag:0];
 }
 
 -(void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
 {
-    NSLog(@"Client relay socketDidDisconnect");
+    NSLog(@"ClientRelay socketDidDisconnect");
     if (err) {
-        NSLog(@"CR Socket Error: %@", err);
+        NSLog(@"ClientRelay socket error '%@' on host:%@:%u", err, sock.connectedHost, sock.connectedPort);
         // Error in connect function:
-        // GCDAsyncSocketErrorDomain Code=7 "Socket closed by remote peer" (same device)
         // NSPOSIXErrorDomain Code=61 "Connection refused" (no listener setup)
         // NSPOSIXErrorDomain Code=49 "Can't assign requested address"
     }
@@ -137,13 +136,13 @@
 
 -(void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag
 {
-    NSLog(@"Client relay didWriteDataWithTag:%ld", tag);
+    NSLog(@"ClientRelay didWriteDataWithTag:%ld", tag);
 }
 
 -(void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
     NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    NSLog(@"Client relay didReadDataWithTag:%ld %@", tag, str);
+    NSLog(@"ClientRelay didReadDataWithTag:%ld %@", tag, str);
     
     // TODO: check for string equality
 }
