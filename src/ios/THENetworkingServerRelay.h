@@ -11,8 +11,8 @@
 
 @property (nonatomic, weak) id<THENetworkingServerRelayDelegate> delegate;
 
--(instancetype)initWithMPInputStream:(NSInputStream *)inputStream
-                  withMPOutputStream:(NSOutputStream *)outputStream
+-(instancetype)initWithInputStream:(NSInputStream *)inputStream
+                  withOutputStream:(NSOutputStream *)outputStream
                             withPort:(uint)port
                   withPeerIdentifier:(NSUUID *)peerIdentifier;
 

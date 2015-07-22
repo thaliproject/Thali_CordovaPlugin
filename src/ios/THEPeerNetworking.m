@@ -78,7 +78,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
                           port:(int)port;
 // TODO
 -(void)tryCreateTCPClient;
--(void)tryCreateTCPServer;
+-(void)tryCreateTCPListener;
 
 @end
 
@@ -133,7 +133,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
         // creates TCP listener on localport
         if (_serverRelay == nil)
         {
-            _serverRelay = [[THENetworkingServerRelay alloc] initWithMPInputStream:_clientInputStream withMPOutputStream:_clientOutputStream withPort:_port withPeerIdentifier:_peerIdentifier];
+            _serverRelay = [[THENetworkingServerRelay alloc] initWithInputStream:_clientInputStream withOutputStream:_clientOutputStream withPort:_port withPeerIdentifier:_peerIdentifier];
             [_serverRelay setDelegate:(id<THENetworkingServerRelayDelegate>)[[THEAppContext singleton] self]]; // Notify the delegate didGetLocalPort...
             
             if([_serverRelay start])

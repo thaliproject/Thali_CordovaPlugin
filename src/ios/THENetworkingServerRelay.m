@@ -7,13 +7,14 @@
     NSInputStream *aInputStream;
     NSOutputStream *aOutputStream;
     uint aPort;
+    GCDAsyncSocket *aSocket;
     NSUUID *aPeerIdentifier;
     
     pthread_mutex_t _mutex;
 }
 
--(instancetype)initWithMPInputStream:(NSInputStream *)inputStream
-                  withMPOutputStream:(NSOutputStream *)outputStream
+-(instancetype)initWithInputStream:(NSInputStream *)inputStream
+                  withOutputStream:(NSOutputStream *)outputStream
                             withPort:(uint)port
                   withPeerIdentifier:(NSUUID *)peerIdentifier
 {
@@ -85,10 +86,31 @@
             case NSStreamEventHasSpaceAvailable:
                 break;
             case NSStreamEventHasBytesAvailable:
+            {
+                assert(aSocket);
+                // Read from input stream, write to socket
+                
+                const uint bufferSize = 1024;
+                
+                uint8_t *buffer = malloc(bufferSize);
+                
+                [aInputStream read:buffer maxLength:bufferSize];
+                
+                NSData *toWrite = [[NSData alloc] initWithBytesNoCopy:buffer length:bufferSize];
+                
+               
+                [aSocket writeData:toWrite withTimeout:-1 tag:0];
+            }
                 break;
             case NSStreamEventEndEncountered:
+            {
+                NSLog(@"aInputStream Stream Ended");
+            }
                 break;
             case NSStreamEventErrorOccurred:
+            {
+                NSLog(@"aInputStream Error");
+            }
                 break;
             default:
                 break;
@@ -101,12 +123,21 @@
             case NSStreamEventOpenCompleted:
                 break;
             case NSStreamEventHasSpaceAvailable:
+            {
+                
+            }
                 break;
             case NSStreamEventHasBytesAvailable:
                 break;
             case NSStreamEventEndEncountered:
+            {
+                NSLog(@"aOutputStream Stream Ended");
+            }
                 break;
             case NSStreamEventErrorOccurred:
+            {
+                NSLog(@"aOutputStream Error");
+            }
                 break;
             default:
                 break;
@@ -120,14 +151,10 @@
 {
     NSLog(@"ServerRelay accepted new Socket: host:%@ port:%hu", newSocket.connectedHost, (uint16_t)newSocket.connectedPort); // newSocket client port
     
-    [newSocket writeData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0]; // needed
+    aSocket = newSocket;
     
-    [newSocket readDataWithTimeout:-1 tag:1]; // NB: Inifinite timeouts will timeout after 10 mins
-}
-
--(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
-{
-    NSLog(@"ServerRelay Connected! socket:%p host:%@ port:%hu", sock, host, port);
+    [aSocket writeData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0]; // needed
+    [aSocket readDataWithTimeout:-1 tag:1]; // NB: Inifinite timeouts will timeout after 10 mins
 }
 
 -(void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
@@ -148,9 +175,11 @@
     NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     NSLog(@"ServerRelay didReadDataWithTag:%ld %@", tag, str);
     
-    [sock writeData:data withTimeout:-1 tag:tag];
+    assert(sock == aSocket);
     
-    [sock readDataWithTimeout:-1 tag:tag];
+    // echo data back to client
+    [aSocket writeData:data withTimeout:-1 tag:tag];
+    [aSocket readDataWithTimeout:-1 tag:tag];
 }
 
 

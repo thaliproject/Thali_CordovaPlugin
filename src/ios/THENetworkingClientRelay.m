@@ -25,7 +25,7 @@
     
     aInputStream = inputStream;
     aOutputStream = outputStream;
-    aPort = 53815; //port;
+    aPort = port;
     
     return self;
 }
@@ -44,6 +44,13 @@
         [aOutputStream open];
         
         asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+        
+        // get available port
+        if (aPort==0)
+        {
+            aPort = (arc4random() % 1000) + 1024; //[self getAvailablePort];
+        }
+        
         
         NSError *err = nil;
         if (![asyncSocket connectToHost:@"localhost" onPort:aPort withTimeout:-1 error:&err])
@@ -65,6 +72,21 @@
     else
     {
         return NO;
+    }
+}
+
+-(uint)getAvailablePort
+{
+    if (![asyncSocket acceptOnPort:0 error:nil])
+    {
+        NSLog(@"ClientRelay error. Could not get available port");
+        return aPort;
+    }
+    else
+    {
+        UInt16 port = [asyncSocket localPort];
+        NSLog(@"getAvailablePort: %u ", port);
+        return port;
     }
 }
 
