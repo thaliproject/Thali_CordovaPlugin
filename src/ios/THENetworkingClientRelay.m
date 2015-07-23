@@ -33,28 +33,21 @@
 
 -(BOOL)start
 {
+    NSLog(@"**** start *****");
     if (aInputStream != nil && aOutputStream != nil) {
         // check is open...
         
-        aInputStream.delegate = self;
-        [aInputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
-        [aInputStream open];
-        
-        aOutputStream.delegate = self;
-        [aOutputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
-        [aOutputStream open];
-        
-        asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+        serverSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
         
         NSError *err = nil;
-        if (![asyncSocket acceptOnPort:0 error:&err])
+        if (![serverSocket acceptOnPort:0 error:&err])
         {
             NSLog(@"ClientRelay setup error: %@", err);
             return NO;
         }
         else
         {
-            UInt16 port = [asyncSocket localPort];
+            UInt16 port = [serverSocket localPort];
             NSLog(@"ClientRelay socket got localPort: %u ", port);
             
             // Pass event didGetPort by notifing the delegate
@@ -77,7 +70,7 @@
 -(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
     if (aStream == aInputStream) {
-        NSLog(@"ClientRelay aStream aInputStream: %lu", (unsigned long)eventCode);
+        //NSLog(@"ClientRelay aStream aInputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
                 break;
@@ -92,9 +85,10 @@
                 
                 uint8_t *buffer = malloc(bufferSize);
                 
-                [aInputStream read:buffer maxLength:bufferSize];
+                NSInteger len = [aInputStream read:buffer maxLength:bufferSize];
                 
-                NSData *toWrite = [[NSData alloc] initWithBytesNoCopy:buffer length:bufferSize];
+                NSMutableData *toWrite = [[NSMutableData alloc] init];//[[NSData alloc] initWithBytesNoCopy:buffer length:bufferSize];
+                [toWrite appendBytes:buffer length:len];
                 
                 
                 [aSocket writeData:toWrite withTimeout:-1 tag:0];
@@ -151,8 +145,16 @@
     
     aSocket = newSocket;
     
+    aInputStream.delegate = self;
+    [aInputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+    [aInputStream open];
+    
+    aOutputStream.delegate = self;
+    [aOutputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+    [aOutputStream open];
+    
     //[aSocket writeData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0]; // needed
-    //[aSocket readDataWithTimeout:-1 tag:1]; // NB: Inifinite timeouts will timeout after 10 mins
+    [aSocket readDataWithTimeout:-1 tag:1]; // NB: Inifinite timeouts will timeout after 10 mins
 }
 
 -(void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
@@ -176,7 +178,9 @@
     assert(sock == aSocket);
     
     // echo data back to client
-    [aSocket writeData:data withTimeout:-1 tag:tag];
+    //[aSocket writeData:data withTimeout:-1 tag:tag];
+    
+    [aOutputStream write:data.bytes maxLength:data.length];
     [aSocket readDataWithTimeout:-1 tag:tag];
 }
 

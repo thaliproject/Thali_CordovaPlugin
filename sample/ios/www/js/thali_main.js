@@ -146,7 +146,7 @@
 
   function sendMessage() {
     var message = document.getElementById(messageBoxId).value;
-    nslog("sendMessage:" + message);
+    //nslog("sendMessage:" + message);
 
     jxcore('SendMessage').call(message, sendMessageCallback);
     addChatLine("ME", message);
@@ -283,7 +283,7 @@
   //
 
   function nslog(message) {
-    jxcore('nslog').call(message);
+    jxcore('nslog').call("\n"+message);
   }
 
   function print(object, message) {

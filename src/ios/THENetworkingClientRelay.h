@@ -6,7 +6,7 @@
 
 @interface THENetworkingClientRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate, UIAlertViewDelegate>
 {
-    GCDAsyncSocket *asyncSocket;
+    GCDAsyncSocket *serverSocket;
 }
 
 @property (nonatomic, weak) id<THENetworkingClientRelayDelegate> delegate;

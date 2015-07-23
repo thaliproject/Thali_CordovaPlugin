@@ -90,6 +90,7 @@ clientSocket.on('error', function(ex) {
 
 function sendGetRequest(message) {
   if(clientSocket != 0) {
+    nslog("clientSocket write: " + message);
     clientSocket.write(message);
   } else {
     console.log("opps, clientSocket not setup to send message...");

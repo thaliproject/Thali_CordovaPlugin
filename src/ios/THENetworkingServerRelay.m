@@ -33,29 +33,30 @@
     if (aInputStream != nil && aOutputStream != nil) {
         // check is open...
         
-        aInputStream.delegate = self;
-        [aInputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
-        [aInputStream open];
-        
-        aOutputStream.delegate = self;
-        [aOutputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
-        [aOutputStream open];
-        
-        asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+        aSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
         
         NSError *err = nil;
-        if (![asyncSocket connectToHost:@"localhost" onPort:aPort withTimeout:-1 error:&err])
+        if (![aSocket connectToHost:@"localhost" onPort:aPort withTimeout:-1 error:&err])
         {
             NSLog(@"ServerRelay setup error on port:%u %@", aPort, err);
             return NO;
         }
         else
         {
-            NSData *data = [@"World" dataUsingEncoding:NSUTF8StringEncoding];
-            NSLog(@"ServerRelay data via port:%u data:%@", aPort, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] );
+            aInputStream.delegate = self;
+            [aInputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+            [aInputStream open];
             
-            [asyncSocket writeData:data withTimeout:-1 tag:1];
-            [asyncSocket readDataToData:data withTimeout:-1 tag:1];
+            aOutputStream.delegate = self;
+            [aOutputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+            [aOutputStream open];
+            
+            //NSData *data = [@"World" dataUsingEncoding:NSUTF8StringEncoding];
+            //NSLog(@"ServerRelay data via port:%u data:%@", aPort, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] );
+            
+            //[asyncSocket writeData:data withTimeout:-1 tag:1];
+            //[asyncSocket readDataToData:data withTimeout:-1 tag:1];
+            [aSocket readDataWithTimeout:-1 tag:1];
             
             return YES;
         }
@@ -79,6 +80,21 @@
             case NSStreamEventHasSpaceAvailable:
                 break;
             case NSStreamEventHasBytesAvailable:
+            {
+                assert(aSocket);
+                // Read from input stream, write to socket
+                
+                const uint bufferSize = 1024;
+                
+                uint8_t *buffer = malloc(bufferSize);
+                
+                [aInputStream read:buffer maxLength:bufferSize];
+                
+                NSData *toWrite = [[NSData alloc] initWithBytesNoCopy:buffer length:bufferSize];
+                
+                
+                [aSocket writeData:toWrite withTimeout:-1 tag:0];
+            }
                 break;
             case NSStreamEventEndEncountered:
                 break;
@@ -127,9 +143,6 @@
     NSLog(@"ServerRelay socketDidDisconnect");
     if (err) {
         NSLog(@"ServerRelay socket error '%@' on host:%@:%u", err, sock.connectedHost, sock.connectedPort);
-        // Error in connect function:
-        // NSPOSIXErrorDomain Code=61 "Connection refused" (no listener setup)
-        // NSPOSIXErrorDomain Code=49 "Can't assign requested address"
     }
 }
 
@@ -143,7 +156,8 @@
     NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     NSLog(@"ServerRelay didReadDataWithTag:%ld %@", tag, str);
     
-    // TODO: check for string equality
+    [aOutputStream write:data.bytes maxLength:data.length];
+    [aSocket readDataWithTimeout:-1 tag:tag];
 }
 
 
