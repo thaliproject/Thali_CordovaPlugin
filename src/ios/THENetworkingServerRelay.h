@@ -11,10 +11,10 @@
 
 @property (nonatomic, weak) id<THENetworkingServerRelayDelegate> delegate;
 
+// Setup a TCP client on the server peer
 -(instancetype)initWithInputStream:(NSInputStream *)inputStream
                   withOutputStream:(NSOutputStream *)outputStream
-                            withPort:(uint)port
-                  withPeerIdentifier:(NSUUID *)peerIdentifier;
+                          withPort:(uint)port;
 
 -(BOOL)start;
 

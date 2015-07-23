@@ -196,7 +196,7 @@
 
   // not used with iOS - iOS triggers registerToNative calls
   function peersConnectionStateCallback(peerId, state) {
-    alert("Got connection peer : " + peerId + ", state: "  + state);
+    nslog("Got connection peer : " + peerId + ", state: "  + state);
   }
   function peerClientConnectionCallback(peerId) {
     nslog("cor peerClientConnectionCallback : " + peerId); // <--@
@@ -253,7 +253,7 @@
 
   function connectCallback(status, errorString) {
     if (errorString.length > 0) {
-      alert("Connection " + status + ", details: " + errorString);
+      nslog("Connection " + status + ", details: " + errorString);
     }
   }
 

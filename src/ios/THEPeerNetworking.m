@@ -75,7 +75,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
                 peerIdentifier:(NSUUID *)peerIdentifier
                       peerName:(NSString *)peerName
-                          port:(int)port;
+                          port:(uint)port;
 // TODO
 -(void)tryCreateTCPClient;
 -(void)tryCreateTCPListener;
@@ -92,7 +92,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
                 peerIdentifier:(NSUUID *)peerIdentifier
                       peerName:(NSString *)peerName
-                          port:(int)port
+                          port:(uint)port
 {
     // Initialize superclass.
     self = [super init];
@@ -131,53 +131,14 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     if (_clientInputStream != nil && _clientOutputStream != nil)
     {
         // creates TCP listener on localport
-        if (_serverRelay == nil)
-        {
-            _serverRelay = [[THENetworkingServerRelay alloc] initWithInputStream:_clientInputStream withOutputStream:_clientOutputStream withPort:_port withPeerIdentifier:_peerIdentifier];
-            [_serverRelay setDelegate:(id<THENetworkingServerRelayDelegate>)[[THEAppContext singleton] self]]; // Notify the delegate didGetLocalPort...
-            
-            if([_serverRelay start])
-            {
-                NSLog(@"Did start ServerRelay with port:%u", _port);
-            }
-            else
-            {
-                NSLog(@"Error failed to start ServerRelay!");
-            }
-        }
-        else
-        {
-            NSLog(@"• Error already setup a ServerRelay bridge!");
-        }
-    }
-}
-
-// code executed on the server peer
--(void)setServerInputStream:(NSInputStream *)serverInputStream
-{
-    NSLog(@"setServerInputStream - peer server [B]");
-    _serverInputStream = serverInputStream;
-    [self tryCreateTCPClient];
-}
--(void)setServerOutputStream:(NSOutputStream *)serverOutputStream
-{
-    NSLog(@"setServerOutputStream - peer server [B]");
-    _serverOutputStream = serverOutputStream;
-    [self tryCreateTCPClient];
-}
--(void)tryCreateTCPClient
-{
-    if (_serverInputStream != nil && _serverOutputStream != nil)
-    {
-        // creates TCP listener on localport
         if (_clientRelay == nil)
         {
-            _clientRelay = [[THENetworkingClientRelay alloc] initWithMPInputStream:_serverInputStream withMPOutputStream:_serverOutputStream withPort:_port];
-            [_clientRelay setDelegate:(id<THENetworkingClientRelayDelegate>)[[THEAppContext singleton] self]]; // Notify the delegate
+            _clientRelay = [[THENetworkingClientRelay alloc] initWithInputStream:_clientInputStream withOutputStream:_clientOutputStream withPeerIdentifier:_peerIdentifier];
+            [_clientRelay setDelegate:(id<THENetworkingClientRelayDelegate>)[[THEAppContext singleton] self]]; // Notify the delegate didGetLocalPort...
             
             if([_clientRelay start])
             {
-                NSLog(@"Did start ClientRelay with port:%u", _port);
+                NSLog(@"Did start ClientRelay TCP listener");
             }
             else
             {
@@ -187,6 +148,45 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
         else
         {
             NSLog(@"• Error already setup a ClientRelay bridge!");
+        }
+    }
+}
+
+// code executed on the server peer
+-(void)setServerInputStream:(NSInputStream *)serverInputStream
+{
+    NSLog(@"setServerInputStream - peer server [B] nodeport:%u", _port);
+    _serverInputStream = serverInputStream;
+    [self tryCreateTCPClient];
+}
+-(void)setServerOutputStream:(NSOutputStream *)serverOutputStream
+{
+    NSLog(@"setServerOutputStream - peer server [B] nodeport:%u", _port);
+    _serverOutputStream = serverOutputStream;
+    [self tryCreateTCPClient];
+}
+-(void)tryCreateTCPClient
+{
+    if (_serverInputStream != nil && _serverOutputStream != nil)
+    {
+        // creates TCP client on localport _serverInputStream _serverOutputStream
+        if (_serverRelay == nil)
+        {
+            _serverRelay = [[THENetworkingServerRelay alloc] initWithInputStream:_serverInputStream withOutputStream:_serverOutputStream withPort:_port];
+            [_serverRelay setDelegate:(id<THENetworkingServerRelayDelegate>)[[THEAppContext singleton] self]]; // Notify the delegate
+            
+            if([_serverRelay start])
+            {
+                NSLog(@"Did start ServerRelay TCP client using node server port:%u", _port);
+            }
+            else
+            {
+                NSLog(@"Error failed to start ServerRelay!");
+            }
+        }
+        else
+        {
+            NSLog(@"• Error already setup a ServerRelay bridge!");
         }
     }
 }
@@ -246,6 +246,9 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 
     // The peers dictionary.
     NSMutableDictionary * _peers;
+    
+    // The node listener port
+    uint _port;
 }
 
 // Class initializer.
@@ -267,6 +270,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     _serviceType = serviceType;
     _peerIdentifier = peerIdentifier;
     _peerName = peerName;
+    _port = port;
     
     // Initialize
     pthread_mutex_init(&_mutex, NULL);
@@ -467,7 +471,7 @@ withDiscoveryInfo:(NSDictionary *)info
         peerDescriptor = [[THEPeerDescriptor alloc]initWithPeerID:peerID
                                                    peerIdentifier:[[NSUUID alloc] initWithUUIDString:info[PEER_IDENTIFIER]]
                                                          peerName:info[PEER_NAME]
-                                                            port:0];
+                                                            port:_port];
         [peerDescriptor setFound:YES];
         _peers[peerID] = peerDescriptor;
     }

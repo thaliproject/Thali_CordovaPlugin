@@ -619,12 +619,12 @@ peerClientNotConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier
 
 @end
 
-// THEAppContext (THENetworkingServerRelayDelegate) implementation.
-@implementation THEAppContext (THENetworkingServerRelayDelegate)
+// THEAppContext (THENetworkingClientRelayDelegate) implementation.
+@implementation THEAppContext (THENetworkingClientRelayDelegate)
 
-- (void)networkingServerRelay:(THENetworkingServerRelay *)serverRelay didGetLocalPort:(uint)port withPeerIdentifier:(NSUUID *)peerIdentifier
+- (void)networkingClientRelay:(THENetworkingClientRelay *)clientRelay didGetLocalPort:(uint)port withPeerIdentifier:(NSUUID *)peerIdentifier
 {
-    NSLog(@"THEAppContext delegate didGetLocalPort:%u withPeerIdentifier:%@", port, [peerIdentifier UUIDString]);
+    NSLog(@"THEAppContext delegate: clientRelay didGetLocalPort:%u withPeerIdentifier:%@", port, [peerIdentifier UUIDString]);
     if (port>0)
     {
         // return (err, port) [NSNumber numberWithUnsignedInt:port]

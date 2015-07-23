@@ -8,15 +8,11 @@
     NSOutputStream *aOutputStream;
     uint aPort;
     GCDAsyncSocket *aSocket;
-    NSUUID *aPeerIdentifier;
-    
-    pthread_mutex_t _mutex;
 }
 
 -(instancetype)initWithInputStream:(NSInputStream *)inputStream
                   withOutputStream:(NSOutputStream *)outputStream
-                            withPort:(uint)port
-                  withPeerIdentifier:(NSUUID *)peerIdentifier
+                          withPort:(uint)port
 {
     self = [super init];
     // Handle errors.
@@ -28,7 +24,6 @@
     aInputStream = inputStream;
     aOutputStream = outputStream;
     aPort = port;
-    aPeerIdentifier = peerIdentifier;
     
     return self;
 }
@@ -49,24 +44,22 @@
         asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
         
         NSError *err = nil;
-        if (![asyncSocket acceptOnPort:aPort error:&err])
+        if (![asyncSocket connectToHost:@"localhost" onPort:aPort withTimeout:-1 error:&err])
         {
             NSLog(@"ServerRelay setup error on port:%u %@", aPort, err);
             return NO;
         }
         else
         {
-            UInt16 port = [asyncSocket localPort];
-            NSLog(@"ServerRelay socket got localPort: %u ", port);
+            NSData *data = [@"World" dataUsingEncoding:NSUTF8StringEncoding];
+            NSLog(@"ServerRelay data via port:%u data:%@", aPort, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] );
             
-            // Pass event didGetPort by notifing the delegate
-            if ([[self delegate] respondsToSelector:@selector(networkingServerRelay:didGetLocalPort:withPeerIdentifier:)])
-            {
-                [[self delegate] networkingServerRelay:self didGetLocalPort:port withPeerIdentifier:aPeerIdentifier];
-            }
+            [asyncSocket writeData:data withTimeout:-1 tag:1];
+            [asyncSocket readDataToData:data withTimeout:-1 tag:1];
             
             return YES;
         }
+        
     }
     else
     {
@@ -86,31 +79,10 @@
             case NSStreamEventHasSpaceAvailable:
                 break;
             case NSStreamEventHasBytesAvailable:
-            {
-                assert(aSocket);
-                // Read from input stream, write to socket
-                
-                const uint bufferSize = 1024;
-                
-                uint8_t *buffer = malloc(bufferSize);
-                
-                [aInputStream read:buffer maxLength:bufferSize];
-                
-                NSData *toWrite = [[NSData alloc] initWithBytesNoCopy:buffer length:bufferSize];
-                
-               
-                [aSocket writeData:toWrite withTimeout:-1 tag:0];
-            }
                 break;
             case NSStreamEventEndEncountered:
-            {
-                NSLog(@"aInputStream Stream Ended");
-            }
                 break;
             case NSStreamEventErrorOccurred:
-            {
-                NSLog(@"aInputStream Error");
-            }
                 break;
             default:
                 break;
@@ -123,21 +95,12 @@
             case NSStreamEventOpenCompleted:
                 break;
             case NSStreamEventHasSpaceAvailable:
-            {
-                
-            }
                 break;
             case NSStreamEventHasBytesAvailable:
                 break;
             case NSStreamEventEndEncountered:
-            {
-                NSLog(@"aOutputStream Stream Ended");
-            }
                 break;
             case NSStreamEventErrorOccurred:
-            {
-                NSLog(@"aOutputStream Error");
-            }
                 break;
             default:
                 break;
@@ -149,19 +112,24 @@
 
 -(void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)newSocket
 {
-    NSLog(@"ServerRelay accepted new Socket: host:%@ port:%hu", newSocket.connectedHost, (uint16_t)newSocket.connectedPort); // newSocket client port
+    NSLog(@"ServerRelay accepted new Socket: host:%@ port:%hu", newSocket.connectedHost, (uint16_t)newSocket.connectedPort);
+}
+
+-(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
+{
+    NSLog(@"ServerRelay connected! socket:%p host:%@ port:%hu", sock, host, port);
     
-    aSocket = newSocket;
-    
-    //[aSocket writeData:[@"Hello" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:0]; // needed
-    //[aSocket readDataWithTimeout:-1 tag:1]; // NB: Inifinite timeouts will timeout after 10 mins
+    [sock readDataWithTimeout:-1 tag:0];
 }
 
 -(void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
 {
     NSLog(@"ServerRelay socketDidDisconnect");
     if (err) {
-        NSLog(@"ServerRelay Socket Error: %@", [err description]);
+        NSLog(@"ServerRelay socket error '%@' on host:%@:%u", err, sock.connectedHost, sock.connectedPort);
+        // Error in connect function:
+        // NSPOSIXErrorDomain Code=61 "Connection refused" (no listener setup)
+        // NSPOSIXErrorDomain Code=49 "Can't assign requested address"
     }
 }
 
@@ -175,11 +143,7 @@
     NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     NSLog(@"ServerRelay didReadDataWithTag:%ld %@", tag, str);
     
-    assert(sock == aSocket);
-    
-    // echo data back to client
-    [aSocket writeData:data withTimeout:-1 tag:tag];
-    [aSocket readDataWithTimeout:-1 tag:tag];
+    // TODO: check for string equality
 }
 
 
