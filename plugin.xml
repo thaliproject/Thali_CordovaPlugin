@@ -56,6 +56,14 @@
         <header-file src="src/ios/THEPeerNetworkingDelegate.h" />
         <header-file src="src/ios/THEPeerNetworking.h" />
         <source-file src="src/ios/THEPeerNetworking.m" />
+		<header-file src="src/ios/THENetworkingClientRelay.h" />
+        <source-file src="src/ios/THENetworkingClientRelay.m" />
+        <header-file src="src/ios/THENetworkingServerRelay.h" />
+        <source-file src="src/ios/THENetworkingServerRelay.m" />
+        <header-file src="src/ios/THENetworkingClientRelayDelegate.h" />
+        <header-file src="src/ios/THENetworkingServerRelayDelegate.h" />
+        <source-file src="src/ios/GCDAsyncSocket/GCDAsyncSocket.h" />
+        <source-file src="src/ios/GCDAsyncSocket/GCDAsyncSocket.m" />
     </platform>
     
 </plugin>
