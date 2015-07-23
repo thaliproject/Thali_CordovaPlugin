@@ -173,7 +173,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
         if (_serverRelay == nil)
         {
             _serverRelay = [[THENetworkingServerRelay alloc] initWithInputStream:_serverInputStream withOutputStream:_serverOutputStream withPort:_port];
-            [_serverRelay setDelegate:(id<THENetworkingServerRelayDelegate>)[[THEAppContext singleton] self]]; // Notify the delegate
+            //[_serverRelay setDelegate:(id<THENetworkingServerRelayDelegate>)[[THEAppContext singleton] self]]; // Notify the delegate
             
             if([_serverRelay start])
             {

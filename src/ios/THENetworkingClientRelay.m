@@ -70,9 +70,9 @@
 -(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
     if (aStream == aInputStream) {
-        //NSLog(@"ClientRelay aStream aInputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
+                NSLog(@"<- ClientRelay aInputStream Opened");
                 break;
             case NSStreamEventHasSpaceAvailable:
                 break;
@@ -83,26 +83,23 @@
                 
                 const uint bufferSize = 1024;
                 
-                uint8_t *buffer = malloc(bufferSize);
+                uint8_t buffer[bufferSize]; //uint8_t *buffer = malloc(bufferSize);
                 
                 NSInteger len = [aInputStream read:buffer maxLength:bufferSize];
                 
-                NSMutableData *toWrite = [[NSMutableData alloc] init];//[[NSData alloc] initWithBytesNoCopy:buffer length:bufferSize];
+                NSMutableData *toWrite = [[NSMutableData alloc] init];
                 [toWrite appendBytes:buffer length:len];
                 
                 
                 [aSocket writeData:toWrite withTimeout:-1 tag:0];
-            }
+                
                 break;
-            case NSStreamEventEndEncountered:
-            {
-                NSLog(@"aInputStream Stream Ended");
             }
+            case NSStreamEventEndEncountered:
+                NSLog(@"<- ClientRelay aInputStream Ended");
                 break;
             case NSStreamEventErrorOccurred:
-            {
-                NSLog(@"aInputStream Error");
-            }
+                NSLog(@"<- ClientRelay aInputStream Error!");
                 break;
             default:
                 break;
@@ -110,26 +107,19 @@
     }
     else if (aStream == aOutputStream)
     {
-        NSLog(@"ClientRelay aStream aOutputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
+                NSLog(@"-> ClientRelay aOutputStream Opened");
                 break;
             case NSStreamEventHasSpaceAvailable:
-            {
-                
-            }
                 break;
             case NSStreamEventHasBytesAvailable:
                 break;
             case NSStreamEventEndEncountered:
-            {
-                NSLog(@"aOutputStream Stream Ended");
-            }
+                NSLog(@"-> ClientRelay aOutputStream Ended");
                 break;
             case NSStreamEventErrorOccurred:
-            {
-                NSLog(@"aOutputStream Error");
-            }
+                NSLog(@"-> ClientRelay aOutputStream Error!");
                 break;
             default:
                 break;

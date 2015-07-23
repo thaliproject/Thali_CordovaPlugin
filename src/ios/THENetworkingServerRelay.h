@@ -5,11 +5,8 @@
 #import "THENetworkingServerRelayDelegate.h"
 
 @interface THENetworkingServerRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate>
-{
 
-}
-
-@property (nonatomic, weak) id<THENetworkingServerRelayDelegate> delegate;
+//@property (nonatomic, weak) id<THENetworkingServerRelayDelegate> delegate;
 
 // Setup a TCP client on the server peer
 -(instancetype)initWithInputStream:(NSInputStream *)inputStream

@@ -73,9 +73,9 @@
 -(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
     if (aStream == aInputStream) {
-        NSLog(@"ServerRelay aStream aInputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
+                NSLog(@"<- ServerRelay aInputStream Opened");
                 break;
             case NSStreamEventHasSpaceAvailable:
                 break;
@@ -97,8 +97,10 @@
             }
                 break;
             case NSStreamEventEndEncountered:
+                NSLog(@"<- ServerRelay aInputStream Ended");
                 break;
             case NSStreamEventErrorOccurred:
+                NSLog(@"<- ServerRelay aInputStream Error!");
                 break;
             default:
                 break;
@@ -106,17 +108,19 @@
     }
     else if (aStream == aOutputStream)
     {
-        NSLog(@"ServerRelay aStream aOutputStream: %lu", (unsigned long)eventCode);
         switch (eventCode) {
             case NSStreamEventOpenCompleted:
+                NSLog(@"-> ServerRelay aOutputStream Opened");
                 break;
             case NSStreamEventHasSpaceAvailable:
                 break;
             case NSStreamEventHasBytesAvailable:
                 break;
             case NSStreamEventEndEncountered:
+                NSLog(@"-> ServerRelay aOutputStream Ended");
                 break;
             case NSStreamEventErrorOccurred:
+                NSLog(@"-> ServerRelay aOutputStream Error!");
                 break;
             default:
                 break;
@@ -133,7 +137,7 @@
 
 -(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
 {
-    NSLog(@"ServerRelay connected! socket:%p host:%@ port:%hu", sock, host, port);
+    NSLog(@"ServerRelay connected! socket:%p host:%@ port:%hu", [sock localHost], host, port);
     
     [sock readDataWithTimeout:-1 tag:0];
 }
