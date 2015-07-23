@@ -49,12 +49,12 @@ ThaliReplicationManager.prototype.start = function (port, dbName) {
 
   var cryptomanager = require('./thalicryptomanager');
   // get the device public-key-hash
-  cryptomanager.getPublicKeyHash(function (publicKeyHash) {
+  cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
     var currentAddrEntry;
-    if (publicKeyHash == null) {
-      console.log('got null for publicKeyHash');
+    if (err) {
+      console.log('getPublicKeyHash returned err: ', err);
       this._isStarted = false;
-      this.emit(ThaliReplicationManager.events.START_ERROR, 'could not generate public-key-hash');
+      this.emit(ThaliReplicationManager.events.START_ERROR, err);
       return;
     } else {
       console.log('got a valid publicKeyHash');
