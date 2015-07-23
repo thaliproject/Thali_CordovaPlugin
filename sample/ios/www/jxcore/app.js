@@ -35,9 +35,9 @@
         // BUGBUG: On the desktop this event listener is not necessary. But on JXCore on Android
         // we have to include this handler or no data will ever arrive at the server.
         // Please see https://github.com/jxcore/jxcore/issues/411
-        console.log("We received data on the socket the server is listening on - " + data.toString());
-        gotMessage("data: " + data.toString());
-        c.write("Got data : " + data.toString());
+        console.log("We received data on the socket the server is listening on - data: \n" + data.toString());
+        gotMessageFromPeer(data.toString());
+        c.write(data.toString());
       });
 
       // when using piping, I don't get 'data' events, and as in debug time I want to log them
@@ -74,8 +74,8 @@ function startClientSocket(port,tmpAddress) {
   console.log("We have successfully connected to the server.");
 });
 clientSocket.on('data', function (data) {
-  console.log("clientSocket got data: " + data.toString());
-  gotMessage("data: " + data.toString());
+  console.log("clientSocket received data - data: \n" + data.toString());
+  gotMessage(data.toString()); // passing message to Cordova to validate
 });
 clientSocket.on('close', function () {
   peerConnectionStateChanged(tmpAddress,"Disconnected");
@@ -94,6 +94,7 @@ function sendGetRequest(message) {
     clientSocket.write(message);
   } else {
     console.log("opps, clientSocket not setup to send message...");
+    alert("Please connect with a peer to send a message!");
   }
 }
 
@@ -397,6 +398,11 @@ function gotMessage(message) {
   } else {
     console.log("MessageCallback not set !!!!");
   }
+}
+
+function gotMessageFromPeer(message) {
+  console.log("jx gotMessageFromPeer: " + message);
+  Mobile('gotMessageFromPeer').call(message);
 }
 
 /****************************************************************************

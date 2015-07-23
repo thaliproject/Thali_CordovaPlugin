@@ -65,6 +65,7 @@
     // JX calls to Cordova UI functions
     jxcore('peerClientConnectionCallback').register(peerClientConnectionCallback);
     jxcore('peerServerConnectionCallback').register(peerServerConnectionCallback);
+    jxcore('gotMessageFromPeer').register(gotMessageFromPeer);
   }
 
   // Device name and identifier
@@ -144,9 +145,10 @@
     clearLogs();
   }
 
+  var myLastMessage = "";
   function sendMessage() {
     var message = document.getElementById(messageBoxId).value;
-    //nslog("sendMessage:" + message);
+    myLastMessage = message;
 
     jxcore('SendMessage').call(message, sendMessageCallback);
     addChatLine("ME", message);
@@ -155,8 +157,18 @@
   }
 
   function sendMessageCallback(data) {
-    //console.log("sendMessageCallback " + data);
-    nslog("sendMessageCallback " + data);
+    nslog("sendMessageCallback data: " + data); // print
+    if (myLastMessage == data) {
+      nslog("Success. The message I sent matches the received message data.");
+      logInCordova("Message received by peer confirmation: " + data);
+    } else {
+      nslog("Fail condition. The message data I sent is not an exact match of the received data.");
+    }
+  }
+
+  function gotMessageFromPeer(data) {
+    nslog("cor gotMessageFromPeer: " + data); // print
+    addChatLine("PEER", data);
   }
 
   function clearMessages() {
