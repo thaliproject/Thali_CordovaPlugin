@@ -6,14 +6,12 @@
     @private
     NSInputStream *aInputStream;
     NSOutputStream *aOutputStream;
-//    uint aPort;
     NSUUID *aPeerIdentifier;
     GCDAsyncSocket *aSocket;
 }
 
 -(instancetype)initWithInputStream:(NSInputStream *)inputStream
                   withOutputStream:(NSOutputStream *)outputStream
-//                          withPort:(uint)port
                 withPeerIdentifier:(NSUUID *)peerIdentifier
 {
     self = [super init];
@@ -25,7 +23,6 @@
     
     aInputStream = inputStream;
     aOutputStream = outputStream;
-//    aPort = port;
     aPeerIdentifier = peerIdentifier;
     
     return self;
@@ -79,17 +76,16 @@
             case NSStreamEventHasBytesAvailable:
             {
                 assert(aSocket);
+                
                 // Read from input stream, write to socket
+                const uint bufferValue = 1024; // 512, 1024 or 4k
                 
-                const uint bufferSize = 1024;
+                uint8_t *buffer = malloc(bufferValue);
                 
-                uint8_t buffer[bufferSize]; //uint8_t *buffer = malloc(bufferSize);
-                
-                NSInteger len = [aInputStream read:buffer maxLength:bufferSize];
+                NSInteger len = [aInputStream read:buffer maxLength:sizeof(bufferValue)];
                 
                 NSMutableData *toWrite = [[NSMutableData alloc] init];
                 [toWrite appendBytes:buffer length:len];
-                
                 
                 [aSocket writeData:toWrite withTimeout:-1 tag:0];
                 
