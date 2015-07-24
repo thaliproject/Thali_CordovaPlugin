@@ -1,3 +1,7 @@
 # Mac OS X
 *.DS_Store
+.idea/
 
+# Nodejs
+node_modules
+npm-debug.log

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link type="text/css" rel="stylesheet" href="index.css"/>
+  <title>Thali Cordova Plugin Tests</title>
+  <script src="source-code-pro.js"></script>
+</head>
+<body>
+  <div>
+    <% rows.forEach(function (row) { %>
+
+      <% if (row.type === 'test') { %>
+        <div class="msg"><%= row.name %></div>
+      <% } %>
+
+      <% if (row.type === 'assert') { %>
+
+        <% if (row.ok) { %>
+          <div class="ok"><%= row.name %></div>
+        <% } %>
+
+        <% if (!row.ok) { %>
+          <div class="fail"><%= row.name %></div>
+        <% } %>
+
+      <% }); %>
+
+    <% }); %>
+
+    <div class="total-msg"><%= total %></div>
+    <div class="total-fail"><%= failed %></div>
+    <div class="total-ok"><%= passed %></div>
+
+  </div>
+
+</body>
+</html>

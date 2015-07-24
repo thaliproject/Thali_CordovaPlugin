@@ -47,7 +47,6 @@
                     alert('Error loading ThaliMobile app.js');
                     alert(err);
                 } else {
-                   // logInCordova('Loaded');
                     jxcore_ready();
                 }
             });
@@ -64,18 +63,12 @@
         document.getElementById("DisconnectButton").addEventListener("click", DisconnectPeer);
     }
 
-//   alert('button is set');
-//    jxcore('ShowToast').call('Hello',true, myCallback);
-//   jxcore('ShowToast').call('Hello',false, myCallback);
 
     function startConnector() {
         jxcore('setMessageCallback').call(SendMessageCallback);
         jxcore('setConnectionStatusCallback').call(peersConnectionStateCallback);
         jxcore('setPeerChangedCallback').call(peersChangedCallback);
 
-
-
-        jxcore('StartConnector').call(document.getElementById('nameBox').value);
         document.getElementById('stopButton').style.display = 'block';
         document.getElementById('startButton').style.display = 'none';
     }
@@ -107,11 +100,13 @@
         var butEntries = document.getElementById('peerListSelector');
         butEntries.innerHTML = "";
 
+        // on top of the list shown we have the available peers
         for (var key in _peers) {
             if (_peers[key].peerAvailable == "true") {
                 addButton(_peers[key]);
             }
         }
+        // and on bottom we have the non-available peers
         for (var key in _peers) {
             if (_peers[key].peerAvailable != "true") {
                 addButton(_peers[key]);
@@ -133,11 +128,7 @@
 
         // alert("Got connection peer : " + peerId + ", state: "  + state);
 
-        if (state == "Connecting") {
-            jxcore('ShowToast').call('Connecting  to ' + peerId, false);
-        } else if (state == "Disconnected") {
-            incomingConnection = true;
-            jxcore('ShowToast').call('Disconnected from ' + peerId, true);
+        if (state == "Disconnected") {
             document.getElementById('RemNameBox').value = "";
             document.getElementById('RemAddrBox').value = "";
             ClearMessages();
@@ -149,17 +140,9 @@
                     document.getElementById('RemNameBox').value = _peers[key].peerName;
                 }
             }
-        } else if (state == "peerGotConnection") {
-            document.getElementById('RemAddrBox').value = peerId;
-            for (var key in _peers) {
-                if (_peers[key].peerIdentifier == peerId) {
-                    document.getElementById('RemNameBox').value = _peers[key].peerName;
-                }
-            }
         }
 
         if (document.getElementById('RemAddrBox').value.length > 0) {
-
             if (incomingConnection == true) {
                 document.getElementById('mySendMessageDiv').style.display = 'none';
             } else {
@@ -208,17 +191,13 @@
     }
 
     function DisconnectPeer() {
-// could use document.getElementById('RemAddrBox').value as peerId as well
         jxcore('DisconnectPeer').call("", ConnectCallback);
     }
 
     function ConnectToDevice(peerid) {
 
         if (peerid.length > 0) {
-            //       document.getElementById('myRemoteDevice').style.display = 'block';
-            //       document.getElementById('myDeviceSelection').style.display = 'none';
             jxcore('ConnectToDevice').call(peerid, ConnectCallback);
-
         } else {
             alert("No device selected to connect to");
         }
