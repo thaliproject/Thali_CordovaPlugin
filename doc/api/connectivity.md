@@ -5,9 +5,11 @@
 - `StopBroadcasting`
 - `Connect`
 - `Disconnect`
+
+## Testing Methods
 - `KillConnection`
 
-Events:
+## Events:
 - `peerAvailabilityChanged`
 - `networkChanged`
 
@@ -19,7 +21,7 @@ METHODS:
 
 ### `StartBroadcasting(deviceName, portNumber, callback)`
 
-This method starts advertising or broadcasting its availability at the following port that PouchDB/Express-PouchDB is listening.  
+This method starts broadcasting its availability at the following port that PouchDB/Express-PouchDB is listening.  
 
 #### Arguments:
 
@@ -32,7 +34,7 @@ This method starts advertising or broadcasting its availability at the following
 
 ### `StopBroadcasting(callback)`
 
-This method stops advertising or broadcasting of its availability.
+This method stops broadcasting of its availability.
 
 #### Arguments:
 
@@ -68,7 +70,7 @@ This method disconnects from the given peer by the given peer identifier.  If th
 
 ### `KillConnection(peerIdentifier, callback)`
 
-This method kills the connection for the given peer identifier to simulate crashes.  This is not intended for use in production code.
+This method kills the connection for the given peer identifier to simulate crashes.  This is not intended for use in production code and is solely used for testing.
 
 #### Arguments:
 

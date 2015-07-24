@@ -14,15 +14,10 @@ var db = new PouchDB('dbname');
 var manager = new ThaliReplicationManager(db);
 
 manager.on('started', function () {
-
-  manager.connect(peerIdentifier, function (err, port) {
-    if (err) { throw err; }
-
-    console.log('Now connected to peer %s', peerIdentifier);
-  });
+  console.log('Thali replication manager started');
 });
 
-manager.start('deviceName', 5000 /* port */);
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 ```
 
 ## `ThaliReplicationManager` API
@@ -65,49 +60,50 @@ var manager = new ThaliReplicationManager(db);
 
 ### `ThaliReplicationManager.prototype.start()`
 
-This method starts the Thali Replication Manager.
+This method starts the Thali Replication Manager with the given device name, port number used for synchronization and database name to synchronize.  Once called this method emits the `starting` event.  Once started, the `started` event is fired.  If there is an error in starting the Thali Replication Manager, the `startError` event will fire.
+
+#### Arguments:
+1. `deviceName`: `String` - the device name to start broadcasting.
+2. `port`: `Number` - the port number used for synchronization.
+3. `dbName`: `String` - the name of the database.
 
 #### Example:
 
 ```js
-manager.start(function (err) {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log('Thali replication manager started');
-  }
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+
+manager.on('started', function () {
+  console.log('Thali replication manager started');
 });
+
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 ```
 ***
 
-### `ThaliEmitter.prototype.stop(callback)`
+### `ThaliEmitter.prototype.stop()`
 
-This method stops the Thali Replication Manager.
-
-#### Arguments:
-
-1. `callback` : `Function` – must be in the form of the following, function (err) where:
-  - `err` : `Error` – an `Error` if one occurred, else `null`
+This method stops the Thali Replication Manager.  Once called, this will fire the `stopping` event.  Once stopped, the `stopped` event will fire.  If an error occurs stopping the Thali Replication Manager, the `stopError` event will fire.
 
 #### Example:
 
 ```js
-manager.start(function (err) {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log('Started the replication manager');
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
 
-    // Stop it after 5 seconds
-    setTimeout(function () {
-      manager.stop(function (err) {
-        if (err) {
-          console.log('err');
-        } else {
-          console.log('Stopped the replication manager');
-        }
-      })
-    }, 5000);
-  }
+var manager = new ThaliReplicationManager(db);
+
+manager.on('started', function () {
+  manager.stop();
 });
+
+manager.on('stopped', function () {
+  console.log('Thali replication manager stopped');
+})
+
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 ```

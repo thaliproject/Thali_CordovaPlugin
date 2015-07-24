@@ -41,6 +41,7 @@ ThaliReplicationManager.events = {
 * Starts the Thali replication manager with the given device name and port number
 * @param {String} deviceName the device name to advertise.
 * @param {Number} port the port number used for synchronization.
+* @param {String} dbName the name of the database.
 */
 ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
   validations.ensureNonNullOrEmptyString(deviceName, 'deviceName');
@@ -67,21 +68,6 @@ ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
         this.emit(ThaliReplicationManager.events.STARTED);
       }
     }.bind(this));
-  }.bind(this));
-};
-
-/**
-* Starts the Thali replication manager with the given device name and port number
-* @param {String} deviceName the device name to advertise.
-* @param {Number} port the port number used for synchronization.
-*/
-ThaliReplicationManager.prototype._restart = function () {
-  this.emit(ThaliReplicationManager.events.STARTING);
-
-  this._serverBridge = muxServerBridge.call(this, this._port);
-  this._serverBridge.listen(function () {
-    this._serverBridgePort = this._serverBridge.address().port;
-    this.emit(ThaliReplicationManager.events.STARTED);
   }.bind(this));
 };
 
@@ -129,9 +115,7 @@ function syncPeers(peers) {
 
     var p = this._replications[peer.peerIdentifier];
 
-    if (!p && peer.peerAvailable) {
-      syncPeer.call(this, peer);
-    }
+    !p && peer.peerAvailable && syncPeer.call(this, peer);
 
     if (p && !peer.isAvailable) {
       var client = this._clients[peer.peerIdentifier];
@@ -180,27 +164,16 @@ function syncPeer(peer) {
     if (err) {
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
     } else {
-
-      console.log('connect port', port, peer.peerIdentifier);
-
       var client = muxClientBridge.call(this, port, peer);
       this._clients[peer.peerIdentifier] = client;
       client.listen(function () {
         var localPort = client.address().port;
 
-        console.log('client port', localPort, peer.peerIdentifier);
-
         var remoteDB = 'http://localhost:' + localPort + '/db/' + this._dbName;
         var options = { live: true, retry: true };
         this._replications[peer.peerIdentifier] = {
-          from: this._db.replicate.from(remoteDB, options)
-            .on('error', function (err) {
-              console.log('from woops', err, peer.peerIdentifier);
-            }),
+          from: this._db.replicate.from(remoteDB, options),
           to: this._db.replicate.from(remoteDB, options)
-            .on('error', function (err) {
-              console.log('to woops', err, peer.peerIdentifier);
-            })
         }
       }.bind(this));
     }
