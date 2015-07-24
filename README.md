@@ -58,6 +58,10 @@ $ sudo jx install -g cordova
 
 ### Create a Cordova project
 
+The Cordova project creates the platform specific build files e.g. the XCode project from which the test application
+is built and into which the plugin will be installed. It can be called anything you like but we'll refer to it as
+ThaliTest throughout this doc.
+
 ```
 $ cordova create ThaliTest com.test.thalitest ThaliTest
 ```
@@ -116,19 +120,23 @@ Follow the instructions below to use the Thali Cordova Plugin on Android and iOS
 
 #### iOS
 
-All commands are issued from the the root of the project folder.
+We assume your source directory is ~/Code but it can be anything you prefer.
 
 1. Add the Thali Cordova Plugin to the Cordova project:
+ * `~/Code> cd ThaliTest`
  * `~/Code/ThaliTest> cordova plugin add https://github.com/thaliproject/Thali_CordovaPlugin.git`
 2. Add the iOS platform:
  * `~/Code/ThaliTest> cordova platform add ios`
-3. Copy Thali Cordova Plugin sample to the Cordova project:
- * `~/Code/ThaliTest> cp -a -R -v plugins/org.thaliproject.p2p/sample/ios/www ./`
+3. Copy Thali Cordova Plugin tests to the Cordova project:
+ * `~/Code/ThaliTest> cp -a -R -v plugins/org.thaliproject.p2p/test//www ./`
 4. Build Cordova:
  * `~/Code/ThaliTest> cordova build`
 3. Open the iOS Cordova project in Xcode
  * (e.g. `<project_root>/platforms/ios/ThaliTest.xcodeproj`)
  * `~/Code/ThaliTest> open platforms/ios/ThaliTest.xcodeproj`
+
+*If you add or remove node modules to the test project you should re-run cordova build in order for them to be included
+in the bulild*
 
 ### Unit Testing the Thali Cordova Plugin
 
@@ -158,7 +166,7 @@ To ensure the test files are up to date, run the following in the project root w
 $ npm test
 ```
 
-To get started, copy the files from `plugins/org.thaliproject.p2p/sample/www` to the `www` folder of your Cordova project.
+To get started, copy the files from `plugins/org.thaliproject.p2p/test/www` to the `www` folder of your Cordova project.
 
 Next, inside the `www/jxcore` root folder of your Cordova project, install the requirements for testing:
 ```
