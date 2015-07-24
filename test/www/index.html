@@ -14,8 +14,7 @@
     <script src="cordova.js"></script>
 </head>
 <body>
-  <div id="txt"></div>
-  <iframe id="thalitestFrame" style="position: absolute; height: 80%; width: 100%; border: none" />
+  <iframe id="thalitestFrame" style="position: absolute; height: 100%; width: 100%; border: none" />
 <script>
 
 try {
@@ -42,14 +41,15 @@ try {
         jxcore('app.js').loadMainFile(function (ret, err) {
           if(err) {
             var msg;
-            if (!err || err.replace)
+            if (!err || err.replace) {
               msg = err;
-            else
+            } else {
               msg = JSON && JSON.stringify ? JSON.stringify(err) : err;
+            }
 
             alert(msg);
           } else {
-
+            document.getElementById('thalitestFrame').src = 'http://localhost:5000';
           }
         });
       });
