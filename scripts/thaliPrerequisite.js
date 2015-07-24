@@ -58,6 +58,18 @@ function updateJXCore(){
     exec('cordova plugin add jxcore-cordova');
 }
 
+//TODO: This is temporary fix, and we don't reqiure it once the version update PR available
+//Update the Android SDK version
+// ..\platforms\android and in AndroidManifest.xml change android:minSdkVersion="10" to android:minSdkVersion="16"
+function updateAndroidSDKVersion() {
+    var to_replace = 'android:minSdkVersion=\"10\"';
+    var replace_with = 'android:minSdkVersion=\"16\"';
+    var filename = rootdir + '/../platforms/android/AndroidManifest.xml';
+    var data = fs.readFileSync(filename, 'utf8');
+    var result = data.replace(new RegExp(to_replace, "g"), replace_with);
+    fs.writeFileSync(filename, result, 'utf8');
+}
+
 //Copy the build-extras.gradle
 //Copy from \plugins\org.thaliproject.p2p\build to \platforms\android
 function copyBuildExtras(){
@@ -87,6 +99,9 @@ installThaliModules();
 //3. Move the build-extras.gradle to platform
 console.log('Copying the build-extras.gradle to platform..');
 copyBuildExtras();
+
+//TODO: Will be removed soon
+updateAndroidSDKVersion();
 
 //4. Creating a dummy file to prevent the future execution of the entire script
 console.log('Completed the Thali_Cordova plugin Pre-requisites configuration..');
