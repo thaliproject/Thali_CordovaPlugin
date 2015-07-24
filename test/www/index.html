@@ -9,40 +9,31 @@
     <!-- WARNING: for iOS 7, remove the width=device-width and height=device-height attributes. See https://issues.apache.org/jira/browse/CB-4323 -->
     <meta name="viewport"
           content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi"/>
-    <title>Hello World</title>
+    <title>Thali Scenario Tests</title>
 
-    <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+    <script src="cordova.js"></script>
 </head>
 <body>
-<div class="app">
-    <h1>Cordova and JXcore</h1>
-</div>
+  <div id="txt"></div>
+  <iframe id="thalitestFrame" style="position: absolute; height: 80%; width: 100%; border: none" />
+<script>
 
-<br/>
-
-<p id='txt'>
-    Hello World!!
-</p>
-
-<script type="text/javascript" charset="utf-8">
-
-try{
+try {
 
     function log(x) {
       var txt = document.getElementById('txt');
-      if (txt)
-        txt.innerHTML += "<BR/>" + x;
+      txt && (txt.innerHTML += '<br>' + x);
     }
 
     // silly but reliable on multiple environments.
     // it tries until the jxcore reference is ready.
     var inter = setInterval(function() {
-      if (typeof jxcore == 'undefined') return;
+      if (typeof jxcore == 'undefined') { return; }
 
       clearInterval(inter);
 
       // sign-up for jxcore.isReady event
-      jxcore.isReady(function(){
+      jxcore.isReady(function () {
         // register log method from UI to jxcore instance
         // so you can call it (app.js) cordova('log').cal(...)
         jxcore('log').register(log);
@@ -58,11 +49,12 @@ try{
 
             alert(msg);
           } else {
+
           }
         });
       });
     }, 5);
-} catch(e) { alert(e)}
+} catch(e) { alert(e); }
 </script>
 
 </body>
