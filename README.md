@@ -143,7 +143,7 @@ To ensure the test files are up to date, run the following in the project root w
 $ npm test
 ```
 
-To run the tests navigate to Thali_CordovaPlugin/sample/www/jxcore/test and run
+To run the tests navigate to Thali_CordovaPlugin/test/www/jxcore/test and run
 ```
 $ jx install
 $ jx thaliemitterspec.js
@@ -158,7 +158,7 @@ To ensure the test files are up to date, run the following in the project root w
 $ npm test
 ```
 
-To get started, copy the files from `plugins/org.thaliproject.p2p/sample/www` to the `www` folder of your Cordova project.
+To get started, copy the files from `plugins/org.thaliproject.p2p/test/www` to the `www` folder of your Cordova project.
 
 Next, inside the `www/jxcore` root folder of your Cordova project, install the requirements for testing:
 ```
