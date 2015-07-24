@@ -143,7 +143,7 @@ To ensure the test files are up to date, run the following in the project root w
 $ npm test
 ```
 
-To run the tests navigate to Thali_CordovaPlugin/sample/www/jxcore/test and run
+To run the tests navigate to Thali_CordovaPlugin/test/www/jxcore/test and run
 ```
 $ jx install
 $ jx thaliemitterspec.js
