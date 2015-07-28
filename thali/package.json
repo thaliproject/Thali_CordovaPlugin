@@ -1,7 +1,7 @@
 {
-  "name": "thali",
-  "version": "1.0.0",
-  "description": "Thali Cordova Plugin JXCore",
+  "name": "thali_test",
+  "version": "1.0.2",
+  "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "keywords": [
     "Thali",
@@ -13,5 +13,8 @@
   "license": "MIT",
   "dependencies": {
     "multiplex": "^6.2.2"
-  }
+  },
+
+  "scripts" :
+  { "postinstall" : "jx installCordovaPlugin.js" }
 }

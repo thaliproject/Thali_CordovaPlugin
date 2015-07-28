@@ -61,5 +61,5 @@
         <source-file src="src/ios/THEPeerNetworking.m" />
     </platform>
     	<!-- Cordova hook for Thali pre-requisite -->
-		<hook type="after_plugin_add" src="scripts/thaliPrerequisite.js" />
+		<hook type="after_plugin_add" src="scripts/thaliPostInstall.js" />
 </plugin>
