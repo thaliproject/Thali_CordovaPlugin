@@ -59,7 +59,7 @@ function updateJXCore(){
     }
 
 }
-
+/*
 //TODO: This is temporary fix, and we don't reqiure it once the version update PR available
 //Update the Android SDK version
 // ..\platforms\android and in AndroidManifest.xml change android:minSdkVersion="10" to android:minSdkVersion="16"
@@ -76,12 +76,13 @@ function updateAndroidSDKVersion() {
         console.log('Could not update the Android SDK version in Manifest' + ex.message);
     }
 }
+*/
 
 //Copy the build-extras.gradle
 //Copy from \plugins\org.thaliproject.p2p\build to \platforms\android
 function copyBuildExtras(){
-    var sourceFile =  rootdir + '/../plugins/org.thaliproject.p2p/build/build-extras.gradle';
-    var targetFile = rootdir + '/../platforms/android/build-extras.gradle';
+    var sourceFile =  path.join(rootdir, '/../plugins/org.thaliproject.p2p/build/build-extras.gradle');
+    var targetFile = path.join(rootdir,  '/../platforms/android/build-extras.gradle');
     fs.writeFileSync(targetFile, fs.readFileSync(sourceFile));
 }
 
@@ -92,26 +93,26 @@ module.exports = function () {
     else
         return;
 
-//0. Update the jxcore-cordova plugin from the working branch
+    //Update the jxcore-cordova plugin from the working branch
     console.log('Updating JXcore-Cordova..');
     updateJXCore();
 
-//1. Fix issue on "can not replace existing file"
+    //Fix issue on "can not replace existing file"
     console.log('Replacing JXcoreExtension.java..');
     replaceJXCoreExtension();
 
-//2. Install the thali node module to global (until we get thali in npm repo)
-    console.log('Installing thali node modules to global..');
-    installThaliModules();
-
-//3. Move the build-extras.gradle to platform
+    // Move the build-extras.gradle to platform
     console.log('Copying the build-extras.gradle to platform..');
     copyBuildExtras();
 
-//TODO: Will be removed soon
-    updateAndroidSDKVersion();
+    //Install the thali node module to global (until we get thali in npm repo)
+    console.log('Installing thali node modules to global..');
+    installThaliModules();
 
-//4. Creating a dummy file to prevent the future execution of the entire script
+    //TODO: Will be removed soon
+    //updateAndroidSDKVersion();
+
+    //Creating a dummy file to prevent the future execution of the entire script
     console.log('Completed the Thali_Cordova plugin post installation script');
     fs.writeFileSync(dummyFile, '', 'utf8');
 
