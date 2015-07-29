@@ -13,75 +13,77 @@ var macName = 'SHA256';
 var hashSizeInBytes = 16;
 
 module.exports = {
-
 /**
-* Creates a PKCS12 content, saves it to a file, extracts the public
-* key and returns it's SHA256 hash value.
+* Checks if a PKCS12 file exists in a known location and if not present, it is
+* created. The public key is extracted from the PKCS12 content and it's SHA256
+* hash value is returned.
+* @param {Function} cb the callback which returns an error or the hash value.
 */
-  getPublicKeyHash: function (callback) {
+  getPublicKeyHash: function (cb) {
     // get the path where the PKCS12 file is saved
     Mobile.GetDocumentsPath(function (err, fileLocation) {
       if (err) {
         console.error("GetDocumentsPath err: ", err);
-        callback(err);
+        cb(err);
       } else {
         var file = path.join(fileLocation, pkcs12FileName);
         getPKCS12Content(file, function(err, pkcs12Content) {
           if(err) {
             console.error('failed to get pkcs12 content');
-            callback(err);
+            cb(err);
           }
-          // extract publick key
-          var publicKey = crypto.pkcs12.extractPublicKey(password, pkcs12Content);
-          if (publicKey.length <= 0) {
-            console.error('failed to extract public key');
-            callback('failed to extract publicKey');
-          }
-          console.log('generating SHA256 hash value');
+          // extract the publick key
+          var publicKey = crypto.pkcs12
+            .extractPublicKey(password, pkcs12Content);
+            if (publicKey.length <= 0) {
+              console.error('failed to extract public key');
+              cb('failed to extract publicKey');
+            }
           var hash = generateSHA256Hash(publicKey);
-          callback(null, hash);
+          cb(null, hash);
         }); //getPKCS12Content
       }
     }); //GetDocumentsPath
   }
-  
 };
 
 /**
 * Reads the PKCS12 content from the given file if it exists. If not,
 * the PKCS12 content is generated, saved to a file and the content is
 * returned.
-* @param {String} fileNameWithPath which has the PKCS12 content.
+* @param {String} fileNameWithPath the file which has the PKCS12 content.
+* @param {Function} cb the callback which returns an error or PKCS12 content.
 */
-function getPKCS12Content(fileNameWithPath, callback) {
+function getPKCS12Content(fileNameWithPath, cb) {
   // check if file already exists
   fs.exists(fileNameWithPath, function (exists) {
     if(exists) {
-      console.log('pkcs12 file exists');
       // read the file
       fs.readFile(fileNameWithPath, function (err, pkcs12Content) {
         if (err) {
-          console.error('failed to read pkcs12 file - err: ', err);
-          callback(err);
+          console.error('failed to read the pkcs12 file - err: ', err);
+          cb(err);
         }
-        console.log('successfully read pkcs12 file');
-        callback(null, pkcs12Content);
+        cb(null, pkcs12Content);
       });
     } else {
-      // create pkcs12 content
-      var pkcs12Content = crypto.pkcs12.createBundle(password, certname, country, organization);
-      if (pkcs12Content.length <= 0) {
-        console.error('failed to create pkcs12 content');
-        callback('failed to create pkcs12Content');
-      }
+      // create pkcs12 content.
+      // the password is not secure because anyone who can get to the file can
+      // get to the app and thus can get the password.
+      // the password is used here only to satisfy the crypto/PKCS12 API.
+      var pkcs12Content = crypto.pkcs12
+        .createBundle(password, certname, country, organization);
+        if (pkcs12Content.length <= 0) {
+          console.error('failed to create pkcs12 content');
+          cb('failed to create pkcs12Content');
+        }
       // write to the file
       fs.writeFile(fileNameWithPath, pkcs12Content, function (err) {
         if (err) {
           console.error('failed to save pkcs12Content - err: ', err);
-          callback(err);
+          cb(err);
         }
-        console.log('successfully saved pkcs12Content');
-        callback(null, pkcs12Content);
+        cb(null, pkcs12Content);
       });
     }
   });
@@ -90,13 +92,13 @@ function getPKCS12Content(fileNameWithPath, callback) {
 /**
 * Generates the SHA256 Hash of the input key and returns the first
 * 'hashSizeInBytes' bytes.
-* @param {String} publicKey whose hash needs to be generated.
+* @param {String} publicKey the piblic key whose hash needs to be generated.
 */
 function generateSHA256Hash(publicKey) {
-    var hash = crypto.createHash(macName);
-    hash.update(publicKey); //already encoded to 'base64'
-    var fullSizeKeyHash = hash.digest('base64');
-    // slice it to the required size
-    var slicedKeyHash = fullSizeKeyHash.slice(0, hashSizeInBytes);
-    return slicedKeyHash;
+  var hash = crypto.createHash(macName);
+  hash.update(publicKey); //already encoded to 'base64'
+  var fullSizeKeyHash = hash.digest('base64');
+  // slice it to the required size
+  var slicedKeyHash = fullSizeKeyHash.slice(0, hashSizeInBytes);
+  return slicedKeyHash;
 }

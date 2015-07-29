@@ -6,7 +6,9 @@ var inherits = require('util').inherits;
 var net = require('net');
 var multiplex = require('multiplex');
 var validations = require('./validations');
-var addressPrefix = 'addressbook-'
+
+var currentDeviceIdentity;
+var deviceIdentityListeners = [];
 
 var e = new EventEmitter();
 
@@ -39,7 +41,8 @@ ThaliReplicationManager.events = {
 };
 
 /**
-* Starts the Thali replication manager with the given port number and db name
+* Starts the Thali replication manager with the given port number and db name.
+* The device-id is obtained using the cryptomanager's API.
 * @param {Number} port the port number used for synchronization.
 * @param {String} dbName the db name to sync.
 */
@@ -50,59 +53,47 @@ ThaliReplicationManager.prototype.start = function (port, dbName) {
   var cryptomanager = require('./thalicryptomanager');
   // get the device public-key-hash
   cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
-    var currentAddrEntry;
     if (err) {
       console.log('getPublicKeyHash returned err: ', err);
       this._isStarted = false;
       this.emit(ThaliReplicationManager.events.START_ERROR, err);
-      return;
     } else {
-      console.log('got a valid publicKeyHash');
-      currentAddrEntry = addressPrefix + publicKeyHash;
+      currentDeviceIdentity = publicKeyHash;
+    }
+    
+    // inform all the listeners about the device's identity
+    console.log('informing the listeners about the current device identity');
+    deviceIdentityListeners.forEach(function (listener) {
+      listener(currentDeviceIdentity);
+    });
+    
+    // clear the list of listeners 
+    while(deviceIdentityListeners.length > 0) {
+      deviceIdentityListeners.pop();
     }
 
-    // check if the db already has an addressbook entry for the public-key-hash
-    this._db.allDocs({
-      include_docs: true,
-      attachments: true
-    }).then(function (result) {
-      var currentAdddrFound = false;
-      result.rows.forEach(function(element) {
-        if(element.doc._id == currentAddrEntry) {
-          console.log('found current device address in db');
-          currentAdddrFound = true;
-        }
-      });
-      if(!currentAdddrFound) {
-        console.log('did not find current device address, adding it now');
-        this._db.put({_id: currentAddrEntry, author: '', destination: '', content: ''});
-        //TODO: handle error for this db-put operation
-      }
-      
-      this.emit(ThaliReplicationManager.events.STARTING);
-      
-      this._port = port;
-      this._deviceName = currentAddrEntry;
-      this._dbName = dbName;
-      this._serverBridge = muxServerBridge.call(this, port);
-      this._serverBridge.listen(function () {
-        this._serverBridgePort = this._serverBridge.address().port;
-  
-        this._emitter.startBroadcasting(currentAddrEntry, this._serverBridgePort, function (err) {
-          if (err) {
-            this._isStarted = false;
-            this.emit(ThaliReplicationManager.events.START_ERROR, err);
-          } else {
-            this._isStarted = true;
-            this._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(this));
-            this._emitter.addListener(NETWORK_CHANGED, networkChanged.bind(this));
-            this.emit(ThaliReplicationManager.events.STARTED);
-          }
-        }.bind(this)); //startBroadcasting
-      }.bind(this)); //listen
-    }.bind(this)); //allDocs result
-  }.bind(this)); //getPublicKeyHash
+    this.emit(ThaliReplicationManager.events.STARTING);
+    
+    this._port = port;
+    this._deviceName = currentDeviceIdentity;
+    this._dbName = dbName;
+    this._serverBridge = muxServerBridge.call(this, port);
+    this._serverBridge.listen(function () {
+      this._serverBridgePort = this._serverBridge.address().port;
 
+      this._emitter.startBroadcasting(currentDeviceIdentity, this._serverBridgePort, function (err) {
+        if (err) {
+          this._isStarted = false;
+          this.emit(ThaliReplicationManager.events.START_ERROR, err);
+        } else {
+          this._isStarted = true;
+          this._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(this));
+          this._emitter.addListener(NETWORK_CHANGED, networkChanged.bind(this));
+          this.emit(ThaliReplicationManager.events.STARTED);
+        }
+      }.bind(this)); //startBroadcasting
+    }.bind(this)); //listen
+  }.bind(this)); //getPublicKeyHash
 };
 
 /**
@@ -146,6 +137,20 @@ ThaliReplicationManager.prototype.stop = function () {
     }
   });
 };
+
+/**
+* Returns the current device's id if available. If not, the provided callback
+* function is saved and called when the id does become available.
+* @param {Function} cb the callback which returns the current device's id.
+*/
+ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
+  if(currentDeviceIdentity) {
+    cb(currentDeviceIdentity);
+  } else {
+    // add the callback function to the listeners list
+    deviceIdentityListeners.push(cb);
+  }
+}
 
 function networkChanged(status) {
   if (!status.isAvailable && this._isStarted) {
