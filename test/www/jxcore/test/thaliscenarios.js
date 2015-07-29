@@ -6,11 +6,9 @@ var ThaliEmitter = require('../thali/thaliemitter');
 test('ThaliEmitter can call startBroadcasting and endBroadcasting without error', function (t) {
   var e = new ThaliEmitter();
 
-  console.log('about to call startBroadcasting');
-  e.startBroadcasting((+ new Date()).toString(), 5000, function (err1) {
+  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
     t.notOk(err1);
 
-    console.log('about to call stop broadcasting');
     e.stopBroadcasting(function (err2) {
       t.notOk(err2);
       t.end();
@@ -18,23 +16,13 @@ test('ThaliEmitter can call startBroadcasting and endBroadcasting without error'
   });
 });
 
-test('ThaliEmitter can call startBroadcasting and endBroadcasting without error', function (t) {
-  var e = new ThaliEmitter();
-
-  e.stopBroadcasting(function (err) {
-    t.assert(err, err.message);
-    t.end();
-  });
-
-});
-
 test('ThaliEmitter calls startBroadcasting twice with error', function (t) {
   var e = new ThaliEmitter();
 
-  e.startBroadcasting((+ new Date()).toString(), 5000, function (err1) {
+  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
     t.notOk(err1);
 
-    e.startBroadcasting((+ new Date()).toString(), 5000, function (err2) {
+    e.startBroadcasting((+ new Date()).toString(), 5001, function (err2) {
 
       t.assert(!!err2, err2.message);
 
@@ -49,7 +37,7 @@ test('ThaliEmitter calls startBroadcasting twice with error', function (t) {
 test('ThaliEmitter throws on connection to bad peer', function (t) {
   var e = new ThaliEmitter();
 
-  e.startBroadcasting((+ new Date()).toString(), 5000, function (err1) {
+  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
     t.notOk(err1);
 
     e.connect('foobar', function (err2, port) {
@@ -66,7 +54,7 @@ test('ThaliEmitter throws on connection to bad peer', function (t) {
 test('ThaliEmitter throws on disconnect to bad peer', function (t) {
   var e = new ThaliEmitter();
 
-  e.startBroadcasting((+ new Date()).toString(), 5000, function (err1) {
+  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
     t.notOk(err1);
 
     e.disconnect('foobar', function (err2, port) {
@@ -88,24 +76,39 @@ test('ThaliEmitter can discover and connect to peers', function (t) {
 
       // This will only pick the first available peer
       if (peer.peerAvailable) {
-        e.connect(peer.peerIdentifier, function (err2, port) {
-          t.notOk(err2);
-          t.ok(port > 0 && port <= 65536);
 
-          e.disconnect(peer.peerIdentifier, function (err3) {
-            t.notOk(err3);
+        function connectToPeer(attempts) {
+          if (attempts === 0) {
+            t.fail('Connecting failed');
+            t.end();
+            return;
+          }
 
-            e.stopBroadcasting(function (err4) {
-              t.notOk(err4);
-              t.end();
+          e.connect(peer.peerIdentifier, function (err2, port) {
+            if (err2) {
+              setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+            }
+
+            t.notOk(err2, 'Connect should pass ' + (err2 ? err2.message : ''));
+            t.ok(port > 0 && port <= 65536);
+
+            e.disconnect(peer.peerIdentifier, function (err3) {
+              t.notOk(err3, 'Disconnect should pass ' + (err3 ? err3.message : ''));
+
+              e.stopBroadcasting(function (err4) {
+                t.notOk(err4);
+                t.end();
+              });
             });
           });
-        });
+        }
+
+        connectToPeer(10);
       }
     });
   });
 
-  e.startBroadcasting((+ new Date()).toString(), 5000, function (err1) {
+  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
     t.notOk(err1);
   });
 });
@@ -118,29 +121,42 @@ test('ThaliEmitter can discover and connect to peers and then fail on double con
 
       // This will only pick the first available peer
       if (peer.peerAvailable) {
-        e.connect(peer.peerIdentifier, function (err2, port) {
-          t.notOk(err2);
-          t.ok(port > 0 && port <= 65536);
+        function connectToPeer(attempts) {
+          if (attempts === 0) {
+            t.fail('Connecting failed');
+            t.end();
+            return;
+          }
 
-          e.connect(peer.peerIdentifier, function(err3, port) {
-            t.ok(err3, 'Error was ' + err3);
-            t.equal(port, -1);
+          e.connect(peer.peerIdentifier, function (err2, port) {
+            if (err2) {
+              setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+            }
 
-            e.disconnect(peer.peerIdentifier, function (err3) {
-              t.notOk(err3);
+            t.notOk(err2, 'Connect should pass ' + (err2 ? err2.message : ''));
+            t.ok(port > 0 && port <= 65536);
 
-              e.stopBroadcasting(function (err4) {
-                t.notOk(err4);
-                t.end();
+            e.connect(peer.peerIdentifier, function(err3, port) {
+              t.ok(err3, 'Error was ' + err3);
+              t.equal(port, undefined);
+
+              e.disconnect(peer.peerIdentifier, function (err4) {
+                t.notOk(err4, 'Disconnect should pass ' + (err4 ? err4.message : ''));
+
+                e.stopBroadcasting(function (err4) {
+                  t.notOk(err4);
+                  t.end();
+                });
               });
             });
           });
-        });
+        }
+        connectToPeer(10);
       }
     });
   });
 
-  e.startBroadcasting((+ new Date()).toString(), 5000, function (err1) {
+  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
     t.notOk(err1);
   });
 });
@@ -153,28 +169,41 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
 
       // This will only pick the first available peer
       if (peer.peerAvailable) {
-        e.connect(peer.peerIdentifier, function (err2, port) {
-          t.notOk(err2);
-          t.ok(port > 0 && port <= 65536);
+        function connectToPeer(attempts) {
+          if (attempts === 0) {
+            t.fail('Connecting failed');
+            t.end();
+            return;
+          }
 
-          e.disconnect(peer.peerIdentifier, function(err3) {
-            t.notOk(err3);
+          e.connect(peer.peerIdentifier, function (err2, port) {
+            if (err2) {
+              setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+            }
 
-            e.disconnect(peer.peerIdentifier, function (err4) {
-              t.ok(err4, 'Error was ' + err4);
+            t.notOk(err2, 'Connect should pass ' + (err2 ? err2.message : ''));
+            t.ok(port > 0 && port <= 65536);
 
-              e.stopBroadcasting(function (err5) {
-                t.notOk(err5);
-                t.end();
+            e.disconnect(peer.peerIdentifier, function(err3) {
+              t.notOk(err3, 'Disconnect should pass ' + (err3 ? err3.message : ''));
+
+              e.disconnect(peer.peerIdentifier, function (err4) {
+                t.ok(err4, 'Error was ' + err4);
+
+                e.stopBroadcasting(function (err5) {
+                  t.notOk(err5);
+                  t.end();
+                });
               });
             });
           });
-        });
+        }
+        connectToPeer(10);
       }
     });
   });
 
-  e.startBroadcasting((+ new Date()).toString(), 5000, function (err1) {
+  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
     t.notOk(err1);
   });
 });
@@ -182,56 +211,63 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
 test('ThaliEmitter can connect and send data', function (t) {
   var e = new ThaliEmitter();
 
-  var testMessage = randomstring.generate(200);
+  var len = 200;
+  var testMessage = randomstring.generate(len);
 
   e.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (peers) {
     peers.forEach(function (peer) {
 
       // This will only pick the first available peer
       if (peer.peerAvailable) {
-        e.connect(peer.peerIdentifier, function (err2, port) {
-          t.notOk(err2);
 
-          var server = net.createServer(function (socket) {
-            socket.pipe(socket);
-          });
+        function connectToPeer(attempts) {
+          if (attempts === 0) {
+            t.fail('Connecting failed');
+            t.end();
+            return;
+          }
 
-          server.listen(port);
+          e.connect(peer.peerIdentifier, function (err2, port) {
+            if (err2) {
+              setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+            }
 
-          var clientSocket = net.createConnection( { port: port }, function () {
-            clientSocket.end(testMessage);
-          });
+            t.notOk(err2, 'Connect should pass ' + (err2 ? err2.message : ''));
 
-          clientSocket.setTimeout(120000);
-          clientSocket.setKeepAlive(true);
+            var clientSocket = net.createConnection( { port: port }, function () {
+              clientSocket.write(testMessage);
+            });
 
-          var testData = '';
+            clientSocket.setTimeout(120000);
+            clientSocket.setKeepAlive(true);
 
-          clientSocket.on('data', function (data) {
-            testData += data;
-          });
+            var testData = '';
 
-          clientSocket.on('end', function () {
-            t.equal(testData, testMessage);
+            clientSocket.on('data', function (data) {
+              testData += data;
 
-            // Ensure tidying up
-            server.close();
+              if (testData.length === len) {
+                t.equal(testData, testMessage, 'the test messages should be equal');
 
-            e.disconnect(peer.peerIdentifier, function (err3) {
-              t.notOk(err3);
+                e.disconnect(peer.peerIdentifier, function (err3) {
+                  t.notOk(err3, 'Disconnect should pass ' + (err3 ? err3.message : ''));
 
-              e.stopBroadcasting(function (err4) {
-                t.notOk(err4);
-                t.end();
-              });
+                  e.stopBroadcasting(function (err4) {
+                    t.notOk(err4, 'stop broadcasting does not fail');
+                    t.end();
+                  });
+                });
+              }
             });
           });
-        });
+        }
+
+        connectToPeer(10);
       }
     });
   });
 
-  e.startBroadcasting((+ new Date()).toString(), 5000, function (err1) {
-    t.notOk(err1);
+  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
+    t.notOk(err1, 'startBroadcasting does not throw');
   });
 });
