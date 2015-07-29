@@ -7,11 +7,10 @@ var exec = require('child_process').execSync;
 var path = require('path');
 
 var rootdir = process.argv[2];
-//Dummy file to prevent the execution of this script when the developer add other Cordova plugins
+//Dummy file to prevent the execution of this script when the developer adds other Cordova plugins
 var dummyFile = path.join(rootdir, '/../plugins/org.thaliproject.p2p/dummy.js');
 
 //Replace JXcoreExtension.java
-//Copy from \plugins\org.thaliproject.p2p\src\android\java\io\jxcore\node to \platforms\android\src\io\jxcore\node
 function replaceJXCoreExtension(){
     var sourceFile =  path.join(rootdir + '/../plugins/org.thaliproject.p2p/src/android/java/io/jxcore/node/JXcoreExtension.java');
     var targetFile = path.join(rootdir + '/../platforms/android/src/io/jxcore/node/JXcoreExtension.java');
@@ -31,7 +30,7 @@ function installThaliModules(){
 
 
 //TODO: This is a temporary fix, and we don't require this method once we get the JXCore fix in master
-//Uncomment the dependency section in plugin.xml while removing this method
+//Update the plugin.xml with jxcore dependency and get rid of this function all together.
 function updateJXCore(){
     console.log('Cloning the jxcore-cordova repo (380MB size)..it might take a while. Please be patient..');
     try {
@@ -43,7 +42,7 @@ function updateJXCore(){
     }
     if (fs.existsSync('jxcore-cordova')){
         console.log('Proceeding with already existing jxcore-cordova folder..');
-        // Another temporary fix to prevent this script is getting called during the following 'plugin add'
+        // Another temporary fix to prevent this script from getting called during the following 'plugin add'
         fs.writeFileSync(dummyFile, '', 'utf8');
         try{
             exec('cordova plugin add jxcore-cordova');
@@ -59,24 +58,6 @@ function updateJXCore(){
     }
 
 }
-/*
-//TODO: This is temporary fix, and we don't reqiure it once the version update PR available
-//Update the Android SDK version
-// ..\platforms\android and in AndroidManifest.xml change android:minSdkVersion="10" to android:minSdkVersion="16"
-function updateAndroidSDKVersion() {
-    var to_replace = 'android:minSdkVersion=\"10\"';
-    var replace_with = 'android:minSdkVersion=\"16\"';
-    var filename = path.join(rootdir, '/../platforms/android/AndroidManifest.xml');
-    var data = fs.readFileSync(filename, 'utf8');
-    var result = data.replace(new RegExp(to_replace, "g"), replace_with);
-    try {
-        fs.writeFileSync(filename, result, 'utf8');
-    }
-    catch(ex){
-        console.log('Could not update the Android SDK version in Manifest' + ex.message);
-    }
-}
-*/
 
 //Copy the build-extras.gradle
 //Copy from \plugins\org.thaliproject.p2p\build to \platforms\android
@@ -108,9 +89,6 @@ module.exports = function () {
     //Install the thali node module to global (until we get thali in npm repo)
     console.log('Installing thali node modules to global..');
     installThaliModules();
-
-    //TODO: Will be removed soon
-    //updateAndroidSDKVersion();
 
     //Creating a dummy file to prevent the future execution of the entire script
     console.log('Completed the Thali_Cordova plugin post installation script');
