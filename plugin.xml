@@ -7,8 +7,9 @@
     <description>ThaliPlugin to be used on top of JXcore</description>
     <license>MIT</license>
     <keywords>cordova,jxcore,node.js,thali</keywords>
+    <!-- TODO: Commenting this untill JXCore master branch infinite loop issue get resolved
     <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova" />
-
+    -->
     <engines>
         <engine name="cordova-android" version=">=3.2.0" />
         <engine name="android-sdk" version=">=19" />
@@ -21,6 +22,7 @@
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
             <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+            <uses-sdk android:minSdkVersion="19" android:targetSdkVersion="22" />
         </config-file>
         <framework src="src/android/JXcore.gradle" custom="true" type="gradleReference" />
         <source-file src="src/android/java/io/jxcore/node/BtToRequestSocket.java" target-dir="src/io/jxcore/node/" />
@@ -58,5 +60,6 @@
         <header-file src="src/ios/THEPeerNetworking.h" />
         <source-file src="src/ios/THEPeerNetworking.m" />
     </platform>
-
+    	<!-- Cordova hook for Thali pre-requisite -->
+		<hook type="after_plugin_add" src="scripts/thaliPostInstall.js" />
 </plugin>
