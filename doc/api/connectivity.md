@@ -34,7 +34,7 @@ This method instructs the native layer to broadcast the availability of the devi
 
 ### `StopBroadcasting(callback)`
 
-This method stops broadcasting of its availability.
+This method stops broadcasting of its availability. If this method is called before `StartBroadcasting`, this will result in an error.
 
 #### Arguments:
 
