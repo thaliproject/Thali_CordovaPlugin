@@ -3,7 +3,7 @@
 var fs = require('fs');
 var Promise = require('lie');
 var path = require('path');
-var promiseUtilities = require('../thali/install/promiseUtilities.js');
+var promiseUtilities = require('./promiseUtilities.js');
 
 /**
  * We've tried various strategies in plugin.xml to set the minimum sdk
