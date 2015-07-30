@@ -1,4 +1,6 @@
-# Thali Cordova Peer Communication API #
+# Thali Peer Discovery and Communication API #
+
+This is the interface to be implemented by the native layer for handling local discovery and peer to peer communication.  The [`ThaliEmmitter`](thaliemitter.md) class is for use by developers which communicates with the Thali Peer Communication API.
 
 ## Methods:
 - `StartBroadcasting`
