@@ -21,12 +21,12 @@ METHODS:
 
 ### `StartBroadcasting(deviceName, portNumber, callback)`
 
-This method starts broadcasting its availability at the following port that PouchDB/Express-PouchDB is listening.  
+This method instructs the native layer to broadcast the availability of the device under the specified deviceName and to direct any incoming connections to the specified port number available on localhost over TCP/IP.
 
 #### Arguments:
 
 1. `deviceName` : `String` – the device name.
-2. `portNumber` : `Number` – obtained by the user of the code which indicates the port number of our local PouchDB/Express-PouchDB
+2. `portNumber` : `Number` – a port number to direct any incoming connections to
 3. `callback` : `Function` – must be in the form of the following, `function (err)` where:
   - `err` : `String` – a string value containing the error if one occurred, else `null`
 
@@ -52,7 +52,7 @@ This method begins a connection to the given peer found during discoverability. 
 1. `peerIdentifier` : `String` – peer identifier found during the `peerAvailabilityChanged` event.
 2. `callback` : `Function` – must be in the form of the following, `function (err, port)` where:
     - `err` : `String` – a string value containing the error if one occurred, else null
-    - `port` : `Number` – the port to connect to the other server for PouchDB synchronization, e.g. 5678 so that we can synchronize to `http://localhost:5678/dbname`
+    - `port` : `Number` – the port number to connect to the remote peer over TCP/IP
 
 ***
 
