@@ -70,7 +70,7 @@ This method disconnects from the peer by the given peer identifier.  If the peer
 
 ### `KillConnection(peerIdentifier, callback)`
 
-This method kills the connection for the given peer identifier to simulate crashes.  This is not intended for use in production code and is solely used for testing.
+This method kills the connection for the given peer identifier to simulate crashes.  There is no cleanup done on the connection during the kill connection.  This is not intended for use in production code and is solely used for testing.
 
 #### Arguments:
 
