@@ -45,7 +45,7 @@ This method stops broadcasting of its availability. If this method is called bef
 
 ### `Connect(peerIdentifier, callback)`
 
-This method begins a connection to the given peer found during discoverability.  If this is called twice with the same peer identifier, an error will be thrown that it is in process.
+This method instructs the native layer to establish a TCP/IP connection to the peer identified by the peerIdentifier, which is obtained via a `peerAvailabilityChanged` event.  If this is called twice with the same peer identifier without a `Disconnect` call will result in an error.
 
 #### Arguments:
 
@@ -58,7 +58,7 @@ This method begins a connection to the given peer found during discoverability. 
 
 ### `Disconnect(peerIdentifier, callback)`
 
-This method disconnects from the given peer by the given peer identifier.  If the peer is already disconnected, then no error shall be thrown.
+This method disconnects from the peer by the given peer identifier.  If the peer is already disconnected and `Disconnect` is called again will result in an error in the callback.
 
 #### Arguments:
 
