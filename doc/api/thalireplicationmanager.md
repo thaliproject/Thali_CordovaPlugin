@@ -1,6 +1,6 @@
 # The `ThaliReplicationManager` class
 
-The `ThaliReplicationManager` class handles database replication between devices, using [PouchDB](http://pouchdb.com/) and the Thali Cordova bridge `ThaliEmitter` class.
+The `ThaliReplicationManager` class handles database replication between devices, using [PouchDB](http://pouchdb.com/) and the Thali Cordova bridge `ThaliEmitter` class.  This class is meant solely for the purpose of demonstrating [Thali Story 0](http://thaliproject.org/stories) and will be dramatically enhanced in the future.
 
 ## Usage
 

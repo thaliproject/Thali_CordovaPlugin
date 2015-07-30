@@ -30,13 +30,16 @@ emitter.startBroadcasting('me', 9001, function (err) {
 
 ## API
 
-## Instance Methods
+## `ThaliEmitter` API
+- `ThaliReplicationManager` constructor
+
+### `ThaliEmitter` Instance Methods
 - `startBroadcasting(deviceName, portNumber, callback)`
 - `stopBroadcasting(callback)`
 - `connect(peerIdentifier, callback)`
 - `disconnect(peerIdentifier, callback)`
 
-## Events
+### `ThaliEmitter` Events
 - `networkChanged`
 - `peerAvailabilityChanged`
 
