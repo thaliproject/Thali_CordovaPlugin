@@ -5,10 +5,13 @@ var path = require('path');
 var https = require('https')
 var unzip = require('unzip');
 var Promise = require('lie');
-var fs = require('fs');
+var fs = require('fs-extra');
 var url = require('url');
 var promiseUtilities = require('./promiseUtilities.js');
 var fileNotFoundCode = "ENOENT";
+var magicDirectoryNameToDoLocalDevelopment = "localdev"; // If this file exists in the thaliDontCheckIn directory then
+                                                    // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
+                                                    // project to this Cordova project.
 
 function getEtagFileLocation(depotName, branchName, directoryToInstallIn) {
     return path.join(directoryToInstallIn, "etag-" + depotName + "-" + branchName);
@@ -67,9 +70,13 @@ function doGitHubEtagsMatch(projectName, depotName, branchName, directoryToInsta
     });
 }
 
+function createUnzipedDirectoryPath(depotName, branchName, directoryToInstallIn) {
+    return path.join(directoryToInstallIn, depotName + "-" + branchName);
+}
+
 function createGitHubZipResponse(depotName, branchName, directoryToInstallIn, directoryUpdated) {
     return {
-        unzipedDirectory: path.join(directoryToInstallIn, depotName + "-" + branchName),
+        unzipedDirectory: createUnzipedDirectoryPath(depotName, branchName, directoryToInstallIn),
         directoryUpdated: directoryUpdated
     };
 }
@@ -116,10 +123,15 @@ function updatePluginXMLJXCoreLocation(thaliCordovaPluginDirectory, jxCoreDirect
 
 function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     return promiseUtilities.readFilePromise(weAddedPluginsFile).catch(function(err) {
-        if (err.code != fileNotFoundCode) {
+        if (err) {
+            if (err.code == fileNotFoundCode) {
+                return false;
+            }
+            
             return Promise.reject(err);
-        } 
-        return false;   
+        }
+        
+        return true;
     }).then(function(doWeNeedToUninstall) {
         if (!doWeNeedToUninstall) {
             return;
@@ -127,6 +139,35 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
         
         return promiseUtilities.execPromise('cordova plugin remove org.thaliproject.p2p', appRootDirectory);
     })
+}
+
+/**
+ * This will copy the contents of a Thali_CordovaPlugin local depot to right directory in the
+ * current Cordova project so it will be installed.
+ */
+function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, depotName, branchName) {
+    var targetDirectory = createUnzipedDirectoryPath(depotName, branchName, thaliDontCheckIn);
+    var sourceDirectory = path.join(appRootDirectory, "../Thali_CordovaPlugin");
+    return new Promise(function(resolve, reject) {
+        fs.remove(targetDirectory, function(err) {
+            if (err) {
+                reject("copyDevelopmentThaliCordovaPluginToProject remove failed with " + err);
+                return;
+            }
+           fs.copy(sourceDirectory, targetDirectory, function (err) {
+               if (err) {
+                   reject("copyDevelopmentThaliCordovaPluginToProject failed with" + err);
+                   return;
+               }
+               resolve(createGitHubZipResponse(depotName, branchName, thaliDontCheckIn, true));
+           }); 
+        });
+    });
+}
+
+function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
+    var magicFileLocation = path.join(thaliDontCheckIn, magicDirectoryNameToDoLocalDevelopment);
+    return fs.existsSync(magicFileLocation);
 }
 
 module.exports = function(callBack) {
@@ -143,8 +184,16 @@ module.exports = function(callBack) {
     var thaliProjectName = "thaliproject";
     var thaliDepotName = "Thali_CordovaPlugin";
     var thaliBranchName = "story_0_yarong";
-    var getThaliCordovaPluginZip = installGitHubZip(thaliProjectName, thaliDepotName, thaliBranchName, thaliDontCheckIn);
+    var getThaliCordovaPluginZip = 
+        doesMagicDirectoryNamedExist(thaliDontCheckIn) ?
+            copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, thaliDepotName, thaliBranchName) :
+            installGitHubZip(thaliProjectName, thaliDepotName, thaliBranchName, thaliDontCheckIn);
     
+    // I really wanted to stick something like the following into plugin.xml:
+    //     <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova" 
+    //         commit="47e4eeb4b5a3131f47770259d9c02949069ec557" branch="0.0.3-dev"/>
+    // The problem is that the attribute branch is not actually supported and the commit isn't in
+    // master so the dependency doesn't work. Hence the code below.
     var jxCoreProjectName = "jxcore";
     var jxCoreDepotName = "jxcore-cordova";
     var jxCoreBranchName = "0.0.3-dev";

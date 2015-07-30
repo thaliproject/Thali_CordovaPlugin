@@ -8,7 +8,7 @@
     <license>MIT</license>
     <keywords>cordova,jxcore,node.js,thali</keywords>
     <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova" 
-        commit="47e4eeb4b5a3131f47770259d9c02949069ec557" />
+        commit="0.0.3-dev"/>
     <engines>
         <engine name="cordova-android" version=">=3.2.0" />
         <engine name="android-sdk" version=">=19" />
@@ -30,7 +30,7 @@
         <source-file src="src/android/java/io/jxcore/node/ConnectivityMonitor.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/BtSocketDisconnectedCallBack.java" target-dir="src/io/jxcore/node/" />
-        <hook type="before_build" src="scripts/androidBeforeBuild.js"/>
+        <hook type="after_prepare" src="scripts/androidAfterPrepare.js"/>
     </platform>
 
     <!-- iOS -->

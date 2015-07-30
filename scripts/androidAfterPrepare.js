@@ -1,6 +1,6 @@
 /// <reference path="../typings/node/node.d.ts"/>
 'use strict'
-var fs = require('fs');
+var fs = require('fs-extra');
 var Promise = require('lie');
 var path = require('path');
 var promiseUtilities = require('./promiseUtilities.js');
@@ -39,18 +39,32 @@ function replaceJXCoreExtension(appRoot) {
     return promiseUtilities.overwriteFilePromise(sourceFile, targetFile);    
 }
 
-
+function removeInstallFromPlatform(appRoot) {
+    var installDir = path.join(appRoot, "platforms/android/assets/www/jxcore/node_modules/thali/install");
+    return new Promise(function(resolve, reject) {
+        fs.remove(installDir, function(err) {
+            if (err) {
+                reject();
+            }
+            resolve();
+        })
+    });
+}
+ 
 function androidUpdates(appRoot) {
-    var androidPlatformLocation = path.join(appRoot, "platforms/android");
-    if (fs.readdirSync(androidPlatformLocation).indexOf("android") == -1) {
-        return Promise.resolve();
-    }
-    
     return Promise.all([
        updateAndroidSDKVersion(appRoot),
-       copyBuildExtras(appRoot),
-       replaceJXCoreExtension(appRoot)
+       //copyBuildExtras(appRoot),
+       replaceJXCoreExtension(appRoot),
+       removeInstallFromPlatform(appRoot)
     ]); 
 }
 
-console.log("PING!");
+var appRoot = path.join(__dirname, "../../..");
+androidUpdates(appRoot)
+.then(function() {
+    process.exit(0);
+}).catch(function(err) {
+    console.log("Android build failed with: " + err);
+    process.exit(1);
+});

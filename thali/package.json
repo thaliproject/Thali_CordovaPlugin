@@ -2,13 +2,6 @@
   "name": "thali",
   "version": "1.0.8",
   "description": "Thali Cordova Plugin",
-  "cordova": {
-    "id": "org.thaliproject.p2p",
-    "platforms": [
-      "android",
-      "ios"
-    ]
-  },
   "main": "thalireplicationmanager.js",
   "dependencies": {
     "multiplex": "^6.2.2"

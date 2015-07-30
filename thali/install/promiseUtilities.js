@@ -1,6 +1,6 @@
 'use strict'
 var exec = require('child_process').exec;
-var fs = require('fs');
+var fs = require('fs-extra');
 var Promise = require('lie');
 var https = require('https')
 
@@ -35,6 +35,7 @@ exports.execPromise = function(command, cwd) {
             function (error, stdout, stderr) {
                 if (error) {
                     reject("command " + command + " failed with - " + error);
+                    return;
                 }          
                 resolve(true);      
             });
@@ -42,9 +43,14 @@ exports.execPromise = function(command, cwd) {
 }
 
 exports.overwriteFilePromise = function(source, destination) {
-    return exports.readFilePromise(source)
-    .then(function(data) {
-        return exports.writeFilePromise(destination, data);
+    return new Promise(function(resolve, reject) {
+        fs.copy(source, destination, { clobber: true}, function(err) {
+            if (err) {
+                reject("overwrite copy from " + source + " to " + destination + " failed.");
+                return;
+            }
+            resolve(true);
+        })
     });
 }
 

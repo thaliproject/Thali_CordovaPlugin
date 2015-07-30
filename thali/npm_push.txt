@@ -1,7 +1,0 @@
-Note to the developer who is updating the NPM package
-**************************************************
-
-Currently there is another package.json file in the parent folder of thali,
-and 'npm push' may consider that package.json for thali package if even you are
-executing the 'npm push' from thali folder.  To avoid that, please copy this thali
-folder to somewhere else, and run the 'npm push'

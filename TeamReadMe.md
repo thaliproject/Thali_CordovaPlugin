@@ -17,6 +17,19 @@ master but one step at a time. So don't forget to update that if you change bran
 So this means that anytime we change anything in the Thali_CordovaPlugin or in our version of JXCore we need to make sure to up the version
 on npm and republish (e.g. `/thali/npm publish ./`) so users can update the NPM and automatically trigger all the other updates.
 
+## Want to develop locally?
+
+When writing code for Cordova one often finds oneself writing code directly inside the Cordova project one is testing with and then having
+to remember to move all the content back to Thali_CordovaPlugin. It's annoying. To work around this do the following:
+
+1. Go to your application project and create a subdirectory called thaliDontCheckIn
+2. Then create a directory called localdev under thaliDontCheckIn
+3. Now when you want to build your project with a new version of Thali_CordovaPlugin:
+ 1. Go to your App's www/jxcore subdirectory
+ 2. issue `jx npm install ../../../Thali_CordovaPlugin/thali --save`
+
+Note that we do depend in other places on your Thali_CordovaPlugin directory being a sibling of your application's root.
+
 ## Android Requirements
 
 We use Maven to distribute an AAR we need to support Bluetooth and Wi-Fi on Android. The instructions below specify how to build the
