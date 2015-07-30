@@ -52,7 +52,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 
 // Properties.
 @property (nonatomic) MCPeerID * peerID;
-@property (nonatomic) NSUUID * peerIdentifier;
+@property (nonatomic) NSString * peerIdentifier;
 @property (nonatomic) NSString * peerName;
 @property (nonatomic) BOOL found;
 @property (nonatomic) THEPeerDescriptorState serverState;
@@ -66,7 +66,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 
 // Class initializer.
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
-                peerIdentifier:(NSUUID *)peerIdentifier
+                peerIdentifier:(NSString *)peerIdentifier
                       peerName:(NSString *)peerName;
 
 @end
@@ -79,7 +79,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 
 // Class initializer.
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
-                peerIdentifier:(NSUUID *)peerIdentifier
+                peerIdentifier:(NSString *)peerIdentifier
                       peerName:(NSString *)peerName
 {
     // Initialize superclass.
@@ -127,7 +127,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     NSString * _serviceType;
     
     // The peer identifier.
-    NSUUID * _peerIdentifier;
+    NSString * _peerIdentifier;
     
     // The peer name.
     NSString * _peerName;
@@ -156,7 +156,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType
-                     peerIdentifier:(NSUUID *)peerIdentifier
+                     peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
 {
     // Initialize superclass.
@@ -222,10 +222,13 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     [_clientSession setDelegate:(id<MCSessionDelegate>)self];
 
     // Allocate and initialize the nearby service advertizer.
-    _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] initWithPeer:_peerID
-                                                                 discoveryInfo:@{PEER_IDENTIFIER:   [_peerIdentifier UUIDString],
-                                                                                 PEER_NAME:         _peerName}
-                                                                   serviceType:_serviceType];
+    _nearbyServiceAdvertiser = [
+        [MCNearbyServiceAdvertiser alloc] initWithPeer:_peerID
+                                         discoveryInfo:@{
+                                            PEER_IDENTIFIER: _peerIdentifier,
+                                                  PEER_NAME: _peerName
+                                           }
+                                           serviceType:_serviceType];
     [_nearbyServiceAdvertiser setDelegate:(id<MCNearbyServiceAdvertiserDelegate>)self];
     
     // Allocate and initialize the nearby service browser.
@@ -261,7 +264,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 }
 
 // Connects to the peer server with the specified peer identifier.
-- (BOOL)connectToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier
+- (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier
 {
     // Lock.
     pthread_mutex_lock(&_mutex);
@@ -297,7 +300,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 }
 
 // Connects from the peer server with the specified peer identifier.
-- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier
+- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSString *)peerIdentifier
 {
     // Lock.
     pthread_mutex_lock(&_mutex);
@@ -370,7 +373,7 @@ withDiscoveryInfo:(NSDictionary *)info
     if (!peerDescriptor)
     {
         peerDescriptor = [[THEPeerDescriptor alloc]initWithPeerID:peerID
-                                                   peerIdentifier:[[NSUUID alloc] initWithUUIDString:info[PEER_IDENTIFIER]]
+                                                   peerIdentifier:info[PEER_IDENTIFIER]
                                                          peerName:info[PEER_NAME]];
         [peerDescriptor setFound:YES];
         _peers[peerID] = peerDescriptor;

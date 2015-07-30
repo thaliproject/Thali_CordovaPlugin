@@ -36,7 +36,7 @@
 
 // Class initializer.
 - (instancetype)initWithServiceType:(NSUUID *)serviceType
-                     peerIdentifier:(NSUUID *)peerIdentifier
+                     peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName;
 
 // Starts peer Bluetooth.

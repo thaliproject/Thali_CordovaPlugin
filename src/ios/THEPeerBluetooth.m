@@ -46,7 +46,7 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 @interface THEPeripheralDescriptor : NSObject
 
 // Properties.
-@property (nonatomic) NSUUID * peerID;
+@property (nonatomic) NSString * peerID;
 @property (nonatomic) NSString * peerName;
 @property (nonatomic) THEPeripheralDescriptorState state;
 
@@ -160,7 +160,7 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 {
 @private
     // The peer identifier.
-    NSUUID * _peerIdentifier;
+    NSString * _peerIdentifier;
     
     // The peer name.
     NSString * _peerName;
@@ -213,7 +213,7 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 
 // Class initializer.
 - (instancetype)initWithServiceType:(NSUUID *)serviceType
-                     peerIdentifier:(NSUUID *)peerIdentifier
+                     peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
 {
     // Initialize superclass.
@@ -238,10 +238,7 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     _canonicalPeerName = [_peerName dataUsingEncoding:NSUTF8StringEncoding];
     
     // Initialize the peer identifier value.
-    UInt8 uuid[16];
-    [_peerIdentifier getUUIDBytes:uuid];
-    NSData * peerIdentifierValue = [NSData dataWithBytes:uuid
-                                                  length:sizeof(uuid)];
+    NSData * peerIdentifierValue = [_peerIdentifier dataUsingEncoding:NSUTF8StringEncoding];
     
     // Allocate and initialize the peer ID type.
     _peerIDType = [CBUUID UUIDWithString:@"E669893C-F4C2-4604-800A-5252CED237F9"];
@@ -631,7 +628,8 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
         if ([[characteristic UUID] isEqual:_peerIDType])
         {
             // When the peer ID is updated, set the peer ID in the peripheral descriptor.
-            [peripheralDescriptor setPeerID:[[NSUUID alloc] initWithUUIDBytes:[[characteristic value] bytes]]];
+            [peripheralDescriptor setPeerID:[
+                [NSString alloc] initWithData:[characteristic value] encoding:NSUTF8StringEncoding]];
         }
         // Peer name characteristic.
         else if ([[characteristic UUID] isEqual:_peerNameType])

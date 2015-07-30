@@ -36,7 +36,7 @@
 
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType
-                     peerIdentifier:(NSUUID *)peerIdentifier
+                     peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName;
 
 // Starts peer networking.
@@ -46,9 +46,9 @@
 - (void)stop;
 
 // Connects to the peer server with the specified peer identifier.
-- (BOOL)connectToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+- (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;
 
 // Connects from the peer server with the specified peer identifier.
-- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;
 
 @end

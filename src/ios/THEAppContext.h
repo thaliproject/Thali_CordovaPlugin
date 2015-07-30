@@ -33,15 +33,12 @@
 // Class singleton.
 + (instancetype)singleton;
 
-// Defines JavaScript extensions.
-- (void)defineJavaScriptExtensions;
-
 // Starts communications.
-- (void)startCommunicationsWithPeerIdentifier:(NSUUID *)peerIdentifier
+- (BOOL)startCommunicationsWithPeerIdentifier:(NSUUID *)peerIdentifier
                                      peerName:(NSString *)peerName;
 
 // Stops communications.
-- (void)stopCommunications;
+- (BOOL)stopCommunications;
 
 // Connects to the peer server with the specified peer idetifier.
 - (BOOL)connectToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;

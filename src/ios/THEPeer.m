@@ -38,7 +38,7 @@
 }
 
 // Class initializer.
-- (instancetype)initWithIdentifier:(NSUUID *)identifier
+- (instancetype)initWithIdentifier:(NSString *)identifier
                               name:(NSString *)name
 {
     // Initialize superclass.
@@ -62,7 +62,7 @@
 - (NSString *)JSON
 {
     return [NSString stringWithFormat:@"[ { \"peerIdentifier\": \"%@\", \"peerName\": \"%@\", \"peerAvailable\": %@ } ]",
-            [[self identifier] UUIDString],
+            [self identifier],
             [self name],
             [self available] ? @"true" : @"false"];
 }

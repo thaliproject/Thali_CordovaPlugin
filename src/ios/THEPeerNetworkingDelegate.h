@@ -34,35 +34,35 @@
 
 // Notifies the delegate that a peer was found.
 - (void)peerNetworking:(THEPeerNetworking *)peerNetworking
- didFindPeerIdentifier:(NSUUID *)peerIdentifier
+ didFindPeerIdentifier:(NSString *)peerIdentifier
               peerName:(NSString *)peerName;
 
 // Notifies the delegate that a peer was lost.
 - (void)peerNetworking:(THEPeerNetworking *)peerNetworking
- didLosePeerIdentifier:(NSUUID *)peerIdentifier;
+ didLosePeerIdentifier:(NSString *)peerIdentifier;
 
 // Notifies the delegate that the peer networking client is connecting to the specified peer networking server.
 - (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-connectingToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+connectingToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;
 
 // Notifies the delegate that the peer networking client is connected to the specified peer networking server.
 - (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-connectedToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+connectedToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;
 
 // Notifies the delegate that peer networking client is not connected to the specified peer networking server.
 - (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-notConnectedToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+notConnectedToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;
 
 // Notifies the delegate that the specified peer networking client is connecting to the peer networking server.
 - (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-peerClientConnectingWithPeerIdentifier:(NSUUID *)peerIdentifier;
+peerClientConnectingWithPeerIdentifier:(NSString *)peerIdentifier;
 
 // Notifies the delegate that the specified peer networking client is connected to the peer networking server.
 - (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-peerClientConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier;
+peerClientConnectedWithPeerIdentifier:(NSString *)peerIdentifier;
 
 // Notifies the delegate that the specified peer networking client is not connected to the peer networking server.
 - (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-peerClientNotConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier;
+peerClientNotConnectedWithPeerIdentifier:(NSString *)peerIdentifier;
 
 @end

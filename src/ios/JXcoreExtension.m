@@ -28,13 +28,96 @@
 #import "JXcoreExtension.h"
 #import "THEAppContext.h"
 
+#import "JXcore.h"
+
 // JXcoreExtension implementation.
 @implementation JXcoreExtension
 
 // Defines methods.
 - (void)defineMethods
 {
-    [[THEAppContext singleton] defineJavaScriptExtensions];
+    THEAppContext *theApp = [THEAppContext singleton];
+
+    // Export the public API to node
+
+    // StartBroadcasting
+    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+    {
+
+        if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || 
+            ![params[1] isKindOfClass:[NSNumber class]])
+        {
+            [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+        }
+        else
+        {
+            if ([theApp startCommunicationsWithPeerIdentifier:params[0] peerName:[params[1] stringValue]])
+            {
+                [JXcore callEventCallback:callbackId withParams:nil];
+            }
+            else
+            {
+                [JXcore callEventCallback:callbackId withParams:@[@"Already broadcasting"]];
+            }
+        }
+
+    } withName:@"StartBroadcasting"];
+
+    
+    // StopBroadcasting
+    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+    {
+        if ([theApp stopCommunications])
+        {
+            [JXcore callEventCallback:callbackId withParams:nil];
+        }
+        else
+        {
+            [JXcore callEventCallback:callbackId withParams:@[@"Not broadcasting"]];
+        }
+
+    } withName:@"StopBroadcasting"];
+
+
+    // Connect
+    [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+    {
+        if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
+        {
+            [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+        }
+        else
+        {
+            if ([theApp connectToPeerServerWithPeerIdentifier: params[0]])
+            {
+                [JXcore callEventCallback:callbackId withParams:nil];
+            }
+            else
+            {
+                [JXcore callEventCallback:callbackId withParams:@[@"Couldn't find specified peer"]];
+            }
+        }
+    } withName:@"Connect"];
+
+    // Disconnect
+    [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+    {
+        if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
+        {
+            [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+        }
+        else
+        {
+            if ([theApp disconnectFromPeerServerWithPeerIdentifier: params[0]])
+            {
+                [JXcore callEventCallback:callbackId withParams:nil];
+            }
+            else
+            {
+                [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
+            }
+        }
+    } withName:@"Disconnect"];
 }
 
 @end

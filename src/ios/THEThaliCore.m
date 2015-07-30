@@ -122,8 +122,8 @@ void nativeFunction2(JXResult * results, int argc)
 // Define extensions.
 - (void)defineExtensions
 {
-//    // Call the base class method.
-//    [super defineExtensions];
+    // Call the base class method.
+    // [super defineExtensions];
     
     // Define native methods extensions.
     JX_DefineExtension("registerJavaScriptFunction1", registerJavaScriptFunction1);
