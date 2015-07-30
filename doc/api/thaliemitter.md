@@ -1,6 +1,6 @@
 # The `ThaliEmitter` class
 
-The `ThaliEmitter` class is a bridge between the native Cordova plugin and JavaScript to give you an easy to use interface for broadcasting availability and to connect and disconnect from peer clients.
+The `ThaliEmitter` class is a bridge between the native connectivity API and JavaScript to use the Thali local discovery and peer to peer capabilities with TCP/IP servers and clients without the rest of the Thali infrastructure needed.  This is intended to eventually be moved to its own NPM module.
 
 ## Usage
 
@@ -21,7 +21,7 @@ emitter.startBroadcasting('me', 9001, function (err) {
   if (err) {
     console.log(err);
   } else {
-    console.log('We are now broadcasting on port 9001');
+    console.log('We are now broadcasting availability on port 9001');
   }
 });
 ```
