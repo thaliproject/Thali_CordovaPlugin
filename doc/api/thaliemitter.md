@@ -62,12 +62,12 @@ var emitter = new ThaliEmitter();
 
 ### `ThaliEmitter.prototype.startBroadcasting(deviceName, portNumber, callback)`
 
-This method starts advertising or broadcasting its availability at the following port that PouchDB/Express-PouchDB is listening.  
+This method instructs the native layer to broadcast the availability of the device under the specified deviceName and to direct any incoming connections to the specified port number available on localhost over TCP/IP.  Calling this method twice without a `stopBroadcasting` call in between will result in an error.
 
 #### Arguments:
 
 1. `deviceName` : `String` – the device name.
-2. `portNumber` : `Number` – obtained by the user of the code which indicates the port number of our local PouchDB/Express-PouchDB
+2. `portNumber` : `Number` – a port number to direct any incoming TCP/IP connections
 3. `callback` : `Function` – must be in the form of the following, `function (err)` where:
   - `err` : `Error` – an `Error` if one occurred, else `null`
 
