@@ -1,0 +1,14 @@
+{
+  "name": "scripts",
+  "version": "0.0.1",
+  "description": "Just used for cordova scripts",
+  "main": "",
+    "dependencies": {
+    "lie": "^2.9.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Microsoft",
+  "license": "MIT"
+}

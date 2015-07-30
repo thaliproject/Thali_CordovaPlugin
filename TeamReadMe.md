@@ -3,6 +3,20 @@
 The following document records information of use to people who are developing the Thali project. Those using the Thali project don't need
 to worry about the contents of this file.
 
+## How this all connects together
+
+In the thali folder is the Javascript we use to enable Thali. But also in their is our package.json which we use to publish to the Thali
+project on NPM. Users install from NPM. Our package.json then runs an install script (installCordovaPlugin.js) which handles downloading
+the right version of this entire repro as well as the right version of JXCore. The assumption is that all of this is happening inside of
+the user's Cordova project because the next thing the NPM install script does it call cordova plugins add to add the Thali_CordovaPlugin
+which has its own post install Cordova script that cleans up a few things locally.
+
+Also note that the readme in package.json points at whatever branch we are currently using. Yes, we should eventually get everything to
+master but one step at a time. So don't forget to update that if you change branches.
+
+So this means that anytime we change anything in the Thali_CordovaPlugin or in our version of JXCore we need to make sure to up the version
+on npm and republish (e.g. `/thali/npm publish ./`) so users can update the NPM and automatically trigger all the other updates.
+
 ## Android Requirements
 
 We use Maven to distribute an AAR we need to support Bluetooth and Wi-Fi on Android. The instructions below specify how to build the

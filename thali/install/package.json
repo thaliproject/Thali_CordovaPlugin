@@ -1,0 +1,15 @@
+{
+  "name": "install",
+  "version": "0.0.1",
+  "description": "Used to handle installing the Thali NPM package correctly into Cordova",
+  "main": "install.js",
+  "dependencies": {
+    "unzip": "^0.1.11",
+    "lie": "^2.9.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Microsoft",
+  "license": "MIT"
+}

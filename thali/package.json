@@ -1,12 +1,17 @@
 {
   "name": "thali",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Thali Cordova Plugin",
+  "cordova": {
+    "id": "org.thaliproject.p2p",
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  },
   "main": "thalireplicationmanager.js",
   "dependencies": {
-    "multiplex": "^6.2.2",
-    "unzip": "^0.1.11",
-    "lie": "^2.9.1"
+    "multiplex": "^6.2.2"
   },
   "devDependencies": {
     "copy-dir": "0.0.7"
@@ -21,16 +26,17 @@
   },
   "keywords": [
     "Thali",
-    "Cordova",
+    "cordova",
     "Plugin",
     "P2P",
     "BlueTooth",
-    "WiFi-Direct"
+    "WiFi-Direct",
+    "node.js"
   ],
   "author": "Microsoft Corporation",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/thaliproject/Thali_CordovaPlugin/issues"
   },
-  "homepage": "https://github.com/thaliproject/Thali_CordovaPlugin#readme"
+  "homepage": "https://github.com/thaliproject/Thali_CordovaPlugin/tree/story_0_yarong#readme"
 }
