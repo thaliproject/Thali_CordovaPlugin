@@ -34,7 +34,7 @@ ThaliReplicationManager.events = {
   STOP_ERROR: 'stopError',
   CONNECT_ERROR: 'connectError',
   DISCONNECT_ERROR: 'disconnectError',
-  SYNC_ERROR: 'syncRetry'
+  SYNC_ERROR: 'syncError'
 };
 
 /**
@@ -184,20 +184,13 @@ function syncPeer(peer) {
 
 function muxServerBridge(tcpEndpointServerPort) {
   var serverPlex = multiplex({}, function(stream, id) {
-
     var clientSocket = net.createConnection({port: tcpEndpointServerPort});
     stream.pipe(clientSocket).pipe(stream);
-
-    listenForStreamEvents(stream, 'muxServerBridge + MuxStream');
-    listenForStreamEvents(clientSocket, 'muxServerBridge + ClientSocket');
   });
 
   var server = net.createServer(function(incomingClientSocket) {
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
-    listenForStreamEvents(incomingClientSocket, 'muxServerBridge + incomingClientSocket');
   });
-
-  listenForStreamEvents(server, 'muxServerBridge - server');
 
   return server;
 }
@@ -209,9 +202,6 @@ function muxClientBridge(localP2PTcpServerPort, peer) {
   var server = net.createServer(function(incomingClientSocket) {
     var clientStream = clientPlex.createStream();
     incomingClientSocket.pipe(clientStream).pipe(incomingClientSocket);
-
-    listenForStreamEvents(incomingClientSocket, 'muxClientBridge + incomingClientSocket');
-    listenForStreamEvents(clientStream, 'muxClientBridge + clientStream');
   });
 
   cleanUpSocket(clientSocket, function() {
@@ -219,15 +209,12 @@ function muxClientBridge(localP2PTcpServerPort, peer) {
     try {
       server.close();
     } catch(e) {
-      console.log('clientSocket cleanup fail %s', e);
       this.emit(ThaliReplicationManager.events.SYNC_ERROR, e);
     }
     syncRetry.call(this, peer);
   }.bind(this));
 
   clientPlex.pipe(clientSocket).pipe(clientPlex);
-  listenForStreamEvents(clientSocket, 'muxClientBridge + clientSocket');
-  listenForStreamEvents(server, 'muxClientBridge + server');
 
   return server;
 }
@@ -250,24 +237,6 @@ function cleanUpSocket(socket, cleanUpCallBack) {
       cleanUpCallBack();
       isClosed = true;
     }
-  });
-}
-
-function listenForStreamEvents(stream, prefixName) {
-  stream.on('error', function(err) {
-    console.log(prefixName + ' error - ' + err);
-  });
-
-  stream.on('end', function() {
-    console.log(prefixName + ' end');
-  });
-
-  stream.on('close', function() {
-    console.log(prefixName + ' close');
-  });
-
-  stream.on('data', function(data) {
-    console.log(prefixName + '  data  ' + data);
   });
 }
 
