@@ -7,6 +7,8 @@ The `ThaliEmitter` class is a bridge between the native connectivity API and Jav
 This is the basic usage to listen for the `peerAvailabilityChanged` event as well as start broadcasting the availability of the current device.
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
 var emitter = new ThaliEmitter();
 
 emitter.on('peerAvailabilityChanged', function (peers) {
@@ -26,6 +28,36 @@ emitter.startBroadcasting('me', 9001, function (err) {
 });
 ```
 
+## API
+
+## Instance Methods
+- `startBroadcasting(deviceName, portNumber, callback)`
+- `stopBroadcasting(callback)`
+- `connect(peerIdentifier, callback)`
+- `disconnect(peerIdentifier, callback)`
+
+## Events
+- `networkChanged`
+- `peerAvailabilityChanged`
+
+***
+
+## Constructor
+
+### `ThaliEmitter.constructor`
+
+This creates a new instance of the `ThaliEmitter` class which acts as a bridge between the native layer and JavaScript to provide local discovery and peer to peer communication with TCP/IP clients and servers.
+
+#### Example:
+
+```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+```
+
+***
+
 ## Methods
 
 ### `ThaliEmitter.prototype.startBroadcasting(deviceName, portNumber, callback)`
@@ -42,6 +74,10 @@ This method starts advertising or broadcasting its availability at the following
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.startBroadcasting('me', 9001, function (err) {
   if (err) {
     console.log(err);
@@ -64,6 +100,10 @@ This method stops advertising or broadcasting of its availability.
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.startBroadcasting('me', 9001, function (err) {
   if (err) {
     console.log(err);
@@ -97,6 +137,10 @@ This method begins a connection to the given peer found during discoverability. 
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.on('peerAvailabilityChanged', function (peers) {
   peers.forEach(function (peer) {
 
@@ -127,6 +171,10 @@ This method disconnects from the given peer by the given peer identifier.  If th
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.on('peerAvailabilityChanged', function (peers) {
   peers.forEach(function (peer) {
 
@@ -160,6 +208,10 @@ This event is called when a peer’s availability has changed.
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.on('peerAvailabilityChanged', function (peers) {
   peers.forEach(function (peer) {
     console.log('Peer identifier %s', peer.peerIdentifier);
@@ -183,6 +235,10 @@ This event is called when the network has changed.
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.on('networkChanged', function (status) {
   console.log('Network is available? %s', status.isAvailable);
 })
