@@ -28,7 +28,7 @@ This method instructs the native layer to broadcast the availability of the devi
 #### Arguments:
 
 1. `deviceName` : `String` – the device name.
-2. `portNumber` : `Number` – a port number to direct any incoming TCP/IP connections.
+2. `portNumber` : `Number` – a port number to direct any incoming TCP/IP connections
 3. `callback` : `Function` – must be in the form of the following, `function (err)` where:
   - `err` : `String` – a string value containing the error if one occurred, else `null`
 
