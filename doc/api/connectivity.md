@@ -21,7 +21,7 @@ METHODS:
 
 ### `StartBroadcasting(deviceName, portNumber, callback)`
 
-This method instructs the native layer to broadcast the availability of the device under the specified deviceName and to direct any incoming connections to the specified port number available on localhost over TCP/IP.
+This method instructs the native layer to broadcast the availability of the device under the specified deviceName and to direct any incoming connections to the specified port number available on localhost over TCP/IP.  Calling this method twice without a `StopBroadcasting` call in between will result in an error.
 
 #### Arguments:
 
