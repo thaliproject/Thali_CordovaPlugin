@@ -164,7 +164,7 @@ module.exports = function(callBack) {
             }).then(function(thaliCordovaPluginDirectory) {
                 return promiseUtilities.execPromise('cordova plugin add ' + thaliCordovaPluginDirectory, appRootDirectory);   
             }).then(function() {
-                return promiseUtilities.execPromise('jx npm install', path.join(appRootDirectory, "scripts"));       
+                return promiseUtilities.execPromise('jx npm install', path.join(appRootDirectory, "plugins/org.thaliproject.p2p/scripts"));       
             }).then(function() {
                 return promiseUtilities.writeFilePromise(weAddedPluginsFile, "yes");
             });
