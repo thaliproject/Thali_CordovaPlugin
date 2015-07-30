@@ -133,6 +133,7 @@ module.exports = function(callBack) {
    //get the app root folder from app/www/jxcore/node_modules/thali
     var appRootDirectory = path.join(__dirname, '../../../../../');
     var thaliDontCheckIn = path.join(appRootDirectory, "thaliDontCheckIn" );
+    var appScriptsFolder = path.join(appRootDirectory, "plugins/org.thaliproject.p2p/scripts");
     
     var jxcoreFolder = path.join(appRootDirectory, 'www/jxcore' );
     if(!(path.basename(jxcoreFolder) == 'jxcore')) {
@@ -164,7 +165,12 @@ module.exports = function(callBack) {
             }).then(function(thaliCordovaPluginDirectory) {
                 return promiseUtilities.execPromise('cordova plugin add ' + thaliCordovaPluginDirectory, appRootDirectory);   
             }).then(function() {
-                return promiseUtilities.execPromise('jx npm install', path.join(appRootDirectory, "plugins/org.thaliproject.p2p/scripts"));       
+                // Unfortunately using a require from the scripts directory to the thali directory doesn't work at run time, the
+                // dependency on lie fails. So I'll just copy the file over.
+                return promiseUtilities.overwriteFilePromise(path.join(jxcoreFolder, "node_modules/thali/install/promiseUtilities.js"),
+                    path.join(appScriptsFolder, 'promiseUtilities.js'));
+            }).then(function() {
+                return promiseUtilities.execPromise('jx npm install', appScriptsFolder);       
             }).then(function() {
                 return promiseUtilities.writeFilePromise(weAddedPluginsFile, "yes");
             });
