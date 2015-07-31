@@ -20,6 +20,7 @@
     "multiplex": "^6.2.2"
   },
   "devDependencies": {
+    "randomstring": "^1.0.7",
     "tape": "^4.0.0"
   }
 }

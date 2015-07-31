@@ -1,7 +1,7 @@
 var keys = {};
 
 function Mobile(key) {
-  keys[key] || (keys[key] = new NativeCall(key));
+  keys.hasOwnProperty(key) ||  (keys[key] = new NativeCall(key));
   return keys[key];
 }
 

@@ -1,6 +1,6 @@
 # The `ThaliReplicationManager` class
 
-The `ThaliReplicationManager` class handles database replication between devices, using [PouchDB](http://pouchdb.com/) and the Thali Cordova bridge `ThaliEmitter` class.
+The `ThaliReplicationManager` class handles database replication between devices, using [PouchDB](http://pouchdb.com/) and the Thali Cordova bridge `ThaliEmitter` class.  This class is meant solely for the purpose of demonstrating [Thali Story 0](http://thaliproject.org/stories) and will be dramatically enhanced in the future.
 
 ## Usage
 
@@ -28,15 +28,12 @@ manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 - `stop`
 
 ### `ThaliReplicationManager` Events
-- `starting`,
-- `started`,
-- `stopping`,
-- `stopped`,
-- `startError`,
-- `stopError`,
-- `connectError`,
-- `disconnectError`,
-- `syncRetry`
+- `starting`
+- `started`
+- `stopping`
+- `stopped`
+- `startError`
+- `stopError`
 
 ## `ThaliReplicationManager(db)` constructor
 
@@ -58,7 +55,7 @@ var manager = new ThaliReplicationManager(db);
 
 ## Methods
 
-### `ThaliReplicationManager.prototype.start()`
+### `ThaliReplicationManager.prototype.start(deviceName, port, dbName)`
 
 This method starts the Thali Replication Manager with the given device name, port number used for synchronization and database name to synchronize.  Once called this method emits the `starting` event.  Once started, the `started` event is fired.  If there is an error in starting the Thali Replication Manager, the `startError` event will fire.
 
@@ -107,3 +104,153 @@ manager.on('stopped', function () {
 
 manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 ```
+
+***
+
+## Events
+
+### `starting`
+
+This event is called once `start` has been called and before it has fully started with the `started` event or an error was raised with the `startError` event.
+
+#### Example:
+
+```js
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+
+manager.on('starting', function () {
+  console.log('Thali replication manager is starting');
+});
+
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+```
+***
+
+### `started`
+
+This event is called once `start` has been called and has successfully started.
+
+#### Example:
+
+```js
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+
+manager.on('started', function () {
+  console.log('Thali replication manager has started');
+});
+
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+```
+***
+
+### `startError`
+
+This event is called once `start` has been called and has not started successfully.
+
+#### Callback Arguments:
+
+1. `error` : An error which occurred during starting the Thali Replication Manager.
+
+#### Example:
+
+```js
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+
+manager.on('startError', function (err) {
+  console.log('Thali replication failed to start: %s', err);
+});
+
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+```
+***
+
+### `stopping`
+
+This event is called once `stop` has been called and before it has fully stopped with the `stopped` event or an error was raised with the `stopError` event.
+
+#### Example:
+
+```js
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+
+manager.on('started', function () {
+  manager.stop();
+});
+
+manager.on('stopping', function () {
+  console.log('Thali replication manager is stopping');
+});
+
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+```
+***
+
+### `stopped`
+
+This event is called once `stop` has been called and has successfully stopped.
+
+#### Example:
+
+```js
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+
+manager.on('started', function () {
+  manager.stop();
+});
+
+manager.on('stopped', function () {
+  console.log('Thali replication manager has stopped');
+});
+
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+```
+***
+
+### `stopError`
+
+This event is called once `stop` has been called and has not stopped successfully.
+
+#### Callback Arguments:
+
+1. `error` : An error which occurred during starting the Thali Replication Manager.
+
+#### Example:
+
+```js
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+
+manager.on('started', function () {
+  manager.stop();
+});
+
+manager.on('stopError', function (err) {
+  console.log('Thali replication manager failed to stop: %s', err);
+});
+
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+```
+***
