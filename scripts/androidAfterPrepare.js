@@ -3,7 +3,7 @@
 var fs = require('fs-extra');
 var Promise = require('lie');
 var path = require('path');
-var promiseUtilities = require('./promiseUtilities.js');
+//var promiseUtilities = require('./promiseUtilities.js');
 
 /**
  * We've tried various strategies in plugin.xml to set the minimum sdk
@@ -16,27 +16,27 @@ var promiseUtilities = require('./promiseUtilities.js');
  */
 function updateAndroidSDKVersion(appRoot) {
    var androidManifestLocation = path.join(appRoot, "platforms/android/AndroidManifest.xml");
-    return promiseUtilities.readFilePromise(androidManifestLocation)
+    return fs.readFileAsynch(androidManifestLocation)
     .then(function(data) {
         // BUBUG: This is fragile, a single character change and the replace won't work! We should really do a
         // proper XML parse and output.
         var replaceDependency = 
             data.replace("android:minSdkVersion=\"10\"",
                          "android:minSdkVersion=\"19\"");
-       return promiseUtilities.writeFilePromise(androidManifestLocation, replaceDependency);        
+       return fs.writeFileAsynch(androidManifestLocation, replaceDependency);        
     });
 }
 
 function copyBuildExtras(appRoot) {
     var sourceFile = path.join(appRoot, "plugins/org.thaliproject.p2p/build/build-extras.gradle");
     var targetFile = path.join(appRoot, "/platforms/android/build-extras.gradle");
-    return promiseUtilities.overwriteFilePromise(sourceFile, targetFile);
+    return fs.copyAsynch(sourceFile, targetFile, { clobber: true});
 }
 
 function replaceJXCoreExtension(appRoot) {
     var sourceFile = path.join(appRoot, "plugins/org.thaliproject.p2p/src/android/java/io/jxcore/node/JXcoreExtension.java");
     var targetFile = path.join(appRoot, "platforms/android/src/io/jxcore/node/JXcoreExtension.java");
-    return promiseUtilities.overwriteFilePromise(sourceFile, targetFile);    
+    return fs.copyAsynch(sourceFile, targetFile, { clobber: true});    
 }
 
 function removeInstallFromPlatform(appRoot) {

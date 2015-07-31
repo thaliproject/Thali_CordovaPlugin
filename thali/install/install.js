@@ -7,11 +7,41 @@ var unzip = require('unzip');
 var Promise = require('lie');
 var fs = require('fs-extra-promise');
 var url = require('url');
-var rp = require('request-promise');
 var fileNotFoundCode = "ENOENT";
 var magicDirectoryNameToDoLocalDevelopment = "localdev"; // If this file exists in the thaliDontCheckIn directory then
                                                     // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
                                                     // project to this Cordova project.
+
+// Unfortunately the obvious library, request-promise, doesn't handle streams
+// well so it would take the multi-megabyte ZIP response file and turn it into
+// an in-memory string. So we use this instead.
+function httpRequestPromise(method, urlObject) {
+    if (method != "GET" && method != "HEAD") {
+        return Promise.reject("We only support GET or HEAD requests");
+    }
+    
+    return new Promise(function(resolve, reject) {
+       var httpsRequestOptions = {
+                    host: urlObject.host,
+                    method: method,
+                    path: urlObject.path,
+                    keepAlive: true
+                };
+                
+        var req = https.request(httpsRequestOptions, function(res) {
+            if (res.statusCode != 200) {
+                reject("Did not get 200 for " + urlObject.href + ", instead got " + res.statusCode);
+                return;
+            }
+            
+            resolve(res);
+        }).on('error', function(e) {
+            reject("Got error on " + urlObject.href + " - " + e);
+        });      
+        
+        req.end();        
+    });
+}
 
 function getEtagFileLocation(depotName, branchName, directoryToInstallIn) {
     return path.join(directoryToInstallIn, "etag-" + depotName + "-" + branchName);
@@ -62,7 +92,8 @@ function doGitHubEtagsMatch(projectName, depotName, branchName, directoryToInsta
             return false;
         }
         
-        return rp.head(getGitHubZipUrlObject(projectName, depotName, branchName).href)
+        return httpRequestPromise("HEAD", 
+            getGitHubZipUrlObject(projectName, depotName, branchName))
         .then(function(res) {
             var etagFromHeadRequest = returnEtagFromResponse(res);
             return etagFromFile == etagFromHeadRequest;
@@ -89,7 +120,7 @@ function installGitHubZip(projectName, depotName, branchName, directoryToInstall
         if (doTheEtagsMatch) {
             return createGitHubZipResponse(depotName, branchName, directoryToInstallIn, false);
         }
-        return rp.get(gitHubZipUrlObject.href)
+        return httpRequestPromise("GET", gitHubZipUrlObject)
         .then(function(res) {
             return new Promise(function(resolve, reject) {
                 res.pipe(unzip.Extract({ path: directoryToInstallIn}))

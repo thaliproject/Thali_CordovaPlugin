@@ -5,17 +5,26 @@ to worry about the contents of this file.
 
 ## How this all connects together
 
-In the thali folder is the Javascript we use to enable Thali. But also in their is our package.json which we use to publish to the Thali
-project on NPM. Users install from NPM. Our package.json then runs an install script (installCordovaPlugin.js) which handles downloading
-the right version of this entire repro as well as the right version of JXCore. The assumption is that all of this is happening inside of
-the user's Cordova project because the next thing the NPM install script does it call cordova plugins add to add the Thali_CordovaPlugin
-which has its own post install Cordova script that cleans up a few things locally.
+We are trying to version, as one, what are actually two different systems. One system is NPM as used in JXCore. The other is
+the Cordova plugin.
 
-Also note that the readme in package.json points at whatever branch we are currently using. Yes, we should eventually get everything to
-master but one step at a time. So don't forget to update that if you change branches.
+We have made the decision to drive the management process from NPM in the JXCore folder. This means that to install Thali
+both into JXCore and into Cordova one must go to www/jxcore in the app project and do a `jx install`. This will install Thali's
+Javascript files from NPM but it will also run a post install script that will then install Thali's Cordova plugin.
 
-So this means that anytime we change anything in the Thali_CordovaPlugin or in our version of JXCore we need to make sure to up the version
-on npm and republish (e.g. `/thali/npm publish ./`) so users can update the NPM and automatically trigger all the other updates.
+Normally to update a NPM one issues `jx npm install` or `jx npm update` and that will update the Javascript files. That applies here
+as well. However in addition the install script run from the NPM install is also smart enough to figure out if the Cordova plugin
+needs to be updated and if so it will handle that as well.
+
+To keep things somewhat clean we have inside of Thali's NPM directory a subdirectory called install. This isolates all the install
+logic that has nothing to do with actually using Thali on a device. We then use a cordova post prepare script to remove this
+directory before we publish so it doesn't end up on the device.
+
+A final note is that for all of this to work we have to have files in at least four different places:
+__NPM__ - We own the thali NPM module and we use `npm publish` from the thali sub-directory to publish there.
+__Thali_CordovaPlugin__ - This is our GIT repro from which we pull down the cordova plugin bytes
+__JXCore_CordovaPlugin__ - Our plugin has a dependency in its plugin.xml on JXCore's Cordova plugin
+__BinTray__ - We have our own bintray available [here](https://bintray.com/thali/Thali) where we publish the btconnectorlib2 JAR for Android
 
 ## Want to develop locally?
 
