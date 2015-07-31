@@ -43,7 +43,6 @@
     // StartBroadcasting
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
     {
-
         if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || 
             ![params[1] isKindOfClass:[NSNumber class]])
         {
@@ -51,7 +50,7 @@
         }
         else
         {
-            if ([theApp startCommunicationsWithPeerIdentifier:params[0] peerName:[params[1] stringValue]])
+            if ([theApp startBroadcasting:params[0] serverPort:params[1]])
             {
                 [JXcore callEventCallback:callbackId withParams:nil];
             }
@@ -67,7 +66,7 @@
     // StopBroadcasting
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
     {
-        if ([theApp stopCommunications])
+        if ([theApp stopBroadcasting])
         {
             [JXcore callEventCallback:callbackId withParams:nil];
         }
@@ -88,13 +87,13 @@
         }
         else
         {
-            if ([theApp connectToPeerServerWithPeerIdentifier: params[0]])
+            void (^connectCallback)(uint) = ^(uint port) {
+                [JXcore callEventCallback:callbackId withParams:@[[NSNull null], @(port)]];
+            };
+
+            if (![theApp connectToPeer:params[0] connectCallback:connectCallback])
             {
-                [JXcore callEventCallback:callbackId withParams:nil];
-            }
-            else
-            {
-                [JXcore callEventCallback:callbackId withParams:@[@"Couldn't find specified peer"]];
+                [JXcore callEventCallback:callbackId withParams:@[@"Connection error"]];
             }
         }
     } withName:@"Connect"];
@@ -108,7 +107,7 @@
         }
         else
         {
-            if ([theApp disconnectFromPeerServerWithPeerIdentifier: params[0]])
+            if ([theApp disconnectFromPeer: params[0]])
             {
                 [JXcore callEventCallback:callbackId withParams:nil];
             }
@@ -117,7 +116,7 @@
                 [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
             }
         }
-    } withName:@"Disconnect"];
+   } withName:@"Disconnect"];
 }
 
 @end

@@ -58,5 +58,21 @@
         <header-file src="src/ios/THEPeerNetworkingDelegate.h" />
         <header-file src="src/ios/THEPeerNetworking.h" />
         <source-file src="src/ios/THEPeerNetworking.m" />
+        <header-file src="src/ios/THEMultipeerClient.h" />
+        <source-file src="src/ios/THEMultipeerClient.m" />
+        <header-file src="src/ios/THEMultipeerServer.h" />
+        <source-file src="src/ios/THEMultipeerServer.m" />
+        <header-file src="src/ios/THEPeerDescriptor.h" />
+        <source-file src="src/ios/THEPeerDescriptor.m" />
+        <header-file src="src/ios/THENetworkingClientRelay.h" />
+        <source-file src="src/ios/THENetworkingClientRelay.m" />
+        <header-file src="src/ios/THENetworkingClientRelayDelegate.h" />
+        <header-file src="src/ios/THENetworkingServerRelay.h" />
+        <source-file src="src/ios/THENetworkingServerRelay.m" />
+        <header-file src="src/ios/THENetworkingServerRelayDelegate.h" />
+        <header-file src="src/ios/GCDAsyncSocket.h" />
+        <source-file src="src/ios/GCDAsyncSocket.m" />
+        <header-file src="src/ios/THEProtectedMutableDictionary.h" />
+        <source-file src="src/ios/THEProtectedMutableDictionary.m" />
     </platform>
 </plugin>

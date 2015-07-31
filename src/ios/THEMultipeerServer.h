@@ -22,29 +22,21 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THEMultipeerServer.h
 //
 
-#import <Foundation/Foundation.h>
-#import "THEPeerNetworkingDelegate.h"
-#import "THENetworkingClientRelayDelegate.h"
+#import <MultipeerConnectivity/MultipeerConnectivity.h>
+#import "THEPeerNetworking.h"
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEPeerNetworkingDelegate, THENetworkingClientRelayDelegate>
+@interface MultipeerServer : NSObject <MCNearbyServiceAdvertiserDelegate, MCSessionDelegate>
 
-// Class singleton.
-+ (instancetype)singleton;
+-(id) initWithPeerId:(MCPeerID *)peerId 
+    withPeerIdentifier:(NSString *)peerIdentifier 
+          withPeerName:(NSString *)peerName
+       withServiceType:(NSString *)serviceType; 
 
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
+-(void) start;
 
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(uint))connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
+-(void) stop;
 
 @end

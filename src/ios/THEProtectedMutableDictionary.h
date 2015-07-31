@@ -22,29 +22,13 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THEProtectedMutableDictionary.h
 //
 
-#import <Foundation/Foundation.h>
-#import "THEPeerNetworkingDelegate.h"
-#import "THENetworkingClientRelayDelegate.h"
+@interface THEProtectedMutableDictionary : NSObject
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEPeerNetworkingDelegate, THENetworkingClientRelayDelegate>
-
-// Class singleton.
-+ (instancetype)singleton;
-
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
-
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(uint))connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
+- (void)createWithKey:(NSObject<NSCopying> *)key createBlock:(NSObject *(^)(NSObject *))createBlock;
+- (void)updateWithKey:(NSObject<NSCopying> *)key updateBlock:(void(^)(NSObject *))updateBlock;
+- (void)updateWithFilter:(BOOL(^)(NSObject *))filterBlock updateBlock:(BOOL(^)(NSObject *))updateBlock;
 
 @end

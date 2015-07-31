@@ -26,12 +26,14 @@
 //
 
 #import <Foundation/Foundation.h>
+
+#import "THEAppContext.h"
+#import "THEPeerDescriptor.h"
 #import "THEPeerNetworkingDelegate.h"
 
 // THEPeerNetworking interface.
 @interface THEPeerNetworking : NSObject
 
-// Properties.
 @property (nonatomic, weak) id<THEPeerNetworkingDelegate> delegate;
 
 // Class initializer.
