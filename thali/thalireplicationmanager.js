@@ -53,11 +53,10 @@ ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
   this._port = port;
   this._deviceName = deviceName;
   this._dbName = dbName;
-  if (this._isStarted || this._serverBridge != null) {
-    this.emit(ThaliReplicationManager.events.START_ERROR, "There is already an existing serverBridge instance.");
-    return;  
+  if (this._isStarted || !!this._serverBridge) {
+    return this.emit(ThaliReplicationManager.events.START_ERROR, new Error('There is already an existing serverBridge instance.'));
   }
-  
+
   this._serverBridge = muxServerBridge.call(this, port);
   this._serverBridge.listen(function () {
     this._serverBridgePort = this._serverBridge.address().port;
@@ -96,7 +95,7 @@ ThaliReplicationManager.prototype.stop = function () {
     this._serverBridge.close();
     this._serverBridge = null;
     this._isStarted = false;
-    
+
     if (err) {
       this.emit(ThaliReplicationManager.events.STOP_ERROR, err);
     } else {
