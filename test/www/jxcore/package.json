@@ -4,7 +4,7 @@
   "description": "Thali Cordova Plugin JXCore",
   "main": "lib/thalireplicationmanager.js",
   "scripts": {
-    "test": "tape test/thaliemitterspec.js"
+    "test": "jx deploytest.js"
   },
   "keywords": [
     "Thali",
@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "randomstring": "^1.0.7",
-    "tape": "^4.0.0"
+    "tape": "^4.0.0",
+    "copy-dir": "0.0.7"
   }
 }
