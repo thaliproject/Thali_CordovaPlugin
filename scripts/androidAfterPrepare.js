@@ -1,6 +1,6 @@
 /// <reference path="../typings/node/node.d.ts"/>
 'use strict'
-var fs = require('fs-extra');
+var fs = require('fs-extra-promise');
 var Promise = require('lie');
 var path = require('path');
 //var promiseUtilities = require('./promiseUtilities.js');
