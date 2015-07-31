@@ -1,6 +1,6 @@
 {
   "name": "thali",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
@@ -10,6 +10,8 @@
     "copy-dir": "0.0.7"
   },
   "scripts": {
+    "prepublish" : "jx install/prePublishThaliCordovaPlugin.js",
+    "postpublish" : "jx install/postPublishThaliCordovaPlugin.js",
     "postinstall" : "jx installCordovaPlugin.js", 
     "test": "node ../build/deploytest.js"
   },

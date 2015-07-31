@@ -1,4 +1,6 @@
-# Thali Cordova Plugin Replication Manager #
+# Thali Cordova Plugin
+
+
 
 ### Contributing
 

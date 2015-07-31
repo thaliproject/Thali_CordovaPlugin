@@ -1,13 +1,13 @@
 /// <reference path="../../typings/node/node.d.ts"/>
 'use strict';
-var exec = require('child_process').exec;
+var exec = require('child-process-promise').exec;
 var path = require('path');
 var https = require('https')
 var unzip = require('unzip');
 var Promise = require('lie');
-var fs = require('fs-extra');
+var fs = require('fs-extra-promise');
 var url = require('url');
-var promiseUtilities = require('./promiseUtilities.js');
+var rp = require('request-promise');
 var fileNotFoundCode = "ENOENT";
 var magicDirectoryNameToDoLocalDevelopment = "localdev"; // If this file exists in the thaliDontCheckIn directory then
                                                     // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
@@ -19,7 +19,7 @@ function getEtagFileLocation(depotName, branchName, directoryToInstallIn) {
 
 function getEtagFromEtagFile(depotName, branchName, directoryToInstallIn) {
     var etagFileLocation = getEtagFileLocation(depotName, branchName, directoryToInstallIn);
-    return promiseUtilities.readFilePromise(etagFileLocation)
+    return fs.readFileAsync(etagFileLocation)
     .catch(function(err) {
         if (err.code != fileNotFoundCode) {
             return Promise.reject(err);
@@ -44,7 +44,7 @@ function writeToEtagFile(depotName, branchName, directoryToInstallIn, httpRespon
     }
         
     var etagFileLocation = getEtagFileLocation(depotName, branchName, directoryToInstallIn);
-    return promiseUtilities.writeFilePromise(etagFileLocation, etag);
+    return fs.writeFileAsync(etagFileLocation, etag);
 }
 
 function getGitHubZipUrlObject(projectName, depotName, branchName) {
@@ -62,7 +62,7 @@ function doGitHubEtagsMatch(projectName, depotName, branchName, directoryToInsta
             return false;
         }
         
-        return promiseUtilities.httpRequestPromise("HEAD", getGitHubZipUrlObject(projectName, depotName, branchName))
+        return rp.head(getGitHubZipUrlObject(projectName, depotName, branchName).href)
         .then(function(res) {
             var etagFromHeadRequest = returnEtagFromResponse(res);
             return etagFromFile == etagFromHeadRequest;
@@ -89,7 +89,7 @@ function installGitHubZip(projectName, depotName, branchName, directoryToInstall
         if (doTheEtagsMatch) {
             return createGitHubZipResponse(depotName, branchName, directoryToInstallIn, false);
         }
-        return promiseUtilities.httpRequestPromise("GET", gitHubZipUrlObject)
+        return rp.get(gitHubZipUrlObject.href)
         .then(function(res) {
             return new Promise(function(resolve, reject) {
                 res.pipe(unzip.Extract({ path: directoryToInstallIn}))
@@ -109,20 +109,20 @@ function installGitHubZip(projectName, depotName, branchName, directoryToInstall
 
 function updatePluginXMLJXCoreLocation(thaliCordovaPluginDirectory, jxCoreDirectory) {
     var pluginFileLocation = path.join(thaliCordovaPluginDirectory, "plugin.xml");
-    return promiseUtilities.readFilePromise(pluginFileLocation).then(function(data) {
+    return fs.readFileAsync(pluginFileLocation).then(function(data) {
         // BUBUG: This is fragile, a single character change and the replace won't work! We should really do a
         // proper XML parse and output.
         var replaceDependency = 
             data.replace("<dependency id=\"io.jxcore.node\" url=\"https://github.com/jxcore/jxcore-cordova\" />",
                          "<dependency id=\"io.jxcore.node\" subdir=\"" + jxCoreDirectory + "\" />");
-       return promiseUtilities.writeFilePromise(pluginFileLocation, replaceDependency);        
+       return fs.writeFileAsync(pluginFileLocation, replaceDependency);        
     }).then(function() {
         return thaliCordovaPluginDirectory;
     });
 }
 
 function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
-    return promiseUtilities.readFilePromise(weAddedPluginsFile).catch(function(err) {
+    return fs.readFileAsync(weAddedPluginsFile).catch(function(err) {
         if (err) {
             if (err.code == fileNotFoundCode) {
                 return false;
@@ -137,7 +137,7 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
             return;
         }
         
-        return promiseUtilities.execPromise('cordova plugin remove org.thaliproject.p2p', appRootDirectory);
+        return exec('cordova plugin remove org.thaliproject.p2p', appRootDirectory);
     })
 }
 
@@ -188,40 +188,26 @@ module.exports = function(callBack) {
         doesMagicDirectoryNamedExist(thaliDontCheckIn) ?
             copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, thaliDepotName, thaliBranchName) :
             installGitHubZip(thaliProjectName, thaliDepotName, thaliBranchName, thaliDontCheckIn);
-    
-    // I really wanted to stick something like the following into plugin.xml:
-    //     <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova" 
-    //         commit="47e4eeb4b5a3131f47770259d9c02949069ec557" branch="0.0.3-dev"/>
-    // The problem is that the attribute branch is not actually supported and the commit isn't in
-    // master so the dependency doesn't work. Hence the code below.
-    var jxCoreProjectName = "jxcore";
-    var jxCoreDepotName = "jxcore-cordova";
-    var jxCoreBranchName = "0.0.3-dev";
-    var getJxCoreCordovaPluginZip = Promise.resolve(); //installGitHubZip(jxCoreProjectName, jxCoreDepotName, jxCoreBranchName, thaliDontCheckIn);
-    
-    Promise.all([getThaliCordovaPluginZip, getJxCoreCordovaPluginZip])
-    .then(function(results) {
-        var thaliCordovaPluginUnZipResult = results[0];
-        //var jxCoreUnZipResult = results[1];
-        
-        if (thaliCordovaPluginUnZipResult.directoryUpdated) {//|| jxCoreUnZipResult.directoryUpdated) {
+
+    getThaliCordovaPluginZip
+    .then(function(thaliCordovaPluginUnZipResult) {        
+        if (thaliCordovaPluginUnZipResult.directoryUpdated) {
             var weAddedPluginsFile = path.join(thaliDontCheckIn, "weAddedPlugins");
             return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
             .then(function() {
-                // return updatePluginXMLJXCoreLocation(thaliCordovaPluginUnZipResult.unzipedDirectory,
-                //                                     jxCoreUnZipResult.unzipedDirectory);   
                 return thaliCordovaPluginUnZipResult.unzipedDirectory; 
             }).then(function(thaliCordovaPluginDirectory) {
-                return promiseUtilities.execPromise('cordova plugin add ' + thaliCordovaPluginDirectory, appRootDirectory);   
+                return exec('cordova plugin add ' + thaliCordovaPluginDirectory, appRootDirectory);   
             }).then(function() {
                 // Unfortunately using a require from the scripts directory to the thali directory doesn't work at run time, the
                 // dependency on lie fails. So I'll just copy the file over.
-                return promiseUtilities.overwriteFilePromise(path.join(jxcoreFolder, "node_modules/thali/install/promiseUtilities.js"),
+                return fs.copyAsync(path.join(jxcoreFolder, 
+                    "node_modules/thali/install/promiseUtilities.js", { clobber: true} ),
                     path.join(appScriptsFolder, 'promiseUtilities.js'));
             }).then(function() {
-                return promiseUtilities.execPromise('jx npm install', appScriptsFolder);       
+                return exec('jx npm install', appScriptsFolder);       
             }).then(function() {
-                return promiseUtilities.writeFilePromise(weAddedPluginsFile, "yes");
+                return fs.writeFileAsync(weAddedPluginsFile, "yes");
             });
         }
     }).then(function() {
