@@ -101,7 +101,7 @@ ThaliReplicationManager.prototype.stop = function () {
     } else {
       this.emit(ThaliReplicationManager.events.STOPPED);
     }
-  });
+  }.bind(this));
 };
 
 function networkChanged(status) {
