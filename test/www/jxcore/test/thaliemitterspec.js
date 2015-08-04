@@ -1,4 +1,6 @@
-require('../thali/mockmobile');
+"use strict";
+
+require('./mockmobile');
 var ThaliEmitter = require('../thali/thaliemitter');
 var test = require('tape');
 
@@ -214,27 +216,6 @@ test('#connect should call Mobile("Connect") and handle an error', function (t) 
     t.equal(Mobile('Connect').callNativeArguments[0], peerIdentifier);
     t.equal(err.message, errorMessage);
     t.end();
-  });
-
-  Mobile.invokeConnect(errorMessage, port);
-});
-
-test('#connect should call Mobile("Connect") twice with same peer identifier and throw an error', function (t) {
-  var emitter = new ThaliEmitter();
-
-  var peerIdentifier = '123',
-      errorMessage = null,
-      port = 9001;
-
-  emitter.connect(peerIdentifier, function (err) {
-
-    t.throws(function () {
-      emitter.connect(peerIdentifier, noop);
-      Mobile.invokeConnect(errorMessage, port);
-    });
-
-    t.end();
-
   });
 
   Mobile.invokeConnect(errorMessage, port);

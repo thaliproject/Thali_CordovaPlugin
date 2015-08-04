@@ -1,13 +1,17 @@
-# Thali Cordova Peer Communication API #
+# Thali Peer Discovery and Communication API #
+
+This is the interface to be implemented by the native layer for handling local discovery and peer to peer communication.  The [`ThaliEmmitter`](thaliemitter.md) class is for use by developers which communicates with the Thali Peer Communication API.
 
 ## Methods:
 - `StartBroadcasting`
 - `StopBroadcasting`
 - `Connect`
 - `Disconnect`
+
+## Testing Methods
 - `KillConnection`
 
-Events:
+## Events:
 - `peerAvailabilityChanged`
 - `networkChanged`
 
@@ -19,12 +23,12 @@ METHODS:
 
 ### `StartBroadcasting(deviceName, portNumber, callback)`
 
-This method starts advertising or broadcasting its availability at the following port that PouchDB/Express-PouchDB is listening.  
+This method instructs the native layer to broadcast the availability of the device under the specified deviceName and to direct any incoming connections to the specified port number available on localhost over TCP/IP.  Calling this method twice without a `StopBroadcasting` call in between will result in an error.
 
 #### Arguments:
 
 1. `deviceName` : `String` – the device name.
-2. `portNumber` : `Number` – obtained by the user of the code which indicates the port number of our local PouchDB/Express-PouchDB
+2. `portNumber` : `Number` – a port number to direct any incoming TCP/IP connections
 3. `callback` : `Function` – must be in the form of the following, `function (err)` where:
   - `err` : `String` – a string value containing the error if one occurred, else `null`
 
@@ -32,7 +36,7 @@ This method starts advertising or broadcasting its availability at the following
 
 ### `StopBroadcasting(callback)`
 
-This method stops advertising or broadcasting of its availability.
+This method stops broadcasting of its availability. If this method is called before `StartBroadcasting`, this will result in an error.
 
 #### Arguments:
 
@@ -43,20 +47,20 @@ This method stops advertising or broadcasting of its availability.
 
 ### `Connect(peerIdentifier, callback)`
 
-This method begins a connection to the given peer found during discoverability.  If this is called twice with the same peer identifier, an error will be thrown that it is in process.
+This method instructs the native layer to establish a TCP/IP connection to the peer identified by the peerIdentifier, which is obtained via a `peerAvailabilityChanged` event.  If this is called twice with the same peer identifier without a `Disconnect` call will result in an error.
 
 #### Arguments:
 
 1. `peerIdentifier` : `String` – peer identifier found during the `peerAvailabilityChanged` event.
 2. `callback` : `Function` – must be in the form of the following, `function (err, port)` where:
     - `err` : `String` – a string value containing the error if one occurred, else null
-    - `port` : `Number` – the port to connect to the other server for PouchDB synchronization, e.g. 5678 so that we can synchronize to `http://localhost:5678/dbname`
+    - `port` : `Number` – the port number to connect to the remote peer over TCP/IP
 
 ***
 
 ### `Disconnect(peerIdentifier, callback)`
 
-This method disconnects from the given peer by the given peer identifier.  If the peer is already disconnected, then no error shall be thrown.
+This method disconnects from the peer by the given peer identifier.  If the peer is already disconnected and `Disconnect` is called again will result in an error in the callback.
 
 #### Arguments:
 
@@ -68,7 +72,7 @@ This method disconnects from the given peer by the given peer identifier.  If th
 
 ### `KillConnection(peerIdentifier, callback)`
 
-This method kills the connection for the given peer identifier to simulate crashes.  This is not intended for use in production code.
+This method kills the connection for the given peer identifier to simulate crashes.  There is no cleanup done on the connection during the kill connection.  This is not intended for use in production code and is solely used for testing.
 
 #### Arguments:
 

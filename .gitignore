@@ -7,8 +7,15 @@
 # Nodejs
 node_modules
 npm-debug.log
+# Cordova
+out/
+src/android/.gradle/
 
 # VS Code
 .settings/
 
-out/
+# IntelliJ/Android Studio
+*.iml
+
+# Don't repeat test files
+test/www/jxcore/thali/
