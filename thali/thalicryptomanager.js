@@ -4,11 +4,15 @@ var crypto = require('crypto');
 var fs = require('fs');
 var path = require('path');
 
-var pkcs12FileName = '/pkcs12.pfx';
+
+// The password is not secure because anyone who can get to the file can get
+// to the app and thus can get the password. The password is used here only to
+// satisfy the crypto/PKCS12 APIs.
 var password = 'password';
 var certname = 'certname';
 var country = 'country';
 var organization = 'organization';
+var pkcs12FileName = '/pkcs12.pfx';
 var macName = 'SHA256';
 var hashSizeInBytes = 16;
 
@@ -32,15 +36,22 @@ module.exports = {
             console.error('failed to get pkcs12 content');
             cb(err);
           }
-          // extract the publick key
-          var publicKey = crypto.pkcs12
-            .extractPublicKey(password, pkcs12Content);
-            if (publicKey.length <= 0) {
-              console.error('failed to extract public key');
-              cb('failed to extract publicKey');
+          
+          try {
+            // extract the public key
+            var publicKey = crypto.pkcs12
+              .extractPublicKey(password, pkcs12Content);
+            // check if the extracted public key is good
+            if ( !publicKey || publicKey.length <= 0) {
+              console.error('extracted public key is invalid');
+              cb('extracted public key is invalid');
             }
-          var hash = generateSHA256Hash(publicKey);
-          cb(null, hash);
+            var hash = generateSHA256Hash(publicKey);
+            cb(null, hash);
+          } catch(e) {
+            console.error('error thrown by extractPublicKey() function');
+            cb('error thrown by extractPublicKey() function');
+          }
         }); //getPKCS12Content
       }
     }); //GetDocumentsPath
@@ -67,7 +78,7 @@ function getPKCS12Content(fileNameWithPath, cb) {
         cb(null, pkcs12Content);
       });
     } else {
-      // create pkcs12 content.
+      // create pkcs12 content
       // the password is not secure because anyone who can get to the file can
       // get to the app and thus can get the password.
       // the password is used here only to satisfy the crypto/PKCS12 API.
@@ -89,11 +100,6 @@ function getPKCS12Content(fileNameWithPath, cb) {
   });
 }
 
-/**
-* Generates the SHA256 Hash of the input key and returns the first
-* 'hashSizeInBytes' bytes.
-* @param {String} publicKey the piblic key whose hash needs to be generated.
-*/
 function generateSHA256Hash(publicKey) {
   var hash = crypto.createHash(macName);
   hash.update(publicKey); //already encoded to 'base64'

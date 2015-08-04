@@ -8,7 +8,6 @@ var multiplex = require('multiplex');
 var validations = require('./validations');
 
 var currentDeviceIdentity;
-var deviceIdentityListeners = [];
 
 var e = new EventEmitter();
 
@@ -49,51 +48,27 @@ ThaliReplicationManager.events = {
 ThaliReplicationManager.prototype.start = function (port, dbName) {
   validations.ensureValidPort(port);
   validations.ensureNonNullOrEmptyString(dbName, 'dbName');
+  this.emit(ThaliReplicationManager.events.STARTING);
+  
+  this._port = port;
+  this._deviceName = currentDeviceIdentity;
+  this._dbName = dbName;
+  this._serverBridge = muxServerBridge.call(this, port);
+  this._serverBridge.listen(function () {
+    this._serverBridgePort = this._serverBridge.address().port;
 
-  var cryptomanager = require('./thalicryptomanager');
-  // get the device public-key-hash
-  cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
-    if (err) {
-      console.log('getPublicKeyHash returned err: ', err);
-      this._isStarted = false;
-      this.emit(ThaliReplicationManager.events.START_ERROR, err);
-    } else {
-      currentDeviceIdentity = publicKeyHash;
-    }
-    
-    // inform all the listeners about the device's identity
-    console.log('informing the listeners about the current device identity');
-    deviceIdentityListeners.forEach(function (listener) {
-      listener(currentDeviceIdentity);
-    });
-    
-    // clear the list of listeners 
-    while(deviceIdentityListeners.length > 0) {
-      deviceIdentityListeners.pop();
-    }
-
-    this.emit(ThaliReplicationManager.events.STARTING);
-    
-    this._port = port;
-    this._deviceName = currentDeviceIdentity;
-    this._dbName = dbName;
-    this._serverBridge = muxServerBridge.call(this, port);
-    this._serverBridge.listen(function () {
-      this._serverBridgePort = this._serverBridge.address().port;
-
-      this._emitter.startBroadcasting(currentDeviceIdentity, this._serverBridgePort, function (err) {
-        if (err) {
-          this._isStarted = false;
-          this.emit(ThaliReplicationManager.events.START_ERROR, err);
-        } else {
-          this._isStarted = true;
-          this._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(this));
-          this._emitter.addListener(NETWORK_CHANGED, networkChanged.bind(this));
-          this.emit(ThaliReplicationManager.events.STARTED);
-        }
-      }.bind(this)); //startBroadcasting
-    }.bind(this)); //listen
-  }.bind(this)); //getPublicKeyHash
+    this._emitter.startBroadcasting(currentDeviceIdentity, this._serverBridgePort, function (err) {
+      if (err) {
+        this._isStarted = false;
+        this.emit(ThaliReplicationManager.events.START_ERROR, err);
+      } else {
+        this._isStarted = true;
+        this._emitter.addListener(PEER_AVAILABILITY_CHANGED, syncPeers.bind(this));
+        this._emitter.addListener(NETWORK_CHANGED, networkChanged.bind(this));
+        this.emit(ThaliReplicationManager.events.STARTED);
+      }
+    }.bind(this)); //startBroadcasting
+  }.bind(this)); //listen
 };
 
 /**
@@ -145,10 +120,18 @@ ThaliReplicationManager.prototype.stop = function () {
 */
 ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
   if(currentDeviceIdentity) {
-    cb(currentDeviceIdentity);
+    cb(null, currentDeviceIdentity);
   } else {
-    // add the callback function to the listeners list
-    deviceIdentityListeners.push(cb);
+    var cryptomanager = require('./thalicryptomanager');
+    // get the device public-key-hash
+    cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
+      if (err) {
+        cb(err);
+      } else {
+        currentDeviceIdentity = publicKeyHash;
+        cb(null, currentDeviceIdentity);
+      }
+    });
   }
 }
 
