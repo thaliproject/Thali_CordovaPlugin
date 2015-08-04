@@ -66,14 +66,14 @@ $ cordova create ThaliTest com.test.thalitest ThaliTest
 
 To use Thali in a Cordova project one must do the following:
 
-5. Make sure to add whatever platforms you are using in Cordova using `cordova platform add`
+5. Make sure to add whatever platforms you are using in Cordova using `cordova platform add` (android | ios)
 1. Add a subfolder to www named jxcore (case sensitivity matters)
 2. Inside the jxcore folder create the app.js for your application
 3. Inside the jxcore folder create the package.json for your application
  * `jx npm init` provides an easy to use wizard that will create a basic package.json file
-4. Inside the jxcore folder run the command `jx install thali --save --autoremove "*.gz"`
- * We have had repeated issues with downloads from GitHub not working correctly with unzip. One will see errors like "invalid distance too far back" or 
- "invalid signature". Worry not, just repeat the install command.
+4. Inside the jxcore folder run the command `jx install thali --save`
+5. In the www/jxcore directory run `find . -name "*.gz" -delete`
+ * This step will go away in an upcoming release of JXCore that will support the `--autoremove "*.gz"` switch
 6. Make sure to run `cordova build` as this is critical to moving key files into place
 
 Now you can run your app.

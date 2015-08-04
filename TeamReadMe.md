@@ -31,8 +31,8 @@ __BinTray__ - We have our own bintray available [here](https://bintray.com/thali
 When writing code for Cordova one often finds oneself writing code directly inside the Cordova project one is testing with and then having
 to remember to move all the content back to Thali_CordovaPlugin. It's annoying. To work around this do the following:
 
-1. Go to your application project and create a subdirectory called thaliDontCheckIn
-2. Then create a directory called localdev under thaliDontCheckIn
+1. Go to your application project and create a subdirectory called `thaliDontCheckIn`
+2. Then create a directory called `localdev` under `thaliDontCheckIn`
 3. Now when you want to build your project with a new version of Thali_CordovaPlugin:
  1. Go to your App's www/jxcore subdirectory
  2. issue `jx npm install ../../../Thali_CordovaPlugin/thali --save`

@@ -1,6 +1,6 @@
 /// <reference path="../../typings/node/node.d.ts"/>
 'use strict';
-var exec = require('child-process-promise').exec;
+var exec = require('child_process').exec;
 var path = require('path');
 var https = require('https')
 var unzip = require('unzip');
@@ -11,6 +11,20 @@ var fileNotFoundCode = "ENOENT";
 var magicDirectoryNameToDoLocalDevelopment = "localdev"; // If this file exists in the thaliDontCheckIn directory then
                                                     // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
                                                     // project to this Cordova project.
+
+// I tried child-process-promise but it failed without errors and I just don't
+// have time to fight with it right now.
+function childProcessExecPromise(command, currentWorkingDirectory) {
+    return new Promise(function(resolve, reject) {
+        exec(command, { cwd: currentWorkingDirectory }, function(error, stdout, stderr) {
+           if (error) {
+               reject(error);
+           } 
+           resolve();
+        });
+    })
+}
+
 
 // Unfortunately the obvious library, request-promise, doesn't handle streams
 // well so it would take the multi-megabyte ZIP response file and turn it into
@@ -168,7 +182,7 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
             return;
         }
         
-        return exec('cordova plugin remove org.thaliproject.p2p', appRootDirectory);
+        return childProcessExecPromise('cordova plugin remove org.thaliproject.p2p', appRootDirectory)
     })
 }
 
@@ -221,22 +235,14 @@ module.exports = function(callBack) {
             installGitHubZip(thaliProjectName, thaliDepotName, thaliBranchName, thaliDontCheckIn);
 
     getThaliCordovaPluginZip
-    .then(function(thaliCordovaPluginUnZipResult) {        
+    .then(function(thaliCordovaPluginUnZipResult) {      
         if (thaliCordovaPluginUnZipResult.directoryUpdated) {
             var weAddedPluginsFile = path.join(thaliDontCheckIn, "weAddedPlugins");
             return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
             .then(function() {
-                return thaliCordovaPluginUnZipResult.unzipedDirectory; 
-            }).then(function(thaliCordovaPluginDirectory) {
-                return exec('cordova plugin add ' + thaliCordovaPluginDirectory, appRootDirectory);   
+                return childProcessExecPromise('cordova plugin add ' + thaliCordovaPluginUnZipResult.unzipedDirectory, appRootDirectory);   
             }).then(function() {
-                // Unfortunately using a require from the scripts directory to the thali directory doesn't work at run time, the
-                // dependency on lie fails. So I'll just copy the file over.
-                return fs.copyAsync(path.join(jxcoreFolder, 
-                    "node_modules/thali/install/promiseUtilities.js", { clobber: true} ),
-                    path.join(appScriptsFolder, 'promiseUtilities.js'));
-            }).then(function() {
-                return exec('jx npm install', appScriptsFolder);       
+                return childProcessExecPromise('jx npm install', appScriptsFolder);       
             }).then(function() {
                 return fs.writeFileAsync(weAddedPluginsFile, "yes");
             });
