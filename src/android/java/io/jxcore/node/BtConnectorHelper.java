@@ -20,11 +20,10 @@ import java.util.UUID;
 /**
  * Created by juksilve on 14.5.2015.
  */
-public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector {
+public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector, BtSocketDisconnectedCallBack {
 
     Context context = null;
 
-    final String instanceEncryptionPWD = "CHANGEYOURPASSWRODHERE";
     final String serviceTypeIdentifier = "Cordovap2p._tcp";
     final String BtUUID                = "fa87c0d0-afac-11de-8a39-0800200c9a66";
     final String Bt_NAME               = "Thaili_Bluetooth";
@@ -35,7 +34,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     BTConnectorSettings conSettings = null;
     BTConnector mBTConnector = null;
 
-    BtToServerSocket mBtToServerSocket = null;
+    List<BtToServerSocket> mServerSocketList = new ArrayList<BtToServerSocket>();
     BtToRequestSocket mBtToRequestSocket = null;
     String myPeerIdentifier= "";
     String myPeerName = "";
@@ -57,20 +56,35 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         this.myPeerName = peerName;
         this.lastAvailableList.clear();
         Stop();
-        mBTConnector = new BTConnector(context,this,this,conSettings,instanceEncryptionPWD);
+        mBTConnector = new BTConnector(context,this,this,conSettings);
         return mBTConnector.Start(this.myPeerIdentifier,this.myPeerName);
     }
 
+    public boolean isRunning(){
+        if(mBTConnector != null){
+            return true;
+        }else{
+            return false;
+        }
+    }
     public void Stop(){
         if(mBTConnector != null){
             mBTConnector.Stop();
             mBTConnector = null;
         }
 
-        if (mBtToServerSocket != null) {
-            print_debug("Disconnect:::Stop : mBtToServerSocket");
-            mBtToServerSocket.Stop();
-            mBtToServerSocket = null;
+        if (mServerSocketList != null) {
+            for(int i = 0; i < mServerSocketList.size(); i++) {
+                BtToServerSocket tmp = mServerSocketList.get(i);
+                if (tmp != null) {
+                    print_debug("Disconnect:::Stop : mBtToServerSocket :" + tmp.getName());
+                    tmp.Stop();
+                    tmp = null;
+                    mServerSocketList.set(i, tmp);
+                }
+            }
+
+            mServerSocketList.clear();
         }
 
         if(mBtToRequestSocket != null) {
@@ -86,7 +100,6 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
 // we only cut off our outgoing connections, incoming ones are cut off from the other end.
 // if we want to cut off whole communications, we'll do Stop
-
         if(mBtToRequestSocket != null) {
             String currentpeerId = mBtToRequestSocket.GetPeerId();
             print_debug("Disconnect : " + peerId + ", current request : " + currentpeerId);
@@ -100,6 +113,28 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         return ret;
     }
+
+    //test time implementation to simulate 'peer disappearing'
+    public boolean  DisconnectIncomingConnections(){
+
+        boolean ret = false;
+        if (mServerSocketList != null) {
+            for(int i = 0; i < mServerSocketList.size(); i++) {
+                BtToServerSocket tmp = mServerSocketList.get(i);
+                if (tmp != null) {
+                    print_debug("Disconnect:::Stop : mBtToServerSocket :" + tmp.getName());
+                    tmp.Stop();
+                    tmp = null;
+                    mServerSocketList.set(i, tmp);
+                    ret = true;
+                }
+            }
+
+            mServerSocketList.clear();
+        }
+        return ret;
+    }
+
     public String GetBluetoothAddress(){
 
         String ret= "";
@@ -121,19 +156,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         return ret;
     }
-    public int getFreePort() {
-        int ret =-1;
-        try {
-            ServerSocket s = new ServerSocket(0);
-            ret = s.getLocalPort();
-            //print_debug("srvSocket got port: " +ret);
-            s.close();
-        }catch (Exception e){
-            print_debug("create ServerSocket failed: "  + e.toString());
-        }
 
-        return ret;
-    }
     public boolean SetDeviceName(String name){
 
         boolean  ret= false;
@@ -161,6 +184,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     }
 
     ConnectStatusCallback mConnectStatusCallback = null;
+
     public interface ConnectStatusCallback{
         void ConnectionStatusUpdate(String Error, int port);
     }
@@ -213,58 +237,85 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         if(bluetoothSocket != null) {
 
-            boolean okToContinue = true;
+            AddPeerIfNotDiscovered(bluetoothSocket, peerId, peerName, peerAddress);
+            print_debug("Starting the connected thread incoming : " + incoming);
 
-            // See when we could support multiple connections
-            if(incoming && mBtToServerSocket != null) {
-                print_debug("Got connection while having old one, will disconnect" );
-                try{
-                    bluetoothSocket.close();
-                }catch (Exception e){
-                    print_debug("Errro while disconnecting : " + e.toString());
-                }
-            }else {
+            if (incoming) {
+                BtToServerSocket tmpBtToServerSocket = new BtToServerSocket(bluetoothSocket, this);
+                mServerSocketList.add(tmpBtToServerSocket);
+
+                tmpBtToServerSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
+                tmpBtToServerSocket.setPort(this.mServerPort);
+                tmpBtToServerSocket.start();
+
+                int port = tmpBtToServerSocket.GetLocalHostPort();
+                print_debug("Server socket is using : " + port + ", and is now connected.");
+
+            } else {
 
                 // basically we should never get to make successful connection
                 // if we already have one outgoing, so the old if it would somehow be there
                 // would be invalid, so lets get rid of it if we are having new outgoing connection.
-                //if (!incoming && mBtToRequestSocket != null)
+                if (mBtToRequestSocket != null) {
+                    mBtToRequestSocket.Stop();
+                    mBtToRequestSocket = null;
+                }
 
-                AddPeerIfNotDiscovered(bluetoothSocket, peerId, peerName, peerAddress);
-                print_debug("Starting the connected thread incoming : " + incoming);
-
-                if (incoming) {
-                    mBtToServerSocket = new BtToServerSocket(bluetoothSocket, mHandler);
-                    mBtToServerSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
-                    mBtToServerSocket.setPort(this.mServerPort);
-                    mBtToServerSocket.start();
-
-                    int port = mBtToServerSocket.GetLocalHostPort();
-                    print_debug("Server socket is using : " + port + ", and is now connected.");
-
-                } else {
-
-                    if(mBtToRequestSocket != null){
-                        mBtToRequestSocket.Stop();
-                        mBtToRequestSocket = null;
+                mBtToRequestSocket = new BtToRequestSocket(bluetoothSocket, new BtSocketDisconnectedCallBack() {
+                    //Called when disconnect event happens, so we can stop & clean everything now.
+                    @Override
+                    public void Disconnected(Thread who, String Error) {
+                        if (mBtToRequestSocket != null) {
+                            print_debug("BT Request socket disconnected");
+                            mBtToRequestSocket.Stop();
+                            mBtToRequestSocket = null;
+                        }
                     }
-
-                    mBtToRequestSocket = new BtToRequestSocket(bluetoothSocket, mHandler);
-                    mBtToRequestSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
-                    mBtToRequestSocket.setPort(getFreePort());
-                    mBtToRequestSocket.start();
-
-                    int port = mBtToRequestSocket.GetLocalHostPort();
-                    print_debug("Request socket is using : " + port);
-                    if(mConnectStatusCallback != null){
-                        print_debug("Calling ConnectionStatusUpdate with port :" + port);
-                        mConnectStatusCallback.ConnectionStatusUpdate(null,port);
+                }, new BtToRequestSocket.ReadyForIncoming() {
+                    // there is a good chance on race condition where the node.js gets to do their client socket
+                    // before we got into the accept line executed, thus this callback takes care that we are ready before node.js is
+                    @Override
+                    public void listeningAndAcceptingNow(int port) {
+                        final int portTmp = port;
+                        print_debug("Request socket is using : " + portTmp);
+                        new Handler(jxcore.activity.getMainLooper()).postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (mConnectStatusCallback != null) {
+                                    print_debug("Calling ConnectionStatusUpdate with port :" + portTmp);
+                                    mConnectStatusCallback.ConnectionStatusUpdate(null, portTmp);
+                                }
+                            }
+                        }, 300);
                     }
+                });
+                mBtToRequestSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
+                mBtToRequestSocket.setPort(0);// setting port to zero, should automatically assign it later on.
+                mBtToRequestSocket.start();
+            }
+        }
+    }
+
+    //This is only called for mBtToServerSocket classes, since mBtToRequestSocket handles it in its own instance callback
+    @Override
+    public void Disconnected(Thread who, String Error) {
+
+        print_debug("BT Disconnected with error : " + Error);
+        if (mServerSocketList != null && who != null) {
+            for(int i = 0; i < mServerSocketList.size(); i++) {
+                BtToServerSocket tmp = mServerSocketList.get(i);
+                if (tmp != null && (tmp.getId() == who.getId())) {
+                    print_debug("Disconnect:::Stop : mBtToServerSocket :" + tmp.GetPeerName());
+                    tmp.Stop();
+                    mServerSocketList.remove(i);
+                    break;
                 }
             }
         }
     }
 
+    // if the peer that just made incoming connection has not been discovered yet, we'll ad it here
+    // thus allowing us to make connection back to it
     public void AddPeerIfNotDiscovered(BluetoothSocket bluetoothSocket, String peerId,String peerName,String peerAddress) {
 
         if (lastAvailableList == null) {
@@ -299,8 +350,9 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
     @Override
     public void ConnectionFailed(String peerId, String peerName, String peerAddress) {
-        if(mConnectStatusCallback != null){
-            mConnectStatusCallback.ConnectionStatusUpdate("Connection to " + peerId + " failed",-1);
+
+        if(mConnectStatusCallback != null) {
+            mConnectStatusCallback.ConnectionStatusUpdate("Connection to " + peerId + " failed", -1);
         }
     }
 
@@ -414,30 +466,6 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         return reply;
     }
 
-    // The Handler that gets disconnection events
-    private final Handler mHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case BtToRequestSocket.SOCKET_DISCONNEDTED:{
-                    if(mBtToRequestSocket != null) {
-                        print_debug("BT Request socket disconnected");
-                        mBtToRequestSocket.Stop();
-                        mBtToRequestSocket = null;
-                    }
-                }
-                break;
-                case BtToServerSocket.SOCKET_DISCONNEDTED: {
-                    if (mBtToServerSocket != null) {
-                        print_debug("BT Server socket disconnected");
-                        mBtToServerSocket.Stop();
-                        mBtToServerSocket = null;
-                    }
-                }
-                break;
-            }
-        }
-    };
 
     public void print_debug(String message){
         Log.i("!!!!hekpper!!", message);
