@@ -1,13 +1,14 @@
 "use strict";
 
-var copyDir = require('copy-dir');
+var fs = require('fs-extra-promise');
 
 console.log('copying files');
 
-copyDir('../../../thali', 'test/www/jxcore/thali', function (err) {
-  if (err) {
-    console.error('Error in copying files %s', err);
-  } else {
-    console.log('ok');
-  }
+fs.copyAsync('../../../thali', 'thali')
+.then(function() {
+  console.log("ok");
+  process.exit(0);
+}).catch(function(err) {
+  console.log("Error in copying files %s", err);
+  process.exit(1);
 });

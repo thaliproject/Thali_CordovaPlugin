@@ -78,38 +78,38 @@ Once built the library should be visible in:
 
 ## Unit Testing the Thali Cordova Plugin
 
-The Thali Cordova plugin uses the [Tape](https://www.npmjs.com/package/tape) tap-producing test harness for node and browsers.
+The Thali Cordova plugin uses the [Tape](https://www.npmjs.com/package/tape) tap-producing test harness for node 
+and browsers.
 
-### Desktop Testing
+Right now our testing framework is primarily designed to help us test as we are developing so we have a script
+that will automatically setup the test environment. Just do the following:
 
-Testing is available on the desktop for the Thali Cordova Plugin which uses a mock object to simulate the native Cordova `Mobile` calls.
-
-To ensure the test files are up to date, run the following in the project root which copies the files to the test proper test directory.
 ```
+$ cd Thali_CordovaPlugin/thali/install
+$ chmod u+x setUpTests.sh
 $ jx npm test
 ```
 
-To run the tests navigate to Thali_CordovaPlugin/sample/www/jxcore/test and run
+This will set up a parallel project called ThaliTest.
+
+### Desktop Testing
+
 ```
-$ jx install
+$ cd ThaliTest/www/jxcore
 $ jx thaliemitterspec.js
 ```
 
 ### Mobile Testing
 
-Testing is also available on the mobile devices as well.  This will use the regular `Mobile` calls directly through Cordova to talk to the 
-underlying system.
+Testing is also available on the mobile devices as well.  This will use the regular `Mobile` calls directly through 
+Cordova to talk to the underlying system.
 
-To ensure the test files are up to date, run the following in the project root which copies the files to the test proper test directory.
-```
-$ jx npm test
-```
+Go inside of the ThaliTest project and run
 
-To get started, copy the files from `plugins/org.thaliproject.p2p/sample/www` to the `www` folder of your Cordova project.
-
-Next, inside the `www/jxcore` root folder of your Cordova project, install the requirements for testing:
 ```
-$ jx install
+$ cordova build
 ```
 
-Finally, build the application using `cordova build` and run it on your device. The test results should be shown in your developer console.
+Now deploy with your favorite tool. Note that you need two phones running the tests at the same time in order to
+pass all the tests as some test our networking. You should be able to see the test results in your developer
+console.

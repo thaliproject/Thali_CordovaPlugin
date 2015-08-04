@@ -1,6 +1,6 @@
 {
   "name": "thali",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
@@ -33,5 +33,5 @@
   "bugs": {
     "url": "https://github.com/thaliproject/Thali_CordovaPlugin/issues"
   },
-  "homepage": "https://github.com/thaliproject/Thali_CordovaPlugin/tree/story_0_yarong#readme"
+  "homepage": "https://github.com/thaliproject/Thali_CordovaPlugin/tree/story_0#readme"
 }

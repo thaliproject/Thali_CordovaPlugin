@@ -194,11 +194,9 @@ function muxServerBridge(tcpEndpointServerPort) {
     stream.pipe(clientSocket).pipe(stream);
   });
 
-  var server = net.createServer(function(incomingClientSocket) {
+  return net.createServer(function(incomingClientSocket) {
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
   });
-
-  return server;
 }
 
 function muxClientBridge(localP2PTcpServerPort, peer) {

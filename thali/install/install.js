@@ -214,7 +214,7 @@ module.exports = function(callBack) {
     
     var thaliProjectName = "thaliproject";
     var thaliDepotName = "Thali_CordovaPlugin";
-    var thaliBranchName = "story_0_yarong";
+    var thaliBranchName = "story_0";
     var getThaliCordovaPluginZip = 
         doesMagicDirectoryNamedExist(thaliDontCheckIn) ?
             copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, thaliDepotName, thaliBranchName) :

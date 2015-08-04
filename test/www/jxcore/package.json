@@ -17,11 +17,12 @@
   "dependencies": {
     "ejs": "^2.3.3",
     "express": "^4.13.1",
-    "multiplex": "^6.2.2"
+    "multiplex": "^6.2.2",
+    "thali": "^1.0.18"
   },
   "devDependencies": {
     "randomstring": "^1.0.7",
     "tape": "^4.0.0",
-    "copy-dir": "0.0.7"
+    "fs-extra-promise": "^0.2.0"
   }
 }

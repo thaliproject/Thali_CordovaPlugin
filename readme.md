@@ -81,9 +81,9 @@ Now you can run your app.
 Note that Thali uses a subdirectory in your project called thaliDontCheckin to manage certain downloads. Per the name of the directory,
 please don't check it in to your repro.
 
-If you want to upgrade to a newer version of Thali_CordovaPlugin all you have to do is just edit your package.json with the version you want
-and then run 'jx install --autoremove "*.gz"'. This will automatically update the Javascript files as well as uninstall the old plugin and 
-install the new plugin.
+If you want to upgrade to a newer version of Thali_CordovaPlugin all you have to do is just edit your package.json 
+with the version you want and then run 'jx install'. This will automatically update the Javascript files as well 
+as uninstall the old plugin and install the new plugin.
 
 ### Documentation
 
