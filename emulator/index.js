@@ -18,8 +18,8 @@ app1.disable('x-powered-by');
 app2.disable('x-powered-by');
 
 // Add Express PouchDB
-app1.use('/db', expressPouchDB)(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
-app2.use('/db', expressPouchDB)(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
+app1.use('/db', expressPouchDB)(LevelDownPouchDB, { mode: 'minimumForPouchDB'});
+app2.use('/db', expressPouchDB)(LevelDownPouchDB, { mode: 'minimumForPouchDB'});
 var db1 = new LevelDownPouchDB('thali');
 var db2 = new LevelDownPouchDB('thali');
 

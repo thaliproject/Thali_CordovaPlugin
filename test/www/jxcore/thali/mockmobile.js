@@ -55,4 +55,5 @@ NativeCall.prototype = {
 };
 
 
+//noinspection JSUndefinedPropertyAssignment
 global.Mobile = Mobile;

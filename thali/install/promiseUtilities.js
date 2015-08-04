@@ -1,8 +1,8 @@
-'use strict'
+'use strict';
 var exec = require('child_process').exec;
 var fs = require('fs-extra');
 var Promise = require('lie');
-var https = require('https')
+var https = require('https');
 
 exports.readFilePromise = function(filename) {
     return new Promise(function(resolve, reject) {
@@ -14,7 +14,7 @@ exports.readFilePromise = function(filename) {
           } 
        });
     });
-}
+};
 
 exports.writeFilePromise =function(filename, data) {
     return new Promise(function(resolve, reject) {
@@ -26,7 +26,7 @@ exports.writeFilePromise =function(filename, data) {
             }
         })
     });
-}
+};
 
 exports.execPromise = function(command, cwd) {
     return new Promise(function(resolve, reject) {
@@ -40,7 +40,7 @@ exports.execPromise = function(command, cwd) {
                 resolve(true);      
             });
     });                    
-}
+};
 
 exports.overwriteFilePromise = function(source, destination) {
     return new Promise(function(resolve, reject) {
@@ -52,7 +52,7 @@ exports.overwriteFilePromise = function(source, destination) {
             resolve(true);
         })
     });
-}
+};
 
 exports.httpRequestPromise =function(method, urlObject) {
     if (method != "GET" && method != "HEAD") {
@@ -80,4 +80,4 @@ exports.httpRequestPromise =function(method, urlObject) {
         
         req.end();        
     });
-}
+};

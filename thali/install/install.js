@@ -2,7 +2,7 @@
 'use strict';
 var exec = require('child_process').exec;
 var path = require('path');
-var https = require('https')
+var https = require('https');
 var unzip = require('unzip');
 var Promise = require('lie');
 var fs = require('fs-extra-promise');
@@ -152,20 +152,6 @@ function installGitHubZip(projectName, depotName, branchName, directoryToInstall
     });
 }
 
-function updatePluginXMLJXCoreLocation(thaliCordovaPluginDirectory, jxCoreDirectory) {
-    var pluginFileLocation = path.join(thaliCordovaPluginDirectory, "plugin.xml");
-    return fs.readFileAsync(pluginFileLocation).then(function(data) {
-        // BUBUG: This is fragile, a single character change and the replace won't work! We should really do a
-        // proper XML parse and output.
-        var replaceDependency = 
-            data.replace("<dependency id=\"io.jxcore.node\" url=\"https://github.com/jxcore/jxcore-cordova\" />",
-                         "<dependency id=\"io.jxcore.node\" subdir=\"" + jxCoreDirectory + "\" />");
-       return fs.writeFileAsync(pluginFileLocation, replaceDependency);        
-    }).then(function() {
-        return thaliCordovaPluginDirectory;
-    });
-}
-
 function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     return fs.readFileAsync(weAddedPluginsFile).catch(function(err) {
         if (err) {
@@ -249,9 +235,7 @@ module.exports = function(callBack) {
         }
     }).then(function() {
         callBack(null, null);
-        return;
     }).catch(function(error) {
         callBack(error, null);
-        return;
     });     
-}
+};
