@@ -46,7 +46,7 @@ module.exports = {
               console.error('extracted public key is invalid');
               cb('extracted public key is invalid');
             }
-            var hash = generateSHA256Hash(publicKey);
+            var hash = generateSlicedSHA256Hash(publicKey, hashSizeInBytes);
             cb(null, hash);
           } catch(e) {
             console.error('error thrown by extractPublicKey() function');
@@ -66,10 +66,8 @@ module.exports = {
 * @param {Function} cb the callback which returns an error or PKCS12 content.
 */
 function getPKCS12Content(fileNameWithPath, cb) {
-  // check if file already exists
   fs.exists(fileNameWithPath, function (exists) {
     if(exists) {
-      // read the file
       fs.readFile(fileNameWithPath, function (err, pkcs12Content) {
         if (err) {
           console.error('failed to read the pkcs12 file - err: ', err);
@@ -78,17 +76,12 @@ function getPKCS12Content(fileNameWithPath, cb) {
         cb(null, pkcs12Content);
       });
     } else {
-      // create pkcs12 content
-      // the password is not secure because anyone who can get to the file can
-      // get to the app and thus can get the password.
-      // the password is used here only to satisfy the crypto/PKCS12 API.
       var pkcs12Content = crypto.pkcs12
         .createBundle(password, certname, country, organization);
         if (pkcs12Content.length <= 0) {
           console.error('failed to create pkcs12 content');
           cb('failed to create pkcs12Content');
         }
-      // write to the file
       fs.writeFile(fileNameWithPath, pkcs12Content, function (err) {
         if (err) {
           console.error('failed to save pkcs12Content - err: ', err);
@@ -100,11 +93,10 @@ function getPKCS12Content(fileNameWithPath, cb) {
   });
 }
 
-function generateSHA256Hash(publicKey) {
+function generateSlicedSHA256Hash(stringValueToHash, hashSizeInBytes) {
   var hash = crypto.createHash(macName);
-  hash.update(publicKey); //already encoded to 'base64'
+  hash.update(stringValueToHash);
   var fullSizeKeyHash = hash.digest('base64');
-  // slice it to the required size
   var slicedKeyHash = fullSizeKeyHash.slice(0, hashSizeInBytes);
   return slicedKeyHash;
 }
