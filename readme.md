@@ -75,6 +75,8 @@ To use Thali in a Cordova project one must do the following:
 5. In the www/jxcore directory run `find . -name "*.gz" -delete`
  * This step will go away in an upcoming release of JXCore that will support the `--autoremove "*.gz"` switch
 6. Make sure to run `cordova build` as this is critical to moving key files into place
+ * Yes, an exception did get thrown during the build. No, it isn't harmful. No, we haven't quite figured out
+ why it gets thrown, the verbose debug logs aren't saying anything useful.
 
 Now you can run your app.
 
