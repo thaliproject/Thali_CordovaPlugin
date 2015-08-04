@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" 
-    xmlns:android="http://schemas.android.com/apk/res/android" 
-    id="org.thaliproject.p2p" 
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    id="org.thaliproject.p2p"
     version="0.0.1">
     <name>ThaliPlugin</name>
     <description>ThaliPlugin to be used on top of JXcore</description>
     <license>MIT</license>
     <keywords>cordova,jxcore,node.js,thali</keywords>
-    <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova" />
-    
+    <dependency id="io.jxcore.node" url="../jxcore-cordova" />
+
     <engines>
         <engine name="cordova-android" version=">=3.2.0" />
         <engine name="android-sdk" version=">=19" />
     </engines>
-    
+
     <!-- Android -->
     <platform name="android">
         <config-file target="AndroidManifest.xml" parent="/*">
@@ -21,6 +21,7 @@
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
             <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+            <uses-sdk android:minSdkVersion="19" android:targetSdkVersion="22" />
         </config-file>
         <framework src="src/android/JXcore.gradle" custom="true" type="gradleReference" />
         <source-file src="src/android/java/io/jxcore/node/BtToRequestSocket.java" target-dir="src/io/jxcore/node/" />
@@ -29,6 +30,7 @@
         <source-file src="src/android/java/io/jxcore/node/BtConnectorHelper.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ConnectivityMonitor.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/BtSocketDisconnectedCallBack.java" target-dir="src/io/jxcore/node/" />
     </platform>
 
     <!-- iOS -->
@@ -57,5 +59,5 @@
         <header-file src="src/ios/THEPeerNetworking.h" />
         <source-file src="src/ios/THEPeerNetworking.m" />
     </platform>
-    
+
 </plugin>
