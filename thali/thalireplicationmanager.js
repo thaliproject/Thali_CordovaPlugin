@@ -4,7 +4,7 @@ var ThaliEmitter = require('./thaliemitter');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var net = require('net');
-var multiplex = require('multiplex');
+var tcpmultiplex = require('./tcpmultiplex');
 var validations = require('./validations');
 
 var e = new EventEmitter();
@@ -33,8 +33,7 @@ ThaliReplicationManager.events = {
   START_ERROR: 'startError',
   STOP_ERROR: 'stopError',
   CONNECT_ERROR: 'connectError',
-  DISCONNECT_ERROR: 'disconnectError',
-  SYNC_ERROR: 'syncError'
+  DISCONNECT_ERROR: 'disconnectError'
 };
 
 /**
@@ -57,7 +56,7 @@ ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
     return this.emit(ThaliReplicationManager.events.START_ERROR, new Error('There is already an existing serverBridge instance.'));
   }
 
-  this._serverBridge = muxServerBridge.call(this, port);
+  this._serverBridge = tcpmultiplex.muxServerBridge(port);
   this._serverBridge.listen(function () {
     this._serverBridgePort = this._serverBridge.address().port;
 
@@ -101,7 +100,7 @@ ThaliReplicationManager.prototype.stop = function () {
     } else {
       this.emit(ThaliReplicationManager.events.STOPPED);
     }
-  });
+  }.bind(this));
 };
 
 function networkChanged(status) {
@@ -170,7 +169,10 @@ function syncPeer(peer) {
     if (err) {
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
     } else {
-      var client = muxClientBridge.call(this, port, peer);
+      var client = tcpmultiplex.muxClientBridge(port, function (err) {
+        syncRetry.call(this, peer);
+      }.bind(this));
+
       this._clients[peer.peerIdentifier] = client;
       client.listen(function () {
         var localPort = client.address().port;
@@ -184,66 +186,6 @@ function syncPeer(peer) {
       }.bind(this));
     }
   }.bind(this));
-}
-
-/* Mux Layer */
-
-function muxServerBridge(tcpEndpointServerPort) {
-  var serverPlex = multiplex({}, function(stream, id) {
-    var clientSocket = net.createConnection({port: tcpEndpointServerPort});
-    stream.pipe(clientSocket).pipe(stream);
-  });
-
-  var server = net.createServer(function(incomingClientSocket) {
-    incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
-  });
-
-  return server;
-}
-
-function muxClientBridge(localP2PTcpServerPort, peer) {
-  var clientPlex = multiplex();
-  var clientSocket = net.createConnection({port: localP2PTcpServerPort});
-
-  var server = net.createServer(function(incomingClientSocket) {
-    var clientStream = clientPlex.createStream();
-    incomingClientSocket.pipe(clientStream).pipe(incomingClientSocket);
-  });
-
-  cleanUpSocket(clientSocket, function() {
-    clientPlex.destroy();
-    try {
-      server.close();
-    } catch(e) {
-      this.emit(ThaliReplicationManager.events.SYNC_ERROR, e);
-    }
-    syncRetry.call(this, peer);
-  }.bind(this));
-
-  clientPlex.pipe(clientSocket).pipe(clientPlex);
-
-  return server;
-}
-
-function cleanUpSocket(socket, cleanUpCallBack) {
-  var isClosed = false;
-
-  socket.on('end', function() {
-    cleanUpCallBack();
-    isClosed = true;
-  });
-
-  socket.on('error', function(err) {
-    cleanUpCallBack(err);
-    isClosed = true;
-  });
-
-  socket.on('close', function() {
-    if (!isClosed) {
-      cleanUpCallBack();
-      isClosed = true;
-    }
-  });
 }
 
 module.exports = ThaliReplicationManager;
