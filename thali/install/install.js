@@ -1,4 +1,3 @@
-/// <reference path="../../typings/node/node.d.ts"/>
 'use strict';
 var exec = require('child_process').exec;
 var path = require('path');
@@ -173,8 +172,8 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
 }
 
 /**
- * This will copy the contents of a Thali_CordovaPlugin local depot to right directory in the
- * current Cordova project so it will be installed.
+ * This will copy the contents of a Thali_CordovaPlugin local depot to the right directory in the
+ * current Cordova project so it will be installed. This is used for local development only.
  */
 function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, depotName, branchName) {
     var targetDirectory = createUnzipedDirectoryPath(depotName, branchName, thaliDontCheckIn);
@@ -206,8 +205,8 @@ module.exports = function(callBack) {
     var appRootDirectory = path.join(__dirname, '../../../../../');
     var thaliDontCheckIn = path.join(appRootDirectory, "thaliDontCheckIn" );
     var appScriptsFolder = path.join(appRootDirectory, "plugins/org.thaliproject.p2p/scripts");
-    
     var jxcoreFolder = path.join(appRootDirectory, 'www/jxcore' );
+
     if(!(path.basename(jxcoreFolder) == 'jxcore')) {
         callBack('Could not locate JXCore folder. Exiting the thali plugin installation..', null);
     }

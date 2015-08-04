@@ -21,6 +21,9 @@
   },
   "keywords": [
     "Thali",
+    "JXCore",
+    "PouchDB",
+    "Multiplex",
     "cordova",
     "Plugin",
     "P2P",
