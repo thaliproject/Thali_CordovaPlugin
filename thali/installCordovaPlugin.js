@@ -7,14 +7,12 @@ exec('jx npm install', { cwd: installDirectory}, function(error, stdout, stderr)
    if (error) {
        console.log("Could not install dependencies for install directory. - " + error);
        process.exit(1);
-       return;
    } 
    
    require(installDirectory)(function(err, data) {
        if (err) {
            console.log("Failed with - " + err);
            process.exit(1);
-           return;
        }
        process.exit(0);
    });

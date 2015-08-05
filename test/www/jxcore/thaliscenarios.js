@@ -92,7 +92,7 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
             t.notOk(err2, 'Should be able to connect without error');
             t.ok(port > 0 && port <= 65536, 'Port should be within range');
 
-            testFunction(t, e, peer, function() {
+            testFunction(t, e, peer, port, function() {
               e.stopBroadcasting(function (err4) {
                 t.notOk(err4, 'Should be able to call stopBroadcasting without error');
                 t.end();
@@ -112,7 +112,7 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
 }
 
 test('ThaliEmitter can discover and connect to peers', function (t) {
-  connectWithRetryTestAndDisconnect(t, function(t, e, peer, cb) {
+  connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
     e.disconnect(peer.peerIdentifier, function (err3) {
       t.notOk(err3, 'Should be able to disconnect without error');
       cb();
@@ -121,7 +121,7 @@ test('ThaliEmitter can discover and connect to peers', function (t) {
 });
 
 test('ThaliEmitter can discover and connect to peers and then fail on double connect', function (t) {
-  connectWithRetryTestAndDisconnect(t, function(t, e, peer, cb) {
+  connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
     e.connect(peer.peerIdentifier, function(err3, port) {
       t.ok(err3, 'Should fail on double connect');
       e.disconnect(peer.peerIdentifier, function (err3) {
@@ -133,7 +133,7 @@ test('ThaliEmitter can discover and connect to peers and then fail on double con
 });
 
 test('ThaliEmitter can discover and connect to peers and then fail on double disconnect', function (t) {
-  connectWithRetryTestAndDisconnect(t, function (t, e, peer, cb) {
+  connectWithRetryTestAndDisconnect(t, function (t, e, peer, port, cb) {
     e.disconnect(peer.peerIdentifier, function (err3) {
       t.notOk(err3, 'Should be able to disconnect without error');
 
@@ -148,7 +148,7 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
 test('ThaliEmitter can connect and send data', function (t) {
   var len = 200;
   var testMessage = randomstring.generate(len);
-  connectWithRetryTestAndDisconnect(t, function(t, e, peer, cb) {
+  connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
     var clientSocket = net.createConnection( { port: port }, function () {
       clientSocket.write(testMessage);
     });

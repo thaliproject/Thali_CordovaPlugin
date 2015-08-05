@@ -6,8 +6,8 @@ var unzip = require('unzip');
 var Promise = require('lie');
 var fs = require('fs-extra-promise');
 var url = require('url');
-var fileNotFoundCode = "ENOENT";
-var magicDirectoryNameToDoLocalDevelopment = "localdev"; // If this file exists in the thaliDontCheckIn directory then
+var FILE_NOT_FOUND = "ENOENT";
+var MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT = "localdev"; // If this file exists in the thaliDontCheckIn directory then
                                                     // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
                                                     // project to this Cordova project.
 
@@ -30,7 +30,7 @@ function childProcessExecPromise(command, currentWorkingDirectory) {
 // an in-memory string. So we use this instead.
 function httpRequestPromise(method, urlObject) {
     if (method != "GET" && method != "HEAD") {
-        return Promise.reject("We only support GET or HEAD requests");
+        return Promise.reject(new Error("We only support GET or HEAD requests"));
     }
     
     return new Promise(function(resolve, reject) {
@@ -43,13 +43,13 @@ function httpRequestPromise(method, urlObject) {
                 
         var req = https.request(httpsRequestOptions, function(res) {
             if (res.statusCode != 200) {
-                reject("Did not get 200 for " + urlObject.href + ", instead got " + res.statusCode);
+                reject(new Error("Did not get 200 for " + urlObject.href + ", instead got " + res.statusCode));
                 return;
             }
             
             resolve(res);
         }).on('error', function(e) {
-            reject("Got error on " + urlObject.href + " - " + e);
+            reject(new Error("Got error on " + urlObject.href + " - " + e));
         });      
         
         req.end();        
@@ -64,7 +64,7 @@ function getEtagFromEtagFile(depotName, branchName, directoryToInstallIn) {
     var etagFileLocation = getEtagFileLocation(depotName, branchName, directoryToInstallIn);
     return fs.readFileAsync(etagFileLocation)
     .catch(function(err) {
-        if (err.code != fileNotFoundCode) {
+        if (err.code != FILE_NOT_FOUND) {
             return Promise.reject(err);
         } else {
             return Promise.resolve();
@@ -83,7 +83,7 @@ function writeToEtagFile(depotName, branchName, directoryToInstallIn, httpRespon
     var etag = returnEtagFromResponse(httpResponse);
     
     if (etag == null) {
-        return Promise.reject("Did not get ETag header, something is wrong because Github always sends one!");
+        return Promise.reject(new Error("Did not get ETag header, something is wrong because Github always sends one!"));
     }
         
     var etagFileLocation = getEtagFileLocation(depotName, branchName, directoryToInstallIn);
@@ -114,13 +114,13 @@ function doGitHubEtagsMatch(projectName, depotName, branchName, directoryToInsta
     });
 }
 
-function createUnzipedDirectoryPath(depotName, branchName, directoryToInstallIn) {
+function createUnzippedDirectoryPath(depotName, branchName, directoryToInstallIn) {
     return path.join(directoryToInstallIn, depotName + "-" + branchName);
 }
 
 function createGitHubZipResponse(depotName, branchName, directoryToInstallIn, directoryUpdated) {
     return {
-        unzipedDirectory: createUnzipedDirectoryPath(depotName, branchName, directoryToInstallIn),
+        unzipedDirectory: createUnzippedDirectoryPath(depotName, branchName, directoryToInstallIn),
         directoryUpdated: directoryUpdated
     };
 }
@@ -140,7 +140,7 @@ function installGitHubZip(projectName, depotName, branchName, directoryToInstall
                 .on('close', function() {
                     resolve();
                 }).on('error', function(e) {
-                   reject("Could not extract zip file " + gitHubZipUrlObject.href + ", error was " + e); 
+                   reject(new Error("Could not extract zip file " + gitHubZipUrlObject.href + ", error was " + e));
                 });
             }).then(function() {
                 return writeToEtagFile(depotName, branchName, directoryToInstallIn, res);
@@ -154,7 +154,7 @@ function installGitHubZip(projectName, depotName, branchName, directoryToInstall
 function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     return fs.readFileAsync(weAddedPluginsFile).catch(function(err) {
         if (err) {
-            if (err.code == fileNotFoundCode) {
+            if (err.code == FILE_NOT_FOUND) {
                 return false;
             }
             
@@ -176,17 +176,17 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
  * current Cordova project so it will be installed. This is used for local development only.
  */
 function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, depotName, branchName) {
-    var targetDirectory = createUnzipedDirectoryPath(depotName, branchName, thaliDontCheckIn);
+    var targetDirectory = createUnzippedDirectoryPath(depotName, branchName, thaliDontCheckIn);
     var sourceDirectory = path.join(appRootDirectory, "../Thali_CordovaPlugin");
     return new Promise(function(resolve, reject) {
         fs.remove(targetDirectory, function(err) {
             if (err) {
-                reject("copyDevelopmentThaliCordovaPluginToProject remove failed with " + err);
+                reject(new Error("copyDevelopmentThaliCordovaPluginToProject remove failed with " + err));
                 return;
             }
            fs.copy(sourceDirectory, targetDirectory, function (err) {
                if (err) {
-                   reject("copyDevelopmentThaliCordovaPluginToProject failed with" + err);
+                   reject(new Error("copyDevelopmentThaliCordovaPluginToProject failed with" + err));
                    return;
                }
                resolve(createGitHubZipResponse(depotName, branchName, thaliDontCheckIn, true));
@@ -196,7 +196,7 @@ function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontC
 }
 
 function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
-    var magicFileLocation = path.join(thaliDontCheckIn, magicDirectoryNameToDoLocalDevelopment);
+    var magicFileLocation = path.join(thaliDontCheckIn, MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT);
     return fs.existsSync(magicFileLocation);
 }
 
@@ -233,7 +233,7 @@ module.exports = function(callBack) {
             });
         }
     }).then(function() {
-        callBack(null, null);
+        callBack();
     }).catch(function(error) {
         callBack(error, null);
     });     

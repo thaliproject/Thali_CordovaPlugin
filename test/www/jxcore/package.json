@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "Thali Cordova Plugin JXCore",
   "main": "thaliemitterspec.js",
-  "scripts": {
-    "test": "jx deploytest.js"
-  },
   "keywords": [
     "Thali",
     "JXCore",
@@ -22,7 +19,6 @@
   },
   "devDependencies": {
     "randomstring": "^1.0.7",
-    "tape": "^4.0.0",
-    "fs-extra-promise": "^0.2.0"
+    "tape": "^4.0.0"
   }
 }

@@ -5,15 +5,11 @@
   "main": "thalireplicationmanager.js",
   "dependencies": {
     "multiplex": "^6.2.2"
-  },
-  "devDependencies": {
-    "copy-dir": "0.0.7"
-  },
+  }
   "scripts": {
     "prepublish" : "jx install/prePublishThaliCordovaPlugin.js",
     "postpublish" : "jx install/postPublishThaliCordovaPlugin.js",
-    "postinstall" : "jx installCordovaPlugin.js", 
-    "test": "node ../build/deploytest.js"
+    "postinstall" : "jx installCordovaPlugin.js"
   },
   "repository": {
     "type": "git",
