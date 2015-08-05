@@ -52,9 +52,9 @@ module.exports = {
             console.error('error thrown by extractPublicKey() function');
             cb('error thrown by extractPublicKey() function');
           }
-        }); //getPKCS12Content
+        });
       }
-    }); //GetDocumentsPath
+    });
   }
 };
 
@@ -89,7 +89,7 @@ function getPKCS12Content(fileNameWithPath, cb) {
           cb('failed to create pkcs12Content');
         }
       // write to the file
-      fs.writeFile(fileNameWithPath, pkcs12Content, function (err) {
+      fs.writeFile(fileNameWithPath, pkcs12Content, {flags: 'wx'}, function (err) {
         if (err) {
           console.error('failed to save pkcs12Content - err: ', err);
           cb(err);

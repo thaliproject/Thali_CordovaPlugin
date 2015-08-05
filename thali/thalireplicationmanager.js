@@ -7,7 +7,11 @@ var net = require('net');
 var multiplex = require('multiplex');
 var validations = require('./validations');
 
-var currentDeviceIdentity;
+var deviceIdentityFlag = {
+  noDeviceIdentitySet: 0,
+  gettingDeviceIdentity: 1,
+  deviceIdentityAvailable: 2
+};
 
 var e = new EventEmitter();
 
@@ -17,6 +21,9 @@ var NETWORK_CHANGED = ThaliEmitter.events.NETWORK_CHANGED;
 inherits(ThaliReplicationManager, EventEmitter);
 
 function ThaliReplicationManager(db, emitter) {
+  this._deviceName = '';
+  this._deviceIdentityFlag = deviceIdentityFlag.noDeviceIdentitySet;
+  this._deviceIdentityListeners = [];
   this._db = db;
   this._emitter = (emitter || new ThaliEmitter());
   this._replications = {};
@@ -40,6 +47,37 @@ ThaliReplicationManager.events = {
 };
 
 /**
+* Returns the current device's id if available. If not, the provided callback
+* function is saved and called when the id does become available.
+* @param {Function} cb the callback which returns the current device's id.
+*/
+ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
+  if(this._deviceIdentityFlag == deviceIdentityFlag.deviceIdentityAvailable) {
+    cb(null, this._deviceName);
+  } else if(this._deviceIdentityFlag == deviceIdentityFlag.noDeviceIdentitySet) {
+    var cryptomanager = require('./thalicryptomanager');
+    this._deviceIdentityFlag = deviceIdentityFlag.gettingDeviceIdentity;
+    cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
+      if (err) {
+        this._deviceIdentityFlag = deviceIdentityFlag.noDeviceIdentitySet;
+        informDeviceIdentityListeners.call(this, err, null);
+        clearDeviceIdentityListeners.call(this);
+        cb(err);
+      } else {
+        this._deviceName = publicKeyHash;
+        this._deviceIdentityFlag = deviceIdentityFlag.deviceIdentityAvailable;
+        informDeviceIdentityListeners.call(this, null, publicKeyHash);
+        clearDeviceIdentityListeners.call(this);
+        cb(null, publicKeyHash);
+      }
+    }.bind(this));
+  } else {
+    // save the callback for future
+    this._deviceIdentityListeners.push(cb);
+  }
+}
+
+/**
 * Starts the Thali replication manager with the given port number and db name.
 * The device-id is obtained using the cryptomanager's API.
 * @param {Number} port the port number used for synchronization.
@@ -51,13 +89,12 @@ ThaliReplicationManager.prototype.start = function (port, dbName) {
   this.emit(ThaliReplicationManager.events.STARTING);
   
   this._port = port;
-  this._deviceName = currentDeviceIdentity;
   this._dbName = dbName;
   this._serverBridge = muxServerBridge.call(this, port);
   this._serverBridge.listen(function () {
     this._serverBridgePort = this._serverBridge.address().port;
 
-    this._emitter.startBroadcasting(currentDeviceIdentity, this._serverBridgePort, function (err) {
+    this._emitter.startBroadcasting(this._deviceName, this._serverBridgePort, function (err) {
       if (err) {
         this._isStarted = false;
         this.emit(ThaliReplicationManager.events.START_ERROR, err);
@@ -67,14 +104,12 @@ ThaliReplicationManager.prototype.start = function (port, dbName) {
         this._emitter.addListener(NETWORK_CHANGED, networkChanged.bind(this));
         this.emit(ThaliReplicationManager.events.STARTED);
       }
-    }.bind(this)); //startBroadcasting
-  }.bind(this)); //listen
+    }.bind(this));
+  }.bind(this));
 };
 
 /**
-* Starts the Thali replication manager with the given device name and port number
-* @param {String} deviceName the device name to advertise.
-* @param {Number} port the port number used for synchronization.
+* Retarts the Thali replication manager
 */
 ThaliReplicationManager.prototype._restart = function () {
   this.emit(ThaliReplicationManager.events.STARTING);
@@ -113,25 +148,15 @@ ThaliReplicationManager.prototype.stop = function () {
   });
 };
 
-/**
-* Returns the current device's id if available. If not, the provided callback
-* function is saved and called when the id does become available.
-* @param {Function} cb the callback which returns the current device's id.
-*/
-ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
-  if(currentDeviceIdentity) {
-    cb(null, currentDeviceIdentity);
-  } else {
-    var cryptomanager = require('./thalicryptomanager');
-    // get the device public-key-hash
-    cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
-      if (err) {
-        cb(err);
-      } else {
-        currentDeviceIdentity = publicKeyHash;
-        cb(null, currentDeviceIdentity);
-      }
-    });
+function informDeviceIdentityListeners(err, publicKeyHash) {
+  this._deviceIdentityListeners.forEach(function (listener) {
+    listener(err, publicKeyHash);
+  });
+}
+
+function clearDeviceIdentityListeners() {
+  while(this._deviceIdentityListeners.length > 0) {
+    this._deviceIdentityListeners.pop();
   }
 }
 
