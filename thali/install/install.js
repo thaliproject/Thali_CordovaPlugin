@@ -208,7 +208,7 @@ module.exports = function(callBack) {
     var jxcoreFolder = path.join(appRootDirectory, 'www/jxcore' );
 
     if(!(path.basename(jxcoreFolder) == 'jxcore')) {
-        callBack('Could not locate JXCore folder. Exiting the thali plugin installation..', null);
+        callBack(new Error('Could not locate JXCore folder. Exiting the thali plugin installation..'), null);
     }
     
     var thaliProjectName = "thaliproject";
