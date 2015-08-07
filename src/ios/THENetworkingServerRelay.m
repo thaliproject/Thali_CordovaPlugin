@@ -27,6 +27,11 @@
     return self;
 }
 
+-(void)dealloc
+{
+    [self stop];
+}
+
 -(BOOL)start
 {
     if (_inputStream != nil && _outputStream != nil) 
@@ -67,6 +72,8 @@
 
 -(void)stop
 {
+    NSLog(@"server: relay stopping");
+
     [_socket setDelegate:nil];
     [_socket disconnect];
     _socket = nil;

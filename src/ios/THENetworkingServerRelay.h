@@ -12,5 +12,6 @@
 
 -(BOOL)start;
 -(void)stop;
+-(void)dealloc;
 
 @end

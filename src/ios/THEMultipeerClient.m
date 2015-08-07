@@ -306,20 +306,21 @@ didReceiveStream:(NSInputStream *)inputStream
             // Not connected.
             case MCSessionStateNotConnected:
             {
-                NSLog(@"client: NotConnected to %@", serverDescriptor.peerIdentifier);
+                NSLog(@"client: not connected");
+
+                [serverDescriptor.clientRelay stop];
+                serverDescriptor.clientRelay = nil;
 
                 [serverDescriptor setConnectionState:THEPeerDescriptorStateNotConnected];
                 [serverDescriptor setOutputStream:nil];
                 [serverDescriptor setInputStream:nil];
-                [serverDescriptor.clientRelay stop];
-                serverDescriptor.clientRelay = nil;
             }
             break;
                 
             // Connecting.
             case MCSessionStateConnecting:
             {
-                NSLog(@"client: Connecting to %@", serverDescriptor.peerIdentifier);
+                NSLog(@"client: connecting");
                 [serverDescriptor setConnectionState:THEPeerDescriptorStateConnecting];
             }
             break;
