@@ -6,6 +6,7 @@ var inherits = require('util').inherits;
 var net = require('net');
 var multiplex = require('multiplex');
 var validations = require('./validations');
+var cryptomanager = require('./thalicryptomanager');
 
 var deviceIdentityFlag = {
   noDeviceIdentitySet: 0,
@@ -54,27 +55,40 @@ ThaliReplicationManager.events = {
 ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
   if(this._deviceIdentityFlag == deviceIdentityFlag.deviceIdentityAvailable) {
     cb(null, this._deviceName);
-  } else if(this._deviceIdentityFlag == deviceIdentityFlag.noDeviceIdentitySet) {
-    var cryptomanager = require('./thalicryptomanager');
+    return;
+  }
+  if(this._deviceIdentityFlag == deviceIdentityFlag.noDeviceIdentitySet) {
     this._deviceIdentityFlag = deviceIdentityFlag.gettingDeviceIdentity;
-    cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
-      if (err) {
-        this._deviceIdentityFlag = deviceIdentityFlag.noDeviceIdentitySet;
-        informDeviceIdentityListeners.call(this, err, null);
-        clearDeviceIdentityListeners.call(this);
-        cb(err);
-      } else {
-        this._deviceName = publicKeyHash;
-        this._deviceIdentityFlag = deviceIdentityFlag.deviceIdentityAvailable;
-        informDeviceIdentityListeners.call(this, null, publicKeyHash);
-        clearDeviceIdentityListeners.call(this);
-        cb(null, publicKeyHash);
-      }
-    }.bind(this));
-  } else {
+    getPublicKeyHash.call(this, cb);
+    return;
+  }
+  if(this._deviceIdentityFlag == deviceIdentityFlag.gettingDeviceIdentity) {
     // save the callback for future
     this._deviceIdentityListeners.push(cb);
   }
+}
+
+function getPublicKeyHash(cb) {
+  cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
+    if (err) {
+      this._deviceIdentityFlag = deviceIdentityFlag.noDeviceIdentitySet;
+      informDeviceIdentityListeners.call(this, err, null);
+      this._deviceIdentityListeners = [];
+      cb(err);
+    } else {
+      this._deviceName = publicKeyHash;
+      this._deviceIdentityFlag = deviceIdentityFlag.deviceIdentityAvailable;
+      informDeviceIdentityListeners.call(this, null, publicKeyHash);
+      this._deviceIdentityListeners = [];
+      cb(null, publicKeyHash);
+    }
+  }.bind(this));
+}
+
+function informDeviceIdentityListeners(err, publicKeyHash) {
+  this._deviceIdentityListeners.forEach(function (listener) {
+    listener(err, publicKeyHash);
+  });
 }
 
 /**
@@ -86,6 +100,25 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
 ThaliReplicationManager.prototype.start = function (port, dbName) {
   validations.ensureValidPort(port);
   validations.ensureNonNullOrEmptyString(dbName, 'dbName');
+  
+  // get the device identity first if the user did not do it
+  if(!this._deviceName) {
+    this._deviceIdentityFlag = deviceIdentityFlag.gettingDeviceIdentity;
+    getPublicKeyHash.call(this, function(err, publicKeyHash) {
+      if(err) {
+        this._isStarted = false;
+        this.emit(ThaliReplicationManager.events.START_ERROR, err);
+        return;
+      }
+      startReplicationManager.call(this, port, dbName);
+    }.bind(this));
+  } else {
+    startReplicationManager.call(this, port, dbName);
+  }
+};
+
+
+function startReplicationManager(port, dbName) {
   this.emit(ThaliReplicationManager.events.STARTING);
   
   this._port = port;
@@ -106,7 +139,8 @@ ThaliReplicationManager.prototype.start = function (port, dbName) {
       }
     }.bind(this));
   }.bind(this));
-};
+}
+
 
 /**
 * Retarts the Thali replication manager
@@ -147,18 +181,6 @@ ThaliReplicationManager.prototype.stop = function () {
     }
   });
 };
-
-function informDeviceIdentityListeners(err, publicKeyHash) {
-  this._deviceIdentityListeners.forEach(function (listener) {
-    listener(err, publicKeyHash);
-  });
-}
-
-function clearDeviceIdentityListeners() {
-  while(this._deviceIdentityListeners.length > 0) {
-    this._deviceIdentityListeners.pop();
-  }
-}
 
 function networkChanged(status) {
   if (!status.isAvailable && this._isStarted) {
