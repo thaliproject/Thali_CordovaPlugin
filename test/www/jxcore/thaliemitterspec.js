@@ -1,5 +1,7 @@
-require('../thali/mockmobile');
-var ThaliEmitter = require('../thali/thaliemitter');
+"use strict";
+
+require('./mockmobile');
+var ThaliEmitter = require('thali/thaliemitter');
 var test = require('tape');
 
 function noop () { }

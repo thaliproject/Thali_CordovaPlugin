@@ -53,6 +53,10 @@ ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
   this._port = port;
   this._deviceName = deviceName;
   this._dbName = dbName;
+  if (this._isStarted || !!this._serverBridge) {
+    return this.emit(ThaliReplicationManager.events.START_ERROR, new Error('There is already an existing serverBridge instance.'));
+  }
+
   this._serverBridge = muxServerBridge.call(this, port);
   this._serverBridge.listen(function () {
     this._serverBridgePort = this._serverBridge.address().port;
@@ -79,23 +83,25 @@ ThaliReplicationManager.prototype.stop = function () {
   this.emit(ThaliReplicationManager.events.STOPPING);
 
   this._emitter.stopBroadcasting(function (err) {
+    this._emitter.removeAllListeners(PEER_AVAILABILITY_CHANGED);
+    this._emitter.removeAllListeners(NETWORK_CHANGED);
+
+    Object.keys(this._replications).forEach(function (key) {
+      var item = this._replications[key];
+      item.from.cancel();
+      item.to.cancel();
+    }, this);
+
+    this._serverBridge.close();
+    this._serverBridge = null;
+    this._isStarted = false;
+
     if (err) {
       this.emit(ThaliReplicationManager.events.STOP_ERROR, err);
     } else {
-      this._emitter.removeAllListeners(PEER_AVAILABILITY_CHANGED);
-      this._emitter.removeAllListeners(NETWORK_CHANGED);
-
-      Object.keys(this._replications).forEach(function (key) {
-        var item = this._replications[key];
-        item.from.cancel();
-        item.to.cancel();
-      }, this);
-
-      this._serverBridge.close();
-      this._isStarted = false;
       this.emit(ThaliReplicationManager.events.STOPPED);
     }
-  });
+  }.bind(this));
 };
 
 function networkChanged(status) {
@@ -188,11 +194,9 @@ function muxServerBridge(tcpEndpointServerPort) {
     stream.pipe(clientSocket).pipe(stream);
   });
 
-  var server = net.createServer(function(incomingClientSocket) {
+  return net.createServer(function(incomingClientSocket) {
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
   });
-
-  return server;
 }
 
 function muxClientBridge(localP2PTcpServerPort, peer) {

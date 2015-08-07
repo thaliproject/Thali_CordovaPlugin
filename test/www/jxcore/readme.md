@@ -1,12 +1,14 @@
-# Thali Cordova Plugin Replication Manager #
+# Thali Cordova Plugin Replication Manager Tests #
 
-### Contributing
+## Running the tests
+
+## Contributing
 
 If you see a mistake, find a bug, or you think there is a better way to do something, feel free to contribute.
-Email [thali-talk@thaliproject.org](mailto:thali-talk@thaliproject.org) to connect with other contributors and
-get started with Thali.
+Please see our [contribution page](http://thaliproject.org/WaysToContribute) for ways to connect and start
+contributing to Thali.
 
-### License
+## License
 
 Copyright (c) 2015 Microsoft
 

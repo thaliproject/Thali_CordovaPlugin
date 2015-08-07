@@ -1,7 +1,18 @@
 # Mac OS X
 *.DS_Store
+
+# IntelliJ
 .idea/
+.gradle
+gradle/
+gradlew
+gradlew.bat
 
 # Nodejs
 node_modules
 npm-debug.log
+# Cordova
+out/
+
+# VS Code
+.settings/
