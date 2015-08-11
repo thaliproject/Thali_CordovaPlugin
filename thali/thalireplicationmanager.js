@@ -22,6 +22,7 @@ function ThaliReplicationManager(db, emitter) {
   this._isStarted = false;
   this._serverBridge = null;
   this._serverBridgePort = 0;
+  this._isInRetry = false;
   EventEmitter.call(this);
 }
 
@@ -144,9 +145,17 @@ function syncPeers(peers) {
 }
 
 function syncRetry(peer) {
+  if (this._isInRetry) { return; }
+  this._isInRetry = true;
+
   var c = this._clients[peer.peerIdentifier];
   if (c) {
-    c.close();
+    try {
+      c.close();
+    } catch (e) {
+      console.log('Client close with error: %s', e);
+    }
+
     delete this._clients[peer.peerIdentifier];
   }
   var p = this._replications[peer.peerIdentifier];
@@ -157,18 +166,19 @@ function syncRetry(peer) {
   }
 
   this._emitter.disconnect(peer.peerIdentifier, function (err) {
-    if (err) {
-      this.emit(ThaliReplicationManager.events.DISCONNECT_ERROR, err);
-    } else {
-      syncPeer.call(this, peer);
-    }
+    console.log('Disconnect error with error: %s', err);
+    this.emit(ThaliReplicationManager.events.DISCONNECT_ERROR, err);
+    this._isInRetry = false;
+    syncPeer.call(this, peer);
   }.bind(this));
 }
 
 function syncPeer(peer) {
   this._emitter.connect(peer.peerIdentifier, function (err, port) {
     if (err) {
+      console.log('Connect error with error: %s', err);
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
+      syncRetry.call(this, peer);
     } else {
       var client = muxClientBridge.call(this, port, peer);
       this._clients[peer.peerIdentifier] = client;
@@ -192,11 +202,44 @@ function muxServerBridge(tcpEndpointServerPort) {
   var serverPlex = multiplex({}, function(stream, id) {
     var clientSocket = net.createConnection({port: tcpEndpointServerPort});
     stream.pipe(clientSocket).pipe(stream);
+
+    clientSocket.on('end', function () {
+      clientSocket.destroy();
+    });
+
+    clientSocket.on('error', function (err) {
+      console.log('incoming client sockiet error %s', err);
+      clientSocket.destroy();
+    });
   });
 
-  return net.createServer(function(incomingClientSocket) {
+  var server = net.createServer(function(incomingClientSocket) {
+    incomingClientSocket.on('end', function () {
+      console.log('incoming client socket end');
+    });
+
+    incomingClientSocket.on('error', function (err) {
+      console.log('incoming client sockiet error %s', err);
+      incomingClientSocket.destroy();
+      server.close();
+    });
+
+    server.on('error', function (err) {
+      console.log('mux server bridge error %s', err);
+      incomingClientSocket.destroy();
+      server.close();
+    });
+
+    server.on('close', function () {
+      console.log('mux server bridge close');
+      incomingClientSocket.destroy();
+      serverPlex.destroy();
+    });
+
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
   });
+
+  return server;
 }
 
 function muxClientBridge(localP2PTcpServerPort, peer) {
