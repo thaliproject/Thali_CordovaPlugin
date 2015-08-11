@@ -26,44 +26,18 @@
 //
 
 (function () {
-  // Logs in Cordova.
-  function logInCordova(logEntry) {
-    var logEntriesDiv = document.getElementById('logEntries');
-    if (logEntriesDiv) {
-      var logEntryDiv = document.createElement('div');
-      logEntryDiv.className = 'logEntry';
-      logEntry = logEntry.replace('\n', '<br/>');
-      logEntry = logEntry.replace(' ', '&nbsp;');
-      logEntryDiv.innerHTML = logEntry;
-      logEntriesDiv.appendChild(logEntryDiv);
-    }
-  }
+  var inter = setInterval(function() {
+    if (typeof jxcore == 'undefined') { return; }
 
-  // Find out when JXcore is loaded.
-  var jxcoreLoadedInterval = setInterval(function () {
-    // HACK Repeat until jxcore is defined. When it is, it's loaded.
-    if (typeof jxcore == 'undefined') {
-      return;
-    }
+    clearInterval(inter);
 
-    // JXcore is loaded. Stop interval.
-    clearInterval(jxcoreLoadedInterval);
+    jxcore.isReady(function() {
 
-    // Set the ready function.
-    jxcore.isReady(function () {
-      // Log that JXcore is ready.
-      logInCordova('JXcore ready');
-
-      // Register logging function.
-      jxcore('logInCordova').register(logInCordova);
-
-      // Load app.js.
-      jxcore('app.js').loadMainFile(function (ret, err) {
+      jxcore('app.js').loadMainFile(function(ret, err) {
         if (err) {
-          alert('Error loading ThaliMobile app.js');
-          alert(err);
+          alert(JSON.stringify(err));
         }
       });
     });
-  }, 10);
-})();
+  }, 5);
+}());
