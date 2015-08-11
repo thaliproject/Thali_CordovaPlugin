@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/thaliproject/Thali_CordovaPlugin#readme",
   "devDependencies": {
+    "randomstring": "^1.0.7",
     "tape": "^4.0.0"
   },
   "dependencies": {

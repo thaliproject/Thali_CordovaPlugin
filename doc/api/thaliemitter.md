@@ -1,12 +1,14 @@
 # The `ThaliEmitter` class
 
-The `ThaliEmitter` class is a bridge between the native Cordova plugin and JavaScript to give you an easy to use interface for broadcasting availability and to connect and disconnect from peer clients.
+The `ThaliEmitter` class is a bridge between the native connectivity API and JavaScript to use the Thali local discovery and peer to peer capabilities with TCP/IP servers and clients without the rest of the Thali infrastructure needed.  This is intended to eventually be moved to its own NPM module.
 
 ## Usage
 
 This is the basic usage to listen for the `peerAvailabilityChanged` event as well as start broadcasting the availability of the current device.
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
 var emitter = new ThaliEmitter();
 
 emitter.on('peerAvailabilityChanged', function (peers) {
@@ -21,27 +23,64 @@ emitter.startBroadcasting('me', 9001, function (err) {
   if (err) {
     console.log(err);
   } else {
-    console.log('We are now broadcasting on port 9001');
+    console.log('We are now broadcasting availability on port 9001');
   }
 });
 ```
+
+## API
+
+## `ThaliEmitter` API
+- `ThaliReplicationManager` constructor
+
+### `ThaliEmitter` Instance Methods
+- `startBroadcasting(deviceName, portNumber, callback)`
+- `stopBroadcasting(callback)`
+- `connect(peerIdentifier, callback)`
+- `disconnect(peerIdentifier, callback)`
+
+### `ThaliEmitter` Events
+- `networkChanged`
+- `peerAvailabilityChanged`
+
+***
+
+## Constructor
+
+### `ThaliEmitter.constructor`
+
+This creates a new instance of the `ThaliEmitter` class which acts as a bridge between the native layer and JavaScript to provide local discovery and peer to peer communication with TCP/IP clients and servers.
+
+#### Example:
+
+```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+```
+
+***
 
 ## Methods
 
 ### `ThaliEmitter.prototype.startBroadcasting(deviceName, portNumber, callback)`
 
-This method starts advertising or broadcasting its availability at the following port that PouchDB/Express-PouchDB is listening.  
+This method instructs the native layer to broadcast the availability of the device under the specified deviceName and to direct any incoming connections to the specified port number available on localhost over TCP/IP.  Calling this method twice without a `stopBroadcasting` call in between will result in an error.
 
 #### Arguments:
 
 1. `deviceName` : `String` – the device name.
-2. `portNumber` : `Number` – obtained by the user of the code which indicates the port number of our local PouchDB/Express-PouchDB
+2. `portNumber` : `Number` – a port number to direct any incoming TCP/IP connections
 3. `callback` : `Function` – must be in the form of the following, `function (err)` where:
   - `err` : `Error` – an `Error` if one occurred, else `null`
 
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.startBroadcasting('me', 9001, function (err) {
   if (err) {
     console.log(err);
@@ -64,6 +103,10 @@ This method stops advertising or broadcasting of its availability.
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.startBroadcasting('me', 9001, function (err) {
   if (err) {
     console.log(err);
@@ -97,6 +140,10 @@ This method begins a connection to the given peer found during discoverability. 
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.on('peerAvailabilityChanged', function (peers) {
   peers.forEach(function (peer) {
 
@@ -127,6 +174,10 @@ This method disconnects from the given peer by the given peer identifier.  If th
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.on('peerAvailabilityChanged', function (peers) {
   peers.forEach(function (peer) {
 
@@ -160,6 +211,10 @@ This event is called when a peer’s availability has changed.
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.on('peerAvailabilityChanged', function (peers) {
   peers.forEach(function (peer) {
     console.log('Peer identifier %s', peer.peerIdentifier);
@@ -183,6 +238,10 @@ This event is called when the network has changed.
 #### Example:
 
 ```js
+var ThaliEmitter = require('thali/thaliemitter');
+
+var emitter = new ThaliEmitter();
+
 emitter.on('networkChanged', function (status) {
   console.log('Network is available? %s', status.isAvailable);
 })

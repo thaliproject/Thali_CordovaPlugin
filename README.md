@@ -138,14 +138,15 @@ The Thali Cordova plugin uses the [Tape](https://www.npmjs.com/package/tape) tap
 
 Testing is available on the desktop for the Thali Cordova Plugin which uses a mock object to simulate the native Cordova `Mobile` calls.
 
-To ensure the test files are up to date, run the following in the project root which copies the files to the test proper test directory.
+To ensure the test files are up to date, first go to test/www/jxcore and run the following in the project root which copies the files to the test proper test directory.
 ```
-$ npm test
+$ jx npm install
+$ jx npm run test
 ```
 
-To run the tests navigate to Thali_CordovaPlugin/sample/www/jxcore/test and run
+To run the tests navigate to Thali_CordovaPlugin/test/www/jxcore/test and run
 ```
-$ jx install
+$ jx npm install
 $ jx thaliemitterspec.js
 ```
 
@@ -153,19 +154,15 @@ $ jx thaliemitterspec.js
 
 Testing is also available on the mobile devices as well.  This will use the regular `Mobile` calls directly through Cordova to talk to the underlying system.
 
-To ensure the test files are up to date, run the following in the project root which copies the files to the test proper test directory.
+To ensure the test files are up to date, first go to test/www/jxcore and run the following in the project root which copies the files to the test proper test directory.
 ```
-$ npm test
-```
-
-To get started, copy the files from `plugins/org.thaliproject.p2p/sample/www` to the `www` folder of your Cordova project.
-
-Next, inside the `www/jxcore` root folder of your Cordova project, install the requirements for testing:
-```
-$ jx install
+$ jx npm install
+$ jx npm run test
 ```
 
-Finally, build the application using `cordova build` and run it on your device. The test results should be shown in your developer console.
+To get started, copy the files from `plugins/org.thaliproject.p2p/test/www` to the `www` folder of your Cordova project.
+
+Then, build the application using `cordova build` and run it on your device. The test results should be shown in your developer console.
 
 ### Documentation
 
