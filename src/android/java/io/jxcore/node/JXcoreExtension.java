@@ -13,6 +13,8 @@ import android.view.Display;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import org.thaliproject.p2p.BtConnectorHelper;
+import org.thaliproject.p2p.LifeCycleMonitor;
 import org.thaliproject.p2p.btconnectorlib.BTConnector;
 
 public class JXcoreExtension {

@@ -24,13 +24,13 @@
             <uses-sdk android:minSdkVersion="19" android:targetSdkVersion="22" />
         </config-file>
         <framework src="src/android/JXcore.gradle" custom="true" type="gradleReference" />
-        <source-file src="src/android/java/io/jxcore/node/BtToRequestSocket.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/BtToServerSocket.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/BtConnectorHelper.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/ConnectivityMonitor.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/BtSocketDisconnectedCallBack.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/org/thaliproject/p2p/BtToRequestSocket.java" target-dir="src/org/thaliproject/p2p/" />
+        <source-file src="src/android/java/org/thaliproject/p2p/BtToServerSocket.java" target-dir="src/org/thaliproject/p2p/" />
+        <source-file src="src/android/java/org/thaliproject/p2p/StreamCopyingThread.java" target-dir="src/org/thaliproject/p2p/" />
+        <source-file src="src/android/java/org/thaliproject/p2p/BtConnectorHelper.java" target-dir="src/org/thaliproject/p2p/" />
+        <source-file src="src/android/java/org/thaliproject/p2p/ConnectivityMonitor.java" target-dir="src/org/thaliproject/p2p/" />
+        <source-file src="src/android/java/org/thaliproject/p2p/LifeCycleMonitor.java" target-dir="src/org/thaliproject/p2p/" />
+        <source-file src="src/android/java/org/thaliproject/p2p/BtSocketDisconnectedCallBack.java" target-dir="src/org/thaliproject/p2p/" />
     </platform>
 
     <!-- iOS -->
