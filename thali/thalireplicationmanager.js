@@ -67,8 +67,16 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
         this._deviceName = publicKeyHash;
         this._deviceIdentityFlag = deviceIdentityFlag.deviceIdentityAvailable;
       }
-      informDeviceIdentityListeners.call(this, err, publicKeyHash);
+
+      // save the list of divice-identity-listeners locally and clear the
+      // global list. this will avoid a potential race condition if one of
+      // the callback functions tries to get the device identity again
+      // immediately.
+      var localCopyOfListeners = this._deviceIdentityListeners.slice();
       this._deviceIdentityListeners = [];
+      localCopyOfListeners.forEach(function (listener) {
+        listener(err, publicKeyHash);
+      });
     }.bind(this));
     return;
   }
@@ -77,13 +85,7 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
     this._deviceIdentityListeners.push(cb);
     return;
   }
-  throw 'deviceIdentityFlag is set to unknow state';
-}
-
-function informDeviceIdentityListeners(err, publicKeyHash) {
-  this._deviceIdentityListeners.forEach(function (listener) {
-    listener(err, publicKeyHash);
-  });
+  throw 'deviceIdentityFlag is set to unknown state';
 }
 
 /**

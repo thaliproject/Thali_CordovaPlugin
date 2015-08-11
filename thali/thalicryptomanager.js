@@ -15,58 +15,71 @@ var pkcs12FileName = '/pkcs12.pfx';
 var macName = 'SHA256';
 var hashSizeInBytes = 16;
 
-module.exports = {
-  
-  pkcs12FileName: pkcs12FileName,
-
-  hashSizeInBytes: hashSizeInBytes,
-
-  // these are needed to create the pkcs12 bundle  
-  password: password,
-  certname: certname,
-  country: country,
-  organization: organization,
-  
 /**
 * Checks if a PKCS12 file exists in a known location and if not present, it is
 * created. The public key is extracted from the PKCS12 content and it's SHA256
 * hash value is returned.
 * @param {Function} cb the callback which returns an error or the hash value.
 */
-  getPublicKeyHash: function (cb) {
-    // get the path where the PKCS12 file is saved
-    Mobile.GetDocumentsPath(function (err, fileLocation) {
-      if (err) {
-        console.error("GetDocumentsPath err: ", err);
-        cb(err);
-      } else {
-        var file = path.join(fileLocation, pkcs12FileName);
-        getPKCS12Content(file, function(err, pkcs12Content) {
-          if(err) {
-            console.error('failed to get pkcs12 content');
-            cb(err);
+exports.getPublicKeyHash = function (cb) {
+  // get the path where the PKCS12 file is saved
+  Mobile.GetDocumentsPath(function (err, fileLocation) {
+    if (err) {
+      console.error("GetDocumentsPath err: ", err);
+      cb(err);
+    } else {
+      var file = path.join(fileLocation, pkcs12FileName);
+      getPKCS12Content(file, function(err, pkcs12Content) {
+        if(err) {
+          console.error('failed to get pkcs12 content');
+          cb(err);
+        }
+        
+        try {
+          var publicKey = crypto.pkcs12
+            .extractPublicKey(password, pkcs12Content);
+          // check if the extracted public key is good
+          if ( !publicKey || publicKey.length <= 0) {
+            console.error('extracted public key is invalid');
+            cb('extracted public key is invalid');
           }
-          
-          try {
-            var publicKey = crypto.pkcs12
-              .extractPublicKey(password, pkcs12Content);
-            // check if the extracted public key is good
-            if ( !publicKey || publicKey.length <= 0) {
-              console.error('extracted public key is invalid');
-              cb('extracted public key is invalid');
-            }
-            var hash = generateSlicedSHA256Hash(publicKey, hashSizeInBytes);
-            cb(null, hash);
-          } catch(e) {
-            console.error('error thrown by extractPublicKey() function');
-            cb('error thrown by extractPublicKey() function');
-          }
-        });
-      }
-    });
-  },
-  
-  generateSlicedSHA256Hash: generateSlicedSHA256Hash
+          var hash = generateSlicedSHA256Hash(publicKey, hashSizeInBytes);
+          cb(null, hash);
+        } catch(e) {
+          console.error('error thrown by extractPublicKey() function');
+          cb('error thrown by extractPublicKey() function');
+        }
+      });
+    }
+  });
+};
+
+exports.getSlicedSHA256Hash = function(stringValueToHash, hashSizeInBytes) {
+  return generateSlicedSHA256Hash(stringValueToHash, hashSizeInBytes);
+};
+
+exports.getPassword = function() {
+  return password;
+};
+
+exports.getCertname = function() {
+  return certname;
+};
+
+exports.getCountry = function() {
+  return country;
+};
+
+exports.getOrganization = function() {
+  return organization;
+};
+
+exports.getPkcs12FileName = function() {
+  return pkcs12FileName;
+};
+
+exports.getHashSizeInBytes = function() {
+  return hashSizeInBytes;
 };
 
 /**
