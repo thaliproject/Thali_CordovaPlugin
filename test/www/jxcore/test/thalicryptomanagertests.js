@@ -1,27 +1,11 @@
 "use strict";
 
 require('./mockmobile');
-var fs = require('fs');
+var fs = require('fs-extra-promise');
 var path = require('path');
 var crypto = require('crypto');
 var test = require('tape');
 var cryptomanager = require('../thali/thalicryptomanager');
-
-
-function deleteFolder(fileLocation, file, cb) {
-  if(file) {
-    fs.unlink(file, function(err) {
-      if(err) {
-        console.error('failed to delete the pkcs12 file - err: ', err);
-      }
-      fs.rmdir(fileLocation);
-      cb();
-    });
-  } else {
-    fs.rmdir(fileLocation);
-    cb();
-  }
-}
 
 test('successfully create a new pkcs12 file and return hash value', function (t) {
   var errorMessage = null,
@@ -38,7 +22,10 @@ test('successfully create a new pkcs12 file and return hash value', function (t)
     fs.readFile(file, function (err, pkcs12Content) {
       if(err) {
         console.error('failed to read the pkcs12 file - err: ', err);
-        deleteFolder(fileLocation, file, function() {
+        fs.remove(fileLocation, function(err) {
+          if(err) {
+            console.log('could not remove folder - err: ', err);
+          }
           t.end();
           return;
         });
@@ -47,14 +34,20 @@ test('successfully create a new pkcs12 file and return hash value', function (t)
         extractPublicKey(cryptomanager.getPassword(), pkcs12Content);
       if(!publicKey || publicKey.length <= 0) {
         console.error('extracted public key is invalid');
-        deleteFolder(fileLocation, file, function() {
+        fs.remove(fileLocation, function(err) {
+          if(err) {
+            console.log('could not remove folder - err: ', err);
+          }
           t.end();
           return;
         });
       }
       t.equal(publicKeyHash, cryptomanager.
         getSlicedSHA256Hash(publicKey, cryptomanager.getHashSizeInBytes()));
-      deleteFolder(fileLocation, file, function() {
+      fs.remove(fileLocation, function(err) {
+        if(err) {
+          console.log('could not remove folder - err: ', err);
+        }
         t.end();
       });
     });
@@ -74,7 +67,10 @@ test('successfully read a previous pkcs12 file and return hash value',
     cryptomanager.getCertname(), cryptomanager.getCountry(), cryptomanager.getOrganization());
   if (pkcs12Content.length <= 0) {
     console.error('failed to create pkcs12 content');
-    deleteFolder(fileLocation, null, function() {
+    fs.remove(fileLocation, function(err) {
+      if(err) {
+        console.log('could not remove folder - err: ', err);
+      }
       t.end();
       return;
     });
@@ -84,7 +80,10 @@ test('successfully read a previous pkcs12 file and return hash value',
   fs.writeFile(file, pkcs12Content, {flags: 'wx'}, function (err) {
     if (err) {
       console.error('failed to save pkcs12Content - err: ', err);
-      deleteFolder(fileLocation, file, function() {
+      fs.remove(fileLocation, function(err) {
+        if(err) {
+          console.log('could not remove folder - err: ', err);
+        }
         t.end();
         return;
       });
@@ -94,7 +93,10 @@ test('successfully read a previous pkcs12 file and return hash value',
     extractPublicKey(cryptomanager.getPassword(), pkcs12Content);
     if(!publicKey || publicKey.length <= 0) {
       console.error('extracted public key is invalid');
-      deleteFolder(fileLocation, file, function() {
+      fs.remove(fileLocation, function(err) {
+        if(err) {
+          console.log('could not remove folder - err: ', err);
+        }
         t.end();
         return;
       });
@@ -104,7 +106,10 @@ test('successfully read a previous pkcs12 file and return hash value',
       t.equal(err, null);
       t.equal(publicKeyHash, cryptomanager.
         getSlicedSHA256Hash(publicKey, cryptomanager.getHashSizeInBytes()));
-      deleteFolder(fileLocation, file, function() {
+      fs.remove(fileLocation, function(err) {
+        if(err) {
+          console.log('could not remove folder - err: ', err);
+        }
         t.end();
       });
     });
