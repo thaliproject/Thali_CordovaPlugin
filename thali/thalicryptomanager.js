@@ -4,7 +4,6 @@ var crypto = require('crypto');
 var fs = require('fs');
 var path = require('path');
 
-
 // The password is not secure because anyone who can get to the file can get
 // to the app and thus can get the password. The password is used here only to
 // satisfy the crypto/PKCS12 APIs.
@@ -17,6 +16,17 @@ var macName = 'SHA256';
 var hashSizeInBytes = 16;
 
 module.exports = {
+  
+  pkcs12FileName: pkcs12FileName,
+
+  hashSizeInBytes: hashSizeInBytes,
+
+  // these are needed to create the pkcs12 bundle  
+  password: password,
+  certname: certname,
+  country: country,
+  organization: organization,
+  
 /**
 * Checks if a PKCS12 file exists in a known location and if not present, it is
 * created. The public key is extracted from the PKCS12 content and it's SHA256
@@ -38,7 +48,6 @@ module.exports = {
           }
           
           try {
-            // extract the public key
             var publicKey = crypto.pkcs12
               .extractPublicKey(password, pkcs12Content);
             // check if the extracted public key is good
@@ -55,7 +64,9 @@ module.exports = {
         });
       }
     });
-  }
+  },
+  
+  generateSlicedSHA256Hash: generateSlicedSHA256Hash
 };
 
 /**
@@ -78,10 +89,10 @@ function getPKCS12Content(fileNameWithPath, cb) {
     } else {
       var pkcs12Content = crypto.pkcs12
         .createBundle(password, certname, country, organization);
-        if (pkcs12Content.length <= 0) {
-          console.error('failed to create pkcs12 content');
-          cb('failed to create pkcs12Content');
-        }
+      if (pkcs12Content.length <= 0) {
+        console.error('failed to create pkcs12 content');
+        cb('failed to create pkcs12Content');
+      }
       fs.writeFile(fileNameWithPath, pkcs12Content, {flags: 'wx'}, function (err) {
         if (err) {
           console.error('failed to save pkcs12Content - err: ', err);
