@@ -43,19 +43,26 @@
         NSError *err = nil;
         if (![serverSocket acceptOnPort:0 error:&err])
         {
-            NSLog(@"client: relay failed to listen");
+            NSString *errorMsg = @"relay failed to listen";
+
+            NSLog(@"client: %@", errorMsg);
+            if ([self.delegate respondsToSelector:@selector(didNotConnectWithErrorMessage:withPeerIdentifier:)])
+            {
+                [self.delegate didNotConnectWithErrorMessage:errorMsg withPeerIdentifier:_peerIdentifier];
+            }
+
             return NO;
         }
         else
         {
             UInt16 port = [serverSocket localPort];
-            if ([self.delegate respondsToSelector:@selector(didGetLocalPort:withPeerIdentifier:)])
+            if ([self.delegate respondsToSelector:@selector(didConnectWithLocalPort:withPeerIdentifier:)])
             {
                 // This is the port to which the node client will connect in order
                 // to talk to the server
   
-                NSLog(@"client: relay calling didGetLocalPort");
-                [self.delegate didGetLocalPort:port withPeerIdentifier:_peerIdentifier];
+                NSLog(@"client: relay established");
+                [self.delegate didConnectWithLocalPort:port withPeerIdentifier:_peerIdentifier];
             }
             
             return YES;

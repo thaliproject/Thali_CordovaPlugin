@@ -114,6 +114,7 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
     [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
+        // Called only when v == matching peer
         THEServerPeerDescriptor *serverDescriptor = (THEServerPeerDescriptor *)v;
         if ([serverDescriptor connectionState] == THEPeerDescriptorStateNotConnected)
         {
@@ -149,12 +150,13 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
     [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
+        // Called only when v == matching peer
         THEServerPeerDescriptor *serverDescriptor = (THEServerPeerDescriptor *)v;
         if ([serverDescriptor connectionState] != THEPeerDescriptorStateNotConnected)
         {
+            success = YES;
             NSLog(@"client: disconnecting peer: %@", peerIdentifier);
 
-            success = (serverDescriptor != nil);
             [_clientSession cancelConnectPeer:[serverDescriptor peerID]];
         }
 
@@ -179,6 +181,11 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
         if (descriptor && ([descriptor.peerID hash] == [peerID hash]))
         {
             NSLog(@"client: Found existing peer: %@", info[PEER_IDENTIFIER_KEY]);
+
+            serverDescriptor = descriptor;
+            [serverDescriptor setVisible: YES];
+
+            // Returning nil to indicate we don't need to replace the existing record
             return nil;
         }
 
@@ -197,6 +204,7 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
     if (serverDescriptor)
     {
+        // A new peer or one that has become visible again
         if ([_peerNetworkingDelegate respondsToSelector:@selector(didFindPeerIdentifier:peerName:)])
         {
             [_peerNetworkingDelegate 

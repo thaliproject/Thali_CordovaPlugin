@@ -95,7 +95,7 @@
                 withPeerIdentifier:_peerIdentifier
             ];
 
-            [_clientRelay setDelegate:(id<THENetworkingClientRelayDelegate>)[THEAppContext singleton]];
+            [_clientRelay setDelegate:(id<THEConnectionStatusDelegate>)[THEAppContext singleton]];
 
             if ([_clientRelay start])
             {

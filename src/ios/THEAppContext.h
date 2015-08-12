@@ -27,10 +27,10 @@
 
 #import <Foundation/Foundation.h>
 #import "THEPeerNetworkingDelegate.h"
-#import "THENetworkingClientRelayDelegate.h"
+#import "THEConnectionStatusDelegate.h"
 
 // THEAppContext interface.
-@interface THEAppContext : NSObject <THEPeerNetworkingDelegate, THENetworkingClientRelayDelegate>
+@interface THEAppContext : NSObject <THEPeerNetworkingDelegate, THEConnectionStatusDelegate>
 
 // Class singleton.
 + (instancetype)singleton;
@@ -42,7 +42,7 @@
 - (BOOL)stopBroadcasting;
 
 // Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(uint))connectCallback;
+- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(NSString *, uint))connectCallback;
 
 // Disconnects from the peer with the specified peer idetifier.
 - (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;

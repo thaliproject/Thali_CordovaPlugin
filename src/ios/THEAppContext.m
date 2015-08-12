@@ -182,20 +182,25 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     return NO;
 }
 
-- (void)didGetLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier
+// ConnectionStatusDelegate
+////////////////////////////
+
+- (void)didConnectWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier;
 {
     pthread_mutex_lock(&_mutex);
 
-    void (^connectCallback)(uint) = _outstandingConnections[peerIdentifier];
+    void (^connectCallback)(NSString *, uint) = _outstandingConnections[peerIdentifier];
     if (connectCallback)
     {
-        connectCallback(port);
+        connectCallback(nil, port);
+        [_outstandingConnections removeObjectForKey: peerIdentifier];
     }
     else
     {
         NSLog(@"WARNING: didGetLocalPort when no outstanding connections");
     }
 
+    
     /*THEPeer * peer = _peers[peerIdentifier];
     if (peer)
     {
@@ -204,8 +209,26 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     pthread_mutex_unlock(&_mutex);
 }
 
+- (void)didNotConnectWithErrorMessage:(NSString *)errorMsg withPeerIdentifier:(NSString*)peerIdentifier
+{
+    pthread_mutex_lock(&_mutex);
+
+    void (^connectCallback)(NSString *, uint) = _outstandingConnections[peerIdentifier];
+    if (connectCallback)
+    {
+        connectCallback(errorMsg, 0);
+        [_outstandingConnections removeObjectForKey: peerIdentifier];
+    }
+    else
+    {
+        NSLog(@"WARNING: Connection failure with no outstanding connection");
+    }
+
+    pthread_mutex_unlock(&_mutex);
+}
+
 // Connects to the peer server with the specified peer idetifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(uint))connectCallback
+- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(NSString *, uint))connectCallback
 {
     if ([_atomicFlagCommunicationsEnabled isClear])
     {
@@ -229,21 +252,23 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     }
     */
 
-    if ([_peerNetworking connectToPeerServerWithPeerIdentifier:peerIdentifier])
+    if (!_outstandingConnections[peerIdentifier])
     {
-        if (!_outstandingConnections[peerIdentifier])
+        if ([_peerNetworking connectToPeerServerWithPeerIdentifier:peerIdentifier])
         {
             _outstandingConnections[peerIdentifier] = connectCallback;
             return YES;
         }
         else
         {
-            NSLog(@"Already connecting to this peer");
+            NSString *errorMsg = [NSString stringWithFormat:@"Error connecting to %@", peerIdentifier];
+            connectCallback(errorMsg, 0);
         }
     }
     else
     {
-        NSLog(@"Error connecting to peer: %@", peerIdentifier);
+        NSString *errorMsg = [NSString stringWithFormat:@"Already connecting to peer: %@", peerIdentifier];
+        connectCallback(errorMsg, 0);
     }
 
     return NO;

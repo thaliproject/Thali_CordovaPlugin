@@ -87,14 +87,21 @@
         }
         else
         {
-            void (^connectCallback)(uint) = ^(uint port) {
-                [JXcore callEventCallback:callbackId withParams:@[[NSNull null], @(port)]];
+            void (^connectCallback)(NSString *, uint) = ^(NSString *errorMsg, uint port) 
+            {
+                if (errorMsg == nil)
+                {
+                    // Success
+                    [JXcore callEventCallback:callbackId withParams:@[[NSNull null], @(port)]];
+                }
+                else
+                {
+                    [JXcore callEventCallback:callbackId withParams:@[errorMsg, @(port)]];
+                }
             };
 
-            if (![theApp connectToPeer:params[0] connectCallback:connectCallback])
-            {
-                [JXcore callEventCallback:callbackId withParams:@[@"Connection error"]];
-            }
+            // Let the native side callback for any further error (or success)
+            [theApp connectToPeer:params[0] connectCallback:connectCallback];
         }
     } withName:@"Connect"];
 

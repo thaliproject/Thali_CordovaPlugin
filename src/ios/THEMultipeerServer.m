@@ -134,7 +134,7 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
             // it's probably from a re-launch of the client app and so should be treated
             // as a new connection
             NSLog(@"server: existing peer");
-            [_serverSession cancelConnectPeer:peerID];
+            //[_serverSession cancelConnectPeer:peerID];
         }
         return [[THEClientPeerDescriptor alloc] initWithPeerID:peerID withServerPort:_serverPort ]; 
     }];

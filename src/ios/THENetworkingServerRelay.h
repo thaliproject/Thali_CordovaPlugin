@@ -2,8 +2,6 @@
 #import "GCDAsyncSocket.h"
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
-#import "THENetworkingServerRelayDelegate.h"
-
 @interface THENetworkingServerRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate>
 
 -(instancetype)initWithInputStream:(NSInputStream *)inputStream
