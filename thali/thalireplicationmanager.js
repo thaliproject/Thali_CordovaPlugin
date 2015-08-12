@@ -178,7 +178,7 @@ function syncPeer(peer) {
     if (err) {
       console.log('Connect error with error: %s', err);
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
-      syncRetry.call(this, peer);
+      setImmediate(syncRetry.bind(this, peer));
     } else {
       var client = muxClientBridge.call(this, port, peer);
       this._clients[peer.peerIdentifier] = client;
@@ -258,7 +258,7 @@ function muxClientBridge(localP2PTcpServerPort, peer) {
     } catch(e) {
       this.emit(ThaliReplicationManager.events.SYNC_ERROR, e);
     }
-    syncRetry.call(this, peer);
+    setImmediate(syncRetry.bind(this, peer));
   }.bind(this));
 
   clientPlex.pipe(clientSocket).pipe(clientPlex);
