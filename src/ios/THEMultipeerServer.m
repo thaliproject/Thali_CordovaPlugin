@@ -37,9 +37,6 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
     // Transport level id
     MCPeerID * _peerId;
 
-    // The multipeer session
-    MCSession * _serverSession;
-
     // The multipeer service advertiser
     MCNearbyServiceAdvertiser * _nearbyServiceAdvertiser;
 
@@ -87,11 +84,6 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
     _clients = [[THEProtectedMutableDictionary alloc] init];
 
-    // Create a fresh serverSession, things get flaky if we don't
-    // do this periodically.
-    _serverSession = [[MCSession alloc] initWithPeer:_peerId];
-    _serverSession.delegate = self;
-
     // Start advertising our presence.. 
     _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
         initWithPeer:_peerId 
@@ -105,11 +97,8 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
 -(void) stop
 {
-    [_serverSession disconnect];
     [_nearbyServiceAdvertiser stopAdvertisingPeer];
-
     _nearbyServiceAdvertiser = nil;
-    _serverSession = nil;
     
     _clients = nil;
 }
@@ -122,6 +111,8 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
                      withContext:(NSData *)context
                invitationHandler:(void (^)(BOOL accept, MCSession * session))invitationHandler
 {
+    __block THEClientPeerDescriptor *clientDescriptor = nil;
+
     NSLog(@"server: didReceiveInvitationFromPeer");
 
     [_clients createWithKey:peerID createBlock:^NSObject *(NSObject *oldValue) {
@@ -134,12 +125,27 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
             // it's probably from a re-launch of the client app and so should be treated
             // as a new connection
             NSLog(@"server: existing peer");
-            //[_serverSession cancelConnectPeer:peerID];
+
+            clientDescriptor = descriptor;
+
+            // Destroy the previous session
+            [clientDescriptor.serverSession cancelConnectPeer:peerID];
+            [clientDescriptor.serverSession disconnect];
+            clientDescriptor.serverSession = nil;
         }
-        return [[THEClientPeerDescriptor alloc] initWithPeerID:peerID withServerPort:_serverPort ]; 
+        else
+        {
+            clientDescriptor = [[THEClientPeerDescriptor alloc] initWithPeerID:peerID withServerPort:_serverPort ];
+        }
+
+        // Create a new session for each client
+        clientDescriptor.serverSession = [[MCSession alloc] initWithPeer:_peerId];
+        clientDescriptor.serverSession.delegate = self;
+
+        return clientDescriptor;
     }];
 
-    invitationHandler(YES, _serverSession);
+    invitationHandler(YES, clientDescriptor.serverSession);
 }
 
 - (void)advertiser:(MCNearbyServiceAdvertiser *)advertiser didNotStartAdvertisingPeer:(NSError *)error

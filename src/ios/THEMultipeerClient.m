@@ -109,7 +109,6 @@ static const uint MAX_CONNECT_RETRIES = 5;
                                     toSession:serverDescriptor.clientSession
                                   withContext:nil
                                       timeout:60];
-
             return YES;
         }
         else
@@ -127,7 +126,7 @@ static const uint MAX_CONNECT_RETRIES = 5;
 
 -(BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
 {
-     __block BOOL success = NO;
+    __block BOOL success = NO;
 
     BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
         // Search for the peer with matching peerIdentifier

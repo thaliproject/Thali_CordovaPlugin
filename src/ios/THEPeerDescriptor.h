@@ -65,6 +65,9 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 @end;
 
 @interface THEClientPeerDescriptor : THEPeerDescriptor
+    
+    @property (nonatomic) MCSession * serverSession;
+
     @property (nonatomic) uint serverPort;
     @property (nonatomic, strong) THENetworkingServerRelay * serverRelay;
     - (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort;
