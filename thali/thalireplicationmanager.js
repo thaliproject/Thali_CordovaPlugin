@@ -128,6 +128,7 @@ function syncPeers(peers) {
       var client = this._clients[peer.peerIdentifier];
       if (client) {
         this._clients[peer.peerIdentifier].close(function (err) {
+          console.log('Client close error with error: %s', err);
           err && this.emit(ThaliReplicationManager.events.DISCONNECT_ERROR, err);
         });
         delete this._clients[peer.peerIdentifier];
@@ -138,6 +139,7 @@ function syncPeers(peers) {
       delete this._replications[peer.peerIdentifier];
 
       this._emitter.disconnect(peer.peerIdentifier, function (err) {
+        console.log('Disconnect error with error: %s', err);
         err && this.emit(ThaliReplicationManager.events.DISCONNECT_ERROR, err);
       }.bind(this));
     }
@@ -166,8 +168,10 @@ function syncRetry(peer) {
   }
 
   this._emitter.disconnect(peer.peerIdentifier, function (err) {
-    console.log('Disconnect error with error: %s', err);
-    this.emit(ThaliReplicationManager.events.DISCONNECT_ERROR, err);
+    if (err) {
+      console.log('Disconnect error with error: %s', err);
+      this.emit(ThaliReplicationManager.events.DISCONNECT_ERROR, err);
+    }
     this._isInRetry = false;
     syncPeer.call(this, peer);
   }.bind(this));
@@ -208,7 +212,7 @@ function muxServerBridge(tcpEndpointServerPort) {
     });
 
     clientSocket.on('error', function (err) {
-      console.log('incoming client sockiet error %s', err);
+      console.log('incoming client socket error %s', err);
       clientSocket.destroy();
     });
   });
@@ -219,7 +223,7 @@ function muxServerBridge(tcpEndpointServerPort) {
     });
 
     incomingClientSocket.on('error', function (err) {
-      console.log('incoming client sockiet error %s', err);
+      console.log('incoming client socket error %s', err);
       incomingClientSocket.destroy();
       server.close();
     });
