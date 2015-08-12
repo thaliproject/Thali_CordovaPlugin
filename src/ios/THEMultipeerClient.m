@@ -43,9 +43,6 @@ static const uint MAX_CONNECT_RETRIES = 5;
     // Transport level identifier
     MCPeerID * _peerId;
 
-    // The multipeer session
-    MCSession * _clientSession;
-
     // The multipeer browser
     MCNearbyServiceBrowser * _nearbyServiceBrowser;
 
@@ -84,12 +81,6 @@ static const uint MAX_CONNECT_RETRIES = 5;
 
     _servers = [[THEProtectedMutableDictionary alloc] init];
 
-    // Create a fresh session each time, things get flaky if we don't do this.
-    _clientSession = [[MCSession alloc] 
-        initWithPeer: _peerId securityIdentity:nil encryptionPreference:MCEncryptionNone
-    ];
-    [_clientSession setDelegate:self];
-
     _nearbyServiceBrowser = [[MCNearbyServiceBrowser alloc] initWithPeer:_peerId serviceType:_serviceType];
     [_nearbyServiceBrowser setDelegate:self];
 
@@ -98,11 +89,8 @@ static const uint MAX_CONNECT_RETRIES = 5;
 
 -(void) stop
 {
-    [_clientSession disconnect];
     [_nearbyServiceBrowser stopBrowsingForPeers];
-
     _nearbyServiceBrowser = nil;
-    _clientSession = nil;
 
     _servers = nil;
 }
@@ -118,7 +106,7 @@ static const uint MAX_CONNECT_RETRIES = 5;
         {
             NSLog(@"client: inviting peer");
             [_nearbyServiceBrowser invitePeer:[serverDescriptor peerID]
-                                    toSession:_clientSession
+                                    toSession:serverDescriptor.clientSession
                                   withContext:nil
                                       timeout:60];
 
@@ -153,6 +141,12 @@ static const uint MAX_CONNECT_RETRIES = 5;
         // Called only when v == matching peer
         THEServerPeerDescriptor *serverDescriptor = (THEServerPeerDescriptor *)v;
 
+        // Create a fresh session each time, things get flaky if we don't do this.
+        serverDescriptor.clientSession = [[MCSession alloc] 
+            initWithPeer: _peerId securityIdentity:nil encryptionPreference:MCEncryptionNone
+        ];
+        [serverDescriptor.clientSession setDelegate:self];
+
         // Start connection process from the top
         serverDescriptor.connectRetries = MAX_CONNECT_RETRIES;
         success = [self tryInviteToSessionWithPeerDescriptor:serverDescriptor];
@@ -184,8 +178,8 @@ static const uint MAX_CONNECT_RETRIES = 5;
             success = YES;
             NSLog(@"client: disconnecting peer: %@", peerIdentifier);
 
-            [_clientSession cancelConnectPeer:[serverDescriptor peerID]];
-            //[_clientSession disconnect];
+            [serverDescriptor.clientSession cancelConnectPeer:[serverDescriptor peerID]];
+            //[serverDescriptor.clientSession disconnect];
         }
 
         // Stop iterating
@@ -372,14 +366,14 @@ didReceiveStream:(NSInputStream *)inputStream
                 {
                     NSLog(@"client: retrying connection");
 
-                    [_clientSession cancelConnectPeer:[serverDescriptor peerID]];
-                    [_clientSession disconnect];
-                    _clientSession = nil;
+                    [serverDescriptor.clientSession cancelConnectPeer:[serverDescriptor peerID]];
+                    [serverDescriptor.clientSession disconnect];
+                    serverDescriptor.clientSession = nil;
 
-                    _clientSession = [[MCSession alloc] 
+                    serverDescriptor.clientSession = [[MCSession alloc] 
                         initWithPeer: _peerId securityIdentity:nil encryptionPreference:MCEncryptionNone
                     ];
-                    [_clientSession setDelegate:self];
+                    [serverDescriptor.clientSession setDelegate:self];
 
                     [self tryInviteToSessionWithPeerDescriptor:serverDescriptor];
                 }
