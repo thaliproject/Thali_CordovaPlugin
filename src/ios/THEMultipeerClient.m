@@ -308,12 +308,11 @@ didReceiveStream:(NSInputStream *)inputStream
             {
                 NSLog(@"client: not connected");
 
-                [serverDescriptor.clientRelay stop];
-                serverDescriptor.clientRelay = nil;
-
                 [serverDescriptor setConnectionState:THEPeerDescriptorStateNotConnected];
-                [serverDescriptor setOutputStream:nil];
+
+                serverDescriptor.clientRelay = nil;
                 [serverDescriptor setInputStream:nil];
+                [serverDescriptor setOutputStream:nil];
             }
             break;
                 

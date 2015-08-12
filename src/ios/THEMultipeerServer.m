@@ -206,9 +206,7 @@ didReceiveStream:(NSInputStream *)inputStream
             {
                 NSLog(@"server: session not connected");
 
-                [peerDescriptor.serverRelay stop];
                 peerDescriptor.serverRelay = nil;
-
                 [peerDescriptor setConnectionState:THEPeerDescriptorStateNotConnected];
                 [peerDescriptor setInputStream:nil];
                 [peerDescriptor setOutputStream:nil];
