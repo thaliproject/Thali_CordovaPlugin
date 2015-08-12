@@ -34,13 +34,25 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
 @implementation MultipeerServer
 {
+    // Transport level id
     MCPeerID * _peerId;
+
+    // The multipeer session
     MCSession * _serverSession;
 
-    uint _serverPort;
-    THEProtectedMutableDictionary *_clients;
-
+    // The multipeer service advertiser
     MCNearbyServiceAdvertiser * _nearbyServiceAdvertiser;
+
+    // Application level identifiers
+    NSString *_peerIdentifier;
+    NSString *_peerName;
+    NSString *_serviceType;
+
+    // The port on which the application level is listening
+    uint _serverPort;
+
+    // Map of discovered clients
+    THEProtectedMutableDictionary *_clients;
 }
 
 -(id) initWithPeerId:(MCPeerID *)peerId 
@@ -58,23 +70,13 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
     _peerId = peerId;
 
+    _peerName = peerName;
+    _peerIdentifier = peerIdentifier;
+    _serviceType = serviceType;
+
     // peer name doubles up as server port in current impl.
     // This is the port the node server is listening to on localhost
     _serverPort = [peerName intValue];
-
-    _serverSession = [[MCSession alloc] initWithPeer:_peerId];
-    _serverSession.delegate = self;
-   
-    // Keep track of the clients we've seen 
-    _clients = [[THEProtectedMutableDictionary alloc] init];
-    
-    _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
-        initWithPeer:peerId 
-        discoveryInfo:@{ PEER_IDENTIFIER_KEY: peerIdentifier, PEER_NAME_KEY: peerName } 
-        serviceType:serviceType
-    ];
-
-    [_nearbyServiceAdvertiser setDelegate:self];
 
     return self;
 }
@@ -82,6 +84,22 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 -(void) start
 {
     NSLog(@"server starting..");
+
+    _clients = [[THEProtectedMutableDictionary alloc] init];
+
+    // Create a fresh serverSession, things get flaky if we don't
+    // do this periodically.
+    _serverSession = [[MCSession alloc] initWithPeer:_peerId];
+    _serverSession.delegate = self;
+
+    // Start advertising our presence.. 
+    _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
+        initWithPeer:_peerId 
+        discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier, PEER_NAME_KEY: _peerName } 
+        serviceType:_serviceType
+    ];
+
+    [_nearbyServiceAdvertiser setDelegate:self];
     [_nearbyServiceAdvertiser startAdvertisingPeer];
 }
 
@@ -89,7 +107,11 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 {
     [_serverSession disconnect];
     [_nearbyServiceAdvertiser stopAdvertisingPeer];
+
     _nearbyServiceAdvertiser = nil;
+    _serverSession = nil;
+    
+    _clients = nil;
 }
 
 // MCNearbyServiceAdvertiserDelegate

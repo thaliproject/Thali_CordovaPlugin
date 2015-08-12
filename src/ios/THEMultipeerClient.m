@@ -34,13 +34,23 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
 @implementation MultipeerClient
 {
+    // Transport level identifier
     MCPeerID * _peerId;
+
+    // The multipeer session
     MCSession * _clientSession;
+
+    // The multipeer browser
     MCNearbyServiceBrowser * _nearbyServiceBrowser;
 
-    THEProtectedMutableDictionary *_servers;
+    // Application level service info
+    NSString *_serviceType;
 
+    // Delegate that will be informed when we discover a server
     id<THEPeerNetworkingDelegate>  _peerNetworkingDelegate;
+
+    // Map of discovered servers
+    THEProtectedMutableDictionary *_servers;
 }
 
 -(id) initWithPeerId:(MCPeerID *)peerId withServiceType:(NSString *)serviceType 
@@ -55,18 +65,9 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
     // Init the basic multipeer client session
 
     _peerId = peerId;
-
-    _clientSession = [[MCSession alloc] 
-        initWithPeer: _peerId securityIdentity:nil encryptionPreference:MCEncryptionNone
-    ];
-    [_clientSession setDelegate:self];
-
-    _servers = [[THEProtectedMutableDictionary alloc] init];
+    _serviceType = serviceType;
 
     _peerNetworkingDelegate = peerNetworkingDelegate;
-
-    _nearbyServiceBrowser = [[MCNearbyServiceBrowser alloc] initWithPeer:peerId serviceType:serviceType];
-    [_nearbyServiceBrowser setDelegate:self];
 
     return self;
 }
@@ -74,6 +75,18 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 -(void) start
 {
     NSLog(@"client starting..");
+
+    _servers = [[THEProtectedMutableDictionary alloc] init];
+
+    // Create a fresh session each time, things get flaky if we don't do this.
+    _clientSession = [[MCSession alloc] 
+        initWithPeer: _peerId securityIdentity:nil encryptionPreference:MCEncryptionNone
+    ];
+    [_clientSession setDelegate:self];
+
+    _nearbyServiceBrowser = [[MCNearbyServiceBrowser alloc] initWithPeer:_peerId serviceType:_serviceType];
+    [_nearbyServiceBrowser setDelegate:self];
+
     [_nearbyServiceBrowser startBrowsingForPeers];
 }
 
@@ -81,7 +94,11 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 {
     [_clientSession disconnect];
     [_nearbyServiceBrowser stopBrowsingForPeers];
+
     _nearbyServiceBrowser = nil;
+    _clientSession = nil;
+
+    _servers = nil;
 }
 
 -(BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
