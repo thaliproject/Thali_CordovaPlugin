@@ -52,6 +52,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 
 @interface THEServerPeerDescriptor : THEPeerDescriptor
 
+    @property (nonatomic) uint connectRetries;
     @property (nonatomic) NSString * peerIdentifier;
     @property (nonatomic) NSString * peerName;
     @property (nonatomic, strong) THENetworkingClientRelay * clientRelay;

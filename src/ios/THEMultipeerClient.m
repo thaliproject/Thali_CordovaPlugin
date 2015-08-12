@@ -32,6 +32,12 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 static NSString * const SERVER_OUTPUT_STREAM = @"ServerOutputStream";
 static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
+static const uint MAX_CONNECT_RETRIES = 5;
+
+@interface MultipeerClient()
+    -(BOOL) tryInviteToSessionWithPeerDescriptor:(THEServerPeerDescriptor *)serverDescriptor;
+@end
+
 @implementation MultipeerClient
 {
     // Transport level identifier
@@ -101,9 +107,39 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
     _servers = nil;
 }
 
+-(BOOL) tryInviteToSessionWithPeerDescriptor:(THEServerPeerDescriptor *)serverDescriptor
+{
+    // DON'T CALL THIS OUTSIDE A LOCK
+
+    if ([serverDescriptor connectionState] == THEPeerDescriptorStateNotConnected)
+    {
+        serverDescriptor.connectRetries--;
+        if (serverDescriptor.connectRetries > 0)
+        {
+            NSLog(@"client: inviting peer");
+            [_nearbyServiceBrowser invitePeer:[serverDescriptor peerID]
+                                    toSession:_clientSession
+                                  withContext:nil
+                                      timeout:60];
+
+            return YES;
+        }
+        else
+        {
+            NSLog(@"client: max connect retries exceeded");
+        }
+    }
+    else
+    {
+        NSLog(@"client: already connect(ing/ed)");
+    }
+
+    return NO;
+}
+
 -(BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
 {
-    __block BOOL success = NO;
+     __block BOOL success = NO;
 
     BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
         // Search for the peer with matching peerIdentifier
@@ -116,19 +152,10 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
         // Called only when v == matching peer
         THEServerPeerDescriptor *serverDescriptor = (THEServerPeerDescriptor *)v;
-        if ([serverDescriptor connectionState] == THEPeerDescriptorStateNotConnected)
-        {
-            success = YES;
-            NSLog(@"client: inviting peer");
-            [_nearbyServiceBrowser invitePeer:[serverDescriptor peerID]
-                                    toSession:_clientSession
-                                  withContext:nil
-                                      timeout:60];
-        }
-        else
-        {
-            NSLog(@"client: already connecting to %@", peerIdentifier);
-        }
+
+        // Start connection process from the top
+        serverDescriptor.connectRetries = MAX_CONNECT_RETRIES;
+        success = [self tryInviteToSessionWithPeerDescriptor:serverDescriptor];
 
         // Stop iterating
         return NO;
@@ -158,6 +185,7 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
             NSLog(@"client: disconnecting peer: %@", peerIdentifier);
 
             [_clientSession cancelConnectPeer:[serverDescriptor peerID]];
+            //[_clientSession disconnect];
         }
 
         // Stop iterating
@@ -333,11 +361,28 @@ didReceiveStream:(NSInputStream *)inputStream
             {
                 NSLog(@"client: not connected");
 
+                THEPeerDescriptorState prevState = serverDescriptor.connectionState;
                 [serverDescriptor setConnectionState:THEPeerDescriptorStateNotConnected];
 
                 serverDescriptor.clientRelay = nil;
                 [serverDescriptor setInputStream:nil];
                 [serverDescriptor setOutputStream:nil];
+
+                if (prevState == THEPeerDescriptorStateConnecting)
+                {
+                    NSLog(@"client: retrying connection");
+
+                    [_clientSession cancelConnectPeer:[serverDescriptor peerID]];
+                    [_clientSession disconnect];
+                    _clientSession = nil;
+
+                    _clientSession = [[MCSession alloc] 
+                        initWithPeer: _peerId securityIdentity:nil encryptionPreference:MCEncryptionNone
+                    ];
+                    [_clientSession setDelegate:self];
+
+                    [self tryInviteToSessionWithPeerDescriptor:serverDescriptor];
+                }
             }
             break;
                 

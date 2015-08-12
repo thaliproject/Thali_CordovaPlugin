@@ -76,7 +76,7 @@
     {
         return nil;
     }
-    
+
     _peerIdentifier = peerIdentifier;
     _peerName = peerName;
  
