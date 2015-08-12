@@ -207,7 +207,8 @@ function muxServerBridge(tcpEndpointServerPort) {
     var clientSocket = net.createConnection({port: tcpEndpointServerPort});
     stream.pipe(clientSocket).pipe(stream);
 
-    clientSocket.on('end', function () {
+    stream.on('error', function (err) {
+      console.log('Multiplex stream error %s', err);
       clientSocket.destroy();
     });
 
@@ -218,19 +219,18 @@ function muxServerBridge(tcpEndpointServerPort) {
   });
 
   var server = net.createServer(function(incomingClientSocket) {
-    incomingClientSocket.on('end', function () {
-      console.log('incoming client socket end');
-    });
 
     incomingClientSocket.on('error', function (err) {
       console.log('incoming client socket error %s', err);
       incomingClientSocket.destroy();
+      serverPlex.destroy();
       server.close();
     });
 
     server.on('error', function (err) {
       console.log('mux server bridge error %s', err);
       incomingClientSocket.destroy();
+      serverPlex.destroy();
       server.close();
     });
 
