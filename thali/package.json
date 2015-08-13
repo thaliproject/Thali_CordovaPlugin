@@ -4,7 +4,8 @@
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
-    "multiplex": "^6.2.2"
+    "multiplex": "^6.2.2",
+    "winston":"^1.0.1"
   },
   "scripts": {
     "prepublish" : "jx install/prePublishThaliCordovaPlugin.js",
