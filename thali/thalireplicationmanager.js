@@ -209,7 +209,6 @@ function muxServerBridge(tcpEndpointServerPort) {
 
     stream.on('error', function (err) {
       console.log('Multiplex stream error %s', err);
-      clientSocket.destroy();
     });
 
     clientSocket.on('error', function (err) {
@@ -222,7 +221,6 @@ function muxServerBridge(tcpEndpointServerPort) {
 
     incomingClientSocket.on('error', function (err) {
       console.log('incoming client socket error %s', err);
-      incomingClientSocket.destroy();
       serverPlex.destroy();
       server.close();
     });
@@ -242,6 +240,8 @@ function muxServerBridge(tcpEndpointServerPort) {
 
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
   });
+
+  server.setMaxListeners(100);
 
   return server;
 }
