@@ -43,7 +43,7 @@ exports.getPublicKeyHash = function (cb) {
             console.error('extracted public key is invalid');
             cb('extracted public key is invalid');
           }
-          var hash = generateSlicedSHA256Hash(publicKey, hashSizeInBytes);
+          var hash = exports.generateSlicedSHA256Hash(publicKey, hashSizeInBytes);
           cb(null, hash);
         } catch(e) {
           console.error('error thrown by extractPublicKey() function');
@@ -54,32 +54,24 @@ exports.getPublicKeyHash = function (cb) {
   });
 };
 
-exports.getSlicedSHA256Hash = function(stringValueToHash, hashSizeInBytes) {
-  return generateSlicedSHA256Hash(stringValueToHash, hashSizeInBytes);
+exports.generateSlicedSHA256Hash = function(stringValueToHash, hashSizeInBytes) {
+  var hash = crypto.createHash(macName);
+  hash.update(stringValueToHash);
+  var fullSizeKeyHash = hash.digest('base64');
+  var slicedKeyHash = fullSizeKeyHash.slice(0, hashSizeInBytes);
+  return slicedKeyHash;
 };
 
-exports.getPassword = function() {
-  return password;
-};
-
-exports.getCertname = function() {
-  return certname;
-};
-
-exports.getCountry = function() {
-  return country;
-};
-
-exports.getOrganization = function() {
-  return organization;
-};
-
-exports.getPkcs12FileName = function() {
-  return pkcs12FileName;
-};
-
-exports.getHashSizeInBytes = function() {
-  return hashSizeInBytes;
+exports.getConfigValuesForTestingOnly = function() {
+  var configValues = {
+    password: password,
+    certname: certname,
+    country: country,
+    organization: organization,
+    pkcs12FileName: pkcs12FileName,
+    hashSizeInBytes: hashSizeInBytes
+  };
+  return configValues;
 };
 
 /**
@@ -115,12 +107,4 @@ function getPKCS12Content(fileNameWithPath, cb) {
       });
     }
   });
-}
-
-function generateSlicedSHA256Hash(stringValueToHash, hashSizeInBytes) {
-  var hash = crypto.createHash(macName);
-  hash.update(stringValueToHash);
-  var fullSizeKeyHash = hash.digest('base64');
-  var slicedKeyHash = fullSizeKeyHash.slice(0, hashSizeInBytes);
-  return slicedKeyHash;
 }
