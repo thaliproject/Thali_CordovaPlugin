@@ -29,7 +29,6 @@
 
 -(void)dealloc
 {
-    NSLog(@"server: relay stopping");
     [self stop];
 }
 

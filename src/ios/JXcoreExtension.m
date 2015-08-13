@@ -52,7 +52,7 @@
         {
             if ([theApp startBroadcasting:params[0] serverPort:params[1]])
             {
-                [JXcore callEventCallback:callbackId withParams:nil];
+                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
             }
             else
             {
@@ -68,7 +68,7 @@
     {
         if ([theApp stopBroadcasting])
         {
-            [JXcore callEventCallback:callbackId withParams:nil];
+            [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
         }
         else
         {
@@ -116,7 +116,7 @@
         {
             if ([theApp disconnectFromPeer: params[0]])
             {
-                [JXcore callEventCallback:callbackId withParams:nil];
+                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
             }
             else
             {

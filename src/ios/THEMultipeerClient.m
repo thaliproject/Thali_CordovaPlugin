@@ -175,10 +175,10 @@ static const uint MAX_CONNECT_RETRIES = 5;
         if ([serverDescriptor connectionState] != THEPeerDescriptorStateNotConnected)
         {
             success = YES;
-            NSLog(@"client: disconnecting peer: %@", peerIdentifier);
+            [serverDescriptor setConnectionState:THEPeerDescriptorStateNotConnected];
 
-            [serverDescriptor.clientSession cancelConnectPeer:[serverDescriptor peerID]];
-            //[serverDescriptor.clientSession disconnect];
+            NSLog(@"client: disconnecting peer: %@", peerIdentifier);
+            [serverDescriptor.clientSession disconnect];
         }
 
         // Stop iterating
