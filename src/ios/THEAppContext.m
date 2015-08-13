@@ -55,7 +55,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 // Class initializer.
 - (instancetype)init;
 
-// Fires the network changed event.
+// Firesthe network changed event.
 - (void)fireNetworkChangedEvent;
 
 // UIApplicationWillResignActiveNotification callback.
@@ -182,10 +182,10 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     return NO;
 }
 
-// ConnectionStatusDelegate
+// SocketServerDelegate
 ////////////////////////////
 
-- (void)didConnectWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier;
+- (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier;
 {
     pthread_mutex_lock(&_mutex);
 
@@ -200,16 +200,10 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
         NSLog(@"WARNING: didGetLocalPort when no outstanding connections");
     }
 
-    
-    /*THEPeer * peer = _peers[peerIdentifier];
-    if (peer)
-    {
-    }*/
-
     pthread_mutex_unlock(&_mutex);
 }
 
-- (void)didNotConnectWithErrorMessage:(NSString *)errorMsg withPeerIdentifier:(NSString*)peerIdentifier
+- (void)didNotListenWithErrorMessage:(NSString *)errorMsg withPeerIdentifier:(NSString*)peerIdentifier
 {
     pthread_mutex_lock(&_mutex);
 
@@ -309,6 +303,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
 - (void) didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
 {
+    NSLog(@"didFindPeerIdentifier");
+
     // Lock.
     pthread_mutex_lock(&_mutex);
     
@@ -340,6 +336,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
 - (void) didLosePeerIdentifier:(NSString *)peerIdentifier
 {
+    NSLog(@"didLosPeerIdentifier");
+
     // Lock.
     pthread_mutex_lock(&_mutex);
     

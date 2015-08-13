@@ -25,12 +25,14 @@
 //  THEPeerDescriptor.m
 //
 
-
 #import "THEAppContext.h"
 #import "THEPeerDescriptor.h"
 
-// THEPeerDescriptor implementation.
 @implementation THEPeerDescriptor
+{
+@protected
+    THENetworkingRelay *_relay;
+}
 
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
 {
@@ -47,20 +49,17 @@
 
 -(void)setInputStream:(NSInputStream *)inputStream
 {
-    _inputStream = inputStream;
-    [self tryCreateTCPRelay];
+    [_relay setInputStream:inputStream];
 }
 
 -(void)setOutputStream:(NSOutputStream *)outputStream
 {
-    _outputStream = outputStream;
-    [self tryCreateTCPRelay];
+    [_relay setOutputStream:outputStream];
 }
 
--(void)tryCreateTCPRelay
+-(void)disconnect
 {
-    // Fake an abstract class
-    [self doesNotRecognizeSelector:_cmd];
+    _relay = nil;
 }
 
 @end
@@ -79,38 +78,13 @@
 
     _peerIdentifier = peerIdentifier;
     _peerName = peerName;
+   
+    THENetworkingClientRelay *clientRelay = [[THENetworkingClientRelay alloc] initWithPeerIdentifier:_peerIdentifier];
+    [clientRelay setDelegate:(id<THESocketServerDelegate>)[THEAppContext singleton]];
+    
+    _relay = clientRelay;
  
     return self;
-}
-
--(void)tryCreateTCPRelay
-{
-    if (self.inputStream != nil && self.outputStream != nil)
-    {
-        if (_clientRelay == nil)
-        {
-            _clientRelay = [[THENetworkingClientRelay alloc] 
-                initWithInputStream:self.inputStream 
-                withOutputStream:self.outputStream
-                withPeerIdentifier:_peerIdentifier
-            ];
-
-            [_clientRelay setDelegate:(id<THEConnectionStatusDelegate>)[THEAppContext singleton]];
-
-            if ([_clientRelay start])
-            {
-                [self setConnectionState:THEPeerDescriptorStateConnected];
-            }
-            else
-            {
-                NSLog(@"Error failed to start ServerRelay!");
-            }
-        }
-        else
-        {
-            NSLog(@"Error already setup a ServerRelay bridge!");
-        }
-    }
 }
 
 @end
@@ -127,36 +101,9 @@
     }
     
     _serverPort = serverPort;
+    _relay = [[THENetworkingServerRelay alloc] initWithServerPort:_serverPort];
+
     return self;
-}
-
-
--(void) tryCreateTCPRelay
-{
-    if (self.inputStream != nil && self.outputStream != nil)
-    {
-        if (_serverRelay == nil)
-        {
-            _serverRelay = [[THENetworkingServerRelay alloc] 
-                initWithInputStream:self.inputStream 
-                withOutputStream:self.outputStream
-                withServerPort:_serverPort
-            ];
-
-            if ([_serverRelay start])
-            {
-                [self setConnectionState:THEPeerDescriptorStateConnected];
-            }
-            else
-            {
-                NSLog(@"Error failed to start ClientRelay!");
-            }
-        }
-        else
-        {
-            NSLog(@"Error already setup a ClientRelay bridge!");
-        }
-    }
 }
 
 @end

@@ -121,7 +121,7 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
         if (descriptor && ([descriptor.peerID hash] == [peerID hash]))
         {
-            // Server rarely sees clients disconnect, if it see another invitation
+            // Server rarely sees clients disconnect, if it sees another invitation
             // it's probably from a re-launch of the client app and so should be treated
             // as a new connection
             NSLog(@"server: existing peer");
@@ -129,7 +129,6 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
             clientDescriptor = descriptor;
 
             // Destroy the previous session
-            [clientDescriptor.serverSession cancelConnectPeer:peerID];
             [clientDescriptor.serverSession disconnect];
             clientDescriptor.serverSession = nil;
         }
@@ -233,11 +232,7 @@ didReceiveStream:(NSInputStream *)inputStream
             case MCSessionStateNotConnected:
             {
                 NSLog(@"server: session not connected");
-
-                peerDescriptor.serverRelay = nil;
-                [peerDescriptor setConnectionState:THEPeerDescriptorStateNotConnected];
-                [peerDescriptor setInputStream:nil];
-                [peerDescriptor setOutputStream:nil];
+                [peerDescriptor disconnect];
             }
             break;
 

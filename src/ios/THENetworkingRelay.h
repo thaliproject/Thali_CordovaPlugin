@@ -22,29 +22,18 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THENetworkingRelay.h
 //
 
-#import <Foundation/Foundation.h>
-#import "THEPeerNetworkingDelegate.h"
-#import "THESocketServerDelegate.h"
+#import "GCDAsyncSocket.h"
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEPeerNetworkingDelegate, THESocketServerDelegate>
+@interface THENetworkingRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate>
 
-// Class singleton.
-+ (instancetype)singleton;
+-(BOOL)canCreateSocket;
+-(BOOL)tryCreateSocket;
+-(void)didCreateSocket:(GCDAsyncSocket *)socket;
 
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
-
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(NSString *, uint))connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
+-(void)setInputStream:(NSInputStream *)inputStream;
+-(void)setOutputStream:(NSOutputStream *)outputStream;
 
 @end

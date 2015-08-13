@@ -1,15 +1,10 @@
 #import <Foundation/Foundation.h>
-#import "GCDAsyncSocket.h"
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
-@interface THENetworkingServerRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate>
+#import "THENetworkingRelay.h"
 
--(instancetype)initWithInputStream:(NSInputStream *)inputStream
-                  withOutputStream:(NSOutputStream *)outputStream
-                    withServerPort:(uint)port;
+@interface THENetworkingServerRelay : THENetworkingRelay
 
--(BOOL)start;
--(void)stop;
--(void)dealloc;
+-(instancetype)initWithServerPort:(uint)port;
 
 @end

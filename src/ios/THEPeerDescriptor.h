@@ -42,11 +42,12 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     @property (nonatomic) BOOL visible;
     @property (nonatomic) MCPeerID * peerID;
     @property (nonatomic) THEPeerDescriptorState connectionState;
-    @property (nonatomic) NSInputStream * inputStream;
-    @property (nonatomic) NSOutputStream * outputStream;
     
     - (instancetype)initWithPeerID:(MCPeerID *)peerID;
-    - (void)tryCreateTCPRelay;
+
+    -(void)disconnect;
+    -(void)setInputStream:(NSInputStream *)inputStream;
+    -(void)setOutputStream:(NSOutputStream *)outputStream;
 
 @end
 
@@ -57,7 +58,6 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 
     @property (nonatomic) NSString * peerIdentifier;
     @property (nonatomic) NSString * peerName;
-    @property (nonatomic, strong) THENetworkingClientRelay * clientRelay;
 
     - (instancetype)initWithPeerID:(MCPeerID *)peerID
                 withPeerIdentifier:(NSString *)peerIdentifier
@@ -69,6 +69,6 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     @property (nonatomic) MCSession * serverSession;
 
     @property (nonatomic) uint serverPort;
-    @property (nonatomic, strong) THENetworkingServerRelay * serverRelay;
     - (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort;
+
 @end

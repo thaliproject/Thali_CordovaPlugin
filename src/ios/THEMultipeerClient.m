@@ -355,19 +355,11 @@ didReceiveStream:(NSInputStream *)inputStream
                 NSLog(@"client: not connected");
 
                 THEPeerDescriptorState prevState = serverDescriptor.connectionState;
-                [serverDescriptor setConnectionState:THEPeerDescriptorStateNotConnected];
-
-                serverDescriptor.clientRelay = nil;
-                [serverDescriptor setInputStream:nil];
-                [serverDescriptor setOutputStream:nil];
-
+                [serverDescriptor disconnect];
+                
                 if (prevState == THEPeerDescriptorStateConnecting)
                 {
                     NSLog(@"client: retrying connection");
-
-                    [serverDescriptor.clientSession cancelConnectPeer:[serverDescriptor peerID]];
-                    [serverDescriptor.clientSession disconnect];
-                    serverDescriptor.clientSession = nil;
 
                     serverDescriptor.clientSession = [[MCSession alloc] 
                         initWithPeer: _peerId securityIdentity:nil encryptionPreference:MCEncryptionNone
