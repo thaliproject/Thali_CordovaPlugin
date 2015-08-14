@@ -1,4 +1,98 @@
-# Thali Cordova Plugin Replication Manager #
+# Thali Cordova Plugin
+
+This project is a work in progress and not yet production-level quality.
+
+The Thali Cordova Plugin is a [Cordova](http://cordova.apache.org/) plugin for building peer-to-peer (P2P) networking apps on Android and iOS.
+
+The Thali Cordova Plugin is layered on the [JXcore Cordova plugin](https://github.com/jxcore/jxcore-cordova), which uses [JXcore](http://jxcore.com/home/) to allow one to build mobile applications in JavaScript for Node.JS.  
+
+## Prerequisites
+
+### Android
+
+Download [Android Studio](http://developer.android.com/sdk/index.html)
+
+Make sure to set your `ANDROID_HOME` environment variable:
+
+Mac OS X (put in your `~/.bash_profile` file):
+```
+export ANDROID_HOME=~/Library/Android/sdk
+export PATH=${PATH}:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+```
+
+Linux (put in your `~/.bashrc` file):
+```
+export ANDROID_HOME=/<installation location>/Android/sdk
+export PATH=${PATH}:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+```
+
+Windows:
+```
+set ANDROID_HOME=C:\<installation location>\Android\sdk
+set PATH=%PATH%;%ANDROID_HOME%\tools;%ANDROID_HOME%\platform-tools
+```
+
+### iOS
+
+Download [Xcode 6](https://developer.apple.com/xcode/), or later.
+
+## Getting Started
+
+### Install latest JXCore
+
+Follow the instructions at [http://jxcore.com/downloads/](http://jxcore.com/downloads/). When you're done, check that the
+installation worked:
+```
+$ jx -jxv
+v Beta-0.3.0.3
+```
+
+### Install Cordova
+
+(Check the [Android Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_android_index.md.html#Android%20Platform%20Guide)
+and [iOS Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_ios_index.md.html#iOS%20Platform%20Guide) for detailed instructions.)
+
+```
+$ sudo jx install -g cordova
+```
+
+### Create a Cordova project
+
+```
+$ cordova create ThaliTest com.test.thalitest ThaliTest
+```
+
+### Using the Thali Cordova Plugin
+
+To use Thali in a Cordova project one must do the following:
+
+5. Make sure to add whatever platforms you are using in Cordova using `cordova platform add` (android | ios)
+1. Add a subfolder to www named jxcore (case sensitivity matters)
+2. Inside the jxcore folder create the app.js for your application
+3. Inside the jxcore folder create the package.json for your application
+ * `jx npm init` provides an easy to use wizard that will create a basic package.json file
+4. Inside the jxcore folder run the command `jx install thali --save`
+5. In the www/jxcore directory run `find . -name "*.gz" -delete`
+ * This step will go away in an upcoming release of JXCore that will support the `--autoremove "*.gz"` switch
+6. Make sure to run `cordova build` as this is critical to moving key files into place
+ * Yes, an exception did get thrown during the build. No, it isn't harmful. No, we haven't quite figured out
+ why it gets thrown, the verbose debug logs aren't saying anything useful.
+
+Now you can run your app.
+
+Note that Thali uses a subdirectory in your project called thaliDontCheckin to manage certain downloads. Per the name of the directory,
+please don't check it in to your repro.
+
+If you want to upgrade to a newer version of Thali_CordovaPlugin all you have to do is just edit your package.json 
+with the version you want and then run 'jx install'. This will automatically update the Javascript files as well 
+as uninstall the old plugin and install the new plugin.
+
+### Documentation
+
+The following API documentation is available for the Thali Cordova Plugin:
+- [Thali Cordova Connectivity API](doc/api/connectivity.md)
+- [`ThaliReplicationManager` class](doc/api/thalireplicationmanager.md)
+- [`ThaliEmitter` internal class](doc/api/thaliemitter.md)
 
 ### Contributing
 

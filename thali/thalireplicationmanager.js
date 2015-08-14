@@ -243,10 +243,7 @@ function syncPeer(peer) {
     if (err) {
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
     } else {
-      var client = tcpmultiplex.muxClientBridge(port, function (err) {
-        syncRetry.call(this, peer);
-      }.bind(this));
-
+      var client = muxClientBridge.call(this, port, peer);
       this._clients[peer.peerIdentifier] = client;
       client.listen(function () {
         var localPort = client.address().port;
@@ -260,6 +257,64 @@ function syncPeer(peer) {
       }.bind(this));
     }
   }.bind(this));
+}
+
+/* Mux Layer */
+
+function muxServerBridge(tcpEndpointServerPort) {
+  var serverPlex = multiplex({}, function(stream, id) {
+    var clientSocket = net.createConnection({port: tcpEndpointServerPort});
+    stream.pipe(clientSocket).pipe(stream);
+  });
+
+  return net.createServer(function(incomingClientSocket) {
+    incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
+  });
+}
+
+function muxClientBridge(localP2PTcpServerPort, peer) {
+  var clientPlex = multiplex();
+  var clientSocket = net.createConnection({port: localP2PTcpServerPort});
+
+  var server = net.createServer(function(incomingClientSocket) {
+    var clientStream = clientPlex.createStream();
+    incomingClientSocket.pipe(clientStream).pipe(incomingClientSocket);
+  });
+
+  cleanUpSocket(clientSocket, function() {
+    clientPlex.destroy();
+    try {
+      server.close();
+    } catch(e) {
+      this.emit(ThaliReplicationManager.events.SYNC_ERROR, e);
+    }
+    syncRetry.call(this, peer);
+  }.bind(this));
+
+  clientPlex.pipe(clientSocket).pipe(clientPlex);
+
+  return server;
+}
+
+function cleanUpSocket(socket, cleanUpCallBack) {
+  var isClosed = false;
+
+  socket.on('end', function() {
+    cleanUpCallBack();
+    isClosed = true;
+  });
+
+  socket.on('error', function(err) {
+    cleanUpCallBack(err);
+    isClosed = true;
+  });
+
+  socket.on('close', function() {
+    if (!isClosed) {
+      cleanUpCallBack();
+      isClosed = true;
+    }
+  });
 }
 
 module.exports = ThaliReplicationManager;
