@@ -202,41 +202,52 @@ function syncPeer(peer) {
 
 /* Mux Layer */
 
+function restartMuxServerBridge() {
+  this._serverBridge = muxServerBridge.call(this, port);
+  this._serverBridge.listen(this._serverBridgePort);
+}
+
 function muxServerBridge(tcpEndpointServerPort) {
   var serverPlex = multiplex({}, function(stream, id) {
     var clientSocket = net.createConnection({port: tcpEndpointServerPort});
     stream.pipe(clientSocket).pipe(stream);
-
-    stream.on('error', function (err) {
-      console.log('Multiplex stream error %s', err);
-    });
-
-    clientSocket.on('error', function (err) {
-      console.log('incoming client socket error %s', err);
-      clientSocket.destroy();
-    });
   });
 
   var server = net.createServer(function(incomingClientSocket) {
 
     incomingClientSocket.on('error', function (err) {
       console.log('incoming client socket error %s', err);
-      serverPlex.destroy();
-      server.close();
-    });
+      try {
+        serverPlex.destroy();
+        server.close();
+      } catch (e) {
+        console.log('failed to clean up server and serverPlex');
+      }
+
+      restartMuxServerBridge.call(this);
+    }.bind(this));
 
     server.on('error', function (err) {
       console.log('mux server bridge error %s', err);
-      incomingClientSocket.destroy();
-      serverPlex.destroy();
-      server.close();
-    });
+      try {
+        incomingClientSocket.destroy();
+        serverPlex.destroy();
+      } catch (e) {
+        console.log('failed to clean up server and serverPlex');
+      }
+
+      restartMuxServerBridge.call(this);
+    }.bind(this));
 
     server.on('close', function () {
       console.log('mux server bridge close');
-      incomingClientSocket.destroy();
-      serverPlex.destroy();
-    });
+      try {
+        serverPlex.destroy();
+      } catch (e) {
+        console.log('failed to clean up server and serverPlex');
+      }
+      restartMuxServerBridge.call(this);
+    }.bind(this));
 
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
   });
