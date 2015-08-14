@@ -206,7 +206,7 @@ function restartMuxServerBridge() {
   this.stop();
 
   this.on('stopped', function () {
-    this.start(this._deviceName, this._port = port, this._dbName);
+    this.start(this._deviceName, this._port, this._dbName);
   }.bind(this));
 }
 
