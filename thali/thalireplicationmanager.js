@@ -203,8 +203,11 @@ function syncPeer(peer) {
 /* Mux Layer */
 
 function restartMuxServerBridge() {
-  this._serverBridge = muxServerBridge.call(this, port);
-  this._serverBridge.listen(this._serverBridgePort);
+  this.stop();
+
+  this.on('stopped', function () {
+    this.start(this._deviceName, this._port = port, this._dbName);
+  }.bind(this));
 }
 
 function muxServerBridge(tcpEndpointServerPort) {
