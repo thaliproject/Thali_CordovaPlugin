@@ -4,11 +4,12 @@
 @implementation THENetworkingServerRelay
 {
     uint _serverPort;
+    GCDAsyncSocket *_connectingSocket;
 }
 
 -(instancetype)initWithServerPort:(uint)serverPort
 {
-    self = [super init];
+    self = [super initWithRelayType:@"server"];
     if (!self)
     {
         return nil;
@@ -25,10 +26,10 @@
     {
         NSLog(@"server: relay starting");
  
-        GCDAsyncSocket *socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+        _connectingSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
         
         NSError *err = nil;
-        if (![socket connectToHost:@"localhost" onPort:_serverPort withTimeout:-1 error:&err])
+        if (![_connectingSocket connectToHost:@"localhost" onPort:_serverPort withTimeout:5 error:&err])
         {
             NSLog(@"server: relay socket connect error  %@",[err localizedDescription]);
             return NO;
@@ -51,6 +52,7 @@
 {
     NSLog(@"server: relay established");
     [self didCreateSocket:sock];
+    _connectingSocket = nil;
 }
 
 @end

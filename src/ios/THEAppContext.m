@@ -163,6 +163,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 {
     if ([_atomicFlagCommunicationsEnabled tryClear])
     {
+        NSLog(@"app: stop broadcasting");
+
         [_peerBluetooth stop];
         [_peerNetworking stop];
         [_peerBluetooth setDelegate:nil];
@@ -178,7 +180,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
         return YES;
     }
-
+    
+    NSLog(@"app: didn't stop broadcasting");
     return NO;
 }
 

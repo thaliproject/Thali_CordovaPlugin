@@ -25,6 +25,7 @@
 //  THEMultipeerServer.m
 
 #import "THEMultipeerServer.h"
+#import "THEPeerClientSession.h"
 #import "THEProtectedMutableDictionary.h"
 
 static NSString * const PEER_NAME_KEY        = @"PeerName";
@@ -35,7 +36,7 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 @implementation MultipeerServer
 {
     // Transport level id
-    MCPeerID * _peerId;
+    MCPeerID * _localPeerId;
 
     // The multipeer service advertiser
     MCNearbyServiceAdvertiser * _nearbyServiceAdvertiser;
@@ -65,7 +66,7 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
     // Init the basic multipeer server session
 
-    _peerId = peerId;
+    _localPeerId = peerId;
 
     _peerName = peerName;
     _peerIdentifier = peerIdentifier;
@@ -80,13 +81,13 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
 -(void) start
 {
-    NSLog(@"server starting..");
+    NSLog(@"server: starting");
 
     _clients = [[THEProtectedMutableDictionary alloc] init];
 
     // Start advertising our presence.. 
     _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
-        initWithPeer:_peerId 
+        initWithPeer:_localPeerId 
         discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier, PEER_NAME_KEY: _peerName } 
         serviceType:_serviceType
     ];
@@ -97,6 +98,8 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
 -(void) stop
 {
+    NSLog(@"server: stopping");
+
     [_nearbyServiceAdvertiser stopAdvertisingPeer];
     _nearbyServiceAdvertiser = nil;
     
@@ -111,37 +114,37 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
                      withContext:(NSData *)context
                invitationHandler:(void (^)(BOOL accept, MCSession * session))invitationHandler
 {
-    __block THEClientPeerDescriptor *clientDescriptor = nil;
+  __block MCSession *mcSession = nil;
 
-    NSLog(@"server: didReceiveInvitationFromPeer");
+  NSLog(@"server: didReceiveInvitationFromPeer");
 
-    [_clients createWithKey:peerID createBlock:^NSObject *(NSObject *oldValue) {
+  [_clients createWithKey:peerID createBlock:^NSObject *(NSObject *oldValue) {
 
-        THEClientPeerDescriptor *descriptor = (THEClientPeerDescriptor *)oldValue;
+    THEPeerClientSession *clientSession = (THEPeerClientSession *)oldValue;
 
-        if (descriptor && ([descriptor.peerID hash] == [peerID hash]))
-        {
-            NSLog(@"server: existing peer");
-            clientDescriptor = descriptor;
-        }
-        else
-        {
-            NSLog(@"server: new peer");
-            clientDescriptor = [[THEClientPeerDescriptor alloc] initWithPeerID:peerID withServerPort:_serverPort ];
-        }
+    if (clientSession && ([clientSession.peerID hash] == [peerID hash]))
+    {
+      NSLog(@"server: existing peer");
+      // Disconnect any existing session, see note below
+      [clientSession disconnect];
+    }
+    else
+    {
+      NSLog(@"server: new peer");
+      clientSession = [[THEPeerClientSession alloc] initWithPeerID:_localPeerId 
+                                                    withServerPort:_serverPort];
+    }
 
-        // Create a new session for each client, even if one already
-        // existed. If we're seeing invitations from peers we already have sessions
-        // with then the other side had restarted our session is stale (we often
-        // don't see the other side disconnect)
+    // Create a new session for each client, even if one already
+    // existed. If we're seeing invitations from peers we already have sessions
+    // with then the other side had restarted our session is stale (we often
+    // don't see the other side disconnect)
 
-        clientDescriptor.serverSession = [[MCSession alloc] initWithPeer:_peerId];
-        clientDescriptor.serverSession.delegate = self;
+    mcSession = [clientSession connect];
+    return clientSession;
+  }];
 
-        return clientDescriptor;
-    }];
-
-    invitationHandler(YES, clientDescriptor.serverSession);
+  invitationHandler(YES, mcSession);
 }
 
 - (void)advertiser:(MCNearbyServiceAdvertiser *)advertiser didNotStartAdvertisingPeer:(NSError *)error
@@ -149,122 +152,5 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
     NSLog(@"WARNING: server didNotStartAdvertisingPeer");
 }
 
-// MCSessionDelegate
-////////////////////
-
-- (void)session:(MCSession *)session didReceiveData:(NSData *)data fromPeer:(MCPeerID *)peerID
-{
-}
-
-- (void)session:(MCSession *)session
-         didStartReceivingResourceWithName:(NSString *)resourceName
-         fromPeer:(MCPeerID *)peerID
-         withProgress:(NSProgress *)progress
-{
-}
-
-- (void)session:(MCSession *)session
-didFinishReceivingResourceWithName:(NSString *)resourceName
-       fromPeer:(MCPeerID *)peerID
-          atURL:(NSURL *)localURL
-      withError:(NSError *)error
-{
-}
-
-- (void)session:(MCSession *)session
-didReceiveStream:(NSInputStream *)inputStream
-       withName:(NSString *)streamName
-       fromPeer:(MCPeerID *)peerID
-{
-    NSLog(@"server: didReceiveStream");
-
-    [_clients updateWithKey: peerID updateBlock:^void(NSObject *v) {
-
-        THEClientPeerDescriptor *peerDescriptor = 
-            (THEClientPeerDescriptor *)([v isKindOfClass:[THEClientPeerDescriptor class]] ? v : Nil);
-
-        if (!peerDescriptor)
-        {
-            NSLog(@"Unfound peer");
-            return;
-        }
-     
-        if ([streamName isEqualToString:CLIENT_OUTPUT_STREAM])
-        {
-            [peerDescriptor setInputStream:inputStream];
-        }
-        else
-        {
-            NSLog(@"WARNING: Unexpected stream name");
-        }
-    }];
-}    
-
--(void) session:(MCSession *)session didReceiveCertificate:(NSArray *)certificate 
-       fromPeer:(MCPeerID *)peerID certificateHandler:(void (^)(BOOL accept))certificateHandler
-{
-    certificateHandler(YES);
-}
-
-- (void)session:(MCSession *)session
-           peer:(MCPeerID *)peerID
- didChangeState:(MCSessionState)state
-{
-    [_clients updateWithKey: peerID updateBlock:^void(NSObject *v) {
-
-        THEClientPeerDescriptor *peerDescriptor = 
-            (THEClientPeerDescriptor *)([v isKindOfClass:[THEClientPeerDescriptor class]] ? v : Nil);
-
-        if (!peerDescriptor)
-        {
-            NSLog(@"Unfound peer");
-            return;
-        }
-        
-        switch (state)
-        {
-            case MCSessionStateNotConnected:
-            {
-                NSLog(@"server: session not connected");
-                [peerDescriptor disconnect];
-            }
-            break;
-
-            case MCSessionStateConnecting:
-            {
-                NSLog(@"server: session connecting");
-                [peerDescriptor setConnectionState:THEPeerDescriptorStateConnecting];
-            }
-            break;
-
-            case MCSessionStateConnected:
-            {
-                NSLog(@"server: session connected");
-
-                // Start the server output stream.
-                NSError * error;
-                NSOutputStream * outputStream = [session startStreamWithName:SERVER_OUTPUT_STREAM
-                                                                      toPeer:peerID
-                                                                       error:&error];
-                if (outputStream)
-                {
-                    // Set the server output stream. (Where we write data for the client.)
-                    [peerDescriptor setOutputStream:outputStream];
-                }
-                else
-                {
-                    [session cancelConnectPeer:peerID];
-                }
-            }
-            break;
-
-            default:
-            {
-                NSLog(@"WARNING: Unexpected case statement");
-            }
-            break;
-        }
-    }];
-}
 @end
 

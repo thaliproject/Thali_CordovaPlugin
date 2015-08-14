@@ -27,8 +27,6 @@
 
 #import <Foundation/Foundation.h>
 
-#import "THEAppContext.h"
-#import "THEPeerDescriptor.h"
 #import "THEPeerNetworkingDelegate.h"
 
 @interface THEPeerNetworking : NSObject

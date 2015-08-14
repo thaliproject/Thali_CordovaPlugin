@@ -31,7 +31,6 @@
 #import "THEThreading.h"
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 #import "THEPeerNetworking.h"
-#import "THEPeerDescriptor.h"
 #import "THEMultipeerClient.h"
 #import "THEMultipeerServer.h"
 

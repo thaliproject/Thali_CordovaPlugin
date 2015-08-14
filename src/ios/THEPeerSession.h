@@ -22,20 +22,34 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THENetworkingRelay.h
+//  THEPeerSession.h
 //
 
-#import "GCDAsyncSocket.h"
+#import <MultipeerConnectivity/MultipeerConnectivity.h>
 
-@interface THENetworkingRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate>
+typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
+  THEPeerSessionStateNotConnected  = 0,
+  THEPeerSessionStateConnecting    = 1,
+  THEPeerSessionStateConnected     = 2
+};
 
-- (id)initWithRelayType:(NSString *)relayType;
+// Encapsulates a discovered peer and their connection state. Any peer that has been discovered 
+// will have a PeerSession object although they may not currently be visible or connected. 
+// The underlying connection transport may be any available e.g. Bluetooth, WiFi etc.
+@interface THEPeerSession : NSObject <MCSessionDelegate>
 
-- (BOOL)canCreateSocket;
-- (BOOL)tryCreateSocket;
-- (void)didCreateSocket:(GCDAsyncSocket *)socket;
+@property (nonatomic) BOOL visible;
+@property (nonatomic) MCPeerID * peerID;
+@property (nonatomic) THEPeerSessionState connectionState;
 
+- (instancetype)initWithPeerID:(MCPeerID *)peerID withSessionType:(NSString *)sessionType;
+
+- (MCSession *)session;
+- (MCSession *)connect;
+
+- (void)disconnect;
 - (void)setInputStream:(NSInputStream *)inputStream;
 - (void)setOutputStream:(NSOutputStream *)outputStream;
 
 @end
+

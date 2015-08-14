@@ -2,199 +2,238 @@
 
 @implementation THENetworkingRelay
 {
-    GCDAsyncSocket *_socket;
+  // The socket we're using to talk to the upper (localhost) layers
+  GCDAsyncSocket *_socket;
 
-    NSInputStream *_inputStream;
-    NSOutputStream *_outputStream;
+  // The input and output stream that we use to talk to the remote peer
+  NSInputStream *_inputStream;
+  NSOutputStream *_outputStream;
+
+  // For debugging purposes only
+  NSString *_relayType;
 }
 
--(void)setInputStream:(NSInputStream *)inputStream
+- (instancetype)initWithRelayType:(NSString *)relayType
 {
-    assert(inputStream && _inputStream == nil);
-    _inputStream = inputStream;
-    [self tryCreateSocket];
+  if (self = [super init]) 
+  { 
+    _relayType = relayType;
+  }
+  return self;
 }
 
--(void)setOutputStream:(NSOutputStream *)outputStream
+- (instancetype)init
 {
-    assert(outputStream && _outputStream == nil);
-    _outputStream = outputStream;
-    [self tryCreateSocket];
-}
-
--(void)openStreams
-{
-    assert(_inputStream && _outputStream && _socket);
-
-    _inputStream.delegate = self;
-    [_inputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
-    [_inputStream open];
-    
-    _outputStream.delegate = self;
-    [_outputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
-    [_outputStream open];
-}
-
--(BOOL)canCreateSocket
-{
-    return (_inputStream && _outputStream);
-}
-
--(BOOL)tryCreateSocket
-{
-    return YES;
-}
-
--(void)didCreateSocket:(GCDAsyncSocket *)socket
-{
-    assert(_socket == nil);
-
-    _socket = socket;
-    [self openStreams];
-
-    [_socket readDataWithTimeout:-1 tag:0];
+  return [self initWithRelayType:@"unknown"];
 }
 
 
--(void)dealloc
+- (void)setInputStream:(NSInputStream *)inputStream
 {
-    NSLog(@"relay: dealloc");
+  assert(inputStream && _inputStream == nil);
+  _inputStream = inputStream;
+  [self tryCreateSocket];
+}
 
-    [_socket setDelegate: nil];
-    [_socket disconnect];
-    _socket = nil;
+- (void)setOutputStream:(NSOutputStream *)outputStream
+{
+  assert(outputStream && _outputStream == nil);
+  _outputStream = outputStream;
+  [self tryCreateSocket];
+}
 
-    [_inputStream close];
-    [_outputStream close];
+- (void)openStreams
+{
+  // Everything's in place so let's start the streams to let the data flow
 
-    [_inputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
-    [_outputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
+  assert(_inputStream && _outputStream && _socket);
 
-    _inputStream = nil;
-    _outputStream = nil;
+  _inputStream.delegate = self;
+  [_inputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+  [_inputStream open];
+  
+  _outputStream.delegate = self;
+  [_outputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+  [_outputStream open];
+}
+
+- (BOOL)canCreateSocket
+{
+  // Postpone socket creation until we know we have somewhere to send
+  // it's data
+  return (_inputStream && _outputStream);
+}
+
+- (BOOL)tryCreateSocket
+{
+  // Base class only. Shouldn't be reachable
+  assert(NO);
+  return NO;
+}
+
+- (void)didCreateSocket:(GCDAsyncSocket *)socket
+{
+  assert(_socket == nil);
+
+  _socket = socket;
+  [self openStreams];
+  [_socket readDataWithTimeout:-1 tag:0];
 }
 
 
--(void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
+- (void)dealloc
 {
-    assert(sock == _socket);
-    assert(_outputStream != nil);
+  NSLog(@"%@ relay: dealloc", _relayType);
 
-    NSLog(@"relay: socket->outputStream (%lu)", (unsigned long)data.length);
-    if ([_outputStream write:data.bytes maxLength:data.length] == -1)
-    {
-        NSLog(@"ERROR: Writing to output stream");
-    }
+  // Make sure we detach from and shut down the streams else they may try to call us
+  // back after we're dead
 
-    [_socket readDataWithTimeout:-1 tag:tag];
+  [_inputStream setDelegate: nil];
+  [_outputStream setDelegate: nil];
+
+  [_socket setDelegate: nil];
+  [_socket disconnect];
+  _socket = nil;
+
+  [_inputStream close];
+  [_outputStream close];
+
+  [_inputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
+  [_outputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
+
+  _inputStream = nil;
+  _outputStream = nil;
 }
 
--(void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
-{
-    assert(sock == _socket);
 
-    if (err) 
-    {
-        NSLog(@"client: relay socket disconneted:  %@", [err description]);
-    }
+- (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
+{
+  assert(sock == _socket);
+  assert(_outputStream != nil);
+
+  NSLog(@"%@ relay: socket->outputStream (%lu)", _relayType, (unsigned long)data.length);
+  if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
+  {
+    NSLog(@"ERROR: Writing to output stream");
+  }
+
+  [_socket readDataWithTimeout:-1 tag:tag];
+}
+
+- (void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag
+{
+  NSLog(@"%@ relay: wrote %ld bytes", _relayType, tag);
+}
+
+- (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
+{
+  assert(sock == _socket);
+
+  // Usually benign, the upper layer just closed their connection
+  // they may want to connect again later
+
+  NSLog(@"%@ relay: socket disconnected", _relayType);
+
+  if (err) 
+  {
+      NSLog(@"%@ relay: disconnected with error %@", _relayType, [err description]);
+  }
 }
 
 #pragma mark - NSStreamDelegate
 
--(void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
+- (void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
-    NSLog(@"relay: streamEvent in");
+  NSLog(@"%@ relay: streamEvent in", _relayType);
 
-    @synchronized(self)
+  if (aStream == _inputStream) 
+  {
+    switch (eventCode) 
     {
-        if (aStream == _inputStream) 
-        {
-            switch (eventCode) 
-            {
-                case NSStreamEventOpenCompleted:
-                {
-                    NSLog(@"relay: inputStream opened");
-                }
-                break;
+      case NSStreamEventOpenCompleted:
+      {
+        NSLog(@"%@ relay: inputStream opened", _relayType);
+      }
+      break;
 
-                case NSStreamEventHasSpaceAvailable:
-                {
-                    NSLog(@"relay: inputStream hasSpace");
-                }
-                break;
+      case NSStreamEventHasSpaceAvailable:
+      {
+        NSLog(@"%@ relay: inputStream hasSpace", _relayType);
+      }
+      break;
 
-                case NSStreamEventHasBytesAvailable:
-                {
-                    const uint bufferValue = 1024;
-                    uint8_t *buffer = malloc(bufferValue);
-                    NSInteger len = [_inputStream read:buffer maxLength:sizeof(bufferValue)];
-                    NSMutableData *toWrite = [[NSMutableData alloc] init];
-                    [toWrite appendBytes:buffer length:len];
+      case NSStreamEventHasBytesAvailable:
+      {
+        const uint bufferValue = 1024;
+        uint8_t *buffer = malloc(bufferValue);
+        NSInteger len = [_inputStream read:buffer maxLength:sizeof(bufferValue)];
+        NSMutableData *toWrite = [[NSMutableData alloc] init];
+        [toWrite appendBytes:buffer length:len];
 
-                    assert(_socket);
-                    [_socket writeData:toWrite withTimeout:-1 tag:0];
-                }
-                break;
+        assert(_socket);
+        [_socket writeData:toWrite withTimeout:-1 tag:len];
+        NSLog(@"%@ relay: inputStream->socket (%lu)", _relayType, (unsigned long)len);
+      }
+      break;
 
-                case NSStreamEventEndEncountered:
-                {
-                    NSLog(@"relay: inputStream closed");
-                }
-                break;
+      case NSStreamEventEndEncountered:
+      {
+        NSLog(@"%@ relay: inputStream closed", _relayType);
+      }
+      break;
 
-                case NSStreamEventErrorOccurred:
-                {
-                    NSLog(@"relay: inputStream error");
-                }
-                break;
+      case NSStreamEventErrorOccurred:
+      {
+        NSLog(@"%@ relay: inputStream error", _relayType);
+      }
+      break;
 
-                default:
-                {
-                }
-                break;
-            }
-        }
-        else if (aStream == _outputStream)
-        {
-            switch (eventCode) 
-            {
-                case NSStreamEventOpenCompleted:
-                {
-                    NSLog(@"relay: outputStream opened");
-                }
-                break;
-
-                case NSStreamEventHasSpaceAvailable:
-                {
-                    NSLog(@"relay: outputStream hasSpace");
-                }
-                break;
-
-                case NSStreamEventHasBytesAvailable:
-                {
-                    NSLog(@"relay: outputStream hasBytes");
-                }
-                break;
-
-                case NSStreamEventEndEncountered:
-                {
-                    NSLog(@"relay: outputStream closed");
-                }
-                break;
-
-                case NSStreamEventErrorOccurred:
-                {
-                    NSLog(@"relay: outputStream error");
-                }
-                break;
-
-                default:
-                {
-                }
-                break;
-            }
-        }
+      default:
+      {
+      }
+      break;
     }
-    NSLog(@"relay: streamEvent out");
+  }
+  else if (aStream == _outputStream)
+  {
+    switch (eventCode) 
+    {
+      case NSStreamEventOpenCompleted:
+      {
+        NSLog(@"%@ relay: outputStream opened", _relayType);
+      }
+      break;
+
+      case NSStreamEventHasSpaceAvailable:
+      {
+        NSLog(@"%@ relay: outputStream hasSpace", _relayType);
+      }
+      break;
+
+      case NSStreamEventHasBytesAvailable:
+      {
+        NSLog(@"%@ relay: outputStream hasBytes", _relayType);
+      }
+      break;
+
+      case NSStreamEventEndEncountered:
+      {
+        NSLog(@"%@ relay: outputStream closed", _relayType);
+      }
+      break;
+
+      case NSStreamEventErrorOccurred:
+      {
+        NSLog(@"%@ relay: outputStream error", _relayType);
+      }
+      break;
+
+      default:
+      {
+      }
+      break;
+    }
+  }
+  NSLog(@"%@ relay: streamEvent out", _relayType);
 }
 @end

@@ -27,7 +27,7 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 #import "THEPeerNetworking.h"
 
-@interface MultipeerClient : NSObject <MCNearbyServiceBrowserDelegate, MCSessionDelegate>
+@interface MultipeerClient : NSObject <MCNearbyServiceBrowserDelegate>
 
 -(id) initWithPeerId:(MCPeerID *)peerId withServiceType:(NSString *)serviceType 
                             withPeerNetworkingDelegate:(id<THEPeerNetworkingDelegate>)peerNetworkingDelegate;

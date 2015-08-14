@@ -9,7 +9,7 @@
 
 -(instancetype)initWithPeerIdentifier:(NSString *)peerIdentifier
 {
-    self = [super init];
+    self = [super initWithRelayType:@"client"];
     if (!self)
     {
         return nil;
@@ -22,7 +22,7 @@
 
 -(void)dealloc
 {
-    NSLog(@"client: relay destructing");
+    NSLog(@"client: relay dealloc");
 
     [_serverSocket setDelegate:nil];
     _serverSocket = nil;
