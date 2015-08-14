@@ -336,7 +336,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
 - (void) didLosePeerIdentifier:(NSString *)peerIdentifier
 {
-    NSLog(@"didLosPeerIdentifier");
+    NSLog(@"didLosePeerIdentifier");
 
     // Lock.
     pthread_mutex_lock(&_mutex);

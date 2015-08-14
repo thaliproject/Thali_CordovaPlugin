@@ -121,23 +121,20 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
         if (descriptor && ([descriptor.peerID hash] == [peerID hash]))
         {
-            // Server rarely sees clients disconnect, if it sees another invitation
-            // it's probably from a re-launch of the client app and so should be treated
-            // as a new connection
             NSLog(@"server: existing peer");
-
             clientDescriptor = descriptor;
-
-            // Destroy the previous session
-            [clientDescriptor.serverSession disconnect];
-            clientDescriptor.serverSession = nil;
         }
         else
         {
+            NSLog(@"server: new peer");
             clientDescriptor = [[THEClientPeerDescriptor alloc] initWithPeerID:peerID withServerPort:_serverPort ];
         }
 
-        // Create a new session for each client
+        // Create a new session for each client, even if one already
+        // existed. If we're seeing invitations from peers we already have sessions
+        // with then the other side had restarted our session is stale (we often
+        // don't see the other side disconnect)
+
         clientDescriptor.serverSession = [[MCSession alloc] initWithPeer:_peerId];
         clientDescriptor.serverSession.delegate = self;
 
@@ -188,7 +185,7 @@ didReceiveStream:(NSInputStream *)inputStream
 
         if (!peerDescriptor)
         {
-            // Unknown peer
+            NSLog(@"Unfound peer");
             return;
         }
      
@@ -198,10 +195,8 @@ didReceiveStream:(NSInputStream *)inputStream
         }
         else
         {
-            NSLog(@"CAN'T HAPPEN!");
+            NSLog(@"WARNING: Unexpected stream name");
         }
-
-        return;
     }];
 }    
 
@@ -222,13 +217,12 @@ didReceiveStream:(NSInputStream *)inputStream
 
         if (!peerDescriptor)
         {
-            // Unknown peer
+            NSLog(@"Unfound peer");
             return;
         }
         
         switch (state)
         {
-            // Not connected.
             case MCSessionStateNotConnected:
             {
                 NSLog(@"server: session not connected");
@@ -236,7 +230,6 @@ didReceiveStream:(NSInputStream *)inputStream
             }
             break;
 
-            // Connecting.
             case MCSessionStateConnecting:
             {
                 NSLog(@"server: session connecting");
@@ -244,7 +237,6 @@ didReceiveStream:(NSInputStream *)inputStream
             }
             break;
 
-            // Connected.
             case MCSessionStateConnected:
             {
                 NSLog(@"server: session connected");

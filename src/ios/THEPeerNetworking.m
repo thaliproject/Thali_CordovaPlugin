@@ -55,44 +55,6 @@ static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
     MultipeerServer *_server;
 }
 
-/*-(void) updatePeerFromPeerIdentifier:(NSString *)peerIdentifier 
-                         updateBlock:(void(^)(THEServerPeerDescriptor *peer))updateBlock
-{
-    pthread_mutex_lock(&_mutex);
- 
-    // See if we have a peer descriptor matching the peer identifier.
-    NSArray * peers = [_peers allValues];
-    THEServerPeerDescriptor * serverDescriptor = nil;
-    for (int i = 0; !serverDescriptor && i < [peers count]; i++)
-    {
-        THEServerPeerDescriptor * serverDescriptorToCheck = (THEServerPeerDescriptor *)peers[i];
-        if ([peerIdentifier isEqual:[serverDescriptorToCheck peerIdentifier]])
-        {
-            serverDescriptor = serverDescriptorToCheck;
-        }
-    }
-
-    updateBlock(serverDescriptor);
-    
-    pthread_mutex_unlock(&_mutex);
-}
-
--(void) updatePeerFromPeerID:(MCPeerID *)peerID
-                 updateBlock:(THEServerPeerDescriptor *(^)(THEServerPeerDescriptor *peer))updateBlock
-{
-    pthread_mutex_lock(&_mutex);
-
-    THEServerPeerDescriptor * peerDescriptor = _peers[peerID];
-    if ((peerDescriptor = updateBlock(peerDescriptor)) != nil)
-    {
-        _peers[peerID] = peerDescriptor;
-    }
-    
-    pthread_mutex_unlock(&_mutex);
-}
-*/
-
-// Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
