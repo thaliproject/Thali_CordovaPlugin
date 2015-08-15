@@ -46,7 +46,7 @@
                    withRemotePeerID:(MCPeerID *)remotePeerID
            withRemotePeerIdentifier:(NSString *)remotePeerIdentifier
 {
-  self = [super initWithPeerID:localPeerID withSessionType:@"server"];
+  self = [super initWithPeerID:localPeerID withSessionType:@"client"];
   if (!self)
   {
       return nil;

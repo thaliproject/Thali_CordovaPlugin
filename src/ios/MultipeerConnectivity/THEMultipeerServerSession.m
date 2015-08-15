@@ -32,7 +32,7 @@
 
 - (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort
 {
-  self = [super initWithPeerID:peerID withSessionType:@"client"];
+  self = [super initWithPeerID:peerID withSessionType:@"server"];
   if (!self)
   {
     return nil;
