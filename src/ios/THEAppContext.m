@@ -123,10 +123,10 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     NSUUID * serviceType = [[NSUUID alloc] initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
 
     // Allocate and initialize the peer Bluetooth context.
-    _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
-                                                    peerIdentifier:peerIdentifier
-                                                          peerName:[serverPort stringValue]];
-    [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
+    //_peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
+    //                                                peerIdentifier:peerIdentifier
+    //                                                      peerName:[serverPort stringValue]];
+    //[_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
        
     // Allocate and initialize peer networking.
     _multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
@@ -162,9 +162,9 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   {
     NSLog(@"app: stop broadcasting");
 
-    [_peerBluetooth stop];
+    //[_peerBluetooth stop];
     [_multipeerSession stop];
-    [_peerBluetooth setDelegate:nil];
+    //[_peerBluetooth setDelegate:nil];
     [_multipeerSession setDelegate:nil];
     _peerBluetooth = nil;
     _multipeerSession = nil;
