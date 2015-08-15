@@ -32,7 +32,7 @@
 #import "THEThreading.h"
 #import "NPReachability.h"
 #import "THEPeerBluetooth.h"
-#import "THEPeerNetworking.h"
+#import "THEMultipeerSession.h"
 #import "THEAppContext.h"
 #import "THEPeer.h"
 
@@ -80,7 +80,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     THEPeerBluetooth * _peerBluetooth;
     
     // Peer Networking.
-    THEPeerNetworking * _peerNetworking;
+    THEMultipeerSession * _multipeerSession;
     
     // The mutex used to protect access to things below.
     pthread_mutex_t _mutex;
@@ -132,14 +132,14 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
         [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
         
         // Allocate and initialize peer networking.
-        _peerNetworking = [[THEPeerNetworking alloc] initWithServiceType:@"Thali"
+        _multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
                                                           peerIdentifier:peerIdentifier
                                                                 peerName:[serverPort stringValue]];
-        [_peerNetworking setDelegate:self];
+        [_multipeerSession setDelegate:self];
 
         // Start peer Bluetooth and peer networking.
         [_peerBluetooth start];
-        [_peerNetworking start];
+        [_multipeerSession start];
        
         // Once started, fire the network changed event.
 
@@ -166,11 +166,11 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
         NSLog(@"app: stop broadcasting");
 
         [_peerBluetooth stop];
-        [_peerNetworking stop];
+        [_multipeerSession stop];
         [_peerBluetooth setDelegate:nil];
-        [_peerNetworking setDelegate:nil];
+        [_multipeerSession setDelegate:nil];
         _peerBluetooth = nil;
-        _peerNetworking = nil;
+        _multipeerSession = nil;
 
         if (reachabilityHandlerReference != nil) // network changed event may not have fired yet
         {
@@ -206,7 +206,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     pthread_mutex_unlock(&_mutex);
 }
 
-- (void)didNotListenWithErrorMessage:(NSString *)errorMsg withPeerIdentifier:(NSString*)peerIdentifier
+- (void)didNotListenWithErrorMessage:(NSString *)errorMsg 
+                                      withPeerIdentifier:(NSString*)peerIdentifier
 {
     pthread_mutex_lock(&_mutex);
 
@@ -225,7 +226,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 }
 
 // Connects to the peer server with the specified peer idetifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(NSString *, uint))connectCallback
+- (BOOL)connectToPeer:(NSString *)peerIdentifier 
+                        connectCallback:(void(^)(NSString *, uint))connectCallback
 {
     if ([_atomicFlagCommunicationsEnabled isClear])
     {
@@ -251,7 +253,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
     if (!_outstandingConnections[peerIdentifier])
     {
-        if ([_peerNetworking connectToPeerServerWithPeerIdentifier:peerIdentifier])
+        if ([_multipeerSession connectToPeerServerWithPeerIdentifier:peerIdentifier])
         {
             _outstandingConnections[peerIdentifier] = connectCallback;
             return YES;
@@ -297,11 +299,11 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     }*/
 
     [_outstandingConnections removeObjectForKey:peerIdentifier];
-    return [_peerNetworking disconnectFromPeerServerWithPeerIdentifier:peerIdentifier];
+    return [_multipeerSession disconnectFromPeerServerWithPeerIdentifier:peerIdentifier];
 }
 
 ////////////////////////////////////////////////////////////
-// THEAppContext <THEPeerNetworkingDelegate> implementation.
+// THEAppContext <THEMultipeerSessionDelegate> implementation.
 ////////////////////////////////////////////////////////////
 
 - (void) didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
@@ -350,7 +352,14 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     {
         [peer setAvailable:NO];
     }
-    
+
+    void (^connectCallback)(NSString *, uint) = _outstandingConnections[peerIdentifier];
+    if (connectCallback)
+    {
+        connectCallback(@"Lost the peer", 0);
+        [_outstandingConnections removeObjectForKey: peerIdentifier];
+    }
+
     // Unlock.
     pthread_mutex_unlock(&_mutex);
     
@@ -455,10 +464,10 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
     
     // Allocate and initialize peer networking.
-    _peerNetworking = [[THEPeerNetworking alloc] initWithServiceType:@"Thali"
+    _multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
                                                       peerIdentifier:peerIdentifier
                                                             peerName:[[UIDevice currentDevice] name]];
-    [_peerNetworking setDelegate:(id<THEPeerNetworkingDelegate>)self];
+    [_multipeerSession setDelegate:(id<THEMultipeerSessionDelegate>)self];
     
     // Initialize the the mutex and peers dictionary.
     pthread_mutex_init(&_mutex, NULL);

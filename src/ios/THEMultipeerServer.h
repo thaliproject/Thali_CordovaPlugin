@@ -26,7 +26,7 @@
 //
 
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
-#import "THEPeerNetworking.h"
+#import "THEMultipeerSession.h"
 
 // Encapsulate the local server, handles advertising the serviceType and accepting
 // connections from remote clients

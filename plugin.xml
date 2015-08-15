@@ -7,7 +7,7 @@
     <description>ThaliPlugin to be used on top of JXcore</description>
     <license>MIT</license>
     <keywords>cordova,jxcore,node.js,thali</keywords>
-    <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova" 
+    <dependency id="io.jxcore.node" url="../jxcore-cordova" 
         commit="0.0.3-release"/>
     <engines>
         <engine name="cordova-android" version=">=3.2.0" />
@@ -55,21 +55,26 @@
         <header-file src="src/ios/THEPeerBluetoothDelegate.h" />
         <header-file src="src/ios/THEPeerBluetooth.h" />
         <source-file src="src/ios/THEPeerBluetooth.m" />
-        <header-file src="src/ios/THEPeerNetworkingDelegate.h" />
-        <header-file src="src/ios/THEPeerNetworking.h" />
-        <source-file src="src/ios/THEPeerNetworking.m" />
+        <header-file src="src/ios/THESocketServerDelegate.h" />
+        <header-file src="src/ios/THEMultipeerSession.h" />
+        <source-file src="src/ios/THEMultipeerSession.m" />
+        <header-file src="src/ios/THEMultipeerSessionDelegate.h" />
         <header-file src="src/ios/THEMultipeerClient.h" />
         <source-file src="src/ios/THEMultipeerClient.m" />
         <header-file src="src/ios/THEMultipeerServer.h" />
         <source-file src="src/ios/THEMultipeerServer.m" />
-        <header-file src="src/ios/THEPeerDescriptor.h" />
-        <source-file src="src/ios/THEPeerDescriptor.m" />
+        <header-file src="src/ios/THEPeerSession.h" />
+        <source-file src="src/ios/THEPeerSession.m" />
+        <header-file src="src/ios/THEPeerClientSession.h" />
+        <source-file src="src/ios/THEPeerClientSession.m" />
+        <header-file src="src/ios/THEPeerServerSession.h" />
+        <source-file src="src/ios/THEPeerServerSession.m" />
+        <header-file src="src/ios/THENetworkingRelay.h" />
+        <source-file src="src/ios/THENetworkingRelay.m" />
         <header-file src="src/ios/THENetworkingClientRelay.h" />
         <source-file src="src/ios/THENetworkingClientRelay.m" />
-        <header-file src="src/ios/THENetworkingClientRelayDelegate.h" />
         <header-file src="src/ios/THENetworkingServerRelay.h" />
         <source-file src="src/ios/THENetworkingServerRelay.m" />
-        <header-file src="src/ios/THENetworkingServerRelayDelegate.h" />
         <header-file src="src/ios/GCDAsyncSocket.h" />
         <source-file src="src/ios/GCDAsyncSocket.m" />
         <header-file src="src/ios/THEProtectedMutableDictionary.h" />

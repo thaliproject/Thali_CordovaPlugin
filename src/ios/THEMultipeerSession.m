@@ -22,7 +22,7 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeerNetworking.m
+//  THEMultipeerSession.m
 //
 
 #import <pthread.h>
@@ -30,15 +30,15 @@
 #import "JXcore.h"
 #import "THEThreading.h"
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
-#import "THEPeerNetworking.h"
+#import "THEMultipeerSession.h"
 #import "THEMultipeerClient.h"
 #import "THEMultipeerServer.h"
 
 // Static declarations.
 static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
 
-// THEPeerNetworking implementation.
-@implementation THEPeerNetworking
+// THEMultipeerSession implementation.
+@implementation THEMultipeerSession
 {
   // Application level identifiers
   NSString * _serviceType;
@@ -115,12 +115,12 @@ static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
   [_server start];
   [_client start];
 
-  NSLog(@"THEPeerNetworking initialized peer %@", [_peerID displayName]);
+  NSLog(@"THEMultipeerSession initialized peer %@", [_peerID displayName]);
 }
 
 - (void)stop
 {
-  NSLog(@"THEPeerNetworking stopping peer");
+  NSLog(@"THEMultipeerSession stopping peer");
 
   [_client stop];
   _client = nil;

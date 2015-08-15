@@ -25,7 +25,7 @@
 //  THEMultipeerClient.h
 
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
-#import "THEPeerNetworking.h"
+#import "THEMultipeerSession.h"
 
 // Encapsulates the local client functionality such as discovering and 
 // connecting to remote servers.
@@ -35,7 +35,7 @@
 // (although they'll usually be the same)
 -(id) initWithPeerId:(MCPeerID *)peerId 
                         withServiceType:(NSString *)serviceType 
-             withPeerNetworkingDelegate:(id<THEPeerNetworkingDelegate>)peerNetworkingDelegate;
+             withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate;
 
 // Start and stop the client (i.e. the peer discovery process)
 -(void) start;

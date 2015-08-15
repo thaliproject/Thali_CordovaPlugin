@@ -26,11 +26,11 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "THEPeerNetworkingDelegate.h"
+#import "THEMultipeerSessionDelegate.h"
 #import "THESocketServerDelegate.h"
 
 // THEAppContext interface.
-@interface THEAppContext : NSObject <THEPeerNetworkingDelegate, THESocketServerDelegate>
+@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THESocketServerDelegate>
 
 // Class singleton.
 + (instancetype)singleton;

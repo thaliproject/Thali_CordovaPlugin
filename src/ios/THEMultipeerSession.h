@@ -22,19 +22,19 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeerNetworking.h
+//  THEMultipeerSession.h
 //
 
 #import <Foundation/Foundation.h>
 
-#import "THEPeerNetworkingDelegate.h"
+#import "THEMultipeerSessionDelegate.h"
 
 // Wraps all the functionality of the networking stack and presents to the upper layers.
 // Contains both client and server members which will discover and connect (the client) and
 // advertise and accept (the server) connections from remote peers.
-@interface THEPeerNetworking : NSObject
+@interface THEMultipeerSession : NSObject
 
-@property (nonatomic, weak) id<THEPeerNetworkingDelegate> delegate;
+@property (nonatomic, weak) id<THEMultipeerSessionDelegate> delegate;
 
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType

@@ -44,7 +44,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   NSString *_serviceType;
 
   // Delegate that will be informed when we discover a server
-  id<THEPeerNetworkingDelegate>  _peerNetworkingDelegate;
+  id<THEMultipeerSessionDelegate>  _multipeerSessionDelegate;
 
   // Map servers we're currenty connecting to against the callbacks
   // we should call when that connection completes
@@ -53,7 +53,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (id)initWithPeerId:(MCPeerID *)peerId 
                         withServiceType:(NSString *)serviceType 
-             withPeerNetworkingDelegate:(id<THEPeerNetworkingDelegate>)peerNetworkingDelegate
+             withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate
 {
   self = [super init];
   if (!self)
@@ -66,7 +66,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   _localPeerId = peerId;
   _serviceType = serviceType;
 
-  _peerNetworkingDelegate = peerNetworkingDelegate;
+  _multipeerSessionDelegate = multipeerSessionDelegate;
 
   return self;
 }
@@ -209,9 +209,9 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     [clientSession setVisible:YES];
 
     // A new peer or one that has become visible again
-    if ([_peerNetworkingDelegate respondsToSelector:@selector(didFindPeerIdentifier:peerName:)])
+    if ([_multipeerSessionDelegate respondsToSelector:@selector(didFindPeerIdentifier:peerName:)])
     {
-      [_peerNetworkingDelegate 
+      [_multipeerSessionDelegate 
         didFindPeerIdentifier:[clientSession peerIdentifier] 
                      peerName:info[PEER_NAME_KEY]];
     }
@@ -242,9 +242,9 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   if (clientSession)
   {
     // Let interested parties know we lost a peer
-    if ([_peerNetworkingDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
+    if ([_multipeerSessionDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
     {
-      [_peerNetworkingDelegate didLosePeerIdentifier:[clientSession peerIdentifier]];
+      [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession peerIdentifier]];
     }
   }
   else
