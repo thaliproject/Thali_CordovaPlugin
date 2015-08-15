@@ -22,29 +22,12 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THEMultipeerClientSocketRelayDelegate.m
 //
 
-#import <Foundation/Foundation.h>
-#import "THEMultipeerSessionDelegate.h"
-#import "THEMultipeerClientSocketRelayDelegate.h"
-
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEMultipeerClientSocketRelayDelegate>
-
-// Class singleton.
-+ (instancetype)singleton;
-
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
-
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(NSString *, uint))connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
-
+// Protocol implemented by classes wishing to know which port the client relay
+// is listening on
+@protocol THEMultipeerClientSocketRelayDelegate <NSObject>
+- (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier;
+- (void)didNotListenWithErrorMessage:(NSString *)errorMsg withPeerIdentifier:(NSString*)peerIdentifier;
 @end

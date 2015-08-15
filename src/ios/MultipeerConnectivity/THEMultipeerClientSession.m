@@ -68,7 +68,7 @@
   ];
   // We'll call this delegate back when a listening socket is established
   // to which the application client will connect to be bridged to the remote server
-  [clientRelay setDelegate:(id<THESocketServerDelegate>)[THEAppContext singleton]];
+  [clientRelay setDelegate:(id<THEMultipeerClientSocketRelayDelegate>)[THEAppContext singleton]];
 
   return clientRelay;
 }
