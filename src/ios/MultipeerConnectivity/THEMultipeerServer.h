@@ -30,7 +30,7 @@
 
 // Encapsulate the local server, handles advertising the serviceType and accepting
 // connections from remote clients
-@interface MultipeerServer : NSObject <MCNearbyServiceAdvertiserDelegate>
+@interface THEMultipeerServer : NSObject <MCNearbyServiceAdvertiserDelegate>
 
 - (id) initWithPeerId:(MCPeerID *)peerId 
    withPeerIdentifier:(NSString *)peerIdentifier 

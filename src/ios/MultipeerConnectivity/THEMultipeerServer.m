@@ -33,7 +33,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 static NSString * const SERVER_OUTPUT_STREAM = @"ServerOutputStream";
 static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
-@implementation MultipeerServer
+@implementation THEMultipeerServer
 {
     // Transport level id
     MCPeerID * _localPeerId;

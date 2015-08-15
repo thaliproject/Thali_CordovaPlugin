@@ -52,11 +52,11 @@ static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
   pthread_mutex_t _mutex;
 
   // The multipeer client which will handle browsing and connecting for us
-  MultipeerClient *_client;
+  THEMultipeerClient *_client;
 
   // The multipeer server which will handle advertising out service and accepting 
   // connections from remote clients
-  MultipeerServer *_server;
+  THEMultipeerServer *_server;
 }
 
 - (instancetype)initWithServiceType:(NSString *)serviceType
@@ -104,11 +104,11 @@ static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
   }
     
   // Start up the networking components  
-  _server = [[MultipeerServer alloc] initWithPeerId: _peerID 
+  _server = [[THEMultipeerServer alloc] initWithPeerId: _peerID 
     withPeerIdentifier: _peerIdentifier withPeerName: _peerName withServiceType: _serviceType
   ];
 
-  _client = [[MultipeerClient alloc] 
+  _client = [[THEMultipeerClient alloc] 
     initWithPeerId: _peerID withServiceType: _serviceType withPeerNetworkingDelegate: _delegate
   ];
 
@@ -132,9 +132,11 @@ static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
 }
 
 - (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier
+                          withConnectCallback:(void(^)(NSString *, uint))connectCallback
 {
   // Connect to a previously discovered peer
-  return [_client connectToPeerWithPeerIdentifier:peerIdentifier];
+  return [_client connectToPeerWithPeerIdentifier:peerIdentifier 
+                              withConnectCallback:(void(^)(NSString *, uint))connectCallback];
 }
 
 - (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSString *)peerIdentifier

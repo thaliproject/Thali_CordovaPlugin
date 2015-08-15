@@ -31,8 +31,15 @@
 
 @implementation THEMultipeerClientSession
 {
+  // The transport level peer id
   MCPeerID *_remotePeerID;
+  
+  // The applications level peer id
   NSString *_remotePeerIdentifier;
+
+  // Callback to fire when a connection completes (in fact when the relay
+  // has established it's listening socket)
+  ConnectCallback _connectCallback;
 }
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
@@ -61,6 +68,25 @@
   return _remotePeerIdentifier;
 }
 
+- (MCSession *)connectWithConnectCallback:(ConnectCallback)connectCallback
+{
+  assert(_connectCallback == nil);
+
+  MCSession *mcSession = [super connect];
+  if (mcSession)
+  {
+    _connectCallback = connectCallback;
+  }
+
+  return mcSession;
+}
+
+- (void)disconnect
+{
+  [super disconnect];
+  _connectCallback = nil;
+}
+
 - (THEMultipeerSocketRelay *)createRelay
 {
   THEMultipeerClientSocketRelay *clientRelay = [
@@ -68,9 +94,36 @@
   ];
   // We'll call this delegate back when a listening socket is established
   // to which the application client will connect to be bridged to the remote server
-  [clientRelay setDelegate:(id<THEMultipeerClientSocketRelayDelegate>)[THEAppContext singleton]];
+  [clientRelay setDelegate:(id<THEMultipeerClientSocketRelayDelegate>) self];
 
   return clientRelay;
+}
+
+- (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier
+{
+  if (_connectCallback)
+  {
+    _connectCallback(nil, port);
+    _connectCallback = nil;
+  }
+  else
+  {
+    NSLog(@"WARNING: didListenWithLocalPort but no callback");
+  }
+}
+
+- (void)didNotListenWithErrorMessage:(NSString *)errorMsg 
+                  withPeerIdentifier:(NSString*)peerIdentifier
+{
+  if (_connectCallback)
+  {
+    _connectCallback(errorMsg, 0);
+    _connectCallback = nil;
+  }
+  else
+  {
+    NSLog(@"WARNING: didNotListenWithLocalPort but no callback");
+  }
 }
 
 @end

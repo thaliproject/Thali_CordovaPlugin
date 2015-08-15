@@ -27,6 +27,7 @@
 
 #import <Foundation/Foundation.h>
 
+#import "THEAppContext.h"
 #import "THEMultipeerSessionDelegate.h"
 
 // Wraps all the functionality of the networking stack and presents to the upper layers.
@@ -41,14 +42,17 @@
                      peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName;
 
-// Starts peer networking.
+// Starts multipeer session both discovering and advertising.
 - (void)start;
 
-// Stops peer networking.
+// Stops all multipeer activity
 - (void)stop;
 
-// Connects to the peer server with the specified peer identifier.
-- (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;
+// Connects to the peer server with the specified peer identifier. |connectCallback| will
+// be called when the connection completes with first param being any error message or nil and
+// second param being the port number the relay is listening on
+- (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier 
+                          withConnectCallback:(ConnectCallback)connectCallback;
 
 // Connects from the peer server with the specified peer identifier.
 - (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;

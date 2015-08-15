@@ -31,7 +31,7 @@
 static NSString * const PEER_NAME_KEY        = @"PeerName";
 static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
-@implementation MultipeerClient
+@implementation THEMultipeerClient
 {
   // Transport level identifier, we always init transport level
   // sessions (MCSessions) with this id and never the remote one
@@ -46,9 +46,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   // Delegate that will be informed when we discover a server
   id<THEMultipeerSessionDelegate>  _multipeerSessionDelegate;
 
-  // Map servers we're currenty connecting to against the callbacks
-  // we should call when that connection completes
-  THEProtectedMutableDictionary *_servers;
+  // Dict of all the servers ids we're current aware against their session states
+  THEProtectedMutableDictionary *_clientSessions;
 }
 
 - (id)initWithPeerId:(MCPeerID *)peerId 
@@ -75,7 +74,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 {
   NSLog(@"client starting");
 
-  _servers = [[THEProtectedMutableDictionary alloc] init];
+  _clientSessions = [[THEProtectedMutableDictionary alloc] init];
 
   // Kick off the peer discovery process
   _nearbyServiceBrowser = [[MCNearbyServiceBrowser alloc] 
@@ -93,30 +92,30 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   [_nearbyServiceBrowser stopBrowsingForPeers];
   _nearbyServiceBrowser = nil;
 
-  _servers = nil;
+  _clientSessions = nil;
 }
 
-- (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
+- (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
+                    withConnectCallback:(ConnectCallback)connectCallback
 {
   __block BOOL success = NO;
 
   BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
     // Search for the peer with matching peerIdentifier
     THEMultipeerClientSession *clientSession = 
-        (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);
+      (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);
     return clientSession && [[clientSession peerIdentifier] isEqualToString:peerIdentifier];
   };
+  
+  [_clientSessions updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
-  [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
-
-    // Called only when v == matching peer
     THEMultipeerClientSession *clientSession = (THEMultipeerClientSession *)v;
 
     // Start connection process from the top
     if ([clientSession connectionState] == THEPeerSessionStateNotConnected)
     {
       // connect will create the networking resources required to establish the session
-      [clientSession connect];
+      [clientSession connectWithConnectCallback:(ConnectCallback)connectCallback];
 
       NSLog(@"client: inviting peer");
       [_nearbyServiceBrowser invitePeer:[clientSession peerID]
@@ -150,7 +149,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return clientSession && [clientSession.peerIdentifier isEqualToString:peerIdentifier];
   };
 
-  [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
+  [_clientSessions updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
     // Called only when v == matching peer
     THEMultipeerClientSession *clientSession = (THEMultipeerClientSession *)v;
@@ -177,7 +176,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   __block THEMultipeerClientSession *clientSession = nil;
 
   // Find or create an app session for this peer..
-  [_servers createWithKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
+  [_clientSessions createWithKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
 
     THEMultipeerClientSession *descriptor = (THEMultipeerClientSession *)oldValue;
 
@@ -224,7 +223,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   __block THEMultipeerClientSession *clientSession = nil;
 
   // Update the peer's record under lock
-  [_servers updateWithKey:peerID updateBlock: ^void(NSObject *v) {
+  [_clientSessions updateWithKey:peerID updateBlock: ^void(NSObject *v) {
 
     clientSession = 
       (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);

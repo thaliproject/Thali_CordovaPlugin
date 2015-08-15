@@ -27,10 +27,13 @@
 
 #import <Foundation/Foundation.h>
 #import "THEMultipeerSessionDelegate.h"
-#import "THEMultipeerClientSocketRelayDelegate.h"
+
+// Callback that will be called when the lower levels have established
+// a client relay in response to a connect
+typedef void(^ConnectCallback)(NSString *error, uint port);
 
 // THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEMultipeerClientSocketRelayDelegate>
+@interface THEAppContext : NSObject <THEMultipeerSessionDelegate>
 
 // Class singleton.
 + (instancetype)singleton;
@@ -42,7 +45,7 @@
 - (BOOL)stopBroadcasting;
 
 // Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(void(^)(NSString *, uint))connectCallback;
+- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
 
 // Disconnects from the peer with the specified peer idetifier.
 - (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;

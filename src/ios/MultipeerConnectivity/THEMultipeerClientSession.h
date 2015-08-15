@@ -26,18 +26,23 @@
 //
 
 #import "THEMultipeerPeerSession.h"
+#import "THEMultipeerClientSocketRelayDelegate.h"
 
 // Session type managed by clients (and so references a remote server)
-@interface THEMultipeerClientSession : THEMultipeerPeerSession
+@interface THEMultipeerClientSession : THEMultipeerPeerSession 
+                                        <THEMultipeerClientSocketRelayDelegate>
 
-  // Accessor for application level peer identifier which we'll pass in to the
-  // relay (which needs it to call back the application once it knows which port it's 
-  // server socket is listening on
-  -(NSString *)peerIdentifier;
+// Accessor for application level peer identifier which we'll pass in to the
+// relay (which needs it to call back the application once it knows which port it's 
+// server socket is listening on
+- (NSString *)peerIdentifier;
 
-  -(instancetype)initWithLocalPeerID:(MCPeerID *)localPeer 
-                    withRemotePeerID:(MCPeerID *)remotePeer 
-            withRemotePeerIdentifier:(NSString *)peerIdentifier;
+// Clients need to specialise connect in order to receive the connect callback
+- (void)connectWithConnectCallback:(ConnectCallback)connectCallback;
+
+- (instancetype)initWithLocalPeerID:(MCPeerID *)localPeer 
+                  withRemotePeerID:(MCPeerID *)remotePeer 
+          withRemotePeerIdentifier:(NSString *)peerIdentifier;
 
 @end;
 

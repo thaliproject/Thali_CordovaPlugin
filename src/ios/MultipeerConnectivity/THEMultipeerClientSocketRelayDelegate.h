@@ -28,6 +28,11 @@
 // Protocol implemented by classes wishing to know which port the client relay
 // is listening on
 @protocol THEMultipeerClientSocketRelayDelegate <NSObject>
+
+// Called when the client relay succesfully established it's listening port
 - (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier;
-- (void)didNotListenWithErrorMessage:(NSString *)errorMsg withPeerIdentifier:(NSString*)peerIdentifier;
+
+// Called when the client relay fails to listen
+- (void)didNotListenWithErrorMessage:(NSString *)errorMsg 
+                  withPeerIdentifier:(NSString*)peerIdentifier;
 @end
