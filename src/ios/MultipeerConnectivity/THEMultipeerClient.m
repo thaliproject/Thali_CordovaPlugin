@@ -173,40 +173,40 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)browser:(MCNearbyServiceBrowser *)browser foundPeer:(MCPeerID *)peerID withDiscoveryInfo:(NSDictionary *)info
 {
+  __block BOOL previouslyVisible = NO;
   __block THEMultipeerClientSession *clientSession = nil;
 
   // Find or create an app session for this peer..
   [_clientSessions createWithKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
 
-    THEMultipeerClientSession *descriptor = (THEMultipeerClientSession *)oldValue;
+    THEMultipeerClientSession *session = (THEMultipeerClientSession *)oldValue;
 
-    if (descriptor && ([descriptor.peerID hash] == [peerID hash]))
+    if (session && ([session.peerID hash] == [peerID hash]))
     {
       NSLog(@"client: Found existing peer: %@", info[PEER_IDENTIFIER_KEY]);
 
-      clientSession = descriptor;
-            
-      // Returning nil to indicate we don't need to replace the existing record
-      return nil;
+      clientSession = session;
+      previouslyVisible = clientSession.visible;
+    }
+    else
+    {
+      NSLog(@"client: Found new peer: %@", info[PEER_IDENTIFIER_KEY]);
+
+      // We've found a new peer, create a new record
+      clientSession = [[THEMultipeerClientSession alloc] 
+                                    initWithLocalPeerID:_localPeerId 
+                                       withRemotePeerID:peerID 
+                               withRemotePeerIdentifier:info[PEER_IDENTIFIER_KEY]];
     }
 
-    NSLog(@"client: Found new peer: %@", info[PEER_IDENTIFIER_KEY]);
-
-    // We've found a new peer, create a new record
-    clientSession = [[THEMultipeerClientSession alloc] 
-        initWithLocalPeerID:_localPeerId 
-           withRemotePeerID:peerID 
-   withRemotePeerIdentifier:info[PEER_IDENTIFIER_KEY]];
-
-    // Return the new descriptor to be stored
+    [clientSession setVisible:YES];
     return clientSession;
   }];
 
-  if (clientSession)
+  if (clientSession && previouslyVisible == NO)
   {
-    [clientSession setVisible:YES];
-
-    // A new peer or one that has become visible again
+    // A new peer or one that has become visible again. Only
+    // contact delegate when the state changes (we get duplicates a lot)
     if ([_multipeerSessionDelegate respondsToSelector:@selector(didFindPeerIdentifier:peerName:)])
     {
       [_multipeerSessionDelegate 
@@ -220,6 +220,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 - (void)browser:(MCNearbyServiceBrowser *)browser
        lostPeer:(MCPeerID *)peerID
 {
+  __block BOOL previouslyVisible = NO;
   __block THEMultipeerClientSession *clientSession = nil;
 
   // Update the peer's record under lock
@@ -227,6 +228,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     clientSession = 
       (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);
+
+    previouslyVisible = clientSession.visible;
 
     if (clientSession)
     {
@@ -237,9 +240,9 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     }
   }];
     
-  if (clientSession)
+  if (clientSession && previouslyVisible == YES)
   {
-    // Let interested parties know we lost a peer
+    // Let interested parties know we lost a peer, only do this on a state change
     if ([_multipeerSessionDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
     {
       [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession peerIdentifier]];
