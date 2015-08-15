@@ -145,7 +145,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
     // Search for the peer with matching peerIdentifier
     THEMultipeerClientSession *clientSession = 
-        (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);
+       (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);
     return clientSession && [clientSession.peerIdentifier isEqualToString:peerIdentifier];
   };
 
@@ -235,10 +235,10 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     if (clientSession)
     {
+      NSLog(@"client: lost peer: %@", [clientSession peerIdentifier]);
       // disconnect will clear up any networking resources we currently hold
       [clientSession disconnect];
       [clientSession setVisible:NO];
-      NSLog(@"client: Lost peer: %@", [clientSession peerIdentifier]);
     }
   }];
     
