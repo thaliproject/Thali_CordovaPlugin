@@ -157,7 +157,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     if ([clientSession connectionState] != THEPeerSessionStateNotConnected)
     {
       success = YES;
-      [clientSession setConnectionState:THEPeerSessionStateNotConnected];
 
       NSLog(@"client: disconnecting peer: %@", peerIdentifier);
       [clientSession disconnect];

@@ -87,6 +87,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 
   assert(_relay == nil && _session == nil);
 
+  _connectionState = THEPeerSessionStateConnecting;
+
   _relay = [self createRelay];
 
   _session = [[MCSession alloc] initWithPeer: _peerID 
@@ -162,7 +164,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
     case MCSessionStateConnecting:
     {
       NSLog(@"%@ session: connecting", _sessionType);
-      [self setConnectionState:THEPeerSessionStateConnecting];
+      assert(_connectionState == THEPeerSessionStateConnecting);
     }
     break;
 
@@ -183,6 +185,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
       else
       {
         [_session cancelConnectPeer:peerID];
+        [self disconnect];
       }
     }
     break;
