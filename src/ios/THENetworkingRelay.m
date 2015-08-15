@@ -1,11 +1,9 @@
 #import "THENetworkingRelay.h"
 
-@interface THENetworkingRelay
+@interface THENetworkingRelay()
 
-// 
-- (BOOL)canCreateSocket;
+// Try to open the socket
 - (BOOL)tryCreateSocket;
-- (void)didCreateSocket:(GCDAsyncSocket *)socket;
 
 @end
 
@@ -36,9 +34,10 @@
   return [self initWithRelayType:@"unknown"];
 }
 
-
 - (void)setInputStream:(NSInputStream *)inputStream
 {
+  // inputStream is from the multipeer session, data from the remote
+  // peer will appear here
   assert(inputStream && _inputStream == nil);
   _inputStream = inputStream;
   [self tryCreateSocket];
@@ -46,6 +45,8 @@
 
 - (void)setOutputStream:(NSOutputStream *)outputStream
 {
+  // outputStream is from the multipeer session, data written here will
+  // be sent to the remote peer
   assert(outputStream && _outputStream == nil);
   _outputStream = outputStream;
   [self tryCreateSocket];
@@ -82,6 +83,7 @@
 
 - (void)didCreateSocket:(GCDAsyncSocket *)socket
 {
+  // Socket's been created which means we can open up the stream
   assert(_socket == nil);
 
   _socket = socket;

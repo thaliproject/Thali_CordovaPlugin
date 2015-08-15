@@ -48,8 +48,6 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 - (MCSession *)connect;
 
 - (void)disconnect;
-- (void)setInputStream:(NSInputStream *)inputStream;
-- (void)setOutputStream:(NSOutputStream *)outputStream;
 
 @end
 

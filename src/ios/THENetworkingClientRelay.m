@@ -2,77 +2,83 @@
 
 @implementation THENetworkingClientRelay
 {
-@private
-    NSString *_peerIdentifier;
-    GCDAsyncSocket *_serverSocket;
+  NSString *_peerIdentifier;
+  GCDAsyncSocket *_serverSocket;
 }
 
 -(instancetype)initWithPeerIdentifier:(NSString *)peerIdentifier
 {
-    self = [super initWithRelayType:@"client"];
-    if (!self)
-    {
-        return nil;
-    }
+  self = [super initWithRelayType:@"client"];
+  if (!self)
+  {
+    return nil;
+  }
     
-    _peerIdentifier = peerIdentifier;
+  _peerIdentifier = peerIdentifier;
     
-    return self;
+  return self;
 }
 
 -(void)dealloc
 {
-    NSLog(@"client: relay dealloc");
+  NSLog(@"client: relay dealloc");
 
-    [_serverSocket setDelegate:nil];
-    _serverSocket = nil;
+  [_serverSocket setDelegate:nil];
+  _serverSocket = nil;
 }
 
 -(BOOL)tryCreateSocket
 {
-    if ([self canCreateSocket]) 
+  if ([self canCreateSocket]) 
+  {
+    // Set up a server socket to listen for incoming connections from the 
+    // application
+
+    NSLog(@"client: relay starting");
+
+    _serverSocket = [[GCDAsyncSocket alloc] 
+                        initWithDelegate:self 
+                           delegateQueue:dispatch_get_main_queue()];
+        
+    NSError *err = nil;
+    if (![_serverSocket acceptOnPort:0 error:&err])
     {
-        NSLog(@"client: relay starting");
+      NSString *errorMsg = @"relay failed to listen";
 
-        _serverSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
-        
-        NSError *err = nil;
-        if (![_serverSocket acceptOnPort:0 error:&err])
-        {
-            NSString *errorMsg = @"relay failed to listen";
+      NSLog(@"client: %@", errorMsg);
+      if ([self.delegate respondsToSelector:@selector(
+        didNotListenWithErrorMessage:withPeerIdentifier:)])
+      {
+        [self.delegate didNotListenWithErrorMessage:errorMsg withPeerIdentifier:_peerIdentifier];
+      }
 
-            NSLog(@"client: %@", errorMsg);
-            if ([self.delegate respondsToSelector:@selector(didNotListenWithErrorMessage:withPeerIdentifier:)])
-            {
-                [self.delegate didNotListenWithErrorMessage:errorMsg withPeerIdentifier:_peerIdentifier];
-            }
-
-            return NO;
-        }
-        else
-        {
-            UInt16 port = [_serverSocket localPort];
-            if ([self.delegate respondsToSelector:@selector(didListenWithLocalPort:withPeerIdentifier:)])
-            {
-                NSLog(@"client: relay started");
-                [self.delegate didListenWithLocalPort:port withPeerIdentifier:_peerIdentifier];
-            }
-        
-            return YES;
-        }
+      return NO;
     }
     else
     {
-        return NO;
+      UInt16 port = [_serverSocket localPort];
+      if ([self.delegate respondsToSelector:@selector(didListenWithLocalPort:withPeerIdentifier:)])
+      {
+        NSLog(@"client: relay started");
+        [self.delegate didListenWithLocalPort:port withPeerIdentifier:_peerIdentifier];
+      }
+        
+      return YES;
     }
+  }
+  else
+  {
+    return NO;
+  }
 }
 
 #pragma mark - GCDAsyncSocketDelegate
 
 -(void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)acceptedSocket
 {
-    NSLog(@"client: relay established");
-    [self didCreateSocket: acceptedSocket];
+  // Application has connected to us, the |acceptedSocket| is the one we'll talk to it on
+  NSLog(@"client: relay established");
+  [self didCreateSocket: acceptedSocket];
 }
 
 @end

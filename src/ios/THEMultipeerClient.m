@@ -31,12 +31,6 @@
 static NSString * const PEER_NAME_KEY        = @"PeerName";
 static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
-static const uint MAX_CONNECT_RETRIES = 5;
-
-@interface MultipeerClient()
-  - (BOOL)tryInviteToSessionWithPeerSession:(THEPeerSession *)peerSession;
-@end
-
 @implementation MultipeerClient
 {
   // Transport level identifier, we always init transport level
