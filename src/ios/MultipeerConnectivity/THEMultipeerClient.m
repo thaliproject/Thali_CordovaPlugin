@@ -179,24 +179,26 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   // Find or create an app session for this peer..
   [_clientSessions createWithKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
 
+    NSString *peerIdentifier = info[PEER_IDENTIFIER_KEY];
     THEMultipeerClientSession *session = (THEMultipeerClientSession *)oldValue;
 
-    if (session && ([session.peerID hash] == [peerID hash]))
+    if (session && ([session.peerID hash] == [peerID hash]) && 
+        [peerIdentifier isEqualToString:[session peerIdentifier]])
     {
-      NSLog(@"client: Found existing peer: %@", info[PEER_IDENTIFIER_KEY]);
+      NSLog(@"client: Found existing peer: %@", peerIdentifier);
 
       clientSession = session;
       previouslyVisible = clientSession.visible;
     }
     else
     {
-      NSLog(@"client: Found new peer: %@", info[PEER_IDENTIFIER_KEY]);
+      NSLog(@"client: Found new peer: %@", peerIdentifier);
 
       // We've found a new peer, create a new record
       clientSession = [[THEMultipeerClientSession alloc] 
                                     initWithLocalPeerID:_localPeerId 
                                        withRemotePeerID:peerID 
-                               withRemotePeerIdentifier:info[PEER_IDENTIFIER_KEY]];
+                               withRemotePeerIdentifier:peerIdentifier];
     }
 
     [clientSession setVisible:YES];
@@ -240,17 +242,20 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     }
   }];
     
-  if (clientSession && previouslyVisible == YES)
+  if (clientSession)
   {
-    // Let interested parties know we lost a peer, only do this on a state change
-    if ([_multipeerSessionDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
+    if (previouslyVisible == YES)
     {
-      [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession peerIdentifier]];
+      // Let interested parties know we lost a peer, only do this on a state change
+      if ([_multipeerSessionDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
+      {
+        [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession peerIdentifier]];
+      }
     }
   }
   else
   {
-    // Shouldn't happen
+    // Probably shouldn't happen
     NSLog(@"WARNING: lostPeer we didn't know about");
   }
 }
