@@ -120,7 +120,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   if ([_atomicFlagCommunicationsEnabled trySet])
   {
     // Allocate and initialize the service type.
-    NSUUID * serviceType = [[NSUUID alloc] initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
+    //NSUUID * serviceType = [[NSUUID alloc] initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
 
     // Allocate and initialize the peer Bluetooth context.
     //_peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
