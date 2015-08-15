@@ -1,5 +1,14 @@
 #import "THENetworkingRelay.h"
 
+@interface THENetworkingRelay
+
+// 
+- (BOOL)canCreateSocket;
+- (BOOL)tryCreateSocket;
+- (void)didCreateSocket:(GCDAsyncSocket *)socket;
+
+@end
+
 @implementation THENetworkingRelay
 {
   // The socket we're using to talk to the upper (localhost) layers

@@ -34,156 +34,146 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 static const uint MAX_CONNECT_RETRIES = 5;
 
 @interface MultipeerClient()
-    -(BOOL) tryInviteToSessionWithPeerSession:(THEPeerSession *)peerSession;
+  - (BOOL)tryInviteToSessionWithPeerSession:(THEPeerSession *)peerSession;
 @end
 
 @implementation MultipeerClient
 {
-    // Transport level identifier
-    MCPeerID * _localPeerId;
+  // Transport level identifier, we always init transport level
+  // sessions with this id and never the remote one
+  MCPeerID * _localPeerId;
 
-    // The multipeer browser
-    MCNearbyServiceBrowser * _nearbyServiceBrowser;
+  // The multipeer browser
+  MCNearbyServiceBrowser * _nearbyServiceBrowser;
 
-    // Application level service info
-    NSString *_serviceType;
+  // Application level service info, the kind of service we're looking for
+  NSString *_serviceType;
 
-    // Delegate that will be informed when we discover a server
-    id<THEPeerNetworkingDelegate>  _peerNetworkingDelegate;
+  // Delegate that will be informed when we discover a server
+  id<THEPeerNetworkingDelegate>  _peerNetworkingDelegate;
 
-    // Map of discovered servers
-    THEProtectedMutableDictionary *_servers;
+  // Map servers we're currenty connecting to against the callbacks
+  // we should call when that connection completes
+  THEProtectedMutableDictionary *_servers;
 }
 
--(id) initWithPeerId:(MCPeerID *)peerId withServiceType:(NSString *)serviceType 
-                             withPeerNetworkingDelegate:(id<THEPeerNetworkingDelegate>)peerNetworkingDelegate
+- (id)initWithPeerId:(MCPeerID *)peerId 
+                        withServiceType:(NSString *)serviceType 
+             withPeerNetworkingDelegate:(id<THEPeerNetworkingDelegate>)peerNetworkingDelegate
 {
-    self = [super init];
-    if (!self)
-    {
-        return nil;
-    }
+  self = [super init];
+  if (!self)
+  {
+      return nil;
+  }
 
-    // Init the basic multipeer client session
+  // Init the basic multipeer client session
 
-    _localPeerId = peerId;
-    _serviceType = serviceType;
+  _localPeerId = peerId;
+  _serviceType = serviceType;
 
-    _peerNetworkingDelegate = peerNetworkingDelegate;
+  _peerNetworkingDelegate = peerNetworkingDelegate;
 
-    return self;
+  return self;
 }
 
--(void) start
+- (void)start
 {
-    NSLog(@"client starting");
+  NSLog(@"client starting");
 
-    _servers = [[THEProtectedMutableDictionary alloc] init];
+  _servers = [[THEProtectedMutableDictionary alloc] init];
 
-    _nearbyServiceBrowser = [[MCNearbyServiceBrowser alloc] initWithPeer:_localPeerId serviceType:_serviceType];
-    [_nearbyServiceBrowser setDelegate:self];
+  // Kick off the peer discovery process
+  _nearbyServiceBrowser = [[MCNearbyServiceBrowser alloc] 
+                             initWithPeer:_localPeerId 
+                              serviceType:_serviceType];
+  [_nearbyServiceBrowser setDelegate:self];
 
-    [_nearbyServiceBrowser startBrowsingForPeers];
+  [_nearbyServiceBrowser startBrowsingForPeers];
 }
 
--(void) stop
+- (void)stop
 {
-    NSLog(@"client: stopping");
+  NSLog(@"client: stopping");
 
-    [_nearbyServiceBrowser stopBrowsingForPeers];
-    _nearbyServiceBrowser = nil;
+  [_nearbyServiceBrowser stopBrowsingForPeers];
+  _nearbyServiceBrowser = nil;
 
-    _servers = nil;
+  _servers = nil;
 }
 
--(BOOL) tryInviteToSessionWithPeerSession:(THEPeerServerSession *)serverSession
+- (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
 {
-    // DON'T CALL THIS OUTSIDE A LOCK
+  __block BOOL success = NO;
 
+  BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
+    // Search for the peer with matching peerIdentifier
+    THEPeerServerSession *serverSession = 
+        (THEPeerServerSession *)([v isKindOfClass:[THEPeerServerSession class]] ? v : Nil);
+    return serverSession && [[serverSession peerIdentifier] isEqualToString:peerIdentifier];
+  };
+
+  [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
+
+    // Called only when v == matching peer
+    THEPeerServerSession *serverSession = (THEPeerServerSession *)v;
+
+    // Start connection process from the top
     if ([serverSession connectionState] == THEPeerSessionStateNotConnected)
     {
-        serverSession.connectRetries--;
-        if (serverSession.connectRetries > 0)
-        {
-            [serverSession connect];
+      // connect will create the networking resources required to establish the session
+      [serverSession connect];
 
-            NSLog(@"client: inviting peer");
-            [_nearbyServiceBrowser invitePeer:[serverSession peerID]
-                                    toSession:[serverSession session]
-                                  withContext:nil
-                                      timeout:60];
+      NSLog(@"client: inviting peer");
+      [_nearbyServiceBrowser invitePeer:[serverSession peerID]
+                              toSession:[serverSession session]
+                            withContext:nil
+                                timeout:60];
 
-            return YES;
-        }
-        else
-        {
-            NSLog(@"client: max connect retries exceeded");
-        }
+      success = YES;
     }
     else
     {
-        NSLog(@"client: already connect(ing/ed)");
+      NSLog(@"client: already connect(ing/ed)");
+      success = NO;
     }
 
+    // Stop iterating
     return NO;
+  }];
+
+  return success;
 }
 
--(BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
+- (BOOL)disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier
 {
-    __block BOOL success = NO;
+  __block BOOL success = NO;
 
-    BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
-        // Search for the peer with matching peerIdentifier
-        THEPeerServerSession *serverSession = 
-            (THEPeerServerSession *)([v isKindOfClass:[THEPeerServerSession class]] ? v : Nil);
-        return serverSession && [[serverSession peerIdentifier] isEqualToString:peerIdentifier];
-    };
+  BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
+    // Search for the peer with matching peerIdentifier
+    THEPeerServerSession *serverSession = 
+        (THEPeerServerSession *)([v isKindOfClass:[THEPeerServerSession class]] ? v : Nil);
+    return serverSession && [serverSession.peerIdentifier isEqualToString:peerIdentifier];
+  };
 
-    [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
+  [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
-        // Called only when v == matching peer
-        THEPeerServerSession *serverSession = (THEPeerServerSession *)v;
+    // Called only when v == matching peer
+    THEPeerServerSession *serverSession = (THEPeerServerSession *)v;
+    if ([serverSession connectionState] != THEPeerSessionStateNotConnected)
+    {
+      success = YES;
+      [serverSession setConnectionState:THEPeerSessionStateNotConnected];
 
-        // Start connection process from the top
-        serverSession.connectRetries = MAX_CONNECT_RETRIES;
-        success = [self tryInviteToSessionWithPeerSession:serverSession];
+      NSLog(@"client: disconnecting peer: %@", peerIdentifier);
+      [serverSession disconnect];
+    }
 
-        // Stop iterating
-        return NO;
-    }];
-
-    return success;
-}
-
--(BOOL) disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier
-{
-    __block BOOL success = NO;
-
-    BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
-        // Search for the peer with matching peerIdentifier
-        THEPeerServerSession *serverSession = 
-            (THEPeerServerSession *)([v isKindOfClass:[THEPeerServerSession class]] ? v : Nil);
-        return serverSession && [serverSession.peerIdentifier isEqualToString:peerIdentifier];
-    };
-
-    [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
-
-        // Called only when v == matching peer
-        THEPeerServerSession *serverSession = (THEPeerServerSession *)v;
-        if ([serverSession connectionState] != THEPeerSessionStateNotConnected)
-        {
-            success = YES;
-            [serverSession setConnectionState:THEPeerSessionStateNotConnected];
-
-            NSLog(@"client: disconnecting peer: %@", peerIdentifier);
-            [serverSession disconnect];
-        }
-
-        // Stop iterating
-        return NO;
-    }];
+    // Stop iterating
+    return NO;
+  }];
     
-    return success; 
+  return success; 
 }
 
 // MCNearbyServiceBrowserDelegate
@@ -191,84 +181,88 @@ static const uint MAX_CONNECT_RETRIES = 5;
 
 - (void)browser:(MCNearbyServiceBrowser *)browser foundPeer:(MCPeerID *)peerID withDiscoveryInfo:(NSDictionary *)info
 {
-    __block THEPeerServerSession *serverSession = nil;
+  __block THEPeerServerSession *serverSession = nil;
 
-    // Find or create an app session for this peer..
-    [_servers createWithKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
+  // Find or create an app session for this peer..
+  [_servers createWithKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
 
-        THEPeerServerSession *descriptor = (THEPeerServerSession *)oldValue;
+    THEPeerServerSession *descriptor = (THEPeerServerSession *)oldValue;
 
-        if (descriptor && ([descriptor.peerID hash] == [peerID hash]))
-        {
-            NSLog(@"client: Found existing peer: %@", info[PEER_IDENTIFIER_KEY]);
-
-            serverSession = descriptor;
-            
-            // Returning nil to indicate we don't need to replace the existing record
-            return nil;
-        }
-
-        NSLog(@"client: Found new peer: %@", info[PEER_IDENTIFIER_KEY]);
-
-        // We've found a new peer, create a new record
-        serverSession = [[THEPeerServerSession alloc] 
-            initWithLocalPeerID:_localPeerId withRemotePeerID:peerID withRemotePeerIdentifier:info[PEER_IDENTIFIER_KEY]
-        ];
-
-        // Return the new descriptor to be stored
-        return serverSession;
-    }];
-
-    if (serverSession)
+    if (descriptor && ([descriptor.peerID hash] == [peerID hash]))
     {
-        [serverSession setVisible:YES];
+      NSLog(@"client: Found existing peer: %@", info[PEER_IDENTIFIER_KEY]);
 
-        // A new peer or one that has become visible again
-        if ([_peerNetworkingDelegate respondsToSelector:@selector(didFindPeerIdentifier:peerName:)])
-        {
-            [_peerNetworkingDelegate 
-                didFindPeerIdentifier:[serverSession peerIdentifier] peerName:info[PEER_NAME_KEY]
-            ];
-        }
+      serverSession = descriptor;
+            
+      // Returning nil to indicate we don't need to replace the existing record
+      return nil;
     }
+
+    NSLog(@"client: Found new peer: %@", info[PEER_IDENTIFIER_KEY]);
+
+    // We've found a new peer, create a new record
+    serverSession = [[THEPeerServerSession alloc] 
+        initWithLocalPeerID:_localPeerId 
+           withRemotePeerID:peerID 
+   withRemotePeerIdentifier:info[PEER_IDENTIFIER_KEY]];
+
+    // Return the new descriptor to be stored
+    return serverSession;
+  }];
+
+  if (serverSession)
+  {
+    [serverSession setVisible:YES];
+
+    // A new peer or one that has become visible again
+    if ([_peerNetworkingDelegate respondsToSelector:@selector(didFindPeerIdentifier:peerName:)])
+    {
+      [_peerNetworkingDelegate 
+        didFindPeerIdentifier:[serverSession peerIdentifier] 
+                     peerName:info[PEER_NAME_KEY]];
+    }
+  }
 }
 
 // Notifies the delegate that a peer was lost.
 - (void)browser:(MCNearbyServiceBrowser *)browser
        lostPeer:(MCPeerID *)peerID
 {
-    __block THEPeerServerSession *serverSession = nil;
+  __block THEPeerServerSession *serverSession = nil;
 
-    [_servers updateWithKey:peerID updateBlock: ^void(NSObject *v) {
+  // Update the peer's record under lock
+  [_servers updateWithKey:peerID updateBlock: ^void(NSObject *v) {
 
-        serverSession = 
-            (THEPeerServerSession *)([v isKindOfClass:[THEPeerServerSession class]] ? v : Nil);
+    serverSession = 
+      (THEPeerServerSession *)([v isKindOfClass:[THEPeerServerSession class]] ? v : Nil);
 
-        if (serverSession)
-        {
-            [serverSession setVisible:NO];
-            NSLog(@"client: Lost peer: %@", [serverSession peerIdentifier]);
-        }
-    }];
-    
     if (serverSession)
     {
-        [serverSession disconnect];
-
-        if ([_peerNetworkingDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
-        {
-            [_peerNetworkingDelegate didLosePeerIdentifier:[serverSession peerIdentifier]];
-        }
+      // disconnect will clear up any networking resources we currently hold
+      [serverSession disconnect];
+      [serverSession setVisible:NO];
+      NSLog(@"client: Lost peer: %@", [serverSession peerIdentifier]);
     }
-    else
+  }];
+    
+  if (serverSession)
+  {
+    // Let interested parties know we lost a peer
+    if ([_peerNetworkingDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
     {
-        NSLog(@"WARNING: lostPeer we didn't know about");
+      [_peerNetworkingDelegate didLosePeerIdentifier:[serverSession peerIdentifier]];
     }
+  }
+  else
+  {
+    // Shouldn't happen
+    NSLog(@"WARNING: lostPeer we didn't know about");
+  }
 }
 
 - (void)browser:(MCNearbyServiceBrowser *)browser didNotStartBrowsingForPeers:(NSError *)error
 {
-    NSLog(@"WARNING: didNotStartBrowsingForPeers");
+  NSLog(@"WARNING: didNotStartBrowsingForPeers");
 }
 
 

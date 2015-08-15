@@ -40,18 +40,23 @@ static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
 // THEPeerNetworking implementation.
 @implementation THEPeerNetworking
 {
-@private
-    NSString * _serviceType;
-    NSString * _peerIdentifier;
-    NSString * _peerName;
+  // Application level identifiers
+  NSString * _serviceType;
+  NSString * _peerIdentifier;
+  NSString * _peerName;
 
-    MCPeerID * _peerID;
+  // Out local peer id
+  MCPeerID * _peerID;
    
-    // Mutex used to synchronize accesss to the things below.
-    pthread_mutex_t _mutex;
+  // Mutex used to synchronize accesss to the things below.
+  pthread_mutex_t _mutex;
 
-    MultipeerClient *_client;
-    MultipeerServer *_server;
+  // The multipeer client which will handle browsing and connecting for us
+  MultipeerClient *_client;
+
+  // The multipeer server which will handle advertising out service and accepting 
+  // connections from remote clients
+  MultipeerServer *_server;
 }
 
 - (instancetype)initWithServiceType:(NSString *)serviceType
@@ -77,66 +82,65 @@ static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
 // Starts peer networking.
 - (void)start
 {
-    // Obtain user defaults and see if we have a serialized MCPeerID. If we do, deserialize it. If not, make one
-    // and serialize it for later use. If we don't serialize and reuse the MCPeerID, we'll see duplicates
-    // of this peer in sessions.
-    NSUserDefaults * userDefaults = [NSUserDefaults standardUserDefaults];
-    NSData * data = [userDefaults dataForKey:PEER_ID_KEY];
-    if ([data length])
-    {
-        // Deserialize the MCPeerID.
-        _peerID = [NSKeyedUnarchiver unarchiveObjectWithData:data];
-    }
-    else
-    {
-        // Allocate and initialize a new MCPeerID.
-        _peerID = [[MCPeerID alloc] 
-            initWithDisplayName:[NSString stringWithFormat:@"%@", [[UIDevice currentDevice] name]]
-        ];
+  // Retrieve or create our local peerID  
+  NSUserDefaults * userDefaults = [NSUserDefaults standardUserDefaults];
+  NSData * data = [userDefaults dataForKey:PEER_ID_KEY];
+  if ([data length])
+  {
+    // Deserialize the MCPeerID.
+    _peerID = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+  }
+  else
+  {
+    // Allocate and initialize a new MCPeerID.
+    _peerID = [[MCPeerID alloc] 
+      initWithDisplayName:[NSString stringWithFormat:@"%@", [[UIDevice currentDevice] name]]
+    ];
         
-        // Serialize and save the MCPeerID in user defaults.
-        data = [NSKeyedArchiver archivedDataWithRootObject:_peerID];
-        [userDefaults setValue:data forKey:PEER_ID_KEY];
-        [userDefaults synchronize];
-    }
+    // Serialize and save the MCPeerID in user defaults.
+    data = [NSKeyedArchiver archivedDataWithRootObject:_peerID];
+    [userDefaults setValue:data forKey:PEER_ID_KEY];
+    [userDefaults synchronize];
+  }
     
-  
-    _server = [[MultipeerServer alloc] initWithPeerId: _peerID 
-        withPeerIdentifier: _peerIdentifier withPeerName: _peerName withServiceType: _serviceType
-    ];
+  // Start up the networking components  
+  _server = [[MultipeerServer alloc] initWithPeerId: _peerID 
+    withPeerIdentifier: _peerIdentifier withPeerName: _peerName withServiceType: _serviceType
+  ];
 
-    _client = [[MultipeerClient alloc] 
-        initWithPeerId: _peerID withServiceType: _serviceType withPeerNetworkingDelegate: _delegate
-    ];
+  _client = [[MultipeerClient alloc] 
+    initWithPeerId: _peerID withServiceType: _serviceType withPeerNetworkingDelegate: _delegate
+  ];
 
-    [_server start];
-    [_client start];
+  [_server start];
+  [_client start];
 
-    NSLog(@"THEPeerNetworking initialized peer %@", [_peerID displayName]);
+  NSLog(@"THEPeerNetworking initialized peer %@", [_peerID displayName]);
 }
 
 - (void)stop
 {
-    NSLog(@"THEPeerNetworking stopping peer");
+  NSLog(@"THEPeerNetworking stopping peer");
 
-    [_client stop];
-    _client = nil;
+  [_client stop];
+  _client = nil;
 
-    [_server stop];
-    _server = nil;
+  [_server stop];
+  _server = nil;
     
-    _peerID = nil;
+  _peerID = nil;
 }
 
 - (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier
 {
-    return [_client connectToPeerWithPeerIdentifier:peerIdentifier];
+  // Connect to a previously discovered peer
+  return [_client connectToPeerWithPeerIdentifier:peerIdentifier];
 }
 
-// Connects from the peer server with the specified peer identifier.
 - (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSString *)peerIdentifier
 {
-    return [_client disconnectFromPeerWithPeerIdentifier:peerIdentifier];
+  // Disconnect from a previously (hopefully) connected peer
+  return [_client disconnectFromPeerWithPeerIdentifier:peerIdentifier];
 }
 
 @end

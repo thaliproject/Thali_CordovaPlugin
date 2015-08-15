@@ -29,11 +29,8 @@
 
 @interface THENetworkingRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate>
 
+// relayType is just the id we'll be logging under and can be anything
 - (id)initWithRelayType:(NSString *)relayType;
-
-- (BOOL)canCreateSocket;
-- (BOOL)tryCreateSocket;
-- (void)didCreateSocket:(GCDAsyncSocket *)socket;
 
 - (void)setInputStream:(NSInputStream *)inputStream;
 - (void)setOutputStream:(NSOutputStream *)outputStream;

@@ -28,15 +28,17 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 #import "THEPeerNetworking.h"
 
+// Encapsulate the local server, handles advertising the serviceType and accepting
+// connections from remote clients
 @interface MultipeerServer : NSObject <MCNearbyServiceAdvertiserDelegate>
 
--(id) initWithPeerId:(MCPeerID *)peerId 
-    withPeerIdentifier:(NSString *)peerIdentifier 
-          withPeerName:(NSString *)peerName
-       withServiceType:(NSString *)serviceType; 
+- (id) initWithPeerId:(MCPeerID *)peerId 
+   withPeerIdentifier:(NSString *)peerIdentifier 
+         withPeerName:(NSString *)peerName
+      withServiceType:(NSString *)serviceType; 
 
--(void) start;
-
--(void) stop;
+// Start/stop advertising
+- (void) start;
+- (void) stop;
 
 @end

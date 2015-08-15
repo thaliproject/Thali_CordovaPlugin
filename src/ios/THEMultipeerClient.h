@@ -27,16 +27,24 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 #import "THEPeerNetworking.h"
 
+// Encapsulates the local client functionality such as discovering and 
+// connecting to remote servers
 @interface MultipeerClient : NSObject <MCNearbyServiceBrowserDelegate>
 
--(id) initWithPeerId:(MCPeerID *)peerId withServiceType:(NSString *)serviceType 
-                            withPeerNetworkingDelegate:(id<THEPeerNetworkingDelegate>)peerNetworkingDelegate;
+// Service type here is what we're looking for, not what we may be advertising 
+// (although they'll usually be the same)
+-(id) initWithPeerId:(MCPeerID *)peerId 
+                        withServiceType:(NSString *)serviceType 
+             withPeerNetworkingDelegate:(id<THEPeerNetworkingDelegate>)peerNetworkingDelegate;
 
+// Start and stop the client (i.e. the peer discovery process)
 -(void) start;
-
 -(void) stop;
 
+// Connect to a remote peer identified by the application level identifier
 -(BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier;
+
+// Disconnect to a remote peer identified by the application level identifier
 -(BOOL) disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier;
 
 @end

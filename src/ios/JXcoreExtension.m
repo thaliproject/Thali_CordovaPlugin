@@ -36,94 +36,110 @@
 // Defines methods.
 - (void)defineMethods
 {
-    THEAppContext *theApp = [THEAppContext singleton];
+  THEAppContext *theApp = [THEAppContext singleton];
 
-    // Export the public API to node
+  // Export the public API to node
 
-    // StartBroadcasting
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+  // StartBroadcasting
+  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+  {
+    NSLog(@"jxcore: startBroadcasting");
+
+    if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || 
+        ![params[1] isKindOfClass:[NSNumber class]])
     {
-        if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || 
-            ![params[1] isKindOfClass:[NSNumber class]])
-        {
-            [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-        }
-        else
-        {
-            if ([theApp startBroadcasting:params[0] serverPort:params[1]])
-            {
-                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-            }
-            else
-            {
-                [JXcore callEventCallback:callbackId withParams:@[@"Already broadcasting"]];
-            }
-        }
-
-    } withName:@"StartBroadcasting"];
+      NSLog(@"jxcore: startBroadcasting: badParam");
+      [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+    }
+    else
+    {
+      if ([theApp startBroadcasting:params[0] serverPort:params[1]])
+      {
+        NSLog(@"jxcore: startBroadcasting: success");
+        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+      }
+      else
+      {
+        NSLog(@"jxcore: startBroadcasting: failure");
+        [JXcore callEventCallback:callbackId withParams:@[@"Already broadcasting"]];
+      }
+    }
+  } withName:@"StartBroadcasting"];
 
     
-    // StopBroadcasting
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+  // StopBroadcasting
+  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+  {
+    NSLog(@"jxcore: stopBroadcasting");
+
+    if ([theApp stopBroadcasting])
     {
-        if ([theApp stopBroadcasting])
+      NSLog(@"jxcore: stopBroadcasting: success");
+      [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+    }
+    else
+    {
+      NSLog(@"jxcore: stopBroadcasting: failure");
+      [JXcore callEventCallback:callbackId withParams:@[@"Not broadcasting"]];
+    }
+  } withName:@"StopBroadcasting"];
+
+
+  // Connect
+  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+  {
+    NSLog(@"jxcore: connect");
+
+    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
+    {
+      NSLog(@"jxcore: connect: badParam");
+      [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+    }
+    else
+    {
+      void (^connectCallback)(NSString *, uint) = ^(NSString *errorMsg, uint port) 
+      {
+        if (errorMsg == nil)
         {
-            [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+          NSLog(@"jxcore: connect: success");
+          [JXcore callEventCallback:callbackId withParams:@[[NSNull null], @(port)]];
         }
         else
         {
-            [JXcore callEventCallback:callbackId withParams:@[@"Not broadcasting"]];
+          NSLog(@"jxcore: connect: fail");
+          [JXcore callEventCallback:callbackId withParams:@[errorMsg, @(port)]];
         }
+      };
 
-    } withName:@"StopBroadcasting"];
+      // We'll callback to the upper layer when the connect completes or fails
+      [theApp connectToPeer:params[0] connectCallback:connectCallback];
+    }
+  } withName:@"Connect"];
 
+  // Disconnect
+  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+  {
+    NSLog(@"jxcore: disconnect");
 
-    // Connect
-    [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
     {
-        if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
-        {
-            [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-        }
-        else
-        {
-            void (^connectCallback)(NSString *, uint) = ^(NSString *errorMsg, uint port) 
-            {
-                if (errorMsg == nil)
-                {
-                    // Success
-                    [JXcore callEventCallback:callbackId withParams:@[[NSNull null], @(port)]];
-                }
-                else
-                {
-                    [JXcore callEventCallback:callbackId withParams:@[errorMsg, @(port)]];
-                }
-            };
-
-            // Let the native side callback for any further error (or success)
-            [theApp connectToPeer:params[0] connectCallback:connectCallback];
-        }
-    } withName:@"Connect"];
-
-    // Disconnect
-    [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+      NSLog(@"jxcore: disconnect: badParam");
+      [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+    }
+    else
     {
-        if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
-        {
-            [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-        }
-        else
-        {
-            if ([theApp disconnectFromPeer: params[0]])
-            {
-                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-            }
-            else
-            {
-                [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
-            }
-        }
-   } withName:@"Disconnect"];
+      if ([theApp disconnectFromPeer: params[0]])
+      {
+        NSLog(@"jxcore: disconnect: success");
+        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+      }
+      else
+      {
+        NSLog(@"jxcore: disconnect: fail");
+        [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
+      }
+    }
+  } withName:@"Disconnect"];
 }
 
 @end

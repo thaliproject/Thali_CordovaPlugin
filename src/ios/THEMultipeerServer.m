@@ -88,8 +88,8 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
     // Start advertising our presence.. 
     _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
         initWithPeer:_localPeerId 
-        discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier, PEER_NAME_KEY: _peerName } 
-        serviceType:_serviceType
+       discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier, PEER_NAME_KEY: _peerName } 
+         serviceType:_serviceType
     ];
 
     [_nearbyServiceAdvertiser setDelegate:self];

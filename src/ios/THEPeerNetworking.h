@@ -29,6 +29,9 @@
 
 #import "THEPeerNetworkingDelegate.h"
 
+// Wraps all the functionality of the networking stack and presents to the upper layers.
+// Contains both client and server members which will discover and connect (the client) and
+// advertise and accept (the server) connections from remote peers.
 @interface THEPeerNetworking : NSObject
 
 @property (nonatomic, weak) id<THEPeerNetworkingDelegate> delegate;
