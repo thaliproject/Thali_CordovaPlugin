@@ -25,10 +25,20 @@
 //  THEProtectedMutableDictionary.h
 //
 
+// A thread-safe dictionary that allows common operations to be executed under lock 
 @interface THEProtectedMutableDictionary : NSObject
 
-- (void)createWithKey:(NSObject<NSCopying> *)key createBlock:(NSObject *(^)(NSObject *))createBlock;
+// Execute |createBlock| for |key|. The returned value will be stored in the dict.
+- (void)createWithKey:(NSObject<NSCopying> *)key 
+                        createBlock:(NSObject *(^)(NSObject *))createBlock;
+
+// Execute |updateBlock| for key. The block will receive the current dict[key] object
+// and may update it in a thread-safe manner
 - (void)updateWithKey:(NSObject<NSCopying> *)key updateBlock:(void(^)(NSObject *))updateBlock;
-- (void)updateWithFilter:(BOOL(^)(NSObject *))filterBlock updateBlock:(BOOL(^)(NSObject *))updateBlock;
+
+// Execute |updateBlock| for all dict values for which |filterBlock| returns true. Iteration stops
+// when/if |updateBlock| returns NO
+- (void)updateWithFilter:(BOOL(^)(NSObject *))filterBlock 
+                          updateBlock:(BOOL(^)(NSObject *))updateBlock;
 
 @end

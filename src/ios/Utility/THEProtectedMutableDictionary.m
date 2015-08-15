@@ -69,7 +69,8 @@
     pthread_mutex_unlock(&_mutex);
 }
 
-- (void)updateWithFilter:(BOOL(^)(NSObject *))filterBlock updateBlock:(BOOL(^)(NSObject *))updateBlock
+- (void)updateWithFilter:(BOOL(^)(NSObject *))filterBlock 
+                          updateBlock:(BOOL(^)(NSObject *))updateBlock
 {
     pthread_mutex_lock(&_mutex);
 
