@@ -25,7 +25,7 @@
 //  THEMultipeerClient.m
 
 #import "THEMultipeerClient.h"
-#import "THEPeerClientSession.h"
+#import "THEMultipeerClientSession.h"
 #import "THEProtectedMutableDictionary.h"
 
 static NSString * const PEER_NAME_KEY        = @"PeerName";
@@ -102,15 +102,15 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
   BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
     // Search for the peer with matching peerIdentifier
-    THEPeerClientSession *clientSession = 
-        (THEPeerClientSession *)([v isKindOfClass:[THEPeerClientSession class]] ? v : Nil);
+    THEMultipeerClientSession *clientSession = 
+        (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);
     return clientSession && [[clientSession peerIdentifier] isEqualToString:peerIdentifier];
   };
 
   [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
     // Called only when v == matching peer
-    THEPeerClientSession *clientSession = (THEPeerClientSession *)v;
+    THEMultipeerClientSession *clientSession = (THEMultipeerClientSession *)v;
 
     // Start connection process from the top
     if ([clientSession connectionState] == THEPeerSessionStateNotConnected)
@@ -145,15 +145,15 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
   BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
     // Search for the peer with matching peerIdentifier
-    THEPeerClientSession *clientSession = 
-        (THEPeerClientSession *)([v isKindOfClass:[THEPeerClientSession class]] ? v : Nil);
+    THEMultipeerClientSession *clientSession = 
+        (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);
     return clientSession && [clientSession.peerIdentifier isEqualToString:peerIdentifier];
   };
 
   [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
     // Called only when v == matching peer
-    THEPeerClientSession *clientSession = (THEPeerClientSession *)v;
+    THEMultipeerClientSession *clientSession = (THEMultipeerClientSession *)v;
     if ([clientSession connectionState] != THEPeerSessionStateNotConnected)
     {
       success = YES;
@@ -175,12 +175,12 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)browser:(MCNearbyServiceBrowser *)browser foundPeer:(MCPeerID *)peerID withDiscoveryInfo:(NSDictionary *)info
 {
-  __block THEPeerClientSession *clientSession = nil;
+  __block THEMultipeerClientSession *clientSession = nil;
 
   // Find or create an app session for this peer..
   [_servers createWithKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
 
-    THEPeerClientSession *descriptor = (THEPeerClientSession *)oldValue;
+    THEMultipeerClientSession *descriptor = (THEMultipeerClientSession *)oldValue;
 
     if (descriptor && ([descriptor.peerID hash] == [peerID hash]))
     {
@@ -195,7 +195,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     NSLog(@"client: Found new peer: %@", info[PEER_IDENTIFIER_KEY]);
 
     // We've found a new peer, create a new record
-    clientSession = [[THEPeerClientSession alloc] 
+    clientSession = [[THEMultipeerClientSession alloc] 
         initWithLocalPeerID:_localPeerId 
            withRemotePeerID:peerID 
    withRemotePeerIdentifier:info[PEER_IDENTIFIER_KEY]];
@@ -222,13 +222,13 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 - (void)browser:(MCNearbyServiceBrowser *)browser
        lostPeer:(MCPeerID *)peerID
 {
-  __block THEPeerClientSession *clientSession = nil;
+  __block THEMultipeerClientSession *clientSession = nil;
 
   // Update the peer's record under lock
   [_servers updateWithKey:peerID updateBlock: ^void(NSObject *v) {
 
     clientSession = 
-      (THEPeerClientSession *)([v isKindOfClass:[THEPeerClientSession class]] ? v : Nil);
+      (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);
 
     if (clientSession)
     {

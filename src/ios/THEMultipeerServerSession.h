@@ -22,32 +22,17 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeerSession.h
+//  THEMultipeerServerSession.h
 //
 
-#import <MultipeerConnectivity/MultipeerConnectivity.h>
+#import "THEMultipeerPeerSession.h"
 
-typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
-  THEPeerSessionStateNotConnected  = 0,
-  THEPeerSessionStateConnecting    = 1,
-  THEPeerSessionStateConnected     = 2
-};
+// The sesssion type managed by a server (and so references a client)
+@interface THEMultipeerServerSession : THEMultipeerPeerSession
 
-// Encapsulates a discovered peer and their connection state. Any peer that has been discovered 
-// will have a PeerSession object although they may not currently be visible or connected. 
-// The underlying connection transport may be any available e.g. Bluetooth, WiFi etc.
-@interface THEPeerSession : NSObject <MCSessionDelegate>
+// The local port on which the application server is listening
+@property (nonatomic) uint serverPort;
 
-@property (nonatomic) BOOL visible;
-@property (nonatomic) MCPeerID * peerID;
-@property (nonatomic) THEPeerSessionState connectionState;
-
-- (instancetype)initWithPeerID:(MCPeerID *)peerID withSessionType:(NSString *)sessionType;
-
-- (MCSession *)session;
-- (MCSession *)connect;
-
-- (void)disconnect;
+- (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort;
 
 @end
-

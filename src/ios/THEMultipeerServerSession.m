@@ -22,17 +22,30 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeerServerSession.h
+//  THEMultipeerServerSession.m
 //
 
-#import "THEPeerSession.h"
+#import "THEMultipeerServerSession.h"
+#import "THENetworkingServerRelay.h"
 
-// The sesssion type managed by a server (and so references a client)
-@interface THEPeerServerSession : THEPeerSession
+@implementation THEMultipeerServerSession
 
-// The local port on which the application server is listening
-@property (nonatomic) uint serverPort;
+- (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort
+{
+  self = [super initWithPeerID:peerID withSessionType:@"client"];
+  if (!self)
+  {
+    return nil;
+  }
+    
+  _serverPort = serverPort;
 
-- (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort;
+  return self;
+}
+
+- (THENetworkingRelay *)createRelay
+{
+  return [[THENetworkingServerRelay alloc] initWithServerPort:_serverPort];
+}
 
 @end

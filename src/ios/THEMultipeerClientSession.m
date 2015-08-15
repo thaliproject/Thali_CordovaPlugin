@@ -22,30 +22,57 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeerServerSession.m
+//  THEMultipeerClientSession.m
 //
 
-#import "THEPeerServerSession.h"
-#import "THENetworkingServerRelay.h"
+#import "THEAppContext.h"
+#import "THEMultipeerClientSession.h"
+#import "THENetworkingClientRelay.h"
 
-@implementation THEPeerServerSession
-
-- (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort
+@implementation THEMultipeerClientSession
 {
-  self = [super initWithPeerID:peerID withSessionType:@"client"];
+  MCPeerID *_remotePeerID;
+  NSString *_remotePeerIdentifier;
+}
+
+- (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
+                   withRemotePeerID:(MCPeerID *)remotePeerID
+           withRemotePeerIdentifier:(NSString *)remotePeerIdentifier
+{
+  self = [super initWithPeerID:localPeerID withSessionType:@"server"];
   if (!self)
   {
-    return nil;
+      return nil;
   }
-    
-  _serverPort = serverPort;
+
+  _remotePeerID = remotePeerID;
+  _remotePeerIdentifier = remotePeerIdentifier;
 
   return self;
 }
 
+-(MCPeerID *)peerID
+{
+  return _remotePeerID;
+}
+
+-(NSString *)peerIdentifier
+{
+  return _remotePeerIdentifier;
+}
+
 - (THENetworkingRelay *)createRelay
 {
-  return [[THENetworkingServerRelay alloc] initWithServerPort:_serverPort];
+  THENetworkingClientRelay *clientRelay = [
+    [THENetworkingClientRelay alloc] initWithPeerIdentifier:_remotePeerIdentifier
+  ];
+  // We'll call this delegate back when a listening socket is established
+  // to which the application client will connect to be bridged to the remote server
+  [clientRelay setDelegate:(id<THESocketServerDelegate>)[THEAppContext singleton]];
+
+  return clientRelay;
 }
 
 @end
+
+

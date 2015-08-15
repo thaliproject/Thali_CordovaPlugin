@@ -22,20 +22,20 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeerSession.m
+//  THEMultipeerSession.m
 //
 
 #import "THEAppContext.h"
-#import "THEPeerSession.h"
+#import "THEMultipeerPeerSession.h"
 #import "THENetworkingRelay.h"
 
 static NSString * const THALI_STREAM = @"ThaliStream";
 
-@interface THEPeerSession()
+@interface THEMultipeerPeerSession()
 - (THENetworkingRelay *)createRelay;
 @end
 
-@implementation THEPeerSession
+@implementation THEMultipeerPeerSession
 {
   MCSession * _session;
   THENetworkingRelay *_relay;

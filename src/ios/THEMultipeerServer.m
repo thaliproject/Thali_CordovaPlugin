@@ -25,7 +25,7 @@
 //  THEMultipeerServer.m
 
 #import "THEMultipeerServer.h"
-#import "THEPeerServerSession.h"
+#import "THEMultipeerServerSession.h"
 #import "THEProtectedMutableDictionary.h"
 
 static NSString * const PEER_NAME_KEY        = @"PeerName";
@@ -120,7 +120,7 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
   [_clients createWithKey:peerID createBlock:^NSObject *(NSObject *oldValue) {
 
-    THEPeerServerSession *serverSession = (THEPeerServerSession *)oldValue;
+    THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)oldValue;
 
     if (serverSession && ([serverSession.peerID hash] == [peerID hash]))
     {
@@ -131,7 +131,7 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
     else
     {
       NSLog(@"server: new peer");
-      serverSession = [[THEPeerServerSession alloc] initWithPeerID:_localPeerId 
+      serverSession = [[THEMultipeerServerSession alloc] initWithPeerID:_localPeerId 
                                                     withServerPort:_serverPort];
     }
 
