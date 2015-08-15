@@ -1,7 +1,7 @@
 
-#import "THENetworkingServerRelay.h"
+#import "THEMultipeerServerSocketRelay.h"
 
-@implementation THENetworkingServerRelay
+@implementation THEMultipeerServerSocketRelay
 {
     uint _serverPort;
     GCDAsyncSocket *_connectingSocket;

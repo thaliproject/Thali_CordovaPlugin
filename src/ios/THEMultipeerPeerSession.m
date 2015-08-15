@@ -27,18 +27,18 @@
 
 #import "THEAppContext.h"
 #import "THEMultipeerPeerSession.h"
-#import "THENetworkingRelay.h"
+#import "THEMultipeerSocketRelay.h"
 
 static NSString * const THALI_STREAM = @"ThaliStream";
 
 @interface THEMultipeerPeerSession()
-- (THENetworkingRelay *)createRelay;
+- (THEMultipeerSocketRelay *)createRelay;
 @end
 
 @implementation THEMultipeerPeerSession
 {
   MCSession * _session;
-  THENetworkingRelay *_relay;
+  THEMultipeerSocketRelay *_relay;
 
   // Debugging purposes only
   NSString * _sessionType;
@@ -115,7 +115,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   }
 }
 
--(THENetworkingRelay *)createRelay
+-(THEMultipeerSocketRelay *)createRelay
 {
   return nil;
 }

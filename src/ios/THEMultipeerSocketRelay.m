@@ -1,13 +1,13 @@
-#import "THENetworkingRelay.h"
+#import "THEMultipeerSocketRelay.h"
 
-@interface THENetworkingRelay()
+@interface THEMultipeerSocketRelay()
 
 // Try to open the socket
 - (BOOL)tryCreateSocket;
 
 @end
 
-@implementation THENetworkingRelay
+@implementation THEMultipeerSocketRelay
 {
   // The socket we're using to talk to the upper (localhost) layers
   GCDAsyncSocket *_socket;

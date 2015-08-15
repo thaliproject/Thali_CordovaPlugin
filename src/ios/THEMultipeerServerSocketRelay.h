@@ -22,30 +22,16 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEMultipeerServerSession.m
+//  THEMultipeerServerSocketRelay.m
 //
 
-#import "THEMultipeerServerSession.h"
-#import "THEMultipeerServerSocketRelay.h"
+#import <Foundation/Foundation.h>
+#import <MultipeerConnectivity/MultipeerConnectivity.h>
 
-@implementation THEMultipeerServerSession
+#import "THEMultipeerSocketRelay.h"
 
-- (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort
-{
-  self = [super initWithPeerID:peerID withSessionType:@"client"];
-  if (!self)
-  {
-    return nil;
-  }
-    
-  _serverPort = serverPort;
+@interface THEMultipeerServerSocketRelay : THEMultipeerSocketRelay
 
-  return self;
-}
-
-- (THEMultipeerSocketRelay *)createRelay
-{
-  return [[THEMultipeerServerSocketRelay alloc] initWithServerPort:_serverPort];
-}
+-(instancetype)initWithServerPort:(uint)port;
 
 @end

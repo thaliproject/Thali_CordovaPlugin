@@ -27,7 +27,7 @@
 
 #import "THEAppContext.h"
 #import "THEMultipeerClientSession.h"
-#import "THENetworkingClientRelay.h"
+#import "THEMultipeerClientSocketRelay.h"
 
 @implementation THEMultipeerClientSession
 {
@@ -61,10 +61,10 @@
   return _remotePeerIdentifier;
 }
 
-- (THENetworkingRelay *)createRelay
+- (THEMultipeerSocketRelay *)createRelay
 {
-  THENetworkingClientRelay *clientRelay = [
-    [THENetworkingClientRelay alloc] initWithPeerIdentifier:_remotePeerIdentifier
+  THEMultipeerClientSocketRelay *clientRelay = [
+    [THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:_remotePeerIdentifier
   ];
   // We'll call this delegate back when a listening socket is established
   // to which the application client will connect to be bridged to the remote server

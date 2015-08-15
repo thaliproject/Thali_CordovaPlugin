@@ -1,6 +1,6 @@
-#import "THENetworkingClientRelay.h"
+#import "THEMultipeerClientSocketRelay.h"
 
-@implementation THENetworkingClientRelay
+@implementation THEMultipeerClientSocketRelay
 {
   NSString *_peerIdentifier;
   GCDAsyncSocket *_serverSocket;

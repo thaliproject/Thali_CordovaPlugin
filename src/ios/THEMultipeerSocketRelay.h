@@ -22,7 +22,7 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THENetworkingRelay.h
+//  THEMultipeerSocketRelay.h
 //
 
 #import "GCDAsyncSocket.h"
@@ -30,7 +30,7 @@
 // Base class of the networking relay which passes data it receives via the input/output
 // streams over the multipeer session to and from the application over a local socket 
 // Subclasses differ only in the way the they create the socket. 
-@interface THENetworkingRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate>
+@interface THEMultipeerSocketRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate>
 
 // relayType is just the id we'll be logging under and can be anything
 - (id)initWithRelayType:(NSString *)relayType;
