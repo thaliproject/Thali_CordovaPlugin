@@ -27,7 +27,7 @@
 
 #import "THEPeerSession.h"
 
-// Session type for a remote server (and so is only created by clients)
+// Session type managed by clients (and so references a remote server)
 @interface THEPeerClientSession : THEPeerSession
 
   // Accessor for application level peer identifier which we'll pass in to the

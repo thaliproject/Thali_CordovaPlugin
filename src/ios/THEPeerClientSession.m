@@ -66,6 +66,8 @@
   THENetworkingClientRelay *clientRelay = [
     [THENetworkingClientRelay alloc] initWithPeerIdentifier:_remotePeerIdentifier
   ];
+  // We'll call this delegate back when a listening socket is established
+  // to which the application client will connect to be bridged to the remote server
   [clientRelay setDelegate:(id<THESocketServerDelegate>)[THEAppContext singleton]];
 
   return clientRelay;

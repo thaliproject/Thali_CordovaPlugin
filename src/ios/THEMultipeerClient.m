@@ -34,7 +34,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 @implementation MultipeerClient
 {
   // Transport level identifier, we always init transport level
-  // sessions with this id and never the remote one
+  // sessions (MCSessions) with this id and never the remote one
   MCPeerID * _localPeerId;
 
   // The multipeer browser

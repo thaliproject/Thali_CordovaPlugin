@@ -28,7 +28,7 @@
 #import "THEPeerNetworking.h"
 
 // Encapsulates the local client functionality such as discovering and 
-// connecting to remote servers
+// connecting to remote servers.
 @interface MultipeerClient : NSObject <MCNearbyServiceBrowserDelegate>
 
 // Service type here is what we're looking for, not what we may be advertising 

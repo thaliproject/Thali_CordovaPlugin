@@ -27,7 +27,7 @@
 
 #import "THEPeerSession.h"
 
-// A session to a client peer (and references a remote server)
+// The sesssion type managed by a server (and so references a client)
 @interface THEPeerServerSession : THEPeerSession
 
 // The local port on which the application server is listening
