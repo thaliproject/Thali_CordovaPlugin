@@ -104,8 +104,12 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   NSLog(@"%@ session: disconnect", _sessionType);
 
   _connectionState = THEPeerSessionStateNotConnected;
-    
-  _relay = nil;
+
+  if (_relay != nil)
+  {
+    [_relay stop];    
+    _relay = nil;
+  }
 
   if (_session != nil)
   {

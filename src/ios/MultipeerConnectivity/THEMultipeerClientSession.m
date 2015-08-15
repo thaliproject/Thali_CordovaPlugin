@@ -83,12 +83,12 @@
 
 - (void)disconnect
 {
-  THEPeerConnectionState prevState = _connectionState;
+  THEPeerSessionState prevState = [self connectionState];
 
   [super disconnect];
   if (_connectCallback != nil)
   {
-    if (prevState == THEPeerStateConnecting)
+    if (prevState == THEPeerSessionStateConnecting)
     {
       _connectCallback(@"Session disconnected", 0);
     }

@@ -91,31 +91,34 @@
   [_socket readDataWithTimeout:-1 tag:0];
 }
 
+- (void)stop
+{
+  if (_socket)
+  {
+    _socket.delegate = nil;
+    [_socket disconnect];
+    _socket = nil;
+  }
+
+  if (_inputStream)
+  {
+    [_inputStream close];
+    [_inputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
+    _inputStream = nil;
+  }
+
+  if (_outputStream)
+  {
+    [_outputStream close];
+    [_outputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
+    _outputStream = nil;
+  }
+}
 
 - (void)dealloc
 {
-  NSLog(@"%@ relay: dealloc", _relayType);
-
-  // Make sure we detach from and shut down the streams else they may try to call us
-  // back after we're dead
-
-  [_inputStream setDelegate: nil];
-  [_outputStream setDelegate: nil];
-
-  [_socket setDelegate: nil];
-  [_socket disconnect];
-  _socket = nil;
-
-  [_inputStream close];
-  [_outputStream close];
-
-  [_inputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
-  [_outputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
-
-  _inputStream = nil;
-  _outputStream = nil;
+  [self stop];  
 }
-
 
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {

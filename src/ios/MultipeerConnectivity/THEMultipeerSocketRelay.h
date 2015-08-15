@@ -50,4 +50,7 @@
 // the remote peer
 - (void)setOutputStream:(NSOutputStream *)outputStream;
 
+// Ensure orderly close of the streams else bad things happen when we dealloc
+- (void)stop;
+
 @end
