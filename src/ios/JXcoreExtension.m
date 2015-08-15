@@ -106,7 +106,7 @@
         }
         else
         {
-          NSLog(@"jxcore: connect: fail");
+          NSLog(@"jxcore: connect: fail: %@", errorMsg);
           [JXcore callEventCallback:callbackId withParams:@[errorMsg, @(port)]];
         }
       };
