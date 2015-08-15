@@ -27,18 +27,12 @@
 
 #import "THEPeerSession.h"
 
-// Session type for a remote server (and so is only created by clients)
+// A session to a client peer (and references a remote server)
 @interface THEPeerServerSession : THEPeerSession
 
-  // Accessor for application level peer identifier which we'll pass in to the
-  // relay (which needs it to call back the application once it knows which port it's 
-  // server socket is listening on
-  -(NSString *)peerIdentifier;
+// The local port on which the application server is listening
+@property (nonatomic) uint serverPort;
 
-  -(instancetype)initWithLocalPeerID:(MCPeerID *)localPeer 
-                    withRemotePeerID:(MCPeerID *)remotePeer 
-            withRemotePeerIdentifier:(NSString *)peerIdentifier;
+- (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort;
 
-@end;
-
-
+@end

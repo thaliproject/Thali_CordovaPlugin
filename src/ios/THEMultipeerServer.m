@@ -25,7 +25,7 @@
 //  THEMultipeerServer.m
 
 #import "THEMultipeerServer.h"
-#import "THEPeerClientSession.h"
+#import "THEPeerServerSession.h"
 #import "THEProtectedMutableDictionary.h"
 
 static NSString * const PEER_NAME_KEY        = @"PeerName";
@@ -120,18 +120,18 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
   [_clients createWithKey:peerID createBlock:^NSObject *(NSObject *oldValue) {
 
-    THEPeerClientSession *clientSession = (THEPeerClientSession *)oldValue;
+    THEPeerServerSession *serverSession = (THEPeerServerSession *)oldValue;
 
-    if (clientSession && ([clientSession.peerID hash] == [peerID hash]))
+    if (serverSession && ([serverSession.peerID hash] == [peerID hash]))
     {
       NSLog(@"server: existing peer");
       // Disconnect any existing session, see note below
-      [clientSession disconnect];
+      [serverSession disconnect];
     }
     else
     {
       NSLog(@"server: new peer");
-      clientSession = [[THEPeerClientSession alloc] initWithPeerID:_localPeerId 
+      serverSession = [[THEPeerServerSession alloc] initWithPeerID:_localPeerId 
                                                     withServerPort:_serverPort];
     }
 
@@ -140,8 +140,8 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
     // with then the other side had restarted our session is stale (we often
     // don't see the other side disconnect)
 
-    mcSession = [clientSession connect];
-    return clientSession;
+    mcSession = [serverSession connect];
+    return serverSession;
   }];
 
   invitationHandler(YES, mcSession);

@@ -25,7 +25,7 @@
 //  THEMultipeerClient.m
 
 #import "THEMultipeerClient.h"
-#import "THEPeerServerSession.h"
+#import "THEPeerClientSession.h"
 #import "THEProtectedMutableDictionary.h"
 
 static NSString * const PEER_NAME_KEY        = @"PeerName";
@@ -102,25 +102,25 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
   BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
     // Search for the peer with matching peerIdentifier
-    THEPeerServerSession *serverSession = 
-        (THEPeerServerSession *)([v isKindOfClass:[THEPeerServerSession class]] ? v : Nil);
-    return serverSession && [[serverSession peerIdentifier] isEqualToString:peerIdentifier];
+    THEPeerClientSession *clientSession = 
+        (THEPeerClientSession *)([v isKindOfClass:[THEPeerClientSession class]] ? v : Nil);
+    return clientSession && [[clientSession peerIdentifier] isEqualToString:peerIdentifier];
   };
 
   [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
     // Called only when v == matching peer
-    THEPeerServerSession *serverSession = (THEPeerServerSession *)v;
+    THEPeerClientSession *clientSession = (THEPeerClientSession *)v;
 
     // Start connection process from the top
-    if ([serverSession connectionState] == THEPeerSessionStateNotConnected)
+    if ([clientSession connectionState] == THEPeerSessionStateNotConnected)
     {
       // connect will create the networking resources required to establish the session
-      [serverSession connect];
+      [clientSession connect];
 
       NSLog(@"client: inviting peer");
-      [_nearbyServiceBrowser invitePeer:[serverSession peerID]
-                              toSession:[serverSession session]
+      [_nearbyServiceBrowser invitePeer:[clientSession peerID]
+                              toSession:[clientSession session]
                             withContext:nil
                                 timeout:60];
 
@@ -145,22 +145,22 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
   BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
     // Search for the peer with matching peerIdentifier
-    THEPeerServerSession *serverSession = 
-        (THEPeerServerSession *)([v isKindOfClass:[THEPeerServerSession class]] ? v : Nil);
-    return serverSession && [serverSession.peerIdentifier isEqualToString:peerIdentifier];
+    THEPeerClientSession *clientSession = 
+        (THEPeerClientSession *)([v isKindOfClass:[THEPeerClientSession class]] ? v : Nil);
+    return clientSession && [clientSession.peerIdentifier isEqualToString:peerIdentifier];
   };
 
   [_servers updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
     // Called only when v == matching peer
-    THEPeerServerSession *serverSession = (THEPeerServerSession *)v;
-    if ([serverSession connectionState] != THEPeerSessionStateNotConnected)
+    THEPeerClientSession *clientSession = (THEPeerClientSession *)v;
+    if ([clientSession connectionState] != THEPeerSessionStateNotConnected)
     {
       success = YES;
-      [serverSession setConnectionState:THEPeerSessionStateNotConnected];
+      [clientSession setConnectionState:THEPeerSessionStateNotConnected];
 
       NSLog(@"client: disconnecting peer: %@", peerIdentifier);
-      [serverSession disconnect];
+      [clientSession disconnect];
     }
 
     // Stop iterating
@@ -175,18 +175,18 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)browser:(MCNearbyServiceBrowser *)browser foundPeer:(MCPeerID *)peerID withDiscoveryInfo:(NSDictionary *)info
 {
-  __block THEPeerServerSession *serverSession = nil;
+  __block THEPeerClientSession *clientSession = nil;
 
   // Find or create an app session for this peer..
   [_servers createWithKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
 
-    THEPeerServerSession *descriptor = (THEPeerServerSession *)oldValue;
+    THEPeerClientSession *descriptor = (THEPeerClientSession *)oldValue;
 
     if (descriptor && ([descriptor.peerID hash] == [peerID hash]))
     {
       NSLog(@"client: Found existing peer: %@", info[PEER_IDENTIFIER_KEY]);
 
-      serverSession = descriptor;
+      clientSession = descriptor;
             
       // Returning nil to indicate we don't need to replace the existing record
       return nil;
@@ -195,24 +195,24 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     NSLog(@"client: Found new peer: %@", info[PEER_IDENTIFIER_KEY]);
 
     // We've found a new peer, create a new record
-    serverSession = [[THEPeerServerSession alloc] 
+    clientSession = [[THEPeerClientSession alloc] 
         initWithLocalPeerID:_localPeerId 
            withRemotePeerID:peerID 
    withRemotePeerIdentifier:info[PEER_IDENTIFIER_KEY]];
 
     // Return the new descriptor to be stored
-    return serverSession;
+    return clientSession;
   }];
 
-  if (serverSession)
+  if (clientSession)
   {
-    [serverSession setVisible:YES];
+    [clientSession setVisible:YES];
 
     // A new peer or one that has become visible again
     if ([_peerNetworkingDelegate respondsToSelector:@selector(didFindPeerIdentifier:peerName:)])
     {
       [_peerNetworkingDelegate 
-        didFindPeerIdentifier:[serverSession peerIdentifier] 
+        didFindPeerIdentifier:[clientSession peerIdentifier] 
                      peerName:info[PEER_NAME_KEY]];
     }
   }
@@ -222,29 +222,29 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 - (void)browser:(MCNearbyServiceBrowser *)browser
        lostPeer:(MCPeerID *)peerID
 {
-  __block THEPeerServerSession *serverSession = nil;
+  __block THEPeerClientSession *clientSession = nil;
 
   // Update the peer's record under lock
   [_servers updateWithKey:peerID updateBlock: ^void(NSObject *v) {
 
-    serverSession = 
-      (THEPeerServerSession *)([v isKindOfClass:[THEPeerServerSession class]] ? v : Nil);
+    clientSession = 
+      (THEPeerClientSession *)([v isKindOfClass:[THEPeerClientSession class]] ? v : Nil);
 
-    if (serverSession)
+    if (clientSession)
     {
       // disconnect will clear up any networking resources we currently hold
-      [serverSession disconnect];
-      [serverSession setVisible:NO];
-      NSLog(@"client: Lost peer: %@", [serverSession peerIdentifier]);
+      [clientSession disconnect];
+      [clientSession setVisible:NO];
+      NSLog(@"client: Lost peer: %@", [clientSession peerIdentifier]);
     }
   }];
     
-  if (serverSession)
+  if (clientSession)
   {
     // Let interested parties know we lost a peer
     if ([_peerNetworkingDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
     {
-      [_peerNetworkingDelegate didLosePeerIdentifier:[serverSession peerIdentifier]];
+      [_peerNetworkingDelegate didLosePeerIdentifier:[clientSession peerIdentifier]];
     }
   }
   else
