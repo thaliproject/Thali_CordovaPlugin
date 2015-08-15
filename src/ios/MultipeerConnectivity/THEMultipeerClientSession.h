@@ -33,8 +33,7 @@
                                         <THEMultipeerClientSocketRelayDelegate>
 
 // Accessor for application level peer identifier which we'll pass in to the
-// relay (which needs it to call back the application once it knows which port it's 
-// server socket is listening on
+// relay (which needs it needs for the connect callback)
 - (NSString *)peerIdentifier;
 
 // Clients need to specialise connect in order to receive the connect callback

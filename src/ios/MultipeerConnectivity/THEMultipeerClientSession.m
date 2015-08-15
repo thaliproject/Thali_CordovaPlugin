@@ -83,8 +83,17 @@
 
 - (void)disconnect
 {
+  THEPeerConnectionState prevState = _connectionState;
+
   [super disconnect];
-  _connectCallback = nil;
+  if (_connectCallback != nil)
+  {
+    if (prevState == THEPeerStateConnecting)
+    {
+      _connectCallback(@"Session disconnected", 0);
+    }
+    _connectCallback = nil;
+  }
 }
 
 - (THEMultipeerSocketRelay *)createRelay
