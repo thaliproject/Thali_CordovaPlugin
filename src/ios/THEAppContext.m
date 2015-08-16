@@ -120,7 +120,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   if ([_atomicFlagCommunicationsEnabled trySet])
   {
     // Allocate and initialize the service type.
-    //NSUUID * serviceType = [[NSUUID alloc] initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
+    //NSUUID * serviceType = [[NSUUID alloc] 
+    //  initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
 
     // Allocate and initialize the peer Bluetooth context.
     //_peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
@@ -146,7 +147,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     // handler reference outside of the mutex
     OnMainThreadAfterTimeInterval(1.0, ^{
         [self fireNetworkChangedEvent];
-        reachabilityHandlerReference = [[NPReachability sharedInstance] addHandler:^(NPReachability *reachability) {
+        reachabilityHandlerReference = [[NPReachability sharedInstance] 
+          addHandler:^(NPReachability *reachability) {
             [self fireNetworkChangedEvent];
         }];
     });
@@ -199,22 +201,6 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
       return NO;
   }
     
-  // Lock.
-  /*pthread_mutex_lock(&_mutex);
-   
-  // Find the peer.
-  THEPeer * peer = _peers[peerIdentifier];
-    
-  // Unlock.
-  pthread_mutex_unlock(&_mutex);
-    
-  // If we didn't find the peer, return NO.
-  if (!peer)
-  {
-    return NO;
-  }
-  */
-
   return [_multipeerSession connectToPeerServerWithPeerIdentifier:peerIdentifier 
                                               withConnectCallback:connectCallback];
 }
@@ -229,21 +215,6 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     return NO;
   }
     
-  // Lock.
-  /*pthread_mutex_lock(&_mutex);
-    
-  // Find the peer. If we didn't find it, return NO.
-  THEPeer * peer = _peers[peerIdentifier];
-
-  // Unlock.
-  pthread_mutex_unlock(&_mutex);
-
-  // If we didn't find the peer, return NO.
-  if (!peer)
-  {
-    return NO;
-  }*/
-
   return [_multipeerSession disconnectFromPeerServerWithPeerIdentifier:peerIdentifier];
 }
 
@@ -379,7 +350,8 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
     
   // Allocate and initialize the service type
-  //NSUUID * serviceType = [[NSUUID alloc] initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
+  //NSUUID * serviceType = [[NSUUID alloc] 
+  //  initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
     
   // Static declarations.
   static NSString * const PEER_IDENTIFIER_KEY = @"PeerIdentifierKey";
@@ -439,7 +411,8 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     {
         json = [NSString stringWithFormat:@"{ \"isReachable\": %@, \"isWiFi\": %@ }",
                 @"true",
-                ([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN) == 0 ? @"true" : @"false"];
+                ([[NPReachability sharedInstance] currentReachabilityFlags] & 
+                  kSCNetworkReachabilityFlagsIsWWAN) == 0 ? @"true" : @"false"];
     }
     else
     {
