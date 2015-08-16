@@ -116,7 +116,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   NSString *peerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
   NSLog(@"server: didReceiveInvitationFromPeer %@", peerIdentifier);
   
-  [_clients createWithKey:peerID createBlock:^NSObject *(NSObject *oldValue) {
+  [_clients createForKey:peerID createBlock:^NSObject *(NSObject *oldValue) {
 
     THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)oldValue;
 
@@ -136,7 +136,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     // Create a new session for each client, even if one already
     // existed. If we're seeing invitations from peers we already have sessions
-    // with then the other side had restarted our session is stale (we often
+    // with then the other side had restarted and our session is stale (we often
     // don't see the other side disconnect)
 
     mcSession = [serverSession connect];

@@ -109,7 +109,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return clientSession && [[clientSession peerIdentifier] isEqualToString:peerIdentifier];
   };
   
-  [_clientSessions updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
+  [_clientSessions updateForFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
     clientSession = (THEMultipeerClientSession *)v;
 
@@ -168,7 +168,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return clientSession && [clientSession.peerIdentifier isEqualToString:peerIdentifier];
   };
 
-  [_clientSessions updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
+  [_clientSessions updateForFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
     THEMultipeerClientSession *clientSession = (THEMultipeerClientSession *)v;
     if ([clientSession connectionState] != THEPeerSessionStateNotConnected)
@@ -195,7 +195,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   __block THEMultipeerClientSession *clientSession = nil;
 
   // Find or create an app session for this peer..
-  [_clientSessions createWithKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
+  [_clientSessions createForKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
 
     NSString *peerIdentifier = info[PEER_IDENTIFIER_KEY];
     THEMultipeerClientSession *session = (THEMultipeerClientSession *)oldValue;
@@ -244,7 +244,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   __block THEMultipeerClientSession *clientSession = nil;
 
   // Update the peer's record under lock
-  [_clientSessions updateWithKey:peerID updateBlock: ^void(NSObject *v) {
+  [_clientSessions updateForKey:peerID updateBlock: ^void(NSObject *v) {
 
     clientSession = 
       (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);

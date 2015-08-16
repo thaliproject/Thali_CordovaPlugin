@@ -47,7 +47,7 @@
     return self;
 }
 
-- (void)createWithKey:(NSObject<NSCopying> *)key createBlock:(NSObject *(^)(NSObject *))createBlock
+- (void)createForKey:(NSObject<NSCopying> *)key createBlock:(NSObject *(^)(NSObject *))createBlock
 {
     pthread_mutex_lock(&_mutex);
 
@@ -60,7 +60,7 @@
     pthread_mutex_unlock(&_mutex);
 }
 
-- (void)updateWithKey:(NSObject<NSCopying> *)key updateBlock:(void(^)(NSObject *))updateBlock
+- (void)updateForKey:(NSObject<NSCopying> *)key updateBlock:(void(^)(NSObject *))updateBlock
 {
     pthread_mutex_lock(&_mutex);
 
@@ -69,7 +69,7 @@
     pthread_mutex_unlock(&_mutex);
 }
 
-- (void)updateWithFilter:(BOOL(^)(NSObject *))filterBlock 
+- (void)updateForFilter:(BOOL(^)(NSObject *))filterBlock 
                           updateBlock:(BOOL(^)(NSObject *))updateBlock
 {
     pthread_mutex_lock(&_mutex);
