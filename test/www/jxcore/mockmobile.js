@@ -2,10 +2,24 @@
 
 var keys = {};
 
+// arguments needed to simulate the GetDocumentsPath() function
+var errArgGetDocumentsPath;
+var fileLocationArgGetDocumentsPath;
+
 function Mobile(key) {
   keys.hasOwnProperty(key) || (keys[key] = new NativeCall(key));
   return keys[key];
 }
+
+Mobile.storeGetDocumentsPathReturnArguments =
+    function (errArg, fileLocationArg) {
+  errArgGetDocumentsPath = errArg;
+  fileLocationArgGetDocumentsPath = fileLocationArg;
+};
+
+Mobile.GetDocumentsPath = function (cb) {
+  cb(errArgGetDocumentsPath, fileLocationArgGetDocumentsPath);
+};
 
 Mobile.invokeNative = function (key, arg) {
   keys[key].registerNativeCallback(arg);

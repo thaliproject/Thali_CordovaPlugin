@@ -19,6 +19,8 @@
   },
   "devDependencies": {
     "randomstring": "^1.0.7",
-    "tape": "^4.0.0"
+    "tape": "^4.0.0",
+    "fs-extra-promise": "^0.2.0",
+    "wrapping-tape": "^0.0.3"
   }
 }

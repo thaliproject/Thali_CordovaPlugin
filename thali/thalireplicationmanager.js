@@ -6,6 +6,13 @@ var inherits = require('util').inherits;
 var net = require('net');
 var multiplex = require('multiplex');
 var validations = require('./validations');
+var cryptomanager = require('./thalicryptomanager');
+
+var deviceIdentityFlag = {
+  noDeviceIdentitySet: 0,
+  gettingDeviceIdentity: 1,
+  deviceIdentityAvailable: 2
+};
 
 var e = new EventEmitter();
 
@@ -15,6 +22,9 @@ var NETWORK_CHANGED = ThaliEmitter.events.NETWORK_CHANGED;
 inherits(ThaliReplicationManager, EventEmitter);
 
 function ThaliReplicationManager(db, emitter) {
+  this._deviceName = '';
+  this._deviceIdentityFlag = deviceIdentityFlag.noDeviceIdentitySet;
+  this._deviceIdentityListeners = [];
   this._db = db;
   this._emitter = (emitter || new ThaliEmitter());
   this._replications = {};
@@ -38,20 +48,71 @@ ThaliReplicationManager.events = {
 };
 
 /**
-* Starts the Thali replication manager with the given device name and port number
-* @param {String} deviceName the device name to advertise.
+* Returns the current device's id if available. If not, the provided callback
+* function is saved and called when the id does become available.
+* @param {Function} cb the callback which returns the current device's id.
+*/
+ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
+  if(this._deviceIdentityFlag == deviceIdentityFlag.deviceIdentityAvailable) {
+    cb(null, this._deviceName);
+    return;
+  }
+  if(this._deviceIdentityFlag == deviceIdentityFlag.noDeviceIdentitySet) {
+    this._deviceIdentityFlag = deviceIdentityFlag.gettingDeviceIdentity;
+    // save the callback for future
+    this._deviceIdentityListeners.push(cb);
+    cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
+      if (err) {
+        this._deviceIdentityFlag = deviceIdentityFlag.noDeviceIdentitySet;
+      } else {
+        this._deviceName = publicKeyHash;
+        this._deviceIdentityFlag = deviceIdentityFlag.deviceIdentityAvailable;
+      }
+
+      // save the list of divice-identity-listeners locally and clear the
+      // global list. this will avoid a potential race condition if one of
+      // the callback functions tries to get the device identity again
+      // immediately.
+      var localCopyOfListeners = this._deviceIdentityListeners.slice();
+      this._deviceIdentityListeners = [];
+      localCopyOfListeners.forEach(function (listener) {
+        listener(err, publicKeyHash);
+      });
+    }.bind(this));
+    return;
+  }
+  if(this._deviceIdentityFlag == deviceIdentityFlag.gettingDeviceIdentity) {
+    // save the callback for future
+    this._deviceIdentityListeners.push(cb);
+    return;
+  }
+  throw 'deviceIdentityFlag is set to unknown state';
+}
+
+/**
+* Starts the Thali replication manager with the given port number and db name.
+* The device-id is obtained using the cryptomanager's API.
 * @param {Number} port the port number used for synchronization.
 * @param {String} dbName the name of the database.
 */
-ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
-  validations.ensureNonNullOrEmptyString(deviceName, 'deviceName');
+ThaliReplicationManager.prototype.start = function (port, dbName) {
   validations.ensureValidPort(port);
   validations.ensureNonNullOrEmptyString(dbName, 'dbName');
+  
+  this.getDeviceIdentity.call(this, function(err, publicKeyHash) {
+    if(err) {
+      this._isStarted = false;
+      this.emit(ThaliReplicationManager.events.START_ERROR, err);
+      return;
+    }
+    startReplicationManager.call(this, port, dbName);
+  }.bind(this));
+};
 
+function startReplicationManager(port, dbName) {
   this.emit(ThaliReplicationManager.events.STARTING);
 
   this._port = port;
-  this._deviceName = deviceName;
   this._dbName = dbName;
   if (this._isStarted || !!this._serverBridge) {
     return this.emit(ThaliReplicationManager.events.START_ERROR, new Error('There is already an existing serverBridge instance.'));
@@ -61,7 +122,7 @@ ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
   this._serverBridge.listen(function () {
     this._serverBridgePort = this._serverBridge.address().port;
 
-    this._emitter.startBroadcasting(deviceName, this._serverBridgePort, function (err) {
+    this._emitter.startBroadcasting(this._deviceName, this._serverBridgePort, function (err) {
       if (err) {
         this._isStarted = false;
         this.emit(ThaliReplicationManager.events.START_ERROR, err);
@@ -73,7 +134,7 @@ ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
       }
     }.bind(this));
   }.bind(this));
-};
+}
 
 /**
 * Stops the Thali replication manager
