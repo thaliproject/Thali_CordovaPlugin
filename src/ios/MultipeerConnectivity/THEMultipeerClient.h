@@ -42,7 +42,7 @@
 -(void) start;
 -(void) stop;
 
-// Connect to a remote peer identified by the application level identifier
+// Connect to a remote peer identified by the application level identifier,
 -(BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
                     withConnectCallback:(ConnectCallback)connectCallback;
 

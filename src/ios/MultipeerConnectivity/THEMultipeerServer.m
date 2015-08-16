@@ -28,10 +28,7 @@
 #import "THEMultipeerServerSession.h"
 #import "THEProtectedMutableDictionary.h"
 
-static NSString * const PEER_NAME_KEY        = @"PeerName";
 static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
-static NSString * const SERVER_OUTPUT_STREAM = @"ServerOutputStream";
-static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
 @implementation THEMultipeerServer
 {
@@ -81,14 +78,14 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
 -(void) start
 {
-    NSLog(@"server: starting");
+    NSLog(@"server: starting %@", _peerIdentifier);
 
     _clients = [[THEProtectedMutableDictionary alloc] init];
 
     // Start advertising our presence.. 
     _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
         initWithPeer:_localPeerId 
-       discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier, PEER_NAME_KEY: _peerName } 
+       discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier } 
          serviceType:_serviceType
     ];
 
@@ -98,12 +95,12 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
 
 -(void) stop
 {
-    NSLog(@"server: stopping");
+  NSLog(@"server: stopping");
 
-    [_nearbyServiceAdvertiser stopAdvertisingPeer];
-    _nearbyServiceAdvertiser = nil;
+  [_nearbyServiceAdvertiser stopAdvertisingPeer];
+  _nearbyServiceAdvertiser = nil;
     
-    _clients = nil;
+  _clients = nil;
 }
 
 // MCNearbyServiceAdvertiserDelegate
@@ -115,9 +112,10 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
                invitationHandler:(void (^)(BOOL accept, MCSession * session))invitationHandler
 {
   __block MCSession *mcSession = nil;
-
-  NSLog(@"server: didReceiveInvitationFromPeer");
-
+ 
+  NSString *peerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
+  NSLog(@"server: didReceiveInvitationFromPeer %@", peerIdentifier);
+  
   [_clients createWithKey:peerID createBlock:^NSObject *(NSObject *oldValue) {
 
     THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)oldValue;
@@ -132,7 +130,8 @@ static NSString * const CLIENT_OUTPUT_STREAM = @"ClientOutputStream";
     {
       NSLog(@"server: new peer");
       serverSession = [[THEMultipeerServerSession alloc] initWithPeerID:_localPeerId 
-                                                    withServerPort:_serverPort];
+                                                     withPeerIdentifier:peerIdentifier
+                                                          withServerPort:_serverPort];
     }
 
     // Create a new session for each client, even if one already

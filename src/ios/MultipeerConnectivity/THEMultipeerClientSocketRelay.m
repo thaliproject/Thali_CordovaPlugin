@@ -34,8 +34,6 @@
     // Set up a server socket to listen for incoming connections from the 
     // application
 
-    NSLog(@"client: relay starting");
-
     _serverSocket = [[GCDAsyncSocket alloc] 
                         initWithDelegate:self 
                            delegateQueue:dispatch_get_main_queue()];
@@ -59,7 +57,6 @@
       UInt16 port = [_serverSocket localPort];
       if ([self.delegate respondsToSelector:@selector(didListenWithLocalPort:withPeerIdentifier:)])
       {
-        NSLog(@"client: relay started");
         [self.delegate didListenWithLocalPort:port withPeerIdentifier:_peerIdentifier];
       }
         

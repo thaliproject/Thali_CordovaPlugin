@@ -33,6 +33,8 @@
 // The local port on which the application server is listening
 @property (nonatomic) uint serverPort;
 
-- (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort;
+- (instancetype)initWithPeerID:(MCPeerID *)peerID 
+            withPeerIdentifier:(NSString *)peerIdentifier 
+                withServerPort:(uint)serverPort;
 
 @end

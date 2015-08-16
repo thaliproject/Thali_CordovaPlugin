@@ -24,8 +24,6 @@
 {
     if ([self canCreateSocket]) 
     {
-        NSLog(@"server: relay starting");
- 
         _connectingSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
         
         NSError *err = nil;
@@ -36,7 +34,6 @@
         }
         else
         {
-            NSLog(@"server: relay started");
             return YES;
         }
     }

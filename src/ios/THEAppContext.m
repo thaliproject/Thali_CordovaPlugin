@@ -128,6 +128,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     //                                                      peerName:[serverPort stringValue]];
     //[_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
        
+    _peers = [[NSMutableDictionary alloc] init];
+
     // Allocate and initialize peer networking.
     _multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
                                                           peerIdentifier:peerIdentifier
@@ -175,6 +177,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
       reachabilityHandlerReference = nil;
     }
 
+    _peers = nil;
     return YES;
   }
     
@@ -187,11 +190,12 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
 // Connects to the peer server with the specified peer idetifier.
 - (BOOL)connectToPeer:(NSString *)peerIdentifier 
-                        connectCallback:(void(^)(NSString *, uint))connectCallback
+      connectCallback:(void(^)(NSString *, uint))connectCallback
 {
   if ([_atomicFlagCommunicationsEnabled isClear])
   {
       NSLog(@"Communications not enabled");
+      connectCallback(@"app: Not initialised", 0);
       return NO;
   }
     
@@ -211,19 +215,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   }
   */
 
-  if ([_multipeerSession connectToPeerServerWithPeerIdentifier:peerIdentifier 
-                                           withConnectCallback:connectCallback])
-  {
-    return YES;
-  }
-  else
-  {
-    // Perhaps already connecting ??
-    NSString *errorMsg = [NSString stringWithFormat:@"Error connecting to %@", peerIdentifier];
-    connectCallback(errorMsg, 0);
-  }
-
-  return NO;
+  return [_multipeerSession connectToPeerServerWithPeerIdentifier:peerIdentifier 
+                                              withConnectCallback:connectCallback];
 }
 
 // Disconnects from the peer server with the specified peer idetifier.
@@ -260,7 +253,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
 - (void) didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
 {
-  NSLog(@"didFindPeerIdentifier");
+  NSLog(@"app: didFindPeerIdentifier %@", peerIdentifier);
 
   // Lock.
   pthread_mutex_lock(&_mutex);
@@ -293,7 +286,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
 - (void) didLosePeerIdentifier:(NSString *)peerIdentifier
 {
-  NSLog(@"didLosePeerIdentifier");
+  NSLog(@"app: didLosePeerIdentifier %@", peerIdentifier);
 
   // Lock.
   pthread_mutex_lock(&_mutex);
@@ -418,7 +411,6 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     
   // Initialize the the mutex and peers dictionary.
   pthread_mutex_init(&_mutex, NULL);
-  _peers = [[NSMutableDictionary alloc] init];
 
   // Get the default notification center.
   NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];

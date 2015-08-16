@@ -40,11 +40,15 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   MCSession * _session;
   THEMultipeerSocketRelay *_relay;
 
+  NSString * _peerIdentifier;
+
   // Debugging purposes only
   NSString * _sessionType;
 }
 
-- (instancetype)initWithPeerID:(MCPeerID *)peerID withSessionType:sessionType
+- (instancetype)initWithPeerID:(MCPeerID *)peerID 
+            withPeerIdentifier:(NSString *)peerIdentifier 
+               withSessionType:(NSString *)sessionType
 {
   self = [super init];
   if (!self)
@@ -53,15 +57,24 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   }
     
   _peerID = peerID;
+  _peerIdentifier = peerIdentifier;
+  
   _sessionType = sessionType;
+
+  NSLog(@"%@ session init: %@", _peerIdentifier, _sessionType);
 
   return self;
 }
 
 -(void)dealloc
 {
-  NSLog(@"%@ session: dealloc", _sessionType);
+  NSLog(@"%@ session: dealloc %@", _sessionType, _peerIdentifier);
   [self disconnect];
+}
+
+-(NSString *)peerIdentifier
+{
+  return _peerIdentifier;
 }
 
 -(void)setInputStream:(NSInputStream *)inputStream
@@ -81,41 +94,47 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 
 -(MCSession *)connect
 {
-  // Create the session and relay, we're not yet fully connected though
+  @synchronized(self)
+  {
+    NSLog(@"%@ session base connect %@", _sessionType, [self peerIdentifier]);
 
-  NSLog(@"%@ session: connect", _sessionType);
+    // Create the session and relay, we're not yet fully connected though
 
-  assert(_relay == nil && _session == nil);
+    assert(_relay == nil && _session == nil);
 
-  _connectionState = THEPeerSessionStateConnecting;
+    _connectionState = THEPeerSessionStateConnecting;
 
-  _relay = [self createRelay];
+    _relay = [self createRelay];
 
-  _session = [[MCSession alloc] initWithPeer: _peerID 
-                            securityIdentity:nil 
-                        encryptionPreference:MCEncryptionNone];
-  _session.delegate = self;
+    _session = [[MCSession alloc] initWithPeer: _peerID 
+                              securityIdentity:nil 
+                          encryptionPreference:MCEncryptionNone];
+    _session.delegate = self;
 
-  return _session;
+    return _session;
+  }
 }
 
 -(void)disconnect
 {
-  NSLog(@"%@ session: disconnect", _sessionType);
-
-  _connectionState = THEPeerSessionStateNotConnected;
-
-  if (_relay != nil)
+  @synchronized(self)
   {
-    [_relay stop];    
-    _relay = nil;
-  }
+    NSLog(@"%@ session base disconnect %@", _sessionType, [self peerIdentifier]);
 
-  if (_session != nil)
-  {
-    _session.delegate = nil;
-    [_session disconnect];
-    _session = nil;
+    _connectionState = THEPeerSessionStateNotConnected;
+
+    if (_relay != nil)
+    {
+      [_relay stop];    
+      _relay = nil;
+    }
+
+    if (_session != nil)
+    {
+      _session.delegate = nil;
+      [_session disconnect];
+      _session = nil;
+    }
   }
 }
 
@@ -175,6 +194,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
     case MCSessionStateConnected:
     {
       NSLog(@"%@ session: connected", _sessionType);
+
+      _connectionState = THEPeerSessionStateConnected;
 
       // Start the server output stream.
       NSError * error;

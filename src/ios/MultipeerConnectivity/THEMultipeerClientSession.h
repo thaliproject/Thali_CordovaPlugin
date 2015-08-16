@@ -32,16 +32,12 @@
 @interface THEMultipeerClientSession : THEMultipeerPeerSession 
                                         <THEMultipeerClientSocketRelayDelegate>
 
-// Accessor for application level peer identifier which we'll pass in to the
-// relay (which needs it needs for the connect callback)
-- (NSString *)peerIdentifier;
-
 // Clients need to specialise connect in order to receive the connect callback
 - (MCSession *)connectWithConnectCallback:(ConnectCallback)connectCallback;
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeer 
-                  withRemotePeerID:(MCPeerID *)remotePeer 
-          withRemotePeerIdentifier:(NSString *)peerIdentifier;
+                   withRemotePeerID:(MCPeerID *)remotePeer 
+                 withPeerIdentifier:(NSString *)peerIdentifier;
 
 @end;
 

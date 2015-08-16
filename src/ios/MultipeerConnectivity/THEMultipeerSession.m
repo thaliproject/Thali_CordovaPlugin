@@ -34,9 +34,6 @@
 #import "THEMultipeerClient.h"
 #import "THEMultipeerServer.h"
 
-// Static declarations.
-static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
-
 // THEMultipeerSession implementation.
 @implementation THEMultipeerSession
 {
@@ -45,7 +42,7 @@ static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
   NSString * _peerIdentifier;
   NSString * _peerName;
 
-  // Out local peer id
+  // Our local peer id
   MCPeerID * _peerID;
    
   // Mutex used to synchronize accesss to the things below.
@@ -82,27 +79,8 @@ static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
 // Starts peer networking.
 - (void)start
 {
-  // Retrieve or create our local peerID  
-  NSUserDefaults * userDefaults = [NSUserDefaults standardUserDefaults];
-  NSData * data = [userDefaults dataForKey:PEER_ID_KEY];
-  if ([data length])
-  {
-    // Deserialize the MCPeerID.
-    _peerID = [NSKeyedUnarchiver unarchiveObjectWithData:data];
-  }
-  else
-  {
-    // Allocate and initialize a new MCPeerID.
-    _peerID = [[MCPeerID alloc] 
-      initWithDisplayName:[NSString stringWithFormat:@"%@", [[UIDevice currentDevice] name]]
-    ];
-        
-    // Serialize and save the MCPeerID in user defaults.
-    data = [NSKeyedArchiver archivedDataWithRootObject:_peerID];
-    [userDefaults setValue:data forKey:PEER_ID_KEY];
-    [userDefaults synchronize];
-  }
-    
+  _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
+ 
   // Start up the networking components  
   _server = [[THEMultipeerServer alloc] initWithPeerId: _peerID 
     withPeerIdentifier: _peerIdentifier withPeerName: _peerName withServiceType: _serviceType

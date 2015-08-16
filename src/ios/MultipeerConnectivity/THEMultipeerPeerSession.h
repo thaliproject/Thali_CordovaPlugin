@@ -43,7 +43,11 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 @property (nonatomic) MCPeerID * peerID;
 @property (readonly, nonatomic) THEPeerSessionState connectionState;
 
-- (instancetype)initWithPeerID:(MCPeerID *)peerID withSessionType:(NSString *)sessionType;
+- (instancetype)initWithPeerID:(MCPeerID *)peerID 
+            withPeerIdentifier:(NSString *)peerIdentifier
+               withSessionType:(NSString *)sessionType;
+
+- (NSString *)peerIdentifier;
 
 - (MCSession *)session;
 - (MCSession *)connect;

@@ -136,7 +136,6 @@
 
 - (void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag
 {
-  NSLog(@"%@ relay: wrote %ld bytes", _relayType, tag);
 }
 
 - (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
@@ -158,7 +157,7 @@
 
 - (void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
-  NSLog(@"%@ relay: streamEvent in", _relayType);
+  //NSLog(@"%@ relay: streamEvent in", _relayType);
 
   if (aStream == _inputStream) 
   {
@@ -166,13 +165,13 @@
     {
       case NSStreamEventOpenCompleted:
       {
-        NSLog(@"%@ relay: inputStream opened", _relayType);
+        //NSLog(@"%@ relay: inputStream opened", _relayType);
       }
       break;
 
       case NSStreamEventHasSpaceAvailable:
       {
-        NSLog(@"%@ relay: inputStream hasSpace", _relayType);
+        //NSLog(@"%@ relay: inputStream hasSpace", _relayType);
       }
       break;
 
@@ -186,19 +185,19 @@
 
         assert(_socket);
         [_socket writeData:toWrite withTimeout:-1 tag:len];
-        NSLog(@"%@ relay: inputStream->socket (%lu)", _relayType, (unsigned long)len);
+        //NSLog(@"%@ relay: inputStream->socket (%lu)", _relayType, (unsigned long)len);
       }
       break;
 
       case NSStreamEventEndEncountered:
       {
-        NSLog(@"%@ relay: inputStream closed", _relayType);
+        //NSLog(@"%@ relay: inputStream closed", _relayType);
       }
       break;
 
       case NSStreamEventErrorOccurred:
       {
-        NSLog(@"%@ relay: inputStream error", _relayType);
+        //NSLog(@"%@ relay: inputStream error", _relayType);
       }
       break;
 
@@ -214,31 +213,31 @@
     {
       case NSStreamEventOpenCompleted:
       {
-        NSLog(@"%@ relay: outputStream opened", _relayType);
+        //NSLog(@"%@ relay: outputStream opened", _relayType);
       }
       break;
 
       case NSStreamEventHasSpaceAvailable:
       {
-        NSLog(@"%@ relay: outputStream hasSpace", _relayType);
+        //NSLog(@"%@ relay: outputStream hasSpace", _relayType);
       }
       break;
 
       case NSStreamEventHasBytesAvailable:
       {
-        NSLog(@"%@ relay: outputStream hasBytes", _relayType);
+        //NSLog(@"%@ relay: outputStream hasBytes", _relayType);
       }
       break;
 
       case NSStreamEventEndEncountered:
       {
-        NSLog(@"%@ relay: outputStream closed", _relayType);
+        //NSLog(@"%@ relay: outputStream closed", _relayType);
       }
       break;
 
       case NSStreamEventErrorOccurred:
       {
-        NSLog(@"%@ relay: outputStream error", _relayType);
+        //NSLog(@"%@ relay: outputStream error", _relayType);
       }
       break;
 
@@ -248,6 +247,6 @@
       break;
     }
   }
-  NSLog(@"%@ relay: streamEvent out", _relayType);
+  //NSLog(@"%@ relay: streamEvent out", _relayType);
 }
 @end

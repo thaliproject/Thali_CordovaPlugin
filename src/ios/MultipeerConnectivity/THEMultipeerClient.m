@@ -81,7 +81,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                              initWithPeer:_localPeerId 
                               serviceType:_serviceType];
   [_nearbyServiceBrowser setDelegate:self];
-
   [_nearbyServiceBrowser startBrowsingForPeers];
 }
 
@@ -99,6 +98,9 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                     withConnectCallback:(ConnectCallback)connectCallback
 {
   __block BOOL success = NO;
+  __block THEMultipeerClientSession *clientSession = nil;
+
+  NSLog(@"connectToPeer %@", peerIdentifier);
 
   BOOL (^filterBlock)(NSObject *peer) = ^BOOL(NSObject *v) {
     // Search for the peer with matching peerIdentifier
@@ -109,31 +111,48 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   
   [_clientSessions updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
-    THEMultipeerClientSession *clientSession = (THEMultipeerClientSession *)v;
+    clientSession = (THEMultipeerClientSession *)v;
 
-    // Start connection process from the top
-    if ([clientSession connectionState] == THEPeerSessionStateNotConnected)
+    if (![clientSession visible])
     {
-      // connect will create the networking resources required to establish the session
-      [clientSession connectWithConnectCallback:(ConnectCallback)connectCallback];
-
-      NSLog(@"client: inviting peer");
-      [_nearbyServiceBrowser invitePeer:[clientSession peerID]
-                              toSession:[clientSession session]
-                            withContext:nil
-                                timeout:60];
-
-      success = YES;
+      success = NO;
+      NSLog(@"Peer unreachable %@", peerIdentifier);
+      connectCallback(@"Peer unreachable", 0);
     }
     else
     {
-      NSLog(@"client: already connect(ing/ed)");
-      success = NO;
+      // Start connection process from the top
+      if ([clientSession connectionState] == THEPeerSessionStateNotConnected)
+      {
+
+        // connect will create the networking resources required to establish the session
+        [clientSession connectWithConnectCallback:(ConnectCallback)connectCallback];
+
+        NSLog(@"client: inviting peer %@", peerIdentifier);
+        [_nearbyServiceBrowser invitePeer:[clientSession peerID]
+                                toSession:[clientSession session]
+                              withContext:[peerIdentifier dataUsingEncoding:NSUTF8StringEncoding]
+                                  timeout:60];
+
+        success = YES;
+      }
+      else
+      {
+        NSLog(@"client: already connect(ing/ed) to %@", peerIdentifier);
+        connectCallback(@"Aleady connecting", 0);
+        success = NO;
+      }
     }
 
     // Stop iterating
     return NO;
   }];
+
+  if (!clientSession)
+  {
+    NSLog(@"Unknown peer %@", peerIdentifier);
+    connectCallback(@"Unknown peer", 0);
+  }
 
   return success;
 }
@@ -151,7 +170,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
   [_clientSessions updateWithFilter:filterBlock updateBlock:^BOOL(NSObject *v) {
 
-    // Called only when v == matching peer
     THEMultipeerClientSession *clientSession = (THEMultipeerClientSession *)v;
     if ([clientSession connectionState] != THEPeerSessionStateNotConnected)
     {
@@ -198,7 +216,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       clientSession = [[THEMultipeerClientSession alloc] 
                                     initWithLocalPeerID:_localPeerId 
                                        withRemotePeerID:peerID 
-                               withRemotePeerIdentifier:peerIdentifier];
+                                     withPeerIdentifier:peerIdentifier];
     }
 
     [clientSession setVisible:YES];

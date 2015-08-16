@@ -30,9 +30,11 @@
 
 @implementation THEMultipeerServerSession
 
-- (instancetype)initWithPeerID:(MCPeerID *)peerID withServerPort:(uint)serverPort
+- (instancetype)initWithPeerID:(MCPeerID *)peerID 
+            withPeerIdentifier:(NSString *)peerIdentifier
+                withServerPort:(uint)serverPort
 {
-  self = [super initWithPeerID:peerID withSessionType:@"server"];
+  self = [super initWithPeerID:peerID withPeerIdentifier:peerIdentifier withSessionType:@"server"];
   if (!self)
   {
     return nil;
