@@ -47,25 +47,23 @@
     return self;
 }
 
-- (void)createForKey:(NSObject<NSCopying> *)key createBlock:(NSObject *(^)(NSObject *))createBlock
+- (void)updateForKey:(NSObject<NSCopying> *)key updateBlock:(NSObject *(^)(NSObject *))updateBlock
 {
     pthread_mutex_lock(&_mutex);
 
-    NSObject *newObject = createBlock(_dict[key]);
-    if (newObject)
+    NSObject *newObject = updateBlock(_dict[key]);
+    if (newObject == nil)
     {
-        _dict[key] = newObject;
+      [_dict removeObjectForKey:key];
+    }
+    else if (newObject != _dict[key])
+    {
+      if (newObject)
+      {
+          _dict[key] = newObject;
+      }
     }
 
-    pthread_mutex_unlock(&_mutex);
-}
-
-- (void)updateForKey:(NSObject<NSCopying> *)key updateBlock:(void(^)(NSObject *))updateBlock
-{
-    pthread_mutex_lock(&_mutex);
-
-    updateBlock(_dict[key]);
-    
     pthread_mutex_unlock(&_mutex);
 }
 

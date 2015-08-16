@@ -116,7 +116,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   NSString *peerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
   NSLog(@"server: didReceiveInvitationFromPeer %@", peerIdentifier);
   
-  [_clients createForKey:peerID createBlock:^NSObject *(NSObject *oldValue) {
+  [_clients updateForKey:peerID updateBlock:^NSObject *(NSObject *oldValue) {
 
     THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)oldValue;
 

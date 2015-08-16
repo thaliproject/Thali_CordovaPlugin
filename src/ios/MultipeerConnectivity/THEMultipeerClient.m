@@ -189,13 +189,14 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 // MCNearbyServiceBrowserDelegate
 /////////////////////////////////
 
-- (void)browser:(MCNearbyServiceBrowser *)browser foundPeer:(MCPeerID *)peerID withDiscoveryInfo:(NSDictionary *)info
+- (void)browser:(MCNearbyServiceBrowser *)browser foundPeer:(MCPeerID *)peerID 
+                                          withDiscoveryInfo:(NSDictionary *)info
 {
   __block BOOL previouslyVisible = NO;
   __block THEMultipeerClientSession *clientSession = nil;
 
   // Find or create an app session for this peer..
-  [_clientSessions createForKey:peerID createBlock: ^NSObject *(NSObject *oldValue) {
+  [_clientSessions updateForKey:peerID updateBlock: ^NSObject *(NSObject *oldValue) {
 
     NSString *peerIdentifier = info[PEER_IDENTIFIER_KEY];
     THEMultipeerClientSession *session = (THEMultipeerClientSession *)oldValue;
@@ -244,7 +245,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   __block THEMultipeerClientSession *clientSession = nil;
 
   // Update the peer's record under lock
-  [_clientSessions updateForKey:peerID updateBlock: ^void(NSObject *v) {
+  [_clientSessions updateForKey:peerID updateBlock: ^NSObject *(NSObject *v) {
 
     clientSession = 
       (THEMultipeerClientSession *)([v isKindOfClass:[THEMultipeerClientSession class]] ? v : Nil);
@@ -258,6 +259,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       [clientSession disconnect];
       [clientSession setVisible:NO];
     }
+
+    return clientSession;
   }];
     
   if (clientSession)
