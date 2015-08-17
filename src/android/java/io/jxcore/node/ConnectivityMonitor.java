@@ -8,6 +8,12 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import io.jxcore.node.JXcoreExtension;
+import io.jxcore.node.jxcore;
+
 /**
  * Created by juksilve on 14.5.2015.
  */
@@ -58,14 +64,18 @@ public class ConnectivityMonitor {
         activity.runOnUiThread(new Runnable() {
             public void run() {
 
-                String reply = "";
-                if (isConnected) {
-                    reply = "{\"" + JXcoreExtension.EVENTVALUESTRING_REACHABLE + "\":\"" + isConnected + "\", " + "\"" + JXcoreExtension.EVENTVALUESTRING_WIFI + "\":\"" + isWiFi + "\"}";
-                } else {
-                    reply = "{\"" + JXcoreExtension.EVENTVALUESTRING_REACHABLE + "\":\"" + isConnected + "\"}";
+                JSONObject tmp = new JSONObject();
+                try {
+                    tmp.put(JXcoreExtension.EVENTVALUESTRING_REACHABLE, isConnected);
+                    if(isConnected) {
+                        tmp.put(JXcoreExtension.EVENTVALUESTRING_WIFI, isWiFi);
+                    }
+                } catch (JSONException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
 
-                jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_NETWORKCHANGED, reply);
+                jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_NETWORKCHANGED, tmp.toString());
             }
         });
     }

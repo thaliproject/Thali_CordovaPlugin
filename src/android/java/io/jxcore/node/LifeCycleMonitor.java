@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
 
+import io.jxcore.node.jxcore;
+
 /**
  * Created by juksilve on 13.5.2015.
  */

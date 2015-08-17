@@ -4,13 +4,7 @@ package io.jxcore.node;
 
 import io.jxcore.node.jxcore.JXcoreCallback;
 import java.util.ArrayList;
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.graphics.Point;
-import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
-import android.view.Display;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import org.thaliproject.p2p.btconnectorlib.BTConnector;
@@ -205,9 +199,11 @@ public class JXcoreExtension {
                   }
               });
 
-              if(stopped){
+              // todo if we get Postcard fixed on lifecycle handling we should re-enable this
+              // now we need to just trust that postcard will shutdown correctly
+           /*   if(stopped){
                   mBtConnectorHelper.Stop();
-              }
+              }*/
           }
       });
       mLifeCycleMonitor.Start();

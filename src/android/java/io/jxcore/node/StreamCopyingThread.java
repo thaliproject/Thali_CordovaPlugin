@@ -1,6 +1,5 @@
 package io.jxcore.node;
 
-import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
