@@ -125,7 +125,6 @@
   assert(sock == _socket);
   assert(_outputStream != nil);
 
-  NSLog(@"%@ relay: socket->outputStream (%lu)", _relayType, (unsigned long)data.length);
   if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
   {
     NSLog(@"ERROR: Writing to output stream");
@@ -157,8 +156,6 @@
 
 - (void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
 {
-  //NSLog(@"%@ relay: streamEvent in", _relayType);
-
   if (aStream == _inputStream) 
   {
     switch (eventCode) 
@@ -180,12 +177,14 @@
         const uint bufferValue = 1024;
         uint8_t *buffer = malloc(bufferValue);
         NSInteger len = [_inputStream read:buffer maxLength:sizeof(bufferValue)];
-        NSMutableData *toWrite = [[NSMutableData alloc] init];
-        [toWrite appendBytes:buffer length:len];
+        if (len)
+        {
+          NSMutableData *toWrite = [[NSMutableData alloc] init];
+          [toWrite appendBytes:buffer length:len];
 
-        assert(_socket);
-        [_socket writeData:toWrite withTimeout:-1 tag:len];
-        //NSLog(@"%@ relay: inputStream->socket (%lu)", _relayType, (unsigned long)len);
+          assert(_socket);
+          [_socket writeData:toWrite withTimeout:-1 tag:len];
+        }
       }
       break;
 
@@ -247,6 +246,5 @@
       break;
     }
   }
-  //NSLog(@"%@ relay: streamEvent out", _relayType);
 }
 @end

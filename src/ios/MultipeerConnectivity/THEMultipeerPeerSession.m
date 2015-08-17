@@ -61,14 +61,11 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   
   _sessionType = sessionType;
 
-  NSLog(@"%@ session init: %@", _peerIdentifier, _sessionType);
-
   return self;
 }
 
 -(void)dealloc
 {
-  NSLog(@"%@ session: dealloc %@", _sessionType, _peerIdentifier);
   [self disconnect];
 }
 
@@ -96,9 +93,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 {
   @synchronized(self)
   {
-    NSLog(@"%@ session base connect %@", _sessionType, [self peerIdentifier]);
-
-    // Create the session and relay, we're not yet fully connected though
+    // Create the transport session and relay, we're not yet fully connected though
 
     assert(_relay == nil && _session == nil);
 
@@ -119,7 +114,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 {
   @synchronized(self)
   {
-    NSLog(@"%@ session base disconnect %@", _sessionType, [self peerIdentifier]);
+    // Free up the resources we need for an active connection
 
     _connectionState = THEPeerSessionStateNotConnected;
 
@@ -179,21 +174,21 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   {
     case MCSessionStateNotConnected:
     {
-      NSLog(@"%@ session: not connected", _sessionType);
+      //NSLog(@"%@ session: not connected", _sessionType);
       [self disconnect];
     }
     break;
 
     case MCSessionStateConnecting:
     {
-      NSLog(@"%@ session: connecting", _sessionType);
+      //NSLog(@"%@ session: connecting", _sessionType);
       assert(_connectionState == THEPeerSessionStateConnecting);
     }
     break;
 
     case MCSessionStateConnected:
     {
-      NSLog(@"%@ session: connected", _sessionType);
+      //NSLog(@"%@ session: connected", _sessionType);
 
       _connectionState = THEPeerSessionStateConnected;
 

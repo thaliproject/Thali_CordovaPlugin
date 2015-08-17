@@ -63,7 +63,7 @@
 
 - (MCSession *)connectWithConnectCallback:(ConnectCallback)connectCallback
 {
-  NSLog(@"client session connect %@", [self peerIdentifier]);
+  NSLog(@"client: session connect %@", [self peerIdentifier]);
 
   assert(_connectCallback == nil);
 
