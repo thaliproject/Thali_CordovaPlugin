@@ -384,14 +384,14 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     NSString * json;
     if ([[NPReachability sharedInstance] isCurrentlyReachable])
     {
-        json = [NSString stringWithFormat:@"{ \"isReachable\": %@, \"isWiFi\": %@ }",
+        json = [NSString stringWithFormat:@"{ \"isAvailable\": %@, \"isWiFi\": %@ }",
                 @"true",
                 ([[NPReachability sharedInstance] currentReachabilityFlags] & 
                   kSCNetworkReachabilityFlagsIsWWAN) == 0 ? @"true" : @"false"];
     }
     else
     {
-        json = @"{ \"isReachable\": false }";
+        json = @"{ \"isAvailable\": false }";
     }
 
     // Fire the networkChanged event.
