@@ -75,6 +75,9 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     
   // The reachability handler reference.
   id reachabilityHandlerReference;
+
+  // Our current app level id
+  NSString *_peerIdentifier;
     
   // Peer Bluetooth.
   THEPeerBluetooth * _peerBluetooth;
@@ -119,32 +122,34 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 {
   if ([_atomicFlagCommunicationsEnabled trySet])
   {
-    // Allocate and initialize the service type.
-    //NSUUID * serviceType = [[NSUUID alloc] 
-    //  initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
+    _peerIdentifier = [[NSString alloc] initWithString:peerIdentifier];
 
-    // Allocate and initialize the peer Bluetooth context.
-    //_peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
-    //                                                peerIdentifier:peerIdentifier
-    //                                                      peerName:[serverPort stringValue]];
-    //[_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
-       
+    // Somewhere to put our peers
     _peers = [[NSMutableDictionary alloc] init];
 
-    // Allocate and initialize peer networking.
+    /// Initialise the BLE stack..
+
+    NSUUID * btServiceType = [[NSUUID alloc] 
+      initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
+
+    _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:btServiceType
+                                                    peerIdentifier:peerIdentifier
+                                                          peerName:[serverPort stringValue]];
+    [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
+       
+
+    // Intitialise the multipeer connectivity stack..
     _multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
                                                           peerIdentifier:peerIdentifier
                                                               peerName:[serverPort stringValue]];
     [_multipeerSession setDelegate:self];
 
-    // Start peer Bluetooth and peer networking.
-    //[_peerBluetooth start];
+    // Start networking..
+    [_peerBluetooth start];
     [_multipeerSession start];
        
     // Once started, fire the network changed event.
 
-    // TBD(tobe) - This arbitrary delay bothers me and also appears to change the
-    // handler reference outside of the mutex
     OnMainThreadAfterTimeInterval(1.0, ^{
         [self fireNetworkChangedEvent];
         reachabilityHandlerReference = [[NPReachability sharedInstance] 
@@ -166,10 +171,12 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   {
     NSLog(@"app: stop broadcasting");
 
-    //[_peerBluetooth stop];
+    [_peerBluetooth stop];
     [_multipeerSession stop];
-    //[_peerBluetooth setDelegate:nil];
+
+    [_peerBluetooth setDelegate:nil];
     [_multipeerSession setDelegate:nil];
+
     _peerBluetooth = nil;
     _multipeerSession = nil;
 
@@ -349,39 +356,7 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   // Intialize.
   _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
     
-  // Allocate and initialize the service type
-  //NSUUID * serviceType = [[NSUUID alloc] 
-  //  initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
-    
-  // Static declarations.
-  static NSString * const PEER_IDENTIFIER_KEY = @"PeerIdentifierKey";
-    
-  // Retrieve or create a persistent peerIdentifier
-  NSUserDefaults * userDefaults = [NSUserDefaults standardUserDefaults];
-  NSString * peerIdentifier = [userDefaults stringForKey:PEER_IDENTIFIER_KEY];
-  if (!peerIdentifier)
-  {
-    // Create a new peer identifier - UUID is as good as any.
-    peerIdentifier = [[NSUUID UUID] UUIDString];
-    [userDefaults setValue:peerIdentifier forKey:PEER_IDENTIFIER_KEY];
-    [userDefaults synchronize];
-  }
-    
-  // Allocate and initialize the peer Bluetooth context.
-  //_peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
-  //                                                peerIdentifier:peerIdentifier
-  //                                                      peerName:[[UIDevice currentDevice] name]];
-  //[_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
-    
-  // Allocate and initialize peer networking.
-  _multipeerSession = [[THEMultipeerSession alloc] 
-                                         initWithServiceType:@"Thali"
-                                              peerIdentifier:peerIdentifier
-                                                    peerName:[[UIDevice currentDevice] name]];
-
-  [_multipeerSession setDelegate:(id<THEMultipeerSessionDelegate>)self];
-    
-  // Initialize the the mutex and peers dictionary.
+  // Initialize the the mutex 
   pthread_mutex_init(&_mutex, NULL);
 
   // Get the default notification center.
