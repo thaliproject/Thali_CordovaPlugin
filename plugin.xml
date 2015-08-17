@@ -118,5 +118,9 @@
           compiler-flags="-Werror"/>
         <source-file src="src/ios/Utility/THEProtectedMutableDictionary.m" 
           compiler-flags="-Werror"/>
+        <header-file src="src/ios/Utility/THESessionDictionary.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/Utility/THESessionDictionary.m" 
+          compiler-flags="-Werror"/>
     </platform>
 </plugin>

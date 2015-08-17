@@ -26,7 +26,8 @@
 
 #import "THEMultipeerServer.h"
 #import "THEMultipeerServerSession.h"
-#import "THEProtectedMutableDictionary.h"
+
+#import "THESessionDictionary.h"
 
 static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
@@ -46,8 +47,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     // The port on which the application level is listening
     uint _serverPort;
 
-    // Map of discovered clients
-    THEProtectedMutableDictionary *_clients;
+    // Map of sessions for all the peers we know about
+    THESessionDictionary *_serverSessions;
 }
 
 -(id) initWithPeerId:(MCPeerID *)peerId 
@@ -80,7 +81,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 {
     NSLog(@"server: starting %@", _peerIdentifier);
 
-    _clients = [[THEProtectedMutableDictionary alloc] init];
+    _serverSessions = [[THESessionDictionary alloc] init];
 
     // Start advertising our presence.. 
     _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
@@ -100,7 +101,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   [_nearbyServiceAdvertiser stopAdvertisingPeer];
   _nearbyServiceAdvertiser = nil;
     
-  _clients = nil;
+  _serverSessions = nil;
 }
 
 // MCNearbyServiceAdvertiserDelegate
@@ -116,9 +117,10 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   NSString *peerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
   NSLog(@"server: didReceiveInvitationFromPeer %@", peerIdentifier);
   
-  [_clients updateForKey:peerID updateBlock:^NSObject *(NSObject *oldValue) {
+  [_serverSessions updateForPeerID:peerID 
+                       updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
 
-    THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)oldValue;
+    THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)p;
 
     if (serverSession && ([serverSession.peerID hash] == [peerID hash]))
     {

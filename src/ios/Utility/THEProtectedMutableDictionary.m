@@ -28,10 +28,15 @@
 #import <pthread.h>
 #import "THEProtectedMutableDictionary.h"
 
+@interface THEProtectedMutableDictionary()
+{
+  NSMutableDictionary * _dict;
+}
+@end
+
 @implementation THEProtectedMutableDictionary
 {
   pthread_mutex_t _mutex;
-  NSMutableDictionary * _dict;
 }
 
 - (instancetype)init
@@ -49,8 +54,12 @@
 
 - (void)updateForKey:(NSObject<NSCopying> *)key updateBlock:(NSObject *(^)(NSObject *))updateBlock
 {
-  pthread_mutex_lock(&_mutex);
+  // Can't have nil keys
+  if (key == nil)
+    return;
 
+  pthread_mutex_lock(&_mutex);
+  
   NSObject *newObject = updateBlock(_dict[key]);
   if (newObject == nil)
   {
