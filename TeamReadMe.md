@@ -12,7 +12,7 @@ We have made the decision to drive the management process from NPM in the JXCore
 both into JXCore and into Cordova one must go to www/jxcore in the app project and do a `jx install`. This will install Thali's
 Javascript files from NPM but it will also run a post install script that will then install Thali's Cordova plugin.
 
-Normally to update a NPM one issues `jx npm install` or `jx npm update` and that will update the Javascript files. 
+Normally to update a NPM one issues `jx npm install` or `jx npm update` and that will update the Javascript files.
 That applies here as well, however, in addition the install script run from the NPM install is also smart enough to figure out if the Cordova plugin
 needs to be updated and if so it will handle that as well.
 
@@ -39,10 +39,24 @@ to remember to move all the content back to Thali_CordovaPlugin. It's annoying. 
 
 Note that we do depend in other places on your Thali_CordovaPlugin directory being a sibling of your application's root.
 
+## Windows Prerequisites
+
+If you are using Windows to run the system with [PouchDB](pouchdb.com/), you will need to use [node-gyp](https://github.com/TooTallNate/node-gyp) to compile [leveldown](https://github.com/Level/leveldown)
+
+The following software is required:
+- Visual Studio 2013/2015
+- Python 2.7.x
+
+Follow the [node-gyp installation documentation](https://github.com/TooTallNate/node-gyp#installation) to ensure that Python is properly set.  The easiest way for Python to work is to have it set in your PATH environment variable.
+
+To change the version of Visual Studio used, use the `--msvs_version` option during the installation, for example to use Visual Studio 2015:
+```
+$ jx npm install --msvs_version=2015
+```
+
 ## Android Requirements
 
-We use Maven to distribute an AAR we need to support Bluetooth and Wi-Fi on Android. The instructions below specify how to build the
-AAR and develop with it locally.
+We use Maven to distribute an AAR we need to support Bluetooth and Wi-Fi on Android. The instructions below specify how to build the AAR and develop with it locally.
 
 ### Use Gradle
 
@@ -78,7 +92,7 @@ Once built the library should be visible in:
 
 ## Unit Testing the Thali Cordova Plugin
 
-The Thali Cordova plugin uses the [Tape](https://www.npmjs.com/package/tape) tap-producing test harness for node 
+The Thali Cordova plugin uses the [Tape](https://www.npmjs.com/package/tape) tap-producing test harness for node
 and browsers.
 
 Right now our testing framework is primarily designed to help us test as we are developing so we have a script
@@ -101,7 +115,7 @@ $ jx thaliemitterspec.js
 
 ### Mobile Testing
 
-Testing is also available on the mobile devices as well.  This will use the regular `Mobile` calls directly through 
+Testing is also available on the mobile devices as well.  This will use the regular `Mobile` calls directly through
 Cordova to talk to the underlying system.
 
 Go inside of the ThaliTest project and run
