@@ -185,8 +185,8 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
         var options = { live: true, retry: true };
         this._replications[peer.peerIdentifier] = {
           from: this._db.replicate.from(remoteDB, options),
-          to: this._db.replicate.from(remoteDB, options)
-        }
+          to: this._db.replicate.to(remoteDB, options)
+        };
       }.bind(this));
     }
   }.bind(this));
