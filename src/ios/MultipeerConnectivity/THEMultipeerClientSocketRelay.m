@@ -37,7 +37,9 @@
     _serverSocket = [[GCDAsyncSocket alloc] 
                         initWithDelegate:self 
                            delegateQueue:dispatch_get_main_queue()];
-        
+
+    NSLog(@"client: new server socket: %p", _serverSocket);        
+
     NSError *err = nil;
     if (![_serverSocket acceptOnPort:0 error:&err])
     {
@@ -75,6 +77,7 @@
 {
   // Application has connected to us, the |acceptedSocket| is the one we'll talk to it on
   NSLog(@"client: relay established");
+  NSLog(@"client: new accepted socket: %p", acceptedSocket);        
   [self didCreateSocket: acceptedSocket];
 }
 

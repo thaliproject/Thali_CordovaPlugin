@@ -95,6 +95,7 @@
 {
   if (_socket)
   {
+    NSLog(@"%@: destroying socket %p", _relayType, _socket);
     _socket.delegate = nil;
     [_socket disconnect];
     _socket = nil;
@@ -139,7 +140,7 @@
 
 - (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
 {
-  assert(sock == _socket);
+  assert(_socket == nil || sock == _socket);
 
   // Usually benign, the upper layer just closed their connection
   // they may want to connect again later
@@ -148,7 +149,7 @@
 
   if (err) 
   {
-      NSLog(@"%@ relay: disconnected with error %@", _relayType, [err description]);
+      NSLog(@"%@ relay: %p disconnected with error %@ ", _relayType, sock, [err description]);
   }
 }
 
