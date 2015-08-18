@@ -40,15 +40,18 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   MCSession * _session;
   THEMultipeerSocketRelay *_relay;
 
-  NSString * _peerIdentifier;
+  MCPeerID * _localPeerID;
+  MCPeerID * _remotePeerID;
+  NSString * _remotePeerIdentifier;
 
   // Debugging purposes only
   NSString * _sessionType;
 }
 
-- (instancetype)initWithPeerID:(MCPeerID *)peerID 
-            withPeerIdentifier:(NSString *)peerIdentifier 
-               withSessionType:(NSString *)sessionType
+- (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
+                   withRemotePeerID:(MCPeerID *)remotePeerID
+           withRemotePeerIdentifier:(NSString *)remotePeerIdentifier 
+                    withSessionType:(NSString *)sessionType
 {
   self = [super init];
   if (!self)
@@ -56,8 +59,9 @@ static NSString * const THALI_STREAM = @"ThaliStream";
       return nil;
   }
     
-  _peerID = peerID;
-  _peerIdentifier = peerIdentifier;
+  _localPeerID = localPeerID;
+  _remotePeerID = remotePeerID;
+  _remotePeerIdentifier = remotePeerIdentifier;
   
   _sessionType = sessionType;
 
@@ -69,9 +73,14 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   [self disconnect];
 }
 
--(NSString *)peerIdentifier
+- (MCPeerID *)remotePeerID
 {
-  return _peerIdentifier;
+  return _remotePeerID;
+}
+
+-(NSString *)remotePeerIdentifier
+{
+  return _remotePeerIdentifier;
 }
 
 -(void)setInputStream:(NSInputStream *)inputStream
@@ -101,7 +110,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 
     _relay = [self createRelay];
 
-    _session = [[MCSession alloc] initWithPeer: _peerID 
+    _session = [[MCSession alloc] initWithPeer: _localPeerID 
                               securityIdentity:nil 
                           encryptionPreference:MCEncryptionNone];
     _session.delegate = self;

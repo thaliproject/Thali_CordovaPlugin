@@ -71,7 +71,7 @@
     else
     {
       // update our mapping, usual case is no change
-      _peerIdentifiers[[session peerIdentifier]] = peerID;
+      _peerIdentifiers[[session remotePeerIdentifier]] = peerID;
     }
 
     return session;

@@ -40,14 +40,15 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 @interface THEMultipeerPeerSession : NSObject <MCSessionDelegate>
 
 @property (nonatomic) BOOL visible;
-@property (nonatomic) MCPeerID * peerID;
 @property (readonly, nonatomic) THEPeerSessionState connectionState;
 
-- (instancetype)initWithPeerID:(MCPeerID *)peerID 
-            withPeerIdentifier:(NSString *)peerIdentifier
-               withSessionType:(NSString *)sessionType;
+- (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID 
+                   withRemotePeerID:(MCPeerID *)remotePeerID
+           withRemotePeerIdentifier:(NSString *)peerIdentifier
+                    withSessionType:(NSString *)sessionType;
 
-- (NSString *)peerIdentifier;
+- (MCPeerID *)remotePeerID;
+- (NSString *)remotePeerIdentifier;
 
 - (MCSession *)session;
 - (MCSession *)connect;

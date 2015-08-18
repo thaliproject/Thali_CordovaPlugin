@@ -35,9 +35,9 @@
 // Clients need to specialise connect in order to receive the connect callback
 - (MCSession *)connectWithConnectCallback:(ConnectCallback)connectCallback;
 
-- (instancetype)initWithLocalPeerID:(MCPeerID *)localPeer 
-                   withRemotePeerID:(MCPeerID *)remotePeer 
-                 withPeerIdentifier:(NSString *)peerIdentifier;
+- (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
+                   withRemotePeerID:(MCPeerID *)remotePeerID
+           withRemotePeerIdentifier:(NSString *)remotePeerIdentifier;
 
 @end;
 

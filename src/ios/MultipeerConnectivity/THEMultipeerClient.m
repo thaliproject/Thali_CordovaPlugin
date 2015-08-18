@@ -126,10 +126,10 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
           [clientSession connectWithConnectCallback:(ConnectCallback)connectCallback];
 
           NSLog(@"client: inviting peer %@", peerIdentifier);
-          [_nearbyServiceBrowser invitePeer:[clientSession peerID]
+          [_nearbyServiceBrowser invitePeer:[clientSession remotePeerID]
                                   toSession:[clientSession session]
                                 withContext:[peerIdentifier dataUsingEncoding:NSUTF8StringEncoding]
-                                    timeout:60];
+                                    timeout:30];
 
           success = YES;
         }
@@ -195,8 +195,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     THEMultipeerClientSession *session = (THEMultipeerClientSession *)p;
 
     NSString *peerIdentifier = info[PEER_IDENTIFIER_KEY];
-    if (session && ([session.peerID hash] == [peerID hash]) && 
-        [peerIdentifier isEqualToString:[session peerIdentifier]])
+    if (session && ([[session remotePeerID] hash] == [peerID hash]) && 
+        [peerIdentifier isEqualToString:[session remotePeerIdentifier]])
     {
       NSLog(@"client: Found existing peer: %@", peerIdentifier);
 
@@ -211,7 +211,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       clientSession = [[THEMultipeerClientSession alloc] 
                                     initWithLocalPeerID:_localPeerId 
                                        withRemotePeerID:peerID 
-                                     withPeerIdentifier:peerIdentifier];
+                               withRemotePeerIdentifier:peerIdentifier];
     }
 
     [clientSession setVisible:YES];
@@ -225,7 +225,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     if ([_multipeerSessionDelegate respondsToSelector:@selector(didFindPeerIdentifier:peerName:)])
     {
       [_multipeerSessionDelegate 
-        didFindPeerIdentifier:[clientSession peerIdentifier] 
+        didFindPeerIdentifier:[clientSession remotePeerIdentifier] 
                      peerName:info[PEER_NAME_KEY]];
     }
   }
@@ -243,12 +243,13 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                        updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
 
     clientSession = (THEMultipeerClientSession *)p;
+    assert([[clientSession remotePeerID] hash] == [peerID hash]);
 
     previouslyVisible = clientSession.visible;
 
     if (clientSession)
     {
-      NSLog(@"client: lost peer: %@", [clientSession peerIdentifier]);
+      NSLog(@"client: lost peer: %@", [clientSession remotePeerIdentifier]);
       // disconnect will clear up any networking resources we currently hold
       [clientSession disconnect];
       [clientSession setVisible:NO];
@@ -264,7 +265,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       // Let interested parties know we lost a peer, only do this on a state change
       if ([_multipeerSessionDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
       {
-        [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession peerIdentifier]];
+        [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession remotePeerIdentifier]];
       }
     }
   }

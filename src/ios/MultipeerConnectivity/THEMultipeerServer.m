@@ -122,8 +122,10 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)p;
 
-    if (serverSession && ([serverSession.peerID hash] == [peerID hash]))
+    if (serverSession && ([[serverSession remotePeerID] hash] == [peerID hash]))
     {
+      assert([[serverSession remotePeerIdentifier] isEqualToString:peerIdentifier]);
+
       NSLog(@"server: existing peer");
       // Disconnect any existing session, see note below
       [serverSession disconnect];
@@ -131,9 +133,10 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     else
     {
       NSLog(@"server: new peer");
-      serverSession = [[THEMultipeerServerSession alloc] initWithPeerID:_localPeerId 
-                                                     withPeerIdentifier:peerIdentifier
-                                                          withServerPort:_serverPort];
+      serverSession = [[THEMultipeerServerSession alloc] initWithLocalPeerID:_localPeerId
+                                                            withRemotePeerID:peerID
+                                                    withRemotePeerIdentifier:peerIdentifier
+                                                              withServerPort:_serverPort];
     }
 
     // Create a new session for each client, even if one already

@@ -31,9 +31,6 @@
 
 @implementation THEMultipeerClientSession
 {
-  // The transport level peer id
-  MCPeerID *_remotePeerID;
-  
   // Callback to fire when a connection completes (in fact when the relay
   // has established it's listening socket)
   ConnectCallback _connectCallback;
@@ -41,29 +38,23 @@
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
                    withRemotePeerID:(MCPeerID *)remotePeerID
-                 withPeerIdentifier:(NSString *)peerIdentifier
+           withRemotePeerIdentifier:(NSString *)remotePeerIdentifier
 {
-  self = [super initWithPeerID:localPeerID 
-            withPeerIdentifier:peerIdentifier 
-               withSessionType:@"client"];
+  self = [super initWithLocalPeerID:localPeerID 
+                   withRemotePeerID:remotePeerID
+           withRemotePeerIdentifier:remotePeerIdentifier 
+                    withSessionType:@"client"];
   if (!self)
   {
       return nil;
   }
 
-  _remotePeerID = remotePeerID;
-
   return self;
-}
-
--(MCPeerID *)peerID
-{
-  return _remotePeerID;
 }
 
 - (MCSession *)connectWithConnectCallback:(ConnectCallback)connectCallback
 {
-  NSLog(@"client: session connect %@", [self peerIdentifier]);
+  NSLog(@"client: session connect %@", [self remotePeerIdentifier]);
 
   assert(_connectCallback == nil);
 
@@ -94,7 +85,7 @@
 - (THEMultipeerSocketRelay *)createRelay
 {
   THEMultipeerClientSocketRelay *clientRelay = [
-    [THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self peerIdentifier]
+    [THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self remotePeerIdentifier]
   ];
   // We'll call this delegate back when a listening socket is established
   // to which the application client will connect to be bridged to the remote server
