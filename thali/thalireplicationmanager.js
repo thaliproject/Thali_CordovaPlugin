@@ -291,7 +291,7 @@ function muxServerBridge(tcpEndpointServerPort) {
     }.bind(this));
 
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
-  });
+  }.bind(this));
 
   server.setMaxListeners(100);
 
