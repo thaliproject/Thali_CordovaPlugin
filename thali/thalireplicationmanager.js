@@ -23,7 +23,7 @@ function ThaliReplicationManager(db, emitter) {
   this._isStarted = false;
   this._serverBridge = null;
   this._serverBridgePort = 0;
-  this._isInRetry = false;
+  this._isInRetry = {};
   EventEmitter.call(this);
 }
 
@@ -127,7 +127,7 @@ ThaliReplicationManager.prototype._syncPeers = function (peers) {
   // Get a list of peers for later for checking if available
   this._peers = peers.reduce(function (acc, peer) {
     acc[peer.peerIdentifier] = peer; return acc;
-  }, {});
+  }, this._peers);
 
   peers.forEach(function (peer) {
 
@@ -198,8 +198,8 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
  * @param {String} peerIdentifier The peer identifier to retry the synchronization with.
  */
 ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
-  if (this._isInRetry) { return; }
-  this._isInRetry = true;
+  if (this._isInRetry[peerIdentifier]) { return; }
+  this._isInRetry[peerIdentifier] = true;
 
   var c = this._clients[peerIdentifier];
   if (c) {
@@ -223,7 +223,7 @@ ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
       console.log('Disconnect error with error: %s', err);
       this.emit(ThaliReplicationManager.events.DISCONNECT_ERROR, err);
     }
-    this._isInRetry = false;
+    this._isInRetry[peerIdentifier] = false;
     this._syncPeer(peerIdentifier);
   }.bind(this));
 };
