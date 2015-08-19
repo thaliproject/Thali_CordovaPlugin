@@ -33,16 +33,23 @@ public class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks 
     }
 
     public void Start() {
-        this.MyApp = activity.getApplication();
-        if (this.MyApp != null) {
-            this.MyApp.registerActivityLifecycleCallbacks(this);
+        Application tmpApp = activity.getApplication();
+        if (tmpApp != null) {
+            try {
+                tmpApp.registerActivityLifecycleCallbacks(this);
+            }catch(Exception e){e.printStackTrace();}
         }
+
+        this.MyApp = tmpApp;
     }
 
     public void Stop() {
-        if (this.MyApp != null) {
-            this.MyApp.unregisterActivityLifecycleCallbacks(this);
-            this.MyApp = null;
+        Application tmpApp = this.MyApp;
+        this.MyApp = null;
+        if (tmpApp != null) {
+            try {
+                tmpApp.unregisterActivityLifecycleCallbacks(this);
+            } catch (Exception e) {e.printStackTrace();}
         }
     }
 

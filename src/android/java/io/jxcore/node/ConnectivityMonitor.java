@@ -22,31 +22,34 @@ public class ConnectivityMonitor {
     BroadcastReceiver receiver = null;
     Activity activity = jxcore.activity;
 
-    public ConnectivityMonitor(){
-    }
+    public ConnectivityMonitor(){}
 
-    public void Start(){
+    public void Start() {
         Stop();
         IntentFilter filter = new IntentFilter();
         filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
 
-        receiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                SendConnectivityInfo();
-            }
-        };
+        try {
+            receiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    SendConnectivityInfo();
+                }
+            };
 
-        activity.registerReceiver(receiver, filter);
-
-        //To do fix this once we know how to get events that all is ready !
-        SendConnectivityInfo();
+            activity.registerReceiver(receiver, filter);
+            //To do fix this once we know how to get events that all is ready !
+            SendConnectivityInfo();
+        } catch (Exception e) {e.printStackTrace();}
     }
 
-    public void Stop(){
-        if(receiver != null) {
-            activity.unregisterReceiver(receiver);
-            receiver = null;
+    public void Stop() {
+        BroadcastReceiver tmpRec= receiver;
+        receiver = null;
+        if (tmpRec != null) {
+            try {
+                activity.unregisterReceiver(tmpRec);
+            } catch (Exception e) {e.printStackTrace();}
         }
     }
 
