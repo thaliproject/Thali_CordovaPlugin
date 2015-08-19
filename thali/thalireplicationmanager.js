@@ -111,11 +111,11 @@ ThaliReplicationManager.prototype.stop = function () {
  */
 ThaliReplicationManager.prototype._networkChanged = function (status) {
   if (!status.isAvailable && this._isStarted) {
-    this.stop();
+    return this.stop();
   }
 
   if (status.isAvailable && !this._isStarted) {
-    this.start(this._deviceName, this._port, this._dbName);
+    return this.start(this._deviceName, this._port, this._dbName);
   }
 };
 
