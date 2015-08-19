@@ -131,11 +131,11 @@ ThaliReplicationManager.prototype._syncPeers = function (peers) {
 
   peers.forEach(function (peer) {
 
-    var p = this._replications[peer.peerIdentifier];
+    var existingReplication = this._replications[peer.peerIdentifier];
 
-    !p && peer.peerAvailable && this._syncPeer(peer.peerIdentifier);
+    !existingReplication && peer.peerAvailable && this._syncPeer(peer.peerIdentifier);
 
-    if (p && !peer.peerAvailable) {
+    if (existingReplication && !peer.peerAvailable) {
       var client = this._clients[peer.peerIdentifier];
       if (client) {
         this._clients[peer.peerIdentifier].close(function (err) {
@@ -147,8 +147,8 @@ ThaliReplicationManager.prototype._syncPeers = function (peers) {
         delete this._clients[peer.peerIdentifier];
       }
 
-      p.from.cancel();
-      p.to.cancel();
+      existingReplication.from.cancel();
+      existingReplication.to.cancel();
       delete this._replications[peer.peerIdentifier];
 
       this._emitter.disconnect(peer.peerIdentifier, function (err) {
@@ -211,10 +211,10 @@ ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
 
     delete this._clients[peerIdentifier];
   }
-  var p = this._replications[peerIdentifier];
-  if (p) {
-    p.from.cancel();
-    p.to.cancel();
+  var existingReplication = this._replications[peerIdentifier];
+  if (existingReplication) {
+    existingReplication.from.cancel();
+    existingReplication.to.cancel();
     delete this._replications[peerIdentifier];
   }
 
