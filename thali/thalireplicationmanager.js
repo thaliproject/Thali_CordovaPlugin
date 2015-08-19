@@ -248,11 +248,12 @@ function muxServerBridge(tcpEndpointServerPort) {
 
   var server = net.createServer(function(incomingClientSocket) {
 
-    incomingClientSocket.on('error', function (err) {
-      console.log('incoming client socket error %s', err);
-
+    incomingClientSocket.on('close', function () {
       if (!serverRestarted) {
         try {
+          incomingClientSocket.unpipe(serverPlex);
+          serverPlex.unpipe(incomingClientSocket);
+
           serverPlex.destroy();
           server.close();
         } catch (e) {
@@ -262,23 +263,19 @@ function muxServerBridge(tcpEndpointServerPort) {
         restartMuxServerBridge.call(this);
         serverRestarted = true;
       }
-
     }.bind(this));
+
+    incomingClientSocket.on('timeout', function () {
+      console.log('incoming client socket timeout');
+    });
+
+    incomingClientSocket.on('error', function (err) {
+      console.log('incoming client socket error %s', err);
+    });
 
     server.on('error', function (err) {
       console.log('mux server bridge error %s', err);
-      if (!serverRestarted) {
-        try {
-          incomingClientSocket.destroy();
-          serverPlex.destroy();
-        } catch (e) {
-          console.log('failed to clean up server and serverPlex');
-        }
-
-        restartMuxServerBridge.call(this);
-        serverRestarted = true;
-      }
-    }.bind(this));
+    });
 
     server.on('close', function () {
       console.log('mux server bridge close');
