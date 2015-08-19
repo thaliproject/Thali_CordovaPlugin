@@ -23,7 +23,7 @@ function ThaliReplicationManager(db, emitter) {
   this._isStarted = false;
   this._serverBridge = null;
   this._serverBridgePort = 0;
-  this._isInRetry = false;
+  this._isInRetry = {};
   EventEmitter.call(this);
 }
 
@@ -127,7 +127,7 @@ ThaliReplicationManager.prototype._syncPeers = function (peers) {
   // Get a list of peers for later for checking if available
   this._peers = peers.reduce(function (acc, peer) {
     acc[peer.peerIdentifier] = peer; return acc;
-  }, {});
+  }, this._peers);
 
   peers.forEach(function (peer) {
 
@@ -198,8 +198,8 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
  * @param {String} peerIdentifier The peer identifier to retry the synchronization with.
  */
 ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
-  if (this._isInRetry) { return; }
-  this._isInRetry = true;
+  if (this._isInRetry[peerIdentifier]) { return; }
+  this._isInRetry[peerIdentifier] = true;
 
   var c = this._clients[peerIdentifier];
   if (c) {
@@ -223,78 +223,64 @@ ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
       console.log('Disconnect error with error: %s', err);
       this.emit(ThaliReplicationManager.events.DISCONNECT_ERROR, err);
     }
-    this._isInRetry = false;
+    this._isInRetry[peerIdentifier] = false;
     this._syncPeer(peerIdentifier);
   }.bind(this));
 };
 
 /* Mux Layer */
 
-function restartMuxServerBridge() {
-  this.once('stopped', function () {
-    this.start(this._deviceName, this._port, this._dbName);
-  }.bind(this));
-
-  this.stop();
-}
-
 function muxServerBridge(tcpEndpointServerPort) {
-  var serverRestarted = false;
 
-  var serverPlex = multiplex({}, function(stream, id) {
-    var clientSocket = net.createConnection({port: tcpEndpointServerPort});
-    stream.pipe(clientSocket).pipe(stream);
-  });
+  // Keep track of all the client sockets we've seen
+  var clientSockets = {};
 
   var server = net.createServer(function(incomingClientSocket) {
 
+    incomingClientSocket.on('close', function () {
+      // Remove the closed socket from out records, destroying (by
+      // unref-fing) the multiplexer (we hope)
+      console.log("server bridge: socket closed");
+      delete clientSockets[incomingClientSocket];
+    }.bind(this));
+
+    incomingClientSocket.on('timeout', function () {
+      console.log('incoming client socket timeout');
+    });
+
     incomingClientSocket.on('error', function (err) {
       console.log('incoming client socket error %s', err);
-
-      if (!serverRestarted) {
-        try {
-          serverPlex.destroy();
-          server.close();
-        } catch (e) {
-          console.log('failed to clean up server and serverPlex');
-        }
-
-        restartMuxServerBridge.call(this);
-        serverRestarted = true;
-      }
-
-    }.bind(this));
+    });
 
     server.on('error', function (err) {
       console.log('mux server bridge error %s', err);
-      if (!serverRestarted) {
-        try {
-          incomingClientSocket.destroy();
-          serverPlex.destroy();
-        } catch (e) {
-          console.log('failed to clean up server and serverPlex');
-        }
-
-        restartMuxServerBridge.call(this);
-        serverRestarted = true;
-      }
-    }.bind(this));
+    });
 
     server.on('close', function () {
-      console.log('mux server bridge close');
-      if (!serverRestarted) {
-        try {
-          serverPlex.destroy();
-        } catch (e) {
-          console.log('failed to clean up server and serverPlex');
-        }
-        restartMuxServerBridge.call(this);
-        serverRestarted = true;
+      // Close all the client sockets, this'll force the server object 
+      // to *really* close
+      console.log("server bridge: server closing (" + Object.keys(clientSockets).length + ")");
+      // Shutdown all the connected sockets
+      for (var sock in clientSockets) {
+        sock.end();
+        sock.destroy();
       }
+      clientSockets = {};
     }.bind(this));
 
+    console.log("server bridge: new client socket");
+
+    // We'll need a new multiplex object for each incoming socket
+    var serverPlex = multiplex({}, function(stream, id) {
+      var clientSocket = net.createConnection({port: tcpEndpointServerPort});
+      stream.pipe(clientSocket).pipe(stream);
+    });
+
+    // Record the mapping between incoming socket and multiplex
+    clientSockets[incomingClientSocket] = serverPlex;
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
-  });
+
+  }.bind(this));
 
   server.setMaxListeners(100);
 
