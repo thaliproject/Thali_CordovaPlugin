@@ -71,12 +71,10 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
             mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
             localHostSocket = new Socket(mLocalHostAddress, mHTTPPort);
 
-            if(localHostSocket != null){
-                mHTTPPort = localHostSocket.getPort();
-            }
+            mHTTPPort = localHostSocket.getPort();
+
             print_debug("LocalHost addr: " + GetLocalHostAddress() + ", port: " + GetLocalHostPort());
 
-            print_debug("Get local streams");
             tmpInputStream = localHostSocket.getInputStream();
             tmpOutputStream = localHostSocket.getOutputStream();
 
@@ -142,55 +140,69 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
     }
 
     public String GetLocalHostAddress() {
-        String ret = "";
-        if(localHostSocket != null && localHostSocket.getInetAddress() != null){
-            ret = localHostSocket.getInetAddress().toString();
+
+        if(localHostSocket == null){
+            return "";
         }
-        return ret;
+
+        if(localHostSocket.getInetAddress() == null){
+            return "";
+        }
+
+        return localHostSocket.getInetAddress().toString();
     }
 
     public void Stop() {
         mStopped = true;
 
-        if(ReceivingThread != null){
+        StreamCopyingThread tmpSCTrec = ReceivingThread;
+        ReceivingThread = null;
+        if(tmpSCTrec != null){
             print_debug("Stop ReceivingThread");
-            ReceivingThread.Stop();
-            ReceivingThread = null;
+            tmpSCTrec.Stop();
         }
 
-        if(SendingThread != null){
+        StreamCopyingThread tmpSCTsend = SendingThread;
+        SendingThread = null;
+        if(tmpSCTsend != null){
             print_debug("Stop SendingThread");
-            SendingThread.Stop();
-            SendingThread = null;
+            tmpSCTsend.Stop();
         }
 
-        if (mmInStream != null) {
-            try {mmInStream.close();} catch (Exception e) {}
-            mmInStream = null;
+        InputStream tmpinStr = mmInStream;
+        mmInStream = null;
+        if (tmpinStr != null) {
+            try {tmpinStr.close();} catch (Exception e) {}
         }
 
-        if (LocalInputStream != null) {
-            try {LocalInputStream.close();} catch (Exception e) {}
-            LocalInputStream = null;
+        InputStream tmpinStrLoc = LocalInputStream;
+        LocalInputStream = null;
+        if (tmpinStrLoc != null) {
+            try {tmpinStrLoc.close();} catch (Exception e) {}
         }
 
-        if (LocalOutputStream != null) {
-            try {LocalOutputStream.close();} catch (Exception e) {}
-            LocalOutputStream = null;
+        OutputStream tmpoutStrLoc = LocalOutputStream;
+        LocalOutputStream = null;
+        if (tmpoutStrLoc != null) {
+            try {tmpoutStrLoc.close();} catch (Exception e) {}
         }
 
-        if (mmOutStream != null) {
-            try {mmOutStream.close();} catch (Exception e) {}
-            mmOutStream = null;
+        OutputStream tmpoutStr = mmOutStream;
+        mmOutStream = null;
+        if (tmpoutStr != null) {
+            try {tmpoutStr.close();} catch (Exception e) {}
         }
 
-        if (mmSocket != null) {
-            try {mmSocket.close();} catch (Exception e) {}
-            mmSocket = null;
+        BluetoothSocket tmpbtSoc = mmSocket;
+        mmSocket = null;
+        if (tmpbtSoc != null) {
+            try {tmpbtSoc.close();} catch (Exception e) {}
         }
-        if (localHostSocket != null) {
-            try {localHostSocket.close();} catch (Exception e) {}
-            localHostSocket = null;
+
+        Socket tmplhSoc = localHostSocket;
+        localHostSocket = null;
+        if (tmplhSoc != null) {
+            try {tmplhSoc.close();} catch (Exception e) {}
         }
     }
 

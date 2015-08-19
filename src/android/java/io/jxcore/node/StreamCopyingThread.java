@@ -39,32 +39,28 @@ public class StreamCopyingThread extends Thread {
     public void run() {
         byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
 
-        while (!mStopped){
+        while (!mStopped) {
             try {
-                if (!mStopped) {
-                    if (mInputStream != null && mOutputStream != null) {
-                        int n = 0;
-                        while (-1 != (n = mInputStream.read(buffer)) && !mStopped) {
-                         //   String dbgMessage = new String(buffer,0,n);
-                         //   print_debug(" Copying " + n + " bytes, data: " + dbgMessage);
-                            mOutputStream.write(buffer, 0, n);
-                        }
+                if (mInputStream != null && mOutputStream != null) {
+                    int n = 0;
+                    while (-1 != (n = mInputStream.read(buffer)) && !mStopped) {
+                        //   String dbgMessage = new String(buffer,0,n);
+                        //   print_debug(" Copying " + n + " bytes, data: " + dbgMessage);
+                        mOutputStream.write(buffer, 0, n);
+                    }
 
-                        if(n == -1){
-                            mStopped = true;
-                            callback.StreamCopyError(this, "input stream got -1 on read");
-                        }
+                    if (n == -1) {
+                        mStopped = true;
+                        callback.StreamCopyError(this, "input stream got -1 on read");
                     }
                 }
             } catch (IOException e) {
-                if (!mStopped) {
-                    mStopped = true;
-                    callback.StreamCopyError(this, "disconnected: " + e.toString());
-                }
+                mStopped = true;
+                callback.StreamCopyError(this, "disconnected: " + e.toString());
             }
-        }
 
-        print_debug("run ended");
+            print_debug("run ended");
+        }
     }
 
     public void Stop(){

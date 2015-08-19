@@ -170,77 +170,92 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
     }
 
     public String GetLocalHostAddress() {
-        String ret = "";
-        if(localHostSocket != null && localHostSocket.getInetAddress() != null){
-            ret = localHostSocket.getInetAddress().toString();
+        if(localHostSocket == null){
+            return "";
         }
-        return ret;
+
+        if(localHostSocket.getInetAddress() == null){
+            return "";
+        }
+
+        return localHostSocket.getInetAddress().toString();
     }
 
     public void Stop() {
         mStopped = true;
 
-        if(ReceivingThread != null){
+        StreamCopyingThread tmpSCTrec = ReceivingThread;
+        ReceivingThread = null;
+        if(tmpSCTrec != null){
             print_debug("Stop ReceivingThread");
-            ReceivingThread.Stop();
-            ReceivingThread = null;
+            tmpSCTrec.Stop();
         }
 
-        if(SendingThread != null){
+        StreamCopyingThread tmpSCTsend = SendingThread;
+        SendingThread = null;
+        if(tmpSCTsend != null){
             print_debug("Stop SendingThread");
-            SendingThread.Stop();
-            SendingThread = null;
+            tmpSCTsend.Stop();
         }
 
         CloseSocketAndStreams();
 
-        if (mmInStream != null) {
+        InputStream tmpInStr = mmInStream;
+        mmInStream = null;
+        if (tmpInStr != null) {
             try {print_debug("Close bt in");
-                mmInStream.close();} catch (Exception e) {print_debug("Close error : " + e.toString());}
-            mmInStream = null;
+                tmpInStr.close();} catch (Exception e) {print_debug("Close error : " + e.toString());}
         }
 
-        if (mmOutStream != null) {
+        OutputStream tmpOutStr = mmOutStream;
+        mmOutStream = null;
+        if (tmpOutStr != null) {
             try {print_debug("Close bt out");
-                mmOutStream.close();} catch (Exception e) {print_debug("Close error : " + e.toString());}
-            mmOutStream = null;
+                tmpOutStr.close();} catch (Exception e) {print_debug("Close error : " + e.toString());}
         }
 
-        if (mmSocket != null) {
+        BluetoothSocket tmpSoc = mmSocket;
+        mmSocket = null;
+        if (tmpSoc != null) {
             try {print_debug("Close bt socket");
-                mmSocket.close();} catch (Exception e) {print_debug("Close error : " + e.toString());}
-            mmSocket = null;
+                tmpSoc.close();} catch (Exception e) {print_debug("Close error : " + e.toString());}
         }
 
-        if (srvSocket != null) {
+        ServerSocket tmpSrvSoc = srvSocket;
+        srvSocket = null;
+        if (tmpSrvSoc != null) {
             try {print_debug("Close server socket");
-                srvSocket.close();} catch (Exception e) {print_debug("Close error : " + e.toString());}
-            srvSocket = null;
+                tmpSrvSoc.close();} catch (Exception e) {print_debug("Close error : " + e.toString());}
         }
     }
 
     public void CloseSocketAndStreams() {
-        if (LocalInputStream != null) {
+
+        InputStream tmpLocStrIn = LocalInputStream;
+        LocalInputStream = null;
+        if (tmpLocStrIn != null) {
             try {print_debug("Close local in");
-                LocalInputStream.close();} catch (Exception e) {
+                tmpLocStrIn.close();} catch (Exception e) {
                 print_debug("Close error : " + e.toString());
             }
-            LocalInputStream = null;
         }
 
-        if (LocalOutputStream != null) {
+        OutputStream tmpLocStrOut = LocalOutputStream;
+        LocalOutputStream = null;
+        if (tmpLocStrOut != null) {
             try {print_debug("Close localout");
-                LocalOutputStream.close();} catch (Exception e) {
+                tmpLocStrOut.close();} catch (Exception e) {
                 print_debug("Close error : " + e.toString());
             }
-            LocalOutputStream = null;
         }
-        if (localHostSocket != null) {
+
+        Socket tmpLHSoc = localHostSocket;
+        localHostSocket = null;
+        if (tmpLHSoc != null) {
             try {print_debug("Close local host sokcte");
-                localHostSocket.close();} catch (Exception e) {
+                tmpLHSoc.close();} catch (Exception e) {
                 print_debug("Close error : " + e.toString());
             }
-            localHostSocket = null;
         }
     }
     public void SetIdAddressAndName(String peerId,String peerName,String peerAddress) {
