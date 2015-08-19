@@ -93,9 +93,11 @@
 
 - (void)stop
 {
+  NSLog(@"%@ relay: stopping", _relayType);
+
   if (_socket)
   {
-    NSLog(@"%@: destroying socket %p", _relayType, _socket);
+    NSLog(@"%@ relay: destroying socket %p", _relayType, _socket);
     _socket.delegate = nil;
     [_socket disconnect];
     _socket = nil;
@@ -118,6 +120,7 @@
 
 - (void)dealloc
 {
+  NSLog(@"%@ relay: dealloc", _relayType);
   [self stop];  
 }
 
