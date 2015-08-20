@@ -1,8 +1,6 @@
 package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
-import android.os.Handler;
-import android.util.Log;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
@@ -13,14 +11,14 @@ import java.net.Socket;
  */
 public class BtToRequestSocket extends Thread implements StreamCopyingThread.CopyThreadCallback {
 
-    BtToRequestSocket that = this;
+    private final BtToRequestSocket that = this;
 
     public interface ReadyForIncoming
     {
         void listeningAndAcceptingNow(int port);
     }
-    private ReadyForIncoming readyCallback;
-    private BtSocketDisconnectedCallBack mHandler;
+    private final ReadyForIncoming readyCallback;
+    private final BtSocketDisconnectedCallBack mHandler;
 
     private BluetoothSocket mmSocket = null;
     private Socket localHostSocket = null;
@@ -40,9 +38,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
 
     private int mHTTPPort = 0;
 
-    final String TAG = "--BtCon-CLIENT-Socket";
-
-    boolean mStopped = false;
+    private boolean mStopped = false;
 
     public BtToRequestSocket(BluetoothSocket socket, BtSocketDisconnectedCallBack handler,ReadyForIncoming callback) {
         print_debug("Creating BtConnectedRequestSocket");
@@ -67,13 +63,10 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
         mmOutStream = tmpOut;
     }
 
-    public void setPort(int port) {
-        mHTTPPort = port;
-    }
-
     public void run() {
         try {
             print_debug("start Socket with port: " + mHTTPPort);
+            mHTTPPort = 0; // just to make sure its zero
             srvSocket = new ServerSocket(mHTTPPort);
             mHTTPPort = srvSocket.getLocalPort();
             print_debug("mHTTPPort  set to : " + mHTTPPort);
@@ -96,7 +89,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
                 CloseSocketAndStreams();
                 localHostSocket = tmpSocket;
 
-                print_debug("incoming data from: " + GetLocalHostAddress() + ", port: " + GetLocalHostPort());
+                print_debug("incoming data from: " + GetLocalHostAddressAsString() + ", port: " + GetLocalHostPort());
                 tmpInputStream = localHostSocket.getInputStream();
                 tmpOutputStream = localHostSocket.getOutputStream();
 
@@ -165,20 +158,12 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
         }
     }
 
-    public int GetLocalHostPort() {
+    private  int GetLocalHostPort() {
         return mHTTPPort;
     }
 
-    public String GetLocalHostAddress() {
-        if(localHostSocket == null){
-            return "";
-        }
-
-        if(localHostSocket.getInetAddress() == null){
-            return "";
-        }
-
-        return localHostSocket.getInetAddress().toString();
+    private String GetLocalHostAddressAsString() {
+        return localHostSocket == null || localHostSocket.getInetAddress() == null ? null : localHostSocket.getInetAddress().toString();
     }
 
     public void Stop() {
@@ -229,7 +214,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
         }
     }
 
-    public void CloseSocketAndStreams() {
+    private  void CloseSocketAndStreams() {
 
         InputStream tmpLocStrIn = LocalInputStream;
         LocalInputStream = null;
@@ -243,7 +228,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
         OutputStream tmpLocStrOut = LocalOutputStream;
         LocalOutputStream = null;
         if (tmpLocStrOut != null) {
-            try {print_debug("Close localout");
+            try {print_debug("Close LocalOutputStream");
                 tmpLocStrOut.close();} catch (Exception e) {
                 print_debug("Close error : " + e.toString());
             }
@@ -252,7 +237,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
         Socket tmpLHSoc = localHostSocket;
         localHostSocket = null;
         if (tmpLHSoc != null) {
-            try {print_debug("Close local host sokcte");
+            try {print_debug("Close localHostSocket");
                 tmpLHSoc.close();} catch (Exception e) {
                 print_debug("Close error : " + e.toString());
             }
@@ -266,14 +251,10 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
     public String GetPeerId() {
         return mPeerId;
     }
-    public String GetPeerName(){
-        return mPeerName;
-    }
-    public String GetPeerAddress(){
-        return mPeerAddress;
-    }
+    public String GetPeerName(){return mPeerName;}
+    public String GetPeerAddress(){return mPeerAddress;}
 
-    public void print_debug(String message){
+    private  void print_debug(String message){
         //Log.i(TAG, message);
     }
 

@@ -13,28 +13,25 @@ import java.net.Socket;
  */
 public class BtToServerSocket extends Thread implements StreamCopyingThread.CopyThreadCallback {
 
-    BtToServerSocket that = this;
-    private BluetoothSocket mmSocket = null;;
+    private final BtToServerSocket that = this;
+    private BluetoothSocket mmSocket = null;
     private Socket localHostSocket = null;
 
     private InputStream mmInStream = null;
     private OutputStream mmOutStream = null;
     private InputStream LocalInputStream = null;
     private OutputStream LocalOutputStream = null;
-    private BtSocketDisconnectedCallBack mHandler;
+    private final BtSocketDisconnectedCallBack mHandler;
     private String mPeerId = "";
     private String mPeerName = "";
     private String mPeerAddress = "";
 
     private StreamCopyingThread SendingThread = null;
     private StreamCopyingThread ReceivingThread = null;
-    private Inet4Address mLocalHostAddress = null;
-
-    final String TAG  = "BTConnectedThread";
 
     private int mHTTPPort = 0;
 
-    boolean mStopped = false;
+    private boolean mStopped = false;
 
     public BtToServerSocket(BluetoothSocket socket, BtSocketDisconnectedCallBack handler) {
         print_debug("Creating BTConnectedThread");
@@ -68,12 +65,12 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
         InputStream tmpInputStream = null;
         OutputStream tmpOutputStream = null;
         try {
-            mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
+            Inet4Address mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
             localHostSocket = new Socket(mLocalHostAddress, mHTTPPort);
 
             mHTTPPort = localHostSocket.getPort();
 
-            print_debug("LocalHost addr: " + GetLocalHostAddress() + ", port: " + GetLocalHostPort());
+            print_debug("LocalHost address: " + GetLocalHostAddressAsString() + ", port: " + GetLocalHostPort());
 
             tmpInputStream = localHostSocket.getInputStream();
             tmpOutputStream = localHostSocket.getOutputStream();
@@ -122,10 +119,11 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
         //Sending socket has local input stream, thus if it is giving error we are getting local disconnection
         // thus we should do round to get new local connection
             print_debug("SendingThread thread got error: " + error);
-            if(SendingThread != null){
+            StreamCopyingThread tmpSendThread = SendingThread;
+            SendingThread = null;
+            if(tmpSendThread != null){
                 print_debug("Stop SendingThread");
-                SendingThread.Stop();
-                SendingThread = null;
+                tmpSendThread.Stop();
             }
 
             mStopped = true;
@@ -139,17 +137,8 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
         return mHTTPPort;
     }
 
-    public String GetLocalHostAddress() {
-
-        if(localHostSocket == null){
-            return "";
-        }
-
-        if(localHostSocket.getInetAddress() == null){
-            return "";
-        }
-
-        return localHostSocket.getInetAddress().toString();
+    private String GetLocalHostAddressAsString() {
+        return localHostSocket == null || localHostSocket.getInetAddress() == null ? null : localHostSocket.getInetAddress().toString();
     }
 
     public void Stop() {
@@ -172,37 +161,37 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
         InputStream tmpinStr = mmInStream;
         mmInStream = null;
         if (tmpinStr != null) {
-            try {tmpinStr.close();} catch (Exception e) {}
+            try {tmpinStr.close();} catch (Exception e) {e.printStackTrace();}
         }
 
         InputStream tmpinStrLoc = LocalInputStream;
         LocalInputStream = null;
         if (tmpinStrLoc != null) {
-            try {tmpinStrLoc.close();} catch (Exception e) {}
+            try {tmpinStrLoc.close();} catch (Exception e) {e.printStackTrace();}
         }
 
         OutputStream tmpoutStrLoc = LocalOutputStream;
         LocalOutputStream = null;
         if (tmpoutStrLoc != null) {
-            try {tmpoutStrLoc.close();} catch (Exception e) {}
+            try {tmpoutStrLoc.close();} catch (Exception e) {e.printStackTrace();}
         }
 
         OutputStream tmpoutStr = mmOutStream;
         mmOutStream = null;
         if (tmpoutStr != null) {
-            try {tmpoutStr.close();} catch (Exception e) {}
+            try {tmpoutStr.close();} catch (Exception e) {e.printStackTrace();}
         }
 
         BluetoothSocket tmpbtSoc = mmSocket;
         mmSocket = null;
         if (tmpbtSoc != null) {
-            try {tmpbtSoc.close();} catch (Exception e) {}
+            try {tmpbtSoc.close();} catch (Exception e) {e.printStackTrace();}
         }
 
         Socket tmplhSoc = localHostSocket;
         localHostSocket = null;
         if (tmplhSoc != null) {
-            try {tmplhSoc.close();} catch (Exception e) {}
+            try {tmplhSoc.close();} catch (Exception e) {e.printStackTrace();}
         }
     }
 
@@ -211,18 +200,14 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
         mPeerName = peerName;
         mPeerAddress = peerAddress;
     }
-    public String GetPeerId() {
-        return mPeerId;
-    }
+    public String GetPeerId() {return mPeerId;}
     public String GetPeerName(){
         return mPeerName;
     }
-    public String GetPeerAddress(){
-            return mPeerAddress;
-    }
+    public String GetPeerAddress(){return mPeerAddress;}
 
-    public void print_debug(String message){
-        Log.i(TAG, message);
+    private void print_debug(String message){
+        Log.i("BTConnectedThread", message);
     }
 
 

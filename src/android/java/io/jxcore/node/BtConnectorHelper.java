@@ -3,7 +3,6 @@ package io.jxcore.node;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Handler;
 
 import android.util.Log;
@@ -25,24 +24,23 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector, BtSocketDisconnectedCallBack {
 
-    Context context = null;
+    private Context context = null;
 
-    final String serviceTypeIdentifier = "Cordovap2p._tcp";
-    final String BtUUID                = "fa87c0d0-afac-11de-8a39-0800200c9a66";
-    final String Bt_NAME               = "Thaili_Bluetooth";
+    private final String serviceTypeIdentifier = "Cordovap2p._tcp";
+    private final String BtUUID                = "fa87c0d0-afac-11de-8a39-0800200c9a66";
+    private final String Bt_NAME               = "Thaili_Bluetooth";
 
 
-    CopyOnWriteArrayList<ServiceItem> lastAvailableList = new CopyOnWriteArrayList<ServiceItem>();
+    private final CopyOnWriteArrayList<ServiceItem> lastAvailableList = new CopyOnWriteArrayList<ServiceItem>();
 
-    BTConnectorSettings conSettings = null;
-    BTConnector mBTConnector = null;
+    private BTConnectorSettings conSettings = null;
+    private BTConnector mBTConnector = null;
 
-    CopyOnWriteArrayList<BtToServerSocket> mServerSocketList = new CopyOnWriteArrayList<BtToServerSocket>();
-    BtToRequestSocket mBtToRequestSocket = null;
-    String myPeerIdentifier= "";
-    String myPeerName = "";
+    private final CopyOnWriteArrayList<BtToServerSocket> mServerSocketList = new CopyOnWriteArrayList<BtToServerSocket>();
+    private BtToRequestSocket mBtToRequestSocket = null;
 
-    int mServerPort = 0;
+
+    private int mServerPort = 0;
 
     public BtConnectorHelper() {
         conSettings = new BTConnectorSettings();
@@ -54,24 +52,18 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
     public BTConnector.WifiBtStatus Start(String peerName,int port){
         this.mServerPort = port;
-        this.myPeerIdentifier= GetBluetoothAddress();
-        this.myPeerName = peerName;
         this.lastAvailableList.clear();
 
         Stop();
 
         BTConnector tmpCon= new BTConnector(context,this,this,conSettings);
-        BTConnector.WifiBtStatus  ret = tmpCon.Start(this.myPeerIdentifier,this.myPeerName);
+        BTConnector.WifiBtStatus  ret = tmpCon.Start(GetBluetoothAddress(),peerName);
         mBTConnector = tmpCon;
         return ret;
     }
 
     public boolean isRunning(){
-        if(mBTConnector != null){
-            return true;
-        }else{
-            return false;
-        }
+        return mBTConnector != null;
     }
     public void Stop(){
 
@@ -85,7 +77,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         DisconnectIncomingConnections();
 
         // disconnect outgoing connection
-        Disconnect("");
+        DisconnectAll ();
     }
 
     // we only cut off our outgoing connections, incoming ones are cut off from the other end.
@@ -96,109 +88,99 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             return false;
         }
 
-        String currentpeerId = tmpSoc.GetPeerId();
-        print_debug("Disconnect : " + peerId + ", current request : " + currentpeerId);
-        if (peerId.length() == 0 || peerId.equalsIgnoreCase(currentpeerId)) {
-            print_debug("Disconnect:::Stop :" + currentpeerId);
-
+        String currenPeerId = tmpSoc.GetPeerId();
+        print_debug("Disconnect : " + peerId + ", current request : " + currenPeerId);
+        if (peerId.equalsIgnoreCase(currenPeerId)) {
             tmpSoc.Stop();
             mBtToRequestSocket = null;
-
             return true;
-
         }
         return false;
     }
 
-    //test time implementation to simulate 'peer disappearing'
+    private void DisconnectAll(){
+        BtToRequestSocket tmpSoc = mBtToRequestSocket;
+        mBtToRequestSocket = null;
+        if(tmpSoc != null) {
+            tmpSoc.Stop();
+        }
+    }
+
+    //function to disconnect all incoming connections
+    // should only be used internally, i.e. should be private
+    // but for testing time, this is marked as public, so we can simulate 'peer disappearing'
+    // by cutting off the connection from the remote party
     public boolean  DisconnectIncomingConnections() {
 
-        if (mServerSocketList == null) {
-            return false;
-        }
-
-        for (int i = 0; i < mServerSocketList.size(); i++) {
-            BtToServerSocket tmpToSrvSocket = mServerSocketList.get(i);
-            if (tmpToSrvSocket != null) {
-                print_debug("Disconnect:::Stop : mBtToServerSocket :" + tmpToSrvSocket.getName());
-                tmpToSrvSocket.Stop();
-                mServerSocketList.remove(i);
+        boolean ret = false;
+        for(BtToServerSocket rSocket : mServerSocketList){
+            if (rSocket != null) {
+                print_debug("Disconnect:::Stop : mBtToServerSocket :" + rSocket.getName());
+                rSocket.Stop();
+                mServerSocketList.remove(rSocket);
+                ret = true;
             }
         }
 
         mServerSocketList.clear();
 
-        return true;
-
+        return ret;
     }
 
-    public String GetBluetoothAddress(){
+    private String GetBluetoothAddress(){
         BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
-        return bluetooth == null ? null : bluetooth.getAddress();
+        return bluetooth == null ? "" : bluetooth.getAddress();
     }
 
-    public String GetDeviceName(){
-        BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
-        return bluetooth == null ? null : bluetooth.getName();
-    }
-
-    public boolean SetDeviceName(String name){
-        BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
-        return bluetooth == null ? null : bluetooth.setName(name);
-    }
-
-    ConnectStatusCallback mConnectStatusCallback = null;
+    private ConnectStatusCallback mConnectStatusCallback = null;
 
     public interface ConnectStatusCallback{
         void ConnectionStatusUpdate(String Error, int port);
     }
 
-    public void BeginConnectPeer(String toPeerId, ConnectStatusCallback connectStatusCallback) {
-        ConnectStatusCallback tmpCallback = connectStatusCallback;
-        if (tmpCallback == null) {
+    public void BeginConnectPeer(final String toPeerId, ConnectStatusCallback connectStatusCallback) {
+
+        if (connectStatusCallback == null) {
             //nothing we should do, since we can not update progress
-            print_debug("BeginConnectPeer callback is NULL !!!!!!");
-            return;
+            throw new RuntimeException("BeginConnectPeer callback is NULL !!!!!!");
         }
 
         BtToRequestSocket tmpToReqSoc = mBtToRequestSocket;
         if (tmpToReqSoc != null) {
-            tmpCallback.ConnectionStatusUpdate("Already connected to " + tmpToReqSoc.GetPeerId(), -1);
+            connectStatusCallback.ConnectionStatusUpdate("Maximum peer connections reached, please try again after disconnecting a peer. Connected to " + tmpToReqSoc.GetPeerId(), -1);
             return;
         }
 
         ServiceItem selectedDevice = null;
-        if (lastAvailableList != null) {
-            for (int i = 0; i < lastAvailableList.size(); i++) {
-                if (lastAvailableList.get(i).peerId.contentEquals(toPeerId)) {
-                    selectedDevice = lastAvailableList.get(i);
-                    break;
-                }
+        for (ServiceItem item: lastAvailableList) {
+            if (item != null && item.peerId.contentEquals(toPeerId)) {
+                selectedDevice = item;
+                break;
             }
         }
 
         if (selectedDevice == null) {
-            tmpCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
+            connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
             return;
         }
 
         BTConnector tmpConn = mBTConnector;
         if (tmpConn == null) {
-            tmpCallback.ConnectionStatusUpdate("Device connectivity not started, please call StartBroadcasting before attempting to connect", -1);
+            connectStatusCallback.ConnectionStatusUpdate("Device connectivity not started, please call StartBroadcasting before attempting to connect", -1);
             return;
         }
 
         BTConnector.TryConnectReturnValues retVal = tmpConn.TryConnect(selectedDevice);
         if (retVal == BTConnector.TryConnectReturnValues.Connecting) {
             //all is ok, lets wait callbacks, and for them lets copy the callback here
-            mConnectStatusCallback = tmpCallback;
+            mConnectStatusCallback = connectStatusCallback;
         } else if (retVal == BTConnector.TryConnectReturnValues.NoSelectedDevice) {
             // we do check this already, thus we should not get this ever.
-            tmpCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
+            connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
         } else if (retVal == BTConnector.TryConnectReturnValues.AlreadyAttemptingToConnect) {
-            tmpCallback.ConnectionStatusUpdate("There is already one connection attempt progressing.", -1);
+            connectStatusCallback.ConnectionStatusUpdate("There is already one connection attempt progressing.", -1);
         } else if (retVal == BTConnector.TryConnectReturnValues.BTDeviceFetchFailed) {
-            tmpCallback.ConnectionStatusUpdate("Bluetooth API failed to get Bluetooth device for the address : " + selectedDevice.peerAddress, -1);
+            connectStatusCallback.ConnectionStatusUpdate("Bluetooth API failed to get Bluetooth device for the address : " + selectedDevice.peerAddress, -1);
         }
     }
 
@@ -273,7 +255,6 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             }
         });
         tmpregSoc.SetIdAddressAndName(peerId, peerName, peerAddress);
-        tmpregSoc.setPort(0);// setting port to zero, should automatically assign it later on.
         tmpregSoc.start();
         mBtToRequestSocket = tmpregSoc;
     }
@@ -284,31 +265,25 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     public void Disconnected(Thread who, String Error) {
 
         print_debug("BT Disconnected with error : " + Error);
-        if (mServerSocketList != null && who != null) {
-            for (int i = 0; i < mServerSocketList.size(); i++) {
-                BtToServerSocket tmpToSrvSoc = mServerSocketList.get(i);
-                if (tmpToSrvSoc != null && (tmpToSrvSoc.getId() == who.getId())) {
-                    print_debug("Disconnect:::Stop : mBtToServerSocket :" + tmpToSrvSoc.GetPeerName());
-                    tmpToSrvSoc.Stop();
-                    mServerSocketList.remove(i);
-                    break;
-                }
+
+        for (BtToServerSocket rSocket : mServerSocketList) {
+            if (rSocket != null && (rSocket.getId() == who.getId())) {
+                print_debug("Disconnect:::Stop : mBtToServerSocket :" + rSocket.GetPeerName());
+                rSocket.Stop();
+                mServerSocketList.remove(rSocket);
+                break;
             }
         }
     }
 
     // if the peer that just made incoming connection has not been discovered yet, we'll ad it here
     // thus allowing us to make connection back to it
-    public void AddPeerIfNotDiscovered(BluetoothSocket bluetoothSocket, String peerId,String peerName,String peerAddress) {
-
-        if (lastAvailableList == null) {
-            lastAvailableList = new CopyOnWriteArrayList<ServiceItem>();
-        }
+    private void AddPeerIfNotDiscovered(BluetoothSocket bluetoothSocket, String peerId,String peerName,String peerAddress) {
 
         boolean isDiscovered = false;
 
-        for (int i = 0; i < lastAvailableList.size(); i++) {
-            if (lastAvailableList.get(i).peerId.contentEquals(peerId)) {
+        for (ServiceItem item: lastAvailableList) {
+            if (item != null && item.peerId.contentEquals(peerId)) {
                 isDiscovered = true;
                 break;
             }
@@ -361,7 +336,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 break;
             case Connected:
                 break;
-        };
+        }
 
     }
 
@@ -374,40 +349,39 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     @Override
     public ServiceItem CurrentPeersList(List<ServiceItem> serviceItems) {
 
-        Boolean wasPrevouslyAvailable = false;
+        Boolean wasPreviouslyAvailable = false;
 
         JSONArray jsonArray = new JSONArray();
 
         if (serviceItems != null) {
-            for (int i = 0; i < serviceItems.size(); i++) {
+            for (ServiceItem item: serviceItems) {
+                if(item != null) {
+                    wasPreviouslyAvailable = false;
 
-                wasPrevouslyAvailable = false;
-                ServiceItem item = serviceItems.get(i);
-                if (lastAvailableList != null) {
-                    for (int ll = (lastAvailableList.size() - 1); ll >= 0; ll--) {
-                        if (item.deviceAddress.equalsIgnoreCase(lastAvailableList.get(ll).deviceAddress)) {
-                            wasPrevouslyAvailable = true;
-                            lastAvailableList.remove(ll);
+                    for (ServiceItem lastItem : lastAvailableList) {
+                        if (lastItem != null && item.deviceAddress.equalsIgnoreCase(lastItem.deviceAddress)) {
+                            wasPreviouslyAvailable = true;
+                            lastAvailableList.remove(lastItem);
                         }
                     }
-                }
 
-                if (!wasPrevouslyAvailable) {
-                    jsonArray.put(getAvailabilityStatus(item, true));
+                    if (!wasPreviouslyAvailable) {
+                        jsonArray.put(getAvailabilityStatus(item, true));
+                    }
                 }
             }
         }
 
-        if (lastAvailableList != null) {
-            for (int ii = 0; ii < lastAvailableList.size(); ii++) {
-                jsonArray.put(getAvailabilityStatus(lastAvailableList.get(ii), false));
-                lastAvailableList.remove(ii);
-            }
+        for (ServiceItem lastItem2: lastAvailableList) {
+            jsonArray.put(getAvailabilityStatus(lastItem2, false));
+            lastAvailableList.remove(lastItem2);
         }
 
         if (serviceItems != null) {
-            for (int iii = 0; iii < serviceItems.size(); iii++) {
-                lastAvailableList.add(serviceItems.get(iii));
+            for (ServiceItem item: serviceItems) {
+                if(item != null) {
+                    lastAvailableList.add(item);
+                }
             }
         }
 
@@ -425,11 +399,9 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     public void PeerDiscovered(ServiceItem serviceItem) {
         boolean wasPrevouslyAvailable = false;
 
-        if (lastAvailableList != null) {
-            for (int ll = (lastAvailableList.size() - 1); ll >= 0; ll--) {
-                if (serviceItem.deviceAddress.equalsIgnoreCase(lastAvailableList.get(ll).deviceAddress)) {
-                    wasPrevouslyAvailable = true;
-                }
+        for (ServiceItem lastItem : lastAvailableList) {
+            if (lastItem != null && serviceItem.deviceAddress.equalsIgnoreCase(lastItem.deviceAddress)) {
+                wasPrevouslyAvailable = true;
             }
         }
 
@@ -458,7 +430,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     }
 
 
-    public void print_debug(String message){
-        Log.i("!!!!hekpper!!", message);
+    private void print_debug(String message){
+        Log.i("!!!!-Helpper-!!", message);
     }
 }
