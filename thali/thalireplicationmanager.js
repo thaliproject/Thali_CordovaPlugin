@@ -4,7 +4,7 @@ var ThaliEmitter = require('./thaliemitter');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var net = require('net');
-var multiplex = require('multiplex');
+var tcpMultiplex = require('./tcpmultiplex');
 var validations = require('./validations');
 
 var e = new EventEmitter();
@@ -59,7 +59,7 @@ ThaliReplicationManager.prototype.start = function (deviceName, port, dbName) {
     return this.emit(ThaliReplicationManager.events.START_ERROR, new Error('There is already an existing serverBridge instance.'));
   }
 
-  this._serverBridge = muxServerBridge.call(this, port);
+  this._serverBridge = tcpMultiplex.muxServerBridge(port);
   this._serverBridge.listen(function () {
     this._serverBridgePort = this._serverBridge.address().port;
 
@@ -176,7 +176,7 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
       setImmediate(this._syncRetry.bind(this, peerIdentifier));
     } else {
-      var client = muxClientBridge.call(this, port, peerIdentifier);
+      var client = tcpMultiplex.muxClientBridge(port);
       this._clients[peer.peerIdentifier] = client;
       client.listen(function () {
         var localPort = client.address().port;
@@ -201,10 +201,10 @@ ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
   if (this._isInRetry[peerIdentifier]) { return; }
   this._isInRetry[peerIdentifier] = true;
 
-  var c = this._clients[peerIdentifier];
-  if (c) {
+  var existingClient = this._clients[peerIdentifier];
+  if (existingClient) {
     try {
-      c.close();
+      existingClient.close();
     } catch (e) {
       console.log('Client close with error: %s', e);
     }
@@ -227,120 +227,5 @@ ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
     this._syncPeer(peerIdentifier);
   }.bind(this));
 };
-
-/* Mux Layer */
-
-function restartMuxServerBridge() {
-  this.once('stopped', function () {
-    this.start(this._deviceName, this._port, this._dbName);
-  }.bind(this));
-
-  this.stop();
-}
-
-function muxServerBridge(tcpEndpointServerPort) {
-  var serverRestarted = false;
-
-  var serverPlex = multiplex({}, function(stream, id) {
-    var clientSocket = net.createConnection({port: tcpEndpointServerPort});
-    stream.pipe(clientSocket).pipe(stream);
-  });
-
-  var server = net.createServer(function(incomingClientSocket) {
-
-    incomingClientSocket.on('close', function () {
-      if (!serverRestarted) {
-        try {
-          incomingClientSocket.unpipe(serverPlex);
-          serverPlex.unpipe(incomingClientSocket);
-
-          serverPlex.destroy();
-          server.close();
-        } catch (e) {
-          console.log('failed to clean up server and serverPlex');
-        }
-
-        restartMuxServerBridge.call(this);
-        serverRestarted = true;
-      }
-    }.bind(this));
-
-    incomingClientSocket.on('timeout', function () {
-      console.log('incoming client socket timeout');
-    });
-
-    incomingClientSocket.on('error', function (err) {
-      console.log('incoming client socket error %s', err);
-    });
-
-    server.on('error', function (err) {
-      console.log('mux server bridge error %s', err);
-    });
-
-    server.on('close', function () {
-      console.log('mux server bridge close');
-      if (!serverRestarted) {
-        try {
-          serverPlex.destroy();
-        } catch (e) {
-          console.log('failed to clean up server and serverPlex');
-        }
-        restartMuxServerBridge.call(this);
-        serverRestarted = true;
-      }
-    }.bind(this));
-
-    incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
-  }.bind(this));
-
-  server.setMaxListeners(100);
-
-  return server;
-}
-
-function muxClientBridge(localP2PTcpServerPort, peerIdentifier) {
-  var clientPlex = multiplex();
-  var clientSocket = net.createConnection({port: localP2PTcpServerPort});
-
-  var server = net.createServer(function(incomingClientSocket) {
-    var clientStream = clientPlex.createStream();
-    incomingClientSocket.pipe(clientStream).pipe(incomingClientSocket);
-  });
-
-  cleanUpSocket(clientSocket, function() {
-    clientPlex.destroy();
-    try {
-      server.close();
-    } catch(e) {
-      this.emit(ThaliReplicationManager.events.SYNC_ERROR, e);
-    }
-    setImmediate(this._syncRetry.bind(this, peerIdentifier));
-  }.bind(this));
-
-  clientPlex.pipe(clientSocket).pipe(clientPlex);
-
-  return server;
-}
-
-function cleanUpSocket(socket, cleanUpCallBack) {
-  var isClosed = false;
-
-  socket.on('end', function() {
-    cleanUpCallBack();
-    isClosed = true;
-  });
-
-  socket.on('error', function(err) {
-    cleanUpCallBack(err);
-    isClosed = true;
-  });
-
-  socket.on('close', function() {
-    if (!isClosed) {
-      cleanUpCallBack();
-      isClosed = true;
-    }
-  });
-}
 
 module.exports = ThaliReplicationManager;
