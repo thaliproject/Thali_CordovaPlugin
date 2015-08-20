@@ -9,12 +9,12 @@ import io.jxcore.node.jxcore;
 /**
  * Created by juksilve on 13.5.2015.
  */
-public class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks {
+class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks {
 
-    Application MyApp = null;
+    private Application MyApp = null;
 
     public interface onLCEventCallback{
-        public void onEvent(String eventString, boolean stopped);
+        void onEvent(String eventString, boolean stopped);
     }
 
     public final String ACTIVITY_CREATED   = "onActivityCreated";
@@ -26,8 +26,8 @@ public class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks 
     public final String ACTIVITY_DESTROYED = "onActivityDestroyed";
 
     //BtConnectorHelper.jxCallBack jxcore = null; // remove the line
-    Activity activity = jxcore.activity;
-    onLCEventCallback callback = null;
+    private final Activity activity = jxcore.activity;
+    private onLCEventCallback callback = null;
     public LifeCycleMonitor(onLCEventCallback Callback) {
         callback = Callback;
     }

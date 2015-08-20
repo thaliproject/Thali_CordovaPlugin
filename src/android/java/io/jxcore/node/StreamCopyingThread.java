@@ -8,18 +8,18 @@ import java.io.OutputStream;
 /**
  * Created by juksilve on 5.6.2015.
  */
-public class StreamCopyingThread extends Thread {
+class StreamCopyingThread extends Thread {
 
 
     interface CopyThreadCallback
     {
-        public void StreamCopyError(StreamCopyingThread who, String error);
+        void StreamCopyError(StreamCopyingThread who, String error);
     }
 
-    CopyThreadCallback callback = null;
+    private CopyThreadCallback callback = null;
 
-    String TAG = "StreamCopyingThread";
-    boolean mStopped = false;
+    private String TAG = "StreamCopyingThread";
+    private boolean mStopped = false;
 
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
 
@@ -32,8 +32,8 @@ public class StreamCopyingThread extends Thread {
         mOutputStream = mmOutStreamt;
     }
 
-    public void setDebugTag(String debugtag) {
-        TAG = debugtag;
+    public void setDebugTag(String debugTag) {
+        TAG = debugTag;
     }
 
     public void run() {
@@ -59,7 +59,7 @@ public class StreamCopyingThread extends Thread {
                 callback.StreamCopyError(this, "disconnected: " + e.toString());
             }
 
-            print_debug("run ended");
+           // print_debug("run ended");
         }
     }
 
@@ -67,7 +67,7 @@ public class StreamCopyingThread extends Thread {
         mStopped = true;
     }
 
-    public void print_debug(String message){
-    //    Log.i(TAG, message);
-    }
+  /*  public void print_debug(String message){
+        Log.i(TAG, message);
+    }*/
 }

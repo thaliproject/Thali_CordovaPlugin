@@ -11,24 +11,23 @@ import org.thaliproject.p2p.btconnectorlib.BTConnector;
 
 public class JXcoreExtension {
 
-    public static String EVENTSTRING_PEERAVAILABILITY   = "peerAvailabilityChanged";
-    public static String EVENTVALUESTRING_PEERID        = "peerIdentifier";
-    public static String EVENTVALUESTRING_PEERNAME      = "peerName";
-    public static String EVENTVALUESTRING_PEERAVAILABLE = "peerAvailable";
+    public final static String EVENTSTRING_PEERAVAILABILITY   = "peerAvailabilityChanged";
+    public final static String EVENTVALUESTRING_PEERID        = "peerIdentifier";
+    public final static String EVENTVALUESTRING_PEERNAME      = "peerName";
+    public final static String EVENTVALUESTRING_PEERAVAILABLE = "peerAvailable";
 
-    public static String EVENTSTRING_NETWORKCHANGED     = "networkChanged";
-    public static String EVENTVALUESTRING_REACHABLE     = "isReachable";
-    public static String EVENTVALUESTRING_WIFI          = "isWiFi";
+    public final static String EVENTSTRING_NETWORKCHANGED     = "networkChanged";
+    public final static String EVENTVALUESTRING_REACHABLE     = "isReachable";
+    public final static String EVENTVALUESTRING_WIFI          = "isWiFi";
 
-    public static String METHODSTRING_SHOWTOAST         = "ShowToast";
+    public final static String METHODSTRING_SHOWTOAST         = "ShowToast";
 
-    public static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
-    public static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
+    public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
+    public final static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
 
-    public static String METHODSTRING_CONNECTTOPEER     = "Connect";
-    public static String METHODSTRING_DISCONNECTPEER    = "Disconnect";
-    public static String METHODSTRING_KILLCONNECTION    = "KillConnection";
-
+    public final static String METHODSTRING_CONNECTTOPEER     = "Connect";
+    public final static String METHODSTRING_DISCONNECTPEER    = "Disconnect";
+    public final static String METHODSTRING_KILLCONNECTION    = "KillConnection";
 
     public static void LoadExtensions() {
 
@@ -191,7 +190,6 @@ public class JXcoreExtension {
 
           @Override
           public void onEvent(String eventString,boolean stopped) {
-              final String messageTmp = eventString;
               jxcore.activity.runOnUiThread(new Runnable(){
                   public void run() {
               //        String reply = "{\"lifecycleevent\":\"" + messageTmp + "\"}";

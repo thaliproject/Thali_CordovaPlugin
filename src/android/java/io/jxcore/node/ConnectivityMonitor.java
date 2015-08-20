@@ -17,10 +17,10 @@ import io.jxcore.node.jxcore;
 /**
  * Created by juksilve on 14.5.2015.
  */
-public class ConnectivityMonitor {
+class ConnectivityMonitor {
 
-    BroadcastReceiver receiver = null;
-    Activity activity = jxcore.activity;
+    private BroadcastReceiver receiver = null;
+    private final Activity activity = jxcore.activity;
 
     public ConnectivityMonitor(){}
 
@@ -53,7 +53,7 @@ public class ConnectivityMonitor {
         }
     }
 
-    public void SendConnectivityInfo() {
+    private void SendConnectivityInfo() {
 
         ConnectivityManager connectivity = (ConnectivityManager) activity.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = connectivity.getActiveNetworkInfo();
@@ -67,18 +67,18 @@ public class ConnectivityMonitor {
         activity.runOnUiThread(new Runnable() {
             public void run() {
 
-                JSONObject tmp = new JSONObject();
-                try {
-                    tmp.put(JXcoreExtension.EVENTVALUESTRING_REACHABLE, isConnected);
-                    if(isConnected) {
-                        tmp.put(JXcoreExtension.EVENTVALUESTRING_WIFI, isWiFi);
-                    }
-                } catch (JSONException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+            JSONObject tmp = new JSONObject();
+            try {
+                tmp.put(JXcoreExtension.EVENTVALUESTRING_REACHABLE, isConnected);
+                if(isConnected) {
+                    tmp.put(JXcoreExtension.EVENTVALUESTRING_WIFI, isWiFi);
                 }
+            } catch (JSONException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
 
-                jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_NETWORKCHANGED, tmp.toString());
+            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_NETWORKCHANGED, tmp.toString());
             }
         });
     }
