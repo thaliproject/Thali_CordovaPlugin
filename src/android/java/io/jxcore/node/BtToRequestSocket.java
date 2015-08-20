@@ -67,13 +67,10 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
         mmOutStream = tmpOut;
     }
 
-    public void setPort(int port) {
-        mHTTPPort = port;
-    }
-
     public void run() {
         try {
             print_debug("start Socket with port: " + mHTTPPort);
+            mHTTPPort = 0; // just to make sure its zero
             srvSocket = new ServerSocket(mHTTPPort);
             mHTTPPort = srvSocket.getLocalPort();
             print_debug("mHTTPPort  set to : " + mHTTPPort);
@@ -96,7 +93,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
                 CloseSocketAndStreams();
                 localHostSocket = tmpSocket;
 
-                print_debug("incoming data from: " + GetLocalHostAddress() + ", port: " + GetLocalHostPort());
+                print_debug("incoming data from: " + GetLocalHostAddressAsString() + ", port: " + GetLocalHostPort());
                 tmpInputStream = localHostSocket.getInputStream();
                 tmpOutputStream = localHostSocket.getOutputStream();
 
@@ -169,16 +166,8 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
         return mHTTPPort;
     }
 
-    public String GetLocalHostAddress() {
-        if(localHostSocket == null){
-            return "";
-        }
-
-        if(localHostSocket.getInetAddress() == null){
-            return "";
-        }
-
-        return localHostSocket.getInetAddress().toString();
+    private String GetLocalHostAddressAsString() {
+        return localHostSocket == null || localHostSocket.getInetAddress() == null ? null : localHostSocket.getInetAddress().toString();
     }
 
     public void Stop() {
