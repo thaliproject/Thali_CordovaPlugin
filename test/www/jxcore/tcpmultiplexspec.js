@@ -4,8 +4,38 @@ var tcpmultiplex = require('./thali/tcpmultiplex');
 var test = require('tape');
 var net = require('net');
 var randomstring = require('randomstring');
+var multiplex = require('multiplex');
 
-test('serverMuxBridge can mux data', function (t) {
+test('multiplex can send data', function (t) {
+  var len = 200;
+  var testMessage = randomstring.generate(len);
+
+  var server = net.createServer(function (socket) {
+    var plex1 = multiplex(function (stream) {
+      stream.on('data', function (data) {
+        t.equal(testMessage, String(data), 'String should be length:' + testMessage.length);
+        t.end();
+
+        socket.destroy();
+        server.close();
+      });
+    });
+
+    socket.pipe(plex1).pipe(socket);
+  });
+
+  server.listen(5001, function () {
+    var socket = net.createConnection({port: 5001}, function () {
+      var plex2 = multiplex();
+      var stream = plex2.createStream();
+      stream.write(new Buffer(testMessage));
+
+      plex2.pipe(socket).pipe(plex2);
+    });
+  });
+});
+
+test('muxServerBridge', function (t) {
   var len = 200;
   var testMessage = randomstring.generate(len);
 
@@ -15,45 +45,31 @@ test('serverMuxBridge can mux data', function (t) {
 
   server.listen(5001, function () {
     var muxServerBridge = tcpmultiplex.muxServerBridge(5001);
-    muxServerBridge.listen(5000, function () {
+    muxServerBridge.listen(function () {
+      var serverPort = muxServerBridge.address().port;
 
-      var clientSocket = net.createConnection( { port: 5001 }, function () {
-        clientSocket.write(Buffer(testMessage));
-      });
+      var muxClientBridge = tcpmultiplex.muxClientBridge(serverPort, function (err) {
 
-      clientSocket.on('data', function (data) {
-        t.equal(testMessage, data.toString(), 'Should send ' + testMessage.length + ' characters');
-        t.end();
+        muxClientBridge.listen(function () {
+          var clientPort = muxClientBridge.address().port;
 
-        muxServerBridge.close();
-        server.close();
-      });
-    });
-  });
-});
+          var socket = net.createConnection({port: clientPort}, function () {
+            socket.end(new Buffer(testMessage));
+          });
 
-test('clientMuxBridge can mux data', function (t) {
-  var len = 200;
-  var testMessage = randomstring.generate(len);
+          socket.on('data', function (data) {
+            t.equal(testMessage, String(data), 'String should be length:' + testMessage.length);
+            t.end();
 
-  var server = net.createServer(function (socket) {
-    socket.pipe(socket);
-  });
+            muxClientBridge.on('close', function () {
+              console.log('closed');
+            });
 
-  server.listen(5001, function () {
-    var muxClientBridge = tcpmultiplex.muxClientBridge(5001);
-    muxClientBridge.listen(5000, function () {
-
-      var clientSocket = net.createConnection( { port: 5001 }, function () {
-        clientSocket.write(Buffer(testMessage));
-      });
-
-      clientSocket.on('data', function (data) {
-        t.equal(testMessage, data.toString(), 'Should send ' + testMessage.length + ' characters');
-        t.end();
-
-        muxClientBridge.close();
-        server.close();
+            muxClientBridge.close();
+            muxServerBridge.close();
+            server.close();
+          });
+        });
       });
     });
   });

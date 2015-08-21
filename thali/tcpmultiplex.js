@@ -3,7 +3,7 @@ var multiplex = require('multiplex');
 
 function muxServerBridge(tcpEndpointServerPort) {
   // Keep track of all the client sockets we've seen
-  var clientSockets = {};
+  var clientSockets = [];
 
   var server = net.createServer(function(incomingClientSocket) {
 
@@ -11,7 +11,7 @@ function muxServerBridge(tcpEndpointServerPort) {
       // Remove the closed socket from out records, destroying (by
       // unref-fing) the multiplexer (we hope)
       console.log('server bridge: socket closed');
-      delete clientSockets[incomingClientSocket];
+      clientSockets.splice(clientSockets.indexOf(incomingClientSocket), 1);
     });
 
     incomingClientSocket.on('timeout', function () {
@@ -31,7 +31,7 @@ function muxServerBridge(tcpEndpointServerPort) {
     });
 
     // Record the mapping between incoming socket and multiplex
-    clientSockets[incomingClientSocket] = serverPlex;
+    clientSockets.push(serverPlex);
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
   });
 
@@ -42,25 +42,30 @@ function muxServerBridge(tcpEndpointServerPort) {
   server.on('close', function () {
     // Close all the client sockets, this'll force the server object
     // to *really* close
-    console.log('server bridge: server closing (%d)', Object.keys(clientSockets).length);
+    console.log('server bridge: server closing (%d)', clientSockets.length);
     // Shutdown all the connected sockets
-    Object.keys(clientSockets).forEach(function (key) {
-      var sock = clientSockets[key];
+    clientSockets.forEach(function (sock) {
       sock.end();
       sock.destroy();
-    })
-    clientSockets = {};
+    });
+    clientSockets.length = 0;
   });
 
   return server;
 }
 
-function muxClientBridge(localP2PTcpServerPort) {
+function muxClientBridge(localP2PTcpServerPort, cb) {
   var clientPlex = multiplex();
-  var clientSocket = net.createConnection({port: localP2PTcpServerPort});
+  var clientSocket = net.createConnection({port: localP2PTcpServerPort}, function () {
+    cb();
+  });
+
+  clientSocket.on('error', function (err) {
+    cb(err);
+  });
 
   // Keep track of all the client sockets we've seen
-  var clientStreams = {};
+  var clientSockets = [];
 
   var server = net.createServer(function(incomingClientSocket) {
     var clientStream = clientPlex.createStream();
@@ -69,7 +74,7 @@ function muxClientBridge(localP2PTcpServerPort) {
       // Remove the closed socket from out records, destroying (by
       // unref-fing) the multiplexer (we hope)
       console.log('client bridge: socket closed');
-      delete clientStreams[incomingClientSocket];
+      clientSockets.splice(clientSockets.indexOf(incomingClientSocket), 1);
     });
 
     incomingClientSocket.on('timeout', function () {
@@ -82,7 +87,7 @@ function muxClientBridge(localP2PTcpServerPort) {
 
     console.log('client bridge: new client socket');
 
-    clientStreams[incomingClientSocket] = clientStream;
+    clientSockets.push(incomingClientSocket);
     incomingClientSocket.pipe(clientStream).pipe(incomingClientSocket);
   });
 
@@ -93,14 +98,14 @@ function muxClientBridge(localP2PTcpServerPort) {
   server.on('close', function () {
     // Close all the client sockets, this'll force the server object
     // to *really* close
-    console.log('client bridge: server closing (%d)', Object.keys(clientSockets).length);
+    console.log('client bridge: server closing (%d)', clientSockets.length);
     // Shutdown all the connected sockets
-    Object.keys(clientStreams).forEach(function (key) {
-      var streams = clientStreams[key];
-      streams.end();
-      streams.destroy();
-    })
-    clientStreams = {};
+    clientSockets.forEach(function (sock) {
+      sock.end();
+      sock.destroy();
+    });
+    
+    clientSockets.length = 0;
   });
 
   clientPlex.pipe(clientSocket).pipe(clientPlex);

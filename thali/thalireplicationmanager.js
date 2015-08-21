@@ -176,17 +176,22 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
       setImmediate(this._syncRetry.bind(this, peerIdentifier));
     } else {
-      var client = tcpMultiplex.muxClientBridge(port);
-      this._clients[peer.peerIdentifier] = client;
-      client.listen(function () {
-        var localPort = client.address().port;
+      var client = tcpMultiplex.muxClientBridge(port, function (err) {
+        if (err) {
+          console.log('Error in mux client bridge %s', err);
+          setImmediate(this._syncRetry.bind(this, peerIdentifier));
+        }
+        this._clients[peer.peerIdentifier] = client;
+        client.listen(function () {
+          var localPort = client.address().port;
 
-        var remoteDB = 'http://localhost:' + localPort + '/db/' + this._dbName;
-        var options = { live: true, retry: true };
-        this._replications[peer.peerIdentifier] = {
-          from: this._db.replicate.from(remoteDB, options),
-          to: this._db.replicate.to(remoteDB, options)
-        };
+          var remoteDB = 'http://localhost:' + localPort + '/db/' + this._dbName;
+          var options = { live: true, retry: true };
+          this._replications[peer.peerIdentifier] = {
+            from: this._db.replicate.from(remoteDB, options),
+            to: this._db.replicate.to(remoteDB, options)
+          };
+        }.bind(this));
       }.bind(this));
     }
   }.bind(this));
