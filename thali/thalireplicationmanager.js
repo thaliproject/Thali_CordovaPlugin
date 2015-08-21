@@ -57,6 +57,7 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
     cb(null, this._deviceName);
     return;
   }
+
   if(this._deviceIdentityFlag == deviceIdentityFlag.noDeviceIdentitySet) {
     this._deviceIdentityFlag = deviceIdentityFlag.gettingDeviceIdentity;
     // save the callback for future
@@ -69,7 +70,7 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
         this._deviceIdentityFlag = deviceIdentityFlag.deviceIdentityAvailable;
       }
 
-      // save the list of divice-identity-listeners locally and clear the
+      // save the list of device-identity-listeners locally and clear the
       // global list. this will avoid a potential race condition if one of
       // the callback functions tries to get the device identity again
       // immediately.
@@ -81,13 +82,15 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
     }.bind(this));
     return;
   }
+
   if(this._deviceIdentityFlag == deviceIdentityFlag.gettingDeviceIdentity) {
     // save the callback for future
     this._deviceIdentityListeners.push(cb);
     return;
   }
-  throw 'deviceIdentityFlag is set to unknown state';
-}
+
+  throw new Error('deviceIdentityFlag is set to unknown state');
+};
 
 /**
 * Starts the Thali replication manager with the given port number and db name.

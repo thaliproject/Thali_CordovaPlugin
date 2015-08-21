@@ -30,6 +30,6 @@ app.listen(5000, function () {
         console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
       });
 
-    require('./thaliscenarios');
+    require('./allTests.js');
   });
 });

@@ -101,7 +101,7 @@ that will automatically setup the test environment. Just do the following:
 ```
 $ cd Thali_CordovaPlugin/thali/install
 $ chmod u+x setUpTests.sh
-$ jx npm test
+$ jx npm run testSetup
 ```
 
 This will set up a parallel project called ThaliTest.
@@ -110,7 +110,7 @@ This will set up a parallel project called ThaliTest.
 
 ```
 $ cd ThaliTest/www/jxcore
-$ jx thaliemitterspec.js
+$ jx npm run test
 ```
 
 ### Mobile Testing
@@ -127,3 +127,10 @@ $ cordova build
 Now deploy with your favorite tool. Note that you need two phones running the tests at the same time in order to
 pass all the tests as some test our networking. You should be able to see the test results in your developer
 console.
+
+### Adding new tests
+
+Because we can't really enumerate the contents of the jxcore directory very easily we put all of our tests in a file
+called allTests.js. So if you want to create a new test file go to test/www/jxcore and add it there and then
+put a require to that file into allTests.js. Make sure if the test is designed to only run on devices that you
+check out thaliscenarios.js to see how it is handling that.
