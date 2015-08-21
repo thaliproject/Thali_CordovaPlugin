@@ -82,7 +82,7 @@ test('successfully read a previous pkcs12 file and return hash value',
 test('failed to extract public key because of corrupt pkcs12 file',
   function (t) {
   var errorMessage = null,
-      badFileLocation = './pkcs12folderbad';
+      badFileLocation = path.join(__dirname, 'pkcs12folderbad');
       
   var cryptoErrorMessage = 'error thrown by extractPublicKey() function';
 
