@@ -1,3 +1,5 @@
+"use strict";
+
 var test = require('tape');
 var express = require('express');
 var net = require('net');
@@ -30,6 +32,6 @@ app.listen(5000, function () {
         console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
       });
 
-    require('./allTests.js');
+    require('./runTests.js');
   });
 });

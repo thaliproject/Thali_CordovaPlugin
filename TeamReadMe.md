@@ -130,7 +130,6 @@ console.
 
 ### Adding new tests
 
-Because we can't really enumerate the contents of the jxcore directory very easily we put all of our tests in a file
-called allTests.js. So if you want to create a new test file go to test/www/jxcore and add it there and then
-put a require to that file into allTests.js. Make sure if the test is designed to only run on devices that you
-check out thaliscenarios.js to see how it is handling that.
+We run on both the desktop and mobile all the tests in the test/www/jxcore directory that have a file name of the form
+test*.js. We have protections to make sure that tests that shouldn't run on the desktop don't as well as to make
+sure that objects that use the Mobile mock don't mess up things for everyone else. Check the test code for examples.

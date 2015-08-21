@@ -2,9 +2,9 @@
   "name": "thali-cordova-plugin-jxcore",
   "version": "1.0.0",
   "description": "Thali Cordova Plugin JXCore",
-  "main": "allTests.js",
+  "main": "runTests.js",
   "scripts": {
-    "test" : "jx allTests.js"
+    "test" : "jx runTests.js"
   },
   "keywords": [
     "Thali",

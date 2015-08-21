@@ -1,7 +1,6 @@
 "use strict";
 
-// These tests are only intended to be run on a device
-if (typeof Mobile === "undefined" || Mobile.iAmAMock) {
+if (!jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
