@@ -22,35 +22,32 @@ var hashSizeInBytes = 16;
 * @param {Function} cb the callback which returns an error or the hash value.
 */
 exports.getPublicKeyHash = function (cb) {
-  // get the path where the PKCS12 file is saved
   Mobile.GetDocumentsPath(function (err, fileLocation) {
     if (err) {
-      console.error("GetDocumentsPath err: ", err);
       cb(err);
-    } else {
-      var file = path.join(fileLocation, pkcs12FileName);
-      getPKCS12Content(file, function(err, pkcs12Content) {
-        if(err) {
-          console.error('failed to get pkcs12 content');
-          cb(err);
-        }
-        
-        try {
-          var publicKey = crypto.pkcs12
-            .extractPublicKey(password, pkcs12Content);
-          // check if the extracted public key is good
-          if ( !publicKey || publicKey.length <= 0) {
-            console.error('extracted public key is invalid');
-            cb('extracted public key is invalid');
-          }
-          var hash = exports.generateSlicedSHA256Hash(publicKey, hashSizeInBytes);
-          cb(null, hash);
-        } catch(e) {
-          console.error('error thrown by extractPublicKey() function');
-          cb('error thrown by extractPublicKey() function');
-        }
-      });
+      return;
     }
+
+    var file = path.join(fileLocation, pkcs12FileName);
+    getPKCS12Content(file, function(err, pkcs12Content) {
+      if (err) {
+        cb(err);
+        return;
+      }
+
+      try {
+        var publicKey = crypto.pkcs12
+          .extractPublicKey(password, pkcs12Content);
+        if (!publicKey || publicKey.length <= 0) {
+          cb('extracted public key is invalid');
+          return;
+        }
+        var hash = exports.generateSlicedSHA256Hash(publicKey, hashSizeInBytes);
+        cb(null, hash);
+      } catch(e) {
+        cb('error thrown by extractPublicKey() function');
+      }
+    });
   });
 };
 
@@ -58,12 +55,11 @@ exports.generateSlicedSHA256Hash = function(stringValueToHash, hashSizeInBytes) 
   var hash = crypto.createHash(macName);
   hash.update(stringValueToHash);
   var fullSizeKeyHash = hash.digest('base64');
-  var slicedKeyHash = fullSizeKeyHash.slice(0, hashSizeInBytes);
-  return slicedKeyHash;
+  return fullSizeKeyHash.slice(0, hashSizeInBytes);
 };
 
 exports.getConfigValuesForTestingOnly = function() {
-  var configValues = {
+  return {
     password: password,
     certname: certname,
     country: country,
@@ -71,7 +67,6 @@ exports.getConfigValuesForTestingOnly = function() {
     pkcs12FileName: pkcs12FileName,
     hashSizeInBytes: hashSizeInBytes
   };
-  return configValues;
 };
 
 /**
@@ -86,8 +81,8 @@ function getPKCS12Content(fileNameWithPath, cb) {
     if(exists) {
       fs.readFile(fileNameWithPath, function (err, pkcs12Content) {
         if (err) {
-          console.error('failed to read the pkcs12 file - err: ', err);
           cb(err);
+          return;
         }
         cb(null, pkcs12Content);
       });
@@ -95,13 +90,13 @@ function getPKCS12Content(fileNameWithPath, cb) {
       var pkcs12Content = crypto.pkcs12
         .createBundle(password, certname, country, organization);
       if (pkcs12Content.length <= 0) {
-        console.error('failed to create pkcs12 content');
         cb('failed to create pkcs12Content');
+        return;
       }
       fs.writeFile(fileNameWithPath, pkcs12Content, {flags: 'wx'}, function (err) {
         if (err) {
-          console.error('failed to save pkcs12Content - err: ', err);
           cb(err);
+          return;
         }
         cb(null, pkcs12Content);
       });

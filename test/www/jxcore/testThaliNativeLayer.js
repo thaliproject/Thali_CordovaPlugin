@@ -1,5 +1,9 @@
 "use strict";
 
+if (!jxcore.utils.OSInfo().isMobile) {
+  return;
+}
+
 var test = require('tape');
 var net = require('net');
 var randomstring = require('randomstring');

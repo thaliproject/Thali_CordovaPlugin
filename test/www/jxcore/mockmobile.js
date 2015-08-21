@@ -7,12 +7,13 @@ var errArgGetDocumentsPath;
 var fileLocationArgGetDocumentsPath;
 
 function Mobile(key) {
-  keys.hasOwnProperty(key) || (keys[key] = new NativeCall(key));
+  keys.hasOwnProperty(key) || (keys[key] = new Mobile.NativeCall(key));
   return keys[key];
 }
 
-Mobile.storeGetDocumentsPathReturnArguments =
-    function (errArg, fileLocationArg) {
+Mobile.iAmAMock = true;
+
+Mobile.setGetDocumentsPathReturnValues = function (errArg, fileLocationArg) {
   errArgGetDocumentsPath = errArg;
   fileLocationArgGetDocumentsPath = fileLocationArg;
 };
@@ -55,13 +56,13 @@ Mobile.invokeStopBroadcasting = function () {
   invokeCallback('StopBroadcasting', args);
 };
 
-function NativeCall(key) {
+Mobile.NativeCall = function(key) {
   this.key = key;
   this.registerNativeCallback = null;
   this.callNativeArguments = null;
-}
+};
 
-NativeCall.prototype = {
+Mobile.NativeCall.prototype = {
   registerToNative: function (cb) {
     this.registerNativeCallback = cb;
   },
@@ -70,6 +71,4 @@ NativeCall.prototype = {
   }
 };
 
-
-//noinspection JSUndefinedPropertyAssignment
-global.Mobile = Mobile;
+module.exports = Mobile;
