@@ -21,6 +21,8 @@ function updateAndroidSDKVersion(appRoot) {
    var originalContent = fs.readFileSync(androidManifestLocation).toString();
    var newContent = originalContent.replace("android:minSdkVersion=\"10\"",
                                             "android:minSdkVersion=\"19\"");
+    //quick hack to support the recent updates in Cordova
+    newContent = originalContent.replace("android:minSdkVersion=\"14\"", "android:minSdkVersion=\"19\"");
    fs.writeFileSync(androidManifestLocation, newContent);
 }
 
