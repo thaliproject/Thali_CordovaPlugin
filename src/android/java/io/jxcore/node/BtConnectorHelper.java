@@ -14,7 +14,6 @@ import org.thaliproject.p2p.btconnectorlib.BTConnector;
 import org.thaliproject.p2p.btconnectorlib.BTConnectorSettings;
 import org.thaliproject.p2p.btconnectorlib.ServiceItem;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -114,9 +113,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     public boolean  DisconnectIncomingConnections() {
 
         boolean ret = false;
-        Iterator<BtToServerSocket> iterator = mServerSocketList.iterator();
-        while (iterator.hasNext()) {
-            BtToServerSocket rSocket = iterator.next();
+        for (BtToServerSocket rSocket : mServerSocketList) {
             if (rSocket != null) {
                 print_debug("Disconnect:::Stop : mBtToServerSocket :" + rSocket.getName());
                 rSocket.Stop();
@@ -155,9 +152,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         ServiceItem selectedDevice = null;
 
-        Iterator<ServiceItem> iterator = lastAvailableList.iterator();
-        while (iterator.hasNext()) {
-            ServiceItem item = iterator.next();
+        for (ServiceItem item : lastAvailableList) {
             if (item != null && item.peerId.contentEquals(toPeerId)) {
                 selectedDevice = item;
                 break;
@@ -175,17 +170,25 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             return;
         }
 
-        BTConnector.TryConnectReturnValues retVal = tmpConn.TryConnect(selectedDevice);
-        if (retVal == BTConnector.TryConnectReturnValues.Connecting) {
-            //all is ok, lets wait callbacks, and for them lets copy the callback here
-            mConnectStatusCallback = connectStatusCallback;
-        } else if (retVal == BTConnector.TryConnectReturnValues.NoSelectedDevice) {
-            // we do check this already, thus we should not get this ever.
-            connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
-        } else if (retVal == BTConnector.TryConnectReturnValues.AlreadyAttemptingToConnect) {
-            connectStatusCallback.ConnectionStatusUpdate("There is already one connection attempt progressing.", -1);
-        } else if (retVal == BTConnector.TryConnectReturnValues.BTDeviceFetchFailed) {
-            connectStatusCallback.ConnectionStatusUpdate("Bluetooth API failed to get Bluetooth device for the address : " + selectedDevice.peerAddress, -1);
+        switch(tmpConn.TryConnect(selectedDevice)){
+            case Connecting:{
+                //all is ok, lets wait callbacks, and for them lets copy the callback here
+                mConnectStatusCallback = connectStatusCallback;
+            }
+            break;
+            case  NoSelectedDevice:{
+                // we do check this already, thus we should not get this ever.
+                connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
+            }
+            break;
+            case  AlreadyAttemptingToConnect:{
+                connectStatusCallback.ConnectionStatusUpdate("There is already one connection attempt progressing.", -1);
+            }
+            break;
+            case  BTDeviceFetchFailed:{
+                connectStatusCallback.ConnectionStatusUpdate("Bluetooth API failed to get Bluetooth device for the address : " + selectedDevice.peerAddress, -1);
+            }
+            break;
         }
     }
 
@@ -271,9 +274,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         print_debug("BT Disconnected with error : " + Error);
 
-        Iterator<BtToServerSocket> iterator = mServerSocketList.iterator();
-        while (iterator.hasNext()) {
-            BtToServerSocket rSocket = iterator.next();
+        for (BtToServerSocket rSocket : mServerSocketList) {
             if (rSocket != null && (rSocket.getId() == who.getId())) {
                 print_debug("Disconnect:::Stop : mBtToServerSocket :" + rSocket.GetPeerName());
                 rSocket.Stop();
@@ -289,9 +290,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         boolean isDiscovered = false;
 
-        Iterator<ServiceItem> iterator = lastAvailableList.iterator();
-        while (iterator.hasNext()) {
-            ServiceItem item = iterator.next();
+        for (ServiceItem item : lastAvailableList) {
             if (item != null && item.peerId.contentEquals(peerId)) {
                 isDiscovered = true;
                 break;
@@ -367,9 +366,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 if(item != null) {
                     wasPreviouslyAvailable = false;
 
-                    Iterator<ServiceItem> iterator = lastAvailableList.iterator();
-                    while (iterator.hasNext()) {
-                        ServiceItem lastItem = iterator.next();
+                    for (ServiceItem lastItem : lastAvailableList) {
                         if (lastItem != null && item.deviceAddress.equalsIgnoreCase(lastItem.deviceAddress)) {
                             wasPreviouslyAvailable = true;
                             lastAvailableList.remove(lastItem);
@@ -383,9 +380,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             }
         }
 
-        Iterator<ServiceItem> iterator2 = lastAvailableList.iterator();
-        while (iterator2.hasNext()) {
-            ServiceItem lastItem2 = iterator2.next();
+        for (ServiceItem lastItem2 : lastAvailableList) {
             jsonArray.put(getAvailabilityStatus(lastItem2, false));
             lastAvailableList.remove(lastItem2);
         }
@@ -412,9 +407,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     public void PeerDiscovered(ServiceItem serviceItem) {
         boolean wasPrevouslyAvailable = false;
 
-        Iterator<ServiceItem> iterator = lastAvailableList.iterator();
-        while (iterator.hasNext()) {
-            ServiceItem lastItem = iterator.next();
+        for (ServiceItem lastItem : lastAvailableList) {
             if (lastItem != null && serviceItem.deviceAddress.equalsIgnoreCase(lastItem.deviceAddress)) {
                 wasPrevouslyAvailable = true;
             }

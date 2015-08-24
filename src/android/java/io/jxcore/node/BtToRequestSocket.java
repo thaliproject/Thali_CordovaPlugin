@@ -64,6 +64,7 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
     }
 
     public void run() {
+
         try {
             print_debug("start Socket with port: " + mHTTPPort);
             mHTTPPort = 0; // just to make sure its zero
@@ -73,61 +74,52 @@ public class BtToRequestSocket extends Thread implements StreamCopyingThread.Cop
         } catch (Exception e) {
             print_debug("Creating local sockets failed: " + e.toString());
             srvSocket = null;
+            mStopped = true;
+            mHandler.Disconnected(that, "creating socket failed");
+            return;
         }
 
         InputStream tmpInputStream = null;
         OutputStream tmpOutputStream = null;
 
-        if (srvSocket != null) {
-            try {
-
-                if(readyCallback != null){
-                    readyCallback.listeningAndAcceptingNow(mHTTPPort);
-                }
-                print_debug("Now accepting connections");
-                Socket tmpSocket = srvSocket.accept();
-                CloseSocketAndStreams();
-                localHostSocket = tmpSocket;
-
-                print_debug("incoming data from: " + GetLocalHostAddressAsString() + ", port: " + GetLocalHostPort());
-                tmpInputStream = localHostSocket.getInputStream();
-                tmpOutputStream = localHostSocket.getOutputStream();
-
-            } catch (Exception e) {
-                mStopped = true;
-                print_debug("Creating local streams failed: " + e.toString());
-                mHandler.Disconnected(that,"Creating local streams failed");
+        try {
+            if (readyCallback != null) {
+                readyCallback.listeningAndAcceptingNow(mHTTPPort);
             }
+            print_debug("Now accepting connections");
+            Socket tmpSocket = srvSocket.accept();
+            CloseSocketAndStreams();
+            localHostSocket = tmpSocket;
 
-            if(!mStopped) {
-                print_debug("Set local streams");
-                LocalInputStream = tmpInputStream;
-                LocalOutputStream = tmpOutputStream;
+            print_debug("incoming data from: " + GetLocalHostAddressAsString() + ", port: " + GetLocalHostPort());
+            tmpInputStream = localHostSocket.getInputStream();
+            tmpOutputStream = localHostSocket.getOutputStream();
 
-                if (mmInStream != null && LocalInputStream != null
-                 && mmOutStream != null && LocalOutputStream != null
-                 && localHostSocket != null) {
-
-                    SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
-                    SendingThread.setDebugTag("--Sending");
-                    SendingThread.start();
-
-                    ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
-                    ReceivingThread.setDebugTag("--Receiving");
-                    ReceivingThread.start();
-
-                    print_debug("Stream Threads are running");
-                } else {
-                    mStopped = true;
-                    print_debug("at least one stream is null");
-                    mHandler.Disconnected(that,"at least one stream is null");
-                }
-            }
-        } else {
+        } catch (Exception e) {
             mStopped = true;
-            print_debug("creating  socket failed");
-            mHandler.Disconnected(that,"creating socket failed");
+            print_debug("Creating local streams failed: " + e.toString());
+            mHandler.Disconnected(that, "Creating local streams failed");
+            return;
         }
+
+        print_debug("Set local streams");
+        LocalInputStream = tmpInputStream;
+        LocalOutputStream = tmpOutputStream;
+
+        if (mmInStream == null || LocalInputStream == null || mmOutStream == null || LocalOutputStream == null || localHostSocket == null) {
+            mStopped = true;
+            print_debug("at least one stream is null");
+            mHandler.Disconnected(that, "at least one stream is null");
+            return;
+        }
+
+        SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
+        SendingThread.setDebugTag("--Sending");
+        SendingThread.start();
+
+        ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
+        ReceivingThread.setDebugTag("--Receiving");
+        ReceivingThread.start();
 
         print_debug("rin ended ---------------------------;");
     }

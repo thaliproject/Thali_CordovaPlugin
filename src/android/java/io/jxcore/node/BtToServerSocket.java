@@ -37,6 +37,15 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
         print_debug("Creating BTConnectedThread");
         mHandler = handler;
         mmSocket = socket;
+    }
+
+    public void setPort(int port){
+        mHTTPPort = port;
+    }
+
+    public void run() {
+
+        print_debug("--DoOneRunRound started");
 
         InputStream tmpIn = null;
         OutputStream tmpOut = null;
@@ -50,18 +59,12 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
             print_debug("Creating Bluetooth input streams failed: " + e.toString());
             mStopped = true;
             mHandler.Disconnected(that,"creating Bluetooth input streams failed");
+            return;
         }
+
         mmInStream = tmpIn;
         mmOutStream = tmpOut;
 
-    }
-    public void setPort(int port){
-        mHTTPPort = port;
-    }
-
-    public void run() {
-
-        print_debug("--DoOneRunRound started");
         InputStream tmpInputStream = null;
         OutputStream tmpOutputStream = null;
         try {
@@ -78,30 +81,27 @@ public class BtToServerSocket extends Thread implements StreamCopyingThread.Copy
         } catch (Exception e) {
             print_debug("Creating local input streams failed: " + e.toString());
             mStopped = true;
-            mHandler.Disconnected(that,"creating local input streams failed");
+            mHandler.Disconnected(that, "creating local input streams failed");
+            return;
         }
-        if(!mStopped) {
-            LocalInputStream = tmpInputStream;
-            LocalOutputStream = tmpOutputStream;
 
-            if (mmInStream != null && LocalInputStream != null
-                    && mmOutStream != null && LocalOutputStream != null
-                    && localHostSocket != null) {
+        LocalInputStream = tmpInputStream;
+        LocalOutputStream = tmpOutputStream;
 
-                SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
-                SendingThread.setDebugTag("--Sending");
-                SendingThread.start();
-
-                ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
-                ReceivingThread.setDebugTag("--Receiving");
-                ReceivingThread.start();
-                print_debug("Stream Threads are running");
-            } else {
-                mStopped = true;
-                print_debug("at least one stream is null");
-                mHandler.Disconnected(that,"at least one stream is null");
-            }
+        if (mmInStream == null || LocalInputStream == null || mmOutStream == null || LocalOutputStream == null || localHostSocket == null) {
+            mStopped = true;
+            print_debug("at least one stream is null");
+            mHandler.Disconnected(that, "at least one stream is null");
+            return;
         }
+
+        SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
+        SendingThread.setDebugTag("--Sending");
+        SendingThread.start();
+
+        ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
+        ReceivingThread.setDebugTag("--Receiving");
+        ReceivingThread.start();
 
         print_debug("--DoOneRunRound ended");
     }
