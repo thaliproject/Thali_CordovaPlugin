@@ -11,7 +11,7 @@ import java.net.Socket;
 /**
  * Created by juksilve on 15.5.2015.
  */
-public class BtToServerSocket extends BtToSocketBase {
+class BtToServerSocket extends BtToSocketBase {
 
     private int mHTTPPort = 0;
 

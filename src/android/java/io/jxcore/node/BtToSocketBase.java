@@ -13,14 +13,14 @@ import java.net.Socket;
  */
 public class BtToSocketBase extends Thread implements StreamCopyingThread.CopyThreadCallback  {
 
-    BtToSocketBase that = this;
+    final BtToSocketBase that = this;
     protected final BtSocketDisconnectedCallBack mHandler;
 
-    protected BluetoothSocket mmSocket = null;
+    protected final BluetoothSocket mmSocket;
     protected Socket localHostSocket = null;
 
-    protected InputStream mmInStream = null;
-    protected OutputStream mmOutStream = null;
+    protected final InputStream mmInStream;
+    protected final OutputStream mmOutStream;
     protected InputStream LocalInputStream = null;
     protected OutputStream LocalOutputStream = null;
 
@@ -85,25 +85,19 @@ public class BtToSocketBase extends Thread implements StreamCopyingThread.CopyTh
 
         CloseSocketAndStreams();
 
-        InputStream tmpInStr = mmInStream;
-        mmInStream = null;
-        if (tmpInStr != null) {
+        if (mmInStream != null) {
             try {print_debug("BtToSocketBase","Close bt in");
-                tmpInStr.close();} catch (Exception e) {print_debug("BtToSocketBase","Close error : " + e.toString());}
+                mmInStream.close();} catch (IOException e) {print_debug("BtToSocketBase","Close error : " + e.toString());}
         }
 
-        OutputStream tmpOutStr = mmOutStream;
-        mmOutStream = null;
-        if (tmpOutStr != null) {
+        if (mmOutStream != null) {
             try {print_debug("BtToSocketBase","Close bt out");
-                tmpOutStr.close();} catch (Exception e) {print_debug("BtToSocketBase","Close error : " + e.toString());}
+                mmOutStream.close();} catch (IOException e) {print_debug("BtToSocketBase","Close error : " + e.toString());}
         }
 
-        BluetoothSocket tmpSoc = mmSocket;
-        mmSocket = null;
-        if (tmpSoc != null) {
+        if (mmSocket != null) {
             try {print_debug("BtToSocketBase","Close bt socket");
-                tmpSoc.close();} catch (Exception e) {print_debug("BtToSocketBase","Close error : " + e.toString());}
+                mmSocket.close();} catch (IOException e) {print_debug("BtToSocketBase","Close error : " + e.toString());}
         }
     }
 

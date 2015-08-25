@@ -24,7 +24,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector, BtSocketDisconnectedCallBack {
 
-    private Context context = null;
+    private final Context context;
 
     private final String serviceTypeIdentifier = "Cordovap2p._tcp";
     private final String BtUUID                = "fa87c0d0-afac-11de-8a39-0800200c9a66";
@@ -33,12 +33,11 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
     private final CopyOnWriteArrayList<ServiceItem> lastAvailableList = new CopyOnWriteArrayList<ServiceItem>();
 
-    private BTConnectorSettings conSettings = null;
+    private final BTConnectorSettings conSettings;
     private BTConnector mBTConnector = null;
 
     private final CopyOnWriteArrayList<BtToServerSocket> mServerSocketList = new CopyOnWriteArrayList<BtToServerSocket>();
     private BtToRequestSocket mBtToRequestSocket = null;
-
 
     private int mServerPort = 0;
 
@@ -360,7 +359,6 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             case Connected:
                 break;
         }
-
     }
 
     // this is called with a full list of peer-services we see, its takes time to get,
