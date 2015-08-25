@@ -42,7 +42,7 @@ public class JXcoreExtension {
                   String message = params.get(0).toString();
                   boolean isLong = true;
                   if (params.size() == 2) {
-                      isLong = ((Boolean) params.get(1)).booleanValue();
+                      isLong = (Boolean) params.get(1);
                   }
 
                   int duration = Toast.LENGTH_SHORT;
@@ -66,15 +66,15 @@ public class JXcoreExtension {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
+              String errString = "";
+              ArrayList<Object> args = new ArrayList<Object>();
+
               if(params.size() > 1) {
                   String peerName = params.get(0).toString();
-                  String port = params.get(1).toString();
-
-                  String errString = "";
-                  ArrayList<Object> args = new ArrayList<Object>();
+                  int port = (Integer)params.get(1);//.toString();
 
                   if(!mBtConnectorHelper.isRunning()) {
-                      BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, Integer.decode(port));
+                      BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, port);
 
                       if (retVal.isWifiEnabled && retVal.isWifiOk && retVal.isBtEnabled && retVal.isBtOk) {
                           args.add(null);
@@ -96,9 +96,13 @@ public class JXcoreExtension {
                       errString ="Already running, not re-starting.";
                       args.add(errString);
                   }
-                  Log.i("DEBUG-TEST" , METHODSTRING_STARTBROADCAST + "called, we return Err string as : " + errString);
-                  jxcore.CallJSMethod(callbackId, args.toArray());
+              }else{
+                  errString ="Not enough parameters with function call.";
+                  args.add(errString);
               }
+
+              Log.i("DEBUG-TEST" , METHODSTRING_STARTBROADCAST + "called, we return Err string as : " + errString);
+              jxcore.CallJSMethod(callbackId, args.toArray());
           }
       });
 

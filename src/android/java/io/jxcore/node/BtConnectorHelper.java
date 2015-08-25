@@ -206,7 +206,13 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         print_debug("Starting the connected thread incoming : " + incoming + ", " + peerName);
 
         if (incoming) {
-            BtToServerSocket tmpBtToServerSocket = new BtToServerSocket(bluetoothSocket, this);
+            BtToServerSocket tmpBtToServerSocket = null;
+            try {
+                tmpBtToServerSocket = new BtToServerSocket(bluetoothSocket, this);
+            }catch (Exception e){
+                print_debug("Creating BtToServerSocket failed : " + e.toString());
+                return;
+            }
 
             mServerSocketList.add(tmpBtToServerSocket);
 
@@ -231,37 +237,46 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             tmpregSoc.Stop();
         }
 
-        tmpregSoc = new BtToRequestSocket(bluetoothSocket, new BtSocketDisconnectedCallBack() {
-            //Called when disconnect event happens, so we can stop & clean everything now.
-            @Override
-            public void Disconnected(Thread who, String Error) {
+        try {
+            tmpregSoc = new BtToRequestSocket(bluetoothSocket, new BtSocketDisconnectedCallBack() {
+                //Called when disconnect event happens, so we can stop & clean everything now.
+                @Override
+                public void Disconnected(Thread who, String Error) {
 
-                BtToRequestSocket tmpSoc = mBtToRequestSocket;
-                mBtToRequestSocket = null;
-                if (tmpSoc != null) {
-                    print_debug("BT Request socket disconnected");
-                    tmpSoc.Stop();
-                }
-            }
-        }, new BtToRequestSocket.ReadyForIncoming() {
-            // there is a good chance on race condition where the node.js gets to do their client socket
-            // before we got into the accept line executed, thus this callback takes care that we are ready before node.js is
-            @Override
-            public void listeningAndAcceptingNow(int port) {
-                final int portTmp = port;
-                print_debug("Request socket is using : " + portTmp);
-                new Handler(jxcore.activity.getMainLooper()).postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        ConnectStatusCallback tmpCallBack = mConnectStatusCallback;
-                        if (tmpCallBack != null) {
-                            print_debug("Calling ConnectionStatusUpdate with port :" + portTmp);
-                            tmpCallBack.ConnectionStatusUpdate(null, portTmp);
-                        }
+                    BtToRequestSocket tmpSoc = mBtToRequestSocket;
+                    mBtToRequestSocket = null;
+                    if (tmpSoc != null) {
+                        print_debug("BT Request socket disconnected");
+                        tmpSoc.Stop();
                     }
-                }, 300);
+                }
+            }, new BtToRequestSocket.ReadyForIncoming() {
+                // there is a good chance on race condition where the node.js gets to do their client socket
+                // before we got into the accept line executed, thus this callback takes care that we are ready before node.js is
+                @Override
+                public void listeningAndAcceptingNow(int port) {
+                    final int portTmp = port;
+                    print_debug("Request socket is using : " + portTmp);
+                    new Handler(jxcore.activity.getMainLooper()).postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            ConnectStatusCallback tmpCallBack = mConnectStatusCallback;
+                            if (tmpCallBack != null) {
+                                print_debug("Calling ConnectionStatusUpdate with port :" + portTmp);
+                                tmpCallBack.ConnectionStatusUpdate(null, portTmp);
+                            }
+                        }
+                    }, 300);
+                }
+            });
+        }catch (Exception e) {
+            print_debug("Creating BtToRequestSocket failed : " + e.toString());
+            ConnectStatusCallback tmpCallBack = mConnectStatusCallback;
+            if (tmpCallBack != null) {
+                tmpCallBack.ConnectionStatusUpdate("Creating BtToRequestSocket failed : " + e.toString(), -1);
             }
-        });
+            return;
+        }
         tmpregSoc.SetIdAddressAndName(peerId, peerName, peerAddress);
         tmpregSoc.start();
         mBtToRequestSocket = tmpregSoc;
