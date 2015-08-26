@@ -1,6 +1,7 @@
 package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
+import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,7 +23,7 @@ public class BtToRequestSocket extends BtToSocketBase{
 
     public BtToRequestSocket(BluetoothSocket socket, BtSocketDisconnectedCallBack handler,ReadyForIncoming callback)  throws IOException {
         super(socket,handler);
-        print_debug("BtToRequestSocket", "Creating BtConnectedRequestSocket");
+        Log.i("BtToRequestSocket", "Creating BtConnectedRequestSocket");
         readyCallback = callback;
     }
 
@@ -30,11 +31,10 @@ public class BtToRequestSocket extends BtToSocketBase{
 
         try {
             srvSocket = new ServerSocket(0);
-            print_debug("BtToRequestSocket", "mHTTPPort  set to : " + srvSocket.getLocalPort());
-        } catch (Exception e) {
-            print_debug("BtToRequestSocket", "Creating local sockets failed: " + e.toString());
+            Log.i("BtToRequestSocket", "mHTTPPort  set to : " + srvSocket.getLocalPort());
+        } catch (IOException e) {
+            Log.i("BtToRequestSocket", "Creating local sockets failed: " + e.toString());
             srvSocket = null;
-            mStopped = true;
             mHandler.Disconnected(that, "creating socket failed");
             return;
         }
@@ -46,42 +46,28 @@ public class BtToRequestSocket extends BtToSocketBase{
             if (readyCallback != null) {
                 readyCallback.listeningAndAcceptingNow(srvSocket.getLocalPort());
             }
-            print_debug("BtToRequestSocket", "Now accepting connections");
+            Log.i("BtToRequestSocket", "Now accepting connections");
             Socket tmpSocket = srvSocket.accept();
             CloseSocketAndStreams();
             localHostSocket = tmpSocket;
 
-            print_debug("BtToRequestSocket", "incoming data from: " + GetLocalHostAddressAsString() + ", port: " + GetLocalHostPort());
+            Log.i("BtToRequestSocket", "incoming data from: " + GetLocalHostAddressAsString() + ", port: " + GetLocalHostPort());
             tmpInputStream = localHostSocket.getInputStream();
             tmpOutputStream = localHostSocket.getOutputStream();
 
-        } catch (Exception e) {
-            mStopped = true;
-            print_debug("BtToRequestSocket", "Creating local streams failed: " + e.toString());
+        } catch (IOException e) {
+            Log.i("BtToRequestSocket", "Creating local streams failed: " + e.toString());
             mHandler.Disconnected(that, "Creating local streams failed");
             return;
         }
 
-        print_debug("BtToRequestSocket", "Set local streams");
+        Log.i("BtToRequestSocket", "Set local streams");
         LocalInputStream = tmpInputStream;
         LocalOutputStream = tmpOutputStream;
 
-        if (mmInStream == null || LocalInputStream == null || mmOutStream == null || LocalOutputStream == null || localHostSocket == null) {
-            mStopped = true;
-            print_debug("BtToRequestSocket", "at least one stream is null");
-            mHandler.Disconnected(that, "at least one stream is null");
-            return;
-        }
+        StartStreamCopyThreads();
 
-        SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
-        SendingThread.setDebugTag("--Sending");
-        SendingThread.start();
-
-        ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
-        ReceivingThread.setDebugTag("--Receiving");
-        ReceivingThread.start();
-
-        print_debug("BtToRequestSocket", "rin ended ---------------------------;");
+        Log.i("BtToRequestSocket", "rin ended ---------------------------;");
     }
 
     private  int GetLocalHostPort() {
@@ -94,9 +80,8 @@ public class BtToRequestSocket extends BtToSocketBase{
         ServerSocket tmpSrvSoc = srvSocket;
         srvSocket = null;
         if (tmpSrvSoc != null) {
-            try {print_debug("BtToRequestSocket", "Close server socket");
-                tmpSrvSoc.close();} catch (Exception e) {print_debug("BtToRequestSocket", "Close error : " + e.toString());}
+            try {Log.i("BtToRequestSocket", "Close server socket");
+                tmpSrvSoc.close();} catch (IOException e) {Log.i("BtToRequestSocket", "Close error : " + e.toString());}
         }
     }
-
 }

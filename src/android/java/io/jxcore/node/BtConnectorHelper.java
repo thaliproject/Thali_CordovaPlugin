@@ -14,6 +14,7 @@ import org.thaliproject.p2p.btconnectorlib.BTConnector;
 import org.thaliproject.p2p.btconnectorlib.BTConnectorSettings;
 import org.thaliproject.p2p.btconnectorlib.ServiceItem;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -40,6 +41,20 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     private BtToRequestSocket mBtToRequestSocket = null;
 
     private int mServerPort = 0;
+
+    // implementation which forwards any uncaught exception from threads to the Jxcore
+    final Thread.UncaughtExceptionHandler mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
+        @Override
+        public void uncaughtException(Thread thread, Throwable ex) {
+            final Throwable tmpException = ex;
+            new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run(){
+                    throw new RuntimeException(tmpException);
+                }
+            });
+        }
+    };
 
     public BtConnectorHelper() {
         conSettings = new BTConnectorSettings();
@@ -88,7 +103,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         }
 
         String currenPeerId = tmpSoc.GetPeerId();
-        print_debug("Disconnect : " + peerId + ", current request : " + currenPeerId);
+        Log.i("BtConnectorHelper","Disconnect : " + peerId + ", current request : " + currenPeerId);
         if (peerId.equalsIgnoreCase(currenPeerId)) {
             tmpSoc.Stop();
             mBtToRequestSocket = null;
@@ -114,7 +129,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         boolean ret = false;
         for (BtToServerSocket rSocket : mServerSocketList) {
             if (rSocket != null) {
-                print_debug("Disconnect:::Stop : mBtToServerSocket :" + rSocket.getName());
+                Log.i("BtConnectorHelper","Disconnect:::Stop : mBtToServerSocket :" + rSocket.getName());
                 rSocket.Stop();
                 ret = true;
             }
@@ -188,6 +203,8 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 connectStatusCallback.ConnectionStatusUpdate("Bluetooth API failed to get Bluetooth device for the address : " + selectedDevice.peerAddress, -1);
             }
             break;
+            default:
+                throw new RuntimeException("Invalid value returned for BTConnector.TryConnectReturnValues with TryConnect");
         }
     }
 
@@ -202,16 +219,17 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         // this is here, so if we have not found the incoming peer via Discovery, we'll get it
         // added to the discovery list, and we can connect back to it.
         AddPeerIfNotDiscovered(bluetoothSocket, peerId, peerName, peerAddress);
-        print_debug("Starting the connected thread incoming : " + incoming + ", " + peerName);
+        Log.i("BtConnectorHelper","Starting the connected thread incoming : " + incoming + ", " + peerName);
 
         if (incoming) {
             BtToServerSocket tmpBtToServerSocket = null;
             try {
                 tmpBtToServerSocket = new BtToServerSocket(bluetoothSocket, this);
-            }catch (Exception e){
-                print_debug("Creating BtToServerSocket failed : " + e.toString());
+            }catch (IOException e){
+                Log.i("BtConnectorHelper","Creating BtToServerSocket failed : " + e.toString());
                 return;
             }
+            tmpBtToServerSocket.setDefaultUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
 
             mServerSocketList.add(tmpBtToServerSocket);
 
@@ -220,7 +238,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             tmpBtToServerSocket.start();
 
             int port = tmpBtToServerSocket.GetLocalHostPort();
-            print_debug("Server socket is using : " + port + ", and is now connected.");
+            Log.i("BtConnectorHelper","Server socket is using : " + port + ", and is now connected.");
 
             return;
         }
@@ -245,7 +263,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                     BtToRequestSocket tmpSoc = mBtToRequestSocket;
                     mBtToRequestSocket = null;
                     if (tmpSoc != null) {
-                        print_debug("BT Request socket disconnected");
+                        Log.i("BtConnectorHelper","BT Request socket disconnected");
                         tmpSoc.Stop();
                     }
                 }
@@ -255,27 +273,28 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 @Override
                 public void listeningAndAcceptingNow(int port) {
                     final int portTmp = port;
-                    print_debug("Request socket is using : " + portTmp);
+                    Log.i("BtConnectorHelper","Request socket is using : " + portTmp);
                     new Handler(jxcore.activity.getMainLooper()).postDelayed(new Runnable() {
                         @Override
                         public void run() {
                             ConnectStatusCallback tmpCallBack = mConnectStatusCallback;
                             if (tmpCallBack != null) {
-                                print_debug("Calling ConnectionStatusUpdate with port :" + portTmp);
+                                Log.i("BtConnectorHelper","Calling ConnectionStatusUpdate with port :" + portTmp);
                                 tmpCallBack.ConnectionStatusUpdate(null, portTmp);
                             }
                         }
                     }, 300);
                 }
             });
-        }catch (Exception e) {
-            print_debug("Creating BtToRequestSocket failed : " + e.toString());
+        }catch (IOException e) {
+            Log.i("BtConnectorHelper","Creating BtToRequestSocket failed : " + e.toString());
             ConnectStatusCallback tmpCallBack = mConnectStatusCallback;
             if (tmpCallBack != null) {
                 tmpCallBack.ConnectionStatusUpdate("Creating BtToRequestSocket failed : " + e.toString(), -1);
             }
             return;
         }
+        tmpregSoc.setDefaultUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
         tmpregSoc.SetIdAddressAndName(peerId, peerName, peerAddress);
         tmpregSoc.start();
         mBtToRequestSocket = tmpregSoc;
@@ -286,11 +305,11 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     @Override
     public void Disconnected(Thread who, String Error) {
 
-        print_debug("BT Disconnected with error : " + Error);
+        Log.i("BtConnectorHelper","BT Disconnected with error : " + Error);
 
         for (BtToServerSocket rSocket : mServerSocketList) {
             if (rSocket != null && (rSocket.getId() == who.getId())) {
-                print_debug("Disconnect:::Stop : mBtToServerSocket :" + rSocket.GetPeerName());
+                Log.i("BtConnectorHelper","Disconnect:::Stop : mBtToServerSocket :" + rSocket.GetPeerName());
                 rSocket.Stop();
                 mServerSocketList.remove(rSocket);
                 break;
@@ -358,6 +377,8 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
                 break;
             case Connected:
                 break;
+            default:
+                throw new RuntimeException("Invalid value set for BTConnector.State in StateChanged");
         }
     }
 
@@ -445,13 +466,8 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             returnJsonObj.put(JXcoreExtension.EVENTVALUESTRING_PEERNAME, item.peerName);
             returnJsonObj.put(JXcoreExtension.EVENTVALUESTRING_PEERAVAILABLE, available);
         } catch (JSONException e) {
-            print_debug("JSONException : " + e.toString());
+            Log.i("BtConnectorHelper","JSONException : " + e.toString());
         }
         return returnJsonObj;
-    }
-
-
-    private void print_debug(String message){
-        Log.i("!!!!-Helpper-!!", message);
     }
 }

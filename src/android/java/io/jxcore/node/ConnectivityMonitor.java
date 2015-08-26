@@ -40,7 +40,7 @@ class ConnectivityMonitor {
             activity.registerReceiver(receiver, filter);
             //To do fix this once we know how to get events that all is ready !
             SendConnectivityInfo();
-        } catch (Exception e) {e.printStackTrace();}
+        } catch (IllegalArgumentException e) {e.printStackTrace();}
     }
 
     public void Stop() {
@@ -49,7 +49,7 @@ class ConnectivityMonitor {
         if (tmpRec != null) {
             try {
                 activity.unregisterReceiver(tmpRec);
-            } catch (Exception e) {e.printStackTrace();}
+            } catch (IllegalArgumentException e) {e.printStackTrace();}
         }
     }
 

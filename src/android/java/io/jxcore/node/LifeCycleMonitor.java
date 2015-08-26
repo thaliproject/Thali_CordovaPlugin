@@ -37,7 +37,7 @@ class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks {
         if (tmpApp != null) {
             try {
                 tmpApp.registerActivityLifecycleCallbacks(this);
-            }catch(Exception e){e.printStackTrace();}
+            }catch(IllegalArgumentException e){e.printStackTrace();}
         }
 
         this.MyApp = tmpApp;
@@ -49,7 +49,7 @@ class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks {
         if (tmpApp != null) {
             try {
                 tmpApp.unregisterActivityLifecycleCallbacks(this);
-            } catch (Exception e) {e.printStackTrace();}
+            } catch (IllegalArgumentException e) {e.printStackTrace();}
         }
     }
 

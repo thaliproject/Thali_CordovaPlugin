@@ -15,8 +15,6 @@ class StreamCopyingThread extends Thread {
     }
 
     private final CopyThreadCallback callback;
-
-    private String TAG = "StreamCopyingThread";
     private boolean mStopped = false;
 
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
@@ -30,10 +28,6 @@ class StreamCopyingThread extends Thread {
         mOutputStream = mmOutStreamt;
     }
 
-    public void setDebugTag(String debugTag) {
-        TAG = debugTag;
-    }
-
     public void run() {
         byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
 
@@ -42,7 +36,7 @@ class StreamCopyingThread extends Thread {
                 int n = 0;
                 while (-1 != (n = mInputStream.read(buffer)) && !mStopped) {
                     //   String dbgMessage = new String(buffer,0,n);
-                    //   print_debug(" Copying " + n + " bytes, data: " + dbgMessage);
+                    //   Log.i (" Copying " + n + " bytes, data: " + dbgMessage);
                     mOutputStream.write(buffer, 0, n);
                 }
 
@@ -56,14 +50,9 @@ class StreamCopyingThread extends Thread {
                 callback.StreamCopyError(this, "disconnected: " + e.toString());
             }
         }
-        // print_debug("run ended");
     }
 
     public void Stop(){
         mStopped = true;
     }
-
-  /*  public void print_debug(String message){
-        Log.i(TAG, message);
-    }*/
 }

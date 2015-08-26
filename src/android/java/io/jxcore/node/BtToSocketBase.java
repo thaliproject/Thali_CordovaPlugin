@@ -31,35 +31,46 @@ public class BtToSocketBase extends Thread implements StreamCopyingThread.CopyTh
     protected StreamCopyingThread SendingThread = null;
     protected StreamCopyingThread ReceivingThread = null;
 
-    protected volatile boolean mStopped = false;
-
     public BtToSocketBase(BluetoothSocket socket, BtSocketDisconnectedCallBack handler) throws IOException {
-        print_debug("BtToSocketBase","BtToSocketBase BtConnectedRequestSocket");
+        Log.i("BtToSocketBase","BtToSocketBase BtConnectedRequestSocket");
         mHandler = handler;
         mmSocket = socket;
         mmInStream = mmSocket.getInputStream();
         mmOutStream = mmSocket.getOutputStream();
     }
 
+    protected void StartStreamCopyThreads() {
+        if (mmInStream == null || LocalInputStream == null || mmOutStream == null || LocalOutputStream == null || localHostSocket == null) {
+            Log.i("BtToRequestSocket", "at least one stream is null");
+            mHandler.Disconnected(that, "at least one stream is null");
+            return;
+        }
+
+        SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
+        // as we have set DefaultUncaughtExceptionHandler for the main thread, we can forward any exceptions from copy thread as well
+        SendingThread.setDefaultUncaughtExceptionHandler(that.getUncaughtExceptionHandler());
+        SendingThread.start();
+
+        ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
+        // as we have set DefaultUncaughtExceptionHandler for the main thread, we can forward any exceptions from copy thread as well
+        ReceivingThread.setDefaultUncaughtExceptionHandler(that.getUncaughtExceptionHandler());
+        ReceivingThread.start();
+    }
     @Override
     public void StreamCopyError(StreamCopyingThread who, String error) {
-        // Receiving Thread is the one that is having Bluetooth input stream,
-        // thus if it gives error, we know that connection has been disconnected from other end.
+
         if(who == ReceivingThread){
-            print_debug("BtToSocketBase","ReceivingThread thread got error: " + error);
-            mStopped = true;
-            mHandler.Disconnected(that,"creating serve socket failed");
+            // Receiving Thread is the one that is having Bluetooth input stream,
+            // thus if it gives error, we know that connection has been disconnected from other end.
+            Log.i("BtToSocketBase","ReceivingThread thread got error: " + error);
         }else if(who == SendingThread){
-            //Sending socket has local input stream, thus if it is giving error we are getting local disconnection
-            // thus we should do round to get new local connection
-            print_debug("BtToSocketBase","SendingThread thread got error: " + error);
-            mStopped = true;
-            // with this app we want to disconnect the Bluetooth once we lose local sockets
-            mHandler.Disconnected(that,error);
+            //Sending socket has local input stream,
+            // thus if it is giving error we are getting local disconnection
+            Log.i("BtToSocketBase","SendingThread thread got error: " + error);
         }else{
-            print_debug("BtToSocketBase","Dunno which thread got error: " + error);
-            mHandler.Disconnected(that,error);
+            Log.i("BtToSocketBase","Dunno which thread got error: " + error);
         }
+        mHandler.Disconnected(that,error);
     }
 
     public String GetLocalHostAddressAsString() {
@@ -67,37 +78,36 @@ public class BtToSocketBase extends Thread implements StreamCopyingThread.CopyTh
     }
 
     public void Stop() {
-        mStopped = true;
 
         StreamCopyingThread tmpSCTrec = ReceivingThread;
         ReceivingThread = null;
         if(tmpSCTrec != null){
-            print_debug("BtToSocketBase","Stop ReceivingThread");
+            Log.i("BtToSocketBase","Stop ReceivingThread");
             tmpSCTrec.Stop();
         }
 
         StreamCopyingThread tmpSCTsend = SendingThread;
         SendingThread = null;
         if(tmpSCTsend != null){
-            print_debug("BtToSocketBase","Stop SendingThread");
+            Log.i("BtToSocketBase","Stop SendingThread");
             tmpSCTsend.Stop();
         }
 
         CloseSocketAndStreams();
 
         if (mmInStream != null) {
-            try {print_debug("BtToSocketBase","Close bt in");
-                mmInStream.close();} catch (IOException e) {print_debug("BtToSocketBase","Close error : " + e.toString());}
+            try {Log.i("BtToSocketBase","Close bt in");
+                mmInStream.close();} catch (IOException e) {Log.i("BtToSocketBase","Close error : " + e.toString());}
         }
 
         if (mmOutStream != null) {
-            try {print_debug("BtToSocketBase","Close bt out");
-                mmOutStream.close();} catch (IOException e) {print_debug("BtToSocketBase","Close error : " + e.toString());}
+            try {Log.i("BtToSocketBase","Close bt out");
+                mmOutStream.close();} catch (IOException e) {Log.i("BtToSocketBase","Close error : " + e.toString());}
         }
 
         if (mmSocket != null) {
-            try {print_debug("BtToSocketBase","Close bt socket");
-                mmSocket.close();} catch (IOException e) {print_debug("BtToSocketBase","Close error : " + e.toString());}
+            try {Log.i("BtToSocketBase","Close bt socket");
+                mmSocket.close();} catch (IOException e) {Log.i("BtToSocketBase","Close error : " + e.toString());}
         }
     }
 
@@ -106,27 +116,27 @@ public class BtToSocketBase extends Thread implements StreamCopyingThread.CopyTh
         InputStream tmpLocStrIn = LocalInputStream;
         LocalInputStream = null;
         if (tmpLocStrIn != null) {
-            try {print_debug("BtToSocketBase","Close local in");
-                tmpLocStrIn.close();} catch (Exception e) {
-                print_debug("BtToSocketBase","Close error : " + e.toString());
+            try {Log.i("BtToSocketBase","Close local in");
+                tmpLocStrIn.close();} catch (IOException e) {
+                Log.i("BtToSocketBase","Close error : " + e.toString());
             }
         }
 
         OutputStream tmpLocStrOut = LocalOutputStream;
         LocalOutputStream = null;
         if (tmpLocStrOut != null) {
-            try {print_debug("BtToSocketBase","Close LocalOutputStream");
-                tmpLocStrOut.close();} catch (Exception e) {
-                print_debug("BtToSocketBase","Close error : " + e.toString());
+            try {Log.i("BtToSocketBase","Close LocalOutputStream");
+                tmpLocStrOut.close();} catch (IOException e) {
+                Log.i("BtToSocketBase","Close error : " + e.toString());
             }
         }
 
         Socket tmpLHSoc = localHostSocket;
         localHostSocket = null;
         if (tmpLHSoc != null) {
-            try {print_debug("BtToSocketBase","Close localHostSocket");
-                tmpLHSoc.close();} catch (Exception e) {
-                print_debug("BtToSocketBase","Close error : " + e.toString());
+            try {Log.i("BtToSocketBase","Close localHostSocket");
+                tmpLHSoc.close();} catch (IOException e) {
+                Log.i("BtToSocketBase","Close error : " + e.toString());
             }
         }
     }
@@ -140,8 +150,4 @@ public class BtToSocketBase extends Thread implements StreamCopyingThread.CopyTh
     }
     public String GetPeerName(){return mPeerName;}
     public String GetPeerAddress(){return mPeerAddress;}
-
-    protected  void print_debug(String who,String message){
-        Log.i(who, message);
-    }
 }

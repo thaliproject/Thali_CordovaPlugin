@@ -1,6 +1,7 @@
 package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
+import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +18,7 @@ class BtToServerSocket extends BtToSocketBase {
 
     public BtToServerSocket(BluetoothSocket socket, BtSocketDisconnectedCallBack handler) throws IOException{
         super(socket,handler);
-        print_debug("BtToRequestSocket", "Creating BTConnectedThread");
+        Log.i("BtToRequestSocket", "Creating BTConnectedThread");
     }
 
     public void setPort(int port){
@@ -26,7 +27,7 @@ class BtToServerSocket extends BtToSocketBase {
 
     public void run() {
 
-        print_debug("BtToRequestSocket", "--DoOneRunRound started");
+        Log.i("BtToRequestSocket", "--DoOneRunRound started");
 
         InputStream tmpInputStream = null;
         OutputStream tmpOutputStream = null;
@@ -34,14 +35,13 @@ class BtToServerSocket extends BtToSocketBase {
             Inet4Address mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
             localHostSocket = new Socket(mLocalHostAddress, mHTTPPort);
 
-            print_debug("BtToRequestSocket", "LocalHost address: " + GetLocalHostAddressAsString() + ", port: " + GetLocalHostPort());
+            Log.i("BtToRequestSocket", "LocalHost address: " + GetLocalHostAddressAsString() + ", port: " + GetLocalHostPort());
 
             tmpInputStream = localHostSocket.getInputStream();
             tmpOutputStream = localHostSocket.getOutputStream();
 
-        } catch (Exception e) {
-            print_debug("BtToRequestSocket", "Creating local input streams failed: " + e.toString());
-            mStopped = true;
+        } catch (IOException e) {
+            Log.i("BtToRequestSocket", "Creating local input streams failed: " + e.toString());
             mHandler.Disconnected(that, "creating local input streams failed");
             return;
         }
@@ -49,22 +49,9 @@ class BtToServerSocket extends BtToSocketBase {
         LocalInputStream = tmpInputStream;
         LocalOutputStream = tmpOutputStream;
 
-        if (mmInStream == null || LocalInputStream == null || mmOutStream == null || LocalOutputStream == null || localHostSocket == null) {
-            mStopped = true;
-            print_debug("BtToRequestSocket", "at least one stream is null");
-            mHandler.Disconnected(that, "at least one stream is null");
-            return;
-        }
+        StartStreamCopyThreads();
 
-        SendingThread = new StreamCopyingThread(this, LocalInputStream, mmOutStream);
-        SendingThread.setDebugTag("--Sending");
-        SendingThread.start();
-
-        ReceivingThread = new StreamCopyingThread(this, mmInStream, LocalOutputStream);
-        ReceivingThread.setDebugTag("--Receiving");
-        ReceivingThread.start();
-
-        print_debug("BtToRequestSocket", "--DoOneRunRound ended");
+        Log.i("BtToRequestSocket", "--DoOneRunRound ended");
     }
 
     public int GetLocalHostPort() {
