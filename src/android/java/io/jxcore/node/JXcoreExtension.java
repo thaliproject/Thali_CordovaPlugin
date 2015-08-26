@@ -4,37 +4,30 @@ package io.jxcore.node;
 
 import io.jxcore.node.jxcore.JXcoreCallback;
 import java.util.ArrayList;
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.graphics.Point;
-import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
-import android.view.Display;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import org.thaliproject.p2p.btconnectorlib.BTConnector;
 
 public class JXcoreExtension {
 
-    public static String EVENTSTRING_PEERAVAILABILITY   = "peerAvailabilityChanged";
-    public static String EVENTVALUESTRING_PEERID        = "peerIdentifier";
-    public static String EVENTVALUESTRING_PEERNAME      = "peerName";
-    public static String EVENTVALUESTRING_PEERAVAILABLE = "peerAvailable";
+    public final static String EVENTSTRING_PEERAVAILABILITY   = "peerAvailabilityChanged";
+    public final static String EVENTVALUESTRING_PEERID        = "peerIdentifier";
+    public final static String EVENTVALUESTRING_PEERNAME      = "peerName";
+    public final static String EVENTVALUESTRING_PEERAVAILABLE = "peerAvailable";
 
-    public static String EVENTSTRING_NETWORKCHANGED     = "networkChanged";
-    public static String EVENTVALUESTRING_REACHABLE     = "isReachable";
-    public static String EVENTVALUESTRING_WIFI          = "isWiFi";
+    public final static String EVENTSTRING_NETWORKCHANGED     = "networkChanged";
+    public final static String EVENTVALUESTRING_REACHABLE     = "isReachable";
+    public final static String EVENTVALUESTRING_WIFI          = "isWiFi";
 
-    public static String METHODSTRING_SHOWTOAST         = "ShowToast";
+    public final static String METHODSTRING_SHOWTOAST         = "ShowToast";
 
-    public static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
-    public static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
+    public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
+    public final static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
 
-    public static String METHODSTRING_CONNECTTOPEER     = "Connect";
-    public static String METHODSTRING_DISCONNECTPEER    = "Disconnect";
-    public static String METHODSTRING_KILLCONNECTION    = "KillConnection";
-
+    public final static String METHODSTRING_CONNECTTOPEER     = "Connect";
+    public final static String METHODSTRING_DISCONNECTPEER    = "Disconnect";
+    public final static String METHODSTRING_KILLCONNECTION    = "KillConnection";
 
     public static void LoadExtensions() {
 
@@ -45,24 +38,25 @@ public class JXcoreExtension {
 
               ArrayList<Object> args = new ArrayList<Object>();
 
-              if(params.size() > 0) {
-                  String message = params.get(0).toString();
-                  boolean isLong = true;
-                  if (params.size() == 2) {
-                      isLong = ((Boolean) params.get(1)).booleanValue();
-                  }
-
-                  int duration = Toast.LENGTH_SHORT;
-                  if (isLong) {
-                      duration = Toast.LENGTH_LONG;
-                  }
-
-                  Toast.makeText(jxcore.activity.getApplicationContext(), message, duration).show();
-                  args.add(null);
-              }else{
-                  args.add("Required parameters missing");
+              if(params.size() <= 0) {
+                  args.add("Required parameters missing.");
+                  jxcore.CallJSMethod(callbackId, args.toArray());
+                  return;
               }
 
+              String message = params.get(0).toString();
+              boolean isLong = true;
+              if (params.size() == 2) {
+                isLong = (Boolean) params.get(1);
+              }
+
+              int duration = Toast.LENGTH_SHORT;
+              if (isLong) {
+                duration = Toast.LENGTH_LONG;
+              }
+
+              Toast.makeText(jxcore.activity.getApplicationContext(), message, duration).show();
+              args.add(null);
               jxcore.CallJSMethod(callbackId, args.toArray());
           }
       });
@@ -73,39 +67,41 @@ public class JXcoreExtension {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
-              if(params.size() > 1) {
-                  String peerName = params.get(0).toString();
-                  String port = params.get(1).toString();
+              ArrayList<Object> args = new ArrayList<Object>();
 
-                  String errString = "";
-                  ArrayList<Object> args = new ArrayList<Object>();
-
-                  if(!mBtConnectorHelper.isRunning()) {
-                      BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, Integer.decode(port));
-
-                      if (retVal.isWifiEnabled && retVal.isWifiOk && retVal.isBtEnabled && retVal.isBtOk) {
-                          args.add(null);
-                      } else {
-                          if (!retVal.isBtOk) {
-                              errString = "Bluetooth is not supported on this hardware platform, ";
-                          } else if (!retVal.isBtEnabled) {
-                              errString = "Bluetooth is disabled, ";
-                          }
-
-                          if (!retVal.isWifiOk) {
-                              errString = "Wi-Fi Direct is not supported on this hardware platform.";
-                          } else if (!retVal.isWifiEnabled) {
-                              errString = "Wi-Fi is disabled.";
-                          }
-                          args.add(errString);
-                      }
-                  }else{
-                      errString ="Already running, not re-starting.";
-                      args.add(errString);
-                  }
-                  Log.i("DEBUG-TEST" , METHODSTRING_STARTBROADCAST + "called, we return Err string as : " + errString);
+              if (params.size() <= 0) {
+                  args.add("Required parameters missing.");
                   jxcore.CallJSMethod(callbackId, args.toArray());
+                  return;
               }
+
+              if (mBtConnectorHelper.isRunning()) {
+                  args.add("Already running, not re-starting.");
+                  jxcore.CallJSMethod(callbackId, args.toArray());
+                  return;
+              }
+
+              String peerName = params.get(0).toString();
+              int port = (Integer) params.get(1);
+
+              BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, port);
+
+              String errString = null;
+              if (!retVal.isBtOk) {
+                  errString = "Bluetooth is not supported on this hardware platform, ";
+              } else if (!retVal.isBtEnabled) {
+                  errString = "Bluetooth is disabled, ";
+              }
+
+              if (!retVal.isWifiOk) {
+                  errString = "Wi-Fi Direct is not supported on this hardware platform.";
+              } else if (!retVal.isWifiEnabled) {
+                  errString = "Wi-Fi is disabled.";
+              }
+
+              //if all is well, the errString is still null in here..
+              args.add(errString);
+              jxcore.CallJSMethod(callbackId, args.toArray());
           }
       });
 
@@ -113,17 +109,15 @@ public class JXcoreExtension {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
-              String errString = "";
               ArrayList<Object> args = new ArrayList<Object>();
-              if (mBtConnectorHelper.isRunning()) {
-                  mBtConnectorHelper.Stop();
-                  args.add(null);
-              } else {
-                  errString ="Already stopped.";
+              if (!mBtConnectorHelper.isRunning()) {
                   args.add("Already stopped.");
+                  jxcore.CallJSMethod(callbackId, args.toArray());
+                  return;
               }
 
-              Log.i("DEBUG-TEST" , METHODSTRING_STOPBROADCAST + " returning Err  as : " + errString);
+              mBtConnectorHelper.Stop();
+              args.add(null);
               jxcore.CallJSMethod(callbackId, args.toArray());
           }
       });
@@ -132,19 +126,23 @@ public class JXcoreExtension {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
-              String peerId = "";
-              if(params.size() > 0) {
-                  peerId = params.get(0).toString();
-              }
-
               ArrayList<Object> args = new ArrayList<Object>();
-              if(mBtConnectorHelper.Disconnect(peerId)){
-                  args.add(null);
-              }else{
-                  args.add("Connection for PeerId: " + peerId + " not  found.");
+              if(params.size() <= 0) {
+                  args.add("Required parameters missing");
+                  jxcore.CallJSMethod(callbackId, args.toArray());
+                  return;
               }
-              jxcore.CallJSMethod(callbackId, args.toArray());
 
+              String peerId = params.get(0).toString();
+              if(!mBtConnectorHelper.Disconnect(peerId)){
+                  args.add("Connection for PeerId: " + peerId + " not  found.");
+                  jxcore.CallJSMethod(callbackId, args.toArray());
+                  return;
+              }
+
+              //all is well, so lets return null
+              args.add(null);
+              jxcore.CallJSMethod(callbackId, args.toArray());
           }
       });
 
@@ -152,15 +150,16 @@ public class JXcoreExtension {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
-
                 ArrayList<Object> args = new ArrayList<Object>();
-                if(mBtConnectorHelper.DisconnectIncomingConnections()){
-                    args.add(null);
-                }else{
+                if(!mBtConnectorHelper.DisconnectIncomingConnections()){
                     args.add("No incoming connection to disconnect");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
                 }
-                jxcore.CallJSMethod(callbackId, args.toArray());
 
+                //all is well, so lets return null
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
 
@@ -171,24 +170,24 @@ public class JXcoreExtension {
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
               final String callbackIdTmp = callbackId;
-              if(params.size() > 0) {
-                  String address = params.get(0).toString();
 
-                  mBtConnectorHelper.BeginConnectPeer(address, new BtConnectorHelper.ConnectStatusCallback(){
-                      @Override
-                      public void ConnectionStatusUpdate(String Error, int port) {
-                          ArrayList<Object> args = new ArrayList<Object>();
-                          args.add(Error);
-                          args.add(port);
-                          jxcore.CallJSMethod(callbackIdTmp, args.toArray());
-                      }
-                  });
-
-              }else{
-                  ArrayList<Object> args = new ArrayList<Object>();
+              ArrayList<Object> args = new ArrayList<Object>();
+              if (params.size() <= 0) {
                   args.add("Required parameters missing");
                   jxcore.CallJSMethod(callbackIdTmp, args.toArray());
+                  return;
               }
+
+              String address = params.get(0).toString();
+              mBtConnectorHelper.BeginConnectPeer(address, new BtConnectorHelper.ConnectStatusCallback() {
+                  @Override
+                  public void ConnectionStatusUpdate(String Error, int port) {
+                      ArrayList<Object> args = new ArrayList<Object>();
+                      args.add(Error);
+                      args.add(port);
+                      jxcore.CallJSMethod(callbackIdTmp, args.toArray());
+                  }
+              });
           }
       });
 
@@ -197,7 +196,6 @@ public class JXcoreExtension {
 
           @Override
           public void onEvent(String eventString,boolean stopped) {
-              final String messageTmp = eventString;
               jxcore.activity.runOnUiThread(new Runnable(){
                   public void run() {
               //        String reply = "{\"lifecycleevent\":\"" + messageTmp + "\"}";
@@ -205,9 +203,11 @@ public class JXcoreExtension {
                   }
               });
 
-              if(stopped){
+              // todo if we get Postcard fixed on lifecycle handling we should re-enable this
+              // now we need to just trust that postcard will shutdown correctly
+           /*   if(stopped){
                   mBtConnectorHelper.Stop();
-              }
+              }*/
           }
       });
       mLifeCycleMonitor.Start();
