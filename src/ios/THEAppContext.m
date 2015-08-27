@@ -88,6 +88,9 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   NSMutableDictionary * _peers;
 }
 
+// CONSTANTS
+static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B";
+
 // Singleton.
 + (instancetype)singleton
 {
@@ -125,8 +128,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
     /// Initialise the BLE stack..
 
-    NSUUID * btServiceType = [[NSUUID alloc] 
-      initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
+    NSUUID * btServiceType = [[NSUUID alloc] initWithUUIDString:BLE_SERVICE_TYPE];
 
     _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:btServiceType
                                                     peerIdentifier:peerIdentifier
