@@ -53,10 +53,6 @@
           compiler-flags="-Werror"/>
         <source-file src="src/ios/NPReachability/NPReachability.m" 
           compiler-flags="-Werror"/>
-        <header-file src="src/ios/THEThaliCore.h" 
-          compiler-flags="-Werror"/>
-        <source-file src="src/ios/THEThaliCore.m" 
-          compiler-flags="-Werror"/>
         <header-file src="src/ios/THEAppContext.h" 
           compiler-flags="-Werror"/>
         <source-file src="src/ios/THEAppContext.m" 
