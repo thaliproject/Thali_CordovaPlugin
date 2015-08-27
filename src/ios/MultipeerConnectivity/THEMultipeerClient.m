@@ -296,8 +296,9 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   }
   else
   {
-    // Probably shouldn't happen
-    NSLog(@"WARNING: lostPeer we didn't know about");
+    @throw [NSException exceptionWithName:@"UnknownPeerException" 
+                                   reason:@"Lost a peer we didn't know about" 
+                                 userInfo:@{ @"PeerDisplayName":[peerID displayName]}];
   }
 }
 
