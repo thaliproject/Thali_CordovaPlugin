@@ -549,11 +549,8 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
         // Notify the delegate.
         if ([peripheralDescriptor peerName])
         {
-            if ([_delegate respondsToSelector:@selector(peerBluetooth:didDisconnectPeerIdentifier:)])
-            {
-                [_delegate peerBluetooth:self 
-                  didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
-            }
+            [_delegate peerBluetooth:self 
+                didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
         }
         
         // Immediately reconnect. This is long-lived. Central manager will connect to this peer whenever it is
@@ -667,13 +664,9 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
             [peripheralDescriptor setState:THEPeripheralDescriptorStateConnected];
             
             // Notify the delegate that the peer is connected.
-            if ([_delegate 
-                  respondsToSelector:@selector(peerBluetooth:didConnectPeerIdentifier:peerName:)])
-            {
-                [_delegate peerBluetooth:self
-                      didConnectPeerIdentifier:[peripheralDescriptor peerID]
-                                      peerName:[peripheralDescriptor peerName]];
-            }
+            [_delegate peerBluetooth:self
+                  didConnectPeerIdentifier:[peripheralDescriptor peerID]
+                                  peerName:[peripheralDescriptor peerName]];
         }
     }
 

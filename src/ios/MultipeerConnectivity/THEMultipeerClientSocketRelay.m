@@ -46,21 +46,14 @@
       NSString *errorMsg = @"relay failed to listen";
 
       NSLog(@"client: %@", errorMsg);
-      if ([self.delegate respondsToSelector:@selector(
-        didNotListenWithErrorMessage:withPeerIdentifier:)])
-      {
-        [self.delegate didNotListenWithErrorMessage:errorMsg withPeerIdentifier:_peerIdentifier];
-      }
+      [self.delegate didNotListenWithErrorMessage:errorMsg withPeerIdentifier:_peerIdentifier];
 
       return NO;
     }
     else
     {
       UInt16 port = [_serverSocket localPort];
-      if ([self.delegate respondsToSelector:@selector(didListenWithLocalPort:withPeerIdentifier:)])
-      {
-        [self.delegate didListenWithLocalPort:port withPeerIdentifier:_peerIdentifier];
-      }
+      [self.delegate didListenWithLocalPort:port withPeerIdentifier:_peerIdentifier];
         
       return YES;
     }

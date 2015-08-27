@@ -247,12 +247,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   {
     // A new peer or one that has become visible again. Only
     // contact delegate when the state changes (we get duplicates a lot)
-    if ([_multipeerSessionDelegate respondsToSelector:@selector(didFindPeerIdentifier:peerName:)])
-    {
-      [_multipeerSessionDelegate 
-        didFindPeerIdentifier:[clientSession remotePeerIdentifier] 
-                     peerName:info[PEER_NAME_KEY]];
-    }
+    [_multipeerSessionDelegate didFindPeerIdentifier:[clientSession remotePeerIdentifier] 
+                                            peerName:info[PEER_NAME_KEY]];
   }
 }
 
@@ -288,10 +284,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     if (previouslyVisible == YES)
     {
       // Let interested parties know we lost a peer, only do this on a state change
-      if ([_multipeerSessionDelegate respondsToSelector:@selector(didLosePeerIdentifier:)])
-      {
-        [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession remotePeerIdentifier]];
-      }
+      [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession remotePeerIdentifier]];
     }
   }
   else
