@@ -197,7 +197,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 // SocketServerDelegate
 ////////////////////////////
 
-// Connects to the peer server with the specified peer idetifier.
+// Connects to the peer server with the specified peer identifier.
 - (BOOL)connectToPeer:(NSString *)peerIdentifier 
       connectCallback:(void(^)(NSString *, uint))connectCallback
 {
