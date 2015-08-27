@@ -206,6 +206,9 @@
 
       default:
       {
+        @throw [NSException exceptionWithName:@"UnknownStreamEvent" 
+                                       reason:@"Input stream sent unknown event" 
+                                     userInfo:nil];
       }
       break;
     }
@@ -246,6 +249,9 @@
 
       default:
       {
+        @throw [NSException exceptionWithName:@"UnknownStreamEvent" 
+                                       reason:@"Output stream sent unknown event" 
+                                     userInfo:nil];
       }
       break;
     }
