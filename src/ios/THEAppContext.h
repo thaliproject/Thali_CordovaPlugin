@@ -51,4 +51,7 @@ typedef void(^ConnectCallback)(NSString *error, uint port);
 // Disconnects from the peer with the specified peer idetifier.
 - (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
 
+// Kill connection without cleanup - Testing only !!
+- (BOOL)killConnection:(NSString *)peerIdentifier;
+
 @end

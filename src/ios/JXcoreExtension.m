@@ -140,6 +140,32 @@
       }
     }
   } withName:@"Disconnect"];
+
+  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+  {
+    NSLog(@"jxcore: killConnection");
+
+    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
+    {
+      NSLog(@"jxcore: killConnection: badParam");
+      [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+    }
+    else
+    {
+      if ([theApp killConnection: params[0]])
+      {
+        NSLog(@"jxcore: killConnection: success");
+        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+      }
+      else
+      {
+        NSLog(@"jxcore: killConnection: fail");
+        [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
+      }
+    }
+
+  } withName:@"KillConnection"];
+
 }
 
 @end

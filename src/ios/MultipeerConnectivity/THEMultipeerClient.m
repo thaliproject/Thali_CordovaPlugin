@@ -179,6 +179,31 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   return success; 
 }
 
+- (BOOL)killConnection:(NSString *)peerIdentifier
+{
+  __block BOOL success = NO;
+
+  [_clientSessions updateForPeerIdentifier:peerIdentifier 
+                               updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
+
+    THEMultipeerClientSession *clientSession = (THEMultipeerClientSession *)p;
+    if (clientSession)
+    {
+      if ([clientSession connectionState] != THEPeerSessionStateConnected)
+      {
+        success = YES;
+
+        NSLog(@"client: killing peer: %@", peerIdentifier);
+        [clientSession kill];
+      }
+    }
+
+    return clientSession;
+  }];
+
+  return success;
+}
+
 // MCNearbyServiceBrowserDelegate
 /////////////////////////////////
 

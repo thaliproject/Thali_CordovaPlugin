@@ -185,9 +185,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   return NO;
 }
 
-// SocketServerDelegate
-////////////////////////////
-
 // Connects to the peer server with the specified peer identifier.
 - (BOOL)connectToPeer:(NSString *)peerIdentifier 
       connectCallback:(void(^)(NSString *, uint))connectCallback
@@ -203,7 +200,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
                                               withConnectCallback:connectCallback];
 }
 
-// Disconnects from the peer server with the specified peer idetifier.
+// Disconnects from the peer server with the specified peer identifier.
 - (BOOL)disconnectFromPeer:(NSString *)peerIdentifier
 {
   // If communications are not enabled, return NO.
@@ -214,6 +211,18 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   }
     
   return [_multipeerSession disconnectFromPeerServerWithPeerIdentifier:peerIdentifier];
+}
+
+// Kill connection with extreme prejudice, no clean-up, testing only
+- (BOOL)killConnection:(NSString *)peerIdentifier
+{
+  if ([_atomicFlagCommunicationsEnabled isClear])
+  {
+    NSLog(@"Communications not enabled");
+    return NO;
+  }
+
+  return [_multipeerSession killConnection:peerIdentifier];
 }
 
 ////////////////////////////////////////////////////////////

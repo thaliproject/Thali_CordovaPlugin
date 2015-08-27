@@ -137,4 +137,10 @@
   return [_client disconnectFromPeerWithPeerIdentifier:peerIdentifier];
 }
 
+- (BOOL)killConnection:(NSString *)peerIdentifier
+{
+  // Cause trouble for testing purposes
+  return [_client killConnection:peerIdentifier];
+}
+
 @end

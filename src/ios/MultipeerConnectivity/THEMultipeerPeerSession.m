@@ -142,6 +142,15 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   }
 }
 
+-(void)kill
+{
+  // Disconnect without being polite, testing only !!
+  @synchronized(self)
+  {
+    [_session disconnect];
+  }
+}
+
 -(THEMultipeerSocketRelay *)createRelay
 {
   return nil;

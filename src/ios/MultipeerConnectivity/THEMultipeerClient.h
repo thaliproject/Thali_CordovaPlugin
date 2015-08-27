@@ -34,19 +34,22 @@
 
 // Service type here is what we're looking for, not what we may be advertising 
 // (although they'll usually be the same)
--(id) initWithPeerId:(MCPeerID *)peerId 
+- (id)initWithPeerId:(MCPeerID *)peerId 
      withServiceType:(NSString *)serviceType 
     withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate;
 
 // Start and stop the client (i.e. the peer discovery process)
--(void) start;
--(void) stop;
+- (void)start;
+- (void)stop;
 
 // Connect to a remote peer identified by the application level identifier,
--(BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
+- (BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
                     withConnectCallback:(ConnectCallback)connectCallback;
 
 // Disconnect to a remote peer identified by the application level identifier
--(BOOL) disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier;
+- (BOOL)disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier;
+
+// Kill connection for testing purposes
+- (BOOL)killConnection:(NSString *)peerIdentifier;
 
 @end

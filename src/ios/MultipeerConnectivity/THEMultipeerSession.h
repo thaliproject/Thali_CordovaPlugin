@@ -54,4 +54,7 @@
 // Connects from the peer server with the specified peer identifier.
 - (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;
 
+// Kill the connection without clean-up. Testing only !!
+- (BOOL)killConnection:(NSString *)peerIdentifier;
+
 @end
