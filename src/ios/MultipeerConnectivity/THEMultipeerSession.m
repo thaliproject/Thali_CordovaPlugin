@@ -45,7 +45,7 @@
   // Our local peer id
   MCPeerID * _peerID;
    
-  // Mutex used to synchronize accesss to the things below.
+  // Mutex used to synchronize access to the things below.
   pthread_mutex_t _mutex;
 
   // The multipeer client which will handle browsing and connecting for us
