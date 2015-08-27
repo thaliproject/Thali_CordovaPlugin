@@ -50,21 +50,33 @@ MockThaliReplicationManager.prototype.stop = function () {
   }.bind(this));
 };
 
-var replicationManager, app;
+var app;
 
 // test setup & teardown activities
 var test = tape({
   setup: function(t) {
     global.Mobile = mockMobile;
-    replicationManager = new MockThaliReplicationManager();
+
     app = express();
     t.end();
   },
   teardown: function(t) {
     global.Mobile = originalMobile;
+    global.isInIdentityExchange = false;
     t.end();
   }
 });
 
 test('Calling startIdentityExchange twice creates and error', function (t) {
+  var myFriendlyName = randomString.generate(32);
+
+  var replicationManager = new MockThaliReplicationManager();
+  var exchange = identityExchange(app, replicationManager);
+
+  exchange.startIdentityExchange(myFriendlyName, function () {
+    exchange.startIdentityExchange(myFriendlyName, function (err) {
+      t.ok(err, 'Start identity exchange twice should cause an error');
+      t.end();
+    });
+  });
 });
