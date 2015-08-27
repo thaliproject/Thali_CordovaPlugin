@@ -54,11 +54,14 @@
   // The multipeer server which will handle advertising out service and accepting 
   // connections from remote clients
   THEMultipeerServer *_server;
+
+  __weak id<THEMultipeerSessionDelegate> _delegate; 
 }
 
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
+                    sessionDelegate:(id<THEMultipeerSessionDelegate>)delegate
 {
     self = [super init];
     
@@ -66,7 +69,9 @@
     {
         return nil;
     }
-    
+   
+    _delegate = delegate;
+ 
     _serviceType = serviceType;
     _peerIdentifier = peerIdentifier;
     _peerName = peerName;
@@ -76,9 +81,16 @@
     return self;
 }
 
+- (void)dealloc
+{
+  [self stop];
+}
+
 // Starts peer networking.
 - (void)start
 {
+  assert(_delegate != nil);
+
   _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
  
   // Start up the networking components  
@@ -99,6 +111,8 @@
 - (void)stop
 {
   NSLog(@"THEMultipeerSession stopping peer");
+
+  _delegate = nil;
 
   [_client stop];
   _client = nil;

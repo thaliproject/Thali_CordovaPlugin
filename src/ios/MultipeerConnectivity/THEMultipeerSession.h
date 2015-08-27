@@ -34,19 +34,16 @@
 // Contains both client and server members which will discover and connect (the client) and
 // advertise and accept (the server) connections from remote peers.
 @interface THEMultipeerSession : NSObject
-
-@property (nonatomic, weak) id<THEMultipeerSessionDelegate> delegate;
-
+ 
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSString *)peerIdentifier
-                           peerName:(NSString *)peerName;
+                           peerName:(NSString *)peerName
+                    sessionDelegate:(id<THEMultipeerSessionDelegate>)delegate;
 
-// Starts multipeer session both discovering and advertising.
+// Starts multipeer session both discovering and advertising, will stop only on destruction
+// of the instance
 - (void)start;
-
-// Stops all multipeer activity
-- (void)stop;
 
 // Connects to the peer server with the specified peer identifier. |connectCallback| will
 // be called when the connection completes with first param being any error message or nil and

@@ -141,9 +141,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     // Intitialise the multipeer connectivity stack..
     _multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
                                                           peerIdentifier:peerIdentifier
-                                                              peerName:[serverPort stringValue]];
-    [_multipeerSession setDelegate:self];
-
+                                                                peerName:[serverPort stringValue]
+                                                         sessionDelegate:self];
     // Start networking..
     [_peerBluetooth start];
     [_multipeerSession start];
@@ -172,10 +171,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
     NSLog(@"app: stop broadcasting");
 
     [_peerBluetooth stop];
-    [_multipeerSession stop];
-
     [_peerBluetooth setDelegate:nil];
-    [_multipeerSession setDelegate:nil];
 
     _peerBluetooth = nil;
     _multipeerSession = nil;
