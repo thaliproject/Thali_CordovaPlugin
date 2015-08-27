@@ -52,7 +52,8 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 
 // Class initializer.
 - (instancetype)initWithPeripheral:(CBPeripheral *)peripheral
-                      initialState:(THEPeripheralDescriptorState)initialState;
+                      initialState:(THEPeripheralDescriptorState)initialState
+                 bluetoothDelegate:(id<THEPeerBluetoothDelegate>)delegate;
 
 @end
 
@@ -62,11 +63,13 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 @private
     // The peripheral.
     CBPeripheral * _peripheral;
+    __weak id<THEPeerBluetoothDelegate> _delegate;
 }
 
 // Class initializer.
 - (instancetype)initWithPeripheral:(CBPeripheral *)peripheral
                       initialState:(THEPeripheralDescriptorState)initialState
+                 bluetoothDelegate:(id<THEPeerBluetoothDelegate>)delegate
 {
     // Initialize superclass.
     self = [super init];
@@ -80,6 +83,8 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     // Initialize.
     _peripheral = peripheral;
     _state = initialState;
+
+    _delegate = delegate;
 
     // Done.
     return self;
@@ -209,12 +214,16 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     
     // The pending characteristic updates array.
     NSMutableArray * _pendingCharacteristicUpdates;
+
+    // The bluetooth delegate which will receive peer availability updates
+    __weak id<THEPeerBluetoothDelegate> _delegate;
 }
 
 // Class initializer.
 - (instancetype)initWithServiceType:(NSUUID *)serviceType
                      peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
+                  bluetoothDelegate:(id<THEPeerBluetoothDelegate>) delegate
 {
     // Initialize superclass.
     self = [super init];
@@ -224,7 +233,9 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     {
         return nil;
     }
-    
+   
+    _delegate = delegate;
+ 
     // If the peer name is too long, truncate it.
     if ([peerName length] > 100)
     {
@@ -297,6 +308,11 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     return self;
 }
 
+- (void)dealloc
+{
+  [self stop];
+}
+
 // Starts peer Bluetooth.
 - (void)start
 {
@@ -320,6 +336,8 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 {
     // Lock.
     pthread_mutex_lock(&_mutex);
+
+    _delegate = nil;
 
     // Stop, if we should.
     if (_enabled)
@@ -439,8 +457,10 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     if (!_peripherals[peripheralIdentifierString])
     {
         // Add a THEPeripheralDescriptor to the peripherals dictionary.
-        _peripherals[peripheralIdentifierString] = [[THEPeripheralDescriptor alloc] initWithPeripheral:peripheral
-                                                                              initialState:THEPeripheralDescriptorStateConnecting];
+        _peripherals[peripheralIdentifierString] = [[THEPeripheralDescriptor alloc] 
+                                        initWithPeripheral:peripheral
+                                              initialState:THEPeripheralDescriptorStateConnecting
+                                         bluetoothDelegate:_delegate];
 
         // Connect to the peripheral.
         [_centralManager connectPeripheral:peripheral
@@ -471,13 +491,14 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     else
     {
         // Allocate a new peripheral descriptor and add it to the peripherals dictionary.
-        peripheralDescriptor = [[THEPeripheralDescriptor alloc] initWithPeripheral:peripheral
-                                                          initialState:THEPeripheralDescriptorStateInitializing];
+        peripheralDescriptor = [[THEPeripheralDescriptor alloc] 
+                                       initWithPeripheral:peripheral
+                                             initialState:THEPeripheralDescriptorStateInitializing
+                                        bluetoothDelegate:_delegate];
         _peripherals[peripheralIdentifierString] = peripheralDescriptor;
     }
     
     // Set our delegate on the peripheral and discover its services.
-    [peripheral setDelegate:(id<CBPeripheralDelegate>)self];
     [peripheral discoverServices:@[_serviceType]];
     
     // Unlock.
@@ -513,7 +534,7 @@ didFailToConnectPeripheral:(CBPeripheral *)peripheral
 // Invoked when a peripheral is disconnected.
 - (void)centralManager:(CBCentralManager *)centralManager
 didDisconnectPeripheral:(CBPeripheral *)peripheral
-                 error:(NSError *)error
+                  error:(NSError *)error
 {
     // Get the peripheral identifier string.
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
@@ -528,10 +549,10 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
         // Notify the delegate.
         if ([peripheralDescriptor peerName])
         {
-            if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didDisconnectPeerIdentifier:)])
+            if ([_delegate respondsToSelector:@selector(peerBluetooth:didDisconnectPeerIdentifier:)])
             {
-                [[self delegate] peerBluetooth:self
-                   didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
+                [_delegate peerBluetooth:self 
+                  didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
             }
         }
         
@@ -646,9 +667,10 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
             [peripheralDescriptor setState:THEPeripheralDescriptorStateConnected];
             
             // Notify the delegate that the peer is connected.
-            if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didConnectPeerIdentifier:peerName:)])
+            if ([_delegate 
+                  respondsToSelector:@selector(peerBluetooth:didConnectPeerIdentifier:peerName:)])
             {
-                [[self delegate] peerBluetooth:self
+                [_delegate peerBluetooth:self
                       didConnectPeerIdentifier:[peripheralDescriptor peerID]
                                       peerName:[peripheralDescriptor peerName]];
             }

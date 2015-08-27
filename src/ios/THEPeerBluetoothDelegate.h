@@ -35,7 +35,7 @@
 // Notifies the delegate that a peer was connected.
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
 didConnectPeerIdentifier:(NSString *)peerIdentifier
-             peerName:(NSString *)peerName;
+                peerName:(NSString *)peerName;
 
 // Notifies the delegate that a peer was disconnected.
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth

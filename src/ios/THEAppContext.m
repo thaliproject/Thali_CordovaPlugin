@@ -45,10 +45,6 @@ NSString * const kPeerClientConnecting      = @"peerClientConnecting";
 NSString * const kPeerClientConnected       = @"peerClientConnected";
 NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
-// THEAppContext (THEPeerBluetoothDelegate) interface.
-@interface THEAppContext (THEPeerBluetoothDelegate)
-@end
-
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal)
 
@@ -134,8 +130,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
     _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:btServiceType
                                                     peerIdentifier:peerIdentifier
-                                                          peerName:[serverPort stringValue]];
-    [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
+                                                          peerName:[serverPort stringValue]
+                                                 bluetoothDelegate:self];
        
 
     // Intitialise the multipeer connectivity stack..
@@ -169,9 +165,6 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   if ([_atomicFlagCommunicationsEnabled tryClear])
   {
     NSLog(@"app: stop broadcasting");
-
-    [_peerBluetooth stop];
-    [_peerBluetooth setDelegate:nil];
 
     _peerBluetooth = nil;
     _multipeerSession = nil;
@@ -285,13 +278,9 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   }
 }
 
-@end
-
 ///////////////////////////////////////////////////////////
 // THEAppContext (THEPeerBluetoothDelegate) implementation.
 ///////////////////////////////////////////////////////////
-
-@implementation THEAppContext (THEPeerBluetoothDelegate)
 
 // Notifies the delegate that a peer was connected.
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
