@@ -44,7 +44,7 @@ Follow the instructions at [http://jxcore.com/downloads/](http://jxcore.com/down
 installation worked:
 ```
 $ jx -jxv
-v Beta-0.3.0.3
+v 0.3.0.5
 ```
 
 ### Install Cordova
@@ -71,17 +71,14 @@ To use Thali in a Cordova project one must do the following:
 2. Inside the jxcore folder create the app.js for your application
 3. Inside the jxcore folder create the package.json for your application
  * `jx npm init` provides an easy to use wizard that will create a basic package.json file
-4. Inside the jxcore folder run the command `jx install thali --save`
-5. In the www/jxcore directory run `find . -name "*.gz" -delete`
- * This step will go away in an upcoming release of JXCore that will support the `--autoremove "*.gz"` switch
-6. Make sure to run `cordova build ios` or `cordova build android` as appropriate as this is critical to moving key files into place
+4. Inside the jxcore folder run the command `jx install thali --autoremove="*.gz" --save`
+5. Make sure to run `cordova build` as this is critical to moving key files into place
  * Yes, an exception did get thrown during the build. No, it isn't harmful. No, we haven't quite figured out
  why it gets thrown, the verbose debug logs aren't saying anything useful.
 
 Now you can run your app.
 
-Note that Thali uses a subdirectory in your project called thaliDontCheckin to manage certain downloads. Per the name of the directory,
-please don't check it in to your repro.
+Note that Thali uses a subdirectory in your project called thaliDontCheckin to manage certain downloads. Per the name of the directory, please don't check it in to your repro.
 
 If you want to upgrade to a newer version of Thali_CordovaPlugin all you have to do is just edit your package.json 
 with the version you want and then run 'jx install'. This will automatically update the Javascript files as well 
