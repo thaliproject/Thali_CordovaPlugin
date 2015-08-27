@@ -9,6 +9,7 @@ var mockMobile = require('./mockmobile');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var express = require('express');
+var randomString = require('randomstring');
 
 var ThaliEmitter = require('thali/thaliemitter');
 var identityExchange = require('thali/identityexchange');
@@ -16,31 +17,33 @@ var identityExchange = require('thali/identityexchange');
 inherits(MockThaliReplicationManager, EventEmitter);
 
 // Mock replication manager
-function MockThaliReplicationManager() {
+function MockThaliReplicationManager(startError, stopError) {
   this._emitter = new ThaliEmitter();
+  this._startError = startError;
+  this._stopError = stopError;
   EventEmitter.call(this);
 }
 
-MockThaliReplicationManager.prototype.start = function (port, dbName, deviceName, error) {
+MockThaliReplicationManager.prototype.start = function (port, dbName, deviceName) {
   this._port = port;
   this._dbName = dbName;
   this._deviceName = deviceName;
 
   this.emit('starting');
   setImmediate(function () {
-    if (error) {
-      this.emit('startError', error);
+    if (this._startError) {
+      this.emit('startError', this._startError);
     } else {
       this.emit('started');
     }
   }.bind(this));
 };
 
-MockThaliReplicationManager.prototype.stop = function (error) {
+MockThaliReplicationManager.prototype.stop = function () {
   this.emit('stopping');
   setImmediate(function () {
-    if (error) {
-      this.emit('stopError', error);
+    if (this._stopError) {
+      this.emit('stopError', this._stopError);
     } else {
       this.emit('stopped');
     }
@@ -64,5 +67,4 @@ var test = tape({
 });
 
 test('Calling startIdentityExchange twice creates and error', function (t) {
-  
 });
