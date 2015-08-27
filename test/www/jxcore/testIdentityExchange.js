@@ -80,3 +80,23 @@ test('Calling startIdentityExchange twice creates and error', function (t) {
     });
   });
 });
+
+test('Can emit peerIdentityExchange event', function (t) {
+  var hash = randomString.generate(32);
+  var friendlyName = randomString.generate(10);
+
+  var replicationManager = new MockThaliReplicationManager();
+
+  replicationManager._emitter.once('peerIdentityExchange', function (peer) {
+    t.equal(peer.peerName, hash, 'hash should equal peer name');
+    t.equal(peer.peerFriendlyName, friendlyName, 'friendlyName should equal peer friendly name');
+    t.end();
+  });
+
+  var peers = [
+    { peerName: randomString.generate(32) },
+    { peerName: hash + ';' + friendlyName }
+  ];
+
+  replicationManager._emitter.emit('peerAvailabilityChanged', peers);
+});
