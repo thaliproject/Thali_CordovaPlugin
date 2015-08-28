@@ -70,6 +70,9 @@ Follow the instructions here: http://maven.apache.org/download.cgi
 #### Clone the Thali Cordova Plugin library
 `$ git clone https://github.com/thaliproject/Thali_CordovaPlugin_BtLibrary.git`  
 
+remember to get story_08_juksilve !
+
+
 #### Build the Thali Cordova Plugin library
 At the root of the Thali Cordova Plugin Library that you just git cloned:  
 
@@ -84,10 +87,10 @@ before you will be able to run the next command.
 `$ ./gradlew build install`  
 
 Once built the library should be visible in:  
-`<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.0`
+`<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.2`
 
 Once built the library should be visible in:  
-`<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.0`
+`<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.2`
 
 
 ## Unit Testing the Thali Cordova Plugin

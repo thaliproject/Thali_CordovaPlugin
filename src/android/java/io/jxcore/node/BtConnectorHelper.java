@@ -23,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Created by juksilve on 14.5.2015.
  */
-public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector, BtSocketDisconnectedCallBack {
+public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector {
 
     private final Context context;
 
@@ -38,7 +38,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     private BTConnector mBTConnector = null;
 
     private final CopyOnWriteArrayList<BtToServerSocket> mServerSocketList = new CopyOnWriteArrayList<BtToServerSocket>();
-    private BtToRequestSocket mBtToRequestSocket = null;
+    private final CopyOnWriteArrayList<BtToRequestSocket> mRequestSocketList = new CopyOnWriteArrayList<BtToRequestSocket>();
 
     private int mServerPort = 0;
 
@@ -97,27 +97,32 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     // we only cut off our outgoing connections, incoming ones are cut off from the other end.
     // if we want to cut off whole communications, we'll do Stop
     public boolean Disconnect(String peerId){
-        BtToRequestSocket tmpSoc = mBtToRequestSocket;
-        if(tmpSoc == null) {
-            return false;
+
+        for (BtToRequestSocket rSocket : mRequestSocketList) {
+            if (rSocket != null) {
+                String currentPeerId = rSocket.GetPeerId();
+                if (peerId.equalsIgnoreCase(currentPeerId)) {
+                    Log.i("BtConnectorHelper","Disconnect outgoing peer: " + currentPeerId);
+                    rSocket.Stop();
+                    mRequestSocketList.remove(rSocket);
+                    return true;
+                }
+            }
         }
 
-        String currenPeerId = tmpSoc.GetPeerId();
-        Log.i("BtConnectorHelper","Disconnect : " + peerId + ", current request : " + currenPeerId);
-        if (peerId.equalsIgnoreCase(currenPeerId)) {
-            tmpSoc.Stop();
-            mBtToRequestSocket = null;
-            return true;
-        }
         return false;
     }
 
     private void DisconnectAll(){
-        BtToRequestSocket tmpSoc = mBtToRequestSocket;
-        mBtToRequestSocket = null;
-        if(tmpSoc != null) {
-            tmpSoc.Stop();
+
+        for (BtToRequestSocket rSocket : mRequestSocketList) {
+            if (rSocket != null) {
+                Log.i("BtConnectorHelper","Disconnect:::Stop : BtToRequestSocket :" + rSocket.getName());
+                rSocket.Stop();
+            }
         }
+
+        mRequestSocketList.clear();
     }
 
     //function to disconnect all incoming connections
@@ -158,9 +163,9 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             throw new RuntimeException("BeginConnectPeer callback is NULL !!!!!!");
         }
 
-        BtToRequestSocket tmpToReqSoc = mBtToRequestSocket;
-        if (tmpToReqSoc != null) {
-            connectStatusCallback.ConnectionStatusUpdate("Maximum peer connections reached, please try again after disconnecting a peer. Connected to " + tmpToReqSoc.GetPeerId(), -1);
+        //todo what should we have here for the actual value ?
+        if (mRequestSocketList.size() > 100) {
+            connectStatusCallback.ConnectionStatusUpdate("Maximum peer connections reached, please try again after disconnecting a peer. Connected to " + mRequestSocketList.size() + " peers.",-1);
             return;
         }
 
@@ -224,7 +229,22 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         if (incoming) {
             BtToServerSocket tmpBtToServerSocket = null;
             try {
-                tmpBtToServerSocket = new BtToServerSocket(bluetoothSocket, this);
+                tmpBtToServerSocket = new BtToServerSocket(bluetoothSocket, new BtSocketDisconnectedCallBack(){
+                    //Called when disconnect event happens, so we can stop & clean everything now.
+                    @Override
+                    public void Disconnected(Thread who, String Error) {
+                        Log.i("BtConnectorHelper","BT Disconnected with error : " + Error);
+
+                        for (BtToServerSocket rSocket : mServerSocketList) {
+                            if (rSocket != null && (rSocket.getId() == who.getId())) {
+                                Log.i("BtConnectorHelper","Disconnect:::Stop : mBtToServerSocket :" + rSocket.GetPeerName());
+                                rSocket.Stop();
+                                mServerSocketList.remove(rSocket);
+                                break;
+                            }
+                        }
+                    }
+                });
             }catch (IOException e){
                 Log.i("BtConnectorHelper","Creating BtToServerSocket failed : " + e.toString());
                 return;
@@ -244,27 +264,20 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         }
 
         //not incoming, thus its outgoing
-
-        // basically we should never get to make successful connection
-        // if we already have one outgoing, so the old if it would somehow be there
-        // would be invalid, so lets get rid of it if we are having new outgoing connection.
-        BtToRequestSocket tmpregSoc = mBtToRequestSocket;
-        mBtToRequestSocket = null;
-        if (tmpregSoc != null) {
-            tmpregSoc.Stop();
-        }
-
+        BtToRequestSocket tmpRequestSocket = null;
         try {
-            tmpregSoc = new BtToRequestSocket(bluetoothSocket, new BtSocketDisconnectedCallBack() {
+            tmpRequestSocket = new BtToRequestSocket(bluetoothSocket, new BtSocketDisconnectedCallBack() {
                 //Called when disconnect event happens, so we can stop & clean everything now.
                 @Override
                 public void Disconnected(Thread who, String Error) {
 
-                    BtToRequestSocket tmpSoc = mBtToRequestSocket;
-                    mBtToRequestSocket = null;
-                    if (tmpSoc != null) {
-                        Log.i("BtConnectorHelper","BT Request socket disconnected");
-                        tmpSoc.Stop();
+                    for (BtToRequestSocket rSocket : mRequestSocketList) {
+                        if (rSocket != null && (rSocket.getId() == who.getId())) {
+                            Log.i("BtConnectorHelper","Disconnect outgoing peer: " + rSocket.GetPeerName());
+                            rSocket.Stop();
+                            mRequestSocketList.remove(rSocket);
+                            break;
+                        }
                     }
                 }
             }, new BtToRequestSocket.ReadyForIncoming() {
@@ -294,27 +307,10 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             }
             return;
         }
-        tmpregSoc.setDefaultUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
-        tmpregSoc.SetIdAddressAndName(peerId, peerName, peerAddress);
-        tmpregSoc.start();
-        mBtToRequestSocket = tmpregSoc;
-    }
-
-
-    //This is only called for mBtToServerSocket classes, since mBtToRequestSocket handles it in its own instance callback
-    @Override
-    public void Disconnected(Thread who, String Error) {
-
-        Log.i("BtConnectorHelper","BT Disconnected with error : " + Error);
-
-        for (BtToServerSocket rSocket : mServerSocketList) {
-            if (rSocket != null && (rSocket.getId() == who.getId())) {
-                Log.i("BtConnectorHelper","Disconnect:::Stop : mBtToServerSocket :" + rSocket.GetPeerName());
-                rSocket.Stop();
-                mServerSocketList.remove(rSocket);
-                break;
-            }
-        }
+        mRequestSocketList.add(tmpRequestSocket);
+        tmpRequestSocket.setDefaultUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
+        tmpRequestSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
+        tmpRequestSocket.start();
     }
 
     // if the peer that just made incoming connection has not been discovered yet, we'll ad it here
