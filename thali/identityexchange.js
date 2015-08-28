@@ -179,22 +179,52 @@ module.exports = function identityExchange (app, replicationManager) {
 
   app.post('/identity/cb', function (req, res) {
     if (!global.isInIdentityExchange) {
-      return res.status(400).end();
+      return res.sendStatus(400);
+    }
+
+    if (!req.body) {
+      return res.sendStatus(400);
+    }
+    if (typeof req.body.cbValue !== 'string' || req.body.cbValue.length === 0) {
+      return res.sendStatus(400);
+    }
+    if (typeof req.body.pkMine !== 'string' || req.body.pkMine.length === 0) {
+      return res.sendStatus(400);
     }
 
     cbValue = new Buffer(req.body.cbValue);
     var buf = new Buffer(req.body.pkMine);
     if (!buf.equals(pkOtherBuffer)) {
-      return res.status(400).end();
+      return res.sendStatus(400);
     }
 
-    res.status(200).json({
+    res.sendStatus(200).json({
       pkOther: pkMineBuffer.toString('base64'),
       rnOther: rnMine.toString('base64')
     });
   });
 
   app.post('/identity/rnmine', function (req, res) {
+    if (!global.isInIdentityExchange) {
+      return res.sendStatus(400);
+    }
+
+    if (!req.body) {
+      return res.sendStatus(400);
+    }
+    if (typeof req.body.pkMine !== 'string' || req.body.pkMine.length === 0) {
+      return res.sendStatus(400);
+    }
+    if (typeof req.body.rnMine !== 'string' || req.body.rnMine.length !== 44) {
+      return res.sendStatus(400);
+    }
+
+    // Test if we're under attack
+    var testBuff = new Buffer(req.body.pkMine);
+    if (!testBuff.equals(pkOtherBuffer)) {
+      return res.sendStatus(400);
+    }
+
     var rnOther = new Buffer(req.body.rnMine);
     var newBuff = Buffer.concat([pkOtherBuffer, pkMineBuffer]);
     var hmac = crypto.createHmac('sha256', rnOther);
@@ -203,10 +233,10 @@ module.exports = function identityExchange (app, replicationManager) {
 
     // No match
     if (!ret.equals(cbValue)) {
-      return res.status(400).end();
+      return res.sendStatus(400);
     }
 
-    res.status(200).end();
+    res.sendStatus(200);
 
     var finalBuff = Buffer.concat([pkMineBuffer, pkOtherBuffer, rnOther]);
     hmac = crypto.createHmac('sha256', rnMine);
