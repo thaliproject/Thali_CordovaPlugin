@@ -41,9 +41,11 @@
                            peerName:(NSString *)peerName
                     sessionDelegate:(id<THEMultipeerSessionDelegate>)delegate;
 
-// Starts multipeer session both discovering and advertising, will stop only on destruction
-// of the instance
+// Starts multipeer session both discovering and advertising
 - (void)start;
+
+// Stop discovering and advertising, must be called before destrution
+- (void)stop;
 
 // Connects to the peer server with the specified peer identifier. |connectCallback| will
 // be called when the connection completes with first param being any error message or nil and

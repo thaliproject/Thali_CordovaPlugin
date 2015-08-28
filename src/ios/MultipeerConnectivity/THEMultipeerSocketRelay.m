@@ -178,17 +178,23 @@
 
       case NSStreamEventHasBytesAvailable:
       {
-        const uint bufferValue = 1024;
-        uint8_t *buffer = malloc(bufferValue);
-        NSInteger len = [_inputStream read:buffer maxLength:sizeof(bufferValue)];
-        if (len)
-        {
-          NSMutableData *toWrite = [[NSMutableData alloc] init];
-          [toWrite appendBytes:buffer length:len];
+        const uint BUFFER_LEN = 1024;
+        static uint8_t buffer[BUFFER_LEN];
 
-          assert(_socket);
-          [_socket writeData:toWrite withTimeout:-1 tag:len];
+        NSInteger len;
+        do
+        {
+          len = [_inputStream read:buffer maxLength:BUFFER_LEN];
+          if (len > 0)
+          {
+            NSMutableData *toWrite = [[NSMutableData alloc] init];
+            [toWrite appendBytes:buffer length:len];
+
+            assert(_socket);
+            [_socket writeData:toWrite withTimeout:-1 tag:len];
+          }
         }
+        while (len >= 0);
       }
       break;
 
