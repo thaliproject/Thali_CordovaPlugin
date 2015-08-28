@@ -37,7 +37,10 @@
                            peerName:(NSString *)peerName
                   bluetoothDelegate:(id<THEPeerBluetoothDelegate>)delegate;
 
-// Starts peer Bluetooth, will only stop on destruction
+// Starts BLE layer
 - (void)start;
+
+// Stops the BLE layer, must be called prior to destruction
+- (void)stop;
 
 @end

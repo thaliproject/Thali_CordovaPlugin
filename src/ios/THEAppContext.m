@@ -168,7 +168,9 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   {
     NSLog(@"app: stop broadcasting");
 
+    [_peerBluetooth stop];
     _peerBluetooth = nil;
+
     _multipeerSession = nil;
 
     if (reachabilityHandlerReference != nil) // network changed event may not have fired yet
