@@ -288,11 +288,11 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
    
     // Allocate and initialize the peripheral manager.
     _peripheralManager = [[CBPeripheralManager alloc] 
-                            initWithDelegate:(id<CBPeripheralManagerDelegate>)self
+                            initWithDelegate:self
                                        queue:backgroundQueue];
     
     // Allocate and initialize the central manager.
-    _centralManager = [[CBCentralManager alloc] initWithDelegate:(id<CBCentralManagerDelegate>)self
+    _centralManager = [[CBCentralManager alloc] initWithDelegate:self
                                                            queue:backgroundQueue];
     
     // Initialize
@@ -310,6 +310,10 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     
     // Done.
     return self;
+}
+
+- (void)dealloc
+{
 }
 
 // Starts peer Bluetooth.
@@ -337,6 +341,8 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     pthread_mutex_lock(&_mutex);
 
     _delegate = nil;
+    _peripheralManager.delegate = nil;
+    _centralManager.delegate = nil;
 
     // Stop, if we should.
     if (_enabled)
