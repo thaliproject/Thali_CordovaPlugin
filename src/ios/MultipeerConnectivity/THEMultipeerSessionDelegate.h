@@ -22,36 +22,17 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THEMultipeerSessionDelegate.h
 //
 
-#import <Foundation/Foundation.h>
-#import "THEMultipeerSessionDelegate.h"
-#import "THEPeerBluetoothDelegate.h"
+// Defines the interface through which the multipeer session will 
+// inform it's delegate about the visibility of peers
+@protocol THEMultipeerSessionDelegate <NSObject>
 
-// Callback that will be called when the lower levels have established
-// a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, uint port);
+// Notifies the delegate that a peer was found.
+- (void)didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName;
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEPeerBluetoothDelegate>
-
-// Class singleton.
-+ (instancetype)singleton;
-
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
-
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
-
-// Kill connection without cleanup - Testing only !!
-- (BOOL)killConnection:(NSString *)peerIdentifier;
+// Notifies the delegate that a peer was lost.
+- (void)didLosePeerIdentifier:(NSString *)peerIdentifier;
 
 @end

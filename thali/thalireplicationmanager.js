@@ -213,7 +213,6 @@ ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
     } catch (e) {
       console.log('Client close with error: %s', e);
     }
-
     delete this._clients[peerIdentifier];
   }
   var existingReplication = this._replications[peerIdentifier];

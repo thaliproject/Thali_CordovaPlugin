@@ -33,6 +33,9 @@
 const NSUInteger kMaxStatusDataLength = 140 * 4;
 const NSUInteger kMaxPeerNameLength = 100;
 
+static NSString *const PEER_ID_CHARACTERISTIC_UID = @"E669893C-F4C2-4604-800A-5252CED237F9";
+static NSString *const PEER_NAME_CHARACTERISTIC_UID = @"2EFDAD55-5B85-4C78-9DE8-07884DC051FA";
+
 // THEPeripheralDescriptorState enumeration.
 typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 {
@@ -46,13 +49,14 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 @interface THEPeripheralDescriptor : NSObject
 
 // Properties.
-@property (nonatomic) NSUUID * peerID;
+@property (nonatomic) NSString * peerID;
 @property (nonatomic) NSString * peerName;
 @property (nonatomic) THEPeripheralDescriptorState state;
 
 // Class initializer.
 - (instancetype)initWithPeripheral:(CBPeripheral *)peripheral
-                      initialState:(THEPeripheralDescriptorState)initialState;
+                      initialState:(THEPeripheralDescriptorState)initialState
+                 bluetoothDelegate:(id<THEPeerBluetoothDelegate>)delegate;
 
 @end
 
@@ -62,11 +66,13 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 @private
     // The peripheral.
     CBPeripheral * _peripheral;
+    __weak id<THEPeerBluetoothDelegate> _delegate;
 }
 
 // Class initializer.
 - (instancetype)initWithPeripheral:(CBPeripheral *)peripheral
                       initialState:(THEPeripheralDescriptorState)initialState
+                 bluetoothDelegate:(id<THEPeerBluetoothDelegate>)delegate
 {
     // Initialize superclass.
     self = [super init];
@@ -80,6 +86,8 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     // Initialize.
     _peripheral = peripheral;
     _state = initialState;
+
+    _delegate = delegate;
 
     // Done.
     return self;
@@ -160,7 +168,7 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 {
 @private
     // The peer identifier.
-    NSUUID * _peerIdentifier;
+    NSString * _peerIdentifier;
     
     // The peer name.
     NSString * _peerName;
@@ -209,12 +217,16 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     
     // The pending characteristic updates array.
     NSMutableArray * _pendingCharacteristicUpdates;
+
+    // The bluetooth delegate which will receive peer availability updates
+    __weak id<THEPeerBluetoothDelegate> _delegate;
 }
 
 // Class initializer.
 - (instancetype)initWithServiceType:(NSUUID *)serviceType
-                     peerIdentifier:(NSUUID *)peerIdentifier
+                     peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
+                  bluetoothDelegate:(id<THEPeerBluetoothDelegate>) delegate
 {
     // Initialize superclass.
     self = [super init];
@@ -224,7 +236,9 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     {
         return nil;
     }
-    
+   
+    _delegate = delegate;
+ 
     // If the peer name is too long, truncate it.
     if ([peerName length] > 100)
     {
@@ -238,50 +252,50 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     _canonicalPeerName = [_peerName dataUsingEncoding:NSUTF8StringEncoding];
     
     // Initialize the peer identifier value.
-    UInt8 uuid[16];
-    [_peerIdentifier getUUIDBytes:uuid];
-    NSData * peerIdentifierValue = [NSData dataWithBytes:uuid
-                                                  length:sizeof(uuid)];
+    NSData * peerIdentifierValue = [_peerIdentifier dataUsingEncoding:NSUTF8StringEncoding];
     
     // Allocate and initialize the peer ID type.
-    _peerIDType = [CBUUID UUIDWithString:@"E669893C-F4C2-4604-800A-5252CED237F9"];
+    _peerIDType = [CBUUID UUIDWithString:PEER_ID_CHARACTERISTIC_UID];
     
     // Allocate and initialize the peer name type.
-    _peerNameType = [CBUUID UUIDWithString:@"2EFDAD55-5B85-4C78-9DE8-07884DC051FA"];
+    _peerNameType = [CBUUID UUIDWithString:PEER_NAME_CHARACTERISTIC_UID];
     
     // Allocate and initialize the service.
     _service = [[CBMutableService alloc] initWithType:_serviceType
                                               primary:YES];
     
     // Allocate and initialize the peer ID characteristic.
-    _characteristicPeerID = [[CBMutableCharacteristic alloc] initWithType:_peerIDType
-                                                               properties:CBCharacteristicPropertyRead
-                                                                    value:peerIdentifierValue
-                                                              permissions:CBAttributePermissionsReadable];
+    _characteristicPeerID = [[CBMutableCharacteristic alloc] 
+                                    initWithType:_peerIDType
+                                      properties:CBCharacteristicPropertyRead
+                                           value:peerIdentifierValue
+                                     permissions:CBAttributePermissionsReadable];
 
     // Allocate and initialize the peer name characteristic.
-    _characteristicPeerName = [[CBMutableCharacteristic alloc] initWithType:_peerNameType
-                                                                 properties:CBCharacteristicPropertyRead
-                                                                      value:_canonicalPeerName
-                                                                permissions:CBAttributePermissionsReadable];
+    _characteristicPeerName = [[CBMutableCharacteristic alloc] 
+                                        initWithType:_peerNameType
+                                          properties:CBCharacteristicPropertyRead
+                                               value:_canonicalPeerName
+                                         permissions:CBAttributePermissionsReadable];
 
     // Set the service characteristics.
-    [_service setCharacteristics:@[_characteristicPeerID,
-                                   _characteristicPeerName]];
+    [_service setCharacteristics:@[_characteristicPeerID, _characteristicPeerName]];
     
     // Allocate and initialize the advertising data.
-    _advertisingData = @{CBAdvertisementDataServiceUUIDsKey:    @[_serviceType],
-                         CBAdvertisementDataLocalNameKey:       _peerName};
+    _advertisingData = @{CBAdvertisementDataServiceUUIDsKey: @[_serviceType],
+                            CBAdvertisementDataLocalNameKey: _peerName};
     
     // The background queue.
-    dispatch_queue_t backgroundQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0);
-    
+    dispatch_queue_t backgroundQueue = 
+      dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0);
+   
     // Allocate and initialize the peripheral manager.
-    _peripheralManager = [[CBPeripheralManager alloc] initWithDelegate:(id<CBPeripheralManagerDelegate>)self
-                                                                 queue:backgroundQueue];
+    _peripheralManager = [[CBPeripheralManager alloc] 
+                            initWithDelegate:self
+                                       queue:backgroundQueue];
     
     // Allocate and initialize the central manager.
-    _centralManager = [[CBCentralManager alloc] initWithDelegate:(id<CBCentralManagerDelegate>)self
+    _centralManager = [[CBCentralManager alloc] initWithDelegate:self
                                                            queue:backgroundQueue];
     
     // Initialize
@@ -291,13 +305,18 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     // every peripheral we are either connecting or connected to.
     _peripherals = [[NSMutableDictionary alloc] init];
     
-    // Allocate and initialize the pending updates array. It contains a THECharacteristicUpdateDescriptor
-    // for each characteristic update that is pending after a failed call to CBPeripheralManager
+    // Allocate and initialize the pending updates array. It contains a 
+    // THECharacteristicUpdateDescriptor for each characteristic update that is pending 
+    // after a failed call to CBPeripheralManager
     // updateValue:forCharacteristic:onSubscribedCentrals.
     _pendingCharacteristicUpdates = [[NSMutableArray alloc] init];
     
     // Done.
     return self;
+}
+
+- (void)dealloc
+{
 }
 
 // Starts peer Bluetooth.
@@ -323,6 +342,10 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 {
     // Lock.
     pthread_mutex_lock(&_mutex);
+
+    _delegate = nil;
+    _peripheralManager.delegate = nil;
+    _centralManager.delegate = nil;
 
     // Stop, if we should.
     if (_enabled)
@@ -367,6 +390,7 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 {
 }
 
+
 // Invoked with the result of a addService call.
 - (void)peripheralManager:(CBPeripheralManager *)peripheralManager
             didAddService:(CBService *)service
@@ -383,8 +407,11 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     // Process as many pending characteristic updates as we can.
     while ([_pendingCharacteristicUpdates count])
     {
-        // Process the next pending characteristic update. If the trasnmission queue is full, stop processing.
-        THECharacteristicUpdateDescriptor * characteristicUpdateDescriptor = _pendingCharacteristicUpdates[0];
+        // Process the next pending characteristic update. 
+        // If the tranmission queue is full, stop processing.
+        THECharacteristicUpdateDescriptor * characteristicUpdateDescriptor = 
+          _pendingCharacteristicUpdates[0];
+
         if (![_peripheralManager updateValue:[characteristicUpdateDescriptor value]
                            forCharacteristic:[characteristicUpdateDescriptor characteristic]
                         onSubscribedCentrals:nil])
@@ -399,7 +426,6 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     // Unlock.
     pthread_mutex_unlock(&_mutex);
 }
-
 @end
 
 // THEPeerBluetooth (CBCentralManagerDelegate) implementation.
@@ -442,8 +468,10 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     if (!_peripherals[peripheralIdentifierString])
     {
         // Add a THEPeripheralDescriptor to the peripherals dictionary.
-        _peripherals[peripheralIdentifierString] = [[THEPeripheralDescriptor alloc] initWithPeripheral:peripheral
-                                                                              initialState:THEPeripheralDescriptorStateConnecting];
+        _peripherals[peripheralIdentifierString] = [[THEPeripheralDescriptor alloc] 
+                                        initWithPeripheral:peripheral
+                                              initialState:THEPeripheralDescriptorStateConnecting
+                                         bluetoothDelegate:_delegate];
 
         // Connect to the peripheral.
         [_centralManager connectPeripheral:peripheral
@@ -474,13 +502,14 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     else
     {
         // Allocate a new peripheral descriptor and add it to the peripherals dictionary.
-        peripheralDescriptor = [[THEPeripheralDescriptor alloc] initWithPeripheral:peripheral
-                                                          initialState:THEPeripheralDescriptorStateInitializing];
+        peripheralDescriptor = [[THEPeripheralDescriptor alloc] 
+                                       initWithPeripheral:peripheral
+                                             initialState:THEPeripheralDescriptorStateInitializing
+                                        bluetoothDelegate:_delegate];
         _peripherals[peripheralIdentifierString] = peripheralDescriptor;
     }
     
     // Set our delegate on the peripheral and discover its services.
-    [peripheral setDelegate:(id<CBPeripheralDelegate>)self];
     [peripheral discoverServices:@[_serviceType]];
     
     // Unlock.
@@ -502,8 +531,8 @@ didFailToConnectPeripheral:(CBPeripheral *)peripheral
     THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
     if (peripheralDescriptor)
     {
-        // Immediately reconnect. This is long-lived meaning that we will connect to this peer whenever it is
-        // encountered again.
+        // Immediately reconnect. This is long-lived meaning that we will connect to this peer 
+        // whenever it is encountered again.
         [peripheralDescriptor setState:THEPeripheralDescriptorStateConnecting];
         [_centralManager connectPeripheral:peripheral
                                    options:nil];
@@ -516,7 +545,7 @@ didFailToConnectPeripheral:(CBPeripheral *)peripheral
 // Invoked when a peripheral is disconnected.
 - (void)centralManager:(CBCentralManager *)centralManager
 didDisconnectPeripheral:(CBPeripheral *)peripheral
-                 error:(NSError *)error
+                  error:(NSError *)error
 {
     // Get the peripheral identifier string.
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
@@ -525,21 +554,19 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
     pthread_mutex_lock(&_mutex);
 
     // Find the peripheral descriptor in the peripherals dictionary. It should be there.
-    THEPeripheralDescriptor * peripheralDescriptor = [_peripherals objectForKey:peripheralIdentifierString];
+    THEPeripheralDescriptor * peripheralDescriptor = 
+      [_peripherals objectForKey:peripheralIdentifierString];
     if (peripheralDescriptor)
     {
         // Notify the delegate.
         if ([peripheralDescriptor peerName])
         {
-            if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didDisconnectPeerIdentifier:)])
-            {
-                [[self delegate] peerBluetooth:self
-                   didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
-            }
+            [_delegate peerBluetooth:self 
+                didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
         }
         
-        // Immediately reconnect. This is long-lived. Central manager will connect to this peer whenever it is
-        // discovered again.
+        // Immediately reconnect. This is long-lived. Central manager will connect to this peer 
+        // whenever it is discovered again.
         [peripheralDescriptor setState:THEPeripheralDescriptorStateConnecting];
         [_centralManager connectPeripheral:peripheral
                                    options:nil];
@@ -631,7 +658,8 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
         if ([[characteristic UUID] isEqual:_peerIDType])
         {
             // When the peer ID is updated, set the peer ID in the peripheral descriptor.
-            [peripheralDescriptor setPeerID:[[NSUUID alloc] initWithUUIDBytes:[[characteristic value] bytes]]];
+            [peripheralDescriptor setPeerID:[
+                [NSString alloc] initWithData:[characteristic value] encoding:NSUTF8StringEncoding]];
         }
         // Peer name characteristic.
         else if ([[characteristic UUID] isEqual:_peerNameType])
@@ -642,18 +670,16 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
         }
         
         // Detect when the peer is fully initialized and move it to the connected state.
-        if ([peripheralDescriptor state] == THEPeripheralDescriptorStateInitializing && [peripheralDescriptor peerID] && [peripheralDescriptor peerName])
+        if ([peripheralDescriptor state] == THEPeripheralDescriptorStateInitializing && 
+            [peripheralDescriptor peerID] && [peripheralDescriptor peerName])
         {
             // Move the peer to the connected state.
             [peripheralDescriptor setState:THEPeripheralDescriptorStateConnected];
             
             // Notify the delegate that the peer is connected.
-            if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didConnectPeerIdentifier:peerName:)])
-            {
-                [[self delegate] peerBluetooth:self
-                      didConnectPeerIdentifier:[peripheralDescriptor peerID]
-                                      peerName:[peripheralDescriptor peerName]];
-            }
+            [_delegate peerBluetooth:self
+                  didConnectPeerIdentifier:[peripheralDescriptor peerID]
+                                  peerName:[peripheralDescriptor peerName]];
         }
     }
 
@@ -669,7 +695,8 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
 // Starts advertising.
 - (void)startAdvertising
 {
-    if ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn && _enabled && ![_peripheralManager isAdvertising])
+    if ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn && 
+        _enabled && ![_peripheralManager isAdvertising])
     {
         [_peripheralManager addService:_service];
         [_peripheralManager startAdvertising:_advertisingData];
@@ -692,8 +719,9 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
     if ([_centralManager state] == CBCentralManagerStatePoweredOn && _enabled && !_scanning)
     {
         _scanning = YES;
-        [_centralManager scanForPeripheralsWithServices:@[_serviceType]
-                                                options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @(NO)}];
+        [_centralManager 
+            scanForPeripheralsWithServices:@[_serviceType]
+                                   options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @(NO)}];
     }
 }
 

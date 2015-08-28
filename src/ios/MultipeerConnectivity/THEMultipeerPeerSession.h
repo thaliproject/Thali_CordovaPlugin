@@ -22,33 +22,41 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeerNetworking.h
+//  THEMultipeerSession.h
 //
 
-#import <Foundation/Foundation.h>
-#import "THEPeerNetworkingDelegate.h"
+#import <MultipeerConnectivity/MultipeerConnectivity.h>
 
-// THEPeerNetworking interface.
-@interface THEPeerNetworking : NSObject
+typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
+  THEPeerSessionStateNotConnected  = 0,
+  THEPeerSessionStateConnecting    = 1,
+  THEPeerSessionStateConnected     = 2
+};
 
-// Properties.
-@property (nonatomic, weak) id<THEPeerNetworkingDelegate> delegate;
+// Encapsulates a discovered peer, their connection state and resources.
+// Any peer that has been discovered  will have a MultipeerPeerSession object although 
+// they may not currently be visible or connected. 
+// The underlying connection transport may be any available e.g. Bluetooth, WiFi etc.
+@interface THEMultipeerPeerSession : NSObject <MCSessionDelegate>
 
-// Class initializer.
-- (instancetype)initWithServiceType:(NSString *)serviceType
-                     peerIdentifier:(NSUUID *)peerIdentifier
-                           peerName:(NSString *)peerName;
+@property (nonatomic) BOOL visible;
+@property (readonly, nonatomic) THEPeerSessionState connectionState;
 
-// Starts peer networking.
-- (void)start;
+- (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID 
+                   withRemotePeerID:(MCPeerID *)remotePeerID
+           withRemotePeerIdentifier:(NSString *)peerIdentifier
+                    withSessionType:(NSString *)sessionType;
 
-// Stops peer networking.
-- (void)stop;
+- (MCPeerID *)remotePeerID;
+- (NSString *)remotePeerIdentifier;
 
-// Connects to the peer server with the specified peer identifier.
-- (BOOL)connectToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+- (MCSession *)session;
+- (MCSession *)connect;
 
-// Connects from the peer server with the specified peer identifier.
-- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+// Kill for testing only !!
+- (void)kill;
+
+- (void)disconnect;
 
 @end
+
