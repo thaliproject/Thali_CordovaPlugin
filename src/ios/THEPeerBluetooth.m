@@ -33,6 +33,9 @@
 const NSUInteger kMaxStatusDataLength = 140 * 4;
 const NSUInteger kMaxPeerNameLength = 100;
 
+static NSString *const PEER_ID_CHARACTERISTIC_UID = @"E669893C-F4C2-4604-800A-5252CED237F9";
+static NSString *const PEER_NAME_CHARACTERISTIC_UID = @"2EFDAD55-5B85-4C78-9DE8-07884DC051FA";
+
 // THEPeripheralDescriptorState enumeration.
 typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 {
@@ -252,10 +255,10 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     NSData * peerIdentifierValue = [_peerIdentifier dataUsingEncoding:NSUTF8StringEncoding];
     
     // Allocate and initialize the peer ID type.
-    _peerIDType = [CBUUID UUIDWithString:@"E669893C-F4C2-4604-800A-5252CED237F9"];
+    _peerIDType = [CBUUID UUIDWithString:PEER_ID_CHARACTERISTIC_UID];
     
     // Allocate and initialize the peer name type.
-    _peerNameType = [CBUUID UUIDWithString:@"2EFDAD55-5B85-4C78-9DE8-07884DC051FA"];
+    _peerNameType = [CBUUID UUIDWithString:PEER_NAME_CHARACTERISTIC_UID];
     
     // Allocate and initialize the service.
     _service = [[CBMutableService alloc] initWithType:_serviceType
