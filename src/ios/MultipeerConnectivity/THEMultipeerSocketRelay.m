@@ -95,26 +95,29 @@
 {
   NSLog(@"%@ relay: stopping", _relayType);
 
-  if (_socket)
+  @synchronized(self)
   {
-    NSLog(@"%@ relay: destroying socket %p", _relayType, _socket);
-    _socket.delegate = nil;
-    [_socket disconnect];
-    _socket = nil;
-  }
+    if (_socket)
+    {
+      NSLog(@"%@ relay: destroying socket %p", _relayType, _socket);
+      _socket.delegate = nil;
+      [_socket disconnect];
+      _socket = nil;
+    }
 
-  if (_inputStream)
-  {
-    [_inputStream close];
-    [_inputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
-    _inputStream = nil;
-  }
+    if (_inputStream)
+    {
+      [_inputStream close];
+      [_inputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
+      _inputStream = nil;
+    }
 
-  if (_outputStream)
-  {
-    [_outputStream close];
-    [_outputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
-    _outputStream = nil;
+    if (_outputStream)
+    {
+      [_outputStream close];
+      [_outputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
+      _outputStream = nil;
+    }
   }
 }
 
@@ -181,20 +184,23 @@
         const uint BUFFER_LEN = 1024;
         static uint8_t buffer[BUFFER_LEN];
 
-        NSInteger len;
-        do
+        @synchronized(self)
         {
-          len = [_inputStream read:buffer maxLength:BUFFER_LEN];
-          if (len > 0)
+          NSInteger len;
+          do
           {
-            NSMutableData *toWrite = [[NSMutableData alloc] init];
-            [toWrite appendBytes:buffer length:len];
+            len = [_inputStream read:buffer maxLength:BUFFER_LEN];
+            if (len > 0)
+            {
+              NSMutableData *toWrite = [[NSMutableData alloc] init];
+              [toWrite appendBytes:buffer length:len];
 
-            assert(_socket);
-            [_socket writeData:toWrite withTimeout:-1 tag:len];
+              assert(_socket);
+              [_socket writeData:toWrite withTimeout:-1 tag:len];
+            }
           }
+          while (len >= 0);
         }
-        while (len >= 0);
       }
       break;
 
