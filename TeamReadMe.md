@@ -20,11 +20,15 @@ To keep things somewhat clean we have inside of Thali's NPM directory a subdirec
 logic that has nothing to do with actually using Thali on a device. We then use a cordova post prepare script to remove this
 directory before we publish so it doesn't end up on the device.
 
-A final note is that for all of this to work we have to have files in at least four different places:
-__NPM__ - We own the thali NPM module and we use `npm publish` from the thali sub-directory to publish there.
-__Thali_CordovaPlugin__ - This is our GIT repro from which we pull down the cordova plugin bytes
-__JXCore_CordovaPlugin__ - Our plugin has a dependency in its plugin.xml on JXCore's Cordova plugin
-__BinTray__ - We have our own bintray available [here](https://bintray.com/thali/Thali) where we publish the btconnectorlib2 JAR for Android
+For all of this to work we have to have files in at least four different places:
+
+* __NPM__ - We own the thali NPM module and we use `npm publish` from the thali sub-directory to publish there.
+* __Thali_CordovaPlugin__ - This is our GIT repro from which we pull down the cordova plugin bytes
+* __JXCore_CordovaPlugin__ - Our plugin has a dependency in its plugin.xml on JXCore's Cordova plugin
+* __BinTray__ - We have our own bintray available [here](https://bintray.com/thali/Thali) where we publish the btconnectorlib2 JAR for Android
+
+When we update our JS files we have to do a 'npm publish' from the thali sub-directory to Thali.
+Also keep in mind that thali/install/install.js has a variable called 'thaliBranchName" that points to the branch where we will download the cordova code from. Right now that branch points at story_0 but soon enough we will change it to point at master. But keep in mind that each dev branch has to edit this variable to point to their own branch if they want to do 'end to end' testing using their own release to NPM. But in practice we really just do local testing so my guess is that most folks can safely leave this value as master (or story_0 for the moment).
 
 ## Want to develop locally?
 
