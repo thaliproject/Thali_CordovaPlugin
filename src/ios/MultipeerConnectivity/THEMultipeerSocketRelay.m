@@ -199,7 +199,7 @@
               [_socket writeData:toWrite withTimeout:-1 tag:len];
             }
           }
-          while (len >= 0);
+          while (len > 0);
         }
       }
       break;
