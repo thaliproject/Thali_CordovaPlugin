@@ -1,57 +1,232 @@
-# Thali Identity Exchange Protocol
+# `IdentityExchange` Node Module #
 
-This document contains the basic logic of the Thali Identity Exchange Protocol.
+This module implements the [Coin Flipping for Thali Identity Exchange Protocol](http://www.goland.org/coinflippingforthali/) to allow users of Thali to securely exchange identification information.  Note that only one identity exchange can be done at a time and trying to exchange more than one identity at a time will result in an error.
 
-## `peerAvailabilityChanged` Event
-1. get peerName which may be a hash of the public key;peer name
-2. if peer contains hash;their friendly name, emit new peer with identity exchange friendly name and peer identifier and hash as peer name (peerIdentityExchange)
+## Usage ##
 
-## `startIdentityExchange(friendlyName, cb)` Method
-1. Can only happen one at a time
-2. call `ThaliReplicationManager#stop`
-3. call `ThaliReplicationManager#start` with hash;my friendly name
+This is the basic usage of the `IdentityExchange` module.
 
-## `stopIdentityExchange(cb)` Method
-1. If in the middle of change, stop the world and clean up current exchange
-2. call `ThaliReplicationManager#stop`
-3. call `ThaliReplicationManager#start` with regular hash
+```js
+// Express
+var express = require('express');
+var bodyParser = require('body-parser');
+var app = express();
 
-## `executeIdentityExchange(peerIdentifier, theirHash, cb)` Method
-1. 128 bit nonce created using node crypto `crypto.createHmac('SHA256', crypto.randomBytes(32))` called rnMine
-2. Ensure `startIdentityExchange` is started
-3. Check if already exchanged IDs if calling `connect`
-4. Call `connect` with `peerIdentifier` and if error, call `cb(error)`
-5. Take my public key hash and send across the wire POST to exchange identity express endpoint, and if error on their side, call `cb(error)`.
-6. wait until other side posts to me with their public key hash
-7. Is the hash from step 6 the same as what was passed in?
-8. If no match, cb(error(already in exchange, sorry))
-9. Calculate whose hash is bigger
-	1. - If my hash is smaller,
-    		1. - take their hash and my hash and concat to string, do a `crypto.createHmac('SHA256', rnMine)` and update with Buffer(concat) and returns Cb
-    		2. - post Cb and public key hash and response should be rnOther
-    		3. - post rnMine and my public key hash and response should be 200 - OK
-    		4. - take my public key hash, your public key hash, rnMine as a single concat string.  Call crypto.createHmac(‘SHA256’, Buffer(rnOther)
-    		5. - call hmac.update(concatenated string)
-    		6. - mod the value by 10 ^ 6 which gives a six digit integer and return in cb(null, integer)
-	2. - If my hash is larger
-  		1. - wait for them to post my Cb express endpoint
-  		2. - ensure their hash is the same as you expected, else a 400 status code.  Go back to step 2.1
-  		3. - If matches, return rnMine
-  		4. - Wait for them to send me rnOther
-  		5. - concat pkOther + pkMine crypto.createHmac(‘SHA256’, Buffer(rnOther) and compare to Cb in 2.1.  If no match, under attack, return cb(err)
-  		6. - if match, take pkMine + pkOther + rnOther with crypto.createHmac(‘SHA256’, Buffer(rnMine))
-      7. - mod by 10^6 and return cb(null, integer)
+// parse application/json
+app.use(bodyParser.json());
 
-## Express endpoints
+app.listen(5000);
 
-### `/identity/exchange` URL
+// Thali
+var ThaliReplicationManager = require('thali/thalireplicationmanager');
+var replicationManager = new ThaliReplicationManager();
 
-Used to send my public key hash and verify it on the other side, and then send back the other public key hash.
+// Identity information
+var myFriendlyName = '...';
+var myPkHash = '...';
 
-### `/identity/cb` URL
+var identityExchange = require('thali/identityexchange')(app, replicationManager);
 
+replicationManager.once('peerIdentityExchange', function (peer) {
+  // Advertise my friendly name to the world
+  identityexchange.startIdentityExchange('bob', function (err) {
+    if (err) {
+      throw err;
+    }
 
+    identityExchange.executeIdentityExchange(
+      peer.peerIdentifier,
+      myPkHash,
+      peer.peerName,
+      function (err, number) {
+        if (err) {
+          throw err;
+        }
 
-Postcard App Will subscribe to peerIdentityExchange
-Postcard App will call startIdentityExchange
-Postcard App will call stopIdentityExchange
+        // Alert the user of the six digit number from the other side
+        console.log('Six digit code is %d', number);
+
+        identityExchange.stopIdentityExchange(function (err) {
+          if (err) {
+            throw err;
+          }
+
+          console.log('Identity exchange complete');
+        });
+      })
+  });
+});
+```
+
+## `IdentityExchange` Methods ##
+
+The `IdentityExchange` module has the following methods:
+- `constructor(app, replicationManager)`
+- `startIdentityExchange(myFriendlyName, cb)`
+- `stopIdentityExchange(cb)`
+- `executeIdentityExchange(peerIdentifier, pkMine, pkOther, cb)`
+
+### `constructor(app, replicationManager)`
+
+This constructs the `IdentityExchange` module with an [Express](http://expressjs.com/) application that can have the identity endpoints added to it, as well as a [`ThaliReplicationManager`](thalireplicationmanager.md) instance which is used to broadcast our friendly name and hash for identity exchange.  The Express app must have [body-parser](https://github.com/expressjs/body-parser) module installed as middleware as the identity exchange module will add endpoints which require POST commands with JSON bodies.
+
+#### Arguments
+1. `app`: `express` - Express application configured with the body-parser module.
+2. `replicationManager`: `ThaliReplicationManager` - a `ThaliReplicationManager` instance used for replicating data betwen devices.
+
+#### Return Value
+`IdentityExchange` - the initialized `IdentityExchange` module used for identity exchange between devices.
+
+#### Example
+```js
+// Express
+var express = require('express');
+var bodyParser = require('body-parser');
+var app = express();
+
+// parse application/json
+app.use(bodyParser.json());
+
+app.listen(5000);
+
+// Thali
+var ThaliReplicationManager = require('thali/thalireplicationmanager');
+var replicationManager = new ThaliReplicationManager();
+
+var identityExchange = require('thali/identityexchange')(app, replicationManager);
+```
+
+***
+
+### `startIdentityExchange(myFriendlyName, cb)`
+
+This method starts the identity exchange with a given friendly name to broadcast to other devices.
+
+#### Arguments
+1. `myFriendlyName`: `string` - The friendly name to broadcast to other devices as the identity of the device.
+2. `callback`: `Function` – must be in the form of the following, `function (err)` where:
+  - `err` : `Error` – an `Error` if one occurred, else `null`
+
+#### Example
+```js
+// Express
+var express = require('express');
+var bodyParser = require('body-parser');
+var app = express();
+
+// parse application/json
+app.use(bodyParser.json());
+
+app.listen(5000);
+
+// Thali
+var ThaliReplicationManager = require('thali/thalireplicationmanager');
+var replicationManager = new ThaliReplicationManager();
+
+var identityExchange = require('thali/identityexchange')(app, replicationManager);
+
+// Advertise my name as Bob
+identityExchange.startIdentityExchange('Bob', function (err) {
+  if (err) {
+    throw err;
+  }
+
+  console.log('Started broadcasting my name as Bob');
+});
+```
+***
+
+### `stopIdentityExchange(cb)`
+
+This method stops the identity exchange between two devices.
+
+#### Arguments
+1. `callback`: `Function` – must be in the form of the following, `function (err)` where:
+  - `err` : `Error` – an `Error` if one occurred, else `null`
+
+#### Example
+```js
+// Express
+var express = require('express');
+var bodyParser = require('body-parser');
+var app = express();
+
+// parse application/json
+app.use(bodyParser.json());
+
+app.listen(5000);
+
+// Thali
+var ThaliReplicationManager = require('thali/thalireplicationmanager');
+var replicationManager = new ThaliReplicationManager();
+
+var identityExchange = require('thali/identityexchange')(app, replicationManager);
+
+// Advertise my name as Bob
+identityExchange.startIdentityExchange('Bob', function (err) {
+  if (err) {
+    throw err;
+  }
+
+  console.log('Started broadcasting my name as Bob');
+
+  identityExchange.stopIdentityExchange(function (err) {
+    if (err) {
+      throw err;
+    }
+
+    console.log('Stopped broadcasting my name as Bob');
+  });
+});
+```
+***
+
+### `executeIdentityExchange(peerIdentifier, myPkHash, otherPkHash, cb)`
+
+This method stops the identity exchange between two devices.
+
+#### Arguments
+1. `peerIdentifier`: `String` - the peer identifier of the remote device to connect to.
+2. `myPkHash`: `String` - the primary key hash for the current device.
+3. `otherPkHash`: `String` - the primary key hash for the other device to connect to.
+4. `callback`: `Function` – must be in the form of the following, `function (err, number)` where:
+  - `number`: `Number` - a six digit number used for verifying the identity
+  - `err`: `Error` – an `Error` if one occurred, else `null`
+
+#### Example
+```js
+// Express
+var express = require('express');
+var bodyParser = require('body-parser');
+var app = express();
+
+// parse application/json
+app.use(bodyParser.json());
+
+app.listen(5000);
+
+// Thali
+var ThaliReplicationManager = require('thali/thalireplicationmanager');
+var replicationManager = new ThaliReplicationManager();
+
+var identityExchange = require('thali/identityexchange')(app, replicationManager);
+
+// Advertise my name as Bob
+identityExchange.startIdentityExchange('Bob', function (err) {
+  if (err) {
+    throw err;
+  }
+
+  console.log('Started broadcasting my name as Bob');
+
+  // Execute identity exchange with other discovered peer
+  identityExchange.executeIdentityExchange(otherPeer, myPkHash, otherPkHash, function (err, number) {
+    if (err) {
+      throw err;
+    }
+
+    console.log('Six digit verification number is %d', number);
+  });
+});
+```
+***
