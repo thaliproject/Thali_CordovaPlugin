@@ -276,12 +276,11 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
                                          permissions:CBAttributePermissionsReadable];
 
     // Set the service characteristics.
-    [_service setCharacteristics:@[_characteristicPeerID,
-                                   _characteristicPeerName]];
+    [_service setCharacteristics:@[_characteristicPeerID, _characteristicPeerName]];
     
     // Allocate and initialize the advertising data.
-    _advertisingData = @{CBAdvertisementDataServiceUUIDsKey:    @[_serviceType],
-                         CBAdvertisementDataLocalNameKey:       _peerName};
+    _advertisingData = @{CBAdvertisementDataServiceUUIDsKey: @[_serviceType],
+                            CBAdvertisementDataLocalNameKey: _peerName};
     
     // The background queue.
     dispatch_queue_t backgroundQueue = 
@@ -399,8 +398,11 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     // Process as many pending characteristic updates as we can.
     while ([_pendingCharacteristicUpdates count])
     {
-        // Process the next pending characteristic update. If the trasnmission queue is full, stop processing.
-        THECharacteristicUpdateDescriptor * characteristicUpdateDescriptor = _pendingCharacteristicUpdates[0];
+        // Process the next pending characteristic update. 
+        // If the tranmission queue is full, stop processing.
+        THECharacteristicUpdateDescriptor * characteristicUpdateDescriptor = 
+          _pendingCharacteristicUpdates[0];
+
         if (![_peripheralManager updateValue:[characteristicUpdateDescriptor value]
                            forCharacteristic:[characteristicUpdateDescriptor characteristic]
                         onSubscribedCentrals:nil])
@@ -520,8 +522,8 @@ didFailToConnectPeripheral:(CBPeripheral *)peripheral
     THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
     if (peripheralDescriptor)
     {
-        // Immediately reconnect. This is long-lived meaning that we will connect to this peer whenever it is
-        // encountered again.
+        // Immediately reconnect. This is long-lived meaning that we will connect to this peer 
+        // whenever it is encountered again.
         [peripheralDescriptor setState:THEPeripheralDescriptorStateConnecting];
         [_centralManager connectPeripheral:peripheral
                                    options:nil];
@@ -543,7 +545,8 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
     pthread_mutex_lock(&_mutex);
 
     // Find the peripheral descriptor in the peripherals dictionary. It should be there.
-    THEPeripheralDescriptor * peripheralDescriptor = [_peripherals objectForKey:peripheralIdentifierString];
+    THEPeripheralDescriptor * peripheralDescriptor = 
+      [_peripherals objectForKey:peripheralIdentifierString];
     if (peripheralDescriptor)
     {
         // Notify the delegate.
@@ -553,8 +556,8 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
                 didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
         }
         
-        // Immediately reconnect. This is long-lived. Central manager will connect to this peer whenever it is
-        // discovered again.
+        // Immediately reconnect. This is long-lived. Central manager will connect to this peer 
+        // whenever it is discovered again.
         [peripheralDescriptor setState:THEPeripheralDescriptorStateConnecting];
         [_centralManager connectPeripheral:peripheral
                                    options:nil];
@@ -658,7 +661,8 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
         }
         
         // Detect when the peer is fully initialized and move it to the connected state.
-        if ([peripheralDescriptor state] == THEPeripheralDescriptorStateInitializing && [peripheralDescriptor peerID] && [peripheralDescriptor peerName])
+        if ([peripheralDescriptor state] == THEPeripheralDescriptorStateInitializing && 
+            [peripheralDescriptor peerID] && [peripheralDescriptor peerName])
         {
             // Move the peer to the connected state.
             [peripheralDescriptor setState:THEPeripheralDescriptorStateConnected];
