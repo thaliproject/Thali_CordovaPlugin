@@ -84,10 +84,10 @@ before you will be able to run the next command.
 `$ ./gradlew build install`  
 
 Once built the library should be visible in:  
-`<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.0`
+`<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.1`
 
 Once built the library should be visible in:  
-`<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.0`
+`<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.1`
 
 
 ## Unit Testing the Thali Cordova Plugin
