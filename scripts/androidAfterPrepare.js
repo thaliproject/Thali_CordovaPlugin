@@ -19,10 +19,10 @@ var path = require('path');
 function updateAndroidSDKVersion(appRoot) {
    var androidManifestLocation = path.join(appRoot, "platforms/android/AndroidManifest.xml");
    var originalContent = fs.readFileSync(androidManifestLocation).toString();
-   var newContent = originalContent.replace("android:minSdkVersion=\"10\"",
-                                            "android:minSdkVersion=\"19\"");
-    //quick hack to support the recent updates in Cordova
-    newContent = originalContent.replace("android:minSdkVersion=\"14\"", "android:minSdkVersion=\"19\"");
+    // Different version of Cordova use different mins, yes we need to replace this with xpath
+   var newContent = originalContent
+       .replace("android:minSdkVersion=\"10\"", "android:minSdkVersion=\"19\"")
+       .replace("android:minSdkVersion=\"14\"", "android:minSdkVersion=\"19\"");
    fs.writeFileSync(androidManifestLocation, newContent);
 }
 
