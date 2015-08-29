@@ -41,6 +41,18 @@
   return self;
 }
 
+- (void)dealloc
+{
+  // Sanity check we cleaned everything up
+  for (id peerIdentifier in _peerIdentifiers) {
+    [self updateForPeerIdentifier:peerIdentifier 
+                      updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
+      assert(p.connectionState == THEPeerSessionStateNotConnected);
+      return nil;
+    }];
+  }
+}
+
 - (void)updateForPeerID:(MCPeerID *)peerID
            updateBlock:(THEMultipeerPeerSession *(^)(THEMultipeerPeerSession *))updateBlock;
 {
