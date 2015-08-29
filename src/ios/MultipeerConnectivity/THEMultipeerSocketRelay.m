@@ -7,6 +7,13 @@
 
 @end
 
+// Possible states of a relay instance 
+typedef enum relayStates {
+  INITIALIZED,
+  CONNECTED,
+  STOPPED 
+} RelayState;
+
 @implementation THEMultipeerSocketRelay
 {
   // The socket we're using to talk to the upper (localhost) layers
@@ -15,6 +22,9 @@
   // The input and output stream that we use to talk to the remote peer
   NSInputStream *_inputStream;
   NSOutputStream *_outputStream;
+
+  // Track our current state
+  RelayState _relayState;
 
   // For debugging purposes only
   NSString *_relayType;
@@ -25,13 +35,10 @@
   if (self = [super init]) 
   { 
     _relayType = relayType;
+    _relayState = INITIALIZED;
   }
+  
   return self;
-}
-
-- (instancetype)init
-{
-  return [self initWithRelayType:@"unknown"];
 }
 
 - (void)setInputStream:(NSInputStream *)inputStream
@@ -56,15 +63,20 @@
 {
   // Everything's in place so let's start the streams to let the data flow
 
-  assert(_inputStream && _outputStream && _socket);
+  @synchronized(self)
+  {
+    assert(_inputStream && _outputStream && _socket);
 
-  _inputStream.delegate = self;
-  [_inputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
-  [_inputStream open];
-  
-  _outputStream.delegate = self;
-  [_outputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
-  [_outputStream open];
+    _inputStream.delegate = self;
+    [_inputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+    [_inputStream open];
+    
+    _outputStream.delegate = self;
+    [_outputStream scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+    [_outputStream open];
+
+    _relayState = CONNECTED;
+  }
 }
 
 - (BOOL)canCreateSocket
@@ -76,19 +88,31 @@
 
 - (BOOL)tryCreateSocket
 {
-  // Base class only. Shouldn't be reachable
-  assert(NO);
+  // Base class only
+  assert(false);
   return NO;
 }
 
 - (void)didCreateSocket:(GCDAsyncSocket *)socket
 {
-  // Socket's been created which means we can open up the stream
-  assert(_socket == nil);
+  @synchronized(self)
+  {
+    if (_relayState == STOPPED)
+    {
+      // It's possible for stop to have been called between opening a socket
+      // and it becoming connected, don't attempt to open the streams if that's
+      // the case
+      return;
+    }
 
-  _socket = socket;
-  [self openStreams];
-  [_socket readDataWithTimeout:-1 tag:0];
+    // Socket's been created which means we can open up the stream
+    assert(_socket == nil);
+    assert(_relayState == INITIALIZED);
+
+    _socket = socket;
+    [self openStreams];
+    [_socket readDataWithTimeout:-1 tag:0];
+  }
 }
 
 - (void)stop
@@ -99,7 +123,6 @@
   {
     if (_socket)
     {
-      NSLog(@"%@ relay: destroying socket %p", _relayType, _socket);
       _socket.delegate = nil;
       [_socket disconnect];
       _socket = nil;
@@ -118,13 +141,15 @@
       [_outputStream removeFromRunLoop: [NSRunLoop currentRunLoop] forMode: NSDefaultRunLoopMode];
       _outputStream = nil;
     }
+
+    _relayState = STOPPED;
   }
 }
 
 - (void)dealloc
 {
   NSLog(@"%@ relay: dealloc", _relayType);
-  [self stop];  
+  assert(_relayState == STOPPED);
 }
 
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
@@ -186,10 +211,9 @@
 
         @synchronized(self)
         {
-          NSInteger len;
-          do
+          while ([_inputStream hasBytesAvailable])
           {
-            len = [_inputStream read:buffer maxLength:BUFFER_LEN];
+            NSInteger len = [_inputStream read:buffer maxLength:BUFFER_LEN];
             if (len > 0)
             {
               NSMutableData *toWrite = [[NSMutableData alloc] init];
@@ -199,7 +223,6 @@
               [_socket writeData:toWrite withTimeout:-1 tag:len];
             }
           }
-          while (len > 0);
         }
       }
       break;
