@@ -27,7 +27,6 @@
     _connectingSocket = [[GCDAsyncSocket alloc] initWithDelegate:self 
                                                    delegateQueue:dispatch_get_main_queue()];
 
-    NSLog(@"server: new connecting socket: %p to %d", _connectingSocket, _serverPort);
     NSError *err = nil;
     if (![_connectingSocket connectToHost:@"localhost" onPort:_serverPort withTimeout:5 error:&err])
     {
@@ -49,7 +48,7 @@
 
 -(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
 {
-  NSLog(@"server: relay established (to port: %d)", port);
+  NSLog(@"server relay: connected (to port: %d)", port);
   [self didCreateSocket:sock];
   _connectingSocket = nil;
 }

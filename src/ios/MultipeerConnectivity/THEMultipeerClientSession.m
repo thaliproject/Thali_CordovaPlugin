@@ -54,7 +54,7 @@
 
 - (MCSession *)connectWithConnectCallback:(ConnectCallback)connectCallback
 {
-  NSLog(@"client: session connect %@", [self remotePeerIdentifier]);
+  NSLog(@"client session: connect %@", [self remotePeerIdentifier]);
 
   assert(_connectCallback == nil);
 
@@ -69,6 +69,8 @@
 
 - (void)disconnect
 {
+  NSLog(@"client session: disconnect %@", [self remotePeerIdentifier]);
+
   THEPeerSessionState prevState = [self connectionState];
 
   [super disconnect];

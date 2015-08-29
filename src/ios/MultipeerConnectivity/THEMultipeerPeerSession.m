@@ -70,7 +70,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 
 -(void)dealloc
 {
-  [self disconnect];
+  assert(_connectionState == THEPeerSessionStateNotConnected);
 }
 
 - (MCPeerID *)remotePeerID
@@ -104,6 +104,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   {
     // Create the transport session and relay, we're not yet fully connected though
 
+    NSLog(@"%@ session: connect %@", _sessionType, _remotePeerIdentifier);
+
     assert(_relay == nil && _session == nil);
 
     _connectionState = THEPeerSessionStateConnecting;
@@ -124,6 +126,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   @synchronized(self)
   {
     // Free up the resources we need for an active connection
+
+    NSLog(@"%@ session: disconnect %@", _sessionType, _remotePeerIdentifier);
 
     _connectionState = THEPeerSessionStateNotConnected;
 
