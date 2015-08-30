@@ -47,6 +47,10 @@
   for (id peerIdentifier in _peerIdentifiers) {
     [self updateForPeerIdentifier:peerIdentifier 
                       updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
+      if (p.connectionState != THEPeerSessionStateNotConnected)
+      {
+        [p disconnect];
+      }
       assert(p.connectionState == THEPeerSessionStateNotConnected);
       return nil;
     }];
