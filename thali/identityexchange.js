@@ -9,6 +9,16 @@ global.isInIdentityExchange = false;
 
 module.exports = function identityExchange (app, replicationManager) {
 
+  var
+    pkMineBuffer,         // My private key hash
+    pkOtherBuffer,        // Other private key hash
+    rnMine,               // My random bytes
+    exchangeCb,           // Callback for if my hash is larger
+    originalDeviceHash,   // Original device hash before changing it for identity exchange
+    newDeviceHash,        // New device hash after the change for identity exchange
+    localPeerIdentifier,  // Peer identifier for remote device
+    cbValue;              // Cb value used for identity exchange
+
   replicationManager.on('peerAvailabilityChanged', function (peers) {
     peers.forEach(function (peer) {
       if (peer.peerName.indexOf(';') !== -1) {
@@ -20,9 +30,6 @@ module.exports = function identityExchange (app, replicationManager) {
       }
     });
   });
-
-  var originalDeviceHash,
-      newDeviceHash;
 
   function startIdentityExchange(myFriendlyName, cb) {
     if (global.isInIdentityExchange) {
@@ -75,12 +82,6 @@ module.exports = function identityExchange (app, replicationManager) {
     replicationManager.stop();
   }
 
-  var
-    pkMineBuffer,
-    pkOtherBuffer,
-    rnMine,
-    exchangeCb;
-
   function cleanupIdentityExchange(cb) {
     replicationManager._emitter.disconnect(localPeerIdentifier, function (err) {
       console.log('Disconnect error %s', err);
@@ -90,8 +91,6 @@ module.exports = function identityExchange (app, replicationManager) {
       });
     });
   }
-
-  var localPeerIdentifier;
 
   function executeIdentityExchange(peerIdentifier, pkMine, pkOther, cb) {
     if (!global.isInIdentityExchange) {
@@ -180,16 +179,10 @@ module.exports = function identityExchange (app, replicationManager) {
     });
   }
 
-  var cbValue;
-
   app.post('/identity/cb', function (req, res) {
-    if (!global.isInIdentityExchange) {
-      return res.sendStatus(400);
-    }
+    if (!global.isInIdentityExchange) { return res.sendStatus(400); }
 
-    if (!req.body) {
-      return res.sendStatus(400);
-    }
+    if (!req.body) { return res.sendStatus(400); }
     if (typeof req.body.cbValue !== 'string' || req.body.cbValue.length === 0) {
       return res.sendStatus(400);
     }
@@ -208,9 +201,7 @@ module.exports = function identityExchange (app, replicationManager) {
   });
 
   app.post('/identity/rnmine', function (req, res) {
-    if (!global.isInIdentityExchange) {
-      return res.sendStatus(400);
-    }
+    if (!global.isInIdentityExchange) { return res.sendStatus(400); }
 
     if (!req.body) { return res.sendStatus(400); }
     if (typeof req.body.pkMine !== 'string' || req.body.pkMine.length === 0) {
