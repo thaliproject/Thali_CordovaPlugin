@@ -28,6 +28,7 @@ manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 - `stop`
 
 ### `ThaliReplicationManager` Events
+- `peerIdentityExchange`
 - `starting`
 - `started`
 - `stopping`
@@ -108,6 +109,39 @@ manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 ***
 
 ## Events
+
+### `peerIdentityExchange`
+
+This event is called when a remote peer wants to do an identity exchange
+
+#### Callback Arguments:
+
+1. `peer`: `PeerAvailability` - A peer with the following information:
+- `peerIdentifier`: `String` – the peer identifier
+- `peerName`: `String` – the peer public key hash
+- `peerAvailable`: `Boolean` – whether the peer is available or not
+- `peerFriendlyName`: `String` - the peer friendly name to advertise
+
+#### Example:
+
+```js
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+
+manager.on('started', function () {
+  manager.stop();
+});
+
+manager.on('stopError', function (err) {
+  console.log('Thali replication manager failed to stop: %s', err);
+});
+
+manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+```
+***
 
 ### `starting`
 

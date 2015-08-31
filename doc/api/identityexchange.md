@@ -29,7 +29,7 @@ var identityExchange = require('thali/identityexchange')(app, replicationManager
 
 replicationManager.once('peerIdentityExchange', function (peer) {
   // Advertise my friendly name to the world
-  identityexchange.startIdentityExchange('bob', function (err) {
+  identityexchange.startIdentityExchange(myFriendlyName, function (err) {
     if (err) {
       throw err;
     }
@@ -64,7 +64,7 @@ The `IdentityExchange` module has the following methods:
 - `constructor(app, replicationManager)`
 - `startIdentityExchange(myFriendlyName, cb)`
 - `stopIdentityExchange(cb)`
-- `executeIdentityExchange(peerIdentifier, pkMine, pkOther, cb)`
+- `executeIdentityExchange(peerIdentifier, otherPkHash, myPkHash, cb)`
 
 ### `constructor(app, replicationManager)`
 
@@ -125,13 +125,15 @@ var replicationManager = new ThaliReplicationManager();
 
 var identityExchange = require('thali/identityexchange')(app, replicationManager);
 
-// Advertise my name as Bob
-identityExchange.startIdentityExchange('Bob', function (err) {
+// Advertise my name
+var myFriendlyName = '...';
+
+identityExchange.startIdentityExchange(myFriendlyName, function (err) {
   if (err) {
     throw err;
   }
 
-  console.log('Started broadcasting my name as Bob');
+  console.log('Started broadcasting my name as %s', myFriendlyName);
 });
 ```
 ***
@@ -162,33 +164,35 @@ var replicationManager = new ThaliReplicationManager();
 
 var identityExchange = require('thali/identityexchange')(app, replicationManager);
 
-// Advertise my name as Bob
-identityExchange.startIdentityExchange('Bob', function (err) {
+// Advertise my name
+var myFriendlyName = '...';
+
+identityExchange.startIdentityExchange(myFriendlyName, function (err) {
   if (err) {
     throw err;
   }
 
-  console.log('Started broadcasting my name as Bob');
+  console.log('Started broadcasting my name as %s', myFriendlyName);
 
   identityExchange.stopIdentityExchange(function (err) {
     if (err) {
       throw err;
     }
 
-    console.log('Stopped broadcasting my name as Bob');
+    console.log('Stopped broadcasting my name as %s', myFriendlyName);
   });
 });
 ```
 ***
 
-### `executeIdentityExchange(peerIdentifier, myPkHash, otherPkHash, cb)`
+### `executeIdentityExchange(peerIdentifier, otherPkHash, myPkHash, cb)`
 
 This method stops the identity exchange between two devices.
 
 #### Arguments
 1. `peerIdentifier`: `String` - the peer identifier of the remote device to connect to.
-2. `myPkHash`: `String` - the primary key hash for the current device.
-3. `otherPkHash`: `String` - the primary key hash for the other device to connect to.
+2. `otherPkHash`: `String` - the primary key hash for the other device to connect to.
+3. `myPkHash`: `String` - the primary key hash for the current device.
 4. `callback`: `Function` – must be in the form of the following, `function (err, number)` where:
   - `number`: `Number` - a six digit number used for verifying the identity
   - `err`: `Error` – an `Error` if one occurred, else `null`
@@ -211,13 +215,15 @@ var replicationManager = new ThaliReplicationManager();
 
 var identityExchange = require('thali/identityexchange')(app, replicationManager);
 
-// Advertise my name as Bob
-identityExchange.startIdentityExchange('Bob', function (err) {
+// Advertise my name
+var myFriendlyName = '...';
+
+identityExchange.startIdentityExchange(myFriendlyName, function (err) {
   if (err) {
     throw err;
   }
 
-  console.log('Started broadcasting my name as Bob');
+  console.log('Started broadcasting my name as %s', myFriendlyName);
 
   // Execute identity exchange with other discovered peer
   identityExchange.executeIdentityExchange(otherPeer, myPkHash, otherPkHash, function (err, number) {
