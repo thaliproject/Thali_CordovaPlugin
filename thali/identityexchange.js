@@ -19,9 +19,9 @@ module.exports = function identityExchange (app, replicationManager) {
     localPeerIdentifier,  // Peer identifier for remote device
     cbValue;              // Cb value used for identity exchange
 
-  replicationManager.on('peerAvailabilityChanged', function (peers) {
+  replicationManager._emitter.on('peerAvailabilityChanged', function (peers) {
     peers.forEach(function (peer) {
-      if (peer.peerName.indexOf(';') !== -1) {
+      if (peer.peerName.indexOf(';') !== -1 && peer.peerAvailable) {
         var split = peer.peerName.split(';');
         peer.peerFriendlyName = split[1];
         peer.peerName = split[0];
@@ -82,7 +82,7 @@ module.exports = function identityExchange (app, replicationManager) {
     replicationManager.stop();
   }
 
-  function executeIdentityExchange(peerIdentifier, pkMine, pkOther, cb) {
+  function executeIdentityExchange(peerIdentifier, pkOther, pkMine, cb) {
     if (!global.isInIdentityExchange) {
       return cb(new Error('Identity Exchange not started'));
     }
