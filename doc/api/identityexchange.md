@@ -4,7 +4,7 @@ This module implements the [Coin Flipping for Thali Identity Exchange Protocol](
 
 ## Usage ##
 
-This is the basic usage of the `IdentityExchange` module.
+This is the basic usage of the `IdentityExchange` module.  Note that the public key hash comes from the `ThaliReplicationManager.prototype.getDeviceIdentity()` method.
 
 ```js
 // Express
