@@ -82,16 +82,6 @@ module.exports = function identityExchange (app, replicationManager) {
     replicationManager.stop();
   }
 
-  function cleanupIdentityExchange(cb) {
-    replicationManager._emitter.disconnect(localPeerIdentifier, function (err) {
-      console.log('Disconnect error %s', err);
-      stopIdentityExchange(function (innerError) {
-        console.log('Stop Identity Exchange Error %s', innerError);
-        cb();
-      });
-    });
-  }
-
   function executeIdentityExchange(peerIdentifier, pkMine, pkOther, cb) {
     if (!global.isInIdentityExchange) {
       return cb(new Error('Identity Exchange not started'));
@@ -105,8 +95,7 @@ module.exports = function identityExchange (app, replicationManager) {
 
     replicationManager._emitter.connect(peerIdentifier, function (err, port) {
       if (err) {
-        return stopIdentityExchange(function (innerError) {
-          console.log('Stop Identity Exchange Error %s', innerError);
+        return cleanupStopIdentityExchange(function () {
           cb(err);
         });
       }
@@ -159,13 +148,8 @@ module.exports = function identityExchange (app, replicationManager) {
               });
             }
 
-            var newConcat = Buffer.concat([pkOtherBuffer, pkMineBuffer, rnMine]);
-            var newCrypto = crypto.createHmac('sha256', rnOther);
-            var newHash = newCrypto.update(newConcat);
-            var newBuffer = newHash.digest();
-
-            var value = parseInt(newBuffer.toString('hex'), 16) % Math.pow(10, 6);
-            cleanupIdentityExchange(function () {
+            var value = createIdentityExchangeValue(rnOther, Buffer.concat([pkOtherBuffer, pkMineBuffer, rnMine]));
+            disconnectExchange(function () {
               cb(null, value);
             });
           });
@@ -226,15 +210,41 @@ module.exports = function identityExchange (app, replicationManager) {
 
     res.sendStatus(200);
 
-    var finalBuff = Buffer.concat([pkMineBuffer, pkOtherBuffer, rnOther]);
-    hmac = crypto.createHmac('sha256', rnMine);
-    hmac.update(finalBuff);
-    ret = hmac.digest();
-    var value = parseInt(ret.toString('hex'), 16) % Math.pow(10, 6);
+    var value = createIdentityExchangeValue(rnMine, Buffer.concat([pkMineBuffer, pkOtherBuffer, rnOther]));
     cleanupIdentityExchange(function () {
       exchangeCb(null, value);
     });
   });
+
+  /* Create identity exchange value */
+  function createIdentityExchangeValue(key, buffer) {
+    var hmac = crypto.createHmac('sha256', key);
+    hmac.update(buffer);
+    return parseInt(hmac.digest().toString('hex'), 16) % Math.pow(10, 6);
+  }
+
+  /* Cleanup functions */
+  function cleanupIdentityExchange(cb) {
+    disconnectExchange(function () {
+      cleanupStopIdentityExchange(function (cb) {
+        cb();
+      });
+    });
+  }
+
+  function cleanupStopIdentityExchange(cb) {
+    stopIdentityExchange(function (innerError) {
+      console.log('Stop Identity Exchange Error %s', innerError);
+      cb();
+    });
+  }
+
+  function disconnectExchange(cb) {
+    replicationManager._emitter.disconnect(localPeerIdentifier, function (err) {
+      console.log('Disconnect error %s', err);
+      cb();
+    });
+  }
 
   return {
     startIdentityExchange: startIdentityExchange,
