@@ -19,6 +19,15 @@ module.exports = function identityExchange (app, replicationManager) {
     localPeerIdentifier,  // Peer identifier for remote device
     cbValue;              // Cb value used for identity exchange
 
+  function resetState() {
+    pkMineBuffer = null;
+    pkOtherBuffer = null;
+    rnMine = null;
+    exchangeCb = null;
+    localPeerIdentifier = null;
+    cbValue = null;
+  }
+
   replicationManager._emitter.on('peerAvailabilityChanged', function (peers) {
     peers.forEach(function (peer) {
       if (peer.peerName.indexOf(';') !== -1 && peer.peerAvailable) {
@@ -97,6 +106,7 @@ module.exports = function identityExchange (app, replicationManager) {
       if (err) {
         return cleanupStopIdentityExchange(function () {
           cb(err);
+          resetState();
         });
       }
 
@@ -121,6 +131,7 @@ module.exports = function identityExchange (app, replicationManager) {
           if (response.status !== 200) {
             return cleanupIdentityExchange(function () {
               cb(new Error('Invalid exchange'));
+              resetState();
             });
           }
 
@@ -130,6 +141,7 @@ module.exports = function identityExchange (app, replicationManager) {
           if (!pkO.equals(pkOtherBuffer)) {
             return cleanupIdentityExchange(function () {
               cb(new Error('Invalid exchange'));
+              resetState();
             });
           }
 
@@ -145,12 +157,14 @@ module.exports = function identityExchange (app, replicationManager) {
             if (response.status !== 200) {
               return cleanupIdentityExchange(function () {
                 cb(new Error('Invalid exchange'));
+                resetState();
               });
             }
 
             var value = createIdentityExchangeValue(rnOther, Buffer.concat([pkOtherBuffer, pkMineBuffer, rnMine]));
             disconnectExchange(function () {
               cb(null, value);
+              resetState();
             });
           });
         });
@@ -213,6 +227,7 @@ module.exports = function identityExchange (app, replicationManager) {
     var value = createIdentityExchangeValue(rnMine, Buffer.concat([pkMineBuffer, pkOtherBuffer, rnOther]));
     cleanupIdentityExchange(function () {
       exchangeCb(null, value);
+      resetState();
     });
   });
 
