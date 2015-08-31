@@ -187,7 +187,7 @@ identityExchange.startIdentityExchange(myFriendlyName, function (err) {
 
 ### `executeIdentityExchange(peerIdentifier, otherPkHash, myPkHash, cb)`
 
-This method stops the identity exchange between two devices.
+This executes the identity exchange between two devices with a given peer identifier, the peer's public key hash, your public key hash and a callback.
 
 #### Arguments
 1. `peerIdentifier`: `String` - the peer identifier of the remote device to connect to.
