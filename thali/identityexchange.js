@@ -42,7 +42,7 @@ module.exports = function identityExchange (app, replicationManager) {
       if (err) { return cb(err); }
 
       originalDeviceHash = deviceName;
-      newDeviceHash = replicationManager._deviceName + ';' + myFriendlyName;
+      newDeviceHash = deviceName + ';' + myFriendlyName;
 
       replicationManager.once('stopped', function () {
 
