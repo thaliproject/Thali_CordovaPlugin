@@ -36,8 +36,8 @@ replicationManager.once('peerIdentityExchange', function (peer) {
 
     identityExchange.executeIdentityExchange(
       peer.peerIdentifier,
-      myPkHash,
       peer.peerName,
+      myPkHash,
       function (err, number) {
         if (err) {
           throw err;
@@ -226,7 +226,7 @@ identityExchange.startIdentityExchange(myFriendlyName, function (err) {
   console.log('Started broadcasting my name as %s', myFriendlyName);
 
   // Execute identity exchange with other discovered peer
-  identityExchange.executeIdentityExchange(otherPeer, myPkHash, otherPkHash, function (err, number) {
+  identityExchange.executeIdentityExchange(otherPeer, otherPkHash, myPkHash, function (err, number) {
     if (err) {
       throw err;
     }
