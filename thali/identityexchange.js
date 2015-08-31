@@ -9,7 +9,6 @@ global.isInIdentityExchange = false;
 
 module.exports = function identityExchange (app, replicationManager) {
 
-  // TODO: Add this to the Thali Replication Manager itself
   replicationManager.on('peerAvailabilityChanged', function (peers) {
     peers.forEach(function (peer) {
       if (peer.peerName.indexOf(';') !== -1) {
@@ -29,32 +28,35 @@ module.exports = function identityExchange (app, replicationManager) {
     if (global.isInIdentityExchange) {
       return cb(new Error('Already in identity exchange'));
     }
+
     global.isInIdentityExchange = true;
-    replicationManager.once('stopped', function () {
 
-      replicationManager.once('started', function () {
-        cb(null, newDeviceHash);
-      });
+    replicationManager.getDeviceIdentity(function (err, deviceName) {
+      if (err) { return cb(err); }
 
-      // TODO: Get it from the replication manager instead of the field
-      originalDeviceHash = replicationManager._deviceName;
+      originalDeviceHash = deviceName;
       newDeviceHash = replicationManager._deviceName + ';' + myFriendlyName;
 
-      replicationManager.once('startError', cb);
-      replicationManager.start(
-        replicationManager._port,
-        replicationManager._dbName,
-        replicationManager._deviceName + ';' + myFriendlyName);
-    });
+      replicationManager.once('stopped', function () {
 
-    replicationManager.once('stopError', cb);
-    replicationManager.stop();
+        replicationManager.once('started', function () {
+          cb(null, newDeviceHash);
+        });
+
+        replicationManager.once('startError', cb);
+        replicationManager.start(
+          replicationManager._port,
+          replicationManager._dbName,
+          newDeviceHash);
+      });
+
+      replicationManager.once('stopError', cb);
+      replicationManager.stop();
+    });
   }
 
   function stopIdentityExchange(cb) {
     global.isInIdentityExchange = false;
-
-    // TODO: Clean up all pending exchanges
 
     replicationManager.once('stopped', function () {
 
@@ -80,9 +82,12 @@ module.exports = function identityExchange (app, replicationManager) {
     exchangeCb;
 
   function cleanupIdentityExchange(cb) {
-    replicationManager._emitter.connect.disconnect(localPeerIdentifier, function (err) {
-      // TODO: Log error
-      cb();
+    replicationManager._emitter.disconnect(localPeerIdentifier, function (err) {
+      console.log('Disconnect error %s', err);
+      stopIdentityExchange(function (innerError) {
+        console.log('Stop Identity Exchange Error %s', innerError);
+        cb();
+      });
     });
   }
 
@@ -99,10 +104,13 @@ module.exports = function identityExchange (app, replicationManager) {
 
     rnMine = crypto.randomBytes(32);
 
-    // TODO: Check if already connected
-
     replicationManager._emitter.connect(peerIdentifier, function (err, port) {
-      if (err) { return cb(err); }
+      if (err) {
+        return stopIdentityExchange(function (innerError) {
+          console.log('Stop Identity Exchange Error %s', innerError);
+          cb(err);
+        });
+      }
 
       var compared = pkMineBuffer.compare(pkOtherBuffer);
 
@@ -122,7 +130,6 @@ module.exports = function identityExchange (app, replicationManager) {
         });
 
         rnOtherReq.once('response', function (response) {
-          // TODO: Check for 500 status for retry
           if (response.status !== 200) {
             return cleanupIdentityExchange(function () {
               cb(new Error('Invalid exchange'));
@@ -147,7 +154,6 @@ module.exports = function identityExchange (app, replicationManager) {
           });
 
           rnMineReq.once('response', function (response) {
-            // TODO: Check for 500
             if (response.status !== 200) {
               return cleanupIdentityExchange(function () {
                 cb(new Error('Invalid exchange'));
@@ -163,7 +169,6 @@ module.exports = function identityExchange (app, replicationManager) {
             cleanupIdentityExchange(function () {
               cb(null, value);
             });
-
           });
         });
       } else if (compared > 0) {
@@ -194,9 +199,7 @@ module.exports = function identityExchange (app, replicationManager) {
 
     cbValue = new Buffer(req.body.cbValue);
     var buf = new Buffer(req.body.pkMine);
-    if (!buf.equals(pkOtherBuffer)) {
-      return res.sendStatus(400);
-    }
+    if (!buf.equals(pkOtherBuffer)) { return res.sendStatus(400); }
 
     res.sendStatus(200).json({
       pkOther: pkMineBuffer.toString('base64'),
@@ -209,9 +212,7 @@ module.exports = function identityExchange (app, replicationManager) {
       return res.sendStatus(400);
     }
 
-    if (!req.body) {
-      return res.sendStatus(400);
-    }
+    if (!req.body) { return res.sendStatus(400); }
     if (typeof req.body.pkMine !== 'string' || req.body.pkMine.length === 0) {
       return res.sendStatus(400);
     }
@@ -221,9 +222,7 @@ module.exports = function identityExchange (app, replicationManager) {
 
     // Test if we're under attack
     var testBuff = new Buffer(req.body.pkMine);
-    if (!testBuff.equals(pkOtherBuffer)) {
-      return res.sendStatus(400);
-    }
+    if (!testBuff.equals(pkOtherBuffer)) { return res.sendStatus(400); }
 
     var rnOther = new Buffer(req.body.rnMine);
     var newBuff = Buffer.concat([pkOtherBuffer, pkMineBuffer]);
@@ -232,9 +231,7 @@ module.exports = function identityExchange (app, replicationManager) {
     var ret = hmac.digest();
 
     // No match
-    if (!ret.equals(cbValue)) {
-      return res.sendStatus(400);
-    }
+    if (!ret.equals(cbValue)) { return res.sendStatus(400); }
 
     res.sendStatus(200);
 
