@@ -163,6 +163,14 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 
 @end
 
+// Possible states of bluetooth stack 
+typedef enum bluetoothStates {
+  INITIALIZED,
+  STARTED,
+  STOPPED 
+} BluetoothState;
+
+
 // THEPeerBluetooth implementation.
 @implementation THEPeerBluetooth
 {
@@ -205,13 +213,10 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     
     // Mutex used to synchronize accesss to the things below.
     pthread_mutex_t _mutex;
-    
-    // The enabled flag.
-    BOOL _enabled;
-    
-    // The scanning flag.
-    BOOL _scanning;
-    
+
+    // Current state of the bluetooth stack   
+    BluetoothState _state;
+ 
     // The perhipherals dictionary.
     NSMutableDictionary * _peripherals;
     
@@ -310,13 +315,11 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     // after a failed call to CBPeripheralManager
     // updateValue:forCharacteristic:onSubscribedCentrals.
     _pendingCharacteristicUpdates = [[NSMutableArray alloc] init];
-    
+   
+    _state = INITIALIZED;
+ 
     // Done.
     return self;
-}
-
-- (void)dealloc
-{
 }
 
 // Starts peer Bluetooth.
@@ -324,14 +327,13 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 {
     // Lock.
     pthread_mutex_lock(&_mutex);
-    
-    // Start, if we should.
-    if (!_enabled)
-    {
-        _enabled = YES;
-        [self startAdvertising];
-        [self startScanning];
-    }
+   
+    assert(_state == INITIALIZED);
+ 
+    [self startAdvertising];
+    [self startScanning];
+
+    _state = STARTED;
 
     // Unlock.
     pthread_mutex_unlock(&_mutex);
@@ -343,17 +345,17 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     // Lock.
     pthread_mutex_lock(&_mutex);
 
+    assert(_state == STARTED);
+
     _delegate = nil;
     _peripheralManager.delegate = nil;
     _centralManager.delegate = nil;
 
-    // Stop, if we should.
-    if (_enabled)
-    {
-        _enabled = NO;
-        [self stopAdvertising];
-        [self stopScanning];
-    }
+    [self stopAdvertising];
+    [self stopScanning];
+
+    // Only place to go after STOPPED is destroyed
+    _state = STOPPED;
 
     // Unlock.
     pthread_mutex_unlock(&_mutex);
@@ -367,8 +369,16 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 // Invoked whenever the peripheral manager's state has been updated.
 - (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheralManager
 {
-    // Lock.
+    // Force self to stick around for whilst we acquire the lock
+    __strong THEPeerBluetooth *_self = self;
+
     pthread_mutex_lock(&_mutex);
+
+    if (_state == STOPPED)
+    {
+      // Stop may have already been called, early out
+      return;
+    }
 
     // Process the state update.
     if ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn)
@@ -380,8 +390,10 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
         [self stopAdvertising];
     }
 
-    // Unlock.
     pthread_mutex_unlock(&_mutex);
+
+    // Avoid unused variable warning
+    _self = nil;
 }
 
 // Invoked with the result of a startAdvertising call.
@@ -401,7 +413,6 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 // Invoked after a failed call to update a characteristic.
 - (void)peripheralManagerIsReadyToUpdateSubscribers:(CBPeripheralManager *)peripheralManager
 {
-    // Lock.
     pthread_mutex_lock(&_mutex);
 
     // Process as many pending characteristic updates as we can.
@@ -423,7 +434,6 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
         [_pendingCharacteristicUpdates removeObjectAtIndex:0];
     }
 
-    // Unlock.
     pthread_mutex_unlock(&_mutex);
 }
 @end
@@ -434,8 +444,16 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 // Invoked whenever the central manager's state has been updated.
 - (void)centralManagerDidUpdateState:(CBCentralManager *)centralManager
 {
-    // Lock.
+    // Force self to stick around whilst we acquire the lock
+    __strong THEPeerBluetooth *_self = self;
+
     pthread_mutex_lock(&_mutex);
+
+    if (_state == STOPPED)
+    {
+      // Nothing to do here..
+      return;
+    }
 
     // If the central manager is powered on, make sure we're scanning. If it's in any other state,
     // make sure we're not scanning.
@@ -448,8 +466,10 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
         [self stopScanning];
     }
 
-    // Unlock.
     pthread_mutex_unlock(&_mutex);
+
+    // Avoid unused variable warning
+    _self = nil;
 }
 
 // Invoked when a peripheral is discovered.
@@ -696,7 +716,7 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
 - (void)startAdvertising
 {
     if ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn && 
-        _enabled && ![_peripheralManager isAdvertising])
+        ![_peripheralManager isAdvertising])
     {
         [_peripheralManager addService:_service];
         [_peripheralManager startAdvertising:_advertisingData];
@@ -716,9 +736,8 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
 // Starts scanning.
 - (void)startScanning
 {
-    if ([_centralManager state] == CBCentralManagerStatePoweredOn && _enabled && !_scanning)
+    if ([_centralManager state] == CBCentralManagerStatePoweredOn)
     {
-        _scanning = YES;
         [_centralManager 
             scanForPeripheralsWithServices:@[_serviceType]
                                    options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @(NO)}];
@@ -728,11 +747,7 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
 // Stops scanning.
 - (void)stopScanning
 {
-    if (_scanning)
-    {
-        _scanning = NO;
-        [_centralManager stopScan];
-    }
+    [_centralManager stopScan];
 }
 
 @end
