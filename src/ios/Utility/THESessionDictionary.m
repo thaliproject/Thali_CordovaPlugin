@@ -44,6 +44,8 @@
 - (void)dealloc
 {
   // Sanity check we cleaned everything up
+  NSLog(@"destroying sessions");
+
   for (id peerIdentifier in _peerIdentifiers) {
     [self updateForPeerIdentifier:peerIdentifier 
                       updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
@@ -75,14 +77,7 @@
     {
       // session object is about to be removed from the base dict, remove the 
       // corresponding mapping from it's peerIdentifier
-
-      NSString *peerIdentifier = _peerIdentifiers[peerID];
-
-      if (peerIdentifier != nil)
-      {
-        // Object has been removed
-        [_peerIdentifiers removeObjectForKey:peerIdentifier];
-      }
+      [_peerIdentifiers removeObjectForKey:[session remotePeerIdentifier]];
     }
     else
     {
