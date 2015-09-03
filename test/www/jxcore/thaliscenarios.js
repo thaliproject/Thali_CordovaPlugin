@@ -73,10 +73,12 @@ test('ThaliEmitter throws on disconnect to bad peer', function (t) {
 function connectWithRetryTestAndDisconnect(t, testFunction) {
   var e = new ThaliEmitter();
 
+  var _done = false;
+
   e.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (peers) {
+
     peers.forEach(function (peer) {
 
-      // This will only pick the first available peer
       if (peer.peerAvailable) {
         var connectToPeer = function(attempts) {
           if (attempts === 0) {
@@ -85,8 +87,15 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
           }
 
           e.connect(peer.peerIdentifier, function (err2, port) {
+
             if (err2) {
-              return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+              if (_done || err2.message.indexOf("unreachable") != -1) {
+                // Peer has become unreachable or we're done, no point retrying
+                return;
+              } else {
+                // Retry
+                return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+              }
             }
 
             t.notOk(err2, 'Should be able to connect without error');
@@ -96,6 +105,7 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
               e.stopBroadcasting(function (err4) {
                 t.notOk(err4, 'Should be able to call stopBroadcasting without error');
                 t.end();
+                _done = true;
               });
             });
           });
@@ -146,7 +156,7 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
 });
 
 test('ThaliEmitter can connect and send data', function (t) {
-  var len = 200;
+  var len = 1025;
   var testMessage = randomstring.generate(len);
   connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
     var clientSocket = net.createConnection( { port: port }, function () {
