@@ -51,12 +51,12 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 - (NSString *)remotePeerIdentifier;
 
 - (MCSession *)session;
-- (MCSession *)connect;
+
+- (void)connect;
+- (void)disconnect;
 
 // Kill for testing only !!
 - (void)kill;
-
-- (void)disconnect;
 
 @end
 

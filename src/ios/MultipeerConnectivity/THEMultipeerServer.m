@@ -112,7 +112,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                      withContext:(NSData *)context
                invitationHandler:(void (^)(BOOL accept, MCSession * session))invitationHandler
 {
-  __block MCSession *mcSession = nil;
+  __block THEMultipeerServerSession *_serverSession = nil;
  
   NSString *peerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
   NSLog(@"server: didReceiveInvitationFromPeer %@", peerIdentifier);
@@ -144,11 +144,12 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     // with then the other side had restarted and our session is stale (we often
     // don't see the other side disconnect)
 
-    mcSession = [serverSession connect];
+    _serverSession = serverSession;
+    [serverSession connect];
     return serverSession;
   }];
 
-  invitationHandler(YES, mcSession);
+  invitationHandler(YES, [_serverSession session]);
 }
 
 - (void)advertiser:(MCNearbyServiceAdvertiser *)advertiser didNotStartAdvertisingPeer:(NSError *)error

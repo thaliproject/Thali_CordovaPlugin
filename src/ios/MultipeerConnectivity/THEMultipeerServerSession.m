@@ -49,7 +49,7 @@
   return self;
 }
 
-- (THEMultipeerSocketRelay *)createRelay
+- (THEMultipeerSocketRelay *)newSocketRelay
 {
   return [[THEMultipeerServerSocketRelay alloc] initWithServerPort:_serverPort];
 }

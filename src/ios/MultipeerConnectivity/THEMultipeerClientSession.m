@@ -52,22 +52,15 @@
   return self;
 }
 
-- (MCSession *)connectWithConnectCallback:(ConnectCallback)connectCallback
+- (void)connectWithConnectCallback:(ConnectCallback)connectCallback
 {
-  MCSession *mcSession = nil;
-
   @synchronized(self)
   {
     assert(_connectCallback == nil);
 
-    MCSession *mcSession = [super connect];
-    if (mcSession)
-    {
-      _connectCallback = connectCallback;
-    }
+    [super connect];
+    _connectCallback = connectCallback;
   }
-
-  return mcSession;
 }
 
 - (void)disconnect
@@ -88,16 +81,10 @@
   }
 }
 
-- (THEMultipeerSocketRelay *)createRelay
+- (THEMultipeerSocketRelay *)newSocketRelay
 {
-  THEMultipeerClientSocketRelay *clientRelay = [
-    [THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self remotePeerIdentifier]
-  ];
-  // We'll call this delegate back when a listening socket is established
-  // to which the application client will connect to be bridged to the remote server
-  [clientRelay setDelegate:(id<THEMultipeerClientSocketRelayDelegate>) self];
-
-  return clientRelay;
+  return [[THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self remotePeerIdentifier] 
+                                                    withDelegate:self];
 }
 
 - (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier
@@ -134,5 +121,3 @@
 }
 
 @end
-
-

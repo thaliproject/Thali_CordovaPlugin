@@ -32,7 +32,7 @@
 static NSString * const THALI_STREAM = @"ThaliStream";
 
 @interface THEMultipeerPeerSession()
-- (THEMultipeerSocketRelay *)createRelay;
+- (THEMultipeerSocketRelay *)newSocketRelay;
 @end
 
 @implementation THEMultipeerPeerSession
@@ -103,7 +103,7 @@ static int count = 0;
   return _session;
 }
 
--(MCSession *)connect
+-(void)connect
 {
   @synchronized(self)
   {
@@ -113,14 +113,12 @@ static int count = 0;
 
     _connectionState = THEPeerSessionStateConnecting;
 
-    _relay = [self createRelay];
+    _relay = [self newSocketRelay];
 
     _session = [[MCSession alloc] initWithPeer:_localPeerID 
                               securityIdentity:nil 
                           encryptionPreference:MCEncryptionNone];
     _session.delegate = self;
-
-    return _session;
   }
 }
 
@@ -156,7 +154,7 @@ static int count = 0;
   }
 }
 
--(THEMultipeerSocketRelay *)createRelay
+-(THEMultipeerSocketRelay *)newSocketRelay
 {
   return nil;
 }
