@@ -41,6 +41,26 @@
   return self;
 }
 
+- (void)dealloc
+{
+  // Sanity check we cleaned everything up
+  NSLog(@"destroying sessions");
+
+  for (id peerIdentifier in _peerIdentifiers) {
+    [self updateForPeerIdentifier:peerIdentifier 
+                      updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
+      if (p.connectionState != THEPeerSessionStateNotConnected)
+      {
+        [p disconnect];
+      }
+      assert(p.connectionState == THEPeerSessionStateNotConnected);
+      // Since we're enumerating we must return the same object to ensure no
+      // mutations take place
+      return p;
+    }];
+  }
+}
+
 - (void)updateForPeerID:(MCPeerID *)peerID
            updateBlock:(THEMultipeerPeerSession *(^)(THEMultipeerPeerSession *))updateBlock;
 {
@@ -59,19 +79,15 @@
     {
       // session object is about to be removed from the base dict, remove the 
       // corresponding mapping from it's peerIdentifier
-
-      NSString *peerIdentifier = _peerIdentifiers[peerID];
-
-      if (peerIdentifier != nil)
-      {
-        // Object has been removed
-        [_peerIdentifiers removeObjectForKey:peerIdentifier];
-      }
+      [_peerIdentifiers removeObjectForKey:[v remotePeerIdentifier]];
     }
     else
     {
       // update our mapping, usual case is no change
-      _peerIdentifiers[[session remotePeerIdentifier]] = peerID;
+      if (session != v)
+      {
+        _peerIdentifiers[[session remotePeerIdentifier]] = peerID;
+      }
     }
 
     return session;

@@ -32,7 +32,7 @@
 static NSString * const THALI_STREAM = @"ThaliStream";
 
 @interface THEMultipeerPeerSession()
-- (THEMultipeerSocketRelay *)createRelay;
+- (THEMultipeerSocketRelay *)newSocketRelay;
 @end
 
 @implementation THEMultipeerPeerSession
@@ -48,6 +48,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   NSString * _sessionType;
 }
 
+static int count = 0;
+
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
                    withRemotePeerID:(MCPeerID *)remotePeerID
            withRemotePeerIdentifier:(NSString *)remotePeerIdentifier 
@@ -59,6 +61,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
       return nil;
   }
     
+  count++;
+
   _localPeerID = localPeerID;
   _remotePeerID = remotePeerID;
   _remotePeerIdentifier = remotePeerIdentifier;
@@ -70,7 +74,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 
 -(void)dealloc
 {
-  [self disconnect];
+  count--;
+  assert(_connectionState == THEPeerSessionStateNotConnected);
 }
 
 - (MCPeerID *)remotePeerID
@@ -98,7 +103,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   return _session;
 }
 
--(MCSession *)connect
+-(void)connect
 {
   @synchronized(self)
   {
@@ -108,14 +113,12 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 
     _connectionState = THEPeerSessionStateConnecting;
 
-    _relay = [self createRelay];
+    _relay = [self newSocketRelay];
 
-    _session = [[MCSession alloc] initWithPeer: _localPeerID 
+    _session = [[MCSession alloc] initWithPeer:_localPeerID 
                               securityIdentity:nil 
                           encryptionPreference:MCEncryptionNone];
     _session.delegate = self;
-
-    return _session;
   }
 }
 
@@ -151,7 +154,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   }
 }
 
--(THEMultipeerSocketRelay *)createRelay
+-(THEMultipeerSocketRelay *)newSocketRelay
 {
   return nil;
 }
@@ -164,8 +167,6 @@ static NSString * const THALI_STREAM = @"ThaliStream";
           withName:(NSString *)streamName
           fromPeer:(MCPeerID *)peerID
 {
-  NSLog(@"%@ session: didReceiveStream", _sessionType);
-
   if ([streamName isEqualToString:THALI_STREAM])
   {
       [self setInputStream:inputStream];
@@ -192,38 +193,43 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   {
     case MCSessionStateNotConnected:
     {
-      //NSLog(@"%@ session: not connected", _sessionType);
+      //NSLog(@"%@ (base) session: not connected", _sessionType);
       [self disconnect];
     }
     break;
 
     case MCSessionStateConnecting:
     {
-      //NSLog(@"%@ session: connecting", _sessionType);
+      //NSLog(@"%@ (base) session: connecting", _sessionType);
       assert(_connectionState == THEPeerSessionStateConnecting);
     }
     break;
 
     case MCSessionStateConnected:
     {
-      //NSLog(@"%@ session: connected", _sessionType);
+      //NSLog(@"%@ (base) session: connected", _sessionType);
 
-      _connectionState = THEPeerSessionStateConnected;
+      @synchronized(self)
+      {
+        assert(_connectionState == THEPeerSessionStateConnecting);
 
-      // Start the server output stream.
-      NSError * error;
-      NSOutputStream * outputStream = [_session startStreamWithName:THALI_STREAM
-                                                             toPeer:peerID
-                                                              error:&error];
-      if (outputStream)
-      {
-        // Set the server output stream. (Where we write data for the client.)
-        [self setOutputStream:outputStream];
-      }
-      else
-      {
-        [_session cancelConnectPeer:peerID];
-        [self disconnect];
+        _connectionState = THEPeerSessionStateConnected;
+
+        // Start the server output stream.
+        NSError * error;
+        NSOutputStream * outputStream = [_session startStreamWithName:THALI_STREAM
+                                                               toPeer:peerID
+                                                                error:&error];
+        if (outputStream)
+        {
+          // Set the server output stream. (Where we write data for the client.)
+          [self setOutputStream:outputStream];
+        }
+        else
+        {
+          [_session cancelConnectPeer:peerID];
+          [self disconnect];
+        }
       }
     }
     break;

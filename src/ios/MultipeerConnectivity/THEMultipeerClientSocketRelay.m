@@ -4,25 +4,27 @@
 {
   NSString *_peerIdentifier;
   GCDAsyncSocket *_serverSocket;
+
+  __weak id<THEMultipeerClientSocketRelayDelegate> _delegate;
 }
 
--(instancetype)initWithPeerIdentifier:(NSString *)peerIdentifier
+-(instancetype)initWithPeerIdentifier:(NSString *)peerIdentifier 
+                         withDelegate:(id<THEMultipeerClientSocketRelayDelegate>) delegate
 {
   self = [super initWithRelayType:@"client"];
   if (!self)
   {
     return nil;
   }
-    
+ 
+  _delegate = delegate;   
   _peerIdentifier = peerIdentifier;
-    
+
   return self;
 }
 
 -(void)dealloc
 {
-  NSLog(@"client: relay dealloc");
-
   [_serverSocket setDelegate:nil];
   _serverSocket = nil;
 }
@@ -38,22 +40,20 @@
                         initWithDelegate:self 
                            delegateQueue:dispatch_get_main_queue()];
 
-    NSLog(@"client: new server socket: %p", _serverSocket);        
-
     NSError *err = nil;
     if (![_serverSocket acceptOnPort:0 error:&err])
     {
       NSString *errorMsg = @"relay failed to listen";
 
       NSLog(@"client: %@", errorMsg);
-      [self.delegate didNotListenWithErrorMessage:errorMsg withPeerIdentifier:_peerIdentifier];
+      [_delegate didNotListenWithErrorMessage:errorMsg withPeerIdentifier:_peerIdentifier];
 
       return NO;
     }
     else
     {
       UInt16 port = [_serverSocket localPort];
-      [self.delegate didListenWithLocalPort:port withPeerIdentifier:_peerIdentifier];
+      [_delegate didListenWithLocalPort:port withPeerIdentifier:_peerIdentifier];
         
       return YES;
     }

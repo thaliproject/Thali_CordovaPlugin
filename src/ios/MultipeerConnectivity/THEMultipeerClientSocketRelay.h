@@ -9,8 +9,7 @@
 // the multipeer session to the real server application running on the remote peer
 @interface THEMultipeerClientSocketRelay : THEMultipeerSocketRelay
 
-@property (nonatomic, weak) id<THEMultipeerClientSocketRelayDelegate> delegate;
-
-- (instancetype)initWithPeerIdentifier:(NSString *)peerIdentifier;
+- (instancetype)initWithPeerIdentifier:(NSString *)peerIdentifier 
+                          withDelegate:(id<THEMultipeerClientSocketRelayDelegate>)delegate;
 
 @end

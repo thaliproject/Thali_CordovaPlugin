@@ -52,75 +52,72 @@
   return self;
 }
 
-- (MCSession *)connectWithConnectCallback:(ConnectCallback)connectCallback
+- (void)connectWithConnectCallback:(ConnectCallback)connectCallback
 {
-  NSLog(@"client: session connect %@", [self remotePeerIdentifier]);
-
-  assert(_connectCallback == nil);
-
-  MCSession *mcSession = [super connect];
-  if (mcSession)
+  @synchronized(self)
   {
+    assert(_connectCallback == nil);
+
+    [super connect];
     _connectCallback = connectCallback;
   }
-
-  return mcSession;
 }
 
 - (void)disconnect
 {
-  THEPeerSessionState prevState = [self connectionState];
-
-  [super disconnect];
-  if (_connectCallback != nil)
+  @synchronized(self)
   {
-    if (prevState == THEPeerSessionStateConnecting)
+    THEPeerSessionState prevState = [self connectionState];
+
+    [super disconnect];
+    if (_connectCallback != nil)
     {
-      _connectCallback(@"Peer disconnected", 0);
+      if (prevState == THEPeerSessionStateConnecting)
+      {
+        _connectCallback(@"Peer disconnected", 0);
+      }
+      _connectCallback = nil;
     }
-    _connectCallback = nil;
   }
 }
 
-- (THEMultipeerSocketRelay *)createRelay
+- (THEMultipeerSocketRelay *)newSocketRelay
 {
-  THEMultipeerClientSocketRelay *clientRelay = [
-    [THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self remotePeerIdentifier]
-  ];
-  // We'll call this delegate back when a listening socket is established
-  // to which the application client will connect to be bridged to the remote server
-  [clientRelay setDelegate:(id<THEMultipeerClientSocketRelayDelegate>) self];
-
-  return clientRelay;
+  return [[THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self remotePeerIdentifier] 
+                                                    withDelegate:self];
 }
 
 - (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier
 {
-  if (_connectCallback)
+  @synchronized(self)
   {
-    _connectCallback(nil, port);
-    _connectCallback = nil;
-  }
-  else
-  {
-    NSLog(@"WARNING: didListenWithLocalPort but no callback");
+    if (_connectCallback)
+    {
+      _connectCallback(nil, port);
+      _connectCallback = nil;
+    }
+    else
+    {
+      NSLog(@"WARNING: didListenWithLocalPort but no callback");
+    }
   }
 }
 
 - (void)didNotListenWithErrorMessage:(NSString *)errorMsg 
                   withPeerIdentifier:(NSString*)peerIdentifier
 {
-  if (_connectCallback)
+  @synchronized(self)
   {
-    _connectCallback(errorMsg, 0);
-    _connectCallback = nil;
-  }
-  else
-  {
-    NSLog(@"WARNING: didNotListenWithLocalPort but no callback");
+    if (_connectCallback)
+    {
+      _connectCallback(errorMsg, 0);
+      _connectCallback = nil;
+    }
+    else
+    {
+      NSLog(@"WARNING: didNotListenWithLocalPort but no callback");
+    }
   }
 }
 
 @end
-
-
