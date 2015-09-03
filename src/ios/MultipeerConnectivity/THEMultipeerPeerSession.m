@@ -48,6 +48,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   NSString * _sessionType;
 }
 
+static int count = 0;
+
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
                    withRemotePeerID:(MCPeerID *)remotePeerID
            withRemotePeerIdentifier:(NSString *)remotePeerIdentifier 
@@ -59,6 +61,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
       return nil;
   }
     
+  count++;
+
   _localPeerID = localPeerID;
   _remotePeerID = remotePeerID;
   _remotePeerIdentifier = remotePeerIdentifier;
@@ -70,6 +74,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 
 -(void)dealloc
 {
+  count--;
   assert(_connectionState == THEPeerSessionStateNotConnected);
 }
 
@@ -104,15 +109,13 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   {
     // Create the transport session and relay, we're not yet fully connected though
 
-    NSLog(@"%@ session: connect %@", _sessionType, _remotePeerIdentifier);
-
     assert(_relay == nil && _session == nil);
 
     _connectionState = THEPeerSessionStateConnecting;
 
     _relay = [self createRelay];
 
-    _session = [[MCSession alloc] initWithPeer: _localPeerID 
+    _session = [[MCSession alloc] initWithPeer:_localPeerID 
                               securityIdentity:nil 
                           encryptionPreference:MCEncryptionNone];
     _session.delegate = self;
@@ -126,8 +129,6 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   @synchronized(self)
   {
     // Free up the resources we need for an active connection
-
-    NSLog(@"%@ session: disconnect %@", _sessionType, _remotePeerIdentifier);
 
     _connectionState = THEPeerSessionStateNotConnected;
 
@@ -168,8 +169,6 @@ static NSString * const THALI_STREAM = @"ThaliStream";
           withName:(NSString *)streamName
           fromPeer:(MCPeerID *)peerID
 {
-  NSLog(@"%@ session: didReceiveStream", _sessionType);
-
   if ([streamName isEqualToString:THALI_STREAM])
   {
       [self setInputStream:inputStream];
@@ -196,38 +195,43 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   {
     case MCSessionStateNotConnected:
     {
-      //NSLog(@"%@ session: not connected", _sessionType);
+      //NSLog(@"%@ (base) session: not connected", _sessionType);
       [self disconnect];
     }
     break;
 
     case MCSessionStateConnecting:
     {
-      //NSLog(@"%@ session: connecting", _sessionType);
+      //NSLog(@"%@ (base) session: connecting", _sessionType);
       assert(_connectionState == THEPeerSessionStateConnecting);
     }
     break;
 
     case MCSessionStateConnected:
     {
-      //NSLog(@"%@ session: connected", _sessionType);
+      //NSLog(@"%@ (base) session: connected", _sessionType);
 
-      _connectionState = THEPeerSessionStateConnected;
+      @synchronized(self)
+      {
+        assert(_connectionState == THEPeerSessionStateConnecting);
 
-      // Start the server output stream.
-      NSError * error;
-      NSOutputStream * outputStream = [_session startStreamWithName:THALI_STREAM
-                                                             toPeer:peerID
-                                                              error:&error];
-      if (outputStream)
-      {
-        // Set the server output stream. (Where we write data for the client.)
-        [self setOutputStream:outputStream];
-      }
-      else
-      {
-        [_session cancelConnectPeer:peerID];
-        [self disconnect];
+        _connectionState = THEPeerSessionStateConnected;
+
+        // Start the server output stream.
+        NSError * error;
+        NSOutputStream * outputStream = [_session startStreamWithName:THALI_STREAM
+                                                               toPeer:peerID
+                                                                error:&error];
+        if (outputStream)
+        {
+          // Set the server output stream. (Where we write data for the client.)
+          [self setOutputStream:outputStream];
+        }
+        else
+        {
+          [_session cancelConnectPeer:peerID];
+          [self disconnect];
+        }
       }
     }
     break;

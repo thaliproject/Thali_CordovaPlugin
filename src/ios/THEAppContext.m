@@ -311,7 +311,7 @@ didConnectPeerIdentifier:(NSString *)peerIdentifier
       pthread_mutex_unlock(&_mutex);
       return;
   }
-    
+
   // Allocate and initialize the peer.
   peer = [[THEPeer alloc] initWithIdentifier:peerIdentifier
                                           name:peerName];

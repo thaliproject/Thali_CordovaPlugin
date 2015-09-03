@@ -81,11 +81,6 @@
     return self;
 }
 
-- (void)dealloc
-{
-  [self stop];
-}
-
 // Starts peer networking.
 - (void)start
 {
@@ -105,7 +100,7 @@
   [_server start];
   [_client start];
 
-  NSLog(@"THEMultipeerSession initialized peer %@", [_peerID displayName]);
+  NSLog(@"THEMultipeerSession initialized peer %@", _peerIdentifier);
 }
 
 - (void)stop

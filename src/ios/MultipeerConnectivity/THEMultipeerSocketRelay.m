@@ -117,8 +117,6 @@ typedef enum relayStates {
 
 - (void)stop
 {
-  NSLog(@"%@ relay: stopping", _relayType);
-
   @synchronized(self)
   {
     if (_socket)
@@ -148,7 +146,6 @@ typedef enum relayStates {
 
 - (void)dealloc
 {
-  NSLog(@"%@ relay: dealloc", _relayType);
   assert(_relayState == STOPPED);
 }
 

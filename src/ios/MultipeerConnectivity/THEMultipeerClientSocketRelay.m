@@ -6,8 +6,12 @@
   GCDAsyncSocket *_serverSocket;
 }
 
+static int count = 0;
+
 -(instancetype)initWithPeerIdentifier:(NSString *)peerIdentifier
 {
+  count++;
+
   self = [super initWithRelayType:@"client"];
   if (!self)
   {
@@ -21,6 +25,7 @@
 
 -(void)dealloc
 {
+  count--;
   NSLog(@"client: relay dealloc");
 
   [_serverSocket setDelegate:nil];

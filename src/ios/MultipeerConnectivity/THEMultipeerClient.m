@@ -90,6 +90,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 {
   NSLog(@"client: stopping");
 
+  [_nearbyServiceBrowser setDelegate:nil];
   [_nearbyServiceBrowser stopBrowsingForPeers];
   _nearbyServiceBrowser = nil;
 
@@ -102,8 +103,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   __block BOOL success = NO;
   __block THEMultipeerClientSession *clientSession = nil;
 
-  NSLog(@"connectToPeer %@", peerIdentifier);
-
   [_clientSessions updateForPeerIdentifier:peerIdentifier 
                                updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
 
@@ -113,7 +112,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       if (![clientSession visible])
       {
         success = NO;
-        NSLog(@"Peer unreachable %@", peerIdentifier);
         connectCallback(@"Peer unreachable", 0);
       }
       else
@@ -125,7 +123,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
           // connect will create the networking resources required to establish the session
           [clientSession connectWithConnectCallback:(ConnectCallback)connectCallback];
 
-          NSLog(@"client: inviting peer %@", peerIdentifier);
           [_nearbyServiceBrowser invitePeer:[clientSession remotePeerID]
                                   toSession:[clientSession session]
                                 withContext:[peerIdentifier dataUsingEncoding:NSUTF8StringEncoding]

@@ -54,7 +54,9 @@
         [p disconnect];
       }
       assert(p.connectionState == THEPeerSessionStateNotConnected);
-      return nil;
+      // Since we're enumerating we must return the same object to ensure no
+      // mutations take place
+      return p;
     }];
   }
 }
@@ -77,12 +79,15 @@
     {
       // session object is about to be removed from the base dict, remove the 
       // corresponding mapping from it's peerIdentifier
-      [_peerIdentifiers removeObjectForKey:[session remotePeerIdentifier]];
+      [_peerIdentifiers removeObjectForKey:[v remotePeerIdentifier]];
     }
     else
     {
       // update our mapping, usual case is no change
-      _peerIdentifiers[[session remotePeerIdentifier]] = peerID;
+      if (session != v)
+      {
+        _peerIdentifiers[[session remotePeerIdentifier]] = peerID;
+      }
     }
 
     return session;

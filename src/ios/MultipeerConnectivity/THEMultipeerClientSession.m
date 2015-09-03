@@ -54,14 +54,17 @@
 
 - (MCSession *)connectWithConnectCallback:(ConnectCallback)connectCallback
 {
-  NSLog(@"client session: connect %@", [self remotePeerIdentifier]);
+  MCSession *mcSession = nil;
 
-  assert(_connectCallback == nil);
-
-  MCSession *mcSession = [super connect];
-  if (mcSession)
+  @synchronized(self)
   {
-    _connectCallback = connectCallback;
+    assert(_connectCallback == nil);
+
+    MCSession *mcSession = [super connect];
+    if (mcSession)
+    {
+      _connectCallback = connectCallback;
+    }
   }
 
   return mcSession;
@@ -69,18 +72,19 @@
 
 - (void)disconnect
 {
-  NSLog(@"client session: disconnect %@", [self remotePeerIdentifier]);
-
-  THEPeerSessionState prevState = [self connectionState];
-
-  [super disconnect];
-  if (_connectCallback != nil)
+  @synchronized(self)
   {
-    if (prevState == THEPeerSessionStateConnecting)
+    THEPeerSessionState prevState = [self connectionState];
+
+    [super disconnect];
+    if (_connectCallback != nil)
     {
-      _connectCallback(@"Peer disconnected", 0);
+      if (prevState == THEPeerSessionStateConnecting)
+      {
+        _connectCallback(@"Peer disconnected", 0);
+      }
+      _connectCallback = nil;
     }
-    _connectCallback = nil;
   }
 }
 
@@ -98,28 +102,34 @@
 
 - (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier
 {
-  if (_connectCallback)
+  @synchronized(self)
   {
-    _connectCallback(nil, port);
-    _connectCallback = nil;
-  }
-  else
-  {
-    NSLog(@"WARNING: didListenWithLocalPort but no callback");
+    if (_connectCallback)
+    {
+      _connectCallback(nil, port);
+      _connectCallback = nil;
+    }
+    else
+    {
+      NSLog(@"WARNING: didListenWithLocalPort but no callback");
+    }
   }
 }
 
 - (void)didNotListenWithErrorMessage:(NSString *)errorMsg 
                   withPeerIdentifier:(NSString*)peerIdentifier
 {
-  if (_connectCallback)
+  @synchronized(self)
   {
-    _connectCallback(errorMsg, 0);
-    _connectCallback = nil;
-  }
-  else
-  {
-    NSLog(@"WARNING: didNotListenWithLocalPort but no callback");
+    if (_connectCallback)
+    {
+      _connectCallback(errorMsg, 0);
+      _connectCallback = nil;
+    }
+    else
+    {
+      NSLog(@"WARNING: didNotListenWithLocalPort but no callback");
+    }
   }
 }
 

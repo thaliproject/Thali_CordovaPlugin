@@ -88,8 +88,6 @@
   // Connect
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
-    NSLog(@"jxcore: connect");
-
     if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
     {
       NSLog(@"jxcore: connect: badParam");
@@ -97,6 +95,7 @@
     }
     else
     {
+      NSLog(@"jxcore: connect %@", params[0]);
       void (^connectCallback)(NSString *, uint) = ^(NSString *errorMsg, uint port) 
       {
         if (errorMsg == nil)
