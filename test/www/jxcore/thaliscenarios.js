@@ -5,6 +5,11 @@ var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
 
+function newPeerIdentifier() {
+  return (+ new Date()).toString() + "." + process.pid;
+}
+
+
 test('ThaliEmitter can call repeatedly startBroadcasting and endBroadcasting without error', 
 function (t) {
 
@@ -21,7 +26,7 @@ function (t) {
   });
 
   for (var i = 0; i < TRIES; i++) {
-    e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
+    e.startBroadcasting(newPeerIdentifier(), 5001, function (err1) {
       t.notOk(err1, 'Should be able to call startBroadcasting without error');
       e.stopBroadcasting(function (err2) {
         t.notOk(err2, 'Should be able to call stopBroadcasting without error');
@@ -33,10 +38,10 @@ function (t) {
 test('ThaliEmitter calls startBroadcasting twice with error', function (t) {
   var e = new ThaliEmitter();
 
-  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
+  e.startBroadcasting(newPeerIdentifier(), 5001, function (err1) {
     t.notOk(err1, 'Should be able to call startBroadcasting without error');
 
-    e.startBroadcasting((+ new Date()).toString(), 5001, function (err2) {
+    e.startBroadcasting(newPeerIdentifier(), 5001, function (err2) {
 
       t.assert(!!err2, 'Cannot call startBroadcasting twice');
 
@@ -51,7 +56,7 @@ test('ThaliEmitter calls startBroadcasting twice with error', function (t) {
 test('ThaliEmitter throws on connection to bad peer', function (t) {
   var e = new ThaliEmitter();
 
-  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
+  e.startBroadcasting(newPeerIdentifier(), 5001, function (err1) {
     t.notOk(err1, 'Should be able to call startBroadcasting without error');
 
     e.connect('foobar', function (err2, port) {
@@ -68,7 +73,7 @@ test('ThaliEmitter throws on connection to bad peer', function (t) {
 test('ThaliEmitter throws on disconnect to bad peer', function (t) {
   var e = new ThaliEmitter();
 
-  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
+  e.startBroadcasting(newPeerIdentifier(), 5001, function (err1) {
     t.notOk(err1, 'Should be able to call startBroadcasting without error');
 
     e.disconnect('foobar', function (err2, port) {
@@ -131,7 +136,7 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
     });
   });
 
-  e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
+  e.startBroadcasting(newPeerIdentifier(), 5001, function (err1) {
     t.notOk(err1, 'Should be able to call startBroadcasting without error');
   });
 }
