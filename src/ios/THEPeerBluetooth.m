@@ -384,10 +384,12 @@ typedef enum bluetoothStates {
     if ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn)
     {
         [self startAdvertising];
+        [_delegate peerBluetooth:self didUpdateState:YES];
     }
     else
     {
         [self stopAdvertising];
+        [_delegate peerBluetooth:self didUpdateState:NO];
     }
 
     pthread_mutex_unlock(&_mutex);

@@ -7,19 +7,27 @@ var ThaliEmitter = require('thali/thaliemitter');
 
 test('ThaliEmitter can call repeatedly startBroadcasting and endBroadcasting without error', 
 function (t) {
+
+  var TRIES = 10;
+
+  var network_changed = 0;
   var e = new ThaliEmitter();
 
-  for (var i = 0; i < 20; i++) {
+  e.on(ThaliEmitter.events.NETWORK_CHANGED, function(status) {
+    t.ok(status.isAvailable == true, "Network status should be available");
+    if (++network_changed == TRIES) {
+      t.end();
+    }
+  });
+
+  for (var i = 0; i < TRIES; i++) {
     e.startBroadcasting((+ new Date()).toString(), 5001, function (err1) {
       t.notOk(err1, 'Should be able to call startBroadcasting without error');
-
       e.stopBroadcasting(function (err2) {
         t.notOk(err2, 'Should be able to call stopBroadcasting without error');
       });
     });
   }
-
-  t.end();
 });
 
 test('ThaliEmitter calls startBroadcasting twice with error', function (t) {
@@ -85,35 +93,38 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
 
       if (peer.peerAvailable) {
         var connectToPeer = function(attempts) {
-          if (attempts === 0) {
-            t.fail('Connecting failed');
-            return t.end();
-          }
 
-          e.connect(peer.peerIdentifier, function (err2, port) {
-
-            if (err2) {
-              if (_done || err2.message.indexOf("unreachable") != -1) {
-                // Peer has become unreachable or we're done, no point retrying
-                return;
-              } else {
-                // Retry
-                return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
-              }
+          if (!_done) {
+            if (attempts === 0) {
+              t.fail('Connecting failed');
+              return t.end();
             }
 
-            t.notOk(err2, 'Should be able to connect without error');
-            t.ok(port > 0 && port <= 65536, 'Port should be within range');
+            e.connect(peer.peerIdentifier, function (err2, port) {
 
-            testFunction(t, e, peer, port, function() {
-              e.stopBroadcasting(function (err4) {
-                t.notOk(err4, 'Should be able to call stopBroadcasting without error');
-                t.end();
-                _done = true;
+              if (err2) {
+                if (err2.message.indexOf("unreachable") != -1) {
+                  // Peer has become unreachable no point retrying
+                  return;
+                } else {
+                  // Retry
+                  return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+                }
+              }
+
+              t.notOk(err2, 'Should be able to connect without error');
+              t.ok(port > 0 && port <= 65536, 'Port should be within range');
+
+              testFunction(t, e, peer, port, function() {
+                e.stopBroadcasting(function (err4) {
+                  t.notOk(err4, 'Should be able to call stopBroadcasting without error');
+                  t.end();
+                  _done = true;
+                });
               });
             });
-          });
-        };
+          };
+        }
 
         connectToPeer(10);
       }

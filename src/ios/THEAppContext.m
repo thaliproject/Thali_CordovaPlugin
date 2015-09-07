@@ -72,6 +72,9 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   // The reachability handler reference.
   id reachabilityHandlerReference;
 
+  // Bluetooth enabled state
+  bool _bluetoothEnabled;
+
   // Our current app level id
   NSString *_peerIdentifier;
     
@@ -296,6 +299,17 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 // THEAppContext (THEPeerBluetoothDelegate) implementation.
 ///////////////////////////////////////////////////////////
 
+// Receive notifications from the bluetooth stack about radio state
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth didUpdateState:(BOOL)bluetoothEnabled
+{
+  pthread_mutex_lock(&_mutex);
+
+  _bluetoothEnabled = bluetoothEnabled;
+  [self fireNetworkChangedEvent];
+
+  pthread_mutex_unlock(&_mutex);
+}
+
 // Notifies the delegate that a peer was connected.
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
 didConnectPeerIdentifier:(NSString *)peerIdentifier
@@ -354,7 +368,11 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     
   // Intialize.
   _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
-    
+ 
+  // We don't really know yet, assum the worst, we'll get an update
+  // when we initialise the BT stack 
+  _bluetoothEnabled = false;
+  
   // Initialize the the mutex 
   pthread_mutex_init(&_mutex, NULL);
 
@@ -379,13 +397,17 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent
 {
-    // Construct the JSON for the networkChanged event.
     NSString * json;
-    if ([[NPReachability sharedInstance] isCurrentlyReachable])
+
+    // NPReachability only tells us what kind of IP connection we're capable
+    // of. Need to take bluetooth into account also
+
+    BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
+
+    if (reachable)
     {
         json = [NSString stringWithFormat:@"{ \"isAvailable\": %@, \"isWiFi\": %@ }",
-                @"true",
-                ([[NPReachability sharedInstance] currentReachabilityFlags] & 
+                @"true", ([[NPReachability sharedInstance] currentReachabilityFlags] & 
                   kSCNetworkReachabilityFlagsIsWWAN) == 0 ? @"true" : @"false"];
     }
     else
