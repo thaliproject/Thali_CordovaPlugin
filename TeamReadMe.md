@@ -133,7 +133,8 @@ Cordova to talk to the underlying system.
 Go inside of the ThaliTest project and run
 
 ```
-$ cordova build
+$ cordova build android
+$ cordova build ios
 ```
 
 Now deploy with your favorite tool. Note that you need two phones running the tests at the same time in order to
