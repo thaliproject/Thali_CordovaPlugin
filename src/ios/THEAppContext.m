@@ -147,16 +147,13 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     // Start networking..
     [_peerBluetooth start];
     [_multipeerSession start];
-       
-    // Once started, fire the network changed event.
 
-    OnMainThreadAfterTimeInterval(1.0, ^{
+    // Hook reachability to network changed event (when user
+    // toggles Wifi)       
+    reachabilityHandlerReference = [[NPReachability sharedInstance] 
+      addHandler:^(NPReachability *reachability) {
         [self fireNetworkChangedEvent];
-        reachabilityHandlerReference = [[NPReachability sharedInstance] 
-          addHandler:^(NPReachability *reachability) {
-            [self fireNetworkChangedEvent];
-        }];
-    });
+    }];
 
     return true;
   }
@@ -169,8 +166,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 {
   if ([_atomicFlagCommunicationsEnabled tryClear])
   {
-    NSLog(@"app: stop broadcasting");
-
     [_peerBluetooth stop];
     [_multipeerSession stop];
 
@@ -237,8 +232,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 
 - (void) didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
 {
-  NSLog(@"app: didFindPeerIdentifier %@", peerIdentifier);
-
   // Lock.
   pthread_mutex_lock(&_mutex);
   
@@ -270,8 +263,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 
 - (void) didLosePeerIdentifier:(NSString *)peerIdentifier
 {
-  NSLog(@"app: didLosePeerIdentifier %@", peerIdentifier);
-
   // Lock.
   pthread_mutex_lock(&_mutex);
     
@@ -304,6 +295,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 {
   pthread_mutex_lock(&_mutex);
 
+  // This will always be called regardless of BT state
   _bluetoothEnabled = bluetoothEnabled;
   [self fireNetworkChangedEvent];
 

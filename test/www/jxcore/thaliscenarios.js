@@ -123,8 +123,8 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
               testFunction(t, e, peer, port, function() {
                 e.stopBroadcasting(function (err4) {
                   t.notOk(err4, 'Should be able to call stopBroadcasting without error');
-                  t.end();
                   _done = true;
+                  t.end();
                 });
               });
             });

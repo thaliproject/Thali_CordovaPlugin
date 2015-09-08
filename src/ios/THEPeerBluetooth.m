@@ -166,7 +166,9 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 // Possible states of bluetooth stack 
 typedef enum bluetoothStates {
   INITIALIZED,
+  STARTING,
   STARTED,
+  STOPPING,
   STOPPED 
 } BluetoothState;
 
@@ -211,11 +213,12 @@ typedef enum bluetoothStates {
     // The central manager.
     CBCentralManager * _centralManager;
     
-    // Mutex used to synchronize accesss to the things below.
-    pthread_mutex_t _mutex;
-
     // Current state of the bluetooth stack   
     BluetoothState _state;
+
+    // Track outstanding callbacks to better manage STARTING->STOPPING transition
+    BOOL _centralCallbackOutstanding;
+    BOOL _peripheralCallbackOutstanding;
  
     // The perhipherals dictionary.
     NSMutableDictionary * _peripherals;
@@ -225,6 +228,16 @@ typedef enum bluetoothStates {
 
     // The bluetooth delegate which will receive peer availability updates
     __weak id<THEPeerBluetoothDelegate> _delegate;
+}
+
+// References to instances that are stopping and awaiting a callback
+// They can't be destroyed until the callbacks happen (and we've no way to cancel the callback)
+static NSMutableSet * _stoppingInstances;
+
+// Static initializer
++ (void)initialize
+{
+  _stoppingInstances = [[NSMutableSet alloc] init];
 }
 
 // Class initializer.
@@ -299,13 +312,18 @@ typedef enum bluetoothStates {
                             initWithDelegate:self
                                        queue:backgroundQueue];
     
+    // peripheralManager will shortly call us back with info on the 
+    // BT state, we can't destroy this instance until it does
+    _peripheralCallbackOutstanding = (_peripheralManager != nil);
+    
     // Allocate and initialize the central manager.
     _centralManager = [[CBCentralManager alloc] initWithDelegate:self
                                                            queue:backgroundQueue];
+
+    // centralManager will shortly call us back with info on the 
+    // BT state, we can't destroy this instance until it does
+    _centralCallbackOutstanding = (_centralManager != nil);
     
-    // Initialize
-    pthread_mutex_init(&_mutex, NULL);
-   
     // Allocate and initialize the peripherals dictionary. It contains a THEPeripheralDescriptor for
     // every peripheral we are either connecting or connected to.
     _peripherals = [[NSMutableDictionary alloc] init];
@@ -325,40 +343,57 @@ typedef enum bluetoothStates {
 // Starts peer Bluetooth.
 - (void)start
 {
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-   
+  @synchronized(self)
+  { 
     assert(_state == INITIALIZED);
- 
-    [self startAdvertising];
-    [self startScanning];
-
-    _state = STARTED;
-
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
+    _state = STARTING;
+  }
 }
 
 // Stops peer Bluetooth.
 - (void)stop
 {
-    // Lock.
-    pthread_mutex_lock(&_mutex);
+  @synchronized(self)
+  {
+    assert(_state == STARTING || _state == STARTED);
 
-    assert(_state == STARTED);
+    if (_state == STARTING)
+    {
+      // We have an outstanding callback, keep ourself alive until
+      // that's cleared, don't clear delegates yet since that
+      // could stop the callback happening
+      [_stoppingInstances addObject:self];
+    }
+    else if (_state == STARTED)
+    {
+      _delegate = nil;
+      _peripheralManager.delegate = nil;
+      _centralManager.delegate = nil;
+    }
 
-    _delegate = nil;
-    _peripheralManager.delegate = nil;
-    _centralManager.delegate = nil;
+    _state = STOPPING;
 
     [self stopAdvertising];
     [self stopScanning];
+  }
+}
 
-    // Only place to go after STOPPED is destroyed
-    _state = STOPPED;
+- (BOOL)tryReleaseSelf
+{
+  if (_state == STOPPING)
+  {
+    assert([_stoppingInstances member:self]);
+    if (!_peripheralCallbackOutstanding && !_centralCallbackOutstanding)
+    {
+      _delegate = nil;
+      _peripheralManager.delegate = nil;
+      _centralManager.delegate = nil;
 
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
+      [_stoppingInstances removeObject:self];
+      return YES;
+    }
+  }
+  return NO;
 }
 
 @end
@@ -369,33 +404,47 @@ typedef enum bluetoothStates {
 // Invoked whenever the peripheral manager's state has been updated.
 - (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheralManager
 {
-    // Force self to stick around for whilst we acquire the lock
-    __strong THEPeerBluetooth *_self = self;
+  @synchronized(self)
+  {
+    assert(_state == STARTING || _state == STOPPING);
 
-    pthread_mutex_lock(&_mutex);
+    BOOL bluetoothEnabled = ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn);
+    [_delegate peerBluetooth:self didUpdateState:bluetoothEnabled];
 
-    if (_state == STOPPED)
+    _peripheralCallbackOutstanding = NO;
+    if ([self tryReleaseSelf])
     {
-      // Stop may have already been called, early out
+      // We're about to go away, nothing more to do
       return;
     }
 
-    // Process the state update.
-    if ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn)
+    if (bluetoothEnabled)
     {
+      // BT is on, we can advertise
+
+      if (_state == STARTING)
+      {
         [self startAdvertising];
-        [_delegate peerBluetooth:self didUpdateState:YES];
+
+        if (_centralCallbackOutstanding == NO)
+        {
+          // If we've had both callbacks we can safely say we've started
+          _state = STARTED;
+        }
+      }
     }
     else
     {
+      // BT is off, we should stop
+
+      if (_state == STARTED)
+      {
         [self stopAdvertising];
-        [_delegate peerBluetooth:self didUpdateState:NO];
+      }
+
+      _state = STOPPED;
     }
-
-    pthread_mutex_unlock(&_mutex);
-
-    // Avoid unused variable warning
-    _self = nil;
+  }
 }
 
 // Invoked with the result of a startAdvertising call.
@@ -415,28 +464,27 @@ typedef enum bluetoothStates {
 // Invoked after a failed call to update a characteristic.
 - (void)peripheralManagerIsReadyToUpdateSubscribers:(CBPeripheralManager *)peripheralManager
 {
-    pthread_mutex_lock(&_mutex);
-
+  @synchronized(self)
+  {
     // Process as many pending characteristic updates as we can.
     while ([_pendingCharacteristicUpdates count])
     {
-        // Process the next pending characteristic update. 
-        // If the tranmission queue is full, stop processing.
-        THECharacteristicUpdateDescriptor * characteristicUpdateDescriptor = 
-          _pendingCharacteristicUpdates[0];
+      // Process the next pending characteristic update. 
+      // If the tranmission queue is full, stop processing.
+      THECharacteristicUpdateDescriptor * characteristicUpdateDescriptor = 
+        _pendingCharacteristicUpdates[0];
 
-        if (![_peripheralManager updateValue:[characteristicUpdateDescriptor value]
-                           forCharacteristic:[characteristicUpdateDescriptor characteristic]
-                        onSubscribedCentrals:nil])
-        {
-            break;
-        }
-        
-        // Remove the pending characteristic update we processed.
-        [_pendingCharacteristicUpdates removeObjectAtIndex:0];
+      if (![_peripheralManager updateValue:[characteristicUpdateDescriptor value]
+                         forCharacteristic:[characteristicUpdateDescriptor characteristic]
+                      onSubscribedCentrals:nil])
+      {
+          break;
+      }
+      
+      // Remove the pending characteristic update we processed.
+      [_pendingCharacteristicUpdates removeObjectAtIndex:0];
     }
-
-    pthread_mutex_unlock(&_mutex);
+  }
 }
 @end
 
@@ -446,32 +494,43 @@ typedef enum bluetoothStates {
 // Invoked whenever the central manager's state has been updated.
 - (void)centralManagerDidUpdateState:(CBCentralManager *)centralManager
 {
-    // Force self to stick around whilst we acquire the lock
-    __strong THEPeerBluetooth *_self = self;
-
-    pthread_mutex_lock(&_mutex);
-
-    if (_state == STOPPED)
-    {
-      // Nothing to do here..
-      return;
-    }
+  @synchronized(self)
+  {
+    assert(_state == STARTING || _state == STOPPING);
 
     // If the central manager is powered on, make sure we're scanning. If it's in any other state,
     // make sure we're not scanning.
+
+    _centralCallbackOutstanding = NO;
+    if ([self tryReleaseSelf])
+    {
+      // We're about to go away, nothing more to do
+      return;
+    }
+
     if ([_centralManager state] == CBCentralManagerStatePoweredOn)
     {
+      if (_state == STARTING)
+      {
         [self startScanning];
+
+        if (_peripheralCallbackOutstanding == NO)
+        {
+          // If we've had both callbacks we can safely say we've started
+          _state = STARTED;
+        }
+      }
     }
     else
     {
+      if (_state == STARTED)
+      {
         [self stopScanning];
+      }
+      
+      _state = STOPPED;
     }
-
-    pthread_mutex_unlock(&_mutex);
-
-    // Avoid unused variable warning
-    _self = nil;
+  }
 }
 
 // Invoked when a peripheral is discovered.
@@ -480,40 +539,36 @@ typedef enum bluetoothStates {
      advertisementData:(NSDictionary *)advertisementData
                   RSSI:(NSNumber *)RSSI
 {
-    // Obtain the peripheral identifier string.
-    NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
+  // Obtain the peripheral identifier string.
+  NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
     
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-
+  @synchronized(self)
+  {
     // If we're not connected or connecting to this peripheral, connect to it.
     if (!_peripherals[peripheralIdentifierString])
     {
-        // Add a THEPeripheralDescriptor to the peripherals dictionary.
-        _peripherals[peripheralIdentifierString] = [[THEPeripheralDescriptor alloc] 
-                                        initWithPeripheral:peripheral
-                                              initialState:THEPeripheralDescriptorStateConnecting
-                                         bluetoothDelegate:_delegate];
+      // Add a THEPeripheralDescriptor to the peripherals dictionary.
+      _peripherals[peripheralIdentifierString] = [[THEPeripheralDescriptor alloc] 
+                                      initWithPeripheral:peripheral
+                                            initialState:THEPeripheralDescriptorStateConnecting
+                                       bluetoothDelegate:_delegate];
 
         // Connect to the peripheral.
-        [_centralManager connectPeripheral:peripheral
-                                   options:nil];
+      [_centralManager connectPeripheral:peripheral
+                                 options:nil];
     }
-
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
+  }
 }
 
 // Invoked when a peripheral is connected.
 - (void)centralManager:(CBCentralManager *)centralManager
   didConnectPeripheral:(CBPeripheral *)peripheral
 {
-    // Get the peripheral identifier string.
-    NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
-    
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-
+  // Get the peripheral identifier string.
+  NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
+  
+  @synchronized(self)
+  {
     // Find the peripheral descriptor in the peripherals dictionary. It should be there.
     THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
     if (peripheralDescriptor)
@@ -533,9 +588,7 @@ typedef enum bluetoothStates {
     
     // Set our delegate on the peripheral and discover its services.
     [peripheral discoverServices:@[_serviceType]];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
+  }
 }
 
 // Invoked when a peripheral connection fails.
@@ -543,12 +596,11 @@ typedef enum bluetoothStates {
 didFailToConnectPeripheral:(CBPeripheral *)peripheral
                  error:(NSError *)error
 {
-    // Get the peripheral identifier string.
-    NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
-    
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
+  // Get the peripheral identifier string.
+  NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
+
+  @synchronized(self)
+  {  
     // Find the peripheral descriptor in the peripherals dictionary. It should be there.
     THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
     if (peripheralDescriptor)
@@ -559,9 +611,7 @@ didFailToConnectPeripheral:(CBPeripheral *)peripheral
         [_centralManager connectPeripheral:peripheral
                                    options:nil];
     }
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
+  }    
 }
 
 // Invoked when a peripheral is disconnected.
@@ -569,33 +619,31 @@ didFailToConnectPeripheral:(CBPeripheral *)peripheral
 didDisconnectPeripheral:(CBPeripheral *)peripheral
                   error:(NSError *)error
 {
-    // Get the peripheral identifier string.
-    NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
+  // Get the peripheral identifier string.
+  NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
 
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-
+  @synchronized(self)
+  {
     // Find the peripheral descriptor in the peripherals dictionary. It should be there.
     THEPeripheralDescriptor * peripheralDescriptor = 
       [_peripherals objectForKey:peripheralIdentifierString];
+
     if (peripheralDescriptor)
     {
-        // Notify the delegate.
-        if ([peripheralDescriptor peerName])
-        {
-            [_delegate peerBluetooth:self 
-                didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
-        }
+      // Notify the delegate.
+      if ([peripheralDescriptor peerName])
+      {
+        [_delegate peerBluetooth:self 
+            didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
+      }
         
-        // Immediately reconnect. This is long-lived. Central manager will connect to this peer 
-        // whenever it is discovered again.
-        [peripheralDescriptor setState:THEPeripheralDescriptorStateConnecting];
-        [_centralManager connectPeripheral:peripheral
-                                   options:nil];
+      // Immediately reconnect. This is long-lived. Central manager will connect to this peer 
+      // whenever it is discovered again.
+      [peripheralDescriptor setState:THEPeripheralDescriptorStateConnecting];
+      [_centralManager connectPeripheral:peripheral
+                                 options:nil];
     }
-
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
+  }
 }
 
 @end
@@ -607,17 +655,17 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
 - (void)peripheral:(CBPeripheral *)peripheral
 didDiscoverServices:(NSError *)error
 {
-    // Process the services.
-    for (CBService * service in [peripheral services])
+  // Process the services.
+  for (CBService * service in [peripheral services])
+  {
+    // If this is our service, discover its characteristics.
+    if ([[service UUID] isEqual:_serviceType])
     {
-        // If this is our service, discover its characteristics.
-        if ([[service UUID] isEqual:_serviceType])
-        {
-            [peripheral discoverCharacteristics:@[_peerIDType,
-                                                  _peerNameType]
-                                     forService:service];
-        }
+        [peripheral discoverCharacteristics:@[_peerIDType,
+                                              _peerNameType]
+                                 forService:service];
     }
+  }
 }
 
 // Invoked when service characteristics are discovered.
@@ -625,40 +673,37 @@ didDiscoverServices:(NSError *)error
 didDiscoverCharacteristicsForService:(CBService *)service
              error:(NSError *)error
 {
-    // Get the peripheral identifier string.
-    NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
+  // Get the peripheral identifier string.
+  NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
     
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
+  @synchronized(self)
+  { 
     // Obtain the peripheral descriptor.
     THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
     if (peripheralDescriptor)
     {
-        // If this is our service, process its discovered characteristics.
-        if ([[service UUID] isEqual:_serviceType])
+      // If this is our service, process its discovered characteristics.
+      if ([[service UUID] isEqual:_serviceType])
+      {
+        // Process each of the discovered characteristics.
+        for (CBCharacteristic * characteristic in [service characteristics])
         {
-            // Process each of the discovered characteristics.
-            for (CBCharacteristic * characteristic in [service characteristics])
-            {
-                // Peer ID characteristic.
-                if ([[characteristic UUID] isEqual:_peerIDType])
-                {
-                    // Read it.
-                    [peripheral readValueForCharacteristic:characteristic];
-                }
-                // Peer name characteristic.
-                else if ([[characteristic UUID] isEqual:_peerNameType])
-                {
-                    // Read it.
-                    [peripheral readValueForCharacteristic:characteristic];
-                }
-            }
+          // Peer ID characteristic.
+          if ([[characteristic UUID] isEqual:_peerIDType])
+          {
+            // Read it.
+            [peripheral readValueForCharacteristic:characteristic];
+          }
+          // Peer name characteristic.
+          else if ([[characteristic UUID] isEqual:_peerNameType])
+          {
+            // Read it.
+            [peripheral readValueForCharacteristic:characteristic];
+          }
         }
+      }
     }
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
+  }
 }
 
 // Invoked when the value of a characteristic is updated.
@@ -666,47 +711,46 @@ didDiscoverCharacteristicsForService:(CBService *)service
 didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
              error:(NSError *)error
 {
-    // Get the peripheral identifier string.
-    NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
+  // Get the peripheral identifier string.
+  NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
 
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-
+  @synchronized(self)
+  {
     // Obtain the peripheral descriptor.
     THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
     if (peripheralDescriptor)
     {
-        // Peer ID characteristic.
-        if ([[characteristic UUID] isEqual:_peerIDType])
-        {
-            // When the peer ID is updated, set the peer ID in the peripheral descriptor.
-            [peripheralDescriptor setPeerID:[
-                [NSString alloc] initWithData:[characteristic value] encoding:NSUTF8StringEncoding]];
-        }
-        // Peer name characteristic.
-        else if ([[characteristic UUID] isEqual:_peerNameType])
-        {
-            // When the peer name is updated, set the peer name in the peripheral descriptor.
-            [peripheralDescriptor setPeerName:[[NSString alloc] initWithData:[characteristic value]
-                                                                    encoding:NSUTF8StringEncoding]];
-        }
+      // Peer ID characteristic.
+      if ([[characteristic UUID] isEqual:_peerIDType])
+      {
+        // When the peer ID is updated, set the peer ID in the peripheral descriptor.
+        [peripheralDescriptor setPeerID:[
+            [NSString alloc] initWithData:[characteristic value] 
+                                 encoding:NSUTF8StringEncoding]];
+      }
+      // Peer name characteristic.
+      else if ([[characteristic UUID] isEqual:_peerNameType])
+      {
+        // When the peer name is updated, set the peer name in the peripheral descriptor.
+        [peripheralDescriptor setPeerName:[[NSString alloc] 
+                             initWithData:[characteristic value]
+                                 encoding:NSUTF8StringEncoding]];
+      }
         
-        // Detect when the peer is fully initialized and move it to the connected state.
-        if ([peripheralDescriptor state] == THEPeripheralDescriptorStateInitializing && 
-            [peripheralDescriptor peerID] && [peripheralDescriptor peerName])
-        {
-            // Move the peer to the connected state.
-            [peripheralDescriptor setState:THEPeripheralDescriptorStateConnected];
+      // Detect when the peer is fully initialized and move it to the connected state.
+      if ([peripheralDescriptor state] == THEPeripheralDescriptorStateInitializing && 
+          [peripheralDescriptor peerID] && [peripheralDescriptor peerName])
+      {
+        // Move the peer to the connected state.
+        [peripheralDescriptor setState:THEPeripheralDescriptorStateConnected];
             
-            // Notify the delegate that the peer is connected.
-            [_delegate peerBluetooth:self
-                  didConnectPeerIdentifier:[peripheralDescriptor peerID]
-                                  peerName:[peripheralDescriptor peerName]];
-        }
+        // Notify the delegate that the peer is connected.
+        [_delegate peerBluetooth:self
+              didConnectPeerIdentifier:[peripheralDescriptor peerID]
+                              peerName:[peripheralDescriptor peerName]];
+      }
     }
-
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
+  }
 }
 
 @end
@@ -717,39 +761,39 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
 // Starts advertising.
 - (void)startAdvertising
 {
-    if ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn && 
-        ![_peripheralManager isAdvertising])
-    {
-        [_peripheralManager addService:_service];
-        [_peripheralManager startAdvertising:_advertisingData];
-    }
+  if ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn && 
+      ![_peripheralManager isAdvertising])
+  {
+    [_peripheralManager addService:_service];
+    [_peripheralManager startAdvertising:_advertisingData];
+  }
 }
 
 // Stops advertising.
 - (void)stopAdvertising
 {
-    if ([_peripheralManager isAdvertising])
-    {
-        [_peripheralManager removeAllServices];
-        [_peripheralManager stopAdvertising];
-    }
+  if ([_peripheralManager isAdvertising])
+  {
+    [_peripheralManager removeAllServices];
+    [_peripheralManager stopAdvertising];
+  }
 }
 
 // Starts scanning.
 - (void)startScanning
 {
-    if ([_centralManager state] == CBCentralManagerStatePoweredOn)
-    {
-        [_centralManager 
-            scanForPeripheralsWithServices:@[_serviceType]
-                                   options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @(NO)}];
-    }
+  if ([_centralManager state] == CBCentralManagerStatePoweredOn)
+  {
+    [_centralManager 
+        scanForPeripheralsWithServices:@[_serviceType]
+                               options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @(NO)}];
+  }
 }
 
 // Stops scanning.
 - (void)stopScanning
 {
-    [_centralManager stopScan];
+  [_centralManager stopScan];
 }
 
 @end
