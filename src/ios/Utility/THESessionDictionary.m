@@ -43,9 +43,6 @@
 
 - (void)dealloc
 {
-  // Sanity check we cleaned everything up
-  NSLog(@"destroying sessions");
-
   for (id peerIdentifier in _peerIdentifiers) {
     [self updateForPeerIdentifier:peerIdentifier 
                       updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {

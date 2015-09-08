@@ -30,7 +30,9 @@
 
 // THEPeerBluetoothDelegate protocol.
 @protocol THEPeerBluetoothDelegate <NSObject>
-@required
+
+// Notifies the delegate about changes to bluetooth state
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth didUpdateState:(BOOL)bluetoothEnabled;
 
 // Notifies the delegate that a peer was connected.
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth

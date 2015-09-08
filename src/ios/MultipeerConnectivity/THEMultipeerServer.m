@@ -96,8 +96,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 -(void) stop
 {
-  NSLog(@"server: stopping");
-
   [_nearbyServiceAdvertiser stopAdvertisingPeer];
   _nearbyServiceAdvertiser = nil;
     
@@ -115,7 +113,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   __block THEMultipeerServerSession *_serverSession = nil;
  
   NSString *peerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
-  NSLog(@"server: didReceiveInvitationFromPeer %@", peerIdentifier);
   
   [_serverSessions updateForPeerID:peerID 
                        updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
@@ -126,13 +123,11 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     {
       assert([[serverSession remotePeerIdentifier] isEqualToString:peerIdentifier]);
 
-      NSLog(@"server: existing peer");
       // Disconnect any existing session, see note below
       [serverSession disconnect];
     }
     else
     {
-      NSLog(@"server: new peer");
       serverSession = [[THEMultipeerServerSession alloc] initWithLocalPeerID:_localPeerId
                                                             withRemotePeerID:peerID
                                                     withRemotePeerIdentifier:peerIdentifier

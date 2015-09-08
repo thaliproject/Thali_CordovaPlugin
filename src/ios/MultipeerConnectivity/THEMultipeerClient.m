@@ -73,8 +73,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)start
 {
-  NSLog(@"client starting");
-
   // Start with a blank sheet of clients
   _clientSessions = [[THESessionDictionary alloc] init];
 
@@ -88,8 +86,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)stop
 {
-  NSLog(@"client: stopping");
-
   [_nearbyServiceBrowser setDelegate:nil];
   [_nearbyServiceBrowser stopBrowsingForPeers];
   _nearbyServiceBrowser = nil;
@@ -165,7 +161,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       {
         success = YES;
 
-        NSLog(@"client: disconnecting peer: %@", peerIdentifier);
         [clientSession disconnect];
       }
     }
@@ -220,15 +215,11 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     if (session && ([[session remotePeerID] hash] == [peerID hash]) && 
         [peerIdentifier isEqualToString:[session remotePeerIdentifier]])
     {
-      NSLog(@"client: Found existing peer: %@", peerIdentifier);
-
       clientSession = session;
       previouslyVisible = clientSession.visible;
     }
     else
     {
-      NSLog(@"client: Found new peer: %@", peerIdentifier);
-
       // We've found a new peer, create a new record
       clientSession = [[THEMultipeerClientSession alloc] 
                                     initWithLocalPeerID:_localPeerId 
@@ -267,7 +258,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     if (clientSession)
     {
-      NSLog(@"client: lost peer: %@", [clientSession remotePeerIdentifier]);
       // disconnect will clear up any networking resources we currently hold
       [clientSession disconnect];
       [clientSession setVisible:NO];

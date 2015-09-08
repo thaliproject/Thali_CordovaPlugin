@@ -72,6 +72,9 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
   // The reachability handler reference.
   id reachabilityHandlerReference;
 
+  // Bluetooth enabled state
+  bool _bluetoothEnabled;
+
   // Our current app level id
   NSString *_peerIdentifier;
     
@@ -144,16 +147,13 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     // Start networking..
     [_peerBluetooth start];
     [_multipeerSession start];
-       
-    // Once started, fire the network changed event.
 
-    OnMainThreadAfterTimeInterval(1.0, ^{
+    // Hook reachability to network changed event (when user
+    // toggles Wifi)       
+    reachabilityHandlerReference = [[NPReachability sharedInstance] 
+      addHandler:^(NPReachability *reachability) {
         [self fireNetworkChangedEvent];
-        reachabilityHandlerReference = [[NPReachability sharedInstance] 
-          addHandler:^(NPReachability *reachability) {
-            [self fireNetworkChangedEvent];
-        }];
-    });
+    }];
 
     return true;
   }
@@ -166,8 +166,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 {
   if ([_atomicFlagCommunicationsEnabled tryClear])
   {
-    NSLog(@"app: stop broadcasting");
-
     [_peerBluetooth stop];
     [_multipeerSession stop];
 
@@ -234,8 +232,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 
 - (void) didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
 {
-  NSLog(@"app: didFindPeerIdentifier %@", peerIdentifier);
-
   // Lock.
   pthread_mutex_lock(&_mutex);
   
@@ -267,8 +263,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 
 - (void) didLosePeerIdentifier:(NSString *)peerIdentifier
 {
-  NSLog(@"app: didLosePeerIdentifier %@", peerIdentifier);
-
   // Lock.
   pthread_mutex_lock(&_mutex);
     
@@ -295,6 +289,18 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 ///////////////////////////////////////////////////////////
 // THEAppContext (THEPeerBluetoothDelegate) implementation.
 ///////////////////////////////////////////////////////////
+
+// Receive notifications from the bluetooth stack about radio state
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth didUpdateState:(BOOL)bluetoothEnabled
+{
+  pthread_mutex_lock(&_mutex);
+
+  // This will always be called regardless of BT state
+  _bluetoothEnabled = bluetoothEnabled;
+  [self fireNetworkChangedEvent];
+
+  pthread_mutex_unlock(&_mutex);
+}
 
 // Notifies the delegate that a peer was connected.
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
@@ -354,7 +360,11 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     
   // Intialize.
   _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
-    
+ 
+  // We don't really know yet, assum the worst, we'll get an update
+  // when we initialise the BT stack 
+  _bluetoothEnabled = false;
+  
   // Initialize the the mutex 
   pthread_mutex_init(&_mutex, NULL);
 
@@ -379,13 +389,17 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent
 {
-    // Construct the JSON for the networkChanged event.
     NSString * json;
-    if ([[NPReachability sharedInstance] isCurrentlyReachable])
+
+    // NPReachability only tells us what kind of IP connection we're capable
+    // of. Need to take bluetooth into account also
+
+    BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
+
+    if (reachable)
     {
         json = [NSString stringWithFormat:@"{ \"isAvailable\": %@, \"isWiFi\": %@ }",
-                @"true",
-                ([[NPReachability sharedInstance] currentReachabilityFlags] & 
+                @"true", ([[NPReachability sharedInstance] currentReachabilityFlags] & 
                   kSCNetworkReachabilityFlagsIsWWAN) == 0 ? @"true" : @"false"];
     }
     else
