@@ -22,15 +22,20 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEThaliCore.h
+//  THEMultipeerServerSession.h
 //
 
-#import "CDVJXcore.h"
+#import "THEMultipeerPeerSession.h"
 
-// THEThaliCore interface.
-@interface THEThaliCore : CDVJXcore
+// The sesssion type managed by a server (and so references a client)
+@interface THEMultipeerServerSession : THEMultipeerPeerSession
 
-// Class initializer.
-- (CDVPlugin*)initWithWebView:(UIWebView *)theWebView;
+// The local port on which the application server is listening
+@property (nonatomic) uint serverPort;
+
+- (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
+                   withRemotePeerID:(MCPeerID *)remotePeerID
+           withRemotePeerIdentifier:(NSString *)peerIdentifier 
+                     withServerPort:(uint)serverPort;
 
 @end

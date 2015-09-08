@@ -1,15 +1,15 @@
 {
   "name": "thali",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
     "multiplex": "^6.2.2"
   },
   "scripts": {
-    "prepublish" : "jx install/prePublishThaliCordovaPlugin.js",
-    "postpublish" : "jx install/postPublishThaliCordovaPlugin.js",
-    "postinstall" : "jx installCordovaPlugin.js"
+    "prepublish": "jx install/prePublishThaliCordovaPlugin.js",
+    "postpublish": "jx install/postPublishThaliCordovaPlugin.js",
+    "postinstall": "jx installCordovaPlugin.js"
   },
   "repository": {
     "type": "git",
