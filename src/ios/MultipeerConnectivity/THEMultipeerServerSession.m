@@ -22,36 +22,36 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THEMultipeerServerSession.m
 //
 
-#import <Foundation/Foundation.h>
-#import "THEMultipeerSessionDelegate.h"
-#import "THEPeerBluetoothDelegate.h"
+#import "THEMultipeerServerSession.h"
+#import "THEMultipeerServerSocketRelay.h"
 
-// Callback that will be called when the lower levels have established
-// a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, uint port);
+@implementation THEMultipeerServerSession
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEPeerBluetoothDelegate>
+- (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
+                   withRemotePeerID:(MCPeerID *)remotePeerID
+           withRemotePeerIdentifier:(NSString *)remotePeerIdentifier
+                     withServerPort:(uint)serverPort
+{
+  self = [super initWithLocalPeerID:localPeerID 
+                   withRemotePeerID:remotePeerID 
+           withRemotePeerIdentifier:remotePeerIdentifier 
+                    withSessionType:@"server"];
+  if (!self)
+  {
+    return nil;
+  }
+    
+  _serverPort = serverPort;
 
-// Class singleton.
-+ (instancetype)singleton;
+  return self;
+}
 
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
-
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
-
-// Kill connection without cleanup - Testing only !!
-- (BOOL)killConnection:(NSString *)peerIdentifier;
+- (THEMultipeerSocketRelay *)newSocketRelay
+{
+  return [[THEMultipeerServerSocketRelay alloc] initWithServerPort:_serverPort];
+}
 
 @end

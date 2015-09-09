@@ -32,7 +32,7 @@
 #import "THEThreading.h"
 #import "NPReachability.h"
 #import "THEPeerBluetooth.h"
-#import "THEPeerNetworking.h"
+#import "THEMultipeerSession.h"
 #import "THEAppContext.h"
 #import "THEPeer.h"
 
@@ -44,14 +44,6 @@ NSString * const kNotConnectedToPeerServer  = @"notConnectedToPeerServer";
 NSString * const kPeerClientConnecting      = @"peerClientConnecting";
 NSString * const kPeerClientConnected       = @"peerClientConnected";
 NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
-
-// THEAppContext (THEPeerBluetoothDelegate) interface.
-@interface THEAppContext (THEPeerBluetoothDelegate)
-@end
-
-// THEAppContext (THEPeerNetworkingDelegate) interface.
-@interface THEAppContext (THEPeerNetworkingDelegate)
-@end
 
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal)
@@ -74,536 +66,282 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 @implementation THEAppContext
 {
 @private
-    // The communications enabled atomic flag.
-    THEAtomicFlag * _atomicFlagCommunicationsEnabled;
+  // The communications enabled atomic flag.
+  THEAtomicFlag * _atomicFlagCommunicationsEnabled;
     
-    // The reachability handler reference.
-    id reachabilityHandlerReference;
+  // The reachability handler reference.
+  id reachabilityHandlerReference;
+
+  // Bluetooth enabled state
+  bool _bluetoothEnabled;
+
+  // Our current app level id
+  NSString *_peerIdentifier;
     
-    // Peer Bluetooth.
-    THEPeerBluetooth * _peerBluetooth;
+  // Peer Bluetooth.
+  THEPeerBluetooth * _peerBluetooth;
     
-    // Peer Networking.
-    THEPeerNetworking * _peerNetworking;
+  // Peer Networking.
+  THEMultipeerSession * _multipeerSession;
     
-    // The mutex used to protect access to things below.
-    pthread_mutex_t _mutex;
+  // The mutex used to protect access to things below.
+  pthread_mutex_t _mutex;
     
-    // The peers dictionary.
-    NSMutableDictionary * _peers;
+  // The peers dictionary.
+  NSMutableDictionary * _peers;
 }
+
+// CONSTANTS
+static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B";
 
 // Singleton.
 + (instancetype)singleton
 {
-    // Singleton instance.
-    static THEAppContext * appContext = nil;
+  // Singleton instance.
+  static THEAppContext * appContext = nil;
     
-    // If unallocated, allocate.
-    if (!appContext)
+  // If unallocated, allocate.
+  if (!appContext)
+  {
+    // Allocator.
+    void (^allocator)() = ^
     {
-        // Allocator.
-        void (^allocator)() = ^
-        {
-            appContext = [[THEAppContext alloc] init];
-        };
+      appContext = [[THEAppContext alloc] init];
+    };
         
-        // Dispatch allocator once.
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, allocator);
-    }
+    // Dispatch allocator once.
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, allocator);
+  }
     
-    // Done.
-    return appContext;
+  // Done.
+  return appContext;
 }
 
-// Defines JavaScript extensions.
-- (void)defineJavaScriptExtensions
-{
-    // GetDeviceName native block.
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        [JXcore callEventCallback:callbackId
-                       withParams:@[[[UIDevice currentDevice] name]]];
-    } withName:@"GetDeviceName"];
-    
-    // MakeGUID native block.
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        [JXcore callEventCallback:callbackId
-                       withParams:@[[[NSUUID UUID] UUIDString]]];
-    } withName:@"MakeGUID"];
-
-    // GetKeyValue native block.
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
-        {
-            [JXcore callEventCallback:callbackId
-                             withParams:@[]];
-        }
-        else
-        {
-            NSString * value = [[NSUserDefaults standardUserDefaults] stringForKey:params[0]];
-            [JXcore callEventCallback:callbackId
-                           withParams:value ? @[value] : @[]];
-        }
-    } withName:@"GetKeyValue"];
-    
-    // SetKeyValue native block.
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || ![params[1] isKindOfClass:[NSString class]])
-        {
-            [JXcore callEventCallback:callbackId
-                           withParams:@[]];
-        }
-        else
-        {
-            NSUserDefaults * userDefaults = [NSUserDefaults standardUserDefaults];
-            [userDefaults setObject:params[1]
-                             forKey:params[0]];
-            [userDefaults synchronize];
-            [JXcore callEventCallback:callbackId
-                           withParams:@[params[1]]];
-        }
-    } withName:@"SetKeyValue"];
-    
-    // NotifyUser native block.
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || ![params[1] isKindOfClass:[NSString class]])
-        {
-            // Done.
-            [JXcore callEventCallback:callbackId
-                           withParams:@[@(false)]];
-        }
-        else
-        {
-            // If the application is not active, post a local notification.
-            if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive)
-            {
-                UILocalNotification * localNotification = [[UILocalNotification alloc] init];
-                [localNotification setFireDate:[[NSDate alloc] init]];
-                [localNotification setAlertTitle:params[0]];
-                [localNotification setAlertBody:params[1]];
-                [localNotification setSoundName:UILocalNotificationDefaultSoundName];
-                [[UIApplication sharedApplication] scheduleLocalNotification:localNotification];
-            }
-            else
-            {
-                // The application is active, do something else. TODO.
-            }
-
-            // Done.
-            [JXcore callEventCallback:callbackId
-                           withParams:@[@(true)]];
-        }
-    } withName:@"NotifyUser"];
-    
-    // StartPeerCommunications native block.
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || ![params[1] isKindOfClass:[NSString class]])
-        {
-            [JXcore callEventCallback:callbackId
-                           withParams:@[@(false)]];
-        }
-        else
-        {
-            [self startCommunicationsWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:params[0]]
-                                               peerName:params[1]];
-            [JXcore callEventCallback:callbackId
-                           withParams:@[@(true)]];
-        }
-    } withName:@"StartPeerCommunications"];
-    
-    // StopPeerCommunications native block.
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        [self stopCommunications];
-        [JXcore callEventCallback:callbackId
-                       withParams:nil];
-    } withName:@"StopPeerCommunications"];
-
-    // BeginConnectToPeerServer native block.
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        // Obtain the peer identifier.
-        NSString * peerIdentifier = params[0];
-        
-        // Connect to the the peer server.
-        BOOL result = [self connectToPeerServerWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:peerIdentifier]];
-        
-        // Return the result.
-        [JXcore callEventCallback:callbackId
-                       withParams:@[@(result)]];
-    } withName:@"BeginConnectToPeerServer"];
-    
-    // DisconnectPeerServer native block.
-    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        // Obtain the peer identifier.
-        NSString * peerIdentifier = params[0];
-        
-        // Disconnect from the peer server.
-        BOOL result = [self disconnectFromPeerServerWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:peerIdentifier]];
-        
-        // Return the result.
-        [JXcore callEventCallback:callbackId
-                       withParams:@[@(result)]];
-    } withName:@"DisconnectFromPeerServer"];
-}
 
 // Starts communications.
-- (void)startCommunicationsWithPeerIdentifier:(NSUUID *)peerIdentifier
-                                     peerName:(NSString *)peerName
+- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort
 {
-    if ([_atomicFlagCommunicationsEnabled trySet])
-    {
-        // Allocate and initialize the service type.
-        NSUUID * serviceType = [[NSUUID alloc] initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
+  if ([_atomicFlagCommunicationsEnabled trySet])
+  {
+    _peerIdentifier = [[NSString alloc] initWithString:peerIdentifier];
 
-        // Allocate and initialize the peer Bluetooth context.
-        _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
-                                                        peerIdentifier:peerIdentifier
-                                                              peerName:peerName];
-        [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
-        
-        // Allocate and initialize peer networking.
-        _peerNetworking = [[THEPeerNetworking alloc] initWithServiceType:@"Thali"
+    // Somewhere to put our peers
+    _peers = [[NSMutableDictionary alloc] init];
+
+    /// Initialise the BLE stack..
+
+    NSUUID * btServiceType = [[NSUUID alloc] initWithUUIDString:BLE_SERVICE_TYPE];
+
+    _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:btServiceType
+                                                    peerIdentifier:peerIdentifier
+                                                          peerName:[serverPort stringValue]
+                                                 bluetoothDelegate:self];
+       
+
+    // Intitialise the multipeer connectivity stack..
+    _multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
                                                           peerIdentifier:peerIdentifier
-                                                                peerName:peerName];
-        [_peerNetworking setDelegate:(id<THEPeerNetworkingDelegate>)self];
+                                                                peerName:[serverPort stringValue]
+                                                         sessionDelegate:self];
+    // Start networking..
+    [_peerBluetooth start];
+    [_multipeerSession start];
 
-        // Start peer Bluetooth and peer networking.
-        [_peerBluetooth start];
-        [_peerNetworking start];
-        
-        // Once started, fire the network changed event.
-        OnMainThreadAfterTimeInterval(1.0, ^{
-            [self fireNetworkChangedEvent];
-            reachabilityHandlerReference = [[NPReachability sharedInstance] addHandler:^(NPReachability * reachability) {
-                [self fireNetworkChangedEvent];
-            }];
-        });
-    }
+    // Hook reachability to network changed event (when user
+    // toggles Wifi)       
+    reachabilityHandlerReference = [[NPReachability sharedInstance] 
+      addHandler:^(NPReachability *reachability) {
+        [self fireNetworkChangedEvent];
+    }];
+
+    return true;
+  }
+
+  return false;
 }
 
 // Stops communications.
-- (void)stopCommunications
+- (BOOL)stopBroadcasting
 {
-    if ([_atomicFlagCommunicationsEnabled tryClear])
-    {
-        [_peerBluetooth stop];
-        [_peerNetworking stop];
-        [_peerBluetooth setDelegate:nil];
-        [_peerNetworking setDelegate:nil];
-        _peerBluetooth = nil;
-        _peerNetworking = nil;
-        [[NPReachability sharedInstance] removeHandler:reachabilityHandlerReference];
-        reachabilityHandlerReference = nil;
-    }
-}
+  if ([_atomicFlagCommunicationsEnabled tryClear])
+  {
+    [_peerBluetooth stop];
+    [_multipeerSession stop];
 
-// Connects to the peer server with the specified peer idetifier.
-- (BOOL)connectToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier
-{
-    // If communications are not enabled, return NO.
-    if ([_atomicFlagCommunicationsEnabled isClear])
+    _peerBluetooth = nil;
+    _multipeerSession = nil;
+
+    if (reachabilityHandlerReference != nil) // network changed event may not have fired yet
     {
-        return NO;
-    }
-    
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer.
-    THEPeer * peer = [_peers objectForKey:peerIdentifier];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-    
-    // If we didn't find the peer, return NO.
-    if (!peer)
-    {
-        return NO;
+      [[NPReachability sharedInstance] removeHandler:reachabilityHandlerReference];
+      reachabilityHandlerReference = nil;
     }
 
-    // Connect the peer and return YES, indicating that we started the connection process.
-    [_peerNetworking connectToPeerServerWithPeerIdentifier:peerIdentifier];
+    _peers = nil;
     return YES;
+  }
+    
+  NSLog(@"app: didn't stop broadcasting");
+  return NO;
 }
 
-// Disconnects from the peer server with the specified peer idetifier.
-- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier
+// Connects to the peer server with the specified peer identifier.
+- (BOOL)connectToPeer:(NSString *)peerIdentifier 
+      connectCallback:(void(^)(NSString *, uint))connectCallback
 {
-    // If communications are not enabled, return NO.
-    if ([_atomicFlagCommunicationsEnabled isClear])
-    {
-        return NO;
-    }
+  if ([_atomicFlagCommunicationsEnabled isClear])
+  {
+      NSLog(@"Communications not enabled");
+      connectCallback(@"app: Not initialised", 0);
+      return NO;
+  }
     
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer. If we didn't find it, return NO.
-    THEPeer * peer = [_peers objectForKey:peerIdentifier];
-
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-
-    // If we didn't find the peer, return NO.
-    if (!peer)
-    {
-        return NO;
-    }
-
-    // Disconnect the peer with the specified peer identifier.
-    [_peerNetworking disconnectFromPeerServerWithPeerIdentifier:peerIdentifier];
-    return YES;
+  return [_multipeerSession connectToPeerServerWithPeerIdentifier:peerIdentifier 
+                                              withConnectCallback:connectCallback];
 }
 
-@end
-
-// THEAppContext (THEPeerBluetoothDelegate) implementation.
-@implementation THEAppContext (THEPeerBluetoothDelegate)
-
-// Notifies the delegate that a peer was connected.
-- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
-didConnectPeerIdentifier:(NSUUID *)peerIdentifier
-             peerName:(NSString *)peerName
+// Disconnects from the peer server with the specified peer identifier.
+- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier
 {
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-
-    // Find the peer. If we found it, simply return.
-    THEPeer * peer = [_peers objectForKey:peerIdentifier];
-    if (peer)
-    {
-        pthread_mutex_unlock(&_mutex);
-        return;
-    }
+  // If communications are not enabled, return NO.
+  if ([_atomicFlagCommunicationsEnabled isClear])
+  {
+    NSLog(@"Communications not enabled");
+    return NO;
+  }
     
-    // Allocate and initialize the peer.
+  return [_multipeerSession disconnectFromPeerServerWithPeerIdentifier:peerIdentifier];
+}
+
+// Kill connection with extreme prejudice, no clean-up, testing only
+- (BOOL)killConnection:(NSString *)peerIdentifier
+{
+  if ([_atomicFlagCommunicationsEnabled isClear])
+  {
+    NSLog(@"Communications not enabled");
+    return NO;
+  }
+
+  return [_multipeerSession killConnection:peerIdentifier];
+}
+
+////////////////////////////////////////////////////////////
+// THEAppContext <THEMultipeerSessionDelegate> implementation.
+////////////////////////////////////////////////////////////
+
+- (void) didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
+{
+  // Lock.
+  pthread_mutex_lock(&_mutex);
+  
+  // Find the peer.
+  THEPeer * peer = _peers[peerIdentifier];
+  
+  // If this is a new peer, add it.
+  if (!peer)
+  {
+    // Allocate and initialize the peer, add it to the peers dictionary.
     peer = [[THEPeer alloc] initWithIdentifier:peerIdentifier
                                           name:peerName];
     [_peers setObject:peer
                forKey:peerIdentifier];
+  }
+    
+  // Update the peer state.
+  [peer setAvailable:YES];
+    
+  // Unlock.
+  pthread_mutex_unlock(&_mutex);
 
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
+  // Fire the peerAvailabilityChanged event.
+  OnMainThread(^{
+    [JXcore callEventCallback:kPeerAvailabilityChanged
+                     withJSON:[peer JSON]];
+  });
+}
 
-    // Fire the peerAvailabilityChanged event.
+- (void) didLosePeerIdentifier:(NSString *)peerIdentifier
+{
+  // Lock.
+  pthread_mutex_lock(&_mutex);
+    
+  // Find the peer.
+  THEPeer * peer = _peers[peerIdentifier];
+  if (peer)
+  {
+    [peer setAvailable:NO];
+  }
+
+  // Unlock.
+  pthread_mutex_unlock(&_mutex);
+    
+  // Fire the peerAvailabilityChanged event.
+  if (peer)
+  {
     OnMainThread(^{
         [JXcore callEventCallback:kPeerAvailabilityChanged
                          withJSON:[peer JSON]];
     });
+  }
+}
+
+///////////////////////////////////////////////////////////
+// THEAppContext (THEPeerBluetoothDelegate) implementation.
+///////////////////////////////////////////////////////////
+
+// Receive notifications from the bluetooth stack about radio state
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth didUpdateState:(BOOL)bluetoothEnabled
+{
+  pthread_mutex_lock(&_mutex);
+
+  // This will always be called regardless of BT state
+  _bluetoothEnabled = bluetoothEnabled;
+  [self fireNetworkChangedEvent];
+
+  pthread_mutex_unlock(&_mutex);
+}
+
+// Notifies the delegate that a peer was connected.
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
+didConnectPeerIdentifier:(NSString *)peerIdentifier
+                peerName:(NSString *)peerName
+{
+  // Lock.
+  pthread_mutex_lock(&_mutex);
+
+  // Find the peer. If we found it, simply return.
+  THEPeer * peer = [_peers objectForKey:peerIdentifier];
+  if (peer)
+  {
+      pthread_mutex_unlock(&_mutex);
+      return;
+  }
+
+  // Allocate and initialize the peer.
+  peer = [[THEPeer alloc] initWithIdentifier:peerIdentifier
+                                          name:peerName];
+  [_peers setObject:peer
+             forKey:peerIdentifier];
+
+  // Unlock.
+  pthread_mutex_unlock(&_mutex);
+
+  // Fire the peerAvailabilityChanged event.
+  OnMainThread(^{
+      [JXcore callEventCallback:kPeerAvailabilityChanged
+                       withJSON:[peer JSON]];
+  });
 }
 
 // Notifies the delegate that a peer was disconnected.
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
-didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
+didDisconnectPeerIdentifier:(NSString *)peerIdentifier
 {
 }
 
 @end
 
-// THEAppContext (THEPeerNetworkingDelegate) implementation.
-@implementation THEAppContext (THEPeerNetworkingDelegate)
-
-// Notifies the delegate that a peer was found.
-- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
- didFindPeerIdentifier:(NSUUID *)peerIdentifier
-              peerName:(NSString *)peerName
-{
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer.
-    THEPeer * peer = [_peers objectForKey:peerIdentifier];
-    
-    // If this is a new peer, add it.
-    if (!peer)
-    {
-        // Allocate and initialize the peer, add it to the peers dictionary.
-        peer = [[THEPeer alloc] initWithIdentifier:peerIdentifier
-                                              name:peerName];
-        [_peers setObject:peer
-                   forKey:peerIdentifier];
-    }
-    
-    // Update the peer state.
-    [peer setAvailable:YES];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-
-    // Fire the peerAvailabilityChanged event.
-    OnMainThread(^{
-        [JXcore callEventCallback:kPeerAvailabilityChanged
-                         withJSON:[peer JSON]];
-    });
-}
-
-// Notifies the delegate that a peer was lost.
-- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
- didLosePeerIdentifier:(NSUUID *)peerIdentifier
-{
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer.
-    THEPeer * peer = _peers[peerIdentifier];
-    if (peer)
-    {
-        [peer setAvailable:NO];
-    }
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-    
-    // Fire the peerAvailabilityChanged event.
-    if (peer)
-    {
-        OnMainThread(^{
-            [JXcore callEventCallback:kPeerAvailabilityChanged
-                             withJSON:[peer JSON]];
-        });
-    }
-}
-
-
-// Notifies the delegate that the peer networking client is connecting to the specified peer networking server.
-- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-connectingToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier
-{
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer.
-    THEPeer * peer = _peers[peerIdentifier];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-    
-    // Fire the peerConnecting event.
-    if (peer)
-    {
-        OnMainThread(^{
-            [JXcore callEventCallback:kConnectingToPeerServer
-                           withParams:@[[[peer identifier] UUIDString]]];
-        });
-    }
-}
-
-// Notifies the delegate that the peer networking client is connected to the specified peer networking server.
-- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-connectedToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier
-{
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer.
-    THEPeer * peer = _peers[peerIdentifier];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-    
-    // Fire the peerConnecting event.
-    if (peer)
-    {
-        OnMainThread(^{
-            [JXcore callEventCallback:kConnectedToPeerServer
-                           withParams:@[[[peer identifier] UUIDString]]];
-        });
-    }
-}
-
-// Notifies the delegate that peer networking client is not connected to the specified peer networking server.
-- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-notConnectedToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier
-{
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer.
-    THEPeer * peer = _peers[peerIdentifier];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-    
-    // Fire the peerConnecting event.
-    if (peer)
-    {
-        OnMainThread(^{
-            [JXcore callEventCallback:kNotConnectedToPeerServer
-                           withParams:@[[[peer identifier] UUIDString]]];
-        });
-    }
-}
-
-// Notifies the delegate that the specified peer networking client is connecting to the peer networking server.
-- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-peerClientConnectingWithPeerIdentifier:(NSUUID *)peerIdentifier
-{
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer.
-    THEPeer * peer = _peers[peerIdentifier];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-    
-    // Fire the peerConnecting event.
-    if (peer)
-    {
-        OnMainThread(^{
-            [JXcore callEventCallback:kPeerClientConnecting
-                           withParams:@[[[peer identifier] UUIDString]]];
-        });
-    }
-}
-
-// Notifies the delegate that the specified peer networking client is connected to the peer networking server.
-- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-peerClientConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier
-{
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer.
-    THEPeer * peer = _peers[peerIdentifier];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-    
-    // Fire the peerConnecting event.
-    if (peer)
-    {
-        OnMainThread(^{
-            [JXcore callEventCallback:kPeerClientConnected
-                           withParams:@[[[peer identifier] UUIDString]]];
-        });
-    }
-}
-
-// Notifies the delegate that the specified peer networking client is not connected to the peer networking server.
-- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-peerClientNotConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier
-{
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-    
-    // Find the peer.
-    THEPeer * peer = _peers[peerIdentifier];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-    
-    // Fire the peerConnecting event.
-    if (peer)
-    {
-        OnMainThread(^{
-            [JXcore callEventCallback:kPeerClientNotConnected
-                           withParams:@[[[peer identifier] UUIDString]]];
-        });
-    }
-}
-
-@end
 
 // THEAppContext (Internal) implementation.
 @implementation THEAppContext (Internal)
@@ -611,90 +349,62 @@ peerClientNotConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier
 // Class initializer.
 - (instancetype)init
 {
-    // Initialize superclass.
-    self = [super init];
+  // Initialize superclass.
+  self = [super init];
     
-    // Handle errors.
-    if (!self)
-    {
-        return nil;
-    }
+  // Handle errors.
+  if (!self)
+  {
+    return nil;
+  }
     
-    // Intialize.
-    _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
+  // Intialize.
+  _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
+ 
+  // We don't really know yet, assum the worst, we'll get an update
+  // when we initialise the BT stack 
+  _bluetoothEnabled = false;
+  
+  // Initialize the the mutex 
+  pthread_mutex_init(&_mutex, NULL);
+
+  // Get the default notification center.
+  NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];
     
-    // Allocate and initialize the service type.
-    NSUUID * serviceType = [[NSUUID alloc] initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
-    
-    // Static declarations.
-    static NSString * const PEER_IDENTIFIER_KEY = @"PeerIdentifierKey";
-    
-    // Obtain user defaults and see if we have a serialized peer identifier. If we do,
-    // deserialize it. If not, make one and serialize it for later use.
-    NSUserDefaults * userDefaults = [NSUserDefaults standardUserDefaults];
-    NSData * peerIdentifierData = [userDefaults dataForKey:PEER_IDENTIFIER_KEY];
-    if (!peerIdentifierData)
-    {
-        // Create a new peer identifier.
-        UInt8 uuid[16];
-        [[NSUUID UUID] getUUIDBytes:uuid];
-        peerIdentifierData = [NSData dataWithBytes:uuid
-                                            length:sizeof(uuid)];
-        
-        // Save the peer identifier in user defaults.
-        [userDefaults setValue:peerIdentifierData
-                        forKey:PEER_IDENTIFIER_KEY];
-        [userDefaults synchronize];
-    }
-    NSUUID * peerIdentifier = [[NSUUID alloc] initWithUUIDBytes:[peerIdentifierData bytes]];
-    
-    // Allocate and initialize the peer Bluetooth context.
-    _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
-                                                    peerIdentifier:peerIdentifier
-                                                          peerName:[[UIDevice currentDevice] name]];
-    [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
-    
-    // Allocate and initialize peer networking.
-    _peerNetworking = [[THEPeerNetworking alloc] initWithServiceType:@"Thali"
-                                                      peerIdentifier:peerIdentifier
-                                                            peerName:[[UIDevice currentDevice] name]];
-    [_peerNetworking setDelegate:(id<THEPeerNetworkingDelegate>)self];
-    
-    // Initialize the the mutex and peers dictionary.
-    pthread_mutex_init(&_mutex, NULL);
-    _peers = [[NSMutableDictionary alloc] init];
-    
-    // Get the default notification center.
-    NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];
-    
-    // Add our observers for application events.
-    [notificationCenter addObserver:self
-                           selector:@selector(applicationWillResignActiveNotification:)
-                               name:UIApplicationWillResignActiveNotification
-                             object:nil];
-    [notificationCenter addObserver:self
-                           selector:@selector(applicationDidBecomeActiveNotification:)
-                               name:UIApplicationDidBecomeActiveNotification
-                             object:nil];
+  // Add our observers for application events.
+  [notificationCenter addObserver:self
+                         selector:@selector(applicationWillResignActiveNotification:)
+                             name:UIApplicationWillResignActiveNotification
+                           object:nil];
+
+  [notificationCenter addObserver:self
+                         selector:@selector(applicationDidBecomeActiveNotification:)
+                             name:UIApplicationDidBecomeActiveNotification
+                           object:nil];
 
     // Done.
-    return self;
+  return self;
 }
 
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent
 {
-    // Construct the JSON for the networkChanged event.
     NSString * json;
-    if ([[NPReachability sharedInstance] isCurrentlyReachable])
+
+    // NPReachability only tells us what kind of IP connection we're capable
+    // of. Need to take bluetooth into account also
+
+    BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
+
+    if (reachable)
     {
-        json = [NSString stringWithFormat:@"{ \"isReachable\": %@, \"isWiFi\": %@ }",
-                @"true",
-                ([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN) == 0 ? @"true" : @"false"];
+        json = [NSString stringWithFormat:@"{ \"isAvailable\": %@, \"isWiFi\": %@ }",
+                @"true", ([[NPReachability sharedInstance] currentReachabilityFlags] & 
+                  kSCNetworkReachabilityFlagsIsWWAN) == 0 ? @"true" : @"false"];
     }
     else
     {
-        json = @"{ \"isReachable\": false }";
+        json = @"{ \"isAvailable\": false }";
     }
 
     // Fire the networkChanged event.

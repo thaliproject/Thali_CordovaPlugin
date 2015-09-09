@@ -1,7 +1,7 @@
 //
 //  The MIT License (MIT)
 //
-//  Copyright (c) 2015 Brian Lambert.
+//  Copyright (c) 2015 Microsoft
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,25 +22,41 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeerBluetooth.h
+//  THEMultipeerSession.h
 //
 
 #import <Foundation/Foundation.h>
-#import "THEPeerBluetoothDelegate.h"
 
-// THEPeerBluetooth interface.v
-@interface THEPeerBluetooth : NSObject
+#import "THEAppContext.h"
+#import "THEMultipeerSessionDelegate.h"
 
+// Wraps all the functionality of the networking stack and presents to the upper layers.
+// Contains both client and server members which will discover and connect (the client) and
+// advertise and accept (the server) connections from remote peers.
+@interface THEMultipeerSession : NSObject
+ 
 // Class initializer.
-- (instancetype)initWithServiceType:(NSUUID *)serviceType
+- (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
-                  bluetoothDelegate:(id<THEPeerBluetoothDelegate>)delegate;
+                    sessionDelegate:(id<THEMultipeerSessionDelegate>)delegate;
 
-// Starts BLE layer
+// Starts multipeer session both discovering and advertising
 - (void)start;
 
-// Stops the BLE layer, must be called prior to destruction
+// Stop discovering and advertising, must be called before destrution
 - (void)stop;
+
+// Connects to the peer server with the specified peer identifier. |connectCallback| will
+// be called when the connection completes with first param being any error message or nil and
+// second param being the port number the relay is listening on
+- (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier 
+                          withConnectCallback:(ConnectCallback)connectCallback;
+
+// Connects from the peer server with the specified peer identifier.
+- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;
+
+// Kill the connection without clean-up. Testing only !!
+- (BOOL)killConnection:(NSString *)peerIdentifier;
 
 @end
