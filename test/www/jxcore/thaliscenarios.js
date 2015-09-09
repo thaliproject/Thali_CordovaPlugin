@@ -10,29 +10,25 @@ function newPeerIdentifier() {
 }
 
 
-test('ThaliEmitter can call repeatedly startBroadcasting and endBroadcasting without error', 
-function (t) {
-
-  var TRIES = 10;
-
-  var network_changed = 0;
+test('ThaliEmitter can call repeatedly startBroadcasting and stopBroadcasting without error', function (t) {
   var e = new ThaliEmitter();
 
-  e.on(ThaliEmitter.events.NETWORK_CHANGED, function(status) {
-    t.ok(status.isAvailable == true, "Network status should be available");
-    if (++network_changed == TRIES) {
+  function repeatCalls(count) {
+    if (count == 0) {
       t.end();
+      return;
     }
-  });
 
-  for (var i = 0; i < TRIES; i++) {
     e.startBroadcasting(newPeerIdentifier(), 5001, function (err1) {
       t.notOk(err1, 'Should be able to call startBroadcasting without error');
       e.stopBroadcasting(function (err2) {
         t.notOk(err2, 'Should be able to call stopBroadcasting without error');
+        repeatCalls(count - 1);
       });
     });
   }
+
+  repeatCalls(10);
 });
 
 test('ThaliEmitter calls startBroadcasting twice with error', function (t) {
