@@ -27,7 +27,8 @@ For all of this to work we have to have files in at least four different places:
 * __JXCore_CordovaPlugin__ - Our plugin has a dependency in its plugin.xml on JXCore's Cordova plugin
 * __BinTray__ - We have our own bintray available [here](https://bintray.com/thali/Thali) where we publish the btconnectorlib2 JAR for Android
 
-In preparation for a new release we have to publish a new version to NPM. Strictly speaking this is only necessary if we changed any of the .js files but realistically all of our stories require that so just assume it. 
+In preparation for a new release we have to publish a new version to NPM. Strictly speaking this is only necessary 
+if we changed any of the .js files but realistically all of our stories require that so just assume it. 
 
 1. Navigate to the thali sub-directory
 2. Run `git status` and make sure it is clean
@@ -36,7 +37,10 @@ In preparation for a new release we have to publish a new version to NPM. Strict
   2. On my Mac the npm version command does not work properly. It will upgrade the package.json but that is it. It won't do the GIT commit or the GIT tag. So once I run npm version I still have to do the commit and tagging myself. I first issued `git tag -a npmv1.0.21 -m "Thali NPM Version 1.0.21"` and then I issued `git push --tags`
 4. Run `npm publish`
 
-Also keep in mind that thali/install/install.js has a variable called 'thaliBranchName" that points to the branch where we will download the cordova code from. Right now that branch points at story_0 but soon enough we will change it to point at master.For most folks it's o.k. to leave this because when we dev on a local branch we tend to get our files locally, not from NPM. But it's good to be aware of this variable's existence.
+Also keep in mind that thali/install/install.js has a variable called 'thaliBranchName" that points to the branch 
+where we will download the cordova code from. Right now that branch points at story_0 but soon enough we will 
+change it to point at master. For most folks it's o.k. to leave this because when we dev on a local branch we tend
+to get our files locally, not from NPM. But it's good to be aware of this variable's existence.
 
 ## Want to develop locally?
 
