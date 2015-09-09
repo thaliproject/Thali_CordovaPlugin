@@ -4,15 +4,17 @@ import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
 
+import io.jxcore.node.jxcore;
+
 /**
  * Created by juksilve on 13.5.2015.
  */
-public class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks {
+class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks {
 
-    Application MyApp = null;
+    private Application MyApp = null;
 
     public interface onLCEventCallback{
-        public void onEvent(String eventString,boolean stopped);
+        void onEvent(String eventString, boolean stopped);
     }
 
     public final String ACTIVITY_CREATED   = "onActivityCreated";
@@ -24,23 +26,30 @@ public class LifeCycleMonitor implements Application.ActivityLifecycleCallbacks 
     public final String ACTIVITY_DESTROYED = "onActivityDestroyed";
 
     //BtConnectorHelper.jxCallBack jxcore = null; // remove the line
-    Activity activity = jxcore.activity;
-    onLCEventCallback callback = null;
+    private final Activity activity = jxcore.activity;
+    private onLCEventCallback callback = null;
     public LifeCycleMonitor(onLCEventCallback Callback) {
         callback = Callback;
     }
 
     public void Start() {
-        this.MyApp = activity.getApplication();
-        if (this.MyApp != null) {
-            this.MyApp.registerActivityLifecycleCallbacks(this);
+        Application tmpApp = activity.getApplication();
+        if (tmpApp != null) {
+            try {
+                tmpApp.registerActivityLifecycleCallbacks(this);
+            }catch(IllegalArgumentException e){e.printStackTrace();}
         }
+
+        this.MyApp = tmpApp;
     }
 
     public void Stop() {
-        if (this.MyApp != null) {
-            this.MyApp.unregisterActivityLifecycleCallbacks(this);
-            this.MyApp = null;
+        Application tmpApp = this.MyApp;
+        this.MyApp = null;
+        if (tmpApp != null) {
+            try {
+                tmpApp.unregisterActivityLifecycleCallbacks(this);
+            } catch (IllegalArgumentException e) {e.printStackTrace();}
         }
     }
 

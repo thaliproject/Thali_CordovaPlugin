@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" 
-    xmlns:android="http://schemas.android.com/apk/res/android" 
-    id="org.thaliproject.p2p" 
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    id="org.thaliproject.p2p"
     version="0.0.1">
-    <name>ThaliPlugin</name>
+    <name>Thali</name>
     <description>ThaliPlugin to be used on top of JXcore</description>
     <license>MIT</license>
     <keywords>cordova,jxcore,node.js,thali</keywords>
-    <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova" />
-    
+    <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova"
+        commit="0.0.3-release"/>
     <engines>
         <engine name="cordova-android" version=">=3.2.0" />
         <engine name="android-sdk" version=">=19" />
     </engines>
-    
+
     <!-- Android -->
     <platform name="android">
         <config-file target="AndroidManifest.xml" parent="/*">
@@ -21,16 +21,17 @@
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
             <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-            
-            <uses-sdk android:minSdkVersion="19" android:targetSdkVersion="22" />
         </config-file>
         <framework src="src/android/JXcore.gradle" custom="true" type="gradleReference" />
         <source-file src="src/android/java/io/jxcore/node/BtToRequestSocket.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/BtToServerSocket.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/BtToSocketBase.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/BtConnectorHelper.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ConnectivityMonitor.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/BtSocketDisconnectedCallBack.java" target-dir="src/io/jxcore/node/" />
+        <hook type="after_prepare" src="scripts/androidAfterPrepare.js"/>
     </platform>
 
     <!-- iOS -->
@@ -40,24 +41,83 @@
         <framework src="MultipeerConnectivity.framework" />
         <framework src="CoreBluetooth.framework" />
         <framework src="SystemConfiguration.framework" />
-        <source-file src="src/ios/JXcoreExtension.m" />
-        <header-file src="src/ios/THEThreading.h" />
-        <header-file src="src/ios/THEAtomicFlag.h" />
-        <source-file src="src/ios/THEAtomicFlag.m" />
-        <header-file src="src/ios/NPReachability/NPReachability.h" />
-        <source-file src="src/ios/NPReachability/NPReachability.m" />
-        <header-file src="src/ios/THEThaliCore.h" />
-        <source-file src="src/ios/THEThaliCore.m" />
-        <header-file src="src/ios/THEAppContext.h" />
-        <source-file src="src/ios/THEAppContext.m" />
-        <header-file src="src/ios/THEPeer.h" />
-        <source-file src="src/ios/THEPeer.m" />
-        <header-file src="src/ios/THEPeerBluetoothDelegate.h" />
-        <header-file src="src/ios/THEPeerBluetooth.h" />
-        <source-file src="src/ios/THEPeerBluetooth.m" />
-        <header-file src="src/ios/THEPeerNetworkingDelegate.h" />
-        <header-file src="src/ios/THEPeerNetworking.h" />
-        <source-file src="src/ios/THEPeerNetworking.m" />
+        <source-file src="src/ios/JXcoreExtension.m"
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/Utility/THEThreading.h"
+          compiler-flags="-Werror" />
+        <header-file src="src/ios/Utility/THEAtomicFlag.h"
+          compiler-flags="-Werror" />
+        <source-file src="src/ios/Utility/THEAtomicFlag.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/NPReachability/NPReachability.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/NPReachability/NPReachability.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/THEAppContext.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/THEAppContext.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/THEPeer.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/THEPeer.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/THEPeerBluetoothDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/THEPeerBluetooth.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/THEPeerBluetooth.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSession.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerSession.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSessionDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClient.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerClient.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServer.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerServer.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerPeerSession.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerPeerSession.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSession.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSession.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSession.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSession.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSocketRelay.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerSocketRelay.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSocketRelay.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSocketRelay.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSocketRelayDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSocketRelay.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSocketRelay.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/GCDAsyncSocket/GCDAsyncSocket.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/GCDAsyncSocket/GCDAsyncSocket.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/Utility/THEProtectedMutableDictionary.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/Utility/THEProtectedMutableDictionary.m" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/Utility/THESessionDictionary.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/Utility/THESessionDictionary.m" 
+          compiler-flags="-Werror"/>
     </platform>
-    
 </plugin>

@@ -31,18 +31,16 @@
 // THEPeerBluetooth interface.v
 @interface THEPeerBluetooth : NSObject
 
-// Properties.
-@property (nonatomic, weak) id<THEPeerBluetoothDelegate> delegate;
-
 // Class initializer.
 - (instancetype)initWithServiceType:(NSUUID *)serviceType
-                     peerIdentifier:(NSUUID *)peerIdentifier
-                           peerName:(NSString *)peerName;
+                     peerIdentifier:(NSString *)peerIdentifier
+                           peerName:(NSString *)peerName
+                  bluetoothDelegate:(id<THEPeerBluetoothDelegate>)delegate;
 
-// Starts peer Bluetooth.
+// Starts BLE layer
 - (void)start;
 
-// Stops peer Bluetooth.
+// Stops the BLE layer, must be called prior to destruction
 - (void)stop;
 
 @end

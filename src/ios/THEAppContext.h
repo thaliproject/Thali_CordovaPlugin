@@ -26,27 +26,32 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "THEMultipeerSessionDelegate.h"
+#import "THEPeerBluetoothDelegate.h"
+
+// Callback that will be called when the lower levels have established
+// a client relay in response to a connect
+typedef void(^ConnectCallback)(NSString *error, uint port);
 
 // THEAppContext interface.
-@interface THEAppContext : NSObject
+@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEPeerBluetoothDelegate>
 
 // Class singleton.
 + (instancetype)singleton;
 
-// Defines JavaScript extensions.
-- (void)defineJavaScriptExtensions;
-
 // Starts communications.
-- (void)startCommunicationsWithPeerIdentifier:(NSUUID *)peerIdentifier
-                                     peerName:(NSString *)peerName;
+- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
 
 // Stops communications.
-- (void)stopCommunications;
+- (BOOL)stopBroadcasting;
 
-// Connects to the peer server with the specified peer idetifier.
-- (BOOL)connectToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+// Connects to the peer with the specified peer identifier.
+- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
 
-// Disconnects from the peer server with the specified peer idetifier.
-- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+// Disconnects from the peer with the specified peer idetifier.
+- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
+
+// Kill connection without cleanup - Testing only !!
+- (BOOL)killConnection:(NSString *)peerIdentifier;
 
 @end
