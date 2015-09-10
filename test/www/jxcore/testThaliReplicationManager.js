@@ -2,7 +2,7 @@
 
 var os = require("os");
 var test = require('tape');
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 var PouchDB = require('pouchdb');
 var randomstring = require('randomstring');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
@@ -34,26 +34,26 @@ test('ThaliReplicationManager can call start without error', function (t) {
   
   manager.on('starting', function () {
     t.ok(starting == false && started == false && stopping == false && stopped == false,
-         "starting event emitted out of order");
+         "starting event should occur in right order");
     starting = true;
   });
 
   manager.on('started', function () {
     t.ok(starting == true && started == false && stopping == false && stopped == false,
-         "started event emitted out of order");
+         "started event should occur in right order");
     started = true;
     manager.stop();
   });
 
   manager.on('stopping', function() {
     t.ok(starting == true && started == true && stopping == false && stopped == false,
-         "stopping event emitted out of order");
+         "stopping event should occur in right order");
     stopping = true;
   });
 
   manager.on('stopped', function () {
     t.ok(starting == true && started == true && stopping == true && stopped == false,
-         "stopped event emitted out of order");
+         "stopped event should occur in right order");
     t.end();
   });
 
@@ -88,7 +88,7 @@ test('ThaliReplicationManager receives identity', function (t) {
 
   manager.start(5000, 'thali');
 });
-
+/*
 test('ThaliReplicationManager replicates database', function (t) {
 
   var db = new LevelDownPouchDB('thali');
@@ -145,5 +145,5 @@ test('ThaliReplicationManager replicates database', function (t) {
   // Start replication
   manager.start(5000, 'thali');
 });
-
+*/
 
