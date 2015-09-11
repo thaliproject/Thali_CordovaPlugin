@@ -100,18 +100,25 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
 * @param {Number} port the port number used for synchronization.
 * @param {String} dbName the name of the database.
 */
-ThaliReplicationManager.prototype.start = function (port, dbName) {
+ThaliReplicationManager.prototype.start = function (port, dbName, deviceName) {
   validations.ensureValidPort(port);
   validations.ensureNonNullOrEmptyString(dbName, 'dbName');
-  
-  this.getDeviceIdentity.call(this, function(err, publicKeyHash) {
-    if(err) {
-      this._isStarted = false;
-      this.emit(ThaliReplicationManager.events.START_ERROR, err);
-      return;
-    }
+
+  if (deviceName) {
+    this._deviceName = deviceName;
     startReplicationManager.call(this, port, dbName);
-  }.bind(this));
+  } else {
+    this.getDeviceIdentity.call(this, function(err, publicKeyHash) {
+      if(err) {
+        this._isStarted = false;
+        this.emit(ThaliReplicationManager.events.START_ERROR, err);
+        return;
+      }
+      startReplicationManager.call(this, port, dbName);
+    }.bind(this));
+  }
+
+
 };
 
 function startReplicationManager(port, dbName) {
