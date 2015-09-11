@@ -50,7 +50,7 @@
   Coordinator.on('disconnect', function () {
     console.log('The client has disconnected!');
     //we need to stop & close any tests we are runnign here
-    TestFramework.stopAllTests();
+    TestFramework.stopAllTests(false);
     logMessageToScreen('disconnected');
   });
 

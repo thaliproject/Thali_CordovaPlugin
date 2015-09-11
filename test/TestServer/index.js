@@ -7,7 +7,11 @@ var TestDevice = require('./IPAddressToFile');
 var TestDevice = require('./TestDevice');
 var TestFramework = require('./TestFramework');
 
-
+/* // we might need to add this later
+process.argv.forEach(function (val, index, array) {
+  console.log("arguments : " + index + ': ' + val);
+});
+*/
 app.get('/', function(req, res){
   console.log("HTTP get called");
   res.sendfile('index.html');

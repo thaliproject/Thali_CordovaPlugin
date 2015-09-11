@@ -24,12 +24,18 @@ Object.keys(ifaces).forEach(function (ifname) {
             // this interface has only one ipv4 adress
             console.log(ifname, iface.address);
 
+            fs.writeFile("../www/jxcore/ipaddress.json", JSON.stringify([{name: ifname, address: iface.address}]), function (err) {
+                if (err) {
+                    return console.log(err);
+                }
+                console.log("IP-address saved to jxcore folder!");
+            });
+
             fs.writeFile("./ipaddress.json", JSON.stringify([{name: ifname, address: iface.address}]), function (err) {
                 if (err) {
                     return console.log(err);
                 }
-                console.log("The file was saved!");
-
+                console.log("local The file was saved!");
             });
         }
     });

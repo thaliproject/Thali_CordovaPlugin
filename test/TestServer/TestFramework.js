@@ -18,8 +18,9 @@ var configFile = require('./config.json');
  {"name": "testReConnect.js", "timeout": "700000","data": {"count": "3","timeout": "600000","rounds":"6","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
  {"name": "testSendData.js", "timeout": "7000000","data": {"count": "3","timeout": "6000000","rounds":"3","dataAmount":"1000000","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
  {"name": "testThaliNativeLayer.js", "timeout": "600000","data": {"timeout": "500000"}},
- {"name": "testThaliEmitter.js", "timeout": "600000","data": {"timeout": "500000"}}
-
+ {"name": "testThaliEmitter.js", "timeout": "600000","data": {"timeout": "500000"}},
+ {"name": "testThaliNativeLayerConnectivity.js", "timeout": "600000","data": { "count": "1","timeout": "60000"}},
+ {"name": "testThaliCryptoManager.js", "timeout": "600000","data": {"timeout": "500000"}},
  ]
  }
  */

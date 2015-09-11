@@ -85,7 +85,7 @@ testFindPeers.prototype.start = function() {
     }
 }
 
-testFindPeers.prototype.stop = function() {
+testFindPeers.prototype.stop = function(doReport) {
     console.log('testFindPeers stopped');
     if (this.timerId != null) {
         clearTimeout(this.timerId);
@@ -100,9 +100,18 @@ testFindPeers.prototype.stop = function() {
             console.log('StopBroadcasting went ok');
         }
     });
+    if(doReport){
+        this.weAreDoneNow();
+    }
+
+    this.doneAlready = true;
 }
 
 testFindPeers.prototype.weAreDoneNow = function() {
+
+    if (this.doneAlready) {
+        return;
+    }
 
     if (this.timerId != null) {
         clearTimeout(this.timerId);
@@ -111,21 +120,29 @@ testFindPeers.prototype.weAreDoneNow = function() {
 
     console.log('weAreDoneNow');
 
-    if(!this.doneAlready) {
-        this.doneAlready = true;
-        this.endTime = new Date();
+    this.doneAlready = true;
+    this.endTime = new Date();
 
-        var replyData = [];
-        var foundCount = 0;
-        for (var foundPeer in this.foundPeers) {
-            foundCount++;
-            replyData.push({"peerName":this.foundPeers[foundPeer].peerName, "peerIdentifier": this.foundPeers[foundPeer].peerIdentifier, "peerAvailable":this.foundPeers[foundPeer].peerAvailable,"time":this.foundPeers[foundPeer].foundTime});
-        }
-
-        this.emit('debug', "---- finished : findPeers -- ");
-        var responseTime = this.endTime - this.startTime;
-        this.emit('done', JSON.stringify({"name:":this.name,"time":responseTime,"result":this.endReason,"peersList":replyData}));
+    var replyData = [];
+    var foundCount = 0;
+    for (var foundPeer in this.foundPeers) {
+        foundCount++;
+        replyData.push({
+            "peerName": this.foundPeers[foundPeer].peerName,
+            "peerIdentifier": this.foundPeers[foundPeer].peerIdentifier,
+            "peerAvailable": this.foundPeers[foundPeer].peerAvailable,
+            "time": this.foundPeers[foundPeer].foundTime
+        });
     }
+
+    this.emit('debug', "---- finished : findPeers -- ");
+    var responseTime = this.endTime - this.startTime;
+    this.emit('done', JSON.stringify({
+        "name:": this.name,
+        "time": responseTime,
+        "result": this.endReason,
+        "peersList": replyData
+    }));
 }
 
 module.exports = testFindPeers;

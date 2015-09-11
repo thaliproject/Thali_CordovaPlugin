@@ -52,7 +52,7 @@ TestFrameworkClient.prototype.handleCommand = function(command){
         }
         case 'stop':{
             self.emit('debug',"stop");
-            this.stopAllTests();
+            this.stopAllTests(true);
             break;
         }
         default:{
@@ -69,13 +69,13 @@ TestFrameworkClient.prototype.setCallbacks = function(test) {
 }
 
 
-TestFrameworkClient.prototype.stopAllTests = function() {
+TestFrameworkClient.prototype.stopAllTests = function(doReport) {
     console.log('stop tests now !');
     if (currentTest == null) {
         return;
     }
     console.log('stop current!');
-    currentTest.stop();
+    currentTest.stop(doReport);
     currentTest.removeListener('done', this.doneCallback);
     currentTest.removeListener('debug', this.debugCallback);
     currentTest = null;

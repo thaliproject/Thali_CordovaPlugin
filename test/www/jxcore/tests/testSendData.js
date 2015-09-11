@@ -97,7 +97,7 @@ testSendData.prototype.start = function() {
     }
 }
 
-testSendData.prototype.stop = function() {
+testSendData.prototype.stop = function(doReport) {
     console.log('testSendData stopped');
 
     this.emitter.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
@@ -109,6 +109,11 @@ testSendData.prototype.stop = function() {
         }
     });
 
+    if (this.timerId != null) {
+        clearTimeout(this.timerId);
+        this.timerId = null;
+    }
+
     this.testServer.stopServer();
 
     if(this.testConnector != null){
@@ -117,6 +122,11 @@ testSendData.prototype.stop = function() {
         this.testConnector.removeListener('debug', this.debugCallback);
         this.testConnector = null;
     }
+
+    if(doReport){
+        this.weAreDoneNow();
+    }
+
     this.doneAlready = true;
 }
 
@@ -160,8 +170,6 @@ testSendData.prototype.weAreDoneNow = function() {
     this.doneAlready = true;
     this.endTime = new Date();
 
-    //first make sure we are stopped
-    this.testConnector.Stop();
     //then get any data that has not been reported yet. i.e. the full rounds have not been done yet
     var resultData = this.testConnector.getResultArray();
     for (var i = 0; i < resultData.length; i++) {
@@ -170,7 +178,12 @@ testSendData.prototype.weAreDoneNow = function() {
 
     this.emit('debug', "---- finished : send-data -- ");
     var responseTime = this.endTime - this.startTime;
-    this.emit('done', JSON.stringify({"name:": this.name,"time": responseTime,"result": this.endReason,"sendList": this.resultArray}));
+    this.emit('done', JSON.stringify({
+        "name:": this.name,
+        "time": responseTime,
+        "result": this.endReason,
+        "sendList": this.resultArray
+    }));
 }
 
 module.exports = testSendData;
