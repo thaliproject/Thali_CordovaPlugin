@@ -31,14 +31,11 @@
 // THEPeerBluetooth interface.v
 @interface THEPeerBluetooth : NSObject
 
-// Class initializer.
+// ctor - Discovery and scanning will automatically start 
 - (instancetype)initWithServiceType:(NSUUID *)serviceType
                      peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
                   bluetoothDelegate:(id<THEPeerBluetoothDelegate>)delegate;
-
-// Starts BLE layer
-- (void)start;
 
 // Stops the BLE layer, must be called prior to destruction
 - (void)stop;

@@ -129,8 +129,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     // Somewhere to put our peers
     _peers = [[NSMutableDictionary alloc] init];
 
-    /// Initialise the BLE stack..
-
+    // Initialise the BLE stack..
     NSUUID * btServiceType = [[NSUUID alloc] initWithUUIDString:BLE_SERVICE_TYPE];
 
     _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:btServiceType
@@ -145,7 +144,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
                                                                 peerName:[serverPort stringValue]
                                                          sessionDelegate:self];
     // Start networking..
-    [_peerBluetooth start];
     [_multipeerSession start];
 
     // Hook reachability to network changed event (when user
