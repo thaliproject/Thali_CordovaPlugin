@@ -1,6 +1,6 @@
 {
   "name": "thali",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
