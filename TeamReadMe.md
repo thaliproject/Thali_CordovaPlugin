@@ -27,6 +27,8 @@ For all of this to work we have to have files in at least four different places:
 * __JXCore_CordovaPlugin__ - Our plugin has a dependency in its plugin.xml on JXCore's Cordova plugin
 * __BinTray__ - We have our own bintray available [here](https://bintray.com/thali/Thali) where we publish the btconnectorlib2 JAR for Android
 
+## Managing a new release
+### Updating NPM
 In preparation for a new release we have to publish a new version to NPM. Strictly speaking this is only necessary 
 if we changed any of the .js files but realistically all of our stories require that so just assume it. 
 
@@ -41,6 +43,12 @@ Also keep in mind that thali/install/install.js has a variable called 'thaliBran
 where we will download the cordova code from. Right now that branch points at story_0 but soon enough we will 
 change it to point at master. For most folks it's o.k. to leave this because when we dev on a local branch we tend
 to get our files locally, not from NPM. But it's good to be aware of this variable's existence.
+
+### The rest of the process
+1. Write up a blog article for Thali's blog (this will be auto-reposted to Twitter)
+2. Go to [stories](https://github.com/thaliproject/thali/blob/gh-pages/stories.md) and mark the story as completed. This requires both marking it completed in the table of contents and then use `~~` wrappers to strike out the entry in the body.
+3. Go to GitHub and create a release
+4. Go to internal metrics spreadsheet and add the release to both the shared code and blog tabs.
 
 ## Want to develop locally?
 
