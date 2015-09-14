@@ -119,6 +119,9 @@ test('ThaliReplicationManager replicates database', function (t) {
  
     // Listen for changes from the other side
 
+    var localSeq = null;
+    var remoteSeq = null;
+
     var seenLocalChanges = false;
     var seenRemoteChanges = false;
 
@@ -131,16 +134,33 @@ test('ThaliReplicationManager replicates database', function (t) {
     }).on('change', function(change) {
       var doc = change.doc;
       if (doc._id == mydocid) {
-        t.ok(doc.data == mydevicename, "1st change of local doc should contain local id");
-        seenLocalChanges = true;
-        if (seenRemoteChanges) {
-          manager.stop();
+        if (localSeq == null) {
+          localSeq = change.seq;
+          t.ok(doc.data == mydevicename, "1st change of local doc should contain local id");
+        } else {
+          t.ok(change.seq > localSeq, "Local changes occur in strict order");
+          t.ok(doc.data != mydevicename, "2nd change of local doc should contain remote id");
+          seenLocalChanges = true;
+          if (seenRemoteChanges) {
+            manager.stop();
+          }
         }
       } else {
-        t.ok(doc.data != mydevicename, "1st change of remote doc should contain remote id");
-        seenRemoteChanges = true;
-        if (seenLocalChanges) {
-          manager.stop();
+        if (remoteSeq == null) {
+          remoteSeq = change.seq;
+          t.ok(doc.data != mydevicename, "1st change of remote doc should contain remote id");
+          doc.data = mydevicename;
+          db.put(doc, function(err, result) {
+            t.notOk(err, "Can update remote doc without error");
+            console.log(util.inspect(err));
+            console.log(util.inspect(result));
+          });
+        } else { 
+          t.ok(change.seq > remoteSeq, "Remote changes occur in strict order");
+          seenRemoteChanges = true;
+          if (seenLocalChanges) {
+            manager.stop();
+          }
         }
       }
     }).on('complete', function(info) {
