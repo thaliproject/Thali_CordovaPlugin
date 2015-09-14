@@ -22,36 +22,22 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THEProtectedMutableDictionary.h
 //
 
-#import <Foundation/Foundation.h>
-#import "THEMultipeerSessionDelegate.h"
-#import "THEPeerBluetoothDelegate.h"
+// A thread-safe dictionary that allows common operations to be executed under lock 
+@interface THEProtectedMutableDictionary : NSObject
 
-// Callback that will be called when the lower levels have established
-// a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, uint port);
+// Execute |updateBlock| for |key|. The block will receive the current object.
+// If the block returns a different object it will replace the original. 
+// If the block returns nil the object will be removed (can't put nil in a dict
+// anyway). If the key does not exist the block will receive nil.
+- (void)updateForKey:(NSObject<NSCopying> *)key 
+         updateBlock:(NSObject *(^)(NSObject *))updateBlock;
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEPeerBluetoothDelegate>
-
-// Class singleton.
-+ (instancetype)singleton;
-
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
-
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
-
-// Kill connection without cleanup - Testing only !!
-- (BOOL)killConnection:(NSString *)peerIdentifier;
+// Execute |updateBlock| for all dict values for which |filterBlock| returns true. 
+// Iteration stops if the block returns NO
+- (void)updateForFilter:(BOOL(^)(NSObject *))filterBlock 
+                          updateBlock:(BOOL(^)(NSObject *))updateBlock;
 
 @end

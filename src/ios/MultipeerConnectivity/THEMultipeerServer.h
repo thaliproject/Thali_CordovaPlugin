@@ -22,36 +22,23 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THEMultipeerServer.h
 //
 
-#import <Foundation/Foundation.h>
-#import "THEMultipeerSessionDelegate.h"
-#import "THEPeerBluetoothDelegate.h"
+#import <MultipeerConnectivity/MultipeerConnectivity.h>
+#import "THEMultipeerSession.h"
 
-// Callback that will be called when the lower levels have established
-// a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, uint port);
+// Encapsulate the local server, handles advertising the serviceType and accepting
+// connections from remote clients
+@interface THEMultipeerServer : NSObject <MCNearbyServiceAdvertiserDelegate>
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEPeerBluetoothDelegate>
+- (id) initWithPeerId:(MCPeerID *)peerId 
+   withPeerIdentifier:(NSString *)peerIdentifier 
+         withPeerName:(NSString *)peerName
+      withServiceType:(NSString *)serviceType; 
 
-// Class singleton.
-+ (instancetype)singleton;
-
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
-
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
-
-// Kill connection without cleanup - Testing only !!
-- (BOOL)killConnection:(NSString *)peerIdentifier;
+// Start/stop advertising
+- (void) start;
+- (void) stop;
 
 @end

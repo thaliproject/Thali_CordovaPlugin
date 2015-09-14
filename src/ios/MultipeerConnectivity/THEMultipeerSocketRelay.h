@@ -22,36 +22,35 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THEMultipeerSocketRelay.h
 //
 
-#import <Foundation/Foundation.h>
-#import "THEMultipeerSessionDelegate.h"
-#import "THEPeerBluetoothDelegate.h"
+#import "GCDAsyncSocket.h"
 
-// Callback that will be called when the lower levels have established
-// a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, uint port);
+// Base class of the networking relay which passes data it receives via the input/output
+// streams over the multipeer session to and from the application over a local socket 
+// Subclasses differ only in the way the they create the socket. 
+@interface THEMultipeerSocketRelay : NSObject <GCDAsyncSocketDelegate, NSStreamDelegate>
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEPeerBluetoothDelegate>
+// relayType is just the id we'll be logging under and can be anything
+- (id)initWithRelayType:(NSString *)relayType;
 
-// Class singleton.
-+ (instancetype)singleton;
+// Let the subclasses ask us if it's the right time to create a socket
+- (BOOL)canCreateSocket;
 
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
+// Let the subclasses inform us they created (by their different means)
+// the socket
+- (void)didCreateSocket:(GCDAsyncSocket *)socket;
 
-// Stops communications.
-- (BOOL)stopBroadcasting;
+// Set the input stream from which we'll receive data from the remote peer and pass
+// to the application
+- (void)setInputStream:(NSInputStream *)inputStream;
 
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
+// Set the output stream via which we'll send data we received from the application to
+// the remote peer
+- (void)setOutputStream:(NSOutputStream *)outputStream;
 
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
-
-// Kill connection without cleanup - Testing only !!
-- (BOOL)killConnection:(NSString *)peerIdentifier;
+// Ensure orderly close of the streams else bad things happen when we dealloc
+- (void)stop;
 
 @end

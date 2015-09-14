@@ -22,36 +22,17 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
+//  THEMultipeerClientSocketRelayDelegate.m
 //
 
-#import <Foundation/Foundation.h>
-#import "THEMultipeerSessionDelegate.h"
-#import "THEPeerBluetoothDelegate.h"
+// Protocol implemented by classes wishing to know which port the client relay
+// is listening on
+@protocol THEMultipeerClientSocketRelayDelegate <NSObject>
 
-// Callback that will be called when the lower levels have established
-// a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, uint port);
+// Called when the client relay succesfully established it's listening port
+- (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier;
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEPeerBluetoothDelegate>
-
-// Class singleton.
-+ (instancetype)singleton;
-
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
-
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
-
-// Kill connection without cleanup - Testing only !!
-- (BOOL)killConnection:(NSString *)peerIdentifier;
-
+// Called when the client relay fails to listen
+- (void)didNotListenWithErrorMessage:(NSString *)errorMsg 
+                  withPeerIdentifier:(NSString*)peerIdentifier;
 @end

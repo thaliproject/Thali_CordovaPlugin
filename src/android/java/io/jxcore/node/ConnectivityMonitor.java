@@ -8,43 +8,52 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import io.jxcore.node.JXcoreExtension;
+import io.jxcore.node.jxcore;
+
 /**
  * Created by juksilve on 14.5.2015.
  */
-public class ConnectivityMonitor {
+class ConnectivityMonitor {
 
-    BroadcastReceiver receiver = null;
-    Activity activity = jxcore.activity;
+    private BroadcastReceiver receiver = null;
+    private final Activity activity = jxcore.activity;
 
-    public ConnectivityMonitor(){
-    }
+    public ConnectivityMonitor(){}
 
-    public void Start(){
+    public void Start() {
         Stop();
         IntentFilter filter = new IntentFilter();
         filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
 
-        receiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                SendConnectivityInfo();
-            }
-        };
+        try {
+            receiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    SendConnectivityInfo();
+                }
+            };
 
-        activity.registerReceiver(receiver, filter);
-
-        //To do fix this once we know how to get events that all is ready !
-        SendConnectivityInfo();
+            activity.registerReceiver(receiver, filter);
+            //To do fix this once we know how to get events that all is ready !
+            SendConnectivityInfo();
+        } catch (IllegalArgumentException e) {e.printStackTrace();}
     }
 
-    public void Stop(){
-        if(receiver != null) {
-            activity.unregisterReceiver(receiver);
-            receiver = null;
+    public void Stop() {
+        BroadcastReceiver tmpRec= receiver;
+        receiver = null;
+        if (tmpRec != null) {
+            try {
+                activity.unregisterReceiver(tmpRec);
+            } catch (IllegalArgumentException e) {e.printStackTrace();}
         }
     }
 
-    public void SendConnectivityInfo() {
+    private void SendConnectivityInfo() {
 
         ConnectivityManager connectivity = (ConnectivityManager) activity.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = connectivity.getActiveNetworkInfo();
@@ -58,14 +67,18 @@ public class ConnectivityMonitor {
         activity.runOnUiThread(new Runnable() {
             public void run() {
 
-                String reply = "";
-                if (isConnected) {
-                    reply = "{\"" + JXcoreExtension.EVENTVALUESTRING_REACHABLE + "\":\"" + isConnected + "\", " + "\"" + JXcoreExtension.EVENTVALUESTRING_WIFI + "\":\"" + isWiFi + "\"}";
-                } else {
-                    reply = "{\"" + JXcoreExtension.EVENTVALUESTRING_REACHABLE + "\":\"" + isConnected + "\"}";
+            JSONObject tmp = new JSONObject();
+            try {
+                tmp.put(JXcoreExtension.EVENTVALUESTRING_REACHABLE, isConnected);
+                if(isConnected) {
+                    tmp.put(JXcoreExtension.EVENTVALUESTRING_WIFI, isWiFi);
                 }
+            } catch (JSONException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
 
-                jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_NETWORKCHANGED, reply);
+            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_NETWORKCHANGED, tmp.toString());
             }
         });
     }
