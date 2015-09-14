@@ -1,10 +1,16 @@
 # `IdentityExchange` Node Module #
 
-This module implements the [Coin Flipping for Thali Identity Exchange Protocol](http://www.goland.org/coinflippingforthali/) to allow users of Thali to securely exchange identification information.  Note that only one identity exchange can be done at a time and trying to exchange more than one identity at a time will result in an error.
+This module implements the 
+[Coin Flipping for Thali Identity Exchange Protocol](http://www.goland.org/coinflippingforthali/) to allow users of
+Thali to securely exchange identification information.  Note that only one identity exchange can be done at a time 
+and trying to exchange more than one identity at a time will result in an error..
 
 ## Usage ##
 
-This is the basic usage of the `IdentityExchange` module.  Note that the public key hash comes from the `ThaliReplicationManager.prototype.getDeviceIdentity()` method.  In order for us to get the identities of the other devices we want to exchange identities with, we must listen to the `peerIdentityExchange` event from the `ThaliReplicationManager`.
+This is the basic usage of the `IdentityExchange` module.  Note that the public key hash comes from the 
+`ThaliReplicationManager.prototype.getDeviceIdentity()` method.  In order for us to get the identities of the 
+other devices we want to exchange identities with, we must listen to the `peerIdentityExchange` event from the 
+`ThaliReplicationManager`.
 
 ```js
 // Express
@@ -65,6 +71,7 @@ The `IdentityExchange` module has the following methods:
 - `startIdentityExchange(myFriendlyName, cb)`
 - `stopIdentityExchange(cb)`
 - `executeIdentityExchange(peerIdentifier, otherPkHash, myPkHash, cb)`
+- `stopExecutingIdentityExchange(peerIdentifier, cb)`
 
 ### `constructor(app, replicationManager)`
 
@@ -187,7 +194,8 @@ identityExchange.startIdentityExchange(myFriendlyName, function (err) {
 
 ### `executeIdentityExchange(peerIdentifier, otherPkHash, myPkHash, cb)`
 
-This executes the identity exchange between two devices with a given peer identifier, the peer's public key hash, your public key hash and a callback.
+This executes the identity exchange between two devices with a given peer identifier, the peer's public key hash, 
+your public key hash and a callback.
 
 #### Arguments
 1. `peerIdentifier`: `String` - the peer identifier of the remote device to connect to.
@@ -236,3 +244,16 @@ identityExchange.startIdentityExchange(myFriendlyName, function (err) {
 });
 ```
 ***
+
+### `stopExecutingIdentityExchange(peerIdentifier, cb)`
+
+This stops an outstanding attempt to end a peer identity exchange with the specified peer Identifier. It is an 
+error to call this method if the outstanding identity exchange isn't with this peer identifier or if there is no
+outstanding identity exchange.
+
+#### Arguments
+1. `peerIdentifier`: `String` - the peer identifier of the remote device we are attempting to exchange identities with
+2. `callback`: `Function` - must be in the form of the following, `function (err)` where:
+ - `err`: `Error` = an `Error` if one occurred, else `null`
+ 
+ 

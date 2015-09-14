@@ -26,6 +26,7 @@ manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 ### `ThaliReplicationManager` Instance Methods
 - `start`
 - `stop`
+- `getDeviceIdentity`
 
 ### `ThaliReplicationManager` Events
 - `peerIdentityExchange`
@@ -84,7 +85,9 @@ manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 
 ### `ThaliEmitter.prototype.stop()`
 
-This method stops the Thali Replication Manager.  Once called, this will fire the `stopping` event.  Once stopped, the `stopped` event will fire.  If an error occurs stopping the Thali Replication Manager, the `stopError` event will fire.
+This method stops the Thali Replication Manager.  Once called, this will fire the `stopping` event.  Once stopped, 
+the `stopped` event will fire.  If an error occurs stopping the Thali Replication Manager, the `stopError` event 
+will fire.
 
 #### Example:
 
@@ -104,6 +107,27 @@ manager.on('stopped', function () {
 })
 
 manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+```
+
+### 'ThaliEmitter.prototype.getDeviceIdentity(cb)
+
+This method will return a string containing the hash of the user's root public key.
+
+#### Example
+
+``` js
+var ThaliReplicationManager = require('thali');
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+manager.getDeviceIdentity(function(error, hash) {
+  if (error) {
+    console.log("Catastrophic failure - system couldn't get hash - " + error);
+  }
+  userPublicKeyHash = hash;
+}
 ```
 
 ***
