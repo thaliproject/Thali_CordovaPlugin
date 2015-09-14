@@ -7,6 +7,7 @@
 gradle/
 gradlew
 gradlew.bat
+*.iml
 
 # Nodejs
 node_modules

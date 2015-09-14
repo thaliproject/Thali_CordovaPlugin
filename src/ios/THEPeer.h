@@ -43,12 +43,12 @@ typedef NS_ENUM(NSUInteger, THEPeerState)
 @interface THEPeer : NSObject
 
 // Properties.
-@property (nonatomic, readonly) NSUUID * identifier;
+@property (nonatomic, readonly) NSString * identifier;
 @property (nonatomic, readonly) NSString * name;
 @property (nonatomic) BOOL available;
 
 // Class initializer.
-- (instancetype)initWithIdentifier:(NSUUID *)peerIdentifier
+- (instancetype)initWithIdentifier:(NSString *)peerIdentifier
                               name:(NSString *)name;
 
 // Converts THEPeer to JSON.

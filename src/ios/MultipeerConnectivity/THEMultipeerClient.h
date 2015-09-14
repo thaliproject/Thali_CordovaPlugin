@@ -22,36 +22,34 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAppContext.h
-//
+//  THEMultipeerClient.h
 
-#import <Foundation/Foundation.h>
-#import "THEMultipeerSessionDelegate.h"
-#import "THEPeerBluetoothDelegate.h"
+#import <MultipeerConnectivity/MultipeerConnectivity.h>
 
-// Callback that will be called when the lower levels have established
-// a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, uint port);
+#import "THEAppContext.h"
 
-// THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEPeerBluetoothDelegate>
+// Encapsulates the local client functionality such as discovering and 
+// connecting to remote servers.
+@interface THEMultipeerClient : NSObject <MCNearbyServiceBrowserDelegate>
 
-// Class singleton.
-+ (instancetype)singleton;
+// Service type here is what we're looking for, not what we may be advertising 
+// (although they'll usually be the same)
+- (id)initWithPeerId:(MCPeerID *)peerId 
+     withServiceType:(NSString *)serviceType 
+    withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate;
 
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
+// Start and stop the client (i.e. the peer discovery process)
+- (void)start;
+- (void)stop;
 
-// Stops communications.
-- (BOOL)stopBroadcasting;
+// Connect to a remote peer identified by the application level identifier,
+- (BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
+                    withConnectCallback:(ConnectCallback)connectCallback;
 
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
+// Disconnect to a remote peer identified by the application level identifier
+- (BOOL)disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier;
 
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
-
-// Kill connection without cleanup - Testing only !!
+// Kill connection for testing purposes
 - (BOOL)killConnection:(NSString *)peerIdentifier;
 
 @end
