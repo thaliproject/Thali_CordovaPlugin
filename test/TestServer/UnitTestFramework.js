@@ -77,8 +77,8 @@ UnitTestFramework.prototype.removeDevice = function(device){
     if(this.testDevices[devName]){
         console.log(devName + ' is now disconnected!');
         for(var test in this.testDevices[devName]){
-            if(this.testDevices[devName][tstName] && !this.testDevices[devName][tstName].done){
-                this.ClientStopEventReceived(devName,tstName);
+            if(this.testDevices[devName][test] && !this.testDevices[devName][test].done){
+                this.ClientStopEventReceived(devName,test);
             }
         }
     }
