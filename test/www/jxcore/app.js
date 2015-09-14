@@ -1,88 +1,88 @@
-(function () {
 
-  var CoordinatorConnector = require('CoordinatorConnector');
-  var TestFrameworkClient = require('TestFrameworkClient');
+"use strict";
 
-  /*----------------------------------------------------------------------------------
-   code for connecting to the coordinator server
-   -----------------------------------------------------------------------------------*/
-  fs = require('fs');
-  var parsedJSON = require('ipaddress.json');
-  var myName = "DEV" + Math.round((Math.random() * (10000)));
+var test = require('tape');
+var express = require('express');
+var net = require('net');
 
-  console.log('my name is : ' + myName);
-  console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
+var app = express();
+app.disable('x-powered-by');
 
-  var Coordinator = new CoordinatorConnector();
-  Coordinator.init(parsedJSON[0].address, 3000);
-  console.log('attempting to connect to test coordinator');
+var server = net.createServer(function (socket) {
+    socket.pipe(socket);
+});
 
-  Coordinator.on('error', function (data) {
-    var errData = JSON.parse(data);
-    console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
-    logMessageToScreen('Client error: ' + errData.type);
-  });
+var myName = "UNIT-TEST";
 
-  /*----------------------------------------------------------------------------------
-   code for handling test communications
-   -----------------------------------------------------------------------------------*/
-  var TestFramework = new TestFrameworkClient(myName);
-  TestFramework.on('done', function (data) {
-    console.log('done, sending data to server');
-    Coordinator.sendData(data);
-  });
-  TestFramework.on('debug', function (data) {
-    logMessageToScreen(data);
-  });
 
-  Coordinator.on('connect', function () {
-    console.log('Client has connected to the server!');
-    logMessageToScreen('connected to server');
-    Coordinator.identify(myName);
-  });
+app.listen(5000, function () {
+    server.listen(5001, function () {
+        var rows = [], total = 0, passed = 0, failed = 0;
 
-  Coordinator.on('command', function (data) {
-    console.log('command received : ' + data);
-    TestFramework.handleCommand(data);
-  });
+        test.createStream({ objectMode: true })
+            .on('data', function (row) {
+                // Log for results
+                console.log(JSON.stringify(row));
 
-  // Add a disconnect listener
-  Coordinator.on('disconnect', function () {
-    console.log('The client has disconnected!');
-    //we need to stop & close any tests we are runnign here
-    TestFramework.stopAllTests(false);
-    logMessageToScreen('disconnected');
-  });
+                if (row.type === 'assert') {
+                    total++;
+                    row.ok && passed++;
+                    !row.ok && failed++;
+                }
+                rows.push(row);
 
-  /***************************************************************************************
-   functions for Cordova side application, used for showing logs & sending test messages
-   ***************************************************************************************/
+                //lets just show only results, not setup, teardown etc. rows.
+                if(row.ok && row.name) {
+                    logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
+                }
+            })
+            .on('end', function () {
+                // Log final results
+                logMessageToScreen("------ Final results ---- ");
+                logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
+                console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
 
-  function isFunction(functionToCheck) {
+                console.log("Remaining a server...");
+                var ThaliEmitter = require('thali/thaliemitter');
+                var e = new ThaliEmitter();
+                e.startBroadcasting((+ new Date()).toString(), 5001, function (err) {
+                    if (err) {
+                        console.log("Failed to remain a server");
+                    }
+                });
+
+            });
+
+        require('./runTests.js');
+    });
+});
+
+/***************************************************************************************
+ functions for Cordova side application, used for showing debug logs
+ ***************************************************************************************/
+
+function isFunction(functionToCheck) {
     var getType = {};
     return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
-  }
+}
 
-  var LogCallback;
+var LogCallback;
 
-  function logMessageToScreen(message) {
+function logMessageToScreen(message) {
     if (isFunction(LogCallback)) {
-      LogCallback(message);
+        LogCallback(message);
     } else {
-      console.log("LogCallback not set !!!!");
+        console.log("LogCallback not set !!!!");
     }
-  }
+}
 
-  Mobile('setLogCallback').registerAsync(function (callback) {
+Mobile('setLogCallback').registerAsync(function (callback) {
     LogCallback = callback;
-  });
+});
 
-  Mobile('getMyName').registerAsync(function (callback) {
+Mobile('getMyName').registerAsync(function (callback) {
     callback(myName);
-  });
+});
 
-  // Log that the app.js file was loaded.
-  console.log('Test app app.js loaded');
-})();
-
-
+// Log that the app.js file was loaded.
+console.log('Test app app.js loaded');

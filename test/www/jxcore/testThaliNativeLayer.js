@@ -4,15 +4,23 @@ if (!jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
-var test = require('tape');
 var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
+var tape = require('thali-tape');
 
 function newPeerIdentifier() {
   return (+ new Date()).toString() + "." + process.pid;
 }
 
+var test = tape({
+  setup: function(t) {
+    t.end();
+  },
+  teardown: function(t) {
+    t.end();
+  }
+});
 
 test('ThaliEmitter can call repeatedly startBroadcasting and stopBroadcasting without error', function (t) {
   var e = new ThaliEmitter();

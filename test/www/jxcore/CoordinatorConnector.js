@@ -5,9 +5,7 @@
 
 var events = require('events');
 
-
 function CoordinatorConnector() {
-
 }
 
 CoordinatorConnector.prototype = new events.EventEmitter;
@@ -38,14 +36,34 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
     this.socket.on('command', function (data) {
         self.emit('command',data);
     });
+
+    this.socket.on('start_unit_test', function (data) {
+        self.emit('setup_ready',data);
+    });
+
+    this.socket.on('end_unit_test', function (data) {
+        self.emit('tear_down_ready',data);
+    });
 }
 
 CoordinatorConnector.prototype.identify = function(name){
-    this.socket.emit('identify device', name);
+    this.socket.emit('start_performance_testing', name);
 }
 
 CoordinatorConnector.prototype.sendData = function(data){
     this.socket.emit('test data', data);
+}
+
+CoordinatorConnector.prototype.initUnitTest = function(deviceName){
+    this.socket.emit('start_unit_testing', JSON.stringify({"name":deviceName}));
+}
+
+CoordinatorConnector.prototype.setUp = function(deviceName,testName){
+    this.socket.emit('setup_unit_test', JSON.stringify({"name":deviceName,"test":testName}));
+}
+
+CoordinatorConnector.prototype.tearDown = function(deviceName,testName){
+    this.socket.emit('unit_test_done', JSON.stringify({"name":deviceName,"test":testName}));
 }
 
 module.exports = CoordinatorConnector;

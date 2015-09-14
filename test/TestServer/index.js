@@ -5,7 +5,9 @@ var io = require('socket.io')(http);
 
 var TestDevice = require('./IPAddressToFile');
 var TestDevice = require('./TestDevice');
-var TestFramework = require('./TestFramework');
+var PerfTestFramework = require('./PerfTestFramework');
+var UnitTestFramework = require('./UnitTestFramework');
+
 
 /* // we might need to add this later
 process.argv.forEach(function (val, index, array) {
@@ -17,21 +19,46 @@ app.get('/', function(req, res){
   res.sendfile('index.html');
 });
 
-var TestFramework = new TestFramework();
+var perfTests = new PerfTestFramework();
+var unitTests = new UnitTestFramework();
+
 
 io.on('connection', function(socket) {
   console.log("got connection");
 
-  socket.on('identify device', function(msg){
+  socket.on('start_performance_testing', function(msg){
     var newDevice = new TestDevice(this,msg);
-    TestFramework.addDevice(newDevice);
+    perfTests.addDevice(newDevice);
 
     this.on('disconnect', function () {
-      TestFramework.removeDevice(newDevice.getName());
+      perfTests.removeDevice(newDevice.getName());
     });
 
     this.on('test data', function (data) {
-      TestFramework.ClientDataReceived(newDevice.getName(),data)
+      perfTests.ClientDataReceived(newDevice.getName(),data)
+    });
+  });
+
+  socket.on('start_unit_testing', function(msg){
+    var devName = JSON.parse(msg).name;
+    var unitTestDevice = new TestDevice(this,devName);
+
+    this.on('setup_unit_test', function (msg) {
+      var msgData = JSON.parse(msg);
+      if(msgData.name == unitTestDevice.getName()) {
+        unitTests.addDevice(unitTestDevice, msgData.test);
+      }
+    });
+
+    this.on('disconnect', function () {
+      unitTests.removeDevice(unitTestDevice);
+    });
+
+    this.on('unit_test_done', function (msg) {
+      var msgData = JSON.parse(msg);
+      if(msgData.name == unitTestDevice.getName()) {
+        unitTests.ClientStopEventReceived(msgData.name, msgData.test)
+      }
     });
   });
 });
