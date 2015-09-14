@@ -33,7 +33,7 @@ app.listen(5000, function () {
 
         console.log("Remaining a server...");
         var ThaliEmitter = require('thali/thaliemitter');
-        e = new ThaliEmitter();
+        var e = new ThaliEmitter();
         e.startBroadcasting((+ new Date()).toString(), 5001, function (err) {
           if (err) {
             console.log("Failed to remain a server");
