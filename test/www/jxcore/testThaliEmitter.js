@@ -1,10 +1,22 @@
 "use strict";
 
-require('./mockmobile');
+var originalMobile = typeof Mobile === "undefined" ? undefined : Mobile;
+var mockMobile = require('./mockmobile');
 var ThaliEmitter = require('thali/thaliemitter');
-var test = require('tape');
+var tape = require('thali-tape');
 
 function noop () { }
+
+var test = tape({
+  setup: function(t) {
+    global.Mobile = mockMobile;
+    t.end();
+  },
+  teardown: function(t) {
+    global.Mobile = originalMobile;
+    t.end();
+  }
+});
 
 test('#init should register the peerAvailabilityChanged event', function (t) {
   var emitter = new ThaliEmitter();
