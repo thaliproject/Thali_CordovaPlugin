@@ -6,7 +6,8 @@
   "dependencies": {
     "multiplex": "^6.2.2",
     "request": "^2.61.0",
-    "winston": "^1.0.1"
+    "winston": "^1.0.1",
+    "body-parser": "^1.13.3"
   },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",

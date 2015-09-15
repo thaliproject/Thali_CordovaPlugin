@@ -3,6 +3,7 @@
 var test = require('tape');
 var express = require('express');
 var net = require('net');
+var ThaliEmitter = require('thali/thaliemitter');
 
 var app = express();
 app.disable('x-powered-by');
@@ -32,9 +33,8 @@ app.listen(5000, function () {
         console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
 
         console.log("Remaining a server...");
-        var ThaliEmitter = require('thali/thaliemitter');
-        e = new ThaliEmitter();
-        e.startBroadcasting((+ new Date()).toString(), 5001, function (err) {
+        var thaliEmitter = new ThaliEmitter();
+        thaliEmitter.startBroadcasting((+ new Date()).toString(), 5001, function (err) {
           if (err) {
             console.log("Failed to remain a server");
           }

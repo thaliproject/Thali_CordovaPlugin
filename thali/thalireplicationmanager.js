@@ -134,14 +134,15 @@ function startReplicationManager(port, dbName) {
   this._serverBridge.listen(function () {
     this._serverBridgePort = this._serverBridge.address().port;
 
+    this._emitter.addListener(PEER_AVAILABILITY_CHANGED, this._syncPeers.bind(this));
+    this._emitter.addListener(NETWORK_CHANGED, this._networkChanged.bind(this));
+
     this._emitter.startBroadcasting(this._deviceName, this._serverBridgePort, function (err) {
       if (err) {
         this._isStarted = false;
         this.emit(ThaliReplicationManager.events.START_ERROR, err);
       } else {
         this._isStarted = true;
-        this._emitter.addListener(PEER_AVAILABILITY_CHANGED, this._syncPeers.bind(this));
-        this._emitter.addListener(NETWORK_CHANGED, this._networkChanged.bind(this));
         this.emit(ThaliReplicationManager.events.STARTED);
       }
     }.bind(this));
@@ -246,25 +247,27 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
       console.log('Connect error with error: %s', err);
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
       setImmediate(this._syncRetry.bind(this, peerIdentifier));
-    } else {
-      var client = tcpMultiplex.muxClientBridge(port, function (err) {
-        if (err) {
-          console.log('Error in mux client bridge %s', err);
-          setImmediate(this._syncRetry.bind(this, peerIdentifier));
-        }
-        this._clients[peer.peerIdentifier] = client;
-        client.listen(function () {
-          var localPort = client.address().port;
-
-          var remoteDB = 'http://localhost:' + localPort + '/db/' + this._dbName;
-          var options = { live: true, retry: true };
-          this._replications[peer.peerIdentifier] = {
-            from: this._db.replicate.from(remoteDB, options),
-            to: this._db.replicate.to(remoteDB, options)
-          };
-        }.bind(this));
-      }.bind(this));
+      return;
     }
+
+    var client = tcpMultiplex.muxClientBridge(port, function (err) {
+      if (err) {
+        console.log('Error in mux client bridge %s', err);
+        setImmediate(this._syncRetry.bind(this, peerIdentifier));
+        return;
+      }
+      this._clients[peer.peerIdentifier] = client;
+      client.listen(function () {
+        var localPort = client.address().port;
+
+        var remoteDB = 'http://localhost:' + localPort + '/db/' + this._dbName;
+        var options = { live: true, retry: true };
+        this._replications[peer.peerIdentifier] = {
+          from: this._db.replicate.from(remoteDB, options),
+          to: this._db.replicate.to(remoteDB, options)
+        };
+      }.bind(this));
+    }.bind(this));
   }.bind(this));
 };
 

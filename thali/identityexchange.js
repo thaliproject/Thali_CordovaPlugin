@@ -4,6 +4,8 @@
 var http = require('http');
 var crypto = require('crypto');
 var request = require('request');
+var bodyParser = require('body-parser');
+var jsonParser = bodyParser.json();
 
 global.isInIdentityExchange = false;
 
@@ -177,7 +179,7 @@ module.exports = function identityExchange (app, replicationManager) {
     });
   }
 
-  app.post('/identity/cb', function (req, res) {
+  app.post('/identity/cb', jsonParser, function (req, res) {
     if (!global.isInIdentityExchange) { return res.sendStatus(400); }
 
     if (!req.body) { return res.sendStatus(400); }
@@ -198,7 +200,7 @@ module.exports = function identityExchange (app, replicationManager) {
     });
   });
 
-  app.post('/identity/rnmine', function (req, res) {
+  app.post('/identity/rnmine', jsonParser, function (req, res) {
     if (!global.isInIdentityExchange) { return res.sendStatus(400); }
 
     if (!req.body) { return res.sendStatus(400); }

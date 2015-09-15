@@ -29,13 +29,13 @@ manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 - `getDeviceIdentity`
 
 ### `ThaliReplicationManager` Events
-- `peerIdentityExchange`
 - `starting`
 - `started`
 - `stopping`
 - `stopped`
 - `startError`
 - `stopError`
+- `connectionSuccess`
 
 ## `ThaliReplicationManager(db)` constructor
 
@@ -133,39 +133,6 @@ manager.getDeviceIdentity(function(error, hash) {
 ***
 
 ## Events
-
-### `peerIdentityExchange`
-
-This event is called when a remote peer wants to do an identity exchange
-
-#### Callback Arguments:
-
-1. `peer`: `PeerAvailability` - A peer with the following information:
-- `peerIdentifier`: `String` – the peer identifier
-- `peerName`: `String` – the peer public key hash
-- `peerAvailable`: `Boolean` – whether the peer is available or not
-- `peerFriendlyName`: `String` - the peer friendly name to advertise
-
-#### Example:
-
-```js
-var ThaliReplicationManager = require('thali');
-var PouchDB = require('pouchdb');
-var db = new PouchDB('dbname');
-
-var manager = new ThaliReplicationManager(db);
-
-manager.on('started', function () {
-  manager.stop();
-});
-
-manager.on('stopError', function (err) {
-  console.log('Thali replication manager failed to stop: %s', err);
-});
-
-manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
-```
-***
 
 ### `starting`
 
@@ -311,4 +278,28 @@ manager.on('stopError', function (err) {
 
 manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 ```
+***
+
+### `connectionSuccess`
+
+This event is called anytime we successfully connect the client mux to a remote device.
+
+__NOTE__ - This is a temporary event being used to help run identity exchange. It will be removed once
+we have a proper notification infrastructure and also support a mux level connect that can handle multiple
+different parts of our app wanting to connect to the same peer. Or, put in the next, this will continue
+until we have ACLs and now we won't just automatically create connections to everyone.
+
+#### Callback Arguments:
+
+1. `peer` :
+    - `peerIdentifier` : `String` - The device ID of the peer we connected to
+    - `muxPort` : `Number` - The TCP/IP port that the client mux is listening on
+    
+#### Example:
+
+#### Implementation
+We currently only call connect in exactly one place. So we just need to stick in an event emit after
+that one place and we are good. Keep in mind that we explicitly aren't putting in a connectionFailure
+event because for our current use case we don't care.
+
 ***
