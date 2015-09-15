@@ -88,6 +88,16 @@ UnitTestFramework.prototype.ClientStopEventReceived = function(devName,tstName) 
 
     console.log('~ ' + devName + ' test ' + tstName + ' done!');
 
+    if(!this.testingCurrently || this.testingCurrently == null){
+        console.log("this.testingCurrently is null");
+        return;
+    }
+
+    if(!this.testingCurrently.devices || this.testingCurrently.devices == null){
+        console.log("this.testingCurrently.devices is null");
+        return;
+    }
+
     for (var i = 0; i < this.testingCurrently.devices.length; i++) {
         if (this.testingCurrently.devices[i] && this.testingCurrently.devices[i].testDevice) {
             if (this.testingCurrently.devices[i].testDevice.getName() == devName) {

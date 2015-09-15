@@ -17,6 +17,8 @@ var myName = "UNIT-TEST";
 
 app.listen(5000, function () {
     server.listen(5001, function () {
+
+        var failedRows = [];
         var rows = [], total = 0, passed = 0, failed = 0;
 
         test.createStream({ objectMode: true })
@@ -34,11 +36,20 @@ app.listen(5000, function () {
                 //lets just show only results, not setup, teardown etc. rows.
                 if(row.ok && row.name) {
                     logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
+
+                    if(!row.ok){
+                        failedRows.push(row);
+                    }
                 }
             })
             .on('end', function () {
                 // Log final results
                 logMessageToScreen("------ Final results ---- ");
+
+                for(var i = 0; i < failedRows.length; i++){
+                    logMessageToScreen(failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name);
+                }
+
                 logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
                 console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
 

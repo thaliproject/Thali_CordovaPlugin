@@ -13,11 +13,20 @@ function newPeerIdentifier() {
   return (+ new Date()).toString() + "." + process.pid;
 }
 
+var  emitterToShutDown = null;
+
 var test = tape({
   setup: function(t) {
     t.end();
   },
   teardown: function(t) {
+    if(emitterToShutDown != null){
+      console.log("calling stopBroadcasting");
+      emitterToShutDown.stopBroadcasting(function (err4) {
+        console.log("stopBroadcasting returned " + err4);
+      });
+      emitterToShutDown = null;
+    }
     t.end();
   }
 });
@@ -129,11 +138,10 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
               t.ok(port > 0 && port <= 65536, 'Port should be within range');
 
               testFunction(t, e, peer, port, function() {
-                e.stopBroadcasting(function (err4) {
-                  t.notOk(err4, 'Should be able to call stopBroadcasting without error');
-                  _done = true;
-                  t.end();
-                });
+                console.log("setting stopBroadcasting callback and ending test.");
+                emitterToShutDown = e;
+                _done = true;
+                t.end();
               });
             });
           };
