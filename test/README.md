@@ -2,40 +2,43 @@
 
 ## Overview
 
-The testing frmework is split into two separate sets of tests:
+The testing framework is split into two separate sets of tests:
 - Unit tests
 - Performance tests
 
-Both tests are controlled by centran coordinating server, but the test are managed between the tests in different manner.
+Both types of test are managed by a coordinating server running on a Node capable device (usually a PC) on the same LAN (necessarily WiFi) as the devices under test.
 
-With Unit tests, the coordinator server is simply used to syncronize test setup and test teardown between devices running the test.
+The method of co-ordination differs slightly between the test types:
 
-And with performance tests the coordinator server is used as test manager, which is commanding devices to run specific tests with specific arguments. Additionally the test server also syncronizes the test teardown.
+- With Unit tests the coordinating server simply syncronizes test setup and teardown across devices running the test suite. By this method we can ensure that devices are running the same test at the same time. Tests written to run under this regime should therefore assume they will run against themsselves running on a different device. 
 
-When running the tests, do remember that all devices in which the tests are run, as well as the computer in which the the coordinator server is run must be using same Wi-Fi network.
+- With performance tests the coordinating server additionally provides global options to devices running the test (e.g. number of times to run a particular test before collating results).
 
-Addtionally you also need to remember to make sure that the serveraddress.json file is copied into the jxcore folder of the test app.
+In order to point the devices running test suites at the coorinating server a file, serveraddress.json, containing the ip address of the server host is installed in the jxcore folder of the test app. You'll need to edit the file yourself to make sure it contains the right server address.
 
-## usage
+On startup the test devices will connect back to the server to indicate their readiness to proceed. Once the required number of devices are ready the server will signal them to begin the first test. The server will then coordinate test execution so that each subsequent test is not commenced before all devices have finished the preceding one.
 
-Before running the test server  do remember to use npm install to get the required nodejs modules installed. 
+It is essential, therefore, that tests remain in a state which facilitates completion for the other devices in the test configuration before finally completing and tearing down it's resources.
 
-Do also remember to spcify at least the count of device in the test with Config_PerfTest.json and Config_UnitTest.json files.
+## Usage
 
-With performance tests, you should also check that the required tests are defined in the tests array, as well as that corresponding tests are included in the application.
+Before running the test server you'll need to run 'npm install' in the www/jxcore directory within the test app in order to install the necessary node modules. This is a one-time operation unless you change the set of packages i.e. update package.json. 
 
-## Coordinator server
+Configuration for each test app is contained within the files Config\_Perftest.json and Config\_UnitTest.json which configure the performance and unit tests respectively.
 
-Go to the folder where you have the index.js located and run it : node index.js
+Unit tests are found by scanning the 'tests' subdirectory for any file matchig the patter test\*.
 
-Check the console output for any possible errors reported
+With performance tests the tests to be executed are specified in the config file.
 
-Make sure the serveraddress.json file is created. It should contain the IP-Address for the connected Wi-Fi network. 
+## Running the Coordination Server
 
-## Phone application
+On a PC, from within the test/TestServer directory: node index.js. A side effect of starting the server is that the serveraddress.json file is created, ready to install into the test application.
 
-Create standard Thali app with the plugin: https://github.com/thaliproject/Thali_CordovaPlugin
+## Building the Test App
 
-Then add the content of the TestApp\www\ folder to the www folder  of the Thali app.
+- Follow instructions for creating a typical Thali app given here: <https://github.com/thaliproject/Thali_CordovaPlugin/blob/master/readme.md#getting-started> as far as step 5.
 
-Do also remember to copy the serveraddress.json into the jxcore folder!
+- Copy the test/www directory from the plugin source directory to the test app www directory i.e. from ThaliTest root do: 
+  cp -R ../Thali\_CordovaPlugin/test/www .
+
+Remember to copy the serveraddress.json config into the jxcore folder !!
