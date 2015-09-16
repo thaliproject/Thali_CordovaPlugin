@@ -1,5 +1,12 @@
 /**
- * Created by juksilve on 3.9.2015.
+ *
+ * This test is needing all three files to be present
+ *  - testReConnect.js      : the main entry point to the test case
+ *  - ReConnectConnector.js : logic that handles the connection & data sending parts
+ *  - ReConnectTCPServer.js : logic that handles the server endpoint for connections & data receiving/replying for the test
+ *
+ * In this test case we try connecting to the remote peer and verify that the connection works by sending small amount of data (that gets echoed back)
+ * We measure the time it takes to create the connection, and then disconnect and do re-connections as specified by the test data
  */
 'use strict';
 
@@ -9,6 +16,16 @@ var ThaliEmitter = require('thali/thaliemitter');
 var ReConnectTCPServer = require('./ReConnectTCPServer');
 var ReConnectConnector = require('./ReConnectConnector');
 
+/*
+"jsonData": {
+    "count"          : Specifies the number of peers we would need to do the connections to
+    "timeout"        : Specifies the timeout when we would end test (in case we have not already finished all connection rounds yet)
+    "rounds"         : Specifies how many connections to each peer we should be doing
+    "dataTimeout"    : Specifies timeout used for sending the data and waiting for the reply before we do retry for the connection round.
+    "conReTryTimeout": Specifies the time value we wait after unsuccessful connection attempt, before we try again.
+    "conReTryCount"  : Specifies the times we do retries for unsuccessful connection attempts before we mark the test round failed
+    }
+*/
 function testReConnect(jsonData,name) {
     var self = this;
     console.log('testReConnect created ' + jsonData);
@@ -75,7 +92,9 @@ testReConnect.prototype.start = function() {
     this.emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
     this.emitter.startBroadcasting(self.name, serverPort, function (err) {
         if (err) {
-            console.log('StartBroadcasting returned error ' + err);
+            self.endReason = 'StartBroadcasting returned error ' + err;
+            self.emit('debug', self.endReason);
+            self.weAreDoneNow();
         } else {
             console.log('StartBroadcasting started ok');
         }

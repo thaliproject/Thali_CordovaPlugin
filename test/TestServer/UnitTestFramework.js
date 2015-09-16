@@ -1,5 +1,6 @@
 /**
- * Created by juksilve on 1.9.2015.
+ * Unit test framework used with thali-tape.
+ * is basically making sure that all devices wait others on setup and tear down before proceeding
  */
 
 'use strict';

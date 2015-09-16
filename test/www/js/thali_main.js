@@ -32,10 +32,10 @@
     clearInterval(inter);
 
     jxcore.isReady(function() {
-
       jxcore('app.js').loadMainFile(function(ret, err) {
         if (err) {
-          alert(JSON.stringify(err));
+          console.log("App.js file failed to load : " + JSON.stringify(err));
+          navigator.app.exitApp();
         }else{
           jxcore_ready();
         }

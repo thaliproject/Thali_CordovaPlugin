@@ -1,5 +1,5 @@
 /**
- * Created by juksilve on 1.9.2015.
+ * a calss that is used to store each test device so we can sent data back to them
  */
 
 'use strict';

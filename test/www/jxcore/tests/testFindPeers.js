@@ -1,10 +1,21 @@
 /**
- * Created by juksilve on 2.9.2015.
+ *
+ * This test implement's the whole test code in a single file
+ *
+ * In this test we are simply discovering peers and measuring the time it takes to find them
+ *
  */
 'use strict';
 
 var events = require('events');
 var ThaliEmitter = require('thali/thaliemitter');
+
+/*
+"jsonData": {
+    "count": Specifies the number of peers we would need to discover,
+    "timeout": Specifies the timeout when we would end discovery (in case we have not found all needed peers yet)
+    }
+*/
 
 function testFindPeers(jsonData,name) {
     var self = this;
@@ -60,12 +71,15 @@ testFindPeers.prototype.start = function() {
     this.startTime = new Date();
     this.emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
 
-    var serverPort = 8876;//we are not connectin, thus we can use fake port here.
+    var serverPort = 8876;//we are not connecting, thus we can use fake port here.
     console.log('serverPort is ' + serverPort);
 
     this.emitter.startBroadcasting(self.name, serverPort, function (err) {
         if (err) {
-            console.log('StartBroadcasting returned error ' + err);
+            self.endReason = 'StartBroadcasting returned error ' + err;
+            self.emit('debug', self.endReason);
+            self.weAreDoneNow();
+            return;
         } else {
             console.log('StartBroadcasting started ok');
         }
@@ -76,7 +90,6 @@ testFindPeers.prototype.start = function() {
             console.log('timeout now');
             if(!self.doneAlready)
             {
-                console.log('dun');
                 self.endReason = "TIMEOUT";
                 self.emit('debug', "*** TIMEOUT ***");
                 self.weAreDoneNow();

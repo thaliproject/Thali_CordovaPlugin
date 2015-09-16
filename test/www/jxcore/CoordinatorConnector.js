@@ -1,5 +1,5 @@
 /**
- * Created by juksilve on 1.9.2015.
+ * Class used for connecting & communicating with the coordinator server
  */
 'use strict';
 

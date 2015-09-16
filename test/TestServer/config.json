@@ -1,8 +1,0 @@
-{
-    "name": "performance tests",
-    "description": "basic performance tests for Thali apps framework",
-    "startDeviceCount": "3",
-    "tests": [
-        {"name": "testThaliEmitter.js", "timeout": "600000","data": {"timeout": "500000"}}
-    ]
-}

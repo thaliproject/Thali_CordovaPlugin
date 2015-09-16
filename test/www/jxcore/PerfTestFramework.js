@@ -1,5 +1,10 @@
 /**
- * Testframework on client side to handle perfoamnce tests according the commands gotten from coordinator server
+ *
+ * This is class implementation which is used to load all performance tests from the tests folder
+ * Then its expecting start & stop commands for the tests, and also it expects the start command to specify which test file to execute.
+ * It also routes the:
+ * - 'done' events indicating that the test case has now been finished, and the test now waits teardown to happen with stop command
+ * - 'debug' events which are relying some debugging information that could be shown in the applications UI
  */
 'use strict';
 var events = require('events');
@@ -33,23 +38,24 @@ function TestFrameworkClient(name) {
 
 TestFrameworkClient.prototype = new events.EventEmitter;
 
-/*{
-    command : either start or stop,
-    testName: filename to execute,
-    testData: data specific for test to be executed
-    }
- */
+/*
+{
+command : start/stop test,
+testName: filename of the test to execute,
+testData: parameters for the test case
+}
+*/
 
 TestFrameworkClient.prototype.handleCommand = function(command){
     var self = this;
     var commandData = JSON.parse(command);
     switch(commandData.command){
         case 'start':{
-            console.log('Star now : ' + commandData.testName);
-            this.stopAllTests(); //Stop any previous tests if still running
+            console.log('Start now : ' + commandData.testName);
+            self.stopAllTests(); //Stop any previous tests if still running
             if(self.test[commandData.testName]){
                 self.emit('debug',"--- start :" + commandData.testName + "---");
-                currentTest = new self.test[commandData.testName](commandData.testData,this.deviceName);
+                currentTest = new self.test[commandData.testName](commandData.testData,self.deviceName);
                 self.setCallbacks(currentTest);
                 currentTest.start();
             }else{
@@ -59,7 +65,7 @@ TestFrameworkClient.prototype.handleCommand = function(command){
         }
         case 'stop':{
             self.emit('debug',"stop");
-            this.stopAllTests(true);
+            self.stopAllTests(true);
             break;
         }
         default:{

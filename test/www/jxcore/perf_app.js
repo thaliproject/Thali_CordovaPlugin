@@ -1,3 +1,8 @@
+/*
+* This file needs to be renamed as app.js when we want to run performance tests
+* in order this to get loaded by the jxcore ready event.
+* This efectively acts as main entry poin to the performance test app
+ */
 (function () {
 
   var CoordinatorConnector = require('CoordinatorConnector');
@@ -7,7 +12,7 @@
    code for connecting to the coordinator server
    -----------------------------------------------------------------------------------*/
   fs = require('fs');
-  var parsedJSON = require('ipaddress.json');
+  var parsedJSON = require('serveraddress.json');
   var myName = "DEV" + Math.round((Math.random() * (10000)));
 
   console.log('my name is : ' + myName);

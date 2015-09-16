@@ -1,10 +1,28 @@
-/*globals require module */
+/*
+Thali unit test implementation of tape.
+Highly inspired by wrapping-tape, and usage is very similar to the wrapping tape:
+
+ var tape = require('thali-tape');
+
+ var test = tape({
+  setup: function(t) {
+    // will be called after each test has started to setup the test
+    // after the next line, the actual test code will be executed
+  t.end();
+ },
+  teardown: function(t) {
+    // will be called after each device has ended the test
+    // do any final tear down for the test in here
+  t.end();
+ }
+ });
+*/
 
 'use strict';
 
 var tape = require('tape');
 var CoordinatorConnector = require('CoordinatorConnector');
-var parsedJSON = require('ipaddress.json');
+var parsedJSON = require('serveraddress.json');
 
 function Thali_Tape(options) {
 

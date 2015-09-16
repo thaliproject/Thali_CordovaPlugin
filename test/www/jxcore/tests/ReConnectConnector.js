@@ -1,5 +1,12 @@
 /**
- * Created by juksilve on 3.9.2015.
+ *
+ * This test is needing all three files to be present
+ *  - testReConnect.js      : the main entry point to the test case
+ *  - ReConnectConnector.js : logic that handles the connection & data sending parts
+ *  - ReConnectTCPServer.js : logic that handles the server endpoint for connections & data receiving/replying for the test
+ *
+ * In this test case we try connecting to the remote peer and verify that the connection works by sending small amount of data (that gets echoed back)
+ * We measure the time it takes to create the connection, and then disconnect and do re-connections as specified by the test data
  */
 
 var net = require('net');
@@ -144,16 +151,17 @@ ReConnectConnector.prototype.resetDataTimeout = function(peer) {
             console.log('Receiving data timeout now');
             self.endReason = "DATA-TIMEOUT";
 
-            // I have a problem here, I would need to disconnect now & re-start but there is no API for it
-            // with client socket end() will not disconnect, but the server keeps the connection open & receives data & replies back
-            // and destroy() will do bad thinga on server, and as we are not only connection its not good to cause issues for tests of other devices
-            // We need this, since sometimes the data just stops flowing, and we would wait till end of time unless we have a way on doing disconnection
+
             self.disconnecting = true;
-            Mobile('Disconnect').callNative(peer.peerIdentifier, function (err, port) {
-                console.log("CLIENT Disconnect, err: " + err);
-                self.tryAgain();
-                self.disconnecting = false;
-            });
+            //Closing Client socket, will also close connection
+            if(self.clientSocket != null) {
+                console.log("CLIENT closeClientSocket");
+                self.clientSocket.end();
+                self.clientSocket.destroy();// this makes sure it gets really closed properly
+                self.clientSocket = null;
+            }
+            self.tryAgain();
+            self.disconnecting = false;
             console.log("----------------- closeClientSocket");
 
         }, self.dataTimeOut);

@@ -1,5 +1,7 @@
 /**
  * Created by juksilve on 1.9.2015.
+ *
+ * This file
  */
 
 'use strict';
@@ -24,14 +26,14 @@ Object.keys(ifaces).forEach(function (ifname) {
             // this interface has only one ipv4 adress
             console.log(ifname, iface.address);
 
-            fs.writeFile("../www/jxcore/ipaddress.json", JSON.stringify([{name: ifname, address: iface.address}]), function (err) {
+            fs.writeFile("../www/jxcore/serveraddress.json", JSON.stringify([{name: ifname, address: iface.address}]), function (err) {
                 if (err) {
                     return console.log(err);
                 }
                 console.log("IP-address saved to jxcore folder!");
             });
 
-            fs.writeFile("./ipaddress.json", JSON.stringify([{name: ifname, address: iface.address}]), function (err) {
+            fs.writeFile("./serveraddress.json", JSON.stringify([{name: ifname, address: iface.address}]), function (err) {
                 if (err) {
                     return console.log(err);
                 }

@@ -1,3 +1,6 @@
+/*
+Main entry point for Thali test frameworks coordinator server
+ */
 var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);

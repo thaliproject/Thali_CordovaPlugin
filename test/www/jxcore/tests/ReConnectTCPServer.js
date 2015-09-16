@@ -1,5 +1,12 @@
 /**
- * Created by juksilve on 2.9.2015.
+ *
+ * This test is needing all three files to be present
+ *  - testReConnect.js      : the main entry point to the test case
+ *  - ReConnectConnector.js : logic that handles the connection & data sending parts
+ *  - ReConnectTCPServer.js : logic that handles the server endpoint for connections & data receiving/replying for the test
+ *
+ * In this test case we try connecting to the remote peer and verify that the connection works by sending small amount of data (that gets echoed back)
+ * We measure the time it takes to create the connection, and then disconnect and do re-connections as specified by the test data
  */
 'use strict';
 var net = require('net');
@@ -24,16 +31,9 @@ function ReConnectTCPServer(port) {
         });
 
         c.on('data', function (data) {
-            // BUGBUG: On the desktop this event listener is not necessary. But on JXCore on Android
-            // we have to include this handler or no data will ever arrive at the server.
-            // Please see https://github.com/jxcore/jxcore/issues/411
             console.log("TCP/IP server got data - " + data.length);
             c.write(data.toString());
         });
-
-        // when using piping, I don't get 'data' events, and as in debug time I want to log them
-        // I'm doing write operations in the data event, instead doing the piping
-        // c.pipe(c);
     });
 
     this.server.on('error', function (data) {

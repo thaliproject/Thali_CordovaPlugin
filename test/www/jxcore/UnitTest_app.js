@@ -1,3 +1,8 @@
+/**
+ * This file needs to be renamed as app.js when we want to run unit tests
+ * in order this to get loaded by the jxcore ready event.
+ * This efectively acts as main entry poin to the unit test app
+ */
 
 "use strict";
 
@@ -52,16 +57,6 @@ app.listen(5000, function () {
 
                 logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
                 console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
-
-                console.log("Remaining a server...");
-                var ThaliEmitter = require('thali/thaliemitter');
-                var e = new ThaliEmitter();
-                e.startBroadcasting((+ new Date()).toString(), 5001, function (err) {
-                    if (err) {
-                        console.log("Failed to remain a server");
-                    }
-                });
-
             });
 
         require('./runTests.js');

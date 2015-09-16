@@ -1,5 +1,4 @@
 /**
- * Created by juksilve on 1.9.2015.
  */
 
 'use strict';
@@ -20,6 +19,24 @@ var configFile = require('./Config_PerfTest.json');
 
  ]
  }
+
+  With startDeviceCount define on how many devices needs to be connected before tests are started
+
+  Test item in the array includes the tests file name and:
+  - timeout: defines timeout value which after the coordinator server will cancel the test
+  - data: is data that gets sent to the clients devices, and defines what they need to do
+
+   with testFindPeers additional data item included is:
+   - count: defines how many peers needs to be found/processed
+
+   additionally with  re-Connect test data
+   - rounds defines how many rounds of connection established needs to be performed for each peers
+   - dataTimeout defines timeout which after data sent is determined to be lost, and the connection is disconnected (and reconnected, data send starts from the point we know we managed to deliver to other side)
+   - conReTryTimeout defines timeout value used between disconnection (by error) and re-connection
+   - conReTryCount defined on how many times we re-try establishing connections before we give up.
+
+   also additionally with  send-data test data
+   - dataAmount defines the amount of data sent through each connection before disconnecting
  */
 
 
