@@ -165,7 +165,6 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 
 // Possible states of bluetooth stack 
 typedef enum bluetoothStates {
-  INITIALIZED,
   STARTING,
   STARTED,
   STOPPING,
@@ -333,21 +332,11 @@ static NSMutableSet * _stoppingInstances;
     // after a failed call to CBPeripheralManager
     // updateValue:forCharacteristic:onSubscribedCentrals.
     _pendingCharacteristicUpdates = [[NSMutableArray alloc] init];
-   
-    _state = INITIALIZED;
+
+    _state = STARTING;
  
     // Done.
     return self;
-}
-
-// Starts peer Bluetooth.
-- (void)start
-{
-  @synchronized(self)
-  { 
-    assert(_state == INITIALIZED);
-    _state = STARTING;
-  }
 }
 
 // Stops peer Bluetooth.
@@ -375,6 +364,8 @@ static NSMutableSet * _stoppingInstances;
 
     [self stopAdvertising];
     [self stopScanning];
+    
+    _state = STOPPED;
   }
 }
 
@@ -441,8 +432,6 @@ static NSMutableSet * _stoppingInstances;
       {
         [self stopAdvertising];
       }
-
-      _state = STOPPED;
     }
   }
 }
@@ -527,8 +516,6 @@ static NSMutableSet * _stoppingInstances;
       {
         [self stopScanning];
       }
-      
-      _state = STOPPED;
     }
   }
 }
