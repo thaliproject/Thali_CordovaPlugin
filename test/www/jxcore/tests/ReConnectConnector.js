@@ -50,32 +50,36 @@ ReConnectConnector.prototype.ReStart = function(peer) {
         this.clientSocket.end()
         this.clientSocket = null;
     }
-    console.log('Connect[' + this.tryRounds + '] to : ' + this.peer.peerName + 'Available: '  + this.peer.peerAvailable);
+    console.log('Connect[' + this.tryRounds + '] to : ' + this.peer.peerIdentifier + ' Available: '  + this.peer.peerAvailable);
     this.doConnect(this.peer);
 }
 
 
-ReConnectConnector.prototype.Stop = function(peer) {
+ReConnectConnector.prototype.Stop = function() {
+  
     console.log("CLIENT Stop now");
-    this.stopped = true;
-    if(this.reTryTimeOut != null) {
-        console.log("Stop retry timer");
-        clearTimeout(this.reTryTimeOut);
-        this.reTryTimeOut = null;
-    }
 
-    if (this.dataTimerId != null) {
-        console.log("Stop data retrieving timer");
-        clearTimeout(this.dataTimerId);
-        this.dataTimerId = null;
-    }
+    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
+        this.stopped = true;
+        if(this.reTryTimeOut != null) {
+            console.log("Stop retry timer");
+            clearTimeout(this.reTryTimeOut);
+            this.reTryTimeOut = null;
+        }
 
-    //Closing Client socket, will also close connection
-    if(this.clientSocket != null) {
-        console.log("CLIENT closeClientSocket");
-        this.clientSocket.end();
-        this.clientSocket = null;
-    }
+        if (this.dataTimerId != null) {
+            console.log("Stop data retrieving timer");
+            clearTimeout(this.dataTimerId);
+            this.dataTimerId = null;
+        }
+
+        //Closing Client socket, will also close connection
+        if(this.clientSocket != null) {
+            console.log("CLIENT closeClientSocket");
+            this.clientSocket.end();
+            this.clientSocket = null;
+        }
+    });
 }
 
 ReConnectConnector.prototype.doConnect = function(peer) {
@@ -195,7 +199,7 @@ ReConnectConnector.prototype.tryAgain = function() {
     console.log("tryAgain afer: " + self.reTryTimeout + " ms.");
     //lets try again after a short while
     self.reTryTimeOut = setTimeout(function () {
-        console.log("re-try now : " + self.peer.peerName);
+        console.log("re-try now : " + self.peer.peerIdentifier);
         self.reTryTimeOut = null
         self.ReStart(self.peer);
     }, self.reTryTimeout);
@@ -206,10 +210,11 @@ ReConnectConnector.prototype.oneRoundDoneNow = function() {
 
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;
-    this.resultArray.push({"name:":this.peer.peerName,"time":responseTime,"result":this.endReason,"connections":this.connectionCount});
+    this.resultArray.push({"name:":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount});
 
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
 
+   
     this.doneRounds++;
     if(this.roundsToDo > this.doneRounds){
         this.tryRounds = 0;
