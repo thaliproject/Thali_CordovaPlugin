@@ -60,17 +60,15 @@ function testReConnect(jsonData,name) {
     this.resultArray = [];
 
     this.peerAvailabilityChanged = function(peers) {
-        console.log('peerAvailabilityChanged ' + peers);
+        console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
         for (var i = 0; i < peers.length; i++) {
             var peer = peers[i];
             if ((!self.foundPeers[peer.peerIdentifier]) || (!self.foundPeers[peer.peerIdentifier].doneAlready)) {
                 self.foundPeers[peer.peerIdentifier] = peer;
-                console.log("Found peer : " + peer.peerName + ", Available: " + peer.peerAvailable);
             }
         }
 
         if (!self.testStarted) {
-            console.log("a");
             self.startWithNextDevice();
         }
     }
@@ -85,7 +83,6 @@ testReConnect.prototype.start = function() {
     this.testConnector.on('done', this.doneCallback);
     this.testConnector.on('debug',this.debugCallback);
 
-    console.log('check server');
     var serverPort = this.testServer.getServerPort();
     console.log('serverPort is ' + serverPort);
 
@@ -161,7 +158,7 @@ testReConnect.prototype.startWithNextDevice = function() {
     for(var peerId in this.foundPeers){
         if(this.foundPeers[peerId].peerAvailable && !this.foundPeers[peerId].doneAlready){
             this.testStarted = true;
-            this.emit('debug', '--- start for : ' + this.foundPeers[peerId].peerName + ' ---');
+            this.emit('debug', '--- start for : ' + this.foundPeers[peerId].peerIdentifier + ' ---');
             this.foundSofar++
             console.log('device[' + this.foundSofar +  ']: ' + this.foundPeers[peerId].peerIdentifier);
 

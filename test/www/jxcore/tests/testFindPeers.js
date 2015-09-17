@@ -34,7 +34,7 @@ function testFindPeers(jsonData,name) {
         if(self.doneAlready){
             return;
         }
-        console.log('peerAvailabilityChanged ' + peers);
+        console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
         for (var i = 0; i < peers.length; i++) {
             var peer = peers[i];
             self.foundPeers[peer.peerIdentifier] = peer;
@@ -45,8 +45,8 @@ function testFindPeers(jsonData,name) {
             }
 
             if(self.foundPeers[peer.peerIdentifier].peerAvailable) {
-                self.emit('debug', "Found peer : " + peer.peerName + ", Available: " + peer.peerAvailable);
-                console.log("Found peer : " + peer.peerName + ", peerAvailable: " + peer.peerAvailable);
+                self.emit('debug', "Found peer : " + peer.peerIdentifier + ", Available: " + peer.peerAvailable);
+                console.log("Found peer : " + peer.peerIdentifier + ", peerAvailable: " + peer.peerAvailable);
             }
         }
 
