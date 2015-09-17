@@ -35,8 +35,7 @@ function testFindPeers(jsonData,name) {
             return;
         }
         console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
-        for (var i = 0; i < peers.length; i++) {
-            var peer = peers[i];
+        for (var peer in peers) {
             self.foundPeers[peer.peerIdentifier] = peer;
 
             if(!self.foundPeers[peer.peerIdentifier].foundTime){
