@@ -332,7 +332,7 @@ static NSMutableSet * _stoppingInstances;
     // after a failed call to CBPeripheralManager
     // updateValue:forCharacteristic:onSubscribedCentrals.
     _pendingCharacteristicUpdates = [[NSMutableArray alloc] init];
-   
+    
     _state = STARTING;
  
     // Done.
@@ -364,6 +364,8 @@ static NSMutableSet * _stoppingInstances;
 
     [self stopAdvertising];
     [self stopScanning];
+    
+    _state = STOPPED;
   }
 }
 

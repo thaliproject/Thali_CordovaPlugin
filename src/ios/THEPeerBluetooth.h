@@ -31,7 +31,7 @@
 // THEPeerBluetooth interface.v
 @interface THEPeerBluetooth : NSObject
 
-// ctor - Discovery and scanning will automatically start 
+// Class initializer, will start advertising/scanning immediately
 - (instancetype)initWithServiceType:(NSUUID *)serviceType
                      peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
