@@ -16,11 +16,10 @@ wait --> findPeersDoingIdentityExchange : startIdentityExchange called
 findPeersDoingIdentityExchange --> wait : stopIdentityExchange called
 findPeersDoingIdentityExchange --> exchangeIdentity : executeIdentityExchange called
 
-exchangeIdentity --> wait : stopIdentityExchange called
 exchangeIdentity --> findPeersDoingIdentityExchange : stopExecutingIdentityExchange called
 ```
 
-![IdentityExchange State Machine](http://plantuml.com/plantuml/png/YzQALT3LjLCeJymiKR1IICxFAoufAaqkoIzII4xCoKbDuU82Iu7Kf6NcfGIafXOLk-HdvgLxfgJcbMIMLBfM96SavgMd0dKNboGMbM28mymXe1t95SKb-GMuZ272b5Ge1oO9D36r8ZMvj2GLfzimj13f6gpwY0Yd_09Ni8kmoKEC1W00)
+![IdentityExchange State Machine](http://plantuml.com/plantuml/png/YzQALT3LjLCeJymiKR1IICxFAoufAaqkoIzII4xCoKbDuU82Iu7Kf6NcfGIafXOLk-HdvgLxfgJcbMIMLBfM96SavgMd0dKNboGMbM28mymXe1t95SKb-GMuZ272b5Ge1oO9D36r8ZMvj2GLfzimj13ft_m2Lx39sEGXPWC0)
 
 Eventually we will be able to complete separate finding peers to do identity exchange with and executing
 an identity exchange. But right now they are coupled because we depend on a call to startBroadcasting
@@ -67,8 +66,8 @@ This is the basic usage of the `IdentityExchange` module.  Note that the public 
 ## `IdentityExchange` Methods ##
 
 The `IdentityExchange` module has the following methods:
-- `constructor(app, replicationManager)`
-- `startIdentityExchange(myFriendlyName, cb)`
+- `constructor(app, replicationManager, port, dbName, deviceName)`
+- `startIdentityExchange(myFriendlyName)`
 - `stopIdentityExchange(cb)`
 - `executeIdentityExchange(peerIdentifier, otherPkHash, myPkHash, cb)`
 - `stopExecutingIdentityExchange(peerIdentifier, cb)`
@@ -76,7 +75,7 @@ The `IdentityExchange` module has the following methods:
 The `IdentityExchange` module has the following events:
 - `peerIdentityExchange`
 
-### `constructor(app, replicationManager)`
+### `constructor(app, replicationManager, port, dbName, deviceName)`
 This constructs the `IdentityExchange` module specifically with the Express-PouchDB instance used with Thali.
 
 __WARNING__ - For the moment we require that the replicationManager that was passed into us is in the stop 
@@ -90,6 +89,10 @@ manager.
 1. `app`: `express` - Thali's Express-PouchDB Express application instance
 2. `replicationManager`: `ThaliReplicationManager` - a `ThaliReplicationManager` instance used for replicating 
 data between devices. It's state must be off.
+3. `port`: number - As defined in `ThaliReplicationManager` start method
+4. `dbName`: string - As defined in `ThaliReplicationManager` start method
+5. `deviceName`: string - As defined in `ThaliReplicationManager` start method, this is usually the device's
+public key hash as obtained from thaliReplicationManager.getDeviceIdentity()
 
 #### Return Value
 `IdentityExchange` - the initialized `IdentityExchange` module used for identity exchange between devices.
@@ -123,14 +126,12 @@ var identityExchange = new IdentityExchange(app, replicationManager);
 
 ***
 
-### `startIdentityExchange(myFriendlyName, cb)`
+### `startIdentityExchange(myFriendlyName)`
 
 This method starts the process of advertising the device's desire to perform an identity exchange.
 
 #### Arguments
 1. `myFriendlyName`: `string` - The friendly name to broadcast to other devices as the identity of the device.
-2. `callback`: `Function` – must be in the form of the following, `function (err)` where:
-  - `err` : `Error` – an `Error` if one occurred, else `null`
 
 #### Example
 ```js
@@ -157,7 +158,7 @@ one character.
 
 ***
 
-### `stopIdentityExchange(cb)`
+### `stopIdentityExchange()`
 
 This method stops advertising for identity exchanges. 
 
@@ -167,8 +168,6 @@ we have added the right native apis to allow us to change the characteristics we
 that after calling stopIdentityExchange one has to call start on the replication manager!
 
 #### Arguments
-1. `callback`: `Function` – must be in the form of the following, `function (err)` where:
-  - `err` : `Error` – an `Error` if one occurred, else `null`
 
 #### Example
 ```js
@@ -252,7 +251,7 @@ This event is called when a remote peer wants to do an identity exchange
 
 #### Callback Arguments:
 
-1. `peer`: `PeerAvailability` - A peer with the following information:
+1. `peer`: - A peer with the following information:
 - `peerIdentifier`: `String` – the peer identifier
 - `peerName`: `String` – the peer public key hash
 - `peerAvailable`: `Boolean` – whether the peer is available or not

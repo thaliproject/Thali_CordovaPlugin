@@ -14,10 +14,9 @@ var deviceIdentityFlag = {
   deviceIdentityAvailable: 2
 };
 
-var e = new EventEmitter();
-
 var PEER_AVAILABILITY_CHANGED = ThaliEmitter.events.PEER_AVAILABILITY_CHANGED;
 var NETWORK_CHANGED = ThaliEmitter.events.NETWORK_CHANGED;
+var CONNECTION_SUCCESS = "connectionSuccess";
 
 inherits(ThaliReplicationManager, EventEmitter);
 
@@ -99,6 +98,7 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
 * The device-id is obtained using the cryptomanager's API.
 * @param {Number} port the port number used for synchronization.
 * @param {String} dbName the name of the database.
+* @param {String} deviceName the name to advertise for the device
 */
 ThaliReplicationManager.prototype.start = function (port, dbName, deviceName) {
   validations.ensureValidPort(port);
@@ -259,6 +259,11 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
       this._clients[peer.peerIdentifier] = client;
       client.listen(function () {
         var localPort = client.address().port;
+
+        this.emit(CONNECTION_SUCCESS, {
+          peerIdentifier : peer.peerIdentifier,
+          muxPort : localPort
+        });
 
         var remoteDB = 'http://localhost:' + localPort + '/db/' + this._dbName;
         var options = { live: true, retry: true };

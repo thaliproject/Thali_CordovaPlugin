@@ -1,6 +1,124 @@
 /* jshint node: true */
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
+var app = null;
+var replicationManager = null;
+var port = null;
+var dbName = null;
+var deviceName = null;
+var connectionTable = {};
+var connectionSuccessListener = null;
+
+var minFriendlyNameLength = 0;
+var maxFriendlyNameLength = 20;
+var connectionSuccessEventName = "connectionSuccess";
+
+
+var StateMachine = require("javascript-state-machine");
+
+var identityExchangeStateMachine = StateMachine.create({
+  initial: 'wait',
+  events: [
+    { name: 'startIdentityExchangeCalled', from: 'wait', to: 'findPeersDoingIdentityExchange'},
+    { name: 'stopIdentityExchangeCalled', from: 'findPeersDoingIdentityExchange', to: 'wait'},
+    { name: 'executeIdentityExchangeCalled', from: 'findPeersDoingIdentityExchange', to: 'exchangeIdentity'},
+    { name: 'stopExecutingIdentityExchangeCalled', from: 'exchangeIdentity', to: 'findPeersDoingIdentityExchange'}
+  ],
+  callbacks: {
+    onstartIdentityExchangeCalled: onStartIdentityExchangeCalled,
+    onstopIdentityExchangeCalled: onStopIdentityExchangeCalled,
+    onexecuteIdentityExchangeCalled: onExecuteIdentityExchangeCalled,
+    onstopExecutingIdentityExchangeCalled: onStopExecutingIdentityExchangeCalled
+  }
+});
+
+function onStartIdentityExchangeCalled(event, from, to, myFriendlyName) {
+  connectionSuccessListener = function (successObject) {
+    connectionTable[successObject.peerIdentifier] = {
+      muxPort: successObject.muxPort,
+      time: Date.now()
+    };
+
+    self.emit(successObject.peerIdentifier, connectionTable[successObject.peerIdentifier]);
+  };
+  replicationManager.on(connectionSuccessEventName, connectionSuccessListener);
+
+  return replicationManager.start(port, dbName, deviceName + ";" + myFriendlyName);
+}
+
+function onStopIdentityExchangeCalled(event, from, to) {
+  replicationManager.removeListener(connectionSuccessEventName, connectionSuccessListener);
+  connectionSuccessListener = null;
+  connectionTable = {};
+  // Switch identity endpoints to returning 404 not found
+  // Clear out any pending HTTP requests
+  return replicationManager.stop();
+}
+
+function onExecuteIdentityExchangeCalled(event, from, to) {
+
+}
+
+function onStopExecutingIdentityExchangeCalled(event, from, to) }{
+
+}
+
+inherits(identityExchange, EventEmitter);
+function identityExchange(app, replicationManager, port, dbName, deviceName) {
+  EventEmitter.call(this);
+  this.app = app;
+  this.replicationManager = replicationManager;
+  this.port = port;
+  this.dbName = dbName;
+  this.deviceName = deviceName;
+
+  replicationManager._emitter.on('peerAvailabilityChanged', function (peers) {
+    if (identityExchangeStateMachine.current == "findPeersDoingIdentityExchange" ||
+        identityExchangeStateMachine.current == "exchangeIdentity") {
+      peers.forEach(function (peer) {
+        if (peer.peerName.indexOf(';') !== -1) {
+          var split = peer.peerName.split(';');
+          peer.peerFriendlyName = split[1];
+          peer.peerName = split[0];
+
+          replicationManager.emit('peerIdentityExchange', peer);
+        }
+      });
+    }
+  });
+
+
+  // Connect the identity exchange endpoints to return 404
+  return {
+    startIdentityExchange : function(myFriendlyName) {
+      if (!myFriendlyName || typeof myFriendlyName !== "string" || myFriendlyName.length <= minFriendlyNameLength ||
+        myFriendlyName.length > maxFriendlyNameLength) {
+        throw new Error("myFriendlyName MUST be a string that is between 1 and 20 characters long, inclusive.");
+      }
+
+      return identityExchangeStateMachine.onstartIdentityExchangeCalled(myFriendlyName);
+    },
+    stopIdentityExchange : function() {
+      return identityExchangeStateMachine.onstopIdentityExchangeCalled();
+    },
+    executeIdentityExchange : function(peerIdentifier, otherPkHash, myPkHash, cb) {
+      if (!cb || typeof cb !== "function") {
+        throw new Error("cb MUST be a function.");
+      }
+
+      return identityExchangeStateMachine.onexecuteIdentityExchangeCalled(peerIdentifier, otherPkHash, myPkHash, cb);
+    },
+    stopExecutingIdentityExchange : function(peerIdentifier, cb) {
+      return identityExchangeStateMachine.onstopExecutingIdentityExchangeCalled(peerIdentifier, cb);
+    }
+  }
+}
+
+module.exports = identityExchange;
+
 var http = require('http');
 var crypto = require('crypto');
 var request = require('request');
