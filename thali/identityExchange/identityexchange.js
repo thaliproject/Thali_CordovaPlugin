@@ -1,6 +1,7 @@
 /* jshint node: true */
 'use strict';
 
+var StateMachine = require("javascript-state-machine");
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
@@ -16,8 +17,8 @@ var minFriendlyNameLength = 0;
 var maxFriendlyNameLength = 20;
 var connectionSuccessEventName = "connectionSuccess";
 
-
-var StateMachine = require("javascript-state-machine");
+GIVE THE CONNECTION TABLE ITS OWN OBJECT SO WE CAN PASS IT INTO THE SMALL HASH MACHINE AND NOT PASS IN
+THE ENTIRE IDENTITY EXCHANGE OBJECT
 
 var identityExchangeStateMachine = StateMachine.create({
   initial: 'wait',
@@ -59,11 +60,11 @@ function onStopIdentityExchangeCalled(event, from, to) {
 }
 
 function onExecuteIdentityExchangeCalled(event, from, to) {
-
+  // Start the two baby state machines
 }
 
 function onStopExecutingIdentityExchangeCalled(event, from, to) }{
-
+  // Stop the two baby state machines
 }
 
 inherits(identityExchange, EventEmitter);
