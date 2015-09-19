@@ -5,8 +5,8 @@
  */
 (function () {
 
-  var CoordinatorConnector = require('CoordinatorConnector');
-  var TestFrameworkClient = require('PerfTestFramework');
+  var CoordinatorConnector = require('./lib/CoordinatorConnector');
+  var TestFrameworkClient = require('./lib/PerfTestFramework');
 
   /*----------------------------------------------------------------------------------
    code for connecting to the coordinator server
