@@ -16,7 +16,6 @@ var deviceIdentityFlag = {
 
 var PEER_AVAILABILITY_CHANGED = ThaliEmitter.events.PEER_AVAILABILITY_CHANGED;
 var NETWORK_CHANGED = ThaliEmitter.events.NETWORK_CHANGED;
-var CONNECTION_SUCCESS = "connectionSuccess";
 
 inherits(ThaliReplicationManager, EventEmitter);
 
@@ -45,7 +44,8 @@ ThaliReplicationManager.events = {
   STOP_ERROR: 'stopError',
   CONNECT_ERROR: 'connectError',
   DISCONNECT_ERROR: 'disconnectError',
-  SYNC_ERROR: 'syncError'
+  SYNC_ERROR: 'syncError',
+  CONNECTION_SUCCESS: 'connectionSuccess'
 };
 
 /**
@@ -260,7 +260,7 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
       client.listen(function () {
         var localPort = client.address().port;
 
-        this.emit(CONNECTION_SUCCESS, {
+        this.emit(ThaliReplicationManager.events.CONNECTION_SUCCESS, {
           peerIdentifier : peer.peerIdentifier,
           muxPort : localPort
         });
