@@ -2,7 +2,7 @@
 
 var os = require('os');
 var path = require('path');
-var test = require('tape');
+var test = require('../lib/thali-tape');
 var uuid = require('uuid');
 var util = require('util');
 var express = require('express');
