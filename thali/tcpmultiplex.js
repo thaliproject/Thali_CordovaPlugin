@@ -40,8 +40,7 @@ function muxServerBridge(tcpEndpointServerPort) {
   });
 
   server.on('close', function () {
-    // Close all the client sockets, this'll force the server object
-    // to *really* close
+    console.log('mux server bridge listener closed');
   });
 
   server.exit = function() {
