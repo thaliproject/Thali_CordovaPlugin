@@ -3,7 +3,7 @@
 var originalMobile = typeof Mobile === "undefined" ? undefined : Mobile;
 var mockMobile = require('./mockmobile');
 var ThaliEmitter = require('thali/thaliemitter');
-var tape = require('thali-tape');
+var tape = require('../lib/thali-tape');
 
 function noop () { }
 
