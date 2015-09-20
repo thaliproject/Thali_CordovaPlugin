@@ -23,6 +23,11 @@
     "tape": "^4.0.0",
     "fs-extra-promise": "^0.2.0",
     "wrapping-tape": "^0.0.3",
-    "nock": "^2.12.0"
+    "nock": "^2.12.0",
+    "pouchdb": "^4.0.3",
+    "express-pouchDB": "^0.14.2",
+    "leveldown": "^1.3.0",
+    "leveldown-mobile": "^1.0.7",
+    "lie": "^3.0.1"
   }
 }

@@ -5,6 +5,7 @@ var StateMachine = require("javascript-state-machine");
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var ConnectionTable = require('./connectionTable');
+var ThaliReplicationManager = require('../thalireplicationmanager');
 
 var app = null;
 var replicationManager = null;
@@ -43,18 +44,18 @@ var identityExchangeStateMachine = StateMachine.create({
 function onStartIdentityExchangeCalled(event, from, to, myFriendlyName, cb) {
   var startListener = function(error) {
     if (error) {
-      replicationManager.removeListener(replicationManager.events.STARTED, startListener);
+      replicationManager.removeListener(ThaliReplicationManager.events.STARTED, startListener);
       identityExchangeStateMachine.startIdentityExchangeCalledCBFail();
     } else {
-      replicationManager.removeListener(replicationManager.events.STOP_ERROR, startListener);
+      replicationManager.removeListener(ThaliReplicationManager.events.STOP_ERROR, startListener);
       identityExchangeStateMachine.startIdentityExchangeCalledCBDone();
     }
 
     cb(error);
   };
 
-  replicationManager.once(replicationManager.events.STARTED, startListener);
-  replicationManager.once(replicationManager.events.START_ERROR, startListener);
+  replicationManager.once(ThaliReplicationManager.events.STARTED, startListener);
+  replicationManager.once(ThaliReplicationManager.events.START_ERROR, startListener);
 
   connectionTable = new ConnectionTable(replicationManager);
 
@@ -63,14 +64,14 @@ function onStartIdentityExchangeCalled(event, from, to, myFriendlyName, cb) {
 
 function onStopIdentityExchangeCalled(event, from, to, cb) {
   var stopListener = function(error) {
-    var eventToRemove = error ? replicationManager.events.STOPPED : replicationManager.events.STOP_ERROR;
+    var eventToRemove = error ? ThaliReplicationManager.events.STOPPED : ThaliReplicationManager.events.STOP_ERROR;
     replicationManager.removeListener(eventToRemove, stopListener);
     identityExchangeStateMachine.stopIdentityExchangeCalledCBDone();
     cb(error);
   };
 
-  replicationManager.once(replicationManager.events.STOPPED, stopListener);
-  replicationManager.once(replicationManager.events.STOP_ERROR, stopListener);
+  replicationManager.once(ThaliReplicationManager.events.STOPPED, stopListener);
+  replicationManager.once(ThaliReplicationManager.events.STOP_ERROR, stopListener);
 
   connectionTable.cleanUp();
   connectionTable = null;

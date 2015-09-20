@@ -113,6 +113,22 @@ Once built the library should be visible in:
 Once built the library should be visible in:  
 `<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.1`
 
+## Developing node specific code and tests for the Thali Cordova Plugin
+Normally to run a test of a Cordova plugin one needs Cordova. But a large section of Thali's code is actually just
+pure Node.js code that can be tested (and more importantly, developed) on the desktop. Thus skipping all the pain
+associated with developing in mobile emulators or devices.
+
+To just test pure node.js code clone the repo and then inside of Thali_CordovaPlugin/thali execute the command
+`npm install` followed by `sudo npm link`. This will create a link from the local repo directory to the machine's 
+global NPM directory.
+
+Then go to Thali_CordovaPlugin/test/www/jxcore and type `npm link thali`. This will connect that global link
+to the local directory. You can then issue `npm install`.
+ 
+Now when you run node.js on local files in the
+test directory everything will be hooked up to the thali sub-directory automatically. This means you can edit
+files, set break points, etc. right in the thali sub-directory and the same with the test sub-directory. No need 
+to play copy and paste games the way we do when we are developing Cordova specific features.
 
 ## Unit Testing the Thali Cordova Plugin
 
