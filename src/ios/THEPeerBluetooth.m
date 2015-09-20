@@ -353,19 +353,15 @@ static NSMutableSet * _stoppingInstances;
       // could stop the callback happening
       [_stoppingInstances addObject:self];
     }
-    else if (_state == STARTED)
-    {
-      _delegate = nil;
-      _peripheralManager.delegate = nil;
-      _centralManager.delegate = nil;
-    }
+
+    _delegate = nil;
+    _peripheralManager.delegate = nil;
+    _centralManager.delegate = nil;
 
     _state = STOPPING;
 
     [self stopAdvertising];
     [self stopScanning];
-    
-    _state = STOPPED;
   }
 }
 
@@ -382,6 +378,8 @@ static NSMutableSet * _stoppingInstances;
       _centralManager.delegate = nil;
 
       [_stoppingInstances removeObject:self];
+      _state = STOPPED;
+
       return YES;
     }
   }
@@ -400,15 +398,15 @@ static NSMutableSet * _stoppingInstances;
   {
     assert(_state == STARTING || _state == STOPPING);
 
-    BOOL bluetoothEnabled = ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn);
-    [_delegate peerBluetooth:self didUpdateState:bluetoothEnabled];
-
     _peripheralCallbackOutstanding = NO;
     if ([self tryReleaseSelf])
     {
       // We're about to go away, nothing more to do
       return;
     }
+
+    BOOL bluetoothEnabled = ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn);
+    [_delegate peerBluetooth:self didUpdateState:bluetoothEnabled];
 
     if (bluetoothEnabled)
     {
