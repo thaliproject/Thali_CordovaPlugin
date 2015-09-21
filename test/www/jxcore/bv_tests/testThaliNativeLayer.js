@@ -192,6 +192,15 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
 });
 
 test('ThaliEmitter can connect and send data', function (t) {
+
+  var server = net.createServer(function(s) {
+    s.pipe(s);
+  });
+
+  server.listen(5001, function() {
+    console.log("echo server started");
+  });
+
   var len = 1025;
   var testMessage = randomstring.generate(len);
   connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
