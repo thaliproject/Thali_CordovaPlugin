@@ -1,5 +1,7 @@
 'use strict';
 
+var crypto = require('crypto');
+
 exports.rnBufferLength = 16;
 exports.pkBufferLength = 32;
 exports.cbBufferLength = 32;
@@ -29,8 +31,26 @@ exports.validateAndGetBase64Object = function(base64Value, expectedRawLength) {
 exports.fourHundredErrorCodes = {
     notDoingIdentityExchange: "notDoingIdentityExchange",
     malformed: "malformed",
-    wrongPeer: "wrongPeer"
+    wrongPeer: "wrongPeer",
+    skippedAhead: "skippedAhead"
 };
 
 exports.cbPath = "/identity/cb";
 exports.rnMinePath = "/identity/rnmine";
+
+exports.generateCb = function(rnForHash, firstPkBuffer, secondPkBuffer) {
+    return generateHashBuffer([firstPkBuffer, secondPkBuffer], rnForHash);
+};
+
+function generateHashBuffer(arrayOfBuffers, key) {
+    var buffer = Buffer.concat(arrayOfBuffers);
+    var hash = crypto.createHmac('sha256', key);
+    hash.write(buffer);
+    hash.end();
+    return hash.read();
+}
+
+exports.generateValidationCode = function(rnForHash, firstPkBuffer, secondPkBuffer, rnBufferToHash) {
+    var hashBuffer = generateHashBuffer([ firstPkBuffer, secondPkBuffer, rnBufferToHash], rnForHash);
+    return parseInt(hashBuffer.toString('hex'), 16) % Math.pow(10, 6);
+};

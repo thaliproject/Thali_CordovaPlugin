@@ -117,8 +117,6 @@ ThaliReplicationManager.prototype.start = function (port, dbName, deviceName) {
       startReplicationManager.call(this, port, dbName);
     }.bind(this));
   }
-
-
 };
 
 function startReplicationManager(port, dbName) {

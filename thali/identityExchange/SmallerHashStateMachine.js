@@ -7,6 +7,7 @@ var logger = require('../thalilogger')('smallerHash');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var identityExchangeUtils = require('./identityExchangeUtils');
+var ThaliReplicationManager = require('../thalireplicationmanager');
 
 SmallerHashStateMachine.Events = {
     Exited: "exit",
@@ -15,12 +16,14 @@ SmallerHashStateMachine.Events = {
     ValidationCode: "validationCode",
     BadRequestBody: "testBad200",
     FourOhFour: "test404NotFound",
-    GoodCbRequest: "testGoodCbRequest"
+    GoodCbRequest: "testGoodCbRequest",
+    GotNotDoingIdentityExchange: "testNotDoingIdentityExchange",
+    GotUnclassifiedError: "testUnclassifiedError"
 };
 
 inherits(SmallerHashStateMachine, EventEmitter);
 
-SmallerHashStateMachine.prototype.identityExchangeController = null;
+SmallerHashStateMachine.prototype.thaliReplicationManager = null;
 SmallerHashStateMachine.prototype.connectionTable = null;
 SmallerHashStateMachine.prototype.peerIdentifier = null;
 SmallerHashStateMachine.prototype.otherPkHashBuffer = null;
@@ -48,7 +51,7 @@ function onStartSearch(event, from, to, self) {
     getPeerIdPort(self);
 }
 
-function onExitCalled(event, from, to, self) {
+function onExitCalled(event, from, to, self, error) {
     if (self.currentHttpRequest) {
         self.currentHttpRequest.abort();
     }
@@ -61,7 +64,7 @@ function onExitCalled(event, from, to, self) {
         clearTimeout(self.onIdentityExchangeNotStartedTimeout);
     }
 
-    self.emit(SmallerHashStateMachine.Events.Exited);
+    self.emit(SmallerHashStateMachine.Events.Exited, error);
 }
 
 function makeRequestParseResponse(self, port, portRetrievalTime, urlPath, requestBody, state, validate200) {
@@ -132,20 +135,22 @@ function makeRequestParseResponse(self, port, portRetrievalTime, urlPath, reques
                 case identityExchangeUtils.fourHundredErrorCodes.notDoingIdentityExchange:
                     logger.info("Got identity exchange not started on " + urlPath + " response.");
                     self.smallHashStateMachine.identityExchangeNotStarted(self);
+                    self.emit(SmallerHashStateMachine.Events.GotNotDoingIdentityExchange, urlPath);
                     return;
             }
         }
 
         logger.info("We got some other error, specifically " + response.statusCode + ", body - " +
-            (!body ? null : body));
+            (!body ? null : JSON.stringify(body)));
         self.smallHashStateMachine.channelBindingError(self, portRetrievalTime);
+        self.emit(SmallerHashStateMachine.Events.GotUnclassifiedError, urlPath);
     });
 }
 
 function onFoundPeerPort(event, from, to, self, port, portRetrievalTime) {
     var rnMineBuffer = crypto.randomBytes(identityExchangeUtils.rnBufferLength);
     var cbValueBase64 =
-        generateCb(rnMineBuffer, self.myPkHashBuffer, self.otherPkHashBuffer).toString('base64');
+        identityExchangeUtils.generateCb(rnMineBuffer, self.myPkHashBuffer, self.otherPkHashBuffer).toString('base64');
     var requestBody =  {
         cbValue: cbValueBase64,
         pkMine: self.myPkHashBuffer.toString('base64')
@@ -181,32 +186,39 @@ function onCbRequestSucceeded(event, from, to, self, port, portRetrievalTime, rn
     };
     var validate200 = function() {
         self.smallHashStateMachine.exitCalled(self);
-        self.emit(SmallerHashStateMachine.Events.ValidationCode, generateValidationCode(rnMineBuffer,
-            rnOtherBuffer, self.myPkHashBuffer, self.otherPkHashBuffer));
+        self.emit(SmallerHashStateMachine.Events.ValidationCode,
+            identityExchangeUtils.
+                generateValidationCode(rnOtherBuffer, self.otherPkHashBuffer, self.myPkHashBuffer, rnMineBuffer));
     };
     return makeRequestParseResponse(self, port, portRetrievalTime, identityExchangeUtils.rnMinePath, requestBody,
                                     "MakeRnMineRequest", validate200);
 }
 
 function onChannelBindingError(event, from, to, self, portRetrievalTime) {
-    return getPeerIdPort(self, portRetrievalTime);
-}
+    // We stop and start the replication manager to kill all connections since we have a channel beining
+    // error. Obviously this is thermo nuclear level overkill since we just want to kill a single connection.
+    var stoppedHandler = function() {
+        self.thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
+        var startHandler = function() {
+            self.thaliReplicationManager.removeListener(ThaliReplicationManager.events.START_ERROR, startHandlerError);
+            return getPeerIdPort(self, portRetrievalTime);
+        };
+        var startHandlerError = function() {
+            self.thaliReplicationManager.removeListener(ThaliReplicationManager.events.STARTED, startHandler);
+            self.smallHashStateMachine.exitCalled(self, new Error("Got a start error from Thali replication manager"));
 
-function generateHashBuffer(arrayOfBuffers, key) {
-    var buffer = Buffer.concat(arrayOfBuffers);
-    var hash = crypto.createHmac('sha256', key);
-    hash.write(buffer);
-    hash.end();
-    return hash.read();
-}
-
-function generateCb(rnMine, myPkHashBuffer, otherPkHashBuffer) {
-    return generateHashBuffer([ myPkHashBuffer, otherPkHashBuffer], rnMine);
-}
-
-function generateValidationCode(rnMine, rnOther, myPkHashBuffer, otherPkHashBuffer) {
-    var hashBuffer = generateHashBuffer([ otherPkHashBuffer, myPkHashBuffer, rnMine], rnOther);
-    return parseInt(hashBuffer.toString('hex'), 16) % Math.pow(10, 6);
+        };
+        self.thaliReplicationManager.once(ThaliReplicationManager.events.STARTED, startHandler);
+        self.thaliReplicationManager.once(ThaliReplicationManager.events.START_ERROR, startHandlerError);
+        self.thaliReplicationManager.start();
+    };
+    var stoppedErrorHandler = function() {
+        self.thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOPPED, stoppedHandler);
+        self.smallHashStateMachine.exitCalled(self, new Error("Got a stop error from Thali replication manager"));
+    };
+    self.thaliReplicationManager.once(ThaliReplicationManager.events.STOPPED, stoppedHandler);
+    self.thaliReplicationManager.once(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
+    self.thaliReplicationManager.stop();
 }
 
 SmallerHashStateMachine.prototype.stop = function() {
@@ -223,10 +235,10 @@ SmallerHashStateMachine.prototype.start = function() {
     }
 };
 
-function SmallerHashStateMachine(identityExchangeController, connectionTable, peerIdentifier, otherPkHashBuffer,
+function SmallerHashStateMachine(thaliReplicationManager, connectionTable, peerIdentifier, otherPkHashBuffer,
                                myPkHashBuffer) {
     EventEmitter.call(this);
-    this.identityExchangeController = identityExchangeController;
+    this.thaliReplicationManager = thaliReplicationManager;
     this.connectionTable = connectionTable;
     this.peerIdentifier = peerIdentifier;
     this.otherPkHashBuffer = otherPkHashBuffer;
