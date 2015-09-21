@@ -31,3 +31,6 @@ exports.fourHundredErrorCodes = {
     malformed: "malformed",
     wrongPeer: "wrongPeer"
 };
+
+exports.cbPath = "/identity/cb";
+exports.rnMinePath = "/identity/rnmine";

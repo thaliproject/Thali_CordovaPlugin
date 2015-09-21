@@ -18,8 +18,8 @@ exports.createThaliAppServer = function() {
     app.use('/db', ExpressPouchDB(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
 
     return new Promise(function(resolve, reject) {
-        var server = app.listen(4999, function() {
-            resolve(app, server);
+        var server = app.listen(0, function() {
+            resolve({ app: app, server: this });
         })
     });
 };

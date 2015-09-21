@@ -25,8 +25,14 @@ LargerHashStateMachine.prototype.otherPkHashBuffer = null;
 LargerHashStateMachine.prototype.myPkHashBuffer = null;
 LargerHashStateMachine.prototype.myPkHashBase64 = null;
 
-function exitCalled(self) {
+function startListening(event, from, to, self) {
+    self.lhsmRouter = express.Router();
+    var jsonParser = bodyParser.json();
+    self.lhsmRouter.post('/cb', jsonParser, function(req, res) {
+        return cbParser(self, req, res);
+    });
 
+    self.thaliExpressServer.use('/identity', self.lhsmRouter);
 }
 
 function fourHundredResponse(self, errorCode) {
@@ -36,14 +42,14 @@ function fourHundredResponse(self, errorCode) {
     }
 }
 
-function isCbRequestValid(self, req) {
+function isCbRequestSyntacticallyValid(self, req) {
     if (!req.body) {
         logger.info("Got a cb request with no body!");
         return false;
     }
 
-    var cbValueBuffer = identityUtils.validateCbAndGetBase64Object(req.cbValue);
-    var pkMineBuffer = identityUtils.validateAndGetBase64Object(req.pkMine);
+    var cbValueBuffer = identityUtils.validateCbAndGetBase64Object(req.body.cbValue);
+    var pkMineBuffer = identityUtils.validatePkAndGetBase64Object(req.body.pkMine);
 
     if (!cbValueBuffer || !pkMineBuffer) {
         logger.info("Got a cb request with either a bum cbValue or pkMine or both - " +
@@ -51,17 +57,10 @@ function isCbRequestValid(self, req) {
         return false;
     }
 
-    return self.otherPkHashBuffer.compare(self.myPkHashBuffer) === 0;
+    return true;
 }
 
 function cbParser(self, req, res) {
-    if (!isCbRequestValid(self, req)) {
-        return res
-            .stats(400)
-            .json(fourHundredResponse(self, identityUtils.fourHundredErrorCodes.malformed))
-            .end();
-    }
-
     switch (self.largerHashStateMachine.current) {
         case 'NoIdentityExchange':
             return res
@@ -73,53 +72,56 @@ function cbParser(self, req, res) {
                 .status(400)
                 .json(fourHundredResponse(self, identityUtils.fourHundredErrorCodes.wrongPeer))
                 .end();
-        case 'Exit':
-            logger.info("We got a CB request while in Exit state, that should not be possible!");
-            return res.status(500).end();
+        case 'WaitForCb':
+            if (!isCbRequestSyntacticallyValid(self, req)) {
+                return res
+                    .status(400)
+                    .json(fourHundredResponse(self, identityUtils.fourHundredErrorCodes.malformed))
+                    .end();
+            }
+            return;
         default:
+            logger.error("We got a CB request while in an illegal state!!!! Current State: " +
+                self.largerHashStateMachine.current);
             return res.status(500).end();
     }
 }
 
 LargerHashStateMachine.prototype.stop = function() {
-    return this.largerHashStateMachine.exitCalled(self);
+    return this.largerHashStateMachine.noIdentityExchange();
 };
 
-function lhsmRouter(self) {
-    self.lhsmRouter = express.Router();
-    var jsonParser = bodyParser.json();
-    self.lhsmRouter.post('/cb', jsonParser, function(req, res) {
-        return cbParser(self, req, res);
-    });
-    return self.lhsmRouter;
-}
+LargerHashStateMachine.prototype.exchangeIdentity = function(otherPkHashBuffer) {
+    this.otherPkHashBuffer = otherPkHashBuffer;
 
-LargerHashStateMachine.prototype.start = function() {
-    this.thaliExpressServer.use('/identity', lhsmRouter(this));
-    if (this.myPkHashBuffer.compare(this.otherPkHashBuffer)   > 0) {
-        this.largerHashStateMachine.desiredPeerHasLargerHash(this);
+    if (this.myPkHashBuffer.compare(this.otherPkHashBuffer) < 0) {
+        this.largerHashStateMachine.desiredPeerHasLargerHash();
     } else {
-        this.largerHashStateMachine.startListening(this);
+        this.largerHashStateMachine.waitForPeer();
     }
 };
 
-function LargerHashStateMachine(thaliExpressServer, otherPkHashBuffer, myPkHashBuffer) {
+LargerHashStateMachine.prototype.start = function() {
+    this.largerHashStateMachine.startListening(this);
+};
+
+function LargerHashStateMachine(thaliExpressServer, myPkHashBuffer) {
     EventEmitter.call(this);
     var self = this;
-    self.thaliExpressServer = thaliExpressServer;
-    self.otherPkHashBuffer = otherPkHashBuffer;
     self.myPkHashBuffer = myPkHashBuffer;
     self.myPkHashBase64 = myPkHashBuffer.toString('base64');
+    self.thaliExpressServer = thaliExpressServer;
     self.largerHashStateMachine = StateMachine.create({
-        initial: 'NoIdentityExchange',
+        initial: 'none',
         events: [
-            { name: 'startListening', from: 'NoIdentityExchange', to: 'WaitForCb'},
+            { name: 'startListening', from: 'none', to: 'NoIdentityExchange'},
             { name: 'desiredPeerHasLargerHash', from: 'NoIdentityExchange', to: 'WrongPeer'},
-            { name: 'exitCalled', from: ['NoIdentityExchange', 'WaitForCb', 'WrongPeer'],
-                to: 'Exit'}
+            { name: 'waitForPeer', from: 'NoIdentityExchange', to: 'WaitForCb'},
+            { name: 'noIdentityExchange', from: ['NoIdentityExchange', 'WaitForCb', 'WrongPeer'],
+                to: 'NoIdentityExchange'}
         ],
         callbacks: {
-            onexitCalled: exitCalled
+            onstartListening: startListening
         }
     });
 }
