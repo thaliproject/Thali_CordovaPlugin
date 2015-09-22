@@ -53,7 +53,7 @@ v 0.3.0.5
 and [iOS Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_ios_index.md.html#iOS%20Platform%20Guide) for detailed instructions.)
 
 ```
-$ sudo jx install -g cordova
+$ sudo jx install -g cordova@5.1.1
 ```
 
 ### Create a Cordova project
