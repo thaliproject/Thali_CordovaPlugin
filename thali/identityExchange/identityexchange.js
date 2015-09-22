@@ -9,6 +9,7 @@ var ThaliReplicationManager = require('../thalireplicationmanager');
 var identityExchangeUtils = require('./identityExchangeUtils');
 var LargerHashStateMachine = require('./LargerHashStateMachine');
 var SmallerHashStateMachine = require('./SmallerHashStateMachine');
+var ThaliEmitter = require('../thaliemitter');
 
 inherits(IdentityExchange, EventEmitter);
 
@@ -19,7 +20,8 @@ IdentityExchange.Events = {
 };
 
 
-IdentityExchange.prototype.thaliAppServer = null;
+IdentityExchange.prototype.thaliApp = null;
+IdentityExchange.prototype.thaliServerPort = null;
 IdentityExchange.prototype.thaliReplicationManager = null;
 IdentityExchange.prototype.dbName = null;
 IdentityExchange.prototype.connectionTable = null;
@@ -37,6 +39,7 @@ function onStartIdentityExchangeCalled(event, from, to, self, myFriendlyName, cb
       myFriendlyName.length < IdentityExchange.minFriendlyNameLength ||
       myFriendlyName.length > IdentityExchange.maxFriendlyNameLength) {
     cb(new Error("myFriendlyName MUST be a string that is between 1 and 20 characters long, inclusive."));
+    return;
   }
 
   self.connectionTable = new ConnectionTable(self.thaliReplicationManager);
@@ -53,20 +56,21 @@ function onStartIdentityExchangeCalled(event, from, to, self, myFriendlyName, cb
     })
   };
 
-  self.thaliReplicationManager._emitter.on('peerAvailabilityChanged', self.thaliEmitterListener);
+  self.thaliReplicationManager._emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED,
+      self.thaliEmitterListener);
 
   return identityExchangeUtils.getDeviceIdentityFromThaliReplicationManager(self.thaliReplicationManager)
       .then(function(deviceName) {
         self.myPublicKeyHashBuffer = new Buffer(deviceName, 'base64');
 
         self.largerHashStateMachine =
-            new LargerHashStateMachine(self.thaliAppServer, self.myPublicKeyHash);
+            new LargerHashStateMachine(self.thaliApp, self.myPublicKeyHashBuffer);
         self.largerHashStateMachine.start();
 
         self.identityExchangeDeviceName = deviceName + ";" + myFriendlyName;
 
         return identityExchangeUtils.startThaliReplicationManager(self.thaliReplicationManager,
-            self.thaliAppServer.address().port, self.dbName,
+            self.thaliServerPort, self.dbName,
             self.identityExchangeDeviceName);
       }).then(function() {
         self.identityExchangeStateMachine.startIdentityExchangeCalledCBDone();
@@ -83,7 +87,8 @@ function onStartIdentityExchangeCalled(event, from, to, self, myFriendlyName, cb
 
 function onStopIdentityExchangeCalled(event, from, to, self, cb) {
   if (self.thaliEmitterListener) {
-    self.thaliReplicationManager.removeListener('peerAvailabilityChanged', self.thaliEmitterListener);
+    self.thaliReplicationManager.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED,
+        self.thaliEmitterListener);
   }
 
   self.connectionTable.cleanUp();
@@ -122,7 +127,7 @@ function onExecuteIdentityExchangeCalled(event, from, to, self, peerIdentifier, 
   };
 
   self.smallerHashStateMachine = new SmallerHashStateMachine(self.thaliReplicationManager, self.connectionTable,
-    peerIdentifier, otherPkHash, self.myPublicKeyHashBuffer, self.thaliAppServer.address().port,
+    peerIdentifier, otherPkHash, self.myPublicKeyHashBuffer, self.thaliApp.address().port,
     self.dbName, self.identityExchangeDeviceName);
   self.smallerHashStateMachine.on(SmallerHashStateMachine.Events.ValidationCode, self.codeListener);
   self.smallerHashStateMachine.on(SmallerHashStateMachine.Events.Exited, self.smallerHashExitListener);
@@ -158,9 +163,10 @@ IdentityExchange.prototype.stopExecutingIdentityExchange = function() {
   return this.identityExchangeStateMachine.stopExecutingIdentityExchangeCalled(this);
 };
 
-function IdentityExchange(thaliAppServer, thaliReplicationManager, dbName) {
+function IdentityExchange(thaiApp, thaliServerPort, thaliReplicationManager, dbName) {
   EventEmitter.call(this);
-  this.thaliAppServer = thaliAppServer;
+  this.thaliApp = thaiApp;
+  this.thaliServerPort = thaliServerPort;
   this.thaliReplicationManager = thaliReplicationManager;
   this.dbName = dbName;
   this.identityExchangeStateMachine = StateMachine.create({
