@@ -1,5 +1,13 @@
 'use strict';
 
+/*
+This code isn't going to make sense if you haven't read http://www.goland.org/coinflippingforthali/
+and http://www.goland.org/thaliidentityexchangeprotocol/. This implementation uses a state machine
+defined below based on (but not identical to) the smaller hash state machine defined in the second link.
+The machines has only three user exposed apis, the constructor for a new instance, start and stop. Once
+the machine is stopped it is junk and can't do any further work. A new machine will have to be created.
+ */
+
 var StateMachine = require("javascript-state-machine");
 var crypto = require('crypto');
 var request = require('request');
@@ -12,8 +20,8 @@ var ThaliReplicationManager = require('../thalireplicationmanager');
 SmallerHashStateMachine.Events = {
     Exited: "exit",
     SearchStarted: "searchStarted",
-    WrongPeer: "wrongPeer",
     ValidationCode: "validationCode",
+    WrongPeer: "testWrongPeer", // The test values are just used for internal testing, don't use them!
     BadRequestBody: "testBad200",
     FourOhFour: "test404NotFound",
     GoodCbRequest: "testGoodCbRequest",
@@ -38,7 +46,8 @@ SmallerHashStateMachine.prototype.smallHashStateMachine = null;
 SmallerHashStateMachine.prototype.currentHttpRequest = null;
 
 function getPeerIdPort(self, portRetrievalTime) {
-    if (self.smallHashStateMachine.current )
+    // Note: This method assumes that whomever is calling it has already checked to see if we are not
+    // in Exit.
     var tableEntry = self.connectionTable.lookUpPeerId(self.peerIdentifier, portRetrievalTime);
     if (!tableEntry) {
         self.portListener = function(tableEntry) {
@@ -83,6 +92,9 @@ function makeRequestParseResponse(self, port, portRetrievalTime, urlPath, reques
             logger.error("Oops, we aren't in " + state + " anymore, we should have been aborted, " +
                 " we should be in the exit state and we are in " +
                 self.smallHashStateMachine.current);
+            if (self.smallHashStateMachine.current !== "Exit") {
+                self.smallHashStateMachine.exitCalled();
+            }
             return;
         }
 
@@ -202,21 +214,21 @@ function onChannelBindingError(event, from, to, self, portRetrievalTime) {
     // We stop and start the replication manager to kill all connections since we have a channel beining
     // error. Obviously this is thermo nuclear level overkill since we just want to kill a single connection.
     identityExchangeUtils.stopThaliReplicationManager(self.thaliReplicationManager)
-        .then(function() {
+        .thenIfNotInExit(self, function() {
             return identityExchangeUtils
                 .startThaliReplicationManager(self.thaliReplicationManager, self.port, self.dbName, self.deviceName);
-        }).then(function() {
+        }).thenIfNotInExit(self, function() {
             return getPeerIdPort(self, portRetrievalTime);
-        }).catch(function(err) {
+        }).catchIfNotInExit(self, function() {
             self.smallHashStateMachine.exitCalled(self,
                 new Error("Could either not start or stop thali replication manager - " +
-                JSON.stringfy(err)));
+                    JSON.stringfy(err)));
         });
 }
 
 SmallerHashStateMachine.prototype.stop = function() {
     if (this.smallHashStateMachine.current != "Exit") {
-        return this.smallHashStateMachine.exitCalled(this);
+        this.smallHashStateMachine.exitCalled(this);
     }
 };
 

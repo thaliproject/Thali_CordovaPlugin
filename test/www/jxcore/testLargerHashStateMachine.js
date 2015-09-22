@@ -501,3 +501,37 @@ test("do a cb and then a rnmine with a rnmine that doesn't match the cb value", 
             t.fail(err);
         });
 });
+
+test("Make sure apis don't allow incorrect states", function(t) {
+    // With BigHash
+    t.throws(function() { largerHashStateMachine.stop() });
+    t.throws(function() { largerHashStateMachine.exchangeIdentity(smallHash)});
+    t.throws(function() { largerHashStateMachine.exchangeIdentity(bigHash)});
+    largerHashStateMachine.start(); // Making sure flipping start-stop-start doesn't break anything
+    largerHashStateMachine.stop();
+    largerHashStateMachine.exchangeIdentity(bigHash); // We already in NoIdentityExchange
+    t.throws(function() { largerHashStateMachine.exchangeIdentity(smallHash) });
+    t.throws(function() { largerHashStateMachine.start() });
+    t.throws(function() { largerHashStateMachine.exchangeIdentity(smallHash) });
+    t.throws(function() { largerHashStateMachine.exchangeIdentity(bigHash) });
+    largerHashStateMachine.stop();
+    largerHashStateMachine.exchangeIdentity(smallHash); // In certain cases you can skip start
+    t.throws(function() { largerHashStateMachine.start()});
+
+    var rnMineBuffer = crypto.randomBytes(identityExchangeUtils.rnBufferLength);
+    var rnOther = null;
+    largerHashStateMachine.once(LargerHashStateMachine.Events.ValidationCodeGenerated, function(code) {
+        var rnOtherBuffer = identityExchangeUtils.validateRnAndGetBase64Object(rnOther);
+        t.notEqual(rnOtherBuffer, null);
+        t.equal(code,
+            identityExchangeUtils.generateValidationCode(rnOtherBuffer, bigHash, smallHash, rnMineBuffer));
+        t.end();
+    });
+    makeGoodCb(rnMineBuffer)
+        .then(function(res) {
+            rnOther = res.body.rnOther;
+            return makeGoodRnMine(rnMineBuffer);
+        }).catch(function(err) {
+            t.fail(err);
+        });
+});

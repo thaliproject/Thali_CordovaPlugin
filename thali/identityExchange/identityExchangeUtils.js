@@ -57,6 +57,22 @@ exports.generateValidationCode = function(rnForHash, firstPkBuffer, secondPkBuff
     return parseInt(hashBuffer.toString('hex'), 16) % Math.pow(10, 6);
 };
 
+Promise.prototype.thenIfNotInExit = function(self, userFun) {
+    return this.then(function() {
+        if (self.smallHashStateMachine.current != "Exit") {
+            userFun.apply(this, arguments);
+        }
+    });
+};
+
+Promise.prototype.catchIfNotInExit = function(self, userFun) {
+    return this.catch(function() {
+        if (self.smallHashStateMachine.current != "Exit") {
+            userFun.apply(this, arguments);
+        }
+    })
+};
+
 exports.stopThaliReplicationManager = function(thaliReplicationManager) {
     return new Promise(function(resolve, reject) {
         var stoppedHandler = function() {

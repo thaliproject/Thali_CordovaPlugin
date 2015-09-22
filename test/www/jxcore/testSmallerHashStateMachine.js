@@ -422,6 +422,17 @@ test('Get to success!', function(t) {
     })
 });
 
+test('Test race conditions', function(t) {
+    smallerHashStateMachine = new SmallerHashStateMachine(new TRMMock(),
+       retrySamePortConnectionTable(thePeerId, t), thePeerId, bigHash, smallHash);
+    smallerHashStateMachine.start();
+    setImmediate(function() {
+        smallerHashStateMachine.stop();
+        t.throws(function() { smallerHashStateMachine.start() });
+        t.end();
+    });
+});
+
 
 // TEST TO WRITE
 // Check when happens when the thali replication manager does a bad start or bad stop, my hope is that
