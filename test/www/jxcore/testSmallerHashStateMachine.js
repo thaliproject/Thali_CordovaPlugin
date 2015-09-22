@@ -172,8 +172,8 @@ function goodCbMockResponse() {
 
 function runBad200Test(t, requestPath, numberEvents) {
     smallerHashStateMachine =
-        new SmallerHashStateMachine(new TRMMock(), endlessMockConnectionTableLoop(t, thePeerId, port), thePeerId, bigHash,
-            smallHash);
+        new SmallerHashStateMachine(new TRMMock(), endlessMockConnectionTableLoop(t, thePeerId, port), thePeerId,
+            bigHash, smallHash);
 
     var bad200EventCount = 0;
 
@@ -181,7 +181,6 @@ function runBad200Test(t, requestPath, numberEvents) {
         t.equal(requestPath, path);
         bad200EventCount += 1;
         if (bad200EventCount == numberEvents) {
-            smallerHashStateMachine.stop();
             t.end();
         }
     });
@@ -299,7 +298,6 @@ test('Just weird rnmine response error code,', function(t) {
     });
     smallerHashStateMachine.start();
 });
-
 
 test('Handling 404 on cb response', function(t) {
     startThaliServer().then(function() {

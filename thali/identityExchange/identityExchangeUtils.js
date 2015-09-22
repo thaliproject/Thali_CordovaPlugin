@@ -1,6 +1,8 @@
 'use strict';
 
 var crypto = require('crypto');
+var Promise = require('lie');
+var ThaliReplicationManager = require('../thalireplicationmanager');
 
 exports.rnBufferLength = 16;
 exports.pkBufferLength = 32;
@@ -53,4 +55,36 @@ function generateHashBuffer(arrayOfBuffers, key) {
 exports.generateValidationCode = function(rnForHash, firstPkBuffer, secondPkBuffer, rnBufferToHash) {
     var hashBuffer = generateHashBuffer([ firstPkBuffer, secondPkBuffer, rnBufferToHash], rnForHash);
     return parseInt(hashBuffer.toString('hex'), 16) % Math.pow(10, 6);
+};
+
+exports.stopThaliReplicationManager = function(thaliReplicationManager) {
+    return new Promise(function(resolve, reject) {
+        var stoppedHandler = function() {
+            thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
+            resolve();
+        };
+        var stoppedErrorHandler = function(err) {
+            thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOPPED, stoppedHandler);
+            reject(!err ? new Error("Unknown Thali replication manager stop error") : err);
+        };
+        thaliReplicationManager.once(ThaliReplicationManager.events.STOPPED, stoppedHandler);
+        thaliReplicationManager.once(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
+        thaliReplicationManager.stop();
+    });
+};
+
+exports.startThaliReplicationManager = function(thaliReplicationManager, port, dbName, deviceName) {
+    return new Promise(function(resolve, reject) {
+        var startHandler = function() {
+            thaliReplicationManager.removeListener(ThaliReplicationManager.events.START_ERROR, startHandlerError);
+            resolve();
+        };
+        var startHandlerError = function() {
+            thaliReplicationManager.removeListener(ThaliReplicationManager.events.STARTED, startHandler);
+            reject(!err ? new Error("Unknown Thali replication manager start error") : err);
+        };
+        thaliReplicationManager.once(ThaliReplicationManager.events.STARTED, startHandler);
+        thaliReplicationManager.once(ThaliReplicationManager.events.START_ERROR, startHandlerError);
+        thaliReplicationManager.start(port, dbName, deviceName);
+    });
 };

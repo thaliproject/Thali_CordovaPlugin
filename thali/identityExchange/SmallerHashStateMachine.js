@@ -30,11 +30,15 @@ SmallerHashStateMachine.prototype.otherPkHashBuffer = null;
 SmallerHashStateMachine.prototype.myPkHashBuffer = null;
 SmallerHashStateMachine.prototype.portListener = null;
 SmallerHashStateMachine.prototype.onIdentityExchangeNotStartedTimeout = null;
+SmallerHashStateMachine.prototype.port = null;
+SmallerHashStateMachine.prototype.dbName = null;
+SmallerHashStateMachine.prototype.deviceName = null;
 
 SmallerHashStateMachine.prototype.smallHashStateMachine = null;
 SmallerHashStateMachine.prototype.currentHttpRequest = null;
 
 function getPeerIdPort(self, portRetrievalTime) {
+    if (self.smallHashStateMachine.current )
     var tableEntry = self.connectionTable.lookUpPeerId(self.peerIdentifier, portRetrievalTime);
     if (!tableEntry) {
         self.portListener = function(tableEntry) {
@@ -197,28 +201,17 @@ function onCbRequestSucceeded(event, from, to, self, port, portRetrievalTime, rn
 function onChannelBindingError(event, from, to, self, portRetrievalTime) {
     // We stop and start the replication manager to kill all connections since we have a channel beining
     // error. Obviously this is thermo nuclear level overkill since we just want to kill a single connection.
-    var stoppedHandler = function() {
-        self.thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
-        var startHandler = function() {
-            self.thaliReplicationManager.removeListener(ThaliReplicationManager.events.START_ERROR, startHandlerError);
+    identityExchangeUtils.stopThaliReplicationManager(self.thaliReplicationManager)
+        .then(function() {
+            return identityExchangeUtils
+                .startThaliReplicationManager(self.thaliReplicationManager, self.port, self.dbName, self.deviceName);
+        }).then(function() {
             return getPeerIdPort(self, portRetrievalTime);
-        };
-        var startHandlerError = function() {
-            self.thaliReplicationManager.removeListener(ThaliReplicationManager.events.STARTED, startHandler);
-            self.smallHashStateMachine.exitCalled(self, new Error("Got a start error from Thali replication manager"));
-
-        };
-        self.thaliReplicationManager.once(ThaliReplicationManager.events.STARTED, startHandler);
-        self.thaliReplicationManager.once(ThaliReplicationManager.events.START_ERROR, startHandlerError);
-        self.thaliReplicationManager.start();
-    };
-    var stoppedErrorHandler = function() {
-        self.thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOPPED, stoppedHandler);
-        self.smallHashStateMachine.exitCalled(self, new Error("Got a stop error from Thali replication manager"));
-    };
-    self.thaliReplicationManager.once(ThaliReplicationManager.events.STOPPED, stoppedHandler);
-    self.thaliReplicationManager.once(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
-    self.thaliReplicationManager.stop();
+        }).catch(function(err) {
+            self.smallHashStateMachine.exitCalled(self,
+                new Error("Could either not start or stop thali replication manager - " +
+                JSON.stringfy(err)));
+        });
 }
 
 SmallerHashStateMachine.prototype.stop = function() {
@@ -236,13 +229,16 @@ SmallerHashStateMachine.prototype.start = function() {
 };
 
 function SmallerHashStateMachine(thaliReplicationManager, connectionTable, peerIdentifier, otherPkHashBuffer,
-                               myPkHashBuffer) {
+                               myPkHashBuffer, port, dbName, deviceName) {
     EventEmitter.call(this);
     this.thaliReplicationManager = thaliReplicationManager;
     this.connectionTable = connectionTable;
     this.peerIdentifier = peerIdentifier;
     this.otherPkHashBuffer = otherPkHashBuffer;
     this.myPkHashBuffer = myPkHashBuffer;
+    this.port = port;
+    this.dbName = dbName;
+    this.deviceName = deviceName;
     this.smallHashStateMachine = StateMachine.create({
         initial: 'none',
         events: [

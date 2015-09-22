@@ -6,6 +6,7 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var ConnectionTable = require('./connectionTable');
 var ThaliReplicationManager = require('../thalireplicationmanager');
+var identityExchangeUtils = require('./identityExchangeUtils');
 
 var app = null;
 var replicationManager = null;
@@ -42,24 +43,18 @@ var identityExchangeStateMachine = StateMachine.create({
 });
 
 function onStartIdentityExchangeCalled(event, from, to, myFriendlyName, cb) {
-  var startListener = function(error) {
-    if (error) {
-      replicationManager.removeListener(ThaliReplicationManager.events.STARTED, startListener);
-      identityExchangeStateMachine.startIdentityExchangeCalledCBFail();
-    } else {
-      replicationManager.removeListener(ThaliReplicationManager.events.STOP_ERROR, startListener);
-      identityExchangeStateMachine.startIdentityExchangeCalledCBDone();
-    }
-
-    cb(error);
-  };
-
-  replicationManager.once(ThaliReplicationManager.events.STARTED, startListener);
-  replicationManager.once(ThaliReplicationManager.events.START_ERROR, startListener);
-
-  connectionTable = new ConnectionTable(replicationManager);
-
-  return replicationManager.start(port, dbName, deviceName + ";" + myFriendlyName);
+  return identityExchangeUtils.startThaliReplicationManager(replicationManager, port, dbName,
+    deviceName + ";" + myFriendlyName).then(function() {
+        identityExchangeStateMachine.startIdentityExchangeCalledCBDone();
+        if (cb) {
+          cb(null);
+        }
+      }).catch(function(err) {
+        identityExchangeStateMachine.startIdentityExchangeCalledCBFail();
+        if (cb) {
+          cb(err);
+        }
+      });
 }
 
 function onStopIdentityExchangeCalled(event, from, to, cb) {

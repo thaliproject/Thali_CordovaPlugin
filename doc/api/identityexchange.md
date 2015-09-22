@@ -48,8 +48,6 @@ replication manager we are passed on the constructor is turned off and if we tra
 another state (which is only possible via the stopIdentityExchange) then we will turn off
 the replication manager.
 
-Note that we will hook up the identity exchange endpoints, all returning 404 Not Found, in this state.
-
 ### State: findPeersDoingIdentityExchange
 In this state the replication manager is running and we are listening to connectionSuccess events to build
 up the connectionTable. We are also advertising our friendly name.
