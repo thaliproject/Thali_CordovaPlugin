@@ -225,17 +225,11 @@ identityExchange.executeIdentityExchange(otherPeer, otherPkHash, myPkHash, funct
 
 ***
 
-### `stopExecutingIdentityExchange(peerIdentifier, cb)`
+### `stopExecutingIdentityExchange()`
 
-This stops an outstanding attempt to end a peer identity exchange with the specified peer Identifier. It is an 
-error to call this method if the outstanding identity exchange isn't with this peer identifier or if there is no
-outstanding identity exchange.
+This stops an outstanding attempt to exchange identities with the peer specified in executeIdentityExchange.
 
 #### Arguments
-1. `peerIdentifier`: `String` - the peer identifier of the remote device we are attempting to exchange identities
-with
-2. `callback`: `Function` - must be in the form of the following, `function (err)` where:
- - `err`: `Error` = an `Error` if one occurred, else `null`
 
 #### Tests
 

@@ -104,3 +104,14 @@ exports.startThaliReplicationManager = function(thaliReplicationManager, port, d
         thaliReplicationManager.start(port, dbName, deviceName);
     });
 };
+
+exports.getDeviceIdentityFromThaliReplicationManager = function(thaliReplicationManager) {
+    return new Promise(function(resolve, reject) {
+        thaliReplicationManager.getDeviceIdentity(function(err, deviceName) {
+           if (err) {
+               return reject(err);
+           }
+            return resolve(deviceName);
+        });
+    })
+}

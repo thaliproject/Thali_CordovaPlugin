@@ -7,407 +7,185 @@ var inherits = require('util').inherits;
 var ConnectionTable = require('./connectionTable');
 var ThaliReplicationManager = require('../thalireplicationmanager');
 var identityExchangeUtils = require('./identityExchangeUtils');
+var LargerHashStateMachine = require('./LargerHashStateMachine');
+var SmallerHashStateMachine = require('./SmallerHashStateMachine');
 
-var app = null;
-var replicationManager = null;
-var port = null;
-var dbName = null;
-var deviceName = null;
-var connectionTable = null;
+inherits(IdentityExchange, EventEmitter);
 
-var minFriendlyNameLength = 0;
-var maxFriendlyNameLength = 20;
-
-var identityExchangeStateMachine = StateMachine.create({
-  initial: 'wait',
-  events: [
-    { name: 'startIdentityExchangeCalled', from: 'wait', to: 'startIdentityExchangeCalledCB'},
-    { name: 'startIdentityExchangeCalledCBFail', from: 'startIdentityExchangeCalledCB', to: 'wait'},
-    { name: 'startIdentityExchangeCalledCBDone', from: 'startIdentityExchangeCalledCB',
-      to: 'findPeersDoingIdentityExchange'},
-
-    { name: 'stopIdentityExchangeCalled', from: 'findPeersDoingIdentityExchange',
-      to: 'stopIdentityExchangeCalledCB'},
-    { name: 'stopIdentityExchangeCalledCBDone', from: 'stopIdentityExchangeCalledCB', to: 'wait'},
-
-    { name: 'executeIdentityExchangeCalled', from: 'findPeersDoingIdentityExchange', to: 'exchangeIdentity'},
-
-    { name: 'stopExecutingIdentityExchangeCalled', from: 'exchangeIdentity', to: 'findPeersDoingIdentityExchange'}
-  ],
-  callbacks: {
-    onstartIdentityExchangeCalled: onStartIdentityExchangeCalled,
-    onstopIdentityExchangeCalled: onStopIdentityExchangeCalled,
-    onexecuteIdentityExchangeCalled: onExecuteIdentityExchangeCalled,
-    onstopExecutingIdentityExchangeCalled: onStopExecutingIdentityExchangeCalled
-  }
-});
-
-function onStartIdentityExchangeCalled(event, from, to, myFriendlyName, cb) {
-  return identityExchangeUtils.startThaliReplicationManager(replicationManager, port, dbName,
-    deviceName + ";" + myFriendlyName).then(function() {
-        identityExchangeStateMachine.startIdentityExchangeCalledCBDone();
-        if (cb) {
-          cb(null);
-        }
-      }).catch(function(err) {
-        identityExchangeStateMachine.startIdentityExchangeCalledCBFail();
-        if (cb) {
-          cb(err);
-        }
-      });
-}
-
-function onStopIdentityExchangeCalled(event, from, to, cb) {
-  var stopListener = function(error) {
-    var eventToRemove = error ? ThaliReplicationManager.events.STOPPED : ThaliReplicationManager.events.STOP_ERROR;
-    replicationManager.removeListener(eventToRemove, stopListener);
-    identityExchangeStateMachine.stopIdentityExchangeCalledCBDone();
-    cb(error);
-  };
-
-  replicationManager.once(ThaliReplicationManager.events.STOPPED, stopListener);
-  replicationManager.once(ThaliReplicationManager.events.STOP_ERROR, stopListener);
-
-  connectionTable.cleanUp();
-  connectionTable = null;
-  // Switch identity endpoints to returning 404 not found
-  // Clear out any pending HTTP requests
-  return replicationManager.stop();
-}
-
-function onExecuteIdentityExchangeCalled(event, from, to) {
-  // Start the two baby state machines
-}
-
-function onStopExecutingIdentityExchangeCalled(event, from, to) {
-  // Stop the two baby state machines
-}
-
-inherits(identityExchange, EventEmitter);
-function identityExchange(app, replicationManager, port, dbName, deviceName) {
-  EventEmitter.call(this);
-  this.app = app;
-  this.replicationManager = replicationManager;
-  this.port = port;
-  this.dbName = dbName;
-  this.deviceName = deviceName;
-
-  replicationManager._emitter.on('peerAvailabilityChanged', function (peers) {
-    if (identityExchangeStateMachine.current == "findPeersDoingIdentityExchange" ||
-        identityExchangeStateMachine.current == "exchangeIdentity") {
-      peers.forEach(function (peer) {
-        if (peer.peerName.indexOf(';') !== -1) {
-          var split = peer.peerName.split(';');
-          peer.peerFriendlyName = split[1];
-          peer.peerName = split[0];
-
-          replicationManager.emit('peerIdentityExchange', peer);
-        }
-      });
-    }
-  });
+IdentityExchange.minFriendlyNameLength = 0;
+IdentityExchange.maxFriendlyNameLength = 20;
+IdentityExchange.Events = {
+  PeerIdentityExchange: "peerIdentityExchange"
+};
 
 
-  // Connect the identity exchange endpoints to return 404
-  return {
-    startIdentityExchange : function(myFriendlyName, cb) {
-      if (!myFriendlyName || typeof myFriendlyName !== "string" || myFriendlyName.length <= minFriendlyNameLength ||
-        myFriendlyName.length > maxFriendlyNameLength) {
-        throw new Error("myFriendlyName MUST be a string that is between 1 and 20 characters long, inclusive.");
-      }
+IdentityExchange.prototype.thaliAppServer = null;
+IdentityExchange.prototype.thaliReplicationManager = null;
+IdentityExchange.prototype.dbName = null;
+IdentityExchange.prototype.connectionTable = null;
+IdentityExchange.prototype.identityExchangeStateMachine = null;
+IdentityExchange.prototype.thaliEmitterListener = null;
+IdentityExchange.prototype.myPublicKeyHashBuffer = null;
+IdentityExchange.prototype.largerHashStateMachine = null;
+IdentityExchange.prototype.smallerHashStateMachine = null;
+IdentityExchange.prototype.identityExchangeDeviceName = null;
+IdentityExchange.prototype.codeListener = null;
+IdentityExchange.prototype.smallerHashExitListener = null;
 
-      validateCB(cb);
-
-      return identityExchangeStateMachine.onstartIdentityExchangeCalled(myFriendlyName, cb);
-    },
-    stopIdentityExchange : function(cb) {
-      validateCB(cb);
-      return identityExchangeStateMachine.onstopIdentityExchangeCalled(cb);
-    },
-    executeIdentityExchange : function(peerIdentifier, otherPkHash, myPkHash, cb) {
-      validateCB(cb);
-      return identityExchangeStateMachine.onexecuteIdentityExchangeCalled(peerIdentifier, otherPkHash, myPkHash, cb);
-    },
-    stopExecutingIdentityExchange : function(peerIdentifier, cb) {
-      validateCB(cb);
-      return identityExchangeStateMachine.onstopExecutingIdentityExchangeCalled(peerIdentifier, cb);
-    }
-  }
-}
-
-function validateCB(cb) {
-  if (!cb || typeof cb !== "function") {
-    throw new Error("cb MUST be a function.");
-  }
-}
-
-module.exports = identityExchange;
-
-var http = require('http');
-var crypto = require('crypto');
-var request = require('request');
-var bodyParser = require('body-parser');
-var jsonParser = bodyParser.json();
-
-global.isInIdentityExchange = false;
-
-module.exports = function identityExchange (app, replicationManager) {
-
-  var
-    pkMineBuffer,         // My private key hash
-    pkOtherBuffer,        // Other private key hash
-    rnMine,               // My random bytes
-    exchangeCb,           // Callback for if my hash is larger
-    originalDeviceHash,   // Original device hash before changing it for identity exchange
-    newDeviceHash,        // New device hash after the change for identity exchange
-    localPeerIdentifier,  // Peer identifier for remote device
-    cbValue;              // Cb value used for identity exchange
-
-  function resetState() {
-    pkMineBuffer = null;
-    pkOtherBuffer = null;
-    rnMine = null;
-    exchangeCb = null;
-    localPeerIdentifier = null;
-    cbValue = null;
+function onStartIdentityExchangeCalled(event, from, to, self, myFriendlyName, cb) {
+  if (!myFriendlyName || typeof myFriendlyName !== "string" ||
+      myFriendlyName.length < IdentityExchange.minFriendlyNameLength ||
+      myFriendlyName.length > IdentityExchange.maxFriendlyNameLength) {
+    cb(new Error("myFriendlyName MUST be a string that is between 1 and 20 characters long, inclusive."));
   }
 
-  replicationManager._emitter.on('peerAvailabilityChanged', function (peers) {
+  self.connectionTable = new ConnectionTable(self.thaliReplicationManager);
+
+  self.thaliEmitterListener = function (peers) {
     peers.forEach(function (peer) {
-      if (peer.peerName.indexOf(';') !== -1 && peer.peerAvailable) {
+      if (peer.peerName.indexOf(';') !== -1) {
         var split = peer.peerName.split(';');
         peer.peerFriendlyName = split[1];
         peer.peerName = split[0];
 
-        replicationManager.emit('peerIdentityExchange', peer);
+        self.emit(IdentityExchange.Events.PeerIdentityExchange, peer);
       }
-    });
-  });
-
-  function startIdentityExchange(myFriendlyName, cb) {
-    if (global.isInIdentityExchange) {
-      return cb(new Error('Already in identity exchange'));
-    }
-
-    global.isInIdentityExchange = true;
-
-    replicationManager.getDeviceIdentity(function (err, deviceName) {
-      if (err) { return cb(err); }
-
-      originalDeviceHash = deviceName;
-      newDeviceHash = deviceName + ';' + myFriendlyName;
-
-      replicationManager.once('stopped', function () {
-
-        replicationManager.once('started', function () {
-          cb(null, newDeviceHash);
-        });
-
-        replicationManager.once('startError', cb);
-        replicationManager.start(
-          replicationManager._port,
-          replicationManager._dbName,
-          newDeviceHash);
-      });
-
-      replicationManager.once('stopError', cb);
-      replicationManager.stop();
-    });
-  }
-
-  function stopIdentityExchange(cb) {
-    global.isInIdentityExchange = false;
-
-    replicationManager.once('stopped', function () {
-
-      replicationManager.once('started', function () {
-        cb(null, originalDeviceHash);
-      });
-
-      replicationManager.once('startError', cb);
-      replicationManager.start(
-        replicationManager._port,
-        replicationManager._dbName,
-        originalDeviceHash);
-    });
-
-    replicationManager.once('stopError', cb);
-    replicationManager.stop();
-  }
-
-  function executeIdentityExchange(peerIdentifier, pkOther, pkMine, cb) {
-    if (!global.isInIdentityExchange) {
-      return cb(new Error('Identity Exchange not started'));
-    }
-
-    localPeerIdentifier = peerIdentifier;
-    pkMineBuffer = new Buffer(pkMine);
-    pkOtherBuffer = new Buffer(pkOther);
-
-    rnMine = crypto.randomBytes(16);
-
-    replicationManager._emitter.connect(peerIdentifier, function (err, port) {
-      if (err) {
-        return cleanupStopIdentityExchange(function () {
-          cb(err);
-          resetState();
-        });
-      }
-
-      var compared = pkMineBuffer.compare(pkOtherBuffer);
-
-      if (compared < 0) {
-        // My hash is smaller
-        var concatHash = Buffer.concat([pkMineBuffer, pkOtherBuffer]);
-        var cbHash = crypto.createHmac('sha256', rnMine);
-        var cbBuffer = cbHash.update(concatHash);
-        var cbValue = cbBuffer.toString('base64');
-
-        var rnOtherReq = request.post({
-          url: 'http://localhost:' + port + '/identity/cb',
-          body: {
-            cbValue: cbValue,
-            pkMine: pkMine
-          }
-        });
-
-        rnOtherReq.once('response', function (response) {
-          if (response.status !== 200) {
-            return cleanupIdentityExchange(function () {
-              cb(new Error('Invalid exchange'));
-              resetState();
-            });
-          }
-
-          var rnOther = new Buffer(response.body.rnOther);
-          var pkO = new Buffer(response.body.pkOther);
-
-          if (!pkO.equals(pkOtherBuffer)) {
-            return cleanupIdentityExchange(function () {
-              cb(new Error('Invalid exchange'));
-              resetState();
-            });
-          }
-
-          var rnMineReq = request.post({
-            url: 'http://localhost:' + port + '/identity/rnmine',
-            body: {
-              rnMine: rnMine.toString('base64'),
-              pkMine: pkMine
-            }
-          });
-
-          rnMineReq.once('response', function (response) {
-            if (response.status !== 200) {
-              return cleanupIdentityExchange(function () {
-                cb(new Error('Invalid exchange'));
-                resetState();
-              });
-            }
-
-            var value = createIdentityExchangeValue(rnOther, Buffer.concat([pkOtherBuffer, pkMineBuffer, rnMine]));
-            disconnectExchange(function () {
-              cb(null, value);
-              resetState();
-            });
-          });
-        });
-      } else if (compared > 0) {
-        // My hash is bigger and rest is done in cb express endpoint
-        exchangeCb = cb;
-      } else {
-        cb(new Error('Hashes cannot be equal'));
-      }
-    });
-  }
-
-  app.post('/identity/cb', jsonParser, function (req, res) {
-    if (!global.isInIdentityExchange) { return res.sendStatus(400); }
-
-    if (!req.body) { return res.sendStatus(400); }
-    if (typeof req.body.cbValue !== 'string' || req.body.cbValue.length === 0) {
-      return res.sendStatus(400);
-    }
-    if (typeof req.body.pkMine !== 'string' || req.body.pkMine.length === 0) {
-      return res.sendStatus(400);
-    }
-
-    cbValue = new Buffer(req.body.cbValue);
-    var buf = new Buffer(req.body.pkMine);
-    if (!buf.equals(pkOtherBuffer)) { return res.sendStatus(400); }
-
-    res.sendStatus(200).json({
-      pkOther: pkMineBuffer.toString('base64'),
-      rnOther: rnMine.toString('base64')
-    });
-  });
-
-  app.post('/identity/rnmine', jsonParser, function (req, res) {
-    if (!global.isInIdentityExchange) { return res.sendStatus(400); }
-
-    if (!req.body) { return res.sendStatus(400); }
-    if (typeof req.body.pkMine !== 'string' || req.body.pkMine.length === 0) {
-      return res.sendStatus(400);
-    }
-    if (typeof req.body.rnMineBuffer !== 'string' || req.body.rnMineBuffer.length !== 44) {
-      return res.sendStatus(400);
-    }
-
-    // Test if we're under attack
-    var testBuff = new Buffer(req.body.pkMine);
-    if (!testBuff.equals(pkOtherBuffer)) { return res.sendStatus(400); }
-
-    var rnOther = new Buffer(req.body.rnMineBuffer);
-    var newBuff = Buffer.concat([pkOtherBuffer, pkMineBuffer]);
-    var hmac = crypto.createHmac('sha256', rnOther);
-    hmac.update(newBuff);
-    var ret = hmac.digest();
-
-    // No match
-    if (!ret.equals(cbValue)) { return res.sendStatus(400); }
-
-    res.sendStatus(200);
-
-    var value = createIdentityExchangeValue(rnMine, Buffer.concat([pkMineBuffer, pkOtherBuffer, rnOther]));
-    cleanupIdentityExchange(function () {
-      exchangeCb(null, value);
-      resetState();
-    });
-  });
-
-  /* Create identity exchange value */
-  function createIdentityExchangeValue(key, buffer) {
-    var hmac = crypto.createHmac('sha256', key);
-    hmac.update(buffer);
-    return parseInt(hmac.digest().toString('hex'), 16) % Math.pow(10, 6);
-  }
-
-  /* Cleanup functions */
-  function cleanupIdentityExchange(cb) {
-    disconnectExchange(function () {
-      cleanupStopIdentityExchange(function (cb) {
-        cb();
-      });
-    });
-  }
-
-  function cleanupStopIdentityExchange(cb) {
-    stopIdentityExchange(function (innerError) {
-      console.log('Stop Identity Exchange Error %s', innerError);
-      cb();
-    });
-  }
-
-  function disconnectExchange(cb) {
-    replicationManager._emitter.disconnect(localPeerIdentifier, function (err) {
-      console.log('Disconnect error %s', err);
-      cb();
-    });
-  }
-
-  return {
-    startIdentityExchange: startIdentityExchange,
-    executeIdentityExchange: executeIdentityExchange,
-    stopIdentityExchange: stopIdentityExchange
+    })
   };
+
+  self.thaliReplicationManager._emitter.on('peerAvailabilityChanged', self.thaliEmitterListener);
+
+  return identityExchangeUtils.getDeviceIdentityFromThaliReplicationManager(self.thaliReplicationManager)
+      .then(function(deviceName) {
+        self.myPublicKeyHashBuffer = new Buffer(deviceName, 'base64');
+
+        self.largerHashStateMachine =
+            new LargerHashStateMachine(self.thaliAppServer, self.myPublicKeyHash);
+        self.largerHashStateMachine.start();
+
+        self.identityExchangeDeviceName = deviceName + ";" + myFriendlyName;
+
+        return identityExchangeUtils.startThaliReplicationManager(self.thaliReplicationManager,
+            self.thaliAppServer.address().port, self.dbName,
+            self.identityExchangeDeviceName);
+      }).then(function() {
+        self.identityExchangeStateMachine.startIdentityExchangeCalledCBDone();
+        if (cb) {
+          cb(null);
+        }
+      }).catch(function(err) {
+        self.identityExchangeStateMachine.startIdentityExchangeCalledCBFail();
+        if (cb) {
+          cb(err);
+        }
+      });
+}
+
+function onStopIdentityExchangeCalled(event, from, to, self, cb) {
+  if (self.thaliEmitterListener) {
+    self.thaliReplicationManager.removeListener('peerAvailabilityChanged', self.thaliEmitterListener);
+  }
+
+  self.connectionTable.cleanUp();
+  self.connectionTable = null;
+
+  self.largerHashStateMachine.stop();
+
+  return identityExchangeUtils.stopThaliReplicationManager(self.thaliReplicationManager)
+      .catch(function(err) {
+        return err
+      }).then(function(err) {
+        self.identityExchangeStateMachine.stopIdentityExchangeCalledCBDone();
+        if (cb){
+          cb(err);
+        }
+      });
+}
+
+function onExecuteIdentityExchangeCalled(event, from, to, self, peerIdentifier, otherPkHash, cb) {
+  if (!cb) {
+    throw new Error("cb is required.");
+  }
+
+  self.codeListener = function(code) {
+    cb(null, code);
+  };
+
+  self.largerHashStateMachine.on(LargerHashStateMachine.Events.ValidationCodeGenerated,
+                                  self.codeListener);
+  self.largerHashStateMachine.exchangeIdentity(new Buffer(otherPkHash, 'base64'));
+
+
+  self.smallerHashExitListener = function(err) {
+    cb(err);
+    self.smallerHashStateMachine.stopExecutingIdentityExchangeCalled(self, peerIdentifier);
+  };
+
+  self.smallerHashStateMachine = new SmallerHashStateMachine(self.thaliReplicationManager, self.connectionTable,
+    peerIdentifier, otherPkHash, self.myPublicKeyHashBuffer, self.thaliAppServer.address().port,
+    self.dbName, self.identityExchangeDeviceName);
+  self.smallerHashStateMachine.on(SmallerHashStateMachine.Events.ValidationCode, self.codeListener);
+  self.smallerHashStateMachine.on(SmallerHashStateMachine.Events.Exited, self.smallerHashExitListener);
+  self.smallerHashStateMachine.start();
+}
+
+function onStopExecutingIdentityExchangeCalled(event, from, to, self) {
+  self.largerHashStateMachine.removeListener(LargerHashStateMachine.Events.ValidationCodeGenerated,
+                                              self.codeListener);
+  self.largerHashStateMachine.stop();
+
+  self.smallerHashStateMachine.removeListener(SmallerHashStateMachine.Events.ValidationCode,
+                                              self.codeListener);
+  self.smallerHashStateMachine.removeListener(SmallerHashStateMachine.Events.Exited,
+                                              self.smallerHashExitListener);
+  self.smallerHashStateMachine.stop();
+  self.smallerHashStateMachine = null;
+}
+
+IdentityExchange.prototype.startIdentityExchange = function(myFriendlyName, cb) {
+  return this.identityExchangeStateMachine.startIdentityExchangeCalled(this, myFriendlyName, cb);
 };
+
+IdentityExchange.prototype.stopIdentityExchange = function(cb) {
+  return this.identityExchangeStateMachine.stopIdentityExchangeCalled(this, cb);
+};
+
+IdentityExchange.prototype.executeIdentityExchange = function(peerIdentifier, otherPkHash, cb) {
+  return this.identityExchangeStateMachine.executeIdentityExchangeCalled(this, peerIdentifier, otherPkHash, cb);
+};
+
+IdentityExchange.prototype.stopExecutingIdentityExchange = function() {
+  return this.identityExchangeStateMachine.stopExecutingIdentityExchangeCalled(this);
+};
+
+function IdentityExchange(thaliAppServer, thaliReplicationManager, dbName) {
+  EventEmitter.call(this);
+  this.thaliAppServer = thaliAppServer;
+  this.thaliReplicationManager = thaliReplicationManager;
+  this.dbName = dbName;
+  this.identityExchangeStateMachine = StateMachine.create({
+    initial: 'wait',
+    events: [
+      { name: 'startIdentityExchangeCalled', from: 'wait', to: 'startIdentityExchangeCalledCB'},
+      { name: 'startIdentityExchangeCalledCBFail', from: 'startIdentityExchangeCalledCB', to: 'wait'},
+      { name: 'startIdentityExchangeCalledCBDone', from: 'startIdentityExchangeCalledCB',
+        to: 'findPeersDoingIdentityExchange'},
+
+      { name: 'stopIdentityExchangeCalled', from: 'findPeersDoingIdentityExchange',
+        to: 'stopIdentityExchangeCalledCB'},
+      { name: 'stopIdentityExchangeCalledCBDone', from: 'stopIdentityExchangeCalledCB', to: 'wait'},
+
+      { name: 'executeIdentityExchangeCalled', from: 'findPeersDoingIdentityExchange', to: 'exchangeIdentity'},
+
+      { name: 'stopExecutingIdentityExchangeCalled', from: 'exchangeIdentity', to: 'findPeersDoingIdentityExchange'}
+    ],
+    callbacks: {
+      onstartIdentityExchangeCalled: onStartIdentityExchangeCalled,
+      onstopIdentityExchangeCalled: onStopIdentityExchangeCalled,
+      onexecuteIdentityExchangeCalled: onExecuteIdentityExchangeCalled,
+      onstopExecutingIdentityExchangeCalled: onStopExecutingIdentityExchangeCalled
+    }
+  });
+}
+
+module.exports = IdentityExchange;

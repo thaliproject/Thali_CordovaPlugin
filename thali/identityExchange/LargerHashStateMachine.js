@@ -1,5 +1,20 @@
 'use strict';
 
+/*
+ This code isn't going to make sense if you haven't read http://www.goland.org/coinflippingforthali/
+ and http://www.goland.org/thaliidentityexchangeprotocol/. This implementation uses a state machine
+ defined below based on (but not identical to) the larger hash state machine defined in the second link.
+ Once this machine is associated with a replication manager it has to stay associated forever. This is
+ because Express does not have (an officially supported) way to remove middleware. So the machine
+ can be started, stopped and started again.
+
+ One really confusing aspect of this machine is that I haven't defined the states in such a way that
+ one is guaranteed to only be able to do start->exchangeIdentity->stop. For example, there is at least
+ one path that goes from start->stop->exchangeIdentity. Also when the constructor is run the machine
+ starts in the 'none' state (it literally does nothing) but once start is called even once there is no way
+ to get back to 'none'. Yes, this could all be fixed but in practice it doesn't seem to matter.
+*/
+
 var StateMachine = require("javascript-state-machine");
 var crypto = require('crypto');
 var express = require('express');
@@ -12,8 +27,6 @@ var identityExchangeUtils = require('./identityExchangeUtils');
 var Promise = require('lie');
 
 LargerHashStateMachine.Events = {
-    Exited: "exit",
-    OpenedHailingFrequencies: "serverConfigured",
     ValidationCodeGenerated: "validationCodeGenerated"
 };
 
