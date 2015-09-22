@@ -28,6 +28,7 @@
     "express-pouchDB": "^0.14.2",
     "leveldown": "^1.3.0",
     "leveldown-mobile": "^1.0.7",
-    "lie": "^3.0.1"
+    "lie": "^3.0.1",
+    "supertest-as-promised": "^2.0.2"
   }
 }

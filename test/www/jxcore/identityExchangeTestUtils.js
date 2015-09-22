@@ -6,6 +6,8 @@ var os = require("os");
 var ExpressPouchDB = require("express-pouchdb");
 var Express = require("express");
 var Promise = require('lie');
+var crypto = require('crypto');
+var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
 
 exports.createThaliAppServer = function() {
     var dbPath = path.join(os.tmpdir(), 'dbPath');
@@ -23,3 +25,13 @@ exports.createThaliAppServer = function() {
         })
     });
 };
+
+exports.createSmallAndBigHash = function() {
+    var random1 = crypto.randomBytes(identityExchangeUtils.pkBufferLength);
+    var random2 = crypto.randomBytes(identityExchangeUtils.pkBufferLength);
+    if (random1.compare(random2) > 0) {
+        return { smallHash: random2, bigHash: random1};
+    } else {
+        return { smallHash: random1, bigHash: random2};
+    }
+}

@@ -76,7 +76,7 @@ function isRequestSyntacticallyValid(req, path) {
     var pkMineBuffer = identityExchangeUtils.validatePkAndGetBase64Object(req.body.pkMine);
 
     if (!pkMineBuffer) {
-        logger.info("Got a " + path + " request with  a bum pkMine - " +
+        logger.info("Got a " + path + " request with a bum pkMine - " +
             JSON.stringify(req.body));
         return null;
     }
@@ -146,7 +146,7 @@ function isRnMineRequestSyntacticallyValid(req) {
     var rnMineBuffer = identityExchangeUtils.validateRnAndGetBase64Object(req.body.rnMine);
 
     if (!rnMineBuffer) {
-        logger.info("Got a rnmind request with either a bum rnMine - " +
+        logger.info("Got a rnmind request with either a rnMine - " +
             JSON.stringify(req.body));
         return null;
     }

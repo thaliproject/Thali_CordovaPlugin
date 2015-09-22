@@ -22,19 +22,12 @@ var thePeerId = null;
 var smallerHashStateMachine = null;
 var largerHashStateMachine = null;
 
-// test setup & teardown activities
 var test = tape({
     setup: function(t) {
         thePeerId = "23po98r;lo23ihjfl;wijf;lwaijsf;loi3hjf;lashf;lohwass;klfihsa3;klifhas;kliefh;saklifhos389;alhf";
-        var random1 = crypto.randomBytes(identityExchangeUtils.pkBufferLength);
-        var random2 = crypto.randomBytes(identityExchangeUtils.pkBufferLength);
-        if (random1.compare(random2) > 0) {
-            bigHash = random1;
-            smallHash = random2;
-        } else {
-            bigHash = random2;
-            smallHash = random1;
-        }
+        var smallAndBigHash = identityExchangeTestUtils.createSmallAndBigHash();
+        smallHash = smallAndBigHash.smallHash;
+        bigHash = smallAndBigHash.bigHash;
         t.end();
     },
     teardown: function(t) {
