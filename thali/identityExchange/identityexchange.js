@@ -87,7 +87,7 @@ function onStartIdentityExchangeCalled(event, from, to, self, myFriendlyName, cb
 
 function onStopIdentityExchangeCalled(event, from, to, self, cb) {
   if (self.thaliEmitterListener) {
-    self.thaliReplicationManager.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED,
+    self.thaliReplicationManager._emitter.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED,
         self.thaliEmitterListener);
   }
 
@@ -98,7 +98,7 @@ function onStopIdentityExchangeCalled(event, from, to, self, cb) {
 
   return identityExchangeUtils.stopThaliReplicationManager(self.thaliReplicationManager)
       .catch(function(err) {
-        return err
+        return err;
       }).then(function(err) {
         self.identityExchangeStateMachine.stopIdentityExchangeCalledCBDone();
         if (cb){
@@ -107,10 +107,12 @@ function onStopIdentityExchangeCalled(event, from, to, self, cb) {
       });
 }
 
-function onExecuteIdentityExchangeCalled(event, from, to, self, peerIdentifier, otherPkHash, cb) {
+function onExecuteIdentityExchangeCalled(event, from, to, self, peerIdentifier, otherPkHashBase64, cb) {
   if (!cb) {
     throw new Error("cb is required.");
   }
+
+  var otherPkHashBuffer = new Buffer(otherPkHashBase64, 'base64');
 
   self.codeListener = function(code) {
     cb(null, code);
@@ -118,7 +120,7 @@ function onExecuteIdentityExchangeCalled(event, from, to, self, peerIdentifier, 
 
   self.largerHashStateMachine.on(LargerHashStateMachine.Events.ValidationCodeGenerated,
                                   self.codeListener);
-  self.largerHashStateMachine.exchangeIdentity(new Buffer(otherPkHash, 'base64'));
+  self.largerHashStateMachine.exchangeIdentity(otherPkHashBuffer);
 
 
   self.smallerHashExitListener = function(err) {
@@ -127,7 +129,7 @@ function onExecuteIdentityExchangeCalled(event, from, to, self, peerIdentifier, 
   };
 
   self.smallerHashStateMachine = new SmallerHashStateMachine(self.thaliReplicationManager, self.connectionTable,
-    peerIdentifier, otherPkHash, self.myPublicKeyHashBuffer, self.thaliApp.address().port,
+    peerIdentifier, otherPkHashBuffer, self.myPublicKeyHashBuffer, self.thaliServerPort,
     self.dbName, self.identityExchangeDeviceName);
   self.smallerHashStateMachine.on(SmallerHashStateMachine.Events.ValidationCode, self.codeListener);
   self.smallerHashStateMachine.on(SmallerHashStateMachine.Events.Exited, self.smallerHashExitListener);
@@ -155,8 +157,8 @@ IdentityExchange.prototype.stopIdentityExchange = function(cb) {
   return this.identityExchangeStateMachine.stopIdentityExchangeCalled(this, cb);
 };
 
-IdentityExchange.prototype.executeIdentityExchange = function(peerIdentifier, otherPkHash, cb) {
-  return this.identityExchangeStateMachine.executeIdentityExchangeCalled(this, peerIdentifier, otherPkHash, cb);
+IdentityExchange.prototype.executeIdentityExchange = function(peerIdentifier, otherPkHashBase64, cb) {
+  return this.identityExchangeStateMachine.executeIdentityExchangeCalled(this, peerIdentifier, otherPkHashBase64, cb);
 };
 
 IdentityExchange.prototype.stopExecutingIdentityExchange = function() {

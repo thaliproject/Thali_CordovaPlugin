@@ -49,17 +49,41 @@ function ThaliEmitterMock() {
 }
 
 inherits(TRMMock, EventEmitter);
+
+TRMMock.states = {
+  NotStarted: "notStarted",
+  Started: "started",
+  Stopped: "stopped"
+};
+
 TRMMock.prototype.deviceIdentity = null;
 TRMMock.prototype._emitter = null;
-function TRMMock(deviceIdentity) {
+TRMMock.prototype.t = null;
+TRMMock.prototype.expectedStartPort = null;
+TRMMock.prototype.expectedDbName = null;
+TRMMock.prototype.friendlyName = null;
+TRMMock.prototype.state = TRMMock.states.NotStarted;
+
+function TRMMock(deviceIdentity, t, expectedStartPort, expectedDbName, friendlyName) {
   EventEmitter.call(this);
   this.deviceIdentity = deviceIdentity;
+  this.t = t;
+  this.expectedStartPort = expectedStartPort;
+  this.expectedDbName = expectedDbName;
+  this.friendlyName = friendlyName;
   this._emitter = new ThaliEmitterMock();
 }
-TRMMock.prototype.start = function() {
+TRMMock.prototype.start = function(port, dbName, deviceName) {
+  this.state = TRMMock.states.Started;
+  if (this.t) {
+    this.t.equal(port, this.expectedStartPort);
+    this.t.equal(dbName, this.expectedDbName);
+    this.t.equal(deviceName, this.deviceIdentity + ";" + this.friendlyName);
+  }
   this.emit(ThaliReplicationManager.events.STARTED);
 };
 TRMMock.prototype.stop = function() {
+  this.state = TRMMock.states.Stopped;
   this.emit(ThaliReplicationManager.events.STOPPED);
 };
 TRMMock.prototype.getDeviceIdentity = function(cb) {
@@ -78,14 +102,10 @@ test('start with bad friendly names', function(t) {
   t.end();
 });
 
-// after start make sure we get PeerIdentityExchange Events
-//    then make sure we call start on replication manager with the correct discovery name
-//    then make sure we get 400 NoIdentityExchange errors
-//    then make sure we get callback.
 test('make sure startIdentityExchange sets things up properly', function(t) {
-  var trmMock = new TRMMock(smallHash.toString('base64'));
-  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
   var myFriendlyName = "Matt";
+  var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName);
+  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
   var sawAbc = false;
   var sawDef = false;
 
@@ -141,24 +161,92 @@ test('make sure startIdentityExchange sets things up properly', function(t) {
     }
 
     if (sawAbc && sawDef) {
+      t.equal(trmMock.state, TRMMock.states.Started);
       t.end();
     }
   });
 });
 
-// make sure we get an error if we call start and then immediately call stop
+test('make sure we get an error if we call start and then immediately call stop', function(t) {
+  var myFriendlyName = "Toby";
+  var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName);
+  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
+  identityExchange.startIdentityExchange(myFriendlyName, function(err) {
+    t.equal(err, null);
+  });
+  t.throws(function() { identityExchange.stopExecutingIdentityExchange();})
+  t.end();
+});
 
-// after stop make sure we don't get PeerIdentityExchange events
-//  make sure replication manager is stopped
-//  make sure we get callback
+test('Make sure stop is clean from start', function(t) {
+  var myFriendlyName = "Luke";
+  var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName);
+  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
+  identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
+    t.fail();
+  });
+  identityExchange.startIdentityExchange(myFriendlyName, function(err) {
+    t.notOk(err);
+    identityExchange.stopIdentityExchange(function(err) {
+      t.notOk(err);
+      trmMock._emitter.emit(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, { peerName: "abc;123" });
+      t.equal(trmMock.state, TRMMock.states.Stopped);
+      t.end();
+    })
+  })
+});
 
-// make sure we can't call onExecuteIdentityExchange without first calling start (try both from
-//  constructor straight to onExecuteIdentityExchange as well as start -> stop -> onExecuteIdentityExchange
-//  start -> stop -> onExecuteIdentityExchange -> stopExecuteIdentityExchange -> onExecuteIdentityExchange
+test('Make sure stop is clean from stop execute identity exchange', function(t) {
+  var myFriendlyName = "Jukka";
+  var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName);
+  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
+  identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
+    t.fail();
+  });
+  identityExchange.startIdentityExchange(myFriendlyName, function(err) {
+    t.notOk(err);
+    identityExchange.executeIdentityExchange("foo", bigHash.toString('base64'), function() {t.fail()});
+    identityExchange.stopExecutingIdentityExchange();
+    identityExchange.stopIdentityExchange(function(err) {
+      t.notOk(err);
+      trmMock._emitter.emit(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, { peerName: "abc;123" });
+      t.equal(trmMock.state, TRMMock.states.Stopped);
+      t.end();
+    })
+  })
+});
 
-// do an identity exchange where local device has smaller hash
-//  make sure we get code
+test('illegal method combinations', function(t) {
+  var myFriendlyName = "David";
+  var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName);
+  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
+  t.throws(function() { identityExchange.executeIdentityExchange("foo", "bar", function() {t.fail()})});
+  t.throws(function() { identityExchange.stopExecutingIdentityExchange()});
+  t.throws(function() { identityExchange.stopIdentityExchange(function() {t.fail()})});
+  identityExchange.startIdentityExchange(myFriendlyName, function(err) {
+    t.notOk(err);
+    t.throws(function() { identityExchange.startIdentityExchange(myFriendlyName, function() {t.fail()})});
+    t.throws(function() { identityExchange.stopExecutingIdentityExchange("foo", "bar", function() {t.fail()})});
+    identityExchange.stopIdentityExchange(function(err) {
+      t.notOk(err);
+      t.throws(function() { identityExchange.stopExecutingIdentityExchange()});
+      t.throws(function() { identityExchange.executeIdentityExchange("foo", "bar", function() {t.fail()})});
+      identityExchange.startIdentityExchange(myFriendlyName, function(err) {
+        t.notOk(err);
+        identityExchange.executeIdentityExchange("foo", bigHash.toString('base64'), function() {t.fail()});
+        t.throws(function() { identityExchange.executeIdentityExchange("foo", "bar", function() {t.fail()})});
+        t.throws(function() { identityExchange.stopIdentityExchange(function() {t.fail()})});
+        t.throws(function() { identityExchange.startIdentityExchange(myFriendlyName, function() {t.fail()})});
+        identityExchange.stopExecutingIdentityExchange();
+        t.throws(function() { identityExchange.stopExecutingIdentityExchange()});
+        t.throws(function() { identityExchange.startIdentityExchange(myFriendlyName, function() {t.fail()})});
+        t.end();
+      });
+    })
+  })
+});
 
-// do an identity exchange where local device has larger hash
-//  set it up so we get two codes
+test('do an identity exchange and get code', function(t) {
 
+});
+// Make sure you can cycle from start to exchange to stop exchange to stop and back again
