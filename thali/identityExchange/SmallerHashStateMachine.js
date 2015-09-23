@@ -29,6 +29,9 @@ SmallerHashStateMachine.Events = {
     GotUnclassifiedError: "testUnclassifiedError"
 };
 
+SmallerHashStateMachine.ExitBecauseNotNeededError = new Error("Exited because not needed");
+SmallerHashStateMachine.ExitBecauseGotValidationCode = new Error("Exited because we got a validation code!");
+
 inherits(SmallerHashStateMachine, EventEmitter);
 
 SmallerHashStateMachine.prototype.thaliReplicationManager = null;
@@ -201,7 +204,7 @@ function onCbRequestSucceeded(event, from, to, self, port, portRetrievalTime, rn
         pkMine: self.myPkHashBuffer.toString('base64')
     };
     var validate200 = function() {
-        self.smallHashStateMachine.exitCalled(self);
+        self.smallHashStateMachine.exitCalled(self, SmallerHashStateMachine.ExitBecauseGotValidationCode);
         self.emit(SmallerHashStateMachine.Events.ValidationCode,
             identityExchangeUtils.
                 generateValidationCode(rnOtherBuffer, self.otherPkHashBuffer, self.myPkHashBuffer, rnMineBuffer));
@@ -234,7 +237,7 @@ SmallerHashStateMachine.prototype.stop = function() {
 
 SmallerHashStateMachine.prototype.start = function() {
     if (this.myPkHashBuffer.compare(this.otherPkHashBuffer) > 0) {
-        this.smallHashStateMachine.exitCalled(this);
+        this.smallHashStateMachine.exitCalled(this, SmallerHashStateMachine.ExitBecauseNotNeededError);
     } else {
         this.smallHashStateMachine.startSearch(this);
     }

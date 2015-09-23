@@ -90,7 +90,6 @@ TRMMock.prototype.getDeviceIdentity = function(cb) {
   cb(null, this.deviceIdentity);
 };
 
-// start with various bad friendly names
 test('start with bad friendly names', function(t) {
   var badNames = ["", {}, null, "123456789012345678901"];
   badNames.forEach(function(badName) {
@@ -200,7 +199,7 @@ test('Make sure stop is clean from stop execute identity exchange', function(t) 
   var myFriendlyName = "Jukka";
   var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName);
   var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
-  identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
+  identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function() {
     t.fail();
   });
   identityExchange.startIdentityExchange(myFriendlyName, function(err) {
@@ -246,7 +245,102 @@ test('illegal method combinations', function(t) {
   })
 });
 
-test('do an identity exchange and get code', function(t) {
+function runToCompletion(t, identityExchange, myFriendlyName, trmMock, secondIdentityExchange, secondFriendlyName,
+                          secondTrmMock, secondThaliServer) {
+  var firstPeerId = "foo";
+  var secondPeerId = "bar";
 
+  function checkCode(code) {
+    t.ok(typeof code === "number" && code >= 0 && code < 1000000);
+  }
+
+  return new Promise(function(resolve, reject) {
+    var firstCode = null;
+    var secondCode = null;
+
+    function checkFinish() {
+      if (firstCode && secondCode) {
+        t.equal(firstCode, secondCode);
+        identityExchange.stopExecutingIdentityExchange();
+        identityExchange.stopIdentityExchange(function(err) {
+          t.notOk(err);
+          secondIdentityExchange.stopExecutingIdentityExchange();
+          secondIdentityExchange.stopIdentityExchange(function(err) {
+            t.notOk(err);
+            resolve();
+          })
+        });
+      }
+    }
+
+    identityExchange.startIdentityExchange(myFriendlyName, function(err) {
+      t.notOk(err);
+      identityExchange.executeIdentityExchange(secondPeerId, bigHash.toString('base64'), function(err, code) {
+        t.notOk(err);
+        checkCode(code);
+        firstCode = code;
+        checkFinish();
+      });
+
+      secondIdentityExchange.startIdentityExchange(secondFriendlyName, function(err) {
+        t.notOk(err);
+        secondIdentityExchange.executeIdentityExchange(firstPeerId, smallHash.toString('base64'), function(err, code) {
+          t.notOk(err);
+          checkCode(code);
+          secondCode = code;
+          checkFinish();
+        });
+
+        // Just for chuckles, this shouldn't do anything
+        secondTrmMock.emit(ThaliReplicationManager.events.CONNECTION_SUCCESS, { peerIdentifier: firstPeerId,
+          muxPort: thaliServer.address().port,
+          time: Date.now()});
+        trmMock.emit(ThaliReplicationManager.events.CONNECTION_SUCCESS, { peerIdentifier: secondPeerId,
+          muxPort: secondThaliServer.address().port,
+          time: Date.now()});
+      });
+    });
+  });
+}
+
+test('do an identity exchange and get code multiple times to make sure we do not hork state', function(t) {
+  var secondFriendlyName = "Srikanth";
+  var secondThaliApp = null;
+  var secondThaliServer = null;
+  var secondTrmMock = null;
+  var secondIdentityExchange = null;
+
+  var myFriendlyName = "John";
+  var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName);
+  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
+
+  identityExchangeTestUtils.createThaliAppServer()
+      .then(function(appAndServer) {
+        secondThaliApp = appAndServer.app;
+        secondThaliServer = appAndServer.server;
+
+        secondTrmMock = new TRMMock(bigHash.toString('base64'), t, secondThaliServer.address().port, "anotherDbName",
+            secondFriendlyName);
+        secondIdentityExchange = new IdentityExchange(secondThaliApp, secondThaliServer.address().port, secondTrmMock,
+            "anotherDbName");
+        function runIt() {
+          return runToCompletion(t, identityExchange, myFriendlyName, trmMock, secondIdentityExchange, secondFriendlyName,
+              secondTrmMock, secondThaliServer);
+        }
+
+        var testPromise = runIt();
+
+        for (var i = 0; i < 10; ++i) {
+          testPromise = testPromise.then(function () {
+            return runIt();
+          });
+        }
+
+        return testPromise;
+      }).then(function() {
+        secondThaliServer.close();
+        t.end();
+      }).catch(function(err) {
+        t.fail(err);
+      });
 });
-// Make sure you can cycle from start to exchange to stop exchange to stop and back again

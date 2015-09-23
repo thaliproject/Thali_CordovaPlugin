@@ -130,6 +130,12 @@ test directory everything will be hooked up to the thali sub-directory automatic
 files, set break points, etc. right in the thali sub-directory and the same with the test sub-directory. No need 
 to play copy and paste games the way we do when we are developing Cordova specific features.
 
+Note that at the moment this doesn't seem to work with JXcore, just with node.js. There is some issue with
+linking. See https://github.com/jxcore/jxcore/issues/564
+
+Until this gets fixed or until we polyfill the missing APIs (mostly just test level checks for things like
+which OS we are on) tests have to be run individually, the test runner won't work.
+
 ## Unit Testing the Thali Cordova Plugin
 
 The Thali Cordova plugin uses the [Tape](https://www.npmjs.com/package/tape) tap-producing test harness for node

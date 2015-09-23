@@ -63,8 +63,10 @@ function onStartIdentityExchangeCalled(event, from, to, self, myFriendlyName, cb
       .then(function(deviceName) {
         self.myPublicKeyHashBuffer = new Buffer(deviceName, 'base64');
 
-        self.largerHashStateMachine =
-            new LargerHashStateMachine(self.thaliApp, self.myPublicKeyHashBuffer);
+        if (!self.largerHashStateMachine) {
+          self.largerHashStateMachine =
+              new LargerHashStateMachine(self.thaliApp, self.myPublicKeyHashBuffer);
+        }
         self.largerHashStateMachine.start();
 
         self.identityExchangeDeviceName = deviceName + ";" + myFriendlyName;
@@ -118,22 +120,24 @@ function onExecuteIdentityExchangeCalled(event, from, to, self, peerIdentifier, 
     cb(null, code);
   };
 
-  self.largerHashStateMachine.on(LargerHashStateMachine.Events.ValidationCodeGenerated,
-                                  self.codeListener);
-  self.largerHashStateMachine.exchangeIdentity(otherPkHashBuffer);
-
-
   self.smallerHashExitListener = function(err) {
-    cb(err);
-    self.smallerHashStateMachine.stopExecutingIdentityExchangeCalled(self, peerIdentifier);
+    if (err !== SmallerHashStateMachine.ExitBecauseNotNeededError &&
+        err !== SmallerHashStateMachine.ExitBecauseGotValidationCode) {
+      cb(err);
+      self.smallerHashStateMachine.stopExecutingIdentityExchangeCalled(self, peerIdentifier);
+    }
   };
 
   self.smallerHashStateMachine = new SmallerHashStateMachine(self.thaliReplicationManager, self.connectionTable,
-    peerIdentifier, otherPkHashBuffer, self.myPublicKeyHashBuffer, self.thaliServerPort,
-    self.dbName, self.identityExchangeDeviceName);
+      peerIdentifier, otherPkHashBuffer, self.myPublicKeyHashBuffer, self.thaliServerPort,
+      self.dbName, self.identityExchangeDeviceName);
   self.smallerHashStateMachine.on(SmallerHashStateMachine.Events.ValidationCode, self.codeListener);
-  self.smallerHashStateMachine.on(SmallerHashStateMachine.Events.Exited, self.smallerHashExitListener);
+  self.smallerHashStateMachine.once(SmallerHashStateMachine.Events.Exited, self.smallerHashExitListener);
   self.smallerHashStateMachine.start();
+
+  self.largerHashStateMachine.on(LargerHashStateMachine.Events.ValidationCodeGenerated,
+      self.codeListener);
+  self.largerHashStateMachine.exchangeIdentity(otherPkHashBuffer);
 }
 
 function onStopExecutingIdentityExchangeCalled(event, from, to, self) {

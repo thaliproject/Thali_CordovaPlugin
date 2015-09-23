@@ -42,16 +42,18 @@ LargerHashStateMachine.prototype.rnMineBuffer = null;
 LargerHashStateMachine.prototype.cbValueBuffer = null;
 
 function startListening(event, from, to, self) {
-    self.lhsmRouter = express.Router();
-    var jsonParser = bodyParser.json();
-    self.lhsmRouter.post('/cb', jsonParser, function(req, res) {
-        return cbParser(self, req, res);
-    });
-    self.lhsmRouter.post('/rnmine', jsonParser, function(req, res) {
-        return rnMineParser(self, req, res);
-    });
+    if (!self.lhsmRouter) {
+        self.lhsmRouter = express.Router();
+        var jsonParser = bodyParser.json();
+        self.lhsmRouter.post('/cb', jsonParser, function(req, res) {
+            return cbParser(self, req, res);
+        });
+        self.lhsmRouter.post('/rnmine', jsonParser, function(req, res) {
+            return rnMineParser(self, req, res);
+        });
 
-    self.thaliExpressServer.use('/identity', self.lhsmRouter);
+        self.thaliExpressServer.use('/identity', self.lhsmRouter);
+    }
 }
 
 function fourHundredResponse(self, res, errorCode) {
@@ -235,7 +237,7 @@ function LargerHashStateMachine(thaliExpressServer, myPkHashBuffer) {
     self.largerHashStateMachine = StateMachine.create({
         initial: 'none',
         events: [
-            { name: 'startListening', from: 'none', to: 'NoIdentityExchange'},
+            { name: 'startListening', from: ['none', 'NoIdentityExchange'], to: 'NoIdentityExchange'},
             { name: 'desiredPeerHasLargerHash', from: 'NoIdentityExchange', to: 'WrongPeer'},
             { name: 'waitForCb', from: 'NoIdentityExchange', to: 'WaitForCb'},
             { name: 'noIdentityExchange', from: ['NoIdentityExchange', 'WaitForCb', 'WrongPeer', 'WaitForRnMine'],

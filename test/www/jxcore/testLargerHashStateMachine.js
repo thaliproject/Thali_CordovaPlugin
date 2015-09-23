@@ -535,3 +535,24 @@ test("Make sure apis don't allow incorrect states", function(t) {
             t.fail(err);
         });
 });
+
+test("Make sure we can start, complete and then restart and complete, no state gets horked", function(t) {
+    var rnMineBuffer = crypto.randomBytes(identityExchangeUtils.rnBufferLength);
+    largerHashStateMachine.start();
+    largerHashStateMachine.exchangeIdentity(smallHash);
+    makeGoodCb(rnMineBuffer)
+        .then(function(res) {
+            return makeGoodRnMine(rnMineBuffer);
+        }).then(function(res) {
+            largerHashStateMachine.stop();
+            largerHashStateMachine.start();
+            largerHashStateMachine.exchangeIdentity(smallHash);
+            return makeGoodCb(rnMineBuffer);
+        }).then(function(res) {
+            return makeGoodRnMine(rnMineBuffer);
+        }).then(function(res) {
+            t.end();
+        }).catch(function(err) {
+            t.fail(err);
+        });
+});

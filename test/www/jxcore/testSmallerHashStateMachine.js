@@ -191,7 +191,8 @@ function runBad200Test(t, requestPath, numberEvents) {
 test('start - Make sure we exit when our hash is bigger', function (t) {
     smallerHashStateMachine =
         new SmallerHashStateMachine(new TRMMock(), new MockConnectionTable(), null, smallHash, bigHash);
-    smallerHashStateMachine.once(SmallerHashStateMachine.Events.Exited, function() {
+    smallerHashStateMachine.once(SmallerHashStateMachine.Events.Exited, function(error) {
+        t.equal(error, SmallerHashStateMachine.ExitBecauseNotNeededError);
         t.equal(smallerHashStateMachine.smallHashStateMachine.current, "Exit");
         t.end();
     });
@@ -391,6 +392,14 @@ test('Handling 400 w/wrongPeer on cb response', function(t) {
 test('Get to success!', function(t) {
     var smallerValidationCode = null;
     var largerValidationCode = null;
+    var exitCalled = null;
+
+    function checkDone() {
+        if (smallerValidationCode && largerValidationCode && exitCalled) {
+            t.equal(smallerValidationCode, largerValidationCode);
+            t.end();
+        }
+    }
     startThaliServer().then(function() {
         largerHashStateMachine = new LargerHashStateMachine(thaliApp, bigHash);
         smallerHashStateMachine =
@@ -398,25 +407,27 @@ test('Get to success!', function(t) {
             retrySamePortConnectionTable(thePeerId, t, true), thePeerId, bigHash, smallHash);
         largerHashStateMachine.start();
         largerHashStateMachine.exchangeIdentity(smallHash);
+        smallerHashStateMachine.on(SmallerHashStateMachine.Events.Exited, function(error) {
+            if (exitCalled) {
+                return t.fail("We should only have been called here once.");
+            }
+            exitCalled = true;
+            t.equal(error, SmallerHashStateMachine.ExitBecauseGotValidationCode);
+            checkDone();
+        });
         smallerHashStateMachine.on(SmallerHashStateMachine.Events.ValidationCode, function(validationCode) {
             if (smallerValidationCode) {
-                t.fail("We should have only gotten called here once");
+                return t.fail("We should have only gotten called here once");
             }
             smallerValidationCode = validationCode;
-            if (largerValidationCode) {
-                t.equal(smallerValidationCode, largerValidationCode);
-                t.end();
-            }
+            checkDone();
         });
         largerHashStateMachine.on(LargerHashStateMachine.Events.ValidationCodeGenerated, function (validationCode) {
             if (largerValidationCode) {
-                t.fail("We should have only gotten called here once");
+                return t.fail("We should have only gotten called here once");
             }
             largerValidationCode = validationCode;
-            if (smallerValidationCode) {
-                t.equal(smallerValidationCode, largerValidationCode);
-                t.end();
-            }
+            checkDone();
         });
         smallerHashStateMachine.start();
     })
