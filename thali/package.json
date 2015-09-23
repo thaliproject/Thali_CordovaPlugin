@@ -9,7 +9,8 @@
     "winston": "^1.0.1",
     "body-parser": "^1.13.3",
     "javascript-state-machine": "^2.3.5",
-    "express": "4.13.3"
+    "express": "4.13.3",
+    "lie": "^2.9.1"
   },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",

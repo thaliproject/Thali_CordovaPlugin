@@ -1,8 +1,8 @@
 'use strict';
 
 var crypto = require('crypto');
-var Promise = require('lie');
 var ThaliReplicationManager = require('../thalireplicationmanager');
+var Promise = require('lie');
 
 exports.rnBufferLength = 16;
 exports.pkBufferLength = 32;

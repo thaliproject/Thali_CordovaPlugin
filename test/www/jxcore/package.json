@@ -25,9 +25,9 @@
     "wrapping-tape": "^0.0.3",
     "nock": "^2.12.0",
     "pouchdb": "^4.0.3",
-    "express-pouchDB": "^0.14.2",
-    "leveldown": "^1.3.0",
-    "leveldown-mobile": "^1.0.7",
+    "express-pouchdb": "^0.14.2",
+    "leveldown": "^1.4.1",
+    "leveldown-mobile": "^1.0.10",
     "lie": "^3.0.1",
     "supertest-as-promised": "^2.0.2"
   }

@@ -344,3 +344,14 @@ test('do an identity exchange and get code multiple times to make sure we do not
         t.fail(err);
       });
 });
+
+
+//test('Now do an identity Exchange with the real live system!', function(t) {
+//  if (!jxcore.utils.OSInfo().isMobile) {
+//    t.comment("Skipping test because we aren't running on a mobile platform");
+//    t.end();
+//    return;
+//  }
+//
+//
+//});
