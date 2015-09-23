@@ -22,11 +22,7 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
     });
 
   replicationManager.on('peerIdentityExchange', function (peer) {
-    if (peer.peerAvailable) {
-      peers[peer.peerIdentifier] = peer;
-    } else {
-      delete peers[peer.peerIdentifier];
-    }
+    peers[peer.peerIdentifier] = peer;
   });
 
   // Global queueing
@@ -47,12 +43,12 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
       replicationManager.getDeviceIdentity(function (err, id) {
         if (err) {
           return res.sendStatus(400).json({
-            'errorCode': 'E_DEVICEIDNOTSET',
-            'errorDescription': 'Device Identity not set'
+            errorCode: 'E_DEVICEIDNOTSET',
+            errorDescription: 'Device Identity not set'
           });
         }
         res.sendStatus(200).json({
-          'publicKeyHash': id
+          'deviceIdentity': id
         });
       });
   });
@@ -66,8 +62,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
         // Validate Body
         if (!req.body && typeof req.body.peerFriendlyName !== 'string') {
           res.sendStatus(400).json({
-            'errorCode': 'E_PEERFRIENDLYNAMEMISSING',
-            'errorDescription': 'Request body missing peerFriendlyName property'
+            errorCode: 'E_PEERFRIENDLYNAMEMISSING',
+            errorDescription: 'Request body missing peerFriendlyName property'
           });
           resolve();
           return;
@@ -75,8 +71,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
 
         if (req.body.peerFriendlyName.length < 1 || req.body.peerFriendlyName > 20) {
           res.sendStatus(400).json({
-            'errorCode': 'E_PEERFRIENDLYNAMEINVALID',
-            'errorDescription': 'Request body peerFriendlyName property invalid length'
+            errorCode: 'E_PEERFRIENDLYNAMEINVALID',
+            errorDescription: 'Request body peerFriendlyName property invalid length'
           });
           resolve();
           return;
@@ -95,8 +91,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
             if (err) {
               resolve();
               res.sendStatus(400).json({
-                'errorCode': 'E_STOPIDEXCHANGEFAILED',
-                'errorDescription': 'Stop Identity Exchange Failed'
+                errorCode: 'E_STOPIDEXCHANGEFAILED',
+                errorDescription: 'Stop Identity Exchange Failed'
               });
               return;
             }
@@ -107,8 +103,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
             identityExchange.startidentityexchange(peerFriendlyName, function (err) {
               if (err) {
                 res.sendStatus(400).json({
-                  'errorCode': 'E_STARTIDEXCHANGEFAILED',
-                  'errorDescription': 'Start Identity Exchange Failed'
+                  errorCode: 'E_STARTIDEXCHANGEFAILED',
+                  errorDescription: 'Start Identity Exchange Failed'
                 });
                 resolve();
                 return;
@@ -127,8 +123,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
           if (err) {
             resolve();
             return res.sendStatus(400).json({
-              'errorCode': 'E_STARTIDEXCHANGEFAILED',
-              'errorDescription': 'Start Identity Exchange Failed'
+              errorCode: 'E_STARTIDEXCHANGEFAILED',
+              errorDescription: 'Start Identity Exchange Failed'
             });
           }
 
@@ -146,8 +142,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
       enqueue(function (resolve) {
         if (!peerStarted) {
           res.sendStatus(404).json({
-            'errorCode': 'E_NOCURRENTIDEXCHANGE',
-            'errorDescription': 'No Current Identity Exchange Pending'
+            errorCode: 'E_NOCURRENTIDEXCHANGE',
+            errorDescription: 'No Current Identity Exchange Pending'
           });
           resolve();
           return;
@@ -156,8 +152,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
         identityExchange.stopidentityexchange(function (err) {
           if (err) {
             res.sendStatus(400).json({
-              'errorCode': 'E_STOPIDEXCHANGEFAILED',
-              'errorDescription': 'Stop Identity Exchange Failed'
+              errorCode: 'E_STOPIDEXCHANGEFAILED',
+              errorDescription: 'Stop Identity Exchange Failed'
             });
             resolve();
             return;
@@ -177,8 +173,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
 
       if (!peerStarted) {
         res.sendStatus(404).json({
-          'errorCode': 'E_NOCURRENTIDEXCHANGE',
-          'errorDescription': 'No Current Identity Exchange Pending'
+          errorCode: 'E_NOCURRENTIDEXCHANGE',
+          errorDescription: 'No Current Identity Exchange Pending'
         });
         return;
       }
@@ -196,6 +192,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
       });
   });
 
+  var error;
+
   app.put(
     '/webview/identityexchange/executeexchange',
     bodyParser.json(),
@@ -205,8 +203,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
 
         if (!peerStarted) {
           res.sendStatus(404).json({
-            'errorCode': 'E_NOCURRENTIDEXCHANGE',
-            'errorDescription': 'No Current Identity Exchange Pending'
+            errorCode: 'E_NOCURRENTIDEXCHANGE',
+            errorDescription: 'No Current Identity Exchange Pending'
           });
           resolve();
           return;
@@ -215,8 +213,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
         // Validate Body
         if (!req.body && typeof req.body.peerDeviceId !== 'string') {
           res.sendStatus(400).json({
-            'errorCode': 'E_PEERDEVICEIDMISSING',
-            'errorDescription': 'Request body missing peerDeviceId property'
+            errorCode: 'E_PEERDEVICEIDMISSING',
+            errorDescription: 'Request body missing peerDeviceId property'
           });
           resolve();
           return;
@@ -226,8 +224,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
         var p = peers[req.body.peerDeviceId];
         if (!p) {
           res.sendStatus(400).json({
-            'errorCode': 'E_PEERDEVICEIDNOTFOUND',
-            'errorDescription': 'peerDeviceId does not match any known peers'
+            errorCode: 'E_PEERDEVICEIDNOTFOUND',
+            errorDescription: 'peerDeviceId does not match any known peers'
           });
           resolve();
           return;
@@ -235,9 +233,10 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
 
         currentPeer = p;
 
+        res.sendStatus(202).end();
+
         // Check if we already have one in progress
         if (req.body.peerDeviceId === peerIdentifier) {
-          res.sendStatus(201).end();
           resolve();
           return;
         }
@@ -247,10 +246,11 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
           // Stop service
           identityExchange.stopExecutingIdentityExchange(peerIdentifier, function (err) {
             if (err) {
-              res.sendStatus(400).json({
-                'errorCode': 'E_STOPEXECUTEIDEXCHANGEFAILED',
-                'errorDescription': 'Stop Executing Identity Exchange Failed'
-              });
+              error = {
+                statusCode: 400,
+                errorCode: 'E_STOPEXECUTEIDEXCHANGEFAILED',
+                errorDescription: 'Stop Executing Identity Exchange Failed'
+              };
               resolve();
               return;
             }
@@ -259,10 +259,11 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
             peerIdentifier = req.body.peerDeviceId;
             identityExchange.executeIdentityExchange(peerIdentifier, p.peerName, deviceIdentity, function (err, code) {
               if (err) {
-                res.sendStatus(400).json({
-                  'errorCode': 'E_STARTEXECUTEIDEXCHANGEFAILED',
-                  'errorDescription': 'Start Executing Identity Exchange Failed'
-                });
+                error = {
+                  statusCode: 400,
+                  errorCode: 'E_STARTEXECUTEIDEXCHANGEFAILED',
+                  errorDescription: 'Start Executing Identity Exchange Failed'
+                };
                 resolve();
                 return;
               }
@@ -278,16 +279,16 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
         peerIdentifier = req.body.peerDeviceId;
         identityExchange.executeIdentityExchange(peerIdentifier, p.peerName, deviceIdentity, function (err, code) {
           if (err) {
-            res.sendStatus(400).json({
-              'errorCode': 'E_STARTEXECUTEIDEXCHANGEFAILED',
-              'errorDescription': 'Start Executing Identity Exchange Failed'
-            });
+            error = {
+              statusCode: 400,
+              errorCode: 'E_STARTEXECUTEIDEXCHANGEFAILED',
+              errorDescription: 'Start Executing Identity Exchange Failed'
+            };
             resolve();
             return;
           }
 
           verificationCode = code;
-          res.sendStatus(202).end();
           resolve();
         });
       });
@@ -302,8 +303,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
         if (!peerIdentifier) {
 
           res.sendStatus(404).json({
-            'errorCode': 'E_NOCURRENTIDEXCHANGE',
-            'errorDescription': 'No Current Identity Exchange Pending'
+            errorCode: 'E_NOCURRENTIDEXCHANGE',
+            errorDescription: 'No Current Identity Exchange Pending'
           });
           resolve();
           return;
@@ -312,8 +313,8 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
         identityExchange.stopExecutingIdentityExchange(peerIdentifier, function (err) {
           if (err) {
             res.sendStatus(400).json({
-              'errorCode': 'E_STOPEXECUTEIDEXCHANGEFAILED',
-              'errorDescription': 'Stop Executing Identity Exchange Failed'
+              errorCode: 'E_STOPEXECUTEIDEXCHANGEFAILED',
+              errorDescription: 'Stop Executing Identity Exchange Failed'
             });
             resolve();
             return;
@@ -335,8 +336,17 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
       // Check for peer identifier
       if (!peerIdentifier) {
         res.sendStatus(404).json({
-          'errorCode': 'E_NOCURRENTIDEXCHANGE',
-          'errorDescription': 'No Current Identity Exchange Pending'
+          errorCode: 'E_NOCURRENTIDEXCHANGE',
+          errorDescription: 'No Current Identity Exchange Pending'
+        });
+        return;
+      }
+
+      // Check for error
+      if (error) {
+        res.sendStatus(error.statusCode).json({
+          errorCode: error.errorCode,
+          errorDescription: error.errorDescription
         });
         return;
       }
@@ -349,6 +359,7 @@ module.exports = function (app, replicationManager, identityExchangeModule) {
           peerDeviceId: currentPeer.peerIdentifier,
           publicKeyHash: currentPeer.peerName
         });
+        return;
       }
 
   });
