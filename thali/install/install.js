@@ -19,7 +19,7 @@ function childProcessExecPromise(command, currentWorkingDirectory) {
            if (error) {
                reject(error);
            } 
-           resolve();
+           resolve(stdout.toString());
         });
     })
 }
@@ -200,8 +200,25 @@ function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
     return fs.existsSync(magicFileLocation);
 }
 
+function fetchJxCoreCordovaPlugin(dest) {
+  return new Promise(function(resolve, reject) {
+    var request = require('request');
+
+    request("https://github.com/jxcore/jxcore-cordova-release/raw/master/0.0.5/io.jxcore.node.jx")
+    .pipe(fs.createWriteStream(dest))
+    .on('finish', function(response) {
+      console.log("Downloaded io.jxcore.node.jx");
+      resolve(null);
+    })
+    .on('error', function(error) {
+      console.log("Error downloading io.jxcore.node.jx");
+      reject(error);
+    });
+  });
+}
+
 module.exports = function(callBack) {
-   //get the app root folder from app/www/jxcore/node_modules/thali
+    //get the app root folder from app/www/jxcore/node_modules/thali
     var appRootDirectory = path.join(__dirname, '../../../../../');
     var thaliDontCheckIn = path.join(appRootDirectory, "thaliDontCheckIn" );
     var appScriptsFolder = path.join(appRootDirectory, "plugins/org.thaliproject.p2p/scripts");
@@ -215,26 +232,62 @@ module.exports = function(callBack) {
     var thaliDepotName = "Thali_CordovaPlugin";
     var thaliBranchName = "master";
     var getThaliCordovaPluginZip = 
-        doesMagicDirectoryNamedExist(thaliDontCheckIn) ?
-            copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, thaliDepotName, thaliBranchName) :
-            installGitHubZip(thaliProjectName, thaliDepotName, thaliBranchName, thaliDontCheckIn);
+      doesMagicDirectoryNamedExist(thaliDontCheckIn) ?
+      copyDevelopmentThaliCordovaPluginToProject(
+        appRootDirectory, thaliDontCheckIn, thaliDepotName, thaliBranchName
+      ) :
+      installGitHubZip(thaliProjectName, thaliDepotName, thaliBranchName, thaliDontCheckIn);
 
-    getThaliCordovaPluginZip
-    .then(function(thaliCordovaPluginUnZipResult) {      
-        if (thaliCordovaPluginUnZipResult.directoryUpdated) {
-            var weAddedPluginsFile = path.join(thaliDontCheckIn, "weAddedPlugins");
-            return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
-            .then(function() {
-                return childProcessExecPromise('cordova plugin add ' + thaliCordovaPluginUnZipResult.unzipedDirectory, appRootDirectory);   
-            }).then(function() {
-                return childProcessExecPromise('jx npm install', appScriptsFolder);       
-            }).then(function() {
-                return fs.writeFileAsync(weAddedPluginsFile, "yes");
-            });
-        }
-    }).then(function() {
-        callBack();
-    }).catch(function(error) {
-        callBack(error, null);
-    });     
+    // Fetch and install our dependencies
+    var jxCorePluginPackage = 'io.jxcore.node.jx';
+
+    // Check first for existence of android platform, we need to be installed
+    // afterwards
+    /*childProcessExecPromise('cordova platforms list')
+    .then(function(output) {
+      var platforms = output.split('\n')[0].split(':')[1];
+      if (platforms.indexOf("android") == -1) {
+        throw new Error("Install android platform first");
+      }
+    })
+    .then(function() {
+      // Delete any existing package download
+      try {
+        fs.unlinkSync(jxCorePluginPackage);
+      } catch (e) {
+        // File doesn't exist and that's just fine
+      }
+    })
+    */
+
+    fetchJxCoreCordovaPlugin(jxCorePluginPackage)
+    .then(function() { 
+      return childProcessExecPromise('jx io.jxcore.node.jx', '.'); 
+    })
+    .then(function() {
+      return childProcessExecPromise('cordova plugin add ./io.jxcore.node/', ".");
+    })
+    .then(function () {
+      return getThaliCordovaPluginZip;
+    })
+    .then(function(thaliCordovaPluginUnZipResult) {
+      if (thaliCordovaPluginUnZipResult.directoryUpdated) {
+        var weAddedPluginsFile = path.join(thaliDontCheckIn, "weAddedPlugins");
+        return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
+        .then(function() {
+            return childProcessExecPromise('cordova plugins add ' + thaliCordovaPluginUnZipResult.unzipedDirectory, appRootDirectory);   
+        }).then(function() {
+            return childProcessExecPromise('jx npm install', appScriptsFolder);       
+        }).then(function() {
+            return fs.writeFileAsync(weAddedPluginsFile, "yes");
+        });
+      }
+    })
+    .then(function() {
+      // Success
+      callBack();
+    })
+    .catch(function(error) {
+      callBack(error, null);
+    });
 };
