@@ -105,6 +105,12 @@ function onStartIdentityExchangeCalled(event, from, to, self, myFriendlyName, cb
         self.thaliReplicationManager._emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED,
             self.thaliEmitterListener);
 
+        // Technically we should emit the events after we call the user's callback so that the user
+        // always knows that their start method will get called back before they can receive any
+        // PEER_AVAILABILITY_CHANGED events. But it gives me the hives to let random user code run
+        // (via the callback) in the middle of our code. So I'm intentionally allowing the race condition
+        // where as soon as the start method is called, but before the callback is called,
+        // PEER_AVAILABILITY_CHANGED events can occur.
         if (cb) {
           cb(null);
         }
