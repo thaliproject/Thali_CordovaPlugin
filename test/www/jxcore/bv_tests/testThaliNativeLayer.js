@@ -7,7 +7,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
 var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
-var tape = require('thali-tape');
+var tape = require('../lib/thali-tape');
 
 function newPeerIdentifier() {
   return (+ new Date()).toString() + "." + process.pid;
@@ -192,6 +192,15 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
 });
 
 test('ThaliEmitter can connect and send data', function (t) {
+
+  var server = net.createServer(function(s) {
+    s.pipe(s);
+  });
+
+  server.listen(5001, function() {
+    console.log("echo server started");
+  });
+
   var len = 1025;
   var testMessage = randomstring.generate(len);
   connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {

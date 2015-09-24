@@ -21,7 +21,7 @@ Highly inspired by wrapping-tape, and usage is very similar to the wrapping tape
 'use strict';
 
 var tape = require('tape');
-var CoordinatorConnector = require('CoordinatorConnector');
+var CoordinatorConnector = require('./CoordinatorConnector');
 var parsedJSON = require('serveraddress.json');
 
 function Thali_Tape(options) {
@@ -35,15 +35,18 @@ function Thali_Tape(options) {
   Coordinator.init(parsedJSON[0].address, 3000);
   console.log('attempting to connect to test coordinator to ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
 
+  // We're about to add a lot of event handlers so squash the emitter leak warning
+  Coordinator.setMaxListeners(0);
+
   Coordinator.on('error', function (data) {
     var errData = JSON.parse(data);
     console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
   });
 
-// Add a disconnect listener
+  // Add a disconnect listener
   Coordinator.on('disconnect', function () {
     console.log('The client has disconnected!');
-    //we need to stop & close any tests we are runnign here
+    //we need to stop & close any tests we are running here
     if(setUp_t != null){
       setUp_t.fail("Coordinator server got disconnected");
       setUp_t = null;
@@ -92,7 +95,7 @@ function Thali_Tape(options) {
       }
     });
 
-  //test([name], [opts], cb)
+    //test([name], [opts], cb)
     tape(name, function(t) {
       if (opts != null) {
         t.plan(opts);

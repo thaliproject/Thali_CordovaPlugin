@@ -1,6 +1,6 @@
 /**
  *
- * This is class implementation which is used to load all performance tests from the tests folder
+ * This is class implementation which is used to load all performance tests from the perf_tests folder
  * Then its expecting start & stop commands for the tests, and also it expects the start command to specify which test file to execute.
  * It also routes the:
  * - 'done' events indicating that the test case has now been finished, and the test now waits teardown to happen with stop command
@@ -27,11 +27,11 @@ function TestFrameworkClient(name) {
     }
 
     console.log('check test folder');
-    fs.readdirSync(__dirname + '/tests/').forEach(function(fileName) {
+    fs.readdirSync('../perf_tests/').forEach(function(fileName) {
         if ((fileName.indexOf("test") == 0) &&
             fileName.indexOf(".js", fileName.length - 3) != -1) {
             console.log('found test : ./' + fileName);
-            self.test[fileName] = require('./tests/' + fileName);
+            self.test[fileName] = require('../perf_tests/' + fileName);
         }
     });
 }
