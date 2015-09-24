@@ -130,7 +130,8 @@ function cbParser(self, req, res) {
                 return malformedResponse(self, res);
             }
 
-            if (cbAndpkMineBuffers.pkMineBuffer.compare(self.otherPkHashBuffer) !== 0) {
+            if (identityExchangeUtils.compareEqualSizeBuffers(cbAndpkMineBuffers.pkMineBuffer,
+                    self.otherPkHashBuffer) !== 0) {
                 return wrongPeerResponse(self, res);
             }
 
@@ -183,7 +184,7 @@ function rnMineParser(self, req, res) {
                 return malformedResponse(self, res);
             }
 
-            if (rnAndPkMineBuffers.pkMineBuffer.compare(self.otherPkHashBuffer) !== 0) {
+            if (identityExchangeUtils.compareEqualSizeBuffers(rnAndPkMineBuffers.pkMineBuffer, self.otherPkHashBuffer) !== 0) {
                 return wrongPeerResponse(self, res);
             }
 
@@ -191,7 +192,7 @@ function rnMineParser(self, req, res) {
 
             var testCbValueBuffer =
                 identityExchangeUtils.generateCb(rnOtherBuffer, self.otherPkHashBuffer, self.myPkHashBuffer);
-            if (self.cbValueBuffer.compare(testCbValueBuffer) !== 0) {
+            if (identityExchangeUtils.compareEqualSizeBuffers(self.cbValueBuffer, testCbValueBuffer) !== 0) {
                 return malformedResponse(self, res);
             }
             self.emit(LargerHashStateMachine.Events.ValidationCodeGenerated,
@@ -217,7 +218,7 @@ LargerHashStateMachine.prototype.stop = function() {
 LargerHashStateMachine.prototype.exchangeIdentity = function(otherPkHashBuffer) {
     this.otherPkHashBuffer = otherPkHashBuffer;
 
-    if (this.myPkHashBuffer.compare(this.otherPkHashBuffer) < 0) {
+    if (identityExchangeUtils.compareEqualSizeBuffers(this.myPkHashBuffer, this.otherPkHashBuffer) < 0) {
         this.largerHashStateMachine.desiredPeerHasLargerHash();
     } else {
         this.largerHashStateMachine.waitForCb();

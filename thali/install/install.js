@@ -227,7 +227,7 @@ module.exports = function(callBack) {
             .then(function() {
                 return childProcessExecPromise('cordova plugin add ' + thaliCordovaPluginUnZipResult.unzipedDirectory, appRootDirectory);   
             }).then(function() {
-                return childProcessExecPromise('jx npm install --autoremove="*.gz"', appScriptsFolder);
+                return childProcessExecPromise('jx npm install --autoremove "*.gz"', appScriptsFolder);
             }).then(function() {
                 return fs.writeFileAsync(weAddedPluginsFile, "yes");
             });

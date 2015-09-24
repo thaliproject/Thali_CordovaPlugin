@@ -5,7 +5,7 @@ var ThaliReplicationManager = require('../thalireplicationmanager');
 var Promise = require('lie');
 
 exports.rnBufferLength = 16;
-exports.pkBufferLength = 32;
+exports.pkBufferLength = 16; // We only use the first 16 bytes of the 32 byte hash for space reasons
 exports.cbBufferLength = 32;
 
 exports.validateRnAndGetBase64Object = function(base64Value) {
@@ -114,4 +114,26 @@ exports.getDeviceIdentityFromThaliReplicationManager = function(thaliReplication
             return resolve(deviceName);
         });
     })
-}
+};
+
+exports.compareEqualSizeBuffers = function(buffer1, buffer2) {
+    if (!buffer1 || !Buffer.isBuffer(buffer1) || !buffer2 || !Buffer.isBuffer(buffer2)) {
+        throw new Error("buffer1 and buffer2 have to actually be buffers");
+    }
+
+    if (buffer1.length != buffer2.length) {
+        throw new Error("Buffers must be of the same size.");
+    }
+
+    for(var i = 0; i < buffer1.length; ++i) {
+        if (buffer1[i] > buffer2[i]) {
+            return 1;
+        }
+
+        if (buffer1[i] < buffer2[i]) {
+            return -1;
+        }
+    }
+
+    return 0;
+};

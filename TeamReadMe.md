@@ -119,11 +119,11 @@ pure Node.js code that can be tested (and more importantly, developed) on the de
 associated with developing in mobile emulators or devices.
 
 To just test pure node.js code clone the repo and then inside of Thali_CordovaPlugin/thali execute the command
-`jx npm install --autoremove="*.gz"` followed by `sudo jx npm link`. This will create a link from the local repo directory to the machine's 
+`jx npm install` followed by `sudo jx npm link`. This will create a link from the local repo directory to the machine's 
 global NPM directory.
 
 Then go to Thali_CordovaPlugin/test/www/jxcore and type `jx npm link thali`. This will connect that global link
-to the local directory. You can then issue `npm install --autoremove="*.gz"`.
+to the local directory. You can then issue `npm install`.
  
 Now when you run node.js on local files in the
 test directory everything will be hooked up to the thali sub-directory automatically. This means you can edit

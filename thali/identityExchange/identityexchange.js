@@ -10,6 +10,7 @@ var identityExchangeUtils = require('./identityExchangeUtils');
 var LargerHashStateMachine = require('./LargerHashStateMachine');
 var SmallerHashStateMachine = require('./SmallerHashStateMachine');
 var ThaliEmitter = require('../thaliemitter');
+var logger = require('../thalilogger')('identityExchange');
 
 inherits(IdentityExchange, EventEmitter);
 
@@ -44,16 +45,16 @@ function onStartIdentityExchangeCalled(event, from, to, self, myFriendlyName, cb
 
   self.connectionTable = new ConnectionTable(self.thaliReplicationManager);
 
-  self.thaliEmitterListener = function (peers) {
-    peers.forEach(function (peer) {
-      if (peer.peerName.indexOf(';') !== -1) {
-        var split = peer.peerName.split(';');
-        peer.peerFriendlyName = split[1];
-        peer.peerName = split[0];
-
-        self.emit(IdentityExchange.Events.PeerIdentityExchange, peer);
-      }
-    })
+  // It isn't legal to call executeIdentityExchange until after the cb has returned from
+  // onStartIdentityExchange. But this creates a race condition where we could emit a PeerIdentityExchange
+  // event causing someone to want to call executeIdentityExchange before we have had a chance to return
+  // from the promises below. This would then cause the
+  // executeIdentityExchange method to fail because we haven't switched states yet. To address this
+  // we queue up any peers we find while we wait for the replication manager to get going and then return
+  // them once everything is set up.
+  var storedPeers = [];
+  self.thaliEmitterListener = function(peer) {
+    storedPeers.push(peer);
   };
 
   self.thaliReplicationManager._emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED,
@@ -70,12 +71,40 @@ function onStartIdentityExchangeCalled(event, from, to, self, myFriendlyName, cb
         self.largerHashStateMachine.start();
 
         self.identityExchangeDeviceName = deviceName + ";" + myFriendlyName;
+        logger.info("We will advertise the following device name as we start: " + self.identityExchangeDeviceName);
 
         return identityExchangeUtils.startThaliReplicationManager(self.thaliReplicationManager,
             self.thaliServerPort, self.dbName,
             self.identityExchangeDeviceName);
       }).then(function() {
         self.identityExchangeStateMachine.startIdentityExchangeCalledCBDone();
+
+        function emitPeer(peer) {
+          if (peer.peerName.indexOf(';') !== -1) {
+            var split = peer.peerName.split(';');
+            peer.peerFriendlyName = split[1];
+            peer.peerName = split[0];
+
+            self.emit(IdentityExchange.Events.PeerIdentityExchange, peer);
+          }
+        }
+
+        storedPeers.forEach(function(peer) {
+          emitPeer(peer);
+        });
+
+        self.thaliReplicationManager._emitter.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED,
+          self.thaliEmitterListener);
+
+        self.thaliEmitterListener = function (peers) {
+          peers.forEach(function (peer) {
+            emitPeer(peer);
+          })
+        };
+
+        self.thaliReplicationManager._emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED,
+            self.thaliEmitterListener);
+
         if (cb) {
           cb(null);
         }

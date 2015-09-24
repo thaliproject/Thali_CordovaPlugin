@@ -64,26 +64,43 @@ TRMMock.prototype.expectedStartPort = null;
 TRMMock.prototype.expectedDbName = null;
 TRMMock.prototype.friendlyName = null;
 TRMMock.prototype.state = TRMMock.states.NotStarted;
+TRMMock.prototype.callBeforeStart = null;
 
-function TRMMock(deviceIdentity, t, expectedStartPort, expectedDbName, friendlyName) {
+function TRMMock(deviceIdentity, t, expectedStartPort, expectedDbName, friendlyName, callBeforeStart) {
   EventEmitter.call(this);
   this.deviceIdentity = deviceIdentity;
   this.t = t;
   this.expectedStartPort = expectedStartPort;
   this.expectedDbName = expectedDbName;
   this.friendlyName = friendlyName;
+  this.callBeforeStart = callBeforeStart;
   this._emitter = new ThaliEmitterMock();
 }
 TRMMock.prototype.start = function(port, dbName, deviceName) {
-  this.state = TRMMock.states.Started;
-  if (this.t) {
-    this.t.equal(port, this.expectedStartPort);
-    this.t.equal(dbName, this.expectedDbName);
-    this.t.equal(deviceName, this.deviceIdentity + ";" + this.friendlyName);
+  var self = this;
+  if (self.state != TRMMock.states.NotStarted && self.state != TRMMock.states.Stopped) {
+    self.t.fail("Start was called on TRMMock when it wasn't in the right state.");
   }
-  this.emit(ThaliReplicationManager.events.STARTED);
+  var localCallBeforeStart = this.callBeforeStart;
+  if (!localCallBeforeStart) {
+    localCallBeforeStart = function(port, dbName, deviceName, cb) {
+      cb();
+    }
+  }
+  localCallBeforeStart(port, dbName, deviceName, function() {
+    self.state = TRMMock.states.Started;
+    if (self.t) {
+      self.t.equal(port, self.expectedStartPort);
+      self.t.equal(dbName, self.expectedDbName);
+      self.t.equal(deviceName, self.deviceIdentity + ";" + self.friendlyName);
+    }
+    self.emit(ThaliReplicationManager.events.STARTED);
+  });
 };
 TRMMock.prototype.stop = function() {
+  if (this.state != TRMMock.states.Started) {
+    this.t.fail("Stop was called on TRMock when it wasn't in the start state.");
+  }
   this.state = TRMMock.states.Stopped;
   this.emit(ThaliReplicationManager.events.STOPPED);
 };
@@ -174,7 +191,7 @@ test('make sure we get an error if we call start and then immediately call stop'
   identityExchange.startIdentityExchange(myFriendlyName, function(err) {
     t.equal(err, null);
   });
-  t.throws(function() { identityExchange.stopExecutingIdentityExchange();})
+  t.throws(function() { identityExchange.stopExecutingIdentityExchange();});
   t.end();
 });
 
@@ -216,6 +233,62 @@ test('Make sure stop is clean from stop execute identity exchange', function(t) 
   })
 });
 
+
+test('make sure we do not have a race condition between startIdentityExchange and executeIdentityExchange',
+function(t) {
+  var myFriendlyName = "Doug";
+  var base64BigHash = bigHash.toString('base64');
+  var peerAvailabilityChangedEvents = [
+    { peerName: base64BigHash+";abc"},
+    { peerName: "efg"},
+    { peerName: base64BigHash+";def"}
+  ];
+  var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName,
+    function(port, dbName, deviceName, cb) {
+      peerAvailabilityChangedEvents.forEach(function(peer) {
+        trmMock._emitter.emit(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, peer);
+      });
+      cb();
+    });
+  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
+  var sawAbc = false;
+  var sawDef = false;
+  var gotStartCallBack = false;
+  function checkAllDone(){
+    if (sawAbc && sawDef && gotStartCallBack) {
+      t.end();
+    }
+  }
+  identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
+    if (peer.peerFriendlyName == "abc") {
+      t.notOk(sawAbc);
+      sawAbc = true;
+      t.doesNotThrow(function() {
+        identityExchange.executeIdentityExchange(peer.peerFriendlyName, peer.peerName, function() {
+          t.fail();
+        });
+      });
+      checkAllDone();
+      return;
+    }
+
+    if (peer.peerFriendlyName == "def") {
+      t.notOk(sawDef);
+      sawDef = true;
+      checkAllDone();
+      return;
+    }
+
+    t.fail("We got an event we should not have");
+  });
+  identityExchange.startIdentityExchange(myFriendlyName, function(err) {
+    t.notOk(err);
+    gotStartCallBack = true;
+    checkAllDone();
+  })
+});
+
+
 test('illegal method combinations', function(t) {
   var myFriendlyName = "David";
   var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName);
@@ -246,14 +319,14 @@ test('illegal method combinations', function(t) {
   })
 });
 
+function checkCode(t, code) {
+  t.ok(typeof code === "number" && code >= 0 && code < 1000000, "We got a code, did it check out?");
+}
+
 function runToCompletion(t, identityExchange, myFriendlyName, trmMock, secondIdentityExchange, secondFriendlyName,
                           secondTrmMock, secondThaliServer) {
   var firstPeerId = "foo";
   var secondPeerId = "bar";
-
-  function checkCode(code) {
-    t.ok(typeof code === "number" && code >= 0 && code < 1000000);
-  }
 
   return new Promise(function(resolve, reject) {
     var firstCode = null;
@@ -278,7 +351,7 @@ function runToCompletion(t, identityExchange, myFriendlyName, trmMock, secondIde
       t.notOk(err);
       identityExchange.executeIdentityExchange(secondPeerId, bigHash.toString('base64'), function(err, code) {
         t.notOk(err);
-        checkCode(code);
+        checkCode(t, code);
         firstCode = code;
         checkFinish();
       });
@@ -287,7 +360,7 @@ function runToCompletion(t, identityExchange, myFriendlyName, trmMock, secondIde
         t.notOk(err);
         secondIdentityExchange.executeIdentityExchange(firstPeerId, smallHash.toString('base64'), function(err, code) {
           t.notOk(err);
-          checkCode(code);
+          checkCode(t, code);
           secondCode = code;
           checkFinish();
         });
@@ -346,13 +419,39 @@ test('do an identity exchange and get code multiple times to make sure we do not
       });
 });
 
+test('Now do an identity Exchange with the real live system!', function(t) {
+  if (!jxcore.utils.OSInfo().isMobile) {
+    t.comment("Skipping test because we aren't running on a mobile platform");
+    t.end();
+    return;
+  }
 
-//test('Now do an identity Exchange with the real live system!', function(t) {
-//  if (!jxcore.utils.OSInfo().isMobile) {
-//    t.comment("Skipping test because we aren't running on a mobile platform");
-//    t.end();
-//    return;
-//  }
-//
-//
-//});
+  var dbName = "thali";
+  var thaliReplicationManager =
+      new ThaliReplicationManager(new identityExchangeTestUtils.LevelDownPouchDB()(dbName));
+  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, thaliReplicationManager,
+      dbName);
+  var peerToDoIdentityExchangeWith = null;
+  thaliReplicationManager._emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function(peer) {
+    t.comment("We found a peer - " + JSON.stringify(peer));
+  });
+  identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
+    t.comment("We got a peer to do identity exchange with! - " + JSON.stringify(peer));
+    if (!peerToDoIdentityExchangeWith && peer.isAvailable) {
+      peerToDoIdentityExchangeWith = peer.peerIdentifier;
+      t.comment("We are going to try and do an identity exchange with the peer");
+      identityExchange.executeIdentityExchange(peer.peerIdentifier, peer.peerName, function(err, code) {
+        t.notOk(err, "Did we get an error on executeIdentityExchange?");
+        checkCode(t, code);
+        identityExchange.stopExecutingIdentityExchange();
+        identityExchange.stopIdentityExchange(function(err) {
+          t.notOk(err, "Did we get a problem in calling stop Identity Exchange?");
+          t.end();
+        });
+      })
+    }
+  });
+  identityExchange.startIdentityExchange("Sreejumon", function(err) {
+    t.notOk(err,"Did we successfully get a callback from start?");
+  })
+});

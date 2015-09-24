@@ -84,7 +84,7 @@ function onExitCalled(event, from, to, self, error) {
 }
 
 function makeRequestParseResponse(self, port, portRetrievalTime, urlPath, requestBody, state, validate200) {
-    logger.info("Making " + urlPath + " request to pkOther value " + self.otherPkHashBuffer);
+    logger.info("Making " + urlPath + " request to pkOther value " + self.otherPkHashBuffer.toString('base64'));
     self.currentHttpRequest = request.post({
         url: 'http://localhost:' + port + urlPath,
         body: requestBody,
@@ -133,7 +133,7 @@ function makeRequestParseResponse(self, port, portRetrievalTime, urlPath, reques
                 return;
             }
 
-            if (self.otherPkHashBuffer.compare(pkOtherBuffer) !== 0) {
+            if (identityExchangeUtils.compareEqualSizeBuffers(self.otherPkHashBuffer, pkOtherBuffer) !== 0) {
                 logger.info("Got the wrong pkOther value from a " + urlPath + " response with status " +
                     response.statusCode);
                 self.smallHashStateMachine.channelBindingError(self, portRetrievalTime);
@@ -236,7 +236,7 @@ SmallerHashStateMachine.prototype.stop = function() {
 };
 
 SmallerHashStateMachine.prototype.start = function() {
-    if (this.myPkHashBuffer.compare(this.otherPkHashBuffer) > 0) {
+    if (identityExchangeUtils.compareEqualSizeBuffers(this.myPkHashBuffer, this.otherPkHashBuffer) > 0) {
         this.smallHashStateMachine.exitCalled(this, SmallerHashStateMachine.ExitBecauseNotNeededError);
     } else {
         this.smallHashStateMachine.startSearch(this);
