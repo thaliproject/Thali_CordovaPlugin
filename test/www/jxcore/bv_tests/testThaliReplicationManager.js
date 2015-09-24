@@ -1,8 +1,9 @@
 "use strict";
 
 var os = require('os');
+var fs = require('fs');
 var path = require('path');
-var test = require('../lib/thali-tape');
+var tape = require('../lib/thali-tape');
 var uuid = require('uuid');
 var util = require('util');
 var express = require('express');
@@ -10,30 +11,31 @@ var PouchDB = require('pouchdb');
 var bodyParser = require('body-parser');
 var randomstring = require('randomstring');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
-var mockMobile = require('./mockmobile');
 
 var dbPath = path.join(os.tmpdir(), 'pouchdb');
 var LevelDownPouchDB = process.platform === 'android' || process.platform === 'ios' ?
     PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath}) :
     PouchDB.defaults({db: require('leveldown'), prefix: dbPath});
 
-// test setup & teardown activities
-var test = test({
+var test = tape({
   setup: function(t) {
-    global.Mobile = mockMobile;
     t.end();
   },
   teardown: function(t) {
-    global.Mobile = originalMobile;
+    if (t.__manager) {
+      t.__manager.stop();
+    }
     t.end();
   }
 });
+
+// test setup & teardown activities
 
 test('ThaliReplicationManager can call start without error', function (t) {
 
   var starting = false;
   var started = false;
-  var stopping = false;
+  var stopping = false
   var stopped = false;
 
   // Check that TRM starts and emits event in the expected order
@@ -139,6 +141,7 @@ test('ThaliReplicationManager replicates database', function (t) {
     var seenRemoteChanges = false;
 
     var manager = new ThaliReplicationManager(db);
+    t.__manager = manager;
 
     var changes = db.changes({
       since: 'now',
@@ -155,7 +158,7 @@ test('ThaliReplicationManager replicates database', function (t) {
           t.ok(doc.data != mydevicename, "2nd change of local doc should contain remote id");
           seenLocalChanges = true;
           if (seenRemoteChanges) {
-            manager.stop();
+            t.end();
           }
         }
       } else {
@@ -172,7 +175,7 @@ test('ThaliReplicationManager replicates database', function (t) {
           t.ok(change.seq > remoteSeq, "Remote changes occur in strict order");
           seenRemoteChanges = true;
           if (seenLocalChanges) {
-            manager.stop();
+            t.end();
           }
         }
       }
@@ -207,10 +210,6 @@ test('ThaliReplicationManager replicates database', function (t) {
           t.notOk(err, "Should be able to put doc without error" + err);
         });
       }); 
-    });
-
-    manager.on('stopped', function () {
-      t.end();
     });
 
     var app = express();
