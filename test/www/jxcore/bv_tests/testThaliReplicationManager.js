@@ -17,19 +17,16 @@ var LevelDownPouchDB = process.platform === 'android' || process.platform === 'i
     PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath}) :
     PouchDB.defaults({db: require('leveldown'), prefix: dbPath});
 
-// test setup & teardown activities
 var test = tape({
   setup: function(t) {
-    fs.ensureDirSync(fileLocation);
-    global.Mobile = mockMobile;
     t.end();
   },
   teardown: function(t) {
-    global.Mobile = originalMobile;
-    fs.removeSync(fileLocation);
     t.end();
   }
 });
+
+// test setup & teardown activities
 
 test('ThaliReplicationManager can call start without error', function (t) {
 
