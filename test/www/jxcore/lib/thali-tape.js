@@ -46,7 +46,7 @@ function Thali_Tape(options) {
   // Add a disconnect listener
   Coordinator.on('disconnect', function () {
     console.log('The client has disconnected!');
-    //we need to stop & close any tests we are runnign here
+    //we need to stop & close any tests we are running here
     if(setUp_t != null){
       setUp_t.fail("Coordinator server got disconnected");
       setUp_t = null;
