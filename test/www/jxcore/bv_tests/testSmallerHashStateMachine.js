@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('wrapping-tape');
+var tape = require('../lib/thali-tape');
 var SmallerHashStateMachine = require('thali/identityExchange/SmallerHashStateMachine');
 var LargerHashStateMachine = require('thali/identityExchange/LargerHashStateMachine');
 var EventEmitter = require('events').EventEmitter;

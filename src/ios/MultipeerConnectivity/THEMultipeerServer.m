@@ -67,7 +67,17 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     _localPeerId = peerId;
 
     _peerName = peerName;
-    _peerIdentifier = peerIdentifier;
+
+    // Make peerIdentifier guaranteed to be unique per MCPeerID so that
+    // clients can distinguish stale server sessions with the same peerIdentifier
+    NSMutableString *tempString = [[NSMutableString alloc] initWithString:peerIdentifier];
+
+    unsigned long hash = [peerId hash];
+    NSData *base64 = [NSData dataWithBytes:&hash length:sizeof(hash)]; 
+    [tempString appendString: @"."];
+    [tempString appendString: [base64 base64EncodedStringWithOptions:0]];
+
+    _peerIdentifier = tempString;
     _serviceType = serviceType;
 
     // peer name doubles up as server port in current impl.

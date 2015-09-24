@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('wrapping-tape');
+var tape = require('../lib/thali-tape');
 var LargerHashStateMachine = require('thali/identityExchange/LargerHashStateMachine');
 var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');

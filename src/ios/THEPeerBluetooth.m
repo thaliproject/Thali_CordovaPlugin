@@ -165,7 +165,6 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 
 // Possible states of bluetooth stack 
 typedef enum bluetoothStates {
-  INITIALIZED,
   STARTING,
   STARTED,
   STOPPING,
@@ -333,21 +332,11 @@ static NSMutableSet * _stoppingInstances;
     // after a failed call to CBPeripheralManager
     // updateValue:forCharacteristic:onSubscribedCentrals.
     _pendingCharacteristicUpdates = [[NSMutableArray alloc] init];
-   
-    _state = INITIALIZED;
+    
+    _state = STARTING;
  
     // Done.
     return self;
-}
-
-// Starts peer Bluetooth.
-- (void)start
-{
-  @synchronized(self)
-  { 
-    assert(_state == INITIALIZED);
-    _state = STARTING;
-  }
 }
 
 // Stops peer Bluetooth.
@@ -364,12 +353,10 @@ static NSMutableSet * _stoppingInstances;
       // could stop the callback happening
       [_stoppingInstances addObject:self];
     }
-    else if (_state == STARTED)
-    {
-      _delegate = nil;
-      _peripheralManager.delegate = nil;
-      _centralManager.delegate = nil;
-    }
+
+    _delegate = nil;
+    _peripheralManager.delegate = nil;
+    _centralManager.delegate = nil;
 
     _state = STOPPING;
 
@@ -382,14 +369,17 @@ static NSMutableSet * _stoppingInstances;
 {
   if (_state == STOPPING)
   {
-    assert([_stoppingInstances member:self]);
     if (!_peripheralCallbackOutstanding && !_centralCallbackOutstanding)
     {
+      assert([_stoppingInstances member:self]);
+
       _delegate = nil;
       _peripheralManager.delegate = nil;
       _centralManager.delegate = nil;
 
       [_stoppingInstances removeObject:self];
+      _state = STOPPED;
+
       return YES;
     }
   }
@@ -408,15 +398,15 @@ static NSMutableSet * _stoppingInstances;
   {
     assert(_state == STARTING || _state == STOPPING);
 
-    BOOL bluetoothEnabled = ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn);
-    [_delegate peerBluetooth:self didUpdateState:bluetoothEnabled];
-
     _peripheralCallbackOutstanding = NO;
     if ([self tryReleaseSelf])
     {
       // We're about to go away, nothing more to do
       return;
     }
+
+    BOOL bluetoothEnabled = ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn);
+    [_delegate peerBluetooth:self didUpdateState:bluetoothEnabled];
 
     if (bluetoothEnabled)
     {
@@ -441,8 +431,6 @@ static NSMutableSet * _stoppingInstances;
       {
         [self stopAdvertising];
       }
-
-      _state = STOPPED;
     }
   }
 }
@@ -527,8 +515,6 @@ static NSMutableSet * _stoppingInstances;
       {
         [self stopScanning];
       }
-      
-      _state = STOPPED;
     }
   }
 }

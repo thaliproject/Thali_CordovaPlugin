@@ -123,7 +123,7 @@ To just test pure node.js code clone the repo and then inside of Thali_CordovaPl
 global NPM directory.
 
 Then go to Thali_CordovaPlugin/test/www/jxcore and type `jx npm link thali`. This will connect that global link
-to the local directory. You can then issue `npm install`.
+to the local directory. You can then issue `jx npm install`.
  
 Now when you run node.js on local files in the
 test directory everything will be hooked up to the thali sub-directory automatically. This means you can edit

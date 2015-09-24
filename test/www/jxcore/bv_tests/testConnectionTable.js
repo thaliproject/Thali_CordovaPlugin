@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('wrapping-tape');
+var tape = require('../lib/thali-tape');
 var ConnectionTable = require('thali/identityExchange/connectionTable');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
 var EventEmitter = require('events').EventEmitter;

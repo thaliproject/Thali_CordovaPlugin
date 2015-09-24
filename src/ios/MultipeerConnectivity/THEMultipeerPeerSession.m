@@ -118,6 +118,7 @@ static int count = 0;
     _session = [[MCSession alloc] initWithPeer:_localPeerID 
                               securityIdentity:nil 
                           encryptionPreference:MCEncryptionNone];
+    NSLog(@"Created session: %p", _session);
     _session.delegate = self;
   }
 }
@@ -138,6 +139,8 @@ static int count = 0;
 
     if (_session != nil)
     {
+      NSLog(@"Destroying session: %p", _session);
+      NSLog(@"%@",[NSThread callStackSymbols]);
       _session.delegate = nil;
       [_session disconnect];
       _session = nil;
@@ -193,7 +196,7 @@ static int count = 0;
   {
     case MCSessionStateNotConnected:
     {
-      //NSLog(@"%@ (base) session: not connected", _sessionType);
+      NSLog(@"%@ (base) session: not connected", _sessionType);
       [self disconnect];
     }
     break;
@@ -227,6 +230,7 @@ static int count = 0;
         }
         else
         {
+          NSLog(@"%@ no output stream", _sessionType);
           [_session cancelConnectPeer:peerID];
           [self disconnect];
         }

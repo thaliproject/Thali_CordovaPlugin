@@ -38,3 +38,7 @@ exports.createSmallAndBigHash = function() {
         return { smallHash: random1, bigHash: random2};
     }
 };
+
+exports.checkCode = function(t, code) {
+    t.ok(typeof code === "number" && code >= 0 && code < 1000000, "We got a code, did it check out?");
+}
