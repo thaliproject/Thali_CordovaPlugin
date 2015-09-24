@@ -1,6 +1,7 @@
 "use strict";
 
 var os = require('os');
+var fs = require('fs');
 var path = require('path');
 var tape = require('../lib/thali-tape');
 var uuid = require('uuid');
