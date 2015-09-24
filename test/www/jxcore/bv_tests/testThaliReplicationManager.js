@@ -22,6 +22,9 @@ var test = tape({
     t.end();
   },
   teardown: function(t) {
+    if (t.__manager) {
+      t.__manager.stop();
+    }
     t.end();
   }
 });
@@ -138,6 +141,7 @@ test('ThaliReplicationManager replicates database', function (t) {
     var seenRemoteChanges = false;
 
     var manager = new ThaliReplicationManager(db);
+    t.__manager = manager;
 
     var changes = db.changes({
       since: 'now',
@@ -154,7 +158,7 @@ test('ThaliReplicationManager replicates database', function (t) {
           t.ok(doc.data != mydevicename, "2nd change of local doc should contain remote id");
           seenLocalChanges = true;
           if (seenRemoteChanges) {
-            manager.stop();
+            t.end();
           }
         }
       } else {
@@ -171,7 +175,7 @@ test('ThaliReplicationManager replicates database', function (t) {
           t.ok(change.seq > remoteSeq, "Remote changes occur in strict order");
           seenRemoteChanges = true;
           if (seenLocalChanges) {
-            manager.stop();
+            t.end();
           }
         }
       }
@@ -206,10 +210,6 @@ test('ThaliReplicationManager replicates database', function (t) {
           t.notOk(err, "Should be able to put doc without error" + err);
         });
       }); 
-    });
-
-    manager.on('stopped', function () {
-      t.end();
     });
 
     var app = express();
