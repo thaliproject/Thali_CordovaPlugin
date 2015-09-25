@@ -4,25 +4,19 @@
 
 var bodyParser = require('body-parser');
 var Promise = require('lie');
+var IdentityExchange = require('./identityexchange');
 
-module.exports = function (app, serverPort, dbName, replicationManager, IdentityExchange) {
-  var identityExchange = new IdentityExchange(app, serverPort, replicationManager, dbName);
-
+module.exports = function (app, replicationManager, identityExchange) {
   // state
   var peerFriendlyName,
       peerStarted,
       peerIdentifier,
       peers = {},
       currentPeer,
-      deviceIdentity,
       verificationCode,
       exchangeStatus;
 
-  replicationManager.getDeviceIdentity(function (err, id) {
-    deviceIdentity = id;
-  });
-
-  replicationManager.on('peerIdentityExchange', function (peer) {
+  identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function (peer) {
     peers[peer.peerIdentifier] = peer;
   });
 
