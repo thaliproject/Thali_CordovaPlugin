@@ -4,24 +4,46 @@
 var request = require('request');
 var tape = require('../lib/thali-tape');
 var identityExchangeEndpoint = require('thali/identityExchange/identityexchangeendpoint');
+var ThaliReplicationManager = require('thali/thalireplicationmanager');
+var identityExchangeTestUtils = require('./identityExchangeTestUtils');
+var IdentityExchange = require('thali/identityExchange/identityexchange');
 
 // Express
 var express = require('express');
+var dbName = 'thali';
 var app;
 var server;
 var serverPort;
+var replicationManager;
+var identityExchange;
 
 // Mock Replication Manager
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 
+function setUpServer() {
+  return identityExchangeTestUtils.createThaliAppServer()
+      .then(function(appAndServer) {
+        app = appAndServer.app;
+        server = appAndServer.server;
+        serverPort = server.address().port;
+      }).catch(function(err) {
+        throw err;
+      });
+}
 
 // test setup & teardown activities
 var test = tape({
   setup: function(t) {
-    app = express();
-    server = app.listen(0, function() {
-      serverPort = server.address().port;
+    setUpServer().then(function() {
+      if (jxcore.utils.OSInfo().isMobile) {
+        var db = identityExchangeTestUtils.LevelDownPouchDB()(dbName);
+        replicationManager = new ThaliReplicationManager(db);
+        identityExchange = new IdentityExchange(app, serverPort, replicationManager, dbName);
+      } else {
+        identityExchange = MockIdentityExchange;
+        replicationManager = new MockReplicationManager('thali_device');
+      }
       t.end();
     });
   },
@@ -80,6 +102,8 @@ MockIdentityExchange.prototype.stopExecutingIdentityExchange = function () {
 
 test('GET /webview/deviceidentity with invalid entry', function (t) {
   var error = new Error();
+  // We have to override the replication manager since we can only produce
+  // this error with a mock.
   var replicationManager = new MockReplicationManager(null, error);
 
   var dbName = 'thali';
@@ -98,30 +122,24 @@ test('GET /webview/deviceidentity with invalid entry', function (t) {
 });
 
 test('GET /webview/deviceidentity with valid entry', function (t) {
-  var replicationManager = new MockReplicationManager('thali_device');
+  replicationManager.getDeviceIdentity(function(err, deviceIdentity) {
+    t.notOk(err);
+    identityExchangeEndpoint(app, serverPort, dbName, replicationManager, identityExchange);
 
-  var dbName = 'thali';
-
-  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
-
-  request({
-    url: 'http://localhost:'+serverPort+'/webview/deviceidentity',
-    method: 'GET',
-    json: true
-  }, function (err, httpResponse, body) {
-    t.equal(httpResponse.statusCode, 200, 'Status code should be 200');
-    t.equal(body.deviceIdentity, 'thali_device', 'Device Identity should be thali_device');
-    t.end();
+    request({
+      url: 'http://localhost:'+serverPort+'/webview/deviceidentity',
+      method: 'GET',
+      json: true
+    }, function (err, httpResponse, body) {
+      t.equal(httpResponse.statusCode, 200, 'Status code should be 200');
+      t.equal(body.deviceIdentity, deviceIdentity);
+      t.end();
+    });
   });
 });
 
 test('PUT /webview/identityexchange with invalid peer friendly name', function (t) {
-  var replicationManager = new MockReplicationManager('thali_device');
-
-  var dbName = 'thali';
-
-  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
-
+  identityExchange.startIdentityExchange()
   request({
     url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'PUT',

@@ -18,6 +18,7 @@ function setUpServer() {
             throw err;
         });
 }
+
 var test = tape({
     setup: function(t) {
         setUpServer().then(function() {t.end()});

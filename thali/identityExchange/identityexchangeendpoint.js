@@ -3,7 +3,7 @@
 'use strict';
 
 var bodyParser = require('body-parser');
-require('lie/polyfill');
+var Promise = require('lie');
 
 module.exports = function (app, serverPort, dbName, replicationManager, IdentityExchange) {
   var identityExchange = new IdentityExchange(app, serverPort, replicationManager, dbName);
