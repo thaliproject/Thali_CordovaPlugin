@@ -43,38 +43,84 @@ configuration before finally completing and tearing down it's resources.
 
 ### Mobile
 
+To run either unit or performance tests on mobile devices one first has to build a Cordova project and then launch
+the Cordova project onto the phones. One also needs to run a coordination server.
 
-Before running the test server you'll need to run 'npm install' in the www/jxcore directory within the test app in 
-order to install the necessary node modules. This is a one-time operation unless you change the set of packages i.e. 
-update package.json. 
+__NOTE:__ The scripts don't have execute permissions by default. So please run `chmod u+x setUpTests.sh` in
+Thali_CordovaPlugin
 
-Configuration for each test app is contained within the files Config\_Perftest.json and Config\_UnitTest.json which 
-configure the performance and unit tests respectively.
+We have a built in script available in Thali_CordovaPlugin/install that will create a sibling directory to 
+Thali_CordovaPlugin called ThaliTest. This script can be run inside of Thali_CordovaPlugin/install by issuing
+`jx npm run setupUnit` to create a Cordova project designed to run the unit tests and `jx npm run setupPerf`
+to create a Cordova project designed to run the perf tests. This script will automatically generate a coordination
+server config file for the current machine and put it into the Cordova project. It will also compile the Cordova
+app for both iOS and Android. This therefore assumes that development is being done on a Mac.
 
-Unit tests are found by scanning the 'tests' subdirectory for any file matchig the pattern test\*.
+Once either setupUnit or setupPerf is run make sure to:
+1. Go to Thali_CordovaPlugin/test/TestServer and make sure that either Config_PerfTest.json or Config_UnitTest.json
+is properly configured for the test you want to run.
+2. Then run Thali_CordovaPlugin/test/TestServer/index.js to start the coordination server.
 
-With performance tests the tests to be executed are specified in the config file.
+You can now deploy and run the tests on your two Android or two iPhone devices.
 
-## Running the Coordination Server
+### Desktop
 
-On a PC, from within the test/TestServer directory: node index.js. A side effect of starting the server is that the 
-serveraddress.json file is created, ready to install into the test application.
+All of the tests are designed to be run on the desktop. Tests that require the ThaliEmitter (our mobile environment)
+will de-activate themselves when run on the desktop. What is especially nice about running on the desktop is that
+one can develop and debug directly in the Thali_CordovaPlugin directory. There is no need to do the kind of 
+copying and pasting that Cordova development normally requires. Note that only the unit tests run on the desktop.
+The perf tests are focused exclusively on measuring on the wire perf and so don't make sense (yet) on the desktop.
 
-## Building the Test App
+__NOTE:__ The scripts don't have execute permissions by default. So please run `chmod u+x setupDesktop`.
 
-- Follow instructions for creating a typical Thali app given [here](https://github.com/thaliproject/Thali_CordovaPlugin/blob/master/readme.md#getting-started) as far as step 5.
+__NOTE:__ - This script uses npm link to set up a symbolic link to the global NPM directory, this requires super
+user permissions so expect to get a SUDO prompt for your admin password.
 
-- Copy the test/www directory from the plugin source directory to the test app www directory i.e. from ThaliTest root do: 
-  cp -R ../Thali\_CordovaPlugin/test/www .
+To set up your desktop environment for development go to Thali_CordovaPlugin/install and run `jx npm run setupDesktop`.
 
-Remember to copy the serveraddress.json config into the jxcore folder !!
+You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing `jx runTests.js`. But the
+tests will happily run stand alone so you can run a test directly (e.g. `jx testConnectionTable.js`) thus allowing
+you to easily run and debug individual tests.
 
-## Running unit tests inside of the repro
+### Writing Unit Tests
+The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.
 
-It is possible to run the unit tests inside of the repo in order to allow for easy development and testing. To do
-this one has to:
+A test file will only be run if it starts with the letters 'test'.
 
-1. Go to Thali_CordovaPlugin/thali and issue `jx npm install` followed by `sudo jx npm link`.
-2. Go to Thali_CordovaPlugin/test/www/jxcore and issue `jx npm link thali` followed by `jx npm install`
-3. Go to Thali_CordovaPlugin/test/TestServer and issue `jx npm install`
-5. Go to Thali_CordovaPlugin/www/jxcore and run `jx runTests.js`
+Each test file must include:
+
+```node
+var tape = require('../lib/thali-tape');
+```
+
+Tests must also include a setup and tear down:
+
+```node
+var test = tape({
+    setup: function(t) {
+        ...
+        t.end();
+    },
+    teardown: function(t) {
+        ...
+        t.end();
+    }
+});
+```
+
+Please keep in mind that when the tests are run on devices they are run via the coordination server. Each test
+will automatically contact the coordination server, wait for the server to confirm that all expected devices
+have contacted it and then tell the devices to start their tests. The test teardown will not run until all
+devices have told the coordination server they are done. This is critical because most of the mobile tests involve
+multiple devices talking to each other and we have to make sure that test servers and other infrastructure running
+on each devices isn't destroyed in the teardown until everyone else has finished their tests.
+
+Imagine we have a test that checks if replication is working. The test looks for how many devices are around and
+tries to replicate with each of them. Let's say there are just 2 devices. In that case once device 1 has finished
+checking replication with device 2 it could turn itself off and go to the next test. But device 2 might not have
+finished checking replication with device 1. In that case device 2's test will fail because device 1 has already
+called teardown, destroyed its test server and moved on. The coordination server prevents this. If device 1 finishes
+its testing against device 2 before device 2 finishes testing against device 1 then the coordination server will
+prevent device 1's teardown from running. This will leave up device 1's test server until device 2 finishes. When
+device 2 finishes then it will signal the coordination server who will tell device 1 to tear down and move to the next
+test.
