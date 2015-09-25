@@ -2,17 +2,35 @@
 'use strict';
 
 var request = require('request');
-var tape = require('wrapping-tape');
-var identityExchangeEndpoint = require('./thali/identityexchangeendpoint');
+var tape = require('../lib/thali-tape');
+var identityExchangeEndpoint = require('thali/identityExchange/identityexchangeendpoint');
 
 // Express
 var express = require('express');
 var app;
 var server;
+var serverPort;
 
 // Mock Replication Manager
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
+
+
+// test setup & teardown activities
+var test = tape({
+  setup: function(t) {
+    app = express();
+    server = app.listen(0, function() {
+      serverPort = server.address().port;
+      t.end();
+    });
+  },
+  teardown: function(t) {
+    server.close();
+    resetExchangeState();
+    t.end();
+  }
+});
 
 inherits(MockReplicationManager, EventEmitter);
 function MockReplicationManager(deviceIdentity, err) {
@@ -60,31 +78,16 @@ MockIdentityExchange.prototype.stopExecutingIdentityExchange = function () {
   this._state.stopExecutingIdentityExchangeCalled = true;
 };
 
-// test setup & teardown activities
-var test = tape({
-  setup: function(t) {
-    app = express();
-    server = app.listen(3000);
-    t.end();
-  },
-  teardown: function(t) {
-    server.close();
-    resetExchangeState();
-    t.end();
-  }
-});
-
 test('GET /webview/deviceidentity with invalid entry', function (t) {
   var error = new Error();
   var replicationManager = new MockReplicationManager(null, error);
 
-  var serverPort = 3000,
-      dbName = 'thali';
+  var dbName = 'thali';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/deviceidentity',
+    url: 'http://localhost:'+serverPort+'/webview/deviceidentity',
     method: 'GET',
     json: true
   }, function (err, httpResponse, body) {
@@ -97,13 +100,12 @@ test('GET /webview/deviceidentity with invalid entry', function (t) {
 test('GET /webview/deviceidentity with valid entry', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali';
+  var dbName = 'thali';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/deviceidentity',
+    url: 'http://localhost:'+serverPort+'/webview/deviceidentity',
     method: 'GET',
     json: true
   }, function (err, httpResponse, body) {
@@ -116,13 +118,12 @@ test('GET /webview/deviceidentity with valid entry', function (t) {
 test('PUT /webview/identityexchange with invalid peer friendly name', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali';
+  var dbName = 'thali';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'PUT',
     json: true
   }, function (err, httpResponse, body) {
@@ -136,14 +137,13 @@ test('PUT /webview/identityexchange with invalid peer friendly name', function (
 test('PUT /webview/identityexchange with valid entry', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali',
+  var dbName = 'thali',
       peerFriendlyName = 'BOB';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'PUT',
     json: true,
     body: { peerFriendlyName: peerFriendlyName }
@@ -158,14 +158,13 @@ test('PUT /webview/identityexchange with valid entry', function (t) {
 test('PUT /webview/identityexchange with same name twice', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali',
+  var dbName = 'thali',
       peerFriendlyName = 'BOB';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'PUT',
     json: true,
     body: { peerFriendlyName: peerFriendlyName }
@@ -176,7 +175,7 @@ test('PUT /webview/identityexchange with same name twice', function (t) {
     t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
 
     request({
-      url: 'http://localhost:3000/webview/identityexchange',
+      url: 'http://localhost:'+serverPort+'/webview/identityexchange',
       method: 'PUT',
       json: true,
       body: { peerFriendlyName: peerFriendlyName }
@@ -193,15 +192,14 @@ test('PUT /webview/identityexchange with same name twice', function (t) {
 test('PUT /webview/identityexchange with different names twice', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali',
+  var dbName = 'thali',
       peerFriendlyName1 = 'BOB',
       peerFriendlyName2 = 'BILL';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'PUT',
     json: true,
     body: { peerFriendlyName: peerFriendlyName1 }
@@ -212,7 +210,7 @@ test('PUT /webview/identityexchange with different names twice', function (t) {
     t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName1, 'Should use myFriendlyName');
 
     request({
-      url: 'http://localhost:3000/webview/identityexchange',
+      url: 'http://localhost:'+serverPort+'/webview/identityexchange',
       method: 'PUT',
       json: true,
       body: { peerFriendlyName: peerFriendlyName2 }
@@ -228,8 +226,7 @@ test('PUT /webview/identityexchange with different names twice', function (t) {
 test('PUT /webview/identityexchange with startIdentityExchange error', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali',
+  var dbName = 'thali',
       peerFriendlyName = 'BOB';
 
   mockIdentityExchangeState.startIdentityExchangeErr = new Error();
@@ -237,7 +234,7 @@ test('PUT /webview/identityexchange with startIdentityExchange error', function 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'PUT',
     json: true,
     body: { peerFriendlyName: peerFriendlyName }
@@ -251,13 +248,12 @@ test('PUT /webview/identityexchange with startIdentityExchange error', function 
 test('DELETE /webview/identityexchange without calling start', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali';
+  var dbName = 'thali';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'DELETE',
     json: true
   }, function (err, httpResponse, body) {
@@ -270,14 +266,13 @@ test('DELETE /webview/identityexchange without calling start', function (t) {
 test('DELETE /webview/identityexchange normal', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali',
+  var dbName = 'thali',
       peerFriendlyName = 'BOB';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'PUT',
     json: true,
     body: { peerFriendlyName: peerFriendlyName }
@@ -287,7 +282,7 @@ test('DELETE /webview/identityexchange normal', function (t) {
     t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
 
     request({
-      url: 'http://localhost:3000/webview/identityexchange',
+      url: 'http://localhost:'+serverPort+'/webview/identityexchange',
       method: 'DELETE',
       json: true
     }, function (err, httpResponse) {
@@ -301,8 +296,7 @@ test('DELETE /webview/identityexchange normal', function (t) {
 test('DELETE /webview/identityexchange error', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali',
+  var dbName = 'thali',
       peerFriendlyName = 'BOB';
 
   mockIdentityExchangeState.stopIdentityExchangeErr = new Error();
@@ -310,7 +304,7 @@ test('DELETE /webview/identityexchange error', function (t) {
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'PUT',
     json: true,
     body: { peerFriendlyName: peerFriendlyName }
@@ -320,7 +314,7 @@ test('DELETE /webview/identityexchange error', function (t) {
     t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
 
     request({
-      url: 'http://localhost:3000/webview/identityexchange',
+      url: 'http://localhost:'+serverPort+'/webview/identityexchange',
       method: 'DELETE',
       json: true
     }, function (err, httpResponse, body) {
@@ -335,13 +329,12 @@ test('DELETE /webview/identityexchange error', function (t) {
 test('GET /webview/identityexchange without calling start', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali';
+  var dbName = 'thali';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'GET',
     json: true
   }, function (err, httpResponse, body) {
@@ -354,8 +347,7 @@ test('GET /webview/identityexchange without calling start', function (t) {
 test('GET /webview/identityexchange normal', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali',
+  var dbName = 'thali',
       peerFriendlyName = 'BOB';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
@@ -367,7 +359,7 @@ test('GET /webview/identityexchange normal', function (t) {
   });
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange',
     method: 'PUT',
     json: true,
     body: { peerFriendlyName: peerFriendlyName }
@@ -377,7 +369,7 @@ test('GET /webview/identityexchange normal', function (t) {
     t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
 
     request({
-      url: 'http://localhost:3000/webview/identityexchange',
+      url: 'http://localhost:'+serverPort+'/webview/identityexchange',
       method: 'GET',
       json: true
     }, function (err, httpResponse, body) {
@@ -394,13 +386,12 @@ test('GET /webview/identityexchange normal', function (t) {
 test('PUT /webview/identityexchange/executeexchange without start', function (t) {
   var replicationManager = new MockReplicationManager('thali_device');
 
-  var serverPort = 3000,
-      dbName = 'thali';
+  var dbName = 'thali';
 
   identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
 
   request({
-    url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+    url: 'http://localhost:'+serverPort+'/webview/identityexchange/executeexchange',
     method: 'PUT',
     json: true
   }, function (err, httpResponse, body) {

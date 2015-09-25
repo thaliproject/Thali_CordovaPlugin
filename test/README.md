@@ -6,22 +6,43 @@ The testing framework is split into two separate sets of tests:
 - Unit tests
 - Performance tests
 
-Both types of test are managed by a coordinating server running on a Node capable device (usually a PC) on the same LAN
-(necessarily WiFi) as the devices under test.
+The unit tests are themselves separated into two kinds of tests, ones that require mobile (because they exercise
+local discovery and connectivity features) and those that run on mocks.
 
-The method of co-ordination differs slightly between the test types:
+The mock based unit tests can all be run on the desktop, instructions for setting this up are given below.
 
-- With Unit tests the coordinating server simply synchronizes test setup and teardown across devices running the test suite. By this method we can ensure that devices are running the same test at the same time. Tests written to run under this regime should therefore assume they will run against themsselves running on a different device. 
+The mobile based unit tests and the performance tests all require actual phones, at least two of the same type (e.g.
+Android or iOS) in order to run. We also need a coordination server that can coordinate the tests across the testing
+devices in order to make sure that the tests run consistently. This coordination server is typically run on a PC.
 
-- With performance tests the coordinating server additionally provides global options to devices running the test (e.g. number of times to run a particular test before collating results).
+The coordination server talks to the devices over WiFi although in theory devices that support sharing network over
+USB could also talk that way.
 
-In order to point the devices running test suites at the coordinating server a file, serveraddress.json, containing the ip address of the server host is installed in the jxcore folder of the test app. You'll need to edit the file yourself to make sure it contains the right server address.
+The method of co-ordination differs slightly between Unit and Performance tests:
 
-On startup the test devices will connect back to the server to indicate their readiness to proceed. Once the required number of devices are ready the server will signal them to begin the first test. The server will then coordinate test execution so that each subsequent test is not commenced before all devices have finished the preceding one.
+- With Unit tests the coordinating server simply synchronizes test setup and teardown across devices running the test 
+suite. By this method we can ensure that devices are running the same test at the same time. Tests written to run 
+under this regime should therefore assume they will run against themsselves running on a different device. 
 
-It is essential, therefore, that tests remain in a state which facilitates completion for the other devices in the test configuration before finally completing and tearing down it's resources.
+- With performance tests the coordinating server additionally provides global options to devices running the test 
+(e.g. number of times to run a particular test before collating results).
+
+In order to point the devices running test suites at the coordinating server a file, serveraddress.json, containing the 
+ip address of the server host is installed in the jxcore folder of the test app. If the coordination server runs on
+the same machine that you build the mobile apps on then everything will be set up for you. Otherwise you'll need to edit 
+the serveraddress.json file yourself to make sure it contains the right server address.
+
+On startup the test devices will connect back to the server to indicate their readiness to proceed. Once the required 
+number of devices are ready the server will signal them to begin the first test. The server will then coordinate test 
+execution so that each subsequent test is not commenced before all devices have finished the preceding one.
+
+It is essential, therefore, that tests remain in a state which facilitates completion for the other devices in the test 
+configuration before finally completing and tearing down it's resources.
 
 ## Usage
+
+### Mobile
+
 
 Before running the test server you'll need to run 'npm install' in the www/jxcore directory within the test app in 
 order to install the necessary node modules. This is a one-time operation unless you change the set of packages i.e. 
@@ -49,14 +70,11 @@ serveraddress.json file is created, ready to install into the test application.
 Remember to copy the serveraddress.json config into the jxcore folder !!
 
 ## Running unit tests inside of the repro
+
 It is possible to run the unit tests inside of the repo in order to allow for easy development and testing. To do
 this one has to:
 
 1. Go to Thali_CordovaPlugin/thali and issue `jx npm install` followed by `sudo jx npm link`.
 2. Go to Thali_CordovaPlugin/test/www/jxcore and issue `jx npm link thali` followed by `jx npm install`
 3. Go to Thali_CordovaPlugin/test/TestServer and issue `jx npm install`
-4. While in Thali_CordovaPlugin/test/TestServer run `jx index.js`
-5. Go to Thali_CordovaPlugin/www/jxcore and run `jx UnitTest_app.js`
-6. Go to Thali_CordovaPlugin/test/TestServer and edit Config_UnitTest.json to set peers to 1
-7. Go open a new window and run `jx Thali_CordovaPlugin/test/TestServer/index.js`
-8. Open a different window and run `jx Thali_CordovaPlugin/test/www/jxcore/UnitTest_app.js`
+5. Go to Thali_CordovaPlugin/www/jxcore and run `jx runTests.js`

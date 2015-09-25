@@ -21,11 +21,11 @@ Highly inspired by wrapping-tape, and usage is very similar to the wrapping tape
 'use strict';
 
 var tape = require('tape');
+var WrappingTape = require('wrapping-tape');
 var CoordinatorConnector = require('./CoordinatorConnector');
 var parsedJSON = require('../serveraddress.json');
 
 function Thali_Tape(options) {
-
   var myName = "UT" + Math.round((Math.random() * (1000000)));
   if(options.deviceName){
     myName = options.deviceName;
@@ -120,5 +120,4 @@ function Thali_Tape(options) {
   };
 }
 
-
-module.exports = Thali_Tape;
+module.exports = jxcore.utils.OSInfo().isMobile ? Thali_Tape : WrappingTape;
