@@ -212,15 +212,16 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
         currentPeer = p;
         exchangeStatus = 'pending';
 
-        res.status(202).end();
+        res.sendStatus(202);
 
         // Start regularly
         peerIdentifier = req.body.peerDeviceId;
         identityExchange.executeIdentityExchange(peerIdentifier, p.peerName, function (err, code) {
+          exchangeStatus = 'error';
           if (err) {
             error = {
               status: exchangeStatus,
-              statusCode: 400,
+              statusCode: 500,
               errorCode: 'E_STARTEXECUTEIDEXCHANGEFAILED',
               errorDescription: 'Start Executing Identity Exchange Failed'
             };
@@ -252,7 +253,7 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
         identityExchange.stopExecutingIdentityExchange();
 
         clearState();
-        res.status(204).end();
+        res.sendStatus(204);
         resolve();
       });
   });
