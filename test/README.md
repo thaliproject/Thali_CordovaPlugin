@@ -71,12 +71,12 @@ one can develop and debug directly in the Thali_CordovaPlugin directory. There i
 copying and pasting that Cordova development normally requires. Note that only the unit tests run on the desktop.
 The perf tests are focused exclusively on measuring on the wire perf and so don't make sense (yet) on the desktop.
 
-__NOTE:__ The scripts don't have execute permissions by default. So please run `chmod u+x setupDesktop`.
+__NOTE:__ The scripts don't have execute permissions by default. So please run `chmod u+x setUpDesktop.sh`.
 
 __NOTE:__ - This script uses npm link to set up a symbolic link to the global NPM directory, this requires super
 user permissions so expect to get a SUDO prompt for your admin password.
 
-To set up your desktop environment for development go to Thali_CordovaPlugin/install and run `jx npm run setupDesktop`.
+To set up your desktop environment for development go to Thali_CordovaPlugin/thali/install and run `jx npm run setupDesktop`.
 
 You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing `jx runTests.js`. But the
 tests will happily run stand alone so you can run a test directly (e.g. `jx testConnectionTable.js`) thus allowing
