@@ -30,7 +30,8 @@ function resetExchangeState() {
   mockIdentityExchangeState = {
     startIdentityExchangeErr: null,
     stopIdentityExchangeErr: null,
-    executeIdentityExchangeErr: null
+    executeIdentityExchangeErr: null,
+    verificationCode: 0
   };
 }
 
@@ -53,7 +54,7 @@ MockIdentityExchange.prototype.stopIdentityExchange = function (cb) {
 MockIdentityExchange.prototype.executeIdentityExchange = function (peerIdentifier, otherPkHash, cb) {
   this._state._peerIdentifier = peerIdentifier;
   this._state._otherPkHash = otherPkHash;
-  cb(this._state.executeIdentityExchangeErr);
+  cb(this._state.executeIdentityExchangeErr, this._state.verificationCode);
 };
 
 MockIdentityExchange.prototype.stopExecutingIdentityExchange = function () {
@@ -404,8 +405,342 @@ test('PUT /webview/identityexchange/executeexchange without start', function (t)
     method: 'PUT',
     json: true
   }, function (err, httpResponse, body) {
+    t.equal(httpResponse.statusCode, 404, 'Status code should be 404');
+    t.equal(body.errorCode, 'E_NOCURRENTIDEXCHANGE', 'Error code should be E_NOCURRENTIDEXCHANGE');
+    t.end();
+  });
+});
+
+test('PUT /webview/identityexchange/executeexchange peer device missing', function (t) {
+  var replicationManager = new MockReplicationManager('thali_device');
+
+  var serverPort = 3000,
+      dbName = 'thali',
+      peerFriendlyName = 'BOB';
+
+  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
+
+  request({
+    url: 'http://localhost:3000/webview/identityexchange',
+    method: 'PUT',
+    json: true,
+    body: { peerFriendlyName: peerFriendlyName }
+  }, function (err, httpResponse, body) {
+    t.equal(httpResponse.statusCode, 201, 'Status code should be 201');
+    t.equal(body, 'Created', 'Body should be Created');
+    t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
+
+    request({
+      url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+      method: 'PUT',
+      json: true
+    }, function (err, httpResponse, body) {
+      t.equal(httpResponse.statusCode, 400, 'Status code should be 400');
+      t.equal(body.errorCode, 'E_PEERDEVICEIDMISSING', 'Error code should be E_PEERDEVICEIDMISSING');
+      t.end();
+    });
+
+  });
+});
+
+test('PUT /webview/identityexchange/executeexchange no peer found', function (t) {
+  var replicationManager = new MockReplicationManager('thali_device');
+
+  var serverPort = 3000,
+      dbName = 'thali',
+      peerFriendlyName = 'BOB',
+      peerDeviceId = 'DEVICEID';
+
+  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
+
+  request({
+    url: 'http://localhost:3000/webview/identityexchange',
+    method: 'PUT',
+    json: true,
+    body: { peerFriendlyName: peerFriendlyName }
+  }, function (err, httpResponse, body) {
+    t.equal(httpResponse.statusCode, 201, 'Status code should be 201');
+    t.equal(body, 'Created', 'Body should be Created');
+    t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
+
+    request({
+      url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+      method: 'PUT',
+      json: true,
+      body: { peerDeviceId: peerDeviceId }
+    }, function (err, httpResponse, body) {
+      t.equal(httpResponse.statusCode, 400, 'Status code should be 400');
+      t.equal(body.errorCode, 'E_PEERDEVICEIDNOTFOUND', 'Error code should be E_PEERDEVICEIDMISSING');
+      t.end();
+    });
+
+  });
+});
+
+test('PUT /webview/identityexchange/executeexchange peer found', function (t) {
+  var replicationManager = new MockReplicationManager('thali_device');
+
+  var serverPort = 3000,
+      dbName = 'thali',
+      peerFriendlyName = 'BOB',
+      peerDeviceId = 'DEVICEID';
+
+  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
+
+  replicationManager.emit('peerIdentityExchange', {
+    peerIdentifier: peerDeviceId,
+    peerName: 'REALLYLONGHASH',
+    peerFriendlyName: 'BILL'
+  });
+
+  request({
+    url: 'http://localhost:3000/webview/identityexchange',
+    method: 'PUT',
+    json: true,
+    body: { peerFriendlyName: peerFriendlyName }
+  }, function (err, httpResponse, body) {
+    t.equal(httpResponse.statusCode, 201, 'Status code should be 201');
+    t.equal(body, 'Created', 'Body should be Created');
+    t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
+
+    request({
+      url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+      method: 'PUT',
+      json: true,
+      body: { peerDeviceId: peerDeviceId }
+    }, function (err, httpResponse, body) {
+      t.equal(httpResponse.statusCode, 202, 'Status code should be 202');
+      t.equal(body, 'Accepted', 'Body should be accepted');
+      t.end();
+    });
+
+  });
+});
+
+test('PUT /webview/identityexchange/executeexchange different peers', function (t) {
+  var replicationManager = new MockReplicationManager('thali_device');
+
+  var serverPort = 3000,
+      dbName = 'thali',
+      peerFriendlyName = 'BOB',
+      peerDeviceId1 = 'DEVICEID1',
+      peerDeviceId2 = 'DEVICEID2';
+
+  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
+
+  replicationManager.emit('peerIdentityExchange', {
+    peerIdentifier: peerDeviceId1,
+    peerName: 'REALLYLONGHASH',
+    peerFriendlyName: 'BILL'
+  });
+
+  replicationManager.emit('peerIdentityExchange', {
+    peerIdentifier: peerDeviceId2,
+    peerName: 'REALLYLONGHASH',
+    peerFriendlyName: 'BILL'
+  });
+
+  request({
+    url: 'http://localhost:3000/webview/identityexchange',
+    method: 'PUT',
+    json: true,
+    body: { peerFriendlyName: peerFriendlyName }
+  }, function (err, httpResponse, body) {
+    t.equal(httpResponse.statusCode, 201, 'Status code should be 201');
+    t.equal(body, 'Created', 'Body should be Created');
+    t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
+
+    request({
+      url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+      method: 'PUT',
+      json: true,
+      body: { peerDeviceId: peerDeviceId1 }
+    }, function (err, httpResponse, body) {
+      t.equal(httpResponse.statusCode, 202, 'Status code should be 202');
+      t.equal(body, 'Accepted', 'Body should be accepted');
+
+      request({
+        url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+        method: 'PUT',
+        json: true,
+        body: { peerDeviceId: peerDeviceId2 }
+      }, function (err, httpResponse, body) {
+        t.equal(httpResponse.statusCode, 400, 'Status code should be 400');
+        t.equal(body.errorCode, 'E_INVALIDEXCHANGE', 'Error code should be E_INVALIDEXCHANGE');
+        t.end();
+      });
+    });
+  });
+});
+
+test('GET /webview/identityexchange/executeexchange peer found', function (t) {
+  var replicationManager = new MockReplicationManager('thali_device');
+
+  var serverPort = 3000,
+      dbName = 'thali',
+      peerFriendlyName = 'BOB',
+      peerDeviceId = 'DEVICEID';
+
+  mockIdentityExchangeState.verificationCode = 12345;
+
+  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
+
+  replicationManager.emit('peerIdentityExchange', {
+    peerIdentifier: peerDeviceId,
+    peerName: 'REALLYLONGHASH',
+    peerFriendlyName: 'BILL'
+  });
+
+  request({
+    url: 'http://localhost:3000/webview/identityexchange',
+    method: 'PUT',
+    json: true,
+    body: { peerFriendlyName: peerFriendlyName }
+  }, function (err, httpResponse, body) {
+    t.equal(httpResponse.statusCode, 201, 'Status code should be 201');
+    t.equal(body, 'Created', 'Body should be Created');
+    t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
+
+    request({
+      url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+      method: 'PUT',
+      json: true,
+      body: { peerDeviceId: peerDeviceId }
+    }, function (err, httpResponse, body) {
+      t.equal(httpResponse.statusCode, 202, 'Status code should be 202');
+      t.equal(body, 'Accepted', 'Body should be accepted');
+
+      request({
+        url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+        method: 'GET',
+        json: true,
+      }, function (err, httpResponse, body) {
+        t.equal(httpResponse.statusCode, 200, 'Status code should be 200');
+        t.equal(body.status, 'complete', 'Status should be complete');
+        t.equal(body.verificationCode, 12345, 'Verification code be present');
+        t.equal(body.peerDeviceId, peerDeviceId, 'Peer device ID should be present');
+        t.equal(body.publicKeyHash, 'REALLYLONGHASH', 'Public key hash should be present');
+        t.end();
+      });
+    });
+  });
+});
+
+test('GET /webview/identityexchange/executeexchange error', function (t) {
+  var replicationManager = new MockReplicationManager('thali_device');
+
+  var serverPort = 3000,
+      dbName = 'thali',
+      peerFriendlyName = 'BOB',
+      peerDeviceId = 'DEVICEID';
+
+  mockIdentityExchangeState.executeIdentityExchangeErr = new Error();
+
+  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
+
+  replicationManager.emit('peerIdentityExchange', {
+    peerIdentifier: peerDeviceId,
+    peerName: 'REALLYLONGHASH',
+    peerFriendlyName: 'BILL'
+  });
+
+  request({
+    url: 'http://localhost:3000/webview/identityexchange',
+    method: 'PUT',
+    json: true,
+    body: { peerFriendlyName: peerFriendlyName }
+  }, function (err, httpResponse, body) {
+    t.equal(httpResponse.statusCode, 201, 'Status code should be 201');
+    t.equal(body, 'Created', 'Body should be Created');
+    t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
+
+    request({
+      url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+      method: 'PUT',
+      json: true,
+      body: { peerDeviceId: peerDeviceId }
+    }, function (err, httpResponse, body) {
+      t.equal(httpResponse.statusCode, 202, 'Status code should be 202');
+      t.equal(body, 'Accepted', 'Body should be accepted');
+
+      request({
+        url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+        method: 'GET',
+        json: true,
+      }, function (err, httpResponse, body) {
+        t.equal(httpResponse.statusCode, 500, 'Status code should be 500');
+        t.equal(body.status, 'error', 'Status should be complete');
+        t.equal(body.errorCode, 'E_STARTEXECUTEIDEXCHANGEFAILED', 'Error code should be E_STARTEXECUTEIDEXCHANGEFAILED');
+        t.end();
+      });
+    });
+  });
+});
+
+test('DELETE /webview/deviceidentity with valid entry', function (t) {
+  var replicationManager = new MockReplicationManager('thali_device');
+
+  var serverPort = 3000,
+      dbName = 'thali';
+
+  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
+
+  request({
+    url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+    method: 'DELETE',
+    json: true
+  }, function (err, httpResponse, body) {
     t.equal(httpResponse.statusCode, 404, 'Status code should be 200');
     t.equal(body.errorCode, 'E_NOCURRENTIDEXCHANGE', 'Error code should be E_NOCURRENTIDEXCHANGE');
     t.end();
+  });
+});
+
+test('GET /webview/identityexchange/executeexchange peer found', function (t) {
+  var replicationManager = new MockReplicationManager('thali_device');
+
+  var serverPort = 3000,
+      dbName = 'thali',
+      peerFriendlyName = 'BOB',
+      peerDeviceId = 'DEVICEID';
+
+  mockIdentityExchangeState.verificationCode = 12345;
+
+  identityExchangeEndpoint(app, serverPort, dbName, replicationManager, MockIdentityExchange);
+
+  replicationManager.emit('peerIdentityExchange', {
+    peerIdentifier: peerDeviceId,
+    peerName: 'REALLYLONGHASH',
+    peerFriendlyName: 'BILL'
+  });
+
+  request({
+    url: 'http://localhost:3000/webview/identityexchange',
+    method: 'PUT',
+    json: true,
+    body: { peerFriendlyName: peerFriendlyName }
+  }, function (err, httpResponse, body) {
+    t.equal(httpResponse.statusCode, 201, 'Status code should be 201');
+    t.equal(body, 'Created', 'Body should be Created');
+    t.equal(mockIdentityExchangeState._myFriendlyName, peerFriendlyName, 'Should use myFriendlyName');
+
+    request({
+      url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+      method: 'PUT',
+      json: true,
+      body: { peerDeviceId: peerDeviceId }
+    }, function (err, httpResponse, body) {
+      t.equal(httpResponse.statusCode, 202, 'Status code should be 202');
+      t.equal(body, 'Accepted', 'Body should be accepted');
+
+      request({
+        url: 'http://localhost:3000/webview/identityexchange/executeexchange',
+        method: 'DELETE',
+        json: true,
+      }, function (err, httpResponse, body) {
+        t.equal(httpResponse.statusCode, 204, 'Status code should be 204');
+        t.end();
+      });
+    });
   });
 });
