@@ -6,6 +6,7 @@ var unzip = require('unzip');
 var Promise = require('lie');
 var fs = require('fs-extra-promise');
 var url = require('url');
+var request = require('request');
 var FILE_NOT_FOUND = "ENOENT";
 var MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT = "localdev"; // If this file exists in the thaliDontCheckIn directory then
                                                     // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
@@ -206,7 +207,7 @@ function fetchJxCoreCordovaPlugin(dest) {
 
     request("https://github.com/jxcore/jxcore-cordova-release/raw/master/0.0.5/io.jxcore.node.jx")
     .pipe(fs.createWriteStream(dest))
-    .on('finish', function(response) {
+    .on('finish', function() {
       console.log("Downloaded io.jxcore.node.jx");
       resolve(null);
     })
@@ -262,7 +263,7 @@ module.exports = function(callBack) {
 
     fetchJxCoreCordovaPlugin(jxCorePluginPackage)
     .then(function() { 
-      return childProcessExecPromise('jx io.jxcore.node.jx', '.'); 
+      return childProcessExecPromise('jx io.jxcore.node.jx', '.');
     })
     .then(function() {
       return childProcessExecPromise('cordova plugin add ./io.jxcore.node/', ".");
@@ -275,7 +276,8 @@ module.exports = function(callBack) {
         var weAddedPluginsFile = path.join(thaliDontCheckIn, "weAddedPlugins");
         return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
         .then(function() {
-            return childProcessExecPromise('cordova plugins add ' + thaliCordovaPluginUnZipResult.unzipedDirectory, appRootDirectory);   
+            return childProcessExecPromise('cordova plugins add ' + thaliCordovaPluginUnZipResult.unzipedDirectory,
+                appRootDirectory);
         }).then(function() {
             return childProcessExecPromise('jx npm install --autoremove "*.gz"', appScriptsFolder);       
         }).then(function() {

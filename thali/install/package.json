@@ -10,7 +10,8 @@
     "fs-extra-promise":"^0.2.0"
   },
   "scripts": {
-    "testSetup": "./setUpTests.sh"
+    "testSetup": "./setUpTests.sh",
+    "setupUnit": "./setUpUnitTestProject.sh"
   },
   "author": "Microsoft",
   "license": "MIT"

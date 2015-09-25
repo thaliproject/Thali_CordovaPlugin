@@ -118,7 +118,7 @@ function Thali_Tape(options) {
       }
     });
   };
-};
+}
 
 
 module.exports = Thali_Tape;

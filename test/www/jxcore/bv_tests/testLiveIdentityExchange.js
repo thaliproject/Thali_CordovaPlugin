@@ -41,30 +41,37 @@ test('Now do an identity Exchange with the real live system!', function(t) {
     }
 
     var dbName = "thali";
+    var levelDownPouchDB = identityExchangeTestUtils.LevelDownPouchDB();
     var thaliReplicationManager =
-        new ThaliReplicationManager(new identityExchangeTestUtils.LevelDownPouchDB()(dbName));
+        new ThaliReplicationManager(new levelDownPouchDB(dbName));
     var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, thaliReplicationManager,
         dbName);
-    var peerToDoIdentityExchangeWith = null;
     thaliReplicationManager._emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function(peer) {
         t.comment("We found a peer - " + JSON.stringify(peer));
     });
-    identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
+    var peerIdentityExchangeHandler = function(peer) {
         t.comment("We got a peer to do identity exchange with! - " + JSON.stringify(peer));
-        if (!peerToDoIdentityExchangeWith && peer.isAvailable) {
-            peerToDoIdentityExchangeWith = peer.peerIdentifier;
+        if (peer.peerAvailable) {
+            identityExchange.removeListener(IdentityExchange.Events.PeerIdentityExchange,
+                peerIdentityExchangeHandler);
             t.comment("We are going to try and do an identity exchange with the peer");
             identityExchange.executeIdentityExchange(peer.peerIdentifier, peer.peerName, function(err, code) {
                 t.notOk(err, "Did we get an error on executeIdentityExchange?");
                 identityExchangeTestUtils.checkCode(t, code);
-                identityExchange.stopExecutingIdentityExchange();
-                identityExchange.stopIdentityExchange(function(err) {
-                    t.notOk(err, "Did we get a problem in calling stop Identity Exchange?");
-                    t.end();
-                });
+                // The side with the larger hash can end up quiting fast enough to kill the connection
+                // before the response goes back causing a hang on the side with the smaller hash. So we
+                // put in a delay to make sure everything gets through.
+                setTimeout(function() {
+                    identityExchange.stopExecutingIdentityExchange();
+                    identityExchange.stopIdentityExchange(function(err) {
+                        t.notOk(err, "Did we get a problem in calling stop Identity Exchange?");
+                        t.end();
+                    });
+                }, 200)
             })
         }
-    });
+    };
+    identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, peerIdentityExchangeHandler);
     identityExchange.startIdentityExchange("Sreejumon", function(err) {
         t.notOk(err,"Did we successfully get a callback from start?");
     })

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-cd ../../../
+cd ../../test/TestServer
+jx npm install
+jx generateServerAddress.js
+cd ../../..
 cordova create ThaliTest com.test.thalitest ThaliTest
 mkdir -p ThaliTest/thaliDontCheckIn/localdev
 cp -r Thali_CordovaPlugin/test/www/ ThaliTest/www
