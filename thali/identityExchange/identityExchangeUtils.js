@@ -73,19 +73,29 @@ Promise.prototype.catchIfNotInExit = function(self, userFun) {
     })
 };
 
+/**
+ * This function is intended primarily for teardown where we want to stop the Thali Replication Manager and
+ * if we never started it, that's o.k. we just want a NOP. That is normally a great way to hide programming
+ * errors.
+ * @param thaliReplicationManager
+ * @returns {Promise|exports|module.exports}
+ */
 exports.stopThaliReplicationManager = function(thaliReplicationManager) {
     return new Promise(function(resolve, reject) {
-        var stoppedHandler = function() {
-            thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
-            resolve();
-        };
-        var stoppedErrorHandler = function(err) {
-            thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOPPED, stoppedHandler);
-            reject(!err ? new Error("Unknown Thali replication manager stop error") : err);
-        };
-        thaliReplicationManager.once(ThaliReplicationManager.events.STOPPED, stoppedHandler);
-        thaliReplicationManager.once(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
-        thaliReplicationManager.stop();
+      if (!thaliReplicationManager._isStarted) {
+        resolve();
+      }
+      var stoppedHandler = function() {
+          thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
+          resolve();
+      };
+      var stoppedErrorHandler = function(err) {
+          thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOPPED, stoppedHandler);
+          reject(!err ? new Error("Unknown Thali replication manager stop error") : err);
+      };
+      thaliReplicationManager.once(ThaliReplicationManager.events.STOPPED, stoppedHandler);
+      thaliReplicationManager.once(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
+      thaliReplicationManager.stop();
     });
 };
 

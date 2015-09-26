@@ -19,12 +19,12 @@ var bigHash = null;
 
 function setUpServer() {
   return identityExchangeTestUtils.createThaliAppServer()
-      .then(function(appAndServer) {
-        thaliApp = appAndServer.app;
-        thaliServer = appAndServer.server;
-      }).catch(function(err) {
-        throw err;
-      });
+    .then(function(appAndServer) {
+      thaliApp = appAndServer.app;
+      thaliServer = appAndServer.server;
+    }).catch(function(err) {
+      throw err;
+    });
 }
 
 var test = tape({
@@ -32,15 +32,21 @@ var test = tape({
     var smallAndBigHash = identityExchangeTestUtils.createSmallAndBigHash();
     smallHash = smallAndBigHash.smallHash;
     bigHash = smallAndBigHash.bigHash;
-    setUpServer().then(function() {t.end()});
+    setUpServer().then(function() {
+      t.end();
+    });
   },
   teardown: function(t) {
     if(thaliServer) {
-      thaliServer.close();
-      thaliServer = null;
-      thaliApp = null;
+      thaliServer.close(function () {
+        thaliServer = null;
+        thaliApp = null;
+
+        t.end();
+      });
+    } else {
+      t.end();
     }
-    t.end();
   }
 });
 
@@ -141,26 +147,26 @@ test('make sure startIdentityExchange sets things up properly', function(t) {
   ];
 
   request(thaliApp)
-      .post(identityExchangeUtils.cbPath)
-      .send({ foo: "bar"})
-      .expect(404)
-      .end(function(err, res) {
+    .post(identityExchangeUtils.cbPath)
+    .send({ foo: "bar"})
+    .expect(404)
+    .end(function(err, res) {
+      t.notOk(err);
+
+      identityExchange.startIdentityExchange(myFriendlyName, function(err) {
         t.notOk(err);
 
-        identityExchange.startIdentityExchange(myFriendlyName, function(err) {
-          t.notOk(err);
+        request(thaliApp)
+          .post(identityExchangeUtils.rnMinePath)
+          .send({ foo: "bar"})
+          .expect(400)
+          .end(function(err, res) {
+            t.notOk(err);
 
-          request(thaliApp)
-              .post(identityExchangeUtils.rnMinePath)
-              .send({ foo: "bar"})
-              .expect(400)
-              .end(function(err, res) {
-                t.notOk(err);
-
-                trmMock._emitter.emit(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, peerAvailabilityEvents);
-              })
-        });
+            trmMock._emitter.emit(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, peerAvailabilityEvents);
+          })
       });
+    });
 
   identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
     if (peer.peerFriendlyName == "abc") {
@@ -235,58 +241,58 @@ test('Make sure stop is clean from stop execute identity exchange', function(t) 
 
 
 test('make sure we do not have a race condition between startIdentityExchange and executeIdentityExchange',
-function(t) {
-  var myFriendlyName = "Doug";
-  var base64BigHash = bigHash.toString('base64');
-  var peerAvailabilityChangedEvents = [
-    { peerName: base64BigHash+";abc"},
-    { peerName: "efg"},
-    { peerName: base64BigHash+";def"}
-  ];
-  var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName,
-    function(port, dbName, deviceName, cb) {
-      peerAvailabilityChangedEvents.forEach(function(peer) {
-        trmMock._emitter.emit(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, peer);
-      });
-      cb();
-    });
-  var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
-  var sawAbc = false;
-  var sawDef = false;
-  var gotStartCallBack = false;
-  function checkAllDone(){
-    if (sawAbc && sawDef && gotStartCallBack) {
-      t.end();
-    }
-  }
-  identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
-    if (peer.peerFriendlyName == "abc") {
-      t.notOk(sawAbc);
-      sawAbc = true;
-      t.doesNotThrow(function() {
-        identityExchange.executeIdentityExchange(peer.peerFriendlyName, peer.peerName, function() {
-          t.fail();
+  function(t) {
+    var myFriendlyName = "Doug";
+    var base64BigHash = bigHash.toString('base64');
+    var peerAvailabilityChangedEvents = [
+      { peerName: base64BigHash+";abc"},
+      { peerName: "efg"},
+      { peerName: base64BigHash+";def"}
+    ];
+    var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName,
+      function(port, dbName, deviceName, cb) {
+        peerAvailabilityChangedEvents.forEach(function(peer) {
+          trmMock._emitter.emit(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, peer);
         });
+        cb();
       });
-      checkAllDone();
-      return;
+    var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
+    var sawAbc = false;
+    var sawDef = false;
+    var gotStartCallBack = false;
+    function checkAllDone(){
+      if (sawAbc && sawDef && gotStartCallBack) {
+        t.end();
+      }
     }
+    identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
+      if (peer.peerFriendlyName == "abc") {
+        t.notOk(sawAbc);
+        sawAbc = true;
+        t.doesNotThrow(function() {
+          identityExchange.executeIdentityExchange(peer.peerFriendlyName, peer.peerName, function() {
+            t.fail();
+          });
+        });
+        checkAllDone();
+        return;
+      }
 
-    if (peer.peerFriendlyName == "def") {
-      t.notOk(sawDef);
-      sawDef = true;
+      if (peer.peerFriendlyName == "def") {
+        t.notOk(sawDef);
+        sawDef = true;
+        checkAllDone();
+        return;
+      }
+
+      t.fail("We got an event we should not have");
+    });
+    identityExchange.startIdentityExchange(myFriendlyName, function(err) {
+      t.notOk(err);
+      gotStartCallBack = true;
       checkAllDone();
-      return;
-    }
-
-    t.fail("We got an event we should not have");
+    })
   });
-  identityExchange.startIdentityExchange(myFriendlyName, function(err) {
-    t.notOk(err);
-    gotStartCallBack = true;
-    checkAllDone();
-  })
-});
 
 
 test('illegal method combinations', function(t) {
@@ -320,7 +326,7 @@ test('illegal method combinations', function(t) {
 });
 
 function runToCompletion(t, identityExchange, myFriendlyName, trmMock, secondIdentityExchange, secondFriendlyName,
-                          secondTrmMock, secondThaliServer) {
+                         secondTrmMock, secondThaliServer) {
   var firstPeerId = "foo";
   var secondPeerId = "bar";
 
@@ -385,33 +391,33 @@ test('do an identity exchange and get code multiple times to make sure we do not
   var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
 
   identityExchangeTestUtils.createThaliAppServer()
-      .then(function(appAndServer) {
-        secondThaliApp = appAndServer.app;
-        secondThaliServer = appAndServer.server;
+    .then(function(appAndServer) {
+      secondThaliApp = appAndServer.app;
+      secondThaliServer = appAndServer.server;
 
-        secondTrmMock = new TRMMock(bigHash.toString('base64'), t, secondThaliServer.address().port, "anotherDbName",
-            secondFriendlyName);
-        secondIdentityExchange = new IdentityExchange(secondThaliApp, secondThaliServer.address().port, secondTrmMock,
-            "anotherDbName");
-        function runIt() {
-          return runToCompletion(t, identityExchange, myFriendlyName, trmMock, secondIdentityExchange, secondFriendlyName,
-              secondTrmMock, secondThaliServer);
-        }
+      secondTrmMock = new TRMMock(bigHash.toString('base64'), t, secondThaliServer.address().port, "anotherDbName",
+        secondFriendlyName);
+      secondIdentityExchange = new IdentityExchange(secondThaliApp, secondThaliServer.address().port, secondTrmMock,
+        "anotherDbName");
+      function runIt() {
+        return runToCompletion(t, identityExchange, myFriendlyName, trmMock, secondIdentityExchange, secondFriendlyName,
+          secondTrmMock, secondThaliServer);
+      }
 
-        var testPromise = runIt();
+      var testPromise = runIt();
 
-        for (var i = 0; i < 10; ++i) {
-          testPromise = testPromise.then(function () {
-            return runIt();
-          });
-        }
+      for (var i = 0; i < 10; ++i) {
+        testPromise = testPromise.then(function () {
+          return runIt();
+        });
+      }
 
-        return testPromise;
-      }).then(function() {
-        secondThaliServer.close();
+      return testPromise;
+    }).then(function() {
+      secondThaliServer.close(function() {
         t.end();
-      }).catch(function(err) {
-        t.fail(err);
       });
+    }).catch(function(err) {
+      t.fail(err);
+    });
 });
-

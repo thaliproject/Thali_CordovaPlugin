@@ -9,12 +9,12 @@ var IdentityExchange = require('./identityexchange');
 module.exports = function (app, replicationManager, identityExchange) {
   // state
   var peerFriendlyName,
-      peerStarted,
-      peerIdentifier,
-      peers = {},
-      currentPeer,
-      verificationCode,
-      exchangeStatus;
+    peerStarted,
+    peerIdentifier,
+    peers = {},
+    currentPeer,
+    verificationCode,
+    exchangeStatus;
 
   identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function (peer) {
     peers[peer.peerIdentifier] = peer;
@@ -55,13 +55,12 @@ module.exports = function (app, replicationManager, identityExchange) {
           'deviceIdentity': id
         });
       });
-  });
+    });
 
   app.put(
     '/webview/identityexchange',
     bodyParser.json(),
     function (req, res) {
-
       enqueue(function (resolve) {
         // Validate Body
         if (typeof req.body.peerFriendlyName !== 'string') {
@@ -102,7 +101,7 @@ module.exports = function (app, replicationManager, identityExchange) {
           resolve();
         });
       });
-  });
+    });
 
   app.delete(
     '/webview/identityexchange',
@@ -131,7 +130,7 @@ module.exports = function (app, replicationManager, identityExchange) {
           resolve();
         });
       });
-  });
+    });
 
   app.get(
     '/webview/identityexchange',
@@ -156,7 +155,7 @@ module.exports = function (app, replicationManager, identityExchange) {
           };
         })
       });
-  });
+    });
 
   var error;
 
@@ -227,7 +226,7 @@ module.exports = function (app, replicationManager, identityExchange) {
           resolve();
         });
       });
-  });
+    });
 
   app.delete(
     '/webview/identityexchange/executeexchange',
@@ -250,7 +249,7 @@ module.exports = function (app, replicationManager, identityExchange) {
         res.sendStatus(204);
         resolve();
       });
-  });
+    });
 
   app.get(
     '/webview/identityexchange/executeexchange',
@@ -294,6 +293,5 @@ module.exports = function (app, replicationManager, identityExchange) {
         });
         return;
       }
-
-  });
+    });
 };
