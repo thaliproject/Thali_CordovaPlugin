@@ -206,14 +206,14 @@ test('Make sure stop is clean from start', function(t) {
   var trmMock = new TRMMock(smallHash.toString('base64'), t, thaliServer.address().port, "dbName", myFriendlyName);
   var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, trmMock, "dbName");
   identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function(peer) {
-    t.fail();
+    t.fail('Should not have been called on PeerIdentityExchange');
   });
   identityExchange.startIdentityExchange(myFriendlyName, function(err) {
-    t.notOk(err);
+    t.notOk(err, 'Should not have gotten error on startIdentityExchange');
     identityExchange.stopIdentityExchange(function(err) {
-      t.notOk(err);
+      t.notOk(err, 'Should not have gotten error on stopIdentityExchange');
       trmMock._emitter.emit(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, { peerName: "abc;123" });
-      t.equal(trmMock.state, TRMMock.states.Stopped);
+      t.equal(trmMock.state, TRMMock.states.Stopped, 'State should be Stopped');
       t.end();
     })
   })

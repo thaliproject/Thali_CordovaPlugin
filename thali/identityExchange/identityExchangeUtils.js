@@ -82,9 +82,6 @@ Promise.prototype.catchIfNotInExit = function(self, userFun) {
  */
 exports.stopThaliReplicationManager = function(thaliReplicationManager) {
     return new Promise(function(resolve, reject) {
-      if (!thaliReplicationManager._isStarted) {
-        resolve();
-      }
       var stoppedHandler = function() {
           thaliReplicationManager.removeListener(ThaliReplicationManager.events.STOP_ERROR, stoppedErrorHandler);
           resolve();

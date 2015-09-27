@@ -1,7 +1,9 @@
 /* jshint node: true, undef: true, unused: true  */
 'use strict';
 
+var http = require('http');
 var request = require('request');
+var requestPromise = require('request-promise');
 var tape = require('../lib/thali-tape');
 var identityExchangeEndpoint = require('thali/identityExchange/identityexchangeendpoint');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
@@ -40,7 +42,7 @@ var test = tape({
   setup: function(t) {
     setUpServer().then(function() {
       server.on('error', function(err) {
-        t.comment("Server emited an error event - " + JSON.stringify(err));
+        t.comment("Server emitted an error event - " + JSON.stringify(err));
       });
       if (jxcore.utils.OSInfo().isMobile) {
         var levelDownPouchDb = identityExchangeTestUtils.LevelDownPouchDB();
@@ -55,23 +57,47 @@ var test = tape({
     });
   },
   teardown: function(t) {
-    console.log("Entered teardown section");
-    server.close(function() {
-      console.log("Got past server.close()");
-      resetExchangeState();
-      if (replicationManager instanceof ThaliReplicationManager) {
-        console.log("About to call stopThaliReplicationManager");
-        identityExchangeUtils.stopThaliReplicationManager(replicationManager)
-          .then(function() {
-            console.log("Got back from stopThaliReplicationManager");
-            t.end();
+    console.log("Entered teardown section and server value is " + server);
+    Object.keys(http.globalAgent.sockets).forEach(function(socketIndex) {
+      http.globalAgent.sockets[socketIndex].forEach(function(socket) {
+        socket.destroy();
+      })
+    });
+    resetExchangeState();
+    new Promise(function (resolve, reject) {
+      console.log("Entered first promise");
+      if (replicationManager instanceof  ThaliReplicationManager && replicationManager._isStarted) {
+        console.log("Calling stopThaliReplicationManager");
+        // I really should be able to return stopThaliReplicationManager directly but I've run into
+        // some odd issues and this work around seems to work for the moment.
+        identityExchangeUtils.stopThaliReplicationManager(replicationManager).
+          then(function() {
+            console.log("About to call resolve in testIdentityExchangeEndpoint");
+            resolve();
           }).catch(function(err) {
-            t.fail("stopThaliReplicationManager failed with " + JSON.stringify(err));
+            console.log("About to call reject in testIdentityExchangeEndpoint");
+            reject(err);
           });
       } else {
-        t.end();
+        console.log("Calling resolve.");
+        return resolve();
       }
-    });
+    }).then(function () {
+        if (server) {
+          console.log("About to call server.close");
+          server.close(function () {
+            console.log("server.close returned!");
+            t.end();
+          });
+        } else {
+          console.log("Server was null so just ending");
+          t.end();
+        }
+      })
+      .catch(function (err) {
+        t.fail("stopThaliReplicationManager failed with " + JSON.stringify(err));
+        t.end();
+      });
   }
 });
 
@@ -608,6 +634,177 @@ test('PUT /webview/identityexchange/executeexchange different peers', function (
   });
 });
 
+test('DELETE /webview/identityexchange/executeexchange before it gets a chance to generate a code', function(t) {
+  var peerFriendlyName = 'BOB',
+    peerDeviceId = 'DEVICEID';
+
+  replicationManager = new MockReplicationManager();
+  identityExchange = new MockIdentityExchange();
+
+  identityExchangeEndpoint(app, replicationManager, identityExchange);
+
+  // Delay sending confirmation code long enough for us to get a pending
+  identityExchange.executeIdentityExchange = function (peerIdentifier, otherPkHash, cb) {
+    this._state._peerIdentifier = peerIdentifier;
+    this._state._otherPkHash = otherPkHash;
+    // We never make the cb so no verification code will ever be sent
+  };
+
+  identityExchange.once(IdentityExchange.Events.PeerIdentityExchange, function (peer) {
+    requestPromise({
+      url: webviewIdentityExchangeExecuteExchangeURL(),
+      method: 'PUT',
+      json: true,
+      body: {peerDeviceId: peer.peerIdentifier},
+      resolveWithFullResponse: true
+    }).catch(function(err) {
+      t.fail("Initial PUT failed with " + JSON.stringify(err));
+    }).then(function(httpResponse) {
+      t.equal(httpResponse.statusCode, 202, 'Status code should be 202');
+      t.equal(httpResponse.body, 'Accepted', 'Body should be accepted');
+      return requestPromise({
+        url: webviewIdentityExchangeExecuteExchangeURL(),
+        method: 'GET',
+        json: true,
+        resolveWithFullResponse: true
+      });
+    }).catch(function(err) {
+      t.fail("Pending GET failed with " + JSON.stringify(err));
+    }).then(function(httpResponse) {
+      t.equal(httpResponse.statusCode, 200, 'Status code should be 200 for pending');
+      t.equal(httpResponse.body.status, 'pending');
+      t.equal(httpResponse.body.peerDeviceId, peer.peerIdentifier, 'Pending peer ID');
+      return requestPromise({
+        url: webviewIdentityExchangeExecuteExchangeURL(),
+        method: 'DELETE',
+        resolveWithFullResponse: true
+      });
+    }).catch(function(err) {
+      t.fail("DELETE failed with " + JSON.stringify(err));
+    }).then(function(httpResponse) {
+      t.equal(httpResponse.statusCode, 204, 'Code status should be 204');
+      return requestPromise({
+        url: webviewIdentityExchangeExecuteExchangeURL(),
+        method: 'GET',
+        json: true,
+        resolveWithFullResponse: true
+      });
+    }).then(function(httpResponse) {
+      t.fail("We should have gotten a 404 but instead got " + JSON.stringify(httpResponse));
+    }).catch(function(err) {
+      t.equal(err.statusCode, 404, 'Status code for second GET should be 404');
+      t.equal(err.error.status, 'error', 'Body should have error status');
+      t.equal(err.error.errorCode, 'E_NOCURRENTIDEXCHANGE');
+      t.end();
+    });
+  });
+
+  request({
+    url: webviewIdentityExchangeURL(),
+    method: 'PUT',
+    json: true,
+    body: {peerFriendlyName: peerFriendlyName}
+  }, function (err, httpResponse, body) {
+    t.notOk(err);
+    t.equal(httpResponse.statusCode, 201, 'Status code should be 201');
+    t.equal(body, 'Created', 'Body should be Created');
+
+    identityExchange.emit(IdentityExchange.Events.PeerIdentityExchange, {
+      peerIdentifier: peerDeviceId,
+      peerName: 'REALLYLONGHASH',
+      peerFriendlyName: 'BILL'
+    });
+  });
+});
+
+test('GET /webview/identityexchange/executeexchange peer pending', function(t) {
+  var peerFriendlyName = 'BOB',
+    peerDeviceId = 'DEVICEID';
+
+  mockIdentityExchangeState.verificationCode = 12345;
+  replicationManager = new MockReplicationManager();
+  identityExchange = new MockIdentityExchange();
+
+  identityExchangeEndpoint(app, replicationManager, identityExchange);
+
+  // Hold the verification code callback until we confirm we have received
+  // the pending status result.
+  var pendingGetPassedPromiseResolve = null;
+  var pendingGetPassedPromise = new Promise(function(resolve, reject) {
+    pendingGetPassedPromiseResolve = resolve;
+  });
+
+  // Delay sending confirmation code long enough for us to get a pending
+  identityExchange.executeIdentityExchange = function (peerIdentifier, otherPkHash, cb) {
+    this._state._peerIdentifier = peerIdentifier;
+    this._state._otherPkHash = otherPkHash;
+    var self = this;
+    pendingGetPassedPromise.then(function() {
+      cb(self._state.executeIdentityExchangeErr, self._state.verificationCode);
+    });
+  };
+
+  identityExchange.once(IdentityExchange.Events.PeerIdentityExchange, function (peer) {
+    requestPromise({
+      url: webviewIdentityExchangeExecuteExchangeURL(),
+      method: 'PUT',
+      json: true,
+      body: {peerDeviceId: peer.peerIdentifier},
+      resolveWithFullResponse: true
+    }).catch(function(err) {
+      t.fail("Initial PUT failed with " + JSON.stringify(err));
+    }).then(function(httpResponse) {
+      t.equal(httpResponse.statusCode, 202, 'Status code should be 202');
+      t.equal(httpResponse.body, 'Accepted', 'Body should be accepted');
+      return requestPromise({
+        url: webviewIdentityExchangeExecuteExchangeURL(),
+        method: 'GET',
+        json: true,
+        resolveWithFullResponse: true
+      });
+    }).catch(function(err) {
+      t.fail("Pending GET failed with " + JSON.stringify(err));
+    }).then(function(httpResponse) {
+      t.equal(httpResponse.statusCode, 200, 'Status code should be 200 for pending');
+      t.equal(httpResponse.body.status, 'pending');
+      t.equal(httpResponse.body.peerDeviceId, peer.peerIdentifier, 'Pending peer ID');
+      pendingGetPassedPromiseResolve();
+      return requestPromise({
+        url: webviewIdentityExchangeExecuteExchangeURL(),
+        method: 'GET',
+        json: true,
+        resolveWithFullResponse: true
+      });
+    }).catch(function(err) {
+      t.fail("Validation code GET failed with " + JSON.stringify(err));
+    }).then(function(httpResponse) {
+      t.equal(httpResponse.statusCode, 200, 'Code status should be 200');
+      t.equal(httpResponse.body.status, 'complete', 'Status should be complete');
+      t.equal(httpResponse.body.peerDeviceId, peer.peerIdentifier, 'Peer device ID should be present');
+      t.equal(httpResponse.body.publicKeyHash, peer.peerName, 'Public key hash should be present');
+      t.equal(httpResponse.body.verificationCode, 12345, 'Verification code be present');
+      t.end();
+    });
+  });
+
+  request({
+    url: webviewIdentityExchangeURL(),
+    method: 'PUT',
+    json: true,
+    body: {peerFriendlyName: peerFriendlyName}
+  }, function (err, httpResponse, body) {
+    t.notOk(err);
+    t.equal(httpResponse.statusCode, 201, 'Status code should be 201');
+    t.equal(body, 'Created', 'Body should be Created');
+
+    identityExchange.emit(IdentityExchange.Events.PeerIdentityExchange, {
+      peerIdentifier: peerDeviceId,
+      peerName: 'REALLYLONGHASH',
+      peerFriendlyName: 'BILL'
+    });
+  });
+});
+
 test('GET /webview/identityexchange/executeexchange peer found', function (t) {
   var peerFriendlyName = 'BOB',
     peerDeviceId = 'DEVICEID';
@@ -654,6 +851,7 @@ test('GET /webview/identityexchange/executeexchange peer found', function (t) {
     });
   }
 
+  var verifiedOnce = false;
   function getVerificationCode(peerToConfirm) {
     setTimeout(function() {
       request({
@@ -662,19 +860,30 @@ test('GET /webview/identityexchange/executeexchange peer found', function (t) {
         json: true
       }, function (err, httpResponse, body) {
         t.notOk(err);
-        if (httpResponse.statusCode != 200) {
+        t.equal(httpResponse.statusCode, 200, 'Status code should be 200');
+
+        if (body.status === 'pending') {
           getVerificationCode(peerToConfirm);
           return;
         }
-        t.equal(httpResponse.statusCode, 200, 'Status code should be 200');
+
         t.equal(body.status, 'complete', 'Status should be complete');
         t.equal(body.peerDeviceId, peerToConfirm.peerIdentifier, 'Peer device ID should be present');
         t.equal(body.publicKeyHash, peerToConfirm.peerName, 'Public key hash should be present');
 
         if (!jxcore.utils.OSInfo().isMobile) {
           t.equal(body.verificationCode, 12345, 'Verification code be present');
+        } else {
+          identityExchangeTestUtils.checkCode(t, body.verificationCode);
         }
-        t.end();
+
+        // Now lets make sure we get the same code again
+        if (!verifiedOnce) {
+          verifiedOnce = true;
+          getVerificationCode(peerToConfirm);
+        } else {
+          t.end();
+        }
       });
     }, 10);
   }
@@ -794,4 +1003,116 @@ test('GET /webview/identityexchange/executeexchange peer found', function (t) {
       });
     }
   });
+});
+
+test('Do the whole life cycle a few times', function(t) {
+  var peerFriendlyName = 'BOB',
+    peerDeviceId = 'DEVICEID';
+
+  mockIdentityExchangeState.verificationCode = 12345;
+
+  identityExchangeEndpoint(app, replicationManager, identityExchange);
+
+  var requestCountDown = 3;
+
+  function doGetUntilCode(peer) {
+    return requestPromise({
+      url: webviewIdentityExchangeExecuteExchangeURL(),
+      method: 'GET',
+      json: true,
+      resolveWithFullResponse: true
+    }).then(function(httpResponse) {
+      t.equal(httpResponse.statusCode, 200, 'Status could should be 200');
+      if (httpResponse.body.status === 'pending') {
+        return new Promise(function(resolve, reject) {
+          setTimeout(function() {
+            doGetUntilCode(peer)
+              .then(function(result) {
+                resolve(result);
+              }).catch(function(err) {
+                reject(err);
+              });
+          });
+        });
+      }
+      t.equal(httpResponse.body.status, 'complete', 'Status should be complete');
+      t.equal(httpResponse.body.peerDeviceId, peer.peerIdentifier, 'Peer device ID should be present');
+      t.equal(httpResponse.body.publicKeyHash, peer.peerName, 'Public key hash should be present');
+
+      if (!jxcore.utils.OSInfo().isMobile) {
+        t.equal(httpResponse.body.verificationCode, 12345, 'Verification code be present');
+      } else {
+        identityExchangeTestUtils.checkCode(t, httpResponse.body.verificationCode);
+      }
+    })
+  }
+
+  function startRequests() {
+    identityExchange.once(IdentityExchange.Events.PeerIdentityExchange, function (peer) {
+      return requestPromise({
+        url: webviewIdentityExchangeExecuteExchangeURL(),
+        method: 'PUT',
+        json: true,
+        body: { peerDeviceId: peer.peerIdentifier },
+        resolveWithFullResponse: true
+      }).catch(function(err) {
+        t.fail('Second PUT failed with ' + JSON.stringify(err));
+      }).then(function(httpResponse) {
+        t.equal(httpResponse.statusCode, 202, 'Second PUT gives us a 202');
+        return doGetUntilCode(peer);
+      }).catch(function(err) {
+        t.fail('Get until code failed with ' + JSON.stringify(err));
+      }).then(function() {
+        return requestPromise({
+          url: webviewIdentityExchangeExecuteExchangeURL(),
+          method: 'DELETE',
+          json: true,
+          resolveWithFullResponse: true
+        });
+      }).catch(function(err) {
+        t.fail('First DELETE failed with ' + JSON.stringify(err));
+      }).then(function(httpResponse) {
+        t.equal(httpResponse.statusCode, 204, 'First DELETE should be 204');
+        return requestPromise({
+          url: webviewIdentityExchangeURL(),
+          method: 'DELETE',
+          json: true,
+          resolveWithFullResponse: true
+        });
+      }).catch(function(err) {
+        t.fail('Second DELETE failed with ' + JSON.stringify(err));
+      }).then(function(httpResponse) {
+        t.equal(httpResponse.statusCode, 204, 'Second DELETE should be 204');
+        requestCountDown -= 1;
+        if (requestCountDown === 0) {
+          t.end();
+        } else {
+          return startRequests();
+        }
+      })
+    });
+
+    requestPromise({
+      url: webviewIdentityExchangeURL(),
+      method: 'PUT',
+      json: true,
+      body: { peerFriendlyName: peerFriendlyName },
+      resolveWithFullResponse: true
+    }).catch(function(err) {
+      t.fail("First PUT failed with " + JSON.stringify(err));
+    }).then(function(httpResponse) {
+      t.equal(httpResponse.statusCode, 201, 'First PUT gives us a 201');
+
+
+      if (!jxcore.utils.OSInfo().isMobile) {
+        identityExchange.emit(IdentityExchange.Events.PeerIdentityExchange, {
+          peerIdentifier: peerDeviceId,
+          peerName: 'REALLYLONGHASH',
+          peerFriendlyName: 'BILL'
+        });
+      }
+    });
+  }
+
+  startRequests();
 });

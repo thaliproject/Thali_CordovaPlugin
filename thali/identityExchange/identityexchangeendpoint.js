@@ -20,6 +20,14 @@ module.exports = function (app, replicationManager, identityExchange) {
     peers[peer.peerIdentifier] = peer;
   });
 
+  function clearIdentityExchangeState() {
+    error = null;
+    verificationCode = null;
+    peerIdentifier = null;
+    currentPeer = null;
+    exchangeStatus = null;
+  }
+
   function clearState() {
     error = null;
     verificationCode = null;
@@ -27,6 +35,7 @@ module.exports = function (app, replicationManager, identityExchange) {
     currentPeer = null;
     peerStarted = false;
     exchangeStatus = null;
+    peerFriendlyName = null;
   }
 
   // Global queueing
@@ -187,7 +196,7 @@ module.exports = function (app, replicationManager, identityExchange) {
         if (peerIdentifier && req.body.peerDeviceId !== peerIdentifier) {
           res.status(400).json({
             errorCode: 'E_INVALIDEXCHANGE',
-            errorDescription: 'Only one peer exchance can happen at once'
+            errorDescription: 'Only one peer exchange can happen at once'
           });
           return resolve();
         }
@@ -223,8 +232,9 @@ module.exports = function (app, replicationManager, identityExchange) {
 
           exchangeStatus = 'complete';
           verificationCode = code;
-          resolve();
         });
+
+        resolve();
       });
     });
 
@@ -245,7 +255,7 @@ module.exports = function (app, replicationManager, identityExchange) {
 
         identityExchange.stopExecutingIdentityExchange();
 
-        clearState();
+        clearIdentityExchangeState();
         res.sendStatus(204);
         resolve();
       });
@@ -291,7 +301,6 @@ module.exports = function (app, replicationManager, identityExchange) {
           peerDeviceId: currentPeer.peerIdentifier,
           publicKeyHash: currentPeer.peerName
         });
-        return;
       }
     });
 };
