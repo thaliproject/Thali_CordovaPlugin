@@ -1,5 +1,6 @@
 'use strict';
 
+var Promise = require('lie');
 var fs = require('fs-extra-promise');
 var path = require('path');
 
@@ -27,10 +28,15 @@ function updateAndroidSDKVersion(appRoot) {
 }
 
 function replaceJXCoreExtension(appRoot) {
+
     var sourceFile = path.join(appRoot, "plugins/org.thaliproject.p2p/src/android/java/io/jxcore/node/JXcoreExtension.java");
     var targetFile = path.join(appRoot, "platforms/android/src/io/jxcore/node/JXcoreExtension.java");
-    var sourceContent = fs.readFileSync(sourceFile);
-    fs.writeFileSync(targetFile, sourceContent);
+    try {
+      var sourceContent = fs.readFileSync(sourceFile);
+      fs.writeFileSync(targetFile, sourceContent);
+    } catch (e) {
+      console.log("+++ WARNING +++ Please re-add io.jxcore.node plugin");
+    }
 }
 
 function removeInstallFromPlatform(appRoot) {
