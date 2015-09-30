@@ -16,13 +16,15 @@ var deviceIdentityFlag = {
 
 var PEER_AVAILABILITY_CHANGED = ThaliEmitter.events.PEER_AVAILABILITY_CHANGED;
 var NETWORK_CHANGED = ThaliEmitter.events.NETWORK_CHANGED;
+var CONNECTION_ERROR = ThaliEmitter.events.CONNECTION_ERROR;
 
 inherits(ThaliReplicationManager, EventEmitter);
 
 function ThaliReplicationManager(db, emitter) {
+  if (!db) { throw new Error('db is required to inititialize the ThaliReplicationManager'); }
+
   EventEmitter.call(this);
-  console.log("DB value for ThaliReplicationManager is: " + JSON.stringify(db));
-  if (!db) { console.trace("DB is null, how did we get here!?!?!?!?") }
+  console.log('DB value for ThaliReplicationManager is: %s', JSON.stringify(db));
   this._db = db;
   this._emitter = (emitter || new ThaliEmitter());
   this.clearState();
@@ -41,7 +43,7 @@ ThaliReplicationManager.events = {
   CONNECTION_SUCCESS: 'connectionSuccess'
 };
 
-ThaliReplicationManager.prototype.clearState =function() {
+ThaliReplicationManager.prototype.clearState = function() {
   this._deviceName = '';
   this._deviceIdentityFlag = deviceIdentityFlag.noDeviceIdentitySet;
   this._deviceIdentityListeners = [];
@@ -112,7 +114,7 @@ ThaliReplicationManager.prototype.start = function (port, dbName, deviceName) {
 
   if (deviceName) {
     this._deviceName = deviceName;
-    startReplicationManager.call(this, port, dbName);
+    this._start(port, dbName);
   } else {
     this.getDeviceIdentity.call(this, function(err, publicKeyHash) {
       if(err) {
@@ -120,18 +122,21 @@ ThaliReplicationManager.prototype.start = function (port, dbName, deviceName) {
         this.emit(ThaliReplicationManager.events.START_ERROR, err);
         return;
       }
-      startReplicationManager.call(this, port, dbName);
+      this._start(port, dbName);
     }.bind(this));
   }
 };
 
-function startReplicationManager(port, dbName) {
+ThaliReplicationManager.prototype._start = function (port, dbName) {
   this.emit(ThaliReplicationManager.events.STARTING);
 
   this._port = port;
   this._dbName = dbName;
   if (this._isStarted || !!this._serverBridge) {
-    return this.emit(ThaliReplicationManager.events.START_ERROR, new Error('There is already an existing serverBridge instance.'));
+    return this.emit(
+      ThaliReplicationManager.events.START_ERROR,
+      new Error('There is already an existing serverBridge instance.')
+    );
   }
 
   this._serverBridge = tcpMultiplex.muxServerBridge(port);
@@ -140,6 +145,7 @@ function startReplicationManager(port, dbName) {
 
     this._emitter.addListener(PEER_AVAILABILITY_CHANGED, this._syncPeers.bind(this));
     this._emitter.addListener(NETWORK_CHANGED, this._networkChanged.bind(this));
+    this._emitter.addListener(CONNECTION_ERROR, this._connectionError.bind(this));
 
     this._emitter.startBroadcasting(this._deviceName, this._serverBridgePort, function (err) {
       if (err) {
@@ -151,22 +157,23 @@ function startReplicationManager(port, dbName) {
       }
     }.bind(this));
   }.bind(this));
-}
+};
 
 /**
  * Stops the Thali replication manager
  */
 ThaliReplicationManager.prototype.stop = function () {
-  console.log("Now in TRM stop");
-  console.log("State of this._isStarted:" + this._isStarted);
+  console.log('Now in TRM stop');
+  console.log('State of this._isStarted: %s', this._isStarted);
   if (!this._isStarted) { throw new Error('.start must be called before stop'); }
   this.emit(ThaliReplicationManager.events.STOPPING);
 
-  console.log("About to call stopBroadcasting");
+  console.log('About to call stopBroadcasting');
   this._emitter.stopBroadcasting(function (err) {
-    console.log("Got callback from stopBroadcasting with err " + err);
+    console.log('Got callback from stopBroadcasting with err %s', err);
     this._emitter.removeAllListeners(PEER_AVAILABILITY_CHANGED);
     this._emitter.removeAllListeners(NETWORK_CHANGED);
+    this._emitter.removeAllListeners(CONNECTION_ERROR);
 
     Object.keys(this._replications).forEach(function (key) {
       var item = this._replications[key];
@@ -199,6 +206,14 @@ ThaliReplicationManager.prototype._networkChanged = function (status) {
   if (status.isAvailable && !this._isStarted) {
     return this.start(this._deviceName, this._port, this._dbName);
   }
+};
+
+/**
+ * Handles the connection errors from the native layer for synchronization
+ * @param {Object} status A message containing the peerIdentifier for the connection error
+ */
+ThaliReplicationManager.prototype._connectionError = function (status) {
+  this._syncRetry(status.peerIdentifier);
 };
 
 /**
@@ -249,22 +264,20 @@ ThaliReplicationManager.prototype._syncPeers = function (peers) {
  */
 ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
   var peer = this._peers[peerIdentifier];
-  if (!peer) { console.log('peer not found', peerIdentifier); return; }
-  if (peer && !peer.peerAvailable) { console.log('peer not available', peerIdentifier); return; }
+  if (!peer) { console.log('peerIdentifier not found: %s', peerIdentifier); return; }
+  if (peer && !peer.peerAvailable) { console.log('peerIdentifier not available %s', peerIdentifier); return; }
 
   this._emitter.connect(peer.peerIdentifier, function (err, port) {
     if (err) {
       console.log('Connect error with error: %s', err);
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
-      setImmediate(this._syncRetry.bind(this, peerIdentifier));
-      return;
+      return setImmediate(this._syncRetry.bind(this, peerIdentifier));
     }
 
     var client = tcpMultiplex.muxClientBridge(port, function (err) {
       if (err) {
         console.log('Error in mux client bridge %s', err);
-        setImmediate(this._syncRetry.bind(this, peerIdentifier));
-        return;
+        return setImmediate(this._syncRetry.bind(this, peerIdentifier));
       }
       this._clients[peer.peerIdentifier] = client;
       client.listen(function () {
@@ -293,10 +306,11 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
  */
 ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
   if (!this._isStarted) {
-    return;
+    return console.log('syncRetry called when not started');
   }
-
-  if (this._isInRetry[peerIdentifier]) { return; }
+  if (this._isInRetry[peerIdentifier]) {
+    return console.log('peerIdentifier already in syncRetry %s', peerIdentifier);
+  }
 
   this._isInRetry[peerIdentifier] = true;
 
