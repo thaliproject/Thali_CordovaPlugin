@@ -61,15 +61,12 @@ var test = tape({
     }
 
     if (thaliServer) {
-      thaliServer.close(function() {
-        thaliApp = null;
-        thaliServer = null;
-        thaliServerPort = null;
-        t.end();
-      });
-    } else {
-      t.end();
+      thaliServer.close();
     }
+    thaliApp = null;
+    thaliServer = null;
+    thaliServerPort = null;
+    t.end();
   }
 });
 
@@ -147,6 +144,7 @@ function endlessMockConnectionTableLoop(t, expectedPeerId, port, noChannelBindin
   var mock = new MockConnectionTable(function(peerId, lastLookupTime) {
     t.equal(expectedPeerId, peerId);
     if (!noChannelBindingErrors) {
+      t.comment("lookupTime: " + lookupTime + ", lastLookupTime: " + lastLookupTime);
       t.ok(lookupTime == 0 || lookupTime == lastLookupTime);
     }
 

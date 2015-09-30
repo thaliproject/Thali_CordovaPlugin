@@ -25,14 +25,11 @@ var test = tape({
   },
   teardown: function(t) {
     if(thaliServer) {
-      thaliServer.close(function() {
-        thaliServer = null;
-        thaliApp = null;
-        t.end();
-      });
-    } else {
-      t.end();
+      thaliServer.close();
     }
+    thaliServer = null;
+    thaliApp = null;
+    t.end();
   }
 });
 

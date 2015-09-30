@@ -37,16 +37,12 @@ var test = tape({
     });
   },
   teardown: function(t) {
-    if(thaliServer) {
-      thaliServer.close(function () {
-        thaliServer = null;
-        thaliApp = null;
-
-        t.end();
-      });
-    } else {
-      t.end();
+    thaliServer = null;
+    thaliApp = null;
+    if (thaliServer) {
+      thaliServer.close();
     }
+    t.end();
   }
 });
 
@@ -414,9 +410,8 @@ test('do an identity exchange and get code multiple times to make sure we do not
 
       return testPromise;
     }).then(function() {
-      secondThaliServer.close(function() {
-        t.end();
-      });
+      secondThaliServer.close();
+      t.end();
     }).catch(function(err) {
       t.fail(err);
     });

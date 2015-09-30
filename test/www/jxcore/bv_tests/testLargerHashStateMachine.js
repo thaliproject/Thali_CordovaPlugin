@@ -48,15 +48,12 @@ var test = tape({
     }
 
     if (thaliServer) {
-      thaliServer.close(function() {
-        thaliApp = null;
-        thaliServer = null;
-        thaliServerPort = null;
-        t.end();
-      });
-    } else {
-      t.end();
+      thaliServer.close();
     }
+    thaliApp = null;
+    thaliServer = null;
+    thaliServerPort = null;
+    t.end();
   }
 });
 
