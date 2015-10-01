@@ -67,12 +67,20 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     public BTConnector.WifiBtStatus Start(String peerName,int port){
         this.mServerPort = port;
        // this.lastAvailableList.clear();
-
         Stop();
 
         BTConnector tmpCon= new BTConnector(context,this,this,conSettings);
         BTConnector.WifiBtStatus  ret = tmpCon.Start(GetBluetoothAddress(),peerName);
         mBTConnector = tmpCon;
+
+        if(lastAvailableList.size() > 0) {
+            JSONArray jsonArray = new JSONArray();
+            for (ServiceItem item : lastAvailableList) {
+                jsonArray.put(getAvailabilityStatus(item, true));
+            }
+            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_PEERAVAILABILITY, jsonArray.toString());
+        }
+
         return ret;
     }
 
