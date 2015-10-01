@@ -66,7 +66,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
     public BTConnector.WifiBtStatus Start(String peerName,int port){
         this.mServerPort = port;
-        this.lastAvailableList.clear();
+       // this.lastAvailableList.clear();
 
         Stop();
 
