@@ -66,13 +66,21 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
     public BTConnector.WifiBtStatus Start(String peerName,int port){
         this.mServerPort = port;
-        this.lastAvailableList.clear();
-
+       // this.lastAvailableList.clear();
         Stop();
 
         BTConnector tmpCon= new BTConnector(context,this,this,conSettings);
         BTConnector.WifiBtStatus  ret = tmpCon.Start(GetBluetoothAddress(),peerName);
         mBTConnector = tmpCon;
+
+        if(lastAvailableList.size() > 0) {
+            JSONArray jsonArray = new JSONArray();
+            for (ServiceItem item : lastAvailableList) {
+                jsonArray.put(getAvailabilityStatus(item, true));
+            }
+            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_PEERAVAILABILITY, jsonArray.toString());
+        }
+
         return ret;
     }
 
@@ -102,9 +110,9 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             if (rSocket != null) {
                 String currentPeerId = rSocket.GetPeerId();
                 if (peerId.equalsIgnoreCase(currentPeerId)) {
-                    Log.i("BtConnectorHelper","Disconnect outgoing peer: " + currentPeerId);
-                    rSocket.Stop();
                     mRequestSocketList.remove(rSocket);
+                    Log.i("BtConnectorHelper", "Disconnect outgoing peer: " + currentPeerId);
+                    rSocket.Stop();
                     return true;
                 }
             }
@@ -117,6 +125,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         for (BtToRequestSocket rSocket : mRequestSocketList) {
             if (rSocket != null) {
+                mRequestSocketList.remove(rSocket);
                 Log.i("BtConnectorHelper","Disconnect:::Stop : BtToRequestSocket :" + rSocket.getName());
                 rSocket.Stop();
             }
@@ -165,7 +174,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
         //todo what should we have here for the actual value ?
         if (mRequestSocketList.size() > 100) {
-            connectStatusCallback.ConnectionStatusUpdate("Maximum peer connections reached, please try again after disconnecting a peer. Connected to " + mRequestSocketList.size() + " peers.",-1);
+            connectStatusCallback.ConnectionStatusUpdate("Maximum peer connections reached, please try again after disconnecting a peer. Connected to " + mRequestSocketList.size() + " peers.", -1);
             return;
         }
 
@@ -273,9 +282,18 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
 
                     for (BtToRequestSocket rSocket : mRequestSocketList) {
                         if (rSocket != null && (rSocket.getId() == who.getId())) {
-                            Log.i("BtConnectorHelper","Disconnect outgoing peer: " + rSocket.GetPeerName());
-                            rSocket.Stop();
+                            Log.i("BtConnectorHelper", "Disconnect outgoing peer: " + rSocket.GetPeerName());
                             mRequestSocketList.remove(rSocket);
+                            // fire the event in here !!!
+                            rSocket.Stop();
+                            JSONObject returnJsonObj = new JSONObject();
+                            try {
+                                returnJsonObj.put(JXcoreExtension.EVENTVALUESTRING_PEERID, rSocket.GetPeerId());
+                            } catch (JSONException e) {
+                                Log.i("BtConnectorHelper","JSONException : " + e.toString());
+                            }
+
+                            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_CONNECTIONERROR, returnJsonObj.toString());
                             break;
                         }
                     }
@@ -307,7 +325,10 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             }
             return;
         }
+
         mRequestSocketList.add(tmpRequestSocket);
+        tmpRequestSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
+
         tmpRequestSocket.setDefaultUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
         tmpRequestSocket.SetIdAddressAndName(peerId, peerName, peerAddress);
         tmpRequestSocket.start();
@@ -387,7 +408,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     @Override
     public ServiceItem CurrentPeersList(final List<ServiceItem> serviceItems) {
 
-        Boolean wasPreviouslyAvailable = false;
+   /*     Boolean wasPreviouslyAvailable = false;
 
         JSONArray jsonArray = new JSONArray();
 
@@ -426,7 +447,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         // lets not sent any empty arrays up.
         if (jsonArray.toString().length() > 5) {
             jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_PEERAVAILABILITY, jsonArray.toString());
-        }
+        }*/
         return null;
     }
 
