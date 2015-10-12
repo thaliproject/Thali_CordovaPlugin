@@ -42,6 +42,9 @@
 // the socket
 - (void)didCreateSocket:(GCDAsyncSocket *)socket;
 
+// Let the subclasses inform us the socket was disconnected (by an upper layer)
+- (void)didDisconnectSocket:(GCDAsyncSocket *)socket;
+
 // Set the input stream from which we'll receive data from the remote peer and pass
 // to the application
 - (void)setInputStream:(NSInputStream *)inputStream;
