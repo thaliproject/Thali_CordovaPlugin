@@ -34,7 +34,8 @@
 
 // Service type here is what we're looking for, not what we may be advertising 
 // (although they'll usually be the same)
-- (id)initWithPeerId:(MCPeerID *)peerId 
+- (id)initWithPeerId:(MCPeerID *)peerId
+  withPeerIdentifier:(NSString *)peerIdentifier
      withServiceType:(NSString *)serviceType 
     withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate;
 

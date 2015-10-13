@@ -20,7 +20,8 @@ inherits(ThaliEmitter, EventEmitter);
 
 ThaliEmitter.events = {
   PEER_AVAILABILITY_CHANGED: 'peerAvailabilityChanged',
-  NETWORK_CHANGED: 'networkChanged'
+  NETWORK_CHANGED: 'networkChanged',
+  CONNECTION_ERROR: 'connectionError'
 };
 
 ThaliEmitter.prototype._init = function () {

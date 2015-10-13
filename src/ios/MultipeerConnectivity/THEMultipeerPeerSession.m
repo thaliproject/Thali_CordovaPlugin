@@ -118,7 +118,6 @@ static int count = 0;
     _session = [[MCSession alloc] initWithPeer:_localPeerID 
                               securityIdentity:nil 
                           encryptionPreference:MCEncryptionNone];
-    NSLog(@"Created session: %p", _session);
     _session.delegate = self;
   }
 }
@@ -139,8 +138,6 @@ static int count = 0;
 
     if (_session != nil)
     {
-      NSLog(@"Destroying session: %p", _session);
-      NSLog(@"%@",[NSThread callStackSymbols]);
       _session.delegate = nil;
       [_session disconnect];
       _session = nil;
