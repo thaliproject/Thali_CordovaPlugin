@@ -23,6 +23,10 @@ typedef enum relayStates {
   NSInputStream *_inputStream;
   NSOutputStream *_outputStream;
 
+  // Output buffer
+  NSMutableArray *_outputBuffer;
+  BOOL _outputBufferHasSpaceAvailable;
+
   // Track our current state
   RelayState _relayState;
 
@@ -37,7 +41,10 @@ typedef enum relayStates {
     _relayType = relayType;
     _relayState = INITIALIZED;
   }
-  
+
+  _outputBuffer = [[NSMutableArray alloc] init];  
+  _outputBufferHasSpaceAvailable = NO;
+
   return self;
 }
 
@@ -161,17 +168,46 @@ typedef enum relayStates {
   assert(_relayState == STOPPED);
 }
 
+- (BOOL)writeOutputStream
+{
+  @synchronized(self)
+  {
+    if (_outputBuffer.count > 0)
+    {
+      assert(_outputStream != nil);
+      assert([_outputStream hasSpaceAvailable] == YES);
+
+      NSData *data = [_outputBuffer objectAtIndex:0];
+      if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
+      {
+        NSLog(@"ERROR: Writing to output stream");
+        return NO;
+      }
+      [_outputBuffer removeObjectAtIndex:0];
+      return YES;
+    }
+    else
+    {
+      // Nothing to send
+      return NO;
+    }
+  }
+}
+ 
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
   assert(sock == _socket);
-  assert(_outputStream != nil);
-  assert([_outputStream hasSpaceAvailable] == YES);
-
-  if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
+  @synchronized(self)
   {
-    NSLog(@"ERROR: Writing to output stream");
+    // Enqueue, send directly if we're pending
+    [_outputBuffer addObject:data];
+    if (_outputBufferHasSpaceAvailable)
+    {
+      BOOL sentData = [self writeOutputStream];
+      _outputBufferHasSpaceAvailable = NO;
+      assert(sentData == YES);
+    }
   }
-
   [_socket readDataWithTimeout:-1 tag:tag];
 }
 
@@ -270,7 +306,11 @@ typedef enum relayStates {
 
       case NSStreamEventHasSpaceAvailable:
       {
-        //NSLog(@"%@ relay: outputStream hasSpace", _relayType);
+        // If we get called here and *don't* send anything we will never get called
+        // again until we *do* send something, so record the fact and send directly next
+        // next time we put something on the output queue
+        BOOL sentData = [self writeOutputStream];
+        _outputBufferHasSpaceAvailable = (sentData == NO);
       }
       break;
 
