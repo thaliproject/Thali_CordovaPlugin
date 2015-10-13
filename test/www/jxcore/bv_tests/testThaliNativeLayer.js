@@ -201,7 +201,7 @@ test('ThaliEmitter can connect and send data', function (t) {
     console.log("echo server started");
   });
 
-  var len = 1025;
+  var len = (128 * 1024);
   var testMessage = randomstring.generate(len);
   connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
     var clientSocket = net.createConnection( { port: port }, function () {
