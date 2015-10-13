@@ -107,12 +107,24 @@ typedef enum relayStates {
 
     // Socket's been created which means we can open up the stream
     assert(_socket == nil);
-    assert(_relayState == INITIALIZED);
-
+   
+    // This may be a re-connect of upper layer socket 
     _socket = socket;
-    [self openStreams];
+    if (_relayState == INITIALIZED)
+    {
+      [self openStreams];
+    }
+
+    assert(_relayState == CONNECTED);
     [_socket readDataWithTimeout:-1 tag:0];
   }
+}
+
+- (void)didDisconnectSocket:(GCDAsyncSocket *)socket
+{
+  assert(socket == _socket);
+  _socket.delegate = nil;
+  _socket = nil;
 }
 
 - (void)stop
@@ -153,6 +165,7 @@ typedef enum relayStates {
 {
   assert(sock == _socket);
   assert(_outputStream != nil);
+  assert([_outputStream hasSpaceAvailable] == YES);
 
   if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
   {
@@ -179,6 +192,9 @@ typedef enum relayStates {
   {
       NSLog(@"%@ relay: %p disconnected with error %@ ", _relayType, sock, [err description]);
   }
+
+  // Dispose of the socket, it's no good to us anymore
+  _socket = nil;
 }
 
 #pragma mark - NSStreamDelegate
@@ -208,17 +224,14 @@ typedef enum relayStates {
 
         @synchronized(self)
         {
-          while ([_inputStream hasBytesAvailable])
+          NSInteger len = [_inputStream read:buffer maxLength:BUFFER_LEN];
+          if (len > 0)
           {
-            NSInteger len = [_inputStream read:buffer maxLength:BUFFER_LEN];
-            if (len > 0)
-            {
-              NSMutableData *toWrite = [[NSMutableData alloc] init];
-              [toWrite appendBytes:buffer length:len];
+            NSMutableData *toWrite = [[NSMutableData alloc] init];
+            [toWrite appendBytes:buffer length:len];
 
-              assert(_socket);
-              [_socket writeData:toWrite withTimeout:-1 tag:len];
-            }
+            assert(_socket);
+            [_socket writeData:toWrite withTimeout:-1 tag:len];
           }
         }
       }
