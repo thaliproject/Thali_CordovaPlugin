@@ -113,48 +113,5 @@ Once built the library should be visible in:
 Once built the library should be visible in:  
 `<user folder>\.m2\repository\org\thaliproject\p2p\btconnectorlib\btconnectorlib2\0.0.1`
 
-
-## Unit Testing the Thali Cordova Plugin
-
-The Thali Cordova plugin uses the [Tape](https://www.npmjs.com/package/tape) tap-producing test harness for node
-and browsers.
-
-Right now our testing framework is primarily designed to help us test as we are developing so we have a script
-that will automatically setup the test environment. Just do the following:
-
-```
-$ cd Thali_CordovaPlugin/thali/install
-$ chmod u+x setUpTests.sh
-$ jx npm run testSetup
-```
-
-This will set up a parallel project called ThaliTest.
-
-### Desktop Testing
-
-```
-$ cd ThaliTest/www/jxcore
-$ jx npm run test
-```
-
-### Mobile Testing
-
-Testing is also available on the mobile devices as well.  This will use the regular `Mobile` calls directly through
-Cordova to talk to the underlying system.
-
-Go inside of the ThaliTest project and run
-
-```
-$ cordova build android
-$ cordova build ios
-```
-
-Now deploy with your favorite tool. Note that you need two phones running the tests at the same time in order to
-pass all the tests as some test our networking. You should be able to see the test results in your developer
-console.
-
-### Adding new tests
-
-We run on both the desktop and mobile all the tests in the test/www/jxcore directory that have a file name of the form
-test*.js. We have protections to make sure that tests that shouldn't run on the desktop don't as well as to make
-sure that objects that use the Mobile mock don't mess up things for everyone else. Check the test code for examples.
+## Developing node specific code and tests for the Thali Cordova Plugin
+Please see the Thali_CordovaPlugin/test/README.md

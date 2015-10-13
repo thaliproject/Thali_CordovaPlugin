@@ -1,10 +1,19 @@
 'use strict';
 
-var tcpmultiplex = require('./thali/tcpmultiplex');
-var test = require('tape');
+var tcpmultiplex = require('thali/tcpmultiplex');
+var tape = require('../lib/thali-tape');
 var net = require('net');
 var randomstring = require('randomstring');
 var multiplex = require('multiplex');
+
+var test = tape({
+  setup: function(t) {
+    t.end();
+  },
+  teardown: function(t) {
+    t.end();
+  }
+});
 
 test('multiplex can send data', function (t) {
   var len = 200;
@@ -24,8 +33,8 @@ test('multiplex can send data', function (t) {
     socket.pipe(plex1).pipe(socket);
   });
 
-  server.listen(5001, function () {
-    var socket = net.createConnection({port: 5001}, function () {
+  server.listen(6001, function () {
+    var socket = net.createConnection({port: 6001}, function () {
       var plex2 = multiplex();
       var stream = plex2.createStream();
       stream.write(new Buffer(testMessage));
@@ -35,6 +44,7 @@ test('multiplex can send data', function (t) {
   });
 });
 
+/*
 test('muxServerBridge', function (t) {
   var len = 200;
   var testMessage = randomstring.generate(len);
@@ -43,8 +53,8 @@ test('muxServerBridge', function (t) {
     socket.pipe(socket);
   });
 
-  server.listen(5001, function () {
-    var muxServerBridge = tcpmultiplex.muxServerBridge(5001);
+  server.listen(6001, function () {
+    var muxServerBridge = tcpmultiplex.muxServerBridge(6001);
     muxServerBridge.listen(function () {
       var serverPort = muxServerBridge.address().port;
 
@@ -74,3 +84,4 @@ test('muxServerBridge', function (t) {
     });
   });
 });
+*/

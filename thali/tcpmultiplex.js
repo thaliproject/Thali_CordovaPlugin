@@ -31,7 +31,7 @@ function muxServerBridge(tcpEndpointServerPort) {
     });
 
     // Record the mapping between incoming socket and multiplex
-    clientSockets.push(serverPlex);
+    clientSockets.push(incomingClientSocket);
     incomingClientSocket.pipe(serverPlex).pipe(incomingClientSocket);
   });
 
@@ -40,16 +40,18 @@ function muxServerBridge(tcpEndpointServerPort) {
   });
 
   server.on('close', function () {
-    // Close all the client sockets, this'll force the server object
-    // to *really* close
-    console.log('server bridge: server closing (%d)', clientSockets.length);
+    console.log('mux server bridge listener closed');
+  });
+
+  server.exit = function() {
+    console.log('server bridge: server exiting (%d)', clientSockets.length);
     // Shutdown all the connected sockets
     clientSockets.forEach(function (sock) {
       sock.end();
-      sock.destroy();
     });
-    clientSockets.length = 0;
-  });
+    clientSockets = [];
+    this.close();
+  };
 
   return server;
 }
@@ -95,21 +97,18 @@ function muxClientBridge(localP2PTcpServerPort, cb) {
     console.log('mux client bridge error %s', err);
   });
 
-  server.on('close', function () {
-    // Close all the client sockets, this'll force the server object
-    // to *really* close
-    console.log('client bridge: server closing (%d)', clientSockets.length);
+  clientPlex.pipe(clientSocket).pipe(clientPlex);
+
+  server.exit = function() {
+    console.log('client bridge: server exiting (%d)', clientSockets.length);
     // Shutdown all the connected sockets
     clientSockets.forEach(function (sock) {
       sock.end();
-      sock.destroy();
     });
-    
-    clientSockets.length = 0;
-  });
-
-  clientPlex.pipe(clientSocket).pipe(clientPlex);
-
+    clientSockets = [];
+    this.close();
+  }
+ 
   return server;
 }
 

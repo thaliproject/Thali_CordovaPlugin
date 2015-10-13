@@ -4,15 +4,32 @@ if (!jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
-var test = require('tape');
 var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
+var tape = require('../lib/thali-tape');
 
 function newPeerIdentifier() {
   return (+ new Date()).toString() + "." + process.pid;
 }
 
+var  emitterToShutDown = null;
+
+var test = tape({
+  setup: function(t) {
+    t.end();
+  },
+  teardown: function(t) {
+    if(emitterToShutDown != null){
+      console.log("calling stopBroadcasting");
+      emitterToShutDown.stopBroadcasting(function (err4) {
+        console.log("stopBroadcasting returned " + err4);
+      });
+      emitterToShutDown = null;
+    }
+    t.end();
+  }
+});
 
 test('ThaliEmitter can call repeatedly startBroadcasting and stopBroadcasting without error', function (t) {
   var e = new ThaliEmitter();
@@ -121,11 +138,10 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
               t.ok(port > 0 && port <= 65536, 'Port should be within range');
 
               testFunction(t, e, peer, port, function() {
-                e.stopBroadcasting(function (err4) {
-                  t.notOk(err4, 'Should be able to call stopBroadcasting without error');
-                  _done = true;
-                  t.end();
-                });
+                console.log("setting stopBroadcasting callback and ending test.");
+                emitterToShutDown = e;
+                _done = true;
+                t.end();
               });
             });
           };
@@ -176,6 +192,15 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
 });
 
 test('ThaliEmitter can connect and send data', function (t) {
+
+  var server = net.createServer(function(s) {
+    s.pipe(s);
+  });
+
+  server.listen(5001, function() {
+    console.log("echo server started");
+  });
+
   var len = 1025;
   var testMessage = randomstring.generate(len);
   connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {

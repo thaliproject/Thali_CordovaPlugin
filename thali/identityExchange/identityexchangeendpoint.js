@@ -3,28 +3,30 @@
 'use strict';
 
 var bodyParser = require('body-parser');
-require('lie/polyfill');
+var Promise = require('lie');
+var IdentityExchange = require('./identityexchange');
 
-module.exports = function (app, serverPort, dbName, replicationManager, IdentityExchange) {
-  var identityExchange = new IdentityExchange(app, serverPort, replicationManager, dbName);
-
+module.exports = function (app, replicationManager, identityExchange) {
   // state
   var peerFriendlyName,
-      peerStarted,
-      peerIdentifier,
-      peers = {},
-      currentPeer,
-      deviceIdentity,
-      verificationCode,
-      exchangeStatus;
+    peerStarted,
+    peerIdentifier,
+    peers = {},
+    currentPeer,
+    verificationCode,
+    exchangeStatus;
 
-  replicationManager.getDeviceIdentity(function (err, id) {
-    deviceIdentity = id;
-  });
-
-  replicationManager.on('peerIdentityExchange', function (peer) {
+  identityExchange.on(IdentityExchange.Events.PeerIdentityExchange, function (peer) {
     peers[peer.peerIdentifier] = peer;
   });
+
+  function clearIdentityExchangeState() {
+    error = null;
+    verificationCode = null;
+    peerIdentifier = null;
+    currentPeer = null;
+    exchangeStatus = null;
+  }
 
   function clearState() {
     error = null;
@@ -33,6 +35,7 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
     currentPeer = null;
     peerStarted = false;
     exchangeStatus = null;
+    peerFriendlyName = null;
   }
 
   // Global queueing
@@ -61,13 +64,12 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
           'deviceIdentity': id
         });
       });
-  });
+    });
 
   app.put(
     '/webview/identityexchange',
     bodyParser.json(),
     function (req, res) {
-
       enqueue(function (resolve) {
         // Validate Body
         if (typeof req.body.peerFriendlyName !== 'string') {
@@ -108,7 +110,7 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
           resolve();
         });
       });
-  });
+    });
 
   app.delete(
     '/webview/identityexchange',
@@ -137,7 +139,7 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
           resolve();
         });
       });
-  });
+    });
 
   app.get(
     '/webview/identityexchange',
@@ -162,7 +164,7 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
           };
         })
       });
-  });
+    });
 
   var error;
 
@@ -194,7 +196,7 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
         if (peerIdentifier && req.body.peerDeviceId !== peerIdentifier) {
           res.status(400).json({
             errorCode: 'E_INVALIDEXCHANGE',
-            errorDescription: 'Only one peer exchance can happen at once'
+            errorDescription: 'Only one peer exchange can happen at once'
           });
           return resolve();
         }
@@ -230,10 +232,11 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
 
           exchangeStatus = 'complete';
           verificationCode = code;
-          resolve();
         });
+
+        resolve();
       });
-  });
+    });
 
   app.delete(
     '/webview/identityexchange/executeexchange',
@@ -252,11 +255,11 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
 
         identityExchange.stopExecutingIdentityExchange();
 
-        clearState();
+        clearIdentityExchangeState();
         res.sendStatus(204);
         resolve();
       });
-  });
+    });
 
   app.get(
     '/webview/identityexchange/executeexchange',
@@ -298,8 +301,6 @@ module.exports = function (app, serverPort, dbName, replicationManager, Identity
           peerDeviceId: currentPeer.peerIdentifier,
           publicKeyHash: currentPeer.peerName
         });
-        return;
       }
-
-  });
+    });
 };

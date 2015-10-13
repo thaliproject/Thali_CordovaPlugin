@@ -51,11 +51,12 @@ exports.getPublicKeyHash = function (cb) {
   });
 };
 
-exports.generateSlicedSHA256Hash = function(stringValueToHash, hashSizeInBytes) {
+exports.generateSlicedSHA256Hash = function(bufferValueToHash, hashSizeInBytes) {
   var hash = crypto.createHash(macName);
-  hash.update(stringValueToHash);
-  var fullSizeKeyHash = hash.digest('base64');
-  return fullSizeKeyHash.slice(0, hashSizeInBytes);
+  hash.update(bufferValueToHash);
+  var fullSizeKeyHashBuffer = hash.digest();
+  var slicedBuffer = fullSizeKeyHashBuffer.slice(0, hashSizeInBytes);
+  return slicedBuffer.toString('base64');
 };
 
 exports.getConfigValuesForTestingOnly = function() {

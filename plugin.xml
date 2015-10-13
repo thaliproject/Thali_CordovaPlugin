@@ -7,8 +7,6 @@
     <description>ThaliPlugin to be used on top of JXcore</description>
     <license>MIT</license>
     <keywords>cordova,jxcore,node.js,thali</keywords>
-    <dependency id="io.jxcore.node" url="https://github.com/jxcore/jxcore-cordova"
-        commit="0.0.3-release"/>
     <engines>
         <engine name="cordova-android" version=">=3.2.0" />
         <engine name="android-sdk" version=">=19" />
@@ -32,6 +30,7 @@
         <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/BtSocketDisconnectedCallBack.java" target-dir="src/io/jxcore/node/" />
         <hook type="after_prepare" src="scripts/androidAfterPrepare.js"/>
+        <!--<hook type="after_platform_add" src="scripts/androidAfterPlatformAdd.js"/>-->
     </platform>
 
     <!-- iOS -->

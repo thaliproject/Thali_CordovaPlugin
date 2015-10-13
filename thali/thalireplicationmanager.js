@@ -14,27 +14,18 @@ var deviceIdentityFlag = {
   deviceIdentityAvailable: 2
 };
 
-var e = new EventEmitter();
-
 var PEER_AVAILABILITY_CHANGED = ThaliEmitter.events.PEER_AVAILABILITY_CHANGED;
 var NETWORK_CHANGED = ThaliEmitter.events.NETWORK_CHANGED;
 
 inherits(ThaliReplicationManager, EventEmitter);
 
 function ThaliReplicationManager(db, emitter) {
-  this._deviceName = '';
-  this._deviceIdentityFlag = deviceIdentityFlag.noDeviceIdentitySet;
-  this._deviceIdentityListeners = [];
+  EventEmitter.call(this);
+  console.log("DB value for ThaliReplicationManager is: " + JSON.stringify(db));
+  if (!db) { console.trace("DB is null, how did we get here!?!?!?!?") }
   this._db = db;
   this._emitter = (emitter || new ThaliEmitter());
-  this._peers = {};
-  this._replications = {};
-  this._clients = {};
-  this._isStarted = false;
-  this._serverBridge = null;
-  this._serverBridgePort = 0;
-  this._isInRetry = {};
-  EventEmitter.call(this);
+  this.clearState();
 }
 
 ThaliReplicationManager.events = {
@@ -46,14 +37,28 @@ ThaliReplicationManager.events = {
   STOP_ERROR: 'stopError',
   CONNECT_ERROR: 'connectError',
   DISCONNECT_ERROR: 'disconnectError',
-  SYNC_ERROR: 'syncError'
+  SYNC_ERROR: 'syncError',
+  CONNECTION_SUCCESS: 'connectionSuccess'
+};
+
+ThaliReplicationManager.prototype.clearState =function() {
+  this._deviceName = '';
+  this._deviceIdentityFlag = deviceIdentityFlag.noDeviceIdentitySet;
+  this._deviceIdentityListeners = [];
+  this._peers = {};
+  this._replications = {};
+  this._clients = {};
+  this._isStarted = false;
+  this._serverBridge = null;
+  this._serverBridgePort = 0;
+  this._isInRetry = {};
 };
 
 /**
-* Returns the current device's id if available. If not, the provided callback
-* function is saved and called when the id does become available.
-* @param {Function} cb the callback which returns the current device's id.
-*/
+ * Returns the current device's id if available. If not, the provided callback
+ * function is saved and called when the id does become available.
+ * @param {Function} cb the callback which returns the current device's id.
+ */
 ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
   if(this._deviceIdentityFlag == deviceIdentityFlag.deviceIdentityAvailable) {
     cb(null, this._deviceName);
@@ -95,11 +100,12 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
 };
 
 /**
-* Starts the Thali replication manager with the given port number and db name.
-* The device-id is obtained using the cryptomanager's API.
-* @param {Number} port the port number used for synchronization.
-* @param {String} dbName the name of the database.
-*/
+ * Starts the Thali replication manager with the given port number and db name.
+ * The device-id is obtained using the cryptomanager's API.
+ * @param {Number} port the port number used for synchronization.
+ * @param {String} dbName the name of the database.
+ * @param {String} deviceName the name to advertise for the device
+ */
 ThaliReplicationManager.prototype.start = function (port, dbName, deviceName) {
   validations.ensureValidPort(port);
   validations.ensureNonNullOrEmptyString(dbName, 'dbName');
@@ -117,8 +123,6 @@ ThaliReplicationManager.prototype.start = function (port, dbName, deviceName) {
       startReplicationManager.call(this, port, dbName);
     }.bind(this));
   }
-
-
 };
 
 function startReplicationManager(port, dbName) {
@@ -134,14 +138,15 @@ function startReplicationManager(port, dbName) {
   this._serverBridge.listen(function () {
     this._serverBridgePort = this._serverBridge.address().port;
 
+    this._emitter.addListener(PEER_AVAILABILITY_CHANGED, this._syncPeers.bind(this));
+    this._emitter.addListener(NETWORK_CHANGED, this._networkChanged.bind(this));
+
     this._emitter.startBroadcasting(this._deviceName, this._serverBridgePort, function (err) {
       if (err) {
         this._isStarted = false;
         this.emit(ThaliReplicationManager.events.START_ERROR, err);
       } else {
         this._isStarted = true;
-        this._emitter.addListener(PEER_AVAILABILITY_CHANGED, this._syncPeers.bind(this));
-        this._emitter.addListener(NETWORK_CHANGED, this._networkChanged.bind(this));
         this.emit(ThaliReplicationManager.events.STARTED);
       }
     }.bind(this));
@@ -149,13 +154,17 @@ function startReplicationManager(port, dbName) {
 }
 
 /**
-* Stops the Thali replication manager
-*/
+ * Stops the Thali replication manager
+ */
 ThaliReplicationManager.prototype.stop = function () {
+  console.log("Now in TRM stop");
+  console.log("State of this._isStarted:" + this._isStarted);
   if (!this._isStarted) { throw new Error('.start must be called before stop'); }
   this.emit(ThaliReplicationManager.events.STOPPING);
 
+  console.log("About to call stopBroadcasting");
   this._emitter.stopBroadcasting(function (err) {
+    console.log("Got callback from stopBroadcasting with err " + err);
     this._emitter.removeAllListeners(PEER_AVAILABILITY_CHANGED);
     this._emitter.removeAllListeners(NETWORK_CHANGED);
 
@@ -168,6 +177,8 @@ ThaliReplicationManager.prototype.stop = function () {
     this._serverBridge.close();
     this._serverBridge = null;
     this._isStarted = false;
+
+    this.clearState();
 
     if (err) {
       this.emit(ThaliReplicationManager.events.STOP_ERROR, err);
@@ -246,35 +257,47 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
       console.log('Connect error with error: %s', err);
       this.emit(ThaliReplicationManager.events.CONNECT_ERROR, err);
       setImmediate(this._syncRetry.bind(this, peerIdentifier));
-    } else {
-      var client = tcpMultiplex.muxClientBridge(port, function (err) {
-        if (err) {
-          console.log('Error in mux client bridge %s', err);
-          setImmediate(this._syncRetry.bind(this, peerIdentifier));
-        }
-        this._clients[peer.peerIdentifier] = client;
-        client.listen(function () {
-          var localPort = client.address().port;
-
-          var remoteDB = 'http://localhost:' + localPort + '/db/' + this._dbName;
-          var options = { live: true, retry: true };
-          this._replications[peer.peerIdentifier] = {
-            from: this._db.replicate.from(remoteDB, options),
-            to: this._db.replicate.to(remoteDB, options)
-          };
-        }.bind(this));
-      }.bind(this));
+      return;
     }
+
+    var client = tcpMultiplex.muxClientBridge(port, function (err) {
+      if (err) {
+        console.log('Error in mux client bridge %s', err);
+        setImmediate(this._syncRetry.bind(this, peerIdentifier));
+        return;
+      }
+      this._clients[peer.peerIdentifier] = client;
+      client.listen(function () {
+        var localPort = client.address().port;
+
+        this.emit(ThaliReplicationManager.events.CONNECTION_SUCCESS, {
+          peerIdentifier : peer.peerIdentifier,
+          muxPort : localPort
+        });
+
+        var remoteDB = 'http://localhost:' + localPort + '/db/' + this._dbName;
+        var options = { live: true, retry: true };
+        this._replications[peer.peerIdentifier] = {
+          from: this._db.replicate.from(remoteDB, options),
+          to: this._db.replicate.to(remoteDB, options)
+        };
+      }.bind(this));
+    }.bind(this));
   }.bind(this));
 };
 
 /**
- * Retry a synchronization after a failture with the given peer identifier. This tears down
+ * Retry a synchronization after a failure with the given peer identifier. This tears down
  * all the client replications so that we can have a clean sync retry
  * @param {String} peerIdentifier The peer identifier to retry the synchronization with.
  */
 ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
+  if (!this._isStarted) {
+    return;
+  }
+
   if (this._isInRetry[peerIdentifier]) { return; }
+
   this._isInRetry[peerIdentifier] = true;
 
   var existingClient = this._clients[peerIdentifier];

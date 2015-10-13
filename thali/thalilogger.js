@@ -23,4 +23,4 @@ module.exports = function(tag){
         return meta;
     });
     return logger;
-}
+};
