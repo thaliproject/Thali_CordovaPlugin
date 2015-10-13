@@ -172,13 +172,11 @@ typedef enum relayStates {
     NSLog(@"ERROR: Writing to output stream");
   }
 
-  NSLog(@"%@ out: %ld bytes", _relayType, (unsigned long)data.length);
   [_socket readDataWithTimeout:-1 tag:tag];
 }
 
 - (void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag
 {
-  NSLog(@"%@ didWriteData: %ld", _relayType, tag);
 }
 
 - (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err

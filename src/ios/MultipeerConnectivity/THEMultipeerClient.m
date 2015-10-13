@@ -113,6 +113,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       if (![clientSession visible])
       {
         success = NO;
+        NSLog(@"client: connect: unreachable %@", peerIdentifier);
         connectCallback(@"Peer unreachable", 0);
       }
       else
@@ -145,7 +146,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
   if (!clientSession)
   {
-    NSLog(@"Unknown peer %@", peerIdentifier);
+    NSLog(@"client: unknown peer %@", peerIdentifier);
     connectCallback(@"Unknown peer", 0);
   }
 
@@ -258,6 +259,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     clientSession = (THEMultipeerClientSession *)p;
     assert([[clientSession remotePeerID] hash] == [peerID hash]);
+    NSLog(@"client: lost peer: %@", [clientSession remotePeerIdentifier]);
 
     previouslyVisible = clientSession.visible;
 

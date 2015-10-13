@@ -74,6 +74,7 @@
     {
       if (prevState == THEPeerSessionStateConnecting)
       {
+        NSLog(@"client session: disconnected: %@", [self remotePeerIdentifier]);
         _connectCallback(@"Peer disconnected", 0);
       }
       _connectCallback = nil;
