@@ -34,7 +34,7 @@
     "supertest-as-promised": "^2.0.2",
     "socket.io-client": "^1.3.6",
     "tape": "^4.0.0",
-    "thali": "^2.1.0",
+    "thali": "^2.0.1",
     "uuid": "^2.0.0",
     "wrapping-tape": "^0.0.3"
   },

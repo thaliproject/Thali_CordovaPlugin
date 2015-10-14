@@ -85,7 +85,7 @@ var test = tape({
     }).then(function () {
         if (server) {
           console.log("About to call server.close");
-          server.close()
+          server.close();
           t.end();
         } else {
           console.log("Server was null so just ending");
