@@ -196,9 +196,10 @@ typedef enum relayStates {
  
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
-  assert(sock == _socket);
   @synchronized(self)
   {
+    assert(sock == _socket);
+
     // Enqueue, send directly if we're pending
     [_outputBuffer addObject:data];
     if (_outputBufferHasSpaceAvailable)
