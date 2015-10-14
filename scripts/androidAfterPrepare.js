@@ -1,6 +1,5 @@
 'use strict';
 
-var Promise = require('lie');
 var fs = require('fs-extra-promise');
 var path = require('path');
 
@@ -41,16 +40,12 @@ function replaceJXCoreExtension(appRoot) {
 
 function removeInstallFromPlatform(appRoot) {
     var installDir = path.join(appRoot, "platforms/android/assets/www/jxcore/node_modules/thali/install");
-    return fs.removeAsync(installDir);
+    fs.remove(installDir);
 }
 
-var appRoot = path.join(__dirname, "../../..");
-updateAndroidSDKVersion(appRoot);
-replaceJXCoreExtension(appRoot);
-removeInstallFromPlatform(appRoot)
-.then(function() {
-    process.exit(0);
-}).catch(function(err) {
-    console.log("Android build failed with: " + err);
-    process.exit(1);
-});   
+module.exports = function (context) {
+    var appRoot = context.opts.projectRoot;
+    updateAndroidSDKVersion(appRoot);
+    replaceJXCoreExtension(appRoot);
+    removeInstallFromPlatform(appRoot);
+};
