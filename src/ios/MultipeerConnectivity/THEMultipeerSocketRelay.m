@@ -218,20 +218,23 @@ typedef enum relayStates {
 
 - (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
 {
-  assert(_socket == nil || sock == _socket);
-
-  // Usually benign, the upper layer just closed their connection
-  // they may want to connect again later
-
-  NSLog(@"%@ relay: socket disconnected", _relayType);
-
-  if (err) 
+  @synchronized(self)
   {
-      NSLog(@"%@ relay: %p disconnected with error %@ ", _relayType, sock, [err description]);
-  }
+    assert(_socket == nil || sock == _socket);
 
-  // Dispose of the socket, it's no good to us anymore
-  _socket = nil;
+    // Usually benign, the upper layer just closed their connection
+    // they may want to connect again later
+
+    NSLog(@"%@ relay: socket disconnected", _relayType);
+
+    if (err) 
+    {
+        NSLog(@"%@ relay: %p disconnected with error %@ ", _relayType, sock, [err description]);
+    }
+
+    // Dispose of the socket, it's no good to us anymore
+    _socket = nil;
+  }
 }
 
 #pragma mark - NSStreamDelegate
