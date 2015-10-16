@@ -47,6 +47,7 @@ To run either unit or performance tests on mobile devices one first has to build
 the Cordova project onto the phones. One also needs to run a coordination server.
 
 To run the mobile tests:
+
 1. If you have a sibling directory to Thali_CordovaPlugin called ThaliTest, now would be a good time to delete it.
 1. Go to Thali_CordovaPlugin/thali/install
 2. Run either `jx npm run setupUnit` or `jx npm run setupPerf` depending on what type of test project you want to
