@@ -4,7 +4,7 @@
   "description": "Just used for cordova scripts",
   "main": "",
   "dependencies": {
-    "fs-extra-promise": "^0.2.0"
+    
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
