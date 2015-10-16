@@ -124,13 +124,13 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     _peers = [[NSMutableDictionary alloc] init];
 
     // Initialise the BLE stack..
-    NSUUID * btServiceType = [[NSUUID alloc] initWithUUIDString:BLE_SERVICE_TYPE];
+    //NSUUID * btServiceType = [[NSUUID alloc] initWithUUIDString:BLE_SERVICE_TYPE];
 
     // Bluetooth will start on initialisation
-    _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:btServiceType
-                                                    peerIdentifier:peerIdentifier
-                                                          peerName:[serverPort stringValue]
-                                                 bluetoothDelegate:self];
+    //_peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:btServiceType
+    //                                                peerIdentifier:peerIdentifier
+    //                                                      peerName:[serverPort stringValue]
+    //                                             bluetoothDelegate:self];
        
 
     // Intitialise the multipeer connectivity stack..
@@ -159,7 +159,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 {
   if ([_atomicFlagCommunicationsEnabled tryClear])
   {
-    [_peerBluetooth stop];
+    //[_peerBluetooth stop];
     [_multipeerSession stop];
 
     _peerBluetooth = nil;
