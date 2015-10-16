@@ -15,6 +15,6 @@ jx npm install --autoremove "*.gz"
 # seem to work in this case.
 find . -name "*.gz" -delete
 cp $1 app.js
-cordova build android
-cordova build ios
+cordova build android --release --device
+cordova build ios --device
 echo "Remember to start the test coordination server by running jx index.js"
