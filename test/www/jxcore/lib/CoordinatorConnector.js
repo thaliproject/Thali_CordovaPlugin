@@ -49,7 +49,7 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
 
 CoordinatorConnector.prototype.close = function(){
     this.socket.close();
-}
+};
 
 CoordinatorConnector.prototype.identify = function(name){
     if(jxcore.utils.OSInfo().isAndroid) {

@@ -57,7 +57,9 @@ Android and iOS. This assumes you are running on a Mac with all the right tools.
 3. Go to Thali_CordovaPlugin/test/TestServer
 4. Examine Config_PerfTest.json or Config_UnitTest.json (depending on the test type you are running) and make sure it
 is configured properly.
-5. Run `jx index.js` in that directory on your local PC to start the coordination server
+5. Run `jx index.js {\"devices\":{\"ios\":\"2\",\"android\":\"2\"}}` in that directory on your local PC to start the 
+coordination server. Obviously edit the device counts passed on the command line to reflect the actual test
+environment.
 6. Deploy and run the tests on your two Android or two iPhone devices.
 
 ### Desktop

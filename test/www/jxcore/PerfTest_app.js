@@ -5,7 +5,7 @@
  */
 (function () {
 
-  
+
   Mobile.toggleBluetooth(true, function() {
     console.log("toggleBluetooth - ON- ");
     Mobile.toggleWiFi(true, function() {
@@ -13,8 +13,8 @@
     });
   });
 
-  var CoordinatorConnector = require('./CoordinatorConnector');
-  var TestFrameworkClient = require('./PerfTestFramework');
+  var CoordinatorConnector = require('./lib/CoordinatorConnector');
+  var TestFrameworkClient = require('./perf_tests/PerfTestFramework');
 
   /*----------------------------------------------------------------------------------
    code for connecting to the coordinator server

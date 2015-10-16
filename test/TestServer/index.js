@@ -1,5 +1,5 @@
 /*
-Main entry point for Thali test frameworks coordinator server
+ Main entry point for Thali test frameworks coordinator server
  */
 
 
@@ -12,13 +12,7 @@ var io = require('socket.io')(http);
 var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');
 var UnitTestFramework = require('./UnitTestFramework');
-
-//todo remove after we stop debugging
-var objToParse  = "{\"devices\":{\"ios\":\"2\",\"android\":\"3\"}}";
-
-console.log("Integration server has received ", process.argv);
-var devicesObject = JSON.parse(objToParse);
-console.log("JSON", devicesObject);
+var devicesObject = JSON.parse(process.argv[2]);
 
 var perfTestsAndroid = new PerfTestFramework(devicesObject.devices.android,"Android");
 var perfTestsIOS     = new PerfTestFramework(devicesObject.devices.ios,"iOs");

@@ -6,7 +6,6 @@
 'use strict';
 
 var events = require('events');
-var TestDevice = require('./TestDevice');
 
 function UnitTestFramework(count) {
     this.devicesCount = count;

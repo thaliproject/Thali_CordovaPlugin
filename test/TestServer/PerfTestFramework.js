@@ -5,7 +5,6 @@
 
 var fs = require('fs');
 var events = require('events');
-var TestDevice = require('./TestDevice');
 var configFile = require('./Config_PerfTest.json');
 
 /*

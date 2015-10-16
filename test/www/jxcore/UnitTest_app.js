@@ -7,15 +7,15 @@
 "use strict";
 
 var test = require('tape');
-var express = require('express');
+//var express = require('express');
 var net = require('net');
-
-var app = express();
-app.disable('x-powered-by');
+//
+//var app = express();
+//app.disable('x-powered-by');
 
 var myName = "UNIT-TEST";
 
-app.listen(5000, function () {
+//app.listen(5000, function () {
 
   var failedRows = [];
   var rows = [], total = 0, passed = 0, failed = 0;
@@ -53,7 +53,7 @@ app.listen(5000, function () {
     });
 
   require('./runTests.js');
-});
+//});
 
 /***************************************************************************************
  functions for Cordova side application, used for showing debug logs

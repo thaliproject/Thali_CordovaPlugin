@@ -1,8 +1,8 @@
 /**
  *
  * This is class implementation which is used to load all performance tests from the perf_tests folder
- * Then its expecting start & stop commands for the tests, and also it expects the start command to specify which test file to execute.
- * It also routes the:
+ * Then its expecting start & stop commands for the tests, and also it expects the start command to specify which test
+ * file to execute. It also routes the:
  * - 'done' events indicating that the test case has now been finished, and the test now waits teardown to happen with stop command
  * - 'debug' events which are relying some debugging information that could be shown in the applications UI
  */
