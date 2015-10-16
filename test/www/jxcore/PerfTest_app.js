@@ -6,9 +6,15 @@
 (function () {
 
 
-  Mobile.toggleBluetooth(true, function() {
+  Mobile.toggleBluetooth(true, function(err) {
+    if (err) {
+      console.log("We could not turn on Bluetooth! - " + err);
+    }
     console.log("toggleBluetooth - ON- ");
-    Mobile.toggleWiFi(true, function() {
+    Mobile.toggleWiFi(true, function(err) {
+      if (err) {
+        console.log("We could not turn on WiFi! - " + err);
+      }
       console.log("toggleWiFi - ON- ");
     });
   });
