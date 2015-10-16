@@ -1,6 +1,7 @@
 'use strict';
 
-var fs = require('fs-extra-promise');
+/*var fs = require('fs-extra-promise');
+*/
 var path = require('path');
 
 /**
