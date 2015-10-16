@@ -10,7 +10,9 @@ cd ThaliTest/www/jxcore
 cordova platform add ios
 cordova platform add android
 jx npm install ../../../Thali_CordovaPlugin/thali --save --autoremove "*.gz"
-jx npm install --autoremove "*.gz"
+# SuperTest which is used by some of the BVTs include a PEM file (for private keys) that makes Android unhappy
+# so we remove it below in addition to the gz files.
+jx npm install --autoremove "*.gz,*.pem"
 # In theory we don't need the line below because we use autoremove but for some reason autoremove doesn't
 # seem to work in this case.
 find . -name "*.gz" -delete
