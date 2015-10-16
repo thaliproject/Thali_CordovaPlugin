@@ -1,7 +1,7 @@
 # The `Mobile API` class
 
 The `Mobile API` class is a set of Javascript functions that use JXcore's native call out capabilities to talk
-to the underlying native platform and use its non-TCP/IP based technologies to enable for discovery and connectivity
+to the underlying native platform and use its non-TCP/IP based technologies to enable discovery and connectivity
 to devices. However, to enable better interop with Node's rich collection of TCP/IP based stacks all connections
 over non-TCP/IP native technologies will be bridged to TCP/IP.
 
@@ -15,17 +15,17 @@ additional functionality such as TCP/IP (and UDP/IP) based discovery/connectivit
 
 MobileAPI is a singleton so there is no constructor. It exposes the following methods:
 
-- `startListening(portNumber, callback)`
-- `stopListening(callback)`
-- `startUpdateAdvertising(callback)`
-- `stopAdvertising(callback)`
-- `connect(peerIdentifier, callback)`
-- `disconnect(peerIdentifier, callback)`
-- `networkStatus(callback)`
+- `Mobile('StartListening').callNative(portNumber, callback)`
+- `Mobile('StopListening').callNative(callback)`
+- `Mobile('StartUpdateAdvertising').callNative(callback)`
+- `Mobile('StopAdvertising').callNative(callback)`
+- `Mobile('Connect').callNative(peerIdentifier, callback)`
+- `Mobile('Disconnect').callNative(peerIdentifier, callback)`
+- `Mobile('NetworkStatus').callNative(callback)`
 
 ## Events
-- `networkChanged`
-- `peerAvailabilityChanged`
+- `Mobile('NetworkChanged').registerToNative(callback)`
+- `Mobile('PeerAvailabilityChanged').registerToNative(callback)`
 
 ## Methods
 
@@ -34,7 +34,8 @@ MobileAPI is a singleton so there is no constructor. It exposes the following me
 All methods defined here are asynchronous. This means that when called they synchronously will return null and the
 actual response will be sent to the submitted callback.
 
-All methods defined here are safe to call consecutively but not concurrently.
+Unless explicitly stated otherwise in a method's definition, all methods defined here are safe to call consecutively 
+but not concurrently.
 
 In other words:
 
@@ -43,11 +44,11 @@ emitter.startListening(portNumber, function() {});
 emitter.startListening(portNumber + 1, function() {});
 ```
 
-is ILLEGAL because it has two calls to startListening outstanding at the same time without waiting for the callback.
+is an error because it has two calls to startListening outstanding at the same time without waiting for the callback.
 
-If any method defined here is called concurrently then the system should do its best to return a 'NoConcurrentCalls' 
-error message. But in general if any method is called concurrently then the system is said to be in an indeterminate
- state.
+For methods that do not support concurrent calls the system should do its best to return a 'NoConcurrentCalls' 
+error message. But in general if any method is called concurrently that does not support concurrent calls then the 
+system is said to be in an indeterminate state and operations should not continue.
 
 Where as:
 
@@ -62,13 +63,13 @@ emitter.startListening(portNumber, function(err) {
 
 is explicitly allowed because while the calls to startListening are consecutive they are not concurrent.
 
-### `mobileAPI.prototype.startListening(portNumber)`
+### `Mobile('StartListening').callNative(portNumber, callback)`
 
 This method instructs the native layer to do two things. 
 
-First, it tells the native layer to discovery what other devices
-are within range using whatever non-TCP/IP native technologies are available. When a device is discovered its 
-information will be published as a `peerAvailabilityChanged` event.
+First, it tells the native layer to discovery what other devices are within range using whatever non-TCP/IP native 
+technologies are available. When a device is discovered its information will be published as a 
+`peerAvailabilityChanged` event.
 
 Second, it tells the native layer to accept incoming connections over the non-TCP/IP native technologies and to bridge
 those connections to TCP/IP and then connect to the submitted portNumber on 127.0.0.1.
@@ -88,14 +89,18 @@ a local TCP/IP client who will connect to 127.0.0.1 using the supplied portNumbe
 look to the local Node.js code as if it were talking over TCP/IP. But this is just a bridge from the non-TCP/IP
 native technology to TCP/IP.
 
-It is explicitly legal to call this method multiple times in a row, even with different portNumber values. Calling
-the method multiple times in a row tells the native layer to just keep on listening and keep on accepting incoming
-connections. There must not be any disruption in listening or accepting incoming connections due to repeated calls
+When calling this method consecutively it is fine to use different portNumbers on each call. Calling
+the method consecutively tells the native layer to just keep on listening and keep on accepting incoming
+connections. There must not be any disruption in listening or accepting incoming connections due to consecutive calls
 to this method. If the portNumber is changed between calls then this change only affects future incoming connections,
-any existing connections on the old portNumber must be left alone.
+any existing connections on the old portNumber must be left alone. For example, imagine that at time 0 `StartListening` 
+is called with port A, a time 1 an incoming connection is received and connected to port A, a time 2 'StartListening' is
+called again but with port B. From time 2 onwards any new incoming connections will be connected to port B but the
+existing incoming connection to port A will be left alone.
 
 It is an error to concurrently call startListening and stopListening. Any attempt to do so leaves the system in
-an indeterminate state. Ideally however one or both calls would fail with a 'NoConcurrentCalls' error.
+an indeterminate state. Ideally however one or both calls would fail with a 'NoConcurrentCalls' error but this is
+not guaranteed.
 
 #### Arguments:
 
@@ -103,7 +108,7 @@ an indeterminate state. Ideally however one or both calls would fail with a 'NoC
 2. `callback` : `Function` - must be in the form of the following, `function(err)` where:
   - `err` : `Error` - an `Error` if one occurred, else `null`.
 
-### `mobileAPI.prototype.stopListening(callback)`
+### `Mobile('StopListening').callNative(callback)`
 
 This method instructs the native layer to stop listening for discovery requests and incoming connections. It also
 instructs the native layer to terminate any in-progress incoming connections regardless of what port they are
@@ -113,7 +118,7 @@ For example, if startListening was called with portNumber A and then later calle
 incoming connections to both port A and B when `stopListening()` is called all connections, both to ports A and B,
 are to be terminated.
 
-Once this method returns its callback no further `peerAvailabilityChanged` events will be received until 
+Once this method calls the submitted callback no further `peerAvailabilityChanged` events will be received until 
 `startListening()` is called.
 
 `stopListening()` may be called successfully at any time, even if `startListening()` has not been called.
@@ -124,7 +129,7 @@ Once this method returns its callback no further `peerAvailabilityChanged` event
 1. `callback` : `Function` - must be in the form of the following, `function(err)` where:
   - `err` : `Error` - an `Error` if one occurred, else `null`.
 
-### `mobileAPI.prototype.startUpdateAdvertising(callback)`
+### `Mobile('StartUpdateAdvertising').callNative(callback)`
 
 This method tells the native layer to start advertising the device's support of Thali.
 
@@ -133,22 +138,21 @@ advertise. But for now we will just hardcode in Thali's service identifier.
 
 An issue Thali has to deal with is that its discovery layer is based on a fairly long string of data (see 
 [here](http://thaliproject.org/presenceprotocolforopportunisticsynching) for details). This string is typically
-to long to reliably send over native discovery mechanisms. So instead we do a 'two step' where we just advertise
+too long to reliably send over native discovery mechanisms. So instead we do a 'two step' where we just advertise
 our support of Thali over the local discovery mechanism and then we establish a connection directly to the
 device over the local high bandwidth transport to get the discovery string. 
 
 The problem is that the discovery string changes over time so how is device A who discovered device B supposed to know 
 that two minutes later device B has a different discovery string? In other words, at time 0 device A retrieves device 
-B's discovery string, determines there is nothing interesting there and goes back to sleep. At time 1 device B changes 
+B's discovery string and takes whatever actions are appropriate with it. At time 1 device B changes 
 its discovery string, device A now needs to know to look at the new discovery string. How is device A supposed to find 
 out? After all it has already discovered device B. Why would it try to talk to device B again?
 
 We could, of course, use polling. But that is not battery efficient.
 
-Instead we use different solutions for different platforms. For example, in Android due to issues we have run into
-using BLE connect we only use BLE to announce presence. But every time we start and stop BLE peripheral mode this will 
-result in us getting a new BLE address. Therefore whenever we change our discovery string we can just start and stop 
-BLE peripheral node. All the other devices will see a "new" device and connect to it.
+Instead we use different solutions for different platforms, see the document `discoveryNotification.md` for details on 
+how this is handled for different platforms. But in each case the native code needs a signal that a new string is 
+available. This method provides that signal.
 
 In iOS however multi-peer connectivity works slightly differently. There we have to create a new session. But 
 conceptually the result is the same. The new session has a new piece of metadata that tells everybody that
@@ -170,7 +174,7 @@ called with `startListening()` is not active then a `OnlyCallAfterStartListening
 1. `callback` : `Function` - must be in the form of the following, `function(err)` where:
   - `err` : `Error` - an `Error` if one occurred, else `null`.
 
-### `mobileAPI.prototype.stopAdvertising(callback)`
+### `Mobile('StopAdvertising').callNative(callback)`
 
 This method tells the native layer to stop advertising support for Thali. It only affects advertising, not listening
 or any connections.
@@ -184,7 +188,7 @@ have not been called.
 1. `callback` : `Function` - must be in the form of the following, `function(err)` where:
   - `err` : `Error` - an `Error` if one occurred, else `null`.
   
-### `mobileAPI.prototype.connect(peerIdentifier, callback)`
+### `Mobile('Connect').callNative(peerIdentifier, callback)`
 
 As explained in more detail in the section on `peerAvailabilityChanged` when a peer is discovered via the native
 layer it is assigned a `peerIdentifier`. Since the peer is not natively available over TCP/IP we have to
