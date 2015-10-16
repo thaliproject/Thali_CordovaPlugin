@@ -3,6 +3,7 @@
 
 'use strict';
 
+var fs = require('fs');
 var events = require('events');
 var TestDevice = require('./TestDevice');
 var configFile = require('./Config_PerfTest.json');
@@ -11,23 +12,18 @@ var configFile = require('./Config_PerfTest.json');
  {
  "name": "performance tests",
  "description": "basic performance tests for Thali apps framework",
- "startDeviceCount": "4",
  "tests": [
- {"name": "testFindPeers.js", "timeout": "30000","data": {"count": "3","timeout": "20000"}},
- {"name": "testReConnect.js", "timeout": "700000","data": {"count": "3","timeout": "600000","rounds":"6","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
- {"name": "testSendData.js", "timeout": "7000000","data": {"count": "3","timeout": "6000000","rounds":"3","dataAmount":"1000000","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
+ {"name": "testFindPeers.js", "timeout": "30000","data": {"timeout": "20000"}},
+ {"name": "testReConnect.js", "timeout": "700000","data": {"timeout": "600000","rounds":"6","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
+ {"name": "testSendData.js", "timeout": "7000000","data": {"timeout": "6000000","rounds":"3","dataAmount":"1000000","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
 
  ]
  }
 
-  With startDeviceCount define on how many devices needs to be connected before tests are started
 
   Test item in the array includes the tests file name and:
   - timeout: defines timeout value which after the coordinator server will cancel the test
   - data: is data that gets sent to the clients devices, and defines what they need to do
-
-   with testFindPeers additional data item included is:
-   - count: defines how many peers needs to be found/processed
 
    additionally with  re-Connect test data
    - rounds defines how many rounds of connection established needs to be performed for each peers
@@ -40,14 +36,15 @@ var configFile = require('./Config_PerfTest.json');
  */
 
 
-
-function PerfTestFramework() {
+function PerfTestFramework(count, platform) {
     this.timerId = null;
+    this.devicesCount = count;
+    this.os = platform;
     this.testDevices = {};
     this.testResults = [];
     this.currentTest = -1;
 
-    console.log('Start test : ' + configFile.name + ", start tests with " + configFile.startDeviceCount + " devices");
+    console.log('Star ' + this.os + ' tests : ' + configFile.name + ", start tests with " + this.devicesCount + " devices");
 
     for(var i=0; i < configFile.tests.length; i++) {
         console.log('Test[' + i + ']: ' + configFile.tests[i].name + ', timeout : ' + configFile.tests[i].timeout + ", data : " + JSON.stringify(configFile.tests[i].data));
@@ -59,24 +56,26 @@ PerfTestFramework.prototype = new events.EventEmitter;
 PerfTestFramework.prototype.addDevice = function(device){
 
     if(this.currentTest >= 0){
-        console.log('test progressing ' + device.getName() + ' not added to tests');
+        console.log(this.os + ' test progressing ' + device.getName() + ' not added to tests');
         return;
     }
 
     this.testDevices[device.getName()] = device;
-    console.log(device.getName() + ' added!');
+    console.log(this.os + '  ' + device.getName() + ' added!');
 
-    if(this.getConnectedDevicesCount() == configFile.startDeviceCount){
-        console.log('----- start testing now -----');
+    if(this.getConnectedDevicesCount() == this.devicesCount){
+        console.log('-----' + this.os + ' start testing now -----');
+
+        this.start =new Date();
         this.doNextTest();
     }
 }
 
 PerfTestFramework.prototype.removeDevice = function(name){
-    console.log(name + ' id now disconnected!');
+    console.log(this.os + ' ' + name + ' id now disconnected!');
     if(this.currentTest >= 0){
         if(this.testDevices[name]){
-            console.log('test for ' + name + ' cancelled');
+            console.log(this.os + ' test for ' + name + ' cancelled');
             this.ClientDataReceived(name,JSON.stringify({"result":"DISCONNECTED"}));
         }else {
             console.log('test progressing ' + name + ' is not removed from the list');
@@ -88,7 +87,7 @@ PerfTestFramework.prototype.removeDevice = function(name){
     this.testDevices[name] = null;
 }
 
-PerfTestFramework.prototype.ClientDataReceived = function(name,data){
+PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
     var jsonData = JSON.parse(data);
 
     //save the time and the time we got the results
@@ -96,10 +95,48 @@ PerfTestFramework.prototype.ClientDataReceived = function(name,data){
     this.testDevices[name].endTime = new Date();
 
     var responseTime = this.testDevices[name].endTime - this.testDevices[name].startTime;
-    console.log('with ' + name + ' request took : ' + responseTime + " ms.");
+    console.log(this.os + ' with ' + name + ' request took : ' + responseTime + " ms.");
 
-    if(this.getFinishedDevicesCount() == configFile.startDeviceCount){
-        console.log('test[ ' + this.currentTest + '] done now.');
+    console.log('--------------- ' + name + ' ---------------------');
+
+    if (jsonData.peersList && (jsonData.peersList.length > 0)) {
+
+        jsonData.peersList.sort(this.compare);
+        var line01 = name + ' has ' + jsonData.peersList.length + ' peersList result, range ' + jsonData.peersList[0].time + ' ms  to  ' + jsonData.peersList[(jsonData.peersList.length - 1)].time + " ms.";
+        console.log(line01);
+
+        var line02 = "100% : " + this.getValueOf(jsonData.peersList, 1.00) + " ms, 99% : " + this.getValueOf(jsonData.peersList, 0.90) + " ms, 95 %: " + this.getValueOf(jsonData.peersList, 0.95) + " ms, 90% : " + this.getValueOf(jsonData.peersList, 0.90) + " ms.";
+
+        console.log(line02);
+    }
+
+    if (jsonData.connectList && (jsonData.connectList.length > 0)) {
+        jsonData.connectList.sort(this.compare);
+
+        var line03 = name + ' has ' + jsonData.connectList.length + ' connectList result , range ' + jsonData.connectList[0].time + ' ms to  ' + jsonData.connectList[(jsonData.connectList.length - 1)].time + " ms.";
+
+        console.log(line03);
+
+        var line04 = "100% : " + this.getValueOf(jsonData.connectList, 1.00) + " ms, 99% : " + this.getValueOf(jsonData.connectList, 0.99) + " ms, 95% : " + this.getValueOf(jsonData.connectList, 0.95) + " ms, 90% : " + this.getValueOf(jsonData.connectList, 0.90) + " ms.";
+
+        console.log(line04);
+    }
+
+    if (jsonData.sendList && (jsonData.sendList.length > 0)) {
+        jsonData.sendList.sort(this.compare);
+
+        var line05 = name + ' has ' + jsonData.sendList.length + ' sendList result , range ' + jsonData.sendList[0].time + ' ms to  ' + jsonData.sendList[(jsonData.sendList.length - 1)].time + " ms.";
+
+        console.log(line05);
+
+        var line06 = "100% : " + this.getValueOf(jsonData.sendList, 1.00) + " ms, 99% : " + this.getValueOf(jsonData.sendList, 0.99) + " ms, 95 : " + this.getValueOf(jsonData.sendList, 0.95) + " ms, 90% : " + this.getValueOf(jsonData.sendList, 0.90) + " ms.";
+
+        console.log(line06);
+    }
+
+
+    if (this.getFinishedDevicesCount() == this.devicesCount) {
+        console.log(this.os + ' test[ ' + this.currentTest + '] done now.');
         this.testFinished();
     }
 }
@@ -141,7 +178,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
                 this.testDevices[deviceName].startTime = new Date();
                 this.testDevices[deviceName].endTime = new Date();
                 this.testDevices[deviceName].data = null;
-                this.testDevices[deviceName].SendCommand('start',configFile.tests[this.currentTest].name,JSON.stringify(configFile.tests[this.currentTest].data));
+                this.testDevices[deviceName].SendCommand('start',configFile.tests[this.currentTest].name,JSON.stringify(configFile.tests[this.currentTest].data),(this.devicesCount - 1));
            }
         }
 
@@ -159,9 +196,12 @@ PerfTestFramework.prototype.doNextTest  = function(){
         return;
     }
 
-    console.log('All tests are done, preparing test report.');
+    console.log(this.os + ' All tests are done, preparing test report.');
+
+
     var results = {};
     var combined ={};
+
     for (var i=0; i < this.testResults.length; i++) {
 
         if(this.testResults[i].data) {
@@ -179,7 +219,9 @@ PerfTestFramework.prototype.doNextTest  = function(){
                 results[this.testResults[i].device].sendList = this.extendArray(this.testResults[i].data.sendList, results[this.testResults[i].device].sendList);
 
             } else {
-                console.log('Test[' + this.testResults[i].test + '] for ' + this.testResults[i].device + ' has unknown data : ' + JSON.stringify(this.testResults[i].data));
+                var line00 = 'Test[' + this.testResults[i].test + '] for ' + this.testResults[i].device + ' has unknown data : ' + JSON.stringify(this.testResults[i].data);
+
+                console.log(line00);
             }
         }
     }
@@ -187,27 +229,49 @@ PerfTestFramework.prototype.doNextTest  = function(){
     console.log('--------------- test report ---------------------');
 
     for( var devName in results){
+
         console.log('--------------- ' + devName + ' ---------------------');
 
         if(results[devName].peersList && (results[devName].peersList.length > 0)) {
 
             results[devName].peersList.sort(this.compare);
-            console.log(devName + ' has ' + results[devName].peersList.length + ' peersList result, range ' + results[devName].peersList[0].time + ' ms  to  '  + results[devName].peersList[(results[devName].peersList.length - 1)].time + " ms.");
-            console.log("100% : " + this.getValueOf(results[devName].peersList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].peersList,0.90)  + " ms, 95 %: " + this.getValueOf(results[devName].peersList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].peersList,0.90) + " ms.");
+
+            var line01 = devName + ' has ' + results[devName].peersList.length + ' peersList result, range ' + results[devName].peersList[0].time + ' ms  to  '  + results[devName].peersList[(results[devName].peersList.length - 1)].time + " ms.";
+
+            console.log(line01);
+
+            var line02 = "100% : " + this.getValueOf(results[devName].peersList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].peersList,0.90)  + " ms, 95 %: " + this.getValueOf(results[devName].peersList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].peersList,0.90) + " ms.";
+
+            console.log(line02);
+
             combined.peersList = this.extendArray(results[devName].peersList,combined.peersList);
         }
 
         if(results[devName].connectList && (results[devName].connectList.length > 0)) {
             results[devName].connectList.sort(this.compare);
-            console.log(devName + ' has ' + results[devName].connectList.length + ' connectList result , range ' + results[devName].connectList[0].time + ' ms to  '  + results[devName].connectList[(results[devName].connectList.length - 1)].time + " ms.");
-            console.log("100% : " + this.getValueOf(results[devName].connectList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].connectList,0.99)  + " ms, 95% : " + this.getValueOf(results[devName].connectList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].connectList,0.90) + " ms.");
+
+            var line03 = devName + ' has ' + results[devName].connectList.length + ' connectList result , range ' + results[devName].connectList[0].time + ' ms to  '  + results[devName].connectList[(results[devName].connectList.length - 1)].time + " ms.";
+
+            console.log(line03);
+
+            var line04 = "100% : " + this.getValueOf(results[devName].connectList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].connectList,0.99)  + " ms, 95% : " + this.getValueOf(results[devName].connectList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].connectList,0.90) + " ms.";
+
+            console.log(line04);
+
             combined.connectList = this.extendArray(results[devName].connectList,combined.connectList);
         }
 
         if(results[devName].sendList && (results[devName].sendList.length > 0)) {
             results[devName].sendList.sort(this.compare);
-            console.log(devName + ' has ' + results[devName].sendList.length + ' sendList result , range ' + results[devName].sendList[0].time + ' ms to  '  + results[devName].sendList[(results[devName].sendList.length - 1)].time + " ms.");
-            console.log("100% : " + this.getValueOf(results[devName].sendList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].sendList,0.99)  + " ms, 95 : " + this.getValueOf(results[devName].sendList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].sendList,0.90) + " ms.");
+
+            var line05 = devName + ' has ' + results[devName].sendList.length + ' sendList result , range ' + results[devName].sendList[0].time + ' ms to  '  + results[devName].sendList[(results[devName].sendList.length - 1)].time + " ms.";
+
+            console.log(line05);
+
+            var line06 = "100% : " + this.getValueOf(results[devName].sendList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].sendList,0.99)  + " ms, 95 : " + this.getValueOf(results[devName].sendList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].sendList,0.90) + " ms.";
+
+            console.log(line06);
+
             combined.sendList = this.extendArray(results[devName].sendList,combined.sendList);
         }
     }
@@ -216,21 +280,36 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
     if(combined.peersList){
         combined.peersList.sort(this.compare);
-        console.log("peersList : 100% : " + this.getValueOf(combined.peersList,1.00) + " ms, 99% : " + this.getValueOf(combined.peersList,0.99)  + " ms, 95 : " + this.getValueOf(combined.peersList,0.95)  + " ms, 90% : " + this.getValueOf(combined.peersList,0.90) + " ms.");
+        var line07 = "peersList : 100% : " + this.getValueOf(combined.peersList,1.00) + " ms, 99% : " + this.getValueOf(combined.peersList,0.99)  + " ms, 95 : " + this.getValueOf(combined.peersList,0.95)  + " ms, 90% : " + this.getValueOf(combined.peersList,0.90) + " ms.";
+
+        console.log(line07);
     }
 
     if(combined.connectList){
         combined.connectList.sort(this.compare);
-        console.log("connectList : 100% : " + this.getValueOf(combined.connectList,1.00) + " ms, 99% : " + this.getValueOf(combined.connectList,0.99)  + " ms, 95 : " + this.getValueOf(combined.connectList,0.95)  + " ms, 90% : " + this.getValueOf(combined.connectList,0.90) + " ms.");
+        var line08 = "connectList : 100% : " + this.getValueOf(combined.connectList,1.00) + " ms, 99% : " + this.getValueOf(combined.connectList,0.99)  + " ms, 95 : " + this.getValueOf(combined.connectList,0.95)  + " ms, 90% : " + this.getValueOf(combined.connectList,0.90) + " ms.";
+
+        console.log(line08);
     }
 
     if(combined.sendList){
         combined.sendList.sort(this.compare);
-        console.log("sendList : 100% : " + this.getValueOf(combined.sendList,1.00) + " ms, 99% : " + this.getValueOf(combined.sendList,0.99)  + " ms, 95 : " + this.getValueOf(combined.sendList,0.95)  + " ms, 90% : " + this.getValueOf(combined.sendList,0.90) + " ms.");
+        var line09 = "sendList : 100% : " + this.getValueOf(combined.sendList,1.00) + " ms, 99% : " + this.getValueOf(combined.sendList,0.99)  + " ms, 95 : " + this.getValueOf(combined.sendList,0.95)  + " ms, 90% : " + this.getValueOf(combined.sendList,0.90) + " ms.";
+
+        console.log(line09);
+    }
+
+    for (var deviceName in this.testDevices) {
+        if(this.testDevices[deviceName] != null){
+            //if really needed, we could send the whole test data back with this command, and do the whole logging in the client side as well
+            this.testDevices[deviceName].SendCommand('end','results',JSON.stringify({"result":results[deviceName],'combined':combined}),this.devicesCount);
+        }
     }
 
     console.log('--------------- end of test report ---------------------');
 }
+
+
 
 PerfTestFramework.prototype.getValueOf  = function(array, presentage) {
     var index = Math.round(array.length * presentage);
@@ -264,7 +343,7 @@ PerfTestFramework.prototype.testFinished  = function(){
             this.testResults.push({"test": this.currentTest, "device":deviceName,"time": responseTime,"data": this.testDevices[deviceName].data});
 
             //lets finalize the test by stopping it.
-            this.testDevices[deviceName].SendCommand('stop',"","");
+            this.testDevices[deviceName].SendCommand('stop',"","","");
 
             //reset values for next testing round
             this.testDevices[deviceName].startTime = new Date();

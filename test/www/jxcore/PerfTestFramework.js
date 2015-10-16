@@ -27,11 +27,11 @@ function TestFrameworkClient(name) {
     }
 
     console.log('check test folder');
-    fs.readdirSync('../perf_tests/').forEach(function(fileName) {
+    fs.readdirSync(__dirname + '/perf_tests/').forEach(function(fileName) {
         if ((fileName.indexOf("test") == 0) &&
             fileName.indexOf(".js", fileName.length - 3) != -1) {
             console.log('found test : ./' + fileName);
-            self.test[fileName] = require('../perf_tests/' + fileName);
+            self.test[fileName] = require('./perf_tests/' + fileName);
         }
     });
 }
@@ -55,7 +55,7 @@ TestFrameworkClient.prototype.handleCommand = function(command){
             self.stopAllTests(); //Stop any previous tests if still running
             if(self.test[commandData.testName]){
                 self.emit('debug',"--- start :" + commandData.testName + "---");
-                currentTest = new self.test[commandData.testName](commandData.testData,self.deviceName);
+                currentTest = new self.test[commandData.testName](commandData.testData,self.deviceName,commandData.devices);
                 self.setCallbacks(currentTest);
                 currentTest.start();
             }else{
@@ -66,6 +66,18 @@ TestFrameworkClient.prototype.handleCommand = function(command){
         case 'stop':{
             self.emit('debug',"stop");
             self.stopAllTests(true);
+            break;
+        }
+        case 'end':{
+            self.emit('debug',"--- ENDING test---");
+            Mobile.toggleBluetooth(false, function() {
+                self.emit('debug',"toggleBluetooth, OFF");
+                Mobile.toggleWiFi(false, function() {
+                    self.emit('debug',"toggleWiFi, OFF");
+                    console.log("****TEST TOOK:  ms ****" );
+                    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+                });
+            });
             break;
         }
         default:{

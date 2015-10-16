@@ -18,7 +18,6 @@ var ReConnectConnector = require('./ReConnectConnector');
 
 /*
 "jsonData": {
-    "count"          : Specifies the number of peers we would need to do the connections to
     "timeout"        : Specifies the timeout when we would end test (in case we have not already finished all connection rounds yet)
     "rounds"         : Specifies how many connections to each peer we should be doing
     "dataTimeout"    : Specifies timeout used for sending the data and waiting for the reply before we do retry for the connection round.
@@ -26,7 +25,7 @@ var ReConnectConnector = require('./ReConnectConnector');
     "conReTryCount"  : Specifies the times we do retries for unsuccessful connection attempts before we mark the test round failed
     }
 */
-function testReConnect(jsonData,name) {
+function testReConnect(jsonData,name,dev) {
     var self = this;
     console.log('testReConnect created ' + jsonData);
     this.name = name;
@@ -53,7 +52,7 @@ function testReConnect(jsonData,name) {
         }
     }
 
-    this.toFindCount = this.commandData.count;
+    this.toFindCount = dev;
     this.foundSofar = 0;
     this.timerId = null;
     this.foundPeers = {};
