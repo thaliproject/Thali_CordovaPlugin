@@ -5,8 +5,16 @@
  */
 (function () {
 
-  var CoordinatorConnector = require('./lib/CoordinatorConnector');
-  var TestFrameworkClient = require('./lib/PerfTestFramework');
+  
+  Mobile.toggleBluetooth(true, function() {
+    console.log("toggleBluetooth - ON- ");
+    Mobile.toggleWiFi(true, function() {
+      console.log("toggleWiFi - ON- ");
+    });
+  });
+
+  var CoordinatorConnector = require('./CoordinatorConnector');
+  var TestFrameworkClient = require('./PerfTestFramework');
 
   /*----------------------------------------------------------------------------------
    code for connecting to the coordinator server

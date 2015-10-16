@@ -46,8 +46,16 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
     });
 }
 
+CoordinatorConnector.prototype.close = function(){
+    this.socket.close();
+}
+
 CoordinatorConnector.prototype.identify = function(name){
-    this.socket.emit('start_performance_testing', name);
+    if(jxcore.utils.OSInfo().isAndroid) {
+        this.socket.emit('start_performance_testing', JSON.stringify({"name": name, "os": "android"}));
+    }else{
+        this.socket.emit('start_performance_testing', JSON.stringify({"name": name, "os": "ios"}));
+    }
 }
 
 CoordinatorConnector.prototype.sendData = function(data){
@@ -55,7 +63,12 @@ CoordinatorConnector.prototype.sendData = function(data){
 }
 
 CoordinatorConnector.prototype.initUnitTest = function(deviceName){
-    this.socket.emit('start_unit_testing', JSON.stringify({"name":deviceName}));
+    //todo we also need to supply actual platform with the message
+    if(jxcore.utils.OSInfo().isAndroid) {
+        this.socket.emit('start_unit_testing', JSON.stringify({"name": deviceName, "os": "android"}));
+    }else{
+        this.socket.emit('start_unit_testing', JSON.stringify({"name": deviceName, "os": "ios"}));
+    }
 }
 
 CoordinatorConnector.prototype.setUp = function(deviceName,testName){
