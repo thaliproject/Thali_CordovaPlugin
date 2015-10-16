@@ -29,6 +29,10 @@
 #import "THEMultipeerClientSession.h"
 #import "THEMultipeerClientSocketRelay.h"
 
+#include "jx.h"
+#import "JXcore.h"
+#import "THEThreading.h"
+
 @implementation THEMultipeerClientSession
 {
   // Callback to fire when a connection completes (in fact when the relay
@@ -119,6 +123,36 @@
       NSLog(@"WARNING: didNotListenWithLocalPort but no callback");
     }
   }
+}
+
+- (void)didDisconnectFromPeer:(NSString *)peerIdentifier
+{
+  NSString * const kPeerConnectionError   = @"connectionError";
+  NSString * const kEventValueStringPeerId = @"peerIdentifier";
+
+  // Socket disconnecting currently requires we tear down the entire p2p conection
+  NSLog(@"client session: disconnecting due to socket close: %@", [self remotePeerIdentifier]);
+  [self disconnect];
+
+  NSDictionary *connectionError = @{
+    kEventValueStringPeerId : peerIdentifier
+  };
+
+  NSError *error = nil;
+  NSData *jsonData = [NSJSONSerialization dataWithJSONObject:connectionError
+                                                      options:NSJSONWritingPrettyPrinted 
+                                                        error:&error];
+  if (error != nil) {
+    // Will never happen in practice
+    NSLog(@"WARNING: Could not generate jsonString for disconnect message");
+    return;
+  }
+
+  NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+
+  OnMainThread(^{
+    [JXcore callEventCallback:kPeerConnectionError withJSON:jsonString ];
+  });
 }
 
 @end

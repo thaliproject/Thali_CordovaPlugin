@@ -227,3 +227,100 @@ test('ThaliEmitter can connect and send data', function (t) {
     });
   });
 });
+
+function connectWithRetry(emitter, cb) {
+
+  var _done = false;
+
+  e.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (peers) {
+
+    peers.forEach(function (peer) {
+
+      if (peer.peerAvailable) {
+        var connectToPeer = function(attempts) {
+
+          if (!_done) {
+            if (attempts === 0) {
+              cb("didn't connect");
+              return;
+            }
+
+            e.connect(peer.peerIdentifier, function (err2, port) {
+
+              if (err2) {
+                if (err2.message.indexOf("unreachable") != -1) {
+                  // Peer has become unreachable no point retrying
+                  return;
+                } else {
+                  // Retry
+                  return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+                }
+              }
+
+              t.notOk(err2, 'Should be able to connect without error');
+              t.ok(port > 0 && port <= 65536, 'Port should be within range');
+              cb(null, e, port);
+            });
+          }
+        }
+        connectToPeer(10);
+      }
+    });
+  });
+}
+
+test('ThaliEmitter handles socket disconnect correctly', function (t) {
+
+  var emitter = new ThaliEmitter();
+
+  var server = net.createServer(function(s) {
+    s.pipe(s);
+  });
+
+  server.listen(5001, function() {
+    console.log("echo server started");
+  });
+
+  var sendData = function(port) {
+
+    var len = 2048;
+    var testMessage = randomstring.generate(len);
+    var clientSocket = net.createConnection( { port: port }, function () {
+      clientSocket.write(testMessage);
+    });
+
+    clientSocket.setTimeout(120000);
+    clientSocket.setKeepAlive(true);
+
+    var testData = '';
+
+    clientSocket.on('data', function (data) {
+      testData += data;
+
+      if (testData.length === len) {
+        t.equal(testData, testMessage, 'the test messages should be equal');
+        clientSocket.end();
+        cb(null);
+      }
+    });
+  }
+
+  connectWithRetry(emitter, function(err, port) {
+   
+    t.assert(err == null, "First connect should succeed");
+ 
+    emitter.on(ThaliEmitter.events.CONNECTION_ERROR, function() {
+      connectWithRetry(emitter, function(err, port) {
+        t.assert(err == null, "Second connect should succeed");
+        sendData(port, function(err) {
+          t.assert(err == null, "Second send should succeed");
+          t.end();
+        });
+      });
+    });
+
+    sendData(port, function(err) {
+      t.assert(err == null, "First send should succeed");
+    });
+  });
+});

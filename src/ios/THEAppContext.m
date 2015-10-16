@@ -38,12 +38,6 @@
 
 // JavaScript callbacks.
 NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
-NSString * const kConnectingToPeerServer    = @"connectingToPeerServer";
-NSString * const kConnectedToPeerServer     = @"connectedToPeerServer";
-NSString * const kNotConnectedToPeerServer  = @"notConnectedToPeerServer";
-NSString * const kPeerClientConnecting      = @"peerClientConnecting";
-NSString * const kPeerClientConnected       = @"peerClientConnected";
-NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal)
@@ -229,7 +223,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 // THEAppContext <THEMultipeerSessionDelegate> implementation.
 ////////////////////////////////////////////////////////////
 
-- (void) didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
+- (void)didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
 {
   // Lock.
   pthread_mutex_lock(&_mutex);
@@ -260,7 +254,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   });
 }
 
-- (void) didLosePeerIdentifier:(NSString *)peerIdentifier
+- (void)didLosePeerIdentifier:(NSString *)peerIdentifier
 {
   // Lock.
   pthread_mutex_lock(&_mutex);
