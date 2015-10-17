@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
+# The first argument must be the name of the test file to make into the app.js
+# The second argument is optional and specifies a string with an IP address to manually set the coordination server's
+# address to.
 cd ../../test/TestServer
 jx npm install
-jx generateServerAddress.js
+jx generateServerAddress.js $2
 cd ../../..
 cordova create ThaliTest com.test.thalitest ThaliTest
 mkdir -p ThaliTest/thaliDontCheckIn/localdev
