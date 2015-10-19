@@ -20,11 +20,11 @@ function TestFrameworkClient(name) {
 
     this.debugCallback = function(data) {
         self.emit('debug',data);
-    }
+    };
 
     this.doneCallback = function(data) {
         self.emit('done',data);
-    }
+    };
 
     console.log('check test folder');
     fs.readdirSync(__dirname + '/perf_tests/').forEach(function(fileName) {
