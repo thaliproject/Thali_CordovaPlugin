@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to manually set the coordination server's
 # address to.
@@ -19,7 +23,7 @@ jx npm install --autoremove "*.gz,*.pem"
 # In theory we don't need the line below because we use autoremove but for some reason autoremove doesn't
 # seem to work in this case.
 find . -name "*.gz" -delete
-cp $1 app.js
+cp -v $1 app.js
 cordova build android --release --device
 # cordova build ios --device
 echo "Remember to start the test coordination server by running jx index.js"
