@@ -63,7 +63,7 @@ TestServer -> Device3 : send 'too late'
 
 
 ![Example of counting devices](http://g.gravizo.com/g?
-  digraph G {
+ {
   @startuml
   participant TestServer
   participant Device1
