@@ -63,7 +63,6 @@ TestServer -> Device3 : send 'too late'
 
 
 ![Example of counting devices](http://g.gravizo.com/g?
- {
   @startuml
   participant TestServer
   participant Device1
@@ -77,7 +76,7 @@ TestServer -> Device3 : send 'too late'
   TestServer -> Device2 : send 'start tests' + { "android": 1, "ios": 1 }
   Device3 -> TestServer : send 'present' + { "os": "iOS" }
   TestServer -> Device3 : send 'too late'
-  }
+  @enduml
 )
 ### Test Server Logic
 
