@@ -23,6 +23,7 @@ jx npm install --autoremove "*.gz,*.pem"
 # In theory we don't need the line below because we use autoremove but for some reason autoremove doesn't
 # seem to work in this case.
 find . -name "*.gz" -delete
+find . -name "*.pem" -delete
 cp -v $1 app.js
 cordova build android --release --device
 # cordova build ios --device
