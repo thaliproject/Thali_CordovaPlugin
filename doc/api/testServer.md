@@ -69,7 +69,7 @@ TestServer -> Device3 : send 'too late'
   participant Device2;
   participant Device3;
   TestServer -> TestServer : Start timer;
-  Device1 -> TestServer : send 'present' + { "os": "android" };
+  Device1 -> TestServer : send 'present' +  "os": "android" ;
   Device2 -> TestServer : send 'present' + { "os": "iOS" };
   TestServer -> TestServer : Timer Expires;
   TestServer -> Device1 : send 'start tests' + { "android": 1, "ios": 1 };
@@ -78,6 +78,7 @@ TestServer -> Device3 : send 'too late'
   TestServer -> Device3 : send 'too late';
   @enduml
 )
+
 ### Test Server Logic
 
 When the Test Server begins operation it MUST begin a timer. The timer MUST be started before the Test Server opens
