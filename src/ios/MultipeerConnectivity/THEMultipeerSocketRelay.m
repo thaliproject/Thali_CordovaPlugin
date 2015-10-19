@@ -127,13 +127,6 @@ typedef enum relayStates {
   }
 }
 
-- (void)didDisconnectSocket:(GCDAsyncSocket *)socket
-{
-  assert(socket == _socket);
-  _socket.delegate = nil;
-  _socket = nil;
-}
-
 - (void)stop
 {
   @synchronized(self)
@@ -181,7 +174,13 @@ typedef enum relayStates {
       if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
       {
         NSLog(@"ERROR: Writing to output stream");
-        return NO;
+        NSException *e = [NSException 
+          exceptionWithName:@"OutputStreamException"
+                     reason:@"Error writing to outputstream"
+                   userInfo:nil
+        ];
+
+        @throw e;        
       }
       [_outputBuffer removeObjectAtIndex:0];
       return YES;
@@ -204,6 +203,7 @@ typedef enum relayStates {
     [_outputBuffer addObject:data];
     if (_outputBufferHasSpaceAvailable)
     {
+      
       BOOL sentData = [self writeOutputStream];
       _outputBufferHasSpaceAvailable = NO;
       assert(sentData == YES);

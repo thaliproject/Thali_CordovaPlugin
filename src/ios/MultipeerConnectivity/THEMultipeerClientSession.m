@@ -151,7 +151,7 @@
   NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
 
   OnMainThread(^{
-    [JXcore callEventCallback:kPeerConnectionError withJSON:jsonString ];
+    [JXcore callEventCallback:kPeerConnectionError withJSON:jsonString];
   });
 }
 

@@ -17,9 +17,12 @@ var  emitterToShutDown = null;
 
 var test = tape({
   setup: function(t) {
+    console.log("SETUP");
     t.end();
   },
   teardown: function(t) {
+    console.log("TEARDOWN");
+    console.log(emitterToShutDown);
     if(emitterToShutDown != null){
       console.log("calling stopBroadcasting");
       emitterToShutDown.stopBroadcasting(function (err4) {
@@ -30,7 +33,7 @@ var test = tape({
     t.end();
   }
 });
-
+/*
 test('ThaliEmitter can call repeatedly startBroadcasting and stopBroadcasting without error', function (t) {
   var e = new ThaliEmitter();
 
@@ -103,7 +106,6 @@ test('ThaliEmitter throws on disconnect to bad peer', function (t) {
     });
   });
 });
-
 function connectWithRetryTestAndDisconnect(t, testFunction) {
   var e = new ThaliEmitter();
 
@@ -156,7 +158,6 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
     t.notOk(err1, 'Should be able to call startBroadcasting without error');
   });
 }
-
 test('ThaliEmitter can discover and connect to peers', function (t) {
   connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
     e.disconnect(peer.peerIdentifier, function (err3) {
@@ -190,7 +191,6 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
     });
   });
 });
-
 test('ThaliEmitter can connect and send data', function (t) {
 
   var server = net.createServer(function(s) {
@@ -215,6 +215,7 @@ test('ThaliEmitter can connect and send data', function (t) {
 
     clientSocket.on('data', function (data) {
       testData += data;
+      console.log("data in " + testData.length);
 
       if (testData.length === len) {
         t.equal(testData, testMessage, 'the test messages should be equal');
@@ -227,50 +228,11 @@ test('ThaliEmitter can connect and send data', function (t) {
     });
   });
 });
-
-function connectWithRetry(emitter, cb) {
-
-  var _done = false;
-
-  e.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (peers) {
-
-    peers.forEach(function (peer) {
-
-      if (peer.peerAvailable) {
-        var connectToPeer = function(attempts) {
-
-          if (!_done) {
-            if (attempts === 0) {
-              cb("didn't connect");
-              return;
-            }
-
-            e.connect(peer.peerIdentifier, function (err2, port) {
-
-              if (err2) {
-                if (err2.message.indexOf("unreachable") != -1) {
-                  // Peer has become unreachable no point retrying
-                  return;
-                } else {
-                  // Retry
-                  return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
-                }
-              }
-
-              t.notOk(err2, 'Should be able to connect without error');
-              t.ok(port > 0 && port <= 65536, 'Port should be within range');
-              cb(null, e, port);
-            });
-          }
-        }
-        connectToPeer(10);
-      }
-    });
-  });
-}
+*/
 
 test('ThaliEmitter handles socket disconnect correctly', function (t) {
 
+  var done = false;
   var emitter = new ThaliEmitter();
 
   var server = net.createServer(function(s) {
@@ -281,7 +243,34 @@ test('ThaliEmitter handles socket disconnect correctly', function (t) {
     console.log("echo server started");
   });
 
-  var sendData = function(port) {
+  var connectWithRetry = function(peerIdentifier, cb) {
+
+    var connectToPeer = function(attempts) {
+
+      if (attempts === 0) {
+        cb("too many attempts");
+        return;
+      }
+
+      emitter.connect(peerIdentifier, function (connectError, port) {
+        if (connectError) {
+          if (connectError.message.indexOf("unreachable") != -1) {
+            return;
+          } else {
+            return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+          }
+        }
+
+        t.notOk(connectError, 'Should be able to connect without error');
+        t.ok(port > 0 && port <= 65536, 'Port should be within range');
+        cb(null, port);
+      });
+    }
+
+    connectToPeer(10);  
+  }
+
+  var sendData = function(port, cb) {
 
     var len = 2048;
     var testMessage = randomstring.generate(len);
@@ -300,27 +289,50 @@ test('ThaliEmitter handles socket disconnect correctly', function (t) {
       if (testData.length === len) {
         t.equal(testData, testMessage, 'the test messages should be equal');
         clientSocket.end();
-        cb(null);
+        cb(true); 
       }
     });
   }
 
-  connectWithRetry(emitter, function(err, port) {
-   
-    t.assert(err == null, "First connect should succeed");
- 
-    emitter.on(ThaliEmitter.events.CONNECTION_ERROR, function() {
-      connectWithRetry(emitter, function(err, port) {
-        t.assert(err == null, "Second connect should succeed");
-        sendData(port, function(err) {
-          t.assert(err == null, "Second send should succeed");
-          t.end();
-        });
-      });
-    });
+  emitter.startBroadcasting(newPeerIdentifier(), 5001, function (err) {
 
-    sendData(port, function(err) {
-      t.assert(err == null, "First send should succeed");
+    t.notOk(err, 'Should be able to call startBroadcasting without error');
+
+    emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (peers) {
+
+      console.log(JSON.stringify(peers));
+
+      peers.forEach(function (peer) {
+
+        if (peer.peerAvailable) {
+
+          connectWithRetry(peer.peerIdentifier, function(err1, port) {
+     
+            t.assert(err1 == null, "First connect should succeed");
+            sendData(port, function(success) {
+              t.assert(success == true, "First send should succeed");
+            });
+
+            emitter.on(ThaliEmitter.events.CONNECTION_ERROR, function(peer) {
+
+              if (done)
+                return;
+
+              connectWithRetry(peer.peerIdentifier, function(err2, port) {
+
+                t.assert(err2 == null, "Second connect should succeed");
+
+                sendData(port, function(success) {
+                  done = true;
+                  t.assert(success == true, "Second send should succeed");
+                  emitterToShutDown = emitter;
+                  t.end();
+                });
+              })
+            });
+          }); 
+        }
+      });
     });
   });
 });
