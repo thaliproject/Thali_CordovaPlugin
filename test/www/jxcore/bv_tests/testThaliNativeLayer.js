@@ -17,12 +17,9 @@ var  emitterToShutDown = null;
 
 var test = tape({
   setup: function(t) {
-    console.log("SETUP");
     t.end();
   },
   teardown: function(t) {
-    console.log("TEARDOWN");
-    console.log(emitterToShutDown);
     if(emitterToShutDown != null){
       console.log("calling stopBroadcasting");
       emitterToShutDown.stopBroadcasting(function (err4) {
@@ -33,7 +30,7 @@ var test = tape({
     t.end();
   }
 });
-/*
+
 test('ThaliEmitter can call repeatedly startBroadcasting and stopBroadcasting without error', function (t) {
   var e = new ThaliEmitter();
 
@@ -106,6 +103,7 @@ test('ThaliEmitter throws on disconnect to bad peer', function (t) {
     });
   });
 });
+
 function connectWithRetryTestAndDisconnect(t, testFunction) {
   var e = new ThaliEmitter();
 
@@ -158,6 +156,7 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
     t.notOk(err1, 'Should be able to call startBroadcasting without error');
   });
 }
+
 test('ThaliEmitter can discover and connect to peers', function (t) {
   connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
     e.disconnect(peer.peerIdentifier, function (err3) {
@@ -191,6 +190,7 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
     });
   });
 });
+
 test('ThaliEmitter can connect and send data', function (t) {
 
   var server = net.createServer(function(s) {
@@ -228,7 +228,6 @@ test('ThaliEmitter can connect and send data', function (t) {
     });
   });
 });
-*/
 
 test('ThaliEmitter handles socket disconnect correctly', function (t) {
 
