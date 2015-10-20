@@ -203,10 +203,17 @@ typedef enum relayStates {
     [_outputBuffer addObject:data];
     if (_outputBufferHasSpaceAvailable)
     {
-      
-      BOOL sentData = [self writeOutputStream];
-      _outputBufferHasSpaceAvailable = NO;
-      assert(sentData == YES);
+      @try
+      { 
+        BOOL sentData = [self writeOutputStream];
+        _outputBufferHasSpaceAvailable = NO;
+        assert(sentData == YES);
+      }
+      @catch (NSException *e)
+      {
+        NSLog(@"Exception writing to outputstream: %@", e);
+        [self stop];
+      }
     }
   }
   [_socket readDataWithTimeout:-1 tag:tag];
@@ -313,8 +320,16 @@ typedef enum relayStates {
         // If we get called here and *don't* send anything we will never get called
         // again until we *do* send something, so record the fact and send directly next
         // next time we put something on the output queue
-        BOOL sentData = [self writeOutputStream];
-        _outputBufferHasSpaceAvailable = (sentData == NO);
+        @try
+        {
+          BOOL sentData = [self writeOutputStream];
+          _outputBufferHasSpaceAvailable = (sentData == NO);
+        }
+        @catch (NSException *e)
+        {
+          NSLog(@"Exception writing to outputstream: %@", e);
+          [self stop];
+        }
       }
       break;
 
