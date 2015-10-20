@@ -78,7 +78,8 @@
 {
   // The upper layer has closed the client socket
   NSLog(@"client: socket closed");
-  [self didDisconnectSocket: sock];
+  [super socketDidDisconnect:sock withError:err];
+  [_delegate didDisconnectFromPeer:_peerIdentifier];
 }
 
 @end

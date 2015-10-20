@@ -127,13 +127,6 @@ typedef enum relayStates {
   }
 }
 
-- (void)didDisconnectSocket:(GCDAsyncSocket *)socket
-{
-  assert(socket == _socket);
-  _socket.delegate = nil;
-  _socket = nil;
-}
-
 - (void)stop
 {
   @synchronized(self)
@@ -181,7 +174,13 @@ typedef enum relayStates {
       if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
       {
         NSLog(@"ERROR: Writing to output stream");
-        return NO;
+        NSException *e = [NSException 
+          exceptionWithName:@"OutputStreamException"
+                     reason:@"Error writing to outputstream"
+                   userInfo:nil
+        ];
+
+        @throw e;        
       }
       [_outputBuffer removeObjectAtIndex:0];
       return YES;
@@ -196,16 +195,25 @@ typedef enum relayStates {
  
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
-  assert(sock == _socket);
   @synchronized(self)
   {
+    assert(sock == _socket);
+
     // Enqueue, send directly if we're pending
     [_outputBuffer addObject:data];
     if (_outputBufferHasSpaceAvailable)
     {
-      BOOL sentData = [self writeOutputStream];
-      _outputBufferHasSpaceAvailable = NO;
-      assert(sentData == YES);
+      @try
+      { 
+        BOOL sentData = [self writeOutputStream];
+        _outputBufferHasSpaceAvailable = NO;
+        assert(sentData == YES);
+      }
+      @catch (NSException *e)
+      {
+        NSLog(@"Exception writing to outputstream: %@", e);
+        [self stop];
+      }
     }
   }
   [_socket readDataWithTimeout:-1 tag:tag];
@@ -217,20 +225,23 @@ typedef enum relayStates {
 
 - (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
 {
-  assert(_socket == nil || sock == _socket);
-
-  // Usually benign, the upper layer just closed their connection
-  // they may want to connect again later
-
-  NSLog(@"%@ relay: socket disconnected", _relayType);
-
-  if (err) 
+  @synchronized(self)
   {
-      NSLog(@"%@ relay: %p disconnected with error %@ ", _relayType, sock, [err description]);
-  }
+    assert(_socket == nil || sock == _socket);
 
-  // Dispose of the socket, it's no good to us anymore
-  _socket = nil;
+    // Usually benign, the upper layer just closed their connection
+    // they may want to connect again later
+
+    NSLog(@"%@ relay: socket disconnected", _relayType);
+
+    if (err) 
+    {
+        NSLog(@"%@ relay: %p disconnected with error %@ ", _relayType, sock, [err description]);
+    }
+
+    // Dispose of the socket, it's no good to us anymore
+    _socket = nil;
+  }
 }
 
 #pragma mark - NSStreamDelegate
@@ -309,8 +320,16 @@ typedef enum relayStates {
         // If we get called here and *don't* send anything we will never get called
         // again until we *do* send something, so record the fact and send directly next
         // next time we put something on the output queue
-        BOOL sentData = [self writeOutputStream];
-        _outputBufferHasSpaceAvailable = (sentData == NO);
+        @try
+        {
+          BOOL sentData = [self writeOutputStream];
+          _outputBufferHasSpaceAvailable = (sentData == NO);
+        }
+        @catch (NSException *e)
+        {
+          NSLog(@"Exception writing to outputstream: %@", e);
+          [self stop];
+        }
       }
       break;
 
