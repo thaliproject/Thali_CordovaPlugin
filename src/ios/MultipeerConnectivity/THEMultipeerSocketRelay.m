@@ -23,6 +23,10 @@ typedef enum relayStates {
   NSInputStream *_inputStream;
   NSOutputStream *_outputStream;
 
+  // Output buffer
+  NSMutableArray *_outputBuffer;
+  BOOL _outputBufferHasSpaceAvailable;
+
   // Track our current state
   RelayState _relayState;
 
@@ -37,7 +41,10 @@ typedef enum relayStates {
     _relayType = relayType;
     _relayState = INITIALIZED;
   }
-  
+
+  _outputBuffer = [[NSMutableArray alloc] init];  
+  _outputBufferHasSpaceAvailable = NO;
+
   return self;
 }
 
@@ -107,10 +114,15 @@ typedef enum relayStates {
 
     // Socket's been created which means we can open up the stream
     assert(_socket == nil);
-    assert(_relayState == INITIALIZED);
-
+   
+    // This may be a re-connect of upper layer socket 
     _socket = socket;
-    [self openStreams];
+    if (_relayState == INITIALIZED)
+    {
+      [self openStreams];
+    }
+
+    assert(_relayState == CONNECTED);
     [_socket readDataWithTimeout:-1 tag:0];
   }
 }
@@ -149,16 +161,61 @@ typedef enum relayStates {
   assert(_relayState == STOPPED);
 }
 
+- (BOOL)writeOutputStream
+{
+  @synchronized(self)
+  {
+    if (_outputBuffer.count > 0)
+    {
+      assert(_outputStream != nil);
+      assert([_outputStream hasSpaceAvailable] == YES);
+
+      NSData *data = [_outputBuffer objectAtIndex:0];
+      if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
+      {
+        NSLog(@"ERROR: Writing to output stream");
+        NSException *e = [NSException 
+          exceptionWithName:@"OutputStreamException"
+                     reason:@"Error writing to outputstream"
+                   userInfo:nil
+        ];
+
+        @throw e;        
+      }
+      [_outputBuffer removeObjectAtIndex:0];
+      return YES;
+    }
+    else
+    {
+      // Nothing to send
+      return NO;
+    }
+  }
+}
+ 
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
-  assert(sock == _socket);
-  assert(_outputStream != nil);
-
-  if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
+  @synchronized(self)
   {
-    NSLog(@"ERROR: Writing to output stream");
-  }
+    assert(sock == _socket);
 
+    // Enqueue, send directly if we're pending
+    [_outputBuffer addObject:data];
+    if (_outputBufferHasSpaceAvailable)
+    {
+      @try
+      { 
+        BOOL sentData = [self writeOutputStream];
+        _outputBufferHasSpaceAvailable = NO;
+        assert(sentData == YES);
+      }
+      @catch (NSException *e)
+      {
+        NSLog(@"Exception writing to outputstream: %@", e);
+        [self stop];
+      }
+    }
+  }
   [_socket readDataWithTimeout:-1 tag:tag];
 }
 
@@ -168,16 +225,22 @@ typedef enum relayStates {
 
 - (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
 {
-  assert(_socket == nil || sock == _socket);
-
-  // Usually benign, the upper layer just closed their connection
-  // they may want to connect again later
-
-  NSLog(@"%@ relay: socket disconnected", _relayType);
-
-  if (err) 
+  @synchronized(self)
   {
-      NSLog(@"%@ relay: %p disconnected with error %@ ", _relayType, sock, [err description]);
+    assert(_socket == nil || sock == _socket);
+
+    // Usually benign, the upper layer just closed their connection
+    // they may want to connect again later
+
+    NSLog(@"%@ relay: socket disconnected", _relayType);
+
+    if (err) 
+    {
+        NSLog(@"%@ relay: %p disconnected with error %@ ", _relayType, sock, [err description]);
+    }
+
+    // Dispose of the socket, it's no good to us anymore
+    _socket = nil;
   }
 }
 
@@ -208,17 +271,14 @@ typedef enum relayStates {
 
         @synchronized(self)
         {
-          while ([_inputStream hasBytesAvailable])
+          NSInteger len = [_inputStream read:buffer maxLength:BUFFER_LEN];
+          if (len > 0)
           {
-            NSInteger len = [_inputStream read:buffer maxLength:BUFFER_LEN];
-            if (len > 0)
-            {
-              NSMutableData *toWrite = [[NSMutableData alloc] init];
-              [toWrite appendBytes:buffer length:len];
+            NSMutableData *toWrite = [[NSMutableData alloc] init];
+            [toWrite appendBytes:buffer length:len];
 
-              assert(_socket);
-              [_socket writeData:toWrite withTimeout:-1 tag:len];
-            }
+            assert(_socket);
+            [_socket writeData:toWrite withTimeout:-1 tag:len];
           }
         }
       }
@@ -257,7 +317,19 @@ typedef enum relayStates {
 
       case NSStreamEventHasSpaceAvailable:
       {
-        //NSLog(@"%@ relay: outputStream hasSpace", _relayType);
+        // If we get called here and *don't* send anything we will never get called
+        // again until we *do* send something, so record the fact and send directly next
+        // next time we put something on the output queue
+        @try
+        {
+          BOOL sentData = [self writeOutputStream];
+          _outputBufferHasSpaceAvailable = (sentData == NO);
+        }
+        @catch (NSException *e)
+        {
+          NSLog(@"Exception writing to outputstream: %@", e);
+          [self stop];
+        }
       }
       break;
 

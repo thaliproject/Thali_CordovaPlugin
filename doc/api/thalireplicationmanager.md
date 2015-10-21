@@ -26,6 +26,7 @@ manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 ### `ThaliReplicationManager` Instance Methods
 - `start`
 - `stop`
+- `getDeviceIdentity`
 
 ### `ThaliReplicationManager` Events
 - `starting`
@@ -34,6 +35,7 @@ manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 - `stopped`
 - `startError`
 - `stopError`
+- `connectionSuccess`
 
 ## `ThaliReplicationManager(db)` constructor
 
@@ -83,7 +85,9 @@ manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 
 ### `ThaliEmitter.prototype.stop()`
 
-This method stops the Thali Replication Manager.  Once called, this will fire the `stopping` event.  Once stopped, the `stopped` event will fire.  If an error occurs stopping the Thali Replication Manager, the `stopError` event will fire.
+This method stops the Thali Replication Manager.  Once called, this will fire the `stopping` event.  Once stopped, 
+the `stopped` event will fire.  If an error occurs stopping the Thali Replication Manager, the `stopError` event 
+will fire.
 
 #### Example:
 
@@ -103,6 +107,27 @@ manager.on('stopped', function () {
 })
 
 manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+```
+
+### 'ThaliEmitter.prototype.getDeviceIdentity(cb)
+
+This method will return a string containing the hash of the user's root public key.
+
+#### Example
+
+``` js
+var ThaliReplicationManager = require('thali');
+var ThaliReplicationManager = require('thali');
+var PouchDB = require('pouchdb');
+var db = new PouchDB('dbname');
+
+var manager = new ThaliReplicationManager(db);
+manager.getDeviceIdentity(function(error, hash) {
+  if (error) {
+    console.log("Catastrophic failure - system couldn't get hash - " + error);
+  }
+  userPublicKeyHash = hash;
+}
 ```
 
 ***
@@ -253,4 +278,28 @@ manager.on('stopError', function (err) {
 
 manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
 ```
+***
+
+### `connectionSuccess`
+
+This event is called anytime we successfully connect the client mux to a remote device.
+
+__NOTE__ - This is a temporary event being used to help run identity exchange. It will be removed once
+we have a proper notification infrastructure and also support a mux level connect that can handle multiple
+different parts of our app wanting to connect to the same peer. Or, put in the next, this will continue
+until we have ACLs and now we won't just automatically create connections to everyone.
+
+#### Callback Arguments:
+
+1. `peer` :
+    - `peerIdentifier` : `String` - The device ID of the peer we connected to
+    - `muxPort` : `Number` - The TCP/IP port that the client mux is listening on
+    
+#### Example:
+
+#### Implementation
+We currently only call connect in exactly one place. So we just need to stick in an event emit after
+that one place and we are good. Keep in mind that we explicitly aren't putting in a connectionFailure
+event because for our current use case we don't care.
+
 ***
