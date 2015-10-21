@@ -25,6 +25,17 @@ console.log('my name is : ' + myName);
 console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
 
 var Coordinator = new CoordinatorConnector();
+
+process.on('uncaughtException', function(err) {
+    console.log("We have an uncaught exception, good bye: " + JSON.stringify(err));
+    Coordinator.close();
+});
+
+process.on('unhandledRejection', function(err) {
+    console.log("We have an uncaught promise rejection, good bye: " + JSON.stringify(err));
+    Coordinator.close();
+});
+
 Coordinator.init(parsedJSON[0].address, 3000);
 console.log('attempting to connect to test coordinator');
 
@@ -47,10 +58,25 @@ TestFramework.on('debug', function (data) {
   testUtils.logMessageToScreen(data);
 });
 
+TestFramework.on('start_tests', function (data) {
+    console.log('got start_tests event with data : ' + data);
+});
+
+TestFramework.on('too_late', function (data) {
+    console.log('got too_late message');
+    testUtils.logMessageToScreen("got too_late message");
+    TestFramework.stopAllTests(false);
+    Coordinator.toggleRadios(false);
+
+    //let let the CI know that we did finish
+    console.log("****TEST TOOK:  ms ****" );
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+});
+
 Coordinator.on('connect', function () {
-  console.log('Client has connected to the server!');
-  testUtils.logMessageToScreen('connected to server');
-  Coordinator.identify(myName);
+    console.log('Client has connected to the server!');
+    testUtils.logMessageToScreen('connected to server');
+    Coordinator.present(myName,"perftest");
 });
 
 Coordinator.on('command', function (data) {
@@ -59,10 +85,11 @@ Coordinator.on('command', function (data) {
 });
 
 Coordinator.on('disconnect', function () {
-  console.log('The client has disconnected!');
-  //we need to stop & close any tests we are running here
-  TestFramework.stopAllTests(false);
-  testUtils.logMessageToScreen('disconnected');
+    console.log('The client has disconnected!');
+    //we need to stop & close any tests we are running here
+    TestFramework.stopAllTests(false);
+    testUtils.logMessageToScreen('disconnected');
+    Coordinator.toggleRadios(false);
 });
 
 // Log that the app.js file was loaded.
