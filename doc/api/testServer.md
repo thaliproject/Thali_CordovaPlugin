@@ -51,7 +51,7 @@ Device3 -> TestServer : send 'present' + { "os": "iOS" }
 TestServer -> Device3 : send 'too late'
 @enduml)
 
-## I use @staruml/@enduml and get rid of the { characters
+## I use @startuml/@enduml and get rid of the { characters
 ![Testing](http://www.gravizo.com/g?
 @startuml
 participant TestServer
