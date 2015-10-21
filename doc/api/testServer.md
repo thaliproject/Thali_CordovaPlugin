@@ -51,3 +51,19 @@ Device3 -> TestServer : send 'present' + { "os": "iOS" }
 TestServer -> Device3 : send 'too late'
 @enduml)
 
+## I use @staruml/@enduml and get rid of the { characters
+![Testing](http://www.gravizo.com/g?
+@startuml
+participant TestServer
+participant Device1
+participant Device2
+participant Device3
+TestServer -> TestServer : Start timer
+Device1 -> TestServer : send 'present' +  "os": "android" }
+Device2 -> TestServer : send 'present' +  "os": "iOS" }
+TestServer -> TestServer : Timer Expires
+TestServer -> Device1 : send 'start tests' +  "android": 1, "ios": 1 }
+TestServer -> Device2 : send 'start tests' +  "android": 1, "ios": 1 }
+Device3 -> TestServer : send 'present' +  "os": "iOS" }
+TestServer -> Device3 : send 'too late'
+@enduml)
