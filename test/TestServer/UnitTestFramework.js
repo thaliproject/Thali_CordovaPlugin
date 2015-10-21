@@ -17,7 +17,16 @@ function UnitTestFramework(platform) {
 
 UnitTestFramework.prototype = new events.EventEmitter;
 
-UnitTestFramework.prototype.addDevice = function(device) {
+UnitTestFramework.prototype.addDevice = function(device,socket) {
+
+    //each device will report each and every file they load, so lets filter here the dublicates out
+    for (var deviceName in this.testDevices) {
+        if (this.testDevices[deviceName] != null && this.testDevices[deviceName].device) {
+            if(this.testDevices[deviceName].device.compareSocket(socket)){
+                return;
+            }
+        }
+    }
 
     this.devicesCount++;
 
