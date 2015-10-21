@@ -16,6 +16,8 @@ public class JXcoreExtension {
     public final static String EVENTVALUESTRING_PEERNAME      = "peerName";
     public final static String EVENTVALUESTRING_PEERAVAILABLE = "peerAvailable";
 
+    public final static String EVENTSTRING_CONNECTIONERROR    = "connectionError";
+
     public final static String EVENTSTRING_NETWORKCHANGED     = "networkChanged";
     public final static String EVENTVALUESTRING_REACHABLE     = "isReachable";
     public final static String EVENTVALUESTRING_WIFI          = "isWiFi";

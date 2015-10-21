@@ -12,4 +12,6 @@
 - (instancetype)initWithPeerIdentifier:(NSString *)peerIdentifier 
                           withDelegate:(id<THEMultipeerClientSocketRelayDelegate>)delegate;
 
+- (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err;
+
 @end

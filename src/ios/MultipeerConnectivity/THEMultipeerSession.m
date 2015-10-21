@@ -94,8 +94,10 @@
   ];
 
   _client = [[THEMultipeerClient alloc] 
-    initWithPeerId: _peerID withServiceType: _serviceType withPeerNetworkingDelegate: _delegate
-  ];
+              initWithPeerId:_peerID 
+          withPeerIdentifier:_peerIdentifier 
+             withServiceType:_serviceType 
+  withPeerNetworkingDelegate:_delegate];
 
   [_server start];
   [_client start];

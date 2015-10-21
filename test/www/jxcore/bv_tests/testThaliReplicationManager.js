@@ -1,7 +1,10 @@
 "use strict";
 
+if (!jxcore.utils.OSInfo().isMobile) {
+  return;
+}
+
 var os = require('os');
-var fs = require('fs');
 var path = require('path');
 var tape = require('../lib/thali-tape');
 var uuid = require('uuid');
@@ -110,8 +113,6 @@ test('ThaliReplicationManager receives identity', function (t) {
 
 test('ThaliReplicationManager replicates database', function (t) {
 
-  PouchDB.debug.enable('*');
-  
   /*
     Create a local doc with local device name and sync to peer. On receiving that they'll swap
     their device name for ours and sync it back. When both sides have successfully done this and 
@@ -205,6 +206,9 @@ test('ThaliReplicationManager replicates database', function (t) {
         // Actually create the new doc
         mydevicename = deviceName;
         mydoc.data = mydevicename;
+        // Use blob to ensure we can transfer large files
+        mydoc.blob = randomstring.generate(365 * 1024);
+
         var r = db.put(mydoc, function (err, result) {
           err = err ? " (" + err + ")" : "";
           t.notOk(err, "Should be able to put doc without error" + err);
@@ -223,4 +227,3 @@ test('ThaliReplicationManager replicates database', function (t) {
     });
   });
 });
-

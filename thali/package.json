@@ -1,11 +1,16 @@
 {
   "name": "thali",
-  "version": "1.0.22",
+  "version": "2.0.1",
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
+    "body-parser": "^1.13.3",
+    "express": "4.13.3",
+    "javascript-state-machine": "^2.3.5",
+    "lie": "^3.0.1",
     "multiplex": "^6.2.2",
-    "winston":"^1.0.1"
+    "request": "^2.64.0",
+    "winston": "^1.0.2"
   },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",

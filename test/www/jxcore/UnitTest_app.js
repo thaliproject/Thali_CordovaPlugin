@@ -32,10 +32,9 @@ app.listen(5000, function () {
         }
         rows.push(row);
 
-        //lets just show only results, not setup, teardown etc. rows.
-        if(row.ok && row.name) {
-            logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
+        logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
 
+        if(row.ok && row.name) {
             if(!row.ok){
                 failedRows.push(row);
             }
@@ -75,13 +74,19 @@ function logMessageToScreen(message) {
     }
 }
 
-Mobile('setLogCallback').registerAsync(function (callback) {
-    LogCallback = callback;
-});
+if (jxcore.utils.OSInfo().isMobile) {
+    Mobile('setLogCallback').registerAsync(function (callback) {
+        LogCallback = callback;
+    });
 
-Mobile('getMyName').registerAsync(function (callback) {
-    callback(myName);
-});
+    Mobile('getMyName').registerAsync(function (callback) {
+        callback(myName);
+    });
+} else {
+    LogCallback = function(message) {
+        console.log(message);
+    }
+}
 
 // Log that the app.js file was loaded.
 console.log('Test app app.js loaded');

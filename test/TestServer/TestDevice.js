@@ -1,5 +1,5 @@
 /**
- * a class that is used to store each test device so we can sent data back to them
+ * a class that is used to store each test device so we can send data back to them
  */
 
 'use strict';
