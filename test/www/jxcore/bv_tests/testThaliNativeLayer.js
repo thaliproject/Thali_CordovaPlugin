@@ -201,9 +201,78 @@ test('ThaliEmitter can connect and send data', function (t) {
     console.log("echo server started");
   });
 
-  var len = 1025;
+  var len = (128 * 1024);
   var testMessage = randomstring.generate(len);
   connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
+    var clientSocket = net.createConnection( { port: port }, function () {
+      clientSocket.write(testMessage);
+    });
+
+    clientSocket.setTimeout(120000);
+    clientSocket.setKeepAlive(true);
+
+    var testData = '';
+
+    clientSocket.on('data', function (data) {
+      testData += data;
+      console.log("data in " + testData.length);
+
+      if (testData.length === len) {
+        t.equal(testData, testMessage, 'the test messages should be equal');
+
+        e.disconnect(peer.peerIdentifier, function (err3) {
+          t.notOk(err3, 'Should be able to disconnect without error');
+          cb();
+        });
+      }
+    });
+  });
+});
+
+test('ThaliEmitter handles socket disconnect correctly', function (t) {
+
+  var done = false;
+  var emitter = new ThaliEmitter();
+
+  var server = net.createServer(function(s) {
+    s.pipe(s);
+  });
+
+  server.listen(5001, function() {
+    console.log("echo server started");
+  });
+
+  var connectWithRetry = function(peerIdentifier, cb) {
+
+    var connectToPeer = function(attempts) {
+
+      if (attempts === 0) {
+        cb("too many attempts");
+        return;
+      }
+
+      emitter.connect(peerIdentifier, function (connectError, port) {
+        if (connectError) {
+          if (connectError.message.indexOf("unreachable") != -1) {
+            return;
+          } else {
+            return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+          }
+        }
+
+        t.notOk(connectError, 'Should be able to connect without error');
+        t.ok(port > 0 && port <= 65536, 'Port should be within range');
+        cb(null, port);
+      });
+    }
+
+    connectToPeer(10);  
+  }
+
+  var sendData = function(port, cb) {
+
+    var len = 2048;
+    var testMessage = randomstring.generate(len);
     var clientSocket = net.createConnection( { port: port }, function () {
       clientSocket.write(testMessage);
     });
@@ -218,12 +287,51 @@ test('ThaliEmitter can connect and send data', function (t) {
 
       if (testData.length === len) {
         t.equal(testData, testMessage, 'the test messages should be equal');
-
-        e.disconnect(peer.peerIdentifier, function (err3) {
-          t.notOk(err3, 'Should be able to disconnect without error');
-          cb();
-        });
+        clientSocket.end();
+        cb(true); 
       }
+    });
+  }
+
+  emitter.startBroadcasting(newPeerIdentifier(), 5001, function (err) {
+
+    t.notOk(err, 'Should be able to call startBroadcasting without error');
+
+    emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (peers) {
+
+      console.log(JSON.stringify(peers));
+
+      peers.forEach(function (peer) {
+
+        if (peer.peerAvailable) {
+
+          connectWithRetry(peer.peerIdentifier, function(err1, port) {
+     
+            t.assert(err1 == null, "First connect should succeed");
+            sendData(port, function(success) {
+              t.assert(success == true, "First send should succeed");
+            });
+
+            emitter.on(ThaliEmitter.events.CONNECTION_ERROR, function(peer) {
+
+              if (done)
+                return;
+
+              connectWithRetry(peer.peerIdentifier, function(err2, port) {
+
+                t.assert(err2 == null, "Second connect should succeed");
+
+                sendData(port, function(success) {
+                  done = true;
+                  t.assert(success == true, "Second send should succeed");
+                  emitterToShutDown = emitter;
+                  t.end();
+                });
+              })
+            });
+          }); 
+        }
+      });
     });
   });
 });

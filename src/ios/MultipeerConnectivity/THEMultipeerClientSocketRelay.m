@@ -74,4 +74,12 @@
   [self didCreateSocket: acceptedSocket];
 }
 
+- (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
+{
+  // The upper layer has closed the client socket
+  NSLog(@"client: socket closed");
+  [super socketDidDisconnect:sock withError:err];
+  [_delegate didDisconnectFromPeer:_peerIdentifier];
+}
+
 @end
