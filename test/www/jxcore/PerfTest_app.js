@@ -62,7 +62,7 @@ TestFramework.on('start_tests', function (data) {
     console.log('got start_tests event with data : ' + data);
 });
 
-TestFramework.on('too_late', function (data) {
+Coordinator.on('too_late', function (data) {
     console.log('got too_late message');
     testUtils.logMessageToScreen("got too_late message");
     TestFramework.stopAllTests(false);
