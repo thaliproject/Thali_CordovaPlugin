@@ -134,6 +134,7 @@ function installGitHubZip(projectName, depotName, branchName, directoryToInstall
       if (doTheEtagsMatch) {
         return createGitHubZipResponse(depotName, branchName, directoryToInstallIn, false);
       }
+      console.log('Starting to download Thali Cordova plugin from: ' + gitHubZipUrlObject.href);
       return httpRequestPromise("GET", gitHubZipUrlObject)
         .then(function(res) {
           return new Promise(function(resolve, reject) {
@@ -141,7 +142,7 @@ function installGitHubZip(projectName, depotName, branchName, directoryToInstall
               .on('close', function() {
                 resolve();
               }).on('error', function(e) {
-                reject(new Error("Could not extract zip file " + gitHubZipUrlObject.href + ", error was " + e));
+                reject(new Error("Could not extract zip file from " + gitHubZipUrlObject.href + ", error was " + e));
               });
           }).then(function() {
               return writeToEtagFile(depotName, branchName, directoryToInstallIn, res);
@@ -167,7 +168,7 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     if (!doWeNeedToUninstall) {
       return;
     }
-
+    console.log('Removing previously installed Thali Cordova plugin');
     return childProcessExecPromise('cordova plugin remove org.thaliproject.p2p', appRootDirectory)
   })
 }
@@ -185,6 +186,7 @@ function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontC
         reject(new Error("copyDevelopmentThaliCordovaPluginToProject remove failed with " + err));
         return;
       }
+      console.log('Copying files from ' + sourceDirectory + ' to ' + targetDirectory);
       fs.copy(sourceDirectory, targetDirectory, function (err) {
         if (err) {
           reject(new Error("copyDevelopmentThaliCordovaPluginToProject failed with" + err));
@@ -233,8 +235,26 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       }
 
       return new Promise(function(resolve, reject) {
-        request("https://github.com/jxcore/jxcore-cordova-release/raw/master/" + jxCoreVersionNumber + "/io.jxcore.node.jx")
-          .pipe(fs.createWriteStream(jxCoreFileLocation))
+        var requestUrl = 'https://github.com/jxcore/jxcore-cordova-release/raw/master/' + jxCoreVersionNumber + '/io.jxcore.node.jx';
+        var receivedData = 0;
+        var contentLength = 0;
+        var previousPercentageProgress = 0;
+        console.log('Starting to download from ' + requestUrl);
+        request(requestUrl)
+          .on('response', function (response) {
+            contentLength = response.headers['content-length'];
+            console.log('Started download of content with length: ' + contentLength);
+            console.log('Download progress: 0%');
+          })
+          .on('data', function (data) {
+            receivedData += data.length;
+            var currentPercentageProgress = parseInt(receivedData / contentLength * 100);
+            if (currentPercentageProgress !== previousPercentageProgress && currentPercentageProgress % 20 === 0) {
+              console.log('Download progress: ' + currentPercentageProgress + '%');
+              previousPercentageProgress = currentPercentageProgress;
+            }
+          })
+          .pipe(fs.createWriteStream(jxCoreFileLocation)
           .on('finish', function() {
             console.log("Downloaded io.jxcore.node.jx");
             resolve(true);
@@ -248,15 +268,30 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
                 console.log("Tried to delete the bad io.jxcore.node.jx file but failed - " + err);
                 reject(error);
               });
-          });
+          }));
       });
     }).then(function(neededDownload) {
       if (neededDownload) {
+        console.log('Running jx against the file downloaded to: ' + jxCoreFileLocation);
         return childProcessExecPromise('jx io.jxcore.node.jx', jxParentDir)
           .then(function() {
+            console.log('Adding io.jxcore.node Cordova plugin');
             return childProcessExecPromise('cordova plugin add ./io.jxcore.node/', jxParentDir);
           }).then(function() {
             return fs.writeFileAsync(currentInstalledVersion, jxCoreVersionNumber, 'utf8');
+          }).catch(function (error) {
+            console.log('Failed to process the downloaded io.jxcore.node.jx file');
+            // Delete the "corrupted" file so that it doesn't interfere in subsequent
+            // installation attempts.
+            return new Promise(function (resolve, reject) {
+              fs.unlink(jxCoreFileLocation)
+                .then(function () {
+                  // Always reject the above-created promise
+                  // because we are in the case where unpackaging
+                  // has failed and installation should not continue.
+                  reject(error);
+              });
+            });
           });
       }
 
@@ -264,7 +299,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
     });
 }
 
-module.exports = function(callBack) {
+module.exports = function(callback) {
   //get the app root folder from app/www/jxcore/node_modules/thali
   var appRootDirectory = path.join(__dirname, '../../../../../');
   var thaliDontCheckIn = path.join(appRootDirectory, "thaliDontCheckIn" );
@@ -277,50 +312,33 @@ module.exports = function(callBack) {
   var thaliDepotName = "Thali_CordovaPlugin";
   var thaliBranchName = "master";
 
-  if(!(path.basename(jxcoreFolder) == 'jxcore')) {
-    callBack(new Error('Could not locate JXCore folder. Exiting the thali plugin installation..'), null);
+  if (!fs.existsSync(jxcoreFolder)) {
+    var jxcoreFolderNotFoundError = 'Could not locate JXCore folder. Exiting the thali plugin installation..';
+    console.log(jxcoreFolderNotFoundError);
+    callback(new Error(jxcoreFolderNotFoundError), null);
+    return;
   }
-
-  var getThaliCordovaPluginZip =
-    doesMagicDirectoryNamedExist(thaliDontCheckIn) ?
-      copyDevelopmentThaliCordovaPluginToProject(
-        appRootDirectory, thaliDontCheckIn, thaliDepotName, thaliBranchName
-      ) :
-      installGitHubZip(thaliProjectName, thaliDepotName, thaliBranchName, thaliDontCheckIn);
-
-  // Fetch and install our dependencies
-
-  // Check first for existence of android platform, we need to be installed
-  // afterwards
-  /*childProcessExecPromise('cordova platforms list')
-   .then(function(output) {
-   var platforms = output.split('\n')[0].split(':')[1];
-   if (platforms.indexOf("android") == -1) {
-   throw new Error("Install android platform first");
-   }
-   })
-   .then(function() {
-   // Delete any existing package download
-   try {
-   fs.unlinkSync(jxCorePluginPackage);
-   } catch (e) {
-   // File doesn't exist and that's just fine
-   }
-   })
-   */
 
   fetchAndInstallJxCoreCordovaPlugin(thaliDontCheckIn, jxCoreVersionNumber)
     .then(function () {
-      return getThaliCordovaPluginZip;
+      if (doesMagicDirectoryNamedExist(thaliDontCheckIn)) {
+        return copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, thaliDepotName, thaliBranchName);
+      } else {
+        return installGitHubZip(thaliProjectName, thaliDepotName, thaliBranchName, thaliDontCheckIn);
+      }
     })
     .then(function(thaliCordovaPluginUnZipResult) {
       if (thaliCordovaPluginUnZipResult.directoryUpdated) {
         var weAddedPluginsFile = path.join(thaliDontCheckIn, "weAddedPlugins");
         return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
           .then(function() {
+            console.log('Adding Thali Cordova plugin from: ' + thaliCordovaPluginUnZipResult.unzipedDirectory);
             return childProcessExecPromise('cordova plugins add ' + thaliCordovaPluginUnZipResult.unzipedDirectory,
               appRootDirectory);
           }).then(function() {
+            // The step below is required, because the Android after prepare Cordova hook
+            // depends on external node modules that need to be installed.
+            console.log('Running jx npm install in: ' + appScriptsFolder);
             return childProcessExecPromise('jx npm install --autoremove "*.gz"', appScriptsFolder);
           }).then(function() {
             return fs.writeFileAsync(weAddedPluginsFile, "yes");
@@ -329,9 +347,9 @@ module.exports = function(callBack) {
     })
     .then(function() {
       // Success
-      callBack();
+      callback();
     })
     .catch(function(error) {
-      callBack(error, null);
+      callback(error, null);
     });
 };
