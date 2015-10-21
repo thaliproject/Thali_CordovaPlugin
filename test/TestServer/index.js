@@ -9,15 +9,15 @@ var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
-var IPAddressToFile = require('./IPAddressToFile');
-IPAddressToFile();
+//var IPAddressToFile = require('./IPAddressToFile');
+//IPAddressToFile();
 
 var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');
 var UnitTestFramework = require('./UnitTestFramework');
 var devicesObject = JSON.parse(process.argv[2]); //
 
-var timeOutValueToStart = 30000;// after 300 seconds of waiting we'll start even if we did not get desired amount of devices
+var timeOutValueToStart = 300000;// after 300 seconds of waiting we'll start even if we did not get desired amount of devices
 
 var perfTestsAndroid = new PerfTestFramework("Android");
 var perfTestsIOS     = new PerfTestFramework("iOs");

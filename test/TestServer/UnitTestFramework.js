@@ -19,7 +19,16 @@ UnitTestFramework.prototype = new events.EventEmitter;
 
 UnitTestFramework.prototype.addDevice = function(device,socket) {
 
-    //each device will report each and every file they load, so lets filter here the dublicates out
+    var devName = device.getName();
+    if(!this.testDevices) {
+        this.testDevices = {};
+    }
+
+    if(!this.testDevices[devName]){
+        this.testDevices[devName] = {};
+    }
+
+    //each device will report each and every file they load, so lets not count dublicates
     for (var deviceName in this.testDevices) {
         if (this.testDevices[deviceName] != null && this.testDevices[deviceName].device) {
             if(this.testDevices[deviceName].device.compareSocket(socket)){
@@ -30,18 +39,8 @@ UnitTestFramework.prototype.addDevice = function(device,socket) {
 
     this.devicesCount++;
 
-    var devName = device.getName();
-    if(!this.testDevices) {
-        this.testDevices = {};
-    }
-
-    if(!this.testDevices[devName]){
-        this.testDevices[devName] = {};
-    }
-
     this.testDevices[devName].device = device;
     console.log('Add ' + devName + ', os: ' + this.os + ' for unit tests' );
-
 }
 
 UnitTestFramework.prototype.getCount = function() {
