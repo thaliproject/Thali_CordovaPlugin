@@ -25,8 +25,7 @@
 //  THEMultipeerClientSocketRelayDelegate.m
 //
 
-// Protocol implemented by classes wishing to know which port the client relay
-// is listening on
+// Protocol implemented by classes wishing to know about socket related events
 @protocol THEMultipeerClientSocketRelayDelegate <NSObject>
 
 // Called when the client relay succesfully established it's listening port
@@ -35,4 +34,8 @@
 // Called when the client relay fails to listen
 - (void)didNotListenWithErrorMessage:(NSString *)errorMsg 
                   withPeerIdentifier:(NSString*)peerIdentifier;
+
+// Called when the socket is disconnected (usually by the app)
+- (void)didDisconnectFromPeer:(NSString *)peerIdentifier;
+
 @end

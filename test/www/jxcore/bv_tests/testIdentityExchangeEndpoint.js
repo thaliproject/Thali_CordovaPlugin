@@ -1,6 +1,8 @@
 /* jshint node: true, undef: true, unused: true  */
 'use strict';
 
+return;
+
 var http = require('http');
 var request = require('request');
 var requestPromise = require('request-promise');

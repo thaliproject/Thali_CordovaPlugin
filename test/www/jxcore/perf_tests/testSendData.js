@@ -25,7 +25,6 @@ var SendDataConnector = require('./SendDataConnector');
 
 /*
 "data": {
-    "count"          : Specifies the number of peers we would need to do the connections to
     "timeout"        : Specifies the timeout when we would end test (in case we have not already finished all connection rounds yet)
     "rounds"         : Specifies how many connections to each peer we should be doing
     "dataAmount"     : Specifies the amount of data we need ro send over each connection made
@@ -35,12 +34,12 @@ var SendDataConnector = require('./SendDataConnector');
     }
 */
 
-function testSendData(jsonData,name) {
+function testSendData(jsonData,name,dev) {
     var self = this;
     this.name = name;
     this.commandData = JSON.parse(jsonData);
     this.emitter = new ThaliEmitter();
-    this.toFindCount = this.commandData.count;
+    this.toFindCount = dev;
     console.log('testSendData created ' + jsonData);
 
     this.startTime = new Date();

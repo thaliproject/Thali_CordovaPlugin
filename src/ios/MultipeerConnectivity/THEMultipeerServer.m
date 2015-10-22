@@ -134,6 +134,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       assert([[serverSession remotePeerIdentifier] isEqualToString:peerIdentifier]);
 
       // Disconnect any existing session, see note below
+      NSLog(@"server: disconnecting to refresh session (%@)", peerIdentifier);
       [serverSession disconnect];
     }
     else
@@ -154,6 +155,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return serverSession;
   }];
 
+  NSLog(@"server: accepting invitation %@", peerIdentifier);
   invitationHandler(YES, [_serverSession session]);
 }
 
