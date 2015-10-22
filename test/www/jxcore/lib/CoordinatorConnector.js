@@ -37,6 +37,7 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
     })
 
     this.socket.on('disconnect', function () {
+        console.log('CoordinatorConnector disconnect called');
         self.emit('disconnect');
     });
 
@@ -63,6 +64,7 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
 };
 
 CoordinatorConnector.prototype.close = function(){
+    console.log('CoordinatorConnector close called');
     this.socket.close();
 };
 
