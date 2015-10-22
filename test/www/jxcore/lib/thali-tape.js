@@ -23,7 +23,6 @@
 var tape = require('tape');
 var WrappingTape = require('wrapping-tape');
 var CoordinatorConnector = require('./CoordinatorConnector');
-var parsedJSON = require('../serveraddress.json');
 
 process.on('uncaughtException', function(err) {
   console.log("We have an uncaught exception, good bye: " + JSON.stringify(err));
@@ -34,6 +33,8 @@ process.on('unhandledRejection', function(err) {
 });
 
 function Thali_Tape(options) {
+  var parsedJSON = require('../serveraddress.json');
+
   var myName = "UT" + Math.round((Math.random() * (1000000)));
   if(options.deviceName){
     myName = options.deviceName;
