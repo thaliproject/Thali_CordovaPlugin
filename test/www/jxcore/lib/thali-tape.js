@@ -25,6 +25,8 @@ var WrappingTape = require('wrapping-tape');
 var CoordinatorConnector = require('./CoordinatorConnector');
 var parsedJSON = require('../serveraddress.json');
 
+var testUtils = require("./testUtils");
+
 var Coordinator = null;
 
 process.on('uncaughtException', function(err) {
@@ -76,7 +78,7 @@ function Thali_Tape(options) {
     }
 
     // we need to shut down the Wifi & Bluetooth here
-    Coordinator.toggleRadios(false);
+    testUtils.toggleRadios(false);
   });
 
   var isConnected = false;
