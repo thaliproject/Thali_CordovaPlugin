@@ -26,5 +26,5 @@ find . -name "*.gz" -delete
 find . -name "*.pem" -delete
 cp -v $1 app.js
 cordova build android --release --device
-# cordova build ios --device
+cordova build ios --device
 echo "Remember to start the test coordination server by running jx index.js"
