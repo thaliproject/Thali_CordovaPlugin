@@ -59,26 +59,28 @@ ReConnectConnector.prototype.Stop = function() {
   
     console.log("CLIENT Stop now");
 
+    this.stopped = true;
+    if(this.reTryTimeOut != null) {
+        console.log("Stop retry timer");
+        clearTimeout(this.reTryTimeOut);
+        this.reTryTimeOut = null;
+    }
+
+    if (this.dataTimerId != null) {
+        console.log("Stop data retrieving timer");
+        clearTimeout(this.dataTimerId);
+        this.dataTimerId = null;
+    }
+
+    //Closing Client socket, will also close connection
+    if(this.clientSocket != null) {
+        console.log("CLIENT closeClientSocket");
+        this.clientSocket.end();
+        this.clientSocket = null;
+    }
+
     Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
-        this.stopped = true;
-        if(this.reTryTimeOut != null) {
-            console.log("Stop retry timer");
-            clearTimeout(this.reTryTimeOut);
-            this.reTryTimeOut = null;
-        }
-
-        if (this.dataTimerId != null) {
-            console.log("Stop data retrieving timer");
-            clearTimeout(this.dataTimerId);
-            this.dataTimerId = null;
-        }
-
-        //Closing Client socket, will also close connection
-        if(this.clientSocket != null) {
-            console.log("CLIENT closeClientSocket");
-            this.clientSocket.end();
-            this.clientSocket = null;
-        }
+        console.log("Disconnected");
     });
 }
 
@@ -214,7 +216,6 @@ ReConnectConnector.prototype.oneRoundDoneNow = function() {
 
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
 
-   
     this.doneRounds++;
     if(this.roundsToDo > this.doneRounds){
         this.tryRounds = 0;
