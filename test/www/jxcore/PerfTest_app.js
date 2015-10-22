@@ -54,6 +54,12 @@ TestFramework.on('done', function (data) {
   Coordinator.sendData(data);
 });
 
+TestFramework.on('end', function (data) {
+    console.log('end, event received');
+    Coordinator.close();
+});
+
+
 TestFramework.on('debug', function (data) {
   testUtils.logMessageToScreen(data);
 });
@@ -66,8 +72,8 @@ Coordinator.on('too_late', function (data) {
     console.log('got too_late message');
     testUtils.logMessageToScreen("got too_late message");
     TestFramework.stopAllTests(false);
-    Coordinator.toggleRadios(false);
 
+    Coordinator.close();
     //let let the CI know that we did finish
     console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
@@ -89,7 +95,9 @@ Coordinator.on('disconnect', function () {
     //we need to stop & close any tests we are running here
     TestFramework.stopAllTests(false);
     testUtils.logMessageToScreen('disconnected');
-    Coordinator.toggleRadios(false);
+
+    console.log('turning Radios off');
+    testUtils.toggleRadios(false);
 });
 
 // Log that the app.js file was loaded.

@@ -29,18 +29,26 @@ UnitTestFramework.prototype.addDevice = function(device,socket) {
     }
 
     //each device will report each and every file they load, so lets not count dublicates
+    if(this.isSocketAlreadyCounted(socket)){
+        return;
+    }
+
+    this.devicesCount++;
+    this.testDevices[devName].device = device;
+    console.log('Add ' + devName + ', os: ' + this.os + ' for unit tests' );
+}
+
+UnitTestFramework.prototype.isSocketAlreadyCounted = function(socket) {
+
     for (var deviceName in this.testDevices) {
         if (this.testDevices[deviceName] != null && this.testDevices[deviceName].device) {
             if(this.testDevices[deviceName].device.compareSocket(socket)){
-                return;
+                return true;
             }
         }
     }
 
-    this.devicesCount++;
-
-    this.testDevices[devName].device = device;
-    console.log('Add ' + devName + ', os: ' + this.os + ' for unit tests' );
+    return false;
 }
 
 UnitTestFramework.prototype.getCount = function() {

@@ -19,8 +19,8 @@ var devicesObject = JSON.parse(process.argv[2]); //
 
 var timeOutValueToStart = 300000;// after 300 seconds of waiting we'll start even if we did not get desired amount of devices
 
-var perfTestsAndroid = new PerfTestFramework("Android");
-var perfTestsIOS     = new PerfTestFramework("iOs");
+var perfTestsAndroid = new PerfTestFramework("Android",devicesObject.devices.android,devicesObject.honorCount);
+var perfTestsIOS     = new PerfTestFramework("iOs",devicesObject.devices.ios,devicesObject.honorCount);
 var unitTestsAndroid = new UnitTestFramework("Android");
 var unitTestsIOS     = new UnitTestFramework("iOs");
 
@@ -53,9 +53,25 @@ io.on('connection', function(socket) {
     }
 
     if(weHaveStartedTesting){
-      console.log("too late arrival");
-      this.emit('too_late', JSON.stringify({"timeout ":"malformed message"}));
-      return;
+      var isThisTestFromAddedDevice = false;
+      // each file will do its own present with different name
+      //  and we need to register the names, so we can determine which tests are actually included
+      // thus we need to check whether we would need to let these present pass, even though we have started
+      // there is one connection, i.e. one socket for each device, so we use that to determine what to do
+      if(devicesObject.honorCount && presentObj.type == "unittest"){
+
+        if(presentObj.os == 'android') {
+          isThisTestFromAddedDevice = unitTestsAndroid.isSocketAlreadyCounted(this);
+        }else{
+          isThisTestFromAddedDevice = unitTestsIOS.isSocketAlreadyCounted(this);
+        }
+      }
+
+      if(!isThisTestFromAddedDevice) {
+        console.log("too late arrival");
+        this.emit('too_late', JSON.stringify({"timeout ": "malformed message"}));
+        return;
+      }
     }
 
     var newDevice = new TestDevice(this,presentObj.name,presentObj.os);
@@ -66,6 +82,17 @@ io.on('connection', function(socket) {
         unitTestsAndroid.addDevice(newDevice,this);
       }else{
         unitTestsIOS.addDevice(newDevice,this);
+      }
+
+      if(devicesObject.honorCount){
+        var androidCount = unitTestsAndroid.getCount();
+        var iosCount = unitTestsIOS.getCount();
+        if(devicesObject.devices.android <= androidCount
+        && devicesObject.devices.ios <= iosCount){
+          weHaveStartedTesting = true;
+          unitTestsAndroid.startTest({"devices":{"ios":iosCount,"android":androidCount}});
+          unitTestsIOS.startTest({"devices":{"ios":iosCount,"android":androidCount}});
+        }
       }
 
       //the app is running unit tests
@@ -82,7 +109,7 @@ io.on('connection', function(socket) {
 
       this.on('disconnect', function () {
         if(!weHaveStartedTesting){
-          this.emit('error', JSON.stringify({"timeout ":"message not acceptable in current Test Server state"}));
+          this.emit('test_error', JSON.stringify({"timeout ":"message not acceptable in current Test Server state"}));
           return;
         }
 
@@ -95,7 +122,7 @@ io.on('connection', function(socket) {
 
       this.on('unit_test_done', function (msg) {
         if(!weHaveStartedTesting){
-          this.emit('error', JSON.stringify({"timeout ":"message not acceptable in current Test Server state"}));
+          this.emit('test_error', JSON.stringify({"timeout ":"message not acceptable in current Test Server state"}));
           return;
         }
 
@@ -116,9 +143,20 @@ io.on('connection', function(socket) {
         perfTestsIOS.addDevice(newDevice);
       }
 
+      if(devicesObject.honorCount){
+        var androidCount = perfTestsAndroid.getCount();
+        var iosCount = perfTestsIOS.getCount();
+        if(devicesObject.devices.android <= androidCount
+            && devicesObject.devices.ios <= iosCount){
+          weHaveStartedTesting = true;
+          perfTestsAndroid.startTest({"devices":{"ios":iosCount,"android":androidCount}});
+          perfTestsIOS.startTest({"devices":{"ios":iosCount,"android":androidCount}});
+        }
+      }
+
       this.on('disconnect', function () {
         if(!weHaveStartedTesting){
-          this.emit('error', JSON.stringify({"timeout ":"message not acceptable in current Test Server state"}));
+          this.emit('test_error', JSON.stringify({"timeout ":"message not acceptable in current Test Server state"}));
           return;
         }
         if(newDevice.getPlatform() == 'android') {
@@ -130,7 +168,7 @@ io.on('connection', function(socket) {
 
       this.on('test data', function (data) {
         if(!weHaveStartedTesting){
-          this.emit('error', JSON.stringify({"timeout ":"message not acceptable in current Test Server state"}));
+          this.emit('test_error', JSON.stringify({"timeout ":"message not acceptable in current Test Server state"}));
           return;
         }
         if(newDevice.getPlatform() == 'android') {

@@ -69,15 +69,10 @@ TestFrameworkClient.prototype.handleCommand = function(command){
             break;
         }
         case 'end':{
-            self.emit('debug',"--- ENDING test---");
-            Mobile.toggleBluetooth(false, function() {
-                self.emit('debug',"toggleBluetooth, OFF");
-                Mobile.toggleWiFi(false, function() {
-                    self.emit('debug',"toggleWiFi, OFF");
-                    console.log("****TEST TOOK:  ms ****" );
-                    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
-                });
-            });
+            console.log("****TEST TOOK:  ms ****" );
+            console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+            self.stopAllTests(true);
+            self.emit('end',"end");
             break;
         }
         default:{
