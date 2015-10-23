@@ -19,7 +19,6 @@ var configFile = require('./Config_PerfTest.json');
  ]
  }
 
-
   Test item in the array includes the tests file name and:
   - timeout: defines timeout value which after the coordinator server will cancel the test
   - data: is data that gets sent to the clients devices, and defines what they need to do
@@ -34,17 +33,20 @@ var configFile = require('./Config_PerfTest.json');
    - dataAmount defines the amount of data sent through each connection before disconnecting
  */
 
+var startTime = new Date().getTime();
 
-function PerfTestFramework(count, platform) {
+function PerfTestFramework(platform,count, honourCount) {
     this.timerId = null;
-    this.devicesCount = count;
     this.os = platform;
-    this.testDevices = {};
+
     this.testResults = [];
     this.currentTest = -1;
 
-    console.log('Star ' + this.os + ' tests : ' + configFile.name + ", start tests with " + this.devicesCount + " devices");
-
+    if(honourCount) {
+        console.log('Star ' + this.os + ' tests : ' + configFile.name + ", start tests with " + count + " devices");
+    }else{
+        console.log('Star ' + this.os + ' tests : ' + configFile.name + ", start tests with timer");
+    }
     for(var i=0; i < configFile.tests.length; i++) {
         console.log('Test[' + i + ']: ' + configFile.tests[i].name + ', timeout : ' + configFile.tests[i].timeout + ", data : " + JSON.stringify(configFile.tests[i].data));
     }
@@ -52,32 +54,60 @@ function PerfTestFramework(count, platform) {
 
 PerfTestFramework.prototype = new events.EventEmitter;
 
-PerfTestFramework.prototype.addDevice = function(device){
+PerfTestFramework.prototype.getCount = function() {
+    return this.getConnectedDevicesCount();
+}
 
-    if(this.currentTest >= 0){
-        console.log(this.os + ' test progressing ' + device.getName() + ' not added to tests');
+PerfTestFramework.prototype.addDevice = function(device) {
+    var self = this;
+
+    if (this.currentTest >= 0) {
+       // console.log(this.os + ' test progressing ' + device.getName() + ' not added to tests');
         return;
     }
 
-    this.testDevices[device.getName()] = device;
-    console.log(this.os + '  ' + device.getName() + ' added!');
-
-    if(this.getConnectedDevicesCount() == this.devicesCount){
-        console.log('-----' + this.os + ' start testing now -----');
-
-        this.start =new Date();
-        this.doNextTest();
+    if(!this.testDevices) {
+        this.testDevices = {};
     }
+
+    this.testDevices[device.getName()] = device;
+    console.log(this.os + '  ' + device.getName() + ' added : ' + ((new Date().getTime() - startTime) / 1000) + " sec., device count " + this.getConnectedDevicesCount());
+}
+
+PerfTestFramework.prototype.startTest = function(json){
+
+    //no devicesd were added
+    if(!this.testDevices || this.testDevices == null){
+        return ;
+    }
+
+    for (var deviceName in this.testDevices) {
+        if(this.testDevices[deviceName] != null){
+            this.testDevices[deviceName].start_tests(json);
+        }
+    }
+
+    this.devicesCount = this.getConnectedDevicesCount();
+
+    console.log('-----' + this.os + ' start testing now with ' + this.devicesCount + ' devices.');
+    this.start =new Date();
+    this.doNextTest();
 }
 
 PerfTestFramework.prototype.removeDevice = function(name){
-    console.log(this.os + ' ' + name + ' id now disconnected!');
+    if(!this.testDevices || this.testDevices == null){
+        return ;
+    }
+
+  //  console.log(this.os + ' ' + name + ' id now disconnected '  + ((new Date().getTime() - startTime) / 1000) + " sec.");
     if(this.currentTest >= 0){
         if(this.testDevices[name]){
-            console.log(this.os + ' test for ' + name + ' cancelled');
+            // this device is lost, it has now turned its Bluetooth & Wifi off, thus we need to take it out from the count
+            this.devicesCount = this.devicesCount - 1;
+            console.log(this.os + ' test for ' + name + ' cancelled, device count now: ' + this.devicesCount);
             this.ClientDataReceived(name,JSON.stringify({"result":"DISCONNECTED"}));
         }else {
-            console.log('test progressing ' + name + ' is not removed from the list');
+          //  console.log('test progressing ' + name + ' is not removed from the list');
         }
         return;
     }
@@ -88,6 +118,10 @@ PerfTestFramework.prototype.removeDevice = function(name){
 
 PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
     var jsonData = JSON.parse(data);
+
+    if(!this.testDevices || this.testDevices == null){
+        return ;
+    }
 
     //save the time and the time we got the results
     this.testDevices[name].data = jsonData;
@@ -142,9 +176,15 @@ PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
 
 PerfTestFramework.prototype.getFinishedDevicesCount  = function(){
     var devicesFinishedCount = 0;
+    if(!this.testDevices || this.testDevices == null){
+        return 0;
+    }
     for (var deviceName in this.testDevices) {
         if(this.testDevices[deviceName] != null && this.testDevices[deviceName].data != null){
-            devicesFinishedCount = devicesFinishedCount + 1;
+
+            if(this.testDevices[deviceName].data.result != "DISCONNECTED") {
+                devicesFinishedCount = devicesFinishedCount + 1;
+            }
         }
     }
 
@@ -153,6 +193,10 @@ PerfTestFramework.prototype.getFinishedDevicesCount  = function(){
 
 PerfTestFramework.prototype.getConnectedDevicesCount  = function(){
     var count = 0;
+    if(!this.testDevices || this.testDevices == null){
+        return 0;
+    }
+
     for (var deviceName in this.testDevices) {
         if(this.testDevices[deviceName] != null){
             count++;
@@ -162,6 +206,12 @@ PerfTestFramework.prototype.getConnectedDevicesCount  = function(){
     return count;
 }
 PerfTestFramework.prototype.doNextTest  = function(){
+
+    //no devicesd were added
+    if(!this.testDevices || this.testDevices == null){
+        return;
+    }
+
     var self = this;
     if(this.timerId != null) {
         clearTimeout(this.timerId);
@@ -171,7 +221,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
     this.currentTest++;
     if(configFile.tests[this.currentTest]){
         //if we have tests, then lets start new tests on all devices
-        console.log('start test[' + this.currentTest + ']');
+        console.log('start test[' + this.currentTest + '] with ' + this.devicesCount + ' devices.');
         for (var deviceName in this.testDevices) {
             if(this.testDevices[deviceName] != null){
                 this.testDevices[deviceName].startTime = new Date();
@@ -224,6 +274,11 @@ PerfTestFramework.prototype.doNextTest  = function(){
             }
         }
     }
+
+
+    // to prevent ending disconnections etc on being included in reports
+    var tmpDevicesList = this.testDevices;
+    this.testDevices = null;
 
     console.log('--------------- test report ---------------------');
 
@@ -298,10 +353,10 @@ PerfTestFramework.prototype.doNextTest  = function(){
         console.log(line09);
     }
 
-    for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null){
+    for (var deviceName in tmpDevicesList) {
+        if(tmpDevicesList[deviceName] != null){
             //if really needed, we could send the whole test data back with this command, and do the whole logging in the client side as well
-            this.testDevices[deviceName].SendCommand('end','results',JSON.stringify({"result":results[deviceName],'combined':combined}),this.devicesCount);
+            tmpDevicesList[deviceName].SendCommand('end','results',JSON.stringify({"result":results[deviceName],'combined':combined}),this.devicesCount);
         }
     }
 
@@ -334,7 +389,9 @@ PerfTestFramework.prototype.compare  = function (a,b) {
 }
 
 PerfTestFramework.prototype.testFinished  = function(){
-
+    if(!this.testDevices || this.testDevices == null){
+        return ;
+    }
     this.doneAlready = true;
     for (var deviceName in this.testDevices) {
         if (this.testDevices[deviceName] != null) {

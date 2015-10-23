@@ -15,26 +15,37 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
     var self = this;
     this.socket = socketIo('http://' + ipAddress + ':' + port + '/');
     this.socket.on('connect', function () {
+        console.log('DBG, CoordinatorConnector connect called');
         self.emit('connect');
     });
 
     this.socket.on('connect_error', function (err) {
+        console.log('DBG, CoordinatorConnector connect_error called');
         self.emit('error',JSON.stringify({type: 'connect_error', data: err}));
     });
 
     this.socket.on('connect_timeout', function (err) {
+        console.log('DBG, CoordinatorConnector connect_timeout called');
         self.emit('error',JSON.stringify({type: 'connect_timeout', data: err}));
     });
 
     this.socket.on('error', function (err) {
+        console.log('DBG, CoordinatorConnector error called');
         self.emit('error',JSON.stringify({type: 'error', data: err}));
     });
 
+    this.socket.on('test_error', function (err) {
+        console.log('DBG, CoordinatorConnector test_error called');
+        self.emit('test_error',JSON.stringify({type: 'test_error', data: err}));
+    })
+
     this.socket.on('disconnect', function () {
+        console.log('DBG, CoordinatorConnector disconnect called');
         self.emit('disconnect');
     });
 
     this.socket.on('command', function (data) {
+        console.log('DBG, CoordinatorConnector command called');
         self.emit('command',data);
     });
 
@@ -45,31 +56,35 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
     this.socket.on('end_unit_test', function (data) {
         self.emit('tear_down_ready',data);
     });
+
+    this.socket.on('too_late', function (data) {
+        console.log('DBG, CoordinatorConnector too_late called');
+        self.emit('too_late',data);
+    });
+
+    this.socket.on('start_tests', function (data) {
+        console.log('DBG, CoordinatorConnector start_tests called');
+        self.emit('start_tests',data);
+    });
+
 };
 
 CoordinatorConnector.prototype.close = function(){
+    console.log('CoordinatorConnector close called');
     this.socket.close();
 };
 
-CoordinatorConnector.prototype.identify = function(name){
+CoordinatorConnector.prototype.present = function(name,type){
     if(jxcore.utils.OSInfo().isAndroid) {
-        this.socket.emit('start_performance_testing', JSON.stringify({"name": name, "os": "android"}));
+        this.socket.emit('present', JSON.stringify({"os": "android","name": name,"type":type}));
     }else{
-        this.socket.emit('start_performance_testing', JSON.stringify({"name": name, "os": "ios"}));
+        this.socket.emit('present', JSON.stringify({"os": "ios","name": name,"type":type}));
     }
 };
 
 CoordinatorConnector.prototype.sendData = function(data){
+    console.log('DBG, CoordinatorConnector sendData called');
     this.socket.emit('test data', data);
-};
-
-CoordinatorConnector.prototype.initUnitTest = function(deviceName){
-    //todo we also need to supply actual platform with the message
-    if(jxcore.utils.OSInfo().isAndroid) {
-        this.socket.emit('start_unit_testing', JSON.stringify({"name": deviceName, "os": "android"}));
-    }else{
-        this.socket.emit('start_unit_testing', JSON.stringify({"name": deviceName, "os": "ios"}));
-    }
 };
 
 CoordinatorConnector.prototype.setUp = function(deviceName,testName){
@@ -79,5 +94,6 @@ CoordinatorConnector.prototype.setUp = function(deviceName,testName){
 CoordinatorConnector.prototype.tearDown = function(deviceName,testName){
     this.socket.emit('unit_test_done', JSON.stringify({"name":deviceName,"test":testName}));
 };
+
 
 module.exports = CoordinatorConnector;

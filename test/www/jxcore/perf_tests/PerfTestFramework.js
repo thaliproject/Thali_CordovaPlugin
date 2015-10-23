@@ -20,18 +20,18 @@ function TestFrameworkClient(name) {
 
     this.debugCallback = function(data) {
         self.emit('debug',data);
-    };
+    }
 
     this.doneCallback = function(data) {
         self.emit('done',data);
-    };
+    }
 
     console.log('check test folder');
-    fs.readdirSync(__dirname + '/perf_tests/').forEach(function(fileName) {
+    fs.readdirSync(__dirname).forEach(function(fileName) {
         if ((fileName.indexOf("test") == 0) &&
             fileName.indexOf(".js", fileName.length - 3) != -1) {
             console.log('found test : ./' + fileName);
-            self.test[fileName] = require('./perf_tests/' + fileName);
+            self.test[fileName] = require('./' + fileName);
         }
     });
 }
@@ -69,15 +69,10 @@ TestFrameworkClient.prototype.handleCommand = function(command){
             break;
         }
         case 'end':{
-            self.emit('debug',"--- ENDING test---");
-            Mobile.toggleBluetooth(false, function() {
-                self.emit('debug',"toggleBluetooth, OFF");
-                Mobile.toggleWiFi(false, function() {
-                    self.emit('debug',"toggleWiFi, OFF");
-                    console.log("****TEST TOOK:  ms ****" );
-                    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
-                });
-            });
+            console.log("****TEST TOOK:  ms ****" );
+            console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+            self.stopAllTests(true);
+            self.emit('end',"end");
             break;
         }
         default:{
