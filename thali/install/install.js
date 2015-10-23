@@ -261,7 +261,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
           })
           .on('error', function(error) {
             console.log("Error downloading io.jxcore.node.jx");
-            fs.unlink(jxCoreFileLocation)
+            fs.unlinkAsync(jxCoreFileLocation)
               .then(function() {
                 reject(error);
               }).catch(function(err) {
@@ -283,7 +283,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
             console.log('Failed to process the downloaded io.jxcore.node.jx file');
             // Delete the "corrupted" file so that it doesn't interfere in subsequent
             // installation attempts.
-            return fs.unlink(jxCoreFileLocation)
+            return fs.unlinkAsync(jxCoreFileLocation)
               .then(function () {
                 // Always reject the above-created promise
                 // because we are in the case where unpackaging
