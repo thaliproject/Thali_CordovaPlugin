@@ -86,9 +86,9 @@ SendDataConnector.prototype.Stop = function(peer) {
         this.clientSocket = null;
     }
 
-    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
+  /*  Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
         console.log("Disconnected by Mobile call");
-    });
+    });*/
 }
 
 SendDataConnector.prototype.doConnect = function(peer) {

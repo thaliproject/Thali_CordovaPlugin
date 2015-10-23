@@ -6,9 +6,19 @@
 
 'use strict';
 
+
+var options = {
+  pingTimeout: 3599000,
+  pingInterval: 60000,
+//  transports: ['websocket'],
+  allowUpgrades: false,
+  cookie: false
+};
+
 var app = require('express')();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
+var http = require('http').Server(app)
+
+var io = require('socket.io')(http,options);
 
 process.on('uncaughtException', function(err) {
   console.log("We have an uncaught exception, good bye: " + JSON.stringify(err));
@@ -49,9 +59,10 @@ if (!devicesObject.honorCount) {
 
   }, timeOutValueToStart);
 }
-
-io.set('heartbeat interval', 120000); // Do heart beat every 10 minutes
-io.set('close timeout', 60000);//
+/*
+io.set('pingTimeout', 240000);
+io.set('pingInterval', 25000);//
+*/
 io.on('connection', function(socket) {
   console.log("got connection ");
 

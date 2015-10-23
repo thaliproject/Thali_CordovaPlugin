@@ -14,9 +14,6 @@ CoordinatorConnector.prototype = new events.EventEmitter;
 CoordinatorConnector.prototype.init = function (ipAddress, port){
     var self = this;
     this.socket = socketIo('http://' + ipAddress + ':' + port + '/');
-    this.socket.heartbeatTimeout = 3600000; // close socket if we don't get heartbeat in one  hour
-    this.socket.set('close timeout', 60000);//
-
     this.socket.on('connect', function () {
         console.log('DBG, CoordinatorConnector connect called');
         self.emit('connect');
