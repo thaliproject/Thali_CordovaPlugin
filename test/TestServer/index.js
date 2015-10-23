@@ -4,10 +4,20 @@
  jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"}}//
  */
 
+'use strict';
 
 var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+
+process.on('uncaughtException', function(err) {
+  console.log("We have an uncaught exception, good bye: " + JSON.stringify(err));
+});
+
+process.on('unhandledRejection', function(err) {
+  console.log("We have an uncaught promise rejection, good bye: " + JSON.stringify(err));
+});
+
 
 //var IPAddressToFile = require('./IPAddressToFile');
 //IPAddressToFile();
@@ -40,7 +50,8 @@ if (!devicesObject.honorCount) {
   }, timeOutValueToStart);
 }
 
-io.set('heartbeat interval', 1200); // Do heart beat every 10 minutes
+io.set('heartbeat interval', 120000); // Do heart beat every 10 minutes
+io.set('close timeout', 60000);//
 io.on('connection', function(socket) {
   console.log("got connection ");
 

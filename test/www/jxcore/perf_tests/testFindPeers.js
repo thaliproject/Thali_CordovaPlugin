@@ -34,6 +34,7 @@ function testFindPeers(jsonData,name,dev) {
             return;
         }
         console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
+        //todo peers.forEach()
         for (var i =0; i < peers.length; i++) {
             var peer = peers[i];
 

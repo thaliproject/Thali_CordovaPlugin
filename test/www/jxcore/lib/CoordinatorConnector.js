@@ -15,33 +15,40 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
     var self = this;
     this.socket = socketIo('http://' + ipAddress + ':' + port + '/');
     this.socket.heartbeatTimeout = 3600000; // close socket if we don't get heartbeat in one  hour
+    this.socket.set('close timeout', 60000);//
 
     this.socket.on('connect', function () {
+        console.log('DBG, CoordinatorConnector connect called');
         self.emit('connect');
     });
 
     this.socket.on('connect_error', function (err) {
+        console.log('DBG, CoordinatorConnector connect_error called');
         self.emit('error',JSON.stringify({type: 'connect_error', data: err}));
     });
 
     this.socket.on('connect_timeout', function (err) {
+        console.log('DBG, CoordinatorConnector connect_timeout called');
         self.emit('error',JSON.stringify({type: 'connect_timeout', data: err}));
     });
 
     this.socket.on('error', function (err) {
+        console.log('DBG, CoordinatorConnector error called');
         self.emit('error',JSON.stringify({type: 'error', data: err}));
     });
 
     this.socket.on('test_error', function (err) {
+        console.log('DBG, CoordinatorConnector test_error called');
         self.emit('test_error',JSON.stringify({type: 'test_error', data: err}));
     })
 
     this.socket.on('disconnect', function () {
-        console.log('CoordinatorConnector disconnect called');
+        console.log('DBG, CoordinatorConnector disconnect called');
         self.emit('disconnect');
     });
 
     this.socket.on('command', function (data) {
+        console.log('DBG, CoordinatorConnector command called');
         self.emit('command',data);
     });
 
@@ -54,10 +61,12 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
     });
 
     this.socket.on('too_late', function (data) {
+        console.log('DBG, CoordinatorConnector too_late called');
         self.emit('too_late',data);
     });
 
     this.socket.on('start_tests', function (data) {
+        console.log('DBG, CoordinatorConnector start_tests called');
         self.emit('start_tests',data);
     });
 
@@ -77,6 +86,7 @@ CoordinatorConnector.prototype.present = function(name,type){
 };
 
 CoordinatorConnector.prototype.sendData = function(data){
+    console.log('DBG, CoordinatorConnector sendData called');
     this.socket.emit('test data', data);
 };
 

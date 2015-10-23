@@ -80,7 +80,7 @@ ReConnectConnector.prototype.Stop = function() {
     }
 
     Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
-        console.log("Disconnected");
+        console.log("Disconnected by Mobile call");
     });
 }
 
@@ -156,7 +156,6 @@ ReConnectConnector.prototype.resetDataTimeout = function(peer) {
         self.dataTimerId = setTimeout(function () {
             console.log('Receiving data timeout now');
             self.endReason = "DATA-TIMEOUT";
-
 
             self.disconnecting = true;
             //Closing Client socket, will also close connection
