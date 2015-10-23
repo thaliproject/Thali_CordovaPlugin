@@ -6,17 +6,22 @@ set -e
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to manually set the coordination server's
 # address to.
-cd ../../test/TestServer
+
+cd `dirname $0`
+cd ../..
+repositoryRoot=$(pwd)
+cd test/TestServer
 jx npm install
 jx generateServerAddress.js $2
-cd ../../..
+cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest
 mkdir -p ThaliTest/thaliDontCheckIn/localdev
-cp -r Thali_CordovaPlugin/test/www/ ThaliTest/www
-cd ThaliTest/www/jxcore
+cp -r $repositoryRoot/test/www/ ThaliTest/www
+cd ThaliTest
 cordova platform add ios
 cordova platform add android
-jx npm install ../../../Thali_CordovaPlugin/thali --save --autoremove "*.gz"
+cd www/jxcore
+jx npm install $repositoryRoot/thali --save --autoremove "*.gz"
 # SuperTest which is used by some of the BVTs include a PEM file (for private keys) that makes Android unhappy
 # so we remove it below in addition to the gz files.
 jx npm install --autoremove "*.gz,*.pem"
