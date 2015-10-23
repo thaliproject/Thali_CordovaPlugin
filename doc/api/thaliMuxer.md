@@ -1,7 +1,3 @@
----
-title: Thali Multiplex layer for non-TCP/IP Transports
-layout: default
----
 # Muxing TCP/IP connections over non-TCP/IP transports
 
 ## The problem
