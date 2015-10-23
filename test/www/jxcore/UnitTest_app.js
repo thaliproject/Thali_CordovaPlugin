@@ -1,21 +1,25 @@
-/**
+/*
  * This file needs to be renamed as app.js when we want to run unit tests
  * in order this to get loaded by the jxcore ready event.
- * This efectively acts as main entry poin to the unit test app
+ * This effectively acts as main entry point to the unit test app
  */
 
 "use strict";
 
 var test = require('tape');
-var express = require('express');
+//var express = require('express');
 var net = require('net');
+var testUtils = require("./lib/testUtils");
 
-var app = express();
-app.disable('x-powered-by');
+testUtils.toggleRadios(true);
+
+//var app = express();
+//app.disable('x-powered-by');
 
 var myName = "UNIT-TEST";
+testUtils.setMyName(myName);
 
-app.listen(5000, function () {
+//app.listen(5000, function () {
 
   var failedRows = [];
   var rows = [], total = 0, passed = 0, failed = 0;
@@ -32,7 +36,7 @@ app.listen(5000, function () {
         }
         rows.push(row);
 
-        logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
+        testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
 
         if(row.ok && row.name) {
             if(!row.ok){
@@ -42,51 +46,19 @@ app.listen(5000, function () {
     })
     .on('end', function () {
         // Log final results
-        logMessageToScreen("------ Final results ---- ");
+        testUtils.logMessageToScreen("------ Final results ---- ");
 
         for(var i = 0; i < failedRows.length; i++){
-            logMessageToScreen(failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name);
+            testUtils.logMessageToScreen(failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name);
         }
 
-        logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
+        testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
         console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
+        testUtils.toggleRadios(false);
     });
 
   require('./runTests.js');
-});
-
-/***************************************************************************************
- functions for Cordova side application, used for showing debug logs
- ***************************************************************************************/
-
-function isFunction(functionToCheck) {
-    var getType = {};
-    return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
-}
-
-var LogCallback;
-
-function logMessageToScreen(message) {
-    if (isFunction(LogCallback)) {
-        LogCallback(message);
-    } else {
-        console.log("LogCallback not set !!!!");
-    }
-}
-
-if (jxcore.utils.OSInfo().isMobile) {
-    Mobile('setLogCallback').registerAsync(function (callback) {
-        LogCallback = callback;
-    });
-
-    Mobile('getMyName').registerAsync(function (callback) {
-        callback(myName);
-    });
-} else {
-    LogCallback = function(message) {
-        console.log(message);
-    }
-}
+//});
 
 // Log that the app.js file was loaded.
 console.log('Test app app.js loaded');
