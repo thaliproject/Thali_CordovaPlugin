@@ -19,7 +19,6 @@ var configFile = require('./Config_PerfTest.json');
  ]
  }
 
-
   Test item in the array includes the tests file name and:
   - timeout: defines timeout value which after the coordinator server will cancel the test
   - data: is data that gets sent to the clients devices, and defines what they need to do
