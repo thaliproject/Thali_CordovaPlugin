@@ -29,13 +29,13 @@ ERROR_ABORT() {
 # The build has sometimes failed with the default value of maximum open
 # files per process, which is 256. Doubling it here to 512 to workaround
 # that issue.
-ulimit -n 512
+ulimit -n 512;ERROR_ABORT
 
 # Remove the previous build result (if any) to start from a clean state.
 rm -rf ../ThaliTest;ERROR_ABORT
 
 # Trial to get rid of a build failure that happens only occasionally in CI.
-jx npm cache clean
+jx npm cache clean;ERROR_ABORT
 
 # A hack to workaround an issue where the install scripts assume that the
 # folder of the Thali Cordova plugin is called exactly Thali_CordovaPlugin,
@@ -44,7 +44,7 @@ jx npm cache clean
 THALI_DIRECTORY="../Thali_CordovaPlugin"
 if [ ! -d "$THALI_DIRECTORY" ]
 then
-  cp -R . $THALI_DIRECTORY
+  cp -R . $THALI_DIRECTORY;ERROR_ABORT
 fi
 
 # Check the existence of the script that in CI gives the right test server
@@ -73,5 +73,8 @@ rm -rf test/TestServer/node_modules;ERROR_ABORT
 
 # A hack workround due to the fact that CI server doesn't allow relative paths outside
 # of the original parent folder as a path to the build output binaries.
-cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk
-cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app
+# https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
+rm -rf android-release-unsigned.apk;ERROR_ABORT
+cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk;ERROR_ABORT
+rm -rf ThaliTest.app;ERROR_ABORT
+cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
