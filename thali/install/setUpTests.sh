@@ -6,6 +6,8 @@ set -e
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to manually set the coordination server's
 # address to.
+
+cd `dirname $0`
 cd ../../test/TestServer
 jx npm install
 jx generateServerAddress.js $2
