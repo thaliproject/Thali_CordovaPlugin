@@ -16,7 +16,7 @@ jx generateServerAddress.js $2
 cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest
 mkdir -p ThaliTest/thaliDontCheckIn/localdev
-cp -r $repositoryRoot/test/www/ ThaliTest/www
+cp -R $repositoryRoot/test/www/ ThaliTest/www
 cd ThaliTest
 cordova platform add ios
 cordova platform add android

@@ -34,9 +34,6 @@ ulimit -n 512;ERROR_ABORT
 # Remove the previous build result (if any) to start from a clean state.
 rm -rf ../ThaliTest;ERROR_ABORT
 
-# Trial to get rid of a build failure that happens only occasionally in CI.
-jx npm cache clean;ERROR_ABORT
-
 # A hack to workaround an issue where the install scripts assume that the
 # folder of the Thali Cordova plugin is called exactly Thali_CordovaPlugin,
 # but this isn't always the case in the CI.
