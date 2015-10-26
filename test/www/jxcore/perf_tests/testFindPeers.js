@@ -34,10 +34,7 @@ function testFindPeers(jsonData,name,dev) {
             return;
         }
         console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
-        //todo peers.forEach()
-        for (var i =0; i < peers.length; i++) {
-            var peer = peers[i];
-
+        peers.forEach(function(peer) {
             self.foundPeers[peer.peerIdentifier] = peer;
 
             if(!self.foundPeers[peer.peerIdentifier].foundTime){
@@ -49,7 +46,7 @@ function testFindPeers(jsonData,name,dev) {
                 self.emit('debug', "Found peer : " + peer.peerIdentifier + ", Available: " + peer.peerAvailable);
                 console.log("Found peer : " + peer.peerIdentifier + ", peerAvailable: " + peer.peerAvailable);
             }
-        }
+        });
 
         var howManyWeDiscoveredAlready = 0;
         for (var foundPeer in self.foundPeers) {
