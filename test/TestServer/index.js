@@ -10,7 +10,7 @@
 var options = {
   pingTimeout: 3599000,
   pingInterval: 60000,
-//  transports: ['websocket']
+  transports: ['websocket']
 };
 
 var app = require('express')();
