@@ -11,7 +11,6 @@ function writeFiles(interfaceName, address) {
             JSON.stringify([{name: interfaceName, address: address}]));
     }
 
-    console.log(interfaceName, address);
     return writeServerAddress(path.join(__dirname, "../www/jxcore"))
         .then(function() {
             return writeServerAddress(__dirname);
