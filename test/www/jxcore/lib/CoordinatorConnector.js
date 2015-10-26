@@ -13,7 +13,14 @@ CoordinatorConnector.prototype = new events.EventEmitter;
 
 CoordinatorConnector.prototype.init = function (ipAddress, port){
     var self = this;
-    this.socket = socketIo('http://' + ipAddress + ':' + port + '/');
+
+    var options = {
+        pingTimeout: 3599000,
+        pingInterval: 60000,
+        transports: ['websocket']
+    };
+
+    this.socket = socketIo('http://' + ipAddress + ':' + port + '/',options);
     this.socket.on('connect', function () {
         console.log('DBG, CoordinatorConnector connect called');
         self.emit('connect');
