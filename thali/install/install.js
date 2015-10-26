@@ -1,6 +1,7 @@
 'use strict';
 var exec = require('child_process').exec;
 var path = require('path');
+var os = require('os');
 var https = require('https');
 var unzip = require('unzip');
 var Promise = require('lie');
@@ -204,17 +205,28 @@ function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
 }
 
 function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
-  var jxParentDir = path.join(baseDir, "jxcore", jxCoreVersionNumber);
-  var jxCoreFileLocation = path.join(jxParentDir, "io.jxcore.node.jx");
-  var currentInstalledVersion = path.join(baseDir, "jxcore", "installedVersion");
+  var jxCoreCacheFolder = path.join(os.tmpdir(), 'thali', 'jxcore', jxCoreVersionNumber);
+  var jxCoreCachedPlugin = path.join(jxCoreCacheFolder, 'io.jxcore.node');
+  var jxCoreFileLocation = path.join(jxCoreCacheFolder, 'io.jxcore.node.jx');
+  var currentInstalledVersionDir = path.join(baseDir, 'jxcore');
+  var currentInstalledVersion = path.join(currentInstalledVersionDir, 'installedVersion');
 
-  return fs.ensureDirAsync(jxParentDir)
+  return fs.ensureDirAsync(currentInstalledVersionDir)
     .then(function() {
       if (fs.existsSync(currentInstalledVersion)) {
         var currentVersion = fs.readFileSync(currentInstalledVersion, "utf8");
         if (currentVersion != jxCoreVersionNumber) {
+          console.log('Installed version of io.jxcore.node (' +
+                      currentVersion + ') is older than required (' +
+                      jxCoreVersionNumber + ') so doing a remove');
           return childProcessExecPromise('cordova plugin remove io.jxcore.node', baseDir)
             .then(function () {
+              return Promise.resolve(true);
+            })
+            .catch(function () {
+              console.log('Failed to remove the previous version of the plugin');
+              // This isn't considered an error that should prevent the installation
+              // from continuing so resolve the promise anyways.
               return Promise.resolve(true);
             });
         }
@@ -225,13 +237,17 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       return Promise.resolve(true);
     }).then(function(anythingToDo) {
       if (!anythingToDo) {
+        console.log('Cordova plugin io.jxcore.node already installed and matching the required version');
         return Promise.resolve(false);
       }
 
-      // This is a hack to let us copy the jx package file from some local location
-      // where we have a copy into this directory just in case local Internet is very slow
-      if (anythingToDo && fs.existsSync(jxCoreFileLocation)) {
+      // Check if the plugin is found from the local cache and use that instead
+      // of downloading it, if found.
+      if (fs.existsSync(jxCoreCachedPlugin)) {
+        console.log('Using jxcore Cordova plugin from: ' + jxCoreCachedPlugin);
         return Promise.resolve(true);
+      } else {
+        fs.mkdirsSync(jxCoreCacheFolder);
       }
 
       return new Promise(function(resolve, reject) {
@@ -256,8 +272,23 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
           })
           .pipe(fs.createWriteStream(jxCoreFileLocation)
           .on('finish', function() {
-            console.log("Downloaded io.jxcore.node.jx");
-            resolve(true);
+            console.log('Downloaded io.jxcore.node.jx to: ' + jxCoreFileLocation);
+            console.log('Running jx against the file downloaded to: ' + jxCoreFileLocation);
+            childProcessExecPromise('jx ' + jxCoreFileLocation, jxCoreCacheFolder)
+              .then(function () {
+                resolve(true);
+              }).catch(function (error) {
+                console.log('Failed to process the downloaded io.jxcore.node.jx file');
+                // Delete the "corrupted" files so that they don't interfere in subsequent
+                // installation attempts.
+                fs.removeAsync(jxCoreCacheFolder)
+                  .then(function () {
+                    // Always reject the above-created promise
+                    // because we are in the case where unpackaging
+                    // has failed and installation should not continue.
+                    reject(error);
+                  });
+                });
           })
           .on('error', function(error) {
             console.log("Error downloading io.jxcore.node.jx");
@@ -272,23 +303,15 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       });
     }).then(function(neededDownload) {
       if (neededDownload) {
-        console.log('Running jx against the file downloaded to: ' + jxCoreFileLocation);
-        return childProcessExecPromise('jx io.jxcore.node.jx', jxParentDir)
+        console.log('Adding io.jxcore.node Cordova plugin');
+        return childProcessExecPromise('cordova plugin add ' + path.join(jxCoreCacheFolder, 'io.jxcore.node'), baseDir)
           .then(function() {
-            console.log('Adding io.jxcore.node Cordova plugin');
-            return childProcessExecPromise('cordova plugin add ./io.jxcore.node/', jxParentDir);
-          }).then(function() {
             return fs.writeFileAsync(currentInstalledVersion, jxCoreVersionNumber, 'utf8');
-          }).catch(function (error) {
-            console.log('Failed to process the downloaded io.jxcore.node.jx file');
-            // Delete the "corrupted" file so that it doesn't interfere in subsequent
-            // installation attempts.
-            return fs.unlinkAsync(jxCoreFileLocation)
+          }).catch(function() {
+            console.log('Failed to add Cordova plugin');
+            return fs.removeAsync(jxCoreCacheFolder)
               .then(function () {
-                // Always reject the above-created promise
-                // because we are in the case where unpackaging
-                // has failed and installation should not continue.
-                return Promise.reject(error);
+                return Promise.reject();
               });
           });
       }
