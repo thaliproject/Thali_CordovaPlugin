@@ -1,7 +1,7 @@
 /*
  Main entry point for Thali test frameworks coordinator server
 
- jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"}}//
+ jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"},\"honorCount\":\"true\"}//
  */
 
 'use strict';
@@ -10,9 +10,7 @@
 var options = {
   pingTimeout: 3599000,
   pingInterval: 60000,
-//  transports: ['websocket'],
-  allowUpgrades: false,
-  cookie: false
+//  transports: ['websocket']
 };
 
 var app = require('express')();
@@ -28,7 +26,7 @@ process.on('unhandledRejection', function(err) {
   console.log("We have an uncaught promise rejection, good bye: " + JSON.stringify(err));
 });
 
-
+//IPAddressToFile is left here for debugging purposes, it gives you quick way on seeing the IP address used
 //var IPAddressToFile = require('./IPAddressToFile');
 //IPAddressToFile();
 
@@ -59,10 +57,7 @@ if (!devicesObject.honorCount) {
 
   }, timeOutValueToStart);
 }
-/*
-io.set('pingTimeout', 240000);
-io.set('pingInterval', 25000);//
-*/
+
 io.on('connection', function(socket) {
   console.log("got connection ");
 

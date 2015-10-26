@@ -76,7 +76,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
 PerfTestFramework.prototype.startTest = function(json){
 
-    //no devicesd were added
+    //no devices were added
     if(!this.testDevices || this.testDevices == null){
         return ;
     }
@@ -207,7 +207,7 @@ PerfTestFramework.prototype.getConnectedDevicesCount  = function(){
 }
 PerfTestFramework.prototype.doNextTest  = function(){
 
-    //no devicesd were added
+    //no devices were added
     if(!this.testDevices || this.testDevices == null){
         return;
     }
