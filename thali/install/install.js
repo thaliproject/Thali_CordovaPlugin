@@ -251,7 +251,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       }
 
       return new Promise(function(resolve, reject) {
-        var requestUrl = 'https://github.com/jxcore/jxcore-cordova-release/raw/master/' + jxCoreVersionNumber + '/io.jxcore.node.jx';
+        var requestUrl = 'http://jxcordova.cloudapp.net/' + jxCoreVersionNumber + '/io.jxcore.node.jx';
         var receivedData = 0;
         var contentLength = 0;
         var previousPercentageProgress = 0;
