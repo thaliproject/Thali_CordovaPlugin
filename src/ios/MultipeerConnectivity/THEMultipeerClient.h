@@ -37,7 +37,7 @@
 - (id)initWithPeerId:(MCPeerID *)peerId
   withPeerIdentifier:(NSString *)peerIdentifier
      withServiceType:(NSString *)serviceType 
-    withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate;
+withDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate;
 
 // Start and stop the client (i.e. the peer discovery process)
 - (void)start;

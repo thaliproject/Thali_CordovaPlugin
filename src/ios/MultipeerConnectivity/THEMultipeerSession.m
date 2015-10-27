@@ -55,13 +55,13 @@
   // connections from remote clients
   THEMultipeerServer *_server;
 
-  __weak id<THEMultipeerSessionDelegate> _delegate; 
+  __weak id<THEMultipeerDiscoveryDelegate> _delegate; 
 }
 
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
-                    sessionDelegate:(id<THEMultipeerSessionDelegate>)delegate
+                  discoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)delegate
 {
     self = [super init];
     
@@ -97,7 +97,7 @@
               initWithPeerId:_peerID 
           withPeerIdentifier:_peerIdentifier 
              withServiceType:_serviceType 
-  withPeerNetworkingDelegate:_delegate];
+       withDiscoveryDelegate:_delegate];
 
   [_server start];
   [_client start];

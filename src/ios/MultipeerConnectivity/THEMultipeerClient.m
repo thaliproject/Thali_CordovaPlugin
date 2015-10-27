@@ -48,7 +48,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   NSString *_serviceType;
 
   // Delegate that will be informed when we discover a server
-  id<THEMultipeerSessionDelegate>  _multipeerSessionDelegate;
+  id<THEMultipeerDiscoveryDelegate>  _multipeerDiscoveryDelegate;
 
   // Dict of all the servers ids we're current aware against their session states
   THESessionDictionary *_clientSessions;
@@ -57,7 +57,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 - (id)initWithPeerId:(MCPeerID *)peerId 
                      withPeerIdentifier:(NSString *)peerIdentifier
                         withServiceType:(NSString *)serviceType 
-             withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate
+                  withDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate
 {
   self = [super init];
   if (!self)
@@ -71,7 +71,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   _serviceType = serviceType;
   _localPeerIdentifier = peerIdentifier;
 
-  _multipeerSessionDelegate = multipeerSessionDelegate;
+  _multipeerDiscoveryDelegate = discoveryDelegate;
 
   return self;
 }
@@ -230,7 +230,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       clientSession = [[THEMultipeerClientSession alloc] 
                                     initWithLocalPeerID:_localPeerId 
                                        withRemotePeerID:peerID 
-                               withRemotePeerIdentifier:peerIdentifier];
+                               withRemotePeerIdentifier:peerIdentifier
+                                  ];
     }
 
     [clientSession setVisible:YES];
@@ -241,7 +242,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   {
     // A new peer or one that has become visible again. Only
     // contact delegate when the state changes (we get duplicates a lot)
-    [_multipeerSessionDelegate didFindPeerIdentifier:[clientSession remotePeerIdentifier] 
+    [_multipeerDiscoveryDelegate didFindPeerIdentifier:[clientSession remotePeerIdentifier] 
                                             peerName:info[PEER_NAME_KEY]];
   }
 }
@@ -278,7 +279,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     if (previouslyVisible == YES)
     {
       // Let interested parties know we lost a peer, only do this on a state change
-      [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession remotePeerIdentifier]];
+      [_multipeerDiscoveryDelegate didLosePeerIdentifier:[clientSession remotePeerIdentifier]];
     }
   }
   else
