@@ -45,21 +45,21 @@ that the CI system thinks are available. Instead the Test Server will start a ti
 the Test Server will accept connections from candidate devices who will report their name as part of the welcome ping.
 Any devices that try to register with the Test Server after the timer has expired will be rejected.
 
-```PlantUML
-participant TestServer
-participant Device1
-participant Device2
-participant Device3
-TestServer -> TestServer : Start timer
-Device1 -> TestServer : send 'present' + { "os": "android" }
-Device2 -> TestServer : send 'present' + { "os": "iOS" }
-TestServer -> TestServer : Timer Expires
-TestServer -> Device1 : send 'start tests' + { "android": 1, "ios": 1 }
-TestServer -> Device2 : send 'start tests' + { "android": 1, "ios": 1 }
-Device3 -> TestServer : send 'present' + { "os": "iOS" }
-TestServer -> Device3 : send 'too late'
-```
-![Example of counting devices](http://plantuml.com/plantuml/svg/fP0n2y8m58Jt_eeZImTrQDqwEEdiqFw1qBxXWJOXUHH1_E-ccc2nHIXkuRYxxrwiTi8jMzqB6l9Ianl8PNOY7sdWbee5hLpGzjcd1hl3f1GLQWb-25y38jREF9xw3hbr51wIOuCxbF6gWj9zvmnt2eyOBbU4-LoFmH_Zcd4MJZVB8VvbJ6CJmRyF2HuVAMbSXM8RQ2zeCGEctUjxuk_-Ut6gIK4n1XSjb3y1)
+![Test Server Message Flow](http://www.gravizo.com/g?
+@startuml;
+participant TestServer;
+participant Device1;
+participant Device2;
+participant Device3;
+TestServer -> TestServer : Start timer;
+Device1 -> TestServer : send 'present' + { "os": "android" };
+Device2 -> TestServer : send 'present' + { "os": "iOS" };
+TestServer -> TestServer : Timer Expires;
+TestServer -> Device1 : send 'start tests' + { "android": 1, "ios": 1 };
+TestServer -> Device2 : send 'start tests' + { "android": 1, "ios": 1 };
+Device3 -> TestServer : send 'present' + { "os": "iOS" };
+TestServer -> Device3 : send 'too late';
+@enduml;)
 
 ### Test Server Logic
 
