@@ -71,6 +71,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
     }
 
     this.testDevices[device.getName()] = device;
+
     console.log(this.os + '  ' + device.getName() + ' added : ' + ((new Date().getTime() - startTime) / 1000) + " sec., device count " + this.getConnectedDevicesCount());
 }
 
@@ -101,7 +102,7 @@ PerfTestFramework.prototype.removeDevice = function(name){
 
   //  console.log(this.os + ' ' + name + ' id now disconnected '  + ((new Date().getTime() - startTime) / 1000) + " sec.");
     if(this.currentTest >= 0){
-        if(this.testDevices[name]){
+        if(this.testDevices[name] && (this.testDevices[deviceName].data == null)){
             // this device is lost, it has now turned its Bluetooth & Wifi off, thus we need to take it out from the count
             this.devicesCount = this.devicesCount - 1;
             console.log(this.os + ' test for ' + name + ' cancelled, device count now: ' + this.devicesCount);
