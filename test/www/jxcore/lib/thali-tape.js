@@ -41,7 +41,7 @@ function Thali_Tape(options) {
 
   var Coordinator = new CoordinatorConnector();
   Coordinator.init(parsedJSON[0].address, 3000);
-  console.log('attempting to connect to test coordinator to ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
+  console.log('Attempting to connect to the test coordinator server');
 
   // We're about to add a lot of event handlers so squash the emitter leak warning
   Coordinator.setMaxListeners(0);
