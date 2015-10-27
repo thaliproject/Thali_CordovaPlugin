@@ -52,6 +52,21 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   NSString * _sessionType;
 }
 
+static NSDictionary *stateChanges = nil;
+
++ (void)initialize 
+{
+  if (self == [THEMultipeerPeerSession class]) {
+    // Static initialisation
+    stateChanges = @{ 
+      @(THEPeerSessionStateNotConnected) : @[@(THEPeerSessionStateConnecting)],
+      @(THEPeerSessionStateConnecting) : 
+        @[@(THEPeerSessionStateNotConnected), @(THEPeerSessionStateConnected)],
+      @(THEPeerSessionStateConnected) : @[@(THEPeerSessionStateNotConnected)]
+    };
+  }
+}
+
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
                    withRemotePeerID:(MCPeerID *)remotePeerID
            withRemotePeerIdentifier:(NSString *)remotePeerIdentifier
@@ -72,7 +87,19 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   return self;
 }
 
--(void)dealloc
+- (void)changeState:(THEPeerSessionState)newState
+{
+  @synchronized(self)
+  {
+    assert([stateChanges[@(_connectionState)] containsObject:@(newState)]);
+    NSLog(@"%@ (base) session: stateChange:%lu->%lu", 
+      _sessionType, (unsigned long)_connectionState, (unsigned long)newState
+    );
+    _connectionState = newState;
+  }
+}
+
+- (void)dealloc
 {
   assert(_connectionState == THEPeerSessionStateNotConnected);
 }
@@ -110,7 +137,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 
     assert(_relay == nil && _session == nil);
 
-    _connectionState = THEPeerSessionStateConnecting;
+    [self changeState:THEPeerSessionStateConnecting];
 
     _relay = [self newSocketRelay];
 
@@ -127,7 +154,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   {
     // Free up the resources we need for an active connection
 
-    _connectionState = THEPeerSessionStateNotConnected;
+    [self changeState:THEPeerSessionStateNotConnected];
 
     if (_relay != nil)
     {
@@ -248,9 +275,7 @@ static NSString * const THALI_STREAM = @"ThaliStream";
 
       @synchronized(self)
       {
-        assert(_connectionState == THEPeerSessionStateConnecting);
-
-        _connectionState = THEPeerSessionStateConnected;
+        [self changeState:THEPeerSessionStateConnected];
 
         // Start the server output stream.
         NSError * error;

@@ -39,14 +39,15 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 // The underlying connection transport may be any available e.g. Bluetooth, WiFi etc.
 @interface THEMultipeerPeerSession : NSObject <MCSessionDelegate>
 
-@property (nonatomic) BOOL visible;
-@property (readonly, nonatomic) THEPeerSessionState connectionState;
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID 
                    withRemotePeerID:(MCPeerID *)remotePeerID
            withRemotePeerIdentifier:(NSString *)peerIdentifier
                     withSessionType:(NSString *)sessionType;
 
+@property (atomic) BOOL visible;
+@property (readonly, atomic) THEPeerSessionState connectionState;
+ 
 - (MCPeerID *)remotePeerID;
 - (NSString *)remotePeerIdentifier;
 
