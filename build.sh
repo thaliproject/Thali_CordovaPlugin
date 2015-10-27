@@ -56,7 +56,7 @@ else
 fi
 
 # Either PerfTest_app.js or UnitTest_app.js
-TEST_TYPE="UnitTest_app.js"
+TEST_TYPE="PerfTest_app.js"
 
 # The line below is really supposed to be 'jx npm run setupUnit -- $SERVER_ADDRESS' but getting the last argument
 # passed through npm run and then into sh script seems to be a step too far. Eventually we could use an
