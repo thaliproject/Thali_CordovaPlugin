@@ -58,5 +58,8 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 // Kill for testing only !!
 - (void)kill;
 
+// Called when session disconnects or socket get closed
+- (void)didDisconnectFromPeer;
+
 @end
 

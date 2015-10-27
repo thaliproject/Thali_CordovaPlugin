@@ -29,6 +29,10 @@
 #import "THEMultipeerPeerSession.h"
 #import "THEMultipeerSocketRelay.h"
 
+#include "jx.h"
+#import "JXcore.h"
+#import "THEThreading.h"
+
 static NSString * const THALI_STREAM = @"ThaliStream";
 
 @interface THEMultipeerPeerSession()
@@ -48,11 +52,9 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   NSString * _sessionType;
 }
 
-static int count = 0;
-
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
                    withRemotePeerID:(MCPeerID *)remotePeerID
-           withRemotePeerIdentifier:(NSString *)remotePeerIdentifier 
+           withRemotePeerIdentifier:(NSString *)remotePeerIdentifier
                     withSessionType:(NSString *)sessionType
 {
   self = [super init];
@@ -61,12 +63,10 @@ static int count = 0;
       return nil;
   }
     
-  count++;
-
   _localPeerID = localPeerID;
   _remotePeerID = remotePeerID;
   _remotePeerIdentifier = remotePeerIdentifier;
-  
+ 
   _sessionType = sessionType;
 
   return self;
@@ -74,7 +74,6 @@ static int count = 0;
 
 -(void)dealloc
 {
-  count--;
   assert(_connectionState == THEPeerSessionStateNotConnected);
 }
 
@@ -159,6 +158,44 @@ static int count = 0;
   return nil;
 }
 
+-(void)disconnectWithError:(NSString *)error
+{
+  @synchronized(self)
+  {
+    NSLog(@"%@ (base) session: disconnectWithError:%@", _sessionType, error);
+    [self didDisconnectFromPeer];
+    [self disconnect];
+  }
+}
+
+- (void)didDisconnectFromPeer
+{
+  NSString * const kPeerConnectionError   = @"connectionError";
+  NSString * const kEventValueStringPeerId = @"peerIdentifier";
+
+  [self disconnect];
+
+  NSDictionary *connectionError = @{
+    kEventValueStringPeerId : _remotePeerIdentifier
+  };
+
+  NSError *error = nil;
+  NSData *jsonData = [NSJSONSerialization dataWithJSONObject:connectionError
+                                                      options:NSJSONWritingPrettyPrinted 
+                                                        error:&error];
+  if (error != nil) {
+    // Will never happen in practice
+    NSLog(@"WARNING: Could not generate jsonString for disconnect message");
+    return;
+  }
+
+  NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+
+  OnMainThread(^{
+    [JXcore callEventCallback:kPeerConnectionError withJSON:jsonString];
+  });
+}
+
 // MCSessionDelegate
 /////////////////////
 
@@ -194,7 +231,7 @@ static int count = 0;
     case MCSessionStateNotConnected:
     {
       NSLog(@"%@ (base) session: not connected", _sessionType);
-      [self disconnect];
+      [self disconnectWithError:@"Unexpected disconnect"];
     }
     break;
 
