@@ -71,7 +71,7 @@ To use Thali in a Cordova project one must do the following:
 2. Inside the jxcore folder create the app.js for your application
 3. Inside the jxcore folder create the package.json for your application
  * `jx npm init` provides an easy to use wizard that will create a basic package.json file
-4. Inside the jxcore folder run the command `jx install thali --autoremove="*.gz" --save`
+4. Inside the jxcore folder run the command `jx install thali --autoremove "*.gz" --save`
 5. Make sure to run `cordova build` as this is critical to moving key files into place
  * Yes, an exception did get thrown during the build. No, it isn't harmful. No, we haven't quite figured out
  why it gets thrown, the verbose debug logs aren't saying anything useful.

@@ -47,6 +47,7 @@ To run either unit or performance tests on mobile devices one first has to build
 the Cordova project onto the phones. One also needs to run a coordination server.
 
 To run the mobile tests:
+
 1. If you have a sibling directory to Thali_CordovaPlugin called ThaliTest, now would be a good time to delete it.
 1. Go to Thali_CordovaPlugin/thali/install
 2. Run either `jx npm run setupUnit` or `jx npm run setupPerf` depending on what type of test project you want to
@@ -56,7 +57,9 @@ Android and iOS. This assumes you are running on a Mac with all the right tools.
 3. Go to Thali_CordovaPlugin/test/TestServer
 4. Examine Config_PerfTest.json or Config_UnitTest.json (depending on the test type you are running) and make sure it
 is configured properly.
-5. Run index.js in that directory on your local PC to start the coordination server
+5. Run `jx index.js {\"devices\":{\"ios\":\"2\",\"android\":\"2\"}}` in that directory on your local PC to start the 
+coordination server. Obviously edit the device counts passed on the command line to reflect the actual test
+environment.
 6. Deploy and run the tests on your two Android or two iPhone devices.
 
 ### Desktop
@@ -72,7 +75,7 @@ To set up your desktop environment for development go to Thali_CordovaPlugin/tha
 
 Sudo is needed because this script installs a symbolic link into your global NPM directory.
 
-You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing `jx runTests.js`. But the
+You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing `jx UnitTest_app.js`. But the
 tests will happily run stand alone so you can run a test directly (e.g. `jx testConnectionTable.js`) thus allowing
 you to easily run and debug individual tests.
 

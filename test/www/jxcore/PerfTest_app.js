@@ -1,93 +1,72 @@
 /*
-* This file needs to be renamed as app.js when we want to run performance tests
-* in order this to get loaded by the jxcore ready event.
-* This efectively acts as main entry poin to the performance test app
- */
-(function () {
+ * This file needs to be renamed as app.js when we want to run performance tests
+ * in order this to get loaded by the jxcore ready event.
+ * This effectively acts as main entry point to the performance test app
+*/
 
-  var CoordinatorConnector = require('./lib/CoordinatorConnector');
-  var TestFrameworkClient = require('./lib/PerfTestFramework');
+"use strict";
 
-  /*----------------------------------------------------------------------------------
-   code for connecting to the coordinator server
-   -----------------------------------------------------------------------------------*/
-  fs = require('fs');
-  var parsedJSON = require('serveraddress.json');
-  var myName = "DEV" + Math.round((Math.random() * (10000)));
+var testUtils = require("./lib/testUtils");
+var fs = require('fs');
+var parsedJSON = require('serveraddress.json');
 
-  console.log('my name is : ' + myName);
-  console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
+testUtils.toggleRadios(true);
 
-  var Coordinator = new CoordinatorConnector();
-  Coordinator.init(parsedJSON[0].address, 3000);
-  console.log('attempting to connect to test coordinator');
+var CoordinatorConnector = require('./lib/CoordinatorConnector');
+var TestFrameworkClient = require('./perf_tests/PerfTestFramework');
 
-  Coordinator.on('error', function (data) {
-    var errData = JSON.parse(data);
-    console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
-    logMessageToScreen('Client error: ' + errData.type);
-  });
+/*----------------------------------------------------------------------------------
+ code for connecting to the coordinator server
+ -----------------------------------------------------------------------------------*/
+var myName = "DEV" + Math.round((Math.random() * (10000)));
+testUtils.setMyName(myName);
 
-  /*----------------------------------------------------------------------------------
-   code for handling test communications
-   -----------------------------------------------------------------------------------*/
-  var TestFramework = new TestFrameworkClient(myName);
-  TestFramework.on('done', function (data) {
-    console.log('done, sending data to server');
-    Coordinator.sendData(data);
-  });
-  TestFramework.on('debug', function (data) {
-    logMessageToScreen(data);
-  });
+console.log('my name is : ' + myName);
+console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
 
-  Coordinator.on('connect', function () {
-    console.log('Client has connected to the server!');
-    logMessageToScreen('connected to server');
-    Coordinator.identify(myName);
-  });
+var Coordinator = new CoordinatorConnector();
+Coordinator.init(parsedJSON[0].address, 3000);
+console.log('attempting to connect to test coordinator');
 
-  Coordinator.on('command', function (data) {
-    console.log('command received : ' + data);
-    TestFramework.handleCommand(data);
-  });
+Coordinator.on('error', function (data) {
+  var errData = JSON.parse(data);
+  console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
+  testUtils.logMessageToScreen('Client error: ' + errData.type);
+});
 
-  // Add a disconnect listener
-  Coordinator.on('disconnect', function () {
-    console.log('The client has disconnected!');
-    //we need to stop & close any tests we are runnign here
-    TestFramework.stopAllTests(false);
-    logMessageToScreen('disconnected');
-  });
+/*----------------------------------------------------------------------------------
+ code for handling test communications
+ -----------------------------------------------------------------------------------*/
+var TestFramework = new TestFrameworkClient(myName);
+TestFramework.on('done', function (data) {
+  console.log('done, sending data to server');
+  Coordinator.sendData(data);
+});
 
-  /***************************************************************************************
-   functions for Cordova side application, used for showing debug logs
-   ***************************************************************************************/
+TestFramework.on('debug', function (data) {
+  testUtils.logMessageToScreen(data);
+});
 
-  function isFunction(functionToCheck) {
-    var getType = {};
-    return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
-  }
+Coordinator.on('connect', function () {
+  console.log('Client has connected to the server!');
+  testUtils.logMessageToScreen('connected to server');
+  Coordinator.identify(myName);
+});
 
-  var LogCallback;
+Coordinator.on('command', function (data) {
+  console.log('command received : ' + data);
+  TestFramework.handleCommand(data);
+});
 
-  function logMessageToScreen(message) {
-    if (isFunction(LogCallback)) {
-      LogCallback(message);
-    } else {
-      console.log("LogCallback not set !!!!");
-    }
-  }
+Coordinator.on('disconnect', function () {
+  console.log('The client has disconnected!');
+  //we need to stop & close any tests we are running here
+  TestFramework.stopAllTests(false);
+  testUtils.logMessageToScreen('disconnected');
+});
 
-  Mobile('setLogCallback').registerAsync(function (callback) {
-    LogCallback = callback;
-  });
+// Log that the app.js file was loaded.
+console.log('Test app app.js loaded');
 
-  Mobile('getMyName').registerAsync(function (callback) {
-    callback(myName);
-  });
-
-  // Log that the app.js file was loaded.
-  console.log('Test app app.js loaded');
-})();
 
 

@@ -6,14 +6,11 @@
 'use strict';
 
 var events = require('events');
-var TestDevice = require('./TestDevice');
-var configFile = require('./Config_UnitTest.json');
 
-function UnitTestFramework() {
+function UnitTestFramework(count) {
+    this.devicesCount = count;
     this.testDevices = {};
     this.testsToRunArray = [];
-
-    console.log('Start test : ' + configFile.name + ", start tests with " + configFile.startDeviceCount + " devices.");
 }
 // to do, we would need timeout for each test, so we can cancel is somebody is hanging
 
@@ -44,7 +41,7 @@ UnitTestFramework.prototype.addDevice = function(device,test) {
         }
     }
 
-    if (count == configFile.startDeviceCount) {
+    if (count == this.devicesCount) {
         var testDevicesReadyArray = [];
         for (var deviceName in this.testDevices) {
             if (this.testDevices[deviceName] != null) {
