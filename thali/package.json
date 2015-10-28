@@ -12,10 +12,14 @@
     "request": "^2.64.0",
     "winston": "^1.0.2"
   },
+  "devDependencies": {
+    "jsdoc": "^3.3.3"
+  },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",
     "postpublish": "jx install/postPublishThaliCordovaPlugin.js",
-    "postinstall": "jx installCordovaPlugin.js"
+    "postinstall": "jx installCordovaPlugin.js",
+    "createDocs": "./node_modules/.bin/jsdoc -c conf.json ."
   },
   "repository": {
     "type": "git",
