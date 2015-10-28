@@ -233,6 +233,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                                   ];
     }
 
+    NSLog(@"client: found peer: %@", [clientSession remotePeerIdentifier]);
     [clientSession setVisible:YES];
     return clientSession;
   }];
@@ -262,11 +263,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     NSLog(@"client: lost peer: %@", [clientSession remotePeerIdentifier]);
 
     previouslyVisible = clientSession.visible;
-
-    if (clientSession)
-    {
-      [clientSession onPeerLost];
-    }
+    [clientSession onPeerLost];
 
     return clientSession;
   }];
