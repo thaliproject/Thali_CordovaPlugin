@@ -29,6 +29,9 @@
 #import "THEMultipeerClientSession.h"
 #import "THEMultipeerClientSocketRelay.h"
 
+#include "jx.h"
+#import "JXcore.h"
+#import "THEThreading.h"
 
 @implementation THEMultipeerClientSession
 {
@@ -64,23 +67,45 @@
   }
 }
 
-- (void)disconnect
+- (void)fireConnectCallback:(NSString *)error withPort:(uint)port
 {
   @synchronized(self)
   {
-    THEPeerSessionState prevState = [self connectionState];
+    NSLog(@"client session: fireConnectCallback: %@", [self remotePeerIdentifier]);
 
-    [super disconnect];
-    if (_connectCallback != nil)
-    {
-      if (prevState == THEPeerSessionStateConnecting)
-      {
-        NSLog(@"client session: disconnected: %@", [self remotePeerIdentifier]);
-        _connectCallback(@"Peer disconnected", 0);
-      }
-      _connectCallback = nil;
-    }
+    assert(_connectCallback != nil);
+
+    _connectCallback(error, port);
+    _connectCallback = nil;
   }
+}
+
+- (void)fireConnectionErrorEvent
+{
+  NSLog(@"client session: fireConnectionErrorEvent: %@", [self remotePeerIdentifier]);
+
+  NSString * const kPeerConnectionError   = @"connectionError";
+  NSString * const kEventValueStringPeerId = @"peerIdentifier";
+
+  NSDictionary *connectionError = @{
+    kEventValueStringPeerId : [self remotePeerIdentifier]
+  };
+
+  NSError *error = nil;
+  NSData *jsonData = [NSJSONSerialization dataWithJSONObject:connectionError
+                                                      options:NSJSONWritingPrettyPrinted 
+                                                        error:&error];
+  if (error != nil) {
+    // Will never happen in practice
+    NSLog(@"WARNING: Could not generate jsonString for disconnect message");
+    return;
+  }
+
+  NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+
+  OnMainThread(^{
+    [JXcore callEventCallback:kPeerConnectionError withJSON:jsonString];
+  });
 }
 
 - (THEMultipeerSocketRelay *)newSocketRelay
@@ -89,6 +114,54 @@
                                                     withDelegate:self];
 }
 
+// The p2p socket or iostream has failed
+- (void)onLinkFailure
+{
+  @synchronized(self)
+  {
+    NSLog(@"client session: onLinkFailure: %@", [self remotePeerIdentifier]);
+
+    assert([self connectionState] != THEPeerSessionStateNotConnected);
+
+    THEPeerSessionState prevState = [self connectionState];
+    [self disconnect];
+
+    if (prevState == THEPeerSessionStateConnecting)
+      [self fireConnectCallback:@"Peer disconnected" withPort:0];
+    else if (prevState == THEPeerSessionStateConnected)
+      [self fireConnectionErrorEvent];
+  }
+}
+
+// Lost the peer
+- (void)onPeerLost
+{
+  @synchronized(self)
+  {
+    NSLog(@"client session: onPeerLost: %@", [self remotePeerIdentifier]);
+    [self onLinkFailure];
+    [self setVisible:NO]; 
+  }
+}
+
+// User-initiated disconnect
+- (void)disconnectFromPeer
+{
+  @synchronized(self)
+  {
+    NSLog(@"client session: disconnectFromPeer: %@", [self remotePeerIdentifier]);
+
+    assert([self connectionState] != THEPeerSessionStateNotConnected);
+
+    THEPeerSessionState prevState = [self connectionState];
+    [self disconnect];
+
+    if (prevState == THEPeerSessionStateConnecting)
+      [self fireConnectCallback:@"Peer disconnected" withPort:0];
+  }
+}
+
+
 // ClientSocketRelayDelegate methods
 /////////////////////////////////////
 
@@ -96,15 +169,7 @@
 {
   @synchronized(self)
   {
-    if (_connectCallback)
-    {
-      _connectCallback(nil, port);
-      _connectCallback = nil;
-    }
-    else
-    {
-      NSLog(@"WARNING: didListenWithLocalPort but no callback");
-    }
+    [self fireConnectCallback:nil withPort:port];
   }
 }
 
@@ -126,8 +191,9 @@
   
 - (void)didDisconnectFromPeer
 {
-  NSLog(@"client session: disconnected due to socket close: %@", [self remotePeerIdentifier]);
-  [super didDisconnectFromPeer];
+  // The p2p socket has been closed
+  NSLog(@"client session: socket closed: %@", [self remotePeerIdentifier]);
+  [self onLinkFailure];
 }
 
 @end

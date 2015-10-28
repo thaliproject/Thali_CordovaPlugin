@@ -29,9 +29,6 @@
 #import "THEMultipeerPeerSession.h"
 #import "THEMultipeerSocketRelay.h"
 
-#include "jx.h"
-#import "JXcore.h"
-#import "THEThreading.h"
 
 static NSString * const THALI_STREAM = @"ThaliStream";
 
@@ -83,6 +80,7 @@ static NSDictionary *stateChanges = nil;
   _remotePeerIdentifier = remotePeerIdentifier;
  
   _sessionType = sessionType;
+  _connectionState = THEPeerSessionStateNotConnected;
 
   return self;
 }
@@ -92,8 +90,8 @@ static NSDictionary *stateChanges = nil;
   @synchronized(self)
   {
     assert([stateChanges[@(_connectionState)] containsObject:@(newState)]);
-    NSLog(@"%@ (base) session: stateChange:%lu->%lu", 
-      _sessionType, (unsigned long)_connectionState, (unsigned long)newState
+    NSLog(@"%@ session: stateChange:%lu->%lu %@", 
+      _sessionType, (unsigned long)_connectionState, (unsigned long)newState, _remotePeerIdentifier
     );
     _connectionState = newState;
   }
@@ -137,6 +135,7 @@ static NSDictionary *stateChanges = nil;
 
     assert(_relay == nil && _session == nil);
 
+    NSLog(@"%@ session: connect", _sessionType);
     [self changeState:THEPeerSessionStateConnecting];
 
     _relay = [self newSocketRelay];
@@ -154,6 +153,10 @@ static NSDictionary *stateChanges = nil;
   {
     // Free up the resources we need for an active connection
 
+    if (_connectionState == THEPeerSessionStateNotConnected)
+      return;
+
+    NSLog(@"%@ session: disconnect", _sessionType);
     [self changeState:THEPeerSessionStateNotConnected];
 
     if (_relay != nil)
@@ -185,42 +188,9 @@ static NSDictionary *stateChanges = nil;
   return nil;
 }
 
--(void)disconnectWithError:(NSString *)error
+- (void)onLinkFailure
 {
-  @synchronized(self)
-  {
-    NSLog(@"%@ (base) session: disconnectWithError:%@", _sessionType, error);
-    [self didDisconnectFromPeer];
-    [self disconnect];
-  }
-}
-
-- (void)didDisconnectFromPeer
-{
-  NSString * const kPeerConnectionError   = @"connectionError";
-  NSString * const kEventValueStringPeerId = @"peerIdentifier";
-
-  [self disconnect];
-
-  NSDictionary *connectionError = @{
-    kEventValueStringPeerId : _remotePeerIdentifier
-  };
-
-  NSError *error = nil;
-  NSData *jsonData = [NSJSONSerialization dataWithJSONObject:connectionError
-                                                      options:NSJSONWritingPrettyPrinted 
-                                                        error:&error];
-  if (error != nil) {
-    // Will never happen in practice
-    NSLog(@"WARNING: Could not generate jsonString for disconnect message");
-    return;
-  }
-
-  NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-
-  OnMainThread(^{
-    [JXcore callEventCallback:kPeerConnectionError withJSON:jsonString];
-  });
+  // Nothing for base/server class to do here
 }
 
 // MCSessionDelegate
@@ -257,24 +227,25 @@ static NSDictionary *stateChanges = nil;
   {
     case MCSessionStateNotConnected:
     {
-      NSLog(@"%@ (base) session: not connected", _sessionType);
-      [self disconnectWithError:@"Unexpected disconnect"];
+      NSLog(@"%@ session: not connected %@", _sessionType, _remotePeerIdentifier);
+      [self onLinkFailure];
     }
     break;
 
     case MCSessionStateConnecting:
     {
-      //NSLog(@"%@ (base) session: connecting", _sessionType);
+      //NSLog(@"%@ session: connecting", _sessionType);
       assert(_connectionState == THEPeerSessionStateConnecting);
     }
     break;
 
     case MCSessionStateConnected:
     {
-      //NSLog(@"%@ (base) session: connected", _sessionType);
+      //NSLog(@"%@ session: connected", _sessionType);
 
       @synchronized(self)
       {
+        NSLog(@"%@ session: connected", _sessionType);
         [self changeState:THEPeerSessionStateConnected];
 
         // Start the server output stream.
