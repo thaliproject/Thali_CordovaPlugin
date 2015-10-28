@@ -45,7 +45,6 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
            withRemotePeerIdentifier:(NSString *)peerIdentifier
                     withSessionType:(NSString *)sessionType;
 
-@property (atomic) BOOL visible;
 @property (readonly, atomic) THEPeerSessionState connectionState;
  
 - (MCPeerID *)remotePeerID;
@@ -59,8 +58,7 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 // Kill for testing only !!
 - (void)kill;
 
-// Called when session disconnects or socket get closed
-- (void)didDisconnectFromPeer;
-
+// Called when the p2p link fails
+- (void)onLinkFailure;
 @end
 
