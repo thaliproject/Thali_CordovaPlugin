@@ -208,39 +208,18 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
   var jxCoreCacheFolder = path.join(os.tmpdir(), 'thali', 'jxcore', jxCoreVersionNumber);
   var jxCoreCachedPlugin = path.join(jxCoreCacheFolder, 'io.jxcore.node');
   var jxCoreFileLocation = path.join(jxCoreCacheFolder, 'io.jxcore.node.jx');
-  var currentInstalledVersionDir = path.join(baseDir, 'jxcore');
-  var currentInstalledVersion = path.join(currentInstalledVersionDir, 'installedVersion');
 
-  return fs.ensureDirAsync(currentInstalledVersionDir)
+  return childProcessExecPromise('cordova plugin remove io.jxcore.node', baseDir)
+    .then(function () {
+      return Promise.resolve();
+    })
+    .catch(function () {
+      // This shouldn't be considered an error scenario, because it meant Cordova
+      // wan't able to remove a previously-installed plugin version, which is in
+      // fact a typical scenario when Thali is installed onto a new app.
+      return Promise.resolve();
+    })
     .then(function() {
-      if (fs.existsSync(currentInstalledVersion)) {
-        var currentVersion = fs.readFileSync(currentInstalledVersion, "utf8");
-        if (currentVersion != jxCoreVersionNumber) {
-          console.log('Installed version of io.jxcore.node (' +
-                      currentVersion + ') is older than required (' +
-                      jxCoreVersionNumber + ') so doing a remove');
-          return childProcessExecPromise('cordova plugin remove io.jxcore.node', baseDir)
-            .then(function () {
-              return Promise.resolve(true);
-            })
-            .catch(function () {
-              console.log('Failed to remove the previous version of the plugin');
-              // This isn't considered an error that should prevent the installation
-              // from continuing so resolve the promise anyways.
-              return Promise.resolve(true);
-            });
-        }
-
-        return Promise.resolve(false);
-      }
-
-      return Promise.resolve(true);
-    }).then(function(anythingToDo) {
-      if (!anythingToDo) {
-        console.log('Cordova plugin io.jxcore.node already installed and matching the required version');
-        return Promise.resolve(false);
-      }
-
       // Check if the plugin is found from the local cache and use that instead
       // of downloading it, if found.
       if (fs.existsSync(jxCoreCachedPlugin)) {
@@ -305,9 +284,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       if (neededDownload) {
         console.log('Adding io.jxcore.node Cordova plugin');
         return childProcessExecPromise('cordova plugin add ' + path.join(jxCoreCacheFolder, 'io.jxcore.node'), baseDir)
-          .then(function() {
-            return fs.writeFileAsync(currentInstalledVersion, jxCoreVersionNumber, 'utf8');
-          }).catch(function() {
+          .catch(function() {
             console.log('Failed to add Cordova plugin');
             return fs.removeAsync(jxCoreCacheFolder)
               .then(function () {
@@ -340,7 +317,7 @@ module.exports = function(callback) {
     return;
   }
 
-  fetchAndInstallJxCoreCordovaPlugin(thaliDontCheckIn, jxCoreVersionNumber)
+  fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, jxCoreVersionNumber)
     .then(function () {
       if (doesMagicDirectoryNamedExist(thaliDontCheckIn)) {
         return copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, thaliDepotName, thaliBranchName);
