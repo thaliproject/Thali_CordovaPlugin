@@ -370,7 +370,7 @@ module.exports = function(callback, appRootDirectory) {
   var appScriptsFolder = path.join(appRootDirectory, "plugins/org.thaliproject.p2p/scripts");
   var jxcoreFolder = path.join(appRootDirectory, 'www/jxcore' );
 
-  var jxCoreVersionNumber = "0.0.7";
+  var jxCoreVersionNumber = "0.0.8";
 
   var thaliProjectName = "thaliproject";
   var thaliDepotName = "Thali_CordovaPlugin";
