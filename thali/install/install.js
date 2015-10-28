@@ -8,6 +8,7 @@ var Promise = require('lie');
 var fs = require('fs-extra-promise');
 var url = require('url');
 var request = require('request');
+var scp = require('scp');
 var FILE_NOT_FOUND = "ENOENT";
 var MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT = "localdev"; // If this file exists in the thaliDontCheckIn directory then
 // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
@@ -211,6 +212,15 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
   var jxCoreCachedPlugin = path.join(jxCoreCacheFolder, jxCorePluginId);
   var jxCoreFileLocation = path.join(jxCoreCacheFolder, jxCorePluginFileName);
 
+  // Will be set later on based on determining if remote cache is needed,
+  // but can be used for testing purposes to force-enable remote cache.
+  var remoteCacheEnabled = false;
+  var remoteCacheUser = 'pi';
+  var remoteCacheHost = '192.168.1.150';
+  var remoteCacheRoot = '~';
+  var remoteCacheLocation = path.join(remoteCacheRoot, 'thali', 'jxcore', jxCoreVersionNumber, jxCorePluginId);
+  var remoteCacheShouldUpdate = false;
+
   return childProcessExecPromise('cordova plugin remove ' + jxCorePluginId, baseDir)
     .then(function () {
       return Promise.resolve();
@@ -220,6 +230,39 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       // wan't able to remove a previously-installed plugin version, which is in
       // fact a typical scenario when Thali is installed onto a new app.
       return Promise.resolve();
+    })
+    .then(function() {
+      return new Promise(function(resolve, reject) {
+        // A hack way to determine if we are running in CI environment where
+        // we want to leverage the remote cache.
+        exec('CIGIVEMEMYIP.sh', function (err, stdout, stderr) {
+          if (err) {
+            // We are not in CI so carry on.
+            resolve();
+          } else {
+            // We are in CI so add flag to enable remote cache.
+            remoteCacheEnabled = true;
+            fs.mkdirsSync(jxCoreCacheFolder);
+            console.log('We are in CI so trying to fetch the plugin via scp');
+            scp.get({
+              file: remoteCacheLocation,
+              user: remoteCacheUser,
+              host: remoteCacheHost,
+              path: jxCoreCacheFolder
+            }, function (err, stdout, stderr) {
+              if (err) {
+                console.log('We were not able to fetch the plugin via scp');
+                // If the plugin wasn't found from the remote cache, update a flag
+                // to state that the cache should be updated after a successful download.
+                remoteCacheShouldUpdate = true;
+              } else {
+                console.log('We fetched the plugin via scp');
+              }
+              resolve();
+            });
+          }
+        });
+      });
     })
     .then(function() {
       // Check if the plugin is found from the local cache and use that instead
@@ -286,7 +329,30 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       var cordovaPluginFolder = path.join(jxCoreCacheFolder, jxCorePluginId);
       console.log('Adding Cordova plugin to app at: ' + baseDir);
       return childProcessExecPromise('cordova plugin add ' + cordovaPluginFolder, baseDir)
-        .catch(function() {
+        .then(function () {
+          return new Promise(function(resolve, reject) {
+            if (remoteCacheEnabled && remoteCacheShouldUpdate) {
+              console.log('Starting to update the remote cache');
+              scp.send({
+                file: path.join(os.tmpdir(), 'thali'),
+                user: remoteCacheUser,
+                host: remoteCacheHost,
+                path: remoteCacheRoot
+              }, function (err, stdout, stderr) {
+                if (err) {
+                  console.log('We tried to update the remove cache, but failed');
+                } else {
+                  console.log('Successfully updated the remote cache');
+                }
+                resolve();
+              });
+            } else {
+              // If we don't have to deal with the remote cache, just move on.
+              resolve();
+            }
+          });
+        })
+        .catch(function () {
           console.log('Failed to add Cordova plugin from: ' + cordovaPluginFolder);
           return fs.removeAsync(jxCoreCacheFolder)
             .then(function () {
@@ -296,9 +362,10 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
     });
 }
 
-module.exports = function(callback) {
-  //get the app root folder from app/www/jxcore/node_modules/thali
-  var appRootDirectory = path.join(__dirname, '../../../../../');
+module.exports = function(callback, appRootDirectory) {
+  // Get the app root as an argument or from app/www/jxcore/node_modules/thali.
+  // Passing as argument can be leveraged in local development and testing scenarios.
+  appRootDirectory = appRootDirectory || path.join(__dirname, '../../../../../');
   var thaliDontCheckIn = path.join(appRootDirectory, "thaliDontCheckIn" );
   var appScriptsFolder = path.join(appRootDirectory, "plugins/org.thaliproject.p2p/scripts");
   var jxcoreFolder = path.join(appRootDirectory, 'www/jxcore' );
