@@ -205,11 +205,13 @@ function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
 }
 
 function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
+  var jxCorePluginId = 'io.jxcore.node';
+  var jxCorePluginFileName = 'io.jxcore.node.jx';
   var jxCoreCacheFolder = path.join(os.tmpdir(), 'thali', 'jxcore', jxCoreVersionNumber);
-  var jxCoreCachedPlugin = path.join(jxCoreCacheFolder, 'io.jxcore.node');
-  var jxCoreFileLocation = path.join(jxCoreCacheFolder, 'io.jxcore.node.jx');
+  var jxCoreCachedPlugin = path.join(jxCoreCacheFolder, jxCorePluginId);
+  var jxCoreFileLocation = path.join(jxCoreCacheFolder, jxCorePluginFileName);
 
-  return childProcessExecPromise('cordova plugin remove io.jxcore.node', baseDir)
+  return childProcessExecPromise('cordova plugin remove ' + jxCorePluginId, baseDir)
     .then(function () {
       return Promise.resolve();
     })
@@ -230,7 +232,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       }
 
       return new Promise(function(resolve, reject) {
-        var requestUrl = 'http://jxcordova.cloudapp.net/' + jxCoreVersionNumber + '/io.jxcore.node.jx';
+        var requestUrl = 'http://jxcordova.cloudapp.net/' + jxCoreVersionNumber + '/' + jxCorePluginFileName;
         var receivedData = 0;
         var contentLength = 0;
         var previousPercentageProgress = 0;
@@ -251,13 +253,13 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
           })
           .pipe(fs.createWriteStream(jxCoreFileLocation)
           .on('finish', function() {
-            console.log('Downloaded io.jxcore.node.jx to: ' + jxCoreFileLocation);
+            console.log('Downloaded ' + jxCorePluginFileName + ' to: ' + jxCoreFileLocation);
             console.log('Running jx against the file downloaded to: ' + jxCoreFileLocation);
             childProcessExecPromise('jx ' + jxCoreFileLocation, jxCoreCacheFolder)
               .then(function () {
                 resolve(true);
               }).catch(function (error) {
-                console.log('Failed to process the downloaded io.jxcore.node.jx file');
+                console.log('Failed to process the downloaded file');
                 // Delete the "corrupted" files so that they don't interfere in subsequent
                 // installation attempts.
                 fs.removeAsync(jxCoreCacheFolder)
@@ -270,22 +272,23 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
                 });
           })
           .on('error', function(error) {
-            console.log("Error downloading io.jxcore.node.jx");
+            console.log('Error downloading from: ' + requestUrl);
             fs.unlinkAsync(jxCoreFileLocation)
               .then(function() {
                 reject(error);
               }).catch(function(err) {
-                console.log("Tried to delete the bad io.jxcore.node.jx file but failed - " + err);
+                console.log('Tried to delete the bad ' + jxCorePluginFileName + ' file but failed with error: ' + err);
                 reject(error);
               });
           }));
       });
     }).then(function(neededDownload) {
       if (neededDownload) {
-        console.log('Adding io.jxcore.node Cordova plugin');
-        return childProcessExecPromise('cordova plugin add ' + path.join(jxCoreCacheFolder, 'io.jxcore.node'), baseDir)
+        var cordovaPluginFolder = path.join(jxCoreCacheFolder, jxCorePluginId);
+        console.log('Adding Cordova plugin to app at: ' + baseDir);
+        return childProcessExecPromise('cordova plugin add ' + cordovaPluginFolder, baseDir)
           .catch(function() {
-            console.log('Failed to add Cordova plugin');
+            console.log('Failed to add Cordova plugin from: ' + cordovaPluginFolder);
             return fs.removeAsync(jxCoreCacheFolder)
               .then(function () {
                 return Promise.reject();
