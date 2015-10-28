@@ -30,12 +30,14 @@ UnitTestFramework.prototype.addDevice = function(device,socket) {
 
     //each device will report each and every file they load, so lets not count dublicates
     if(this.isSocketAlreadyCounted(socket)){
-        return;
+        return false;
     }
 
     this.devicesCount++;
     this.testDevices[devName].device = device;
     console.log('Add ' + devName + ', os: ' + this.os + ' for unit tests' );
+
+    return true;
 }
 
 UnitTestFramework.prototype.isSocketAlreadyCounted = function(socket) {

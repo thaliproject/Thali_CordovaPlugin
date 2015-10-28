@@ -39,9 +39,21 @@ process.on('unhandledRejection', function(err) {
 Coordinator.init(parsedJSON[0].address, 3000);
 console.log('attempting to connect to test coordinator');
 
+var weHaveFinished = false;
+
 Coordinator.on('error', function (data) {
-  var errData = JSON.parse(data);
+
+    //we have disconnected, thus lets not log any additional errors
+    if(weHaveFinished){
+        return;
+    }
+
+    var errData = JSON.parse(data);
   console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
+
+    if(errData.type == "connect_error") {
+        testUtils.printNetworkInfo();
+    }
   testUtils.logMessageToScreen('Client error: ' + errData.type);
 });
 
@@ -98,6 +110,8 @@ Coordinator.on('disconnect', function () {
 
     console.log('turning Radios off');
     testUtils.toggleRadios(false);
+
+    weHaveFinished = true;
 });
 
 // Log that the app.js file was loaded.

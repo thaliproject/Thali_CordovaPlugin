@@ -79,9 +79,9 @@ ReConnectConnector.prototype.Stop = function() {
         this.clientSocket = null;
     }
 
-  /*  Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
+    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
         console.log("Disconnected by Mobile call");
-    });*/
+    });
 }
 
 ReConnectConnector.prototype.doConnect = function(peer) {
