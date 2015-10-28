@@ -226,7 +226,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       // of downloading it, if found.
       if (fs.existsSync(jxCoreCachedPlugin)) {
         console.log('Using jxcore Cordova plugin from: ' + jxCoreCachedPlugin);
-        return Promise.resolve(true);
+        return Promise.resolve();
       } else {
         fs.mkdirsSync(jxCoreCacheFolder);
       }
@@ -257,7 +257,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
             console.log('Running jx against the file downloaded to: ' + jxCoreFileLocation);
             childProcessExecPromise('jx ' + jxCoreFileLocation, jxCoreCacheFolder)
               .then(function () {
-                resolve(true);
+                resolve();
               }).catch(function (error) {
                 console.log('Failed to process the downloaded file');
                 // Delete the "corrupted" files so that they don't interfere in subsequent
@@ -282,21 +282,17 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
               });
           }));
       });
-    }).then(function(neededDownload) {
-      if (neededDownload) {
-        var cordovaPluginFolder = path.join(jxCoreCacheFolder, jxCorePluginId);
-        console.log('Adding Cordova plugin to app at: ' + baseDir);
-        return childProcessExecPromise('cordova plugin add ' + cordovaPluginFolder, baseDir)
-          .catch(function() {
-            console.log('Failed to add Cordova plugin from: ' + cordovaPluginFolder);
-            return fs.removeAsync(jxCoreCacheFolder)
-              .then(function () {
-                return Promise.reject();
-              });
-          });
-      }
-
-      return Promise.resolve();
+    }).then(function() {
+      var cordovaPluginFolder = path.join(jxCoreCacheFolder, jxCorePluginId);
+      console.log('Adding Cordova plugin to app at: ' + baseDir);
+      return childProcessExecPromise('cordova plugin add ' + cordovaPluginFolder, baseDir)
+        .catch(function() {
+          console.log('Failed to add Cordova plugin from: ' + cordovaPluginFolder);
+          return fs.removeAsync(jxCoreCacheFolder)
+            .then(function () {
+              return Promise.reject();
+            });
+        });
     });
 }
 
