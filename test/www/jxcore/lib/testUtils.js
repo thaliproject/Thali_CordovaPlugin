@@ -1,6 +1,6 @@
 var LogCallback;
 var myName;
-
+var os = require('os');
 /**
  * Turn Bluetooth and WiFi either on or off
  * This is a NOOP on iOS and the desktop
@@ -20,10 +20,24 @@ exports.toggleRadios = function(on) {
       if (err) {
         console.log("We could not set WiFi! - " + err);
       }
+
       console.log("toggleWiFi");
     });
   });
 };
+
+exports.printNetworkInfo = function() {
+
+  console.log("printNetworkInfo");
+
+  var networkInterfaces = os.networkInterfaces();
+  Object.keys(networkInterfaces).forEach(function (interfaceName) {
+    console.log("found interfaceName: " +interfaceName);
+    networkInterfaces[interfaceName].forEach(function (iface) {
+      console.log("-iface: " +iface.family + " is internal : " + iface.internal + ", has ip: " + iface.address);
+    });
+  });
+}
 
 function isFunction(functionToCheck) {
   var getType = {};
