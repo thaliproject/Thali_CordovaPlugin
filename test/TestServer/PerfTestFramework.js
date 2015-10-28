@@ -63,23 +63,33 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
     if (this.currentTest >= 0) {
        // console.log(this.os + ' test progressing ' + device.getName() + ' not added to tests');
-        return;
+        return false;
     }
 
     if(!this.testDevices) {
         this.testDevices = {};
     }
 
-    this.testDevices[device.getName()] = device;
+    //do we already have it added
+    if(this.testDevices[device.getName()]){
+        return false;
+    }
 
+    this.testDevices[device.getName()] = device;
     console.log(this.os + '  ' + device.getName() + ' added : ' + ((new Date().getTime() - startTime) / 1000) + " sec., device count " + this.getConnectedDevicesCount());
+
+    return true;
 }
 
 PerfTestFramework.prototype.startTest = function(json){
 
     //no devices were added
-    if(!this.testDevices || this.testDevices == null){
-        return ;
+    if(!this.testDevices){
+        return;
+    }
+
+    if(this.testDevices == null){
+        return;
     }
 
     for (var deviceName in this.testDevices) {
@@ -90,14 +100,19 @@ PerfTestFramework.prototype.startTest = function(json){
 
     this.devicesCount = this.getConnectedDevicesCount();
 
-    console.log('-----' + this.os + ' start testing now with ' + this.devicesCount + ' devices.');
+    console.log('-----' + this.os + ' start testing now with ' + this.devicesCount + ' devices, time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
     this.start =new Date();
     this.doNextTest();
 }
 
 PerfTestFramework.prototype.removeDevice = function(name){
-    if(!this.testDevices || this.testDevices == null){
-        return ;
+
+    if(!this.testDevices){
+        return;
+    }
+
+    if(this.testDevices == null){
+        return;
     }
 
   //  console.log(this.os + ' ' + name + ' id now disconnected '  + ((new Date().getTime() - startTime) / 1000) + " sec.");
@@ -118,18 +133,23 @@ PerfTestFramework.prototype.removeDevice = function(name){
 }
 
 PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
+    if(!this.testDevices){
+        return;
+    }
+
+    if(this.testDevices == null){
+        return;
+    }
+
     var jsonData = JSON.parse(data);
 
-    if(!this.testDevices || this.testDevices == null){
-        return ;
-    }
 
     //save the time and the time we got the results
     this.testDevices[name].data = jsonData;
     this.testDevices[name].endTime = new Date();
 
     var responseTime = this.testDevices[name].endTime - this.testDevices[name].startTime;
-    console.log(this.os + ' with ' + name + ' request took : ' + responseTime + " ms.");
+    console.log(this.os + ' with ' + name + ' request took : ' + responseTime + ' ms. , time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
 
     console.log('--------------- ' + name + ' ---------------------');
 
@@ -170,16 +190,21 @@ PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
 
 
     if (this.getFinishedDevicesCount() == this.devicesCount) {
-        console.log(this.os + ' test[ ' + this.currentTest + '] done now.');
+        console.log(this.os + ' test[ ' + this.currentTest + '] done now. , time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
         this.testFinished();
     }
 }
 
 PerfTestFramework.prototype.getFinishedDevicesCount  = function(){
-    var devicesFinishedCount = 0;
-    if(!this.testDevices || this.testDevices == null){
+    if(!this.testDevices){
         return 0;
     }
+
+    if(this.testDevices == null){
+        return 0;
+    }
+    var devicesFinishedCount = 0;
+
     for (var deviceName in this.testDevices) {
         if(this.testDevices[deviceName] != null && this.testDevices[deviceName].data != null){
 
@@ -193,11 +218,14 @@ PerfTestFramework.prototype.getFinishedDevicesCount  = function(){
 }
 
 PerfTestFramework.prototype.getConnectedDevicesCount  = function(){
-    var count = 0;
-    if(!this.testDevices || this.testDevices == null){
+    if(!this.testDevices){
         return 0;
     }
 
+    if(this.testDevices == null){
+        return 0;
+    }
+    var count = 0;
     for (var deviceName in this.testDevices) {
         if(this.testDevices[deviceName] != null){
             count++;
@@ -209,7 +237,11 @@ PerfTestFramework.prototype.getConnectedDevicesCount  = function(){
 PerfTestFramework.prototype.doNextTest  = function(){
 
     //no devices were added
-    if(!this.testDevices || this.testDevices == null){
+    if(!this.testDevices){
+        return;
+    }
+
+    if(this.testDevices == null){
         return;
     }
 
@@ -246,7 +278,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
         return;
     }
 
-    console.log(this.os + ' All tests are done, preparing test report.');
+    console.log(this.os + ' All tests are done, preparing test report. , time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
 
 
     var results = {};
@@ -390,9 +422,14 @@ PerfTestFramework.prototype.compare  = function (a,b) {
 }
 
 PerfTestFramework.prototype.testFinished  = function(){
-    if(!this.testDevices || this.testDevices == null){
-        return ;
+    if(!this.testDevices){
+        return;
     }
+
+    if(this.testDevices == null){
+        return;
+    }
+
     this.doneAlready = true;
     for (var deviceName in this.testDevices) {
         if (this.testDevices[deviceName] != null) {
