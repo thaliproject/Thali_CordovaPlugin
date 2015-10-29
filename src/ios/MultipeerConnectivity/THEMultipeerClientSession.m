@@ -124,7 +124,7 @@
     assert([self connectionState] != THEPeerSessionStateNotConnected);
 
     THEPeerSessionState prevState = [self connectionState];
-    [self disconnect];
+    //[self disconnect];
 
     if (prevState == THEPeerSessionStateConnecting)
       [self fireConnectCallback:@"Peer disconnected" withPort:0];
