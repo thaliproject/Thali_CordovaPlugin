@@ -200,6 +200,78 @@ function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontC
   });
 }
 
+/**
+ * Functionality for handling the remote cache operations.
+ */
+(function () {
+  // Will be set later on based on determining if remote cache is needed,
+  // but can be used for testing purposes to force-enable remote cache.
+  var remoteCacheEnabled = false;
+  var remoteCacheUser = 'pi';
+  var remoteCacheHost = '192.168.1.150';
+  var remoteCacheRoot = '~';
+  var remoteCacheShouldUpdate = false;
+
+  module.remoteCacheGet = function (jxCorePluginId, jxCoreVersionNumber, jxCoreCacheFolder) {
+    return new Promise(function(resolve, reject) {
+      // A hack way to determine if we are running in CI environment where
+      // we want to leverage the remote cache.
+      exec('CIGIVEMEMYIP.sh', function (err, stdout, stderr) {
+        if (err && !remoteCacheEnabled) {
+          // We are not in CI so carry on.
+          resolve();
+          return;
+        }
+        // We are in CI so add flag to enable remote cache.
+        remoteCacheEnabled = true;
+        fs.mkdirsSync(jxCoreCacheFolder);
+        console.log('We are in CI so trying to fetch the plugin via scp');
+        scp.get({
+          file: path.join(remoteCacheRoot, 'thali', 'jxcore', jxCoreVersionNumber, jxCorePluginId),
+          user: remoteCacheUser,
+          host: remoteCacheHost,
+          path: jxCoreCacheFolder
+        }, function (err, stdout, stderr) {
+          if (err) {
+            console.log('We were not able to fetch the plugin via scp');
+            // If the plugin wasn't found from the remote cache, update a flag
+            // to state that the cache should be updated after a successful download.
+            remoteCacheShouldUpdate = true;
+          } else {
+            console.log('We fetched the plugin via scp');
+          }
+          resolve();
+        });
+      });
+    });
+  };
+
+  module.remoteCacheSet = function (jxCoreCacheRoot) {
+    return new Promise(function(resolve, reject) {
+      if (remoteCacheEnabled && remoteCacheShouldUpdate) {
+        console.log('Starting to update the remote cache');
+        scp.send({
+          file: path.join(jxCoreCacheRoot, 'thali'),
+          user: remoteCacheUser,
+          host: remoteCacheHost,
+          path: remoteCacheRoot
+        }, function (err, stdout, stderr) {
+          if (err) {
+            console.log('We tried to update the remove cache, but failed');
+          } else {
+            console.log('Successfully updated the remote cache');
+          }
+          resolve();
+        });
+      } else {
+        // If we don't have to deal with the remote cache, just move on.
+        resolve();
+        return;
+      }
+    });
+  };
+}());
+
 function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
   var magicFileLocation = path.join(thaliDontCheckIn, MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT);
   return fs.existsSync(magicFileLocation);
@@ -208,18 +280,10 @@ function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
 function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
   var jxCorePluginId = 'io.jxcore.node';
   var jxCorePluginFileName = 'io.jxcore.node.jx';
-  var jxCoreCacheFolder = path.join(os.tmpdir(), 'thali', 'jxcore', jxCoreVersionNumber);
+  var jxCoreCacheRoot = os.tmpdir();
+  var jxCoreCacheFolder = path.join(jxCoreCacheRoot, 'thali', 'jxcore', jxCoreVersionNumber);
   var jxCoreCachedPlugin = path.join(jxCoreCacheFolder, jxCorePluginId);
   var jxCoreFileLocation = path.join(jxCoreCacheFolder, jxCorePluginFileName);
-
-  // Will be set later on based on determining if remote cache is needed,
-  // but can be used for testing purposes to force-enable remote cache.
-  var remoteCacheEnabled = false;
-  var remoteCacheUser = 'pi';
-  var remoteCacheHost = '192.168.1.150';
-  var remoteCacheRoot = '~';
-  var remoteCacheLocation = path.join(remoteCacheRoot, 'thali', 'jxcore', jxCoreVersionNumber, jxCorePluginId);
-  var remoteCacheShouldUpdate = false;
 
   return childProcessExecPromise('cordova plugin remove ' + jxCorePluginId, baseDir)
     .then(function () {
@@ -232,37 +296,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       return Promise.resolve();
     })
     .then(function() {
-      return new Promise(function(resolve, reject) {
-        // A hack way to determine if we are running in CI environment where
-        // we want to leverage the remote cache.
-        exec('CIGIVEMEMYIP.sh', function (err, stdout, stderr) {
-          if (err) {
-            // We are not in CI so carry on.
-            resolve();
-          } else {
-            // We are in CI so add flag to enable remote cache.
-            remoteCacheEnabled = true;
-            fs.mkdirsSync(jxCoreCacheFolder);
-            console.log('We are in CI so trying to fetch the plugin via scp');
-            scp.get({
-              file: remoteCacheLocation,
-              user: remoteCacheUser,
-              host: remoteCacheHost,
-              path: jxCoreCacheFolder
-            }, function (err, stdout, stderr) {
-              if (err) {
-                console.log('We were not able to fetch the plugin via scp');
-                // If the plugin wasn't found from the remote cache, update a flag
-                // to state that the cache should be updated after a successful download.
-                remoteCacheShouldUpdate = true;
-              } else {
-                console.log('We fetched the plugin via scp');
-              }
-              resolve();
-            });
-          }
-        });
-      });
+      return module.remoteCacheGet(jxCorePluginId, jxCoreVersionNumber, jxCoreCacheFolder);
     })
     .then(function() {
       // Check if the plugin is found from the local cache and use that instead
@@ -330,27 +364,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       console.log('Adding Cordova plugin to app at: ' + baseDir);
       return childProcessExecPromise('cordova plugin add ' + cordovaPluginFolder, baseDir)
         .then(function () {
-          return new Promise(function(resolve, reject) {
-            if (remoteCacheEnabled && remoteCacheShouldUpdate) {
-              console.log('Starting to update the remote cache');
-              scp.send({
-                file: path.join(os.tmpdir(), 'thali'),
-                user: remoteCacheUser,
-                host: remoteCacheHost,
-                path: remoteCacheRoot
-              }, function (err, stdout, stderr) {
-                if (err) {
-                  console.log('We tried to update the remove cache, but failed');
-                } else {
-                  console.log('Successfully updated the remote cache');
-                }
-                resolve();
-              });
-            } else {
-              // If we don't have to deal with the remote cache, just move on.
-              resolve();
-            }
-          });
+          return module.remoteCacheSet(jxCoreCacheRoot);
         })
         .catch(function () {
           console.log('Failed to add Cordova plugin from: ' + cordovaPluginFolder);
