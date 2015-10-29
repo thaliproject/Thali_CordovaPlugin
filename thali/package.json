@@ -19,7 +19,8 @@
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",
     "postpublish": "jx install/postPublishThaliCordovaPlugin.js",
     "postinstall": "jx installCordovaPlugin.js",
-    "createDocs": "./node_modules/.bin/jsdoc -c conf.json ."
+    "createPublicDocs": "./node_modules/.bin/jsdoc -c conf.json .",
+    "createInternalDocs": "./node_modules/.bin/jsdoc -c conf.json -p ."
   },
   "repository": {
     "type": "git",
