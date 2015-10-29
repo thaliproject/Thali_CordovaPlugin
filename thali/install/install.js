@@ -270,6 +270,17 @@ function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontC
       }
     });
   };
+
+  module.remoteCachePurge = function () {
+    if (remoteCacheEnabled) {
+      var sshConnection = 'ssh '+ remoteCacheUser + '@' + remoteCacheHost;
+      var purgeCommand = '"rm -rf ' + path.join(remoteCacheRoot, 'thali') + '"';
+      console.log('Purging the remote cache using command: ' + purgeCommand);
+      return childProcessExecPromise(sshConnection + ' ' + purgeCommand, '.');
+    } else {
+      return Promise.resolve();
+    }
+  };
 }());
 
 function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
@@ -366,11 +377,19 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
         .then(function () {
           return module.remoteCacheSet(jxCoreCacheRoot);
         })
-        .catch(function () {
+        .catch(function (err) {
           console.log('Failed to add Cordova plugin from: ' + cordovaPluginFolder);
+          // If adding the Cordova plugin fails, clean the local cache folder
+          // and also purge the remote cache since failure to add the plugin indicates
+          // that the value in the cache is somehow corrupted.
+          // At the end, reject the promise to fail the entire installation, because
+          // the plugin installed here is a mandatory dependency.
           return fs.removeAsync(jxCoreCacheFolder)
             .then(function () {
-              return Promise.reject();
+              return module.remoteCachePurge();
+            })
+            .then(function () {
+              return Promise.reject(err);
             });
         });
     });
