@@ -7,12 +7,18 @@ var events = require('events');
 var socketIo = require('socket.io-client');
 
 function CoordinatorConnector() {
+    this.wasClosed = false;
+
 }
 
 CoordinatorConnector.prototype = new events.EventEmitter;
 
 CoordinatorConnector.prototype.init = function (ipAddress, port){
     var self = this;
+
+    this.wasClosed = false;
+    this.connectAddress = ipAddress;
+    this.connectPort = port;
 
     var options = {
         pingTimeout: 3599000,
@@ -48,7 +54,13 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
 
     this.socket.on('disconnect', function () {
         console.log('DBG, CoordinatorConnector disconnect called');
-        self.emit('disconnect');
+      //  if(this.wasClosed) {
+            self.emit('disconnect');
+      /*      return;
+        }
+        console.log('DBG, Will try re-init');
+        self.close();
+        self.init(self.connectAddress,self.connectPort);*/
     });
 
     this.socket.on('command', function (data) {
@@ -78,7 +90,9 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
 
 CoordinatorConnector.prototype.close = function(){
     console.log('CoordinatorConnector close called');
+    this.wasClosed = true;
     this.socket.close();
+    self.emit('closed');
 };
 
 CoordinatorConnector.prototype.present = function(name,type){
