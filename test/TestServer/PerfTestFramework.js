@@ -59,26 +59,27 @@ PerfTestFramework.prototype.getCount = function() {
 }
 
 PerfTestFramework.prototype.addDevice = function(device) {
-    var self = this;
 
-    if (this.currentTest >= 0) {
-       // console.log(this.os + ' test progressing ' + device.getName() + ' not added to tests');
-        return false;
-    }
+    var deviceName = device.getName();
 
     if(!this.testDevices) {
         this.testDevices = {};
     }
 
     //do we already have it added
-    if(this.testDevices[device.getName()]){
-        console.log(this.os + ' ' + name + ' got re-connected event  ####################################################');
+    if(this.testDevices[deviceName]){
+        console.log(this.os + ' ' + deviceName + ' got re-connected event  ####################################################');
+        return true;
+    }
+
+    //it was not added, and we have already started, thus this devcei is late
+    if (this.currentTest >= 0) {
+       // console.log(this.os + ' test progressing ' + device.getName() + ' not added to tests');
         return false;
     }
 
-    this.testDevices[device.getName()] = device;
-    console.log(this.os + '  ' + device.getName() + ' added : ' + ((new Date().getTime() - startTime) / 1000) + " sec., device count " + this.getConnectedDevicesCount());
-
+    this.testDevices[deviceName] = device;
+    console.log(this.os + '  ' + deviceName + ' added : ' + ((new Date().getTime() - startTime) / 1000) + " sec., device count " + this.getConnectedDevicesCount());
     return true;
 }
 
@@ -116,6 +117,11 @@ PerfTestFramework.prototype.removeDevice = function(name){
         return;
     }
 
+    if(this.testDevices[name]) {
+        console.log(this.os + ' ' + name + ' got disconnection event  ####################################################');
+    }
+
+    /*
   //  console.log(this.os + ' ' + name + ' id now disconnected '  + ((new Date().getTime() - startTime) / 1000) + " sec.");
     if(this.currentTest >= 0){
         if(this.testDevices[name] && (this.testDevices[deviceName].data == null)){
@@ -123,9 +129,9 @@ PerfTestFramework.prototype.removeDevice = function(name){
             console.log(this.os + ' ' + name + ' got disconnection event  ####################################################');
 
             // this device is lost, it has now turned its Bluetooth & Wifi off, thus we need to take it out from the count
-      /*      this.devicesCount = this.devicesCount - 1;
+            this.devicesCount = this.devicesCount - 1;
             console.log(this.os + ' test for ' + name + ' cancelled, device count now: ' + this.devicesCount);
-            this.ClientDataReceived(name,JSON.stringify({"result":"DISCONNECTED"}));*/
+            this.ClientDataReceived(name,JSON.stringify({"result":"DISCONNECTED"}));
         }else {
           //  console.log('test progressing ' + name + ' is not removed from the list');
         }
@@ -133,7 +139,7 @@ PerfTestFramework.prototype.removeDevice = function(name){
     }
 
     //mark it removed from te list
-    //this.testDevices[name] = null;
+    //this.testDevices[name] = null;*/
 }
 
 PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
@@ -236,6 +242,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
     this.currentTest++;
     if(configFile.tests[this.currentTest]){
+        this.doneAlready = false;
         //if we have tests, then lets start new tests on all devices
         console.log('start test[' + this.currentTest + '] with ' + this.devicesCount + ' devices.');
         for (var deviceName in this.testDevices) {
@@ -345,7 +352,6 @@ PerfTestFramework.prototype.doNextTest  = function(){
             results[devName].peersList.sort(this.compare);
 
             var line01 = devName + ' has ' + results[devName].peersList.length + ' peersList result, range ' + results[devName].peersList[0].time + ' ms  to  '  + results[devName].peersList[(results[devName].peersList.length - 1)].time + " ms.";
-
             console.log(line01);
 
             var line02 = "100% : " + this.getValueOf(results[devName].peersList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].peersList,0.90)  + " ms, 95 %: " + this.getValueOf(results[devName].peersList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].peersList,0.90) + " ms.";
@@ -361,6 +367,9 @@ PerfTestFramework.prototype.doNextTest  = function(){
             var line03 = devName + ' has ' + results[devName].connectList.length + ' connectList result , range ' + results[devName].connectList[0].time + ' ms to  '  + results[devName].connectList[(results[devName].connectList.length - 1)].time + " ms.";
 
             console.log(line03);
+            if(results[devName].connectList.length > 0 ) {
+                console.log("Failed connections " + results[devName].connectErrorCount + "(" + (results[devName].connectErrorCount * 100 / results[devName].connectList.length) + "%), average connection count : " + results[devName].connectAvgConnections);
+            }
 
             var line04 = "100% : " + this.getValueOf(results[devName].connectList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].connectList,0.99)  + " ms, 95% : " + this.getValueOf(results[devName].connectList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].connectList,0.90) + " ms.";
 
@@ -375,6 +384,9 @@ PerfTestFramework.prototype.doNextTest  = function(){
             var line05 = devName + ' has ' + results[devName].sendList.length + ' sendList result , range ' + results[devName].sendList[0].time + ' ms to  '  + results[devName].sendList[(results[devName].sendList.length - 1)].time + " ms.";
 
             console.log(line05);
+            if(results[devName].sendList.length > 0 ) {
+                console.log("Failed connections " + results[devName].sendErrorCount + "(" + (results[devName].sendErrorCount * 100 / results[devName].sendList.length) + "%), average connection count : " + results[devName].connectAvgConnections);
+            }
 
             var line06 = "100% : " + this.getValueOf(results[devName].sendList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].sendList,0.99)  + " ms, 95 : " + this.getValueOf(results[devName].sendList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].sendList,0.90) + " ms.";
 
