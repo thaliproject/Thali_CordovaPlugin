@@ -102,16 +102,19 @@ Coordinator.on('command', function (data) {
   TestFramework.handleCommand(data);
 });
 
+Coordinator.on('closed', function () {
+    console.log('The client has closed!');
+    //we need to stop & close any tests we are running here
+     TestFramework.stopAllTests(false);
+     testUtils.logMessageToScreen('fully-closed');
+     console.log('turning Radios off');
+     testUtils.toggleRadios(false);
+     weHaveFinished = true;
+});
+
+
 Coordinator.on('disconnect', function () {
     console.log('The client has disconnected!');
-    //we need to stop & close any tests we are running here
-    TestFramework.stopAllTests(false);
-    testUtils.logMessageToScreen('disconnected');
-
-    console.log('turning Radios off');
-    testUtils.toggleRadios(false);
-
-    weHaveFinished = true;
 });
 
 // Log that the app.js file was loaded.
