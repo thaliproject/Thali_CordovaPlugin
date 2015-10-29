@@ -80,7 +80,11 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 {
   // Start with a blank sheet of clients
   _clientSessions = [[THESessionDictionary alloc] init];
+  [self startBrowsing];
+}
 
+- (void)startBrowsing
+{
   // Kick off the peer discovery process
   _nearbyServiceBrowser = [[MCNearbyServiceBrowser alloc] 
                              initWithPeer:_localPeerId 
@@ -91,11 +95,21 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)stop
 {
+  [self stopBrowsing];
+  _clientSessions = nil;
+}
+
+- (void)stopBrowsing
+{
   [_nearbyServiceBrowser setDelegate:nil];
   [_nearbyServiceBrowser stopBrowsingForPeers];
   _nearbyServiceBrowser = nil;
+}
 
-  _clientSessions = nil;
+- (void)restart
+{
+  [self stopBrowsing];
+  [self startBrowsing];
 }
 
 - (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
