@@ -27,8 +27,8 @@ process.on('unhandledRejection', function(err) {
 });
 
 //IPAddressToFile is left here for debugging purposes, it gives you quick way on seeing the IP address used
-//var IPAddressToFile = require('./IPAddressToFile');
-//IPAddressToFile();
+var IPAddressToFile = require('./IPAddressToFile');
+IPAddressToFile();
 
 var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');
@@ -75,12 +75,20 @@ io.on('connection', function(socket) {
       //  and we need to register the names, so we can determine which tests are actually included
       // thus we need to check whether we would need to let these present pass, even though we have started
       // there is one connection, i.e. one socket for each device, so we use that to determine what to do
-      if(devicesObject.honorCount && presentObj.type == "unittest"){
+      if(presentObj.type == "unittest"){
 
+        if(devicesObject.honorCount) {
+          if (presentObj.os == 'android') {
+            isThisTestFromAddedDevice = unitTestsAndroid.isSocketAlreadyCounted(this);
+          } else {
+            isThisTestFromAddedDevice = unitTestsIOS.isSocketAlreadyCounted(this);
+          }
+        }
+      }else{ //perf test
         if(presentObj.os == 'android') {
-          isThisTestFromAddedDevice = unitTestsAndroid.isSocketAlreadyCounted(this);
+          isThisTestFromAddedDevice = perfTestsAndroid.isDeviceAlreadyAdded(presentObj.name);
         }else{
-          isThisTestFromAddedDevice = unitTestsIOS.isSocketAlreadyCounted(this);
+          isThisTestFromAddedDevice = unitTestsIOS.isDeviceAlreadyAdded(presentObj.name);
         }
       }
 
@@ -101,7 +109,7 @@ io.on('connection', function(socket) {
         unitTestsIOS.addDevice(newDevice,this);
       }
 
-      if(devicesObject.honorCount){
+      if(devicesObject.honorCount && !weHaveStartedTesting){
         var androidCount = unitTestsAndroid.getCount();
         var iosCount = unitTestsIOS.getCount();
         if(devicesObject.devices.android <= androidCount

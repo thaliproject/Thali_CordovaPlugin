@@ -10,6 +10,6 @@
     "android": "com.test.thalitest",
     "ios": "com.test.thalitest"
   },
-  "timeout": 3000,
+  "timeout": 1200,
   "serverScript": "test/TestServer/"
 }

@@ -67,8 +67,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
     }
 
     //do we already have it added
-    if(this.testDevices[deviceName]){
-        console.log(this.os + ' ' + deviceName + ' got re-connected event  ####################################################');
+    if(this.isDeviceAlreadyAdded(deviceName)){
         return true;
     }
 
@@ -81,6 +80,21 @@ PerfTestFramework.prototype.addDevice = function(device) {
     this.testDevices[deviceName] = device;
     console.log(this.os + '  ' + deviceName + ' added : ' + ((new Date().getTime() - startTime) / 1000) + " sec., device count " + this.getConnectedDevicesCount());
     return true;
+}
+
+PerfTestFramework.prototype.isDeviceAlreadyAdded = function(name) {
+
+    if (!this.testDevices) {
+        return false;
+    }
+
+    //do we already have it added
+    if (this.testDevices[name]) {
+        console.log(this.os + ' ' + name + ' got re-connected event  ####################################################');
+        return true;
+    }
+
+    return false;
 }
 
 PerfTestFramework.prototype.startTest = function(json){
