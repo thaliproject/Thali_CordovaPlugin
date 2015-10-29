@@ -72,6 +72,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
     //do we already have it added
     if(this.testDevices[device.getName()]){
+        console.log(this.os + ' ' + name + ' got re-connected event  ####################################################');
         return false;
     }
 
@@ -118,10 +119,13 @@ PerfTestFramework.prototype.removeDevice = function(name){
   //  console.log(this.os + ' ' + name + ' id now disconnected '  + ((new Date().getTime() - startTime) / 1000) + " sec.");
     if(this.currentTest >= 0){
         if(this.testDevices[name] && (this.testDevices[deviceName].data == null)){
+
+            console.log(this.os + ' ' + name + ' got disconnection event  ####################################################');
+
             // this device is lost, it has now turned its Bluetooth & Wifi off, thus we need to take it out from the count
-            this.devicesCount = this.devicesCount - 1;
+      /*      this.devicesCount = this.devicesCount - 1;
             console.log(this.os + ' test for ' + name + ' cancelled, device count now: ' + this.devicesCount);
-            this.ClientDataReceived(name,JSON.stringify({"result":"DISCONNECTED"}));
+            this.ClientDataReceived(name,JSON.stringify({"result":"DISCONNECTED"}));*/
         }else {
           //  console.log('test progressing ' + name + ' is not removed from the list');
         }
@@ -129,7 +133,7 @@ PerfTestFramework.prototype.removeDevice = function(name){
     }
 
     //mark it removed from te list
-    this.testDevices[name] = null;
+    //this.testDevices[name] = null;
 }
 
 PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
