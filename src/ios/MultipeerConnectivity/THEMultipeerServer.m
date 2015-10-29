@@ -49,6 +49,9 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     // Map of sessions for all the peers we know about
     THESessionDictionary *_serverSessions;
+
+    // Timer reset callback
+    void (^_timerCallback)(void);
 }
 
 -(id) initWithPeerId:(MCPeerID *)peerId 
@@ -87,7 +90,12 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return self;
 }
 
--(void) start
+- (void)setTimerResetCallback:(void (^)(void))timerCallback
+{
+  _timerCallback = timerCallback;
+}
+
+- (void)start
 {
     NSLog(@"server: starting %@", _peerIdentifier);
 
@@ -135,6 +143,11 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                invitationHandler:(void (^)(BOOL accept, MCSession * session))invitationHandler
 {
   __block THEMultipeerServerSession *_serverSession = nil;
+
+  // Any invite at all will reset the timer (since an invite implies we're advertsing
+  // correctly).
+  if (_timerCallback)
+    _timerCallback();
  
   NSString *peerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
   
