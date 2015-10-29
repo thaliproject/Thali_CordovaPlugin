@@ -120,6 +120,10 @@
   _peerID = nil;
 }
 
+- (void)restart
+{
+}
+
 - (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier
                           withConnectCallback:(void(^)(NSString *, uint))connectCallback
 {
