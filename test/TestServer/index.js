@@ -27,8 +27,8 @@ process.on('unhandledRejection', function(err) {
 });
 
 //IPAddressToFile is left here for debugging purposes, it gives you quick way on seeing the IP address used
-var IPAddressToFile = require('./IPAddressToFile');
-IPAddressToFile();
+//var IPAddressToFile = require('./IPAddressToFile');
+//IPAddressToFile();
 
 var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');
@@ -168,7 +168,7 @@ io.on('connection', function(socket) {
         perfTestsIOS.addDevice(newDevice);
       }
 
-      if(devicesObject.honorCount){
+      if(devicesObject.honorCount && !weHaveStartedTesting){
         var androidCount = perfTestsAndroid.getCount();
         var iosCount = perfTestsIOS.getCount();
         if(devicesObject.devices.android <= androidCount
