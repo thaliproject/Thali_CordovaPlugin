@@ -92,7 +92,7 @@ CoordinatorConnector.prototype.close = function(){
     console.log('CoordinatorConnector close called');
     this.wasClosed = true;
     this.socket.close();
-    self.emit('closed');
+    this.emit('closed');
 };
 
 CoordinatorConnector.prototype.present = function(name,type){
