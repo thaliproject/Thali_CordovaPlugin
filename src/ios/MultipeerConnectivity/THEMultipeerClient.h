@@ -43,6 +43,9 @@ withDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate;
 - (void)start;
 - (void)stop;
 
+// Restart browsing without killing existing sessions
+- (void)restart;
+
 // Connect to a remote peer identified by the application level identifier,
 - (BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
                     withConnectCallback:(ConnectCallback)connectCallback;
