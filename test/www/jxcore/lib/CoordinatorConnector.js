@@ -54,13 +54,7 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
 
     this.socket.on('disconnect', function () {
         console.log('DBG, CoordinatorConnector disconnect called');
-      //  if(this.wasClosed) {
-            self.emit('disconnect');
-      /*      return;
-        }
-        console.log('DBG, Will try re-init');
-        self.close();
-        self.init(self.connectAddress,self.connectPort);*/
+        self.emit('disconnect');
     });
 
     this.socket.on('command', function (data) {
