@@ -138,7 +138,10 @@ testSendData.prototype.stop = function(doReport) {
     }
 
     this.testServer.stopServer();
-
+    if(doReport){
+        this.emit('debug', "---- sendReportNow");
+        this.sendReportNow();
+    }
     if(this.testConnector != null){
         this.testConnector.Stop();
         this.testConnector.removeListener('done', this.doneCallback);
@@ -146,9 +149,7 @@ testSendData.prototype.stop = function(doReport) {
         this.testConnector = null;
     }
 
-    if(doReport){
-        this.weAreDoneNow();
-    }
+
 
     this.doneAlready = true;
 }
@@ -191,7 +192,12 @@ testSendData.prototype.weAreDoneNow = function() {
 
     console.log('weAreDoneNow , resultArray.length: ' + this.resultArray.length);
     this.doneAlready = true;
-    this.endTime = new Date();
+    this.sendReportNow();
+}
+
+testSendData.prototype.sendReportNow = function() {
+
+        this.endTime = new Date();
 
     //then get any data that has not been reported yet. i.e. the full rounds have not been done yet
     var resultData = this.testConnector.getResultArray();
