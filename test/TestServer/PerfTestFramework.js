@@ -68,6 +68,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
     //do we already have it added
     if(this.isDeviceAlreadyAdded(deviceName)){
+        console.log(this.os + ' ' + name + ' got re-connected event  ####################################################');
         return true;
     }
 
@@ -89,8 +90,7 @@ PerfTestFramework.prototype.isDeviceAlreadyAdded = function(name) {
     }
 
     //do we already have it added
-    if (this.testDevices[name]) {
-        console.log(this.os + ' ' + name + ' got re-connected event  ####################################################');
+    if (this.testDevices[name] && this.testDevices[name] != null) {
         return true;
     }
 
@@ -134,26 +134,6 @@ PerfTestFramework.prototype.removeDevice = function(name){
     if(this.testDevices[name]) {
         console.log(this.os + ' ' + name + ' got disconnection event  ####################################################');
     }
-
-    /*
-  //  console.log(this.os + ' ' + name + ' id now disconnected '  + ((new Date().getTime() - startTime) / 1000) + " sec.");
-    if(this.currentTest >= 0){
-        if(this.testDevices[name] && (this.testDevices[deviceName].data == null)){
-
-            console.log(this.os + ' ' + name + ' got disconnection event  ####################################################');
-
-            // this device is lost, it has now turned its Bluetooth & Wifi off, thus we need to take it out from the count
-            this.devicesCount = this.devicesCount - 1;
-            console.log(this.os + ' test for ' + name + ' cancelled, device count now: ' + this.devicesCount);
-            this.ClientDataReceived(name,JSON.stringify({"result":"DISCONNECTED"}));
-        }else {
-          //  console.log('test progressing ' + name + ' is not removed from the list');
-        }
-        return;
-    }
-
-    //mark it removed from te list
-    //this.testDevices[name] = null;*/
 }
 
 PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
@@ -194,7 +174,7 @@ PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
     if (this.getFinishedDevicesCount() == this.devicesCount) {
         console.log("------------------------------------------------------");
         console.log(this.os + ' test[ ' + this.currentTest + '] done now. , time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
-        this.testFinished();
+        this.testFinished(false);
     }
 }
 
@@ -273,8 +253,19 @@ PerfTestFramework.prototype.doNextTest  = function(){
                     console.log('timeout now');
                     if(!self.doneAlready)
                     {
-                        console.log('TIMEOUT');
-                        self.testFinished();
+                        for (var deviceName in self.testDevices) {
+                            if (self.testDevices[deviceName] != null && self.testDevices[deviceName].data == null) {
+                                console.log('Send timeout now to ' + self.testDevices[deviceName].getName());
+                                self.testDevices[deviceName].SendCommand('timeout',"","","");
+                            }
+                        }
+                        self.timerId = setTimeout(function() {
+                            console.log('Second -- timeout now');
+                            if(!self.doneAlready) {
+                                console.log('Actual TIMEOUT now');
+                                self.testFinished(true);
+                            }
+                        },60000); // hard coded minute
                     }
                 }, configFile.tests[this.currentTest].timeout);
 
@@ -480,16 +471,30 @@ PerfTestFramework.prototype.testFinished  = function(){
     this.doneAlready = true;
     for (var deviceName in this.testDevices) {
         if (this.testDevices[deviceName] != null) {
-            var responseTime = this.testDevices[deviceName].endTime - this.testDevices[deviceName].startTime;
-            this.testResults.push({"test": this.currentTest, "device":deviceName,"time": responseTime,"data": this.testDevices[deviceName].data});
 
-            //lets finalize the test by stopping it.
-            this.testDevices[deviceName].SendCommand('stop',"","","");
+            if(this.testDevices[deviceName].data == null){
+                // this device is now out of sync, so we need to take it out from the tests
+                console.log(deviceName + ' removed from tests, new count : ' + this.devicesCount);
+                this.testDevices[deviceName].SendCommand('end', "", "", "");
+                this.testDevices[deviceName] = null;
+                this.devicesCount = this.getConnectedDevicesCount();
+            }else {
+                var responseTime = this.testDevices[deviceName].endTime - this.testDevices[deviceName].startTime;
+                this.testResults.push({
+                    "test": this.currentTest,
+                    "device": deviceName,
+                    "time": responseTime,
+                    "data": this.testDevices[deviceName].data
+                });
 
-            //reset values for next testing round
-            this.testDevices[deviceName].startTime = new Date();
-            this.testDevices[deviceName].endTime = new Date();
-            this.testDevices[deviceName].data = null;
+                //lets finalize the test by stopping it.
+                this.testDevices[deviceName].SendCommand('stop', "", "", "");
+
+                //reset values for next testing round
+                this.testDevices[deviceName].startTime = new Date();
+                this.testDevices[deviceName].endTime = new Date();
+                this.testDevices[deviceName].data = null;
+            }
         }
     }
 

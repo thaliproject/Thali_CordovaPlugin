@@ -1,7 +1,7 @@
 /*
  Main entry point for Thali test frameworks coordinator server
 
- jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"},\"honorCount\":\"true\"}//
+ jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"},\"honorCount\":\"true\"} //
  */
 
 'use strict';
@@ -27,8 +27,8 @@ process.on('unhandledRejection', function(err) {
 });
 
 //IPAddressToFile is left here for debugging purposes, it gives you quick way on seeing the IP address used
-//var IPAddressToFile = require('./IPAddressToFile');
-//IPAddressToFile();
+var IPAddressToFile = require('./IPAddressToFile');
+IPAddressToFile();
 
 var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');

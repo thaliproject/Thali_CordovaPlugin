@@ -65,6 +65,11 @@ TestFrameworkClient.prototype.handleCommand = function(command){
         }
         case 'stop':{
             self.emit('debug',"stop");
+            self.stopAllTests(false);
+            break;
+        }
+        case 'timeout':{
+            self.emit('debug',"stop-by-timeout");
             self.stopAllTests(true);
             break;
         }
