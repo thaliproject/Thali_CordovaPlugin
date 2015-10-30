@@ -68,7 +68,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
     //do we already have it added
     if(this.isDeviceAlreadyAdded(deviceName)){
-        console.log(this.os + ' ' + name + ' got re-connected event  ####################################################');
+        console.log(this.os + ' ' + deviceName + ' got re-connected event  ####################################################');
         return true;
     }
 
