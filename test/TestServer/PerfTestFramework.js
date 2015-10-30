@@ -145,6 +145,10 @@ PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
         return;
     }
 
+    if(!this.testDevices[name] || this.testDevices[name] == null){
+        return;
+    }
+
     var jsonData = JSON.parse(data);
 
 
@@ -307,7 +311,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
                 results[this.testResults[i].device].connectList = this.extendArray(tmpConnectList, results[this.testResults[i].device].connectList);
                 results[this.testResults[i].device].connectErrorCount = errorCount;
                 if(results[this.testResults[i].device].connectList.length > 0){
-                    results[this.testResults[i].device].connectAvgConnections = (ConnectionCount / results[this.testResults[i].device].connectList.length)
+                    results[this.testResults[i].device].ConCount = ConnectionCount;
                 }
 
             } else if (this.testResults[i].data.sendList) {
@@ -328,7 +332,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
                 results[this.testResults[i].device].sendList = this.extendArray(tmpSendList, results[this.testResults[i].device].sendList);
                 results[this.testResults[i].device].sendErrorCount = errCount;
                 if(results[this.testResults[i].device].sendList.length > 0){
-                    results[this.testResults[i].device].connectAvgConnections = (ConCount / results[this.testResults[i].device].sendList.length)
+                    results[this.testResults[i].device].ConCount = ConCount;
                 }
 
             } else {
@@ -373,7 +377,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
             console.log(line03);
             if(results[devName].connectList.length > 0 ) {
-                console.log("Failed connections " + results[devName].connectErrorCount + "(" + (results[devName].connectErrorCount * 100 / results[devName].connectList.length) + "%), average connection count : " + results[devName].connectAvgConnections);
+                console.log("Failed connections " + results[devName].connectErrorCount + "(" + (results[devName].connectErrorCount * 100 / (results[devName].connectList.length + results[devName].connectErrorCount)) + "%), average connection count : " + (100 * results[devName].ConCount / results[devName].connectList.length ));
             }
 
             var line04 = "100% : " + this.getValueOf(results[devName].connectList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].connectList,0.99)  + " ms, 95% : " + this.getValueOf(results[devName].connectList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].connectList,0.90) + " ms.";
@@ -390,7 +394,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
             console.log(line05);
             if(results[devName].sendList.length > 0 ) {
-                console.log("Failed connections " + results[devName].sendErrorCount + "(" + (results[devName].sendErrorCount * 100 / results[devName].sendList.length) + "%), average connection count : " + results[devName].connectAvgConnections);
+                console.log("Failed connections " + results[devName].sendErrorCount + "(" + (results[devName].sendErrorCount * 100 / (results[devName].sendList.length + results[devName].sendErrorCount)) + "%), average connection count : " + (100 * results[devName].ConCount / results[devName].sendList.length));
             }
 
             var line06 = "100% : " + this.getValueOf(results[devName].sendList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].sendList,0.99)  + " ms, 95 : " + this.getValueOf(results[devName].sendList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].sendList,0.90) + " ms.";
