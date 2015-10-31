@@ -28,7 +28,6 @@ var Promise = require("lie");
  * {@link module:thaliMobileNative} functionality should be calling this module.
  */
 
-
 /**
  * This method instructs the native layer to discover what other devices are within range using the platform's non-TCP
  * P2P capabilities. When a device is discovered its information will be published via
@@ -104,7 +103,7 @@ module.exports.stopListeningForAdvertisements = function() {
  * ## Repeated calls
  * By design this method is intended to be called multiple times without calling stop as each call causes the
  * currently notification flag to change. But this method MUST NOT be called with a different portNumber than
- * previous calls unless there was an intervene call to stop. This restriction is just to reduce our test matrix and
+ * previous calls unless there was an intervening call to stop. This restriction is just to reduce our test matrix and
  * because it does not interfere with any of our current supported scenarios. If this method is called consecutively
  * without an intervening stop using different portNumbers then the callback MUST return a "No Changing portNumber
  * without a stop" error.
