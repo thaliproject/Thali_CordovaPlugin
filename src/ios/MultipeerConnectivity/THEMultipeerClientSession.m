@@ -124,7 +124,6 @@
     assert([self connectionState] != THEPeerSessionStateNotConnected);
 
     THEPeerSessionState prevState = [self connectionState];
-    //[self disconnect];
 
     if (prevState == THEPeerSessionStateConnecting)
       [self fireConnectCallback:@"Peer disconnected" withPort:0];
@@ -139,7 +138,10 @@
   @synchronized(self)
   {
     NSLog(@"client session: onPeerLost: %@", [self remotePeerIdentifier]);
-    [self onLinkFailure];
+    // Losing peers is independent of losing the link so
+    // we may already be disconnected
+    if ([self connectionState] != THEPeerSessionStateNotConnected)
+      [self onLinkFailure];
     [self setVisible:NO]; 
   }
 }
@@ -156,7 +158,7 @@
     THEPeerSessionState prevState = [self connectionState];
     [self disconnect];
 
-    if (prevState == THEPeerSessionStateConnecting)
+    if (prevState == THEPeerSessionStateConnecting && _connectCallback != nil)
       [self fireConnectCallback:@"Peer disconnected" withPort:0];
   }
 }
