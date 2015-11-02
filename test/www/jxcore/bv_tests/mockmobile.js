@@ -20,7 +20,9 @@ Mobile.setGetDocumentsPathReturnValues = function (errArg, fileLocationArg) {
 };
 
 Mobile.GetDocumentsPath = function (cb) {
-  return os.tmpdir();
+  setImmediate(function () {
+    cb(null, os.tmpdir());
+  });
 };
 
 Mobile.invokeNative = function (key, arg) {
