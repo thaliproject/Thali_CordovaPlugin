@@ -6,9 +6,11 @@
   "dependencies": {
     "body-parser": "^1.13.3",
     "express": "4.13.3",
+    "ip": "^1.0.1",
     "javascript-state-machine": "^2.3.5",
     "lie": "^3.0.1",
     "multiplex": "^6.2.2",
+    "node-ssdp": "^2.6.3",
     "request": "^2.64.0",
     "urlsafe-base64": "^1.0.0",
     "winston": "^1.0.2"
