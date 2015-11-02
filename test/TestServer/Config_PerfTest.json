@@ -5,8 +5,6 @@
     "tests": [
         {"name": "testSendData.js", "timeout": "300000","data": {"timeout": "250000","rounds":"3","dataTimeout":"60000","dataAmount":"100000","conReTryTimeout":"2000","conReTryCount":"1"}},
         {"name": "testSendData.js", "timeout": "300000","data": {"timeout": "250000","rounds":"3","dataTimeout":"60000","dataAmount":"100000","conReTryTimeout":"2000","conReTryCount":"1"}},
-        {"name": "testSendData.js", "timeout": "300000","data": {"timeout": "250000","rounds":"3","dataTimeout":"60000","dataAmount":"100000","conReTryTimeout":"2000","conReTryCount":"1"}},
-        {"name": "testSendData.js", "timeout": "300000","data": {"timeout": "250000","rounds":"3","dataTimeout":"60000","dataAmount":"100000","conReTryTimeout":"2000","conReTryCount":"1"}},
-        {"name": "testSendData.js", "timeout": "300000","data": {"timeout": "250000","rounds":"3","dataTimeout":"60000","dataAmount":"100000","conReTryTimeout":"2000","conReTryCount":"1"}}
+       {"name": "testSendData.js", "timeout": "300000","data": {"timeout": "250000","rounds":"3","dataTimeout":"60000","dataAmount":"100000","conReTryTimeout":"2000","conReTryCount":"1"}}
     ]
 }
