@@ -97,35 +97,36 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)start
 {
-    NSLog(@"server: starting %@", _peerIdentifier);
+  NSLog(@"server: starting %@", _peerIdentifier);
 
-    _serverSessions = [[THESessionDictionary alloc] init];
-    [self startAdvertising];
-}
+  _serverSessions = [[THESessionDictionary alloc] init];
 
-- (void)startAdvertising
-{
-  // Start advertising our presence.. 
   _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
       initWithPeer:_localPeerId 
      discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier } 
        serviceType:_serviceType
   ];
-
   [_nearbyServiceAdvertiser setDelegate:self];
+
+  [self startAdvertising];
+}
+
+- (void)startAdvertising
+{
+  // Start advertising our presence.. 
   [_nearbyServiceAdvertiser startAdvertisingPeer];
 }
 
 - (void)stop
 {
   [self stopAdvertising];
+  _nearbyServiceAdvertiser = nil;
   _serverSessions = nil;
 }
 
 - (void)stopAdvertising
 {
   [_nearbyServiceAdvertiser stopAdvertisingPeer];
-  _nearbyServiceAdvertiser = nil;
 }
 
 - (void)restart
