@@ -55,6 +55,9 @@
   // connections from remote clients
   THEMultipeerServer *_server;
 
+  // Restart timer
+  NSTimer *_restartTimer;
+
   __weak id<THEMultipeerDiscoveryDelegate> _delegate; 
 }
 
@@ -99,15 +102,43 @@
              withServiceType:_serviceType 
        withDiscoveryDelegate:_delegate];
 
+  __weak typeof(self) weakSelf = self;
+  [_server setTimerResetCallback: ^void (void) {
+    // Restart the restart timer
+    NSLog(@"multipeer session: restart timer");
+    [weakSelf stopRestartTimer];
+    [weakSelf startRestartTimer];
+  }];
+  
   [_server start];
   [_client start];
 
   NSLog(@"THEMultipeerSession initialized peer %@", _peerIdentifier);
 }
 
+- (void)startRestartTimer
+{
+  SEL _restart = NSSelectorFromString(@"restart:");
+  // Set a timer that, if it ever fires, will restart browsing and advertising
+  NSLog(@"multipeer session: start timer");
+  _restartTimer = [NSTimer scheduledTimerWithTimeInterval:30
+                                                   target:self
+                                                 selector:_restart
+                                                 userInfo:nil
+                                                  repeats:YES];
+}
+
+- (void)stopRestartTimer
+{
+  NSLog(@"multipeer session: stop timer");
+  [_restartTimer invalidate];
+}
+
 - (void)stop
 {
   NSLog(@"THEMultipeerSession stopping peer");
+
+  [self stopRestartTimer];
 
   _delegate = nil;
 
@@ -122,6 +153,9 @@
 
 - (void)restart
 {
+  NSLog(@"multipeer session: restart");
+  [_server restart];
+  [_client restart];
 }
 
 - (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier
