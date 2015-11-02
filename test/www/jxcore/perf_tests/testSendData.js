@@ -34,13 +34,16 @@ var SendDataConnector = require('./SendDataConnector');
     }
 */
 
-function testSendData(jsonData,name,dev) {
+function testSendData(jsonData,name,dev,addressList) {
     var self = this;
+    console.log('testSendData created ' + jsonData + ", bt-address lenght : " + addressList.length);
     this.name = name;
     this.commandData = JSON.parse(jsonData);
     this.emitter = new ThaliEmitter();
     this.toFindCount = dev;
-    console.log('testSendData created ' + jsonData);
+    if(addressList.length > 0) {
+        this.BluetoothAddressList = addressList;
+    }
 
     this.startTime = new Date();
     this.endTime = new Date();
@@ -69,7 +72,13 @@ function testSendData(jsonData,name,dev) {
     this.resultArray = [];
 
     this.peerAvailabilityChanged = function(peers) {
-        console.log('peerAvailabilityChanged ' + peers);
+
+        //we have address list, so we use it instead
+        if(self.BluetoothAddressList){
+            return;
+        }
+
+        console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
         for (var i = 0; i < peers.length; i++) {
             var peer = peers[i];
             if ((!self.foundPeers[peer.peerIdentifier]) || (!self.foundPeers[peer.peerIdentifier].doneAlready)) {
@@ -103,6 +112,12 @@ testSendData.prototype.start = function() {
             console.log('StartBroadcasting returned error ' + err);
         } else {
             console.log('StartBroadcasting started ok');
+
+            if(self.BluetoothAddressList) {
+                if (!self.testStarted) {
+                    self.startWithNextDevice();
+                }
+            }
         }
     });
 
@@ -159,22 +174,41 @@ testSendData.prototype.startWithNextDevice = function() {
         return;
     }
 
-    if(this.foundSofar >= this.toFindCount){
-        this.endReason = "OK";
-        this.weAreDoneNow();
-        return;
-    }
+    if(this.BluetoothAddressList){
 
-    for(var peerId in this.foundPeers){
-        if(this.foundPeers[peerId].peerAvailable && !this.foundPeers[peerId].doneAlready){
-            this.testStarted = true;
-            this.emit('debug', '--- start for : ' + this.foundPeers[peerId].peerName + ' ---');
-            this.foundSofar++
-            console.log('device[' + this.foundSofar +  ']: ' + this.foundPeers[peerId].peerIdentifier);
-
-            this.foundPeers[peerId].doneAlready = true;
-            this.testConnector.Start(this.foundPeers[peerId]);
+        if(this.BluetoothAddressList.length <= 0){
+            this.endReason = "OK";
+            this.weAreDoneNow();
             return;
+        }
+
+        console.log('do fake peer & start');
+
+        var fakePeer = {};
+        fakePeer.peerAvailable = true;
+        fakePeer.peerIdentifier = this.BluetoothAddressList.pop().address;
+
+        console.log('Connect to fake peer: ' + fakePeer.peerIdentifier);
+        this.testConnector.Start(fakePeer);
+        return;
+    }else {
+        if (this.foundSofar >= this.toFindCount) {
+            this.endReason = "OK";
+            this.weAreDoneNow();
+            return;
+        }
+
+        for (var peerId in this.foundPeers) {
+            if (this.foundPeers[peerId].peerAvailable && !this.foundPeers[peerId].doneAlready) {
+                this.testStarted = true;
+                this.emit('debug', '--- start for : ' + this.foundPeers[peerId].peerName + ' ---');
+                this.foundSofar++
+                console.log('device[' + this.foundSofar + ']: ' + this.foundPeers[peerId].peerIdentifier);
+
+                this.foundPeers[peerId].doneAlready = true;
+                this.testConnector.Start(this.foundPeers[peerId]);
+                return;
+            }
         }
     }
 }

@@ -154,7 +154,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         return ret;
     }
 
-    private String GetBluetoothAddress(){
+    public String GetBluetoothAddress(){
         BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
         return bluetooth == null ? "" : bluetooth.getAddress();
     }
@@ -188,8 +188,10 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         }
 
         if (selectedDevice == null) {
-            connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
+        /*    connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
             return;
+            */
+            selectedDevice = new ServiceItem(toPeerId, toPeerId, toPeerId, "", "", "");
         }
 
         BTConnector tmpConn = mBTConnector;

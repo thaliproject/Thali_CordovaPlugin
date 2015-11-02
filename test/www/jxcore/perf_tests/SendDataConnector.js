@@ -52,6 +52,10 @@ SendDataConnector.prototype.Start = function(peer) {
 }
 
 SendDataConnector.prototype.ReStart = function(peer) {
+    this.peer = peer;
+    if(!this.peer){
+        return;
+    }
 
     // make sure any previous connections are really out
     if(this.clientSocket != null) {
@@ -86,15 +90,22 @@ SendDataConnector.prototype.Stop = function(peer) {
         this.clientSocket = null;
     }
 
-  /*  Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
+    if(!this.peer){
+        return;
+    }
+    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
         console.log("Disconnected by Mobile call");
-    });*/
+    });
 }
 
 SendDataConnector.prototype.doConnect = function(peer) {
     var self = this;
 
     if(this.stopped){
+        return;
+    }
+
+    if(!this.peer){
         return;
     }
 
@@ -215,6 +226,11 @@ SendDataConnector.prototype.tryAgain = function() {
     console.log("tryAgain afer: " + self.reTryTimeout + " ms.");
     //lets try again after a short while
     self.reTryTimeOut = setTimeout(function () {
+
+        if(!self.peer){
+            return;
+        }
+
         console.log("re-try now : " + self.peer.peerName);
         self.reTryTimeOut = null
         self.ReStart(self.peer);
@@ -223,6 +239,10 @@ SendDataConnector.prototype.tryAgain = function() {
 
 SendDataConnector.prototype.oneRoundDoneNow = function() {
     this.Stop();
+
+    if(!this.peer){
+        return;
+    }
 
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;

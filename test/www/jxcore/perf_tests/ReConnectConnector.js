@@ -43,7 +43,10 @@ ReConnectConnector.prototype.Start = function(peer) {
 }
 
 ReConnectConnector.prototype.ReStart = function(peer) {
-
+    this.peer = peer;
+    if(!this.peer){
+        return;
+    }
     // make sure any previous connections are really out
     if(this.clientSocket != null) {
         console.log("CLIENT closeClientSocket");
@@ -77,6 +80,10 @@ ReConnectConnector.prototype.Stop = function() {
         console.log("CLIENT closeClientSocket");
         this.clientSocket.end();
         this.clientSocket = null;
+    }
+
+    if(!this.peer){
+        return;
     }
 
     Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
@@ -208,6 +215,10 @@ ReConnectConnector.prototype.tryAgain = function() {
 
 ReConnectConnector.prototype.oneRoundDoneNow = function() {
     this.Stop();
+
+    if(!this.peer){
+        return;
+    }
 
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;

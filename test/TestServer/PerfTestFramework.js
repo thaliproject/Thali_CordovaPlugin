@@ -221,6 +221,29 @@ PerfTestFramework.prototype.getConnectedDevicesCount  = function(){
 
     return count;
 }
+
+PerfTestFramework.prototype.getBluetoothAddressList  = function(){
+    if(!this.testDevices){
+        return [];
+    }
+
+    if(this.testDevices == null){
+        return [];
+    }
+    var BtAddressList = [];
+    for (var deviceName in this.testDevices) {
+        if(this.testDevices[deviceName] != null){
+            var BtAddress = this.testDevices[deviceName].getBluetoothAddress();
+            if(BtAddress) {
+                BtAddressList.push({"address":BtAddress});
+            }
+        }
+    }
+
+
+    return BtAddressList;
+}
+
 PerfTestFramework.prototype.doNextTest  = function(){
 
     //no devices were added
@@ -241,6 +264,9 @@ PerfTestFramework.prototype.doNextTest  = function(){
     this.currentTest++;
     if(configFile.tests[this.currentTest]){
         this.doneAlready = false;
+
+        var BluetoothList = this.getBluetoothAddressList();
+
         //if we have tests, then lets start new tests on all devices
         console.log('start test[' + this.currentTest + '] with ' + this.devicesCount + ' devices.');
         for (var deviceName in this.testDevices) {
@@ -248,7 +274,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
                 this.testDevices[deviceName].startTime = new Date();
                 this.testDevices[deviceName].endTime = new Date();
                 this.testDevices[deviceName].data = null;
-                this.testDevices[deviceName].SendCommand('start',configFile.tests[this.currentTest].name,JSON.stringify(configFile.tests[this.currentTest].data),(this.devicesCount - 1));
+                this.testDevices[deviceName].SendCommand('start',configFile.tests[this.currentTest].name,JSON.stringify(configFile.tests[this.currentTest].data),(this.devicesCount - 1),BluetoothList);
            }
         }
 
@@ -322,6 +348,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
                 this.testResults[i].data.sendList.forEach(function(roundResult) {
 
                     if (roundResult.result == "OK") {
+                        //console.log("roundResult : " + JSON.stringify(roundResult));
                         tmpSendList.push(roundResult);
                         ConCount = ConCount + roundResult.connections;
                     } else {
@@ -334,6 +361,8 @@ PerfTestFramework.prototype.doNextTest  = function(){
                 if(results[this.testResults[i].device].sendList.length > 0){
                     results[this.testResults[i].device].ConCount = ConCount;
                 }
+
+                console.log("roundResult : " + results[this.testResults[i].device].sendList.length);
 
             } else {
                 var line00 = 'Test[' + this.testResults[i].test + '] for ' + this.testResults[i].device + ' has unknown data : ' + JSON.stringify(this.testResults[i].data);
@@ -364,7 +393,6 @@ PerfTestFramework.prototype.doNextTest  = function(){
             console.log(line01);
 
             var line02 = "100% : " + this.getValueOf(results[devName].peersList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].peersList,0.90)  + " ms, 95 %: " + this.getValueOf(results[devName].peersList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].peersList,0.90) + " ms.";
-
             console.log(line02);
 
             combined.peersList = this.extendArray(results[devName].peersList,combined.peersList);
@@ -377,7 +405,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
             console.log(line03);
             if(results[devName].connectList.length > 0 ) {
-                console.log("Failed connections " + results[devName].connectErrorCount + "(" + (results[devName].connectErrorCount * 100 / (results[devName].connectList.length + results[devName].connectErrorCount)) + "%), average connection count : " + (100 * results[devName].ConCount / results[devName].connectList.length ));
+                console.log("Failed connections " + results[devName].connectErrorCount + "(" + (results[devName].connectErrorCount * 100 / (results[devName].connectList.length + results[devName].connectErrorCount)) + "%)");
             }
 
             var line04 = "100% : " + this.getValueOf(results[devName].connectList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].connectList,0.99)  + " ms, 95% : " + this.getValueOf(results[devName].connectList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].connectList,0.90) + " ms.";
@@ -385,6 +413,8 @@ PerfTestFramework.prototype.doNextTest  = function(){
             console.log(line04);
 
             combined.connectList = this.extendArray(results[devName].connectList,combined.connectList);
+        }else if (results[devName].connectErrorCount && results[devName].connectErrorCount > 0){
+            console.log("All (" + results[devName].connectErrorCount + ") Re-Connect test connections failed");
         }
 
         if(results[devName].sendList && (results[devName].sendList.length > 0)) {
@@ -394,7 +424,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
             console.log(line05);
             if(results[devName].sendList.length > 0 ) {
-                console.log("Failed connections " + results[devName].sendErrorCount + "(" + (results[devName].sendErrorCount * 100 / (results[devName].sendList.length + results[devName].sendErrorCount)) + "%), average connection count : " + (100 * results[devName].ConCount / results[devName].sendList.length));
+                console.log("Failed connections " + results[devName].sendErrorCount + "(" + (results[devName].sendErrorCount * 100 / (results[devName].sendList.length + results[devName].sendErrorCount)) + "%)");
             }
 
             var line06 = "100% : " + this.getValueOf(results[devName].sendList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].sendList,0.99)  + " ms, 95 : " + this.getValueOf(results[devName].sendList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].sendList,0.90) + " ms.";
@@ -402,6 +432,8 @@ PerfTestFramework.prototype.doNextTest  = function(){
             console.log(line06);
 
             combined.sendList = this.extendArray(results[devName].sendList,combined.sendList);
+        }else if (results[devName].sendErrorCount && results[devName].sendErrorCount > 0){
+            console.log("All (" + results[devName].sendErrorCount + ") SendData test connections failed");
         }
     }
 

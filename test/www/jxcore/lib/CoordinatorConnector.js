@@ -89,9 +89,9 @@ CoordinatorConnector.prototype.close = function(){
     this.emit('closed');
 };
 
-CoordinatorConnector.prototype.present = function(name,type){
+CoordinatorConnector.prototype.present = function(name,type,bluetoothAddress){
     if(jxcore.utils.OSInfo().isAndroid) {
-        this.socket.emit('present', JSON.stringify({"os": "android","name": name,"type":type}));
+        this.socket.emit('present', JSON.stringify({"os": "android","name": name,"type":type,"btaddress":bluetoothAddress}));
     }else{
         this.socket.emit('present', JSON.stringify({"os": "ios","name": name,"type":type}));
     }
