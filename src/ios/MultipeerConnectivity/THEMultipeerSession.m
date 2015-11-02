@@ -104,8 +104,8 @@
 
   __weak typeof(self) weakSelf = self;
   [_server setTimerResetCallback: ^void (void) {
-    // Restart the restart timer
-    NSLog(@"multipeer session: restart timer");
+    // Reset the restart timer
+    NSLog(@"multipeer session: reset timer");
     [weakSelf stopRestartTimer];
     [weakSelf startRestartTimer];
   }];
@@ -113,19 +113,25 @@
   [_server start];
   [_client start];
 
+  // Kick off the restart timer
+  [self startRestartTimer];
+
   NSLog(@"THEMultipeerSession initialized peer %@", _peerIdentifier);
 }
 
 - (void)startRestartTimer
 {
-  SEL _restart = NSSelectorFromString(@"restart:");
   // Set a timer that, if it ever fires, will restart browsing and advertising
-  NSLog(@"multipeer session: start timer");
-  _restartTimer = [NSTimer scheduledTimerWithTimeInterval:30
-                                                   target:self
-                                                 selector:_restart
-                                                 userInfo:nil
-                                                  repeats:YES];
+  NSLog(@"multipeer session: start timer: %p", self);
+
+  OnMainThread(^{
+    assert([NSThread isMainThread]);
+    _restartTimer = [NSTimer scheduledTimerWithTimeInterval:30
+                                                     target:self
+                                                   selector:@selector(restart:)
+                                                   userInfo:nil
+                                                    repeats:YES];
+  });
 }
 
 - (void)stopRestartTimer
@@ -151,7 +157,7 @@
   _peerID = nil;
 }
 
-- (void)restart
+- (void)restart:(NSTimer *)timer
 {
   NSLog(@"multipeer session: restart");
   [_server restart];
