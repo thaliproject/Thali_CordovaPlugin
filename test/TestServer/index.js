@@ -99,7 +99,7 @@ io.on('connection', function(socket) {
       }
     }
 
-    var newDevice = new TestDevice(this,presentObj.name,presentObj.os);
+    var newDevice = new TestDevice(this,presentObj.name,presentObj.os,presentObj.type,presentObj.btaddress);
 
     if(presentObj.type == "unittest"){
 

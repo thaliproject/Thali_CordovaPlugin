@@ -55,7 +55,7 @@ TestFrameworkClient.prototype.handleCommand = function(command){
             self.stopAllTests(); //Stop any previous tests if still running
             if(self.test[commandData.testName]){
                 self.emit('debug',"--- start :" + commandData.testName + "---");
-                currentTest = new self.test[commandData.testName](commandData.testData,self.deviceName,commandData.devices);
+                currentTest = new self.test[commandData.testName](commandData.testData,self.deviceName,commandData.devices,commandData.addressList);
                 self.setCallbacks(currentTest);
                 currentTest.start();
             }else{
