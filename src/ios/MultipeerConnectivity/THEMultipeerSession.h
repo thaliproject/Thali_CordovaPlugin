@@ -47,6 +47,9 @@
 // Stop discovering and advertising, must be called before destrution
 - (void)stop;
 
+// Restart discovery and advertising without affecting existing sessions
+- (void)restart;
+
 // Connects to the peer server with the specified peer identifier. |connectCallback| will
 // be called when the connection completes with first param being any error message or nil and
 // second param being the port number the relay is listening on
