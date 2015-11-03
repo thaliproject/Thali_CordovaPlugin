@@ -129,6 +129,12 @@
       [self fireConnectCallback:@"Peer disconnected" withPort:0];
     else if (prevState == THEPeerSessionStateConnected)
       [self fireConnectionErrorEvent];
+    else
+    {
+      NSLog(@"client session: Unexpected state (disconnected) in onLinkFailure");
+      [NSException raise:@"Unexpected state" 
+        format:@"state %d was unexpected in onLinkFailure", [self connectionState]];
+    }
   }
 }
 
