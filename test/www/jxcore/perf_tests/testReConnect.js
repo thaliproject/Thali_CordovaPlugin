@@ -46,10 +46,36 @@ function testReConnect(jsonData,name,dev,addressList) {
     this.doneCallback = function (data) {
         console.log('---- round done--------');
         var resultData = JSON.parse(data);
-        for (var i = 0; i < resultData.length; i++) {
-            self.resultArray.push(resultData[i]);
+
+        var peerAddress  = 0;
+        var peerTryCount = 0;
+
+        var areAllTestOk = true;
+
+        // if we use the address list, then we try getting all connections to be successful
+        // thus we re-try the ones that were not successful
+        // and we schedule the re-try to be handled after all other peers we have in the list currently
+        if(self.BluetoothAddressList) {
+            for (var i = 0; i < resultData.length; i++) {
+                if (resultData[i].result != "OK") {
+                    areAllTestOk = false;
+                    peerAddress = resultData[i].name;
+                    peerTryCount = resultData[i].tryCount;
+                }
+            }
         }
 
+        // if all was ok, then we'll store the data values, othervise we'll put the peer back to the address list
+        if(areAllTestOk) {
+            for (var i = 0; i < resultData.length; i++) {
+                self.resultArray.push(resultData[i]);
+            }
+        }else if(peerAddress != 0){ //we gotta re-try it later
+            console.log('---- gotta redo : ' + peerAddress + ", try count now: " + peerTryCount);
+            self.BluetoothAddressList.push({"address":peerAddress,"tryCount":peerTryCount});
+        }
+
+        // see if we need to go and do next round
         self.testStarted = false;
         if (!self.doneAlready) {
             self.startWithNextDevice();
@@ -179,7 +205,10 @@ testReConnect.prototype.startWithNextDevice = function() {
 
         var fakePeer = {};
         fakePeer.peerAvailable = true;
-        fakePeer.peerIdentifier = this.BluetoothAddressList.pop().address;
+
+        var addressItem = this.BluetoothAddressList.pop();
+        fakePeer.peerIdentifier = addressItem.address;
+        fakePeer.tryCount       = (addressItem.tryCount + 1);
 
         console.log('Connect to fake peer: ' + fakePeer.peerIdentifier);
         this.testConnector.Start(fakePeer);
@@ -229,6 +258,14 @@ testReConnect.prototype.sendReportNow = function() {
     var resultData = this.testConnector.getResultArray();
     for (var i = 0; i < resultData.length; i++) {
         this.resultArray.push(resultData[i]);
+    }
+
+    if(this.BluetoothAddressList){
+        for(var ii = 0; ii < this.BluetoothAddressList.length; ii++){
+            if(this.BluetoothAddressList[ii]){
+                this.resultArray.push({"name":this.BluetoothAddressList[ii].address,"time":0,"result":"Fail","connections":this.BluetoothAddressList[ii].tryCount});
+            }
+        }
     }
 
     this.emit('debug', "---- finished : re-Connect -- ");

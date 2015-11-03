@@ -16,13 +16,15 @@ function ReConnectConnector(rounds,reTryTimeout,reTryMaxCount,dataTimeOut) {
     this.roundsToDo         = rounds;
     this.doneRounds         = 0;
     this.reTryTimeout       = reTryTimeout;
+    this.reTryTimer         = null;
+    this.ConnectTimer       = null;
     this.reTryMaxCount      = reTryMaxCount;
     this.dataTimeOut        = dataTimeOut;
     this.clientSocket       = null;
-    this.reTryTimeOut       = null;
     this.tryRounds          = 0;
     this.resultArray        = [];
     this.connectionCount    = 0;
+    this.receivedCounter    = 0;
 }
 
 ReConnectConnector.prototype = new events.EventEmitter;
@@ -43,18 +45,31 @@ ReConnectConnector.prototype.Start = function(peer) {
 }
 
 ReConnectConnector.prototype.ReStart = function(peer) {
+    var self = this;
+
     this.peer = peer;
     if(!this.peer){
         return;
     }
+
+    if(this.ConnectTimer != null){
+        return;
+    }
+
     // make sure any previous connections are really out
     if(this.clientSocket != null) {
         console.log("CLIENT closeClientSocket");
         this.clientSocket.end()
         this.clientSocket = null;
     }
-    console.log('Connect[' + this.tryRounds + '] to : ' + this.peer.peerIdentifier + ' Available: '  + this.peer.peerAvailable);
-    this.doConnect(this.peer);
+
+    console.log("do connect after : " + this.reTryTimeout + " ms.");
+
+    this.ConnectTimer= setTimeout(function () {
+        self.ConnectTimer = null
+        console.log('Connect[' + self.tryRounds + '] to : ' + self.peer.peerIdentifier + ' Available: '  + self.peer.peerAvailable);
+        self.doConnect(self.peer);
+    }, self.reTryTimeout);
 }
 
 
@@ -63,10 +78,16 @@ ReConnectConnector.prototype.Stop = function() {
     console.log("CLIENT Stop now");
 
     this.stopped = true;
-    if(this.reTryTimeOut != null) {
+    if(this.reTryTimer != null) {
         console.log("Stop retry timer");
-        clearTimeout(this.reTryTimeOut);
-        this.reTryTimeOut = null;
+        clearTimeout(this.reTryTimer);
+        this.reTryTimer = null;
+    }
+
+    if(this.ConnectTimer != null) {
+        console.log("Stop ConnectTimer timer");
+        clearTimeout(this.ConnectTimer);
+        this.ConnectTimer = null;
     }
 
     if (this.dataTimerId != null) {
@@ -118,11 +139,13 @@ ReConnectConnector.prototype.doConnect = function(peer) {
                 for (var i = 0; i < ((100 / 2) + 1); i++) {
                     numbers[i] = Math.floor(Math.random() * 10);
                 }
+                self.receivedCounter = 0;
                 self.resetDataTimeout(peer);
                 self.clientSocket.write(numbers.toString());
             });
             self.clientSocket.on('data', function (data) {
-                if(data.length >= 100) {
+                self.receivedCounter = self.receivedCounter + data.length;
+                if(self.receivedCounter >= 100) {
                     self.resetDataTimeout(peer);
 
                     if (self.dataTimerId != null) {
@@ -187,7 +210,7 @@ ReConnectConnector.prototype.tryAgain = function() {
         return;
     }
 
-    if(self.reTryTimeOut != null){
+    if(this.reTryTimer != null){
         return;
     }
 
@@ -204,13 +227,16 @@ ReConnectConnector.prototype.tryAgain = function() {
         return;
     }
 
-    console.log("tryAgain afer: " + self.reTryTimeout + " ms.");
+    this.ReStart(this.peer);
+
+    /*
+    console.log("tryAgain after: " + self.reTryTimeout + " ms.");
     //lets try again after a short while
-    self.reTryTimeOut = setTimeout(function () {
+    self.reTryTimer = setTimeout(function () {
         console.log("re-try now : " + self.peer.peerIdentifier);
-        self.reTryTimeOut = null
+        self.reTryTimer = null
         self.ReStart(self.peer);
-    }, self.reTryTimeout);
+    }, self.reTryTimeout);*/
 }
 
 ReConnectConnector.prototype.oneRoundDoneNow = function() {
@@ -221,14 +247,15 @@ ReConnectConnector.prototype.oneRoundDoneNow = function() {
     }
 
     this.endTime = new Date();
-    var responseTime = this.endTime - this.startTime;
-    this.resultArray.push({"name:":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount});
+    var responseTime = this.endTime - this.startTime - this.reTryTimeout; // there is always self.reTryTimeout timeout before any connect
+    this.resultArray.push({"name":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount,"tryCount":this.peer.tryCount});
 
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
 
     this.doneRounds++;
     if(this.roundsToDo > this.doneRounds){
         this.tryRounds = 0;
+        this.receivedCounter = 0;
 
         //reset the values to make sure they are clean when we start new round
         this.startTime = new Date();

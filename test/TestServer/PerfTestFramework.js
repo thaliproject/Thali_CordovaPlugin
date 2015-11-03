@@ -235,7 +235,7 @@ PerfTestFramework.prototype.getBluetoothAddressList  = function(){
         if(this.testDevices[deviceName] != null){
             var BtAddress = this.testDevices[deviceName].getBluetoothAddress();
             if(BtAddress) {
-                BtAddressList.push({"address":BtAddress});
+                BtAddressList.push({"address":BtAddress,"tryCount":0});
             }
         }
     }
@@ -362,7 +362,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
                     results[this.testResults[i].device].ConCount = ConCount;
                 }
 
-                console.log("roundResult : " + results[this.testResults[i].device].sendList.length);
+                //console.log("roundResult : " + results[this.testResults[i].device].sendList.length);
 
             } else {
                 var line00 = 'Test[' + this.testResults[i].test + '] for ' + this.testResults[i].device + ' has unknown data : ' + JSON.stringify(this.testResults[i].data);
