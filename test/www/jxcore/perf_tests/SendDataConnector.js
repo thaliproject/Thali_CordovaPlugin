@@ -26,7 +26,7 @@ function SendDataConnector(rounds,dataAmount,reTryTimeout,reTryMaxCount,dataTime
     this.reTryMaxCount      = reTryMaxCount;
     this.dataTimeOut        = dataTimeOut;
     this.clientSocket       = null;
-    this.reTryTimeOut       = null;
+    this.reTryTimer         = null;
     this.receivedCounter    = 0;
     this.tryRounds          = 0;
     this.resultArray        = [];
@@ -71,10 +71,10 @@ SendDataConnector.prototype.ReStart = function(peer) {
 SendDataConnector.prototype.Stop = function(peer) {
     console.log("CLIENT Stop now");
     this.stopped = true;
-    if(this.reTryTimeOut != null) {
+    if(this.reTryTimer != null) {
         console.log("Stop retry timer");
-        clearTimeout(this.reTryTimeOut);
-        this.reTryTimeOut = null;
+        clearTimeout(this.reTryTimer);
+        this.reTryTimer = null;
     }
 
     if (this.dataTimerId != null) {
@@ -206,7 +206,7 @@ SendDataConnector.prototype.tryAgain = function() {
         return;
     }
 
-    if(self.reTryTimeOut != null){
+    if(self.reTryTimer != null){
         return;
     }
 
@@ -225,14 +225,14 @@ SendDataConnector.prototype.tryAgain = function() {
 
     console.log("tryAgain afer: " + self.reTryTimeout + " ms.");
     //lets try again after a short while
-    self.reTryTimeOut = setTimeout(function () {
+    self.reTryTimer = setTimeout(function () {
 
         if(!self.peer){
             return;
         }
 
         console.log("re-try now : " + self.peer.peerName);
-        self.reTryTimeOut = null
+        self.reTryTimer = null
         self.ReStart(self.peer);
     }, self.reTryTimeout);
 }
@@ -246,13 +246,14 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
 
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;
-    this.resultArray.push({"name:":this.peer.peerName,"time":responseTime,"result":this.endReason,"connections":this.connectionCount});
+    this.resultArray.push({"name":this.peer.peerName,"time":responseTime,"result":this.endReason,"connections":this.connectionCount});
 
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
 
     this.doneRounds++;
     if(this.roundsToDo > this.doneRounds){
         this.tryRounds = 0;
+        this.receivedCounter = 0;
 
         //reset the values to make sure they are clean when we start new round
         this.startTime = new Date();

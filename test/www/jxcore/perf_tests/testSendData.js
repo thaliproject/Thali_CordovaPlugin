@@ -186,7 +186,10 @@ testSendData.prototype.startWithNextDevice = function() {
 
         var fakePeer = {};
         fakePeer.peerAvailable = true;
-        fakePeer.peerIdentifier = this.BluetoothAddressList.pop().address;
+
+        var addressItem = this.BluetoothAddressList.pop();
+        fakePeer.peerIdentifier = addressItem.address;
+        fakePeer.tryCount       = (addressItem.tryCount + 1);
 
         console.log('Connect to fake peer: ' + fakePeer.peerIdentifier);
         this.testConnector.Start(fakePeer);
@@ -237,6 +240,14 @@ testSendData.prototype.sendReportNow = function() {
     var resultData = this.testConnector.getResultArray();
     for (var i = 0; i < resultData.length; i++) {
         this.resultArray.push(resultData[i]);
+    }
+
+    if(this.BluetoothAddressList){
+        for(var ii = 0; ii < this.BluetoothAddressList.length; ii++){
+            if(this.BluetoothAddressList[ii]){
+                this.resultArray.push({"name":this.BluetoothAddressList[ii].address,"time":0,"result":"Fail","connections":this.BluetoothAddressList[ii].tryCount});
+            }
+        }
     }
 
     this.emit('debug', "---- finished : send-data -- ");

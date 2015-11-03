@@ -22,7 +22,7 @@ var myName = "DEV" + Math.round((Math.random() * (10000)));
 testUtils.setMyName(myName);
 
 console.log('my name is : ' + myName);
-console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
+//console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
 
 var Coordinator = new CoordinatorConnector();
 
