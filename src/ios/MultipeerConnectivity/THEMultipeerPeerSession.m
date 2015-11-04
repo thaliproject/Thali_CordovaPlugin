@@ -29,7 +29,6 @@
 #import "THEMultipeerPeerSession.h"
 #import "THEMultipeerSocketRelay.h"
 
-
 static NSString * const THALI_STREAM = @"ThaliStream";
 
 @interface THEMultipeerPeerSession()
@@ -49,24 +48,11 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   NSString * _sessionType;
 }
 
-static NSDictionary *stateChanges = nil;
-
-+ (void)initialize 
-{
-  if (self == [THEMultipeerPeerSession class]) {
-    // Static initialisation
-    stateChanges = @{ 
-      @(THEPeerSessionStateNotConnected) : @[@(THEPeerSessionStateConnecting)],
-      @(THEPeerSessionStateConnecting) : 
-        @[@(THEPeerSessionStateNotConnected), @(THEPeerSessionStateConnected)],
-      @(THEPeerSessionStateConnected) : @[@(THEPeerSessionStateNotConnected)]
-    };
-  }
-}
+static int count = 0;
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
                    withRemotePeerID:(MCPeerID *)remotePeerID
-           withRemotePeerIdentifier:(NSString *)remotePeerIdentifier
+           withRemotePeerIdentifier:(NSString *)remotePeerIdentifier 
                     withSessionType:(NSString *)sessionType
 {
   self = [super init];
@@ -75,30 +61,20 @@ static NSDictionary *stateChanges = nil;
       return nil;
   }
     
+  count++;
+
   _localPeerID = localPeerID;
   _remotePeerID = remotePeerID;
   _remotePeerIdentifier = remotePeerIdentifier;
- 
+  
   _sessionType = sessionType;
-  _connectionState = THEPeerSessionStateNotConnected;
 
   return self;
 }
 
-- (void)changeState:(THEPeerSessionState)newState
+-(void)dealloc
 {
-  @synchronized(self)
-  {
-    assert([stateChanges[@(_connectionState)] containsObject:@(newState)]);
-    NSLog(@"%@ session: stateChange:%lu->%lu %@", 
-      _sessionType, (unsigned long)_connectionState, (unsigned long)newState, _remotePeerIdentifier
-    );
-    _connectionState = newState;
-  }
-}
-
-- (void)dealloc
-{
+  count--;
   assert(_connectionState == THEPeerSessionStateNotConnected);
 }
 
@@ -135,8 +111,7 @@ static NSDictionary *stateChanges = nil;
 
     assert(_relay == nil && _session == nil);
 
-    NSLog(@"%@ session: connect", _sessionType);
-    [self changeState:THEPeerSessionStateConnecting];
+    _connectionState = THEPeerSessionStateConnecting;
 
     _relay = [self newSocketRelay];
 
@@ -153,11 +128,7 @@ static NSDictionary *stateChanges = nil;
   {
     // Free up the resources we need for an active connection
 
-    if (_connectionState == THEPeerSessionStateNotConnected)
-      return;
-
-    NSLog(@"%@ session: disconnect", _sessionType);
-    [self changeState:THEPeerSessionStateNotConnected];
+    _connectionState = THEPeerSessionStateNotConnected;
 
     if (_relay != nil)
     {
@@ -186,11 +157,6 @@ static NSDictionary *stateChanges = nil;
 -(THEMultipeerSocketRelay *)newSocketRelay
 {
   return nil;
-}
-
-- (void)onLinkFailure
-{
-  // Nothing for base/server class to do here
 }
 
 // MCSessionDelegate
@@ -227,26 +193,27 @@ static NSDictionary *stateChanges = nil;
   {
     case MCSessionStateNotConnected:
     {
-      NSLog(@"%@ session: not connected %@", _sessionType, _remotePeerIdentifier);
-      [self onLinkFailure];
+      NSLog(@"%@ (base) session: not connected", _sessionType);
+      [self disconnect];
     }
     break;
 
     case MCSessionStateConnecting:
     {
-      //NSLog(@"%@ session: connecting", _sessionType);
+      //NSLog(@"%@ (base) session: connecting", _sessionType);
       assert(_connectionState == THEPeerSessionStateConnecting);
     }
     break;
 
     case MCSessionStateConnected:
     {
-      //NSLog(@"%@ session: connected", _sessionType);
+      //NSLog(@"%@ (base) session: connected", _sessionType);
 
       @synchronized(self)
       {
-        NSLog(@"%@ session: connected", _sessionType);
-        [self changeState:THEPeerSessionStateConnected];
+        assert(_connectionState == THEPeerSessionStateConnecting);
+
+        _connectionState = THEPeerSessionStateConnected;
 
         // Start the server output stream.
         NSError * error;

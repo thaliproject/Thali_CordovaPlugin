@@ -28,7 +28,7 @@
 #import <Foundation/Foundation.h>
 
 #import "THEAppContext.h"
-#import "THEMultipeerDiscoveryDelegate.h"
+#import "THEMultipeerSessionDelegate.h"
 
 // Wraps all the functionality of the networking stack and presents to the upper layers.
 // Contains both client and server members which will discover and connect (the client) and
@@ -39,7 +39,7 @@
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      peerIdentifier:(NSString *)peerIdentifier
                            peerName:(NSString *)peerName
-                  discoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)delegate;
+                    sessionDelegate:(id<THEMultipeerSessionDelegate>)delegate;
 
 // Starts multipeer session both discovering and advertising
 - (void)start;
@@ -58,6 +58,5 @@
 
 // Kill the connection without clean-up. Testing only !!
 - (BOOL)killConnection:(NSString *)peerIdentifier;
-
 
 @end

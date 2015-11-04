@@ -29,12 +29,13 @@
 @protocol THEMultipeerClientSocketRelayDelegate <NSObject>
 
 // Called when the client relay succesfully established it's listening port
-- (void)didListenWithLocalPort:(uint)port;
+- (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier;
 
 // Called when the client relay fails to listen
-- (void)didNotListenWithErrorMessage:(NSString *)errorMsg;
+- (void)didNotListenWithErrorMessage:(NSString *)errorMsg 
+                  withPeerIdentifier:(NSString*)peerIdentifier;
 
-// Called when the client is closed
-- (void)didDisconnectFromPeer;
+// Called when the socket is disconnected (usually by the app)
+- (void)didDisconnectFromPeer:(NSString *)peerIdentifier;
 
 @end
