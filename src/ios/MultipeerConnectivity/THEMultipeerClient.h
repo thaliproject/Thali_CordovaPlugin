@@ -37,14 +37,11 @@
 - (id)initWithPeerId:(MCPeerID *)peerId
   withPeerIdentifier:(NSString *)peerIdentifier
      withServiceType:(NSString *)serviceType 
-withDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate;
+    withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate;
 
 // Start and stop the client (i.e. the peer discovery process)
 - (void)start;
 - (void)stop;
-
-// Restart browsing without killing existing sessions
-- (void)restart;
 
 // Connect to a remote peer identified by the application level identifier,
 - (BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 

@@ -48,7 +48,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   NSString *_serviceType;
 
   // Delegate that will be informed when we discover a server
-  id<THEMultipeerDiscoveryDelegate>  _multipeerDiscoveryDelegate;
+  id<THEMultipeerSessionDelegate>  _multipeerSessionDelegate;
 
   // Dict of all the servers ids we're current aware against their session states
   THESessionDictionary *_clientSessions;
@@ -57,7 +57,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 - (id)initWithPeerId:(MCPeerID *)peerId 
                      withPeerIdentifier:(NSString *)peerIdentifier
                         withServiceType:(NSString *)serviceType 
-                  withDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate
+             withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate
 {
   self = [super init];
   if (!self)
@@ -71,7 +71,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   _serviceType = serviceType;
   _localPeerIdentifier = peerIdentifier;
 
-  _multipeerDiscoveryDelegate = discoveryDelegate;
+  _multipeerSessionDelegate = multipeerSessionDelegate;
 
   return self;
 }
@@ -81,37 +81,21 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   // Start with a blank sheet of clients
   _clientSessions = [[THESessionDictionary alloc] init];
 
+  // Kick off the peer discovery process
   _nearbyServiceBrowser = [[MCNearbyServiceBrowser alloc] 
                              initWithPeer:_localPeerId 
                               serviceType:_serviceType];
   [_nearbyServiceBrowser setDelegate:self];
-
-  [self startBrowsing];
-}
-
-- (void)startBrowsing
-{
-  // Kick off the peer discovery process
   [_nearbyServiceBrowser startBrowsingForPeers];
 }
 
 - (void)stop
 {
-  [self stopBrowsing];
   [_nearbyServiceBrowser setDelegate:nil];
-  _nearbyServiceBrowser = nil;
-  _clientSessions = nil;
-}
-
-- (void)stopBrowsing
-{
   [_nearbyServiceBrowser stopBrowsingForPeers];
-}
+  _nearbyServiceBrowser = nil;
 
-- (void)restart
-{
-  [self stopBrowsing];
-  [self startBrowsing];
+  _clientSessions = nil;
 }
 
 - (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
@@ -182,7 +166,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       if ([clientSession connectionState] != THEPeerSessionStateNotConnected)
       {
         success = YES;
-        [clientSession disconnectFromPeer];
+
+        [clientSession disconnect];
       }
     }
 
@@ -245,11 +230,9 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       clientSession = [[THEMultipeerClientSession alloc] 
                                     initWithLocalPeerID:_localPeerId 
                                        withRemotePeerID:peerID 
-                               withRemotePeerIdentifier:peerIdentifier
-                                  ];
+                               withRemotePeerIdentifier:peerIdentifier];
     }
 
-    NSLog(@"client: found peer: %@", [clientSession remotePeerIdentifier]);
     [clientSession setVisible:YES];
     return clientSession;
   }];
@@ -258,7 +241,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   {
     // A new peer or one that has become visible again. Only
     // contact delegate when the state changes (we get duplicates a lot)
-    [_multipeerDiscoveryDelegate didFindPeerIdentifier:[clientSession remotePeerIdentifier] 
+    [_multipeerSessionDelegate didFindPeerIdentifier:[clientSession remotePeerIdentifier] 
                                             peerName:info[PEER_NAME_KEY]];
   }
 }
@@ -279,7 +262,13 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     NSLog(@"client: lost peer: %@", [clientSession remotePeerIdentifier]);
 
     previouslyVisible = clientSession.visible;
-    [clientSession onPeerLost];
+
+    if (clientSession)
+    {
+      // disconnect will clear up any networking resources we currently hold
+      [clientSession disconnect];
+      [clientSession setVisible:NO];
+    }
 
     return clientSession;
   }];
@@ -289,7 +278,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     if (previouslyVisible == YES)
     {
       // Let interested parties know we lost a peer, only do this on a state change
-      [_multipeerDiscoveryDelegate didLosePeerIdentifier:[clientSession remotePeerIdentifier]];
+      [_multipeerSessionDelegate didLosePeerIdentifier:[clientSession remotePeerIdentifier]];
     }
   }
   else

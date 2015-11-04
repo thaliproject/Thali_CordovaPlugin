@@ -197,12 +197,8 @@ typedef enum relayStates {
 {
   @synchronized(self)
   {
-    if (_socket == nil)
-    {
-      // Must be a read that was in-flight when we killed the socket
-      return;
-    }
- 
+    assert(sock == _socket);
+
     // Enqueue, send directly if we're pending
     [_outputBuffer addObject:data];
     if (_outputBufferHasSpaceAvailable)
