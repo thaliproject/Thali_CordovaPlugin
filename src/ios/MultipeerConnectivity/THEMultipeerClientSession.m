@@ -133,7 +133,7 @@
     {
       NSLog(@"client session: Unexpected state (disconnected) in onLinkFailure");
       [NSException raise:@"Unexpected state" 
-        format:@"state %d was unexpected in onLinkFailure", [self connectionState]];
+        format:@"state %lu was unexpected in onLinkFailure", (unsigned long)[self connectionState]];
     }
   }
 }
