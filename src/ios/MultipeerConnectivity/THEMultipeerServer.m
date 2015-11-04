@@ -49,6 +49,9 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     // Map of sessions for all the peers we know about
     THESessionDictionary *_serverSessions;
+
+    // Timer reset callback
+    void (^_timerCallback)(void);
 }
 
 -(id) initWithPeerId:(MCPeerID *)peerId 
@@ -87,29 +90,49 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return self;
 }
 
--(void) start
+- (void)setTimerResetCallback:(void (^)(void))timerCallback
 {
-    NSLog(@"server: starting %@", _peerIdentifier);
-
-    _serverSessions = [[THESessionDictionary alloc] init];
-
-    // Start advertising our presence.. 
-    _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
-        initWithPeer:_localPeerId 
-       discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier } 
-         serviceType:_serviceType
-    ];
-
-    [_nearbyServiceAdvertiser setDelegate:self];
-    [_nearbyServiceAdvertiser startAdvertisingPeer];
+  _timerCallback = timerCallback;
 }
 
--(void) stop
+- (void)start
+{
+  NSLog(@"server: starting %@", _peerIdentifier);
+
+  _serverSessions = [[THESessionDictionary alloc] init];
+
+  _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
+      initWithPeer:_localPeerId 
+     discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier } 
+       serviceType:_serviceType
+  ];
+  [_nearbyServiceAdvertiser setDelegate:self];
+
+  [self startAdvertising];
+}
+
+- (void)startAdvertising
+{
+  // Start advertising our presence.. 
+  [_nearbyServiceAdvertiser startAdvertisingPeer];
+}
+
+- (void)stop
+{
+  [self stopAdvertising];
+  _nearbyServiceAdvertiser = nil;
+  _serverSessions = nil;
+}
+
+- (void)stopAdvertising
 {
   [_nearbyServiceAdvertiser stopAdvertisingPeer];
-  _nearbyServiceAdvertiser = nil;
-    
-  _serverSessions = nil;
+}
+
+- (void)restart
+{
+  [self stopAdvertising];
+  [self startAdvertising];
 }
 
 // MCNearbyServiceAdvertiserDelegate
@@ -121,6 +144,11 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                invitationHandler:(void (^)(BOOL accept, MCSession * session))invitationHandler
 {
   __block THEMultipeerServerSession *_serverSession = nil;
+
+  // Any invite at all will reset the timer (since an invite implies we're advertsing
+  // correctly).
+  if (_timerCallback)
+    _timerCallback();
  
   NSString *peerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
   
