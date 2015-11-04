@@ -3,8 +3,8 @@
     "name": "performance tests",
     "description": "basic performance tests for Thali apps framework",
     "tests": [
-        {"name": "testSendData.js", "timeout": "300000","data": {"timeout": "250000","rounds":"3","dataTimeout":"60000","dataAmount":"100000","conReTryTimeout":"2000","conReTryCount":"1"}},
-        {"name": "testSendData.js", "timeout": "300000","data": {"timeout": "250000","rounds":"3","dataTimeout":"60000","dataAmount":"100000","conReTryTimeout":"2000","conReTryCount":"1"}},
-       {"name": "testSendData.js", "timeout": "300000","data": {"timeout": "250000","rounds":"3","dataTimeout":"60000","dataAmount":"100000","conReTryTimeout":"2000","conReTryCount":"1"}}
+        {"name": "testSendData.js", "timeout": "450000","data": {"timeout": "440000","rounds":"1","dataTimeout":"30000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"5"}},
+      {"name": "testSendData.js", "timeout": "450000","data": {"timeout": "440000","rounds":"1","dataTimeout":"30000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"5"}},
+      {"name": "testSendData.js", "timeout": "450000","data": {"timeout": "440000","rounds":"1","dataTimeout":"30000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"5"}}
     ]
 }
