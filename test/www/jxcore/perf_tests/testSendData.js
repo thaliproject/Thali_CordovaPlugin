@@ -56,8 +56,32 @@ function testSendData(jsonData,name,dev,addressList) {
     this.doneCallback = function (data) {
         console.log('---- round done--------');
         var resultData = JSON.parse(data);
-        for (var i = 0; i < resultData.length; i++) {
-            self.resultArray.push(resultData[i]);
+
+        var peerAddress  = 0;
+        var peerTryCount = 0;
+        var areAllTestOk = true;
+
+        // if we use the address list, then we try getting all connections to be successful
+        // thus we re-try the ones that were not successful
+        // and we schedule the re-try to be handled after all other peers we have in the list currently
+        if(self.BluetoothAddressList) {
+            for (var i = 0; i < resultData.length; i++) {
+                if (resultData[i].result != "OK") {
+                    areAllTestOk = false;
+                    peerAddress = resultData[i].name;
+                    peerTryCount = resultData[i].tryCount;
+                }
+            }
+        }
+
+        // if all was ok, then we'll store the data values, othervise we'll put the peer back to the address list
+        if(areAllTestOk) {
+            for (var i = 0; i < resultData.length; i++) {
+                self.resultArray.push(resultData[i]);
+            }
+        }else if(peerAddress != 0){ //we gotta re-try it later
+            console.log('---- gotta redo : ' + peerAddress + ", try count now: " + peerTryCount);
+            self.BluetoothAddressList.push({"address":peerAddress,"tryCount":peerTryCount});
         }
 
         self.testStarted = false;
@@ -164,8 +188,6 @@ testSendData.prototype.stop = function(doReport) {
         this.testConnector = null;
     }
 
-
-
     this.doneAlready = true;
 }
 
@@ -187,7 +209,7 @@ testSendData.prototype.startWithNextDevice = function() {
         var fakePeer = {};
         fakePeer.peerAvailable = true;
 
-        var addressItem = this.BluetoothAddressList.pop();
+        var addressItem = this.BluetoothAddressList.shift();
         fakePeer.peerIdentifier = addressItem.address;
         fakePeer.tryCount       = (addressItem.tryCount + 1);
 
@@ -230,11 +252,18 @@ testSendData.prototype.weAreDoneNow = function() {
     console.log('weAreDoneNow , resultArray.length: ' + this.resultArray.length);
     this.doneAlready = true;
     this.sendReportNow();
+
+    if(this.testConnector != null){
+        this.testConnector.Stop();
+        this.testConnector.removeListener('done', this.doneCallback);
+        this.testConnector.removeListener('debug', this.debugCallback);
+        this.testConnector = null;
+    }
 }
 
 testSendData.prototype.sendReportNow = function() {
 
-        this.endTime = new Date();
+    this.endTime = new Date();
 
     //then get any data that has not been reported yet. i.e. the full rounds have not been done yet
     var resultData = this.testConnector.getResultArray();

@@ -183,8 +183,6 @@ testReConnect.prototype.stop = function(doReport) {
         this.testConnector = null;
     }
 
-
-
     this.doneAlready = true;
 }
 
@@ -206,7 +204,7 @@ testReConnect.prototype.startWithNextDevice = function() {
         var fakePeer = {};
         fakePeer.peerAvailable = true;
 
-        var addressItem = this.BluetoothAddressList.pop();
+        var addressItem = this.BluetoothAddressList.shift();
         fakePeer.peerIdentifier = addressItem.address;
         fakePeer.tryCount       = (addressItem.tryCount + 1);
 
@@ -249,6 +247,13 @@ testReConnect.prototype.weAreDoneNow = function() {
     console.log('weAreDoneNow , resultArray.length: ' + this.resultArray.length);
     this.doneAlready = true;
     this.sendReportNow();
+
+    if(this.testConnector != null){
+        this.testConnector.Stop();
+        this.testConnector.removeListener('done', this.doneCallback);
+        this.testConnector.removeListener('debug', this.debugCallback);
+        this.testConnector = null;
+    }
 }
 
 testReConnect.prototype.sendReportNow = function() {
@@ -259,6 +264,8 @@ testReConnect.prototype.sendReportNow = function() {
     for (var i = 0; i < resultData.length; i++) {
         this.resultArray.push(resultData[i]);
     }
+
+
 
     if(this.BluetoothAddressList){
         for(var ii = 0; ii < this.BluetoothAddressList.length; ii++){
