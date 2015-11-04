@@ -38,13 +38,7 @@
       withServiceType:(NSString *)serviceType; 
 
 // Start/stop advertising
-- (void)start;
-- (void)stop;
-
-// Restart advertising without killing existing sessions
-- (void)restart;
-
-// Set reset callback for managing restarts
-- (void)setTimerResetCallback:(void (^)(void))timerCallback;
+- (void) start;
+- (void) stop;
 
 @end

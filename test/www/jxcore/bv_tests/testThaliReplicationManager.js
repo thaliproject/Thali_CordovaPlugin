@@ -207,7 +207,7 @@ test('ThaliReplicationManager replicates database', function (t) {
         mydevicename = deviceName;
         mydoc.data = mydevicename;
         // Use blob to ensure we can transfer large files
-        mydoc.blob = randomstring.generate(1024 * 1024);
+        mydoc.blob = randomstring.generate(365 * 1024);
 
         var r = db.put(mydoc, function (err, result) {
           err = err ? " (" + err + ")" : "";
@@ -218,6 +218,8 @@ test('ThaliReplicationManager replicates database', function (t) {
 
     var app = express();
     app.disable('x-powered-by');
+    app.use(bodyParser.json());
+    app.use(bodyParser.urlencoded({ extended: true }));
     app.use('/db', require('express-pouchdb')(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
     app.listen(4242, function() {
       // Start replication

@@ -26,7 +26,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "THEMultipeerDiscoveryDelegate.h"
+#import "THEMultipeerSessionDelegate.h"
 #import "THEPeerBluetoothDelegate.h"
 
 // Callback that will be called when the lower levels have established
@@ -34,7 +34,7 @@
 typedef void(^ConnectCallback)(NSString *error, uint port);
 
 // THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerDiscoveryDelegate, THEPeerBluetoothDelegate>
+@interface THEAppContext : NSObject <THEMultipeerSessionDelegate, THEPeerBluetoothDelegate>
 
 // Class singleton.
 + (instancetype)singleton;
