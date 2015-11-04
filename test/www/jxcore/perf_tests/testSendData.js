@@ -103,6 +103,8 @@ function testSendData(jsonData,name,dev,addressList) {
         }
 
         console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
+
+
         for (var i = 0; i < peers.length; i++) {
             var peer = peers[i];
             if ((!self.foundPeers[peer.peerIdentifier]) || (!self.foundPeers[peer.peerIdentifier].doneAlready)) {
@@ -210,6 +212,7 @@ testSendData.prototype.startWithNextDevice = function() {
         fakePeer.peerAvailable = true;
 
         var addressItem = this.BluetoothAddressList.shift();
+        fakePeer.peerName       = addressItem.address;
         fakePeer.peerIdentifier = addressItem.address;
         fakePeer.tryCount       = (addressItem.tryCount + 1);
 

@@ -88,6 +88,7 @@ function testReConnect(jsonData,name,dev,addressList) {
     this.foundPeers = {};
     this.resultArray = [];
 
+
     this.peerAvailabilityChanged = function(peers) {
 
         //we have address list, so we use it instead

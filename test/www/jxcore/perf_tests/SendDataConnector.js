@@ -63,7 +63,7 @@ SendDataConnector.prototype.ReStart = function(peer) {
         this.clientSocket.end()
         this.clientSocket = null;
     }
-    console.log('Connect[' + this.tryRounds + '] to : ' + this.peer.peerName + 'Available: '  + this.peer.peerAvailable);
+    console.log('Connect[' + this.tryRounds + '] to : ' + this.peer.peerIdentifier + 'Available: '  + this.peer.peerAvailable);
     this.doConnect(this.peer);
 }
 
@@ -231,7 +231,7 @@ SendDataConnector.prototype.tryAgain = function() {
             return;
         }
 
-        console.log("re-try now : " + self.peer.peerName);
+        console.log("re-try now : " + self.peer.peerIdentifier);
         self.reTryTimer = null
         self.ReStart(self.peer);
     }, self.reTryTimeout);
@@ -246,7 +246,7 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
 
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;
-    this.resultArray.push({"name":this.peer.peerName,"time":responseTime,"result":this.endReason,"connections":this.connectionCount});
+    this.resultArray.push({"name":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount});
 
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
 
