@@ -69,6 +69,8 @@ PerfTestFramework.prototype.addDevice = function(device) {
     //do we already have it added
     if(this.isDeviceAlreadyAdded(deviceName)){
         console.log(this.os + ' ' + deviceName + ' got re-connected event  ####################################################');
+        //need to replace the device to get new socket !!
+        this.testDevices[deviceName] = device;
         return true;
     }
 

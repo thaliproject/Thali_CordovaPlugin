@@ -27,8 +27,8 @@ process.on('unhandledRejection', function(err) {
 });
 
 //IPAddressToFile is left here for debugging purposes, it gives you quick way on seeing the IP address used
-//var IPAddressToFile = require('./IPAddressToFile');
-//IPAddressToFile();
+var IPAddressToFile = require('./IPAddressToFile');
+IPAddressToFile();
 
 var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');
@@ -61,6 +61,9 @@ if (!devicesObject.honorCount) {
 io.on('connection', function(socket) {
   console.log("got connection ");
 
+  socket.on('close', function(){
+    console.log("Socket closed");
+  });
   socket.on('present', function(msg){
     var presentObj = JSON.parse(msg);
     if(!presentObj.os || !presentObj.name  || !presentObj.type ){
