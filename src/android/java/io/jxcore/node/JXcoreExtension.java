@@ -23,6 +23,7 @@ public class JXcoreExtension {
     public final static String EVENTVALUESTRING_WIFI          = "isWiFi";
 
     public final static String METHODSTRING_SHOWTOAST         = "ShowToast";
+    public final static String METHODSTRING_GETBTADDRESS      = "GetBluetoothAddress";
 
     public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
     public final static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
@@ -34,7 +35,30 @@ public class JXcoreExtension {
     public static void LoadExtensions() {
 
       //Jukka's stuff
-      jxcore.RegisterMethod(METHODSTRING_SHOWTOAST, new JXcoreCallback() {
+        final BtConnectorHelper mBtConnectorHelper = new BtConnectorHelper();
+
+        jxcore.RegisterMethod(METHODSTRING_GETBTADDRESS, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                String btAddressString = mBtConnectorHelper.GetBluetoothAddress();
+
+                if (btAddressString == null) {
+                    args.add("returned Bluetooth address is null");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
+                }
+
+                //all is well, so lets return null as first argument
+                args.add(null);
+                args.add(btAddressString);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+        jxcore.RegisterMethod(METHODSTRING_SHOWTOAST, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -63,7 +87,6 @@ public class JXcoreExtension {
           }
       });
 
-      final BtConnectorHelper mBtConnectorHelper = new BtConnectorHelper();
 
       jxcore.RegisterMethod(METHODSTRING_STARTBROADCAST, new JXcoreCallback() {
           @Override
