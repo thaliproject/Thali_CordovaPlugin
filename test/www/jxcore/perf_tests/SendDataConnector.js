@@ -63,6 +63,11 @@ SendDataConnector.prototype.ReStart = function(peer) {
         this.clientSocket.end()
         this.clientSocket = null;
     }
+
+    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
+        console.log("Disconnected by Mobile call");
+    });
+
     console.log('Connect[' + this.tryRounds + '] to : ' + this.peer.peerIdentifier + 'Available: '  + this.peer.peerAvailable);
     this.doConnect(this.peer);
 }
@@ -252,7 +257,6 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;
     this.resultArray.push({"name":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount,"tryCount":this.peer.tryCount});
-
 
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
 

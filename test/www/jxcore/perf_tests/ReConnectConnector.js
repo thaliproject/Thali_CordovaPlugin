@@ -63,6 +63,10 @@ ReConnectConnector.prototype.ReStart = function(peer) {
         this.clientSocket = null;
     }
 
+    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
+        console.log("Disconnected by Mobile call");
+    });
+
     console.log("do connect after : " + this.reTryTimeout + " ms.");
 
     this.ConnectTimer= setTimeout(function () {
@@ -286,7 +290,7 @@ ReConnectConnector.prototype.oneRoundDoneNow = function() {
 
 ReConnectConnector.prototype.getCurrentTest = function() {
     if(!this.peer){
-        return;
+        return NULL;
     }
 
     return {"connections":this.peer.tryCount, "name":this.peer.peerIdentifier,"time":0,"result":"Fail"};
