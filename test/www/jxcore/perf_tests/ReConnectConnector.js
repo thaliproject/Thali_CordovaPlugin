@@ -115,6 +115,10 @@ ReConnectConnector.prototype.Stop = function() {
 ReConnectConnector.prototype.doConnect = function(peer) {
     var self = this;
 
+    if(!this.peer){
+        return;
+    }
+
     if(this.stopped){
         return;
     }
@@ -171,6 +175,11 @@ ReConnectConnector.prototype.doConnect = function(peer) {
                     self.tryAgain();
                 }
             });
+        }else{
+            console.log("Port in invalid : " + port);
+            if(!self.disconnecting) {
+                self.tryAgain();
+            }
         }
     });
 }
@@ -205,6 +214,10 @@ ReConnectConnector.prototype.resetDataTimeout = function(peer) {
 
 ReConnectConnector.prototype.tryAgain = function() {
     var self = this;
+
+    if(!this.peer){
+        return;
+    }
 
     if(this.stopped){
         return;
@@ -271,6 +284,14 @@ ReConnectConnector.prototype.oneRoundDoneNow = function() {
     this.weAreDoneNow();
 }
 
+ReConnectConnector.prototype.getCurrentTest = function() {
+    if(!this.peer){
+        return;
+    }
+
+    return {"connections":this.peer.tryCount, "name":this.peer.peerIdentifier,"time":0,"result":"Fail"};
+}
+
 ReConnectConnector.prototype.getResultArray = function() {
     return this.resultArray;
 }
@@ -288,6 +309,7 @@ ReConnectConnector.prototype.weAreDoneNow = function() {
     var tmpArr = this.resultArray;
     this.resultArray = [];
 
+    this.peer = null;
     this.emit('done', JSON.stringify(tmpArr));
 }
 

@@ -167,6 +167,11 @@ SendDataConnector.prototype.doConnect = function(peer) {
                     self.tryAgain();
                 }
             });
+        }else{
+            console.log("Port in invalid : " + port);
+            if(!self.disconnecting) {
+                self.tryAgain();
+            }
         }
     });
 }
@@ -246,7 +251,8 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
 
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;
-    this.resultArray.push({"name":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount});
+    this.resultArray.push({"name":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount,"tryCount":this.peer.tryCount});
+
 
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
 
@@ -269,6 +275,14 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
     this.weAreDoneNow();
 }
 
+SendDataConnector.prototype.getCurrentTest = function() {
+    if(!this.peer){
+        return;
+    }
+
+    return {"connections":this.peer.tryCount, "name":this.peer.peerIdentifier,"time":0,"result":"Fail"};
+}
+
 SendDataConnector.prototype.getResultArray = function() {
     return this.resultArray;
 }
@@ -285,7 +299,7 @@ SendDataConnector.prototype.weAreDoneNow = function() {
 
     var tmpArr = this.resultArray;
     this.resultArray = [];
-
+    this.peer = null;
     this.emit('done', JSON.stringify(tmpArr));
 }
 
