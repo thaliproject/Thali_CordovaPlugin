@@ -1,6 +1,6 @@
 #!/bin/sh
 
-### START - JXcore Test Server --------
+### START - JXcore Test Server --------..........................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -56,7 +56,7 @@ else
 fi
 
 # Either PerfTest_app.js or UnitTest_app.js
-TEST_TYPE="UnitTest_app.js"
+TEST_TYPE="PerfTest_app.js"
 
 # The line below is really supposed to be 'jx npm run setupUnit -- $SERVER_ADDRESS' but getting the last argument
 # passed through npm run and then into sh script seems to be a step too far. Eventually we could use an
