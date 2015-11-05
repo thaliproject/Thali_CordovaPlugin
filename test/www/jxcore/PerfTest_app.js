@@ -36,19 +36,33 @@ var weHaveFinished = false;
 var myName = "DEV" + Math.round((Math.random() * (10000)));
 var Coordinator = new CoordinatorConnector();
 
-Mobile('GetBluetoothAddress').callNative(function (err,address) {
+if(jxcore.utils.OSInfo().isAndroid) {
+    Mobile('GetBluetoothAddress').callNative(function (err, address) {
+        if (err) {
+            console.log("GetBluetoothAddress returned error: " + err + ", address : " + address);
+            Coordinator.close();
+            return;
+        }
 
-    if(err) {
-        console.log("GetBluetoothAddress returned error: " + err + ", address : " +address );
-        Coordinator.close();
-        return;
-    }
+        bluetoothAddress = address;
+        console.log("Got Device Bluetooth address" + bluetoothAddress);
+        Mobile('GetDeviceName').callNative(function (name) {
 
-    bluetoothAddress = address;
-    console.log("Got Device Bluetooth address" + bluetoothAddress);
+            myName = name + "_PT" + Math.round((Math.random() * (10000)));
+            ;
+            console.log('my name is : ' + myName);
+            testUtils.setMyName(myName);
+
+            //console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
+            Coordinator.init(parsedJSON[0].address, 3000);
+            console.log('attempting to connect to test coordinator');
+        });
+    });
+}else{
+    bluetoothAddress = "C0:FF:FF:EE:42:00";
     Mobile('GetDeviceName').callNative(function (name) {
-
-        myName = name + "_PT" + Math.round((Math.random() * (10000)));;
+        myName = name + "_PT" + Math.round((Math.random() * (10000)));
+        ;
         console.log('my name is : ' + myName);
         testUtils.setMyName(myName);
 
@@ -56,7 +70,7 @@ Mobile('GetBluetoothAddress').callNative(function (err,address) {
         Coordinator.init(parsedJSON[0].address, 3000);
         console.log('attempting to connect to test coordinator');
     });
-});
+}
 
 Coordinator.on('error', function (data) {
 
