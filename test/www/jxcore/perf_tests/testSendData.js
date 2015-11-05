@@ -268,16 +268,28 @@ testSendData.prototype.sendReportNow = function() {
 
     this.endTime = new Date();
 
-    //then get any data that has not been reported yet. i.e. the full rounds have not been done yet
-    var resultData = this.testConnector.getResultArray();
-    for (var i = 0; i < resultData.length; i++) {
-        this.resultArray.push(resultData[i]);
-    }
+    if(this.testConnector != null) {
+        var isAlreadyAdded = false;
+        var currentTest = this.testConnector.getCurrentTest();
 
+        //then get any data that has not been reported yet. i.e. the full rounds have not been done yet
+        var resultData = this.testConnector.getResultArray();
+        for (var i = 0; i < resultData.length; i++) {
+            this.resultArray.push(resultData[i]);
+
+            if(currentTest && currentTest.name == resultData[i].name){
+                isAlreadyAdded = true;
+            }
+        }
+
+        if(!isAlreadyAdded){
+            this.resultArray.push(currentTest);
+        }
+    }
     if(this.BluetoothAddressList){
         for(var ii = 0; ii < this.BluetoothAddressList.length; ii++){
             if(this.BluetoothAddressList[ii]){
-                this.resultArray.push({"name":this.BluetoothAddressList[ii].address,"time":0,"result":"Fail","connections":this.BluetoothAddressList[ii].tryCount});
+                this.resultArray.push({"connections":this.BluetoothAddressList[ii].tryCount, "name":this.BluetoothAddressList[ii].address,"time":0,"result":"Fail"});
             }
         }
     }

@@ -18,13 +18,6 @@ var TestFrameworkClient = require('./perf_tests/PerfTestFramework');
 /*----------------------------------------------------------------------------------
  code for connecting to the coordinator server
  -----------------------------------------------------------------------------------*/
-var myName = "DEV" + Math.round((Math.random() * (10000)));
-testUtils.setMyName(myName);
-
-console.log('my name is : ' + myName);
-//console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
-
-var Coordinator = new CoordinatorConnector();
 
 process.on('uncaughtException', function(err) {
     console.log("We have an uncaught exception, good bye: " + JSON.stringify(err));
@@ -36,10 +29,34 @@ process.on('unhandledRejection', function(err) {
     Coordinator.close();
 });
 
-Coordinator.init(parsedJSON[0].address, 3000);
-console.log('attempting to connect to test coordinator');
-
+var bluetoothAddress = "";
+var weHaveMadeInitialConnection= false;
 var weHaveFinished = false;
+
+var myName = "DEV" + Math.round((Math.random() * (10000)));
+var Coordinator = new CoordinatorConnector();
+
+Mobile('GetBluetoothAddress').callNative(function (err,address) {
+
+    if(err) {
+        console.log("GetBluetoothAddress returned error: " + err + ", address : " +address );
+        Coordinator.close();
+        return;
+    }
+
+    bluetoothAddress = address;
+    console.log("Got Device Bluetooth address" + bluetoothAddress);
+    Mobile('GetDeviceName').callNative(function (name) {
+
+        myName = name + "_PT" + Math.round((Math.random() * (10000)));;
+        console.log('my name is : ' + myName);
+        testUtils.setMyName(myName);
+
+        //console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
+        Coordinator.init(parsedJSON[0].address, 3000);
+        console.log('attempting to connect to test coordinator');
+    });
+});
 
 Coordinator.on('error', function (data) {
 
@@ -49,10 +66,15 @@ Coordinator.on('error', function (data) {
     }
 
     var errData = JSON.parse(data);
-  console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
+    console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
 
     if(errData.type == "connect_error") {
         testUtils.printNetworkInfo();
+
+        if(weHaveMadeInitialConnection){
+            weHaveMadeInitialConnection = false;
+            testUtils.reFreshWifi();
+        }
     }
   testUtils.logMessageToScreen('Client error: ' + errData.type);
 });
@@ -62,7 +84,7 @@ Coordinator.on('error', function (data) {
  -----------------------------------------------------------------------------------*/
 var TestFramework = new TestFrameworkClient(myName);
 TestFramework.on('done', function (data) {
-  console.log('done, sending data to server');
+  console.log('done, now sending data to server');
   Coordinator.sendData(data);
 });
 
@@ -70,7 +92,6 @@ TestFramework.on('end', function (data) {
     console.log('end, event received');
     Coordinator.close();
 });
-
 
 TestFramework.on('debug', function (data) {
   testUtils.logMessageToScreen(data);
@@ -86,24 +107,28 @@ Coordinator.on('too_late', function (data) {
     TestFramework.stopAllTests(false);
 
     Coordinator.close();
-    //let let the CI know that we did finish
+    //lets let the CI know that we did finish
     console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
 });
 
 Coordinator.on('connect', function () {
-    console.log('Client has connected to the server!');
+    weHaveMadeInitialConnection = true;
+    console.log('Coordinator is now connected to the server!');
     testUtils.logMessageToScreen('connected to server');
-    Coordinator.present(myName,"perftest");
+    Coordinator.present(myName,"perftest",bluetoothAddress);
+
+    testUtils.printNetworkInfo();
 });
 
+
 Coordinator.on('command', function (data) {
-  console.log('command received : ' + data);
-  TestFramework.handleCommand(data);
+    console.log('command received : ' + data);
+    TestFramework.handleCommand(data);
 });
 
 Coordinator.on('closed', function () {
-    console.log('The client has closed!');
+    console.log('The Coordinator has closed!');
     //we need to stop & close any tests we are running here
      TestFramework.stopAllTests(false);
      testUtils.logMessageToScreen('fully-closed');
@@ -114,7 +139,7 @@ Coordinator.on('closed', function () {
 
 
 Coordinator.on('disconnect', function () {
-    console.log('The client has disconnected!');
+    console.log('The Coordinator has disconnected!');
 });
 
 // Log that the app.js file was loaded.

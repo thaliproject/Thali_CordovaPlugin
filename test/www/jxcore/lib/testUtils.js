@@ -26,6 +26,26 @@ exports.toggleRadios = function(on) {
   });
 };
 
+exports.reFreshWifi = function() {
+  if (!jxcore.utils.OSInfo().isMobile) {
+    return;
+  }
+  console.log("Turning Wifi off");
+  Mobile.toggleWiFi(false, function(err) {
+    if (err) {
+      console.log("We could not turn wifi off! - " + err);
+    }
+    console.log("Turning Wifi back on");
+    Mobile.toggleWiFi(true, function(err) {
+      if (err) {
+        console.log("We could turn wifi back on! - " + err);
+      }
+
+      console.log("toggleWiFi finished");
+    });
+  });
+};
+
 exports.printNetworkInfo = function() {
 
   console.log("printNetworkInfo");

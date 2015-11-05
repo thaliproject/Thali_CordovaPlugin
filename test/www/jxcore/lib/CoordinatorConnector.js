@@ -7,24 +7,17 @@ var events = require('events');
 var socketIo = require('socket.io-client');
 
 function CoordinatorConnector() {
-    this.wasClosed = false;
-
 }
-
 CoordinatorConnector.prototype = new events.EventEmitter;
 
 CoordinatorConnector.prototype.init = function (ipAddress, port){
     var self = this;
-
-    this.wasClosed = false;
-    this.connectAddress = ipAddress;
-    this.connectPort = port;
-
     var options = {
-        pingTimeout: 3599000,
-        pingInterval: 60000,
         transports: ['websocket']
     };
+
+//pingTimeout: 3599000,
+// pingInterval: 60000,
 
     this.socket = socketIo('http://' + ipAddress + ':' + port + '/',options);
     this.socket.on('connect', function () {
@@ -79,12 +72,10 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
         console.log('DBG, CoordinatorConnector start_tests called');
         self.emit('start_tests',data);
     });
-
 };
 
 CoordinatorConnector.prototype.close = function(){
     console.log('CoordinatorConnector close called');
-    this.wasClosed = true;
     this.socket.close();
     this.emit('closed');
 };

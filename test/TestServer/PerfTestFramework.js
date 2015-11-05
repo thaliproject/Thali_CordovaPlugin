@@ -7,14 +7,20 @@ var fs = require('fs');
 var events = require('events');
 var configFile = require('./Config_PerfTest.json');
 
+var resultWriter = null;
+// used for debugging the repoort data,
+// For CI test this must be set to null
+//var ResultToFile = require('./ResultToFile');
+//resultWriter = new ResultToFile();
+
 /*
  {
  "name": "performance tests",
  "description": "basic performance tests for Thali apps framework",
  "tests": [
- {"name": "testFindPeers.js", "timeout": "30000","data": {"timeout": "20000"}},
- {"name": "testReConnect.js", "timeout": "700000","data": {"timeout": "600000","rounds":"6","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
- {"name": "testSendData.js", "timeout": "7000000","data": {"timeout": "6000000","rounds":"3","dataAmount":"1000000","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
+ {"name": "testFindPeers.js", "servertimeout": "30000","data": {"timeout": "20000"}},
+ {"name": "testReConnect.js", "servertimeout": "700000","data": {"timeout": "600000","rounds":"1","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"1"}},
+ {"name": "testSendData.js", "servertimeout": "7000000","data": {"timeout": "6000000","rounds":"1","dataAmount":"1000000","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"5"}},
 
  ]
  }
@@ -24,7 +30,7 @@ var configFile = require('./Config_PerfTest.json');
   - data: is data that gets sent to the clients devices, and defines what they need to do
 
    additionally with  re-Connect test data
-   - rounds defines how many rounds of connection established needs to be performed for each peers
+   - rounds defines how many rounds of connection established needs to be performed for each peers (use 1 for now)
    - dataTimeout defines timeout which after data sent is determined to be lost, and the connection is disconnected (and reconnected, data send starts from the point we know we managed to deliver to other side)
    - conReTryTimeout defines timeout value used between disconnection (by error) and re-connection
    - conReTryCount defined on how many times we re-try establishing connections before we give up.
@@ -43,12 +49,15 @@ function PerfTestFramework(platform,count, honourCount) {
     this.currentTest = -1;
 
     if(honourCount) {
-        console.log('Star ' + this.os + ' tests : ' + configFile.name + ", start tests with " + count + " devices");
+        if(count == 0){
+            return;
+        }
+        console.log('Start ' + this.os + ' tests : ' + configFile.name + ", start tests with " + count + " devices");
     }else{
-        console.log('Star ' + this.os + ' tests : ' + configFile.name + ", start tests with timer");
+        console.log('Start ' + this.os + ' tests : ' + configFile.name + ", start tests with timer");
     }
     for(var i=0; i < configFile.tests.length; i++) {
-        console.log('Test[' + i + ']: ' + configFile.tests[i].name + ', timeout : ' + configFile.tests[i].timeout + ", data : " + JSON.stringify(configFile.tests[i].data));
+        console.log('Test[' + i + ']: ' + configFile.tests[i].name + ', timeout : ' + configFile.tests[i].servertimeout + ", data : " + JSON.stringify(configFile.tests[i].data));
     }
 }
 
@@ -280,7 +289,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
            }
         }
 
-        if(configFile.tests[this.currentTest].timeout) {
+        if(configFile.tests[this.currentTest].servertimeout) {
                 this.timerId = setTimeout(function() {
                     console.log('timeout now');
                     if(!self.doneAlready)
@@ -299,7 +308,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
                             }
                         },60000); // hard coded minute
                     }
-                }, configFile.tests[this.currentTest].timeout);
+                }, configFile.tests[this.currentTest].servertimeout);
 
         }
         return;
@@ -307,7 +316,9 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
     console.log(this.os + ' All tests are done, preparing test report. , time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
 
-
+    if(resultWriter != null) {
+        resultWriter.writeFile(this.testResults, "FullRaport.json");
+    }
     var results = {};
     var combined ={};
 
@@ -324,45 +335,57 @@ PerfTestFramework.prototype.doNextTest  = function(){
             } else if (this.testResults[i].data.connectList) {
 
                 var ConnectionCount = 0;
+                var timeoutCount = 0;
                 var errorCount = 0;
                 var tmpConnectList = [];
                 this.testResults[i].data.connectList.forEach(function(roundResult) {
 
+                    if(!roundResult || roundResult == null){
+                        return;
+                    }
+
                     if (roundResult.result == "OK") {
                         tmpConnectList.push(roundResult);
-                        ConnectionCount = ConnectionCount + roundResult.connections;
-                    } else {
-                        errorCount++;
+                    //    ConnectionCount = ConnectionCount + roundResult.connections;
+                    } else if(roundResult.connections){
+                        errCount++;
+                    }else{ // if connections is zero, then we never got to try to connect before we got timeout
+                        timeoutCount++;
                     }
                 });
 
                 results[this.testResults[i].device].connectList = this.extendArray(tmpConnectList, results[this.testResults[i].device].connectList);
                 results[this.testResults[i].device].connectErrorCount = errorCount;
-                if(results[this.testResults[i].device].connectList.length > 0){
-                    results[this.testResults[i].device].ConCount = ConnectionCount;
-                }
+               // results[this.testResults[i].device].ConCount = ConnectionCount;
+                results[this.testResults[i].device].timeoutCount = timeoutCount;
 
             } else if (this.testResults[i].data.sendList) {
 
                 var ConCount = 0;
                 var errCount = 0;
+                var timeoutCount = 0;
                 var tmpSendList = [];
                 this.testResults[i].data.sendList.forEach(function(roundResult) {
+
+                    if(!roundResult || roundResult == null){
+                        return;
+                    }
 
                     if (roundResult.result == "OK") {
                         //console.log("roundResult : " + JSON.stringify(roundResult));
                         tmpSendList.push(roundResult);
-                        ConCount = ConCount + roundResult.connections;
-                    } else {
+                  //      ConCount = ConCount + roundResult.connections;
+                    } else if(roundResult.connections){
                         errCount++;
+                    }else{ // if connections is zero, then we never got to try to connect before we got timeout
+                        timeoutCount++;
                     }
                 });
 
                 results[this.testResults[i].device].sendList = this.extendArray(tmpSendList, results[this.testResults[i].device].sendList);
                 results[this.testResults[i].device].sendErrorCount = errCount;
-                if(results[this.testResults[i].device].sendList.length > 0){
-                    results[this.testResults[i].device].ConCount = ConCount;
-                }
+                //results[this.testResults[i].device].ConCount = ConCount;
+                results[this.testResults[i].device].timeoutCount = timeoutCount;
 
                 //console.log("roundResult : " + results[this.testResults[i].device].sendList.length);
 
@@ -374,6 +397,9 @@ PerfTestFramework.prototype.doNextTest  = function(){
         }
     }
 
+    if(resultWriter != null) {
+        resultWriter.writeFile(results, "ProcessedResults.json");
+    }
 
     // to prevent ending disconnections etc on being included in reports
     var tmpDevicesList = this.testDevices;
@@ -406,9 +432,10 @@ PerfTestFramework.prototype.doNextTest  = function(){
             var line03 = devName + ' has ' + results[devName].connectList.length + ' connectList result , range ' + results[devName].connectList[0].time + ' ms to  '  + results[devName].connectList[(results[devName].connectList.length - 1)].time + " ms.";
 
             console.log(line03);
-            if(results[devName].connectList.length > 0 ) {
-                console.log("Failed connections " + results[devName].connectErrorCount + "(" + (results[devName].connectErrorCount * 100 / (results[devName].connectList.length + results[devName].connectErrorCount)) + "%)");
-            }
+
+            console.log("Failed connections " + results[devName].connectErrorCount + "(" + (results[devName].connectErrorCount * 100 / (results[devName].connectList.length + results[devName].connectErrorCount)) + "%)");
+            console.log("Never tried (test timeout) connections " + results[devName].timeoutCount + "(" + (results[devName].timeoutCount * 100 / (results[devName].connectList.length + results[devName].connectErrorCount) + results[devName].timeoutCount) + "%) of all ");
+
 
             var line04 = "100% : " + this.getValueOf(results[devName].connectList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].connectList,0.99)  + " ms, 95% : " + this.getValueOf(results[devName].connectList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].connectList,0.90) + " ms.";
 
@@ -425,9 +452,8 @@ PerfTestFramework.prototype.doNextTest  = function(){
             var line05 = devName + ' has ' + results[devName].sendList.length + ' sendList result , range ' + results[devName].sendList[0].time + ' ms to  '  + results[devName].sendList[(results[devName].sendList.length - 1)].time + " ms.";
 
             console.log(line05);
-            if(results[devName].sendList.length > 0 ) {
-                console.log("Failed connections " + results[devName].sendErrorCount + "(" + (results[devName].sendErrorCount * 100 / (results[devName].sendList.length + results[devName].sendErrorCount)) + "%)");
-            }
+            console.log("Failed connections " + results[devName].sendErrorCount + "(" + (results[devName].sendErrorCount * 100 / (results[devName].sendList.length + results[devName].sendErrorCount)) + "%)");
+            console.log("Never tried (test timeout) connections " + results[devName].timeoutCount + "(" + (results[devName].timeoutCount * 100 / (results[devName].sendList.length + results[devName].sendErrorCount) + results[devName].timeoutCount) + "%)");
 
             var line06 = "100% : " + this.getValueOf(results[devName].sendList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].sendList,0.99)  + " ms, 95 : " + this.getValueOf(results[devName].sendList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].sendList,0.90) + " ms.";
 

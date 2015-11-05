@@ -194,6 +194,11 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
             selectedDevice = new ServiceItem(toPeerId, toPeerId, toPeerId, "", "", "");
         }
 
+        if(!BluetoothAdapter.checkBluetoothAddress(selectedDevice.peerAddress)){
+            connectStatusCallback.ConnectionStatusUpdate("Bluetooth address for the device is invalid : " + selectedDevice.peerAddress, -1);
+            return;
+        }
+
         BTConnector tmpConn = mBTConnector;
         if (tmpConn == null) {
             connectStatusCallback.ConnectionStatusUpdate("Device connectivity not started, please call StartBroadcasting before attempting to connect", -1);
@@ -459,6 +464,9 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     @Override
     public void PeerDiscovered(ServiceItem serviceItem) {
         boolean wasPrevouslyAvailable = false;
+
+        Log.i("BtConnectorHelper","PeerDiscovered BtAddress : " + serviceItem.peerAddress + ", Name: " + serviceItem.peerName + ", WifiDirectName: " + serviceItem.deviceName + ", WifiDirect Address: " + serviceItem.deviceAddress  + ", peerId: " + serviceItem.peerId);
+
 
         for (ServiceItem lastItem : lastAvailableList) {
             if (lastItem != null && serviceItem.deviceAddress.equalsIgnoreCase(lastItem.deviceAddress)) {
