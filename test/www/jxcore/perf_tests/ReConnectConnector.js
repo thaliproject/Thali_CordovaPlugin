@@ -290,7 +290,7 @@ ReConnectConnector.prototype.oneRoundDoneNow = function() {
 
 ReConnectConnector.prototype.getCurrentTest = function() {
     if(!this.peer){
-        return NULL;
+        return;
     }
 
     return {"connections":this.peer.tryCount, "name":this.peer.peerIdentifier,"time":0,"result":"Fail"};
