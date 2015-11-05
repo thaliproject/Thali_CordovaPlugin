@@ -74,22 +74,27 @@ module.exports.stopListeningForAdvertisements = function() {
  *
  * | Error String | Description |
  * |--------------|-------------|
- * | app is malformed | The app object is null or doesn't match the app type |
- * | No Changing app without a stop | See previous paragraph. |
+ * | Bad Router | router is null or otherwise wasn't accepted by Express |
+ * | No Changing router without a stop | See previous paragraph. |
  * | No Wifi radio | This device doesn't support Wifi |
  * | Radio Turned Off | Wifi is turned off. |
  * | Unspecified Error with Radio infrastructure | Something went wrong trying to use WiFi. Check the logs. |
  *
- * @param app An Express app handler
- * @returns {Promise<null|Error>}
+ * @param {Object} router This is an Express Router object (for example, express-pouchdb is a router object) that the
+ * caller wants to advertise over Wi-Fi. The system will start a new server instance with this router at '/' so make
+ * sure your paths are set appropriately. The server will be hosted on an external address using whatever port is
+ * available. The selected port will be returned in the promise.
+ * @returns {Promise<number|Error>} If successful then the promise will return the portNumber where the router object
+ * has been attached on the external address. If failed then an Error object with one of the above strings will be
+ * returned.
  */
-module.exports.startUpdateAdvertisingAndListenForIncomingConnections = function(app) {
+module.exports.startUpdateAdvertisingAndListenForIncomingConnections = function(router) {
   return Promise.resolve();
 };
 
 /**
- * This method will stop advertising the peer's presence over the local Wi-Fi Infrastructure Mode discovery mechanism
- * (currently SSDP). This method will also stop the HTTP server started by the start method.
+ * This method MUST stop advertising the peer's presence over the local Wi-Fi Infrastructure Mode discovery mechanism
+ * (currently SSDP). This method MUST also stop the HTTP server started by the start method.
  *
  * So long as the device isn't advertising the peer and the server is stopped (even if the system was always in that
  * state) then this method MUST succeed.
@@ -116,9 +121,40 @@ module.exports.stopAdvertisingAndListeningForIncomingConnections = function() {
  */
 
 /**
+ * For the definition of this event please see
+ * {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}.
+ *
+ * The WiFi layer MUST NOT emit this event unless we are running on Linux, OS/X or Windows. In the case that we are
+ * running on those platforms then If we are running on those platforms then blueToothLowEnergy and blueTooth MUST
+ * both return radioState set to `doNotCare`. Also note that these platforms don't generally support a push based
+ * way to detect WiFi state (at least not without writing native code). So for now we can use polling and something
+ * like [network-scanner](https://www.npmjs.com/package/network-scanner) to give us some sense of the system's state.
+ *
+ * @public
+ * @event networkChanged
+ * @type {Object}
+ * @property {module:thaliMobileNative~NetworkChanged} networkChangedValue
+ *
+ */
+
+/**
+ * For the definition of this event please see
+ * {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
+ *
+ * This version applies to WiFi rather than the non-TCP transport.
+ *
+ * @public
+ * @event discoveryAdvertisingStateUpdateWifiEvent
+ * @type {object}
+ * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
+ */
+
+/**
  * Use this emitter to subscribe to events.
  *
  * @public
  * @fires event:wifiPeerAvailabilityChanged
+ * @fires event:networkChanged
+ * @fires discoveryAdvertisingStateUpdateWifiEvent
  */
 module.exports.emitter = new EventEmitter();

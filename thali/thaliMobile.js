@@ -27,30 +27,69 @@ get the bridges going.
 
 Big thanks to Ville who pushed for the idea that we should make everything into addresses and ports and thus
 hide connect from the higher layers.
+
+The more I work on this the more I'm convinced that this layer is pretty useless. In the end we will need to manage
+the wifi and non-tcp layers separately to deal with their various errors and retries. The problem is really just
+the higher layers.
  */
 
 /**
  * @file
  *
- * This is the primary interface for those who want to perform local discovery of devices over all possible
- * connection mediums including Wi-Fi infrastructure mode as well as whatever P2P radio mechanisms (BLE, Bluetooth,
- * etc.) that the device supports.
+ * This is the unified interface for managing both WiFi Infrastructure Mode (if available) and non-TCP/IP transport
+ * (if available) discovery and connectivity infrastructures. The programmer still has to turn on and off
+ * the WiFi and non-TCP/IP functionality separately. But there is a common infrastructure for updating advertising
+ * as well as for connecting to peers.
+ *
+ * We have chosen to not collapse the start and stop methods into a single method because the error handling is just
+ * too annoying.
  */
-
 
 /**
- * This will start listening for other peers both on Wi-Fi Infrastructure Mode and using whatever local non-TCP/IP
- * P2P mechanisms supported by the device.
+ * This just calls {@link module:thaliWifiInfrastructure.startListeningForAdvertisements}. See there for
+ * definition of behavior.
  *
- * If the Thali code expects the device's platform to support a particular
- * non-TCP/IP P2P mechanism (e.g. we expect Android devices to support BLE and Bluetooth) and if the necessary
- * radios are not present or not turned on than an error MUST be returned. If Thali can't find a WiFi radio or
- * the radio is turned off on a platform that has functioning non-TCP/IP P2P then an error MUST NOT be returned.
- *
- *
- *
- * @returns {}
+ * @returns {Promise<null|Error>}
  */
-module.exports.startListeningForAdvertisements = function() {
+module.exports.startListeningForAdvertisementsWifi = function() {
+  return Promise.resolve();
+};
+
+/**
+ * This just calls {@link module:thaliWifiInfrastructure.stopListeningForAdvertisements}. See there for
+ * definition of behavior.
+ *
+ * @returns {Promise<null|Error>}
+ */
+module.exports.stopListeningForAdvertisementsWifi = function() {
+  return Promise.resolve();
+};
+
+/**
+ * This just calls {@link module:thaliWifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections}. See
+ * there for definition of behavior.
+ *
+ * @param app An Express app handler
+ * @returns {Promise<null|Error>}
+ */
+module.exports.startUpdateAdvertisingAndListenForIncomingConnections = function(app) {
+  return Promise.resolve();
+};
+
+/**
+ * This just calls {@link module:thaliWifiInfrastructure.stopAdvertisingAndListeningForIncomingConnections}. See there
+ * for definition of behavior.
+ *
+ * @returns {Promise<null|Error>}
+ */
+module.exports.stopAdvertisingAndListeningForIncomingConnections = function() {
+  return Promise.resolve();
+};
+
+/**
+ * This will
+ * @returns {*}
+ */
+module.exports.updateAdvertising = function() {
   return Promise.resolve();
 };
