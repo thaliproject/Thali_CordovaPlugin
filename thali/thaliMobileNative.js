@@ -278,6 +278,11 @@
  * example is on Android where the app can go into the background reducing the power to the BLE radio which can make
  * the peer seem to disappear. But Bluetooth would still be on full power so a connect could still work. So this value
  * can at best be treated as a hint.
+ * @property {Number} portNumber If this value is not null then it means that a remote peer established a connection
+ * with this peer but that due to issues with the native layer (see our binding with iOS) this had to be modeled as if
+ * this peer created a TCP/IP connection to the remote peer. Therefore this peer MUST create a multiplex object
+ * connected to a TCP/IP client connected to this portNumber. That multiplex object will be configured to accept and
+ * handling incoming TCP/IP connections from the remote peer at the multiplex layer. Details in the multiplex specs.
  */
 
 /**

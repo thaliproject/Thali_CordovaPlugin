@@ -13,14 +13,7 @@ var Promise = require('lie');
  *
  * However it's not that simple unfortunately.  Some platforms (currently meaning iOS but we suspect Android may join)
  * cannot handle have two native connections
- * between two peers. For example, imagine that peer A wants to initiate a TCP/IP connection with peer B. Historically
- * the way we would try to handle this is by having peer A invite peer B to a MCSession and then establish two
- * output streams (one from each peer) and run the TCP/IP connection over it. If peer B should then decide that it
- * wanted to initiate a TCP connection to peer A then peer B would create a second MCSession and invite peer A to it.
- * The end result is that if both peer A and peer B both simultaneously wanted to establish TCP/IP sessions to each
- * other then they would create two independent MCSession objects between each other. However we have found
- * experimentally that at least as of iOS 8 if two peers establish two simultaneous MCSession objects and start to
- * move a lot of data over them then the output streams will start to randomly fail. To work around this we have to
+ * between two peers. See the binding spec for details. To work around this we have to
  * detect when there is an existing non-TCP connection with the desired peer and then re-use it. This works because
  * the multiplexer library is kind enough to allow for multiplexing full duplex node.js streams in either direction.
  */
@@ -81,9 +74,11 @@ IncomingConnectionsMultiplexer.prototype.start = function() {
  * @param {number} thaliMobileNativeIncomingTCPPort This is the client port that {@link module:thaliMobileNative} is
  * using to connect to IncomingConnectionsMultiplexer's port returned from start. The multiplex object will be used
  * to create connections from this device to the remote device.
- * @returns {Object} The multiplex o
+ * @returns {Object|Null} The multiplex object piped to the incoming TCP/IP connection using the client port
+ * specified in thaliMobileNativeIncomingTCPPort. If null then we do not currently have a connection whose client port
+ * matches the given value.
  */
-IncomingConnectionsMultiplexer.prototype.getMultipex = function(thaliMobileNativeIncomingTCPPort) {
+IncomingConnectionsMultiplexer.prototype.getMultiplex = function(thaliMobileNativeIncomingTCPPort) {
   return {};
 };
 
