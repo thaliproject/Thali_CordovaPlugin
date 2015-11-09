@@ -39,6 +39,7 @@ module.exports = function(addressOverride) {
           // Wi-Fi.
           if(interfaceName.indexOf("Wi-Fi") > -1){
               // this interface has only one ipv4 address
+              console.log(interfaceName + " = " + iface.address);
               return writeFiles(interfaceName, iface.address);
           }
 
