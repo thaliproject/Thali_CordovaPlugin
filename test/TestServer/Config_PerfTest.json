@@ -3,6 +3,6 @@
     "name": "performance tests",
     "description": "basic performance tests for Thali apps framework",
     "tests": [
-        {"name": "testFindPeers.js", "timeout": "250000","data": {"timeout": "200000","rounds":"1","dataTimeout":"30000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"5"}}
+        {"name": "testSendData.js", "servertimeout": "250000","data": {"timeout":"200000","rounds":"1","dataTimeout":"30000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"5"}}
     ]
 }

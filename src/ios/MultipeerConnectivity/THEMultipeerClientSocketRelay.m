@@ -46,14 +46,14 @@
       NSString *errorMsg = @"relay failed to listen";
 
       NSLog(@"client: %@", errorMsg);
-      [_delegate didNotListenWithErrorMessage:errorMsg withPeerIdentifier:_peerIdentifier];
+      [_delegate didNotListenWithErrorMessage:errorMsg];
 
       return NO;
     }
     else
     {
       UInt16 port = [_serverSocket localPort];
-      [_delegate didListenWithLocalPort:port withPeerIdentifier:_peerIdentifier];
+      [_delegate didListenWithLocalPort:port];
         
       return YES;
     }
@@ -79,7 +79,7 @@
   // The upper layer has closed the client socket
   NSLog(@"client: socket closed");
   [super socketDidDisconnect:sock withError:err];
-  [_delegate didDisconnectFromPeer:_peerIdentifier];
+  [_delegate didDisconnectFromPeer];
 }
 
 @end

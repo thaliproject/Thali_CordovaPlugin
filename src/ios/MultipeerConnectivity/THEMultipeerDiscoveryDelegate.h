@@ -22,12 +22,12 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEMultipeerSessionDelegate.h
+//  THEMultipeerDiscoveryDelegate.h
 //
 
 // Defines the interface through which the multipeer session will 
 // inform it's delegate about the visibility of peers
-@protocol THEMultipeerSessionDelegate <NSObject>
+@protocol THEMultipeerDiscoveryDelegate <NSObject>
 
 // Notifies the delegate that a peer was found.
 - (void)didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName;
