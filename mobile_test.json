@@ -4,12 +4,12 @@
     "ios": "ThaliTest.app",
     "android": "android-release-unsigned.apk"
   },
-  "target": "android",
+  "target": "all",
   "priority": "normal",
   "csname": {
     "android": "com.test.thalitest",
     "ios": "com.test.thalitest"
   },
-  "timeout": 1800,
+  "timeout": 600,
   "serverScript": "test/TestServer/"
 }
