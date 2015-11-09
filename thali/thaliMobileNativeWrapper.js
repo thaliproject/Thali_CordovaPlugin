@@ -98,12 +98,12 @@ module.exports.stopListeningForAdvertisements = function() {
  * 1. Creating a new instance of [multiplex](https://www.npmjs.com/package/multiplex) and then pipe it both to and
  * from the thaliMobileNative generated TCP/IP connection.
  * 2. On the multiplex object hook to the new incoming stream callback and for each incoming Node.js stream
- * create a TCP/IP client pointed at portNumber and pipe the content from the Node.js duplex stream pair to the newly
- * created TCP/IP client connection.
+ * create a TCP/IP client pointed at the 127.0.0.1 port that we hosted the app at and pipe the content from the Node.js
+ * duplex stream pair to/from the newly created TCP/IP client connection.
  *
  * If the thaliMobileNative TCP/IP connection is terminated for any reason then the muxed connection MUST be destroyed
  * as follows:
- * 1. All outgoing TCP/IP connections MUST be closed
+ * 1. All outgoing TCP/IP connections MUST have `destroy` called on them.
  * 2. The multiplex object itself MUST the have `destroy` called on it.
  *
  * ## Repeated calls
@@ -181,6 +181,102 @@ module.exports.killConnections = function() {
  */
 
 /**
+ * When this code receive a peerAvailabilityChanged callback it MUST create a
+ * {@link module:NonTCPPeerAvailabilityChangedBridge} object. That call requires passing in a
+ * {@link module:NonTCPPeerAvailabilityChangedBridge~GetMultiplexerFunction} function.
+ *
+ * Before calling start we MUST subscribe for the {@link @NonTCPPeerAvailabilityChangedBridge~closedListener} event.
+ *
+ * ## GetMultiplexerFunction Implementation
+ * This function will submit the multiplexer object that the bridge will use to open connections to the remote peer.
+ * When this function is called it MUST call {@link external:"Mobile('Connect')".callNative}. If the callback
+ * returns an error then this function MUST return the same error. If it returns a
+ * {module:thaliMobileNative~ListenerOrIncomingConnection} object then the following actions MUST be taken.
+ *
+ * ### listeningPort is not NULL
+ * A TCP/IP connection MUST be opened to listeningPort on 127.0.0.1. Then a multiplex object MUST be created and it
+ * MUST be piped, in both directions, to the TCP/IP socket. The newly created multiplex object MUST be returned as
+ * the function output.
+ *
+ * ### clientPort and serverPort are not NULL
+ * If we have stopped updating advertising and listening for incoming connections then we have some bizarre race
+ * condition and we MUST return a "We aren't listening!" error.
+ *
+ * If we have started updating advertising and listening for incoming connections and the returned serverPort does
+ * not match the portNumber we passed to
+ * {@link external:"Mobile('StartUpdateAdvertisingAndListenForIncomingConnections')".callNative} then we MUST
+ * return a "Old portNumber" error.
+ *
+ * Otherwise we must have an {@link module:IncomingConnectionsMultiplexer} object. If we haven't received back the
+ * response to calling start on that object then something truly bizarre has happened, most likely start and stop
+ * on listening were called with the same portNumber and this connect callback is old. But we can't be sure since
+ * there are race conditions. So the best we can do is wrap up the following code as a promise and put it on a then
+ * after the promise returned by the start call on IncomingConnectionsMultiplexer. Otherwise we MUST call
+ * {@link module:IncomingConnectionsMultiplexer.getMultiplex} with the clientPort value.
+ *
+ * If we get back a null value then we MUST return the error "Race condition, incoming connection died." Otherwise
+ * we MUST return the multiplex object we were given.
+ *
+ * ### If none of the values are null or if they are all null
+ * In this case we MUST return the error "Malformed response, bad.".
+ *
+ * ## Handling the closedListener Event
+ *
+ *
+ *
+ * incoming at native layer - create new multiplexer
+ * outgoing w/no existing incoming multiplexer - create new multiplexer
+ * outgoing w/existing incoming multiplexer - Use existing multiplexer
+ * incoming at multiplex layer - There already exists an outgoing multiplex that the other side re-used to send
+ * new incoming connections.
+ *
+ * |                            |incoming at native layer|incoming at multiplex layer|
+ * |----------------------------|------------------------|---------------------------|
+ * |Outgoing at native layer    | Not Possible           | See below                 |
+ * |Outgoing at multiplex layer | See below              | Not Possible              |
+ *
+ * ### Outgoing at native layer and incoming at multiplex layer
+ * In this we have a TCP/IP client socket down to a native TCP/IP server socket and we are pushing data in both
+ * directions over it. The main issue is that it's possible for the TCP/IP listener that sits on top of that mess
+ * handling incoming connections to timeout and close everything down. The reason is that the timeout is at the
+ * higher level TCP/IP listener and so won't see that the multiplexer is still outputting content. So we need to
+ * hijack the close on the multiplex object and have it ask "Should we really close?" If content is still flowing
+ * in then the answer is no but we can return a yes to the caller. This will cause us to fire a closedListener
+ * but we should detect that the multiplexer needs to keep living (for the sake of the incoming connections) and
+ * so we should just keep the mux around. But this means that we need to also make sure we unpipe and then when the
+ * new nonTCPPeerAvailabityChangeBridge is created it can establish its own pipe to the mux.
+ *
+ * The same logic does not apply in reverse. The reason is that while the individual TCP/IP client connections we
+ * generate from incoming multiplex requests do have timeouts there is no global timeout in Node.js for incoming
+ * connections besides the timeout at the native layer for the TCP/IP client. And that timeout should work just fine
+ * since it only wants to see content, it really doesn't care where it comes from. So there should never be a global
+ * close here except if for some reason the native link is lost but all that will do is make us close all the outgoing
+ * TCP/IP connections as part of the closing of the multiplexer. So we are good.
+ *
+ * [Multiplex] <-> [TCP client socket, node.js]<->[TCP server socket, native]
+ * [TCP/IP Listener for Outgoing connections]
+ * [Local Server] <-> [TCP/IP client socket to local server]<->[Multiplex incoming stream]
+ * [TCP/IP client socket from local app]<->[createStream on Multiplex]
+ *
+ * We die if:
+ * We get a time out on the [TCP client socket, node.js] because this means there is no traffic in either direction.
+ *
+ * There is no other reason for us to ever die. So in this case we should completely disable any destroy logic
+ * associated with the TCP/IP Listener for Outgoing connections. So long as the [TCP client socket, node.js] is
+ * seeing traffic then we are good.
+ *
+ *
+ * ### Incoming at native layer and outgoing at multiplex layer
+ * [multiplex] <-> [TCP Server Socket, node.js] <-> [TCP client socket, native]
+ * [TCP/IP Listener for Outgoing connections]
+ * [Local Server] <-> [TCP/IP client socket to local server]<->[Multiplex incoming stream]
+ * [TCP/IP client socket from local app]<->[createStream on Multiplex]
+ *
+ *
+ *
+ *
+ *
+ *
  * When the non-TCP layer finds a peer it will issue a nonTCPPeerAvailabilityChanged event. That event will
  * advertise a port that the peer can be connected to at 127.0.0.1.
  *
