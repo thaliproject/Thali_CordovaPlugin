@@ -59,7 +59,7 @@ function SendDataTCPServer(port) {
     });
 
     this.server.listen(port, function() { //'listening' listener
-        console.log('TCP/IP server  is bound to : ' + self.port );
+        console.log('TCP/IP server  is bound to : ' + port );
     });
 }
 SendDataTCPServer.prototype.getServerPort = function() {
