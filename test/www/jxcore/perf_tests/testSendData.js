@@ -35,13 +35,15 @@ var SendDataConnector = require('./SendDataConnector');
 */
 
 function testSendData(jsonData,name,dev,addressList) {
+
     var self = this;
     console.log('testSendData created ' + jsonData + ", bt-address lenght : " + addressList.length);
     this.name = name;
     this.commandData = JSON.parse(jsonData);
     this.emitter = new ThaliEmitter();
     this.toFindCount = dev;
-    if(addressList.length > 0) {
+
+    if (addressList.length > 0) {
         this.BluetoothAddressList = addressList;
     }
 
@@ -64,7 +66,7 @@ function testSendData(jsonData,name,dev,addressList) {
         // if we use the address list, then we try getting all connections to be successful
         // thus we re-try the ones that were not successful
         // and we schedule the re-try to be handled after all other peers we have in the list currently
-        if(self.BluetoothAddressList) {
+        if (self.BluetoothAddressList) {
             for (var i = 0; i < resultData.length; i++) {
                 if (resultData[i].result != "OK") {
                     areAllTestOk = false;
@@ -75,11 +77,11 @@ function testSendData(jsonData,name,dev,addressList) {
         }
 
         // if all was ok, then we'll store the data values, othervise we'll put the peer back to the address list
-        if(areAllTestOk) {
+        if (areAllTestOk) {
             for (var i = 0; i < resultData.length; i++) {
                 self.resultArray.push(resultData[i]);
             }
-        }else if(peerAddress != 0){ //we gotta re-try it later
+        } else if (peerAddress != 0){ //we gotta re-try it later
             console.log('---- gotta redo : ' + peerAddress + ", try count now: " + peerTryCount);
             self.BluetoothAddressList.push({"address":peerAddress,"tryCount":peerTryCount});
         }
@@ -98,7 +100,7 @@ function testSendData(jsonData,name,dev,addressList) {
     this.peerAvailabilityChanged = function(peers) {
 
         //we have address list, so we use it instead
-        if(self.BluetoothAddressList){
+        if (self.BluetoothAddressList){
             return;
         }
 
@@ -122,6 +124,7 @@ function testSendData(jsonData,name,dev,addressList) {
 testSendData.prototype = new events.EventEmitter;
 
 testSendData.prototype.start = function() {
+
     var self = this;
     this.testServer = new SendDataTCPServer();
     this.testConnector = new SendDataConnector(this.commandData.rounds,this.commandData.dataAmount,this.commandData.conReTryTimeout,this.commandData.conReTryCount,this.commandData.dataTimeout);
@@ -139,7 +142,7 @@ testSendData.prototype.start = function() {
         } else {
             console.log('StartBroadcasting started ok');
 
-            if(self.BluetoothAddressList) {
+            if (self.BluetoothAddressList) {
                 if (!self.testStarted) {
                     self.startWithNextDevice();
                 }
@@ -150,7 +153,7 @@ testSendData.prototype.start = function() {
     if(this.commandData.timeout){
         this.timerId = setTimeout(function() {
             console.log('timeout now');
-            if(!self.doneAlready)
+            if (!self.doneAlready)
             {
                 console.log('dun');
                 self.endReason = "TIMEOUT";
@@ -179,11 +182,13 @@ testSendData.prototype.stop = function(doReport) {
     }
 
     this.testServer.stopServer();
-    if(doReport){
+
+    if (doReport){
         this.emit('debug', "---- sendReportNow");
         this.sendReportNow();
     }
-    if(this.testConnector != null){
+
+    if (this.testConnector != null){
         this.testConnector.Stop();
         this.testConnector.removeListener('done', this.doneCallback);
         this.testConnector.removeListener('debug', this.debugCallback);
@@ -194,13 +199,13 @@ testSendData.prototype.stop = function(doReport) {
 }
 
 testSendData.prototype.startWithNextDevice = function() {
-    if(this.doneAlready || this.testConnector == null) {
+    if (this.doneAlready || this.testConnector == null) {
         return;
     }
 
-    if(this.BluetoothAddressList){
+    if (this.BluetoothAddressList){
 
-        if(this.BluetoothAddressList.length <= 0){
+        if (this.BluetoothAddressList.length <= 0){
             this.endReason = "OK";
             this.weAreDoneNow();
             return;
@@ -219,7 +224,7 @@ testSendData.prototype.startWithNextDevice = function() {
         console.log('Connect to fake peer: ' + fakePeer.peerIdentifier);
         this.testConnector.Start(fakePeer);
         return;
-    }else {
+    } else {
         if (this.foundSofar >= this.toFindCount) {
             this.endReason = "OK";
             this.weAreDoneNow();
@@ -256,7 +261,7 @@ testSendData.prototype.weAreDoneNow = function() {
     this.doneAlready = true;
     this.sendReportNow();
 
-    if(this.testConnector != null){
+    if (this.testConnector != null){
         this.testConnector.Stop();
         this.testConnector.removeListener('done', this.doneCallback);
         this.testConnector.removeListener('debug', this.debugCallback);
@@ -268,7 +273,7 @@ testSendData.prototype.sendReportNow = function() {
 
     this.endTime = new Date();
 
-    if(this.testConnector != null) {
+    if (this.testConnector != null) {
         var isAlreadyAdded = false;
         var currentTest = this.testConnector.getCurrentTest();
 
@@ -277,16 +282,17 @@ testSendData.prototype.sendReportNow = function() {
         for (var i = 0; i < resultData.length; i++) {
             this.resultArray.push(resultData[i]);
 
-            if(currentTest && currentTest.name == resultData[i].name){
+            if (currentTest && currentTest.name == resultData[i].name){
                 isAlreadyAdded = true;
             }
         }
 
-        if(!isAlreadyAdded){
+        if (!isAlreadyAdded){
             this.resultArray.push(currentTest);
         }
     }
-    if(this.BluetoothAddressList){
+
+    if (this.BluetoothAddressList){
         for(var ii = 0; ii < this.BluetoothAddressList.length; ii++){
             if(this.BluetoothAddressList[ii]){
                 this.resultArray.push({"connections":this.BluetoothAddressList[ii].tryCount, "name":this.BluetoothAddressList[ii].address,"time":0,"result":"Fail"});
