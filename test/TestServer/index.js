@@ -27,7 +27,8 @@ process.on('unhandledRejection', function(err) {
   console.log("We have an uncaught promise rejection, good bye: " + JSON.stringify(err));
 });
 
-//IPAddressToFile is left here for debugging purposes, it gives you quick way on seeing the IP address used
+// IPAddressToFile is left here for debugging purposes, it gives you quick way to see the IP 
+// address used 
 //var IPAddressToFile = require('./IPAddressToFile');
 //IPAddressToFile();
 
