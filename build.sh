@@ -6,7 +6,7 @@
 ### Make sure multiple calls to this script file compiles the application file
 
 NORMAL_COLOR='\033[0m'
-RED_COLOR=''
+RED_COLOR='\033[0;31m'
 GREEN_COLOR='\033[0;32m'
 GRAY_COLOR='\033[0;37m'
 
