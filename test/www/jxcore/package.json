@@ -35,7 +35,6 @@
     "socket.io-client": "^1.3.6",
     "supertest-as-promised": "^2.0.2",
     "tape": "^4.0.0",
-    "thali": "C:\\a\\tmp\\Thali_CordovaPlugin\\thali",
     "uuid": "^2.0.0",
     "wrapping-tape": "^0.0.3"
   },
