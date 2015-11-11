@@ -16,6 +16,7 @@ LOG() {
   echo -e "${COLOR}$TEXT ${NORMAL_COLOR}"
 }
 
+
 ERROR_ABORT() {
   if [[ $? != 0 ]]
   then
@@ -64,7 +65,7 @@ thali/install/setUpTests.sh $TEST_TYPE $SERVER_ADDRESS;ERROR_ABORT
 
 # Remove the node_modules in the CI environment, because the coordination
 # server may have different OS and CPU architecture than the build server
-# so modules need to be installed there separately (this is handled by the CI)
+# so modules need to be installed there separately (this is handled by the CI).
 rm -rf test/TestServer/node_modules;ERROR_ABORT
 
 # A hack workround due to the fact that CI server doesn't allow relative paths outside
