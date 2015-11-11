@@ -202,7 +202,14 @@
  * consistent.
  *
  * If this method is called consecutively with the same peerIdentifier then if a connection already exists its port
- * MUST be returned otherwise a new connection MUST be created.
+ * MUST be returned otherwise a new connection MUST be created. In the case of Android there MUST be at most one
+ * Bluetooth client connection between this peer and the identified remote peer. In the case of iOS there MUST be
+ * at most one MCSession between this peer and the identified remote peer. In the case of iOS if this peer is
+ * lexically smaller than the other peer then the iOS layer MUST try to establish a MCSession with the remote peer
+ * as a signaling mechanism per the instructions in the binding spec. If an incoming connection is created within
+ * a reasonable time period from the lexically larger peer then the system MUST issue a connect callback with
+ * listeningPort set to null and clientPort/serverPort set based on the values used when establishing the incoming
+ * connection from the remote peer.
  *
  * The port created by a Connect call MUST only accept a single TCP/IP connection at a time. Any subsequent TCP/IP
  * connections to the 127.0.0.1 port MUST be rejected.
@@ -278,11 +285,13 @@
  * example is on Android where the app can go into the background reducing the power to the BLE radio which can make
  * the peer seem to disappear. But Bluetooth would still be on full power so a connect could still work. So this value
  * can at best be treated as a hint.
- * @property {Number} portNumber If this value is not null then it means that a remote peer established a connection
- * with this peer but that due to issues with the native layer (see our binding with iOS) this had to be modeled as if
- * this peer created a TCP/IP connection to the remote peer. Therefore this peer MUST create a multiplex object
- * connected to a TCP/IP client connected to this portNumber. That multiplex object will be configured to accept and
- * handling incoming TCP/IP connections from the remote peer at the multiplex layer. Details in the multiplex specs.
+ * @property {Boolean} pleaseConnect If true then this means that a lexically smaller peer wishes to establish a
+ * connection to this peer but requires this peer to initiate the connection per the binding spec. If this peer
+ * already has called {@link external:"Mobile('Connect')".callNative} for the identified peer then no action MUST
+ * be taken. Similarly if this peer already has a connection to the remote peer then no action MUST be taken. Yes,
+ * there are many race conditions here but the binding protocol calls for the other peer to repeat its request a
+ * number of times so it should be o.k. If this false is false then it either means that this isn't iOS or it means
+ * that the remote peer is either lexically larger or not currently interested in connecting.
  */
 
 /**
