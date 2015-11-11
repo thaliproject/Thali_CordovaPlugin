@@ -6,5 +6,5 @@ repositories {
 }
 
 dependencies {
-    compile(group: 'org.thaliproject.p2p.btconnectorlib', name: 'btconnectorlib2', version: '0.0.1', ext: 'aar')
+    compile(group: 'org.thaliproject.p2p.btconnectorlib', name: 'btconnectorlib2', version: '0.0.3', ext: 'aar')
 }

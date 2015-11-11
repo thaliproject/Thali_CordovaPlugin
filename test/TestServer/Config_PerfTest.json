@@ -3,9 +3,6 @@
     "name": "performance tests",
     "description": "basic performance tests for Thali apps framework",
     "tests": [
-        {"name": "testReConnect.js", "timeout": "280000","data": {"timeout": "250000","rounds":"1","dataTimeout":"30000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"1"}},
-		{"name": "testReConnect.js", "timeout": "280000","data": {"timeout": "250000","rounds":"1","dataTimeout":"30000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"1"}},
-		{"name": "testReConnect.js", "timeout": "280000","data": {"timeout": "250000","rounds":"1","dataTimeout":"30000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"1"}},
-		{"name": "testReConnect.js", "timeout": "280000","data": {"timeout": "250000","rounds":"1","dataTimeout":"30000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"1"}}
+        {"name": "testReConnect.js", "timeout": "1000000","data": {"timeout": "900000","rounds":"1","dataTimeout":"10000","dataAmount":"100000","conReTryTimeout":"4000","conReTryCount":"1"}}
     ]
 }
