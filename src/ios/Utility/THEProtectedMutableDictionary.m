@@ -82,7 +82,7 @@
   pthread_mutex_lock(&_mutex);
 
   for (id key in _dict)
-  {
+  { 
     NSObject *value = _dict[key];
     if (filterBlock(value))
     {

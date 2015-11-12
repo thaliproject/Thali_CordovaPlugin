@@ -83,6 +83,7 @@
       // update our mapping, usual case is no change
       if (session != v)
       {
+        assert([session remotePeerIdentifier] != nil);
         _peerIdentifiers[[session remotePeerIdentifier]] = peerID;
       }
     }
