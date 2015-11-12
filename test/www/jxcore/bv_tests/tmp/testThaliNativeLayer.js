@@ -7,7 +7,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
 var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
-var tape = require('../lib/thali-tape');
+var tape = require('../../lib/thali-tape');
 
 function newPeerIdentifier() {
   return (+ new Date()).toString() + "." + process.pid;
@@ -228,6 +228,7 @@ test('ThaliEmitter can connect and send data', function (t) {
     });
   });
 });
+
 
 test('ThaliEmitter handles socket disconnect correctly', function (t) {
 
