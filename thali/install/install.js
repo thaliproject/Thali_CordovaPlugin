@@ -1,12 +1,14 @@
 'use strict';
 var exec = require('child_process').exec;
 var path = require('path');
+var os = require('os');
 var https = require('https');
 var unzip = require('unzip');
 var Promise = require('lie');
 var fs = require('fs-extra-promise');
 var url = require('url');
 var request = require('request');
+var remoteCache = require('./remote-cache.js');
 var FILE_NOT_FOUND = "ENOENT";
 var MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT = "localdev"; // If this file exists in the thaliDontCheckIn directory then
 // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
@@ -204,38 +206,40 @@ function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
 }
 
 function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
-  var jxParentDir = path.join(baseDir, "jxcore", jxCoreVersionNumber);
-  var jxCoreFileLocation = path.join(jxParentDir, "io.jxcore.node.jx");
-  var currentInstalledVersion = path.join(baseDir, "jxcore", "installedVersion");
+  var jxCorePluginId = 'io.jxcore.node';
+  var jxCorePluginFileName = 'io.jxcore.node.jx';
+  var jxCoreCacheRoot = os.tmpdir();
+  var jxCoreRemoteCacheRoot = '~';
+  var jxCoreCacheFolder = path.join(jxCoreCacheRoot, 'thali', 'jxcore', jxCoreVersionNumber);
+  var jxCoreCachedPlugin = path.join(jxCoreCacheFolder, jxCorePluginId);
+  var jxCoreFileLocation = path.join(jxCoreCacheFolder, jxCorePluginFileName);
 
-  return fs.ensureDirAsync(jxParentDir)
+  return childProcessExecPromise('cordova plugin remove ' + jxCorePluginId, baseDir)
+    .then(function () {
+      return Promise.resolve();
+    })
+    .catch(function () {
+      // This shouldn't be considered an error scenario, because it meant Cordova
+      // wan't able to remove a previously-installed plugin version, which is in
+      // fact a typical scenario when Thali is installed onto a new app.
+      return Promise.resolve();
+    })
     .then(function() {
-      if (fs.existsSync(currentInstalledVersion)) {
-        var currentVersion = fs.readFileSync(currentInstalledVersion, "utf8");
-        if (currentVersion != jxCoreVersionNumber) {
-          return childProcessExecPromise('cordova plugin remove io.jxcore.node', baseDir)
-            .then(function () {
-              return Promise.resolve(true);
-            });
-        }
-
-        return Promise.resolve(false);
-      }
-
-      return Promise.resolve(true);
-    }).then(function(anythingToDo) {
-      if (!anythingToDo) {
-        return Promise.resolve(false);
-      }
-
-      // This is a hack to let us copy the jx package file from some local location
-      // where we have a copy into this directory just in case local Internet is very slow
-      if (anythingToDo && fs.existsSync(jxCoreFileLocation)) {
-        return Promise.resolve(true);
+      var remotePath = path.join(jxCoreRemoteCacheRoot, 'thali', 'jxcore', jxCoreVersionNumber, jxCorePluginId);
+      return remoteCache.get(jxCoreCacheFolder, remotePath);
+    })
+    .then(function() {
+      // Check if the plugin is found from the local cache and use that instead
+      // of downloading it, if found.
+      if (fs.existsSync(jxCoreCachedPlugin)) {
+        console.log('Using jxcore Cordova plugin from: ' + jxCoreCachedPlugin);
+        return Promise.resolve();
+      } else {
+        fs.mkdirsSync(jxCoreCacheFolder);
       }
 
       return new Promise(function(resolve, reject) {
-        var requestUrl = 'https://github.com/jxcore/jxcore-cordova-release/raw/master/' + jxCoreVersionNumber + '/io.jxcore.node.jx';
+        var requestUrl = 'http://jxcordova.cloudapp.net/' + jxCoreVersionNumber + '/' + jxCorePluginFileName;
         var receivedData = 0;
         var contentLength = 0;
         var previousPercentageProgress = 0;
@@ -256,50 +260,64 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
           })
           .pipe(fs.createWriteStream(jxCoreFileLocation)
           .on('finish', function() {
-            console.log("Downloaded io.jxcore.node.jx");
-            resolve(true);
+            console.log('Downloaded ' + jxCorePluginFileName + ' to: ' + jxCoreFileLocation);
+            console.log('Running jx against the file downloaded to: ' + jxCoreFileLocation);
+            childProcessExecPromise('jx ' + jxCoreFileLocation, jxCoreCacheFolder)
+              .then(function () {
+                resolve();
+              }).catch(function (error) {
+                console.log('Failed to process the downloaded file');
+                // Delete the "corrupted" files so that they don't interfere in subsequent
+                // installation attempts.
+                fs.removeAsync(jxCoreCacheFolder)
+                  .then(function () {
+                    // Always reject the above-created promise
+                    // because we are in the case where unpackaging
+                    // has failed and installation should not continue.
+                    reject(error);
+                  });
+                });
           })
           .on('error', function(error) {
-            console.log("Error downloading io.jxcore.node.jx");
+            console.log('Error downloading from: ' + requestUrl);
             fs.unlinkAsync(jxCoreFileLocation)
               .then(function() {
                 reject(error);
               }).catch(function(err) {
-                console.log("Tried to delete the bad io.jxcore.node.jx file but failed - " + err);
+                console.log('Tried to delete the bad ' + jxCorePluginFileName + ' file but failed with error: ' + err);
                 reject(error);
               });
           }));
       });
-    }).then(function(neededDownload) {
-      if (neededDownload) {
-        console.log('Running jx against the file downloaded to: ' + jxCoreFileLocation);
-        return childProcessExecPromise('jx io.jxcore.node.jx', jxParentDir)
-          .then(function() {
-            console.log('Adding io.jxcore.node Cordova plugin');
-            return childProcessExecPromise('cordova plugin add ./io.jxcore.node/', jxParentDir);
-          }).then(function() {
-            return fs.writeFileAsync(currentInstalledVersion, jxCoreVersionNumber, 'utf8');
-          }).catch(function (error) {
-            console.log('Failed to process the downloaded io.jxcore.node.jx file');
-            // Delete the "corrupted" file so that it doesn't interfere in subsequent
-            // installation attempts.
-            return fs.unlinkAsync(jxCoreFileLocation)
-              .then(function () {
-                // Always reject the above-created promise
-                // because we are in the case where unpackaging
-                // has failed and installation should not continue.
-                return Promise.reject(error);
-              });
-          });
-      }
-
-      return Promise.resolve();
+    }).then(function() {
+      var cordovaPluginFolder = path.join(jxCoreCacheFolder, jxCorePluginId);
+      console.log('Adding Cordova plugin to app at: ' + baseDir);
+      return childProcessExecPromise('cordova plugin add ' + cordovaPluginFolder, baseDir)
+        .then(function () {
+          return remoteCache.set(path.join(jxCoreCacheRoot, 'thali'), jxCoreRemoteCacheRoot);
+        })
+        .catch(function (err) {
+          console.log('Failed to add Cordova plugin from: ' + cordovaPluginFolder);
+          // If adding the Cordova plugin fails, clean the local cache folder
+          // and also purge the remote cache since failure to add the plugin indicates
+          // that the value in the cache is somehow corrupted.
+          // At the end, reject the promise to fail the entire installation, because
+          // the plugin installed here is a mandatory dependency.
+          return fs.removeAsync(jxCoreCacheFolder)
+            .then(function () {
+              return remoteCache.purge(path.join(jxCoreRemoteCacheRoot, 'thali'));
+            })
+            .then(function () {
+              return Promise.reject(err);
+            });
+        });
     });
 }
 
-module.exports = function(callback) {
-  //get the app root folder from app/www/jxcore/node_modules/thali
-  var appRootDirectory = path.join(__dirname, '../../../../../');
+module.exports = function(callback, appRootDirectory) {
+  // Get the app root as an argument or from app/www/jxcore/node_modules/thali.
+  // Passing as argument can be leveraged in local development and testing scenarios.
+  appRootDirectory = appRootDirectory || path.join(__dirname, '../../../../../');
   var thaliDontCheckIn = path.join(appRootDirectory, "thaliDontCheckIn" );
   var appScriptsFolder = path.join(appRootDirectory, "plugins/org.thaliproject.p2p/scripts");
   var jxcoreFolder = path.join(appRootDirectory, 'www/jxcore' );
@@ -317,7 +335,7 @@ module.exports = function(callback) {
     return;
   }
 
-  fetchAndInstallJxCoreCordovaPlugin(thaliDontCheckIn, jxCoreVersionNumber)
+  fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, jxCoreVersionNumber)
     .then(function () {
       if (doesMagicDirectoryNamedExist(thaliDontCheckIn)) {
         return copyDevelopmentThaliCordovaPluginToProject(appRootDirectory, thaliDontCheckIn, thaliDepotName, thaliBranchName);
