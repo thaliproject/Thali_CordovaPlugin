@@ -36,15 +36,18 @@ var configFile = require('./Config_PerfTest.json');
 
 var startTime = new Date().getTime();
 
-function PerfTestFramework(platform) {
+function PerfTestFramework(platform,count, honourCount) {
     this.timerId = null;
     this.os = platform;
 
     this.testResults = [];
     this.currentTest = -1;
 
-    console.log('Star ' + this.os + ' tests : ' + configFile.name + ", start tests with " + this.devicesCount + " devices");
-
+    if(honourCount) {
+        console.log('Star ' + this.os + ' tests : ' + configFile.name + ", start tests with " + count + " devices");
+    }else{
+        console.log('Star ' + this.os + ' tests : ' + configFile.name + ", start tests with timer");
+    }
     for(var i=0; i < configFile.tests.length; i++) {
         console.log('Test[' + i + ']: ' + configFile.tests[i].name + ', timeout : ' + configFile.tests[i].timeout + ", data : " + JSON.stringify(configFile.tests[i].data));
     }

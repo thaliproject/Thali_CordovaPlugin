@@ -32,6 +32,10 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
         self.emit('error',JSON.stringify({type: 'error', data: err}));
     });
 
+    this.socket.on('test_error', function (err) {
+        self.emit('test_error',JSON.stringify({type: 'test_error', data: err}));
+    })
+
     this.socket.on('disconnect', function () {
         self.emit('disconnect');
     });
@@ -80,25 +84,6 @@ CoordinatorConnector.prototype.setUp = function(deviceName,testName){
 
 CoordinatorConnector.prototype.tearDown = function(deviceName,testName){
     this.socket.emit('unit_test_done', JSON.stringify({"name":deviceName,"test":testName}));
-};
-
-CoordinatorConnector.prototype.toggleRadios = function(on) {
-    if (!jxcore.utils.OSInfo().isMobile) {
-        return;
-    }
-    console.log("Turning radios to " + on);
-    Mobile.toggleBluetooth(on, function(err) {
-        if (err) {
-            console.log("We could not set Bluetooth! - " + err);
-        }
-        console.log("toggleBluetooth - ");
-        Mobile.toggleWiFi(on, function(err) {
-            if (err) {
-                console.log("We could not set WiFi! - " + err);
-            }
-            console.log("toggleWiFi");
-        });
-    });
 };
 
 

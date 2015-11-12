@@ -100,7 +100,7 @@ function Thali_Tape(options) {
     console.log('got too_late event, closing connection now.');
     Coordinator.close();
     console.log("****TEST TOOK:  ms ****" );
-    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAIL]****");
   });
 
   var saveTestName = null;
