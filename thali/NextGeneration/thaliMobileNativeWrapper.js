@@ -4,10 +4,6 @@ var Promise = require("lie");
 
 /** @module thaliMobileNativeWrapper */
 
-/*
-        METHODS
- */
-
 /**
  * @file
  *
@@ -28,6 +24,53 @@ var Promise = require("lie");
  * {@link module:thaliMobileNative} functionality should be calling this module.
  */
 
+/*
+        METHODS
+ */
+
+/**
+ * This method MUST be called before any other method here other than registering for events on the emitter. This
+ * method will cause us to:
+ * - create a TCP server on a random port and host the router on that server.
+ * - create a {@link module:TCPServersManager}.
+ * - listen for the {@link module:TCPServersManager~failedConnection} event and then repeat it.
+ * - listen for the {@link module:TCPServersManager~routerPortConnectionFailed} event which we will then cause us to
+ * fire a {@link event:incomingConnectionToPortNumberFailed}.
+ * - call start on the {@link module:TCPServersManager} object and record the returned port.
+ *
+ * We MUST register for the native layer handlers exactly once.
+ *
+ * If the start fails then the object is not in start state and vice versa.
+ *
+ * This method is not idempotent. If called two times in a row without an intervening stop a "Call Stop!" Error
+ * MUST be returned.
+ *
+ * This method can be called after stop since this is a singleton object.
+ *
+ * @public
+ * @param {Object} router This is an Express Router object (for example, express-pouchdb is a router object) that the
+ * caller wants the non-TCP connections to be terminated with. This code will put that router at '/' so make sure your
+ * paths are set up appropriately.
+ * @returns {Promise<null|Error>}
+ */
+module.exports.start = function(router) {
+  return Promise.resolve();
+};
+
+/**
+ * This method will call all the stop methods, call stop on the
+ * {@link module:TCPServersManager} object and close the TCP server hosting the router.
+ *
+ * Once called the object is in stop state.
+ *
+ * This method is idempotent and so MUST be able to be called multiple times in a row without changing state.
+ *
+ * @returns {Promise<null|Error>}
+ */
+module.exports.stop = function() {
+  return Promise.resolve();
+};
+
 /**
  * This method instructs the native layer to discover what other devices are within range using the platform's non-TCP
  * P2P capabilities. When a device is discovered its information will be published via
@@ -36,7 +79,7 @@ var Promise = require("lie");
  * This method is idempotent so multiple consecutive calls without an intervening call to stop will not cause a state
  * change.
  *
- * This method MUST NOT be called if the object is not in start mode or a "Call Start!" error MUST be returned.
+ * This method MUST NOT be called if the object is not in start state or a "Call Start!" error MUST be returned.
  *
  * | Error String | Description |
  * |--------------|-------------|
@@ -56,6 +99,8 @@ module.exports.startListeningForAdvertisements = function() {
 /**
  * This method instructs the native layer to stop listening for discovery advertisements. Note that so long as
  * discovery isn't occurring (because, for example, the radio needed isn't on) this method will return success.
+ *
+ * This method is idempotent and MAY be called even if startListeningForAdvertisements has not been called.
  *
  * This method MUST NOT terminate any existing connections created locally using
  * {@link module:thaliMobileNativeWrapper.connect}.
@@ -105,11 +150,7 @@ module.exports.stopListeningForAdvertisements = function() {
  *
  * ## Repeated calls
  * By design this method is intended to be called multiple times without calling stop as each call causes the
- * currently notification flag to change. But this method MUST NOT be called with a different router object than
- * previous calls unless there was an intervening call to stop. This restriction is just to reduce our test matrix and
- * because it does not interfere with any of our current supported scenarios. If this method is called consecutively
- * without an intervening stop using different router objects then the callback MUST return a "No Changing router
- * without a stop" error.
+ * currently notification flag to change.
  *
  * | Error String | Description |
  * |--------------|-------------|
@@ -119,8 +160,7 @@ module.exports.stopListeningForAdvertisements = function() {
  * | Call Start! | The object is not in start state. |
  *
  * @public
- * @returns {Promise<number|Error>} If successful then the promise will return the portNumber where the router object
- * has been attached on 127.0.0.1. If failed then an Error object with one of the above strings will be returned.
+ * @returns {Promise<null|Error>}
  */
 module.exports.startUpdateAdvertisingAndListenForIncomingConnections = function() {
   return Promise.resolve();
@@ -153,7 +193,8 @@ module.exports.stopAdvertisingAndListeningForIncomingConnections = function() {
  * start interfaces or TCP/IP level connections. The goal is to simulate what would happen if we switched the
  * phone to something like airplane mode. This simulates what would happen if peers went out of range.
  *
- * This method MUST return "Not Supported" if called on Android.
+ * This method MUST return "Not Supported" if called on Android. On Android we can get this functionality by using
+ * JXCore's ability to disable the local radios.
  *
  * | Error String | Description |
  * |--------------|-------------|
@@ -183,31 +224,13 @@ module.exports.killConnections = function() {
  * peer not available event it MUST issue a {@link event:nonTCPPeerAvailabilityChangedEvent} with
  * peerIdentifier set to the value in the peer object, portNumber set to null and suggestedTCPTimeout not set.
  *
- * If a peer's peerAvailable is set to true then we MUST cSTART HERE!!!!!
- *
- * ## Deciding when to mark peers as not being available
- * Whenever the system believes a peer has disappeared it MUST issue a nonTCPPeerAvailabilityChanged event with the
- * peer's ID and a null portNumber. The actual heuristic used to determine that a peer is gone is platform
- * dependent. For example, on Android it's possible for a device's BLE radio to be on low power while
- * its Bluetooth radio is available on higher power. This would mean that Android would think that a peer was
- * gone (because it no longer sees its BLE announcements) when in fact the peer is still in range. So it's reasonable
- * for Android, if it hasn't receive a peerAvailabilityChanged event for the peer in the last few seconds to start
- * a timer to 30 seconds or even a minute and only then sending a nonTCPPeerAvailabilityChanged event stating that
- * the peer is gone.
- *
- * ## Maximum number of peers to advertise
- * If the system is currently advertising more than 1000 ports then when the next peer is discovered one of the
- * existing ports MUST be closed a nonTCPPeerAvailabilityChanged event with portNumber set to null MUST be fired
- * for the selected peer. And yes, this means that Thali is currently not designed to handle enormous numbers
- * of simultaneous peers.
- *
- * ## Dealing with a maximum number of simultaneous connections
- * Non-TCP transports typically have a fairly low limit on the number of simultaneous connections they will support.
- * Furthermore Thali may restrict this limit even further based on practical experience with a particular transport's
- * ability to handle multiple connections well. If attempts are made to connect to an unconnected TCP/IP port
- * exposed by `portNumber` below when the system has reached its limit of native connections then the connection
- * request MUST be rejected and a maxPeerReached event MUST be fired. The caller MUST NOT attempt to open any
- * subsequent connections until it has closed one.
+ * If a peer's peerAvailable is set to true then we MUST call {@link module:TCPServersManager.createPeerListener}. If
+ * an error is returned then the error MUST be logged and we MUST treat this as if we received the value with
+ * peerAvailable equal to false. If the call is a success then we
+ * MUST issue a {@link event:nonTCPPeerAvailabilityChangedEvent} with peerIdentifier set to the value in the peer
+ * object, portNumber set to the returned value and suggestedTCPTimeout set based on the behavior we have seen on the
+ * platform. That is, some non-TCP technologies can take longer to set up a connection than others so we need to warn
+ * those upstream of that.
  *
  * @public
  * @typedef {Object} nonTCPPeerAvailabilityChanged
@@ -217,24 +240,26 @@ module.exports.killConnections = function() {
  * connect in order to establish a TCP/IP connection to the remote peer.
  * @property {number} [suggestedTCPTimeout] Based on the characteristics of the underlying non-TCP transport how long
  * the system suggests that the caller be prepared to wait before the TCP/IP connection to the remote peer can be
- * set up.
+ * set up. This is measured in milliseconds.
  */
 
 /**
- * This event is fired whenever the network's state or our use of the network's state has changed.
- *
  * This event MAY start firing as soon as either of the start methods is called. Start listening for advertisements
  * obviously looks for new peers but in some cases so does start advertising. This is because in some cases
  * it's possible for peer A to discover peer B but not vice versa. This can result in peer A connecting to peer B
- * who previously didn't know peer A exists. When that happens we will first a discovery event.
+ * who previously didn't know peer A exists. When that happens we will fire a discovery event.
  *
  * This event MUST stop firing when both stop methods have been called.
  *
- * The native layer will make no attempt to filter out peerAvailabilityChanged callbacks. This means it is possible to
- * receive multiple announcements about the same peer in the same state.
+ * The native layer does not guarantee that it will filter out duplicate peerAvailabilityChanged callbacks. This means
+ * it is possible to receive multiple announcements about the same peer in the same state.
  *
- * Note that while the native layer can return multiple peers in a single callback the wrapper breaks them into
- * individual events.
+ * While the native layer can return multiple peers in a single callback the wrapper breaks them into
+ * individual events. See {@link module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} for details on how to
+ * process each peer.
+ *
+ * If we receive a {@link module:TCPServersManager~failedConnection} then we MUST treat that as the equivalent of having
+ * received a peer for nonTCPPeerAvailabilityChanged with peerAvailable set to false.
  *
  * @public
  * @event nonTCPPeerAvailabilityChangedEvent
@@ -245,8 +270,11 @@ module.exports.killConnections = function() {
 /**
  * This is used whenever discovery or advertising starts or stops. Since it's possible for these to
  * be stopped (in particular) due to events outside of node.js's control (for example, someone turned off a radio)
- * we provide a callback to track. Note that there is no guarantee that the same callback value couldn't be sent
- * multiple times in a row.
+ * we provide a callback to track these changes. Note that there is no guarantee that the same callback value couldn't
+ * be sent multiple times in a row.
+ *
+ * But the general rule we will only fire this event in response to receiving the event from the native layer. That is,
+ * we won't fire it ourselves when someone calls start or stop advertising/incoming on the wrapper.
  *
  * @public
  * @event discoveryAdvertisingStateUpdateNonTcpEvent
@@ -260,77 +288,46 @@ module.exports.killConnections = function() {
  * as the system starts.
  *
  * @public
- * @event networkChanged
+ * @event networkChangedNonTcp
  * @type {Object}
  * @property {module:thaliMobileNative~NetworkChanged} networkChangedValue
  */
 
 /**
  * This event specifies that our internal TCP servers are no longer accepting connections so we are in serious
- * trouble. Stopping and restarting is almost certainly necessary at this point.
+ * trouble. Stopping and restarting is almost certainly necessary at this point. We can discover this either because
+ * of an error in {@link module:TCPServersManager} or because of
+ * {@link external:"Mobile('IncomingConnectionToPortNumberFailed')".registerToNative}.
  *
  * @public
  * @event incomingConnectionToPortNumberFailed
  * @property {number} portNumber the 127.0.0.1 port that the TCP/IP bridge tried to connect to.
  */
 
-
-/**
- * This method MUST be called before any other method here other than registering for events on the emitter. This
- * method will cause us to:
- * - create a TCP server on a random port and host the router on that server.
- * - create a {@link module:TCPServersManager}.
- * - listen for the {@link module:TCPServersManager~routerPortConnectionFailed} event which we will then cause us to
- * fire a {@link event:incomingConnectionToPortNumberFailed}.
- * - call start on the {@link module:TCPServersManager} object.
- *
- * We MUST register for the native layer handlers exactly once.
- *
- * If the start fails then the object is not in start state.
- *
- * This method is not idempotent. If called two times in a row without an intervening stop a "Call Stop!" Error
- * MUST be returned.
- *
- * This method can be called after stop since this is a singleton object.
- *
- * @public
- * @param {Object} router This is an Express Router object (for example, express-pouchdb is a router object) that the
- * caller wants the non-TCP connections to be terminated with. This code will put that router at '/' so make sure your
- * paths are set up appropriately. The server will be hosted on 127.0.0.1 using whatever port is available and return it
- * in the promise. If stop is called then the system will take down the server so it is no longer available.
- * @returns {Promise<null|Error>}
- */
-module.exports.start = function(router) {
-  return Promise.resolve();
-};
-
-/**
- * This method will call all the stop methods, stop the TCP server hosting the router and call stop on the
- * {@link module:TCPServersManager} object.
- *
- * Once called the object is in stop state.
- *
- * This method is idempotent and so MUST be able to be called multiple times in a row without changing state.
- *
- * @returns {Promise<null|Error>}
- */
-module.exports.stop = function() {
-  return Promise.resolve();
-};
-
 /**
  * Use this emitter to subscribe to events.
  *
  * @public
  * @fires event:nonTCPPeerAvailabilityChangedEvent
- * @fires event:networkChanged
+ * @fires event:networkChangedNonTcp
  * @fires event:incomingConnectionToPortNumberFailed
  * @fires event:discoveryAdvertisingStateUpdateNonTcpEvent
+ * @fires module:TCPServersManager~failedConnection We repeat these events
  */
 module.exports.emitter = new EventEmitter();
 
-// We must register exactly once when this module is first required for the following handlers:
-//  * {@link external:"Mobile('PeerAvailabilityChanged')".registerToNative},
-//  * {@link external:"Mobile('DiscoveryAdvertisingStateUpdateNonTcp')".registerToNative},
-//  * {@link external:"Mobile('NetworkChanged')".registerToNative} and
-//  * {@link external:"Mobile('IncomingConnectionToPortNumberFailed')".registerToNative}
+Mobile('PeerAvailabilityChange').registerToNative(function(peers) {
+  // do stuff!
+});
+
+Mobile('DiscoveryAdvertisingStateUpdateNonTcp').registerToNative(function(discoveryAdvertisingStateUpdateValue) {
+  // do stuff!
+});
+
+Mobile('NetworkChanged').registerToNative(function(networkChanged) {
+  // do stuff!
+});
+
+Mobile('IncomingConnectionToPortNumberFailed').registerToNative(function(portNumber) {
+  // do stuff!
+});

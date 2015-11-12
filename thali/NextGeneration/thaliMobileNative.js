@@ -2,12 +2,8 @@
 
 /** @module thaliMobileNative */
 
-/*
-      callNative methods
- */
-
 /**
- * @file This file is really just a mockup describing the available Mobile bindings that Thali provides for JXcore's
+ * @file This file defines the contract for the Mobile bindings that Thali provides for JXcore's
  * native call interface. The actual API calls will "just be there" since they are added to the global environment
  * via JXcore's native binding mechanism. It is expected that these methods will not be called directly but rather
  * will be called via the {@link module:thaliMobileNativeWrapper} wrappers.
@@ -56,13 +52,18 @@
  * the related start method.
  */
 
+
+/*
+                   callNative methods
+ */
+
 /**
  * This is the default callback we use for the methods defined in this file.
  * @public
  * @callback ThaliMobileCallback
- * @param {error} err - If null then the call the callback was submitted to was successful. If not null then it will be
+ * @param {error} err If null then the call the callback was submitted to was successful. If not null then it will be
  * an Error object that will define what went wrong.
- * @returns {null} - No response is expected.
+ * @returns {null} No response is expected.
  */
 
 /**
@@ -107,7 +108,7 @@
  *
  * @public
  * @function external:"Mobile('StartUpdateAdvertisingAndListenForIncomingConnections')".callNative
- * @param {Number} portNumber - The port on 127.0.0.1 that any incoming connections over the native non-TCP/IP transport
+ * @param {Number} portNumber The port on 127.0.0.1 that any incoming connections over the native non-TCP/IP transport
  * should be bridged to.
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  * @returns {null}
@@ -118,7 +119,8 @@
  */
 
 /**
- * Please see the definition of {@link module:thaliMobileNativeWrapper.stopAdvertisingAndListeningForIncomingConnections}.
+ * Please see the definition of
+ * {@link module:thaliMobileNativeWrapper.stopAdvertisingAndListeningForIncomingConnections}.
  *
  * @public
  * @function external:"Mobile('StopAdvertisingAndListeningForIncomingConnections')".callNative
@@ -173,18 +175,13 @@
 /**
  * This is the callback used by {@link external:"Mobile('Connect')".callNative}.
  *
- * If err is not NULL then `portNumber` and `incomingConnection` MUST be null.
- * If err is NULL then exactly one of `portNumber` and `incomingConnection` MUST be non-null and the other MUST
- * be NULL.
+ * If err is not NULL then listenerOrIncomingConnection MUST be null and vice versa.
  *
  * @public
  * @callback ConnectCallback
  * @param {error} err If null then the call the callback was submitted to was successful. If not null then it will be
  * an Error object that will define what went wrong.
- * @param {module:thaliMobileNative~ListenerOrIncomingConnection} listenerOrIncomingConnection Provides either
- * the TCP/IP 127.0.0.1 port to connect to in order to bridge to the remote peer or it returns information about
- * an existing incoming TCP/IP connection that will have to be reused at the multiplexer layer to talk to the remote
- * peer.
+ * @param {module:thaliMobileNative~ListenerOrIncomingConnection} listenerOrIncomingConnection
  * @returns {null}
  */
 
@@ -221,7 +218,8 @@
  * connection to the 127.0.0.1 port (if any) MUST be closed and the port MUST be released:
  *
  *  - The TCP/IP connection to the 127.0.0.1 port is closed or half closed
- *  - No connection is made to the 127.0.0.1 port within a fixed period of time, typically 2 seconds
+ *  - No connection is made to the 127.0.0.1 port within a fixed period of time, typically 2 seconds (this only applies
+ *  on Android and for lexically larger iOS peers)
  *  - If the non-TCP/IP connection should fail in whole or in part (e.g. some non-TCP/IP transports have the TCP/IP
  *  equivalent of a 1/2 closed connection)
  *
@@ -269,7 +267,7 @@
  */
 
 /*
-        registerToNative Methods
+              registerToNative Methods
  */
 
 /**
@@ -278,7 +276,8 @@
  * @typedef {Object} peer
  * @property {String} peerIdentifier An opaque value that identifies a non-TCP/IP transport handle for the discovered
  * peer. Because of how non-TCP/IP transports work it is completely possible for the same remote peer to have many
- * different peerIdentifiers assigned to them. So the only purpose of this value is to use it in a connect call.
+ * different peerIdentifiers assigned to them. So the only purpose of this value is to use it in a connect call not to
+ * uniquely identify a peer.
  * @property {Boolean} peerAvailable If true this indicates that the peer is available for connectivity. If false
  * it means that the peer can no longer be connected to. For too many reasons to count it's perfectly possible to never
  * get a false for peerAvailable. It is also possible to get a false when the peer is still reachable. A classic
@@ -290,7 +289,7 @@
  * already has called {@link external:"Mobile('Connect')".callNative} for the identified peer then no action MUST
  * be taken. Similarly if this peer already has a connection to the remote peer then no action MUST be taken. Yes,
  * there are many race conditions here but the binding protocol calls for the other peer to repeat its request a
- * number of times so it should be o.k. If this false is false then it either means that this isn't iOS or it means
+ * number of times so it should be o.k. If this value is false then it either means that this isn't iOS or it means
  * that the remote peer is either lexically larger or not currently interested in connecting.
  */
 
@@ -314,7 +313,9 @@
  * The native layer MUST NOT send peerAvailabilityChanged callbacks more frequently than every 200 ms. This is to
  * prevent starving out the node.js main thread. Therefore updates that become available before the next transmission
  * MUST be queued up in the native layer and then sent at once to node.js using the array capability of
- * peerAvailabilityChanged.
+ * peerAvailabilityChanged. We also MUST keep the total size of these notifications down (e.g. don't DOS node). So if
+ * we are getting lots of repeated announcements we can throw those away and if we are just getting large numbers of
+ * unique announcements then it's better to drop some than starve out Node.
  *
  * @public
  * @function external:"Mobile('PeerAvailabilityChanged')".registerToNative
@@ -326,10 +327,10 @@
  * This object defines the state of discovery and advertising
  *
  * @typedef {Object} discoveryAdvertisingStateUpdate
- * @property {Boolean} discoveryActive - True if discovery is running otherwise false. Note that this value can
+ * @property {Boolean} discoveryActive True if discovery is running otherwise false. Note that this value can
  * change as a result of calling start and stop but also due to the user or other apps altering the system's
  * radio state.
- * @property {Boolean} advertisingActive - True if advertising is running otherwise false. Note that this value can
+ * @property {Boolean} advertisingActive True if advertising is running otherwise false. Note that this value can
  * change as a result of calling start and stop but also due to the user or other apps altering the system's
  * radio state.
  */
@@ -406,7 +407,7 @@ var radioState = {
  * Any time the state of the network changes (meaning any of the values in the
  * {@link module:thaliMobileNative~NetworkChanged} object are
  * altered) any callbacks registered with this method will be called. Note that calls to this callback will start after
- * the first network changed event the first callback is registered.
+ * the first network changed event after the first callback is registered.
  *
  * The callbacks MUST NOT be sent more frequently than every 100 ms. If multiple network changes occur during that
  * period then only the last update before the waiting period is up MUST be sent. This means that we do not guarantee
@@ -442,4 +443,3 @@ var radioState = {
  * @param {module:thaliMobileNative~incomingConnectionToPortNumberFailedCallback} callback
  * @returns {null}
  */
-
