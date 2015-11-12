@@ -29,6 +29,7 @@ import android.annotation.TargetApi;
  * Created by juksilve on 14.5.2015.
  */
 public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector {
+    private static final String TAG = BtConnectorHelper.class.getName();
 
     private final Context context;
 
@@ -51,6 +52,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     final Thread.UncaughtExceptionHandler mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
         @Override
         public void uncaughtException(Thread thread, Throwable ex) {
+            Log.e(TAG, "Uncaught exception: " + ex.getMessage(), ex);
             final Throwable tmpException = ex;
             new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
                 @Override
