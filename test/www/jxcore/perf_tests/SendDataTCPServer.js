@@ -52,14 +52,14 @@ function SendDataTCPServer(port) {
     });
 
     this.server.on('error', function (data) {
-        console.log("TCP/IP server  error: " + data.toString());
+        console.log("TCP/IP server error: " + data.toString());
     });
     this.server.on('close', function () {
-        console.log('TCP/IP server  socket is disconnected');
+        console.log('TCP/IP server socket is disconnected');
     });
 
     this.server.listen(port, function() { //'listening' listener
-        console.log('TCP/IP server  is bound to : ' + self.port );
+        console.log('TCP/IP server is bound to : ' + this.server.address().port );
     });
 }
 SendDataTCPServer.prototype.getServerPort = function() {

@@ -1,11 +1,18 @@
-
 {
-    "name": "performance tests",
-    "description": "basic performance tests for Thali apps framework",
-    "tests": [
-        {"name": "testReConnect.js", "timeout": "700000","data": {"timeout": "600000","rounds":"20","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
-        {"name": "testReConnect.js", "timeout": "700000","data": {"timeout": "600000","rounds":"20","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}}
-    ]
+  "name": "performance tests",
+  "description": "basic performance tests for Thali apps framework",
+  "tests": [
+    {
+      "name": "testSendData.js", 
+      "servertimeout": "600000",
+      "data": {
+        "dataAmount" : 10000,
+        "timeout": "600000",
+        "rounds": "3",
+        "dataTimeout": "30000",
+        "conReTryTimeout": "30000",
+        "conReTryCount": "5"
+      }
+    }
+  ]
 }
-
-

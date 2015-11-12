@@ -106,7 +106,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
      discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier } 
        serviceType:_serviceType
   ];
-  [_nearbyServiceAdvertiser setDelegate:self];
 
   [self startAdvertising];
 }
@@ -114,6 +113,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 - (void)startAdvertising
 {
   // Start advertising our presence.. 
+  [_nearbyServiceAdvertiser setDelegate:self];
   [_nearbyServiceAdvertiser startAdvertisingPeer];
 }
 
@@ -126,6 +126,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)stopAdvertising
 {
+  [_nearbyServiceAdvertiser setDelegate:nil];
   [_nearbyServiceAdvertiser stopAdvertisingPeer];
 }
 
@@ -179,10 +180,12 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     // don't see the other side disconnect)
 
     _serverSession = serverSession;
+    assert(serverSession != nil);
     [serverSession connect];
     return serverSession;
   }];
 
+  assert([_serverSession session] != nil);
   NSLog(@"server: accepting invitation %@", peerIdentifier);
   invitationHandler(YES, [_serverSession session]);
 }

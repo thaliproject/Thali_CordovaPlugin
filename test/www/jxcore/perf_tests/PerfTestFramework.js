@@ -20,18 +20,18 @@ function TestFrameworkClient(name) {
 
     this.debugCallback = function(data) {
         self.emit('debug',data);
-    };
+    }
 
     this.doneCallback = function(data) {
         self.emit('done',data);
-    };
+    }
 
     console.log('check test folder');
-    fs.readdirSync(__dirname + '/perf_tests/').forEach(function(fileName) {
+    fs.readdirSync(__dirname).forEach(function(fileName) {
         if ((fileName.indexOf("test") == 0) &&
             fileName.indexOf(".js", fileName.length - 3) != -1) {
             console.log('found test : ./' + fileName);
-            self.test[fileName] = require('./perf_tests/' + fileName);
+            self.test[fileName] = require('./' + fileName);
         }
     });
 }
@@ -55,7 +55,7 @@ TestFrameworkClient.prototype.handleCommand = function(command){
             self.stopAllTests(); //Stop any previous tests if still running
             if(self.test[commandData.testName]){
                 self.emit('debug',"--- start :" + commandData.testName + "---");
-                currentTest = new self.test[commandData.testName](commandData.testData,self.deviceName,commandData.devices);
+                currentTest = new self.test[commandData.testName](commandData.testData,self.deviceName,commandData.devices,self.shuffle(commandData.addressList));
                 self.setCallbacks(currentTest);
                 currentTest.start();
             }else{
@@ -65,19 +65,19 @@ TestFrameworkClient.prototype.handleCommand = function(command){
         }
         case 'stop':{
             self.emit('debug',"stop");
+            self.stopAllTests(false);
+            break;
+        }
+        case 'timeout':{
+            self.emit('debug',"stop-by-timeout");
             self.stopAllTests(true);
             break;
         }
         case 'end':{
-            self.emit('debug',"--- ENDING test---");
-            Mobile.toggleBluetooth(false, function() {
-                self.emit('debug',"toggleBluetooth, OFF");
-                Mobile.toggleWiFi(false, function() {
-                    self.emit('debug',"toggleWiFi, OFF");
-                    console.log("****TEST TOOK:  ms ****" );
-                    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
-                });
-            });
+            console.log("****TEST TOOK:  ms ****" );
+            console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+            self.stopAllTests(true);
+            self.emit('end',"end");
             break;
         }
         default:{
@@ -85,6 +85,27 @@ TestFrameworkClient.prototype.handleCommand = function(command){
         }
     }
 }
+//the Fisher-Yates (aka Knuth) Shuffle.
+// http://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
+TestFrameworkClient.prototype.shuffle = function(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex ;
+
+    // While there remain elements to shuffle...
+    while (0 !== currentIndex) {
+
+        // Pick a remaining element...
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex -= 1;
+
+        // And swap it with the current element.
+        temporaryValue = array[currentIndex];
+        array[currentIndex] = array[randomIndex];
+        array[randomIndex] = temporaryValue;
+    }
+
+    return array;
+}
+
 TestFrameworkClient.prototype.setCallbacks = function(test) {
     if (test == null) {
         return;
