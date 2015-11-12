@@ -14,6 +14,8 @@ CoordinatorConnector.prototype = new events.EventEmitter;
 CoordinatorConnector.prototype.init = function (ipAddress, port){
     var self = this;
     this.socket = socketIo('http://' + ipAddress + ':' + port + '/');
+    this.socket.heartbeatTimeout = 3600000; // close socket if we don't get heartbeat in one  hour
+
     this.socket.on('connect', function () {
         self.emit('connect');
     });
@@ -45,31 +47,31 @@ CoordinatorConnector.prototype.init = function (ipAddress, port){
     this.socket.on('end_unit_test', function (data) {
         self.emit('tear_down_ready',data);
     });
+
+    this.socket.on('too_late', function (data) {
+        self.emit('too_late',data);
+    });
+
+    this.socket.on('start_tests', function (data) {
+        self.emit('start_tests',data);
+    });
+
 };
 
 CoordinatorConnector.prototype.close = function(){
     this.socket.close();
 };
 
-CoordinatorConnector.prototype.identify = function(name){
+CoordinatorConnector.prototype.present = function(name,type){
     if(jxcore.utils.OSInfo().isAndroid) {
-        this.socket.emit('start_performance_testing', JSON.stringify({"name": name, "os": "android"}));
+        this.socket.emit('present', JSON.stringify({"os": "android","name": name,"type":type}));
     }else{
-        this.socket.emit('start_performance_testing', JSON.stringify({"name": name, "os": "ios"}));
+        this.socket.emit('present', JSON.stringify({"os": "ios","name": name,"type":type}));
     }
 };
 
 CoordinatorConnector.prototype.sendData = function(data){
     this.socket.emit('test data', data);
-};
-
-CoordinatorConnector.prototype.initUnitTest = function(deviceName){
-    //todo we also need to supply actual platform with the message
-    if(jxcore.utils.OSInfo().isAndroid) {
-        this.socket.emit('start_unit_testing', JSON.stringify({"name": deviceName, "os": "android"}));
-    }else{
-        this.socket.emit('start_unit_testing', JSON.stringify({"name": deviceName, "os": "ios"}));
-    }
 };
 
 CoordinatorConnector.prototype.setUp = function(deviceName,testName){
@@ -79,5 +81,25 @@ CoordinatorConnector.prototype.setUp = function(deviceName,testName){
 CoordinatorConnector.prototype.tearDown = function(deviceName,testName){
     this.socket.emit('unit_test_done', JSON.stringify({"name":deviceName,"test":testName}));
 };
+
+CoordinatorConnector.prototype.toggleRadios = function(on) {
+    if (!jxcore.utils.OSInfo().isMobile) {
+        return;
+    }
+    console.log("Turning radios to " + on);
+    Mobile.toggleBluetooth(on, function(err) {
+        if (err) {
+            console.log("We could not set Bluetooth! - " + err);
+        }
+        console.log("toggleBluetooth - ");
+        Mobile.toggleWiFi(on, function(err) {
+            if (err) {
+                console.log("We could not set WiFi! - " + err);
+            }
+            console.log("toggleWiFi");
+        });
+    });
+};
+
 
 module.exports = CoordinatorConnector;

@@ -4,17 +4,26 @@
 
 'use strict';
 
-function TestDevice(deviceSocket,name,platform) {
+function TestDevice(deviceSocket,name,platform,testType) {
     this.socket = deviceSocket;
     this.deviceName = name;
     this.os = platform;
+    this.type = testType;
 }
+TestDevice.prototype.gettestType = function(){
+    return this.type;
+};
+
 TestDevice.prototype.getName = function(){
     return this.deviceName;
 };
 
 TestDevice.prototype.getPlatform = function(){
     return this.os;
+};
+
+TestDevice.prototype.start_tests = function(data){
+    this.socket.emit('start_tests', JSON.stringify({data:data}));
 };
 
 TestDevice.prototype.SendCommand = function(command,test,data,dev){

@@ -20,18 +20,18 @@ function TestFrameworkClient(name) {
 
     this.debugCallback = function(data) {
         self.emit('debug',data);
-    };
+    }
 
     this.doneCallback = function(data) {
         self.emit('done',data);
-    };
+    }
 
     console.log('check test folder');
-    fs.readdirSync(__dirname + '/perf_tests/').forEach(function(fileName) {
+    fs.readdirSync(__dirname).forEach(function(fileName) {
         if ((fileName.indexOf("test") == 0) &&
             fileName.indexOf(".js", fileName.length - 3) != -1) {
             console.log('found test : ./' + fileName);
-            self.test[fileName] = require('./perf_tests/' + fileName);
+            self.test[fileName] = require('./' + fileName);
         }
     });
 }

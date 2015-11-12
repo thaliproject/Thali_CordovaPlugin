@@ -7,26 +7,59 @@
 
 var events = require('events');
 
-function UnitTestFramework(count) {
-    this.devicesCount = count;
+function UnitTestFramework(platform) {
+    this.os = platform;
     this.testDevices = {};
     this.testsToRunArray = [];
+    this.devicesCount = 0;
 }
 // to do, we would need timeout for each test, so we can cancel is somebody is hanging
 
 UnitTestFramework.prototype = new events.EventEmitter;
 
-UnitTestFramework.prototype.addDevice = function(device,test) {
+UnitTestFramework.prototype.addDevice = function(device) {
+
+    this.devicesCount++;
 
     var devName = device.getName();
-    var tstName = test;
-
-    console.log(devName + ' added test : ' + tstName);
+    if(!this.testDevices) {
+        this.testDevices = {};
+    }
 
     if(!this.testDevices[devName]){
         this.testDevices[devName] = {};
     }
 
+    this.testDevices[devName].device = device;
+    console.log('Add ' + devName + ', os: ' + this.os + ' for unit tests' );
+
+}
+
+UnitTestFramework.prototype.getCount = function() {
+    return this.devicesCount;
+}
+
+UnitTestFramework.prototype.startTest = function(json) {
+
+    for (var deviceName in this.testDevices) {
+        if (this.testDevices[deviceName] != null && this.testDevices[deviceName].device != null) {
+            //console.log('send start command to ' +  this.testDevices[deviceName].device.getName());
+            this.testDevices[deviceName].device.start_tests(json);
+        }
+    }
+}
+
+UnitTestFramework.prototype.addTest = function(device,test) {
+
+    var devName = device.getName();
+    var tstName = test;
+
+    if(!this.testDevices || !this.testDevices[devName]){
+        console.log(devName + ' has not been added to the tests !!');
+        return;
+    }
+
+    console.log(devName + ' added test : ' + tstName);
     this.testDevices[devName][tstName] = device;
 
     var count = [];
