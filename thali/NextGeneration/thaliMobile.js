@@ -194,7 +194,7 @@ thaliWifiInfrastructure.on("wifiPeerAvailabilityChanged", function(hostAddress, 
  */
 
 /**
- * If we receive a {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateNonTcpEvent} there are a couple
+ * If we receive a {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateNonTCPEvent} there are a couple
  * of possibilities:
  * - This just confirms whatever command we fired, we started advertising and it is confirming that. We should only pass
  * on this event the first time it comes through. If we get multiple events with the same state and they all match our
@@ -218,7 +218,7 @@ thaliWifiInfrastructure.on("wifiPeerAvailabilityChanged", function(hostAddress, 
  */
 
 
-thaliMobileNativeWrapper.on("discoveryAdvertisingStateUpdateNonTcpEvent", function(discoveryAdvertisingStateUpdateValue) {
+thaliMobileNativeWrapper.on("discoveryAdvertisingStateUpdateNonTCPEvent", function(discoveryAdvertisingStateUpdateValue) {
   // Do stuff
 });
 
@@ -236,7 +236,7 @@ thaliWifiInfrastructure.on("discoveryAdvertisingStateUpdateWifiEvent", function(
  * @property {module:thaliMobileNative~NetworkChanged} networkChangedValue
  */
 
-thaliMobileNativeWrapper.on("networkChangedNonTcp", function(networkChangedValue) {
+thaliMobileNativeWrapper.on("networkChangedNonTCP", function(networkChangedValue) {
   // Do stuff
 });
 
