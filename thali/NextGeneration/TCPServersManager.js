@@ -7,8 +7,22 @@ var Promise = require("lie");
 /**
  * @file
  *
- * This is where we manage creating multiplex objects. There are three different scenarios where multiplex objects
- * can get created:
+ * This is where we manage creating multiplex objects. For all intents and purposes this file should be treated as part
+ * of {@link module:thaliMobileNative}. We have broken this functionality out here in order to make the code more
+ * maintainable and easier to follow.
+ *
+ * When dealing with incoming connections this code creates a multiplex object to handle de-multiplexing the incoming
+ * connections and in the iOS case to also send TCP/IP connections down the incoming connection (reverse the polarity
+ * as it were).
+ *
+ * When dealing with discovered peers we like to advertise a port that the Thali Application can connect to in order to
+ * talk to that peer. But for perf reasons that port is typically not connected to anything at the native layer (with
+ * the exception of a lexically smaller peer) until someone connects to the port. The reason for this design (thanks
+ * Ville!) is to make non-TCP and TCP peers look the same. There is an address (in this case 127.0.0.1) and a port and
+ * you connect and there you go. This file defines all the magic needed to create the illusion that a non-TCP peer is
+ * actually available over TCP.
+ *
+ * There are three different scenarios where multiplex objects can get created:
  *
  * Android
  * - We get an incoming connection from the native layer to the portNumber we submitted to
@@ -20,15 +34,15 @@ var Promise = require("lie");
  *  one end and the incoming listener to the mux on the other end.
  *
  * iOS - Lexically Smaller Peer
- * * - We get an incoming connection from the native layer to the portNumber we submitted to
+ * - We get an incoming connection from the native layer to the portNumber we submitted to
  * StartUpdateAdvertisingAndListenForIncomingConnections
  *  - We create a mux that pipes to the incoming TCP/IP connection. We keep track of this mux because we might need it
  *  in the next entry. Remember, we don't know which peer made the incoming connection.
  * - We get a peerAvailabilityChanged Event
- *  - Because we are lexically smaller this event will have pleaseConnect set to false. So we create a port and advertise it
- *  on nonTCPPeerAvailabilityChanged. When we get a connection we call connect. If there is already an incoming
- *  connection then the connect will return with the clientPort/serverPort and we will re-use the existing mux. If
- *  there is no existing incoming connection then the system will wait to trigger the lexically larger peer to create
+ *  - Because we are lexically smaller this event will have pleaseConnect set to false. So we create a port and
+ *  advertise it on nonTCPPeerAvailabilityChanged. When we get a connection we call connect. If there is already an
+ *  incoming connection then the connect will return with the clientPort/serverPort and we will re-use the existing mux
+ *  If there is no existing incoming connection then the system will wait to trigger the lexically larger peer to create
  *  it and once it is created and properly terminated (per the previous section) then we will find the mux via
  *  clientPort/ServerPort.
  *
@@ -44,7 +58,77 @@ var Promise = require("lie");
  *  - If the peerAvailabilityChanged Event has pleaseConnect set to false then we will set up a TCP listener and
  *  advertise the port but we won't create the mux or call connect until the first connection to the TCP listener
  *  comes in.
+ *
+ *  We have two basic kinds of listeners. One type is for incoming connections from remote peers. In that case we
+ *  will have a TCP connection from the native layer connecting to us which we will then connect to a multiplex object.
+ *  The other listener is for connections from a Thali App to a remote peer. In that case we will create a TCP
+ *  connection to a native listener and hook our TCP connection into a multiplex object. And of course with the iOS
+ *  situation sometimes it all gets mixed up.
+ *
+ *  But the point is that each listener has at its root a TCP connection either going out to or coming in from the
+ *  native layer. Because keeping native connections open eats battery (although this is probably a much less
+ *  significant issue with iOS due to its UDP based design) we don't want to let connections hang open unused. This is
+ *  why we put a timeout on the TCP connection under the multiplex. That connection sees all traffic in both directions
+ *  (e.g. even in the iOS case where we mux connections both ways) and so it knows if anything is happening. If all is
+ *  quiet then it knows it can kill the connection.
+ *
+ *  We also need to deal with cleaning things up when they go wrong. Typically we will focus the cleanup code on the
+ *  multiplex object. It will first close the TCP connections with the Thali app then the multiplex streams connected
+ *  to those TCP connections then it will close the listener and any native connections before closing itself.
+ *
+ *  Separately it is possible for individual multiplexed TCP connections to die or the individual streams they are
+ *  connected to can die. This only requires local clean up. We just have to be smart so we don't try to close things
+ *  that are already closed. So when a TCP connection gets a closed event it has to detect if it was closed by the
+ *  underlying multiplex stream or by a TCP level error. If it was closed by the multiplex stream then it shouldn't
+ *  call close on the multiplex stream it is paired with otherwise it should. The same logic applies when an individual
+ *  stream belonging to multiplex object gets closed. Was it closed by its paired TCP connecion? If so, then it's done.
+ *  Otherwise it needs to close that connection.
  */
+
+/**
+ * Maximum number of peers we support simultaneously advertising
+ * @type {number}
+ */
+var maxPeersToAdvertise = 1000;
+
+/**
+ * This method will call {@link module:TCPServersManager.createNativeListener} using the routerPort from the
+ * constructor and record the returned port.
+ *
+ * This method is idempotent and so MUST be able to be called multiple times in a row without changing state.
+ *
+ * If called successfully then the object is in the start state.
+ *
+ * If this method is called after a call to {@link module:TCPServersManager.stop} then a "We are stopped!" Error
+ * MUST be thrown.
+ *
+ * @public
+ * @returns {Promise<Number|Error>} Returns the port to be passed to
+ * {@link external:"Mobile('StartUpdateAdvertisingAndListenForIncomingConnections')".callNative} when the system
+ * is ready to receive external incoming connections.
+ */
+TCPServersManager.prototype.start = function() {
+  return Promise.resolve();
+};
+
+/**
+ * This will cause destroy to be called on the TCP server created by
+ * {@link module:TCPServersManager.createNativeListener} and then on all the TCP servers created by
+ * {@link module:TCPServersManager.connectToPeerViaNativeLayer}.
+ *
+ * This method is idempotent and so MUST be able to be called multiple times in a row without changing state.
+ *
+ * If this method is called before calling start then a "Call Start!" Error MUST be thrown.
+ *
+ * Once called the object is in the stop state and cannot leave it. To start again this object must be disposed and
+ * a new one created.
+ *
+ * @public
+ * @returns {Null|Error}
+ */
+TCPServersManager.prototype.stop = function() {
+  return null;
+};
 
 /**
  * This method creates a TCP listener to handle requests from the native layer and to then pass them through a
@@ -54,17 +138,19 @@ var Promise = require("lie");
  * the native layer's
  * {@link external:"Mobile('StartUpdateAdvertisingAndListenForIncomingConnections')".callNative} command.
  *
- * This method MUST NOT be called more than once. If it is this strongly indicates that something is really wrong
- * in {@link module:ThaliMobileNativeWrapper}. If it is called twice then an exception with "Don't call me twice!"
- * MUST be thrown.
+ * If this method is called when we are not in the start state then an exception MUST be thrown because this is a
+ * private method and something very bad just happened.
+ *
+ * If this method is called twice an exception MUST be thrown because this should only be called once from the
+ * constructor.
  *
  * ## TCP Listener
  *
  * ### Connect Event
  * A multiplex object MUST be created and MUST be directly piped in both directions with the
- * TCP socket returned by the listener. We MUST set a timeout on TCP socket to a reasonable value for the platform. The
- * created multiplex object MUST be recorded with an index of the client port used by the incoming TCP native client
- * connection.
+ * TCP socket returned by the listener. We MUST set a timeout on the incoming TCP socket to a reasonable value for the
+ * platform. The created multiplex object MUST be recorded with an index of the client port used by the incoming TCP
+ * socket.
  *
  * ### Error Event
  * The error MUST be logged.
@@ -77,7 +163,7 @@ var Promise = require("lie");
  * The error MUST be logged.
  *
  * ### Timeout Event
- * Destroy MUST be called on the multiplex object. This will trigger a total cleanup.
+ * Destroy MUST be called on the piped multiplex object. This will trigger a total cleanup.
  *
  * ### Close Event
  * If this close is not the result of a destroy on the multiplex object then destroy MUST be called on the multiplex
@@ -106,7 +192,8 @@ var Promise = require("lie");
  * The error MUST be logged.
  *
  * ### Close Event
- * Destroy MUST be called on the stream this TCP socket is piped to.
+ * Destroy MUST be called on the stream this TCP socket is piped to assuming that it wasn't that stream that called
+ * destroy on the TCP client socket.
  *
  * ## multiplex onStream stream
  * ### Error Event
@@ -118,11 +205,12 @@ var Promise = require("lie");
  *
  * @private
  * @param {Number} routerPort Port that the router object submitted to
- * {@link module:ThaliMobileNativeWrapper.startUpdateAdvertisingAndListenForIncomingConnections} is hosted on.
+ * {@link module:ThaliMobileNativeWrapper.startUpdateAdvertisingAndListenForIncomingConnections} is hosted on. This
+ * value was passed into this object's constructor.
  * @returns {Promise<Number|Error>} The port that the mux is listening on for connections from the native layer or an
  * Error object.
  */
-TCPServersManager.prototype.createIncomingListener = function(routerPort) {
+TCPServersManager.prototype.createNativeListener = function(routerPort) {
   return Promise.resolve();
 };
 
@@ -133,17 +221,15 @@ TCPServersManager.prototype.createIncomingListener = function(routerPort) {
  * If this method is called before start is called then a "Start First!" error MUST be thrown. If this method is
  * called after stop is called then a "We are stopped!" error MUST be thrown.
  *
- * If there is already a TCP server listening for connections to the submitted peerIdentifier and if that server
- * was created with a different pleaseConnect value then the Error "We are connected to that peer with a different
- * pleaseConnect" MUST be returned. Otherwise if the pleaseConnect is the same then the port for the TCP server
- * MUST be returned.
+ * If there is already a TCP server listening for connections to the submitted peerIdentifier then the port for the
+ * TCP server MUST be returned.
  *
  * If there is no existing TCP server for the specified peer then we MUST examine how many peers we are advertising
- * 127.0.0.1 ports for. If that number is equal to 1000 then we MUST call destroy on one of those TCP listeners before
- * continuing with this method. That way we will never offer connections to more than 1000 peers at a time. We should
- * exclude all TCP servers that have active multiplex objects and pick a TCP server to close based on FIFO. Once
- * we have closed the TCP server, if necessary, then a new TCP server MUST be created on port 0 (e.g.
- * any available port) and configured as follows:
+ * 127.0.0.1 ports for. If that number is equal to maxPeersToAdvertise then we MUST call destroy on one of those TCP
+ * listeners before continuing with this method. That way we will never offer connections to more than
+ * maxPeersToAdvertise peers at a time. We should exclude all TCP servers that have active multiplex objects and pick a
+ * TCP server to close based on FIFO. Once we have closed the TCP server, if necessary, then a new TCP server MUST be
+ * created on port 0 (e.g. any available port) and configured as follows:
  *
  * ## TCP server
  * If pleaseConnect is true then an immediate call MUST be made to {@link external:"Mobile('Connect')".callNative} to
@@ -163,17 +249,16 @@ TCPServersManager.prototype.createIncomingListener = function(routerPort) {
  * returned error.
  *
  * ##### listenerPort
- * If the response is listenerPort then
- * we MUST perform the actions specified above for pleaseConnect is true with the exception that if the Connect fails
- * then we MUST call close on the TCP server since the peer is not available and fire a {@link event:failedConnection}
- * event with the error set to "Cannot Connect To Peer".
+ * If the response is listenerPort then we MUST perform the actions specified above for pleaseConnect is true with the
+ * exception that if the Connect fails then we MUST call close on the TCP server since the peer is not available and
+ * fire a {@link event:failedConnection} event with the error set to "Cannot Connect To Peer".
  *
  * ##### clientPort/serverPort
  * If clientPort/serverPort are not null then we MUST confirm that the
  * serverPort matches the port that the server created in
- * {@link module:TCPServersManager.createIncomingListener} is listening on and if not then we MUST call destroy on
- * the incoming TCP connection, fire a {@link event:failedConnection} event with the error set to "Mismatched serverPort",
- * and act as if connection had not been called (e.g. the next connection will be treated
+ * {@link module:TCPServersManager.createNativeListener} is listening on and if not then we MUST call destroy on
+ * the incoming TCP connection, fire a {@link event:failedConnection} event with the error set to
+ * "Mismatched serverPort", and act as if connection had not been called (e.g. the next connection will be treated
  * as the first).
  *
  * Otherwise we must then lookup the multiplex object via the clientPort. If there is no multiplex object associated
@@ -265,38 +350,8 @@ TCPServersManager.prototype.createIncomingListener = function(routerPort) {
  * TCP server.
  * @returns {Promise<Number|Error>}
  */
-TCPServersManager.prototype.connectToPeer = function(peerIdentifier, pleaseConnect) {
+TCPServersManager.prototype.createPeerListener = function (peerIdentifier, pleaseConnect) {
   return Promise.resolve();
-};
-
-/**
- * This method will call {@link module:TCPServersManager.createIncomingListener} and return the port or error
- * from that method.
- *
- * This method is idempotent and so MUST be able to be called multiple times in a row without changing state.
- *
- * If this method is called after a call to {@link module:TCPServersManager.stop} then a "We are stopped!" Error
- * MUST be thrown.
- *
- * @returns {Promise<Number|Error>} Returns the port to be passed to
- * {@link external:"Mobile('StartUpdateAdvertisingAndListenForIncomingConnections')".callNative} when the system
- * is ready to receive external incoming connections.
- */
-TCPServersManager.prototype.start = function() {
-  return Promise.resolve();
-};
-
-/**
- * This will cause destroy to be called on the TCP server created by
- * {@link module:TCPServersManager.createIncomingListener} and then on all the TCP servers created by
- * {@link module:TCPServersManager.connectToPeerViaNativeLayer}.
- *
- * This method is idempotent and so MUST be able to be called multiple times in a row without changing state.
- *
- * If this method is called before calling start then a "Call Start!" Error MUST be thrown.
- */
-TCPServersManager.prototype.stop = function() {
-
 };
 
 /**
