@@ -277,7 +277,7 @@ module.exports.killConnections = function() {
  * we won't fire it ourselves when someone calls start or stop advertising/incoming on the wrapper.
  *
  * @public
- * @event discoveryAdvertisingStateUpdateNonTcpEvent
+ * @event discoveryAdvertisingStateUpdateNonTCPEvent
  * @type {object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
@@ -288,7 +288,7 @@ module.exports.killConnections = function() {
  * as the system starts.
  *
  * @public
- * @event networkChangedNonTcp
+ * @event networkChangedNonTCP
  * @type {Object}
  * @property {module:thaliMobileNative~NetworkChanged} networkChangedValue
  */
@@ -309,9 +309,9 @@ module.exports.killConnections = function() {
  *
  * @public
  * @fires event:nonTCPPeerAvailabilityChangedEvent
- * @fires event:networkChangedNonTcp
+ * @fires event:networkChangedNonTCP
  * @fires event:incomingConnectionToPortNumberFailed
- * @fires event:discoveryAdvertisingStateUpdateNonTcpEvent
+ * @fires event:discoveryAdvertisingStateUpdateNonTCPEvent
  * @fires module:TCPServersManager~failedConnection We repeat these events
  */
 module.exports.emitter = new EventEmitter();
@@ -320,7 +320,7 @@ Mobile('PeerAvailabilityChange').registerToNative(function(peers) {
   // do stuff!
 });
 
-Mobile('DiscoveryAdvertisingStateUpdateNonTcp').registerToNative(function(discoveryAdvertisingStateUpdateValue) {
+Mobile('DiscoveryAdvertisingStateUpdateNonTCP').registerToNative(function(discoveryAdvertisingStateUpdateValue) {
   // do stuff!
 });
 

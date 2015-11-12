@@ -336,24 +336,24 @@
  */
 
 /**
- * @external "Mobile('DiscoveryAdvertisingStateUpdateNonTcp')"
+ * @external "Mobile('DiscoveryAdvertisingStateUpdateNonTCP')"
  */
 
 /**
- * This is the callback used by {@link external:"Mobile('DiscoveryAdvertisingStateUpdateNonTcp')".registerToNative}
+ * This is the callback used by {@link external:"Mobile('DiscoveryAdvertisingStateUpdateNonTCP')".registerToNative}
  *
  * @public
- * @callback discoveryAdvertisingStateUpdateNonTcpCallback
+ * @callback discoveryAdvertisingStateUpdateNonTCPCallback
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  * @returns {null}
  */
 
 /**
- * Please see the definition of {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateNonTcpEvent}
+ * Please see the definition of {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateNonTCPEvent}
  *
  * @public
- * @function external:"Mobile('DiscoveryAdvertisingStateUpdateNonTcp')".registerToNative
- * @param {module:thaliMobileNative~discoveryAdvertisingStateUpdateNonTcpCallback} callback
+ * @function external:"Mobile('DiscoveryAdvertisingStateUpdateNonTCP')".registerToNative
+ * @param {module:thaliMobileNative~discoveryAdvertisingStateUpdateNonTCPCallback} callback
  * @returns {null}
  */
 
