@@ -11,5 +11,5 @@
     "ios": "com.test.thalitest"
   },
   "timeout": 3600,
-  "serverScript": "test/TestServer/"
+  "serverScript": "./test/TestServer/"
 }
