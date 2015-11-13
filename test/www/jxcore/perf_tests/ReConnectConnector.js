@@ -130,6 +130,8 @@ ReConnectConnector.prototype.doConnect = function(peer) {
     console.log("do connect now");
     this.connectionCount++;
 
+    // we only nmeasure the time it takes here to oneRoundDoneNow
+    this.startTime = new Date();
     Mobile('Connect').callNative(peer.peerIdentifier, function (err, port) {
         console.log("CLIENT connected to " + port + ", error: " + err);
 
@@ -264,7 +266,7 @@ ReConnectConnector.prototype.oneRoundDoneNow = function() {
     }
 
     this.endTime = new Date();
-    var responseTime = this.endTime - this.startTime - this.reTryTimeout; // there is always self.reTryTimeout timeout before any connect
+    var responseTime = this.endTime - this.startTime;
     this.resultArray.push({"name":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount,"tryCount":this.peer.tryCount});
 
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
