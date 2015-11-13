@@ -1,10 +1,10 @@
 {
-  "build": "./build.sh",
+  "build": { "ios" : "./build.sh" },
   "binary_path": {
     "ios": "ThaliTest.app",
     "android": "android-release-unsigned.apk"
   },
-  "target": "android",
+  "target": "ios",
   "priority": "normal",
   "csname": {
     "android": "com.test.thalitest",
