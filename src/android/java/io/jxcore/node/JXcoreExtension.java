@@ -2,6 +2,8 @@
 
 package io.jxcore.node;
 
+import android.content.Context;
+import android.net.wifi.WifiManager;
 import io.jxcore.node.jxcore.JXcoreCallback;
 import java.util.ArrayList;
 import android.util.Log;
@@ -24,6 +26,7 @@ public class JXcoreExtension {
 
     public final static String METHODSTRING_SHOWTOAST         = "ShowToast";
     public final static String METHODSTRING_GETBTADDRESS      = "GetBluetoothAddress";
+    public final static String METHODSTRING_RECONNECTWIFIAP   = "ReconnectWifiAP";
 
     public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
     public final static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
@@ -36,6 +39,29 @@ public class JXcoreExtension {
 
       //Jukka's stuff
         final BtConnectorHelper mBtConnectorHelper = new BtConnectorHelper();
+
+        jxcore.RegisterMethod(METHODSTRING_RECONNECTWIFIAP, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                WifiManager wifiManager = (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
+
+                if(wifiManager.reconnect()) {
+                    wifiManager.disconnect();
+                    if(!wifiManager.reconnect()){
+                        args.add("reconnect returned false");
+                        jxcore.CallJSMethod(callbackId, args.toArray());
+                        return;
+                    }
+                }
+
+                //all is well, so lets return null as first argument
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
 
         jxcore.RegisterMethod(METHODSTRING_GETBTADDRESS, new JXcoreCallback() {
             @Override
