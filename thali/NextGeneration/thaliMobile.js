@@ -2,7 +2,7 @@
 
 var Promise = require("lie");
 var thaliMobileNativeWrapper = require("thaliMobileNativeWrapper");
-var thaliWifiInfrastructure = require("thaliWifiInfrastructure");
+var thaliWifiInfrastructure = require("ThaliWifiInfrastructure")();
 
 /** @module thaliMobile */
 
@@ -10,9 +10,9 @@ var thaliWifiInfrastructure = require("thaliWifiInfrastructure");
  * @file
  *
  * This is a convenience class to wrap together {@link module:thaliMobileNativeWrapper} and
- * {@link module:thaliWifiInfrastructure} in order to create a unified interface and set of events. This object assumes
+ * {@link module:ThaliWifiInfrastructure} in order to create a unified interface and set of events. This object assumes
  * that if it is being used then it has exclusive rights to call {@link module:thaliMobileNativeWrapper},
- * {@link module:thaliMobileNative} and {@link module:thaliWifiInfrastructure}.
+ * {@link module:thaliMobileNative} and {@link module:ThaliWifiInfrastructure}.
  */
 
 /*
@@ -30,7 +30,8 @@ var thaliWifiInfrastructure = require("thaliWifiInfrastructure");
 
 /**
  * This method MUST be called before any other method here other than registering for events on the emitter. This
- * method will call start on both the native and wifi infrastructure code. Note that in the case of wifi this
+ * method will call start on both the {@link module:thaliMobileNativeWrapper} singleton and on an instance of
+ * {@link module:ThaliWifiInfrastructure} class. Note that in the case of wifi this
  * call really does nothing but register the router object. In the case of native however there is some setup
  * work so an error is more meaningful. If an error is received from start on either wifi or native then
  * any subsequent method calls below but stop will not attempt to interact with the failed type. And yes, if both fail
@@ -38,7 +39,9 @@ var thaliWifiInfrastructure = require("thaliWifiInfrastructure");
  *
  * This method also instructs the system to pay attention to network events. If one or both radio types is not
  * active but a network changed event indicates that the relevant radio type is now active and if we are still in the
- * start state then this code MUST try to call start on the newly activated radio stack.
+ * start state then this code MUST try to call start on the newly activated radio stack. At that point if the
+ * object is in the start state for discovery or advertising then we MUST also try to call the relevant start
+ * methods there as well.
  *
  * This method is not idempotent. If called two times in a row without an intervening stop a "Call Stop!" Error MUST
  * be returned.
@@ -78,8 +81,8 @@ module.exports.stop = function() {
  * event. In other words if {@module:thaliMobile.start} is called and say WiFi doesn't work. Then this method
  * is called and so advertising is only started for the non-TCP transport. Then a network changed event happens
  * indicating that WiFi is available. Since we are still in start state this code will automatically call
- * {@link module:thaliWifiInfrastructure.start} and then will call
- * {@link module:thaliWiFiInfrastructure.startListeningForAdvertisements} because we haven't yet called
+ * {@link module:ThaliWifiInfrastructure.start} and then will call
+ * {@link module:ThaliWifiInfrastructure.startListeningForAdvertisements} because we haven't yet called
  * {@link module:thaliMobile.stopListeningForAdvertisements}. If any of the calls triggered by the network event fail
  * then the results MUST be logged.
  *
@@ -118,7 +121,7 @@ module.exports.stopListeningForAdvertisements = function() {
  * in that if a radio type that was inactive should later become available and we are in start state then we will
  * try to call start and if that works and stopUpdateAdvertisingAndListenForIncomingConnections has not been called
  * then we will try to call startUpdateAdvertisingAndListenForIncomingConnections on the newly started stack. This
- * includes the requirement to log any failed attempts to call the various methods trigged by a network status change.
+ * includes the requirement to log any failed attempts to call the various methods triggered by a network status change.
  *
  * Every call to this method is meant to change the current advertising flag to indicate that new data is available.
  *
@@ -152,7 +155,7 @@ module.exports.stopAdvertisingAndListeningForIncomingConnections = function() {
  * return the arguments below as taken from the event with the exception of setting hostAddress to 127.0.0.1 unless
  * the peer is not available in which case we should set both hostAddress and portNumber to null.
  *
- * If we receive a {@link module:thaliWiFiInfrastructure~wifiPeerAvailabilityChanged} event then all we have to do is
+ * If we receive a {@link module:ThaliWifiInfrastructure~wifiPeerAvailabilityChanged} event then all we have to do is
  * return the arguments below as taken from the event with the exception of setting something reasonable for the
  * suggestedTCPTimeout.
  *
@@ -205,7 +208,7 @@ thaliWifiInfrastructure.on("wifiPeerAvailabilityChanged", function(hostAddress, 
  * network change event code detected that a radio that was off is now on and we are trying to start things. In that
  * case we should mark the discovery or advertising as started and fire this event.
  *
- * If we receive a {@link module:thaliWiFiInfrastructure~discoveryAdvertisingStateUpdateWiFiEvent} then the logic is
+ * If we receive a {@link module:ThaliWifiInfrastructure~discoveryAdvertisingStateUpdateWiFiEvent} then the logic is
  * effectively the same as above.
  *
  * A scary edge case is that we want discovery or advertising off and suddenly the spontaneously turn on. This shouldn't
@@ -227,7 +230,7 @@ thaliWifiInfrastructure.on("discoveryAdvertisingStateUpdateWifiEvent", function(
 });
 
 /**
- * Unless something went horribly wrong only one of thaliMobileNativeWrapper or thaliWifiInfrastructure should be
+ * Unless something went horribly wrong only one of thaliMobileNativeWrapper or ThaliWifiInfrastructure should be
  * enabled for this event at a time. We can just pass the event value alone.
  *
  * @public

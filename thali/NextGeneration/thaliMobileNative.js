@@ -43,13 +43,6 @@
  * - No listening for discovery announcements using the native facilities
  * - No listening for incoming connections using the native facilities
  * - No advertising information using the native facilities
- *
- * ## registerToNative
- * In some cases the `registerToNative` callbacks are prohibited from being called back until a start method has
- * been called. A start method is considered called as soon as `callNative` for that start method is called, even
- * if the callback submitted with the `callNative` call has not yet been called. This just means
- * that those interested in getting all the relevant `registerToNative` callbacks must register before calling
- * the related start method.
  */
 
 
@@ -328,11 +321,11 @@
  *
  * @typedef {Object} discoveryAdvertisingStateUpdate
  * @property {Boolean} discoveryActive True if discovery is running otherwise false. Note that this value can
- * change as a result of calling start and stop but also due to the user or other apps altering the system's
- * radio state.
+ * change as a result of calling start and stop on discovery but also due to the user or other apps
+ * altering the system's radio state.
  * @property {Boolean} advertisingActive True if advertising is running otherwise false. Note that this value can
- * change as a result of calling start and stop but also due to the user or other apps altering the system's
- * radio state.
+ * change as a result of calling start and stop on advertising but also due to the user or other apps altering the
+ * system's radio state.
  */
 
 /**
@@ -406,8 +399,11 @@ var radioState = {
 /**
  * Any time the state of the network changes (meaning any of the values in the
  * {@link module:thaliMobileNative~NetworkChanged} object are
- * altered) any callbacks registered with this method will be called. Note that calls to this callback will start after
- * the first network changed event after the first callback is registered.
+ * altered) any callbacks registered with this method will be called. Note that calls to this callback can start at
+ * any time once the system has been initialized so it might not be possible to grab all the instances of this event
+ * before the application code is fully running. This is considered acceptable because if there are problems with
+ * network state when calling methods on this object an error wil be returned. So the caller should really only care
+ * about this event once they have called methods on this object.
  *
  * The callbacks MUST NOT be sent more frequently than every 100 ms. If multiple network changes occur during that
  * period then only the last update before the waiting period is up MUST be sent. This means that we do not guarantee

@@ -11,9 +11,9 @@ var Promise = require("lie");
  * in this file are asynchronous. However, with the exception of {@link module:thaliMobileNativeWrapper.emitter} and
  * {@link module:thaliMobileNativeWrapper.connect}, any time a method is called the invocation will immediately return
  * but the request will actually be put on a queue and all incoming requests will be run out of that queue. This means
- * that if one calls two start methods then the first start method will execute, call back its promise and only then
- * will the second start method start running. This restriction is in place to simplify the state model and reduce
- * testing.
+ * that if one calls two start methods on say advertising or discovery then the first start method will execute, call
+ * back its promise and only then will the second start method start running. This restriction is in place to simplify
+ * the state model and reduce testing.
  *
  * ## Why not just call {@link module:thaliMobileNative} directly?
  * Our contract in {@link module:thaliMobileNative} stipulates some behaviors that have to be enforced

@@ -2,7 +2,7 @@
 
 var Promise = require("lie");
 
-/** @module thaliWifiInfrastructure */
+/** @module ThaliWifiInfrastructure */
 
 /**
  * @file
@@ -11,9 +11,9 @@ var Promise = require("lie");
  *
  * All the methods defined in this file are asynchronous. However any time a method is called the invocation will
  * immediately return but the request will actually be put on a queue and all incoming requests will be run out of that
- * queue. This means that if one calls two start methods then the first start method will execute, call back its promise
- * and only then will the second start method start running. This restriction is in place to simplify the state model
- * and reduce testing.
+ * queue. This means that if one calls two start methods on say advertising or discovery then the first start method
+ * will execute, call back its promise and only then will the second start method start running. This restriction is in
+ * place to simplify the state model and reduce testing.
  *
  * All stop methods in this file are idempotent so they can be called multiple times in a row without causing
  * a state change.
@@ -21,7 +21,8 @@ var Promise = require("lie");
 
 /**
  * This method MUST be called before any other method here other than registering for events on the emitter. This
- * method will cause us to do nothing. It's just here to mirror how {@link module:thaliMobileNativeWrapper} works.
+ * method only registers the router object but otherwise doesn't really do anything. It's just here to mirror how
+ * {@link module:thaliMobileNativeWrapper} works.
  *
  * If the start fails then the object is not in start state.
  *
@@ -35,7 +36,7 @@ var Promise = require("lie");
  * paths are set up appropriately.
  * @returns {Promise<null|Error>}
  */
-module.exports.start = function(router) {
+ThaliWifiInfrastructure.prototype.start = function(router) {
   return Promise.resolve();
 };
 
@@ -48,7 +49,7 @@ module.exports.start = function(router) {
  *
  * @returns {Promise<null|Error>}
  */
-module.exports.stop = function() {
+ThaliWifiInfrastructure.prototype.stop = function() {
   return Promise.resolve();
 };
 
@@ -70,7 +71,7 @@ module.exports.stop = function() {
  *
  * @returns {Promise<null|Error>}
  */
-module.exports.startListeningForAdvertisements = function() {
+ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function() {
   return Promise.resolve();
 };
 
@@ -88,16 +89,30 @@ module.exports.startListeningForAdvertisements = function() {
  *
  * @returns {Promise<null|Error>}
  */
-module.exports.stopListeningForAdvertisements = function() {
+ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function() {
   return Promise.resolve();
 };
 
 /**
  * This method will start advertising the peer's presence over the local Wi-Fi Infrastructure Mode discovery
- * mechanism (currently SSDP). This method will also cause the Express app passed in to be hosted in a HTTP
- * server configured with the device's local IP. If the device switches access points (e.g. the BSSID changes) or
+ * mechanism (currently SSDP). When creating the UDP socket for SSDP the socket MUST be "udp4". When socket.bind is
+ * called to bind the socket to the SSDP multicast address and port, a random port will automatically be picked by
+ * Node.js to bind the UDP port to locally. This address is needed in order to set the location header in SSDP
+ * messages. This port can be discovered via socket.address().port in the callback to the socket.bind call. Note that
+ * we MUST make sure that the SSDP local UDP port is picked randomly so we do not have collisions between multiple
+ * instances of {@link module:ThaliWifiInfrastructure}. Also note that the implementation of SSDP MUST recognize
+ * advertisements from its own instance and ignore them. However it is possible to have multiple independent instances
+ * of ThaliWiFiInfrastructure on the same device and we MUST process advertisements from other instances of
+ * ThaliWifiInfrastructure on the same device.
+ *
+ * This method will also cause the Express app passed in to be hosted in a HTTP
+ * server configured with the device's local IP. In other words, the externally available HTTP server is not actually
+ * started and made externally available until this method is called. This is different than
+ * {@link module:thaliMobileNative} where the server is started on 127.0.0.1 as soon as
+ * {@link module:thaliMobileNative.start} is called but isn't made externally available over the non-TCP transport until
+ * the equivalent of this method is called. If the device switches access points (e.g. the BSSID changes) or
  * if WiFi is lost then the server will be shut down. It is up to the caller to catch the networkChanged event
- * and to call start again.
+ * and to call start advertising again.
  *
  * __OPEN ISSUE:__ If we have a properly configured multiple AP network then all the APs will have different BSSID
  * values but identical SSID values and the device should be able to keep the same IP. In that case do we want to
@@ -121,7 +136,7 @@ module.exports.stopListeningForAdvertisements = function() {
  *
  * @returns {Promise<null|Error>}
  */
-module.exports.startUpdateAdvertisingAndListenForIncomingConnections = function() {
+ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListenForIncomingConnections = function() {
   return Promise.resolve();
 };
 
@@ -138,7 +153,7 @@ module.exports.startUpdateAdvertisingAndListenForIncomingConnections = function(
  *
  * @returns {Promise<null|Error>}
  */
-module.exports.stopAdvertisingAndListeningForIncomingConnections = function() {
+ThaliWifiInfrastructure.prototype.stopAdvertisingAndListeningForIncomingConnections = function() {
   return Promise.resolve();
 };
 
@@ -147,6 +162,10 @@ module.exports.stopAdvertisingAndListeningForIncomingConnections = function() {
  * address bindings can change randomly amongst peers and of course peers can disappear. So this should be
  * considered more of a hint than anything else. If the peer has gone (e.g. ssdp:byebye) then both hostAddress and
  * portNumber MUST be set to null.
+ *
+ * Note that when sending SSDP queries we MUST use a randomly assigned address for the local UDP port as described
+ * in {@link moduleThaliWifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections}. It is
+ * not necessary that this be the same UDP port as used in the previously mentioned function.
  *
  * __Open Issue:__ There is a pretty obvious security hole here that a bad actor could advertise a bunch of IP or
  * DNS addresses of some innocent target on a local network in order to trigger a connection storm. Given the various
@@ -165,11 +184,15 @@ module.exports.stopAdvertisingAndListeningForIncomingConnections = function() {
  * For the definition of this event please see
  * {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
  *
- * This version applies to WiFi rather than the non-TCP transport. Note that we MUST fire this event ourselves whenever
- * we call start/stop discovery/advertising. We also have to listen to
- * {@link module:thaliMobileNativeWrapper.nonTCPPeerAvailabilityChangedEvent} when we are on mobile and our own
- * networkChanged event when we are on other platforms and if WiFi is turned off then we have to switch our internal
- * state for any discovery/advertising that was started to stopped and fire this event.
+ * This notifies the listener whenever the state of discovery or advertising changes. In
+ * {@link module:thaliMobileNativeWrapper} the equivalent of this event is fired from the native layer and then works
+ * its way through {@link module:thaliMobileNative} to {@link module:thaliMobileNativeWrapper}. But in the case of
+ * Wifi there is no native layer. Therefore if there is a call to start/stop discovery/advertising or if a network
+ * change event forces a change in status (e.g. someone turned off Wifi) then this class MUST issue this event itself.
+ * That is, it must have hooked into the start/stop methods, start/stop discovery/advertising methods,
+ * {@link module:thaliMobileNativeWrapper.nonTCPPeerAvailabilityChangedEvent} events when we are on mobile devices and
+ * {@link module:ThaliWifiInfrastructure.networkChangedWifi} when we are on desktop to
+ * figure out when status has changed and this event needs to be fired.
  *
  * @public
  * @event discoveryAdvertisingStateUpdateWifiEvent
@@ -195,11 +218,22 @@ module.exports.stopAdvertisingAndListeningForIncomingConnections = function() {
  */
 
 /**
- * Use this emitter to subscribe to events.
+ * This creates an object to manage a WiFi instance. During production we will have exactly one instance running
+ * but for testing purposes it's very useful to be able to run multiple instances. So long as the SSDP code uses a
+ * different port to advertise for responses for each instance and as the router instances are already specified to
+ * use whatever ports are available the different instances should not run into each other.
+ *
+ * __Open Issue:__ We need to confirm that the different instances will see each other's SSDP advertisements and
+ * queries.
  *
  * @public
+ * @constructor
  * @fires event:wifiPeerAvailabilityChanged
  * @fires event:networkChangedWifi
  * @fires discoveryAdvertisingStateUpdateWifiEvent
  */
-module.exports.emitter = new EventEmitter();
+function ThaliWifiInfrastructure() {
+
+}
+
+module.exports = ThaliWifiInfrastructure;
