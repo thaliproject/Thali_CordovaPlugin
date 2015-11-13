@@ -84,11 +84,6 @@ Coordinator.on('error', function (data) {
 
     if(errData.type == "connect_error") {
         testUtils.printNetworkInfo();
-
-        if(weHaveMadeInitialConnection){
-            weHaveMadeInitialConnection = false;
-            testUtils.reFreshWifi();
-        }
     }
   testUtils.logMessageToScreen('Client error: ' + errData.type);
 });
