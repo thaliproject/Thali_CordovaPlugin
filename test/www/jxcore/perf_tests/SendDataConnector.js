@@ -26,7 +26,7 @@ function SendDataConnector(rounds,dataAmount,reTryTimeout,reTryMaxCount,dataTime
     this.reTryMaxCount      = reTryMaxCount;
     this.dataTimeOut        = dataTimeOut;
     this.clientSocket       = null;
-    this.reTryTimer         = null;
+    this.reTryTimeOut       = null;
     this.receivedCounter    = 0;
     this.tryRounds          = 0;
     this.resultArray        = [];
@@ -52,10 +52,6 @@ SendDataConnector.prototype.Start = function(peer) {
 }
 
 SendDataConnector.prototype.ReStart = function(peer) {
-    this.peer = peer;
-    if(!this.peer){
-        return;
-    }
 
     // make sure any previous connections are really out
     if(this.clientSocket != null) {
@@ -63,12 +59,7 @@ SendDataConnector.prototype.ReStart = function(peer) {
         this.clientSocket.end()
         this.clientSocket = null;
     }
-
-    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
-        console.log("Disconnected by Mobile call");
-    });
-
-    console.log('Connect[' + this.tryRounds + '] to : ' + this.peer.peerIdentifier + 'Available: '  + this.peer.peerAvailable);
+    console.log('Connect[' + this.tryRounds + '] to : ' + this.peer.peerName + 'Available: '  + this.peer.peerAvailable);
     this.doConnect(this.peer);
 }
 
@@ -76,10 +67,10 @@ SendDataConnector.prototype.ReStart = function(peer) {
 SendDataConnector.prototype.Stop = function(peer) {
     console.log("CLIENT Stop now");
     this.stopped = true;
-    if(this.reTryTimer != null) {
+    if(this.reTryTimeOut != null) {
         console.log("Stop retry timer");
-        clearTimeout(this.reTryTimer);
-        this.reTryTimer = null;
+        clearTimeout(this.reTryTimeOut);
+        this.reTryTimeOut = null;
     }
 
     if (this.dataTimerId != null) {
@@ -94,23 +85,12 @@ SendDataConnector.prototype.Stop = function(peer) {
         this.clientSocket.end();
         this.clientSocket = null;
     }
-
-    if(!this.peer){
-        return;
-    }
-    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
-        console.log("Disconnected by Mobile call");
-    });
 }
 
 SendDataConnector.prototype.doConnect = function(peer) {
     var self = this;
 
     if(this.stopped){
-        return;
-    }
-
-    if(!this.peer){
         return;
     }
 
@@ -172,11 +152,6 @@ SendDataConnector.prototype.doConnect = function(peer) {
                     self.tryAgain();
                 }
             });
-        }else{
-            console.log("Port in invalid : " + port);
-            if(!self.disconnecting) {
-                self.tryAgain();
-            }
         }
     });
 }
@@ -216,7 +191,7 @@ SendDataConnector.prototype.tryAgain = function() {
         return;
     }
 
-    if(self.reTryTimer != null){
+    if(self.reTryTimeOut != null){
         return;
     }
 
@@ -235,14 +210,9 @@ SendDataConnector.prototype.tryAgain = function() {
 
     console.log("tryAgain afer: " + self.reTryTimeout + " ms.");
     //lets try again after a short while
-    self.reTryTimer = setTimeout(function () {
-
-        if(!self.peer){
-            return;
-        }
-
-        console.log("re-try now : " + self.peer.peerIdentifier);
-        self.reTryTimer = null
+    self.reTryTimeOut = setTimeout(function () {
+        console.log("re-try now : " + self.peer.peerName);
+        self.reTryTimeOut = null
         self.ReStart(self.peer);
     }, self.reTryTimeout);
 }
@@ -250,20 +220,15 @@ SendDataConnector.prototype.tryAgain = function() {
 SendDataConnector.prototype.oneRoundDoneNow = function() {
     this.Stop();
 
-    if(!this.peer){
-        return;
-    }
-
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;
-    this.resultArray.push({"name":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount,"tryCount":this.peer.tryCount});
+    this.resultArray.push({"name:":this.peer.peerName,"time":responseTime,"result":this.endReason,"connections":this.connectionCount});
 
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
 
     this.doneRounds++;
     if(this.roundsToDo > this.doneRounds){
         this.tryRounds = 0;
-        this.receivedCounter = 0;
 
         //reset the values to make sure they are clean when we start new round
         this.startTime = new Date();
@@ -277,14 +242,6 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
 
     //if we get this far, then we are done
     this.weAreDoneNow();
-}
-
-SendDataConnector.prototype.getCurrentTest = function() {
-    if(!this.peer){
-        return;
-    }
-
-    return {"connections":this.peer.tryCount, "name":this.peer.peerIdentifier,"time":0,"result":"Fail"};
 }
 
 SendDataConnector.prototype.getResultArray = function() {
@@ -303,7 +260,7 @@ SendDataConnector.prototype.weAreDoneNow = function() {
 
     var tmpArr = this.resultArray;
     this.resultArray = [];
-    this.peer = null;
+
     this.emit('done', JSON.stringify(tmpArr));
 }
 

@@ -7,77 +7,26 @@
 
 var events = require('events');
 
-function UnitTestFramework(platform) {
-    this.os = platform;
+function UnitTestFramework(count) {
+    this.devicesCount = count;
     this.testDevices = {};
     this.testsToRunArray = [];
-    this.devicesCount = 0;
 }
 // to do, we would need timeout for each test, so we can cancel is somebody is hanging
 
 UnitTestFramework.prototype = new events.EventEmitter;
 
-UnitTestFramework.prototype.addDevice = function(device,socket) {
+UnitTestFramework.prototype.addDevice = function(device,test) {
 
     var devName = device.getName();
-    if(!this.testDevices) {
-        this.testDevices = {};
-    }
+    var tstName = test;
+
+    console.log(devName + ' added test : ' + tstName);
 
     if(!this.testDevices[devName]){
         this.testDevices[devName] = {};
     }
 
-    //each device will report each and every file they load, so lets not count dublicates
-    if(this.isSocketAlreadyCounted(socket)){
-        return false;
-    }
-
-    this.devicesCount++;
-    this.testDevices[devName].device = device;
-    console.log('Add ' + devName + ', os: ' + this.os + ' for unit tests' );
-
-    return true;
-}
-
-UnitTestFramework.prototype.isSocketAlreadyCounted = function(socket) {
-
-    for (var deviceName in this.testDevices) {
-        if (this.testDevices[deviceName] != null && this.testDevices[deviceName].device) {
-            if(this.testDevices[deviceName].device.compareSocket(socket)){
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-UnitTestFramework.prototype.getCount = function() {
-    return this.devicesCount;
-}
-
-UnitTestFramework.prototype.startTest = function(json) {
-
-    for (var deviceName in this.testDevices) {
-        if (this.testDevices[deviceName] != null && this.testDevices[deviceName].device != null) {
-            //console.log('send start command to ' +  this.testDevices[deviceName].device.getName());
-            this.testDevices[deviceName].device.start_tests(json);
-        }
-    }
-}
-
-UnitTestFramework.prototype.addTest = function(device,test) {
-
-    var devName = device.getName();
-    var tstName = test;
-
-    if(!this.testDevices || !this.testDevices[devName]){
-        console.log(devName + ' has not been added to the tests !!');
-        return;
-    }
-
-    console.log(devName + ' added test : ' + tstName);
     this.testDevices[devName][tstName] = device;
 
     var count = [];

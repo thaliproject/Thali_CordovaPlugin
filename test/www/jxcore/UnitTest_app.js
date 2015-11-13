@@ -55,9 +55,6 @@ testUtils.setMyName(myName);
         testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
         console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
         testUtils.toggleRadios(false);
-
-        console.log("****TEST TOOK:  ms ****" );
-        console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
     });
 
   require('./runTests.js');

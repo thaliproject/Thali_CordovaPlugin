@@ -154,7 +154,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         return ret;
     }
 
-    public String GetBluetoothAddress(){
+    private String GetBluetoothAddress(){
         BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
         return bluetooth == null ? "" : bluetooth.getAddress();
     }
@@ -188,14 +188,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         }
 
         if (selectedDevice == null) {
-        /*    connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
-            return;
-            */
-            selectedDevice = new ServiceItem(toPeerId, toPeerId, toPeerId, "", "", "");
-        }
-
-        if(!BluetoothAdapter.checkBluetoothAddress(selectedDevice.peerAddress)){
-            connectStatusCallback.ConnectionStatusUpdate("Bluetooth address for the device is invalid : " + selectedDevice.peerAddress, -1);
+            connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
             return;
         }
 
@@ -464,9 +457,6 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     @Override
     public void PeerDiscovered(ServiceItem serviceItem) {
         boolean wasPrevouslyAvailable = false;
-
-        Log.i("BtConnectorHelper","PeerDiscovered BtAddress : " + serviceItem.peerAddress + ", Name: " + serviceItem.peerName + ", WifiDirectName: " + serviceItem.deviceName + ", WifiDirect Address: " + serviceItem.deviceAddress  + ", peerId: " + serviceItem.peerId);
-
 
         for (ServiceItem lastItem : lastAvailableList) {
             if (lastItem != null && serviceItem.deviceAddress.equalsIgnoreCase(lastItem.deviceAddress)) {
