@@ -1,3 +1,23 @@
 {
-  "node": true
+  "maxlen": 80,
+  "curly": true,
+  "eqeqeq": true,
+  "immed": true,
+  "newcap": true,
+  "noarg": true,
+  "sub": true,
+  "undef": true,
+  "unused": "vars",
+  "eqnull": true,
+  "browser": true,
+  "node": true,
+  "strict": true,
+  "trailing": true,
+  "globalstrict": true,
+  "white": true,
+  "indent": 2,
+  "forin": true,
+  "futurehostile": true,
+  "-W030": true,
+  "predef": [ "Promise" ]
 }
