@@ -76,10 +76,17 @@ PerfTestFramework.prototype.addDevice = function(device) {
     }
 
     //do we already have it added
-    if(this.isDeviceAlreadyAdded(deviceName)){
+    var previousItem = this.getDevice(deviceName);
+    if(previousItem && previousItem != null){
         console.log(this.os + ' ' + deviceName + ' got re-connected event  ####################################################');
+
         //need to replace the device to get new socket !!
         this.testDevices[deviceName] = device;
+        // but we do need to keep old data
+        this.testDevices[deviceName].data = previousItem.data;
+        this.testDevices[deviceName].startTime = previousItem.startTime;
+        this.testDevices[deviceName].endTime = previousItem.endTime;
+
         return true;
     }
 
@@ -96,16 +103,21 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
 PerfTestFramework.prototype.isDeviceAlreadyAdded = function(name) {
 
-    if (!this.testDevices) {
-        return false;
-    }
-
-    //do we already have it added
-    if (this.testDevices[name] && this.testDevices[name] != null) {
+    var previousItem = this.getDevice(name);
+    if(previousItem && previousItem != null){
         return true;
     }
 
     return false;
+}
+
+PerfTestFramework.prototype.getDevice = function(name) {
+
+    if (!this.testDevices) {
+        return null;
+    }
+
+    return this.testDevices[name];
 }
 
 PerfTestFramework.prototype.startTest = function(json){
@@ -331,68 +343,28 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
             if (this.testResults[i].data.peersList) {
                 results[this.testResults[i].device].peersList = this.extendArray(this.testResults[i].data.peersList, results[this.testResults[i].device].peersList);
-
             } else if (this.testResults[i].data.connectList) {
+                if(!results[this.testResults[i].device].connectList) {
+                    results[this.testResults[i].device].connectList = [];
+                }
 
-                var ConnectionCount = 0;
-                var timeoutCount = 0;
-                var errorCount = 0;
-                var tmpConnectList = [];
-                this.testResults[i].data.connectList.forEach(function(roundResult) {
+                if(!results[this.testResults[i].device].connectError) {
+                    results[this.testResults[i].device].connectError = {};
+                }
 
-                    if(!roundResult || roundResult == null){
-                        return;
-                    }
-
-                    if (roundResult.result == "OK") {
-                        tmpConnectList.push(roundResult);
-                    //    ConnectionCount = ConnectionCount + roundResult.connections;
-                    } else if(roundResult.connections){
-                        errCount++;
-                    }else{ // if connections is zero, then we never got to try to connect before we got timeout
-                        timeoutCount++;
-                    }
-                });
-
-                results[this.testResults[i].device].connectList = this.extendArray(tmpConnectList, results[this.testResults[i].device].connectList);
-                results[this.testResults[i].device].connectErrorCount = errorCount;
-               // results[this.testResults[i].device].ConCount = ConnectionCount;
-                results[this.testResults[i].device].timeoutCount = timeoutCount;
-
+                this.preProcessResults(this.testResults[i].data.connectList,results[this.testResults[i].device].connectList,results[this.testResults[i].device].connectError);
             } else if (this.testResults[i].data.sendList) {
+                if(!results[this.testResults[i].device].sendList) {
+                    results[this.testResults[i].device].sendList = [];
+                }
 
-                var ConCount = 0;
-                var errCount = 0;
-                var timeoutCount = 0;
-                var tmpSendList = [];
-                this.testResults[i].data.sendList.forEach(function(roundResult) {
+                if(!results[this.testResults[i].device].sendError) {
+                    results[this.testResults[i].device].sendError = {};
+                }
 
-                    if(!roundResult || roundResult == null){
-                        return;
-                    }
-
-                    if (roundResult.result == "OK") {
-                        //console.log("roundResult : " + JSON.stringify(roundResult));
-                        tmpSendList.push(roundResult);
-                  //      ConCount = ConCount + roundResult.connections;
-                    } else if(roundResult.connections){
-                        errCount++;
-                    }else{ // if connections is zero, then we never got to try to connect before we got timeout
-                        timeoutCount++;
-                    }
-                });
-
-                results[this.testResults[i].device].sendList = this.extendArray(tmpSendList, results[this.testResults[i].device].sendList);
-                results[this.testResults[i].device].sendErrorCount = errCount;
-                //results[this.testResults[i].device].ConCount = ConCount;
-                results[this.testResults[i].device].timeoutCount = timeoutCount;
-
-                //console.log("roundResult : " + results[this.testResults[i].device].sendList.length);
-
+                this.preProcessResults(this.testResults[i].data.sendList,results[this.testResults[i].device].sendList,results[this.testResults[i].device].sendError);
             } else {
-                var line00 = 'Test[' + this.testResults[i].test + '] for ' + this.testResults[i].device + ' has unknown data : ' + JSON.stringify(this.testResults[i].data);
-
-                console.log(line00);
+                console.log('Test[' + this.testResults[i].test + '] for ' + this.testResults[i].device + ' has unknown data : ' + JSON.stringify(this.testResults[i].data));
             }
         }
     }
@@ -413,55 +385,40 @@ PerfTestFramework.prototype.doNextTest  = function(){
         counter++;
         console.log('--------------- ' + devName + ' --------------------- : ' + counter);
 
-        if(results[devName].peersList && (results[devName].peersList.length > 0)) {
-
+        if(results[devName].peersList){// && (results[devName].peersList.length > 0)) {
             results[devName].peersList.sort(this.compare);
 
-            var line01 = devName + ' has ' + results[devName].peersList.length + ' peersList result, range ' + results[devName].peersList[0].time + ' ms  to  '  + results[devName].peersList[(results[devName].peersList.length - 1)].time + " ms.";
-            console.log(line01);
-
-            var line02 = "100% : " + this.getValueOf(results[devName].peersList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].peersList,0.90)  + " ms, 95 %: " + this.getValueOf(results[devName].peersList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].peersList,0.90) + " ms.";
-            console.log(line02);
-
+            this.printResultLine('peersList',results[devName].peersList);
+            this.printMinMaxLine(results[devName].peersList);
             combined.peersList = this.extendArray(results[devName].peersList,combined.peersList);
         }
 
-        if(results[devName].connectList && (results[devName].connectList.length > 0)) {
+        if(results[devName].connectList){// && (results[devName].connectList.length > 0)) {
             results[devName].connectList.sort(this.compare);
 
-            var line03 = devName + ' has ' + results[devName].connectList.length + ' connectList result , range ' + results[devName].connectList[0].time + ' ms to  '  + results[devName].connectList[(results[devName].connectList.length - 1)].time + " ms.";
+            this.printResultLine('connectList',results[devName].connectList);
+            this.printMinMaxLine(results[devName].connectList);
 
-            console.log(line03);
-
-            console.log("Failed connections " + results[devName].connectErrorCount + "(" + (results[devName].connectErrorCount * 100 / (results[devName].connectList.length + results[devName].connectErrorCount)) + "%)");
-            console.log("Never tried (test timeout) connections " + results[devName].timeoutCount + "(" + (results[devName].timeoutCount * 100 / (results[devName].connectList.length + results[devName].connectErrorCount) + results[devName].timeoutCount) + "%) of all ");
-
-
-            var line04 = "100% : " + this.getValueOf(results[devName].connectList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].connectList,0.99)  + " ms, 95% : " + this.getValueOf(results[devName].connectList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].connectList,0.90) + " ms.";
-
-            console.log(line04);
-
+            if(results[devName].connectError) {
+                this.printFailedLine('connectList',results[devName].connectError.failedPeer, results[devName].connectError.notTriedList, results[devName].connectList.length);
+            }
             combined.connectList = this.extendArray(results[devName].connectList,combined.connectList);
-        }else if (results[devName].connectErrorCount && results[devName].connectErrorCount > 0){
-            console.log("All (" + results[devName].connectErrorCount + ") Re-Connect test connections failed");
+        }else if (results[devName].connectError && results[devName].connectError.failedPeer > 0){
+            console.log("All (" + results[devName].connectError.failedPeer + ") Re-Connect test connections failed");
         }
 
-        if(results[devName].sendList && (results[devName].sendList.length > 0)) {
+        if(results[devName].sendList){// && (results[devName].sendList.length > 0)) {
             results[devName].sendList.sort(this.compare);
 
-            var line05 = devName + ' has ' + results[devName].sendList.length + ' sendList result , range ' + results[devName].sendList[0].time + ' ms to  '  + results[devName].sendList[(results[devName].sendList.length - 1)].time + " ms.";
+            this.printResultLine('sendList',results[devName].sendList);
+            this.printMinMaxLine(results[devName].sendList);
 
-            console.log(line05);
-            console.log("Failed connections " + results[devName].sendErrorCount + "(" + (results[devName].sendErrorCount * 100 / (results[devName].sendList.length + results[devName].sendErrorCount)) + "%)");
-            console.log("Never tried (test timeout) connections " + results[devName].timeoutCount + "(" + (results[devName].timeoutCount * 100 / (results[devName].sendList.length + results[devName].sendErrorCount) + results[devName].timeoutCount) + "%)");
-
-            var line06 = "100% : " + this.getValueOf(results[devName].sendList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].sendList,0.99)  + " ms, 95 : " + this.getValueOf(results[devName].sendList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].sendList,0.90) + " ms.";
-
-            console.log(line06);
-
+            if(results[devName].sendError) {
+                this.printFailedLine('sendList',results[devName].sendError.failedPeer, results[devName].sendError.notTriedList, results[devName].sendList.length);
+            }
             combined.sendList = this.extendArray(results[devName].sendList,combined.sendList);
-        }else if (results[devName].sendErrorCount && results[devName].sendErrorCount > 0){
-            console.log("All (" + results[devName].sendErrorCount + ") SendData test connections failed");
+        }else if (results[devName].sendError && results[devName].sendError.failedPeer > 0){
+            console.log("All (" + results[devName].sendError.failedPeer + ") SendData test connections failed");
         }
     }
 
@@ -469,24 +426,18 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
     if(combined.peersList){
         combined.peersList.sort(this.compare);
-        var line07 = "peersList : 100% : " + this.getValueOf(combined.peersList,1.00) + " ms, 99% : " + this.getValueOf(combined.peersList,0.99)  + " ms, 95 : " + this.getValueOf(combined.peersList,0.95)  + " ms, 90% : " + this.getValueOf(combined.peersList,0.90) + " ms.";
-
-        console.log(line07);
+        this.printResultLine('peersList',combined.peersList);
     }
 
     if(combined.connectList){
         combined.connectList.sort(this.compare);
-        var line08 = "connectList : 100% : " + this.getValueOf(combined.connectList,1.00) + " ms, 99% : " + this.getValueOf(combined.connectList,0.99)  + " ms, 95 : " + this.getValueOf(combined.connectList,0.95)  + " ms, 90% : " + this.getValueOf(combined.connectList,0.90) + " ms.";
-
-        console.log(line08);
+        this.printResultLine('connectList',combined.connectList);
     }
 
     if(combined.sendList){
-        combined.sendList.sort(this.compare);
-        var line09 = "sendList : 100% : " + this.getValueOf(combined.sendList,1.00) + " ms, 99% : " + this.getValueOf(combined.sendList,0.99)  + " ms, 95 : " + this.getValueOf(combined.sendList,0.95)  + " ms, 90% : " + this.getValueOf(combined.sendList,0.90) + " ms.";
-
-        console.log(line09);
-    }
+        combined.peersList.sort(this.compare);
+        this.printResultLine('sendList',combined.sendList);
+   }
 
     for (var deviceName in tmpDevicesList) {
         if(tmpDevicesList[deviceName] != null){
@@ -497,10 +448,72 @@ PerfTestFramework.prototype.doNextTest  = function(){
 
     console.log('--------------- end of test report ---------------------');
 }
+PerfTestFramework.prototype.printFailedLine = function(what,failedPeers, notTriedPeers,successCount) {
+
+    if(!notTriedPeers || !failedPeers ||  (failedPeers.length + successCount) <=0){
+        return;
+    }
+    console.log(what + " failed peers count : " + failedPeers.length + " [" + ((failedPeers.length * 100) / (successCount + failedPeers.length)) + " %]");
+
+    failedPeers.forEach(function(peer) {
+        console.log("- Peer ID : " + peer.name + ", Tried : " + peer.connections);
+    });
+
+    console.log(what + " never tried peers count : " + notTriedPeers.length + " [" + ((notTriedPeers.length * 100) / (successCount + failedPeers.length + notTriedPeers.length)) + " %]");
+
+    notTriedPeers.forEach(function(peer) {
+        console.log("- Peer ID : " + peer.name);
+    });
+}
+
+PerfTestFramework.prototype.printMinMaxLine  = function(list) {
+    if(!list || list.length <= 0){
+        console.log('Results list does not contain any items');
+        return;
+    }
+    console.log('Result count ' + list.length + ', range ' + list[0].time + ' ms to  '  + list[(list.length - 1)].time + " ms.");
+}
+
+PerfTestFramework.prototype.printResultLine  = function(what, list) {
+    console.log(what + " : 100% : " + this.getValueOf(list,1.00) + " ms, 99% : " + this.getValueOf(list,0.99)  + " ms, 95 : " + this.getValueOf(list,0.95)  + " ms, 90% : " + this.getValueOf(list,0.90) + " ms.");
+}
+
+PerfTestFramework.prototype.preProcessResults  = function(source, target,errorTarget){
+
+    if(!target) {
+        target = [];
+    }
+    if(!errorTarget.failedPeer) {
+        errorTarget.failedPeer = [];
+    }
+    if(!errorTarget.notTriedList) {
+        errorTarget.notTriedList = [];
+    }
+
+    source.forEach(function(roundResult) {
+
+        if(!roundResult || roundResult == null){
+            return;
+        }
+
+        if (roundResult.result == "OK") {
+            target.push(roundResult);
+        } else if(roundResult.connections){
+            errorTarget.failedPeer.push(roundResult);
+        }else{ // if connections is zero, then we never got to try to connect before we got timeout
+            errorTarget.notTriedList.push(roundResult);
+        }
+    });
+}
 
 
 
 PerfTestFramework.prototype.getValueOf  = function(array, presentage) {
+
+    if(array.length <= 0){
+        return;
+    }
+
     var index = Math.round(array.length * presentage);
     if(index > 0){
         index = index - 1;

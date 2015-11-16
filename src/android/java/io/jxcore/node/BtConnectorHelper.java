@@ -1,8 +1,12 @@
 package io.jxcore.node;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 
 import android.util.Log;
@@ -18,7 +22,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
-
+import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 
 /**
  * Created by juksilve on 14.5.2015.
@@ -143,7 +148,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         boolean ret = false;
         for (BtToServerSocket rSocket : mServerSocketList) {
             if (rSocket != null) {
-                Log.i("BtConnectorHelper","Disconnect:::Stop : mBtToServerSocket :" + rSocket.getName());
+                Log.i("BtConnectorHelper", "Disconnect:::Stop : mBtToServerSocket :" + rSocket.getName());
                 rSocket.Stop();
                 ret = true;
             }
@@ -155,8 +160,38 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     }
 
     public String GetBluetoothAddress(){
+
         BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
         return bluetooth == null ? "" : bluetooth.getAddress();
+    }
+
+    @TargetApi(18)
+    @SuppressLint("NewApi")
+    public String isBLEAdvertisingSupported() {
+
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            return "Build version is " + Build.VERSION.SDK_INT;
+        }
+
+        if (!this.context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)){
+            return "Feature FEATURE_BLUETOOTH_LE not found";
+        }
+
+        BluetoothManager tmpMan = (BluetoothManager) this.context.getSystemService(Context.BLUETOOTH_SERVICE);
+        if (tmpMan == null) {
+            return "Can not get BLUETOOTH_SERVICE";
+        }
+
+        BluetoothAdapter tmpAdapter = tmpMan.getAdapter();
+        if (tmpAdapter == null ) {
+            return "got NULL BluetoothAdapter";
+        }
+
+        if(!tmpAdapter.isMultipleAdvertisementSupported()){
+            return "MultipleAdvertisement not supported";
+        }
+
+        return null;
     }
 
     private ConnectStatusCallback mConnectStatusCallback = null;

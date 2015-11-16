@@ -3,6 +3,7 @@
 package io.jxcore.node;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import io.jxcore.node.jxcore.JXcoreCallback;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ public class JXcoreExtension {
     public final static String METHODSTRING_SHOWTOAST         = "ShowToast";
     public final static String METHODSTRING_GETBTADDRESS      = "GetBluetoothAddress";
     public final static String METHODSTRING_RECONNECTWIFIAP   = "ReconnectWifiAP";
+    public final static String METHODSTRING_ISBLESUPPORTED   = "IsBLESupported";
 
     public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
     public final static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
@@ -80,9 +82,32 @@ public class JXcoreExtension {
                 //all is well, so lets return null as first argument
                 args.add(null);
                 args.add(btAddressString);
+
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
+
+        jxcore.RegisterMethod(METHODSTRING_ISBLESUPPORTED, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                String bleErrorString = mBtConnectorHelper.isBLEAdvertisingSupported();
+                if (bleErrorString != null) {
+                    args.add(bleErrorString);
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
+                }
+
+                //all is well, so lets return null as first argument
+                args.add(null);
+                args.add("BLE is supported");
+
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
 
         jxcore.RegisterMethod(METHODSTRING_SHOWTOAST, new JXcoreCallback() {
           @Override

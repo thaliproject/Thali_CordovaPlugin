@@ -43,7 +43,7 @@ process.on('unhandledRejection', function(err) {
     Coordinator.close();
   }
   console.log("****TEST TOOK:  ms ****" );
-  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAIL]****");
+  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
 });
 
 function Thali_Tape(options) {
