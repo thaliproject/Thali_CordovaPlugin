@@ -144,18 +144,14 @@ PerfTestFramework.prototype.startTest = function(json){
     this.doNextTest();
 }
 
-PerfTestFramework.prototype.removeDevice = function(name){
-
-    if(!this.testDevices){
-        return;
-    }
-
-    if(this.testDevices == null){
-        return;
-    }
-
-    if(this.testDevices[name]) {
-        console.log(this.os + ' ' + name + ' got disconnection event  ####################################################');
+PerfTestFramework.prototype.removeDevice = function(device) {
+    if (this.testDevices[device.deviceName]) {
+        console.log(this.os + ' ' + device.deviceName + ' got disconnected');
+        // TODO: Right now, we are doing nothing when device disconnects, because
+        // we expect that it might reconnect at some point. However, the disconnection
+        // might also be due to the app on the device crashing in which case it
+        // will never connect back. If that is the case that needs to be tackled here
+        // we should probably remove the device from the test devices list.
     }
 }
 
