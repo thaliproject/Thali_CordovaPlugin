@@ -44,19 +44,36 @@ if(jxcore.utils.OSInfo().isAndroid) {
             return;
         }
 
+
         bluetoothAddress = address;
-        console.log("Got Device Bluetooth address" + bluetoothAddress);
+        console.log("Got Device Bluetooth address: " + bluetoothAddress);
         Mobile('GetDeviceName').callNative(function (name) {
 
             myName = name + "_PT" + Math.round((Math.random() * (10000)));
-            ;
+
             console.log('my name is : ' + myName);
             testUtils.setMyName(myName);
 
             //console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
             Coordinator.init(parsedJSON[0].address, 3000);
             console.log('attempting to connect to test coordinator');
-        });
+
+
+            //once we have had the BT off and we just turned it on,
+            // we need to wait untill the BLE support is reported rigth way
+            // seen with LG G4, Not seen with Motorola Nexus 6
+            setTimeout(function () {
+                Mobile('IsBLESupported').callNative(function (err) {
+                    if (err) {
+                        console.log("BLE advertisement not supported: " + err );
+                        return;
+                    }
+                    console.log("BLE supported!!");
+                });
+            },5000);
+
+
+            });
     });
 }else{
     bluetoothAddress = "C0:FF:FF:EE:42:00";
@@ -123,7 +140,7 @@ Coordinator.on('too_late', function (data) {
     Coordinator.close();
     //lets let the CI know that we did finish
     console.log("****TEST TOOK:  ms ****" );
-    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
 });
 
 Coordinator.on('connect', function () {
