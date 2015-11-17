@@ -25,7 +25,8 @@ TestDevice.prototype.getName = function(){
 };
 
 TestDevice.prototype.compareSocket = function(socket){
-    return (socket == this.socket);
+    console.log('Comparing sockets ' + socket.id + ' and ' + this.socket.id);
+    return (socket.id === this.socket.id);
 };
 
 TestDevice.prototype.getPlatform = function(){
