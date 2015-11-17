@@ -435,7 +435,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
     }
 
     if(combined.sendList){
-        combined.peersList.sort(this.compare);
+        combined.sendList.sort(this.compare);
         this.printResultLine('sendList',combined.sendList);
    }
 
