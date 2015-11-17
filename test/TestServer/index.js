@@ -19,22 +19,10 @@ var http = require('http').Server(app)
 
 var io = require('socket.io')(http,options);
 
-process.on('uncaughtException', function(err) {
-  console.log("We have an uncaught exception, good bye: " + JSON.stringify(err));
-});
-
-process.on('unhandledRejection', function(err) {
-  console.log("We have an uncaught promise rejection, good bye: " + JSON.stringify(err));
-});
-
-//IPAddressToFile is left here for debugging purposes, it gives you quick way on seeing the IP address used
-//var IPAddressToFile = require('./IPAddressToFile');
-//IPAddressToFile();
-
 var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');
 var UnitTestFramework = require('./UnitTestFramework');
-var devicesObject = JSON.parse(process.argv[2]); //
+var devicesObject = JSON.parse(process.argv[2]);
 
 var timeOutValueToStart = 30000;// after 300 seconds of waiting we'll start even if we did not get desired amount of devices
 
@@ -67,20 +55,6 @@ if (!devicesObject.honorCount) {
 }
 
 io.on('connection', function (socket) {
-  console.log('Got socket connection');
-
-  socket.on('close', function(){
-    console.log('Socket close');
-  });
-
-  socket.on('error', function(){
-    console.log('Socket error');
-  });
-
-  socket.on('disconnect', function(){
-    console.log('Socket disconnect');
-  });
-
   socket.on('present', function (msg) {
     var presentObj = JSON.parse(msg);
     if (!presentObj.os || !presentObj.name || !presentObj.type) {
