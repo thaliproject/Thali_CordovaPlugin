@@ -66,17 +66,26 @@ if (!devicesObject.honorCount) {
   }, timeOutValueToStart);
 }
 
-io.on('connection', function(socket) {
-  console.log("got connection ");
+io.on('connection', function (socket) {
+  console.log('Got socket connection');
 
   socket.on('close', function(){
-    console.log("Socket closed");
+    console.log('Socket close');
   });
-  socket.on('present', function(msg) {
+
+  socket.on('error', function(){
+    console.log('Socket error');
+  });
+
+  socket.on('disconnect', function(){
+    console.log('Socket disconnect');
+  });
+
+  socket.on('present', function (msg) {
     var presentObj = JSON.parse(msg);
     if (!presentObj.os || !presentObj.name || !presentObj.type) {
       console.log("malformed message");
-      this.emit('error', JSON.stringify({"errorDescription ": "malformed message"}));
+      socket.emit('error', JSON.stringify({"errorDescription ": "malformed message"}));
       return;
     }
 
@@ -88,7 +97,7 @@ io.on('connection', function(socket) {
       // there is one connection, i.e. one socket for each device, so we use that to determine what to do
       if (presentObj.type == "unittest") {
         if (devicesObject.honorCount) {
-          isThisTestFromAddedDevice = TestsFrameworks['unittest'][presentObj.os].isSocketAlreadyCounted(this);
+          isThisTestFromAddedDevice = TestsFrameworks['unittest'][presentObj.os].isSocketAlreadyCounted(socket);
         }
       } else { //perf test
         isThisTestFromAddedDevice = TestsFrameworks['perftest'][presentObj.os].isDeviceAlreadyAdded(presentObj.name);
@@ -96,13 +105,13 @@ io.on('connection', function(socket) {
 
       if (!isThisTestFromAddedDevice) {
         console.log("too late arrival");
-        this.emit('too_late', JSON.stringify({"timeout ": "malformed message"}));
+        socket.emit('too_late', JSON.stringify({"timeout ": "malformed message"}));
         return;
       }
     }
 
-    var newDevice = new TestDevice(this, presentObj.name, presentObj.os, presentObj.type, presentObj.btaddress);
-    TestsFrameworks[presentObj.type][presentObj.os].addDevice(newDevice, this);
+    var newDevice = new TestDevice(socket, presentObj.name, presentObj.os, presentObj.type, presentObj.btaddress);
+    TestsFrameworks[presentObj.type][presentObj.os].addDevice(newDevice, socket);
 
     // implemented by both unit & performance tests
     if (devicesObject.honorCount && !weHaveStartedTesting) {
@@ -119,16 +128,16 @@ io.on('connection', function(socket) {
     }
 
     // implemented by both unit & performance tests
-    this.on('disconnect', function () {
+    socket.on('disconnect', function () {
       if (!weHaveStartedTesting) {
-        this.emit('test_error', JSON.stringify({"timeout ": "message not acceptable in current Test Server state"}));
+        socket.emit('test_error', JSON.stringify({"timeout ": "message not acceptable in current Test Server state"}));
         return;
       }
       TestsFrameworks[presentObj.type][presentObj.os].removeDevice(newDevice);
     });
 
     //this event only happens with unit tests, presentObj.type == unittest
-    this.on('setup_unit_test', function (msg) {
+    socket.on('setup_unit_test', function (msg) {
       var msgData = JSON.parse(msg);
       if (msgData.name == newDevice.getName()) {
         TestsFrameworks[presentObj.type][presentObj.os].addTest(newDevice, msgData.test);
@@ -136,9 +145,9 @@ io.on('connection', function(socket) {
     });
 
     //this event only happens with unit tests, presentObj.type == unittest
-    this.on('unit_test_done', function (msg) {
+    socket.on('unit_test_done', function (msg) {
       if (!weHaveStartedTesting) {
-        this.emit('test_error', JSON.stringify({"timeout ": "message not acceptable in current Test Server state"}));
+        socket.emit('test_error', JSON.stringify({"timeout ": "message not acceptable in current Test Server state"}));
         return;
       }
 
@@ -149,9 +158,9 @@ io.on('connection', function(socket) {
     });
 
     //this event only happens with performance tests, presentObj.type == perftest
-    this.on('test data', function (data) {
+    socket.on('test data', function (data) {
       if (!weHaveStartedTesting) {
-        this.emit('test_error', JSON.stringify({"timeout ": "message not acceptable in current Test Server state"}));
+        socket.emit('test_error', JSON.stringify({"timeout ": "message not acceptable in current Test Server state"}));
         return;
       }
       TestsFrameworks[presentObj.type][presentObj.os].ClientDataReceived(newDevice.getName(), data);

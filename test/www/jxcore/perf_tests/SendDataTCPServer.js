@@ -23,12 +23,13 @@ function SendDataTCPServer(port) {
     var self = this;
     self.port = port;
 
-    var dataCount = 0;
-    var lastReportedCount = 0;
     var limitToReport = 10000;
 
     this.stopServer();
     this.server = net.createServer(function (c) { //'connection' listener
+        var receivedDataInBytes = 0;
+        var lastReportedCount = 0;
+
         console.log('TCP/IP server connected');
 
         c.on('end', function () {
@@ -43,10 +44,13 @@ function SendDataTCPServer(port) {
         });
 
         c.on('data', function (data) {
-            dataCount = dataCount + data.length;
-            if(dataCount / limitToReport > lastReportedCount){
+            // The received data in bytes is gotten by multiplying the data.length
+            // by 2, because each character in the data stream consumes 2 bytes.
+            receivedDataInBytes = receivedDataInBytes + (data.length * 2);
+            console.log('TCP/IP server has received ' + receivedDataInBytes + ' bytes of data');
+            if(receivedDataInBytes / limitToReport > lastReportedCount){
                 lastReportedCount++;
-                c.write("" + limitToReport);
+                c.write('ACK');
             }
         });
     });
