@@ -1,5 +1,6 @@
 {
   "maxlen": 80,
+  "esversion": 5,
   "curly": true,
   "eqeqeq": true,
   "noarg": true,
@@ -14,5 +15,7 @@
   "futurehostile": true,
   "expr": true,
   "nonew": true,
-  "singleGroups": true
+  "singleGroups": true,
+  "latedef": true,
+  "freeze": true
 }
