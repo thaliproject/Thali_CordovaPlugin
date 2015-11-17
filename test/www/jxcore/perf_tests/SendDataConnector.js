@@ -64,12 +64,15 @@ SendDataConnector.prototype.ReStart = function(peer) {
         this.clientSocket = null;
     }
 
-    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
-        console.log("Disconnected by Mobile call");
-    });
-
-    console.log('Connect[' + this.tryRounds + '] to : ' + this.peer.peerIdentifier + 'Available: '  + this.peer.peerAvailable);
-    this.doConnect(this.peer);
+    var self = this;
+    setTimeout(function () {
+        Mobile('Disconnect').callNative(self.peer.peerIdentifier, function () {
+            console.log('Connect (retry count ' + self.tryRounds + ') to peer ' +
+                         self.peer.peerIdentifier + ' with availability status: '  +
+                         self.peer.peerAvailable);
+            self.doConnect(self.peer);
+        });
+    }, self.reTryTimeout);
 }
 
 
@@ -94,13 +97,6 @@ SendDataConnector.prototype.Stop = function(peer) {
         this.clientSocket.end();
         this.clientSocket = null;
     }
-
-    if(!this.peer){
-        return;
-    }
-    Mobile('Disconnect').callNative(this.peer.peerIdentifier, function () {
-        console.log("Disconnected by Mobile call");
-    });
 }
 
 SendDataConnector.prototype.doConnect = function(peer) {
