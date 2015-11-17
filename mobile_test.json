@@ -2,7 +2,7 @@
   "build": "./build.sh",
   "binary_path": {
     "ios": "ThaliTest.app",
-    "android": "android-debug.apk"
+    "android": "android-release-unsigned.apk"
   },
   "target": "all",
   "priority": "normal",
@@ -10,6 +10,6 @@
     "android": "com.test.thalitest",
     "ios": "com.test.thalitest"
   },
-  "timeout": 1800,
+  "timeout": 1200,
   "serverScript": "test/TestServer/"
 }

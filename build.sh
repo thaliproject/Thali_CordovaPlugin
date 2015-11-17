@@ -71,7 +71,7 @@ rm -rf test/TestServer/node_modules;ERROR_ABORT
 # A hack workround due to the fact that CI server doesn't allow relative paths outside
 # of the original parent folder as a path to the build output binaries.
 # https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
-rm -rf android-debug.apk;ERROR_ABORT
-cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-debug.apk android-debug.apk;ERROR_ABORT
+rm -rf android-release-unsigned.apk;ERROR_ABORT
+cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk;ERROR_ABORT
 rm -rf ThaliTest.app;ERROR_ABORT
 cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
