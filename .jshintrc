@@ -17,5 +17,6 @@
   "nonew": true,
   "singleGroups": true,
   "latedef": true,
-  "freeze": true
+  "freeze": true,
+  "maxdepth": 3
 }
