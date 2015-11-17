@@ -13,78 +13,77 @@ function CoordinatorConnector() {
 
 util.inherits(CoordinatorConnector, EventEmitter);
 
+var debug_log(msg) {
+  console.log("CoordinatorConnector-debug: " + msg);
+}
+
 CoordinatorConnector.prototype.init = function (ipAddress, port){
+
   var self = this;
   var options = {
     transports: ['websocket']
   };
 
+  // Connect to the server, this.socket is a singleton managed by socketIo instance
   this.socket = socketIo('http://' + ipAddress + ':' + port + '/',options);
   this.socket.on('connect', function () {
-    console.log('DBG, CoordinatorConnector connect called');
+    debug_log("connected");
     self.emit('connect');
   });
 
-  this.socket.on('connect_error', function (err) {
-    console.log('DBG, CoordinatorConnector connect_error called');
-    self.emit('error',JSON.stringify({type: 'connect_error', data: err}));
-  });
+  // Mapping of errors to event to emit when they occur
+  this.errors = {
+    "error" : "error",
+    "connect_error" : "error",
+    "connect_timeout" : "error",
+    "test_error" : "test_error"
+  };
 
-  this.socket.on('connect_timeout', function (err) {
-    console.log('DBG, CoordinatorConnector connect_timeout called');
-    self.emit('error',JSON.stringify({type: 'connect_timeout', data: err}));
-  });
+  for (var e in this.errors) {
+    this.socket.on(e, function(err) {
+      debug_log(e);
+      self.emit(self.errors[e], JSON.stringify({type:e, data:err}));
+    });
+  }
 
-  this.socket.on('error', function (err) {
-    console.log('DBG, CoordinatorConnector error called');
-    self.emit('error',JSON.stringify({type: 'error', data: err}));
-  });
+  // Mapping of server messages to events to emit when the occur
+  this.messages = {
+    "disconnect" : "disconnect",
+    "command" : "command",
+    "start_unit_test" : "setup_ready",
+    "end_unit_test" : "tear_down_ready",
+    "too_late" : "too_late",
+    "start_tests" : "start_tests"
+  };
 
-  this.socket.on('test_error', function (err) {
-    console.log('DBG, CoordinatorConnector test_error called');
-    self.emit('test_error',JSON.stringify({type: 'test_error', data: err}));
-  })
-
-  this.socket.on('disconnect', function () {
-    console.log('DBG, CoordinatorConnector disconnect called');
-    self.emit('disconnect');
-  });
-
-  this.socket.on('command', function (data) {
-    console.log('DBG, CoordinatorConnector command called');
-    self.emit('command',data);
-  });
-
-  this.socket.on('start_unit_test', function (data) {
-    self.emit('setup_ready',data);
-  });
-
-  this.socket.on('end_unit_test', function (data) {
-    self.emit('tear_down_ready',data);
-  });
-
-  this.socket.on('too_late', function (data) {
-    console.log('DBG, CoordinatorConnector too_late called');
-    self.emit('too_late',data);
-  });
-
-  this.socket.on('start_tests', function (data) {
-    console.log('DBG, CoordinatorConnector start_tests called');
-    self.emit('start_tests',data);
-  });
+  for (var m in this.messages) {
+    this.socket.on(m, function(data) {
+      debug_log(m + " Data:" + data);
+      self.emit(self.error[m], data);
+    });
+  }
 };
 
 CoordinatorConnector.prototype.close = function(){
-  console.log('CoordinatorConnector close called');
+  debug_log('close');
   this.socket.close();
   this.emit('closed');
 };
 
 CoordinatorConnector.prototype.present = function(name,type,bluetoothAddress){
   if (jxcore.utils.OSInfo().isAndroid) {
-    this.socket.emit('present', JSON.stringify({"os": "android","name": name,"type":type,"btaddress":bluetoothAddress}));
+    this.socket.emit('present', JSON.stringify({
+      "os": "android", 
+      "name": name,
+      "type": type,
+      "btaddress": bluetoothAddress
+    }));
   } else {
-    this.socket.emit('present', JSON.stringify({"os": "ios","name": name,"type":type}));
+    this.socket.emit('present', JSON.stringify({
+      "os" : "ios",
+      "name": name,
+      "type": type
+    }));
   }
 };
 
