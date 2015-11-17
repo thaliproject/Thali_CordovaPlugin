@@ -42,6 +42,19 @@ exports.reFreshWifi = function() {
       }
 
       console.log("toggleWiFi finished");
+
+      if(jxcore.utils.OSInfo().isAndroid) {
+        Mobile('ReconnectWifiAP').callNative(function (err) {
+          if (err) {
+            console.log("ReconnectWifiAP returned error: " + err );
+            Coordinator.close();
+            return;
+          }
+
+          console.log("ReconnectWifiAP finished");
+        });
+      }
+
     });
   });
 };

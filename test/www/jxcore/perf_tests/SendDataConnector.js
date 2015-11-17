@@ -128,10 +128,23 @@ SendDataConnector.prototype.doConnect = function(peer) {
         } else if (port > 0) {
             console.log("CLIENT starting client ");
 
-            self.clientSocket = net.connect(port, function () { //'connect' listener
-                console.log("CLIENT now sending data: " + (self.toSendDataAmount - self.receivedCounter));
+            self.clientSocket = net.connect(port, function () {
+                // self.toSendDataAmount is the wanted amount of data in bytes.
+                // The size of a single character is in a string is 2 bytes.
+                // Below, the wanted amount of data is generated so that an array is
+                // filled with integers that is turned into a string. For example,
+                // a loop two times would generate something like: [1, 2].toString() -> '1,2'.
+                // The size of that example string would be 3 * 2 = 6 bytes, because
+                // a comma is entered between array values.
+                console.log('CLIENT now sending ' + (self.toSendDataAmount - self.receivedCounter) + ' bytes of data');
                 var numbers = [];
-                for (var i = 0; i < (((self.toSendDataAmount - self.receivedCounter) / 2) + 1); i++) {
+                // The right length for the array is calculated below by first splitting
+                // the byte amount by two, which gives the amount of characters we need.
+                // Number one is added, to even the fact that comma doesn't get appended
+                // after the last character. Then, the number is split by two, because
+                // each number in the array results also in one additional comma in the
+                // resulting string.
+                for (var i = 0; i < ((((self.toSendDataAmount - self.receivedCounter) / 2) + 1) / 2); i++) {
                     numbers[i] = Math.floor(Math.random() * 10);
                 }
                 self.resetDataTimeout(peer);
@@ -139,7 +152,7 @@ SendDataConnector.prototype.doConnect = function(peer) {
             });
             self.clientSocket.on('data', function (data) {
 
-                if(data.toString().trim()  == "10000") {
+                if (data.toString().trim()  == 'ACK') {
                     self.receivedCounter = self.receivedCounter + 10000;
                     self.resetDataTimeout(peer);
                 }
