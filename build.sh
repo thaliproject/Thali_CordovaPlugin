@@ -46,7 +46,10 @@ fi
 
 # Check the existence of the script that in CI gives the right test server
 # IP address.
-if hash CIGIVEMEMYIP.sh 2>/dev/null
+hash CIGIVEMEMYIP.sh 2>/dev/null
+RUN_IN_CI=$?
+
+if [ $RUN_IN_CI == 0 ]
 then
   SERVER_ADDRESS=$(CIGIVEMEMYIP.sh)
 else
@@ -63,15 +66,18 @@ TEST_TYPE="UnitTest_app.js"
 # intermediary node.js script to fix this but for now we'll just hack it.
 thali/install/setUpTests.sh $TEST_TYPE $SERVER_ADDRESS;ERROR_ABORT
 
-# Remove the node_modules in the CI environment, because the coordination
-# server may have different OS and CPU architecture than the build server
-# so modules need to be installed there separately (this is handled by the CI).
-rm -rf test/TestServer/node_modules;ERROR_ABORT
-
-# A hack workround due to the fact that CI server doesn't allow relative paths outside
-# of the original parent folder as a path to the build output binaries.
-# https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
-rm -rf android-release-unsigned.apk;ERROR_ABORT
-cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk;ERROR_ABORT
-rm -rf ThaliTest.app;ERROR_ABORT
-cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
+if [ $RUN_IN_CI == 0 ]
+then
+  # Remove the node_modules in the CI environment, because the coordination
+  # server may have different OS and CPU architecture than the build server
+  # so modules need to be installed there separately (this is handled by the CI).
+  rm -rf test/TestServer/node_modules;ERROR_ABORT
+  
+  # A hack workround due to the fact that CI server doesn't allow relative paths outside
+  # of the original parent folder as a path to the build output binaries.
+  # https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
+  rm -rf android-release-unsigned.apk;ERROR_ABORT
+  cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk;ERROR_ABORT
+  rm -rf ThaliTest.app;ERROR_ABORT
+  cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
+fi
