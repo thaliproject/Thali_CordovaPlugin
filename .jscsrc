@@ -1,15 +1,22 @@
 {
   "disallowUnusedParams": true,
-  "maximumLineLength": 80,
   "jsDoc": {
     "checkAnnotations": "jsdoc3",
     "checkParamExistence": true,
     "checkParamNames": true,
+    "checkTypes": "strictNativeCase",
     "requireParamTypes": true,
+    "checkRedundantAccess": "enforceLeadingUnderscore",
     "checkRedundantParams": true,
+    "checkRedundantReturns": true,
     "checkReturnTypes": true,
+    "leadingUnderscoreAccess": true,
+    "requireDescriptionCompleteSentence": true,
     "requireReturnTypes": true
   },
+  "maximumLineLength": 80,
+  "maximumNumberOfLines": 1000,
+  "requireCamelCaseOrUpperCaseIdentifiers": true,
   "requireCapitalizedConstructors": true,
   "requireCommaBeforeLineBreak": true,
   "requireCurlyBraces": [
@@ -66,6 +73,7 @@
     "afterConsequent": true,
     "beforeAlternate": true
   },
+  "safeContextKeyword": ["self"],
   "validateIndentation": 2,
   "validateQuoteMarks": "'"
 }
