@@ -282,7 +282,7 @@ testSendData.prototype.sendReportNow = function() {
             }
         }
 
-        if(!isAlreadyAdded){
+        if (!isAlreadyAdded && currentTest) {
             this.resultArray.push(currentTest);
         }
     }
