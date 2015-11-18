@@ -34,7 +34,7 @@ process.on('uncaughtException', function(err) {
     Coordinator.close();
   }
   console.log("****TEST TOOK:  ms ****" );
-  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAIL]****");
+  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
 });
 
 process.on('unhandledRejection', function(err) {
@@ -105,7 +105,7 @@ function Thali_Tape(options) {
     console.log('got too_late event, closing connection now.');
     Coordinator.close();
     console.log("****TEST TOOK:  ms ****" );
-    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAIL]****");
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
   });
 
   var saveTestName = null;
