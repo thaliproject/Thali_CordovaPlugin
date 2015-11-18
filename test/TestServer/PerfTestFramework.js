@@ -145,7 +145,7 @@ PerfTestFramework.prototype.startTest = function(json){
 }
 
 PerfTestFramework.prototype.removeDevice = function(device) {
-    if (this.testDevices[device.deviceName]) {
+    if (this.testDevices && this.testDevices[device.deviceName]) {
         console.log(this.os + ' ' + device.deviceName + ' got disconnected');
         // TODO: Right now, we are doing nothing when device disconnects, because
         // we expect that it might reconnect at some point. However, the disconnection
