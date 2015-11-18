@@ -6,7 +6,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
 
 var os = require('os');
 var path = require('path');
-var tape = require('../../lib/thali-tape');
+var tape = require('../lib/thali-tape');
 var uuid = require('uuid');
 var util = require('util');
 var express = require('express');
