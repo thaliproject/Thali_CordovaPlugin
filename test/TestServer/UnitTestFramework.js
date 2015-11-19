@@ -11,7 +11,7 @@ function UnitTestFramework(testConfig) {
   UnitTestFramework.super_.call(this, testConfig);
 }
 
-util.inherits(UnitTestFramework, TestManager);
+util.inherits(UnitTestFramework, TestFramework);
 
 UnitTestFramework.prototype.startTests = function(platform, tests) {
 
