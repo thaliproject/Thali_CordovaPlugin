@@ -135,10 +135,10 @@ CoordinatorConnector.prototype.setupComplete = function(deviceName, testName)
   this.socket.emit('setup_complete', JSON.stringify({"name":deviceName, "test":testName}));
 };
 
-CoordinatorConnector.prototype.testComplete = function(deviceName, testName)
+CoordinatorConnector.prototype.testComplete = function(testName, success)
 {
   // Inform the test server that we have completed set up
-  this.socket.emit('test_complete', JSON.stringify({"name":deviceName, "test":testName}));
+  this.socket.emit('test_complete', JSON.stringify({"test":testName, "success":success}));
 };
 
 

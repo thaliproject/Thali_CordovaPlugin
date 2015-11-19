@@ -86,13 +86,13 @@ function declareTest(name, setup, teardown, opts, cb) {
   });
 
   tape(name, function(t) {
-    var result = null;
-    t.once("result", function(res) {
-      console.log(res);
+    var success = true;
+    t.on("result", function(res) {
+      success = succes && res.ok;
     });
     getCoordinator().once("start_test", function(_name) {
       cb(t);
-      getCoordinator().testComplete(name);
+      getCoordinator().testComplete(name, success);
     });
   });
 
@@ -179,7 +179,6 @@ thaliTape.begin = function() {
           tests[test].fn
         );
       });
-      console.log("complete");
       getCoordinator().scheduleComplete();
       createStream();
     });
