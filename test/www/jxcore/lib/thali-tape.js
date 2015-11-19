@@ -20,174 +20,174 @@
 
 'use strict';
 var tape = require('tape');
-var WrappingTape = require('wrapping-tape');
 var CoordinatorConnector = require('./CoordinatorConnector');
 var parsedJSON = require('../serveraddress.json');
 
 var testUtils = require("./testUtils");
 
-var Coordinator = null;
-
 process.on('uncaughtException', function(err) {
-  console.log("We have an uncaught exception, good bye: " + JSON.stringify(err));
-  if(Coordinator != null){
-    Coordinator.close();
-  }
+  console.log("Uncaught Exception: " + err);
   console.log("****TEST TOOK:  ms ****" );
   console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAIL]****");
+  throw err;
 });
 
 process.on('unhandledRejection', function(err) {
-  console.log("We have an uncaught promise rejection, good bye: " + JSON.stringify(err));
-  if(Coordinator != null){
-    Coordinator.close();
-  }
+  console.log("Uncaught Promise Rejection: " + JSON.stringify(err));
   console.log("****TEST TOOK:  ms ****" );
   console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
 });
 
-function Thali_Tape(options) {
-  var myName = "UT" + Math.round((Math.random() * (1000000)));
-  if(options.deviceName){
-    myName = options.deviceName;
+// Singleton CoordinatorConnector instance
+var _coordinator = null;
+
+function getCoordinator()
+{
+  if (_coordinator != null) {
+    return _coordinator;
   }
 
-  Coordinator = new CoordinatorConnector();
-  Coordinator.init(parsedJSON[0].address, 3000);
-  console.log('Attempting to connect to the test coordinator server');
+  _coordinator = new CoordinatorConnector();
 
-  // We're about to add a lot of event handlers so squash the emitter leak warning
-  Coordinator.setMaxListeners(0);
-
-  Coordinator.on('error', function (data) {
+  _coordinator.on('error', function (data) {
     var errData = JSON.parse(data);
     console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
   });
 
-  var isDisconnected = false;
-  // Add a disconnect listener
-  Coordinator.on('disconnect', function () {
-    console.log('The client has disconnected!');
-    isDisconnected = true;
-    //we need to stop & close any tests we are running here
-    if(setUp_t != null){
-      setUp_t.fail("Coordinator server got disconnected");
-      setUp_t = null;
-    }
+  _coordinator.on('disconnect', function () {
+    // We've become disconnected from the test server
 
-    if(teardDown_t != null){
-      teardDown_t.fail("Coordinator server got disconnected");
-      teardDown_t = null;
-    }
-
-    // we need to shut down the Wifi & Bluetooth here
+    // Shut down the Wifi & Bluetooth here
     testUtils.toggleRadios(false);
   });
 
-  var isConnected = false;
-  Coordinator.on('connect', function () {
-    if(!isConnected) {
-      isConnected = true;
-      Coordinator.present(myName,"unittest");
-    }
-  });
-
-  var isReadyToStart = false;
-  Coordinator.on('start_tests', function (data) {
-    console.log('got start_tests event with data : ' + data); //debug, remove after verified to work
-    if(!isReadyToStart) {
-      isReadyToStart = true;
-      delayUntilStartCommand();
-    }
-  });
-
-  Coordinator.on('too_late', function (data) {
+  _coordinator.on('too_late', function (data) {
     console.log('got too_late event, closing connection now.');
     Coordinator.close();
     console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAIL]****");
   });
 
-  var saveTestName = null;
+  _coordinator.connect(parsedJSON[0].address, 3000);
 
-  function delayUntilStartCommand(){
-    if(saveTestName != null) {
-      Coordinator.setUp(myName, saveTestName);
-      saveTestName = null;
-    }
-  }
+  return _coordinator;
+}
 
-  var setUp_t = null;
-  var teardDown_t = null;
+var tests = {};
+var deviceName = "UNITTEST-" + Math.random();
 
-  //test([name], [opts], cb)
-  return function(name, opts, cb) {
-    // if there is only two input values, then the second is the function, not opts
-    if (!cb) {
-      cb = opts;
+function declareTest(name, setup, teardown, opts, cb) {
+
+  tape('setup', function(t) {
+    getCoordinator().once("setup", function(_name) {
+      setup(t);
+      getCoordinator().setupComplete(name);
+    });
+  });
+
+  tape(name, function(t) {
+    var result = null;
+    t.once("result", function(res) {
+      console.log(res);
+    });
+    getCoordinator().once("start_test", function(_name) {
+      cb(t);
+      getCoordinator().testComplete(name);
+    });
+  });
+
+  tape("teardown", function(t) {
+    getCoordinator().once("teardown", function(_name) {
+      teardown(t);
+      getCoordinator().teardownComplete(name);
+    }); 
+  });
+};
+
+
+var thaliTape = function(fixture) 
+{
+  // Thali_Tape - Adapt tape such that tests are executed when explicitly triggered
+  // by a co-ordinating server executing (perhaps) remotely.
+  // This enables us to run tests in lock step accross a number of devices
+
+  // test([name], [opts], fn)
+  return function(name, opts, fn) {
+
+    // This is the function that declares and performs the test. 
+    // cb is the test function. We wrap this in setup and 
+
+    if (!fn) {
+      fn = opts;
       opts = null;
     }
 
-    var setUpCallback = function(t) {
-
-      //we have lost connection to the server
-      if(isDisconnected){
-        t.fail("Coordinator server is disconnected");
-        return;
-      }
-
-      if(setUp_t == null) {
-        setUp_t = t;
-        if(!isReadyToStart) {
-          // delayUntilStartCommand will call server once its ready
-          saveTestName = name;
-          return;
-        }
-
-        Coordinator.setUp(myName, name);
-      }
-    };
-
-    if (options.setup) {
-      tape('setup',setUpCallback);
-    }
-
-    Coordinator.on('setup_ready', function (data) {
-      if (options.setup && (setUp_t != null)) {
-        options.setup.call(setUp_t, setUp_t);
-        setUp_t = null;
-      }
-    });
-
-    //test([name], [opts], cb)
-    tape(name, function(t) {
-      if (opts != null) {
-        t.plan(opts);
-      }
-      cb.call(t, t);
-    });
-
-
-    if (options.teardown) {
-      tape('teardown', function(t) {
-        //we have lost connection to the server
-        if(isDisconnected){
-          t.fail("Coordinator server is disconnected");
-          return;
-        }
-
-        teardDown_t = t;
-        Coordinator.tearDown(myName,name);
-      });
-    }
-
-    Coordinator.on('tear_down_ready', function (data) {
-      if (options.teardown && (teardDown_t != null)) {
-        options.teardown.call(teardDown_t, teardDown_t);
-        teardDown_t = null;
-      }
-    });
-  };
+    tests[name] = { opts:opts, fn:fn, fixture:fixture };
+  }
 }
 
-module.exports = jxcore.utils.OSInfo().isMobile ? Thali_Tape : WrappingTape;
+function createStream()
+{
+      tape.createStream({ objectMode: true })
+  .on('data', function (row) {
+      // Log for results
+      //console.log(JSON.stringify(row));
+
+      /*if (row.type === 'assert') {
+          total++;
+          row.ok && passed++;
+          !row.ok && failed++;
+      }
+      rows.push(row);
+
+      testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
+
+      if (row.ok && row.name) {
+          if(!row.ok){
+              failedRows.push(row);
+          }
+      }*/
+  })
+  .on('end', function () {
+      // Log final results
+      /*testUtils.logMessageToScreen("------ Final results ---- ");
+
+      for(var i = 0; i < failedRows.length; i++){
+          testUtils.logMessageToScreen(failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name);
+      }
+
+      testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
+      console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
+      testUtils.toggleRadios(false);
+
+      console.log("****TEST TOOK:  ms ****" );
+      console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");*/
+  });
+}
+
+thaliTape.begin = function() {
+
+  // Once connected, let the server know who we are and what we do
+  getCoordinator().once("connect", function() {
+    getCoordinator().once("schedule", function(schedule) {
+      JSON.parse(schedule).forEach(function(test) {
+        declareTest(
+          test, 
+          tests[test].fixture.setup, 
+          tests[test].fixture.teardown, 
+          tests[test].opts, 
+          tests[test].fn
+        );
+      });
+      console.log("complete");
+      getCoordinator().scheduleComplete();
+      createStream();
+    });
+
+    getCoordinator().present(deviceName, "unittest", Object.keys(tests));
+  });
+}
+
+thaliTape.getCoordinator = getCoordinator;
+
+module.exports = (typeof jxcore == 'undefined' || jxcore.utils.OSInfo().isMobile) ? thaliTape : require("WrappingTape");
