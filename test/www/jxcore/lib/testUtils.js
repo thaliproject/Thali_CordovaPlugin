@@ -7,7 +7,7 @@ var os = require('os');
  * @param {boolean} on - True to turn radios on and False to turn them off
  */
 exports.toggleRadios = function(on) {
-  if (!jxcore.utils.OSInfo().isMobile) {
+  if (typeof jxcore == 'undefined' || !jxcore.utils.OSInfo().isMobile) {
     return;
   }
   console.log("Turning radios to " + on);
@@ -27,7 +27,7 @@ exports.toggleRadios = function(on) {
 };
 
 exports.reFreshWifi = function() {
-  if (!jxcore.utils.OSInfo().isMobile) {
+  if (typeof jxcore === 'undefined' || !jxcore.utils.OSInfo().isMobile) {
     return;
   }
   console.log("Turning Wifi off");
@@ -99,7 +99,7 @@ exports.setMyName = function(name) {
   myName = name;
 };
 
-if (jxcore.utils.OSInfo().isMobile) {
+if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
   Mobile('setLogCallback').registerAsync(function (callback) {
     LogCallback = callback;
   });
