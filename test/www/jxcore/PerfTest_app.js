@@ -36,7 +36,7 @@ var weHaveFinished = false;
 var myName = "DEV" + Math.round((Math.random() * (10000)));
 var Coordinator = new CoordinatorConnector();
 
-if(jxcore.utils.OSInfo().isAndroid) {
+if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
     Mobile('GetBluetoothAddress').callNative(function (err, address) {
         if (err) {
             console.log("GetBluetoothAddress returned error: " + err + ", address : " + address);
