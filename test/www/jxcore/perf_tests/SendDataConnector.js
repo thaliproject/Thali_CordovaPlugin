@@ -28,7 +28,6 @@ inherits(SendDataConnector, EventEmitter);
 SendDataConnector.prototype.Start = function(peer) {
     logger('Start called with peer ' + peer.peerIdentifier);
     this.peer = peer;
-    this.stopped = false;
     //reset the values to make sure they are clean when we start
     this.startTime = new Date();
     this.endTime = new Date();
@@ -39,7 +38,7 @@ SendDataConnector.prototype.Start = function(peer) {
     this.resultArray        = [];
     this.connectionCount    = 0;
 
-    this.ReStart(peer);
+    this.doConnect(this.peer);
 }
 
 SendDataConnector.prototype.ReStart = function(peer) {
@@ -69,10 +68,9 @@ SendDataConnector.prototype.ReStart = function(peer) {
 }
 
 
-SendDataConnector.prototype.Stop = function() {
+SendDataConnector.prototype.Stop = function(callback) {
     var self = this;
     logger("CLIENT Stop now");
-    this.stopped = true;
     if(this.reTryTimer != null) {
         logger("Stop retry timer");
         clearTimeout(this.reTryTimer);
@@ -99,16 +97,13 @@ SendDataConnector.prototype.Stop = function() {
     var peerIdentifier = self.peer.peerIdentifier;
     Mobile('Disconnect').callNative(peerIdentifier, function () {
         logger("Mobile.Disconnect() callback with peer " + peerIdentifier);
+        callback();
     });
 }
 
 SendDataConnector.prototype.doConnect = function(peer) {
     logger('doConnect called with peer ' + peer.peerIdentifier);
     var self = this;
-
-    if(this.stopped){
-        return;
-    }
 
     if(!this.peer){
         return;
@@ -224,10 +219,6 @@ SendDataConnector.prototype.resetDataTimeout = function(peer) {
 SendDataConnector.prototype.tryAgain = function() {
     var self = this;
 
-    if(this.stopped){
-        return;
-    }
-
     if(self.reTryTimer != null){
         return;
     }
@@ -260,7 +251,7 @@ SendDataConnector.prototype.tryAgain = function() {
 }
 
 SendDataConnector.prototype.oneRoundDoneNow = function() {
-    this.Stop();
+    var self = this;
 
     if(!this.peer){
         return;
@@ -269,7 +260,6 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;
     this.resultArray.push({"name":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount,"tryCount":this.peer.tryCount});
-
     this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
 
     this.doneRounds++;
@@ -282,13 +272,16 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
         this.endTime = new Date();
         this.endReason ="";
         this.connectionCount = 0;
-        this.stopped = false;
-        this.ReStart(this.peer);
+        this.Stop(function () {
+            this.ReStart(self.peer);
+        });
         return;
     }
 
     //if we get this far, then we are done
-    this.weAreDoneNow();
+    this.Stop(function () {
+        self.weAreDoneNow();
+    });
 }
 
 SendDataConnector.prototype.getCurrentTest = function() {

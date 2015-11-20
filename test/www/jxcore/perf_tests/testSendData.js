@@ -265,8 +265,10 @@ testSendData.prototype.weAreDoneNow = function() {
         this.testConnector = null;
     }
     if (this.testServer) {
-        this.testServer.stopServer();
-        this.testServer = null;
+        var self = this;
+        this.testServer.stopServer(function () {
+            self.testServer = null;
+        });
     }
 }
 
