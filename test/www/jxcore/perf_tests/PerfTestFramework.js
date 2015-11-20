@@ -7,7 +7,9 @@
  * - 'debug' events which are relying some debugging information that could be shown in the applications UI
  */
 'use strict';
-var events = require('events');
+
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
 var fs = require('fs-extra-promise');
 
 var currentTest = null;
@@ -38,7 +40,7 @@ function TestFrameworkClient(name) {
     });
 }
 
-TestFrameworkClient.prototype = new events.EventEmitter;
+inherits(TestFrameworkClient, EventEmitter);
 
 /*
 {

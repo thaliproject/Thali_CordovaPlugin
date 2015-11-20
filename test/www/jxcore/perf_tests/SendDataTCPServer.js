@@ -1,23 +1,6 @@
-/**
- *
- * This test is needing all three files to be present
- *  - testSendData.js      : the main entry point to the test case
- *  - SendDataConnector.js : logic that handles the connection & data sending parts
- *  - SendDataTCPServer.js : logic that handles the server endpoint for connections & data receiving/replying for the test
- *
- * In this test case we try connecting to the remote peer and send N-bytes of data (where N should be big amount)
- * If the sending fails in midway, the logic will do reconnection to the same peer and send any remaining bytes until the whole N-bytes are sent over
- * We measure the time it takes to send the data and report that back.
- *
- * If specified the sending is done multiple times for each peer.
- *
- * Note that we don't want to sent the data both ways, and for this reason the server is not simply echoing back the data sent,
- * but actually only sends verifications on getting some predefined amount of data, currently the amount is specified as 10000 bytes
- */
-
 'use strict';
-var net = require('net');
 
+var net = require('net');
 
 function SendDataTCPServer(port) {
     var self = this;
