@@ -1,7 +1,7 @@
 'use strict';
 
 var originalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
-var mockMobile = require('./mockmobile');
+var mockMobile = require('../bv_tests/mockmobile.js');
 var SendDataConnector = require('../perf_tests/SendDataConnector.js');
 var SendDataTCPServer = require('../perf_tests/SendDataTCPServer.js');
 var tape = require('../lib/thali-tape');
