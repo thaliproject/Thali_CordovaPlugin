@@ -60,7 +60,7 @@ SendDataTCPServer.prototype.getServerPort = function() {
 }
 
 SendDataTCPServer.prototype.stopServer = function (callback) {
-    if(this.server == null) {
+    if (this.server == null) {
         if (callback) callback();
         return;
     }
