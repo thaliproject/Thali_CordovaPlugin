@@ -1,22 +1,12 @@
-/**
- *
- * This test is needing all three files to be present
- *  - testSendData.js      : the main entry point to the test case
- *  - SendDataConnector.js : logic that handles the connection & data sending parts
- *  - SendDataTCPServer.js : logic that handles the server endpoint for connections & data receiving/replying for the test
- *
- * In this test case we try connecting to the remote peer and send N-bytes of data (where N should be big amount)
- * If the sending fails in midway, the logic will do reconnection to the same peer and send any remaining bytes until the whole N-bytes are sent over
- * We measure the time it takes to send the data and report that back.
- *
- * If specified the sending is done multiple times for each peer.
- *
- * Note that we don't want to sent the data both ways, and for this reason the server is not simply echoing back the data sent,
- * but actually only sends verifications on getting some predefined amount of data, currently the amount is specified as 10000 bytes
- */
+'use strict';
 
 var net = require('net');
-var events = require('events');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
+var logger = function (value) {
+    console.log('SendDataConnector.js: ' + value);
+}
 
 function SendDataConnector(rounds,dataAmount,reTryTimeout,reTryMaxCount,dataTimeOut) {
     this.roundsToDo         = rounds;
@@ -33,9 +23,10 @@ function SendDataConnector(rounds,dataAmount,reTryTimeout,reTryMaxCount,dataTime
     this.connectionCount    = 0;
 }
 
-SendDataConnector.prototype = new events.EventEmitter;
+inherits(SendDataConnector, EventEmitter);
 
 SendDataConnector.prototype.Start = function(peer) {
+    logger('Start called with peer ' + peer.peerIdentifier);
     this.peer = peer;
     this.stopped = false;
     //reset the values to make sure they are clean when we start
@@ -52,6 +43,8 @@ SendDataConnector.prototype.Start = function(peer) {
 }
 
 SendDataConnector.prototype.ReStart = function(peer) {
+    var self = this;
+    logger('ReStart called with peer ' + peer.peerIdentifier);
     this.peer = peer;
     if(!this.peer){
         return;
@@ -59,15 +52,15 @@ SendDataConnector.prototype.ReStart = function(peer) {
 
     // make sure any previous connections are really out
     if(this.clientSocket != null) {
-        console.log("CLIENT closeClientSocket");
+        logger("CLIENT closeClientSocket");
         this.clientSocket.end()
         this.clientSocket = null;
     }
 
-    var self = this;
     setTimeout(function () {
         Mobile('Disconnect').callNative(self.peer.peerIdentifier, function () {
-            console.log('Connect (retry count ' + self.tryRounds + ') to peer ' +
+            logger("Mobile.Disconnect() callback with peer " + self.peer.peerIdentifier);
+            logger('Connect (retry count ' + self.tryRounds + ') to peer ' +
                          self.peer.peerIdentifier + ' with availability status: '  +
                          self.peer.peerAvailable);
             self.doConnect(self.peer);
@@ -76,30 +69,40 @@ SendDataConnector.prototype.ReStart = function(peer) {
 }
 
 
-SendDataConnector.prototype.Stop = function(peer) {
-    console.log("CLIENT Stop now");
+SendDataConnector.prototype.Stop = function() {
+    var self = this;
+    logger("CLIENT Stop now");
     this.stopped = true;
     if(this.reTryTimer != null) {
-        console.log("Stop retry timer");
+        logger("Stop retry timer");
         clearTimeout(this.reTryTimer);
         this.reTryTimer = null;
     }
 
     if (this.dataTimerId != null) {
-        console.log("Stop data retrieving timer");
+        logger("Stop data retrieving timer");
         clearTimeout(this.dataTimerId);
         this.dataTimerId = null;
     }
 
     //Closing Client socket, will also close connection
     if(this.clientSocket != null) {
-        console.log("CLIENT closeClientSocket");
+        logger("CLIENT closeClientSocket");
         this.clientSocket.end();
         this.clientSocket = null;
     }
+
+    if(!self.peer){
+        return;
+    }
+
+    Mobile('Disconnect').callNative(self.peer.peerIdentifier, function () {
+        logger("Mobile.Disconnect() callback with peer " + self.peer.peerIdentifier);
+    });
 }
 
 SendDataConnector.prototype.doConnect = function(peer) {
+    logger('doConnect called with peer ' + peer.peerIdentifier);
     var self = this;
 
     if(this.stopped){
@@ -110,19 +113,19 @@ SendDataConnector.prototype.doConnect = function(peer) {
         return;
     }
 
-    console.log("do connect now");
+    logger("do connect now");
     this.connectionCount++;
 
     Mobile('Connect').callNative(peer.peerIdentifier, function (err, port) {
-        console.log("CLIENT connected to " + port + ", error: " + err);
+        logger("CLIENT connected to " + port + ", error: " + err);
 
         if (err != null && err.length > 0) {
-            console.log("CLIENT Can not Connect: " + err);
+            logger("CLIENT Can not Connect: " + err);
             self.endReason = err;
             self.tryAgain();
 
         } else if (port > 0) {
-            console.log("CLIENT starting client ");
+            logger("CLIENT starting client ");
 
             self.clientSocket = net.connect(port, function () {
                 // self.toSendDataAmount is the wanted amount of data in bytes.
@@ -132,7 +135,7 @@ SendDataConnector.prototype.doConnect = function(peer) {
                 // a loop two times would generate something like: [1, 2].toString() -> '1,2'.
                 // The size of that example string would be 3 * 2 = 6 bytes, because
                 // a comma is entered between array values.
-                console.log('CLIENT now sending ' + (self.toSendDataAmount - self.receivedCounter) + ' bytes of data');
+                logger('CLIENT now sending ' + (self.toSendDataAmount - self.receivedCounter) + ' bytes of data');
                 var numbers = [];
                 // The right length for the array is calculated below by first splitting
                 // the byte amount by two, which gives the amount of characters we need.
@@ -153,7 +156,7 @@ SendDataConnector.prototype.doConnect = function(peer) {
                     self.resetDataTimeout(peer);
                 }
 
-                console.log('CLIENT is data received : ' + self.receivedCounter);
+                logger('CLIENT is data received : ' + self.receivedCounter);
 
                 if(self.receivedCounter >= self.toSendDataAmount){
                     if (self.dataTimerId != null) {
@@ -162,7 +165,7 @@ SendDataConnector.prototype.doConnect = function(peer) {
                     }
 
                     self.endReason = "OK";
-                    console.log('got all data for this round');
+                    logger('got all data for this round');
 
                     //we only reset the value once we have gotten all data, so any re-connect will sent only missing data
                     self.receivedCounter = 0;
@@ -170,11 +173,11 @@ SendDataConnector.prototype.doConnect = function(peer) {
                 }
             });
             self.clientSocket.on('close', function () {
-                console.log('CLIENT is closed');
+                logger('CLIENT is closed');
             });
 
             self.clientSocket.on('error', function (ex) {
-                console.log("CLIENT got error : " + ex);
+                logger("CLIENT got error : " + ex);
                 //just making sure that if we get error while disconnecting
                 // we are then not calling the tryAgain twice
                 if(!self.disconnecting) {
@@ -182,7 +185,7 @@ SendDataConnector.prototype.doConnect = function(peer) {
                 }
             });
         }else{
-            console.log("Port in invalid : " + port);
+            logger("Port in invalid : " + port);
             if(!self.disconnecting) {
                 self.tryAgain();
             }
@@ -191,6 +194,7 @@ SendDataConnector.prototype.doConnect = function(peer) {
 }
 
 SendDataConnector.prototype.resetDataTimeout = function(peer) {
+    logger('resetDataTimeout called with peer ' + peer.peerIdentifier);
     var self = this;
     if (self.dataTimerId != null) {
         clearTimeout(self.dataTimerId);
@@ -199,20 +203,20 @@ SendDataConnector.prototype.resetDataTimeout = function(peer) {
 
     if(self.dataTimeOut) {
         self.dataTimerId = setTimeout(function () {
-            console.log('Receiving data timeout now');
+            logger('Receiving data timeout now');
             self.endReason = "DATA-TIMEOUT";
 
             self.disconnecting = true;
             //Closing Client socket, will also close connection
             if(self.clientSocket != null) {
-                console.log("CLIENT closeClientSocket");
+                logger("CLIENT closeClientSocket");
                 self.clientSocket.end();
                 self.clientSocket.destroy();
                 self.clientSocket = null;
             }
             self.tryAgain();
             self.disconnecting = false;
-            console.log("----------------- closeClientSocket");
+            logger("----------------- closeClientSocket");
 
         }, self.dataTimeOut);
     }
@@ -231,7 +235,7 @@ SendDataConnector.prototype.tryAgain = function() {
 
     //Closing Client socket, will also close connection
     if(this.clientSocket != null) {
-        console.log("CLIENT closeClientSocket");
+        logger("CLIENT closeClientSocket");
         this.clientSocket.end();
         this.clientSocket = null;
     }
@@ -242,7 +246,7 @@ SendDataConnector.prototype.tryAgain = function() {
         return;
     }
 
-    console.log("tryAgain afer: " + self.reTryTimeout + " ms.");
+    logger("tryAgain afer: " + self.reTryTimeout + " ms.");
     //lets try again after a short while
     self.reTryTimer = setTimeout(function () {
 
@@ -250,7 +254,7 @@ SendDataConnector.prototype.tryAgain = function() {
             return;
         }
 
-        console.log("re-try now : " + self.peer.peerIdentifier);
+        logger("re-try now : " + self.peer.peerIdentifier);
         self.reTryTimer = null
         self.ReStart(self.peer);
     }, self.reTryTimeout);
@@ -301,8 +305,6 @@ SendDataConnector.prototype.getResultArray = function() {
 }
 
 SendDataConnector.prototype.weAreDoneNow = function() {
-    this.Stop();
-
     //reset these for next peer test
     this.tryRounds = 0;
     this.startTime = new Date();
