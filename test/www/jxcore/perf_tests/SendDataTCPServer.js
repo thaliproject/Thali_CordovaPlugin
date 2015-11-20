@@ -23,9 +23,7 @@ function SendDataTCPServer(port) {
             logger('TCP/IP server is ended');
             c.destroy();
         });
-        c.on('close', function () {
-            logger('TCP/IP server is close');
-        });
+
         c.on('error', function (err) {
             logger('TCP/IP server got error : ' + err);
         });
@@ -61,11 +59,12 @@ SendDataTCPServer.prototype.getServerPort = function() {
     return (this.server && this.server.address()) ? this.server.address().port : 0;
 }
 
-SendDataTCPServer.prototype.stopServer = function() {
+SendDataTCPServer.prototype.stopServer = function (callback) {
     if(this.server == null) {
+        if (callback) callback();
         return;
     }
-    this.server.close();
+    this.server.close(callback);
     this.server = null;
 }
 
