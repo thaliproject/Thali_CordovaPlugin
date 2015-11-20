@@ -17,7 +17,9 @@
 
 'use strict';
 
-var events = require('events');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var ThaliEmitter = require('thali/thaliemitter');
 
 var SendDataTCPServer = require('./SendDataTCPServer');
@@ -34,13 +36,13 @@ var SendDataConnector = require('./SendDataConnector');
     }
 */
 
-function testSendData(jsonData,name,dev,addressList) {
+function testSendData(jsonData, name, deviceCount, addressList) {
     var self = this;
     console.log('testSendData created ' + jsonData + ", bt-address lenght : " + addressList.length);
     this.name = name;
     this.commandData = JSON.parse(jsonData);
     this.emitter = new ThaliEmitter();
-    this.toFindCount = dev;
+    this.toFindCount = deviceCount;
     if(addressList.length > 0) {
         this.BluetoothAddressList = addressList;
     }
@@ -119,11 +121,11 @@ function testSendData(jsonData,name,dev,addressList) {
     }
 }
 
-testSendData.prototype = new events.EventEmitter;
+inherits(testSendData, EventEmitter);
 
-testSendData.prototype.start = function() {
+testSendData.prototype.start = function(serverPort) {
     var self = this;
-    this.testServer = new SendDataTCPServer();
+    this.testServer = new SendDataTCPServer(serverPort);
     this.testConnector = new SendDataConnector(this.commandData.rounds,this.commandData.dataAmount,this.commandData.conReTryTimeout,this.commandData.conReTryCount,this.commandData.dataTimeout);
     this.testConnector.on('done', this.doneCallback);
     this.testConnector.on('debug',this.debugCallback);
@@ -261,6 +263,10 @@ testSendData.prototype.weAreDoneNow = function() {
         this.testConnector.removeListener('done', this.doneCallback);
         this.testConnector.removeListener('debug', this.debugCallback);
         this.testConnector = null;
+    }
+    if (this.testServer) {
+        this.testServer.stopServer();
+        this.testServer = null;
     }
 }
 
