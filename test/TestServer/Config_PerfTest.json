@@ -10,8 +10,8 @@
                 "timeout": "1500000",
                 "rounds": "1",
                 "dataTimeout": "10000",
-                "dataAmount": "100000",
-                "conReTryTimeout": "5000",
+                "dataAmount": "10000000",
+                "conReTryTimeout": "1000",
                 "conReTryCount": "5"
             }
         }
