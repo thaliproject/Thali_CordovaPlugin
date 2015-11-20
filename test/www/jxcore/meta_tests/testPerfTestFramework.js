@@ -1,7 +1,7 @@
 'use strict';
 
 var originalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
-var mockMobile = require('./mockmobile');
+var mockMobile = require('../bv_tests/mockmobile.js');
 var PerfTestFramework = require('../perf_tests/PerfTestFramework.js');
 var tape = require('../lib/thali-tape');
 

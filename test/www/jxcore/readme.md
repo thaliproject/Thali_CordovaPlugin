@@ -7,6 +7,7 @@
 |____bv_tests/          <- Build Verification tests. You should run these often.
 |____lib/               <- Support files for running tests (but not mocks).
 |____perf_tests/        <- Performance tests. Long running tests. For nightly builds etc
+|____meta_tests/        <- Tests for tests
 |____readme.md          <- This file
 |____runTests.js        <- The test runner
 |____serveraddress.json <- Contains the ipaddress of the coordinating server
