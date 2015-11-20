@@ -5,7 +5,7 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
 var logger = function (value) {
-    console.log('SendDataConnector.js: ' + value);
+    console.log(new Date().toJSON() + ' SendDataConnector.js: ' + value);
 }
 
 function SendDataConnector(rounds,dataAmount,reTryTimeout,reTryMaxCount,dataTimeOut) {
@@ -150,9 +150,10 @@ SendDataConnector.prototype.doConnect = function(peer) {
                 self.clientSocket.write(numbers.toString());
             });
             self.clientSocket.on('data', function (data) {
-
-                if (data.toString().trim()  == 'ACK') {
-                    self.receivedCounter = self.receivedCounter + 10000;
+                var receivedString = data.toString().trim();
+                var acknowledgmentCount = (receivedString.match(/ACK/g) || []).length;
+                if (acknowledgmentCount > 0) {
+                    self.receivedCounter = self.receivedCounter + (acknowledgmentCount * 10000);
                     self.resetDataTimeout(peer);
                 }
 
