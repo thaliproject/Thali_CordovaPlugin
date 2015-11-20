@@ -96,8 +96,9 @@ SendDataConnector.prototype.Stop = function() {
         return;
     }
 
-    Mobile('Disconnect').callNative(self.peer.peerIdentifier, function () {
-        logger("Mobile.Disconnect() callback with peer " + self.peer.peerIdentifier);
+    var peerIdentifier = self.peer.peerIdentifier;
+    Mobile('Disconnect').callNative(peerIdentifier, function () {
+        logger("Mobile.Disconnect() callback with peer " + peerIdentifier);
     });
 }
 
@@ -172,9 +173,6 @@ SendDataConnector.prototype.doConnect = function(peer) {
                     self.receivedCounter = 0;
                     self.oneRoundDoneNow();
                 }
-            });
-            self.clientSocket.on('close', function () {
-                logger('CLIENT is closed');
             });
 
             self.clientSocket.on('error', function (ex) {
