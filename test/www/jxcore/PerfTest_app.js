@@ -159,6 +159,9 @@ Coordinator.on('command', function (data) {
 });
 
 Coordinator.on('closed', function () {
+    if(weHaveFinished){
+        return;
+    }
     console.log('The Coordinator has closed!');
     //we need to stop & close any tests we are running here
      TestFramework.stopAllTests(false);
