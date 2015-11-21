@@ -188,7 +188,6 @@ SendDataConnector.prototype.doConnect = function(peer) {
 }
 
 SendDataConnector.prototype.resetDataTimeout = function(peer) {
-    logger('resetDataTimeout called with peer ' + peer.peerIdentifier);
     var self = this;
     if (self.dataTimerId != null) {
         clearTimeout(self.dataTimerId);

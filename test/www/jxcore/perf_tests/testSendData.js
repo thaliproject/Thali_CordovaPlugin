@@ -164,6 +164,10 @@ testSendData.prototype.start = function(serverPort) {
 }
 
 testSendData.prototype.stop = function(doReport) {
+    if(this.doneAlready || this.testConnector == null) {
+        return;
+    }
+
     console.log('testSendData stopped');
 
     this.emitter.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
@@ -180,7 +184,6 @@ testSendData.prototype.stop = function(doReport) {
         this.timerId = null;
     }
 
-    this.testServer.stopServer();
     if(doReport){
         this.emit('debug', "---- sendReportNow");
         this.sendReportNow();
@@ -193,6 +196,10 @@ testSendData.prototype.stop = function(doReport) {
     }
 
     this.doneAlready = true;
+
+    this.testServer.stopServer(function () {
+        // No need to do anything since this is the end of the test
+    });
 }
 
 testSendData.prototype.startWithNextDevice = function() {
@@ -244,7 +251,6 @@ testSendData.prototype.startWithNextDevice = function() {
 }
 
 testSendData.prototype.weAreDoneNow = function() {
-
     if (this.doneAlready || this.testConnector == null) {
         return;
     }
@@ -264,12 +270,10 @@ testSendData.prototype.weAreDoneNow = function() {
         this.testConnector.removeListener('debug', this.debugCallback);
         this.testConnector = null;
     }
-    if (this.testServer) {
-        var self = this;
-        this.testServer.stopServer(function () {
-            self.testServer = null;
-        });
-    }
+
+    // The test server can't be stopped here, because even though this device
+    // is done with it's own list of peers, it might be still acting as a test
+    // peer for some other devices and thus the server is might still be needed.
 }
 
 testSendData.prototype.sendReportNow = function() {
