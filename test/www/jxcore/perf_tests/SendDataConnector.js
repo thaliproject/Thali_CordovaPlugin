@@ -271,9 +271,7 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
         this.endTime = new Date();
         this.endReason ="";
         this.connectionCount = 0;
-        this.Stop(function () {
-            this.ReStart(self.peer);
-        });
+        this.ReStart(self.peer);
         return;
     }
 
