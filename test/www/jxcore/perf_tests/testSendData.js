@@ -125,6 +125,7 @@ inherits(testSendData, EventEmitter);
 
 testSendData.prototype.start = function(serverPort) {
     var self = this;
+    this.doneAlready = false;
     this.testServer = new SendDataTCPServer(serverPort);
     this.testConnector = new SendDataConnector(this.commandData.rounds,this.commandData.dataAmount,this.commandData.conReTryTimeout,this.commandData.conReTryCount,this.commandData.dataTimeout);
     this.testConnector.on('done', this.doneCallback);
@@ -164,10 +165,6 @@ testSendData.prototype.start = function(serverPort) {
 }
 
 testSendData.prototype.stop = function(doReport) {
-    if(this.doneAlready || this.testConnector == null) {
-        return;
-    }
-
     console.log('testSendData stopped');
 
     this.emitter.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
@@ -195,10 +192,8 @@ testSendData.prototype.stop = function(doReport) {
         this.testConnector = null;
     }
 
-    this.doneAlready = true;
-
     this.testServer.stopServer(function () {
-        // No need to do anything since this is the end of the test
+        // No need to do anything since this is the end of this test
     });
 }
 
