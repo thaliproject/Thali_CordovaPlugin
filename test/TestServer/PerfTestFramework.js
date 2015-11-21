@@ -4,7 +4,8 @@
 'use strict';
 
 var fs = require('fs');
-var events = require('events');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
 var configFile = require('./Config_PerfTest.json');
 
 var resultWriter = null;
@@ -55,6 +56,12 @@ function PerfTestFramework(platform, count, honorCount, timeOutValueToStart) {
     this.testResults = [];
     this.currentTest = -1;
 
+    if (count <= 0) {
+        // If framework was initialized without devices,
+        // no need to do anything.
+        return;
+    }
+
     if (honorCount) {
         console.log(this.os + ' tests will start after ' + count + ' devices has connected');
     } else {
@@ -66,7 +73,7 @@ function PerfTestFramework(platform, count, honorCount, timeOutValueToStart) {
     }
 }
 
-PerfTestFramework.prototype = new events.EventEmitter;
+inherits(PerfTestFramework, EventEmitter);
 
 PerfTestFramework.prototype.getCount = function() {
     return this.getConnectedDevicesCount();
