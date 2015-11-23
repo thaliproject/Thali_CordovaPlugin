@@ -103,9 +103,10 @@ PerfTestFramework.prototype.addDevice = function(device) {
         return true;
     }
 
-    //it was not added, and we have already started, thus this devcei is late
+    // The device was not added and we have already started,
+    // thus this device is late.
     if (this.currentTest >= 0) {
-       // console.log(this.os + ' test progressing ' + device.getName() + ' not added to tests');
+        logger(this.os + ' ' + deviceName + ' not added anymore, because tests were already started');
         return false;
     }
 
