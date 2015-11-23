@@ -30,7 +30,7 @@ var devicesObject = JSON.parse(process.argv[2]);
 // but in the end, the deployment to all might not always work and thus
 // it is beneficial to be able to anyways do the test run with the amount
 // of devices that were able to connect.
-var timeOutValueToStart = 300000; // 5 minutes
+var timeOutValueToStart = 120000; // 2 minutes
 
 var TestsFrameworks  = {};
 TestsFrameworks.perftest =  {};
