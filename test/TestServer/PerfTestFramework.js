@@ -42,12 +42,12 @@ var resultWriter = null;
 
 var startTime = new Date().getTime();
 var getSecondsFromStart = function () {
-    return ((new Date().getTime() - startTime) / 1000);
-}
+    return Math.round((new Date().getTime() - startTime) / 1000);
+};
 
 var logger = function (value) {
-    console.log('Seconds since start: ' + getSecondsFromStart() + ' - ' + value);
-}
+    console.log(new Date().toJSON() + ' (' + getSecondsFromStart() + ' sec) - ' + value);
+};
 
 function PerfTestFramework(platform, count, honorCount, timeOutValueToStart) {
     this.timerId = null;
@@ -62,14 +62,15 @@ function PerfTestFramework(platform, count, honorCount, timeOutValueToStart) {
         return;
     }
 
-    if (honorCount) {
-        console.log(this.os + ' tests will start after ' + count + ' devices has connected');
-    } else {
-        console.log(this.os + ' tests will start after waiting for ' + timeOutValueToStart / 1000 + ' seconds');
+    for (var i=0; i < configFile.tests.length; i++) {
+        console.log('Test ID ' + i + ' configuration: ' + configFile.tests[i].name + ', server timeout: ' + configFile.tests[i].servertimeout + ", data:");
+        console.log(configFile.tests[i].data);
     }
 
-    for (var i=0; i < configFile.tests.length; i++) {
-        console.log('Test ID ' + i + ' configuration: ' + configFile.tests[i].name + ', server timeout : ' + configFile.tests[i].servertimeout + ", data : " + JSON.stringify(configFile.tests[i].data));
+    if (honorCount) {
+        logger(this.os + ' tests will start after ' + count + ' devices has connected');
+    } else {
+        logger(this.os + ' tests will start after waiting for ' + timeOutValueToStart / 1000 + ' seconds');
     }
 }
 
