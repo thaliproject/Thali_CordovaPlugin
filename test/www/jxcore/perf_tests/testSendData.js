@@ -165,6 +165,8 @@ testSendData.prototype.start = function(serverPort) {
 }
 
 testSendData.prototype.stop = function(doReport) {
+    var self = this;
+
     console.log('testSendData stopped');
 
     this.emitter.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
@@ -186,10 +188,11 @@ testSendData.prototype.stop = function(doReport) {
         this.sendReportNow();
     }
     if(this.testConnector != null){
-        this.testConnector.Stop();
-        this.testConnector.removeListener('done', this.doneCallback);
-        this.testConnector.removeListener('debug', this.debugCallback);
-        this.testConnector = null;
+        this.testConnector.Stop(function () {
+            self.testConnector.removeListener('done', self.doneCallback);
+            self.testConnector.removeListener('debug', self.debugCallback);
+            self.testConnector = null;
+        });
     }
 
     this.testServer.stopServer(function () {
@@ -246,6 +249,8 @@ testSendData.prototype.startWithNextDevice = function() {
 }
 
 testSendData.prototype.weAreDoneNow = function() {
+    var self = this;
+
     if (this.doneAlready || this.testConnector == null) {
         return;
     }
@@ -260,10 +265,11 @@ testSendData.prototype.weAreDoneNow = function() {
     this.sendReportNow();
 
     if(this.testConnector != null){
-        this.testConnector.Stop();
-        this.testConnector.removeListener('done', this.doneCallback);
-        this.testConnector.removeListener('debug', this.debugCallback);
-        this.testConnector = null;
+        this.testConnector.Stop(function () {
+            self.testConnector.removeListener('done', self.doneCallback);
+            self.testConnector.removeListener('debug', self.debugCallback);
+            self.testConnector = null;
+        });
     }
 
     // The test server can't be stopped here, because even though this device
