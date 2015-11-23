@@ -39,7 +39,9 @@ test('#connector should fail if server not running', function (t) {
 
   sendDataConnector.on('done', function (result) {
     t.ok(result, 'received a result to the done event');
-    t.end();
+    sendDataConnector.Stop(function () {
+      t.end();
+    });
   });
   sendDataConnector.Start(somePeer);
 });
@@ -84,6 +86,7 @@ test('#should run test with ' + numberOfPeers + ' peers', function (t) {
     t.ok(resultString, 'received a result to the done event');
     var resultData = JSON.parse(resultString);
     t.equal(resultData.sendList.length, numberOfPeers);
+    testSendData.stop(false);
     t.end();
   });
 });

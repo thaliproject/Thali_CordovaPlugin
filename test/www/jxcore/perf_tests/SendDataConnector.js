@@ -52,8 +52,9 @@ SendDataConnector.prototype.ReStart = function(peer) {
     // make sure any previous connections are really out
     if(this.clientSocket != null) {
         logger("CLIENT closeClientSocket");
-        this.clientSocket.end()
-        this.clientSocket = null;
+        self.clientSocket.end(function () {
+            self.clientSocket = null;
+        });
     }
 
     setTimeout(function () {
@@ -86,11 +87,13 @@ SendDataConnector.prototype.Stop = function(callback) {
     //Closing Client socket, will also close connection
     if(this.clientSocket != null) {
         logger("CLIENT closeClientSocket");
-        this.clientSocket.end();
-        this.clientSocket = null;
+        self.clientSocket.end(function () {
+            self.clientSocket = null;
+        });
     }
 
-    if(!self.peer){
+    if (!self.peer) {
+        callback();
         return;
     }
 
@@ -203,9 +206,9 @@ SendDataConnector.prototype.resetDataTimeout = function(peer) {
             //Closing Client socket, will also close connection
             if(self.clientSocket != null) {
                 logger("CLIENT closeClientSocket");
-                self.clientSocket.end();
-                self.clientSocket.destroy();
-                self.clientSocket = null;
+                self.clientSocket.end(function () {
+                    self.clientSocket = null;
+                });
             }
             self.tryAgain();
             self.disconnecting = false;
@@ -225,8 +228,9 @@ SendDataConnector.prototype.tryAgain = function() {
     //Closing Client socket, will also close connection
     if(this.clientSocket != null) {
         logger("CLIENT closeClientSocket");
-        this.clientSocket.end();
-        this.clientSocket = null;
+        self.clientSocket.end(function () {
+            self.clientSocket = null;
+        });
     }
 
     this.tryRounds++;
