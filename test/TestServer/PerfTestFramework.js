@@ -3,8 +3,8 @@
 
 // used for debugging the repoort data,
 // For CI test this must be set to null
-//var ResultToFile = require('./ResultToFile');
-//resultWriter = new ResultToFile();
+// var ResultToFile = require('./ResultToFile');
+// resultWriter = new ResultToFile();
 
 /*
  {
@@ -47,6 +47,8 @@
 
 'use strict';
 
+var util = require('util');
+var TestFramework = require('./TestFramework');
 var configFile = require('./Config_PerfTest.json');
 
 var resultWriter = null;
@@ -62,16 +64,17 @@ function PerfTestFramework(testConfig) {
   this.testResults = [];
   this.currentTest = -1;
 
-  if(honourCount) {
-      if(count == 0){
-          return;
-      }
-      console.log('Start ' + this.os + ' tests : ' + configFile.name + ", start tests with " + count + " devices");
-  }else{
-      console.log('Start ' + this.os + ' tests : ' + configFile.name + ", start tests with timer");
+  if (honourCount) {
+    if (count == 0){
+      return;
+    }
+    console.log('Start ' + this.os + ' tests : ' + configFile.name + ", start tests with " + count + " devices");
+  } else {
+    console.log('Start ' + this.os + ' tests : ' + configFile.name + ", start tests with timer");
   }
-  for(var i=0; i < configFile.tests.length; i++) {
-      console.log('Test[' + i + ']: ' + configFile.tests[i].name + ', timeout : ' + configFile.tests[i].servertimeout + ", data : " + JSON.stringify(configFile.tests[i].data));
+
+  for (var i = 0; i < configFile.tests.length; i++) {
+    console.log('Test[' + i + ']: ' + configFile.tests[i].name + ', timeout : ' + configFile.tests[i].servertimeout + ", data : " + JSON.stringify(configFile.tests[i].data));
   }
 }
 
@@ -80,7 +83,7 @@ util.inherits(PerfTestFramework, TestFramework);
 PerfTestFramework.prototype.startTests = function(platform, tests) {
 
   for (var deviceName in this.testDevices) {
-    if(this.testDevices[deviceName] != null){
+    if (this.testDevices[deviceName] != null) {
       console.log("START TESTS");
       this.testDevices[deviceName].start_tests(json);
     }
@@ -89,58 +92,59 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   this.devicesCount = this.getConnectedDevicesCount();
 
   console.log('-----' + this.os + ' start testing now with ' + this.devicesCount + ' devices, time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
-  this.start =new Date();
+  this.start = new Date();
   this.doNextTest();
 }
 
-PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
+PerfTestFramework.prototype.ClientDataReceived = function(name, data) {
 
-    var jsonData = JSON.parse(data);
+  // Device is sending us some test result
 
-    //save the time and the time we got the results
-    this.testDevices[name].data = jsonData;
-    this.testDevices[name].endTime = new Date();
+  var jsonData = JSON.parse(data);
 
-    var responseTime = this.testDevices[name].endTime - this.testDevices[name].startTime;
+  //save the time and the time we got the results
+  this.testDevices[name].data = jsonData;
+  this.testDevices[name].endTime = new Date();
 
-    var peers = 0;
-    if (jsonData.peersList && (jsonData.peersList.length > 0)) {
-        peers = jsonData.peersList.length;
-    }
+  var responseTime = this.testDevices[name].endTime - this.testDevices[name].startTime;
 
-    var connects = 0;
-    if (jsonData.connectList && (jsonData.connectList.length > 0)) {
-        connects =jsonData.connectList.length;
-    }
+  var peers = 0;
+  if (jsonData.peersList && (jsonData.peersList.length > 0)) {
+    peers = jsonData.peersList.length;
+  }
 
-    var sendData = 0;
-    if (jsonData.sendList && (jsonData.sendList.length > 0)) {
-        sendData =jsonData.sendList.length;
-    }
+  var connects = 0;
+  if (jsonData.connectList && (jsonData.connectList.length > 0)) {
+      connects =jsonData.connectList.length;
+  }
 
-    console.log(this.os + ' with ' + name + ' request took : ' + responseTime + ' ms. results peers[' + peers+ '], reConnects[' + connects + '], sendData[' + sendData+ '], time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
+  var sendData = 0;
+  if (jsonData.sendList && (jsonData.sendList.length > 0)) {
+      sendData =jsonData.sendList.length;
+  }
 
-    if (this.getFinishedDevicesCount() == this.devicesCount) {
-        console.log("------------------------------------------------------");
-        console.log(this.os + ' test[ ' + this.currentTest + '] done now. , time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
-        this.testFinished(false);
-    }
+  console.log(this.os + ' with ' + name + ' request took : ' + responseTime + ' ms. results peers[' + peers+ '], reConnects[' + connects + '], sendData[' + sendData+ '], time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
+
+  if (this.getFinishedDevicesCount() == this.devicesCount) {
+    console.log("------------------------------------------------------");
+    console.log(this.os + ' test[ ' + this.currentTest + '] done now. , time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
+    this.testFinished(false);
+  }
 }
 
 PerfTestFramework.prototype.getFinishedDevicesCount  = function(){
 
-   var devicesFinishedCount = 0;
+ var devicesFinishedCount = 0;
 
-    for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null && this.testDevices[deviceName].data != null){
-
-            if(this.testDevices[deviceName].data.result != "DISCONNECTED") {
-                devicesFinishedCount = devicesFinishedCount + 1;
-            }
-        }
+  for (var deviceName in this.testDevices) {
+    if (this.testDevices[deviceName] != null && this.testDevices[deviceName].data != null) {
+      if (this.testDevices[deviceName].data.result != "DISCONNECTED") {
+        devicesFinishedCount = devicesFinishedCount + 1;
+      }
     }
+  }
 
-    return devicesFinishedCount;
+  return devicesFinishedCount;
 }
 
 PerfTestFramework.prototype.getConnectedDevicesCount = function() {
@@ -157,7 +161,7 @@ PerfTestFramework.prototype.getConnectedDevicesCount = function() {
 
 PerfTestFramework.prototype.getBluetoothAddressList = function() {
 
- var BtAddressList = [];
+  var BtAddressList = [];
   for (var deviceName in this.testDevices) {
     if (this.testDevices[deviceName] != null) {
       var BtAddress = this.testDevices[deviceName].getBluetoothAddress();
@@ -171,6 +175,7 @@ PerfTestFramework.prototype.getBluetoothAddressList = function() {
 }
 
 PerfTestFramework.prototype.doNextTest  = function(){
+
   var self = this;
   if (this.timerId != null) {
     clearTimeout(this.timerId);
@@ -186,11 +191,19 @@ PerfTestFramework.prototype.doNextTest  = function(){
     //if we have tests, then lets start new tests on all devices
     console.log('start test[' + this.currentTest + '] with ' + this.devicesCount + ' devices.');
     for (var deviceName in this.testDevices) {
+
       if (this.testDevices[deviceName] != null) {
         this.testDevices[deviceName].startTime = new Date();
         this.testDevices[deviceName].endTime = new Date();
         this.testDevices[deviceName].data = null;
-        this.testDevices[deviceName].SendCommand('start',configFile.tests[this.currentTest].name,JSON.stringify(configFile.tests[this.currentTest].data),(this.devicesCount - 1),BluetoothList);
+
+        this.testDevices[deviceName].SendCommand(
+          'start',
+          configFile.tests[this.currentTest].name,
+          JSON.stringify(configFile.tests[this.currentTest].data),
+          (this.devicesCount - 1),
+          BluetoothList
+        );
       }
     }
 
@@ -220,6 +233,10 @@ PerfTestFramework.prototype.doNextTest  = function(){
   }
 
   console.log(this.os + ' All tests are done, preparing test report. , time now: ' +  ((new Date().getTime() - startTime) / 1000) + ' sec.');
+  this.testReport();
+}
+
+PerfTestFramework.prototype.testReport = function() {
 
   if (resultWriter != null) {
     resultWriter.writeFile(this.testResults, "FullRaport.json");
@@ -228,41 +245,57 @@ PerfTestFramework.prototype.doNextTest  = function(){
   var results = {};
   var combined ={};
 
-  for (var i=0; i < this.testResults.length; i++) {
-    if (this.testResults[i].data) {
-      if (!results[this.testResults[i].device]) {
-        results[this.testResults[i].device] = {};
+  for (var i = 0; i < this.testResults.length; i++) {
+
+    var testResults = this.testResults[i];
+
+    if (testResults.data) {
+
+      if (!results[testResults.device]) {
+        results[testResults.device] = {};
       }
 
-      if (this.testResults[i].data.peersList) {
-        results[this.testResults[i].device].peersList = this.extendArray(this.testResults[i].data.peersList, results[this.testResults[i].device].peersList);
-       } else if (this.testResults[i].data.connectList) {
-        if (!results[this.testResults[i].device].connectList) {
-          results[this.testResults[i].device].connectList = [];
+      if (testResults.data.peersList) {
+        results[testResults.device].peersList = this.extendArray(
+          testResults.data.peersList, results[testResults.device].peersList
+        );
+       } else if (testResults.data.connectList) {
+        if (!results[testResults.device].connectList) {
+          results[testResults.device].connectList = [];
+        }
+        if (!results[testResults.device].connectError) {
+          results[testResults.device].connectError = {};
         }
 
-        if (!results[this.testResults[i].device].connectError) {
-          results[this.testResults[i].device].connectError = {};
+        this.preProcessResults(
+          testResults.data.connectList, 
+          results[testResults.device].connectList,
+          results[testResults.device].connectError
+        );
+
+      } else if (testResults.data.sendList) {
+
+        if(!results[testResults.device].sendList) {
+          results[testResults.device].sendList = [];
         }
 
-        this.preProcessResults(this.testResults[i].data.connectList,results[this.testResults[i].device].connectList,results[this.testResults[i].device].connectError);
-      } else if (this.testResults[i].data.sendList) {
-        if(!results[this.testResults[i].device].sendList) {
-          results[this.testResults[i].device].sendList = [];
+        if (!results[testResults.device].sendError) {
+          results[testResults.device].sendError = {};
         }
 
-        if (!results[this.testResults[i].device].sendError) {
-          results[this.testResults[i].device].sendError = {};
-        }
+        this.preProcessResults(
+          testResults.data.sendList,
+          results[testResults.device].sendList,
+          results[testResults.device].sendError
+        );
 
-        this.preProcessResults(this.testResults[i].data.sendList,results[this.testResults[i].device].sendList,results[this.testResults[i].device].sendError);
       } else {
-        console.log('Test[' + this.testResults[i].test + '] for ' + this.testResults[i].device + ' has unknown data : ' + JSON.stringify(this.testResults[i].data));
+        console.log('Test[' + testResults.test + '] for ' + testResults.device + ' has unknown data : ' + JSON.stringify(testResults.data));
       }
     }
   }
 
-  if(resultWriter != null) {
+  if (resultWriter != null) {
     resultWriter.writeFile(results, "ProcessedResults.json");
   }
 
@@ -273,7 +306,7 @@ PerfTestFramework.prototype.doNextTest  = function(){
   console.log('--------------- test report ---------------------');
 
   var counter = 0;
-  for( var devName in results){
+  for (var devName in results) {
 
     counter++;
     console.log('--------------- ' + devName + ' --------------------- : ' + counter);
@@ -342,11 +375,14 @@ PerfTestFramework.prototype.doNextTest  = function(){
   console.log('--------------- end of test report ---------------------');
 }
 
-PerfTestFramework.prototype.printFailedLine = function(what,failedPeers, notTriedPeers,successCount) {
+PerfTestFramework.prototype.printFailedLine = function(
+  what, failedPeers, notTriedPeers,successCount
+) {
 
   if(!notTriedPeers || !failedPeers ||  (failedPeers.length + successCount) <=0){
     return;
   }
+
   console.log(what + " failed peers count : " + failedPeers.length + " [" + ((failedPeers.length * 100) / (successCount + failedPeers.length)) + " %]");
 
   failedPeers.forEach(function(peer) {
@@ -365,6 +401,7 @@ PerfTestFramework.prototype.printMinMaxLine  = function(list) {
     console.log('Results list does not contain any items');
     return;
   }
+
   console.log('Result count ' + list.length + ', range ' + list[0].time + ' ms to  '  + list[(list.length - 1)].time + " ms.");
 }
 
@@ -377,9 +414,11 @@ PerfTestFramework.prototype.preProcessResults  = function(source, target,errorTa
   if(!target) {
     target = [];
   }
+
   if(!errorTarget.failedPeer) {
     errorTarget.failedPeer = [];
   }
+
   if(!errorTarget.notTriedList) {
     errorTarget.notTriedList = [];
   }
@@ -405,9 +444,11 @@ PerfTestFramework.prototype.preProcessResults  = function(source, target,errorTa
 PerfTestFramework.prototype.getValueOf  = function(array, presentage) {
 
   var index = Math.round(array.length * presentage);
+
   if(index > 0){
     index = index - 1;
   }
+
   if(index < array.length) {
     return array[index].time;
   }
@@ -416,6 +457,7 @@ PerfTestFramework.prototype.getValueOf  = function(array, presentage) {
 PerfTestFramework.prototype.extendArray  = function(source, target) {
   if(!target)
     return source;
+
   return target.concat(source);
 }
 
