@@ -17,6 +17,7 @@ function TestManager(testConfig) {
 util.inherits(TestManager, EventEmitter);
 
 TestManager.prototype.addDevice = function(device) {
+
   // this.devices = { 'ios' : [dev1, dev2], 'android' : [dev3, dev4] }
   if (!this.devices[device.platform]) {
     this.devices[device.platform] = [device];
