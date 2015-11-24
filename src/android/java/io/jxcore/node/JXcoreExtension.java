@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import android.util.Log;
 import android.widget.Toast;
 
-import org.thaliproject.p2p.btconnectorlib.BTConnector;
+import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 
 public class JXcoreExtension {
 
@@ -69,7 +69,7 @@ public class JXcoreExtension {
 
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                String bleErrorString = mBtConnectorHelper.isBLEAdvertisingSupported();
+                String bleErrorString = "Not supported";//mBtConnectorHelper.isBLEAdvertisingSupported();
                 if (bleErrorString != null) {
                     args.add(bleErrorString);
                     jxcore.CallJSMethod(callbackId, args.toArray());
@@ -136,19 +136,12 @@ public class JXcoreExtension {
               String peerName = params.get(0).toString();
               int port = (Integer) params.get(1);
 
-              BTConnector.WifiBtStatus retVal = mBtConnectorHelper.Start(peerName, port);
+              boolean retVal = mBtConnectorHelper.Start(peerName, port);
 
               String errString = null;
-              if (!retVal.isBtOk) {
-                  errString = "Bluetooth is not supported on this hardware platform, ";
-              } else if (!retVal.isBtEnabled) {
-                  errString = "Bluetooth is disabled, ";
-              }
 
-              if (!retVal.isWifiOk) {
-                  errString = "Wi-Fi Direct is not supported on this hardware platform.";
-              } else if (!retVal.isWifiEnabled) {
-                  errString = "Wi-Fi is disabled.";
+              if (!retVal) {
+                  errString = "Either Bluetooth or Wi-Fi Direct not supported on this device";
               }
 
               //if all is well, the errString is still null in here..
