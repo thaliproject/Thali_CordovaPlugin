@@ -5,14 +5,14 @@
     "tests": [
         {
             "name": "testSendData.js",
-            "servertimeout": "1200000",
+            "servertimeout": 1200000,
             "data": {
-                "timeout": "1000000",
-                "rounds": "1",
-                "dataTimeout": "10000",
-                "dataAmount": "100000",
-                "conReTryTimeout": "5000",
-                "conReTryCount": "5"
+                "timeout": 1000000,
+                "rounds": 1,
+                "dataTimeout": 10000,
+                "dataAmount": 100000,
+                "conReTryTimeout": 5000,
+                "conReTryCount": 5
             }
         }
     ]
