@@ -1,7 +1,7 @@
 /*
  Main entry point for Thali test frameworks coordinator server
 
- jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"},\"honorCount\":\"true\"} //
+ jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"},\"honorCount\":true}"
  */
 
 'use strict';
@@ -30,15 +30,15 @@ var devicesObject = JSON.parse(process.argv[2]);
 // but in the end, the deployment to all might not always work and thus
 // it is beneficial to be able to anyways do the test run with the amount
 // of devices that were able to connect.
-var timeOutValueToStart = 300000; // 5 minutes
+var timeOutValueToStart = 120000; // 2 minutes
 
 var TestsFrameworks  = {};
 TestsFrameworks.perftest =  {};
-TestsFrameworks.perftest.android = new PerfTestFramework("Android",devicesObject.devices.android,devicesObject.honorCount);
-TestsFrameworks.perftest.ios     = new PerfTestFramework("iOs",devicesObject.devices.ios,devicesObject.honorCount);
+TestsFrameworks.perftest.android = new PerfTestFramework("Android",devicesObject.devices.android,devicesObject.honorCount,timeOutValueToStart);
+TestsFrameworks.perftest.ios     = new PerfTestFramework("iOS",devicesObject.devices.ios,devicesObject.honorCount,timeOutValueToStart);
 TestsFrameworks.unittest =  {};
 TestsFrameworks.unittest.android = new UnitTestFramework("Android");
-TestsFrameworks.unittest.ios     = new UnitTestFramework("iOs");
+TestsFrameworks.unittest.ios     = new UnitTestFramework("iOS");
 
 var weHaveStartedTesting = false;
 var startTimerId = null;
