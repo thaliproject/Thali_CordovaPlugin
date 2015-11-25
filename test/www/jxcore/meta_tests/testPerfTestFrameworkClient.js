@@ -2,7 +2,7 @@
 
 var originalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
 var mockMobile = require('../bv_tests/mockmobile.js');
-var PerfTestFramework = require('../perf_tests/PerfTestFramework.js');
+var PerfTestFrameworkClient = require('../perf_tests/PerfTestFrameworkClient.js');
 var tape = require('../lib/thali-tape');
 
 var test = tape({
@@ -17,8 +17,8 @@ var test = tape({
 });
 
 test('#passing wrong test name should emit done', function (t) {
-  var perfTestFramework = new PerfTestFramework('Some device name');
-  perfTestFramework.on('done', function (result) {
+  var perfTestFrameworkClient = new PerfTestFrameworkClient('Some device name');
+  perfTestFrameworkClient.on('done', function (result) {
     t.ok(result, 'received a result to the done event');
     t.end();
   });
@@ -26,5 +26,5 @@ test('#passing wrong test name should emit done', function (t) {
     'command': 'start',
     'testName': 'commandThatDoesNotExist'
   };
-  perfTestFramework.handleCommand(JSON.stringify(commandData));
+  perfTestFrameworkClient.handleCommand(JSON.stringify(commandData));
 });
