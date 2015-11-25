@@ -20,10 +20,13 @@ test('#should be able to process valid results without exceptions', function (t)
             'result': 'OK',
             'sendList': [
                 {
-                    'connections': 2,
-                    'name': 'F8:95:C7:13:51:1E',
+                    'connections': 3,
+                    'dataAmount': 100000,
+                    'dataReceived': 100000,
+                    'doneRounds': 1,
+                    'name': '90:E7:C4:FC:13:3C',
                     'result': 'OK',
-                    'time': 49921,
+                    'time': 57792,
                     'tryCount': 1
                 }
             ],
@@ -32,10 +35,33 @@ test('#should be able to process valid results without exceptions', function (t)
         'device': 'LGE-Nexus 5_PT7062',
         'test': 0,
         'time': 120073
-    }
+    },
+    {
+        'data': {
+            'name:': 'HTC-HTC6535LVW_PT3841',
+            'result': 'OK',
+            'sendList': [
+                {
+                    'connections': 2,
+                    'dataAmount': 100000,
+                    'dataReceived': 100000,
+                    'doneRounds': 5,
+                    'name': 'F8:95:C7:13:51:1E',
+                    'result': 'OK',
+                    'time': 30550,
+                    'tryCount': 1
+                }
+            ],
+            'time': 115137
+        },
+        'device': 'HTC-HTC6535LVW_PT3841',
+        'test': 0,
+        'time': 115231
+    },
   ];
   var testDevices = {
-      'LGE-Nexus 5_PT7062': {}
+      'LGE-Nexus 5_PT7062': {},
+      'HTC-HTC6535LVW_PT3841': {}
   };
   var processedResults = ResultsProcessor.process(testResults, testDevices);
   t.ok(processedResults, 'received processed results');

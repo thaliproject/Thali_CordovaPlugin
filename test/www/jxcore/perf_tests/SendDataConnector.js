@@ -167,8 +167,6 @@ SendDataConnector.prototype.doConnect = function(peer) {
                     self.endReason = "OK";
                     logger('got all data for this round');
 
-                    //we only reset the value once we have gotten all data, so any re-connect will sent only missing data
-                    self.receivedCounter = 0;
                     self.oneRoundDoneNow();
                 }
             });
@@ -260,12 +258,23 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
         return;
     }
 
+    this.doneRounds++;
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;
-    this.resultArray.push({"name":this.peer.peerIdentifier,"time":responseTime,"result":this.endReason,"connections":this.connectionCount,"tryCount":this.peer.tryCount});
-    this.emit('debug','round[' +this.doneRounds + '] time: ' + responseTime + ' ms, rnd: ' + this.connectionCount + ', ex: ' + this.endReason);
+    var resultItem = {
+        'name': this.peer.peerIdentifier,
+        'time': responseTime,
+        'result': this.endReason,
+        'connections': this.connectionCount,
+        'tryCount': this.peer.tryCount,
+        'doneRounds': this.doneRounds,
+        'dataAmount': this.toSendDataAmount,
+        'dataReceived': this.receivedCounter
+    };
+    this.resultArray.push(resultItem);
+    this.emit('debug', 'Round of send data to peer ' + resultItem.name +
+                       ' done with result: ' + resultItem.result);
 
-    this.doneRounds++;
     if(this.roundsToDo > this.doneRounds){
         this.tryRounds = 0;
         this.receivedCounter = 0;

@@ -28,6 +28,22 @@ var printResultLine  = function(what, list) {
     console.log(what + " : 100% : " + getValueOf(list,1.00) + " ms, 99% : " + getValueOf(list,0.99)  + " ms, 95 : " + getValueOf(list,0.95)  + " ms, 90% : " + getValueOf(list,0.90) + " ms.");
 }
 
+var printAverageDataRate = function (list) {
+    var amountOfResults = list.length;
+    var cumulativeTime = 0;
+    var cumulativeData = 0;
+    for (var i = 0; i < amountOfResults; i++) {
+        var listItem = list[i];
+        if (listItem.result === 'OK') {
+            cumulativeTime += listItem.time * listItem.doneRounds;
+            cumulativeData += listItem.dataAmount * listItem.doneRounds;
+        }
+    }
+    // The average rate is calculated by first getting the rate in KB per second
+    // and then rounding it. The final print is done in MB per second.
+    console.log('Average data rate: ' + (Math.round((cumulativeData / 1000) / (cumulativeTime / 1000)) / 1000) + ' MB/s');
+};
+
 var preProcessResults  = function(source, target,errorTarget){
 
     if(!target) {
@@ -159,6 +175,7 @@ module.exports.process = function (testResults, testDevices) {
             results[devName].sendList.sort(compare);
 
             printResultLine('sendList',results[devName].sendList);
+            printAverageDataRate(results[devName].sendList);
             printMinMaxLine(results[devName].sendList);
 
             if(results[devName].sendError) {
@@ -185,9 +202,10 @@ module.exports.process = function (testResults, testDevices) {
     if(combined.sendList){
         combined.sendList.sort(compare);
         printResultLine('sendList',combined.sendList);
+        printAverageDataRate(combined.sendList);
    }
 
     console.log('--------------- end of test report ---------------------');
-    
+
     return results;
 };
