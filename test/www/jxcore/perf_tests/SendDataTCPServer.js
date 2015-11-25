@@ -51,8 +51,8 @@ function SendDataTCPServer(port) {
         logger('TCP/IP server  socket is disconnected');
     });
 
-    this.server.listen(port, function() { //'listening' listener
-        logger('TCP/IP server  is bound to : ' + self.port );
+    this.server.listen(port, function () {
+        logger('TCP/IP server is bound to port: ' + self.getServerPort());
     });
 }
 SendDataTCPServer.prototype.getServerPort = function() {
