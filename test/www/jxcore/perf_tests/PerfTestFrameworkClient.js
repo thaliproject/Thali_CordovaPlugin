@@ -56,7 +56,6 @@ TestFrameworkClient.prototype.handleCommand = function(command){
     switch(commandData.command){
         case 'start':{
             console.log('Start now : ' + commandData.testName);
-            self.stopAllTests(); //Stop any previous tests if still running
             if(self.test[commandData.testName]){
                 self.emit('debug',"--- start :" + commandData.testName + "---");
                 currentTest = new self.test[commandData.testName](commandData.testData,self.deviceName,commandData.devices,self.shuffle(commandData.addressList));
