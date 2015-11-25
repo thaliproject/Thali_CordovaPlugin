@@ -13,7 +13,7 @@ var parsedJSON = require('serveraddress.json');
 testUtils.toggleRadios(true);
 
 var CoordinatorConnector = require('./lib/CoordinatorConnector');
-var TestFrameworkClient = require('./perf_tests/PerfTestFramework');
+var TestFrameworkClient = require('./perf_tests/PerfTestFrameworkClient');
 
 /*----------------------------------------------------------------------------------
  code for connecting to the coordinator server
