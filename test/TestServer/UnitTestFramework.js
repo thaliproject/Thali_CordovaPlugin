@@ -19,6 +19,9 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   var devices = this.devices[platform];
 
   function doTest(test, cb) {
+
+    console.log("Beginning test: " + test);
+
     // Perform a single test
     function doNext(stage) {
       // We need to have seen all devices report in before we
@@ -38,18 +41,23 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
     devices.forEach(function(device) {
 
       // The device has completed setup for this test
-      device.socket.once("setup_complete", function() {
+      device.socket.once("setup_complete", function(info) {
+        console.log(info);
         doNext("start_test");
       });
 
       // The device has completed it's test
-      device.socket.once("test_complete", function() {
+      device.socket.once("test_complete", function(result) {
+        console.log(result);
         doNext('teardown');
       });
 
       // The device has completed teardown for this test
-      device.socket.once("teardown_complete", function() {
-        cb();
+      device.socket.once("teardown_complete", function(info) {
+        console.log(info);
+        if (--toComplete == 0) {
+          cb();
+        }
       });
 
       // Start setup for this test
