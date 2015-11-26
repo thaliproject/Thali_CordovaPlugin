@@ -1,76 +1,41 @@
 var LogCallback;
 var myName;
 var os = require('os');
+
 /**
  * Turn Bluetooth and WiFi either on or off
  * This is a NOOP on iOS and the desktop
- * @param {boolean} on - True to turn radios on and False to turn them off
+ * @param {boolean} on - true to turn radios on and false to turn them off
  */
-exports.toggleRadios = function(on) {
+exports.toggleRadios = function (on) {
   if (!jxcore.utils.OSInfo().isMobile) {
     return;
   }
-  console.log("Turning radios to " + on);
-  Mobile.toggleBluetooth(on, function(err) {
-    if (err) {
-      console.log("We could not set Bluetooth! - " + err);
-    }
-    console.log("toggleBluetooth - ");
-    Mobile.toggleWiFi(on, function(err) {
-      if (err) {
-        console.log("We could not set WiFi! - " + err);
-      }
-
-      console.log("toggleWiFi");
+  console.log('Toggling radios to ' + on);
+  exports.toggleBluetooth(on, function () {
+    exports.toggleWifi(on, function () {
+      console.log('Radios toggled');
     });
   });
 };
 
-exports.reFreshWifi = function() {
-  if (!jxcore.utils.OSInfo().isMobile) {
-    return;
-  }
-  console.log("Turning Wifi off");
-  Mobile.toggleWiFi(false, function(err) {
+exports.toggleWifi = function (on, callback) {
+  Mobile.toggleWiFi(on, function (err) {
     if (err) {
-      console.log("We could not turn wifi off! - " + err);
+      console.log('Could not toggle Wifi - ' + err);
     }
-    console.log("Turning Wifi back on");
-    Mobile.toggleWiFi(true, function(err) {
-      if (err) {
-        console.log("We could turn wifi back on! - " + err);
-      }
-
-      console.log("toggleWiFi finished");
-
-      if(jxcore.utils.OSInfo().isAndroid) {
-        Mobile('ReconnectWifiAP').callNative(function (err) {
-          if (err) {
-            console.log("ReconnectWifiAP returned error: " + err );
-            Coordinator.close();
-            return;
-          }
-
-          console.log("ReconnectWifiAP finished");
-        });
-      }
-
-    });
+    callback();
   });
 };
 
-exports.printNetworkInfo = function() {
-
-  console.log("printNetworkInfo");
-
-  var networkInterfaces = os.networkInterfaces();
-  Object.keys(networkInterfaces).forEach(function (interfaceName) {
-    console.log("found interfaceName: " +interfaceName);
-    networkInterfaces[interfaceName].forEach(function (iface) {
-      console.log("-iface: " +iface.family + " is internal : " + iface.internal + ", has ip: " + iface.address);
-    });
+exports.toggleBluetooth = function (on, callback) {
+  Mobile.toggleBluetooth(on, function (err) {
+    if (err) {
+      console.log('Could not toggle Bluetooth - ' + err);
+    }
+    callback();
   });
-}
+};
 
 function isFunction(functionToCheck) {
   var getType = {};
