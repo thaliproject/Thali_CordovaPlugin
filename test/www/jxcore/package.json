@@ -36,6 +36,7 @@
     "supertest-as-promised": "^2.0.2",
     "thali" : "^2.0.1",
     "tape": "^4.0.0",
+    "tape-catch": "^1.0.4",
     "uuid": "^2.0.0",
     "wrapping-tape": "^0.0.3"
   },

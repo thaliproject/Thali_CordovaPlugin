@@ -19,7 +19,8 @@
  */
 
 'use strict';
-var tape = require('tape');
+var tape = require('tape-catch');
+var WrappingTape = require('wrapping-tape');
 var CoordinatorConnector = require('./CoordinatorConnector');
 var parsedJSON = require('../serveraddress.json');
 
@@ -28,8 +29,7 @@ var testUtils = require("./testUtils");
 process.on('uncaughtException', function(err) {
   console.log("Uncaught Exception: " + err);
   console.log("****TEST TOOK:  ms ****" );
-  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAIL]****");
-  throw err;
+  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
 });
 
 process.on('unhandledRejection', function(err) {
@@ -65,7 +65,7 @@ function getCoordinator()
     console.log('got too_late event, closing connection now.');
     Coordinator.close();
     console.log("****TEST TOOK:  ms ****" );
-    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAIL]****");
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
   });
 
   _coordinator.connect(parsedJSON[0].address, 3000);

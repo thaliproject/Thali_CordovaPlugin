@@ -17,7 +17,9 @@
 
 'use strict';
 
-var events = require('events');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var ThaliEmitter = require('thali/thaliemitter');
 
 var SendDataTCPServer = require('./SendDataTCPServer');
@@ -34,13 +36,13 @@ var SendDataConnector = require('./SendDataConnector');
     }
 */
 
-function testSendData(jsonData,name,dev,addressList) {
+function testSendData(jsonData, name, deviceCount, addressList) {
     var self = this;
     console.log('testSendData created ' + jsonData + ", bt-address lenght : " + addressList.length);
     this.name = name;
     this.commandData = JSON.parse(jsonData);
     this.emitter = new ThaliEmitter();
-    this.toFindCount = dev;
+    this.toFindCount = deviceCount;
     if(addressList.length > 0) {
         this.BluetoothAddressList = addressList;
     }
@@ -119,11 +121,12 @@ function testSendData(jsonData,name,dev,addressList) {
     }
 }
 
-testSendData.prototype = new events.EventEmitter;
+inherits(testSendData, EventEmitter);
 
-testSendData.prototype.start = function() {
+testSendData.prototype.start = function(serverPort) {
     var self = this;
-    this.testServer = new SendDataTCPServer();
+    this.doneAlready = false;
+    this.testServer = new SendDataTCPServer(serverPort);
     this.testConnector = new SendDataConnector(this.commandData.rounds,this.commandData.dataAmount,this.commandData.conReTryTimeout,this.commandData.conReTryCount,this.commandData.dataTimeout);
     this.testConnector.on('done', this.doneCallback);
     this.testConnector.on('debug',this.debugCallback);
@@ -162,6 +165,8 @@ testSendData.prototype.start = function() {
 }
 
 testSendData.prototype.stop = function(doReport) {
+    var self = this;
+
     console.log('testSendData stopped');
 
     this.emitter.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
@@ -178,19 +183,21 @@ testSendData.prototype.stop = function(doReport) {
         this.timerId = null;
     }
 
-    this.testServer.stopServer();
     if(doReport){
         this.emit('debug', "---- sendReportNow");
         this.sendReportNow();
     }
     if(this.testConnector != null){
-        this.testConnector.Stop();
-        this.testConnector.removeListener('done', this.doneCallback);
-        this.testConnector.removeListener('debug', this.debugCallback);
-        this.testConnector = null;
+        this.testConnector.Stop(function () {
+            self.testConnector.removeListener('done', self.doneCallback);
+            self.testConnector.removeListener('debug', self.debugCallback);
+            self.testConnector = null;
+        });
     }
 
-    this.doneAlready = true;
+    this.testServer.stopServer(function () {
+        // No need to do anything since this is the end of this test
+    });
 }
 
 testSendData.prototype.startWithNextDevice = function() {
@@ -242,6 +249,7 @@ testSendData.prototype.startWithNextDevice = function() {
 }
 
 testSendData.prototype.weAreDoneNow = function() {
+    var self = this;
 
     if (this.doneAlready || this.testConnector == null) {
         return;
@@ -257,11 +265,16 @@ testSendData.prototype.weAreDoneNow = function() {
     this.sendReportNow();
 
     if(this.testConnector != null){
-        this.testConnector.Stop();
-        this.testConnector.removeListener('done', this.doneCallback);
-        this.testConnector.removeListener('debug', this.debugCallback);
-        this.testConnector = null;
+        this.testConnector.Stop(function () {
+            self.testConnector.removeListener('done', self.doneCallback);
+            self.testConnector.removeListener('debug', self.debugCallback);
+            self.testConnector = null;
+        });
     }
+
+    // The test server can't be stopped here, because even though this device
+    // is done with it's own list of peers, it might be still acting as a test
+    // peer for some other devices and thus the server is might still be needed.
 }
 
 testSendData.prototype.sendReportNow = function() {
@@ -282,7 +295,7 @@ testSendData.prototype.sendReportNow = function() {
             }
         }
 
-        if(!isAlreadyAdded){
+        if (!isAlreadyAdded && currentTest) {
             this.resultArray.push(currentTest);
         }
     }

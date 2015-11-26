@@ -13,7 +13,7 @@ var parsedJSON = require('serveraddress.json');
 testUtils.toggleRadios(true);
 
 var CoordinatorConnector = require('./lib/CoordinatorConnector');
-var TestFrameworkClient = require('./perf_tests/PerfTestFramework');
+var TestFrameworkClient = require('./perf_tests/PerfTestFrameworkClient');
 
 /*----------------------------------------------------------------------------------
  code for connecting to the coordinator server
@@ -89,25 +89,41 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
     });
 }
 
+// A flag used to avoid too frequent Wifi toggling
+var wifiRepairOngoing = false;
+var wifiRepairFrequency = 60 * 1000 // 1 minute
 Coordinator.on('error', function (data) {
-
-    //we have disconnected, thus lets not log any additional errors
-    if(weHaveFinished){
+    // If we have finished or haven't yet made the initial connection,
+    // ignore the connection errors.
+    if (weHaveFinished || !weHaveMadeInitialConnection) {
         return;
     }
-
-    var errData = JSON.parse(data);
-    console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
-
-    if(errData.type == "connect_error") {
-        testUtils.printNetworkInfo();
-
-        if(weHaveMadeInitialConnection){
-            weHaveMadeInitialConnection = false;
-            testUtils.reFreshWifi();
-        }
+    var errorData = JSON.parse(data);
+    var errorMessage = 'Error type "' + errorData.type +  '" when connecting to the test server';
+    console.log(errorMessage);
+    testUtils.logMessageToScreen(errorMessage);
+    if (wifiRepairOngoing) {
+        return;
     }
-  testUtils.logMessageToScreen('Client error: ' + errData.type);
+    wifiRepairOngoing = true;
+    // If we have a connection error to the test server, we try to repair
+    // the connection by toggling Wifi off and on. This forces devices
+    // to re-connect to the Wifi access point.
+    if (errorData.type === 'connect_error') {
+        testUtils.toggleWifi(false, function () {
+            testUtils.toggleWifi(true, function () {
+                console.log('Wifi toggled for connection repairment');
+                // This is the time when Wifi toggling is completed, but it
+                // doesn't necessarily mean that the connection to the Wifi
+                // access point is already restored. There is some time
+                // needed from turning Wifi on to the point when the connection
+                // is functional.
+            });
+        });
+    }
+    setTimeout(function () {
+        wifiRepairOngoing = false;
+    }, wifiRepairFrequency);
 });
 
 /*----------------------------------------------------------------------------------
@@ -148,8 +164,6 @@ Coordinator.on('connect', function () {
     console.log('Coordinator is now connected to the server!');
     testUtils.logMessageToScreen('connected to server');
     Coordinator.present(myName,"perftest",bluetoothAddress);
-
-    testUtils.printNetworkInfo();
 });
 
 
@@ -159,6 +173,9 @@ Coordinator.on('command', function (data) {
 });
 
 Coordinator.on('closed', function () {
+    if(weHaveFinished){
+        return;
+    }
     console.log('The Coordinator has closed!');
     //we need to stop & close any tests we are running here
      TestFramework.stopAllTests(false);

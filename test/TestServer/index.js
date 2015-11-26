@@ -1,7 +1,7 @@
 /*
  Main entry point for Thali test frameworks coordinator server
 
- jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"},\"honorCount\":\"true\"} //
+ jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"},\"honorCount\":true}"
  */
 
 'use strict';
@@ -19,7 +19,13 @@ var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');
 var UnitTestFramework = require('./UnitTestFramework');
 
-var timeOutValueToStart = 30000;// after 300 seconds of waiting we'll start even if we did not get desired amount of devices
+// This is the time to wait for devices to connect in case honor count is
+// not set to true. This is especially designed for the CI environment where
+// it might take a significant amount of time to deploy to all devices
+// but in the end, the deployment to all might not always work and thus
+// it is beneficial to be able to anyways do the test run with the amount
+// of devices that were able to connect.
+var timeOutValueToStart = 120000; // 2 minutes
 
 var testConfig = JSON.parse(process.argv[2]);
 
