@@ -6,24 +6,14 @@
 
 "use strict";
 
-var test = require('tape');
-//var express = require('express');
 var net = require('net');
+var test = require('tape');
 var testUtils = require("./lib/testUtils");
 
 testUtils.toggleRadios(true);
 
-//var app = express();
-//app.disable('x-powered-by');
-
 var myName = "UNIT-TEST";
 testUtils.setMyName(myName);
 
-var failedRows = [];
-var rows = [], total = 0, passed = 0, failed = 0;
-/*
-*/
 require('./runTests.js');
-
-// Log that the app.js file was loaded.
 console.log('Test app app.js loaded');
