@@ -12,7 +12,6 @@ function SendDataTCPServer(port) {
 
     var limitToReport = 10000;
 
-    this.stopServer();
     this.server = net.createServer(function (c) { //'connection' listener
         var receivedDataInBytes = 0;
         var lastReportedAmount = 0;
