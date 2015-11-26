@@ -71,7 +71,7 @@ CoordinatorConnector.prototype.connect = function (ipAddress, port)
   for (var m in this.messages) {
     this.socket.on(m, function(msg) {
       return function(data) {
-        debug_log("Socket message: " + msg + ":" + data);
+        debug_log(msg + ":" + data);
         self.emit(self.messages[msg], data);
       };
     }(m));
@@ -96,7 +96,6 @@ CoordinatorConnector.prototype.present = function(name, type, tests, bluetoothAd
   // Inform the test server who we are, what type of test we're prepared to run
   // and what our bluetoothAddress is (Android only)
 
-  console.log(tests);
   if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
     this.socket.emit('present', JSON.stringify({
       "os": "android", 
@@ -137,7 +136,7 @@ CoordinatorConnector.prototype.setupComplete = function(deviceName, testName)
 
 CoordinatorConnector.prototype.testComplete = function(testName, success)
 {
-  // Inform the test server that we have completed set up
+  // Inform the test server that we have completed test execution
   this.socket.emit('test_complete', JSON.stringify({"test":testName, "success":success}));
 };
 
