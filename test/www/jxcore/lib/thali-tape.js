@@ -88,7 +88,7 @@ function declareTest(name, setup, teardown, opts, cb) {
   tape(name, function(t) {
     var success = true;
     t.on("result", function(res) {
-      success = succes && res.ok;
+      success = success && res.ok;
     });
     getCoordinator().once("start_test", function(_name) {
       cb(t);
@@ -128,7 +128,7 @@ var thaliTape = function(fixture)
 
 function createStream()
 {
-      tape.createStream({ objectMode: true })
+  tape.createStream({ objectMode: true })
   .on('data', function (row) {
       // Log for results
       //console.log(JSON.stringify(row));
