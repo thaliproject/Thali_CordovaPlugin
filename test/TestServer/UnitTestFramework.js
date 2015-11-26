@@ -16,8 +16,13 @@ util.inherits(UnitTestFramework, TestFramework);
 UnitTestFramework.prototype.startTests = function(platform, tests) {
 
   var toComplete;
-  var devices = this.devices[platform];
+  var results = {};
 
+  // Copy arrays
+  var _tests = tests.slice();
+  var devices = this.devices[platform].slice();
+
+  var self = this;
   function doTest(test, cb) {
 
     console.log("Beginning test: " + test);
@@ -42,20 +47,24 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
       // The device has completed setup for this test
       device.socket.once("setup_complete", function(info) {
-        console.log(info);
         doNext("start_test");
       });
 
       // The device has completed it's test
       device.socket.once("test_complete", function(result) {
+        result = JSON.parse(result);
         console.log(result);
+        if (!results[result.test])
+          results[result.test] = result.success;
+        else
+          results[result.test] &= result.success;
         doNext('teardown');
       });
 
       // The device has completed teardown for this test
       device.socket.once("teardown_complete", function(info) {
-        console.log(info);
         if (--toComplete == 0) {
+          console.log("done");
           cb();
         }
       });
@@ -74,7 +83,8 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         doTest(tests[0], nextTest);
       });
     } else {
-      console.log("ALL DONE");
+      // ALL DONE !!
+      self.testReport(_tests, results);
     }
   }
 
@@ -91,6 +101,27 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
     // Tell devices to set tests up to run in the order we supply
     device.socket.emit("schedule", JSON.stringify(tests));
   });
+}
+
+UnitTestFramework.prototype.testReport = function(tests, results) {
+
+  console.log("\n\n-== UNIT TEST RESULTS ==-");
+
+  var passed = 0;
+  for (var test in results) {
+    passed += results[test];
+  }
+
+  console.log("%d of %d tests completed", Object.keys(results).length, tests.length);
+  console.log("%d/%d passed (%d failures)", passed, tests.length, tests.length - passed);
+
+  console.log("---\n\n");
+
+  for (test in results) {
+    console.log(test + " - " + (results[test] ? "pass" : "fail"));
+  }
+
+  console.log("-== END ==-");
 }
 
 module.exports = UnitTestFramework;
