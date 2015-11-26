@@ -3,6 +3,7 @@
 var net = require('net');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
+var randomstring = require('randomstring');
 
 var logger = function (value) {
     console.log(new Date().toJSON() + ' SendDataConnector.js: ' + value);
@@ -128,26 +129,18 @@ SendDataConnector.prototype.doConnect = function(peer) {
 
             self.clientSocket = net.connect(port, function () {
                 // self.toSendDataAmount is the wanted amount of data in bytes.
-                // The size of a single character is in a string is 2 bytes.
-                // Below, the wanted amount of data is generated so that an array is
-                // filled with integers that is turned into a string. For example,
-                // a loop two times would generate something like: [1, 2].toString() -> '1,2'.
-                // The size of that example string would be 3 * 2 = 6 bytes, because
-                // a comma is entered between array values.
-                logger('CLIENT now sending ' + (self.toSendDataAmount - self.receivedCounter) + ' bytes of data');
-                var numbers = [];
-                // The right length for the array is calculated below by first splitting
-                // the byte amount by two, which gives the amount of characters we need.
-                // Number one is added, to even the fact that comma doesn't get appended
-                // after the last character. Then, the number is split by two, because
-                // each number in the array results also in one additional comma in the
-                // resulting string.
-                for (var i = 0; i < ((((self.toSendDataAmount - self.receivedCounter) / 2) + 1) / 2); i++) {
-                    numbers[i] = Math.floor(Math.random() * 10);
-                }
+                var remainingSendAmount = self.toSendDataAmount - self.receivedCounter;
+                logger('CLIENT now sending ' + remainingSendAmount + ' bytes of data');
+                // The size of a single character in a string is 2 bytes so splitting the
+                // the wanted amount of bytes to get string with right length.
+                var testMessage = randomstring.generate(remainingSendAmount / 2);
                 self.resetDataTimeout(peer);
-                self.clientSocket.write(numbers.toString());
+                self.clientSocket.write(testMessage);
             });
+
+            self.clientSocket.setTimeout(self.dataTimeOut);
+            self.clientSocket.setKeepAlive(true);
+
             self.clientSocket.on('data', function (data) {
                 var receivedString = data.toString().trim();
                 var acknowledgmentCount = (receivedString.match(/ACK/g) || []).length;

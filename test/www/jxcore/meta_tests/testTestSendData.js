@@ -65,12 +65,12 @@ test('#connector should be able to send data to a running server', function (t) 
 var numberOfPeers = 5;
 test('#should run test with ' + numberOfPeers + ' peers', function (t) {
   var testData = {
-    'timeout': '1500000',
-    'rounds': '1',
-    'dataTimeout': '10000',
-    'dataAmount': '100000',
-    'conReTryTimeout': '50',
-    'conReTryCount': '5'
+    'timeout': 1500000,
+    'rounds': 1,
+    'dataTimeout': 10000,
+    'dataAmount': 1000000,
+    'conReTryTimeout': 50,
+    'conReTryCount': 5
   };
 
   var testPeerList = [];
