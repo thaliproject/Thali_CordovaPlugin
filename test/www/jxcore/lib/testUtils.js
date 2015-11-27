@@ -8,9 +8,14 @@ var os = require('os');
  * @param {boolean} on - true to turn radios on and false to turn them off
  */
 exports.toggleRadios = function(on) {
-  if (typeof jxcore == 'undefined' || !jxcore.utils.OSInfo().isMobile) {
+
+  if (typeof jxcore == 'undefined' || !jxcore.utils.OSInfo().isMobile || 
+      !jxcore.utils.OSInfo().isAndroid) 
+  {
     return;
   }
+
+  if (jxcore.utils.OSInfo().isAndroid)
   console.log('Toggling radios to ' + on);
   exports.toggleBluetooth(on, function () {
     exports.toggleWifi(on, function () {
