@@ -25,7 +25,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   var self = this;
   function doTest(test, cb) {
 
-    console.log("Beginning test: " + test);
+    console.log("Running test: " + test);
 
     // Perform a single test
     function doNext(stage) {
@@ -53,7 +53,6 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       // The device has completed it's test
       device.socket.once("test_complete", function(result) {
         result = JSON.parse(result);
-        console.log(result);
         if (!results[result.test])
           results[result.test] = result.success;
         else
@@ -64,7 +63,6 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       // The device has completed teardown for this test
       device.socket.once("teardown_complete", function(info) {
         if (--toComplete == 0) {
-          console.log("done");
           cb();
         }
       });
@@ -84,6 +82,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       });
     } else {
       // ALL DONE !!
+      console.log("Test run complete");
       self.testReport(_tests, results);
       process.exit(0);
     }
