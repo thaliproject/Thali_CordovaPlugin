@@ -15,6 +15,9 @@ var fs = require('fs-extra-promise');
 var currentTest = null;
 
 function TestFrameworkClient(name) {
+
+    TestFrameworkClient.super_.call(this);
+
     var self = this;
     this.deviceName= name;
 
@@ -26,7 +29,6 @@ function TestFrameworkClient(name) {
 
     this.doneCallback = function(data) {
         self.emit('done',data);
-
         self.printResults(data);
     }
 
