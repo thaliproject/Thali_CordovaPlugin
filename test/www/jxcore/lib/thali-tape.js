@@ -56,16 +56,8 @@ function getCoordinator()
 
   _coordinator.on('disconnect', function () {
     // We've become disconnected from the test server
-
     // Shut down the Wifi & Bluetooth here
     testUtils.toggleRadios(false);
-  });
-
-  _coordinator.on('too_late', function (data) {
-    console.log('got too_late event, closing connection now.');
-    Coordinator.close();
-    console.log("****TEST TOOK:  ms ****" );
-    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
   });
 
   _coordinator.connect(parsedJSON[0].address, 3000);
@@ -78,27 +70,46 @@ var deviceName = "UNITTEST-" + Math.random();
 
 function declareTest(name, setup, teardown, opts, cb) {
 
+  // test declaration is postponed until we know the order in which 
+  // the server wants to execute them. 
+
+  // Tape executes tests in strict declaration order once the output stream starts to request 
+  // results so make sure we declare everything up front before asking for the first result
+
+  // Here we declare setup and teardown functions either side of the actual test
+  // They'll be executed in declaration order and will be coordinated across devices
+  // by the test server emitting events at the appropriate point
+
   tape('setup', function(t) {
+    // Run setup function when the coordinator tells us
     getCoordinator().once("setup", function(_name) {
       setup(t);
+      // Tell the coordinator we ran setup for this test
       getCoordinator().setupComplete(name);
     });
   });
 
   tape(name, function(t) {
     var success = true;
+
+    // Listen for the test result
     t.on("result", function(res) {
       success = success && res.ok;
     });
+
+    // Run the test (cb) when the server tells us to    
     getCoordinator().once("start_test", function(_name) {
       cb(t);
+      // Tell the coordinator we ran the test and what the result was (true == pass)
       getCoordinator().testComplete(name, success);
     });
   });
 
   tape("teardown", function(t) {
+    // Run teardown function when the coordinator tells us
     getCoordinator().once("teardown", function(_name) {
       teardown(t);
+      // The the coordinator we ran teardown for this test
       getCoordinator().teardownComplete(name);
     }); 
   });
@@ -109,7 +120,7 @@ var thaliTape = function(fixture)
 {
   // Thali_Tape - Adapt tape such that tests are executed when explicitly triggered
   // by a co-ordinating server executing (perhaps) remotely.
-  // This enables us to run tests in lock step accross a number of devices
+  // This enables us to run tests in lock step across a number of devices
 
   // test([name], [opts], fn)
   return function(name, opts, fn) {
@@ -128,40 +139,52 @@ var thaliTape = function(fixture)
 
 function createStream()
 {
+  // tape is slightly counter-intuitive in that no tests will
+  // run until the output streams are set up. 
+
+  // ** Nothing will run until this function is called !! **
+
+  var total = 0;
+  var passed = 0;
+  var failed = 0;
+  var failedRows = [];
+
   tape.createStream({ objectMode: true })
-  .on('data', function (row) {
-      // Log for results
-      //console.log(JSON.stringify(row));
+  .on('data', function(row) {
+    // Log for results
+    console.log(JSON.stringify(row));
 
-      /*if (row.type === 'assert') {
-          total++;
-          row.ok && passed++;
-          !row.ok && failed++;
+    if (row.type === 'assert') {
+      total++;
+      row.ok && passed++;
+      !row.ok && failed++;
+    }
+    rows.push(row);
+
+    testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
+
+    if (row.ok && row.name) {
+      if(!row.ok) {
+        failedRows.push(row);
       }
-      rows.push(row);
-
-      testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
-
-      if (row.ok && row.name) {
-          if(!row.ok){
-              failedRows.push(row);
-          }
-      }*/
+    }
   })
-  .on('end', function () {
-      // Log final results
-      /*testUtils.logMessageToScreen("------ Final results ---- ");
+  .on('end', function() {
+    // Log final results
+    testUtils.logMessageToScreen("------ Final results ---- ");
 
-      for(var i = 0; i < failedRows.length; i++){
-          testUtils.logMessageToScreen(failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name);
-      }
+    for (var i = 0; i < failedRows.length; i++) {
+      testUtils.logMessageToScreen(
+        failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name
+      );
+    }
 
-      testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
-      console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
-      testUtils.toggleRadios(false);
+    testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
+    console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
+    testUtils.toggleRadios(false);
 
-      console.log("****TEST TOOK:  ms ****" );
-      console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");*/
+    console.log("****TEST TOOK:  ms ****" );
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
   });
 }
 
