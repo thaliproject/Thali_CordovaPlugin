@@ -1,7 +1,7 @@
 repositories {
     mavenLocal()
     maven {
-        url  "https://bintray.com/artifact/download/thali/Thali"
+        url  "https://bintray.com/artifact/download/tompaana/waste-land"
     }
 }
 
