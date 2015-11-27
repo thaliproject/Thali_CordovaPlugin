@@ -85,6 +85,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
     } else {
       // ALL DONE !!
       self.testReport(_tests, results);
+      process.exit(0);
     }
   }
 
@@ -112,6 +113,7 @@ UnitTestFramework.prototype.testReport = function(tests, results) {
     passed += results[test];
   }
 
+  console.log("RESULT: %s", passed == tests.length ? "PASS" : "FAIL");
   console.log("%d of %d tests completed", Object.keys(results).length, tests.length);
   console.log("%d/%d passed (%d failures)", passed, tests.length, tests.length - passed);
 
