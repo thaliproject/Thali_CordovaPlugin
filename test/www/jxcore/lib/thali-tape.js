@@ -149,9 +149,30 @@ function createStream()
   var failed = 0;
   var failedRows = [];
 
+  getCoordinator().once("complete", function() {
+
+    // Log final results once server tells us all is done..
+    testUtils.logMessageToScreen("------ Final results ---- ");
+
+    for (var i = 0; i < failedRows.length; i++) {
+      testUtils.logMessageToScreen(
+        failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name
+      );
+    }
+
+    testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
+    console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
+    testUtils.toggleRadios(false);
+
+    console.log("****TEST TOOK:  ms ****" );
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+  });
+
   tape.createStream({ objectMode: true })
   .on('data', function(row) {
-    // Log for results
+    
+    // Collate and log results as they come in
+
     console.log(JSON.stringify(row));
 
     if (row.type === 'assert') {
@@ -170,21 +191,7 @@ function createStream()
     }
   })
   .on('end', function() {
-    // Log final results
-    testUtils.logMessageToScreen("------ Final results ---- ");
-
-    for (var i = 0; i < failedRows.length; i++) {
-      testUtils.logMessageToScreen(
-        failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name
-      );
-    }
-
-    testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
-    console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
-    testUtils.toggleRadios(false);
-
-    console.log("****TEST TOOK:  ms ****" );
-    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+    console.log("Tests Complete");
   });
 }
 

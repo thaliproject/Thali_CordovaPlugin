@@ -81,9 +81,20 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         doTest(tests[0], nextTest);
       });
     } else {
+
       // ALL DONE !!
+      // All devices have completed all their tests
       console.log("Test run complete");
+
+      // The whole point !! Log test results from the
+      // server
       self.testReport(_tests, results);
+
+      // Signal devices to quit
+      devices.forEach(function(device) {
+        device.socket.emit("complete");
+      });
+
       process.exit(0);
     }
   }
