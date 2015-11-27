@@ -30,7 +30,8 @@ function CoordinatorConnector()
     "setup" : "setup",
     "start_test" : "start_test",
     "teardown" : "teardown",
-    "schedule" : "schedule"
+    "schedule" : "schedule",
+    "too_late" : "too_late"
   };
 
 }
