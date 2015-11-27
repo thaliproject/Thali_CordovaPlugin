@@ -52,6 +52,7 @@ var testConfig = JSON.parse(process.argv[2]);
 }*/
 
 var unitTestManager = new UnitTestFramework(testConfig);
+var perfTestManager = new PerfTestFramework(testConfig);
 
 io.on('connection', function(socket) {
 
@@ -67,8 +68,8 @@ io.on('connection', function(socket) {
 
   socket.on('present', function(msg) {
   
-    var presentObj = JSON.parse(msg);
-    if (!presentObj.os || !presentObj.name || !presentObj.type) {
+    var _device = JSON.parse(msg);
+    if (!_device.os || !_device.name || !_device.type) {
       console.log("malformed message");
       socket.emit('error', JSON.stringify({
         "errorDescription ": "malformed message",
@@ -79,8 +80,9 @@ io.on('connection', function(socket) {
 
     // Add the new device to the test type/os it reports as belonging to
     var device = new TestDevice(
-      socket, presentObj.name, presentObj.os, presentObj.type, presentObj.tests, presentObj.btaddress
+      socket, _device.name, _device.os, _device.type, _device.tests, _device.btaddress
     );
+
     switch (device.type)
     {
       case 'unittest' : unitTestManager.addDevice(device);
