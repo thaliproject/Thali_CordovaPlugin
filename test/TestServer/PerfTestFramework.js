@@ -87,7 +87,10 @@ PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
     sendData =jsonData.sendList.length;
   }
 
-  logger(this.os + ' ' + name + ' test took ' + responseTime + 'ms - results peers[' + peers+ '], reConnects[' + connects + '], sendData[' + sendData+ ']');
+  logger(
+    this.os + ' ' + name + ' test took ' + responseTime + 'ms - results peers[' + 
+    peers + '], reConnects[' + connects + '], sendData[' + sendData + ']'
+  );
 
   if (this.getFinishedDevicesCount() == this.devicesCount) {
     logger(this.os + ' test ID ' + this.currentTest + ' done now');
@@ -128,103 +131,113 @@ PerfTestFramework.prototype.getBluetoothAddressList = function() {
 
 PerfTestFramework.prototype.doNextTest  = function() {
 
-    var self = this;
-    if(this.timerId != null) {
-        clearTimeout(this.timerId);
-        this.timerId = null;
-    }
+  var self = this;
+  if (this.timerId != null) {
+    clearTimeout(this.timerId);
+    this.timerId = null;
+  }
 
-    this.currentTest++;
-    if(configFile.tests[this.currentTest]){
-        this.doneAlready = false;
+  this.currentTest++;
+  if (configFile.tests[this.currentTest]) {
+    this.doneAlready = false;
 
-        var BluetoothList = this.getBluetoothAddressList();
+    var BluetoothList = this.getBluetoothAddressList();
 
-        // If we have tests, then lets start new tests on all devices
-        for (var deviceName in this.testDevices) {
-            if(this.testDevices[deviceName] != null){
-                this.testDevices[deviceName].startTime = new Date();
-                this.testDevices[deviceName].endTime = new Date();
-                this.testDevices[deviceName].data = null;
-                this.testDevices[deviceName].SendCommand('start',configFile.tests[this.currentTest].name,JSON.stringify(configFile.tests[this.currentTest].data),(this.devicesCount - 1),BluetoothList);
-           }
-        }
-
-        if(configFile.tests[this.currentTest].servertimeout) {
-                this.timerId = setTimeout(function() {
-                    logger('Server timeout reached!');
-                    if(!self.doneAlready)
-                    {
-                        for (var deviceName in self.testDevices) {
-                            if (self.testDevices[deviceName] != null && self.testDevices[deviceName].data == null) {
-                                logger('Send timeout to ' + self.testDevices[deviceName].getName());
-                                self.testDevices[deviceName].SendCommand('timeout',"","","");
-                            }
-                        }
-                        // Above, we were sending the timeout command to all connected devices.
-                        // Below, we are having a timer that waits for certain amount of time
-                        // for devices to send their test report, but if that doesn't happen within
-                        // the time set below, we are forcing the tests to finished.
-                        // This is so that in CI, we get to print the result summary before the CI
-                        // timeouts are hit.
-                        var timeToWaitForReports = 60000; // 1 minute
-                        self.timerId = setTimeout(function() {
-                            if (!self.doneAlready) {
-                                logger('Did not get reports from all devices, but forcing tests to finish!');
-                                self.testFinished();
-                            }
-                        }, timeToWaitForReports);
-                    }
-                }, configFile.tests[this.currentTest].servertimeout);
-
-        }
-        return;
-    }
-
-    logger(this.os + ' All tests are done, preparing test report');
-    var processedResults = ResultsProcessor.process(this.testResults, this.testDevices);
-
+    // If we have tests, then lets start new tests on all devices
     for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null){
-            //if really needed, we could send the whole test data back with this command, and do the whole logging in the client side as well
-            this.testDevices[deviceName].SendCommand('end','results',JSON.stringify({"result":processedResults[deviceName]}),this.devicesCount);
-        }
+      if (this.testDevices[deviceName] != null) {
+        this.testDevices[deviceName].startTime = new Date();
+        this.testDevices[deviceName].endTime = new Date();
+        this.testDevices[deviceName].data = null;
+        this.testDevices[deviceName].SendCommand(
+          'start', configFile.tests[this.currentTest].name, 
+          JSON.stringify(configFile.tests[this.currentTest].data), 
+          this.devicesCount - 1, 
+          BluetoothList
+        );
+      }
     }
+
+    if (configFile.tests[this.currentTest].servertimeout) {
+      this.timerId = setTimeout(function() {
+        logger('Server timeout reached!');
+        if(!self.doneAlready)
+        {
+          for (var deviceName in self.testDevices) {
+            if (self.testDevices[deviceName] != null && self.testDevices[deviceName].data == null) {
+              logger('Send timeout to ' + self.testDevices[deviceName].getName());
+              self.testDevices[deviceName].SendCommand('timeout',"","","");
+            }
+          }
+          // Above, we were sending the timeout command to all connected devices.
+          // Below, we are having a timer that waits for certain amount of time
+          // for devices to send their test report, but if that doesn't happen within
+          // the time set below, we are forcing the tests to finished.
+          // This is so that in CI, we get to print the result summary before the CI
+          // timeouts are hit.
+          var timeToWaitForReports = 60000; // 1 minute
+          self.timerId = setTimeout(function() {
+            if (!self.doneAlready) {
+              logger('Did not get reports from all devices, but forcing tests to finish!');
+              self.testFinished();
+            }
+          }, timeToWaitForReports);
+        }
+      }, configFile.tests[this.currentTest].servertimeout);
+
+    }
+    return;
+  }
+
+  logger(this.os + ' All tests are done, preparing test report');
+  var processedResults = ResultsProcessor.process(this.testResults, this.testDevices);
+
+  for (var deviceName in this.testDevices) {
+    if (this.testDevices[deviceName] != null) {
+      this.testDevices[deviceName].SendCommand(
+        'end','results',JSON.stringify({"result":processedResults[deviceName]}),this.devicesCount
+      );
+    }
+  }
 };
 
 PerfTestFramework.prototype.testFinished = function () {
 
-    this.doneAlready = true;
-    for (var deviceName in this.testDevices) {
-        if (this.testDevices[deviceName] != null) {
-            if(this.testDevices[deviceName].data == null){
-                // This is an error scenario, because devices should report
-                // their results at the end of tests.
-                this.testDevices[deviceName].SendCommand('end', "", "", "");
-                this.testDevices[deviceName] = null;
-                this.devicesCount = this.getConnectedDevicesCount();
-                console.log(deviceName + ' did not have results at the end of tests - check the device logs about why!!');
-            }else {
-                var responseTime = this.testDevices[deviceName].endTime - this.testDevices[deviceName].startTime;
-                this.testResults.push({
-                    "test": this.currentTest,
-                    "device": deviceName,
-                    "time": responseTime,
-                    "data": this.testDevices[deviceName].data
-                });
+  this.doneAlready = true;
 
-                //lets finalize the test by stopping it.
-                this.testDevices[deviceName].SendCommand('stop', "", "", "");
+  for (var deviceName in this.testDevices) {
+    if (this.testDevices[deviceName] != null) {
+      if (this.testDevices[deviceName].data == null) {
+        // This is an error scenario, because devices should report
+        // their results at the end of tests.
+        this.testDevices[deviceName].SendCommand('end', "", "", "");
+        this.testDevices[deviceName] = null;
+        this.devicesCount = this.getConnectedDevicesCount();
+        console.log(deviceName + ' did not have results !!!');
+      } else {
 
-                //reset values for next testing round
-                this.testDevices[deviceName].startTime = new Date();
-                this.testDevices[deviceName].endTime = new Date();
-                this.testDevices[deviceName].data = null;
-            }
-        }
+        var responseTime = 
+          this.testDevices[deviceName].endTime - this.testDevices[deviceName].startTime;
+
+        this.testResults.push({
+          "test": this.currentTest,
+          "device": deviceName,
+          "time": responseTime,
+          "data": this.testDevices[deviceName].data
+        });
+
+        //lets finalize the test by stopping it.
+        this.testDevices[deviceName].SendCommand('stop', "", "", "");
+
+        //reset values for next testing round
+        this.testDevices[deviceName].startTime = new Date();
+        this.testDevices[deviceName].endTime = new Date();
+        this.testDevices[deviceName].data = null;
+      }
     }
+  }
 
-    this.doNextTest()
+  this.doNextTest()
 }
 
 module.exports = PerfTestFramework;
