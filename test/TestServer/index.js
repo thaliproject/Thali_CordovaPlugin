@@ -87,8 +87,10 @@ io.on('connection', function(socket) {
     {
       case 'unittest' : unitTestManager.addDevice(device);
       break;
-      case 'perftest' : console.log('perf');
+
+      case 'perftest' : perfTestManager.addDevice(device);
       break;
+
       default : console.log('unrecognised test type: ' + device.type);
     }
   });
