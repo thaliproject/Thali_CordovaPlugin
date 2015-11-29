@@ -19,9 +19,12 @@ var TestFrameworkClient = require('./perf_tests/PerfTestFrameworkClient');
 
 var bluetoothAddress = "";
 
-var myName = "DEV" + Math.round((Math.random() * (10000)));
+var deviceName = null;
 
-if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
+if (typeof jxcore == 'undefined') {
+  deviceName = "PERF_TEST-" + Math.random();
+}
+else if (jxcore.utils.OSInfo().isAndroid) {
 
   Mobile('GetBluetoothAddress').callNative(function (err, address) {
 
@@ -34,10 +37,10 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
     console.log("Got Device Bluetooth address: " + bluetoothAddress);
     Mobile('GetDeviceName').callNative(function (name) {
 
-      myName = name + "_PT" + Math.round((Math.random() * (10000)));
+      deviceName = name + "_PT" + Math.round((Math.random() * (10000)));
 
-      console.log('my name is : ' + myName);
-      testUtils.setMyName(myName);
+      console.log('my name is : ' + deviceName);
+      testUtils.setMyName(deviceName);
 
       console.log('attempting to connect to test coordinator');
 
@@ -52,7 +55,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
           }
           console.log("BLE supported!!");
         });
-      },5000);
+      }, 5000);
     });
   });
 
@@ -61,8 +64,8 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
   bluetoothAddress = "C0:FF:FF:EE:42:00";
   Mobile('GetDeviceName').callNative(function (name) {
 
-    myName = name + "_PT" + Math.round((Math.random() * (10000)));
-    testUtils.setMyName(myName);
+    deviceName = name + "_PT" + Math.round((Math.random() * (10000)));
+    testUtils.setMyName(deviceName);
   });
 }
 
@@ -70,23 +73,23 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
  code for handling test communications
  -----------------------------------------------------------------------------------*/
 
-var testFramework = new TestFrameworkClient(myName);
+var testFramework = new TestFrameworkClient(deviceName);
 
-TestFramework.on('done', function (data) {
+testFramework.on('done', function (data) {
   console.log('done, now sending data to server');
   Coordinator.sendData(data);
 });
 
-TestFramework.on('end', function (data) {
+testFramework.on('end', function (data) {
   console.log('end, event received');
   Coordinator.close();
 });
 
-TestFramework.on('debug', function (data) {
+testFramework.on('debug', function (data) {
   testUtils.logMessageToScreen(data);
 });
 
-TestFramework.on('start_tests', function (data) {
+testFramework.on('start_tests', function (data) {
   console.log('got start_tests event with data : ' + data);
 });
 

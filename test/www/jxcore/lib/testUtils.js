@@ -25,6 +25,12 @@ exports.toggleRadios = function(on) {
 };
 
 exports.toggleWifi = function (on, callback) {
+
+  if (typeof jxcore == 'undefined') {
+    callback();
+    return;
+  }
+
   Mobile.toggleWiFi(on, function (err) {
     if (err) {
       console.log('Could not toggle Wifi - ' + err);

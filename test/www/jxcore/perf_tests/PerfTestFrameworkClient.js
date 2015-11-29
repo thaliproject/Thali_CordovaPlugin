@@ -8,11 +8,11 @@
  */
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
+var fs = require('fs');
 var inherits = require('util').inherits;
-var fs = require('fs-extra-promise');
-var CoordinatorConnector = require('./lib/CoordinatorConnector');
-
+var testUtils = require('../lib/testutils.js');
+var EventEmitter = require('events').EventEmitter;
+var CoordinatorConnector = require('../lib/CoordinatorConnector');
 
 // Singleton coordinator
 var _coordinator = null;
@@ -89,7 +89,7 @@ function TestFrameworkClient(name) {
       console.log('found test : ./' + fileName);
       this.tests[fileName] = require('./' + fileName);
     }
-  });
+  }, this);
 
   this.coordinator = getCoordinator();
 
@@ -124,7 +124,7 @@ function TestFrameworkClient(name) {
 
   this.currentTest = null;
 
-  this.coordinator.connect(require('serveraddress.json').address, 3000);
+  this.coordinator.connect(require('../serveraddress.json').address, 3000);
 }
 
 inherits(TestFrameworkClient, EventEmitter);
