@@ -6,8 +6,6 @@
 
 "use strict";
 
-var net = require('net');
-var test = require('tape');
 var testUtils = require("./lib/testUtils");
 
 testUtils.toggleRadios(true);
