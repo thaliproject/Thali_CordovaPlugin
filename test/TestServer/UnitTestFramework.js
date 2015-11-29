@@ -133,7 +133,7 @@ UnitTestFramework.prototype.testReport = function(tests, results) {
     console.log(test + " - " + (results[test] ? "pass" : "fail"));
   }
 
-  console.log("-== END ==-");
+  console.log("\n\n-== END ==-");
 }
 
 module.exports = UnitTestFramework;
