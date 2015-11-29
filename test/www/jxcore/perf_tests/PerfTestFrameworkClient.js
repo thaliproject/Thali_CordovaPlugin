@@ -23,7 +23,6 @@ function getCoordinator()
   }
 
   _coordinator = new CoordinatorConnector();
-  _coordinator.init(require('serveraddress.json').address, 3000);
 
   // A flag used to avoid too frequent Wifi toggling
   var wifiRepairOngoing = false;
@@ -61,7 +60,6 @@ function getCoordinator()
     }, 60 * 1000);
   });
 
-  _coordinator.connect(parsedJSON[0].address, 3000);
 
   return _coordinator;
 }
@@ -70,11 +68,10 @@ function TestFrameworkClient(name) {
 
   TestFrameworkClient.super_.call(this);
 
-  var self = this;
   this.deviceName = name;
 
-  this.test = {};
 
+  var self = this;
   this.debugCallback = function(data) {
     self.emit('debug',data);
   }
@@ -84,12 +81,13 @@ function TestFrameworkClient(name) {
     self.printResults(data);
   }
 
+  this.tests = {};
   console.log('check test folder');
   fs.readdirSync(__dirname).forEach(function(fileName) {
     if ((fileName.indexOf("test") == 0) &&
       fileName.indexOf(".js", fileName.length - 3) != -1) {
       console.log('found test : ./' + fileName);
-      self.test[fileName] = require('./' + fileName);
+      this.tests[fileName] = require('./' + fileName);
     }
   });
 
@@ -106,7 +104,7 @@ function TestFrameworkClient(name) {
   this.coordinator.on('connect', function () {
     console.log('Coordinator is now connected to the server!');
     testUtils.logMessageToScreen('connected to server');
-    Coordinator.present(myName, "perftest", bluetoothAddress);
+    Coordinator.present(myName, "perftest", Object.keys(self.tests), bluetoothAddress);
   });
 
   this.coordinator.on('command', function (data) {
@@ -124,8 +122,9 @@ function TestFrameworkClient(name) {
     testUtils.toggleRadios(false);
   });
 
-
   this.currentTest = null;
+
+  this.coordinator.connect(require('serveraddress.json').address, 3000);
 }
 
 inherits(TestFrameworkClient, EventEmitter);
@@ -147,10 +146,10 @@ TestFrameworkClient.prototype.handleCommand = function(command){
     case 'start': {
       console.log('Start now : ' + commandData.testName);
 
-      if (this.test[commandData.testName]) {
+      if (this.tests[commandData.testName]) {
 
         this.emit('debug',"--- start :" + commandData.testName + "---");
-        this.currentTest = new this.test[commandData.testName](
+        this.currentTest = new this.tests[commandData.testName](
           commandData.testData,
           this.deviceName,
           commandData.devices,
