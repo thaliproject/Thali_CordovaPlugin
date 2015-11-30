@@ -19,9 +19,25 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  *
  */
+<<<<<<< HEAD
 public class BtConnectorHelper implements ConnectionManager.ConnectionManagerListener {
     private static final String TAG = BtConnectorHelper.class.getName();
 
+=======
+<<<<<<< HEAD
+public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector {
+    private static final String TAG = BtConnectorHelper.class.getName();
+
+    private final Context context;
+
+    private final String serviceTypeIdentifier = "Cordovap2p._tcp";
+    private final String BtUUID                = "fa87c0d0-afac-11de-8a39-0800200c9a66";
+    private final String Bt_NAME               = "Thaili_Bluetooth";
+=======
+public class BtConnectorHelper implements ConnectionManager.ConnectionManagerListener {
+>>>>>>> First commit to #345: Fixed compilation errors.
+
+>>>>>>> Resolved rebase merge conflicts
     private static final String TAG = BtConnectorHelper.class.getName();
     private static final String SERVICE_ID = "Cordovap2p._tcp";
     private static final String BLUETOOTH_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
@@ -40,8 +56,16 @@ public class BtConnectorHelper implements ConnectionManager.ConnectionManagerLis
      */
     final Thread.UncaughtExceptionHandler mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
         @Override
+<<<<<<< HEAD
         public void uncaughtException(Thread thread, final Throwable ex) {
+=======
+<<<<<<< HEAD
+        public void uncaughtException(Thread thread, Throwable ex) {
+>>>>>>> Resolved rebase merge conflicts
             Log.e(TAG, "Uncaught exception: " + ex.getMessage(), ex);
+=======
+        public void uncaughtException(Thread thread, final Throwable ex) {
+>>>>>>> First commit to #345: Fixed compilation errors.
             final Throwable tmpException = ex;
 
             new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {

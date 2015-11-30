@@ -24,6 +24,7 @@ public class JXcoreExtension {
 
     public final static String METHODSTRING_SHOWTOAST         = "ShowToast";
     public final static String METHODSTRING_GETBTADDRESS      = "GetBluetoothAddress";
+    public final static String METHODSTRING_RECONNECTWIFIAP   = "ReconnectWifiAP";
     public final static String METHODSTRING_ISBLESUPPORTED   = "IsBLESupported";
 
     public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
@@ -37,7 +38,10 @@ public class JXcoreExtension {
         final ConnectorHelper mBtConnectorHelper = new ConnectorHelper();
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> Resolved rebase merge conflicts
         jxcore.RegisterMethod(METHODSTRING_RECONNECTWIFIAP, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
