@@ -155,7 +155,7 @@ public class ConnectorHelper implements ConnectionManager.ConnectionManagerListe
 
     /**
      *
-     * @return
+     * @return Null, if BLE is supported.
      */
     @TargetApi(18)
     @SuppressLint("NewApi")
