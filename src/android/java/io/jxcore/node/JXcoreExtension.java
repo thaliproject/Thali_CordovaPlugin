@@ -3,14 +3,11 @@
 package io.jxcore.node;
 
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import io.jxcore.node.jxcore.JXcoreCallback;
 import java.util.ArrayList;
-import android.util.Log;
-import android.widget.Toast;
 
-import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
+import android.widget.Toast;
 
 public class JXcoreExtension {
 
@@ -37,17 +34,41 @@ public class JXcoreExtension {
     public final static String METHODSTRING_KILLCONNECTION    = "KillConnection";
 
     public static void LoadExtensions() {
+        final ConnectorHelper mBtConnectorHelper = new ConnectorHelper();
 
-      //Jukka's stuff
-        final BtConnectorHelper mBtConnectorHelper = new BtConnectorHelper();
+<<<<<<< HEAD
+=======
+        jxcore.RegisterMethod(METHODSTRING_RECONNECTWIFIAP, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
 
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                WifiManager wifiManager = (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
+
+                if(wifiManager.reconnect()) {
+                    wifiManager.disconnect();
+                    if(!wifiManager.reconnect()) {
+                        args.add("reconnect returned false");
+                        jxcore.CallJSMethod(callbackId, args.toArray());
+                        return;
+                    }
+                }
+
+                //all is well, so lets return null as first argument
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+>>>>>>> Commit to #345: Renamed classes, cleaned up the code and improved logging.
         jxcore.RegisterMethod(METHODSTRING_GETBTADDRESS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                String btAddressString = mBtConnectorHelper.GetBluetoothAddress();
+                String btAddressString = mBtConnectorHelper.getBluetoothAddress();
 
                 if (btAddressString == null) {
                     args.add("returned Bluetooth address is null");
@@ -69,7 +90,7 @@ public class JXcoreExtension {
 
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                String bleErrorString = "Not supported";//mBtConnectorHelper.isBLEAdvertisingSupported();
+                String bleErrorString = mBtConnectorHelper.isBleAdvertisingSupported();
                 if (bleErrorString != null) {
                     args.add(bleErrorString);
                     jxcore.CallJSMethod(callbackId, args.toArray());
@@ -136,7 +157,7 @@ public class JXcoreExtension {
               String peerName = params.get(0).toString();
               int port = (Integer) params.get(1);
 
-              boolean retVal = mBtConnectorHelper.Start(peerName, port);
+              boolean retVal = mBtConnectorHelper.start(peerName, port);
 
               String errString = null;
 
@@ -161,7 +182,7 @@ public class JXcoreExtension {
                   return;
               }
 
-              mBtConnectorHelper.Stop();
+              mBtConnectorHelper.stop();
               args.add(null);
               jxcore.CallJSMethod(callbackId, args.toArray());
           }
@@ -179,7 +200,7 @@ public class JXcoreExtension {
               }
 
               String peerId = params.get(0).toString();
-              if(!mBtConnectorHelper.Disconnect(peerId)){
+              if(!mBtConnectorHelper.disconnectOutgoingConnection(peerId)) {
                   args.add("Connection for PeerId: " + peerId + " not  found.");
                   jxcore.CallJSMethod(callbackId, args.toArray());
                   return;
@@ -196,7 +217,7 @@ public class JXcoreExtension {
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
                 ArrayList<Object> args = new ArrayList<Object>();
-                if(!mBtConnectorHelper.DisconnectIncomingConnections()){
+                if (mBtConnectorHelper.disconnectAllIncomingConnections() == 0) {
                     args.add("No incoming connection to disconnect");
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
@@ -224,11 +245,11 @@ public class JXcoreExtension {
               }
 
               String address = params.get(0).toString();
-              mBtConnectorHelper.BeginConnectPeer(address, new BtConnectorHelper.ConnectStatusCallback() {
+              mBtConnectorHelper.connect(address, new ConnectorHelper.JxCoreExtensionListener() {
                   @Override
-                  public void ConnectionStatusUpdate(String Error, int port) {
+                  public void onConnectionStatusChanged(String info, int port) {
                       ArrayList<Object> args = new ArrayList<Object>();
-                      args.add(Error);
+                      args.add(info);
                       args.add(port);
                       jxcore.CallJSMethod(callbackIdTmp, args.toArray());
                   }
@@ -237,11 +258,11 @@ public class JXcoreExtension {
       });
 
 
-      final LifeCycleMonitor mLifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.onLCEventCallback(){
+      final LifeCycleMonitor mLifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.onLCEventCallback() {
 
           @Override
           public void onEvent(String eventString,boolean stopped) {
-              jxcore.activity.runOnUiThread(new Runnable(){
+              jxcore.activity.runOnUiThread(new Runnable() {
                   public void run() {
               //        String reply = "{\"lifecycleevent\":\"" + messageTmp + "\"}";
               //        jxcore.CallJSMethod("onLifeCycleEvent",reply);
@@ -250,8 +271,8 @@ public class JXcoreExtension {
 
               // todo if we get Postcard fixed on lifecycle handling we should re-enable this
               // now we need to just trust that postcard will shutdown correctly
-           /*   if(stopped){
-                  mBtConnectorHelper.Stop();
+           /*   if(stopped) {
+                  mBtConnectorHelper.close();
               }*/
           }
       });
