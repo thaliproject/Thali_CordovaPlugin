@@ -22,7 +22,7 @@
 var tape = require('tape-catch');
 var WrappingTape = require('wrapping-tape');
 var CoordinatorConnector = require('./CoordinatorConnector');
-var parsedJSON = require('../serveraddress.json');
+var serverAddress = require('../server-address.js');
 
 var testUtils = require("./testUtils");
 
@@ -53,7 +53,7 @@ function Thali_Tape(options) {
   }
 
   Coordinator = new CoordinatorConnector();
-  Coordinator.init(parsedJSON[0].address, 3000);
+  Coordinator.init(serverAddress, 3000);
   console.log('Attempting to connect to the test coordinator server');
 
   // We're about to add a lot of event handlers so squash the emitter leak warning

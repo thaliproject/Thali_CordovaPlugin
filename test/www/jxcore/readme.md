@@ -10,7 +10,7 @@
 |____meta_tests/        <- Tests for tests
 |____readme.md          <- This file
 |____runTests.js        <- The test runner
-|____serveraddress.json <- Contains the ipaddress of the coordinating server
+|____server-address.js  <- Contains the ipaddress of the coordinating server
 |____PerfTest_app.js    <- Rename to app.js, build and deploy to run perf tests
 |____UnitTest_app.js    <- Rename to app.js, build and deploy to run bv tests
 
