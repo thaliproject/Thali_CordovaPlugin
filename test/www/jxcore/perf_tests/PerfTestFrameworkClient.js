@@ -29,10 +29,7 @@ function getCoordinator()
 
   _coordinator.on('error', function (data) {
 
-    var errorData = JSON.parse(data);
-    var errorMessage = 'Error type "' + errorData.type +  '" when connecting to the test server';
-    console.log(errorMessage);
-    testUtils.logMessageToScreen(errorMessage);
+    console.log(data);
 
     if (wifiRepairOngoing) {
       return;
@@ -42,7 +39,7 @@ function getCoordinator()
     // If we have a connection error to the test server, we try to repair
     // the connection by toggling Wifi off and on. This forces devices
     // to re-connect to the Wifi access point.
-    if (errorData.type === 'connect_error') {
+    if (data.type === 'connect_error') {
       testUtils.toggleWifi(false, function () {
         testUtils.toggleWifi(true, function () {
           console.log('Wifi toggled for connection repair');
@@ -64,12 +61,12 @@ function getCoordinator()
   return _coordinator;
 }
 
-function TestFrameworkClient(name) {
+function TestFrameworkClient(deviceName, bluetoothAddress) {
 
   TestFrameworkClient.super_.call(this);
 
-  this.deviceName = name;
-
+  this.deviceName = deviceName;
+  this.bluetoothAddress = bluetoothAddress;
 
   var self = this;
   this.debugCallback = function(data) {
@@ -104,15 +101,44 @@ function TestFrameworkClient(name) {
   this.coordinator.on('connect', function () {
     console.log('Coordinator is now connected to the server!');
     testUtils.logMessageToScreen('connected to server');
-    Coordinator.present(myName, "perftest", Object.keys(self.tests), bluetoothAddress);
+    self.coordinator.present(
+      self.deviceName, "perftest", Object.keys(self.tests), bluetoothAddress
+    );
   });
 
-  this.coordinator.on('command', function (data) {
-    console.log('command received : ' + data);
-    TestFramework.handleCommand(data);
+  this.coordinator.on('start', function(testData) {
+
+    console.log(testData);
+
+    self.emit('debug',"--- start :" + testData.testName + "---");
+    self.currentTest = new self.tests[testData.testName] (
+      testData.testData,
+      self.deviceName,
+      null,
+      shuffle(testData.addressList)
+    );
+    self.setCallbacks(self.currentTest);
+    self.currentTest.start();
   });
 
-  this.coordinator.on('closed', function () {
+  this.coordinator.on('stop', function() {
+    this.emit('debug',"stop");
+    this.stopAllTests(false);
+  });
+
+  this.coordinator.on('timeout', function() {
+   this.emit('debug', "stop-by-timeout");
+   this.stopAllTests(true);
+  });
+
+  this.coordinator.on('end', function() {
+    console.log("****TEST TOOK:  ms ****" );
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+    this.stopAllTests(true);
+    this.emit('end', 'end');
+  });
+
+  this.coordinator.on('closed', function() {
     console.log('The Coordinator has closed!');
 
     //we need to stop & close any tests we are running here
@@ -122,9 +148,7 @@ function TestFrameworkClient(name) {
     testUtils.toggleRadios(false);
   });
 
-  this.currentTest = null;
-
-  this.coordinator.connect(require('../serveraddress.json').address, 3000);
+  this.coordinator.connect(require('../serveraddress.json')[0].address, 3000);
 }
 
 inherits(TestFrameworkClient, EventEmitter);
@@ -137,63 +161,10 @@ testData: parameters for the test case
 }
 */
 
-TestFrameworkClient.prototype.handleCommand = function(command){
-
-  var commandData = JSON.parse(command);
-
-  switch (commandData.command) {
-
-    case 'start': {
-      console.log('Start now : ' + commandData.testName);
-
-      if (this.tests[commandData.testName]) {
-
-        this.emit('debug',"--- start :" + commandData.testName + "---");
-        this.currentTest = new this.tests[commandData.testName](
-          commandData.testData,
-          this.deviceName,
-          commandData.devices,
-          this.shuffle(commandData.addressList)
-        );
-        this.setCallbacks(currentTest);
-        currentTest.start();
-
-      } else {
-        this.emit('done', JSON.stringify({"result":"TEST NOT IMPLEMENTED"}));
-      }
-    }
-    break;
-
-    case 'stop': {
-      this.emit('debug',"stop");
-      this.stopAllTests(false);
-    }
-    break;
-
-    case 'timeout': {
-     this.emit('debug',"stop-by-timeout");
-     this.stopAllTests(true);
-    }
-    break;
-
-    case 'end': {
-      console.log("****TEST TOOK:  ms ****" );
-      console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
-      this.stopAllTests(true);
-      this.emit('end',"end");
-    }
-    break;
-
-    default: {
-      console.log('unknown commandData : ' + commandData.command);
-   }
-  }
-}
-
-//the Fisher-Yates (aka Knuth) Shuffle.
+// the Fisher-Yates (aka Knuth) Shuffle.
 // http://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
-TestFrameworkClient.prototype.shuffle = function(array) {
-  var currentIndex = array.length, temporaryValue, randomIndex ;
+function shuffle(array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
 
   // While there remain elements to shuffle...
   while (0 !== currentIndex) {
@@ -212,24 +183,27 @@ TestFrameworkClient.prototype.shuffle = function(array) {
 }
 
 TestFrameworkClient.prototype.setCallbacks = function(test) {
-    if (test == null) {
-        return;
-    }
-    test.on('done', this.doneCallback);
-    test.on('debug', this.debugCallback);
+  if (test == null) {
+    return;
+  }
+  test.on('done', this.doneCallback);
+  test.on('debug', this.debugCallback);
 }
 
 TestFrameworkClient.prototype.stopAllTests = function(doReport) {
-    console.log('stop tests now !');
-    if (currentTest == null) {
-        return;
-    }
-    console.log('stop current!');
-    currentTest.stop(doReport);
-    currentTest.removeListener('done', this.doneCallback);
-    currentTest.removeListener('debug', this.debugCallback);
-    currentTest = null;
+  console.log('stop tests now !');
+  if (currentTest == null) {
+    return;
+  }
+  console.log('stop current!');
+  currentTest.stop(doReport);
+  currentTest.removeListener('done', this.doneCallback);
+  currentTest.removeListener('debug', this.debugCallback);
+  currentTest = null;
 }
+
+// Everything below here is report printing
+//////////////////////////////////////////////////////////////////
 
 TestFrameworkClient.prototype.printResults = function(data) {
 
