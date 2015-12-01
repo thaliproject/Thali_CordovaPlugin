@@ -12,8 +12,6 @@ import java.net.Socket;
  *
  */
 class IncomingSocketThread extends SocketThreadBase {
-
-    protected static final String TAG = IncomingSocketThread.class.getName();
     private int mHttpPort = 0;
 
     /**
@@ -25,7 +23,7 @@ class IncomingSocketThread extends SocketThreadBase {
     public IncomingSocketThread(BluetoothSocket bluetoothSocket, ConnectionStatusListener listener)
             throws IOException{
         super(bluetoothSocket, listener);
-        Log.i(TAG, "Constructed");
+        TAG = IncomingSocketThread.class.getName();
     }
 
     public void setHttpPort(int httpPort) {
@@ -41,7 +39,7 @@ class IncomingSocketThread extends SocketThreadBase {
      */
     @Override
     public void run() {
-        Log.i(TAG, "Entering thread");
+        Log.i(TAG, "Entering thread (ID: " + getId() + ")");
         InputStream tempInputStream = null;
         OutputStream tempOutputStream = null;
         boolean localStreamsCreatedSuccessfully = false;
@@ -67,6 +65,6 @@ class IncomingSocketThread extends SocketThreadBase {
             startStreamCopyingThreads();
         }
 
-        Log.i(TAG, "Exiting thread");
+        Log.i(TAG, "Exiting thread (ID: " + getId() + ")");
     }
 }
