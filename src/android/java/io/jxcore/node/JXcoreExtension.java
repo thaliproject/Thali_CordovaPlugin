@@ -6,7 +6,6 @@ import android.content.Context;
 import android.net.wifi.WifiManager;
 import io.jxcore.node.jxcore.JXcoreCallback;
 import java.util.ArrayList;
-
 import android.widget.Toast;
 
 public class JXcoreExtension {
@@ -25,7 +24,7 @@ public class JXcoreExtension {
     public final static String METHODSTRING_SHOWTOAST         = "ShowToast";
     public final static String METHODSTRING_GETBTADDRESS      = "GetBluetoothAddress";
     public final static String METHODSTRING_RECONNECTWIFIAP   = "ReconnectWifiAP";
-    public final static String METHODSTRING_ISBLESUPPORTED   = "IsBLESupported";
+    public final static String METHODSTRING_ISBLESUPPORTED    = "IsBLESupported";
 
     public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
     public final static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
@@ -35,7 +34,7 @@ public class JXcoreExtension {
     public final static String METHODSTRING_KILLCONNECTION    = "KillConnection";
 
     public static void LoadExtensions() {
-        final ConnectorHelper mBtConnectorHelper = new ConnectorHelper();
+        final ConnectionHelper mConnectionHelper = new ConnectionHelper();
 
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -50,9 +49,10 @@ public class JXcoreExtension {
 
                 WifiManager wifiManager = (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
 
-                if(wifiManager.reconnect()) {
+                if (wifiManager.reconnect()) {
                     wifiManager.disconnect();
-                    if(!wifiManager.reconnect()) {
+
+                    if (!wifiManager.reconnect()) {
                         args.add("reconnect returned false");
                         jxcore.CallJSMethod(callbackId, args.toArray());
                         return;
@@ -72,7 +72,7 @@ public class JXcoreExtension {
 
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                String btAddressString = mBtConnectorHelper.getBluetoothAddress();
+                String btAddressString = mConnectionHelper.getBluetoothAddress();
 
                 if (btAddressString == null) {
                     args.add("returned Bluetooth address is null");
@@ -94,7 +94,7 @@ public class JXcoreExtension {
 
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                String bleErrorString = mBtConnectorHelper.isBleAdvertisingSupported();
+                String bleErrorString = mConnectionHelper.isBleAdvertisingSupported();
                 if (bleErrorString != null) {
                     args.add(bleErrorString);
                     jxcore.CallJSMethod(callbackId, args.toArray());
@@ -152,7 +152,7 @@ public class JXcoreExtension {
                   return;
               }
 
-              if (mBtConnectorHelper.isRunning()) {
+              if (mConnectionHelper.isRunning()) {
                   args.add("Already running, not re-starting.");
                   jxcore.CallJSMethod(callbackId, args.toArray());
                   return;
@@ -161,7 +161,7 @@ public class JXcoreExtension {
               String peerName = params.get(0).toString();
               int port = (Integer) params.get(1);
 
-              boolean retVal = mBtConnectorHelper.start(peerName, port);
+              boolean retVal = mConnectionHelper.start(peerName, port);
 
               String errString = null;
 
@@ -180,13 +180,13 @@ public class JXcoreExtension {
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
               ArrayList<Object> args = new ArrayList<Object>();
-              if (!mBtConnectorHelper.isRunning()) {
+              if (!mConnectionHelper.isRunning()) {
                   args.add("Already stopped.");
                   jxcore.CallJSMethod(callbackId, args.toArray());
                   return;
               }
 
-              mBtConnectorHelper.stop();
+              mConnectionHelper.stop();
               args.add(null);
               jxcore.CallJSMethod(callbackId, args.toArray());
           }
@@ -204,7 +204,7 @@ public class JXcoreExtension {
               }
 
               String peerId = params.get(0).toString();
-              if(!mBtConnectorHelper.disconnectOutgoingConnection(peerId)) {
+              if(!mConnectionHelper.disconnectOutgoingConnection(peerId)) {
                   args.add("Connection for PeerId: " + peerId + " not  found.");
                   jxcore.CallJSMethod(callbackId, args.toArray());
                   return;
@@ -221,7 +221,7 @@ public class JXcoreExtension {
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
                 ArrayList<Object> args = new ArrayList<Object>();
-                if (mBtConnectorHelper.disconnectAllIncomingConnections() == 0) {
+                if (mConnectionHelper.disconnectAllIncomingConnections() == 0) {
                     args.add("No incoming connection to disconnect");
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
@@ -249,11 +249,11 @@ public class JXcoreExtension {
               }
 
               String address = params.get(0).toString();
-              mBtConnectorHelper.connect(address, new ConnectorHelper.JxCoreExtensionListener() {
+              mConnectionHelper.connect(address, new ConnectionHelper.JxCoreExtensionListener() {
                   @Override
-                  public void onConnectionStatusChanged(String info, int port) {
+                  public void onConnectionStatusChanged(String message, int port) {
                       ArrayList<Object> args = new ArrayList<Object>();
-                      args.add(info);
+                      args.add(message);
                       args.add(port);
                       jxcore.CallJSMethod(callbackIdTmp, args.toArray());
                   }

@@ -25,22 +25,23 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  *
  */
-public class ConnectorHelper implements ConnectionManager.ConnectionManagerListener {
+public class ConnectionHelper implements ConnectionManager.ConnectionManagerListener {
     /**
      * A listener interface for relaying connection status change events to Node layer.
      * This interface only applies to outgoing connection attempts (i.e. when you call
-     * ConnectorHelper.connect()
+     * ConnectionHelper.connect()
      */
     public interface JxCoreExtensionListener {
-        void onConnectionStatusChanged(String info, int port);
+        void onConnectionStatusChanged(String message, int port);
     }
 
-    private static final String TAG = ConnectorHelper.class.getName();
+    private static final String TAG = ConnectionHelper.class.getName();
     private static final String SERVICE_TYPE = "Cordovap2p._tcp";
     private static final String BLUETOOTH_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
     private static final String BLUETOOTH_NAME = "Thaili_Bluetooth";
     private static final UUID BLUETOOTH_UUID = UUID.fromString(BLUETOOTH_UUID_AS_STRING);
     private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 100; // TODO: Determine a way to figure out a proper value here
+    private static final int PORT_NUMBER_IN_ERROR_CASES = -1;
 
     private final Context mContext;
     private final Thread.UncaughtExceptionHandler mThreadUncaughtExceptionHandler;
@@ -54,7 +55,7 @@ public class ConnectorHelper implements ConnectionManager.ConnectionManagerListe
     /**
      * Constructor.
      */
-    public ConnectorHelper() {
+    public ConnectionHelper() {
         mContext = jxcore.activity.getBaseContext();
 
         mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
@@ -106,12 +107,12 @@ public class ConnectorHelper implements ConnectionManager.ConnectionManagerListe
     }
 
     /**
-     *
+     * Stops all activities and disconnects all active connections.
      */
     public synchronized void stop() {
         if (mConnectionManager != null) {
             Log.i(TAG, "stop");
-            mConnectionManager.stop();
+            mConnectionManager.deinitialize();
             mConnectionManager = null;
         }
 
@@ -154,8 +155,8 @@ public class ConnectorHelper implements ConnectionManager.ConnectionManagerListe
     }
 
     /**
-     *
-     * @return Null, if BLE is supported.
+     * TODO: This method should be moved to BluetoothManager class of the Bluetooth library.
+     * @return
      */
     @TargetApi(18)
     @SuppressLint("NewApi")
@@ -234,9 +235,13 @@ public class ConnectorHelper implements ConnectionManager.ConnectionManagerListe
 
         if (hasIncoming) {
             Log.i(TAG, "hasConnection: We have an incoming connection with peer with ID " + peerId);
-        } else if (hasOutgoing) {
+        }
+
+        if (hasOutgoing) {
             Log.i(TAG, "hasConnection: We have an outgoing connection with peer with ID " + peerId);
-        } else {
+        }
+
+        if (!hasIncoming && !hasOutgoing){
             Log.i(TAG, "hasConnection: No connection with peer with ID " + peerId);
         }
 
@@ -282,12 +287,12 @@ public class ConnectorHelper implements ConnectionManager.ConnectionManagerListe
                         mOutgoingConnectionListeners.put(peerIdToConnectTo, listener);
                     } else {
                         Log.e(TAG, "connect: Failed to start connecting");
-                        listener.onConnectionStatusChanged("Failed to start connecting", -1);
+                        listener.onConnectionStatusChanged("Failed to start connecting", PORT_NUMBER_IN_ERROR_CASES);
                     }
                 } else {
                     Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.peerBluetoothAddress);
                     listener.onConnectionStatusChanged(
-                            "Invalid Bluetooth address: " + selectedDevice.peerBluetoothAddress, -1);
+                            "Invalid Bluetooth address: " + selectedDevice.peerBluetoothAddress, PORT_NUMBER_IN_ERROR_CASES);
                 }
             } else {
                 Log.e(TAG, "connect: Maximum number of peer connections ("
@@ -295,87 +300,12 @@ public class ConnectorHelper implements ConnectionManager.ConnectionManagerListe
                         + ") reached, please try again after disconnecting a peer");
                 listener.onConnectionStatusChanged("Maximum number of peer connections ("
                         + mOutgoingSocketThreads.size()
-                        + ") reached, please try again after disconnecting a peer", -1);
+                        + ") reached, please try again after disconnecting a peer", PORT_NUMBER_IN_ERROR_CASES);
             }
         } else {
             Log.e(TAG, "connect: Not running, please call start() first");
-            listener.onConnectionStatusChanged("Not running, please call start() first", -1);
+            listener.onConnectionStatusChanged("Not running, please call start() first", PORT_NUMBER_IN_ERROR_CASES);
         }
-    }
-
-
-    /**
-     * Checks whether a peer with the given ID is in the list of discovered peers or not.
-     * @param peerId The peer ID.
-     * @return True, if the peer is in the list. False otherwise.
-     */
-    private synchronized boolean peerDeviceListContainsPeer(String peerId) {
-        boolean peerFound = false;
-
-        for (PeerDeviceProperties peerDeviceProperties : mLastPeerDeviceList) {
-            if (peerDeviceProperties != null && peerDeviceProperties.peerId.contentEquals(peerId)) {
-                peerFound = true;
-                break;
-            }
-        }
-
-        return peerFound;
-    }
-
-    /**
-     * Adds the peer with the given properties to the list of discovered peers, if not already in
-     * there. If the peer was added, the Node layer is notified.
-     * @param peerDeviceProperties The properties of the peer.
-     * @return True, if added. False, if it already exists in the list.
-     */
-    private synchronized boolean addNewPeerToListAndNotify(PeerDeviceProperties peerDeviceProperties) {
-        boolean peerAlreadyInTheList = peerDeviceListContainsPeer(peerDeviceProperties.peerId);
-
-        // Instead of Wi-Fi Direct device address, use peer ID
-        /*for (PeerDeviceProperties cachedPeerDeviceProperties : mLastPeerDeviceList) {
-            if (cachedPeerDeviceProperties != null
-                    && peerDeviceProperties.deviceAddress.equalsIgnoreCase(cachedPeerDeviceProperties.deviceAddress)) {
-                wasPreviouslyAvailable = true;
-                break;
-            }
-        }*/
-
-        if (!peerAlreadyInTheList) {
-            Log.i(TAG, "addNewPeerToListAndNotify: Adding peer with ID " + peerDeviceProperties.peerId);
-            mLastPeerDeviceList.add(peerDeviceProperties);
-
-            JSONArray jsonArray = new JSONArray();
-            jsonArray.put(getAvailabilityStatus(peerDeviceProperties, true));
-            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_PEERAVAILABILITY, jsonArray.toString());
-        }
-
-        return !peerAlreadyInTheList;
-    }
-
-    /**
-     * Adds the peer with the given properties to the list of discovered peers, if not already in
-     * there. If the peer was added, the Node layer is notified.
-     * @param bluetoothSocket The Bluetooth socket associated with the peer.
-     * @param peerId The peer ID.
-     * @param peerName The peer name.
-     * @param peerBluetoothAddress The Bluetooth address of the peer.
-     */
-    private synchronized void addNewPeerToListAndNotify(
-            BluetoothSocket bluetoothSocket,
-            String peerId, String peerName, String peerBluetoothAddress) {
-
-        String bluetoothAddress = peerBluetoothAddress;
-
-        if (bluetoothSocket != null) {
-            if (bluetoothSocket.getRemoteDevice() != null) {
-                bluetoothAddress = bluetoothSocket.getRemoteDevice().getAddress();
-            }
-        }
-
-        PeerDeviceProperties peerDeviceProperties =
-                new PeerDeviceProperties(peerId, peerName, bluetoothAddress, "", "", "");
-
-        addNewPeerToListAndNotify(peerDeviceProperties);
     }
 
     /**
@@ -520,7 +450,7 @@ public class ConnectorHelper implements ConnectionManager.ConnectionManagerListe
                 newOutgoingSocketThread = null;
 
                 if (listener != null) {
-                    listener.onConnectionStatusChanged("Failed to create an outgoing connection thread instance: " + e.getMessage(), -1);
+                    listener.onConnectionStatusChanged("Failed to create an outgoing connection thread instance: " + e.getMessage(), PORT_NUMBER_IN_ERROR_CASES);
                     mOutgoingConnectionListeners.remove(peerId);
                 }
             }
@@ -548,9 +478,83 @@ public class ConnectorHelper implements ConnectionManager.ConnectionManagerListe
         final JxCoreExtensionListener listener = mOutgoingConnectionListeners.get(peerId);
 
         if (listener != null) {
-            listener.onConnectionStatusChanged("Connection to peer with ID " + peerId + " failed", -1);
+            listener.onConnectionStatusChanged("Connection to peer with ID " + peerId + " failed", PORT_NUMBER_IN_ERROR_CASES);
             mOutgoingConnectionListeners.remove(peerId); // Dispose the listener
         }
+    }
+
+    /**
+     * Checks whether a peer with the given ID is in the list of discovered peers or not.
+     * @param peerId The peer ID.
+     * @return True, if the peer is in the list. False otherwise.
+     */
+    private synchronized boolean peerDeviceListContainsPeer(String peerId) {
+        boolean peerFound = false;
+
+        for (PeerDeviceProperties peerDeviceProperties : mLastPeerDeviceList) {
+            if (peerDeviceProperties != null && peerDeviceProperties.peerId.contentEquals(peerId)) {
+                peerFound = true;
+                break;
+            }
+        }
+
+        return peerFound;
+    }
+
+    /**
+     * Adds the peer with the given properties to the list of discovered peers, if not already in
+     * there. If the peer was added, the Node layer is notified.
+     * @param peerDeviceProperties The properties of the peer.
+     * @return True, if added. False, if it already exists in the list.
+     */
+    private synchronized boolean addNewPeerToListAndNotify(PeerDeviceProperties peerDeviceProperties) {
+        boolean peerAlreadyInTheList = peerDeviceListContainsPeer(peerDeviceProperties.peerId);
+
+        // Instead of Wi-Fi Direct device address, use peer ID
+        /*for (PeerDeviceProperties cachedPeerDeviceProperties : mLastPeerDeviceList) {
+            if (cachedPeerDeviceProperties != null
+                    && peerDeviceProperties.deviceAddress.equalsIgnoreCase(cachedPeerDeviceProperties.deviceAddress)) {
+                wasPreviouslyAvailable = true;
+                break;
+            }
+        }*/
+
+        if (!peerAlreadyInTheList) {
+            Log.i(TAG, "addNewPeerToListAndNotify: Adding peer with ID " + peerDeviceProperties.peerId);
+            mLastPeerDeviceList.add(peerDeviceProperties);
+
+            JSONArray jsonArray = new JSONArray();
+            jsonArray.put(getAvailabilityStatus(peerDeviceProperties, true));
+            jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_PEERAVAILABILITY, jsonArray.toString());
+        }
+
+        return !peerAlreadyInTheList;
+    }
+
+    /**
+     * Adds the peer with the given properties to the list of discovered peers, if not already in
+     * there. If the peer was added, the Node layer is notified.
+     * @param bluetoothSocket The Bluetooth socket associated with the peer.
+     * @param peerId The peer ID.
+     * @param peerName The peer name.
+     * @param peerBluetoothAddress The Bluetooth address of the peer.
+     */
+    private synchronized void addNewPeerToListAndNotify(
+            BluetoothSocket bluetoothSocket,
+            String peerId, String peerName, String peerBluetoothAddress) {
+
+        String bluetoothAddress = peerBluetoothAddress;
+
+        if (bluetoothSocket != null) {
+            if (bluetoothSocket.getRemoteDevice() != null) {
+                bluetoothAddress = bluetoothSocket.getRemoteDevice().getAddress();
+            }
+        }
+
+        PeerDeviceProperties peerDeviceProperties =
+                new PeerDeviceProperties(peerId, peerName, bluetoothAddress, "", "", "");
+
+        addNewPeerToListAndNotify(peerDeviceProperties);
     }
 
     /**
