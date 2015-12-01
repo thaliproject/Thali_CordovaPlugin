@@ -85,10 +85,18 @@ io.on('connection', function(socket) {
 
     switch (device.type)
     {
-      case 'unittest' : unitTestManager.addDevice(device);
+      case 'unittest' : 
+      {
+        console.log("New unit test device..");
+        unitTestManager.addDevice(device);
+      }
       break;
 
-      case 'perftest' : perfTestManager.addDevice(device);
+      case 'perftest' : 
+      {
+        console.log("New perf test device..");
+        perfTestManager.addDevice(device);
+      }
       break;
 
       default : console.log('unrecognised test type: ' + device.type);
