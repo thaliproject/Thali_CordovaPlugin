@@ -74,20 +74,6 @@ else if (jxcore.utils.OSInfo().isAndroid) {
 
 var testFramework = new TestFrameworkClient(deviceName, bluetoothAddress);
 
-testFramework.on('done', function (data) {
-  console.log('done, now sending data to server');
-  Coordinator.sendData(data);
-});
-
-testFramework.on('end', function (data) {
-  console.log('end, event received');
-  Coordinator.close();
-});
-
-testFramework.on('debug', function (data) {
-  testUtils.logMessageToScreen(data);
-});
-
 testFramework.on('start_tests', function (data) {
   console.log('got start_tests event with data : ' + data);
 });
