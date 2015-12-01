@@ -63,7 +63,6 @@ else if (jxcore.utils.OSInfo().isAndroid) {
 
   bluetoothAddress = "C0:FF:FF:EE:42:00";
   Mobile('GetDeviceName').callNative(function (name) {
-
     deviceName = name + "_PT" + Math.round((Math.random() * (10000)));
     testUtils.setMyName(deviceName);
   });
@@ -73,7 +72,7 @@ else if (jxcore.utils.OSInfo().isAndroid) {
  code for handling test communications
  -----------------------------------------------------------------------------------*/
 
-var testFramework = new TestFrameworkClient(deviceName);
+var testFramework = new TestFrameworkClient(deviceName, bluetoothAddress);
 
 testFramework.on('done', function (data) {
   console.log('done, now sending data to server');
