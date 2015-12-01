@@ -134,13 +134,17 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
         for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
             if (outgoingSocketThread != null && outgoingSocketThread.getPeerId().equalsIgnoreCase(peerId)) {
-                Log.i(TAG, "closeAndRemoveOutgoingConnectionThread: Disconnecting connection, peer ID: " + peerId);
-                mOutgoingConnectionListeners.remove(peerId);
-                mOutgoingSocketThreads.remove(outgoingSocketThread);
-                outgoingSocketThread.close();
-                wasFoundAndDisconnected = true;
+                Log.i(TAG, "disconnectOutgoingConnection: Found an outgoing connection to peer with ID " + peerId);
+                wasFoundAndDisconnected = closeAndRemoveOutgoingConnectionThread(outgoingSocketThread.getId(), false);
                 break;
             }
+        }
+
+        if (wasFoundAndDisconnected) {
+            Log.i(TAG, "disconnectOutgoingConnection: Successfully disconnected (peer ID: " + peerId + ")");
+        } else {
+            Log.e(TAG, "disconnectOutgoingConnection: Failed to find an outgoing connection to peer with ID "
+                    + peerId + ", this means we have a stored connection with lost handle!");
         }
 
         return wasFoundAndDisconnected;
@@ -249,9 +253,9 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
     }
 
     /**
-     *
-     * @param peerIdToConnectTo
-     * @param listener
+     * Starts the connection process to a peer with the given ID.
+     * @param peerIdToConnectTo The ID of the peer to connect to.
+     * @param listener The listener.
      */
     public synchronized void connect(final String peerIdToConnectTo, JxCoreExtensionListener listener) {
         Log.i(TAG, "connect: Trying to connect to peer with ID " + peerIdToConnectTo);
@@ -364,11 +368,11 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
     /**
      *
-     * @param bluetoothSocket
-     * @param isIncoming
-     * @param peerId
-     * @param peerName
-     * @param peerBluetoothAddress
+     * @param bluetoothSocket The Bluetooth socket.
+     * @param isIncoming True, if the connection is incoming. False, if it is outgoing.
+     * @param peerId The peer ID.
+     * @param peerName The peer name,
+     * @param peerBluetoothAddress The Bluetooth address of the peer.
      */
     @Override
     public void onConnected(
@@ -417,9 +421,8 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
                 newIncomingSocketThread.start();
 
-                Log.i(TAG, "onConnected: Incoming socket thread using port "
-                        + newIncomingSocketThread.getLocalHostPort()
-                        + " and is now connected (peer ID: " + peerId + ")");
+                Log.i(TAG, "onConnected: Incoming socket thread, for peer with ID "
+                        + peerId + ", created successfully");
             }
         } else {
             // Is outgoing connection
@@ -429,17 +432,20 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
             try {
                 newOutgoingSocketThread = new OutgoingSocketThread(bluetoothSocket, new ConnectionStatusListener() {
-                    /**
-                     * There is a good chance of a race condition where the node.js gets to do its
-                     * client socket before we get the accept line executed. Thus, this callback
-                     * takes care that we are ready before node.js is.
-                     * @param port The port listening to.
-                     */
                     @Override
                     public void onListeningForIncomingConnections(int port) {
-                        final int tempPort = port;
                         Log.i(TAG, "onListeningForIncomingConnections: Outgoing connection is using port "
-                                + tempPort + " (peer ID: " + tempPeerId + ")");
+                                + port + " (peer ID: " + tempPeerId + ")");
+
+                        if (listener != null) {
+                            listener.onConnectionStatusChanged(null, port);
+                        }
+
+                        /*
+                        // There is a good chance of a race condition where the node.js gets to do
+                        // its client socket before we get the accept line executed. Thus, this
+                        // callback takes care that we are ready before node.js is.
+                        final int tempPort = port;
 
                         new Handler(jxcore.activity.getMainLooper()).postDelayed(new Runnable() {
                             @Override
@@ -447,8 +453,12 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
                                 if (listener != null) {
                                     listener.onConnectionStatusChanged(null, tempPort);
                                 }
+
+                                Log.i(TAG, "onListeningForIncomingConnections: Outgoing connection is using port "
+                                        + tempPort + " (peer ID: " + tempPeerId + ")");
                             }
-                        }, 300); // TODO: Get rid of the magic number
+                        }, 500); // TODO: Get rid of the magic number
+                        */
                     }
 
                     @Override
@@ -475,7 +485,8 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
                 newOutgoingSocketThread.start();
 
-                Log.i(TAG, "onConnected: Outgoing socket thread, for peer with ID " + peerId + ", created successfully");
+                Log.i(TAG, "onConnected: Outgoing socket thread, for peer with ID "
+                        + peerId + ", created successfully");
             }
         }
     }
@@ -521,7 +532,8 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
      * @return True, if added. False, if it already exists in the list.
      */
     private synchronized boolean addNewPeerToListAndNotify(PeerDeviceProperties peerDeviceProperties) {
-        boolean peerAlreadyInTheList = peerDeviceListContainsPeer(peerDeviceProperties.peerId);
+        final String peerId = peerDeviceProperties.peerId;
+        boolean peerAlreadyInTheList = peerDeviceListContainsPeer(peerId);
 
         // Instead of Wi-Fi Direct device address, use peer ID
         /*for (PeerDeviceProperties cachedPeerDeviceProperties : mLastPeerDeviceList) {
@@ -533,12 +545,14 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
         }*/
 
         if (!peerAlreadyInTheList) {
-            Log.i(TAG, "addNewPeerToListAndNotify: Adding peer with ID " + peerDeviceProperties.peerId);
+            Log.i(TAG, "addNewPeerToListAndNotify: Adding peer with ID " + peerId);
             mLastPeerDeviceList.add(peerDeviceProperties);
 
             JSONArray jsonArray = new JSONArray();
             jsonArray.put(getAvailabilityStatus(peerDeviceProperties, true));
             jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_PEERAVAILABILITY, jsonArray.toString());
+        } else {
+            Log.i(TAG, "addNewPeerToListAndNotify: Peer with ID " + peerId + " already in the list");
         }
 
         return !peerAlreadyInTheList;
@@ -594,10 +608,11 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
     /**
      * Closes and removes an outgoing connection with the given thread ID.
      * @param outgoingThreadId The ID of the outgoing connection thread.
-     * @param notify If true, will notify the Node layer.
+     * @param notifyError If true, will notify the Node layer about a connection error.
      * @return True, if the thread was found, closed and removed.
      */
-    private synchronized boolean closeAndRemoveOutgoingConnectionThread(final long outgoingThreadId, boolean notify) {
+    private synchronized boolean closeAndRemoveOutgoingConnectionThread(
+            final long outgoingThreadId, boolean notifyError) {
         boolean wasFoundAndDisconnected = false;
 
         for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
@@ -609,7 +624,7 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
                 outgoingSocketThread.close();
                 wasFoundAndDisconnected = true;
 
-                if (notify) {
+                if (notifyError) {
                     JSONObject jsonObject = new JSONObject();
 
                     try {
