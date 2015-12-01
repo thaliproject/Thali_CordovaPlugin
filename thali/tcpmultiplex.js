@@ -107,8 +107,8 @@ function muxClientBridge(localP2PTcpServerPort, cb) {
     });
     clientSockets = [];
     this.close();
-  }
- 
+  };
+
   return server;
 }
 

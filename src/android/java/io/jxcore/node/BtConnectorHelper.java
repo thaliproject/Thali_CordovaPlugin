@@ -34,8 +34,8 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     private final Context context;
 
     private final String serviceTypeIdentifier = "Cordovap2p._tcp";
-    private final String BtUUID                = "fa87c0d0-afac-11de-8a39-0800200c9a66";
-    private final String Bt_NAME               = "Thaili_Bluetooth";
+    private final String BtUUID                = "0bbfc6ef-14cc-4ab2-af63-b92e887227ae";
+    private final String Bt_NAME               = "Thali_Bluetooth";
 
 
     private final CopyOnWriteArrayList<ServiceItem> lastAvailableList = new CopyOnWriteArrayList<ServiceItem>();
