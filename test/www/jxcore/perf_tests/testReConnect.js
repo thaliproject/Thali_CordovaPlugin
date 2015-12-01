@@ -25,9 +25,9 @@ var ReConnectConnector = require('./ReConnectConnector');
     "conReTryCount"  : Specifies the times we do retries for unsuccessful connection attempts before we mark the test round failed
     }
 */
-function testReConnect(jsonData,name,dev,addressList) {
+function testReConnect(jsonData, name, dev, addressList) {
     var self = this;
-    console.log('testReConnect created ' + jsonData + ", bt-address lenght : " + addressList.length);
+    console.log('testReConnect created ' + jsonData + ", bt-address length: " + addressList.length);
     this.name = name;
 
     if(addressList.length > 0) {

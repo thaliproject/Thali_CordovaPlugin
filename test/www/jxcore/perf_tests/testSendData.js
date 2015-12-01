@@ -40,7 +40,7 @@ function testSendData(jsonData, name, deviceCount, addressList) {
     var self = this;
     console.log('testSendData created ' + jsonData + ", bt-address lenght : " + addressList.length);
     this.name = name;
-    this.commandData = JSON.parse(jsonData);
+    this.commandData = jsonData;
     this.emitter = new ThaliEmitter();
     this.toFindCount = deviceCount;
     if(addressList.length > 0) {
