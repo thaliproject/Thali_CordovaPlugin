@@ -48,20 +48,19 @@ public class OutgoingSocketThread extends SocketThreadBase {
             boolean localStreamsCreatedSuccessfully = false;
 
             try {
+                Log.i(TAG, "Now accepting connections...");
+
                 if (mListener != null) {
                     mListener.onListeningForIncomingConnections(mServerSocket.getLocalPort());
                 }
 
-                Log.i(TAG, "Now accepting connections...");
-
                 Socket tempSocket = mServerSocket.accept(); // Blocking call
-
-                closeLocalSocketAndStreams(); // TODO: We shouldn't need to have this here, remove after test verification
 
                 mLocalhostSocket = tempSocket;
 
                 Log.i(TAG, "Incoming data from: " + getLocalHostAddressAsString()
                         + ", port: " + getLocalHostPort());
+
                 tempInputStream = mLocalhostSocket.getInputStream();
                 tempOutputStream = mLocalhostSocket.getOutputStream();
                 localStreamsCreatedSuccessfully = true;
@@ -82,7 +81,7 @@ public class OutgoingSocketThread extends SocketThreadBase {
     }
 
     /**
-     *
+     * Closes all the streams and sockets.
      */
     public synchronized void close() {
         Log.i(TAG, "close");
