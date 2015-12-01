@@ -23,6 +23,7 @@ function CoordinatorConnector()
 
   // Mapping of server/socket messages to events to emit when the occur
   this.messages = {
+    "start" : "start",
     "connect" : "connect",
     "disconnect" : "disconnect",
     "command" : "command",
