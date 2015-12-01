@@ -254,6 +254,8 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
      * @param listener
      */
     public synchronized void connect(final String peerIdToConnectTo, JxCoreExtensionListener listener) {
+        Log.i(TAG, "connect: Trying to connect to peer with ID " + peerIdToConnectTo);
+
         if (listener == null) {
             Log.e(TAG, "connect: Listener is null");
             throw new NullPointerException("Listener is null");
@@ -284,6 +286,7 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
                 if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.peerBluetoothAddress)) {
                     if (mConnectionManager.connect(selectedDevice)) {
+                        Log.i(TAG, "connect: Connection process successfully started (peer ID: " + peerIdToConnectTo + ")");
                         mOutgoingConnectionListeners.put(peerIdToConnectTo, listener);
                     } else {
                         Log.e(TAG, "connect: Failed to start connecting");
@@ -386,13 +389,18 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
         addNewPeerToListAndNotify(bluetoothSocket, peerId, peerName, peerBluetoothAddress);
 
         if (isIncoming) {
+            if (hasConnection(peerId)) {
+                Log.w(TAG, "onConnected: Already connected with peer (ID: " + peerId + "), but continuing anyway...");
+            }
+
             IncomingSocketThread newIncomingSocketThread = null;
 
             try {
                 newIncomingSocketThread = new IncomingSocketThread(bluetoothSocket, new ConnectionStatusListener() {
                     @Override
-                    public void onDisconnected(Thread who, String errorMessage) {
-                        Log.i(TAG, "onDisconnected: " + errorMessage);
+                    public void onDisconnected(SocketThreadBase who, String errorMessage) {
+                        Log.w(TAG, "onDisconnected: Incoming connection, peer with ID " + who.getPeerId()
+                                + " disconnected: " + errorMessage);
                         closeAndRemoveIncomingConnectionThread(who.getId());
                     }
                 });
@@ -410,11 +418,13 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
                 newIncomingSocketThread.start();
 
                 Log.i(TAG, "onConnected: Incoming socket thread using port "
-                        + newIncomingSocketThread.getLocalHostPort() + " and is now connected");
+                        + newIncomingSocketThread.getLocalHostPort()
+                        + " and is now connected (peer ID: " + peerId + ")");
             }
         } else {
             // Is outgoing connection
             OutgoingSocketThread newOutgoingSocketThread = null;
+            final String tempPeerId = peerId;
             final JxCoreExtensionListener listener = mOutgoingConnectionListeners.get(peerId);
 
             try {
@@ -428,20 +438,23 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
                     @Override
                     public void onListeningForIncomingConnections(int port) {
                         final int tempPort = port;
-                        Log.i(TAG, "Outgoing connection is using port " + tempPort);
+                        Log.i(TAG, "onListeningForIncomingConnections: Outgoing connection is using port "
+                                + tempPort + " (peer ID: " + tempPeerId + ")");
 
                         new Handler(jxcore.activity.getMainLooper()).postDelayed(new Runnable() {
                             @Override
                             public void run() {
                                 if (listener != null) {
-                                    listener.onConnectionStatusChanged("Listening for incoming connections", tempPort);
+                                    listener.onConnectionStatusChanged(null, tempPort);
                                 }
                             }
                         }, 300); // TODO: Get rid of the magic number
                     }
 
                     @Override
-                    public void onDisconnected(Thread who, String errorMessage) {
+                    public void onDisconnected(SocketThreadBase who, String errorMessage) {
+                        Log.w(TAG, "onDisconnected: Outgoing connection, peer with ID " + who.getPeerId()
+                                + " disconnected: " + errorMessage);
                         closeAndRemoveOutgoingConnectionThread(who.getId(), true);
                     }
                 });
@@ -462,7 +475,7 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
                 newOutgoingSocketThread.start();
 
-                Log.i(TAG, "onConnected: Outgoing socket thread created successfully");
+                Log.i(TAG, "onConnected: Outgoing socket thread, for peer with ID " + peerId + ", created successfully");
             }
         }
     }

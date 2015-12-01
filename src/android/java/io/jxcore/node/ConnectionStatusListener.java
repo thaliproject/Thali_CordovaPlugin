@@ -30,5 +30,5 @@ abstract class ConnectionStatusListener {
      * @param who The thread, which reported the event.
      * @param errorMessage The error message.
      */
-    abstract void onDisconnected(Thread who, String errorMessage);
+    abstract void onDisconnected(SocketThreadBase who, String errorMessage);
 }
