@@ -12,8 +12,6 @@ import java.net.Socket;
  *
  */
 public class OutgoingSocketThread extends SocketThreadBase {
-
-    private static final String TAG = OutgoingSocketThread.class.getName();
     private ServerSocket mServerSocket = null;
 
     /**
@@ -25,7 +23,7 @@ public class OutgoingSocketThread extends SocketThreadBase {
     public OutgoingSocketThread(BluetoothSocket bluetoothSocket, ConnectionStatusListener listener)
             throws IOException {
         super(bluetoothSocket, listener);
-        Log.i(TAG, "Constructed");
+        TAG = OutgoingSocketThread.class.getName();
     }
 
     /**
@@ -33,6 +31,8 @@ public class OutgoingSocketThread extends SocketThreadBase {
      */
     @Override
     public void run() {
+        Log.i(TAG, "Entering thread (ID: " + getId() + ")");
+
         try {
             mServerSocket = new ServerSocket(0);
             Log.i(TAG, "Server socket local port: " + mServerSocket.getLocalPort());
@@ -56,7 +56,8 @@ public class OutgoingSocketThread extends SocketThreadBase {
 
                 Socket tempSocket = mServerSocket.accept(); // Blocking call
 
-                closeLocalSocketAndStreams();
+                closeLocalSocketAndStreams(); // TODO: We shouldn't need to have this here, remove after test verification
+
                 mLocalhostSocket = tempSocket;
 
                 Log.i(TAG, "Incoming data from: " + getLocalHostAddressAsString()
@@ -77,7 +78,7 @@ public class OutgoingSocketThread extends SocketThreadBase {
             }
         }
 
-        Log.i(TAG, "Exiting thread");
+        Log.i(TAG, "Exiting thread (ID: " + getId() + ")");
     }
 
     /**

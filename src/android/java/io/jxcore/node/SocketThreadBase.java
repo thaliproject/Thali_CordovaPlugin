@@ -8,16 +8,18 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 /**
- *
+ * The base (thread) class for outgoing and incoming socket threads.
  */
 public class SocketThreadBase extends Thread implements StreamCopyingThread.Listener {
+    private static final String SENDING_THREAD_NAME = "Sender";
+    private static final String RECEIVING_THREAD_NAME = "Receiver";
 
-    protected static final String TAG = SocketThreadBase.class.getName();
+    protected static String TAG = SocketThreadBase.class.getName();
 
     protected final BluetoothSocket mBluetoothSocket;
     protected final ConnectionStatusListener mListener;
-    protected final InputStream mInputStream;
-    protected final OutputStream mOutputStream;
+    protected final InputStream mBluetoothInputStream;
+    protected final OutputStream mBluetoothOutputStream;
     protected Socket mLocalhostSocket = null;
     protected InputStream mLocalInputStream = null;
     protected OutputStream mLocalOutputStream = null;
@@ -27,7 +29,6 @@ public class SocketThreadBase extends Thread implements StreamCopyingThread.List
     private String mPeerId = "";
     private String mPeerName = "";
     private String mPeerAddress = "";
-
 
     /**
      * Constructor.
@@ -39,8 +40,8 @@ public class SocketThreadBase extends Thread implements StreamCopyingThread.List
             throws IOException {
         mBluetoothSocket = bluetoothSocket;
         mListener = listener;
-        mInputStream = mBluetoothSocket.getInputStream();
-        mOutputStream = mBluetoothSocket.getOutputStream();
+        mBluetoothInputStream = mBluetoothSocket.getInputStream();
+        mBluetoothOutputStream = mBluetoothSocket.getOutputStream();
     }
 
     public ConnectionStatusListener getListener() {
@@ -119,22 +120,38 @@ public class SocketThreadBase extends Thread implements StreamCopyingThread.List
     }
 
     /**
-     *
+     * Logs the event.
+     * @param who The thread, which succeeded in reading and writing.
+     * @param numberOfBytes The number of bytes read and written.
+     */
+    @Override
+    public void onStreamCopySucceeded(StreamCopyingThread who, int numberOfBytes) {
+        if (who == mReceivingThread) {
+            Log.i(TAG, "The receiving thread succeeded to read/write " + numberOfBytes + " bytes");
+        } else if (who == mSendingThread) {
+            Log.i(TAG, "The sending thread succeeded to read/write " + numberOfBytes + " bytes");
+        } else {
+            Log.w(TAG, "An unidentified stream copying thread succeeded to read/write " + numberOfBytes + " bytes");
+        }
+    }
+
+    /**
+     * Creates the stream copying threads (one for sending and one for receiving) and starts them.
      */
     protected synchronized void startStreamCopyingThreads() {
-        if (mInputStream == null
+        if (mBluetoothInputStream == null
                 || mLocalInputStream == null
-                || mOutputStream == null
+                || mBluetoothOutputStream == null
                 || mLocalOutputStream == null
                 || mLocalhostSocket == null) {
-            Log.i(TAG, "startStreamCopyingThreads: Cannot start since at least one of the streams is null");
+            Log.e(TAG, "startStreamCopyingThreads: Cannot start since at least one of the streams is null");
             mListener.onDisconnected(this, "Cannot start stream copying threads since at least one of the streams is null");
         } else {
-            mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mOutputStream);
+            mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, SENDING_THREAD_NAME);
             mSendingThread.setDefaultUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mSendingThread.start();
 
-            mReceivingThread = new StreamCopyingThread(this, mInputStream, mLocalOutputStream);
+            mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, RECEIVING_THREAD_NAME);
             mReceivingThread.setDefaultUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mReceivingThread.start();
 
@@ -146,10 +163,15 @@ public class SocketThreadBase extends Thread implements StreamCopyingThread.List
      * Closes the local socket and streams.
      */
     protected synchronized void closeLocalSocketAndStreams() {
-        Log.i(TAG, "closeLocalSocketAndStreams");
+        if (mLocalhostSocket == null && mLocalInputStream == null && mLocalOutputStream == null) {
+            Log.i(TAG, "closeLocalSocketAndStreams: Nothing to close");
+        } else {
+            Log.i(TAG, "closeLocalSocketAndStreams: Closing...");
+        }
 
         if (mLocalInputStream != null) {
             try {
+                Log.i(TAG, "closeLocalSocketAndStreams: Closing the local input stream...");
                 mLocalInputStream.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the local input stream: " + e.getMessage(), e);
@@ -158,6 +180,7 @@ public class SocketThreadBase extends Thread implements StreamCopyingThread.List
 
         if (mLocalOutputStream != null) {
             try {
+                Log.i(TAG, "closeLocalSocketAndStreams: Closing the local output stream...");
                 mLocalOutputStream.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the local output stream: " + e.getMessage(), e);
@@ -166,9 +189,10 @@ public class SocketThreadBase extends Thread implements StreamCopyingThread.List
 
         if (mLocalhostSocket != null) {
             try {
+                Log.i(TAG, "closeLocalSocketAndStreams: Closing the localhost socket...");
                 mLocalhostSocket.close();
             } catch (IOException e) {
-                Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the local host socket: " + e.getMessage(), e);
+                Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the localhost socket: " + e.getMessage(), e);
             }
         }
     }
@@ -179,17 +203,17 @@ public class SocketThreadBase extends Thread implements StreamCopyingThread.List
     protected synchronized void closeBluetoothSocketAndStreams() {
         Log.i(TAG, "closeBluetoothSocketAndStreams");
 
-        if (mInputStream != null) {
+        if (mBluetoothInputStream != null) {
             try {
-                mInputStream.close();
+                mBluetoothInputStream.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeBluetoothSocketAndStreams: Failed to close the input stream: " + e.getMessage(), e);
             }
         }
 
-        if (mOutputStream != null) {
+        if (mBluetoothOutputStream != null) {
             try {
-                mOutputStream.close();
+                mBluetoothOutputStream.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeBluetoothSocketAndStreams: Failed to close the output stream: " + e.getMessage(), e);
             }
