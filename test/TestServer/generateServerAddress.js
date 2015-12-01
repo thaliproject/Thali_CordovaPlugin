@@ -1,6 +1,6 @@
 'use strict';
 
-var IPAddressToFile = require("./IPAddressToFile");
+var IPAddressToFile = require('./IPAddressToFile');
 
 /**
  * A quick little command line utility to allow us to generate the server config before creating

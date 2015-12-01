@@ -19,5 +19,5 @@ out/
 .settings/
 
 # Testing
-test/TestServer/serveraddress.json
-test/www/jxcore/serveraddress.json
+test/TestServer/server-address.js
+test/www/jxcore/server-address.js
