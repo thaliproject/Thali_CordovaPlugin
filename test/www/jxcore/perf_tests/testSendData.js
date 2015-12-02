@@ -38,7 +38,7 @@ var SendDataConnector = require('./SendDataConnector');
 
 function testSendData(jsonData, name, deviceCount, addressList) {
     var self = this;
-    console.log('testSendData created ' + jsonData + ", bt-address lenght : " + addressList.length);
+    console.log('testSendData created ' + jsonData + ", bt-address length : " + addressList.length);
     this.name = name;
     this.commandData = jsonData;
     this.emitter = new ThaliEmitter();
