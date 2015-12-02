@@ -25,7 +25,7 @@ public class JXcoreExtension {
     public final static String METHODSTRING_GETBTADDRESS      = "GetBluetoothAddress";
     public final static String METHODSTRING_RECONNECTWIFIAP   = "ReconnectWifiAP";
     public final static String METHODSTRING_ISBLESUPPORTED    = "IsBLESupported";
-
+    
     public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
     public final static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
 
@@ -36,11 +36,6 @@ public class JXcoreExtension {
     public static void LoadExtensions() {
         final ConnectionHelper mConnectionHelper = new ConnectionHelper();
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> Resolved rebase merge conflicts
         jxcore.RegisterMethod(METHODSTRING_RECONNECTWIFIAP, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
@@ -65,7 +60,6 @@ public class JXcoreExtension {
             }
         });
 
->>>>>>> Commit to #345: Renamed classes, cleaned up the code and improved logging.
         jxcore.RegisterMethod(METHODSTRING_GETBTADDRESS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
