@@ -77,7 +77,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
       device.socket.once('test data', function (data) {
 
-        device.results = data;
+        device.results = JSON.parse(data);
 
         if (--toComplete == 0) {
 
@@ -89,7 +89,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
               console.log("No results from " + _device);
             } else {
               results.push({
-                "test" : test.name,
+                "test" : test,
                 "device" : _device.deviceName,
                 "time" : null,
                 "data" : _device.results

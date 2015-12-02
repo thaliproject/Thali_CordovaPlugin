@@ -133,7 +133,7 @@ module.exports.process = function (testResults, testDevices) {
 
   for (var i = 0; i < testResults.length; i++) {
 
-    var result = JSON.parse(result);
+    var result = testResults[i];
 
     if (result.data) {
 
