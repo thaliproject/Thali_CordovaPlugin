@@ -149,10 +149,12 @@ public class SocketThreadBase extends Thread implements StreamCopyingThread.List
         } else {
             mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, SENDING_THREAD_NAME);
             mSendingThread.setDefaultUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
+            mSendingThread.setBufferSize(1024 * 8);
             mSendingThread.start();
 
             mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, RECEIVING_THREAD_NAME);
             mReceivingThread.setDefaultUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
+            mReceivingThread.setBufferSize(1024 * 8);
             mReceivingThread.start();
 
             Log.i(TAG, "startStreamCopyingThreads: OK");
