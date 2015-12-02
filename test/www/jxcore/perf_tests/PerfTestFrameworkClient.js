@@ -72,7 +72,6 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
   this.deviceName = deviceName;
   this.bluetoothAddress = bluetoothAddress;
 
-
   var self = this;
 
   this.doneCallback = function(data) {
@@ -127,18 +126,18 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
 
   this.coordinator.on('stop', function() {
     debug("stop");
-    this.stopAllTests(false);
+    self.stopAllTests(false);
   });
 
   this.coordinator.on('timeout', function() {
    debug("stop-by-timeout");
-   this.stopAllTests(true);
+   self.stopAllTests(true);
   });
 
   this.coordinator.on('end', function() {
     console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
-    this.stopAllTests(true);
+    self.stopAllTests(true);
     self.coordinator.close();
   });
 
