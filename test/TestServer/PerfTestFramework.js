@@ -70,8 +70,6 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
       device.socket.once('test data', function (data) {
 
-        self.clientDataReceived(device, data);
-
         if (--toComplete == 0) {
 
           logger(this.os + ' test ID ' + this.currentTest + ' done now');
@@ -93,15 +91,16 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             }
           });
 
-
           tests.shift();
           if (tests.length) {
             process.nextTick(function() {
+              console.log("Continuing to next test: " + tests[0]);
               doTest(tests[0]);
             });
           } else {
             console.log("ALL DONE !!!");
             var processedResults = ResultsProcessor.process(this.testResults, this.testDevices);
+            console.log(processedResults);
             process.exit(0);
           }
         }
@@ -120,80 +119,5 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
   doTest(tests[0]);
 }
-
-PerfTestFramework.prototype.clientDataReceived = function(name, data) {
-
-  var jsonData = JSON.parse(data);
-
-  //save the time and the time we got the results
-  this.testDevices[name].data = jsonData;
-  this.testDevices[name].endTime = new Date();
-
-  var responseTime = this.testDevices[name].endTime - this.testDevices[name].startTime;
-
-  var peers = 0;
-  if (jsonData.peersList && (jsonData.peersList.length > 0)) {
-    peers = jsonData.peersList.length;
-  }
-
-  var connects = 0;
-  if (jsonData.connectList && (jsonData.connectList.length > 0)) {
-    connects = jsonData.connectList.length;
-  }
-
-  var sendData = 0;
-  if (jsonData.sendList && (jsonData.sendList.length > 0)) {
-    sendData =jsonData.sendList.length;
-  }
-
-  logger(
-    this.os + ' ' + name + ' test took ' + responseTime + 'ms - results peers[' + 
-    peers + '], reConnects[' + connects + '], sendData[' + sendData + ']'
-  );
-}
-
-/*
-    if (configFile.tests[this.currentTest].servertimeout) {
-      this.timerId = setTimeout(function() {
-        logger('Server timeout reached!');
-        if(!self.doneAlready)
-        {
-          for (var deviceName in self.testDevices) {
-            if (self.testDevices[deviceName] != null && self.testDevices[deviceName].data == null) {
-              logger('Send timeout to ' + self.testDevices[deviceName].getName());
-              self.testDevices[deviceName].SendCommand('timeout',"","","");
-            }
-          }
-          // Above, we were sending the timeout command to all connected devices.
-          // Below, we are having a timer that waits for certain amount of time
-          // for devices to send their test report, but if that doesn't happen within
-          // the time set below, we are forcing the tests to finished.
-          // This is so that in CI, we get to print the result summary before the CI
-          // timeouts are hit.
-          var timeToWaitForReports = 60000; // 1 minute
-          self.timerId = setTimeout(function() {
-            if (!self.doneAlready) {
-              logger('Did not get reports from all devices, but forcing tests to finish!');
-              self.testFinished();
-            }
-          }, timeToWaitForReports);
-        }
-      }, configFile.tests[this.currentTest].servertimeout);
-
-    }
-    return;
-  }
-  logger(this.os + ' All tests are done, preparing test report');
-  var processedResults = ResultsProcessor.process(this.testResults, this.testDevices);
-
-  for (var deviceName in this.testDevices) {
-    if (this.testDevices[deviceName] != null) {
-      this.testDevices[deviceName].SendCommand(
-        'end','results',JSON.stringify({"result":processedResults[deviceName]}),this.devicesCount
-      );
-    }
-  }
-};
-*/
 
 module.exports = PerfTestFramework;
