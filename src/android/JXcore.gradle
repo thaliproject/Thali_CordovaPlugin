@@ -1,10 +1,10 @@
 repositories {
     mavenLocal()
     maven {
-        url  "https://bintray.com/artifact/download/tompaana/waste-land"
+        url  "https://bintray.com/artifact/download/thali-wasteland/waste-land"
     }
 }
 
 dependencies {
-    compile(group: 'org.thaliproject.p2p.btconnectorlib', name: 'btconnectorlib2', version: '0.0.3', ext: 'aar')
+    compile(group: 'org.thaliproject.p2p.btconnectorlib', name: 'btconnectorlib2', version: '0.0.4', ext: 'aar')
 }
