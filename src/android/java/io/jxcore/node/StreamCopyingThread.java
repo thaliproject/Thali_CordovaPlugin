@@ -28,11 +28,13 @@ class StreamCopyingThread extends Thread {
     }
 
     private static final String TAG = StreamCopyingThread.class.getName();
+    private static final int MAXIMUM_BUFFER_SIZE_IN_BYTES = 1024 * 8;
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
     private final Listener mListener;
     private final InputStream mInputStream;
     private final OutputStream mOutputStream;
     private final String mThreadName;
+    private int mBufferSize = DEFAULT_BUFFER_SIZE;
     private boolean mDoStop = false;
 
     /**
@@ -52,6 +54,13 @@ class StreamCopyingThread extends Thread {
         mThreadName = threadName;
     }
 
+    public void setBufferSize(final int bufferSizeInBytes) {
+        if (bufferSizeInBytes > 0 && bufferSizeInBytes <= MAXIMUM_BUFFER_SIZE_IN_BYTES) {
+            Log.i(TAG, "setBufferSize: Setting buffer size to " + bufferSizeInBytes + " bytes");
+            mBufferSize = bufferSizeInBytes;
+        }
+    }
+
     /**
      * From Thread.
      *
@@ -60,7 +69,7 @@ class StreamCopyingThread extends Thread {
     @Override
     public void run() {
         Log.i(TAG, "Entering thread (ID: " + getId() + ", name: " + mThreadName + ")");
-        byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
+        byte[] buffer = new byte[mBufferSize];
 
         while (!mDoStop) {
             try {

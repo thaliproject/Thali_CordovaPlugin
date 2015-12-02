@@ -136,15 +136,16 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
             if (outgoingSocketThread != null && outgoingSocketThread.getPeerId().equalsIgnoreCase(peerId)) {
                 Log.i(TAG, "disconnectOutgoingConnection: Found an outgoing connection to peer with ID " + peerId);
                 wasFoundAndDisconnected = closeAndRemoveOutgoingConnectionThread(outgoingSocketThread.getId(), false);
+
+                if (wasFoundAndDisconnected) {
+                    Log.i(TAG, "disconnectOutgoingConnection: Successfully disconnected (peer ID: " + peerId + ")");
+                } else {
+                    Log.e(TAG, "disconnectOutgoingConnection: Failed to find an outgoing connection to peer with ID "
+                            + peerId + ", this means we have a stored connection with lost handle!");
+                }
+
                 break;
             }
-        }
-
-        if (wasFoundAndDisconnected) {
-            Log.i(TAG, "disconnectOutgoingConnection: Successfully disconnected (peer ID: " + peerId + ")");
-        } else {
-            Log.e(TAG, "disconnectOutgoingConnection: Failed to find an outgoing connection to peer with ID "
-                    + peerId + ", this means we have a stored connection with lost handle!");
         }
 
         return wasFoundAndDisconnected;
@@ -267,8 +268,7 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
         if (isRunning()) {
             if (hasConnection(peerIdToConnectTo)) {
-                Log.w(TAG, "connect: We are already connected to peer with ID " + peerIdToConnectTo
-                        + ", just saying, trying to connect anyway...");
+                Log.i(TAG, "connect: We already have a connection to peer with ID " + peerIdToConnectTo);
             }
 
             if (mOutgoingSocketThreads.size() < MAXIMUM_NUMBER_OF_CONNECTIONS) {
@@ -389,14 +389,14 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
             throw new RuntimeException("onConnected: Bluetooth socket is null");
         }
 
+        if (hasConnection(peerId)) {
+            Log.w(TAG, "onConnected: Already connected with peer (ID: " + peerId + "), continuing anyway...");
+        }
+
         // Add the peer to the list, if was not discovered before
         addNewPeerToListAndNotify(bluetoothSocket, peerId, peerName, peerBluetoothAddress);
 
         if (isIncoming) {
-            if (hasConnection(peerId)) {
-                Log.w(TAG, "onConnected: Already connected with peer (ID: " + peerId + "), but continuing anyway...");
-            }
-
             IncomingSocketThread newIncomingSocketThread = null;
 
             try {
@@ -638,6 +638,10 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
                 break;
             }
+        }
+
+        if (!wasFoundAndDisconnected) {
+            Log.w(TAG, "closeAndRemoveOutgoingConnectionThread: Failed to find a thread with ID " + outgoingThreadId);
         }
 
         return wasFoundAndDisconnected;
