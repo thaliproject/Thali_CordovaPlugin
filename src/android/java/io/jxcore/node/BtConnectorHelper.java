@@ -29,12 +29,13 @@ import android.annotation.TargetApi;
  * Created by juksilve on 14.5.2015.
  */
 public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector {
+    private static final String TAG = BtConnectorHelper.class.getName();
 
     private final Context context;
 
     private final String serviceTypeIdentifier = "Cordovap2p._tcp";
-    private final String BtUUID                = "fa87c0d0-afac-11de-8a39-0800200c9a66";
-    private final String Bt_NAME               = "Thaili_Bluetooth";
+    private final String BtUUID                = "0bbfc6ef-14cc-4ab2-af63-b92e887227ae";
+    private final String Bt_NAME               = "Thali_Bluetooth";
 
 
     private final CopyOnWriteArrayList<ServiceItem> lastAvailableList = new CopyOnWriteArrayList<ServiceItem>();
@@ -51,6 +52,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     final Thread.UncaughtExceptionHandler mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
         @Override
         public void uncaughtException(Thread thread, Throwable ex) {
+            Log.e(TAG, "Uncaught exception: " + ex.getMessage(), ex);
             final Throwable tmpException = ex;
             new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
                 @Override

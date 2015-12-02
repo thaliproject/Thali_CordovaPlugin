@@ -1,0 +1,8 @@
+{
+  "plugins": ["plugins/markdown"],
+  "opts": { "recurse": true },
+  "source": {
+    "exclude": [ "node_modules", "install"],
+    "includePattern": ".+\\.js?$"
+  }
+}
