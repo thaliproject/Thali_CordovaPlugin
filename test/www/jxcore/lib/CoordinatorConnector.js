@@ -24,6 +24,7 @@ function CoordinatorConnector()
   // Mapping of server/socket messages to events to emit when the occur
   this.messages = {
     "start" : "start",
+    "stop" : "stop",
     "connect" : "connect",
     "disconnect" : "disconnect",
     "command" : "command",
@@ -34,7 +35,6 @@ function CoordinatorConnector()
     "schedule" : "schedule",
     "too_late" : "too_late"
   };
-
 }
 
 util.inherits(CoordinatorConnector, EventEmitter);

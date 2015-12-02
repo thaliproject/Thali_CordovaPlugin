@@ -93,7 +93,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
               });
             }
 
-            device.socket.emit("stop");
+            _device.socket.emit("stop");
           });
 
           tests.shift();

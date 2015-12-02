@@ -28,6 +28,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
     console.log("Running test: " + test);
 
     // Perform a single test
+
     function doNext(stage) {
       // We need to have seen all devices report in before we
       // can proceed to the next stage
