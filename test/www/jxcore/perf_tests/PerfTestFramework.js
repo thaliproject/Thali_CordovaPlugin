@@ -20,13 +20,13 @@ function TestFrameworkClient(name) {
 
     this.debugCallback = function(data) {
         self.emit('debug',data);
-    }
+    };
 
     this.doneCallback = function(data) {
         self.emit('done',data);
 
         self.printResults(data);
-    }
+    };
 
     console.log('check test folder');
     fs.readdirSync(__dirname).forEach(function(fileName) {
@@ -57,7 +57,9 @@ TestFrameworkClient.prototype.handleCommand = function(command){
             self.stopAllTests(); //Stop any previous tests if still running
             if(self.test[commandData.testName]){
                 self.emit('debug',"--- start :" + commandData.testName + "---");
-                currentTest = new self.test[commandData.testName](commandData.testData,self.deviceName,commandData.devices,self.shuffle(commandData.addressList));
+                currentTest = new self.test[commandData.testName](commandData.testData, self.deviceName,
+                                                                  commandData.devices,
+                                                                  self.shuffle(commandData.addressList));
                 self.setCallbacks(currentTest);
                 currentTest.start();
             }else{

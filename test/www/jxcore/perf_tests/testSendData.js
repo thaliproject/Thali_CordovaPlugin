@@ -1,6 +1,6 @@
 /**
  *
- * This test is needing all three files to be present
+ * This test needs all three files to be present
  *  - testSendData.js      : the main entry point to the test case
  *  - SendDataConnector.js : logic that handles the connection & data sending parts
  *  - SendDataTCPServer.js : logic that handles the server endpoint for connections & data receiving/replying for the test
