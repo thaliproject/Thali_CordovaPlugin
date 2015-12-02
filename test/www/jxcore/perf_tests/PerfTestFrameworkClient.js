@@ -192,9 +192,9 @@ TestFrameworkClient.prototype.setCallbacks = function(test) {
 TestFrameworkClient.prototype.stopAllTests = function(doReport) {
   console.log('stop tests now !');
   console.log('stop current!');
-  currentTest.stop(doReport);
-  currentTest.removeListener('done', this.doneCallback);
-  currentTest = null;
+  this.currentTest.stop(doReport);
+  this.currentTest.removeListener('done', this.doneCallback);
+  this.currentTest = null;
 }
 
 // Everything below here is report printing

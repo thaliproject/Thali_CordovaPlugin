@@ -55,15 +55,18 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   // Copy arrays..
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
+  
+  // Filter non-null bluetooth device addresses into array
+  var btAddresses = devices.map(function(dev) {
+    return dev.btAddress;
+  }).filter(function(addr) {
+    return (addr != null);
+  });
 
   var toComplete;
   var self = this;
-  var btAddresses = devices.map(function(dev) {
-    return dev.btAddress;
-  });
 
   var results = [];
-
   function doTest(test) {
 
     toComplete = devices.length;
