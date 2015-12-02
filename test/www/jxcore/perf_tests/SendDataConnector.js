@@ -247,9 +247,13 @@ SendDataConnector.prototype.tryAgain = function() {
 SendDataConnector.prototype.oneRoundDoneNow = function() {
     var self = this;
 
+    console.log("oneRoundDownNow");
+
     if(!this.peer){
         return;
     }
+
+    console.log("oneRoundDownNow:2");
 
     this.doneRounds++;
     this.endTime = new Date();

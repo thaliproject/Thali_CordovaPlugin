@@ -137,6 +137,8 @@ module.exports.process = function (testResults, testDevices) {
 
     if (result.data) {
 
+      console.log(result.data);
+
       if (!results[result.device]) {
         results[result.device] = {};
       }

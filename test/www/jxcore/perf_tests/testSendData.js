@@ -43,9 +43,7 @@ function testSendData(jsonData, name, deviceCount, addressList) {
     this.commandData = jsonData;
     this.emitter = new ThaliEmitter();
     this.toFindCount = deviceCount;
-    if(addressList.length > 0) {
-        this.BluetoothAddressList = addressList;
-    }
+    this.BluetoothAddressList = addressList;
 
     this.startTime = new Date();
     this.endTime = new Date();
@@ -66,7 +64,7 @@ function testSendData(jsonData, name, deviceCount, addressList) {
         // if we use the address list, then we try getting all connections to be successful
         // thus we re-try the ones that were not successful
         // and we schedule the re-try to be handled after all other peers we have in the list currently
-        if(self.BluetoothAddressList) {
+        if (self.BluetoothAddressList.length > 0) {
             for (var i = 0; i < resultData.length; i++) {
                 if (resultData[i].result != "OK") {
                     areAllTestOk = false;
@@ -99,13 +97,12 @@ function testSendData(jsonData, name, deviceCount, addressList) {
 
     this.peerAvailabilityChanged = function(peers) {
 
-        //we have address list, so we use it instead
-        if(self.BluetoothAddressList){
+        // We have address list, so we use it instead
+        if (self.BluetoothAddressList.length > 0) {
             return;
         }
 
         console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
-
 
         for (var i = 0; i < peers.length; i++) {
             var peer = peers[i];
@@ -142,7 +139,7 @@ testSendData.prototype.start = function(serverPort) {
         } else {
             console.log('StartBroadcasting started ok');
 
-            if(self.BluetoothAddressList) {
+            if (self.BluetoothAddressList > 0) {
                 if (!self.testStarted) {
                     self.startWithNextDevice();
                 }
@@ -201,13 +198,16 @@ testSendData.prototype.stop = function(doReport) {
 }
 
 testSendData.prototype.startWithNextDevice = function() {
-    if(this.doneAlready || this.testConnector == null) {
+
+    if (this.doneAlready || this.testConnector == null) {
         return;
     }
 
-    if(this.BluetoothAddressList){
+    console.log(this.BluetoothAddressList);
 
-        if(this.BluetoothAddressList.length <= 0){
+    if (this.BluetoothAddressList > 0) {
+
+        if (this.BluetoothAddressList.length <= 0){
             this.endReason = "OK";
             this.weAreDoneNow();
             return;
@@ -226,7 +226,8 @@ testSendData.prototype.startWithNextDevice = function() {
         console.log('Connect to fake peer: ' + fakePeer.peerIdentifier);
         this.testConnector.Start(fakePeer);
         return;
-    }else {
+    } else {
+
         if (this.foundSofar >= this.toFindCount) {
             this.endReason = "OK";
             this.weAreDoneNow();
@@ -260,7 +261,7 @@ testSendData.prototype.weAreDoneNow = function() {
         this.timerId = null;
     }
 
-    console.log('weAreDoneNow , resultArray.length: ' + this.resultArray.length);
+    console.log('weAreDoneNow, resultArray.length: ' + this.resultArray.length);
     this.doneAlready = true;
     this.sendReportNow();
 
@@ -280,8 +281,11 @@ testSendData.prototype.weAreDoneNow = function() {
 testSendData.prototype.sendReportNow = function() {
 
     this.endTime = new Date();
+  
+    console.log("sendReportNow");
+    console.log(this.testConnector);
 
-    if(this.testConnector != null) {
+    if (this.testConnector != null) {
         var isAlreadyAdded = false;
         var currentTest = this.testConnector.getCurrentTest();
 
