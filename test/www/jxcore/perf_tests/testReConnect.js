@@ -33,7 +33,7 @@ function testReConnect(jsonData, name, dev, addressList) {
     if(addressList.length > 0) {
         this.BluetoothAddressList = addressList;
     }
-    this.commandData = JSON.parse(jsonData);
+    this.commandData = jsonData;
     this.emitter = new ThaliEmitter();
     this.startTime = new Date();
     this.endTime = new Date();
