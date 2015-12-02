@@ -15,7 +15,7 @@ var EventEmitter = require('events').EventEmitter;
 var CoordinatorConnector = require('../lib/CoordinatorConnector');
 
 function debug(msg) {
-  testUtils.logMessageToScreen(data);
+  testUtils.logMessageToScreen(msg);
 };
 
 // Singleton coordinator
