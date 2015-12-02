@@ -10,9 +10,13 @@
 
 var fs = require('fs');
 var inherits = require('util').inherits;
-var testUtils = require('../lib/testutils.js');
+var testUtils = require('../lib/testUtils.js');
 var EventEmitter = require('events').EventEmitter;
 var CoordinatorConnector = require('../lib/CoordinatorConnector');
+
+function debug(msg) {
+  testUtils.logMessageToScreen(data);
+};
 
 // Singleton coordinator
 var _coordinator = null;
@@ -68,13 +72,12 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
   this.deviceName = deviceName;
   this.bluetoothAddress = bluetoothAddress;
 
+
   var self = this;
-  this.debugCallback = function(data) {
-    self.emit('debug',data);
-  }
 
   this.doneCallback = function(data) {
-    self.emit('done',data);
+    console.log('done, now sending data to server');
+    self.coordinator.sendData(data);
     self.printResults(data);
   }
 
@@ -110,7 +113,8 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
 
     console.log(testData);
 
-    self.emit('debug',"--- start :" + testData.testName + "---");
+    debug("--- start :" + testData.testName + "---");
+
     self.currentTest = new self.tests[testData.testName] (
       testData.testData,
       self.deviceName,
@@ -122,12 +126,12 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
   });
 
   this.coordinator.on('stop', function() {
-    this.emit('debug',"stop");
+    debug("stop");
     this.stopAllTests(false);
   });
 
   this.coordinator.on('timeout', function() {
-   this.emit('debug', "stop-by-timeout");
+   debug("stop-by-timeout");
    this.stopAllTests(true);
   });
 
@@ -135,7 +139,7 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
     console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
     this.stopAllTests(true);
-    this.emit('end', 'end');
+    self.coordinator.close();
   });
 
   this.coordinator.on('closed', function() {
@@ -183,22 +187,14 @@ function shuffle(array) {
 }
 
 TestFrameworkClient.prototype.setCallbacks = function(test) {
-  if (test == null) {
-    return;
-  }
   test.on('done', this.doneCallback);
-  test.on('debug', this.debugCallback);
 }
 
 TestFrameworkClient.prototype.stopAllTests = function(doReport) {
   console.log('stop tests now !');
-  if (currentTest == null) {
-    return;
-  }
   console.log('stop current!');
   currentTest.stop(doReport);
   currentTest.removeListener('done', this.doneCallback);
-  currentTest.removeListener('debug', this.debugCallback);
   currentTest = null;
 }
 
