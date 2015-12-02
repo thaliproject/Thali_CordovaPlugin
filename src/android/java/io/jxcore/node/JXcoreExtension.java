@@ -25,7 +25,7 @@ public class JXcoreExtension {
     public final static String METHODSTRING_GETBTADDRESS      = "GetBluetoothAddress";
     public final static String METHODSTRING_RECONNECTWIFIAP   = "ReconnectWifiAP";
     public final static String METHODSTRING_ISBLESUPPORTED    = "IsBLESupported";
-    
+
     public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
     public final static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
 
