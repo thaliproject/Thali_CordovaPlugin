@@ -1,6 +1,6 @@
 {
   "name": "thali",
-  "version": "2.0.2",
+  "version": "2.0.1",
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
@@ -12,10 +12,15 @@
     "request": "^2.64.0",
     "winston": "^1.0.2"
   },
+  "devDependencies": {
+    "jsdoc": "^3.3.3"
+  },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",
     "postpublish": "jx install/postPublishThaliCordovaPlugin.js",
-    "postinstall": "jx installCordovaPlugin.js"
+    "postinstall": "jx installCordovaPlugin.js",
+    "createPublicDocs": "./node_modules/.bin/jsdoc -c conf.json .",
+    "createInternalDocs": "./node_modules/.bin/jsdoc -c conf.json -p ."
   },
   "repository": {
     "type": "git",

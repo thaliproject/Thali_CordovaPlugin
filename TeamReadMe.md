@@ -48,6 +48,13 @@ to get our files locally, not from NPM. But it's good to be aware of this variab
 1. Write up a blog article for Thali's blog (this will be auto-reposted to Twitter)
 2. Go to [stories](https://github.com/thaliproject/thali/blob/gh-pages/stories.md) and mark the story as completed. This requires both marking it completed in the table of contents and then use `~~` wrappers to strike out the entry in the body.
 3. Go to GitHub and create a release
+ 1. Go to the releases tab on the front page of the project on GitHub
+ 2. Hit 'Draft a new release'
+ 3. In 'Tag version' enter the right tag, for a NPM release this will be the NPM tag that was generated above and should already be in the tag list on GitHub. For example, 'npmv1.0.22'. If you got the tag right then GitHub will say 'Existing Tag'.
+ 4. Enter a release title, typically this is something like "Story X - Y"
+ 5. Enter a description that briefly specifies what functionality or bug fixes were added
+ 6. For now make sure to check "This is a pre-release"
+ 7. Hit publish release!
 4. Go to internal metrics spreadsheet and add the release to both the shared code and blog tabs.
 
 ## Want to develop locally?
