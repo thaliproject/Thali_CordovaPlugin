@@ -62,33 +62,38 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
     return dev.btAddress;
   });
 
+  var results = [];
+
   function doTest(test) {
 
     toComplete = devices.length;
 
     devices.forEach(function(device) {
 
+      device.results = null;
+
       device.socket.once('test data', function (data) {
+
+        device.results = data;
 
         if (--toComplete == 0) {
 
-          logger(this.os + ' test ID ' + this.currentTest + ' done now');
+          logger(platform + ' test ID ' + test + ' done now');
 
-          devices.forEach(function(device) {
+          devices.forEach(function(_device) {
 
-            if (device.data == null) {
-              device.socket.emit("end");
-              console.log("No results from " + device);
+            if (device.results == null) {
+              console.log("No results from " + _device);
             } else {
-              this.testResults.push({
+              results.push({
                 "test" : test.name,
-                "device" : device.deviceName,
+                "device" : _device.deviceName,
                 "time" : null,
-                "data" : device.data
+                "data" : _device.results
               });
-
-              device.socket.emit("stop");
             }
+
+            device.socket.emit("stop");
           });
 
           tests.shift();
@@ -99,7 +104,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             });
           } else {
             console.log("ALL DONE !!!");
-            var processedResults = ResultsProcessor.process(this.testResults, this.testDevices);
+            var processedResults = ResultsProcessor.process(results, devices);
             console.log(processedResults);
             process.exit(0);
           }
