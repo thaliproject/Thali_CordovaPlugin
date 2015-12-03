@@ -5,10 +5,10 @@ var os = require('os');
 var path = require('path');
 var Promise = require('lie');
 
-function writeFiles(interfaceName, address) {
+function writeFiles(address) {
     function writeServerAddress(filePath) {
-        return fs.writeFileAsync(path.join(filePath,"serveraddress.json"),
-            JSON.stringify([{name: interfaceName, address: address}]));
+        return fs.writeFileAsync(path.join(filePath, 'server-address.js'),
+            'module.exports = "' + address + '";');
     }
 
     return writeServerAddress(path.join(__dirname, "../www/jxcore"))
@@ -19,12 +19,11 @@ function writeFiles(interfaceName, address) {
 
 module.exports = function(addressOverride) {
   if (addressOverride) {
-    return writeFiles("override", addressOverride);
+    return writeFiles(addressOverride);
   }
 
   var networkInterfaces = os.networkInterfaces();
 
-  var ipv4InterfaceName = null;
   var ipv4address= null;
   Object.keys(networkInterfaces).forEach(function (interfaceName) {
       networkInterfaces[interfaceName].forEach(function (iface) {
@@ -39,20 +38,18 @@ module.exports = function(addressOverride) {
           // Wi-Fi.
           if(interfaceName.indexOf("Wi-Fi") > -1){
               // this interface has only one ipv4 address
-              console.log(interfaceName + " = " + iface.address);
-              return writeFiles(interfaceName, iface.address);
+              ipv4address = iface.address;
           }
 
-          if (!ipv4InterfaceName) {
-              ipv4InterfaceName = interfaceName;
+          if (!ipv4address) {
               ipv4address = iface.address;
           }
       });
   });
 
-  if (!ipv4InterfaceName) {
+  if (!ipv4address) {
       return Promise.reject(new Error("We could not find an IPv4 external facing interface"));
   }
 
-  return writeFiles(ipv4InterfaceName, ipv4address);
+  return writeFiles(ipv4address);
 };
