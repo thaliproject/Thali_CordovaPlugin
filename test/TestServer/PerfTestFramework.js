@@ -109,6 +109,9 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             console.log("ALL DONE !!!");
             var processedResults = ResultsProcessor.process(results, devices);
             console.log(processedResults);
+            devices.forEach(function(_device) {
+              _device.socket.emit("end");
+            }); 
             process.exit(0);
           }
         }
