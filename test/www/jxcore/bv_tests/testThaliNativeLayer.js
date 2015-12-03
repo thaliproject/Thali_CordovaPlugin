@@ -7,7 +7,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
 var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
-var tape = require('../../lib/thali-tape');
+var tape = require('../lib/thali-tape');
 
 function newPeerIdentifier() {
   return (+ new Date()).toString() + "." + process.pid;
@@ -20,7 +20,7 @@ var test = tape({
     t.end();
   },
   teardown: function(t) {
-    if(emitterToShutDown != null){
+    if (emitterToShutDown != null){
       console.log("calling stopBroadcasting");
       emitterToShutDown.stopBroadcasting(function (err4) {
         console.log("stopBroadcasting returned " + err4);
