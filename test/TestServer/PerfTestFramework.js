@@ -71,16 +71,22 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
     toComplete = devices.length;
 
+    // Set up the test parameters
+    var testData = configFile[test];
+    testData.peerCount = toComplete;
+
     devices.forEach(function(device) {
 
       device.results = null;
 
       device.socket.once('test data', function (data) {
 
+        // Cache results in the device object
         device.results = JSON.parse(data);
 
         if (--toComplete == 0) {
 
+          // When all devices have completed, collate results
           logger(platform + ' test ID ' + test + ' done now');
 
           devices.forEach(function(_device) {
@@ -96,33 +102,35 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
               });
             }
 
+            // Let the completed device know it can tear down the current test
             _device.socket.emit("stop");
           });
 
           tests.shift();
           if (tests.length) {
+            // Start the next test if any
             process.nextTick(function() {
               console.log("Continuing to next test: " + tests[0]);
               doTest(tests[0]);
             });
           } else {
+            // All tests are complete, generate the result report
             console.log("ALL DONE !!!");
             var processedResults = ResultsProcessor.process(results, devices);
             console.log(processedResults);
+
+            // Let the devices know we're completely finished
             devices.forEach(function(_device) {
               _device.socket.emit("end");
             }); 
+
+            // Quit !!
             process.exit(0);
           }
         }
       });
 
-      console.log("starting:" + test);
-      var testData = configFile[test];
-      console.log(testData);
-
-      testData.peerCount = devices.length;
-
+      // Begin the test..
       device.socket.emit(
         "start", 
         { testName: test, testData: testData, addressList: btAddresses }
