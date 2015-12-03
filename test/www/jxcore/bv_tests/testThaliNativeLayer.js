@@ -190,7 +190,7 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
     });
   });
 });
-
+/*
 test('ThaliEmitter can connect and send data', function (t) {
 
   var server = net.createServer(function(s) {
@@ -228,7 +228,7 @@ test('ThaliEmitter can connect and send data', function (t) {
     });
   });
 });
-
+*/
 
 test('ThaliEmitter handles socket disconnect correctly', function (t) {
 
