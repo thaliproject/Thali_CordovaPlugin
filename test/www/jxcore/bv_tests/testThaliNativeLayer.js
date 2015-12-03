@@ -229,6 +229,7 @@ test('ThaliEmitter can connect and send data', function (t) {
   });
 });
 
+
 test('ThaliEmitter handles socket disconnect correctly', function (t) {
 
   var done = false;

@@ -1,8 +1,12 @@
 package io.jxcore.node;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 
 import android.util.Log;
@@ -18,18 +22,20 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
-
+import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 
 /**
  * Created by juksilve on 14.5.2015.
  */
 public class BtConnectorHelper implements BTConnector.Callback, BTConnector.ConnectSelector {
+    private static final String TAG = BtConnectorHelper.class.getName();
 
     private final Context context;
 
     private final String serviceTypeIdentifier = "Cordovap2p._tcp";
-    private final String BtUUID                = "fa87c0d0-afac-11de-8a39-0800200c9a66";
-    private final String Bt_NAME               = "Thaili_Bluetooth";
+    private final String BtUUID                = "0bbfc6ef-14cc-4ab2-af63-b92e887227ae";
+    private final String Bt_NAME               = "Thali_Bluetooth";
 
 
     private final CopyOnWriteArrayList<ServiceItem> lastAvailableList = new CopyOnWriteArrayList<ServiceItem>();
@@ -46,6 +52,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     final Thread.UncaughtExceptionHandler mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
         @Override
         public void uncaughtException(Thread thread, Throwable ex) {
+            Log.e(TAG, "Uncaught exception: " + ex.getMessage(), ex);
             final Throwable tmpException = ex;
             new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
                 @Override
@@ -143,7 +150,7 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         boolean ret = false;
         for (BtToServerSocket rSocket : mServerSocketList) {
             if (rSocket != null) {
-                Log.i("BtConnectorHelper","Disconnect:::Stop : mBtToServerSocket :" + rSocket.getName());
+                Log.i("BtConnectorHelper", "Disconnect:::Stop : mBtToServerSocket :" + rSocket.getName());
                 rSocket.Stop();
                 ret = true;
             }
@@ -154,9 +161,39 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         return ret;
     }
 
-    private String GetBluetoothAddress(){
+    public String GetBluetoothAddress(){
+
         BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
         return bluetooth == null ? "" : bluetooth.getAddress();
+    }
+
+    @TargetApi(18)
+    @SuppressLint("NewApi")
+    public String isBLEAdvertisingSupported() {
+
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            return "Build version is " + Build.VERSION.SDK_INT;
+        }
+
+        if (!this.context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)){
+            return "Feature FEATURE_BLUETOOTH_LE not found";
+        }
+
+        BluetoothManager tmpMan = (BluetoothManager) this.context.getSystemService(Context.BLUETOOTH_SERVICE);
+        if (tmpMan == null) {
+            return "Can not get BLUETOOTH_SERVICE";
+        }
+
+        BluetoothAdapter tmpAdapter = tmpMan.getAdapter();
+        if (tmpAdapter == null ) {
+            return "got NULL BluetoothAdapter";
+        }
+
+        if(!tmpAdapter.isMultipleAdvertisementSupported()){
+            return "MultipleAdvertisement not supported";
+        }
+
+        return null;
     }
 
     private ConnectStatusCallback mConnectStatusCallback = null;
@@ -188,7 +225,14 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
         }
 
         if (selectedDevice == null) {
-            connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
+        /*    connectStatusCallback.ConnectionStatusUpdate("Device Address for " + toPeerId + " not found from Discovered device list.", -1);
+            return;
+            */
+            selectedDevice = new ServiceItem(toPeerId, toPeerId, toPeerId, "", "", "");
+        }
+
+        if(!BluetoothAdapter.checkBluetoothAddress(selectedDevice.peerAddress)){
+            connectStatusCallback.ConnectionStatusUpdate("Bluetooth address for the device is invalid : " + selectedDevice.peerAddress, -1);
             return;
         }
 
@@ -457,6 +501,9 @@ public class BtConnectorHelper implements BTConnector.Callback, BTConnector.Conn
     @Override
     public void PeerDiscovered(ServiceItem serviceItem) {
         boolean wasPrevouslyAvailable = false;
+
+        Log.i("BtConnectorHelper","PeerDiscovered BtAddress : " + serviceItem.peerAddress + ", Name: " + serviceItem.peerName + ", WifiDirectName: " + serviceItem.deviceName + ", WifiDirect Address: " + serviceItem.deviceAddress  + ", peerId: " + serviceItem.peerId);
+
 
         for (ServiceItem lastItem : lastAvailableList) {
             if (lastItem != null && serviceItem.deviceAddress.equalsIgnoreCase(lastItem.deviceAddress)) {

@@ -38,7 +38,7 @@ test('ThaliReplicationManager can call start without error', function (t) {
 
   var starting = false;
   var started = false;
-  var stopping = false
+  var stopping = false;
   var stopped = false;
 
   // Check that TRM starts and emits event in the expected order
@@ -48,12 +48,12 @@ test('ThaliReplicationManager can call start without error', function (t) {
     t.fail('startError event should not be emitted');
     t.end();
   });
- 
+
   manager.on('stopError', function () {
     t.fail('stopError event should not be emitted');
     t.end();
   });
-  
+
   manager.on('starting', function () {
     t.ok(starting == false && started == false && stopping == false && stopped == false,
          "starting event should occur in right order");
@@ -90,12 +90,12 @@ test('ThaliReplicationManager receives identity', function (t) {
     t.fail('startError event should not be emitted');
     t.end();
   });
- 
+
   manager.on('stopError', function () {
     t.fail('stopError event should not be emitted');
     t.end();
   });
-  
+
   manager.on('started', function () {
     manager.getDeviceIdentity(function (err, deviceName) {
       t.notOk(err, "getDeviceIdentity should not return an error");
@@ -115,7 +115,7 @@ test('ThaliReplicationManager replicates database', function (t) {
 
   /*
     Create a local doc with local device name and sync to peer. On receiving that they'll swap
-    their device name for ours and sync it back. When both sides have successfully done this and 
+    their device name for ours and sync it back. When both sides have successfully done this and
     have seen the changes we know two-sync is working.
   */
 
@@ -132,7 +132,7 @@ test('ThaliReplicationManager replicates database', function (t) {
     var mydoc = {
       _id: mydocid
     };
- 
+
     // Listen for changes from the other side
 
     var localSeq = null;
@@ -172,7 +172,7 @@ test('ThaliReplicationManager replicates database', function (t) {
             console.log(util.inspect(err));
             console.log(util.inspect(result));
           });
-        } else { 
+        } else {
           t.ok(change.seq > remoteSeq, "Remote changes occur in strict order");
           seenRemoteChanges = true;
           if (seenLocalChanges) {
@@ -191,12 +191,12 @@ test('ThaliReplicationManager replicates database', function (t) {
       t.fail('startError event should not be emitted');
       t.end();
     });
-     
+
     manager.on('stopError', function () {
       t.fail('stopError event should not be emitted');
       t.end();
     });
-      
+
     manager.on('started', function () {
       manager.getDeviceIdentity(function (err, deviceName) {
 
@@ -207,19 +207,17 @@ test('ThaliReplicationManager replicates database', function (t) {
         mydevicename = deviceName;
         mydoc.data = mydevicename;
         // Use blob to ensure we can transfer large files
-        mydoc.blob = randomstring.generate(365 * 1024);
+        mydoc.blob = randomstring.generate(1024 * 1024);
 
         var r = db.put(mydoc, function (err, result) {
           err = err ? " (" + err + ")" : "";
           t.notOk(err, "Should be able to put doc without error" + err);
         });
-      }); 
+      });
     });
 
     var app = express();
     app.disable('x-powered-by');
-    app.use(bodyParser.json());
-    app.use(bodyParser.urlencoded({ extended: true }));
     app.use('/db', require('express-pouchdb')(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
     app.listen(4242, function() {
       // Start replication

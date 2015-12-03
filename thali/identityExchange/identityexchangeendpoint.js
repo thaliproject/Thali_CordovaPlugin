@@ -98,16 +98,16 @@ module.exports = function (app, replicationManager, identityExchange) {
         peerFriendlyName = req.body.peerFriendlyName;
         identityExchange.startIdentityExchange(peerFriendlyName, function (err) {
           if (err) {
-            resolve();
-            return res.status(500).json({
+            res.status(500).json({
               errorCode: 'E_STARTIDEXCHANGEFAILED',
               errorDescription: 'Start Identity Exchange Failed'
             });
+            return resolve();
           }
 
           peerStarted = true;
           res.sendStatus(201);
-          resolve();
+          return resolve();
         });
       });
     });

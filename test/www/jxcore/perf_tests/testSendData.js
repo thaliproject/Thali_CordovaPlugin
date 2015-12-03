@@ -17,7 +17,9 @@
 
 'use strict';
 
-var events = require('events');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var ThaliEmitter = require('thali/thaliemitter');
 
 var SendDataTCPServer = require('./SendDataTCPServer');
@@ -25,7 +27,6 @@ var SendDataConnector = require('./SendDataConnector');
 
 /*
 "data": {
-    "count"          : Specifies the number of peers we would need to do the connections to
     "timeout"        : Specifies the timeout when we would end test (in case we have not already finished all connection rounds yet)
     "rounds"         : Specifies how many connections to each peer we should be doing
     "dataAmount"     : Specifies the amount of data we need ro send over each connection made
@@ -35,13 +36,16 @@ var SendDataConnector = require('./SendDataConnector');
     }
 */
 
-function testSendData(jsonData,name) {
+function testSendData(jsonData, name, deviceCount, addressList) {
     var self = this;
+    console.log('testSendData created ' + jsonData + ", bt-address lenght : " + addressList.length);
     this.name = name;
     this.commandData = JSON.parse(jsonData);
     this.emitter = new ThaliEmitter();
-    this.toFindCount = this.commandData.count;
-    console.log('testSendData created ' + jsonData);
+    this.toFindCount = deviceCount;
+    if(addressList.length > 0) {
+        this.BluetoothAddressList = addressList;
+    }
 
     this.startTime = new Date();
     this.endTime = new Date();
@@ -54,8 +58,32 @@ function testSendData(jsonData,name) {
     this.doneCallback = function (data) {
         console.log('---- round done--------');
         var resultData = JSON.parse(data);
-        for (var i = 0; i < resultData.length; i++) {
-            self.resultArray.push(resultData[i]);
+
+        var peerAddress  = 0;
+        var peerTryCount = 0;
+        var areAllTestOk = true;
+
+        // if we use the address list, then we try getting all connections to be successful
+        // thus we re-try the ones that were not successful
+        // and we schedule the re-try to be handled after all other peers we have in the list currently
+        if(self.BluetoothAddressList) {
+            for (var i = 0; i < resultData.length; i++) {
+                if (resultData[i].result != "OK") {
+                    areAllTestOk = false;
+                    peerAddress = resultData[i].name;
+                    peerTryCount = resultData[i].tryCount;
+                }
+            }
+        }
+
+        // if all was ok, then we'll store the data values, othervise we'll put the peer back to the address list
+        if(areAllTestOk) {
+            for (var i = 0; i < resultData.length; i++) {
+                self.resultArray.push(resultData[i]);
+            }
+        }else if(peerAddress != 0){ //we gotta re-try it later
+            console.log('---- gotta redo : ' + peerAddress + ", try count now: " + peerTryCount);
+            self.BluetoothAddressList.push({"address":peerAddress,"tryCount":peerTryCount});
         }
 
         self.testStarted = false;
@@ -70,7 +98,15 @@ function testSendData(jsonData,name) {
     this.resultArray = [];
 
     this.peerAvailabilityChanged = function(peers) {
-        console.log('peerAvailabilityChanged ' + peers);
+
+        //we have address list, so we use it instead
+        if(self.BluetoothAddressList){
+            return;
+        }
+
+        console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
+
+
         for (var i = 0; i < peers.length; i++) {
             var peer = peers[i];
             if ((!self.foundPeers[peer.peerIdentifier]) || (!self.foundPeers[peer.peerIdentifier].doneAlready)) {
@@ -85,11 +121,12 @@ function testSendData(jsonData,name) {
     }
 }
 
-testSendData.prototype = new events.EventEmitter;
+inherits(testSendData, EventEmitter);
 
-testSendData.prototype.start = function() {
+testSendData.prototype.start = function(serverPort) {
     var self = this;
-    this.testServer = new SendDataTCPServer();
+    this.doneAlready = false;
+    this.testServer = new SendDataTCPServer(serverPort);
     this.testConnector = new SendDataConnector(this.commandData.rounds,this.commandData.dataAmount,this.commandData.conReTryTimeout,this.commandData.conReTryCount,this.commandData.dataTimeout);
     this.testConnector.on('done', this.doneCallback);
     this.testConnector.on('debug',this.debugCallback);
@@ -104,6 +141,12 @@ testSendData.prototype.start = function() {
             console.log('StartBroadcasting returned error ' + err);
         } else {
             console.log('StartBroadcasting started ok');
+
+            if(self.BluetoothAddressList) {
+                if (!self.testStarted) {
+                    self.startWithNextDevice();
+                }
+            }
         }
     });
 
@@ -122,6 +165,8 @@ testSendData.prototype.start = function() {
 }
 
 testSendData.prototype.stop = function(doReport) {
+    var self = this;
+
     console.log('testSendData stopped');
 
     this.emitter.removeListener(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
@@ -138,20 +183,21 @@ testSendData.prototype.stop = function(doReport) {
         this.timerId = null;
     }
 
-    this.testServer.stopServer();
-
-    if(this.testConnector != null){
-        this.testConnector.Stop();
-        this.testConnector.removeListener('done', this.doneCallback);
-        this.testConnector.removeListener('debug', this.debugCallback);
-        this.testConnector = null;
-    }
-
     if(doReport){
-        this.weAreDoneNow();
+        this.emit('debug', "---- sendReportNow");
+        this.sendReportNow();
+    }
+    if(this.testConnector != null){
+        this.testConnector.Stop(function () {
+            self.testConnector.removeListener('done', self.doneCallback);
+            self.testConnector.removeListener('debug', self.debugCallback);
+            self.testConnector = null;
+        });
     }
 
-    this.doneAlready = true;
+    this.testServer.stopServer(function () {
+        // No need to do anything since this is the end of this test
+    });
 }
 
 testSendData.prototype.startWithNextDevice = function() {
@@ -159,27 +205,51 @@ testSendData.prototype.startWithNextDevice = function() {
         return;
     }
 
-    if(this.foundSofar >= this.toFindCount){
-        this.endReason = "OK";
-        this.weAreDoneNow();
-        return;
-    }
+    if(this.BluetoothAddressList){
 
-    for(var peerId in this.foundPeers){
-        if(this.foundPeers[peerId].peerAvailable && !this.foundPeers[peerId].doneAlready){
-            this.testStarted = true;
-            this.emit('debug', '--- start for : ' + this.foundPeers[peerId].peerName + ' ---');
-            this.foundSofar++
-            console.log('device[' + this.foundSofar +  ']: ' + this.foundPeers[peerId].peerIdentifier);
-
-            this.foundPeers[peerId].doneAlready = true;
-            this.testConnector.Start(this.foundPeers[peerId]);
+        if(this.BluetoothAddressList.length <= 0){
+            this.endReason = "OK";
+            this.weAreDoneNow();
             return;
+        }
+
+        console.log('do fake peer & start');
+
+        var fakePeer = {};
+        fakePeer.peerAvailable = true;
+
+        var addressItem = this.BluetoothAddressList.shift();
+        fakePeer.peerName       = addressItem.address;
+        fakePeer.peerIdentifier = addressItem.address;
+        fakePeer.tryCount       = (addressItem.tryCount + 1);
+
+        console.log('Connect to fake peer: ' + fakePeer.peerIdentifier);
+        this.testConnector.Start(fakePeer);
+        return;
+    }else {
+        if (this.foundSofar >= this.toFindCount) {
+            this.endReason = "OK";
+            this.weAreDoneNow();
+            return;
+        }
+
+        for (var peerId in this.foundPeers) {
+            if (this.foundPeers[peerId].peerAvailable && !this.foundPeers[peerId].doneAlready) {
+                this.testStarted = true;
+                this.emit('debug', '--- start for : ' + this.foundPeers[peerId].peerName + ' ---');
+                this.foundSofar++
+                console.log('device[' + this.foundSofar + ']: ' + this.foundPeers[peerId].peerIdentifier);
+
+                this.foundPeers[peerId].doneAlready = true;
+                this.testConnector.Start(this.foundPeers[peerId]);
+                return;
+            }
         }
     }
 }
 
 testSendData.prototype.weAreDoneNow = function() {
+    var self = this;
 
     if (this.doneAlready || this.testConnector == null) {
         return;
@@ -192,12 +262,49 @@ testSendData.prototype.weAreDoneNow = function() {
 
     console.log('weAreDoneNow , resultArray.length: ' + this.resultArray.length);
     this.doneAlready = true;
+    this.sendReportNow();
+
+    if(this.testConnector != null){
+        this.testConnector.Stop(function () {
+            self.testConnector.removeListener('done', self.doneCallback);
+            self.testConnector.removeListener('debug', self.debugCallback);
+            self.testConnector = null;
+        });
+    }
+
+    // The test server can't be stopped here, because even though this device
+    // is done with it's own list of peers, it might be still acting as a test
+    // peer for some other devices and thus the server is might still be needed.
+}
+
+testSendData.prototype.sendReportNow = function() {
+
     this.endTime = new Date();
 
-    //then get any data that has not been reported yet. i.e. the full rounds have not been done yet
-    var resultData = this.testConnector.getResultArray();
-    for (var i = 0; i < resultData.length; i++) {
-        this.resultArray.push(resultData[i]);
+    if(this.testConnector != null) {
+        var isAlreadyAdded = false;
+        var currentTest = this.testConnector.getCurrentTest();
+
+        //then get any data that has not been reported yet. i.e. the full rounds have not been done yet
+        var resultData = this.testConnector.getResultArray();
+        for (var i = 0; i < resultData.length; i++) {
+            this.resultArray.push(resultData[i]);
+
+            if(currentTest && currentTest.name == resultData[i].name){
+                isAlreadyAdded = true;
+            }
+        }
+
+        if (!isAlreadyAdded && currentTest) {
+            this.resultArray.push(currentTest);
+        }
+    }
+    if(this.BluetoothAddressList){
+        for(var ii = 0; ii < this.BluetoothAddressList.length; ii++){
+            if(this.BluetoothAddressList[ii]){
+                this.resultArray.push({"connections":this.BluetoothAddressList[ii].tryCount, "name":this.BluetoothAddressList[ii].address,"time":0,"result":"Fail"});
+            }
+        }
     }
 
     this.emit('debug', "---- finished : send-data -- ");

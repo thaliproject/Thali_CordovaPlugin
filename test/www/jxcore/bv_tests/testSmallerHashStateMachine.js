@@ -23,23 +23,6 @@ var thePeerId = null;
 var smallerHashStateMachine = null;
 var largerHashStateMachine = null;
 
-// TODO: Remove this when JXcore 0.3.0.7 is released.
-/**
- * We have a silly temporary bug that is already fixed in JXcore that makes nock not work
- * on JXcore. But the fix won't be released until 0.3.0.7 so for now I have to disable the
- * nock tests. But I can still run them on Node.
- * @param t
- * @param testFun
- */
-function disableIfJxCore(t, testFun) {
-  if (typeof jxcore !== 'undefined') {
-    t.comment('THIS TEST IS DISABLED DUE TO NOCK COMPATIBILITY ISSUE - HAS JXCORE 0.3.0.7 BEEN RELEASED YET?');
-    t.end();
-    return;
-  }
-  testFun(t);
-}
-
 var test = tape({
   setup: function(t) {
     thePeerId = '23po98r;lo23ihjfl;wijf;lwaijsf;loi3hjf;lashf;lohwass;klfihsa3;klifhas;kliefh;saklifhos389;alhf';
@@ -254,16 +237,15 @@ test('200 cb responses with problem', function(t) {
         pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength)) }
     ];
 
-    var portArray = [];
-    testArray.forEach(function(responseBody) {
-      portArray.push(port);
-      testServer
-        .post(identityExchangeUtils.cbPath)
-        .reply(200, responseBody);
-    });
-
-    runBad200Test(t, identityExchangeUtils.cbPath, testArray.length);
+  var portArray = [];
+  testArray.forEach(function(responseBody) {
+    portArray.push(port);
+    testServer
+      .post(identityExchangeUtils.cbPath)
+      .reply(200, responseBody);
   });
+
+  runBad200Test(t, identityExchangeUtils.cbPath, testArray.length);
 });
 
 test('200 rnmine responses with problem', function(t) {
@@ -278,52 +260,47 @@ test('200 rnmine responses with problem', function(t) {
       { foo: 'ick'}
     ];
 
-    var portArray = [];
-    testArray.forEach(function(responseBody) {
-      portArray.push(port);
-      testServer
-        .post(identityExchangeUtils.cbPath)
-        .reply(200, goodCbMockResponse())
-        .post(identityExchangeUtils.rnMinePath)
-        .reply(200, responseBody);
-    });
-
-    runBad200Test(t, identityExchangeUtils.rnMinePath, testArray.length);
+  var portArray = [];
+  testArray.forEach(function(responseBody) {
+    portArray.push(port);
+    testServer
+      .post(identityExchangeUtils.cbPath)
+      .reply(200, goodCbMockResponse())
+      .post(identityExchangeUtils.rnMinePath)
+      .reply(200, responseBody);
   });
+
+  runBad200Test(t, identityExchangeUtils.rnMinePath, testArray.length);
 });
 
 test('Just weird cb response error code,', function(t) {
-  disableIfJxCore(t, function(t) {
-    testServer
-      .post(identityExchangeUtils.cbPath)
-      .reply(500, {});
-    smallerHashStateMachine =
-      new SmallerHashStateMachine(new TRMMock(), endlessMockConnectionTableLoop(t, thePeerId, port),
-        thePeerId, bigHash, smallHash);
-    smallerHashStateMachine.on(SmallerHashStateMachine.Events.GotUnclassifiedError, function(path) {
-      t.equal(path, identityExchangeUtils.cbPath);
-      t.end();
-    });
-    smallerHashStateMachine.start();
+  testServer
+    .post(identityExchangeUtils.cbPath)
+    .reply(500, {});
+  smallerHashStateMachine =
+    new SmallerHashStateMachine(new TRMMock(), endlessMockConnectionTableLoop(t, thePeerId, port),
+      thePeerId, bigHash, smallHash);
+  smallerHashStateMachine.on(SmallerHashStateMachine.Events.GotUnclassifiedError, function(path) {
+    t.equal(path, identityExchangeUtils.cbPath);
+    t.end();
   });
+  smallerHashStateMachine.start();
 });
 
 test('Just weird rnmine response error code,', function(t) {
-  disableIfJxCore(t, function(t) {
-    testServer
-      .post(identityExchangeUtils.cbPath)
-      .reply(200, goodCbMockResponse)
-      .post(identityExchangeUtils.rnMinePath)
-      .reply(500, {});
-    smallerHashStateMachine =
-      new SmallerHashStateMachine(new TRMMock(), endlessMockConnectionTableLoop(t, thePeerId, port),
-        thePeerId, bigHash, smallHash);
-    smallerHashStateMachine.on(SmallerHashStateMachine.Events.GotUnclassifiedError, function(path) {
-      t.equal(path, identityExchangeUtils.rnMinePath);
-      t.end();
-    });
-    smallerHashStateMachine.start();
+  testServer
+    .post(identityExchangeUtils.cbPath)
+    .reply(200, goodCbMockResponse)
+    .post(identityExchangeUtils.rnMinePath)
+    .reply(500, {});
+  smallerHashStateMachine =
+    new SmallerHashStateMachine(new TRMMock(), endlessMockConnectionTableLoop(t, thePeerId, port),
+      thePeerId, bigHash, smallHash);
+  smallerHashStateMachine.on(SmallerHashStateMachine.Events.GotUnclassifiedError, function(path) {
+    t.equal(path, identityExchangeUtils.rnMinePath);
+    t.end();
   });
+  smallerHashStateMachine.start();
 });
 
 test('Handling 404 on cb response', function(t) {
@@ -343,21 +320,19 @@ test('Handling 404 on cb response', function(t) {
 });
 
 test('Handling 404 on rnmine response', function(t) {
-  disableIfJxCore(t, function(t) {
-    testServer
-      .post(identityExchangeUtils.cbPath)
-      .reply(200, goodCbMockResponse())
-      .post(identityExchangeUtils.rnMinePath)
-      .reply(404, '');
-    var smallerHashStateMachine =
-      new SmallerHashStateMachine(new TRMMock(), endlessMockConnectionTableLoop(t, thePeerId, port), thePeerId, bigHash,
-        smallHash);
-    smallerHashStateMachine.on(SmallerHashStateMachine.Events.FourOhFour, function() {
-      smallerHashStateMachine.stop();
-      t.end();
-    });
-    smallerHashStateMachine.start();
+  testServer
+    .post(identityExchangeUtils.cbPath)
+    .reply(200, goodCbMockResponse())
+    .post(identityExchangeUtils.rnMinePath)
+    .reply(404, "");
+  var smallerHashStateMachine =
+    new SmallerHashStateMachine(new TRMMock(), endlessMockConnectionTableLoop(t, thePeerId, port), thePeerId, bigHash,
+      smallHash);
+  smallerHashStateMachine.on(SmallerHashStateMachine.Events.FourOhFour, function() {
+    smallerHashStateMachine.stop();
+    t.end();
   });
+  smallerHashStateMachine.start();
 });
 
 test('Handling 400 w/notDoingIdentityExchange on cb response', function(t) {

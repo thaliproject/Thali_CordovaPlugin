@@ -1,13 +1,19 @@
 
 {
-    "name": "performance tests",
-    "description": "basic performance tests for Thali apps framework",
-    "startDeviceCount": "3",
+    "name": "Performance tests",
+    "description": "Performance tests for Thali",
     "tests": [
-        {"name": "testFindPeers.js", "timeout": "30000","data": {"count": "2","timeout": "20000"}},
-        {"name": "testReConnect.js", "timeout": "700000","data": {"count": "2","timeout": "600000","rounds":"6","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
-        {"name": "testSendData.js", "timeout": "7000000","data": {"count": "2","timeout": "6000000","rounds":"3","dataAmount":"1000000","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}}
+        {
+            "name": "testSendData.js",
+            "servertimeout": 1200000,
+            "data": {
+                "timeout": 1000000,
+                "rounds": 1,
+                "dataTimeout": 10000,
+                "dataAmount": 100000,
+                "conReTryTimeout": 5000,
+                "conReTryCount": 5
+            }
+        }
     ]
 }
-
-
