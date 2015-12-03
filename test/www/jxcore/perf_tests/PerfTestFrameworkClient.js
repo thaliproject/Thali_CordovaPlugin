@@ -117,7 +117,6 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
     self.currentTest = new self.tests[testData.testName] (
       testData.testData,
       self.deviceName,
-      null,
       shuffle(testData.addressList)
     );
     self.setCallbacks(self.currentTest);

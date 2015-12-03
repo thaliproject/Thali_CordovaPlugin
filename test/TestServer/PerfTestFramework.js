@@ -118,9 +118,11 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
       var testData = configFile[test];
       console.log(testData);
 
+      testData.peerCount = devices.length;
+
       device.socket.emit(
         "start", 
-        { testName: test, testData: testData, device: null, addressList: btAddresses }
+        { testName: test, testData: testData, addressList: btAddresses }
       );
     });
   }

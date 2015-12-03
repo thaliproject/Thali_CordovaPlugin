@@ -272,7 +272,7 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
     this.emit('debug', 'Round of send data to peer ' + resultItem.name +
                        ' done with result: ' + resultItem.result);
 
-    if(this.roundsToDo > this.doneRounds){
+    if (this.roundsToDo > this.doneRounds){
         this.tryRounds = 0;
         this.receivedCounter = 0;
 

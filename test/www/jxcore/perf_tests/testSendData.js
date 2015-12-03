@@ -36,13 +36,13 @@ var SendDataConnector = require('./SendDataConnector');
     }
 */
 
-function testSendData(jsonData, name, deviceCount, addressList) {
+function testSendData(jsonData, name, addressList) {
     var self = this;
     console.log('testSendData created ' + jsonData + ", bt-address length : " + addressList.length);
     this.name = name;
     this.commandData = jsonData;
     this.emitter = new ThaliEmitter();
-    this.toFindCount = deviceCount;
+    this.toFindCount = jsonData.peerCount;
     this.BluetoothAddressList = addressList;
 
     this.startTime = new Date();
@@ -203,8 +203,6 @@ testSendData.prototype.startWithNextDevice = function() {
         return;
     }
 
-    console.log(this.BluetoothAddressList);
-
     if (this.BluetoothAddressList > 0) {
 
         if (this.BluetoothAddressList.length <= 0){
@@ -265,7 +263,7 @@ testSendData.prototype.weAreDoneNow = function() {
     this.doneAlready = true;
     this.sendReportNow();
 
-    if(this.testConnector != null){
+    if (this.testConnector != null){
         this.testConnector.Stop(function () {
             self.testConnector.removeListener('done', self.doneCallback);
             self.testConnector.removeListener('debug', self.debugCallback);
