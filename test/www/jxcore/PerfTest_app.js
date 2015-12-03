@@ -8,6 +8,7 @@
 
 var testUtils = require("./lib/testUtils");
 var fs = require('fs');
+var serverAddress = require('server-address.js');
 
 testUtils.toggleRadios(true);
 
@@ -38,11 +39,7 @@ else if (jxcore.utils.OSInfo().isAndroid) {
     Mobile('GetDeviceName').callNative(function (name) {
 
       deviceName = name + "_PT" + Math.round((Math.random() * (10000)));
-
-      console.log('my name is : ' + deviceName);
       testUtils.setMyName(deviceName);
-
-      console.log('attempting to connect to test coordinator');
 
       // once we have had the BT off and we just turned it on,
       // we need to wait untill the BLE support is reported rigth way

@@ -9,7 +9,7 @@ To solve this we use the Test Server. The Test Server runs as a stand alone node
 that is accessible to all the test devices via local WiFi. We use the Test Server both for running device based
 tests locally as well as for coordinating tests in the continuous integration environment.
 
-The Test Server is a singleton Node.js process. It's IP address is written in a file called serveraddress.json that
+The Test Server is a singleton Node.js process. It's IP address is written in a file called server-address.js that
 is passed to all of the devices. When the devices run their tests they will use the IP address in that file to
 find and communicate with the Test Server.
 
@@ -115,7 +115,7 @@ the number of devices it discovered.
 
 ### Device Logic
 
-When a device first starts running the test framework it MUST read its `serveraddress.json` file to find the IP address
+When a device first starts running the test framework it MUST read its `server-address.js` file to find the IP address
 of its designated Test Server and then it MUST connect to that Test Server over port 3000. If a connection cannot be
 successfully established the device MUST retry establishing the connection until it either succeeds or the test code
 is terminated on the device.

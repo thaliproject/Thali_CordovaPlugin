@@ -21,7 +21,7 @@
 'use strict';
 var tape = require('tape-catch');
 var CoordinatorConnector = require('./CoordinatorConnector');
-var parsedJSON = require('../serveraddress.json');
+var serverAddress = require('../server-address.js');
 
 var testUtils = require("./testUtils");
 
