@@ -59,7 +59,7 @@ function getCoordinator()
     testUtils.toggleRadios(false);
   });
 
-  _coordinator.connect(parsedJSON[0].address, 3000);
+  _coordinator.connect(serverAddress, 3000);
 
   return _coordinator;
 }
