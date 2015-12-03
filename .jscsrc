@@ -14,7 +14,10 @@
     "requireDescriptionCompleteSentence": true,
     "requireReturnTypes": true
   },
-  "maximumLineLength": 80,
+  "maximumLineLength": {
+    "value": 80,
+    "allExcept": ["regex", "urlComments", "require"]
+  },
   "maximumNumberOfLines": 1000,
   "requireCamelCaseOrUpperCaseIdentifiers": true,
   "requireCapitalizedConstructors": true,
