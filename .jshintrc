@@ -1,3 +1,22 @@
 {
-  "node": true
+  "maxlen": 80,
+  "esversion": 5,
+  "curly": true,
+  "eqeqeq": true,
+  "noarg": true,
+  "sub": true,
+  "undef": true,
+  "unused": "vars",
+  "eqnull": true,
+  "node": true,
+  "strict": "global",
+  "nonbsp": true,
+  "forin": true,
+  "futurehostile": true,
+  "expr": true,
+  "nonew": true,
+  "singleGroups": true,
+  "latedef": true,
+  "freeze": true,
+  "maxdepth": 3
 }
