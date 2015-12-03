@@ -67,7 +67,10 @@ io.on('connection', function(socket) {
   });
 
   socket.on('present', function(msg) {
-  
+ 
+    // present - The device is announcing it's presence and telling us 
+    // whether it's running perf or unit tests
+ 
     var _device = JSON.parse(msg);
     if (!_device.os || !_device.name || !_device.type) {
       console.log("malformed message");
@@ -87,14 +90,14 @@ io.on('connection', function(socket) {
     {
       case 'unittest' : 
       {
-        console.log("New unit test device..");
+        console.log("New unit test device:" + _device.name);
         unitTestManager.addDevice(device);
       }
       break;
 
       case 'perftest' : 
       {
-        console.log("New perf test device..");
+        console.log("New perf test device:", + _device.name);
         perfTestManager.addDevice(device);
       }
       break;
