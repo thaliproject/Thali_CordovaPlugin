@@ -320,20 +320,12 @@ module.exports = function(callback, appRootDirectory) {
   appRootDirectory = appRootDirectory || path.join(__dirname, '../../../../../');
   var thaliDontCheckIn = path.join(appRootDirectory, "thaliDontCheckIn" );
   var appScriptsFolder = path.join(appRootDirectory, "plugins/org.thaliproject.p2p/scripts");
-  var jxcoreFolder = path.join(appRootDirectory, 'www/jxcore' );
 
   var jxCoreVersionNumber = "0.0.8";
 
   var thaliProjectName = "thaliproject";
   var thaliDepotName = "Thali_CordovaPlugin";
   var thaliBranchName = "master";
-
-  if (!fs.existsSync(jxcoreFolder)) {
-    var jxcoreFolderNotFoundError = 'Could not locate JXCore folder. Exiting the thali plugin installation..';
-    console.log(jxcoreFolderNotFoundError);
-    callback(new Error(jxcoreFolderNotFoundError), null);
-    return;
-  }
 
   fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, jxCoreVersionNumber)
     .then(function () {
