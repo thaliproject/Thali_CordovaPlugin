@@ -83,13 +83,13 @@ test('failed to extract public key because of corrupt pkcs12 file',
   function (t) {
   var errorMessage = null,
       badFileLocation = path.join(__dirname, 'pkcs12folderbad');
-      
+
   var cryptoErrorMessage = 'error thrown by extractPublicKey() function';
 
   Mobile.setGetDocumentsPathReturnValues(errorMessage, badFileLocation);
 
   cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
-    t.equal(err, cryptoErrorMessage);
+    t.equal(err.message, cryptoErrorMessage);
     t.end();
   });
 });

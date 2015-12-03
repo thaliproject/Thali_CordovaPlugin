@@ -18,5 +18,6 @@
   "singleGroups": true,
   "latedef": true,
   "freeze": true,
-  "maxdepth": 3
+  "maxdepth": 3,
+  "predef": [ "Mobile" ]
 }
