@@ -20,7 +20,6 @@
 
 'use strict';
 var tape = require('tape-catch');
-var WrappingTape = require('wrapping-tape');
 var CoordinatorConnector = require('./CoordinatorConnector');
 var parsedJSON = require('../serveraddress.json');
 
@@ -224,4 +223,4 @@ thaliTape.begin = function() {
 
 thaliTape.getCoordinator = getCoordinator;
 
-module.exports = (typeof jxcore == 'undefined' || jxcore.utils.OSInfo().isMobile) ? thaliTape : require("WrappingTape");
+module.exports = (typeof jxcore == 'undefined' || jxcore.utils.OSInfo().isMobile) ? thaliTape : require("wrapping-tape");
