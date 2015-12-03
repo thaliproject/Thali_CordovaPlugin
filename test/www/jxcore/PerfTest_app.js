@@ -72,12 +72,8 @@ else if (jxcore.utils.OSInfo().isAndroid) {
  code for handling test communications
  -----------------------------------------------------------------------------------*/
 
+// The test framework client will coordinate everything from here..
 var testFramework = new TestFrameworkClient(deviceName, bluetoothAddress);
 
-testFramework.on('start_tests', function (data) {
-  console.log('got start_tests event with data : ' + data);
-});
-
-
 // Log that the app.js file was loaded.
-console.log('Test app app.js loaded');
+console.log('Perf Test app loaded loaded');

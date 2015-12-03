@@ -155,14 +155,6 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
 
 inherits(TestFrameworkClient, EventEmitter);
 
-/*
-{
-command : start/stop test,
-testName: filename of the test to execute,
-testData: parameters for the test case
-}
-*/
-
 // the Fisher-Yates (aka Knuth) Shuffle.
 // http://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
 function shuffle(array) {
