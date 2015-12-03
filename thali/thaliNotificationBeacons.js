@@ -2,7 +2,8 @@
 
 /*
 Matt: Please make sure to see if you can find Srikanth's code in Node and of course you can look at the Java source code
-and tests linked to in the spec, the latest version of which is at https://github.com/thaliproject/thali/blob/yaronyg-patch-4/presenceprotocolforopportunisticsynching.md
+and tests linked to in the spec, the latest version of which is at
+https://github.com/thaliproject/thali/blob/yaronyg-patch-4/presenceprotocolforopportunisticsynching.md
  */
 
 function NotificationBeacons() {}
@@ -10,7 +11,7 @@ function NotificationBeacons() {}
 /**
  * This function will generate a buffer containing the notification preamble and beacons for the given set of
  * public keys using the supplied private key and set to the specified seconds until expiration.
- * @param {string[]} publicKeysToNotify - An array of strings holding base64 encoded ECDH public keys
+ * @param {string[]} publicKeysToNotify - An array of strings holding base64 url safe encoded ECDH public keys
  * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the local device's public and private keys
  * @param {number} secondsUntilExpiration - The number of seconds into the future after which the beacons should expire.
  * @returns {Buffer} - A buffer containing the serialized preamble and beacons
@@ -22,7 +23,8 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
     // Note that you will need to use crypto.ECDH to implement this functionality which was introduced in Node 0.12
     // and isn't in JXcore yet. So for now please just develop using Node 0.12 or Node 4 until we get this back ported
     // to JXcore. The complication with using Node 0.12 is that it won't have the custom extension we need to
-    // crypto that JXcore provided to support HKDF. See http://jxcore.com/docs/crypto.html#cryptogeneratehkdfbytestogenerate-publickey-salt-digestbuffer
+    // crypto that JXcore provided to support HKDF. See
+    // http://jxcore.com/docs/crypto.html#cryptogeneratehkdfbytestogenerate-publickey-salt-digestbuffer
     // The work around is to use https://www.npmjs.com/package/node-hkdf but we *MUST* remove this quickly because
     // it doesn't have a published license.
 
@@ -30,7 +32,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 
 /**
  * Generates a single beacon using the specified values.
- * @param {string} publicKey - This is a base4 encoded public key we need to create a beacon for
+ * @param {string} publicKey - This is a base64 url safe encoded public key we need to create a beacon for
  * @param {ECDH} ecdhWithPrivateKey - A Crypto.ECDH object initialized with the local device's public and private keys
  * @param {Buffer} IV - The IV to use for this beacon (we use the same IV for all beacons)
  * @param {ECDH} Ke - A Crypto.ECDH object initialized with the public and private ephemeral key
@@ -48,19 +50,34 @@ function generateBeacon(publicKey, ecdhWithPrivateKey, IV, Ke, expirationValue) 
  * function is used to retrieve the full public key so that the beacon validation process can complete.
  * @callback addressBookCallback
  * @param {Buffer} unencryptedKeyId - This is a Buffer containing the unencryptedKeId
- * @returns {string} - The base64 encoded public key associated with the unecryptedKeyId or null if the remove peer is
- * not one the local peer recognizes or wishes to communicate with
+ * @returns {string} - The base64 url safe encoded public key associated with the unecryptedKeyId or null if the remote
+ * peer is not one the local peer recognizes or wishes to communicate with
+ */
+
+/**
+ * Response object describing a successfully parsed beacon.
+ *
+ * The definition of pskIdentifyField and psk are as given
+ * [here](https://github.com/thaliproject/thali/blob/gh-pages/pages/documentation/PresenceProtocolForOpportunisticSynching.md#processing-the-pre-amble-and-beacons).
+ *
+ * @typedef {Object} ParseBeaconsResponse
+ * @property {buffer} keyId The buffer contains the HKey as defined
+ * [here](https://github.com/thaliproject/thali/blob/gh-pages/pages/documentation/PresenceProtocolForOpportunisticSynching.md#processing-the-pre-amble-and-beacons).
+ * @property {string} pskIdentifyField This is the value to put in the PSK identity field of the ClientKeyExchange
+ * message when establishing a TLS connection using PSK. This value is generated
+ * @property {buffer} psk This is the calculated pre-shared key that will be needed to establish a TLS PSK connection.
  */
 
 /**
  *
  * @param {Buffer} beaconStreamWithPreAmble - A buffer stream containing the preamble and beacons
- * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the local device'spublic and private keys
+ * @param {Crypto.ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the local device's public and private
+ * keys
  * @param {addressBookCallback} addressBookCallback - A callback used by the function to determine if the identified
  * remote peer's public key hash represents a remote peer the local peer wishes to communicate with.
- * @returns {Buffer} - Null if none of the beacons could be validated as being targeted at the local peer or if
- * the beacon came from a remote peer the local peer does not wish to communicate with. Otherwise a Node.js Buffer
- * containing the unencryptedKeyId for the remote peer.
+ * @returns {ParseBeaconsResponse} - Null if none of the beacons could be validated as being targeted at the local peer
+ * or if the beacon came from a remote peer the local peer does not wish to communicate with. Otherwise a
+ * {@type ParseBeaconsResponse}.
  */
 NotificationBeacons.prototype.parseBeacons =
   function(beaconStreamWithPreAmble, ecdhForLocalDevice, addressBookCallback) {
