@@ -97,17 +97,22 @@ function declareTest(name, setup, teardown, opts, cb) {
       success = success && res.ok;
     });
 
+    t.on("end", function() {
+      // Tell the coordinator we ran the test and what the result was (true == pass)
+      getCoordinator().testComplete(name, success);
+    });
+
     // Run the test (cb) when the server tells us to    
     getCoordinator().once("start_test", function(_name) {
       cb(t);
-      // Tell the coordinator we ran the test and what the result was (true == pass)
-      getCoordinator().testComplete(name, success);
     });
   });
 
   tape("teardown", function(t) {
+      console.log("--- running teardown");
     // Run teardown function when the coordinator tells us
     getCoordinator().once("teardown", function(_name) {
+      console.log("running teardown");
       teardown(t);
       // The the coordinator we ran teardown for this test
       getCoordinator().teardownComplete(name);
