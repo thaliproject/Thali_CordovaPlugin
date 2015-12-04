@@ -7,6 +7,7 @@ var identityExchangeTestUtils = require('./identityExchangeTestUtils');
 var request = require('supertest-as-promised');
 var crypto = require('crypto');
 var Promise = require('lie');
+var urlSafeBase64 = require('urlsafe-base64');
 
 var thePeerId = null;
 var smallHash = null;
@@ -35,9 +36,9 @@ var test = tape({
     thePeerId = "This is a really long string or it would be if I just kept typing on and on forever and ever without nothing useful to say.";
     var smallAndBigHash = identityExchangeTestUtils.createSmallAndBigHash();
     smallHash = smallAndBigHash.smallHash;
-    smallHashBase64 = smallHash.toString('base64');
+    smallHashBase64 = urlSafeBase64.encode(smallHash);
     bigHash = smallAndBigHash.bigHash;
-    bigHashBase64 = bigHash.toString('base64');
+    bigHashBase64 = urlSafeBase64.encode(bigHash);
     setUpServer().then(function() {
       t.end();
     });
@@ -61,14 +62,14 @@ function passed(t) {
   return function(err, res) {
     t.notOk(err);
     t.end();
-  }
+  };
 }
 
 function valFourHundred(t, errorCode, pkOther) {
   return function(res) {
     t.equal(res.body.errorCode, errorCode);
     t.equal(res.body.pkOther, pkOther);
-  }
+  };
 }
 
 function wrongPeerTest(path, t) {
@@ -83,47 +84,47 @@ function wrongPeerTest(path, t) {
         .expect(400)
         .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.wrongPeer, smallHashBase64))
         .end(passed(t));
-    })
+    });
   });
 }
 
 function goodFakeCb() {
   return {
-    cbValue: crypto.randomBytes(identityExchangeUtils.cbBufferLength).toString('base64'),
-    pkMine: crypto.randomBytes(identityExchangeUtils.pkBufferLength).toString('base64')
+    cbValue: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.cbBufferLength)),
+    pkMine: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength))
   };
 }
 
 function goodFakeRnMine() {
   return {
-    rnMine: crypto.randomBytes(identityExchangeUtils.rnBufferLength).toString('base64'),
-    pkOther: crypto.randomBytes(identityExchangeUtils.pkBufferLength).toString('base64')
+    rnMine: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength)),
+    pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength))
   };
 }
 
 function createCb(cbValue, pkMine) {
   return {
-    cbValue: !cbValue ? crypto.randomBytes(identityExchangeUtils.cbBufferLength).toString('base64') :
+    cbValue: !cbValue ? urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.cbBufferLength)) :
       cbValue,
-    pkMine: !pkMine ? crypto.randomBytes(identityExchangeUtils.pkBufferLength).toString('base64') :
+    pkMine: !pkMine ? urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength)) :
       pkMine
   };
 }
 
 function createRnMine(rnMine, pkMine) {
   return {
-    rnMine: !rnMine ? crypto.randomBytes(identityExchangeUtils.rnBufferLength).toString('base64') :
+    rnMine: !rnMine ? urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength)) :
       rnMine,
-    pkMine: !pkMine ? crypto.randomBytes(identityExchangeUtils.pkBufferLength).toString('base64') :
+    pkMine: !pkMine ? urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength)) :
       pkMine
-  }
+  };
 }
 
 function makeGoodCb(rnMineBuffer) {
   return request(thaliApp)
     .post(identityExchangeUtils.cbPath)
     .send(
-    createCb(identityExchangeUtils.generateCb(rnMineBuffer, smallHash, bigHash).toString('base64'),
+    createCb(urlSafeBase64.encode(identityExchangeUtils.generateCb(rnMineBuffer, smallHash, bigHash)),
       smallHashBase64))
     .expect(200);
 }
@@ -131,13 +132,13 @@ function makeGoodCb(rnMineBuffer) {
 function makeGoodRnMine(rnMineBuffer) {
   return request(thaliApp)
     .post(identityExchangeUtils.rnMinePath)
-    .send(createRnMine(rnMineBuffer.toString('base64'), smallHashBase64))
+    .send(createRnMine(urlSafeBase64.encode(rnMineBuffer), smallHashBase64))
     .expect(200);
 }
 
 function makeBadTestValues(cryptoValueLength) {
-  return [" ", "{@#{$@#{$", crypto.randomBytes(cryptoValueLength + 1).toString('base64'),
-    crypto.randomBytes(cryptoValueLength - 1).toString('base64')];
+  return [" ", "{@#{$@#{$", urlSafeBase64.encode(crypto.randomBytes(cryptoValueLength + 1)),
+    urlSafeBase64.encode(crypto.randomBytes(cryptoValueLength - 1))];
 }
 
 function makeArrayOfBadRequestBodies(firstCryptoLength, secondCryptoLength, messageCreationFunction) {
@@ -156,7 +157,7 @@ function makeArrayOfBadRequestBodies(firstCryptoLength, secondCryptoLength, mess
   firstBadValueArray.forEach(function(badFirstValue) {
     secondBadValueArray.forEach(function(badSecondValue) {
       testArray.push(messageCreationFunction(badFirstValue, badSecondValue));
-    })
+    });
   });
 
   testArray.push({});
@@ -284,7 +285,7 @@ test('re-do cb (to check we can reset) and make sure rnOther changes', function(
   var realRnMineBuffer = crypto.randomBytes(identityExchangeUtils.rnBufferLength);
   request(thaliApp)
     .post(identityExchangeUtils.cbPath)
-    .send(createCb(crypto.randomBytes(identityExchangeUtils.cbBufferLength).toString('base64'), smallHashBase64))
+    .send(createCb(urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.cbBufferLength)), smallHashBase64))
     .expect(200)
     .then(function(res) {
       t.ok(res.body.rnOther);
@@ -298,7 +299,7 @@ test('re-do cb (to check we can reset) and make sure rnOther changes', function(
 
       return makeGoodRnMine(realRnMineBuffer);
     }).then(function(res) {
-      t.equal(res.body.pkOther, bigHashBase64)
+      t.equal(res.body.pkOther, bigHashBase64);
       t.end();
     }).catch(function(err) {
       t.fail(err);
@@ -339,7 +340,7 @@ test('good cb followed by good rnmine then repeat cb and finish up, make sure we
       return makeGoodRnMine(secondRnMineBuffer);
     }).catch(function(err) {
       t.fail(err);
-    })
+    });
 });
 
 test('do a successful cb and successful rnmine and then repeat the rnmine', function(t) {
@@ -369,7 +370,7 @@ test('do a successful cb and successful rnmine and then repeat the rnmine', func
       return makeGoodRnMine(rnMineBuffer);
     }).catch(function(err) {
       t.fail(err);
-    })
+    });
 });
 
 test('do a rnmine without a cb', function(t) {
@@ -402,7 +403,7 @@ test('rnMine - bad request bodies', function(t) {
           .post(identityExchangeUtils.rnMinePath)
           .send(testBody)
           .expect(400)
-          .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.malformed, bigHashBase64))
+          .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.malformed, bigHashBase64));
       }).then(function(res) {
         requestCounter += 1;
         if (requestCounter == testArray.length) {
@@ -435,12 +436,12 @@ test("do a cb and then a wrong peer and then finish with rnmine, make sure state
         .post(identityExchangeUtils.cbPath)
         .send(createCb(null, null))
         .expect(400)
-        .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.wrongPeer, bigHashBase64))
+        .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.wrongPeer, bigHashBase64));
     }).then(function(res) {
       return makeGoodRnMine(rnMineBuffer);
     }).catch(function(err) {
       t.fail(err);
-    })
+    });
 });
 
 test("do a cb and then a rnmine then a wrong peer then repeat rnmine to make sure state didn't get lost", function(t) {
@@ -471,13 +472,13 @@ test("do a cb and then a rnmine then a wrong peer then repeat rnmine to make sur
         .post(identityExchangeUtils.cbPath)
         .send(createCb(null, null))
         .expect(400)
-        .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.wrongPeer, bigHashBase64))
+        .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.wrongPeer, bigHashBase64));
     }).then(function(res) {
       return request(thaliApp)
         .post(identityExchangeUtils.rnMinePath)
         .send(createRnMine(null, null))
         .expect(400)
-        .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.wrongPeer, bigHashBase64))
+        .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.wrongPeer, bigHashBase64));
     }).then(function(res) {
       return makeGoodRnMine(rnMineBuffer);
     }).catch(function(err) {
@@ -493,10 +494,10 @@ test("do a cb and then a rnmine with a rnmine that doesn't match the cb value", 
     .then(function(res) {
       return request(thaliApp)
         .post(identityExchangeUtils.rnMinePath)
-        .send(createRnMine(crypto.randomBytes(identityExchangeUtils.rnBufferLength).toString('base64'),
+        .send(createRnMine(urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength)),
           smallHashBase64))
         .expect(400)
-        .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.malformed, bigHashBase64))
+        .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.malformed, bigHashBase64));
     }).then(function(res) {
       t.end();
     }).catch(function(err) {
@@ -506,19 +507,19 @@ test("do a cb and then a rnmine with a rnmine that doesn't match the cb value", 
 
 test("Make sure apis don't allow incorrect states", function(t) {
   // With BigHash
-  t.throws(function() { largerHashStateMachine.stop() });
-  t.throws(function() { largerHashStateMachine.exchangeIdentity(smallHash)});
-  t.throws(function() { largerHashStateMachine.exchangeIdentity(bigHash)});
+  t.throws(function() { largerHashStateMachine.stop(); });
+  t.throws(function() { largerHashStateMachine.exchangeIdentity(smallHash); });
+  t.throws(function() { largerHashStateMachine.exchangeIdentity(bigHash); });
   largerHashStateMachine.start(); // Making sure flipping start-stop-start doesn't break anything
   largerHashStateMachine.stop();
   largerHashStateMachine.exchangeIdentity(bigHash); // We already in NoIdentityExchange
-  t.throws(function() { largerHashStateMachine.exchangeIdentity(smallHash) });
-  t.throws(function() { largerHashStateMachine.start() });
-  t.throws(function() { largerHashStateMachine.exchangeIdentity(smallHash) });
-  t.throws(function() { largerHashStateMachine.exchangeIdentity(bigHash) });
+  t.throws(function() { largerHashStateMachine.exchangeIdentity(smallHash); });
+  t.throws(function() { largerHashStateMachine.start(); });
+  t.throws(function() { largerHashStateMachine.exchangeIdentity(smallHash); });
+  t.throws(function() { largerHashStateMachine.exchangeIdentity(bigHash); });
   largerHashStateMachine.stop();
   largerHashStateMachine.exchangeIdentity(smallHash); // In certain cases you can skip start
-  t.throws(function() { largerHashStateMachine.start()});
+  t.throws(function() { largerHashStateMachine.start(); });
 
   var rnMineBuffer = crypto.randomBytes(identityExchangeUtils.rnBufferLength);
   var rnOther = null;

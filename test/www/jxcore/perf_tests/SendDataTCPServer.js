@@ -33,11 +33,14 @@ function SendDataTCPServer(port) {
             receivedDataInBytes = receivedDataInBytes + (data.length * 2);
             logger('TCP/IP server has received ' + receivedDataInBytes + ' bytes of data');
             var dataSincePreviousReport = receivedDataInBytes - lastReportedAmount;
-            if (dataSincePreviousReport > limitToReport) {
+
+            if (dataSincePreviousReport >= limitToReport) {
                 var acknowledgmentCount = Math.round(dataSincePreviousReport / limitToReport);
+
                 for (var i = 0; i < acknowledgmentCount; i++) {
                     c.write('ACK');
                 }
+
                 lastReportedAmount += acknowledgmentCount * limitToReport;
             }
         });

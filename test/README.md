@@ -27,10 +27,10 @@ under this regime should therefore assume they will run against themsselves runn
 - With performance tests the coordinating server additionally provides global options to devices running the test 
 (e.g. number of times to run a particular test before collating results).
 
-In order to point the devices running test suites at the coordinating server a file, serveraddress.json, containing the 
+In order to point the devices running test suites at the coordinating server a file, server-address.js, containing the 
 ip address of the server host is installed in the jxcore folder of the test app. If the coordination server runs on
 the same machine that you build the mobile apps on then everything will be set up for you. Otherwise you'll need to edit 
-the serveraddress.json file yourself to make sure it contains the right server address.
+the server-address.js file yourself to make sure it contains the right server address.
 
 On startup the test devices will connect back to the server to indicate their readiness to proceed. Once the required 
 number of devices are ready the server will signal them to begin the first test. The server will then coordinate test 

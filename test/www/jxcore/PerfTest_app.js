@@ -8,7 +8,7 @@
 
 var testUtils = require("./lib/testUtils");
 var fs = require('fs');
-var parsedJSON = require('serveraddress.json');
+var serverAddress = require('server-address.js');
 
 testUtils.toggleRadios(true);
 
@@ -54,8 +54,7 @@ if(jxcore.utils.OSInfo().isAndroid) {
             console.log('my name is : ' + myName);
             testUtils.setMyName(myName);
 
-            //console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
-            Coordinator.init(parsedJSON[0].address, 3000);
+            Coordinator.init(serverAddress, 3000);
             console.log('attempting to connect to test coordinator');
 
 
@@ -83,8 +82,7 @@ if(jxcore.utils.OSInfo().isAndroid) {
         console.log('my name is : ' + myName);
         testUtils.setMyName(myName);
 
-        //console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
-        Coordinator.init(parsedJSON[0].address, 3000);
+        Coordinator.init(serverAddress, 3000);
         console.log('attempting to connect to test coordinator');
     });
 }
