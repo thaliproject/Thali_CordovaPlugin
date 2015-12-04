@@ -23,9 +23,10 @@
  * to communicate with the specified peer.
  *
  * @callback EnqueueCallback
- * @param {http.Agent} httpAgentPool HELLO The HTTP client connection pool to use
- * when making requests to the requested peer.
- * @param {ThaliPeerPoolInterface~FinishedEnqueueCallback} finishedEnqueueCallback This callback is to be called once the action is
+ * @param {http.Agent} httpAgentPool HELLO The HTTP client connection pool to
+ * use when making requests to the requested peer.
+ * @param {ThaliPeerPoolInterface~FinishedEnqueueCallback}
+ * finishedEnqueueCallback This callback is to be called once the action is
  * completed.
  */
 

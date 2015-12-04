@@ -20,9 +20,10 @@ var EventEmitter = require('events');
  * Requests to retrieve notification beacons are enqueued on this object in
  * order to make sure we don't overwhelm our bandwidth or native communication
  * capabilities.
- * @param {Crypto.ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized
+ * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
- * @param {addressBookCallback} addressBookCallback
+ * @param {addressBookCallback} addressBookCallback An object used to validate
+ * which peers we are interested in talking to.
  */
 // jscs:disable disallowUnusedParams
 function ThaliNotificationClient(thaliPeerPool, ecdhForLocalDevice,
@@ -40,9 +41,6 @@ function ThaliNotificationClient(thaliPeerPool, ecdhForLocalDevice,
  * multiple listeners to be registered with thaliMobile.
  *
  * ## Handling peerAvailabilityChanged events with hostAddress != null
- *
- * These events announce the discovery of a peer identified by a
- * peerIdentifier.
  *
  * If a peerAvailabilityChanged event with hostAddress != null is received
  * with a peerIdentifier we have not made a note about (see the rest of this
