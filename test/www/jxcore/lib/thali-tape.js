@@ -27,6 +27,7 @@ var testUtils = require("./testUtils");
 
 process.on('uncaughtException', function(err) {
   console.log("Uncaught Exception: " + err);
+  console.log(err.stack);
   console.log("****TEST TOOK:  ms ****" );
   console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
 });
