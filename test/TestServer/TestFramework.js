@@ -1,4 +1,4 @@
-/* TestManager - Base for classes that manage collections of devices and associated tests
+/* TestFramework - Base for classes that manage collections of devices and associated tests
  */
 
 'use strict';
@@ -6,17 +6,17 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 
-function TestManager(testConfig) {
+function TestFramework(testConfig) {
 
-  TestManager.super_.call(this);
+  TestFramework.super_.call(this);
 
   this.devices = {};
   this.testConfig = testConfig;
 }
 
-util.inherits(TestManager, EventEmitter);
+util.inherits(TestFramework, EventEmitter);
 
-TestManager.prototype.addDevice = function(device) {
+TestFramework.prototype.addDevice = function(device) {
 
   // this.devices = { 'ios' : [dev1, dev2], 'android' : [dev3, dev4] }
   if (!this.devices[device.platform]) {
@@ -31,10 +31,10 @@ TestManager.prototype.addDevice = function(device) {
   }
 }
 
-TestManager.prototype.removeDevice = function(device) {
+TestFramework.prototype.removeDevice = function(device) {
   var i = this.devices[device.platform].indexOf(device);
   this.devices[device.platform].splice(i, 1);
   assert(this.devices[device.platform].indexOf(device) == -1);
 }
 
-module.exports = TestManager;
+module.exports = TestFramework;
