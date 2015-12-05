@@ -33,7 +33,8 @@
 /**
  * Adds a request to establish a connection to the specified peerIdentifier
  * over the specified connection type for the purpose of the specified
- * action type.
+ * action type. Enqueue MUST NOT check to see if there is already an identical
+ * entry in the queue.
  *
  * Once the peer manager decides this request should be granted it will call
  * the enqueueCallback.
@@ -51,5 +52,14 @@
  * @param {module:thaliMobile.connectionTypes} connectionType
  * @param {string} actionType
  * @param {EnqueueCallback} enqueueCallback
- * @returns {?Error}
+ * @returns {Object|Error} If an Object is returned then it is a handle that can
+ * be submitted to dequeue to remove the entry from the queue. If it is an
+ * Error then something went wrong, see the MSG for details.
+ */
+
+/**
+ *
+ * @function
+ * @name module:thaliPeerPoolInterface~ThaliPeerPoolInterface#dequeue
+ * @param {Object} queueEntryId
  */

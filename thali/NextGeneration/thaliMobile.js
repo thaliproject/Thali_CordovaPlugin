@@ -184,15 +184,95 @@ module.exports.stopAdvertisingAndListeningForIncomingConnections = function () {
  * @readonly
  * @enum {string}
  */
-
 module.exports.connectionTypes = {
-  multiPeerConnectivityFramework: 'MPCF',
-  blueTooth: 'blueTooth',
-  tcpNative: 'tcp'
+  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
+  BLUE_TOOTH: 'AndroidBlueTooth',
+  TCP_NATIVE: 'tcp'
 };
 
 
 /**
+ * It is the job of this module to provide the most reliable guesses (and that
+ * is what they are) as to when a peer is and is not available. The module MUST
+ * err on the side of saying that a peer is available over saying they are not
+ * available.
+ *
+ * The module MUST guarantee to its listeners (unlike {@link
+ * module:thaliMobileNative}) that once it has fired a peerAvailabilityChanged
+ * event for a specific peerIdentifier + connectionType combination that it will
+ * not fire another peerAvailabilityChanged event for that peerIdentifier +
+ * connectionType combination unless the combination has a new hostAddress or
+ * portNumber.
+ *
+ * Note that this code explicitly does not do any kind of duplicate detection
+ * for the same peerIdentifier across different connectionTypes. This is because
+ * we want to surface to the caller all the ways a particular peer is available.
+ *
+ * This means that if this code receives multiple redundant notifications from
+ * the various sources it is listening to about the same peerIdentifier and
+ * connectionType combination then it must silently discard the duplicates.
+ *
+ * ## Android + BLE + Bluetooth
+ *
+ * When dealing with announcing that a peer has disappeared it is up to this
+ * code to apply relevant heuristics. For example, in the case of Android it is
+ * possible for a Thali app to go into the background. When this happens we
+ * lower the power of the BLE status announcements but we don't change the
+ * Bluetooth power. This means that a peer can seem to disappear when in fact
+ * they are still in range of Bluetooth. This behavior is necessary to preserve
+ * battery. This complicates things because the Android BLE stack never actually
+ * says a peer is gone. Rather it sends a steady stream of announcements that
+ * the peer is available and then stops when it doesn't see the peer anymore. So
+ * this code has to notice those announcements and decide at what point after
+ * they have stopped to declare the peer gone. In general we should experiment
+ * with values like 30 seconds before deciding that a peer is gone. But why not
+ * even longer?
+ *
+ * __Open Issue:__ How long should we wait after we don't hear any updates on
+ * a peer being available over Android before we declare them gone?
+ *
+ * __Open Issue:__ A really obvious optimization would be to hook this code
+ * into the {@link module:TCPServersManager} so it could see if we have a
+ * Bluetooth or MPCF connection running with a particular peer. If we do then
+ * obviously we wouldn't want to declare them gone even if we don't see them on
+ * BLE or if MPCF told us they were gone.
+ *
+ * ## iOS + MPCF
+ *
+ * In the case of the MPCF the native layer has an explicit lostPeer message.
+ * But we aren't completely sure if it's totally reliable. So we either can
+ * immediately declare the peer gone when we get lostPeer or we can take note of
+ * the lostPeer message and then wait a bit before declaring the peer gone. Note
+ * that we would only see this at the Node.js layer via a {@link
+ * module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} event.
+ *
+ * __Open Issue:__ How does MPCF deal with peers who have gone out of range?
+ * Do they regularly send foundPeer messages or do they send one foundPeer
+ * message and go quiet until they send a lostPeer message after a bit?
+ *
+ * __Open Issue:__ How reliable is the lostPeer message from MPCF? I believe
+ * we have had a suspicion that even if we get a lostPeer we might still be able
+ * to open a connection to that peer successfully (this would make sense if
+ * discovery is over Bluetooth and data transfer over Wifi). But we need to now
+ * make this concrete since we have to decide if we are going to put this
+ * suspicion into our code.
+ *
+ * ## Wifi
+ *
+ * In the case of Wifi SSDP supports sending both announcements of
+ * availability as well as announcements that one is going off line. If we
+ * receive an announcement that a peer is going away then we can trust that
+ * since it means the peer is deactivating its SSDP stack. But we can't rely on
+ * receiving such an announcement since obviously if a peer just walks away
+ * nothing will be said. So we MUST set a timer after receiving a SSDP
+ * announcement for a peer (we will receive this via a {@link
+ * module:ThaliWifiInfrastructure~wifiPeerAvailabilityChanged} event) and if we
+ * don't hear an announcement that they are gone then we MUST automatically
+ * generate such an announcement ourselves.
+ *
+ * ## General guidelines on handling nonTCPPeerAvailabilityChanged and
+ * wifiPeerAvailabilityChanged events
+ *
  * If we receive a {@link
  * module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} event then all
  * we have to do is return the arguments below as taken from the event with the
