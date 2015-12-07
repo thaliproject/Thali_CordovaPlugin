@@ -73,16 +73,16 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     });
 
     // Run the test (cb) when the server tells us to    
-    this.testServer.once("start_test", function(_name) {
+    testServer.once("start_test", function(_name) {
       cb(t);
     });
   });
 
   tape("teardown", function(t) {
     // Run teardown function when the server tells us
-    this.testServer.once("teardown", function(_name) {
+    testServer.once("teardown", function(_name) {
       teardown(t);
-      this.testServer('teardown_complete', JSON.stringify({"test":_name}));
+      testServer('teardown_complete', JSON.stringify({"test":_name}));
     }); 
   });
 };
@@ -216,8 +216,7 @@ thaliTape.begin = function() {
       "os": platform, 
       "name": deviceName,
       "type": 'unittest',
-      "tests": Object.keys(tests),
-      "btaddress": bluetoothAddress
+      "tests": Object.keys(tests)
     }));
   });
 }
