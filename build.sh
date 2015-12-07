@@ -31,6 +31,8 @@ ERROR_ABORT() {
 # that issue.
 ulimit -n 512;ERROR_ABORT
 
+jx npm cache clean;ERROR_ABORT
+
 # Remove the previous build result (if any) to start from a clean state.
 rm -rf ../ThaliTest;ERROR_ABORT
 
