@@ -58,7 +58,7 @@ class OutgoingSocketThread extends SocketThreadBase {
                 if (mListener != null) {
                     final ConnectionStatusListener listener = mListener;
                     final int localPort = mServerSocket.getLocalPort();
-                    final Handler handler = new Handler();
+                    final Handler handler = new Handler(jxcore.activity.getMainLooper());
 
                     handler.postDelayed(new Runnable() {
                         @Override
