@@ -212,7 +212,7 @@ thaliTape.begin = function() {
       platform = 'ios';
     }
 
-    this.socket.emit('present', JSON.stringify({
+    testServer.emit('present', JSON.stringify({
       "os": platform, 
       "name": deviceName,
       "type": 'unittest',
