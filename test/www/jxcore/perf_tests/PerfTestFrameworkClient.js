@@ -9,29 +9,20 @@
 'use strict';
 
 var fs = require('fs');
+var io = require('socket.io-client');
 var inherits = require('util').inherits;
 var testUtils = require('../lib/testUtils.js');
 var EventEmitter = require('events').EventEmitter;
-var CoordinatorConnector = require('../lib/CoordinatorConnector');
 
 function debug(msg) {
   testUtils.logMessageToScreen(msg);
 };
 
-// Singleton coordinator
-var _coordinator = null;
-function getCoordinator()
-{
-  if (_coordinator != null) {
-    return _coordinator;
-  }
-
-  _coordinator = new CoordinatorConnector();
-
+/*
   // A flag used to avoid too frequent Wifi toggling
   var wifiRepairOngoing = false;
 
-  _coordinator.on('error', function (data) {
+  _testServer.on('error', function (data) {
 
     console.log(data);
 
@@ -62,10 +53,11 @@ function getCoordinator()
   });
 
 
-  return _coordinator;
+  return _testServer;
 }
+*/
 
-function TestFrameworkClient(deviceName, bluetoothAddress) {
+function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
 
   TestFrameworkClient.super_.call(this);
 
@@ -76,7 +68,7 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
 
   this.doneCallback = function(data) {
     console.log('done, now sending data to server');
-    self.coordinator.sendData(data);
+    self.testServer.emit("test data", data);
     self.printResults(data);
   }
 
@@ -90,9 +82,21 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
     }
   }, this);
 
-  this.coordinator = getCoordinator();
+  var self = this;
 
-  this.coordinator.on('too_late', function (data) {
+  // Inelegant but this allows me to inject a
+  // mock testServer (which we see as simple EventEmitter)
+
+  if (!testServer) {
+    var serverOptions = {  
+      transports: ['websocket']
+    };
+    this.testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
+  } else {
+    this.testServer = testServer;
+  }
+
+  this.testServer.on('too_late', function (data) {
     // We connected too late to take part in a test session
     // signal to CI (via stdout) that we're quitting (and do so)
     console.log("****TEST TOOK:  ms ****" );
@@ -100,48 +104,66 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
     process.exit(0);
   });
 
-  this.coordinator.on('connect', function () {
-    console.log('Coordinator is now connected to the server!');
-    testUtils.logMessageToScreen('connected to server');
-    self.coordinator.present(
-      self.deviceName, "perftest", Object.keys(self.tests), bluetoothAddress
-    );
+  this.testServer.on('connect', function () {
+
+    console.log('Connected to the server!');
+    testUtils.logMessageToScreen('Connected to the server');
+
+    // Inform the test server who we are, what type of test we're prepared to run
+    // and what our bluetoothAddress is (Android only)
+
+    var platform;
+    if (jxcore.utils.OSInfo().isAndroid) {
+      platform = 'android';
+    } else {
+      platform = 'ios';
+    }
+
+    this.testServer.emit('present', JSON.stringify({
+      "os" : platform,
+      "name": self.deviceName,
+      "type": "perftests",
+      "tests": Object.keys(self.tests)
+    }));
   });
 
-  this.coordinator.on('start', function(testData) {
-
-    console.log(testData);
+  this.testServer.on('start', function(testData) {
 
     debug("--- start :" + testData.testName + "---");
+    if (!(testData.testName in self.tests)) {
+      self.testServer.emit("error", "Unknown test");
+      return;
+    }
 
     self.currentTest = new self.tests[testData.testName] (
       testData.testData,
       self.deviceName,
       shuffle(testData.addressList)
     );
+
     self.setCallbacks(self.currentTest);
     self.currentTest.start();
   });
 
-  this.coordinator.on('stop', function() {
+  this.testServer.on('stop', function() {
     debug("stop");
     self.stopAllTests(false);
   });
 
-  this.coordinator.on('timeout', function() {
+  this.testServer.on('timeout', function() {
    debug("stop-by-timeout");
    self.stopAllTests(true);
   });
 
-  this.coordinator.on('end', function() {
+  this.testServer.on('end', function() {
     console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
     self.stopAllTests(true);
-    self.coordinator.close();
+    self.testServer.close();
   });
 
-  this.coordinator.on('closed', function() {
-    console.log('The Coordinator has closed!');
+  this.testServer.on('closed', function() {
+    console.log('The server connection has closed.');
 
     //we need to stop & close any tests we are running here
     TestFramework.stopAllTests(false);
@@ -149,8 +171,6 @@ function TestFrameworkClient(deviceName, bluetoothAddress) {
     console.log('turning Radios off');
     testUtils.toggleRadios(false);
   });
-
-  this.coordinator.connect(require('../serveraddress.json')[0].address, 3000);
 }
 
 inherits(TestFrameworkClient, EventEmitter);

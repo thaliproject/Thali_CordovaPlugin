@@ -38,8 +38,10 @@ var SendDataConnector = require('./SendDataConnector');
 
 function testSendData(jsonData, name, addressList) {
     var self = this;
+    console.log(addressList);
     console.log('testSendData created ' + jsonData + ", bt-address length : " + addressList.length);
     this.name = name;
+    console.log(this.commandData);
     this.commandData = jsonData;
     this.emitter = new ThaliEmitter();
     this.toFindCount = jsonData.peerCount;
@@ -139,7 +141,9 @@ testSendData.prototype.start = function(serverPort) {
         } else {
             console.log('StartBroadcasting started ok');
 
-            if (self.BluetoothAddressList > 0) {
+            console.log(self.BluetoothAddressList);
+
+            if (self.BluetoothAddressList.length > 0) {
                 if (!self.testStarted) {
                     self.startWithNextDevice();
                 }
@@ -199,13 +203,15 @@ testSendData.prototype.stop = function(doReport) {
 
 testSendData.prototype.startWithNextDevice = function() {
 
+    console.log("startWithNextDevice");
+
     if (this.doneAlready || this.testConnector == null) {
         return;
     }
 
-    if (this.BluetoothAddressList > 0) {
+    if (this.BluetoothAddressList) {
 
-        if (this.BluetoothAddressList.length <= 0){
+        if (this.BluetoothAddressList.length == 0) {
             this.endReason = "OK";
             this.weAreDoneNow();
             return;
@@ -217,9 +223,9 @@ testSendData.prototype.startWithNextDevice = function() {
         fakePeer.peerAvailable = true;
 
         var addressItem = this.BluetoothAddressList.shift();
-        fakePeer.peerName       = addressItem.address;
+        fakePeer.peerName = addressItem.address;
         fakePeer.peerIdentifier = addressItem.address;
-        fakePeer.tryCount       = (addressItem.tryCount + 1);
+        fakePeer.tryCount = (addressItem.tryCount + 1);
 
         console.log('Connect to fake peer: ' + fakePeer.peerIdentifier);
         this.testConnector.Start(fakePeer);

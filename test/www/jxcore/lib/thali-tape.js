@@ -20,9 +20,7 @@
 
 'use strict';
 var tape = require('tape-catch');
-var CoordinatorConnector = require('./CoordinatorConnector');
-var serverAddress = require('../server-address.js');
-
+var io = require('socket.io-client');
 var testUtils = require("./testUtils");
 
 process.on('uncaughtException', function(err) {
@@ -38,37 +36,10 @@ process.on('unhandledRejection', function(err) {
   console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
 });
 
-// Singleton CoordinatorConnector instance
-var _coordinator = null;
-
-function getCoordinator()
-{
-  if (_coordinator != null) {
-    return _coordinator;
-  }
-
-  _coordinator = new CoordinatorConnector();
-
-  _coordinator.on('error', function (data) {
-    var errData = JSON.parse(data);
-    console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
-  });
-
-  _coordinator.on('disconnect', function () {
-    // We've become disconnected from the test server
-    // Shut down the Wifi & Bluetooth here
-    testUtils.toggleRadios(false);
-  });
-
-  _coordinator.connect(serverAddress, 3000);
-
-  return _coordinator;
-}
-
 var tests = {};
 var deviceName = "UNITTEST-" + Math.random();
 
-function declareTest(name, setup, teardown, opts, cb) {
+function declareTest(testServer, name, setup, teardown, opts, cb) {
 
   // test declaration is postponed until we know the order in which 
   // the server wants to execute them. 
@@ -81,11 +52,10 @@ function declareTest(name, setup, teardown, opts, cb) {
   // by the test server emitting events at the appropriate point
 
   tape('setup', function(t) {
-    // Run setup function when the coordinator tells us
-    getCoordinator().once("setup", function(_name) {
+    // Run setup function when the testServer tells us
+    testServer.once("setup", function(_name) {
       setup(t);
-      // Tell the coordinator we ran setup for this test
-      getCoordinator().setupComplete(name);
+      testServer.emit('setup_complete', JSON.stringify({"test":_name}));
     });
   });
 
@@ -98,28 +68,24 @@ function declareTest(name, setup, teardown, opts, cb) {
     });
 
     t.on("end", function() {
-      // Tell the coordinator we ran the test and what the result was (true == pass)
-      getCoordinator().testComplete(name, success);
+      // Tell the server we ran the test and what the result was (true == pass)
+      testServer.emit('test_complete', JSON.stringify({"test":name, "success":success}));
     });
 
     // Run the test (cb) when the server tells us to    
-    getCoordinator().once("start_test", function(_name) {
+    this.testServer.once("start_test", function(_name) {
       cb(t);
     });
   });
 
   tape("teardown", function(t) {
-      console.log("--- running teardown");
-    // Run teardown function when the coordinator tells us
-    getCoordinator().once("teardown", function(_name) {
-      console.log("running teardown");
+    // Run teardown function when the server tells us
+    this.testServer.once("teardown", function(_name) {
       teardown(t);
-      // The the coordinator we ran teardown for this test
-      getCoordinator().teardownComplete(name);
+      this.testServer('teardown_complete', JSON.stringify({"test":_name}));
     }); 
   });
 };
-
 
 var thaliTape = function(fixture) 
 {
@@ -142,7 +108,7 @@ var thaliTape = function(fixture)
   }
 }
 
-function createStream()
+function createStream(testServer)
 {
   // tape is slightly counter-intuitive in that no tests will
   // run until the output streams are set up. 
@@ -154,7 +120,7 @@ function createStream()
   var failed = 0;
   var failedRows = [];
 
-  getCoordinator().once("complete", function() {
+  testServer.once("complete", function() {
 
     // Log final results once server tells us all is done..
     testUtils.logMessageToScreen("------ Final results ---- ");
@@ -202,11 +168,32 @@ function createStream()
 
 thaliTape.begin = function() {
 
-  // Once connected, let the server know who we are and what we do
-  getCoordinator().once("connect", function() {
-    getCoordinator().once("schedule", function(schedule) {
+  var serverOptions = {  
+    transports: ['websocket']
+  };
+
+  var testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
+
+  testServer.on('error', function (data) {
+    var errData = JSON.parse(data);
+    console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
+  });
+
+  testServer.on('disconnect', function () {
+    // We've become disconnected from the test server
+    // Shut down the Wifi & Bluetooth here
+    testUtils.toggleRadios(false);
+  });
+
+
+  // Wait until we're connected
+  testServer.once("connect", function() {
+
+    // Once connected, let the server know who we are and what we do
+    testServer.once("schedule", function(schedule) {
       JSON.parse(schedule).forEach(function(test) {
         declareTest(
+          testServer,
           test, 
           tests[test].fixture.setup, 
           tests[test].fixture.teardown, 
@@ -214,14 +201,40 @@ thaliTape.begin = function() {
           tests[test].fn
         );
       });
-      getCoordinator().scheduleComplete();
-      createStream();
+      testServer.emit('schedule_complete');
+      createStream(testServer);
     });
 
-    getCoordinator().present(deviceName, "unittest", Object.keys(tests));
+    var platform;
+    if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
+      platform = 'android';
+    } else {
+      platform = 'ios';
+    }
+
+    this.socket.emit('present', JSON.stringify({
+      "os": platform, 
+      "name": deviceName,
+      "type": 'unittest',
+      "tests": Object.keys(tests),
+      "btaddress": bluetoothAddress
+    }));
   });
 }
 
-thaliTape.getCoordinator = getCoordinator;
+if (typeof jxcore == 'undefined' || jxcore.utils.OSInfo().isMobile)
+{
+  // On mobile, or outside of jxcore (some dev scenarios) we use server-coordinated thaliTape
+  exports = thaliTape;
+}
+else
+{
+  // On desktop we just use wrapping-tape
+  exports = require("wrapping-tape");
 
-module.exports = (typeof jxcore == 'undefined' || jxcore.utils.OSInfo().isMobile) ? thaliTape : require("wrapping-tape");
+  // thaliTape has a begin function that we patch in here to make the api identical
+  exports.begin = function() {
+  };
+}
+
+module.exports = exports;

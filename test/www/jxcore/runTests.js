@@ -13,5 +13,4 @@ fs.readdirSync(path.join(__dirname, testsToRun)).forEach(function(fileName) {
     }
 });
 
-// Begin the test process
 thaliTape.begin();
