@@ -82,7 +82,7 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     // Run teardown function when the server tells us
     testServer.once("teardown", function(_name) {
       teardown(t);
-      testServer('teardown_complete', JSON.stringify({"test":_name}));
+      testServer.emit('teardown_complete', JSON.stringify({"test":_name}));
     }); 
   });
 };
