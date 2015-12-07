@@ -122,7 +122,7 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
     self.testServer.emit('present', JSON.stringify({
       "os" : platform,
       "name": self.deviceName,
-      "type": "perftests",
+      "type": "perftest",
       "tests": Object.keys(self.tests)
     }));
   });
