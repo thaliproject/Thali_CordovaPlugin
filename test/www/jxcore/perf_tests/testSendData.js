@@ -39,12 +39,17 @@ var SendDataConnector = require('./SendDataConnector');
 function testSendData(jsonData, name, addressList) {
 
   var self = this;
-  console.log('testSendData created ' + jsonData + ", bt-address length : " + addressList.length);
+
+  console.log(
+    'testSendData created ' + JSON.stringify(jsonData) + 
+    "bt-address length : " + addressList.length
+  );
+
   this.name = name;
   this.commandData = jsonData;
   this.emitter = new ThaliEmitter();
   this.toFindCount = jsonData.peerCount;
-  this.BluetoothAddressList = addressList;
+  this.BluetoothAddressList = addressList.length > 0 ? addressList : null;
 
   this.startTime = new Date();
   this.endTime = new Date();
@@ -100,7 +105,7 @@ function testSendData(jsonData, name, addressList) {
   this.peerAvailabilityChanged = function(peers) {
 
     // We have address list, so we use it instead
-    if (self.BluetoothAddressList.length > 0) {
+    if (self.BluetoothAddressList && self.BluetoothAddressList.length > 0) {
       return;
     }
 
@@ -127,6 +132,7 @@ function testSendData(jsonData, name, addressList) {
 inherits(testSendData, EventEmitter);
 
 testSendData.prototype.start = function(serverPort) {
+
   var self = this;
   this.doneAlready = false;
   this.testServer = new SendDataTCPServer(serverPort);
@@ -153,7 +159,7 @@ testSendData.prototype.start = function(serverPort) {
       console.log('StartBroadcasting started ok');
       console.log(self.BluetoothAddressList);
 
-      if (self.BluetoothAddressList.length > 0) {
+      if (self.BluetoothAddressList && self.BluetoothAddressList.length > 0) {
         if (!self.testStarted) {
           self.startWithNextDevice();
         }
@@ -174,6 +180,7 @@ testSendData.prototype.start = function(serverPort) {
 }
 
 testSendData.prototype.stop = function(doReport) {
+
   var self = this;
 
   console.log('testSendData stopped');
