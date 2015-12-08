@@ -7,12 +7,9 @@
 "use strict";
 
 var testUtils = require("./lib/testUtils");
-var fs = require('fs');
-var serverAddress = require('server-address.js');
+var TestFrameworkClient = require('./perf_tests/PerfTestFrameworkClient');
 
 testUtils.toggleRadios(true);
-
-var TestFrameworkClient = require('./perf_tests/PerfTestFrameworkClient');
 
 /*----------------------------------------------------------------------------------
  code for connecting to the coordinator server
