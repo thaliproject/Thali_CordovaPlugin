@@ -1,5 +1,5 @@
 {
-  "build": { "ios" : "./build.sh" },
+  "build": "./build.sh",
   "binary_path": {
     "ios": "ThaliTest.app",
     "android": "android-release-unsigned.apk"
@@ -13,3 +13,4 @@
   "timeout": 1800,
   "serverScript": "test/TestServer/"
 }
+
