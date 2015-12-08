@@ -27,8 +27,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
     // http://jxcore.com/docs/crypto.html#cryptogeneratehkdfbytestogenerate-publickey-salt-digestbuffer
     // The work around is to use https://www.npmjs.com/package/node-hkdf but we *MUST* remove this quickly because
     // it doesn't have a published license.
-
-};
+  };
 
 /**
  * Generates a single beacon using the specified values.
