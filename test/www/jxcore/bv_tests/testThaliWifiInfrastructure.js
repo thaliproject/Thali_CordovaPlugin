@@ -27,7 +27,8 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
   var testServer = new nodessdp.Server({
     location: testLocation,
     allowWildcards: true,
-    adInterval: 500
+    adInterval: 500,
+    udn: 'testServerName'
   });
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', function (data) {
     t.equal(data[0].peerAddress, testLocation);

@@ -7,24 +7,23 @@ var nodessdp = require('node-ssdp');
 var ip = require('ip');
 var crypto = require('crypto');
 
-function ThaliWifiInfrastructure() {
+function ThaliWifiInfrastructure (deviceName) {
   EventEmitter.call(this);
-  this._init();
+  this.deviceName = deviceName || crypto.randomBytes(16).toString('base64');
+  this._init(deviceName);
 }
 
 inherits(ThaliWifiInfrastructure, EventEmitter);
 
-ThaliWifiInfrastructure.prototype._init = function (deviceName) {
+ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
     location: ip.address() + ':5000/NotificationBeacons',
     adInterval: 500,
     allowWildcards: true,
     logJSON: false,
-    logLevel: 'trace'
+    logLevel: 'trace',
+    udn: this.deviceName
   };
-  if (deviceName) {
-    serverOptions.udn = deviceName;
-  }
   this._server = new nodessdp.Server(serverOptions);
 
   this._client = new nodessdp.Client({
@@ -34,6 +33,8 @@ ThaliWifiInfrastructure.prototype._init = function (deviceName) {
   });
 
   this._client.on('advertise-alive', function (data) {
+    // Filter out self
+    if (data.USN.indexOf(this.deviceName) === 0) return;
     this.emit('wifiPeerAvailabilityChanged', [{
       peerAddress: data.LOCATION + '',
       peerAvailable: true
@@ -41,6 +42,8 @@ ThaliWifiInfrastructure.prototype._init = function (deviceName) {
   }.bind(this));
 
   this._client.on('advertise-bye', function (data) {
+    // Filter out self
+    if (data.USN.indexOf(this.deviceName) === 0) return;
     this.emit('wifiPeerAvailabilityChanged', [{
       peerAddress: data.LOCATION + '',
       peerAvailable: false
