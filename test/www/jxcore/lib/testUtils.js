@@ -15,13 +15,16 @@ exports.toggleRadios = function(on) {
     return;
   }
 
-  if (jxcore.utils.OSInfo().isAndroid)
-  console.log('Toggling radios to ' + on);
-  exports.toggleBluetooth(on, function () {
-    exports.toggleWifi(on, function () {
-      console.log('Radios toggled');
+  if (jxcore.utils.OSInfo().isAndroid) {
+    console.log('Toggling radios to ' + on);
+    exports.toggleBluetooth(on, function () {
+      exports.toggleWifi(on, function () {
+        console.log('Radios toggled');
+      });
     });
-  });
+  } else {
+    console.log("ERROR: toggleRadios called on unsupported platform");
+  }
 };
 
 exports.toggleWifi = function (on, callback) {
