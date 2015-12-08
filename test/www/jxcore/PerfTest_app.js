@@ -68,9 +68,11 @@ function getDeviceCharacteristics(cb) {
  -----------------------------------------------------------------------------------*/
 
 var testFramework;
-getDeviceCharacteristics(function(deviceName, bluetoothAddresss) {
+getDeviceCharacteristics(function(deviceName, bluetoothAddress) {
   // The test framework client will coordinate everything from here..
-  testFramework = new TestFrameworkClient(deviceName, bluetoothAddress);
+  process.nextTick(function() {
+    testFramework = new TestFrameworkClient(deviceName, bluetoothAddress);
+  });
 });
 
 // Log that the app.js file was loaded.
