@@ -71,7 +71,7 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
   this.doneCallback = function(data) {
     console.log('done, now sending data to server');
     self.testServer.emit("test data", data);
-    self.printResults(data);
+    //self.printResults(data);
   }
 
   this.tests = {};
@@ -213,6 +213,7 @@ TestFrameworkClient.prototype.stopAllTests = function(doReport) {
 // Everything below here is report printing
 //////////////////////////////////////////////////////////////////
 
+/*
 TestFrameworkClient.prototype.printResults = function(data) {
 
   console.log("-- RESULT DATA " + data);
@@ -372,5 +373,5 @@ TestFrameworkClient.prototype.preProcessResults  = function(source, target, erro
     }
   });
 }
-
+*/
 module.exports = TestFrameworkClient;
