@@ -10,8 +10,8 @@ var testUtils = require("./lib/testUtils");
 
 testUtils.toggleRadios(true);
 
-var myName = "UNIT-TEST";
-testUtils.setMyName(myName);
-
-require('./runTests.js');
-console.log('Test app app.js loaded');
+Mobile('GetDeviceName').callNative(function (name) {
+  testUtils.setMyName(name);
+  require('./runTests.js');
+  console.log('Test app app.js loaded');
+}
