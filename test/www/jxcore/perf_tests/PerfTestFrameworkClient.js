@@ -15,6 +15,7 @@ var testUtils = require('../lib/testUtils.js');
 var EventEmitter = require('events').EventEmitter;
 
 function debug(msg) {
+  console.log(msg);
   testUtils.logMessageToScreen(msg);
 };
 
