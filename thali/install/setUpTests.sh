@@ -3,6 +3,14 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Check if we are running in MinGW
+runningInMinGw=false
+
+if [ "$(expr substr $(uname -s) 1 5)" == "MINGW" ]; then
+    echo "Running in MinGW"
+    runningInMinGw=true
+fi
+
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to
 # manually set the coordination server's address to.
@@ -17,7 +25,7 @@ cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest
 mkdir -p ThaliTest/thaliDontCheckIn/localdev
 
-if [ "$(expr substr $(uname -s) 1 10)" == "MINGW32_NT" ]; then
+if [ $runningInMinGw == true ]; then
     cp -R $repositoryRoot/test/www/ ThaliTest/
 else
     cp -R $repositoryRoot/test/www/ ThaliTest/www
@@ -29,7 +37,7 @@ cordova platform add android
 cd www/jxcore
 jx npm install $repositoryRoot/thali --save --autoremove "*.gz"
 
-if [ "$(expr substr $(uname -s) 1 10)" == "MINGW32_NT" ]; then
+if [ $runningInMinGw == true ]; then
     # On Windows the package.json file will contain a local file URI for Thali,
     # which needs to be replaced with a valid value. Otherwise the build process
     # will be aborted. Restore write permission after running sed in case
@@ -48,7 +56,7 @@ jx npm install --autoremove "*.gz,*.pem"
 # invalid. In addition, in Windows file system the ThaliTest paths are usually
 # too long and if rm fails, it will abort the script. Thus, on Windows we have
 # to rely on autoremove to work. 
-if [ "$(expr substr $(uname -s) 1 10)" != "MINGW32_NT" ]; then
+if [ $runningInMinGw == false ]; then
     find . -name "*.gz" -delete
     find . -name "*.pem" -delete
 fi
@@ -56,7 +64,7 @@ fi
 cp -v $1 app.js
 cordova build android --release --device
 
-if [ "$(expr substr $(uname -s) 1 10)" != "MINGW32_NT" ]; then
+if [ $runningInMinGw == false ]; then
     cordova build ios --device
 fi
 
