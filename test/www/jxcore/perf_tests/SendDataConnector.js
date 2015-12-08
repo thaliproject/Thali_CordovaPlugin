@@ -254,8 +254,6 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
         return;
     }
 
-    console.log("oneRoundDownNow:2");
-
     this.doneRounds++;
     this.endTime = new Date();
     var responseTime = this.endTime - this.startTime;
