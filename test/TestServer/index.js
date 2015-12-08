@@ -24,22 +24,6 @@ var testConfig = JSON.parse(process.argv[2]);
 var unitTestManager = new UnitTestFramework(testConfig);
 var perfTestManager = new PerfTestFramework(testConfig);
 
-var timeOutValueToStart = 120000; // 2 minutes
-if (!testConfig.honorCount) {
-
-  // Perf tests only will start after a timeout regardless of whether the 
-  // required number of devices has reported in (if honorCount == true)
-
-  setTimeout(function () {
-
-    console.log("-------- Starting perf test (after timeout) --------");
-
-    perTestManager.startTests('ios');
-    perTestManager.startTests('android');
-
-  }, timeOutValueToStart);
-}
-
 io.on('connection', function(socket) {
 
   // A new device has connected to us.. we expect the next thing to happen to be

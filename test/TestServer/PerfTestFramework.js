@@ -50,6 +50,30 @@ function PerfTestFramework(testConfig) {
 
 inherits(PerfTestFramework, TestFramework);
 
+PerfTestFramework.prototype.addDevice = function(device) {
+
+  PerfTestFramework.super_.prototype.call(this, device);
+
+  if (!this.testsRunning && this.devices[device.platform].length == 1) {
+
+    // Start a timer on first device discovery that will start tests regardless of 
+    // number found if honorCount is true
+
+    if (this.testConfig.honorCount) {
+
+      var self = this;
+
+      setTimeout(function () {
+        if (!self.testsRunning) {
+          console.log("-------- Starting perf test (after timeout) --------");
+          self.startTests('ios');
+          self.startTests('android');
+        }
+      }, 120000);
+    }
+  }
+}
+
 PerfTestFramework.prototype.startTests = function(platform, tests) {
 
   if (!tests) {

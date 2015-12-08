@@ -12,6 +12,7 @@ function TestFramework(testConfig) {
 
   this.devices = {};
   this.testConfig = testConfig;
+  this.testsRunning = false;
 }
 
 util.inherits(TestFramework, EventEmitter);
@@ -28,6 +29,7 @@ TestFramework.prototype.addDevice = function(device) {
   // See if we have enough devices of platform type to start a test run
   if (this.devices[device.platform].length === this.testConfig.devices[device.platform]) {
     this.startTests(device.platform, device.tests);
+    this.testsRunning = true;
   }
 }
 
