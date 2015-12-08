@@ -21,6 +21,8 @@ class StreamCopyingThread extends Thread {
 
         /**
          * Called when a block of bytes (identified by the given number) is read and written successfully.
+         * Call setNotifyStreamCopyingProgress(true) to enable. By default, this callback is not
+         * called.
          * @param who The thread, which succeeded in reading and writing.
          * @param numberOfBytes The number of bytes read and written.
          */
@@ -35,10 +37,12 @@ class StreamCopyingThread extends Thread {
     private final OutputStream mOutputStream;
     private final String mThreadName;
     private int mBufferSize = DEFAULT_BUFFER_SIZE;
+    private boolean mNotifyStreamCopyingProgress = false;
     private boolean mDoStop = false;
 
     /**
-     * Constructor.
+     * Constructor. Note that the responsibility to close the given streams is that of the caller
+     * i.e. this class will not take ownership.
      * @param listener The listener.
      * @param inputStream The input stream.
      * @param outputStream The output stream.
@@ -62,6 +66,16 @@ class StreamCopyingThread extends Thread {
     }
 
     /**
+     * Enables/disables stream copying progress notifications (listener callbacks).
+     * The notifications may affect the stream copying performance, is not recommended and are
+     * disabled by default.
+     * @param notify If true, will enable notifications. If false, will disable them.
+     */
+    public void setNotifyStreamCopyingProgress(boolean notify) {
+        mNotifyStreamCopyingProgress = notify;
+    }
+
+    /**
      * From Thread.
      *
      * Keeps on copying the content of the input stream to the output stream.
@@ -76,27 +90,33 @@ class StreamCopyingThread extends Thread {
                 int numberOfBytesRead = 0;
 
                 while ((numberOfBytesRead = mInputStream.read(buffer)) != -1 && !mDoStop) {
-                    Log.i(TAG, "Read " + numberOfBytesRead + " bytes (thread ID: "
-                            + getId() + ", thread name: " + mThreadName + ")");
+                    // Uncomment the logging, if you need to debug the stream copying process.
+                    // However, note that Log calls are quite heavy and should be used here only, if
+                    // necessary.
+                    //Log.d(TAG, "Read " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
 
                     mOutputStream.write(buffer, 0, numberOfBytesRead); // Can throw IOException
 
-                    Log.i(TAG, "Wrote " + numberOfBytesRead + " bytes (thread ID: "
-                            + getId() + ", thread name: " + mThreadName + ")");
-                    mListener.onStreamCopySucceeded(this, numberOfBytesRead);
+                    //Log.d(TAG, "Wrote " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
+
+                    if (mNotifyStreamCopyingProgress) {
+                        mListener.onStreamCopySucceeded(this, numberOfBytesRead);
+                    }
                 }
 
-                if (numberOfBytesRead == -1) {
+                // Not probably an error, if we are stopping and even it was, no need to report
+                // since we are stopping anyway (referring to mDoStop if true)
+                if (numberOfBytesRead == -1 && !mDoStop) {
                     Log.e(TAG, "Input stream got -1 on read (thread ID: "
                             + getId() + ", thread name: " + mThreadName + ")");
-                    mDoStop = true;
                     mListener.onStreamCopyError(this, "Input stream got -1 on read");
+                    mDoStop = true;
                 }
             } catch (IOException e) {
                 Log.w(TAG, "Either failed to read from the output stream or write to the input stream (thread ID: "
                         + getId() + ", thread name: " + mThreadName + "): " + e.getMessage());
-                mDoStop = true;
                 mListener.onStreamCopyError(this, "Either failed to read from the output stream or write to the input stream: " + e.getMessage());
+                mDoStop = true;
             }
         }
 
