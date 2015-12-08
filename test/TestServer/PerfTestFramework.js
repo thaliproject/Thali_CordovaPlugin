@@ -52,7 +52,7 @@ inherits(PerfTestFramework, TestFramework);
 
 PerfTestFramework.prototype.addDevice = function(device) {
 
-  PerfTestFramework.super_.prototype.call(this, device);
+  PerfTestFramework.super_.prototype.addDevice.call(this, device);
 
   if (!this.testsRunning && this.devices[device.platform].length == 1) {
 
