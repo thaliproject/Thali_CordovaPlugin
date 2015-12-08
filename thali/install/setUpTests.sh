@@ -6,7 +6,7 @@ set -e
 # Check if we are running in MinGW
 runningInMinGw=false
 
-if [ "$(expr substr $(uname -s) 1 5)" == "MINGW" ]; then
+if [ "$(uname -s | cut -c 1-5)" == "MINGW" ]; then
     echo "Running in MinGW"
     runningInMinGw=true
 fi
