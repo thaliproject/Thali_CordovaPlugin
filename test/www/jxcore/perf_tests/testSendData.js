@@ -60,7 +60,9 @@ function testSendData(jsonData, name, addressList) {
   }
 
   this.doneCallback = function (data) {
+
     console.log('---- round done--------');
+
     var resultData = JSON.parse(data);
 
     var peerAddress  = 0;
@@ -70,7 +72,7 @@ function testSendData(jsonData, name, addressList) {
     // if we use the address list, then we try getting all connections to be successful
     // thus we re-try the ones that were not successful
     // and we schedule the re-try to be handled after all other peers we have in the list currently
-    if (self.BluetoothAddressList.length > 0) {
+    if (self.BluetoothAddressList && self.BluetoothAddressList.length > 0) {
       for (var i = 0; i < resultData.length; i++) {
         if (resultData[i].result != "OK") {
           areAllTestOk = false;
