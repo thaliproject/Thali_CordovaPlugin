@@ -161,6 +161,8 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
     console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
     self.stopAllTests(true);
+    // Acknowledge the server's request to end
+    self.testServer.emit("end_ack");
     self.testServer.close();
   });
 

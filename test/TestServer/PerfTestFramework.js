@@ -125,12 +125,17 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             console.log(processedResults);
 
             // Let the devices know we're completely finished
+            toComplete = devices.length;
             devices.forEach(function(_device) {
+              _device.socket.once("end_ack", function() {
+                if (--toComplete == 0) {
+                  // Quit once all devices have acknowledged (and will have
+                  // sent any results they have)
+                  process.exit(0);
+                }
+              });
               _device.socket.emit("end");
             }); 
-
-            // Quit !!
-            process.exit(0);
           }
         }
       });
