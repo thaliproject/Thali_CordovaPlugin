@@ -24,7 +24,9 @@ function debug(msg) {
 
   _testServer.on('error', function (data) {
 
-    console.log(data);
+    this.debugCallback = function(data) {
+        self.emit('debug',data);
+    };
 
     if (wifiRepairOngoing) {
       return;

@@ -1,20 +1,19 @@
 'use strict';
 
-return;
-
 var tape = require('../lib/thali-tape');
 var SmallerHashStateMachine = require('thali/identityExchange/SmallerHashStateMachine');
 var LargerHashStateMachine = require('thali/identityExchange/LargerHashStateMachine');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
-var Nock = require('nock');
+var nock = require('nock');
 var crypto = require('crypto');
 var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
+var urlSafeBase64 = require('urlsafe-base64');
 
 var port = 10008;
-var testServer = Nock('http://localhost:' + port);
+var testServer = nock('http://localhost:' + port);
 var bigHash = null;
 var smallHash = null;
 var thaliApp = null;
@@ -26,7 +25,7 @@ var largerHashStateMachine = null;
 
 var test = tape({
   setup: function(t) {
-    thePeerId = "23po98r;lo23ihjfl;wijf;lwaijsf;loi3hjf;lashf;lohwass;klfihsa3;klifhas;kliefh;saklifhos389;alhf";
+    thePeerId = '23po98r;lo23ihjfl;wijf;lwaijsf;loi3hjf;lashf;lohwass;klfihsa3;klifhas;kliefh;saklifhos389;alhf';
     var smallAndBigHash = identityExchangeTestUtils.createSmallAndBigHash();
     smallHash = smallAndBigHash.smallHash;
     bigHash = smallAndBigHash.bigHash;
@@ -93,7 +92,7 @@ MockConnectionTable.prototype.lookUpPeerId = null;
 
 function mockConnectionTableGenerator(t, expectedPeerId, portsArray) {
   if (!portsArray || portsArray.length <= 0) {
-    throw new Error("portsArray must have at least one entry");
+    throw new Error('portsArray must have at least one entry');
   }
 
   var responsesSent = -1;
@@ -108,7 +107,7 @@ function mockConnectionTableGenerator(t, expectedPeerId, portsArray) {
     if ((!lastLookupTime && responsesSent == -1) || lastLookupTime == responsesSent) {
       responsesSent += 1;
       var response = { muxPort: portsArray[responsesSent], time: responsesSent};
-      if (responsesSent % 2 == 0) {
+      if (responsesSent % 2 === 0) {
         setTimeout(function() {
           mock.emit(expectedPeerId, response);
         }, 10);
@@ -129,13 +128,13 @@ function endlessMockConnectionTableLoop(t, expectedPeerId, port, noChannelBindin
   var mock = new MockConnectionTable(function(peerId, lastLookupTime) {
     t.equal(expectedPeerId, peerId);
     if (!noChannelBindingErrors) {
-      t.comment("lookupTime: " + lookupTime + ", lastLookupTime: " + lastLookupTime);
-      t.ok(lookupTime == 0 || lookupTime == lastLookupTime);
+      t.comment('lookupTime: ' + lookupTime + ', lastLookupTime: ' + lastLookupTime);
+      t.ok(lookupTime === 0 || lookupTime === lastLookupTime);
     }
 
     lookupTime += 1;
     var response = { muxPort: port, time: lookupTime };
-    if (lookupTime % 2 == 0) {
+    if (lookupTime % 2 === 0) {
       setTimeout(function() {
         mock.emit(expectedPeerId, response);
       }, 10);
@@ -167,8 +166,8 @@ function retrySamePortConnectionTable(thePeerId, t, failOnSecondRequest) {
 }
 
 function goodCbMockResponse() {
-  var pkOtherBase64 = bigHash.toString('base64');
-  var goodRnOther = crypto.randomBytes(identityExchangeUtils.rnBufferLength).toString('base64');
+  var pkOtherBase64 = urlSafeBase64.encode(bigHash);
+  var goodRnOther = urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength));
   return { rnOther: goodRnOther, pkOther: pkOtherBase64 };
 }
 
@@ -195,7 +194,7 @@ test('start - Make sure we exit when our hash is bigger', function (t) {
     new SmallerHashStateMachine(new TRMMock(), new MockConnectionTable(), null, smallHash, bigHash);
   smallerHashStateMachine.once(SmallerHashStateMachine.Events.Exited, function(error) {
     t.equal(error, SmallerHashStateMachine.ExitBecauseNotNeededError);
-    t.equal(smallerHashStateMachine.smallHashStateMachine.current, "Exit");
+    t.equal(smallerHashStateMachine.smallHashStateMachine.current, 'Exit');
     t.end();
   });
   smallerHashStateMachine.start();
@@ -205,7 +204,7 @@ test('start - Make sure we start when our hash is smaller', function(t) {
   smallerHashStateMachine =
     new SmallerHashStateMachine(new TRMMock(), new MockConnectionTable(), null, bigHash, smallHash);
   smallerHashStateMachine.on(SmallerHashStateMachine.Events.SearchStarted, function() {
-    t.equal(smallerHashStateMachine.smallHashStateMachine.current, "GetPeerIdPort");
+    t.equal(smallerHashStateMachine.smallHashStateMachine.current, 'GetPeerIdPort');
     t.end();
   });
   smallerHashStateMachine.start();
@@ -219,23 +218,24 @@ test('onFoundPeerPort - bad peer port', function(t) {
 });
 
 test('200 cb responses with problem', function(t) {
-  var pkOtherBase64 = bigHash.toString('base64');
-  var goodRnOther = crypto.randomBytes(identityExchangeUtils.rnBufferLength).toString('base64');
-  var testArray = [
-    {},
-    { rnOther: "{abc", pkOther: pkOtherBase64 }, // rnOther isn't base 64 value
-    { rnOther: crypto.randomBytes(identityExchangeUtils.rnBufferLength + 2).toString('base64'),
-      pkOther: pkOtherBase64},
-    { rnOther: crypto.randomBytes(identityExchangeUtils.rnBufferLength - 1).toString('base64'),
-      pkOther: pkOtherBase64},
-    { rnOther: goodRnOther },
-    { rnOther: goodRnOther,
-      pkOther: crypto.randomBytes(identityExchangeUtils.pkBufferLength - 1).toString('base64')},
-    { rnOther: goodRnOther,
-      pkOther: crypto.randomBytes(identityExchangeUtils.pkBufferLength + 1).toString('base64')},
-    { rnOther: goodRnOther,
-      pkOther: crypto.randomBytes(identityExchangeUtils.pkBufferLength).toString('base64')}
-  ];
+  disableIfJxCore(t, function(t) {
+    var pkOtherBase64 = urlSafeBase64.encode(bigHash);
+    var goodRnOther = urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength));
+    var testArray = [
+      {},
+      { rnOther: '{abc', pkOther: pkOtherBase64 }, // rnOther isn't base 64 value
+      { rnOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength + 2)),
+        pkOther: pkOtherBase64},
+      { rnOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength - 1)),
+        pkOther: pkOtherBase64},
+      { rnOther: goodRnOther },
+      { rnOther: goodRnOther,
+        pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength - 1)) },
+      { rnOther: goodRnOther,
+        pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength + 1)) },
+      { rnOther: goodRnOther,
+        pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength)) }
+    ];
 
   var portArray = [];
   testArray.forEach(function(responseBody) {
@@ -249,15 +249,16 @@ test('200 cb responses with problem', function(t) {
 });
 
 test('200 rnmine responses with problem', function(t) {
-  var testArray = [
-    {},
-    { pkOther: "" },
-    { pkOther: "{abc" },
-    { pkOther: crypto.randomBytes(identityExchangeUtils.pkBufferLength - 3).toString('base64')},
-    { pkOther: crypto.randomBytes(identityExchangeUtils.pkBufferLength + 10).toString('base64')},
-    { pkOther: crypto.randomBytes(identityExchangeUtils.pkBufferLength).toString('base64')},
-    { foo: "ick"}
-  ];
+  disableIfJxCore(t, function(t) {
+    var testArray = [
+      {},
+      { pkOther: '' },
+      { pkOther: '{abc' },
+      { pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength - 3)) },
+      { pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength + 10)) },
+      { pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength)) },
+      { foo: 'ick'}
+    ];
 
   var portArray = [];
   testArray.forEach(function(responseBody) {
@@ -349,7 +350,7 @@ test('Handling 400 w/notDoingIdentityExchange on cb response', function(t) {
     });
     largerHashStateMachine.start();
     smallerHashStateMachine.start();
-  })
+  });
 });
 
 test('Handling 400 w/notDoingIdentityExchange on rnmine response', function(t) {
@@ -372,7 +373,7 @@ test('Handling 400 w/notDoingIdentityExchange on rnmine response', function(t) {
     largerHashStateMachine.start();
     largerHashStateMachine.exchangeIdentity(smallHash);
     smallerHashStateMachine.start();
-  })
+  });
 });
 
 test('Handling 400 w/wrongPeer on cb response', function(t) {
@@ -388,7 +389,7 @@ test('Handling 400 w/wrongPeer on cb response', function(t) {
       t.end();
     });
     smallerHashStateMachine.start();
-  })
+  });
 });
 
 test('Get to success!', function(t) {
@@ -411,7 +412,7 @@ test('Get to success!', function(t) {
     largerHashStateMachine.exchangeIdentity(smallHash);
     smallerHashStateMachine.on(SmallerHashStateMachine.Events.Exited, function(error) {
       if (exitCalled) {
-        return t.fail("We should only have been called here once.");
+        return t.fail('We should only have been called here once.');
       }
       exitCalled = true;
       t.equal(error, SmallerHashStateMachine.ExitBecauseGotValidationCode);
@@ -419,20 +420,20 @@ test('Get to success!', function(t) {
     });
     smallerHashStateMachine.on(SmallerHashStateMachine.Events.ValidationCode, function(validationCode) {
       if (smallerValidationCode) {
-        return t.fail("We should have only gotten called here once");
+        return t.fail('We should have only gotten called here once');
       }
       smallerValidationCode = validationCode;
       checkDone();
     });
     largerHashStateMachine.on(LargerHashStateMachine.Events.ValidationCodeGenerated, function (validationCode) {
       if (largerValidationCode) {
-        return t.fail("We should have only gotten called here once");
+        return t.fail('We should have only gotten called here once');
       }
       largerValidationCode = validationCode;
       checkDone();
     });
     smallerHashStateMachine.start();
-  })
+  });
 });
 
 test('Test race conditions', function(t) {
@@ -441,7 +442,7 @@ test('Test race conditions', function(t) {
   smallerHashStateMachine.start();
   setImmediate(function() {
     smallerHashStateMachine.stop();
-    t.throws(function() { smallerHashStateMachine.start() });
+    t.throws(function() { smallerHashStateMachine.start(); });
     t.end();
   });
 });
