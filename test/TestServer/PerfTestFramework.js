@@ -132,7 +132,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             }
 
             // Let the completed device know it can tear down the current test
-            _device.socket.emit("stop");
+            _device.socket.emit("teardown");
           });
 
           tests.shift();

@@ -132,6 +132,8 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
 
   this.testServer.on('start', function(testData) {
 
+    // Server is telling us to start the named test
+
     debug("--- start :" + testData.testName + "---");
     if (!(testData.testName in self.tests)) {
       self.testServer.emit("error", "Unknown test");
@@ -148,20 +150,25 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
     self.currentTest.start();
   });
 
-  this.testServer.on('stop', function() {
-    debug("stop");
-    self.stopAllTests(false);
+  this.testServer.on('teardown', function() {
+    // Test server is telling us to teardown the current test
+    debug("teardown");
+    self.currentTest.stop(false);
+    self.currentTest = null;
   });
 
   this.testServer.on('timeout', function() {
-   debug("stop-by-timeout");
-   self.stopAllTests(true);
+    debug("server initiated timeout");
+    self.currentTest.stop(true);
+    self.currentTest = null;
   });
 
   this.testServer.on('end', function() {
+
+    // Test server is telling us we can quit
     console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
-    self.stopAllTests(true);
+
     // Acknowledge the server's request to end
     self.testServer.emit("end_ack");
     self.testServer.close();
@@ -170,8 +177,12 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
   this.testServer.on('closed', function() {
     console.log('The server connection has closed.');
 
-    //we need to stop & close any tests we are running here
-    TestFramework.stopAllTests(false);
+    // we need to stop & close any tests we are running here
+    if (self.currentTest) {
+      self.currentTest.stop(false);
+      self.currentTest = null;
+    }
+
     testUtils.logMessageToScreen('fully-closed');
     console.log('turning Radios off');
     testUtils.toggleRadios(false);
@@ -203,14 +214,6 @@ function shuffle(array) {
 
 TestFrameworkClient.prototype.setCallbacks = function(test) {
   test.on('done', this.doneCallback);
-}
-
-TestFrameworkClient.prototype.stopAllTests = function(doReport) {
-  console.log('stop tests now !');
-  console.log('stop current!');
-  this.currentTest.stop(doReport);
-  this.currentTest.removeListener('done', this.doneCallback);
-  this.currentTest = null;
 }
 
 // Everything below here is report printing
