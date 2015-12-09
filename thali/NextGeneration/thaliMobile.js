@@ -237,6 +237,36 @@ module.exports.connectionTypes = {
  * obviously we wouldn't want to declare them gone even if we don't see them on
  * BLE or if MPCF told us they were gone.
  *
+ * If an attempt to connect to a peer via Bluetooth whose presence we have
+ * previously advertised via peerAvailabilityChanged should fail then we MUST
+ * use our own heuristics to decide if we should mark the peer as no longer
+ * available. Generally speaking if we still see the peer via BLE then we should
+ * continue to mark them as available. Note that available doesn't mean
+ * reachable. It is very easy for a peer to get overwhelmed with Bluetooth
+ * requests and so be near but not able to accept a request.
+ *
+ * If we have been notified via a networkChanged event that either BLE or
+ * Bluetooth is no longer available then we MUST mark all peers discovered via
+ * BLE as no longer being present and send peerAvailabilityChanged events
+ * reporting this status change. In theory we could make things more complex by
+ * specifying that if BLE is turned off and Bluetooth isn't then we could
+ * continue to say that the Bluetooth peers are there. But in practical terms it
+ * isn't clear if this situation is possible (e.g. I suspect one can only turn
+ * off Bluetooth, not sub-select between BLE and Bluetooth) and second it's more
+ * complexity than we really need at this point.
+ *
+ * If we have been notified via a discoveryAdvertisingStatus event that
+ * discovery is no longer available then we MUST treat existing discovered
+ * Bluetooth peers as no longer being available and send peerAvailabilityChanged
+ * events reporting this fact. Eventually we might get more flexible here and
+ * allow Bluetooth peers to remain "available" and just use the connection
+ * heuristics described previously to mark them as absent when necessary. But
+ * for now let's keep things simple.
+ *
+ * If we have been notified via a discoveryAdvertisingStatus event that
+ * advertising is no longer available this should not cause any change in our
+ * information about peers we have discovered or will yet discover.
+ *
  * ## iOS + MPCF
  *
  * In the case of the MPCF the native layer has an explicit lostPeer message.
@@ -257,6 +287,37 @@ module.exports.connectionTypes = {
  * make this concrete since we have to decide if we are going to put this
  * suspicion into our code.
  *
+ * If an attempt to connect to a peer via MPCF whose presence we have previously
+ * advertised via peerAvailabilityChanged should fail we MUST use our own
+ * heuristics to decide if we should mark the peer as no longer available.
+ * Typically we should allow several failed connection attempts before we decide
+ * to mark the peer as no longer present.
+ *
+ * If we have been notified via a networkChanged event that one of Bluetooth or
+ * Wifi are no longer available but not both then this should not cause any
+ * immediate action since MPCF seems able to run exclusively over one transport
+ * or the other.
+ *
+ * If however we have been notified via a networkChanged even that both
+ * Bluetooth and Wifi are no longer available then we MUST mark all peers that
+ * we have previously advertised as available as now being unavailable and
+ * advertise this change via the peerAvailabilityChanged event.
+ *
+ * If we have been notified via a discoveryAdvertisingStatus event that
+ * discovery is no longer available then we MUST change the availability of
+ * peers discovered via MPCF as not available and advertise this fact via
+ * peerAvailabilityChanged.
+ *
+ * __Open Issue:__ The MPCF explicitly states that one shouldn't keep discovery
+ * on all the time. One suspects this is because they are using Bluetooth for
+ * discovery. As such as may need to cycle discovery on and off to save battery.
+ * In that case we will need to change the logic above so that turning off
+ * discovery doesn't make the peer appear to be gone.
+ *
+ * If we have been notified via a discoveryAdvertisingStatus even that
+ * advertising is no longer available then this should not cause any change in
+ * our peer status.
+ *
  * ## Wifi
  *
  * In the case of Wifi SSDP supports sending both announcements of
@@ -269,6 +330,28 @@ module.exports.connectionTypes = {
  * module:ThaliWifiInfrastructure~wifiPeerAvailabilityChanged} event) and if we
  * don't hear an announcement that they are gone then we MUST automatically
  * generate such an announcement ourselves.
+ *
+ * Unlike the non-TCP transports, we do not use a proxy architecture with Wifi
+ * and therefore do not know if an attempted connection succeeded or not. This
+ * is why there is no equivalent requirement here to the ones above specifying
+ * that failed connections should cause us to mark a peer as not available.
+ *
+ * If we have been notified via a networkChanged event that Wifi is no longer
+ * available then all peers discovered via Wifi MUST be marked as not present
+ * and this fact advertised via peerAvailabilityChanged.
+ *
+ * If we have been notified via a discoveryAdvertisingStatus event that
+ * discovery is no longer available then we MUST change the availability of
+ * peers discovered via Wifi to not available and advertise this fact via
+ * peerAvailabilityChanged. This is a bit harsh since if Wifi is still working
+ * we certainly could connect to those peers but once discovery is off we have
+ * no way of knowing if the peer has disappeared and since we don't have a proxy
+ * architecture we can't detect failed connections. So it's just easier for now
+ * to just treat the peers as gone.
+ *
+ * If we have been notified via a discoveryAdvertisingStatus event that
+ * advertising is no longer available then this should not cause any change in
+ * our peer status.
  *
  * ## General guidelines on handling nonTCPPeerAvailabilityChanged and
  * wifiPeerAvailabilityChanged events

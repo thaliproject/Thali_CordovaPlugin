@@ -5,37 +5,42 @@
 
 /**
  * Creates a sub-type of the {@link module:thaliPeerPoolInterface~PeerAction}
- * class to represent actions for retrieving notifications.
+ * class to represent actions for retrieving notifications. We MUST default
+ * ActionState to queued. We are explicitly assuming that all created actions
+ * will be added to the queue.
  *
  * @param {string} peerIdentifier
  * @param {module:thaliMobile.connectionTypes} connectionType
  * @param {string} actionType
+ * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
+ * with the local device's public and private keys.
+ * @param {addressBookCallback} addressBookCallback An object used to validate
+ * which peers we are interested in talking to.
  * @constructor
- * @implements {module:thaliPeerPoolInterface~PeerAction}
+ * @implements {module:thaliPeerAction~PeerAction}
  * @fires module:thaliNotificationAction~NotificationAction.event:Resolved
  */
-function NotificationAction(peerIdentifier, connectionType, actionType) {
+function NotificationAction(peerIdentifier, connectionType, actionType,
+                            ecdhForLocalDevice, addressBookCallback) {
   this.actionState = NotificationAction.ActionState.QUEUED;
 }
 
 /**
- * When start is called for the first time the actionState MUST be set to
- * STARTED.
- *
  * Once started we MUST make a HTTP GET request to
  * http://[hostAddress]:[portNumber]/NotificationBeacons. Make sure to set the
  * TCP/IP timeout using suggestedTCPTimeout.
  *
  * If we do get a successful beacon response then we MUST submit the beacon
  * stream along with ecdhForLocalDevice and addressBookCallback to the {@link
- * module:thaliNotificationBeacons.parseBeacons} method on an instance of {@link
- * module:thaliNotificationBeacons} that we have created locally.
+ * module:thaliNotificationBeacons.parseBeacons} method.
  *
- * Handle the results from above per {@link
- * module:thaliNotificationAction~ThaliNotificationAction.event:ActionState}.
+ * When completed fire
+ * {@link module:thaliNotificationAction~NotificationAction.event:Resolved} with
+ * whatever value makes the most sense.
+ *
  * Note that if we receive a kill method while waiting for the response then we
- * MUST call abort on the request, set our ActionState to KILLED and fire off a
- * Resolved event.
+ * MUST call abort the HTTP request, set our ActionState to KILLED and fire off
+ * a Resolved event.
  *
  * __Open Issue:__ Is abort truly synchronous? In other words is it ever
  * possible to call abort, get back a response and then still have the response
@@ -46,43 +51,19 @@ NotificationAction.prototype.start = function () {
 };
 
 /**
- * If the action's state is enqueued then this call MUST result in it being
- * removed from the peer pool queue.
- *
- * If the action's state is waiting then the timer MUST be killed and no further
- * action taken.
- *
- * If the action's state is inProgress then any in flight HTTP requests MUST
- * be terminated and the peer pool's FinishedEnqueueCallback called.
+ * In addition to the inherited behavior also make sure to fire the
+ * {@link module:thaliNotificationAction~NotificationAction.event:Resolved}
+ * event.
  */
 NotificationAction.prototype.kill = function () {
 
 };
 
 /**
- * Records the current state of the action.
- *
- * @readonly
- * @enum {{QUEUED: string, STARTED: string, KILLED: string}}
- */
-NotificationAction.ActionState = {
-  /** The action is in the peer pool's queue */
-  QUEUED: 'queued',
-  /** The action is out of the queue and is currently running */
-  STARTED: 'started',
-  /** The action is not running and not in the queue */
-  KILLED: 'killed'
-};
-
-NotificationAction.prototype.getActionState = function () {
-  return this.actionState;
-};
-
-/**
  * Records the final outcome of the action.
  *
  * @readonly
- * @enum {{BEACONS_RETRIEVED: string, NETWORK_PROBLEM: string, KILLED: string}}
+ * @enum {string}
  */
 NotificationAction.ActionResolution = {
   /**
@@ -118,11 +99,10 @@ NotificationAction.ActionResolution = {
  * @event module:thaliNotificationAction~NotificationAction.event:Resolved
  * @param {ActionResolution} actionResolution Explains how the action was
  * completed.
- * @param {module:thaliNotificationBeacons~ParseBeaconsResponse} beacon If
- * actionResolution is BEACONS_RETRIEVED_AND_PARSED then this object will be
+ * @param {module:thaliNotificationBeacons~ParseBeaconsResponse} beacon
+ * If actionResolution is BEACONS_RETRIEVED_AND_PARSED then this object will be
  * returned. If the beacons were parsed and there were no values directed at
  * this peer then the beacon object MUST be null.
  */
 
-
-module.exports = NotificationAction;
+module.exports.NotificationAction = NotificationAction;

@@ -1,13 +1,14 @@
 'use strict';
 
 var EventEmitter = require('events');
+var thaliPeerDictionary = require('thaliPeerDictionary');
 
 /** @module thaliNotificationClient */
 
 /**
  * Creates a class that can register to receive the {@link
  * module:thaliMobile.event:peerAvailabilityChanged} event. It will listen for
- * the event and upon receiving it will enqueue an action with the
+ * the event and upon receiving it, will enqueue an action with the
  * submitted thaliPeerPool. Once called back by the pool then the callback will
  * issue a HTTP GET request to retrieve the notification beacons for the peer,
  * parse them, see if one matches and if so then fire a {@link
@@ -32,76 +33,18 @@ function ThaliNotificationClient(thaliPeerPool, ecdhForLocalDevice,
 }
 
 /**
- * Records information about how to connect to a peer over a particular
- * connectionType.
- *
- * @typedef {Object} PeerConnectionInformation
- * @property {string} hostAddress
- * @property {number} portNumber
- * @property {number} suggestedTCPTimeout
- */
-
-// jscs:disable maximumLineLength
-/**
- * A dictionary of different connectionTypes and their associated connection
- * information.
- *
- * @typedef {Object.<module:thaliMobile.connectionTypes, PeerConnectionInformation>} PeerConnectionDictionary
- */
-// jscs:enable maximumLineLength
-
-/**
- * Enum to record the state of trying to get the notification beacons for the
- * associated peerIdentifier
- * @readonly
- * @enum {{RESOLVED: string, CONTROLLED_BY_POOL: string, WAITING: string}}
- */
-ThaliNotificationClient.PeerTableEntry.peerState = {
-  /** The notification beacons for this peerID have been successfully
-   * retrieved.
-   */
-  RESOLVED: 'resolved',
-  /** The notification action is under the control of the peer pool so we have
-   * to check the notification action itself to find out its current state.
-   */
-  CONTROLLED_BY_POOL: 'controlledByPool',
-  /** A request to get the notification beacons for this peer failed and we
-   * are now waiting before enqueuing a new request.
-   */
-  WAITING: 'waiting'
-};
-
-/**
- * An entry to be put into the peerDictionary.
- *
- * @private
- * @param {ThaliNotificationClient.PeerTableEntry.peerState} peerState The state
- * of the peer.
- * @param {PeerConnectionDictionary} peerConnectionDictionary A dictionary
- * of different connection types we know about for this peerIdentity
- * @param {module:thaliNotificationAction~NotificationAction} notificationAction
- * @constructor
- */
-ThaliNotificationClient.PeerTableEntry = function (
-  peerState, peerConnectionDictionary, notificationAction) {
-  this.peerState = peerState;
-  this.peerConnectionDictionary = peerConnectionDictionary;
-  this.notificationAction = notificationAction;
-};
-
-/**
  * A dictionary used to track the state of peers we have received notifications
  * about from {@link module:thaliMobile}.
  *
- * @private
- * @type {Object.<string, ThaliNotificationClient.PeerTableEntry>}
+ * @type {ThaliNotificationClient.PeerDictionary}
  */
-ThaliNotificationClient.prototype.peerDictionary = {};
+ThaliNotificationClient.prototype.peerDictionary =
+  new thaliPeerDictionary.PeerDictionary();
 
 /**
  * This method will cause a listener to be registered on the global singleton
  * {@link module:thaliMobile} object for the {@link
- * module:thaliMobile~peerAvailabilityChanged} event.
+ * module:thaliMobile.event:peerAvailabilityChanged} event.
  *
  * This method MUST be idempotent so calling it twice in a row MUST NOT cause
  * multiple listeners to be registered with thaliMobile.
@@ -115,26 +58,20 @@ ThaliNotificationClient.prototype.peerDictionary = {};
  * specific peerIdentifier again. If the peer behind the identifier changes
  * their beacons then we will get a new peerIdentifier.
  *
- * The instructions below assume that we have an object local to this class
- * that is being used
- *
- * The following defines our behavior when we receive a peerAvailabilityChanged
- * event.
- *
  * + If hostAddress != null
- *  + If this peer is not in the table
+ *  + If this peer is not in the dictionary
  *    + Create a {@link module:thaliNotificationAction~NotificationAction} and
  *    then call enqueue on the submitted {@link
  *    module:thaliPeerPoolInterface~ThaliPeerPoolInterface} object and then
- *    create a new PeerTableEntry object with the peerState set to enqueued, the
- *    peerConnectionDictionary set to a single entry matching the data in the
- *    peerAvailabilityChanged event and the notificationAction set to the
- *    previously created notificationAction object.
+ *    create a new PeerDictionaryEntry object with the peerState set to
+ *    enqueued, the peerConnectionDictionary set to a single entry matching the
+ *    data in the peerAvailabilityChanged event and the notificationAction set
+ *    to the previously created notificationAction object.
  *  + If this peer is in the table
  *    + If this peer has been marked as RESOLVED
  *      + Ignore the event
  *    + If this peer has been marked as CONTROLLED_BY_POOL and the action's
- *      state is QUEUED or if its state is WAITING
+ *      state is QUEUED or if the peer's state is WAITING
  *      + First update the connection dictionary for the peer's entry with the
  *      new data. Then if the connectionType of the new event is TCP_NATIVE and
  *      if the connectionType of the existing action isn't that then kill the
@@ -159,8 +96,8 @@ ThaliNotificationClient.prototype.peerDictionary = {};
  *     + If this peer has been marked as resolved
  *       + Ignore the event.
  *     + If this peer has been marked as CONTROLLED_BY_POOL and the action's
- *     state is QUEUED or if its state is WAITING or if this peer has been
- *     marked as CONTROLLED_BY_POOL and the action's state is STARTED
+ *     state is QUEUED or if the peer's state is WAITING or if this peer has
+ *     been marked as CONTROLLED_BY_POOL and the action's state is STARTED
  *       + Call kill on the action via {@link
  *       module:thaliPeerPoolInterface~ThaliPeerPoolInterface#kill} and remove
  *       the associated entry in peerConnectionDictionary. If this leaves no
@@ -202,18 +139,9 @@ ThaliNotificationClient.prototype.peerDictionary = {};
  *  the best thing for us to do is to just delete the entire entry for this
  *  peerIdentifier and move on.
  *
- * ## Rate Limiters
- *
- *   * Limit how many simultaneous HTTP request we have outstanding
- *   Limit how
- * many queued discoveries we have
- * Limit how big the successful peerIdentifier
- * cache can get
- * Limit how many requests we can have in retry
- *
  * @public
  */
-ThaliNotificationClient.prototype.addListener = function () {
+ThaliNotificationClient.prototype.start = function () {
 
 };
 
@@ -223,13 +151,14 @@ ThaliNotificationClient.prototype.addListener = function () {
  * cause a single call to removeListener on thaliMobile and only then if there
  * already was a call to addListener on this object.
  *
- * Note that removing the listener will not affect any actions that have already
- * been registered with the submitted peer pool. They will execute whenever
- * they are picked by the peer pool to run.
+ * Removing the listener MUST not just stop listening for the event but MUST
+ * also cause all non-resolved entries in the dictionary to either stop
+ * waiting or if under control of the pool to be killed and then their entries
+ * MUST be removed from the peer dictionary.
  *
  * @public
  */
-ThaliNotificationClient.prototype.removeListener = function () {
+ThaliNotificationClient.prototype.stop = function () {
 
 };
 
