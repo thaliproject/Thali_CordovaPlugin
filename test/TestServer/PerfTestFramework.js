@@ -6,7 +6,7 @@
 var fs = require('fs');
 var inherits = require('util').inherits;
 var TestFramework = require('./TestFramework');
-var configFile = require('./Config_PerfTest.json');
+var perfTestConfig = require('./PerfTestFramework.js');
 var ResultsProcessor = require('./ResultsProcessor.js');
 
 /*
@@ -45,7 +45,7 @@ var logger = function (value) {
 };
 
 function PerfTestFramework(testConfig) {
-  PerfTestFramework.super_.call(this, testConfig);
+  PerfTestFramework.super_.call(this, testConfig, perfTestConfig.userConfig);
 }
 
 inherits(PerfTestFramework, TestFramework);
@@ -101,7 +101,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
     toComplete = devices.length;
 
     // Set up the test parameters
-    var testData = configFile[test];
+    var testData = perfTestConfig.testConfig[test];
     testData.peerCount = toComplete;
 
     devices.forEach(function(device) {
