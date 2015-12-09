@@ -6,7 +6,7 @@
 var fs = require('fs');
 var inherits = require('util').inherits;
 var TestFramework = require('./TestFramework');
-var perfTestConfig = require('./PerfTestFramework.js');
+var perfTestConfig = require('./PerfTestConfig');
 var ResultsProcessor = require('./ResultsProcessor.js');
 
 /*
