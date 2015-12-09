@@ -10,7 +10,7 @@ import java.net.Socket;
 /**
  * The base (thread) class for outgoing and incoming socket threads.
  */
-public class SocketThreadBase extends Thread implements StreamCopyingThread.Listener {
+abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Listener {
     private static final String SENDING_THREAD_NAME = "Sender";
     private static final String RECEIVING_THREAD_NAME = "Receiver";
 

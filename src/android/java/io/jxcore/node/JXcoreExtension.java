@@ -215,7 +215,7 @@ public class JXcoreExtension {
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
                 ArrayList<Object> args = new ArrayList<Object>();
-                if (mConnectionHelper.disconnectAllIncomingConnections() == 0) {
+                if (mConnectionHelper.closeAndRemoveAllIncomingConnections() == 0) {
                     args.add("No incoming connection to disconnect");
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;

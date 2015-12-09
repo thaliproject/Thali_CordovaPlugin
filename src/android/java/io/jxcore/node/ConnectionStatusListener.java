@@ -1,11 +1,11 @@
 package io.jxcore.node;
 
 /**
- *
+ * The connection status listener interface.
  */
 abstract class ConnectionStatusListener {
     /**
-     * Called when we started listening for incoming connections.
+     * Called when we have a connection ready.
      * @param port The port listening to.
      */
     void onListeningForIncomingConnections(int port) {
@@ -16,13 +16,6 @@ abstract class ConnectionStatusListener {
      * @param port The port number associated with the connection.
      */
     void onConnected(int port) {
-    }
-
-    /**
-     * Called when a connection fails.
-     * @param errorMessage The error message.
-     */
-    void onConnectionError(String errorMessage) {
     }
 
     /**
