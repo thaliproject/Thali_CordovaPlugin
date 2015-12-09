@@ -30,6 +30,13 @@ function NotificationAction(peerIdentifier, connectionType, actionType,
  * http://[hostAddress]:[portNumber]/NotificationBeacons. Make sure to set the
  * TCP/IP timeout using suggestedTCPTimeout.
  *
+ * The logic for the GET request MUST asynchronous read the response to the
+ * GET request and ensure that it is not beyond a prefixed maximum size. Note
+ * that node does not validate that the length of a response body and the
+ * content-length header match so we MUST read the response in chunks
+ * asynchronously and if the total data read exceeds our predefined limit
+ * then we MUST abort the request object.
+ *
  * If we do get a successful beacon response then we MUST submit the beacon
  * stream along with ecdhForLocalDevice and addressBookCallback to the {@link
  * module:thaliNotificationBeacons.parseBeacons} method.
