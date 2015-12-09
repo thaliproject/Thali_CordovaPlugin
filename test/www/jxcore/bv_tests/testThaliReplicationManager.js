@@ -6,6 +6,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
 
 var os = require('os');
 var path = require('path');
+var http = require('http');
 var tape = require('../lib/thali-tape');
 var uuid = require('uuid');
 var util = require('util');
@@ -217,9 +218,10 @@ test('ThaliReplicationManager replicates database', function (t) {
     var app = express();
     app.disable('x-powered-by');
     app.use('/db', require('express-pouchdb')(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
-    app.listen(4242, function() {
+    var server = http.createServer(app).listen(function () {
       // Start replication
-      manager.start(4242, 'thali');
+      manager.start(server.address().port, 'thali');
     });
+    app.set('port', server.address().port);
   });
 });
