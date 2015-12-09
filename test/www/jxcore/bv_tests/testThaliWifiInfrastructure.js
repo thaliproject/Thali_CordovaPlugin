@@ -6,7 +6,9 @@ var nodessdp = require('node-ssdp');
 
 function noop () { }
 
-var wifiInfrastructure = new ThaliWifiInfrastructure('testDeviceName');
+var TEST_DEVICE_NAME = 'testDeviceName'
+
+var wifiInfrastructure = new ThaliWifiInfrastructure(TEST_DEVICE_NAME);
 
 var test = tape({
   setup: function(t) {
@@ -28,7 +30,7 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
     location: testLocation,
     allowWildcards: true,
     adInterval: 500,
-    udn: 'testServerName'
+    udn: 'somePeerDeviceName' + ':' + wifiInfrastructure.thaliUsn
   });
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', function (data) {
     t.equal(data[0].peerAddress, testLocation);
@@ -56,4 +58,20 @@ test('#startUpdateAdvertisingAndListenForIncomingConnections should use differen
       t.end();
     });
   });
+});
+
+test('verify that Thali-specific messages are filtered correctly', function (t) {
+  var irrelevantMessage = {
+    USN: 'foobar'
+  };
+  t.equal(true, wifiInfrastructure.shouldBeIgnored(irrelevantMessage), 'irrelevant messages should be ignored');
+  var relevantMessage = {
+    USN: wifiInfrastructure.thaliUsn
+  };
+  t.equal(false, wifiInfrastructure.shouldBeIgnored(relevantMessage), 'relevant messages should not be ignored');
+  var messageFromSelf = {
+    USN: TEST_DEVICE_NAME + ':' + wifiInfrastructure.thaliUsn
+  };
+  t.equal(true, wifiInfrastructure.shouldBeIgnored(messageFromSelf), 'messages from this device should be ignored');
+  t.end();
 });
