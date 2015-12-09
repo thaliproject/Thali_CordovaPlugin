@@ -14,4 +14,4 @@ Mobile('GetDeviceName').callNative(function (name) {
   testUtils.setMyName(name);
   require('./runTests.js');
   console.log('Test app app.js loaded');
-}
+});
