@@ -6,12 +6,16 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 
-function TestFramework(testConfig) {
-
+function TestFramework(testConfig, userConfig) {
   TestFramework.super_.call(this);
 
   this.devices = {};
+
+  // testConfig - Config provided by the CI system. Tells how many devices are available
+  // userConfig - Config provided by the user (via source). Tells us how many devices we need
   this.testConfig = testConfig;
+  this.userConfig = userConfig;
+
   this.testsRunning = false;
 }
 
@@ -27,7 +31,7 @@ TestFramework.prototype.addDevice = function(device) {
   }
 
   // See if we have enough devices of platform type to start a test run
-  if (this.devices[device.platform].length === this.testConfig.devices[device.platform]) {
+  if (this.devices[device.platform].length === this.userConfig[device.platform].numDevices) {
     this.startTests(device.platform, device.tests);
     this.testsRunning = true;
   }

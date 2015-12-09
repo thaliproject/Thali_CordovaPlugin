@@ -6,9 +6,10 @@
 
 var util = require('util');
 var TestFramework = require('./TestFramework');
+var unitTestConfig = require('./UnitTestConfig');
 
 function UnitTestFramework(testConfig) {
-  UnitTestFramework.super_.call(this, testConfig);
+  UnitTestFramework.super_.call(this, testConfig, unitTestConfig);
 }
 
 util.inherits(UnitTestFramework, TestFramework);
