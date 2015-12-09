@@ -42,7 +42,13 @@ function ThaliNotificationServer(router, ecdhForLocalDevice,
  *
  * There MUST be logic in the endpoint to make sure that if requests/second for
  * this endpoint exceed a set threshold then we MUST respond with a 503
- * server overloaded.
+ * server overloaded. We MUST be careful when logging information about
+ * overloads to make sure we don't overload the log. Once the request rate
+ * for this endpoint has fallen below the threshold then we MUST start serving
+ * beacons (or 204s) again.
+ *
+ * Every time this method is called the beacons MUST be updated with the
+ * submitted value, including NULL to start returning 204s.
  *
  * The following error values MUST be used as appropriate:
  *
