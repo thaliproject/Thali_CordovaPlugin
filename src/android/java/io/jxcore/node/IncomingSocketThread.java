@@ -9,16 +9,16 @@ import java.net.Inet4Address;
 import java.net.Socket;
 
 /**
- *
+ * A thread for incoming Bluetooth connections.
  */
 class IncomingSocketThread extends SocketThreadBase {
     private int mHttpPort = 0;
 
     /**
      * Constructor.
-     * @param bluetoothSocket
-     * @param listener
-     * @throws IOException
+     * @param bluetoothSocket The Bluetooth socket.
+     * @param listener The listener.
+     * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
      */
     public IncomingSocketThread(BluetoothSocket bluetoothSocket, ConnectionStatusListener listener)
             throws IOException{
@@ -39,7 +39,7 @@ class IncomingSocketThread extends SocketThreadBase {
      */
     @Override
     public void run() {
-        Log.i(TAG, "Entering thread (ID: " + getId() + ")");
+        Log.d(TAG, "Entering thread (ID: " + getId() + ")");
         InputStream tempInputStream = null;
         OutputStream tempOutputStream = null;
         boolean localStreamsCreatedSuccessfully = false;
@@ -59,12 +59,12 @@ class IncomingSocketThread extends SocketThreadBase {
         }
 
         if (localStreamsCreatedSuccessfully) {
-            Log.i(TAG, "Local streams created successfully, starting stream copying threads...");
+            Log.d(TAG, "Setting local streams and starting stream copying threads...");
             mLocalInputStream = tempInputStream;
             mLocalOutputStream = tempOutputStream;
             startStreamCopyingThreads();
         }
 
-        Log.i(TAG, "Exiting thread (ID: " + getId() + ")");
+        Log.d(TAG, "Exiting thread (ID: " + getId() + ")");
     }
 }

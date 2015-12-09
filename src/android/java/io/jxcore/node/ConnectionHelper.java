@@ -116,8 +116,8 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
             mConnectionManager = null;
         }
 
-        disconnectAllOutgoingConnections();
-        disconnectAllIncomingConnections();
+        closeAndRemoveAllOutgoingConnections();
+        closeAndRemoveAllIncomingConnections();
     }
 
     public boolean isRunning() {
@@ -130,25 +130,17 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
      * @return True, if the peer was found and disconnected.
      */
     public synchronized boolean disconnectOutgoingConnection(final String peerId) {
-        boolean wasFoundAndDisconnected = false;
+        Log.d(TAG, "disconnectOutgoingConnection: Trying to close connection to peer with ID " + peerId);
+        boolean success = closeAndRemoveOutgoingConnectionThread(peerId, false);
 
-        for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
-            if (outgoingSocketThread != null && outgoingSocketThread.getPeerId().equalsIgnoreCase(peerId)) {
-                Log.i(TAG, "disconnectOutgoingConnection: Found an outgoing connection to peer with ID " + peerId);
-                wasFoundAndDisconnected = closeAndRemoveOutgoingConnectionThread(outgoingSocketThread.getId(), false);
-
-                if (wasFoundAndDisconnected) {
-                    Log.i(TAG, "disconnectOutgoingConnection: Successfully disconnected (peer ID: " + peerId + ")");
-                } else {
-                    Log.e(TAG, "disconnectOutgoingConnection: Failed to find an outgoing connection to peer with ID "
-                            + peerId + ", this means we have a stored connection with lost handle!");
-                }
-
-                break;
-            }
+        if (success) {
+            Log.i(TAG, "disconnectOutgoingConnection: Successfully disconnected (peer ID: " + peerId);
+        } else {
+            Log.w(TAG, "disconnectOutgoingConnection: Failed to disconnect (peer ID: " + peerId
+                    + "), either no such connection or failed to close the connection");
         }
 
-        return wasFoundAndDisconnected;
+        return success;
     }
 
     /**
@@ -196,58 +188,40 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
     /**
      * Checks if we have an incoming connection with a peer matching the given peer ID.
      * @param peerId The peer ID.
-     * @return True, if connected. False otherwisae.
+     * @return True, if connected. False otherwise.
      */
     public synchronized boolean hasIncomingConnection(final String peerId) {
-        boolean isConnected = false;
-
-        for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
-            if (incomingSocketThread != null && incomingSocketThread.getPeerId().equalsIgnoreCase(peerId)) {
-                isConnected = true;
-                break;
-            }
-        }
-
-        return isConnected;
+        return (findSocketThread(peerId, true) != null);
     }
 
     /**
      * Checks if we have an outgoing connection with a peer matching the given peer ID.
      * @param peerId The peer ID.
-     * @return True, if connected. False otherwisae.
+     * @return True, if connected. False otherwise.
      */
     public synchronized boolean hasOutgoingConnection(final String peerId) {
-        boolean isConnected = false;
-
-        for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
-            if (outgoingSocketThread != null && outgoingSocketThread.getPeerId().equalsIgnoreCase(peerId)) {
-                isConnected = true;
-                break;
-            }
-        }
-
-        return isConnected;
+        return (findSocketThread(peerId, false) != null);
     }
 
     /**
      * Checks if we have either an incoming or outgoing connection with a peer matching the given ID.
      * @param peerId The peer ID.
-     * @return True, if connected. False otherwisae.
+     * @return True, if connected. False otherwise.
      */
     public synchronized boolean hasConnection(final String peerId) {
         boolean hasIncoming = hasIncomingConnection(peerId);
         boolean hasOutgoing = hasOutgoingConnection(peerId);
 
         if (hasIncoming) {
-            Log.i(TAG, "hasConnection: We have an incoming connection with peer with ID " + peerId);
+            Log.d(TAG, "hasConnection: We have an incoming connection with peer with ID " + peerId);
         }
 
         if (hasOutgoing) {
-            Log.i(TAG, "hasConnection: We have an outgoing connection with peer with ID " + peerId);
+            Log.d(TAG, "hasConnection: We have an outgoing connection with peer with ID " + peerId);
         }
 
         if (!hasIncoming && !hasOutgoing){
-            Log.i(TAG, "hasConnection: No connection with peer with ID " + peerId);
+            Log.d(TAG, "hasConnection: No connection with peer with ID " + peerId);
         }
 
         return (hasIncoming || hasOutgoing);
@@ -339,7 +313,7 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
     /**
      * Does nothing but logs the event.
-     * @param peerDevicePropertiesList
+     * @param peerDevicePropertiesList The properties of the peer.
      */
     @Override
     public void onPeerListChanged(final List<PeerDeviceProperties> peerDevicePropertiesList) {
@@ -440,36 +414,17 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
                         if (listener != null) {
                             listener.onConnectionStatusChanged(null, port);
                         }
-
-                        /*
-                        // There is a good chance of a race condition where the node.js gets to do
-                        // its client socket before we get the accept line executed. Thus, this
-                        // callback takes care that we are ready before node.js is.
-                        final int tempPort = port;
-
-                        new Handler(jxcore.activity.getMainLooper()).postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (listener != null) {
-                                    listener.onConnectionStatusChanged(null, tempPort);
-                                }
-
-                                Log.i(TAG, "onListeningForIncomingConnections: Outgoing connection is using port "
-                                        + tempPort + " (peer ID: " + tempPeerId + ")");
-                            }
-                        }, 500); // TODO: Get rid of the magic number
-                        */
                     }
 
                     @Override
                     public void onDisconnected(SocketThreadBase who, String errorMessage) {
                         Log.w(TAG, "onDisconnected: Outgoing connection, peer with ID " + who.getPeerId()
                                 + " disconnected: " + errorMessage);
-                        closeAndRemoveOutgoingConnectionThread(who.getId(), true);
+                        closeAndRemoveOutgoingConnectionThread(who.getPeerId(), true);
                     }
                 });
             } catch (IOException e) {
-                Log.e(TAG, "Failed to create an outgoing connection thread instance: " + e.getMessage(), e);
+                Log.e(TAG, "onConnected: Failed to create an outgoing connection thread instance: " + e.getMessage(), e);
                 newOutgoingSocketThread = null;
 
                 if (listener != null) {
@@ -489,13 +444,16 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
                         + peerId + ", created successfully");
             }
         }
+
+        Log.d(TAG, "onConnected: The total number of connections is now "
+                + (mIncomingSocketThreads.size() + mOutgoingSocketThreads.size()));
     }
 
     /**
      * Forwards the connection failure to the correct listener.
-     * @param peerId
-     * @param peerName
-     * @param peerBluetoothAddress
+     * @param peerId The peer ID.
+     * @param peerName The peer name.
+     * @param peerBluetoothAddress The Bluetooth address of the peer.
      */
     @Override
     public void onConnectionFailed(String peerId, String peerName, String peerBluetoothAddress) {
@@ -587,7 +545,7 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
     /**
      * Closes and removes an incoming connection thread with the given ID.
      * @param incomingThreadId The ID of the incoming connection thread.
-     * @return True, if the thread was found, closed and removed.
+     * @return True, if the thread was found, the connection was closed and the thread was removed from the list.
      */
     private synchronized boolean closeAndRemoveIncomingConnectionThread(final long incomingThreadId) {
         boolean wasFoundClosedAndRemoved = false;
@@ -602,58 +560,56 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
             }
         }
 
+        Log.d(TAG, "closeAndRemoveIncomingConnectionThread: " + mIncomingSocketThreads.size() + " incoming connection(s) left");
         return wasFoundClosedAndRemoved;
     }
 
     /**
-     * Closes and removes an outgoing connection with the given thread ID.
-     * @param outgoingThreadId The ID of the outgoing connection thread.
+     * Closes and removes an outgoing connection with the given peer ID.
+     * @param peerId The ID of the peer to disconnect.
      * @param notifyError If true, will notify the Node layer about a connection error.
-     * @return True, if the thread was found, closed and removed.
+     * @return True, if the thread was found, the connection was closed and the thread was removed from the list.
      */
     private synchronized boolean closeAndRemoveOutgoingConnectionThread(
-            final long outgoingThreadId, boolean notifyError) {
+            final String peerId, boolean notifyError) {
         boolean wasFoundAndDisconnected = false;
+        SocketThreadBase socketThread = findSocketThread(peerId, false);
 
-        for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
-            if (outgoingSocketThread != null && outgoingSocketThread.getId() == outgoingThreadId) {
-                final String peerId = outgoingSocketThread.getPeerId();
-                Log.i(TAG, "closeAndRemoveOutgoingConnectionThread: Closing connection, peer ID: " + peerId);
-                mOutgoingConnectionListeners.remove(peerId);
-                mOutgoingSocketThreads.remove(outgoingSocketThread);
-                outgoingSocketThread.close();
-                wasFoundAndDisconnected = true;
+        if (socketThread != null) {
+            Log.i(TAG, "closeAndRemoveOutgoingConnectionThread: Closing connection, peer ID: " + peerId);
+            mOutgoingConnectionListeners.remove(peerId);
+            mOutgoingSocketThreads.remove(socketThread);
+            socketThread.close();
+            wasFoundAndDisconnected = true;
 
-                if (notifyError) {
-                    JSONObject jsonObject = new JSONObject();
+            if (notifyError) {
+                JSONObject jsonObject = new JSONObject();
 
-                    try {
-                        jsonObject.put(JXcoreExtension.EVENTVALUESTRING_PEERID, peerId);
-                    } catch (JSONException e) {
-                        Log.e(TAG, "closeAndRemoveOutgoingConnectionThread: Failed to construct a JSON object: " + e.getMessage(), e);
-                    }
-
-                    jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_CONNECTIONERROR, jsonObject.toString());
+                try {
+                    jsonObject.put(JXcoreExtension.EVENTVALUESTRING_PEERID, peerId);
+                } catch (JSONException e) {
+                    Log.e(TAG, "closeAndRemoveOutgoingConnectionThread: Failed to construct a JSON object: " + e.getMessage(), e);
                 }
 
-                break;
+                jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_CONNECTIONERROR, jsonObject.toString());
             }
         }
 
         if (!wasFoundAndDisconnected) {
-            Log.w(TAG, "closeAndRemoveOutgoingConnectionThread: Failed to find a thread with ID " + outgoingThreadId);
+            Log.e(TAG, "closeAndRemoveOutgoingConnectionThread: Failed to find an outgoing connection to peer with ID " + peerId);
         }
 
+        Log.d(TAG, "closeAndRemoveOutgoingConnectionThread: " + mOutgoingSocketThreads.size() + " outgoing connection(s) left");
         return wasFoundAndDisconnected;
     }
 
     /**
      * Disconnects all outgoing connections.
      */
-    private synchronized void disconnectAllOutgoingConnections() {
+    private synchronized void closeAndRemoveAllOutgoingConnections() {
         for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
             if (outgoingSocketThread != null) {
-                Log.i(TAG, "disconnectAllOutgoingConnections: Disconnecting " + outgoingSocketThread.getName());
+                Log.d(TAG, "closeAndRemoveAllOutgoingConnections: Peer ID: " + outgoingSocketThread.getPeerId());
                 outgoingSocketThread.close();
             }
         }
@@ -668,12 +624,12 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
      * For now, this method can be used for testing to emulate 'peer disconnecting' events.
      * @return The number of connections closed.
      */
-    public synchronized int disconnectAllIncomingConnections() {
+    public synchronized int closeAndRemoveAllIncomingConnections() {
         int numberOfConnectionsClosed = 0;
 
         for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
             if (incomingSocketThread != null) {
-                Log.i(TAG, "disconnectAllIncomingConnections: Disconnecting " + incomingSocketThread.getName());
+                Log.d(TAG, "closeAndRemoveAllIncomingConnections: Peer ID: " + incomingSocketThread.getPeerId());
                 incomingSocketThread.close();
                 numberOfConnectionsClosed++;
             }
@@ -681,6 +637,30 @@ public class ConnectionHelper implements ConnectionManager.ConnectionManagerList
 
         mIncomingSocketThreads.clear();
         return numberOfConnectionsClosed;
+    }
+
+    /**
+     * Tries to find a socket thread with the given peer ID.
+     * @param peerId The peer ID associated with the socket thread.
+     * @param isIncoming If true, will search from incoming connections. If false, will search from outgoing connections.
+     * @return The socket thread or null if not found.
+     */
+    private synchronized SocketThreadBase findSocketThread(final String peerId, final boolean isIncoming) {
+        if (isIncoming) {
+            for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
+                if (incomingSocketThread != null && incomingSocketThread.getPeerId().equalsIgnoreCase(peerId)) {
+                    return incomingSocketThread;
+                }
+            }
+        } else {
+            for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
+                if (outgoingSocketThread != null && outgoingSocketThread.getPeerId().equalsIgnoreCase(peerId)) {
+                    return outgoingSocketThread;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
