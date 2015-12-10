@@ -23,21 +23,29 @@ var LevelDownPouchDB = process.platform === 'android' || process.platform === 'i
     PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath}) :
     PouchDB.defaults({db: require('leveldown'), prefix: dbPath});
 
+// A variable accessible from the tests and from the setup/teardown functions
+// that can be used to make sure that replication managers created during
+// tests are stopped properly.
+var testReplicationManager;
+var testServer;
 var test = tape({
   setup: function(t) {
     global.Mobile = MobileUsingWifi;
+    testReplicationManager = null;
+    testServer = null;
     t.end();
   },
   teardown: function(t) {
-    if (t.__manager) {
-      t.__manager.stop();
+    if (testReplicationManager !== null) {
+      testReplicationManager.stop();
+    }
+    if (testServer !== null) {
+      testServer.close();
     }
     global.Mobile = OriginalMobile;
     t.end();
   }
 });
-
-// test setup & teardown activities
 
 test('ThaliReplicationManager can call start without error', function (t) {
 
@@ -84,7 +92,7 @@ test('ThaliReplicationManager can call start without error', function (t) {
     t.end();
   });
 
-  manager.start(5000, 'thali');
+  manager.start(0, 'thali');
 });
 
 test('ThaliReplicationManager receives identity', function (t) {
@@ -113,7 +121,7 @@ test('ThaliReplicationManager receives identity', function (t) {
     t.end();
   });
 
-  manager.start(5000, 'thali');
+  manager.start(0, 'thali');
 });
 
 test('ThaliReplicationManager replicates database', function (t) {
@@ -139,7 +147,7 @@ test('ThaliReplicationManager replicates database', function (t) {
   var seenRemoteChanges = false;
 
   var manager = new ThaliReplicationManager(db);
-  t.__manager = manager;
+  testReplicationManager = manager;
 
   var changes = db.changes({
     since: 'now',
@@ -221,4 +229,5 @@ test('ThaliReplicationManager replicates database', function (t) {
     manager.start(server.address().port, 'thali');
   });
   app.set('port', server.address().port);
+  testServer = server;
 });
