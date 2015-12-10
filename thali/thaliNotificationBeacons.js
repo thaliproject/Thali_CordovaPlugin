@@ -1,4 +1,12 @@
-"use strict";
+'use strict';
+
+var HKDF = require('./hkdf');
+var crypto = require('crypto');
+
+// Constants
+var BASE64 = 'base64';
+var SHA256 = 'sha256';
+var SECP256K1 = 'secp256k1';
 
 /*
 Matt: Please make sure to see if you can find Srikanth's code in Node and of course you can look at the Java source code
@@ -30,7 +38,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 
 /**
  * Generates a single beacon using the specified values.
- * @param {string} publicKey - This is a base4 encoded public key we need to create a beacon for
+ * @param {string} publicKey - This is a base64 encoded public key we need to create a beacon for
  * @param {ECDH} ecdhWithPrivateKey - A Crypto.ECDH object initialized with the local device's public and private keys
  * @param {Buffer} IV - The IV to use for this beacon (we use the same IV for all beacons)
  * @param {ECDH} Ke - A Crypto.ECDH object initialized with the public and private ephemeral key
@@ -38,6 +46,16 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
  * @returns {Buffer} - A buffer containing the beacon
  */
 function generateBeacon(publicKey, ecdhWithPrivateKey, IV, Ke, expirationValue) {
+  var unencryptedKeyIdHash = crypto.createHash(SHA256);
+  unencryptedKeyIdHash.update(ecdhWithPrivateKey.getPublicKey());
+  var unencryptedKeyId = unencryptedKeyIdHash.digest(BASE64);
+
+  var sxy = crypto
+    .createECDH(SECP256K1)
+    .setPrivateKey(ecdhWithPrivateKey.getPrivateKey(), BASE64)
+    .computeSecret(publicKey, BASE64);
+
+  var hkxy = HKDF(SHA256, expirationValue, sxy).derive('', 32);
 }
 
 /**
