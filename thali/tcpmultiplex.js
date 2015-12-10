@@ -15,11 +15,11 @@ function muxServerBridge(tcpEndpointServerPort) {
     });
 
     incomingClientSocket.on('timeout', function () {
-      console.log('incoming client socket timeout');
+      console.log('server bridge: incoming client socket timeout');
     });
 
     incomingClientSocket.on('error', function (err) {
-      console.log('incoming client socket error %s', err);
+      console.log('server bridge: incoming client socket error %s', err);
     });
 
     console.log('server bridge: new client socket');
@@ -43,14 +43,14 @@ function muxServerBridge(tcpEndpointServerPort) {
     console.log('mux server bridge listener closed');
   });
 
-  server.exit = function() {
+  server.exit = function (callback) {
     console.log('server bridge: server exiting (%d)', clientSockets.length);
     // Shutdown all the connected sockets
     clientSockets.forEach(function (sock) {
-      sock.end();
+      sock.destroy();
     });
     clientSockets = [];
-    this.close();
+    server.close(callback);
   };
 
   return server;
@@ -80,11 +80,11 @@ function muxClientBridge(localP2PTcpServerPort, cb) {
     });
 
     incomingClientSocket.on('timeout', function () {
-      console.log('incoming client socket timeout');
+      console.log('client bridge: incoming client socket timeout');
     });
 
     incomingClientSocket.on('error', function (err) {
-      console.log('incoming client socket error %s', err);
+      console.log('client bridge: incoming client socket error %s', err);
     });
 
     console.log('client bridge: new client socket');
@@ -99,14 +99,14 @@ function muxClientBridge(localP2PTcpServerPort, cb) {
 
   clientPlex.pipe(clientSocket).pipe(clientPlex);
 
-  server.exit = function() {
+  server.exit = function (callback) {
     console.log('client bridge: server exiting (%d)', clientSockets.length);
     // Shutdown all the connected sockets
     clientSockets.forEach(function (sock) {
-      sock.end();
+      sock.destroy();
     });
     clientSockets = [];
-    this.close();
+    server.close(callback);
   };
 
   return server;

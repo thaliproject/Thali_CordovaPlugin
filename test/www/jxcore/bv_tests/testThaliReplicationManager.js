@@ -1,5 +1,7 @@
 'use strict';
 
+global.Mobile = require('../lib/MobileUsingWifi.js');
+
 if (typeof Mobile === 'undefined') {
   return;
 }
@@ -235,3 +237,5 @@ test('ThaliReplicationManager replicates database', function (t) {
   app.set('port', server.address().port);
   testServer = server;
 });
+
+tape.begin();

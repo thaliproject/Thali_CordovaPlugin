@@ -166,6 +166,15 @@ ThaliReplicationManager.prototype.stop = function () {
   console.log('Now in TRM stop');
   console.log('State of this._isStarted: %s', this._isStarted);
   if (!this._isStarted) { throw new Error('.start must be called before stop'); }
+  this._isStarted = false;
+
+  // First stop any ongoing replications
+  Object.keys(this._replications).forEach(function (key) {
+    var item = this._replications[key];
+    item.from.cancel();
+    item.to.cancel();
+  }, this);
+
   this.emit(ThaliReplicationManager.events.STOPPING);
 
   console.log('About to call stopBroadcasting');
@@ -175,23 +184,27 @@ ThaliReplicationManager.prototype.stop = function () {
     this._emitter.removeAllListeners(NETWORK_CHANGED);
     this._emitter.removeAllListeners(CONNECTION_ERROR);
 
-    Object.keys(this._replications).forEach(function (key) {
-      var item = this._replications[key];
-      item.from.cancel();
-      item.to.cancel();
-    }, this);
-
-    this._serverBridge.close();
-    this._serverBridge = null;
-    this._isStarted = false;
-
-    this.clearState();
-
-    if (err) {
-      this.emit(ThaliReplicationManager.events.STOP_ERROR, err);
-    } else {
-      this.emit(ThaliReplicationManager.events.STOPPED);
+    for (var clientIdentifier in this._clients) {
+      var existingClient = this._clients[clientIdentifier];
+      existingClient.exit(function (e) {
+        if (e) {
+          console.log('Client close with error: %s', e);
+        }
+        delete this._clients[clientIdentifier];
+      }.bind(this));
     }
+
+    this._serverBridge.exit(function () {
+      this._serverBridge = null;
+
+      this.clearState();
+
+      if (err) {
+        this.emit(ThaliReplicationManager.events.STOP_ERROR, err);
+      } else {
+        this.emit(ThaliReplicationManager.events.STOPPED);
+      }
+    }.bind(this));
   }.bind(this));
 };
 
@@ -274,6 +287,11 @@ ThaliReplicationManager.prototype._syncPeer = function (peerIdentifier) {
       return setImmediate(this._syncRetry.bind(this, peerIdentifier));
     }
 
+    if (!this._isStarted) {
+      console.log('Connect callback called while not started');
+      return;
+    }
+
     var client = tcpMultiplex.muxClientBridge(port, function (err) {
       if (err) {
         console.log('Error in mux client bridge %s', err);
@@ -316,12 +334,12 @@ ThaliReplicationManager.prototype._syncRetry = function (peerIdentifier) {
 
   var existingClient = this._clients[peerIdentifier];
   if (existingClient) {
-    try {
-      existingClient.close();
-    } catch (e) {
-      console.log('Client close with error: %s', e);
-    }
-    delete this._clients[peerIdentifier];
+    existingClient.close(function (e) {
+      if (e) {
+        console.log('Client close with error: %s', e);
+      }
+      delete this._clients[peerIdentifier];
+    }.bind(this));
   }
   var existingReplication = this._replications[peerIdentifier];
   if (existingReplication) {
