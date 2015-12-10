@@ -10,7 +10,7 @@ var unitTestConfig = require('./UnitTestConfig');
 
 function UnitTestFramework(testConfig) {
   UnitTestFramework.super_.call(this, testConfig, unitTestConfig);
-  self.runningTests = [];
+  this.runningTests = [];
 }
 
 util.inherits(UnitTestFramework, TestFramework);

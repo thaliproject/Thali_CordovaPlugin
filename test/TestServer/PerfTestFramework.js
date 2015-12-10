@@ -46,7 +46,6 @@ var logger = function (value) {
 
 function PerfTestFramework(testConfig) {
   PerfTestFramework.super_.call(this, testConfig, perfTestConfig.userConfig);
-
   this.runningTests = [];
 }
 
