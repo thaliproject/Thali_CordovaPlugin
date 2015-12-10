@@ -90,7 +90,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
       // The whole point !! Log test results from the
       // server
-      self.testReport(_tests, results);
+      self.testReport(platform, _tests, results);
 
       // Signal devices to quit
       devices.forEach(function(device) {
@@ -116,7 +116,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   });
 }
 
-UnitTestFramework.prototype.testReport = function(tests, results) {
+UnitTestFramework.prototype.testReport = function(platform, tests, results) {
 
   console.log("\n\n-== UNIT TEST RESULTS ==-");
 
@@ -125,6 +125,7 @@ UnitTestFramework.prototype.testReport = function(tests, results) {
     passed += results[test];
   }
 
+  console.log("PLATFORM: %s", platform);
   console.log("RESULT: %s", passed == tests.length ? "PASS" : "FAIL");
   console.log("%d of %d tests completed", Object.keys(results).length, tests.length);
   console.log("%d/%d passed (%d failures)", passed, tests.length, tests.length - passed);
