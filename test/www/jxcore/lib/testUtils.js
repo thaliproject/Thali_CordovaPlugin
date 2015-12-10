@@ -1,6 +1,7 @@
 var LogCallback;
 var myName;
 var os = require('os');
+var tmp = require('tmp');
 
 /**
  * Turn Bluetooth and WiFi either on or off
@@ -90,4 +91,20 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
   LogCallback = function(message) {
     console.log(message);
   }
-}
+};
+
+/**
+ * Returns a file path to a temporary directory that can be used by tests to
+ * store data that does not have to be persisted between app restarts.
+ * The temporary directory is removed when the process exists.
+ */
+var tmpObject = null;
+exports.tmpDirectory = function () {
+  if (tmpObject === null) {
+    tmp.setGracefulCleanup();
+    tmpObject = tmp.dirSync({
+      unsafeCleanup: true
+    });
+  }
+  return tmpObject.name;
+};

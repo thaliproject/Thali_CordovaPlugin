@@ -2,9 +2,8 @@
 
 var os = require('os');
 var net = require('net');
-var path = require('path');
-var fs = require('fs');
 
+var testUtils = require('./testUtils.js');
 var ThaliWifiInfrastructure = require('thali/ThaliWifiInfrastructure');
 
 var randomSuffix = '' + Math.round((Math.random() * 10000))
@@ -68,9 +67,8 @@ var Mobile = function (key) {
 };
 
 Mobile.GetDocumentsPath = function (callback) {
-  var directoryForThisInstance = path.join(os.tmpdir(), randomSuffix);
-  fs.mkdir(directoryForThisInstance, function () {
-    callback(null, directoryForThisInstance);
+  setImmediate(function () {
+    callback(null, testUtils.tmpDirectory());
   });
 };
 
