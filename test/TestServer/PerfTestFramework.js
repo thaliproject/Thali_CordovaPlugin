@@ -98,6 +98,9 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
   var toComplete;
   var self = this;
+  
+  // Record that we're running tests for this platform
+  this.runningTests.push(platform);
 
   var results = [];
   function doTest(test) {
@@ -174,9 +177,6 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
           }
         }
       });
-
-      // Record that we're running tests for this platform
-      self.runningTests.push(platform);
 
       // Begin the test..
       device.socket.emit(
