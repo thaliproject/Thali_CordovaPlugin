@@ -1,13 +1,11 @@
 "use strict";
 
-if (!jxcore.utils.OSInfo().isMobile) {
-  return;
-}
-
 var os = require('os');
 var path = require('path');
 var http = require('http');
 var tape = require('../lib/thali-tape');
+var MobileUsingWifi = require('../lib/MobileUsingWifi.js');
+var OriginalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
 var uuid = require('uuid');
 var util = require('util');
 var express = require('express');
@@ -23,12 +21,14 @@ var LevelDownPouchDB = process.platform === 'android' || process.platform === 'i
 
 var test = tape({
   setup: function(t) {
+    global.Mobile = MobileUsingWifi;
     t.end();
   },
   teardown: function(t) {
     if (t.__manager) {
       t.__manager.stop();
     }
+    global.Mobile = OriginalMobile;
     t.end();
   }
 });

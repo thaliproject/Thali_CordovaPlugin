@@ -17,6 +17,7 @@ out/
 
 # VS Code
 .settings/
+.vscode/
 
 # Testing
 test/TestServer/server-address.js

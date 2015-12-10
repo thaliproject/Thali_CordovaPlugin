@@ -9,10 +9,12 @@ var crypto = require('crypto');
 
 var THALI_USN = 'urn:schemas-upnp-org:service:Thali';
 
-function ThaliWifiInfrastructure (deviceName) {
+function ThaliWifiInfrastructure (deviceName, port) {
   EventEmitter.call(this);
   this.thaliUsn = THALI_USN;
   this.deviceName = deviceName || crypto.randomBytes(16).toString('base64');
+  // TODO: Pick a random port if not given
+  this.port = port || 5000;
   this._init(deviceName);
 }
 
