@@ -22,7 +22,7 @@ Here's example of the content of the Config_PerfTest.json file file
 ```json
 {
   "testSendData.js" : {
-    "servertimeout": 1200000,
+    "serverTimeout": 1200000,
     "timeout": 1000000,
     "rounds": 1,
     "dataTimeout": 10000,
@@ -32,7 +32,7 @@ Here's example of the content of the Config_PerfTest.json file file
   },
 
   "testFindPeers.js" : {
-    "servertimeout": 1200000,
+    "serverTimeout": 1200000,
     "timeout": 1000000,
     "rounds": 1,
     "dataTimeout": 10000,
@@ -42,7 +42,7 @@ Here's example of the content of the Config_PerfTest.json file file
   },
 
  "testReConnect.js" : {
-    "servertimeout": 1200000,
+    "serverTimeout": 1200000,
     "timeout": 1000000,
     "rounds": 1,
     "dataTimeout": 10000,

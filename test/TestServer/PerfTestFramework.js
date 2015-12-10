@@ -98,6 +98,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
   var toComplete;
   var self = this;
+  var serverTimeoutTimer = null;
   
   // Record that we're running tests for this platform
   this.runningTests.push(platform);
@@ -119,6 +120,12 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
         // Cache results in the device object
         device.results = JSON.parse(data);
+
+        // Cancel server timeout
+        if (serverTimeoutTimer != null) {
+          clearTimeout(serverTimeoutTimer);
+          serverTimeoutTimer = null;
+        }
 
         if (--toComplete == 0) {
 
@@ -183,6 +190,16 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
         "start", 
         { testName: test, testData: testData, addressList: btAddresses }
       );
+
+      // Set a timeout, forces the test to send any data it has
+      // and shut down
+      if (testData.serverTimeout) {
+        serverTimeoutTimer = setTimeout(function() {
+          console.log("server timeout for test: %s", test);
+          device.socket.emit("timeout");
+          serverTimeoutTimer = null;
+        }, testData.serverTimeout);
+      }
     });
   }
 
