@@ -46,6 +46,8 @@ var logger = function (value) {
 
 function PerfTestFramework(testConfig) {
   PerfTestFramework.super_.call(this, testConfig, perfTestConfig.userConfig);
+
+  this.runningTests = [];
 }
 
 inherits(PerfTestFramework, TestFramework);
@@ -85,6 +87,8 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
   
+  console.log("Starting perf test run for platform: %s", platform);
+
   // Filter non-null bluetooth device addresses into array
   var btAddresses = devices.map(function(dev) {
     return dev.btAddress;
@@ -153,9 +157,16 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             devices.forEach(function(_device) {
               _device.socket.once("end_ack", function() {
                 if (--toComplete == 0) {
-                  // Quit once all devices have acknowledged (and will have
-                  // sent any results they have)
-                  process.exit(0);
+                  // Remove the platform from our set of running tests
+                  self.runningTests = self.runningTests.filter(function(p) {
+                    return (p != platform);
+                  });
+                  if (self.runningTests.length == 0) {
+                    // We assume all tests runs are started before the first
+                    // run finishes. If that's not the case there's not really
+                    // any safe place we can exit.
+                    process.exit(0);
+                  }
                 }
               });
               _device.socket.emit("end");
@@ -163,6 +174,9 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
           }
         }
       });
+
+      // Record that we're running tests for this platform
+      self.runningTests.push(platform);
 
       // Begin the test..
       device.socket.emit(

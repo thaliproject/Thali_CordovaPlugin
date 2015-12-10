@@ -10,6 +10,7 @@ var unitTestConfig = require('./UnitTestConfig');
 
 function UnitTestFramework(testConfig) {
   UnitTestFramework.super_.call(this, testConfig, unitTestConfig);
+  self.runningTests = [];
 }
 
 util.inherits(UnitTestFramework, TestFramework);
@@ -22,6 +23,8 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   // Copy arrays
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
+
+  console.log("Starting unit test run for platform: %s", platform);
 
   var self = this;
   function doTest(test, cb) {
@@ -97,11 +100,21 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         device.socket.emit("complete");
       });
 
-      process.exit(0);
+      // We're done runnign for this platform..
+      self.runningTests = self.runningTests.filter(function(p) {
+        return (p != platform);
+      });
+
+      // There may be other platforms still running
+      if (self.runningTests.length == 0) {
+        process.exit(0);
+      }
     }
   }
 
   toComplete = devices.length;
+  this.runningTests.push(platform);
+
   devices.forEach(function(device) {
     // Wait for devices to signal they've scheduled their
     // test runs and then begin
@@ -110,7 +123,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         doTest(tests[0], nextTest);
       }
     });
-    
+
     // Tell devices to set tests up to run in the order we supply
     device.socket.emit("schedule", JSON.stringify(tests));
   });
