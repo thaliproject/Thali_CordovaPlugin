@@ -57,9 +57,9 @@ PerfTestFramework.prototype.addDevice = function(device) {
   if (!this.testsRunning && this.devices[device.platform].length == 1) {
 
     // Start a timer on first device discovery that will start tests regardless of 
-    // number found if honorCount is true
+    // number found if honorCount is false
 
-    if (this.testConfig.honorCount) {
+    if (!this.testConfig.honorCount) {
 
       var self = this;
 
