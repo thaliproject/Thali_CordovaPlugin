@@ -2,6 +2,7 @@
 
 var os = require('os');
 var net = require('net');
+var url = require('url');
 
 var testUtils = require('./testUtils.js');
 var ThaliWifiInfrastructure = require('thali/ThaliWifiInfrastructure');
@@ -13,6 +14,11 @@ var wifiInfrastructure = new ThaliWifiInfrastructure(randomDeviceName);
 var mocks = {};
 
 mocks.StartBroadcasting = function (args, callback) {
+  var port = args[1];
+  // Using the Wifi instrastructure here in a bit unintended
+  // way to be able to complete the mock against the older
+  // version of the Thali specification.
+  wifiInfrastructure._setLocation(null, port, null);
   wifiInfrastructure.startListeningForAdvertisements()
   .then(function () {
     return wifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections();
@@ -32,6 +38,13 @@ mocks.StopBroadcasting = function (args, callback) {
   });
 };
 
+mocks.Connect = function (args, callback) {
+  var port = url.parse(args[0]).port;
+  setImmediate(function () {
+    callback(null, port);
+  })
+};
+
 var Mobile = function (key) {
   return {
     callNative: function () {
@@ -43,7 +56,8 @@ var Mobile = function (key) {
         args[i] = arguments[i];
       }
       if (mocks.hasOwnProperty(key)) {
-        mocks[key](args, arguments[arguments.length - 1]);
+        var callback = arguments[arguments.length - 1];
+        mocks[key](args, callback);
       } else {
         throw new Error('The callNative for key ' + key + ' is not implemented!');
       }

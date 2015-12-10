@@ -13,8 +13,11 @@ function ThaliWifiInfrastructure (deviceName, port) {
   EventEmitter.call(this);
   this.thaliUsn = THALI_USN;
   this.deviceName = deviceName || crypto.randomBytes(16).toString('base64');
-  // TODO: Pick a random port if not given
-  this.port = port || 5000;
+  this.port = port || 0;
+  // A variable to hold information about known peer availability states
+  // and used to avoid emitting peer availability changes in case the
+  // availability hasn't changed from the previous known value.
+  this.peerAvailabilities = {};
   this._init(deviceName);
 }
 
@@ -22,7 +25,6 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 
 ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
-    location: ip.address() + ':5000/NotificationBeacons',
     adInterval: 500,
     allowWildcards: true,
     logJSON: false,
@@ -30,6 +32,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
     udn: this.deviceName + ':' + this.thaliUsn
   };
   this._server = new nodessdp.Server(serverOptions);
+  this._setLocation();
 
   this._client = new nodessdp.Client({
     allowWildcards: true,
@@ -38,20 +41,41 @@ ThaliWifiInfrastructure.prototype._init = function () {
   });
 
   this._client.on('advertise-alive', function (data) {
-    if (this.shouldBeIgnored(data)) return;
+    if (this.shouldBeIgnored(data)) {
+      return;
+    }
+    var peerAddress = data.LOCATION + '';
+    if (this.peerAvailabilities[peerAddress]) {
+      return;
+    }
+    this.peerAvailabilities[peerAddress] = true;
     this.emit('wifiPeerAvailabilityChanged', [{
-      peerAddress: data.LOCATION + '',
+      peerAddress: peerAddress,
       peerAvailable: true
     }]);
   }.bind(this));
 
   this._client.on('advertise-bye', function (data) {
-    if (this.shouldBeIgnored(data)) return;
+    if (this.shouldBeIgnored(data)) {
+      return;
+    }
+    var peerAddress = data.LOCATION + '';
+    if (!this.peerAvailabilities[peerAddress]) {
+      return;
+    }
+    this.peerAvailabilities[peerAddress] = false;
     this.emit('wifiPeerAvailabilityChanged', [{
-      peerAddress: data.LOCATION + '',
+      peerAddress: peerAddress,
       peerAvailable: false
     }]);
   }.bind(this));
+};
+
+ThaliWifiInfrastructure.prototype._setLocation = function (address, port, path) {
+  address = address || ip.address();
+  port = port || this.port;
+  path = path || 'NotificationBeacons';
+  this._server._location = 'http://' + address + ':' + port + '/' + path;
 };
 
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
