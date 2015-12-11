@@ -176,8 +176,8 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListeningForIncomingConnecti
  * @event wifiPeerAvailabilityChanged
  * @public
  * @property {string} peerIdentifier This is the USN value
- * @property {string} hostAddress This can be either an IP address or a DNS address encoded as a string
- * @property {number} portNumber The port on the hostAddress to use to connect to the peer
+ * @property {string} peerLocation The URL that can be used to connect to the peer
+ * @property {boolean} peerAvailable If true this indicates that the peer is available for connectivity
  */
 
 /**

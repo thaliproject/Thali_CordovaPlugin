@@ -12,8 +12,17 @@ var randomDeviceName = 'device-' + randomSuffix;
 var wifiInfrastructure = new ThaliWifiInfrastructure(randomDeviceName);
 
 var mocks = {};
+var broadcastingStarted = false;
+var peersDiscovered = {};
+var peersConnected = {};
+var connectionErrorCallback = null
 
 mocks.StartBroadcasting = function (args, callback) {
+  if (broadcastingStarted) {
+    callback(new Error());
+    return;
+  }
+  broadcastingStarted = true;
   var port = args[1];
   // Using the Wifi instrastructure here in a bit unintended
   // way to be able to complete the mock against the older
@@ -29,6 +38,7 @@ mocks.StartBroadcasting = function (args, callback) {
 };
 
 mocks.StopBroadcasting = function (args, callback) {
+  broadcastingStarted = false;
   wifiInfrastructure.stopListeningForAdvertisements()
   .then(function () {
     return wifiInfrastructure.stopAdvertisingAndListeningForIncomingConnections();
@@ -39,10 +49,41 @@ mocks.StopBroadcasting = function (args, callback) {
 };
 
 mocks.Connect = function (args, callback) {
-  var port = url.parse(args[0]).port;
+  var peerIdentifier = args[0];
+  // Check if we try to connect to an unknown peer or if
+  // we are already connected.
+  if (typeof peersDiscovered[peerIdentifier] === 'undefined' ||
+      peersConnected[peerIdentifier] === true) {
+    setImmediate(function () {
+      callback(new Error());
+    });
+    return;
+  }
+  peersConnected[peerIdentifier] = true;
+  // Parsing a port from the peer identifier works only, because we
+  // know this mock uses the Wifi infrastructure discovery, which uses
+  // an URL as the identifier.
+  var port = url.parse(peerIdentifier).port;
   setImmediate(function () {
     callback(null, port);
-  })
+  });
+};
+
+mocks.Disconnect = function (args, callback) {
+  var peerIdentifier = args[0];
+  // Check if we try to disconnect from an unknown peer or if
+  // we have already disconnected.
+  if (typeof peersDiscovered[peerIdentifier] === 'undefined' ||
+      peersConnected[peerIdentifier] === false) {
+    setImmediate(function () {
+      callback(new Error());
+    });
+    return;
+  }
+  peersConnected[peerIdentifier] = false;
+  setImmediate(function () {
+    callback(null);
+  });
 };
 
 var Mobile = function (key) {
@@ -63,22 +104,42 @@ var Mobile = function (key) {
       }
     },
     registerToNative: function (callback) {
-      // TODO: Currently only handle peer availability changes
-      if (key == 'peerAvailabilityChanged') {
+      if (key === 'peerAvailabilityChanged') {
         wifiInfrastructure.on('wifiPeerAvailabilityChanged', function (data) {
           // Currently, we always get one peer in the list
           // so just pick the first one.
           var peer = data[0];
+          // Use peer location as identifier in this mock so that
+          // we can made the connections work with the older
+          // version of the Thali specification.
+          var peerIdentifier = peer.peerLocation;
+          peersDiscovered[peerIdentifier] = peer.peerAvailable;
           callback([{
-            peerName: peer.peerAddress,
-            peerIdentifier: peer.peerAddress,
+            peerName: peerIdentifier,
+            peerIdentifier: peerIdentifier,
             peerAvailable: peer.peerAvailable,
           }]);
         });
+      } else if (key === 'connectionError') {
+        // Store the connection error callback so that it can be
+        // triggered later.
+        connectionErrorCallback = callback;
       }
     }
   };
 };
+
+Mobile.iAmAMock = true;
+
+Mobile.TriggerConnectionError = function () {
+  if (connectionErrorCallback !== null) {
+    Object.keys(peersConnected).forEach(function (key) {
+      connectionErrorCallback({
+        peerIdentifier: key
+      });
+    });
+  }
+}
 
 Mobile.GetDocumentsPath = function (callback) {
   setImmediate(function () {

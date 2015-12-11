@@ -1,13 +1,11 @@
 "use strict";
 
-if (!jxcore.utils.OSInfo().isMobile) {
-  return;
-}
-
 var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
 var tape = require('../lib/thali-tape');
+var MobileUsingWifi = require('../lib/MobileUsingWifi.js');
+var OriginalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
 
 function newPeerIdentifier() {
   return (+ new Date()).toString() + "." + process.pid;
@@ -17,6 +15,7 @@ var  emitterToShutDown = null;
 
 var test = tape({
   setup: function(t) {
+    global.Mobile = MobileUsingWifi;
     t.end();
   },
   teardown: function(t) {
@@ -27,6 +26,7 @@ var test = tape({
       });
       emitterToShutDown = null;
     }
+    global.Mobile = OriginalMobile;
     t.end();
   }
 });
@@ -104,7 +104,7 @@ test('ThaliEmitter throws on disconnect to bad peer', function (t) {
   });
 });
 
-function connectWithRetryTestAndDisconnect(t, testFunction) {
+function connectWithRetryTestAndDisconnect(t, testFunction, port) {
   var e = new ThaliEmitter();
 
   var _done = false;
@@ -152,7 +152,7 @@ function connectWithRetryTestAndDisconnect(t, testFunction) {
     });
   });
 
-  e.startBroadcasting(newPeerIdentifier(), 5001, function (err1) {
+  e.startBroadcasting(newPeerIdentifier(), (port || 5001), function (err1) {
     t.notOk(err1, 'Should be able to call startBroadcasting without error');
   });
 }
@@ -197,35 +197,36 @@ test('ThaliEmitter can connect and send data', function (t) {
     s.pipe(s);
   });
 
-  server.listen(5001, function() {
-    console.log("echo server started");
-  });
+  server.listen(0, function() {
+    var serverPort = server.address().port;
+    console.log('echo server started on port: ' + serverPort);
 
-  var len = (128 * 1024);
-  var testMessage = randomstring.generate(len);
-  connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
-    var clientSocket = net.createConnection( { port: port }, function () {
-      clientSocket.write(testMessage);
-    });
+    var len = (128 * 1024);
+    var testMessage = randomstring.generate(len);
+    connectWithRetryTestAndDisconnect(t, function(t, e, peer, port, cb) {
+      var clientSocket = net.createConnection( { port: port }, function () {
+        clientSocket.write(testMessage);
+      });
 
-    clientSocket.setTimeout(120000);
-    clientSocket.setKeepAlive(true);
+      clientSocket.setTimeout(120000);
+      clientSocket.setKeepAlive(true);
 
-    var testData = '';
+      var testData = '';
 
-    clientSocket.on('data', function (data) {
-      testData += data;
-      console.log("data in " + testData.length);
+      clientSocket.on('data', function (data) {
+        testData += data;
+        console.log("data in " + testData.length);
 
-      if (testData.length === len) {
-        t.equal(testData, testMessage, 'the test messages should be equal');
+        if (testData.length === len) {
+          t.equal(testData, testMessage, 'the test messages should be equal');
 
-        e.disconnect(peer.peerIdentifier, function (err3) {
-          t.notOk(err3, 'Should be able to disconnect without error');
-          cb();
-        });
-      }
-    });
+          e.disconnect(peer.peerIdentifier, function (err3) {
+            t.notOk(err3, 'Should be able to disconnect without error');
+            cb();
+          });
+        }
+      });
+    }, serverPort);
   });
 });
 
@@ -235,102 +236,110 @@ test('ThaliEmitter handles socket disconnect correctly', function (t) {
   var emitter = new ThaliEmitter();
 
   var server = net.createServer(function(s) {
+    s.on('end', function () {
+      // A hackish workaround to make the test pass with the mock
+      // who wouldn't otherwise be aware of the connection errors.
+      if (Mobile.iAmAMock === true) {
+        Mobile.TriggerConnectionError();
+      }
+    });
     s.pipe(s);
   });
 
-  server.listen(5001, function() {
-    console.log("echo server started");
-  });
+  server.listen(0, function() {
+    var serverPort = server.address().port;
+    console.log('echo server started on port: ' + serverPort);
 
-  var connectWithRetry = function(peerIdentifier, cb) {
+    var connectWithRetry = function(peerIdentifier, cb) {
 
-    var connectToPeer = function(attempts) {
+      var connectToPeer = function(attempts) {
 
-      if (attempts === 0) {
-        cb("too many attempts");
-        return;
-      }
-
-      emitter.connect(peerIdentifier, function (connectError, port) {
-        if (connectError) {
-          if (connectError.message.indexOf("unreachable") != -1) {
-            return;
-          } else {
-            return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
-          }
+        if (attempts === 0) {
+          cb("too many attempts");
+          return;
         }
 
-        t.notOk(connectError, 'Should be able to connect without error');
-        t.ok(port > 0 && port <= 65536, 'Port should be within range');
-        cb(null, port);
+        emitter.connect(peerIdentifier, function (connectError, port) {
+          if (connectError) {
+            if (connectError.message.indexOf("unreachable") != -1) {
+              return;
+            } else {
+              return setTimeout(function () { connectToPeer(attempts - 1); }, 1000);
+            }
+          }
+
+          t.notOk(connectError, 'Should be able to connect without error');
+          t.ok(port > 0 && port <= 65536, 'Port should be within range');
+          cb(null, port);
+        });
+      }
+
+      connectToPeer(10);
+    }
+
+    var sendData = function(port, cb) {
+
+      var len = 2048;
+      var testMessage = randomstring.generate(len);
+      var clientSocket = net.createConnection( { port: port }, function () {
+        clientSocket.write(testMessage);
+      });
+
+      clientSocket.setTimeout(120000);
+      clientSocket.setKeepAlive(true);
+
+      var testData = '';
+
+      clientSocket.on('data', function (data) {
+        testData += data;
+
+        if (testData.length === len) {
+          t.equal(testData, testMessage, 'the test messages should be equal');
+          clientSocket.end();
+          cb(true);
+        }
       });
     }
 
-    connectToPeer(10);  
-  }
+    emitter.startBroadcasting(newPeerIdentifier(), serverPort, function (err) {
 
-  var sendData = function(port, cb) {
+      t.notOk(err, 'Should be able to call startBroadcasting without error');
 
-    var len = 2048;
-    var testMessage = randomstring.generate(len);
-    var clientSocket = net.createConnection( { port: port }, function () {
-      clientSocket.write(testMessage);
-    });
+      emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (peers) {
 
-    clientSocket.setTimeout(120000);
-    clientSocket.setKeepAlive(true);
+        console.log(JSON.stringify(peers));
 
-    var testData = '';
+        peers.forEach(function (peer) {
 
-    clientSocket.on('data', function (data) {
-      testData += data;
+          if (peer.peerAvailable) {
 
-      if (testData.length === len) {
-        t.equal(testData, testMessage, 'the test messages should be equal');
-        clientSocket.end();
-        cb(true); 
-      }
-    });
-  }
+            connectWithRetry(peer.peerIdentifier, function(err1, port) {
 
-  emitter.startBroadcasting(newPeerIdentifier(), 5001, function (err) {
+              t.assert(err1 == null, "First connect should succeed");
+              sendData(port, function(success) {
+                t.assert(success == true, "First send should succeed");
+              });
 
-    t.notOk(err, 'Should be able to call startBroadcasting without error');
+              emitter.on(ThaliEmitter.events.CONNECTION_ERROR, function(peer) {
 
-    emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function (peers) {
+                if (done)
+                  return;
 
-      console.log(JSON.stringify(peers));
+                connectWithRetry(peer.peerIdentifier, function(err2, port) {
 
-      peers.forEach(function (peer) {
+                  t.assert(err2 == null, "Second connect should succeed");
 
-        if (peer.peerAvailable) {
-
-          connectWithRetry(peer.peerIdentifier, function(err1, port) {
-     
-            t.assert(err1 == null, "First connect should succeed");
-            sendData(port, function(success) {
-              t.assert(success == true, "First send should succeed");
+                  sendData(port, function(success) {
+                    done = true;
+                    t.assert(success == true, "Second send should succeed");
+                    emitterToShutDown = emitter;
+                    t.end();
+                  });
+                })
+              });
             });
-
-            emitter.on(ThaliEmitter.events.CONNECTION_ERROR, function(peer) {
-
-              if (done)
-                return;
-
-              connectWithRetry(peer.peerIdentifier, function(err2, port) {
-
-                t.assert(err2 == null, "Second connect should succeed");
-
-                sendData(port, function(success) {
-                  done = true;
-                  t.assert(success == true, "Second send should succeed");
-                  emitterToShutDown = emitter;
-                  t.end();
-                });
-              })
-            });
-          }); 
-        }
+          }
+        });
       });
     });
   });

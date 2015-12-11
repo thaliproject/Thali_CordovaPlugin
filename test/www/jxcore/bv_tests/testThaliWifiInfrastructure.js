@@ -33,7 +33,7 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
     udn: 'somePeerDeviceName' + ':' + wifiInfrastructure.thaliUsn
   });
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', function (data) {
-    t.equal(data[0].peerAddress, testLocation);
+    t.equal(data[0].peerLocation, testLocation);
     testServer.stop();
     t.end();
   });

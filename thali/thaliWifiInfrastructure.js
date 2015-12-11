@@ -29,7 +29,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
     allowWildcards: true,
     logJSON: false,
     logLevel: 'trace',
-    udn: this.deviceName + ':' + this.thaliUsn
+    udn: this.deviceName
   };
   this._server = new nodessdp.Server(serverOptions);
   this._setLocation();
@@ -41,33 +41,11 @@ ThaliWifiInfrastructure.prototype._init = function () {
   });
 
   this._client.on('advertise-alive', function (data) {
-    if (this.shouldBeIgnored(data)) {
-      return;
-    }
-    var peerAddress = data.LOCATION + '';
-    if (this.peerAvailabilities[peerAddress]) {
-      return;
-    }
-    this.peerAvailabilities[peerAddress] = true;
-    this.emit('wifiPeerAvailabilityChanged', [{
-      peerAddress: peerAddress,
-      peerAvailable: true
-    }]);
+    this._handleMessage(data, true);
   }.bind(this));
 
   this._client.on('advertise-bye', function (data) {
-    if (this.shouldBeIgnored(data)) {
-      return;
-    }
-    var peerAddress = data.LOCATION + '';
-    if (!this.peerAvailabilities[peerAddress]) {
-      return;
-    }
-    this.peerAvailabilities[peerAddress] = false;
-    this.emit('wifiPeerAvailabilityChanged', [{
-      peerAddress: peerAddress,
-      peerAvailable: false
-    }]);
+    this._handleMessage(data, false);
   }.bind(this));
 };
 
@@ -76,6 +54,22 @@ ThaliWifiInfrastructure.prototype._setLocation = function (address, port, path) 
   port = port || this.port;
   path = path || 'NotificationBeacons';
   this._server._location = 'http://' + address + ':' + port + '/' + path;
+};
+
+ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
+  if (this.shouldBeIgnored(data)) {
+    return;
+  }
+  var peer = {
+    peerIdentifier: data.USN,
+    peerLocation: data.LOCATION,
+    peerAvailable: available
+  };
+  if (this.peerAvailabilities[peer.peerIdentifier] === available) {
+    return;
+  }
+  this.peerAvailabilities[peer.peerIdentifier] = available;
+  this.emit('wifiPeerAvailabilityChanged', [peer]);
 };
 
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
@@ -93,7 +87,8 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListenForIncomingConn
   // according to the specification, that happens when the beacon string is changed.
   // Is below enough or should we use some uuid library or something else?
   var randomString = crypto.randomBytes(16).toString('base64');
-  this._server.addUSN(this.thaliUsn + ':' + randomString);
+  // TODO: Appends to USN list, but does not remove.
+  this._server.addUSN(this.thaliUsn + '::' + randomString);
   this._server.start();
   return Promise.resolve();
 };
