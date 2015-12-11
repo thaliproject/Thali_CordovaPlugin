@@ -87,6 +87,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   var devices = this.devices[platform].slice();
   
   console.log("Starting perf test run for platform: %s", platform);
+  console.log("Using devices: %s", devices);
 
   // Filter non-null bluetooth device addresses into array
   var btAddresses = devices.map(function(dev) {
@@ -136,6 +137,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             if (device.results == null) {
               console.log("No results from " + _device);
             } else {
+              console.log("%s (%s) results from: %s", test, platform, _device.name);
               results.push({
                 "test" : test,
                 "device" : _device.deviceName,

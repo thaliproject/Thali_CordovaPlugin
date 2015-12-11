@@ -60,14 +60,12 @@ io.on('connection', function(socket) {
     {
       case 'unittest' : 
       {
-        console.log("New unit test device: " + device.deviceName);
         unitTestManager.addDevice(device);
       }
       break;
 
       case 'perftest' : 
       {
-        console.log("New perf test device: " + device.deviceName);
         perfTestManager.addDevice(device);
       }
       break;

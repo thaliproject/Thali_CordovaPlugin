@@ -2,10 +2,10 @@ var config = {
 
   userConfig : {
     ios : { 
-      numDevices : 2
+      numDevices : 4
     },
     android : {
-      numDevices : 2
+      numDevices : 23
     }
   },
 
