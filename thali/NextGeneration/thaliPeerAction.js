@@ -124,7 +124,7 @@ PeerAction.prototype.getActionState = function () {
  */
 PeerAction.prototype.start = function (httpAgentPool) {
   this.actionState = module.exports.actionState.STARTED;
-  return Promise.resolve();
+  return new Promise();
 };
 
 /**

@@ -65,10 +65,8 @@ var EventEmitter = require('events');
  * system will take down the server so it is no longer available.
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
-// jscs:disable disallowUnusedParams
 module.exports.start = function (router) {
-  // jscs:enable disallowUnusedParams
-  return Promise.resolve();
+  return new Promise();
 };
 
 /**
@@ -83,7 +81,7 @@ module.exports.start = function (router) {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stop = function () {
-  return Promise.resolve();
+  return new Promise();
 };
 
 /**
@@ -92,9 +90,7 @@ module.exports.stop = function () {
  * is called it is giving explicit permission to this code to call this method
  * on a radio stack that is currently disabled when the method is called but is
  * later re-enabled due to a network changed event. In other words if {@link
-// jscs:disable jsDoc
  * module:thaliMobile.start} is called and say WiFi doesn't work. Then this
-// jscs:enable jsDoc
  * method is called and so advertising is only started for the non-TCP
  * transport. Then a network changed event happens indicating that WiFi is
  * available. Since we are still in start state this code will automatically
@@ -118,7 +114,7 @@ module.exports.stop = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.startListeningForAdvertisements = function () {
-  return Promise.resolve();
+  return new Promise();
 };
 
 /**
@@ -132,18 +128,18 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopListeningForAdvertisements = function () {
-  return Promise.resolve();
+  return new Promise();
 };
 
 /**
  * This method calls the underlying
- * startUpdateAdvertisingAndListenForIncomingConnections on whichever radio
+ * startUpdateAdvertisingAndListening on whichever radio
  * stack is currently in start state. This method has the same behavior as
  * {@link module:thaliMobile.startListeningForAdvertisements} in that if a radio
  * type that was inactive should later become available and we are in start
  * state then we will try to call start and if that works and
- * stopUpdateAdvertisingAndListenForIncomingConnections has not been called then
- * we will try to call startUpdateAdvertisingAndListenForIncomingConnections on
+ * stopAdvertisingAndListening has not been called then
+ * we will try to call startUpdateAdvertisingAndListening on
  * the newly started stack. This includes the requirement to log any failed
  * attempts to call the various methods triggered by a network status change.
  *
@@ -153,14 +149,14 @@ module.exports.stopListeningForAdvertisements = function () {
  * @public
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
-module.exports.startUpdateAdvertisingAndListenForIncomingConnections =
+module.exports.startUpdateAdvertisingAndListening =
     function () {
-  return Promise.resolve();
+  return new Promise();
 };
 
 /**
  * This method calls the underlying
- * stopAdvertisingAndListeningForIncomingConnections on both types regardless of
+ * stopAdvertisingAndListening on both types regardless of
  * which is in start state.
  *
  * This method is idempotent and MAY be called even if
@@ -169,8 +165,8 @@ module.exports.startUpdateAdvertisingAndListenForIncomingConnections =
  * @public
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
-module.exports.stopAdvertisingAndListeningForIncomingConnections = function () {
-  return Promise.resolve();
+module.exports.stopAdvertisingAndListening = function () {
+  return new Promise();
 };
 
 /*
@@ -389,18 +385,14 @@ module.exports.connectionTypes = {
  * us.
  */
 
-// jscs:disable disallowUnusedParams
 thaliMobileNativeWrapper.on('nonTCPPeerAvailabilityChangedEvent',
     function (peer)
     {
-      // jscs:enable disallowUnusedParams
       // Do stuff
     });
 
 thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged',
-// jscs:disable disallowUnusedParams
     function (hostAddress, portNumber) {
-  // jscs:enable disallowUnusedParams
   // Do stuff
 });
 
@@ -457,16 +449,12 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged',
 
 
 thaliMobileNativeWrapper.on('discoveryAdvertisingStateUpdateNonTCPEvent',
-// jscs:disable disallowUnusedParams
     function (discoveryAdvertisingStateUpdateValue) {
-  // jscs:enable disallowUnusedParams
   // Do stuff
 });
 
 thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
-// jscs:disable disallowUnusedParams
     function (discoveryAdvertisingStateUpdateValue) {
-  // jscs:enable disallowUnusedParams
   // Do stuff
 });
 
@@ -478,20 +466,16 @@ thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
  * @public
  * @event module:thaliMobile.event:networkChanged
  * @type {Object}
- * @property {module:thaliMobileNative~NetworkChanged} networkChangedValue
+ * @property {module:thaliMobileNative~networkChanged} networkChangedValue
  */
 
 thaliMobileNativeWrapper.on('networkChangedNonTCP',
-// jscs:disable disallowUnusedParams
     function (networkChangedValue) {
-  // jscs:enable disallowUnusedParams
   // Do stuff
 });
 
 thaliWifiInfrastructure.on('networkChangedWifi',
-// jscs:disable disallowUnusedParams
     function (networkChangedValue) {
-  // jscs:enable disallowUnusedParams
   // Do stuff
 });
 
@@ -505,9 +489,7 @@ thaliWifiInfrastructure.on('networkChangedWifi',
  * again.
  */
 thaliMobileNativeWrapper.on('incomingConnectionToPortNumberFailed',
-// jscs:disable disallowUnusedParams
     function (portNumber) {
-  // jscs:enable disallowUnusedParams
   // Do stuff
 });
 

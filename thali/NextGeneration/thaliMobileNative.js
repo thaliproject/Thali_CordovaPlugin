@@ -31,9 +31,9 @@
  *
  * ## Request processing model
  *
- * With the exception of `Connect` the `callNative` methods defined in this
+ * With the exception of `connect` the `callNative` methods defined in this
  * file MUST only be called serially. That is, once a `callNative` method other
- * than `Connect` is called no other `callNative` methods but `Connect` can be
+ * than `connect` is called no other `callNative` methods but `connect` can be
  * called until the first `callNative`'s callback has been called. If this
  * prohibition is violated then the system will enter an undefined state.
  *
@@ -66,11 +66,10 @@
  * @param {error} err If null then the call the callback was submitted to was
  * successful. If not null then it will be an Error object that will define what
  * went wrong.
- * @returns {null} No response is expected.
  */
 
 /**
- * @external "Mobile('StartListeningForAdvertisements')"
+ * @external "Mobile('startListeningForAdvertisements')"
  */
 
 /**
@@ -78,13 +77,12 @@
  * {@link module:thaliMobileNativeWrapper.startListeningForAdvertisements}.
  *
  * @public
- * @function external:"Mobile('StartListeningForAdvertisements')".callNative
+ * @function external:"Mobile('startListeningForAdvertisements')".callNative
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
- * @returns {null}
  */
 
 /**
- * @external "Mobile('StopListeningForAdvertisements')"
+ * @external "Mobile('stopListeningForAdvertisements')"
  */
 
 /**
@@ -92,18 +90,17 @@
  * {@link module:thaliMobileNativeWrapper.stopListeningForAdvertisements}.
  *
  * @public
- * @function external:"Mobile('StopListeningForAdvertisements')".callNative
+ * @function external:"Mobile('stopListeningForAdvertisements')".callNative
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
- * @returns {null}
  */
 
 /**
- * @external "Mobile('StartUpdateAdvertisingAndListenForIncomingConnections')"
+ * @external "Mobile('startUpdateAdvertisingAndListening')"
  */
 
 /**
  * Please see the definition of
- * {@link module:thaliMobileNativeWrapper.startUpdateAdvertisingAndListenForIncomingConnections}.
+ * {@link module:thaliMobileNativeWrapper.startUpdateAdvertisingAndListening}.
  *
  * However, in addition to what is written there, when the system receives an
  * incoming connection it will do so by initiating a single TCP/IP connection to
@@ -114,25 +111,23 @@
  * non-TCP connection MUST be terminated.
  *
  * @public
- * @function external:"Mobile('StartUpdateAdvertisingAndListenForIncomingConnections')".callNative
+ * @function external:"Mobile('startUpdateAdvertisingAndListening')".callNative
  * @param {number} portNumber The port on 127.0.0.1 that any incoming connections over the native non-TCP/IP transport
  * should be bridged to.
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
- * @returns {null}
  */
 
 /**
- * @external "Mobile('StopAdvertisingAndListeningForIncomingConnections')"
+ * @external "Mobile('stopAdvertisingAndListening')"
  */
 
 /**
  * Please see the definition of
- * {@link module:thaliMobileNativeWrapper.stopAdvertisingAndListeningForIncomingConnections}.
+ * {@link module:thaliMobileNativeWrapper.stopAdvertisingAndListening}.
  *
  * @public
- * @function external:"Mobile('StopAdvertisingAndListeningForIncomingConnections')".callNative
+ * @function external:"Mobile('stopAdvertisingAndListening')".callNative
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
- * @returns {null}
  */
 
 /**
@@ -195,7 +190,7 @@
  */
 
 /**
- * This is the callback used by {@link external:"Mobile('Connect')".callNative}.
+ * This is the callback used by {@link external:"Mobile('connect')".callNative}.
  *
  * If err is not NULL then listenerOrIncomingConnection MUST be null and vice
  * versa.
@@ -206,11 +201,10 @@
  * successful. If not null then it will be an Error object that will define what
  * went wrong.
  * @param {module:thaliMobileNative~ListenerOrIncomingConnection} listenerOrIncomingConnection
- * @returns {null}
  */
 
 /**
- * @external "Mobile('Connect')"
+ * @external "Mobile('connect')"
  */
 
 /**
@@ -238,7 +232,7 @@
  * based on the values used when establishing the incoming connection from the
  * remote peer.
  *
- * The port created by a Connect call MUST only accept a single TCP/IP
+ * The port created by a connect call MUST only accept a single TCP/IP
  * connection at a time. Any subsequent TCP/IP connections to the 127.0.0.1 port
  * MUST be rejected.
  *
@@ -274,7 +268,7 @@
  * | Error String | Description |
  * |--------------|-------------|
  * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
- * | StartListeningForAdvertisements is not active | Go start it! |
+ * | startListeningForAdvertisements is not active | Go start it! |
  * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
  * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
  * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
@@ -283,16 +277,15 @@
  * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
  *
  * @public
- * @function external:"Mobile('Connect')".callNative
+ * @function external:"Mobile('connect')".callNative
  * @param {string} peerIdentifier
  * @param {module:thaliMobileNative~ConnectCallback} callback Returns an
  * error or the 127.0.0.1 port to connect to in order to get a connection to the
  * remote peer
- * @returns {null}
  */
 
 /**
- * @external "Mobile('KillConnections')"
+ * @external "Mobile('killConnections')"
  * @private
  */
 
@@ -301,9 +294,8 @@
  * {@link module:thaliMobileNativeWrapper.killConnections}.
  *
  * @private
- * @function external:"Mobile('KillConnections')".callNative
+ * @function external:"Mobile('killConnections')".callNative
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
- * @returns {null}
  */
 
 /*
@@ -330,7 +322,7 @@
  * @property {boolean} pleaseConnect If true then this means that a lexically
  * smaller peer wishes to establish a connection to this peer but requires this
  * peer to initiate the connection per the binding spec. If this peer already
- * has called {@link external:"Mobile('Connect')".callNative} for the identified
+ * has called {@link external:"Mobile('connect')".callNative} for the identified
  * peer then no action MUST be taken. Similarly if this peer already has a
  * connection to the remote peer then no action MUST be taken. Yes, there are
  * many race conditions here but the binding protocol calls for the other peer
@@ -340,17 +332,16 @@
  */
 
 /**
- * @external "Mobile('PeerAvailabilityChanged')"
+ * @external "Mobile('peerAvailabilityChanged')"
  */
 
 /**
  * This is the callback used by
- * {@link external:"Mobile('PeerAvailabilityChanged')".registerToNative}
+ * {@link external:"Mobile('peerAvailabilityChanged')".registerToNative}
  *
  * @public
  * @callback peerAvailabilityChangedCallback
  * @property {module:thaliMobileNative~peer[]} peers
- * @returns {null}
  */
 
 /**
@@ -369,9 +360,8 @@
  * better to drop some than starve out Node.
  *
  * @public
- * @function external:"Mobile('PeerAvailabilityChanged')".registerToNative
+ * @function external:"Mobile('peerAvailabilityChanged')".registerToNative
  * @param {module:thaliMobileNative~peerAvailabilityChangedCallback} callback
- * @returns {null}
  */
 
 /**
@@ -389,17 +379,16 @@
  */
 
 /**
- * @external "Mobile('DiscoveryAdvertisingStateUpdateNonTCP')"
+ * @external "Mobile('discoveryAdvertisingStateUpdateNonTCP')"
  */
 
 /**
  * This is the callback used by
- * {@link external:"Mobile('DiscoveryAdvertisingStateUpdateNonTCP')".registerToNative}
+ * {@link external:"Mobile('discoveryAdvertisingStateUpdateNonTCP')".registerToNative}
  *
  * @public
  * @callback discoveryAdvertisingStateUpdateNonTCPCallback
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
- * @returns {null}
  */
 
 /**
@@ -407,9 +396,8 @@
  * {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateNonTCPEvent}
  *
  * @public
- * @function external:"Mobile('DiscoveryAdvertisingStateUpdateNonTCP')".registerToNative
+ * @function external:"Mobile('discoveryAdvertisingStateUpdateNonTCP')".registerToNative
  * @param {module:thaliMobileNative~discoveryAdvertisingStateUpdateNonTCPCallback} callback
- * @returns {null}
  */
 
 /**
@@ -417,26 +405,26 @@
  *
  * @public
  * @readonly
- * @type {{on: string, off: string, unavailable: string, notHere: string, doNotCare: string}}
+ * @enum {string}
  */
 var radioState = {
   /** The radio is on and available for use. */
-  on: 'on',
+  ON: 'on',
   /** The radio exists on the device but is turned off. */
-  off: 'off',
+  OFF: 'off',
   /** The radio exists on the device and is on but for some reason the system won't let us use it. */
-  unavailable: 'unavailable',
+  UNAVAILABLE: 'unavailable',
   /** We depend on this radio type for this platform type but it doesn't appear to exist on this device. */
-  notHere: 'notHere',
+  NOT_HERE: 'notHere',
   /** Thali doesn't use this radio type on this platform and so makes no effort to determine its state. */
-  doNotCare: 'doNotCare'
+  DO_NOT_CARE: 'doNotCare'
 };
 
 /**
  * This object defines the current state of the network
  *
  * @public
- * @typedef {Object} NetworkChanged
+ * @typedef {Object} networkChanged
  * @property {module:thaliMobileNative~radioState} blueToothLowEnergy
  * @property {module:thaliMobileNative~radioState} blueTooth
  * @property {module:thaliMobileNative~radioState} wifi
@@ -447,22 +435,21 @@ var radioState = {
  */
 
 /**
- * @external "Mobile('NetworkChanged')"
+ * @external "Mobile('networkChanged')"
  */
 
 /**
  * This is the callback used by
- * {@link external:"Mobile('NetworkChanged')".registerToNative}
+ * {@link external:"Mobile('networkChanged')".registerToNative}
  *
  * @public
  * @callback networkChangedCallback
- * @property {module:thaliMobileNative~NetworkChanged} networkChanged
- * @returns {null}
+ * @property {module:thaliMobileNative~networkChanged} networkChanged
  */
 
 /**
  * Any time the state of the network changes (meaning any of the values in the
- * {@link module:thaliMobileNative~NetworkChanged} object are altered) any
+ * {@link module:thaliMobileNative~networkChanged} object are altered) any
  * callbacks registered with this method will be called. Note that calls to this
  * callback can start at any time once the system has been initialized so it
  * might not be possible to grab all the instances of this event before the
@@ -478,23 +465,21 @@ var radioState = {
  * a networkChanged callback.
  *
  * @public
- * @function external:"Mobile('NetworkChanged')".registerToNative
+ * @function external:"Mobile('networkChanged')".registerToNative
  * @param {module:thaliMobileNative~networkChangedCallback} callback
- * @returns {null}
  */
 
 /**
- * @external "Mobile('IncomingConnectionToPortNumberFailed')"
+ * @external "Mobile('incomingConnectionToPortNumberFailed')"
  */
 
 /**
  * This is the callback used by
- * {@link external:"Mobile('IncomingConnectionToPortNumberFailed')".registerToNative}
+ * {@link external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative}
  *
  * @public
  * @callback incomingConnectionToPortNumberFailedCallback
  * @property {number} portNumber The 127.0.0.1 port that the TCP/IP bridge tried to connect to.
- * @returns {null}
  */
 
 /**
@@ -506,7 +491,6 @@ var radioState = {
  * many connections were missed.
  *
  * @public
- * @function external:"Mobile('IncomingConnectionToPortNumberFailed')".registerToNative
+ * @function external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative
  * @param {module:thaliMobileNative~incomingConnectionToPortNumberFailedCallback} callback
- * @returns {null}
  */

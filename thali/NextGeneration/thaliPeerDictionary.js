@@ -179,11 +179,9 @@ PeerDictionary.prototype.addUpdateEntry =
  * is not in the dictionary.
  * @public
  * @param {string} peerId
- * @returns {null}
  */
 PeerDictionary.prototype.removeEntry =
   function(peerId) {
-    return null;
   };
 
 module.exports.PeerDictionary = PeerDictionary;

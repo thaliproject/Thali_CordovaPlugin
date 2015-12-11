@@ -62,7 +62,7 @@ function ThaliNotificationServer(router, ecdhForLocalDevice,
  * returns an error object.
  */
 ThaliNotificationServer.prototype.setBeacons = function (publicKeysToNotify) {
-  return Promise.resolve();
+  return new Promise();
 };
 
 module.exports.ThaliNotificationServer = ThaliNotificationServer;

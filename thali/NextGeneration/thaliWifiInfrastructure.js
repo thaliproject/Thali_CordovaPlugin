@@ -1,6 +1,6 @@
-"use strict";
+'use strict';
 
-var Promise = require("lie");
+var Promise = require('lie');
 
 /** @module ThaliWifiInfrastructure */
 
@@ -57,13 +57,14 @@ function ThaliWifiInfrastructure() {
  *
  * This method can be called after stop since this is a singleton object.
  *
- * @param {Object} router This is an Express Router object (for example, express-pouchdb is a router object) that the
- * caller wants the WiFi connections to be terminated with. This code will put that router at '/' so make sure your
- * paths are set up appropriately.
- * @returns {Promise<null|Error>}
+ * @param {Object} router This is an Express Router object (for example,
+ * express-pouchdb is a router object) that the caller wants the WiFi
+ * connections to be terminated with. This code will put that router at '/' so
+ * make sure your paths are set up appropriately.
+ * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.start = function(router) {
-  return Promise.resolve();
+ThaliWifiInfrastructure.prototype.start = function (router) {
+  return new Promise();
 };
 
 /**
@@ -75,10 +76,10 @@ ThaliWifiInfrastructure.prototype.start = function(router) {
  * This method is idempotent and so MUST be able to be called multiple timex
  * in a row without changing state.
  *
- * @returns {Promise<null|Error>}
+ * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stop = function() {
-  return Promise.resolve();
+ThaliWifiInfrastructure.prototype.stop = function () {
+  return new Promise();
 };
 
 /**
@@ -98,11 +99,12 @@ ThaliWifiInfrastructure.prototype.stop = function() {
  * | Unspecified Error with Radio infrastructure | Something went wrong trying to use WiFi. Check the logs. |
  * | Call Start! | The object is not in start state. |
  *
- * @returns {Promise<null|Error>}
+ * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function() {
-  return Promise.resolve();
-};
+ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
+  function () {
+    return new Promise();
+  };
 
 /**
  * This will stop the local Wi-Fi Infrastructure Mode discovery mechanism
@@ -119,10 +121,10 @@ ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function() {
  * |--------------|-------------|
  * | Failed | Somehow the stop method couldn't do its job. Check the logs. |
  *
- * @returns {Promise<null|Error>}
+ * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function() {
-  return Promise.resolve();
+ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
+  return new Promise();
 };
 
 /**
@@ -176,10 +178,10 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function() {
  * | Unspecified Error with Radio infrastructure | Something went wrong trying to use WiFi. Check the logs. |
  * | Call Start! | The object is not in start state. |
  *
- * @returns {Promise<null|Error>}
+ * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListenForIncomingConnections = function() {
-  return Promise.resolve();
+ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function() {
+  return new Promise();
 };
 
 /**
@@ -194,10 +196,10 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListenForIncomingConn
  * |--------------|-------------|
  * | Failed | Somehow the stop method couldn't do its job. Check the logs. |
  *
- * @returns {Promise<null|Error>}
+ * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopAdvertisingAndListeningForIncomingConnections = function() {
-  return Promise.resolve();
+ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
+  return new Promise();
 };
 
 /**
@@ -224,8 +226,10 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListeningForIncomingConnecti
  * @event wifiPeerAvailabilityChanged
  * @public
  * @property {string} peerIdentifier This is the USN value
- * @property {string} hostAddress This can be either an IP address or a DNS address encoded as a string
- * @property {number} portNumber The port on the hostAddress to use to connect to the peer
+ * @property {string} hostAddress This can be either an IP address or a DNS
+ * address encoded as a string
+ * @property {number} portNumber The port on the hostAddress to use to connect
+ * to the peer
  */
 
 /**
@@ -268,7 +272,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListeningForIncomingConnecti
  * @public
  * @event networkChangedWifi
  * @type {Object}
- * @property {module:thaliMobileNative~NetworkChanged} networkChangedValue
+ * @property {module:thaliMobileNative~networkChanged} networkChangedValue
  *
  */
 

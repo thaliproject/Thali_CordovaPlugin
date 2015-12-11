@@ -30,14 +30,16 @@ var ThaliWifiInfrastructure = require('ThaliWifiInfrastructure');
  * @param {string} mobileMethodName This is the name of the method that was
  * passed in on the mobile object
  * @param {platformChoice} platform
+ * @param {Object} router
  * @param {WifiBasedNativeMock} wifiBasedNativeMock
  * @constructor
  */
-function MobileCallInstance(mobileMethodName, platform, wifiBasedNativeMock) {
-    this.mobileMethodName = mobileMethodName;
-    this.platform = platform;
-    this.router = router;
-    this.wifiBasedNativeMock = wifiBasedNativeMock;
+function MobileCallInstance(mobileMethodName, platform, router,
+                            wifiBasedNativeMock) {
+  this.mobileMethodName = mobileMethodName;
+  this.platform = platform;
+  this.router = router;
+  this.wifiBasedNativeMock = wifiBasedNativeMock;
 }
 
 MobileCallInstance.prototype.wifiBasedNativeMock = null;
@@ -53,31 +55,28 @@ MobileCallInstance.prototype.router = null;
  * {@link module:ThaliWifiInfrastructure}.
  *
  * Other requirements for this method MUST match those of {@link
- * external:"Mobile('StartListeningForAdvertisements')".callNative} in terms of
+ * external:"Mobile('startListeningForAdvertisements')".callNative} in terms of
  * idempotency. This also means we MUST return "Radio Turned Off" if we are
  * emulating Bluetooth as being off.
  *
  * @public
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
- * @returns {null}
  */
-MobileCallInstance.prototype.StartListeningForAdvertisements = function(callBack) {
-  return null;
-};
+MobileCallInstance.prototype.startListeningForAdvertisements =
+  function(callBack) {
+  };
 
 /**
  * This shuts down the SSDP listener/query code. It MUST otherwise behave as
  * given for {@link
- * external:"Mobile('StopListeningForAdvertisements')".callNative}.
+ * external:"Mobile('stopListeningForAdvertisements')".callNative}.
  *
  * @public
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
- * @returns {null}
  */
-MobileCallInstance.prototype.StopListeningForAdvertisements =
-    function(callBack) {
-  return null;
-};
+MobileCallInstance.prototype.stopListeningForAdvertisements =
+  function(callBack) {
+  };
 
 /**
  * This method tells the system to both start advertising and to accept
@@ -93,7 +92,7 @@ MobileCallInstance.prototype.StopListeningForAdvertisements =
  * proxy's listener port in SSDP and when someone connects we will create a TCP
  * client connection to portNumber and then pipe the two connections together.
  *
- * __Open Issue:__ If we directly pipe the TCP listener socket (from Connect)
+ * __Open Issue:__ If we directly pipe the TCP listener socket (from connect)
  * and the TCP client socket (that we created) then will the system
  * automatically kill the pipe if either socket is killed? We need to test this.
  * If it doesn't then we just need to hook the close event and close the other
@@ -113,41 +112,36 @@ MobileCallInstance.prototype.StopListeningForAdvertisements =
  * running on 127.0.0.1.
  *
  * Otherwise the behavior MUST be the same as defined for (@link
- * external:"Mobile('StartUpdateAdvertisingAndListenForIncomingConnections')".ca
+ * external:"Mobile('startUpdateAdvertisingAndListening')".ca
  * llNative}. That includes returning the "Call Start!" error as appropriate as
  * well as returning "Radio Turned Off" if we are emulating Bluetooth as being
  * off.
  *
  * @param {number} portNumber
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
- * @returns {null}
  */
-MobileCallInstance.prototype.
-    StartUpdateAdvertisingAndListenForIncomingConnections =
-    function(portNumber, callBack) {
-      return null;
-    };
+MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
+  function(portNumber, callBack) {
+  };
 
 /**
  * This function MUST behave like {@link module:ThaliWifiInfrastructure} and
  * send a proper SSDP:byebye and then stop responding to queries or sending
  * SSDP:alive messages. Otherwise it MUST act like
- * (@link external:"Mobile('StopUpdateAdvertisingAndListenForIncomingConnections')".callNative}
+ * (@link external:"Mobile('stopAdvertisingAndListening')".callNative}
  * including terminating the TCP proxy and all of its connections to simulate
  * killing all incoming connections.
  *
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
- * @returns {null}
  */
-MobileCallInstance.prototype.StopAdvertisingAndListeningForIncomingConnections =
-    function (callBack) {
-      return null;
-    };
+MobileCallInstance.prototype.stopAdvertisingAndListening =
+  function (callBack) {
+  };
 
 /**
  * All the usual restrictions on connect apply including throwing errors if
  * start listening isn't active, handling consecutive calls, etc. Please see the
- * details in {@link external:"Mobile('Connect')".callNative}. In this case the
+ * details in {@link external:"Mobile('connect')".callNative}. In this case the
  * mock MUST keep track of the advertised IP and port for each peerIdentifier
  * and then be able to establish a TCP/IP listener on 127.0.0.1 and use a TCP
  * proxy to relay any connections to the 127.0.0.1 port to the IP address and
@@ -214,7 +208,7 @@ MobileCallInstance.prototype.StopAdvertisingAndListeningForIncomingConnections =
  * since baring some nasty race conditions we really shouldn't get a call to
  * this endpoint unless we are listening.
  *
- * If we are listening then we MUST issue a PeerAvailabilityChanged callback
+ * If we are listening then we MUST issue a peerAvailabilityChanged callback
  * and set the peerIdentifier to the value in the query argument, peerAvailable
  * to true and pleaseConnect to true. We MUST also record the port in the query
  * argument so that if we get a connect request we know what port to submit.
@@ -254,7 +248,7 @@ MobileCallInstance.prototype.StopAdvertisingAndListeningForIncomingConnections =
  *
  * Otherwise we MUST return a 200 OK.
  *
- * When we return a 200 OK we MUST issue a PeerAvailabilityChanged callback
+ * When we return a 200 OK we MUST issue a peerAvailabilityChanged callback
  * with peerIdentifier set to the submitted peerIdentifier, peerAvailable set to
  * true and pleaseConnect set to false. If we have an outstanding connect
  * request to the specified peerIdentifier then we MUST look up the specified
@@ -270,10 +264,8 @@ MobileCallInstance.prototype.StopAdvertisingAndListeningForIncomingConnections =
  *
  * @param {string} peerIdentifier
  * @param {module:thaliMobileNative~ConnectCallback} callback
- * @returns {null}
  */
-MobileCallInstance.prototype.Connect = function(peerIdentifier, callback) {
-  return null;
+MobileCallInstance.prototype.connect = function(peerIdentifier, callback) {
 };
 
 /**
@@ -284,10 +276,8 @@ MobileCallInstance.prototype.Connect = function(peerIdentifier, callback) {
  *
  * @public
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
- * @returns {null}
  */
-MobileCallInstance.prototype.KillConnections = function(callback) {
-  return null;
+MobileCallInstance.prototype.killConnections = function (callback) {
 };
 
 
@@ -295,36 +285,34 @@ MobileCallInstance.prototype.KillConnections = function(callback) {
 /**
  * Handles processing callNative requests. The actual params differ based on
  * the particular Mobile method that is being called.
- *
- * @returns {null}
  */
-MobileCallInstance.prototype.callNative = function() {
+MobileCallInstance.prototype.callNative = function () {
   switch (this.mobileMethodName) {
-    case 'StartListeningForAdvertisements':
+    case 'startListeningForAdvertisements':
     {
-      return this.StartListeningForAdvertisements(arguments[0]);
+      return this.startListeningForAdvertisements(arguments[0]);
     }
-    case 'StopListeningForAdvertisements':
+    case 'stopListeningForAdvertisements':
     {
-      return this.StopListeningForAdvertisements(arguments[0]);
+      return this.stopListeningForAdvertisements(arguments[0]);
     }
-    case 'StartUpdateAdvertisingAndListenForIncomingConnections':
+    case 'startUpdateAdvertisingAndListening':
     {
-      return this.StartUpdateAdvertisingAndListenForIncomingConnections(
+      return this.startUpdateAdvertisingAndListening(
           arguments[0], arguments[1]);
     }
-    case 'StopAdvertisingAndListeningForIncomingConnections':
+    case 'stopAdvertisingAndListening':
     {
-      return this.StopAdvertisingAndListeningForIncomingConnections(
+      return this.stopAdvertisingAndListening(
           arguments[0]);
     }
-    case 'Connect':
+    case 'connect':
     {
-      return this.Connect(arguments[0], arguments[1]);
+      return this.connect(arguments[0], arguments[1]);
     }
-    case 'KillConnections':
+    case 'killConnections':
     {
-      return this.KillConnections(arguments[0]);
+      return this.killConnections(arguments[0]);
     }
     default:
     {
@@ -337,17 +325,15 @@ MobileCallInstance.prototype.callNative = function() {
 /**
  * Anytime we are looking for advertising and we receive a SSDP:alive,
  * SSDP:byebye or a response to one of our periodic queries we should use it to
- * create a PeerAvailabilityChanged call back. In practice we don't really need
+ * create a peerAvailabilityChanged call back. In practice we don't really need
  * to batch these messages so we can just fire them as we get them. The
  * peerIdentifier is the USN from the SSDP message, peerAvailable is true or
  * false based on the SSDP response and pleaseConnect is false except for the
  * situation described above for /ConnectToMeforMock.
  *
  * @param {module:thaliMobileNative~peerAvailabilityChangedCallback} callback
- * @returns {null}
  */
-MobileCallInstance.prototype.PeerAvailabilityChanged = function (callback) {
-  return null;
+MobileCallInstance.prototype.peerAvailabilityChanged = function (callback) {
 };
 
 /**
@@ -357,11 +343,9 @@ MobileCallInstance.prototype.PeerAvailabilityChanged = function (callback) {
  *
  * @public
  * @param {module:thaliMobileNative~discoveryAdvertisingStateUpdateNonTCPCallback} callback
- * @returns {null}
  */
-MobileCallInstance.prototype.DiscoveryAdvertisingStateUpdateNonTCP =
+MobileCallInstance.prototype.discoveryAdvertisingStateUpdateNonTCP =
     function (callback) {
-      return null;
     };
 
 /**
@@ -377,43 +361,39 @@ MobileCallInstance.prototype.DiscoveryAdvertisingStateUpdateNonTCP =
  *
  * @public
  * @param {module:thaliMobileNative~networkChangedCallback} callback
- * @returns {null}
  */
-MobileCallInstance.prototype.NetworkChanged = function (callback) {
-  return null;
+MobileCallInstance.prototype.networkChanged = function (callback) {
 };
 
 /**
  * This is used anytime the TCP proxy for incoming connections cannot connect
  * to the portNumber set in
- * {@link module:WifiBasedNativeMock~MobileCallInstance.StartUpdateAdvertisingAndListenForIncomingConnections}.
+ * {@link module:WifiBasedNativeMock~MobileCallInstance.startUpdateAdvertisingAndListening}.
  *
  * @public
  * @param {module:thaliMobileNative~incomingConnectionToPortNumberFailedCallback} callback
- * @returns {null}
  */
-MobileCallInstance.prototype.IncomingConnectionToPortNumberFailed =
+MobileCallInstance.prototype.incomingConnectionToPortNumberFailed =
     function (callback) {
-      return null;
     };
 
 MobileCallInstance.prototype.registerToNative = function () {
   switch (this.mobileMethodName) {
-    case 'PeerAvailabilityChanged':
+    case 'peerAvailabilityChanged':
     {
-      return this.PeerAvailabilityChanged(arguments[0]);
+      return this.peerAvailabilityChanged(arguments[0]);
     }
-    case 'DiscoveryAdvertisingStateUpdateNonTCP':
+    case 'discoveryAdvertisingStateUpdateNonTCP':
     {
-      return this.DiscoveryAdvertisingStateUpdateNonTCP(arguments[0]);
+      return this.discoveryAdvertisingStateUpdateNonTCP(arguments[0]);
     }
-    case 'NetworkChanged':
+    case 'networkChanged':
     {
-      return this.NetworkChanged(arguments[0]);
+      return this.networkChanged(arguments[0]);
     }
-    case 'IncomingConnectionToPortNumberFailed':
+    case 'incomingConnectionToPortNumberFailed':
     {
-      return this.IncomingConnectionToPortNumberFailed(arguments[0]);
+      return this.incomingConnectionToPortNumberFailed(arguments[0]);
     }
     default:
     {
@@ -429,11 +409,11 @@ MobileCallInstance.prototype.registerToNative = function () {
  *
  * @public
  * @readonly
- * @type {{android: string, iOS: string}}
+ * @enum {string}
  */
 var platformChoice = {
-  android: 'Android',
-  iOS: 'iOS'
+  ANDROID: 'Android',
+  IOS: 'iOS'
 };
 
 /**

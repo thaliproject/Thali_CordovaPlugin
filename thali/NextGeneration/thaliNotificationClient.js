@@ -25,11 +25,13 @@ var thaliPeerDictionary = require('thaliPeerDictionary');
  * with the local device's public and private keys.
  * @param {addressBookCallback} addressBookCallback An object used to validate
  * which peers we are interested in talking to.
+ * @fires module:thaliNotificationClient.event:peerAdvertisesDataForUs
  */
-// jscs:disable disallowUnusedParams
 function ThaliNotificationClient(thaliPeerPool, ecdhForLocalDevice,
                                  addressBookCallback) {
-  // jscs:enable disallowUnusedParams
+  EventEmitter.call(this);
+  this._init();
+  this.peerDictionary = new thaliPeerDictionary.PeerDictionary();
 }
 
 /**
@@ -38,8 +40,7 @@ function ThaliNotificationClient(thaliPeerPool, ecdhForLocalDevice,
  *
  * @type {ThaliNotificationClient.PeerDictionary}
  */
-ThaliNotificationClient.prototype.peerDictionary =
-  new thaliPeerDictionary.PeerDictionary();
+ThaliNotificationClient.prototype.peerDictionary = null;
 
 /**
  * This method will cause a listener to be registered on the global singleton
@@ -163,21 +164,13 @@ ThaliNotificationClient.prototype.stop = function () {
 };
 
 /**
- * Use to subscribe for discovery events.
- *
- * @public
- * @fires module:thaliNotificationClient.event:peerAdvertisesDataForUs
- */
-ThaliNotificationClient.prototype.emitter = new EventEmitter();
-
-/**
  * This is the action type that will be used by instances of this class when
  * registering with {@link
  * module:thaliPeerPoolInterface~ThaliPeerPoolInterface}.
  * @type {string}
  * @readonly
  */
-ThaliNotificationClient.ActionType = 'GetRequestBeacon';
+ThaliNotificationClient.ACTION_TYPE = 'GetRequestBeacon';
 
 /**
  * Fired whenever we discover a peer who is looking for us.
