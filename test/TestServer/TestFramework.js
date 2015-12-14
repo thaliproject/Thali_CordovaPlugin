@@ -17,6 +17,24 @@ function TestFramework(testConfig, userConfig) {
   this.userConfig = userConfig;
 
   this.testsRunning = false;
+
+  var self = this;
+
+  // requiredDevices is the number of device of each platform 
+  // we need to have seen before we'll start a test
+  this.requiredDevices = {};
+
+  // Populate first from the original testConfig which is
+  // the number of devices the CI system think deployed succesfully
+  Object.keys(this.testConfig.devices).forEach(function(platform) {
+    self.requiredDevices[platform] = self.testConfig.devices[platform];
+  });
+
+  // .. then override with userConfig which may specify a smaller number
+  // of devices
+  Object.keys(this.userConfig).forEach(function(platform) {
+    self.requiredDevices[platform] = self.userConfig[platform].numDevices;
+  });
 }
 
 util.inherits(TestFramework, EventEmitter);
@@ -31,7 +49,7 @@ TestFramework.prototype.addDevice = function(device) {
   }
 
   // See if we have enough devices of platform type to start a test run
-  if (this.devices[device.platform].length === this.userConfig[device.platform].numDevices) {
+  if (this.devices[device.platform].length === this.requiredDevices[device.platform]) {
     this.startTests(device.platform, device.tests);
     this.testsRunning = true;
   }

@@ -1,12 +1,6 @@
 var config = {
 
   userConfig : {
-    ios : { 
-      numDevices : 4
-    },
-    android : {
-      numDevices : 23
-    }
   },
 
   testConfig : {

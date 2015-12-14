@@ -87,7 +87,10 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   var devices = this.devices[platform].slice();
   
   console.log("Starting perf test run for platform: %s", platform);
-  console.log("Using devices: %s", devices);
+  console.log("Using devices:");
+  devices.forEach(function(dev) {
+    console.log(dev.deviceName);
+  });
 
   // Filter non-null bluetooth device addresses into array
   var btAddresses = devices.map(function(dev) {
