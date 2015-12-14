@@ -55,7 +55,8 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
   PerfTestFramework.super_.prototype.addDevice.call(this, device);
 
-  if (!this.testsRunning && this.devices[device.platform].length == 1) {
+  var platform = device.platform;
+  if (!this.runningTests[platform] && this.devices[platform].length == 1) {
 
     // Start a timer on first device discovery that will start tests regardless of 
     // number found if honorCount is false
@@ -65,10 +66,9 @@ PerfTestFramework.prototype.addDevice = function(device) {
       var self = this;
 
       setTimeout(function () {
-        if (!self.testsRunning) {
-          console.log("-------- Starting perf test (after timeout) --------");
-          self.startTests('ios');
-          self.startTests('android');
+        if (!self.runningTests[platform]) {
+          console.log("-------- Starting perf test for %s (after timeout) --------", platform);
+          self.startTests(platform);
         }
       }, 120000);
     }

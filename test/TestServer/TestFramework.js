@@ -16,8 +16,6 @@ function TestFramework(testConfig, userConfig) {
   this.testConfig = testConfig;
   this.userConfig = userConfig;
 
-  this.testsRunning = false;
-
   var self = this;
 
   // requiredDevices is the number of device of each platform 
@@ -51,7 +49,6 @@ TestFramework.prototype.addDevice = function(device) {
   // See if we have enough devices of platform type to start a test run
   if (this.devices[device.platform].length === this.requiredDevices[device.platform]) {
     this.startTests(device.platform, device.tests);
-    this.testsRunning = true;
   }
 }
 
