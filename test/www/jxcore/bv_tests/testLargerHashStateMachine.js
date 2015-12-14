@@ -6,7 +6,6 @@ var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtil
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');
 var request = require('supertest-as-promised');
 var crypto = require('crypto');
-var Promise = require('lie');
 var urlSafeBase64 = require('urlsafe-base64');
 
 var thePeerId = null;
@@ -263,7 +262,7 @@ test('cbRequest - bad request bodies', function(t) {
   function exitOnCount(err, res) {
     t.notOk(err);
     requestCounter += 1;
-    if (requestCounter == testArray.length) {
+    if (requestCounter === testArray.length) {
       t.end();
     }
   }
@@ -406,7 +405,7 @@ test('rnMine - bad request bodies', function(t) {
           .expect(valFourHundred(t, identityExchangeUtils.fourHundredErrorCodes.malformed, bigHashBase64));
       }).then(function(res) {
         requestCounter += 1;
-        if (requestCounter == testArray.length) {
+        if (requestCounter === testArray.length) {
           t.end();
         }
       }).catch(function(err) {

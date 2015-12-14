@@ -68,10 +68,13 @@ function startThaliServer() {
     });
 }
 
-inherits(TRMMock, EventEmitter);
+
 function TRMMock() {
   EventEmitter.call(this);
 }
+
+inherits(TRMMock, EventEmitter);
+
 TRMMock.prototype.start = function() {
   this.emit(ThaliReplicationManager.events.STARTED);
 };
@@ -79,14 +82,14 @@ TRMMock.prototype.stop = function() {
   this.emit(ThaliReplicationManager.events.STOPPED);
 };
 
-
-inherits(MockConnectionTable, EventEmitter);
 function MockConnectionTable(lookUpPeerIdResponseFunction) {
   EventEmitter.call(this);
   this.lookUpPeerId = !lookUpPeerIdResponseFunction ?
     function() { return null; } :
     lookUpPeerIdResponseFunction;
 }
+
+inherits(MockConnectionTable, EventEmitter);
 
 MockConnectionTable.prototype.lookUpPeerId = null;
 
@@ -99,12 +102,12 @@ function mockConnectionTableGenerator(t, expectedPeerId, portsArray) {
   var mock = new MockConnectionTable(function(peerId, lastLookupTime) {
     t.equal(expectedPeerId, peerId);
 
-    if (lastLookupTime == portsArray.length - 1) {
+    if (lastLookupTime === portsArray.length - 1) {
       t.end();
       return;
     }
 
-    if ((!lastLookupTime && responsesSent == -1) || lastLookupTime == responsesSent) {
+    if (!lastLookupTime && responsesSent === -1 || lastLookupTime === responsesSent) {
       responsesSent += 1;
       var response = { muxPort: portsArray[responsesSent], time: responsesSent};
       if (responsesSent % 2 === 0) {
@@ -181,7 +184,7 @@ function runBad200Test(t, requestPath, numberEvents) {
   smallerHashStateMachine.on(SmallerHashStateMachine.Events.BadRequestBody, function(path) {
     t.equal(requestPath, path);
     bad200EventCount += 1;
-    if (bad200EventCount == numberEvents) {
+    if (bad200EventCount === numberEvents) {
       t.end();
     }
   });
@@ -218,24 +221,23 @@ test('onFoundPeerPort - bad peer port', function(t) {
 });
 
 test('200 cb responses with problem', function(t) {
-  disableIfJxCore(t, function(t) {
-    var pkOtherBase64 = urlSafeBase64.encode(bigHash);
-    var goodRnOther = urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength));
-    var testArray = [
-      {},
-      { rnOther: '{abc', pkOther: pkOtherBase64 }, // rnOther isn't base 64 value
-      { rnOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength + 2)),
-        pkOther: pkOtherBase64},
-      { rnOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength - 1)),
-        pkOther: pkOtherBase64},
-      { rnOther: goodRnOther },
-      { rnOther: goodRnOther,
-        pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength - 1)) },
-      { rnOther: goodRnOther,
-        pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength + 1)) },
-      { rnOther: goodRnOther,
-        pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength)) }
-    ];
+  var pkOtherBase64 = urlSafeBase64.encode(bigHash);
+  var goodRnOther = urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength));
+  var testArray = [
+    {},
+    { rnOther: '{abc', pkOther: pkOtherBase64 }, // rnOther isn't base 64 value
+    { rnOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength + 2)),
+      pkOther: pkOtherBase64},
+    { rnOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.rnBufferLength - 1)),
+      pkOther: pkOtherBase64},
+    { rnOther: goodRnOther },
+    { rnOther: goodRnOther,
+      pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength - 1)) },
+    { rnOther: goodRnOther,
+      pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength + 1)) },
+    { rnOther: goodRnOther,
+      pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength)) }
+  ];
 
   var portArray = [];
   testArray.forEach(function(responseBody) {
@@ -249,16 +251,15 @@ test('200 cb responses with problem', function(t) {
 });
 
 test('200 rnmine responses with problem', function(t) {
-  disableIfJxCore(t, function(t) {
-    var testArray = [
-      {},
-      { pkOther: '' },
-      { pkOther: '{abc' },
-      { pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength - 3)) },
-      { pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength + 10)) },
-      { pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength)) },
-      { foo: 'ick'}
-    ];
+  var testArray = [
+    {},
+    { pkOther: '' },
+    { pkOther: '{abc' },
+    { pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength - 3)) },
+    { pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength + 10)) },
+    { pkOther: urlSafeBase64.encode(crypto.randomBytes(identityExchangeUtils.pkBufferLength)) },
+    { foo: 'ick'}
+  ];
 
   var portArray = [];
   testArray.forEach(function(responseBody) {
