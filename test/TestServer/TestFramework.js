@@ -47,6 +47,7 @@ TestFramework.prototype.addDevice = function(device) {
   }
 
   // See if we have enough devices of platform type to start a test run
+  console.log("%d %s devices presented", this.devices[device.platform].length, device.platform);
   if (this.devices[device.platform].length === this.requiredDevices[device.platform]) {
     this.startTests(device.platform, device.tests);
   }

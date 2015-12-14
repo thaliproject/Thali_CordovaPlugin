@@ -65,9 +65,10 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
       var self = this;
 
-      setTimeout(function () {
+      this.startTimeout = setTimeout(function () {
+        console.log("Start timeout elapsed for platform: %s", platform);
+        console.log(self.runningTests);
         if (!self.runningTests[platform]) {
-          console.log("-------- Starting perf test for %s (after timeout) --------", platform);
           self.startTests(platform);
         }
       }, 120000);
@@ -124,13 +125,15 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
         // Cache results in the device object
         device.results = JSON.parse(data);
 
-        // Cancel server timeout
-        if (serverTimeoutTimer != null) {
-          clearTimeout(serverTimeoutTimer);
-          serverTimeoutTimer = null;
+        // Cancel server timeout for this device
+        if (device.serverTimeoutTimer != null) {
+          clearTimeout(device.serverTimeoutTimer);
+          device.serverTimeoutTimer = null;
         }
 
         if (--toComplete == 0) {
+
+          console.log("All test data retrieved for %s (%s)", test, device.platform);
 
           // When all devices have completed, collate results
           logger(platform + ' test ID ' + test + ' done now');
@@ -163,6 +166,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
           } else {
             // All tests are complete, generate the result report
             console.log("ALL DONE !!!");
+
             var processedResults = ResultsProcessor.process(results, devices);
             console.log(processedResults);
 
@@ -189,21 +193,20 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
         }
       });
 
+      // Set a timeout, forces the device to send any data it has and teardown
+      if (testData.serverTimeout) {
+        device.serverTimeoutTimer = setTimeout(function() {
+          console.log("server timeout for test: %s (%s)", test, );
+          device.socket.emit("timeout");
+          device.serverTimeoutTimer = null;
+        }, testData.serverTimeout);
+      }
+
       // Begin the test..
       device.socket.emit(
         "start", 
         { testName: test, testData: testData, addressList: btAddresses }
       );
-
-      // Set a timeout, forces the test to send any data it has
-      // and shut down
-      if (testData.serverTimeout) {
-        serverTimeoutTimer = setTimeout(function() {
-          console.log("server timeout for test: %s", test);
-          device.socket.emit("timeout");
-          serverTimeoutTimer = null;
-        }, testData.serverTimeout);
-      }
     });
   }
 
