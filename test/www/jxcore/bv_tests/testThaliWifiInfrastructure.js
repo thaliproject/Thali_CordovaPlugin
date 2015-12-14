@@ -34,11 +34,13 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
   });
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', function (data) {
     t.equal(data[0].peerLocation, testLocation);
-    testServer.stop();
-    t.end();
+    testServer.stop(function () {
+      t.end();
+    });
   });
-  testServer.start();
-  wifiInfrastructure.startListeningForAdvertisements();
+  testServer.start(function () {
+    wifiInfrastructure.startListeningForAdvertisements();
+  });
 });
 
 test('#startUpdateAdvertisingAndListenForIncomingConnections should use different USN after every invocation', function (t) {

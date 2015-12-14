@@ -14,6 +14,8 @@ function ThaliWifiInfrastructure (deviceName, port) {
   this.thaliUsn = THALI_USN;
   this.deviceName = deviceName || crypto.randomBytes(16).toString('base64');
   this.port = port || 0;
+  this.listening = false;
+  this.advertising = false;
   // A variable to hold information about known peer availability states
   // and used to avoid emitting peer availability changes in case the
   // availability hasn't changed from the previous known value.
@@ -73,29 +75,61 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 };
 
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
-  this._client.start();
-  return Promise.resolve();
+  var self = this;
+  if (this.listening) {
+    return Promise.resolve();
+  }
+  this.listening = true;
+  return new Promise(function(resolve, reject) {
+    self._client.start(function () {
+      resolve();
+    });
+  });
 };
 
 ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
-  this._client.stop();
-  return Promise.resolve();
+  var self = this;
+  if (!this.listening) {
+    return Promise.resolve();
+  }
+  this.listening = false;
+  return new Promise(function(resolve, reject) {
+    self._client.stop(function () {
+      resolve();
+    });
+  });
 };
 
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListenForIncomingConnections = function () {
+  var self = this;
+  if (this.advertising) {
+    return Promise.resolve();
+  }
+  this.advertising = true;
   // TODO: USN should be regenerated every time this method is called, because
   // according to the specification, that happens when the beacon string is changed.
   // Is below enough or should we use some uuid library or something else?
   var randomString = crypto.randomBytes(16).toString('base64');
   // TODO: Appends to USN list, but does not remove.
   this._server.addUSN(this.thaliUsn + '::' + randomString);
-  this._server.start();
-  return Promise.resolve();
+  return new Promise(function(resolve, reject) {
+    self._server.start(function () {
+      resolve();
+    });
+  });
 };
 
 ThaliWifiInfrastructure.prototype.stopAdvertisingAndListeningForIncomingConnections = function () {
-  this._server.stop();
-  return Promise.resolve();
+  var self = this;
+  if (!this.advertising) {
+    return Promise.resolve();
+  }
+  this.advertising = false;
+  return new Promise(function(resolve, reject) {
+    self._server.stop(function () {
+      resolve();
+    });
+  });
 };
 
 // Function used to filter out SSDP messages that are not
