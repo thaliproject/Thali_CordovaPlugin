@@ -603,16 +603,7 @@ public class ConnectionHelper
         boolean success = false;
 
         if (add) {
-            boolean alreadyInTheList = false;
-
-            for (PeerProperties existingPeerProperties : mDiscoveredPeers) {
-                if (existingPeerProperties.equals(peerProperties)) {
-                    alreadyInTheList = true;
-                    break;
-                }
-            }
-
-            if (alreadyInTheList) {
+            if (findDiscoveredPeer(peerProperties.getId()) != null) {
                 Log.w(TAG, "modifyListOfDiscoveredPeers: Peer " + peerProperties.toString()
                         + " already in the list, will not add again");
             } else {
@@ -621,17 +612,11 @@ public class ConnectionHelper
             }
         } else {
             // Remove
-            Iterator<PeerProperties> iterator = mDiscoveredPeers.iterator();
+            PeerProperties peerPropertiesToRemove = findDiscoveredPeer(peerProperties.getId());
 
-            while (iterator.hasNext()) {
-                PeerProperties existingPeerProperties = iterator.next();
-
-                if (existingPeerProperties.equals(peerProperties)) {
-                    iterator.remove();
-                    success = true;
-                    Log.d(TAG, "modifyListOfDiscoveredPeers: Peer " + peerProperties.toString() + " removed");
-                    break;
-                }
+            if (peerPropertiesToRemove != null && mDiscoveredPeers.remove(peerPropertiesToRemove)) {
+                Log.d(TAG, "modifyListOfDiscoveredPeers: Peer " + peerProperties.toString() + " removed");
+                success = true;
             }
         }
 
