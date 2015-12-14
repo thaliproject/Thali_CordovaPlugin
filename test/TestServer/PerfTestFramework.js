@@ -56,7 +56,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
   PerfTestFramework.super_.prototype.addDevice.call(this, device);
 
   var platform = device.platform;
-  if (!this.runningTests[platform] && this.devices[platform].length == 1) {
+  if (!(platform in this.runningTests) && this.devices[platform].length == 1) {
 
     // Start a timer on first device discovery that will start tests regardless of 
     // number found if honorCount is false
@@ -68,7 +68,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
       this.startTimeout = setTimeout(function () {
         console.log("Start timeout elapsed for platform: %s", platform);
         console.log(self.runningTests);
-        if (!self.runningTests[platform]) {
+        if (!(platform in self.runningTests)) {
           self.startTests(platform);
         }
       }, 120000);
