@@ -140,7 +140,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             if (device.results == null) {
               console.log("No results from " + _device);
             } else {
-              console.log("%s (%s) results from: %s", test, platform, _device.name);
+              console.log("%s (%s) results from: %s", test, platform, _device.deviceName);
               results.push({
                 "test" : test,
                 "device" : _device.deviceName,

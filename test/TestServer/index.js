@@ -56,6 +56,8 @@ io.on('connection', function(socket) {
       socket, _device.name, _device.os, _device.type, _device.tests, _device.btaddress
     );
 
+    console.log("New device presented: %s %s", _device.name, _device.type);
+
     switch (device.type)
     {
       case 'unittest' : 
