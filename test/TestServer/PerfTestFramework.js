@@ -196,7 +196,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
       // Set a timeout, forces the device to send any data it has and teardown
       if (testData.serverTimeout) {
         device.serverTimeoutTimer = setTimeout(function() {
-          console.log("server timeout for test: %s (%s)", test, );
+          console.log("server timeout for test: %s (%s)", test, device.platform);
           device.socket.emit("timeout");
           device.serverTimeoutTimer = null;
         }, testData.serverTimeout);
