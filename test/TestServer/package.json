@@ -1,5 +1,5 @@
 {
-  "name": "Thali Test Server",
+  "name": "thali-test-server",
   "version": "0.0.1",
   "description": "Thali Test Server App - To be run under CI",
   "dependencies": {
