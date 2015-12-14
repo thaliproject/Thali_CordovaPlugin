@@ -1,7 +1,7 @@
 {
-  "name": "socket-chat-example",
+  "name": "Thali Test Server",
   "version": "0.0.1",
-  "description": "my first socket.io app",
+  "description": "Thali Test Server App - To be run under CI",
   "dependencies": {
     "express": "^4.10.2",
     "fs-extra-promise": "^0.2.0",
