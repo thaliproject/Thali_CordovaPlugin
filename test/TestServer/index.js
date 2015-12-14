@@ -2,7 +2,7 @@
  Main entry point for Thali test frameworks coordinator server
 
  jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"},\"honorCount\":true}"
- */
+*/
 
 'use strict';
 
@@ -13,7 +13,7 @@ var options = {
 var app = require('express')();
 var http = require('http').Server(app)
 
-var io = require('socket.io')(http,options);
+var io = require('socket.io')(http, options);
 
 var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');
@@ -23,6 +23,12 @@ var testConfig = JSON.parse(process.argv[2]);
 
 var unitTestManager = new UnitTestFramework(testConfig);
 var perfTestManager = new PerfTestFramework(testConfig);
+
+process.on('SIGINT', function() {
+  console.log('Got SIGINT.  Terminating.');
+  io.close();
+  process.exit(130); // Ctrl-C std exit code
+});
 
 io.on('connection', function(socket) {
 
