@@ -1,3 +1,6 @@
+/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+ * See the license file delivered with this project for further information.
+ */
 package io.jxcore.node;
 
 import android.app.Activity;
@@ -74,16 +77,16 @@ class ConnectivityMonitor {
                 JSONObject jsonObject = new JSONObject();
 
                 try {
-                    jsonObject.put(JXcoreExtension.EVENTVALUESTRING_REACHABLE, isConnected);
+                    jsonObject.put(JXcoreExtension.EVENT_VALUE_IS_REACHABLE, isConnected);
 
                     if (isConnected) {
-                        jsonObject.put(JXcoreExtension.EVENTVALUESTRING_WIFI, isWiFi);
+                        jsonObject.put(JXcoreExtension.EVENT_VALUE_IS_WIFI, isWiFi);
                     }
                 } catch (JSONException e) {
                     Log.e(TAG, "Failed to create a JSON object: " + e.getMessage(), e);
                 }
 
-                jxcore.CallJSMethod(JXcoreExtension.EVENTSTRING_NETWORKCHANGED, jsonObject.toString());
+                jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_NETWORK_CHANGED, jsonObject.toString());
             }
         });
     }
