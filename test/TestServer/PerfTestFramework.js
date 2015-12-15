@@ -6,7 +6,6 @@
 var fs = require('fs');
 var inherits = require('util').inherits;
 var TestFramework = require('./TestFramework');
-var perfTestConfig = require('./PerfTestConfig');
 var ResultsProcessor = require('./ResultsProcessor.js');
 
 /*
@@ -45,7 +44,14 @@ var logger = function (value) {
 };
 
 function PerfTestFramework(testConfig) {
-  PerfTestFramework.super_.call(this, testConfig, perfTestConfig.userConfig);
+
+  var configFile = "./PerfTestConfig";
+  if (testConfig.configFile) {
+    configFile = testConfig.configFile;
+  }
+  this.perfTestConfig = require(configFile);
+ 
+  PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig);
   this.runningTests = [];
 }
 
@@ -65,12 +71,17 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
       var self = this;
 
+      console.log(
+        "Setting start timeout to: %d", 
+        this.perfTestConfig.userConfig[platform].startTimeout
+      );
+
       setTimeout(function () {
         if (self.runningTests.indexOf(platform) == -1) {
           console.log("Start timeout elapsed for platform: %s", platform);
           self.startTests(platform);
         }
-      }, 12000);
+      }, this.perfTestConfig.userConfig[platform].startTimeout);
     }
   }
 }
@@ -112,7 +123,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
     console.log("Setting: (%s)", platform, toComplete);
 
     // Set up the test parameters
-    var testData = perfTestConfig.testConfig[test];
+    var testData = self.perfTestConfig.testConfig[test];
     testData.peerCount = toComplete;
 
     devices.forEach(function(device) {
@@ -138,15 +149,11 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
           console.log("All test data retrieved for %s (%s)", test, device.platform);
 
-          // When all devices have completed, collate results
-          logger(platform + ' test ID ' + test + ' done now');
-
           devices.forEach(function(_device) {
 
             if (device.results == null) {
               console.log("No results from " + _device);
             } else {
-              console.log("%s (%s) results from: %s", test, platform, _device.deviceName);
               results.push({
                 "test" : test,
                 "device" : _device.deviceName,

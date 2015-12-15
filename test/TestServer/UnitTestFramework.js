@@ -6,9 +6,15 @@
 
 var util = require('util');
 var TestFramework = require('./TestFramework');
-var unitTestConfig = require('./UnitTestConfig');
 
 function UnitTestFramework(testConfig) {
+
+  var configFile = "./UnitTestConfig";
+  if (testConfig.configFile) {
+    configFile = testConfig.configFile;
+  }
+  var unitTestConfig = require(configFile);
+  
   UnitTestFramework.super_.call(this, testConfig, unitTestConfig);
   this.runningTests = [];
 }

@@ -20,7 +20,6 @@ var PerfTestFramework = require('./PerfTestFramework');
 var UnitTestFramework = require('./UnitTestFramework');
 
 var testConfig = JSON.parse(process.argv[2]);
-
 var unitTestManager = new UnitTestFramework(testConfig);
 var perfTestManager = new PerfTestFramework(testConfig);
 

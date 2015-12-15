@@ -31,7 +31,9 @@ function TestFramework(testConfig, userConfig) {
   // .. then override with userConfig which may specify a smaller number
   // of devices
   Object.keys(this.userConfig).forEach(function(platform) {
-    self.requiredDevices[platform] = self.userConfig[platform].numDevices;
+    if (self.userConfig[platform].numDevices) {
+      self.requiredDevices[platform] = self.userConfig[platform].numDevices;
+    }
   });
 }
 
@@ -47,8 +49,8 @@ TestFramework.prototype.addDevice = function(device) {
   }
 
   // See if we have enough devices of platform type to start a test run
-  console.log("%d %s devices presented", this.devices[device.platform].length, device.platform);
   if (this.devices[device.platform].length === this.requiredDevices[device.platform]) {
+    console.log("Required number of devices presented");
     this.startTests(device.platform, device.tests);
   }
 }
