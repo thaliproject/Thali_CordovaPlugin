@@ -135,10 +135,13 @@ test("test perf test start timeout", function(t) {
         numEnds++;
         t.ok(numEnds <= numDevices - 1, "Shouldn't get more ends than devices");
         if (numEnds == numDevices - 1) {
-          clients.forEach(function(client) {
-            client.close();
-          });
-          server.kill('SIGINT');
+          setTimeout(function() {
+            // Delay quit slightly to check we don't get stray messages
+            clients.forEach(function(client) {
+              client.close();
+            });
+            server.kill('SIGINT');
+          }, 3000);
         }
       });
 
