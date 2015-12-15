@@ -1,7 +1,11 @@
+/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+ * See the license file delivered with this project for further information.
+ */
 package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
+import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -25,10 +29,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     protected OutputStream mLocalOutputStream = null;
     protected StreamCopyingThread mSendingThread = null;
     protected StreamCopyingThread mReceivingThread = null;
-
-    private String mPeerId = "";
-    private String mPeerName = "";
-    private String mPeerAddress = "";
+    protected PeerProperties mPeerProperties = null;
 
     /**
      * Constructor.
@@ -48,22 +49,12 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         return mListener;
     }
 
-    public String getPeerId() {
-        return mPeerId;
+    public PeerProperties getPeerProperties() {
+        return mPeerProperties;
     }
 
-    public String getPeerName() {
-        return mPeerName;
-    }
-
-    public String getPeerAddress() {
-        return mPeerAddress;
-    }
-
-    public void setPeerProperties(String peerId, String peerName, String peerAddress) {
-        mPeerId = peerId;
-        mPeerName = peerName;
-        mPeerAddress = peerAddress;
+    public void setPeerProperties(PeerProperties peerProperties) {
+        mPeerProperties = peerProperties;
     }
 
     /**
@@ -81,13 +72,13 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     public synchronized void close() {
         if (mReceivingThread != null) {
-            Log.i(TAG, "close: Stopping receiving thread...");
+            Log.d(TAG, "close: Stopping receiving thread...");
             mReceivingThread.doStop();
             mReceivingThread = null;
         }
 
         if (mSendingThread != null) {
-            Log.i(TAG, "close: Stopping sending thread...");
+            Log.d(TAG, "close: Stopping sending thread...");
             mSendingThread.doStop();
             mSendingThread = null;
         }
@@ -127,9 +118,9 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     @Override
     public void onStreamCopySucceeded(StreamCopyingThread who, int numberOfBytes) {
         if (who == mReceivingThread) {
-            Log.i(TAG, "The receiving thread succeeded to read/write " + numberOfBytes + " bytes");
+            Log.d(TAG, "The receiving thread succeeded to read/write " + numberOfBytes + " bytes");
         } else if (who == mSendingThread) {
-            Log.i(TAG, "The sending thread succeeded to read/write " + numberOfBytes + " bytes");
+            Log.d(TAG, "The sending thread succeeded to read/write " + numberOfBytes + " bytes");
         } else {
             Log.w(TAG, "An unidentified stream copying thread succeeded to read/write " + numberOfBytes + " bytes");
         }
@@ -166,14 +157,14 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     protected synchronized void closeLocalSocketAndStreams() {
         if (mLocalhostSocket == null && mLocalInputStream == null && mLocalOutputStream == null) {
-            Log.i(TAG, "closeLocalSocketAndStreams: Nothing to close");
+            Log.d(TAG, "closeLocalSocketAndStreams: Nothing to close");
         } else {
-            Log.i(TAG, "closeLocalSocketAndStreams: Closing...");
+            Log.d(TAG, "closeLocalSocketAndStreams: Closing...");
         }
 
         if (mLocalInputStream != null) {
             try {
-                Log.i(TAG, "closeLocalSocketAndStreams: Closing the local input stream...");
+                Log.d(TAG, "closeLocalSocketAndStreams: Closing the local input stream...");
                 mLocalInputStream.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the local input stream: " + e.getMessage(), e);
@@ -182,7 +173,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
         if (mLocalOutputStream != null) {
             try {
-                Log.i(TAG, "closeLocalSocketAndStreams: Closing the local output stream...");
+                Log.d(TAG, "closeLocalSocketAndStreams: Closing the local output stream...");
                 mLocalOutputStream.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the local output stream: " + e.getMessage(), e);
@@ -191,7 +182,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
         if (mLocalhostSocket != null) {
             try {
-                Log.i(TAG, "closeLocalSocketAndStreams: Closing the localhost socket...");
+                Log.d(TAG, "closeLocalSocketAndStreams: Closing the localhost socket...");
                 mLocalhostSocket.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the localhost socket: " + e.getMessage(), e);

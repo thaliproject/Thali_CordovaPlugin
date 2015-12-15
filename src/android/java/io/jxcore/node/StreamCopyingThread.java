@@ -1,7 +1,9 @@
+/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+ * See the license file delivered with this project for further information.
+ */
 package io.jxcore.node;
 
 import android.util.Log;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -82,7 +84,7 @@ class StreamCopyingThread extends Thread {
      */
     @Override
     public void run() {
-        Log.i(TAG, "Entering thread (ID: " + getId() + ", name: " + mThreadName + ")");
+        Log.d(TAG, "Entering thread (ID: " + getId() + ", name: " + mThreadName + ")");
         byte[] buffer = new byte[mBufferSize];
 
         while (!mDoStop) {
@@ -120,7 +122,7 @@ class StreamCopyingThread extends Thread {
             }
         }
 
-        Log.i(TAG, "Exiting thread (ID: " + getId() + ", name: " + mThreadName + ")");
+        Log.d(TAG, "Exiting thread (ID: " + getId() + ", name: " + mThreadName + ")");
     }
 
     /**
