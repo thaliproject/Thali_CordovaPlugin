@@ -94,7 +94,7 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
     var serverOptions = {  
       transports: ['websocket']
     };
-    this.testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
+    this.testServer = io('http://' + require('../server-address') + ':3000/', serverOptions);
   } else {
     this.testServer = testServer;
   }
