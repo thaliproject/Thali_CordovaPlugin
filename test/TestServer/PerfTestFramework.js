@@ -52,7 +52,9 @@ function PerfTestFramework(testConfig) {
   this.perfTestConfig = require(configFile);
  
   PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig);
+
   this.runningTests = [];
+  this.completedTests = [];
 }
 
 inherits(PerfTestFramework, TestFramework);
@@ -62,7 +64,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
   PerfTestFramework.super_.prototype.addDevice.call(this, device);
 
   var platform = device.platform;
-  if (this.runningTests.indexOf(platform) == -1 && this.devices[platform].length == 1) {
+  if (this.devices[platform].length == 1) {
 
     // Start a timer on first device discovery that will start tests regardless of 
     // number found if honorCount is false
@@ -77,16 +79,19 @@ PerfTestFramework.prototype.addDevice = function(device) {
       );
 
       setTimeout(function () {
-        if (self.runningTests.indexOf(platform) == -1) {
-          console.log("Start timeout elapsed for platform: %s", platform);
-          self.startTests(platform);
-        }
+        console.log("Start timeout elapsed for platform: %s", platform);
+        self.startTests(platform);
       }, this.perfTestConfig.userConfig[platform].startTimeout);
     }
   }
 }
 
 PerfTestFramework.prototype.startTests = function(platform, tests) {
+
+  if (this.runningTests.indexOf(platform) != -1 || this.completedTests.indexOf(platform) != -1) {
+    console.log("Tests for %s already running or completed");
+    return;
+  }
 
   if (!tests) {
     // Default to all tests on first device
@@ -185,10 +190,15 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             devices.forEach(function(_device) {
               _device.socket.once("end_ack", function() {
                 if (--toComplete == 0) {
+
+                  // Record we've completed this platform's run
+                  self.completedTests.push(platform);
+
                   // Remove the platform from our set of running tests
                   self.runningTests = self.runningTests.filter(function(p) {
                     return (p != platform);
                   });
+
                   if (self.runningTests.length == 0) {
                     // We assume all tests runs are started before the first
                     // run finishes. If that's not the case there's not really
