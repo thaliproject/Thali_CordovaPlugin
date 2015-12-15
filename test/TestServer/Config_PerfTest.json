@@ -12,7 +12,7 @@
                 "dataTimeout": 10000,
                 "dataAmount": 100000,
                 "conReTryTimeout": 5000,
-                "conReTryCount": 5
+                "conReTryCount": 1
             }
         }
     ]
