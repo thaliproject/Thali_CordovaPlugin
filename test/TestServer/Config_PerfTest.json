@@ -9,7 +9,7 @@
             "data": {
                 "timeout": 1000000,
                 "rounds": 1,
-                "dataTimeout": 10000,
+                "dataTimeout": 20000,
                 "dataAmount": 100000,
                 "conReTryTimeout": 5000,
                 "conReTryCount": 5

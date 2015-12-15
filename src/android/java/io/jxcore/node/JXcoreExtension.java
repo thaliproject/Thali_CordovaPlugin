@@ -1,5 +1,6 @@
-// License information is available from LICENSE file
-
+/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+ * See the license file delivered with this project for further information.
+ */
 package io.jxcore.node;
 
 import android.content.Context;
@@ -9,34 +10,33 @@ import java.util.ArrayList;
 import android.widget.Toast;
 
 public class JXcoreExtension {
+    public final static String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
+    public final static String EVENT_VALUE_PEER_ID = "peerIdentifier";
+    public final static String EVENT_VALUE_PEER_NAME = "peerName";
+    public final static String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
 
-    public final static String EVENTSTRING_PEERAVAILABILITY   = "peerAvailabilityChanged";
-    public final static String EVENTVALUESTRING_PEERID        = "peerIdentifier";
-    public final static String EVENTVALUESTRING_PEERNAME      = "peerName";
-    public final static String EVENTVALUESTRING_PEERAVAILABLE = "peerAvailable";
+    public final static String EVENT_NAME_CONNECTION_ERROR = "connectionError";
 
-    public final static String EVENTSTRING_CONNECTIONERROR    = "connectionError";
+    public final static String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
+    public final static String EVENT_VALUE_IS_REACHABLE = "isReachable";
+    public final static String EVENT_VALUE_IS_WIFI = "isWiFi";
 
-    public final static String EVENTSTRING_NETWORKCHANGED     = "networkChanged";
-    public final static String EVENTVALUESTRING_REACHABLE     = "isReachable";
-    public final static String EVENTVALUESTRING_WIFI          = "isWiFi";
+    public final static String METHOD_NAME_SHOW_TOAST = "ShowToast";
+    public final static String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "GetBluetoothAddress";
+    public final static String METHOD_NAME_RECONNECT_WIFI_AP = "ReconnectWifiAP";
+    public final static String METHOD_NAME_IS_BLE_SUPPORTED = "IsBLESupported";
 
-    public final static String METHODSTRING_SHOWTOAST         = "ShowToast";
-    public final static String METHODSTRING_GETBTADDRESS      = "GetBluetoothAddress";
-    public final static String METHODSTRING_RECONNECTWIFIAP   = "ReconnectWifiAP";
-    public final static String METHODSTRING_ISBLESUPPORTED    = "IsBLESupported";
+    public final static String METHOD_NAME_START_BROADCASTING = "StartBroadcasting";
+    public final static String METHOD_NAME_STOP_BROADCASTING = "StopBroadcasting";
 
-    public final static String METHODSTRING_STARTBROADCAST    = "StartBroadcasting";
-    public final static String METHODSTRING_STOPBROADCAST     = "StopBroadcasting";
-
-    public final static String METHODSTRING_CONNECTTOPEER     = "Connect";
-    public final static String METHODSTRING_DISCONNECTPEER    = "Disconnect";
-    public final static String METHODSTRING_KILLCONNECTION    = "KillConnection";
+    public final static String METHOD_NAME_CONNECT = "Connect";
+    public final static String METHOD_NAME_DISCONNECT = "Disconnect";
+    public final static String METHOD_NAME_KILL_CONNECTION = "KillConnection";
 
     public static void LoadExtensions() {
         final ConnectionHelper mConnectionHelper = new ConnectionHelper();
 
-        jxcore.RegisterMethod(METHODSTRING_RECONNECTWIFIAP, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_RECONNECT_WIFI_AP, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -60,7 +60,7 @@ public class JXcoreExtension {
             }
         });
 
-        jxcore.RegisterMethod(METHODSTRING_GETBTADDRESS, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_GET_BLUETOOTH_ADDRESS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -82,29 +82,26 @@ public class JXcoreExtension {
             }
         });
 
-        jxcore.RegisterMethod(METHODSTRING_ISBLESUPPORTED, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_IS_BLE_SUPPORTED, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                String bleErrorString = mConnectionHelper.isBleAdvertisingSupported();
-                if (bleErrorString != null) {
-                    args.add(bleErrorString);
+                boolean isBleAdvertisingSupported = mConnectionHelper.isBleAdvertisingSupported();
+
+                if (isBleAdvertisingSupported) {
+                    args.add(null); // All is well
+                    args.add("Bluetooth LE advertising is supported");
+
                     jxcore.CallJSMethod(callbackId, args.toArray());
-                    return;
+                } else {
+                    args.add("Bluetooth LE advertising is not supported");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
                 }
-
-                //all is well, so lets return null as first argument
-                args.add(null);
-                args.add("BLE is supported");
-
-                jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
 
-
-        jxcore.RegisterMethod(METHODSTRING_SHOWTOAST, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_SHOW_TOAST, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -134,7 +131,7 @@ public class JXcoreExtension {
       });
 
 
-      jxcore.RegisterMethod(METHODSTRING_STARTBROADCAST, new JXcoreCallback() {
+      jxcore.RegisterMethod(METHOD_NAME_START_BROADCASTING, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -169,7 +166,7 @@ public class JXcoreExtension {
           }
       });
 
-      jxcore.RegisterMethod(METHODSTRING_STOPBROADCAST, new JXcoreCallback() {
+      jxcore.RegisterMethod(METHOD_NAME_STOP_BROADCASTING, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -186,7 +183,7 @@ public class JXcoreExtension {
           }
       });
 
-      jxcore.RegisterMethod(METHODSTRING_DISCONNECTPEER, new JXcoreCallback() {
+      jxcore.RegisterMethod(METHOD_NAME_DISCONNECT, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -210,7 +207,7 @@ public class JXcoreExtension {
           }
       });
 
-        jxcore.RegisterMethod(METHODSTRING_KILLCONNECTION, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_KILL_CONNECTION, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -229,7 +226,7 @@ public class JXcoreExtension {
 
 
 
-      jxcore.RegisterMethod(METHODSTRING_CONNECTTOPEER, new JXcoreCallback() {
+      jxcore.RegisterMethod(METHOD_NAME_CONNECT, new JXcoreCallback() {
           @Override
           public void Receiver(ArrayList<Object> params, String callbackId) {
 
