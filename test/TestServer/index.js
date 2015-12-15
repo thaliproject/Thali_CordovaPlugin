@@ -36,6 +36,7 @@ io.on('connection', function(socket) {
   // a 'present' message
 
   socket.on('disconnect', function () {
+    console.log("Socket disconnected");
     socket.emit(
       'test_error', 
       JSON.stringify({"timeout ": "message not acceptable in current Test Server state"})
