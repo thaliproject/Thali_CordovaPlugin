@@ -109,7 +109,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   function doTest(test) {
 
     toComplete = devices.length;
-    console.log("Setting: " + toComplete);
+    console.log("Setting: (%s)", platform, toComplete);
 
     // Set up the test parameters
     var testData = perfTestConfig.testConfig[test];
@@ -121,6 +121,8 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
       device.socket.once('test data', function (data) {
 
+        console.log("Received results for %s %s", device.deviceName, platform);
+
         // Cache results in the device object
         device.results = JSON.parse(data);
 
@@ -130,7 +132,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
           device.serverTimeoutTimer = null;
         }
 
-        console.log(toComplete);
+        console.log("toComplete: %d %s", toComplete, platform);
 
         if (--toComplete == 0) {
 
