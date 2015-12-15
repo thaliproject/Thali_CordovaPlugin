@@ -56,7 +56,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
   PerfTestFramework.super_.prototype.addDevice.call(this, device);
 
   var platform = device.platform;
-  if (!(platform in this.runningTests) && this.devices[platform].length == 1) {
+  if (this.runningTests.indexOf(platform) == -1 && this.devices[platform].length == 1) {
 
     // Start a timer on first device discovery that will start tests regardless of 
     // number found if honorCount is false
@@ -65,13 +65,12 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
       var self = this;
 
-      this.startTimeout = setTimeout(function () {
-        console.log("Start timeout elapsed for platform: %s", platform);
-        console.log(self.runningTests);
-        if (!(platform in self.runningTests)) {
+      setTimeout(function () {
+        if (self.runningTests.indexOf(platform) == -1) {
+          console.log("Start timeout elapsed for platform: %s", platform);
           self.startTests(platform);
         }
-      }, 120000);
+      }, 12000);
     }
   }
 }
@@ -102,7 +101,6 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
   var toComplete;
   var self = this;
-  var serverTimeoutTimer = null;
   
   // Record that we're running tests for this platform
   this.runningTests.push(platform);
@@ -111,6 +109,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   function doTest(test) {
 
     toComplete = devices.length;
+    console.log("Setting: " + toComplete);
 
     // Set up the test parameters
     var testData = perfTestConfig.testConfig[test];
@@ -130,6 +129,8 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
           clearTimeout(device.serverTimeoutTimer);
           device.serverTimeoutTimer = null;
         }
+
+        console.log(toComplete);
 
         if (--toComplete == 0) {
 
@@ -187,7 +188,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
                   }
                 }
               });
-              _device.socket.emit("end");
+              _device.socket.emit("end", _device.deviceName);
             }); 
           }
         }

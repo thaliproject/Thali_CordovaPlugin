@@ -65,6 +65,8 @@ test("test perf test framework", function(t) {
       numStarts++;
       t.ok(numStarts <= numDevices, "Shouldn't get more starts than devices");
       if (numStarts == numDevices) {
+        // We're taking advantage of the fact that this will emit
+        // the event numDevices times on the server.. 
         client.emit('test data', JSON.stringify({
           "name:": "",
           "time": 0,
@@ -88,4 +90,62 @@ test("test perf test framework", function(t) {
       presentDevice(client, "dev" + i, "ios", "perftest", ["testSendData.js"]);
     }
   });
+});
+
+test("test perf test start timeout", function(t) {
+
+  var server = startServer(t);
+ 
+  var numDevices = 4;
+
+  var numStarts = 0;
+  var numEnds = 0;
+  var numPresents = 0;
+
+  var clients = [];
+  for (var i = 0; i < numDevices; i++) {
+
+    var client = io('http://127.0.0.1:3000/',
+      { transports:['websocket'], 'force new connection': true } 
+    );
+ 
+    clients.push(client);
+ 
+    client.on('error', function() {
+      t.fail();
+    });
+
+    client.on('connect', function () {
+
+      this.on('start', function() {
+        numStarts++;
+        t.ok(numStarts <= numDevices - 1, "Shouldn't get more starts than devices");
+        if (numStarts == numDevices - 1) {
+          this.emit('test data', JSON.stringify({
+            "name:": "",
+            "time": 0,
+            "result": "ok",
+            "sendList": []
+          }));
+        }
+      });
+
+      this.on('end', function(data) {
+        t.equal(numStarts, numDevices - 1, "Shouldn't get events out of order");
+        numEnds++;
+        t.ok(numEnds <= numDevices - 1, "Shouldn't get more ends than devices");
+        if (numEnds == numDevices - 1) {
+          clients.forEach(function(client) {
+            client.close();
+          });
+          server.kill('SIGINT');
+        }
+      });
+
+      if (numPresents < numDevices - 1) {
+        // Deliberately present less devices than expected to force a timeout start
+        presentDevice(client, "dev" + numPresents++, "ios", "perftest", ["testSendData.js"]);
+      }
+    });
+  }
 });
