@@ -4,8 +4,6 @@ var ThaliWifiInfrastructure = require('thali/ThaliWifiInfrastructure');
 var tape = require('../lib/thali-tape');
 var nodessdp = require('node-ssdp');
 
-function noop () { }
-
 var TEST_DEVICE_NAME = 'testDeviceName'
 
 var wifiInfrastructure = new ThaliWifiInfrastructure(TEST_DEVICE_NAME);
@@ -16,10 +14,12 @@ var test = tape({
   },
   teardown: function(t) {
     // Stop everything at the end of tests to make sure the next test starts from clean state
-    wifiInfrastructure.stopAdvertisingAndListeningForIncomingConnections().then(function () {
-      wifiInfrastructure.stopListeningForAdvertisements().then(function () {
-        t.end();
-      });
+    wifiInfrastructure.stopAdvertisingAndListeningForIncomingConnections()
+    .then(function () {
+      return wifiInfrastructure.stopListeningForAdvertisements();
+    })
+    .then(function () {
+      t.end();
     });
   }
 });
@@ -44,19 +44,18 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
 });
 
 test('#startUpdateAdvertisingAndListenForIncomingConnections should use different USN after every invocation', function (t) {
-  var originalServer = wifiInfrastructure._server;
+  var originalAddUsn = wifiInfrastructure._server.addUSN;
   var currentUsn;
-  wifiInfrastructure._server = {
-    start: noop,
-    addUSN: function(usn) {
-      currentUsn = usn;
-    }
+  wifiInfrastructure._server.addUSN = function(usn) {
+    currentUsn = usn;
   };
-  wifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections().then(function() {
+  wifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections()
+  .then(function() {
     var firstUsn = currentUsn;
-    wifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections().then(function() {
+    wifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections()
+    .then(function() {
       t.notEqual(firstUsn, currentUsn);
-      wifiInfrastructure._server = originalServer;
+      wifiInfrastructure._server.addUSN = originalAddUsn;
       t.end();
     });
   });
