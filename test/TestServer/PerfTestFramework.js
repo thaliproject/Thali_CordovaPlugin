@@ -50,6 +50,7 @@ function PerfTestFramework(testConfig, _logger) {
  
   PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig, _logger);
 
+  this.platforms = [];
   this.runningTests = [];
   this.completedTests = [];
 

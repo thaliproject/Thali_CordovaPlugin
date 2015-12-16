@@ -73,7 +73,10 @@ io.on('connection', function(socket) {
       socket, _device.name, _device.uuid, _device.os, _device.type, _device.tests, _device.btaddress
     );
 
-    logger.debug("New device presented: %s (%s) %s", _device.name, _device.os, _device.type);
+    logger.debug(
+      "Device presented: %s (%s) %s socket:%s", 
+      _device.name, _device.os, _device.type, this
+    );
 
     switch (device.type)
     {
