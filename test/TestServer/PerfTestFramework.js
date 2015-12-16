@@ -34,11 +34,6 @@ var ResultsProcessor = require('./ResultsProcessor.js');
    - dataAmount defines the amount of data sent through each connection before disconnecting
  */
 
-var startTime = new Date().getTime();
-var getSecondsFromStart = function () {
-    return Math.round((new Date().getTime() - startTime) / 1000);
-};
-
 var logger = console;
 
 function PerfTestFramework(testConfig, _logger) {
@@ -57,6 +52,7 @@ function PerfTestFramework(testConfig, _logger) {
 
   this.runningTests = [];
   this.completedTests = [];
+
   this.startTimeouts = {};
 }
 
@@ -100,9 +96,9 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
     // Default to all tests on first device
     tests = this.devices[platform][0].tests;
   }
-
+  
   // Copy arrays..
-  var _tests = tests.slice();
+  var testsToRun = tests.slice();
   var devices = this.devices[platform].slice();
   
   logger.info("Starting perf test run for platform: %s", platform);
@@ -175,12 +171,12 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             _device.socket.emit("teardown");
           });
 
-          tests.shift();
-          if (tests.length) {
+          testsToRun.shift();
+          if (testsToRun.length) {
             // Start the next test if any
             process.nextTick(function() {
-              logger.info("Continuing to next test: " + tests[0]);
-              doTest(tests[0]);
+              logger.info("Continuing to next test: " + testsToRun[0]);
+              doTest(testsToRun[0]);
             });
           } else {
             // All tests are complete, generate the result report
