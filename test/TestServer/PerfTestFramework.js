@@ -75,8 +75,8 @@ PerfTestFramework.prototype.addDevice = function(device) {
       var self = this;
 
       console.log(
-        "Setting start timeout to: %d", 
-        this.perfTestConfig.userConfig[platform].startTimeout
+        "Setting start timeout to: %d (%s)", 
+        this.perfTestConfig.userConfig[platform].startTimeout, platform
       );
 
       this.startTimeouts[platform] = setTimeout(function () {
@@ -138,7 +138,10 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
       device.socket.once('test data', function (data) {
 
-        console.log("Received results for %s %s", device.deviceName, platform);
+        console.log(
+          "Received results for %s %s (%d left)", 
+          device.deviceName, platform, toComplete
+        );
 
         // Cache results in the device object
         device.results = JSON.parse(data);
@@ -148,8 +151,6 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
           clearTimeout(device.serverTimeoutTimer);
           device.serverTimeoutTimer = null;
         }
-
-        console.log("toComplete: %d %s", toComplete, platform);
 
         if (--toComplete == 0) {
 

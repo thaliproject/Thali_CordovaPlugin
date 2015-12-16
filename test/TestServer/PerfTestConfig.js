@@ -2,10 +2,10 @@ var config = {
 
   userConfig : {
     "ios" : {
-      "startTimeout": 3000,
+      "startTimeout": 120000
     },
     "android" : { 
-      "startTimeout": 3000
+      "startTimeout": 120000
     }
   },
   
