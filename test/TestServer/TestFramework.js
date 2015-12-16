@@ -52,7 +52,7 @@ TestFramework.prototype.addDevice = function(device) {
     });
     if (existing.length) {
       console.log(
-        "Updating existing device: %s (%s == %s)", existing[0].deviceName, d.uuid, device.uuid
+        "Updating existing device: %s (%s)", existing[0].deviceName, existing[0].uuid
       );
       existing[0].socket = device.socket;
     } else {

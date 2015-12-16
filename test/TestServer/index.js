@@ -35,7 +35,7 @@ io.on('connection', function(socket) {
   // a 'present' message
 
   socket.on('disconnect', function () {
-    console.log("Socket disconnected");
+    console.log("Socket disconnected (%s)", socket.deviceName);
     socket.emit(
       'test_error', 
       JSON.stringify({"timeout ": "message not acceptable in current Test Server state"})
@@ -56,6 +56,8 @@ io.on('connection', function(socket) {
       }));
       return;
     }
+
+    socket.deviceName = _device.name;
 
     // Add the new device to the test type/os it reports as belonging to
     var device = new TestDevice(
