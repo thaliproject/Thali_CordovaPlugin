@@ -9,6 +9,7 @@
 'use strict';
 
 var fs = require('fs');
+var uuid = require('node-uuid');
 var io = require('socket.io-client');
 var inherits = require('util').inherits;
 var testUtils = require('../lib/testUtils.js');
@@ -64,6 +65,7 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
 
   TestFrameworkClient.super_.call(this);
 
+  this.uuid = uuid.v4();
   this.deviceName = deviceName;
   this.bluetoothAddress = bluetoothAddress;
 
@@ -126,7 +128,8 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
       "os" : platform,
       "name": self.deviceName,
       "type": "perftest",
-      "tests": Object.keys(self.tests)
+      "tests": Object.keys(self.tests),
+      "uuid": this.uuid
     }));
   });
 

@@ -4,13 +4,14 @@
 
 'use strict';
 
-function TestDevice(deviceSocket, name, platform, testType, tests, bluetoothAddress) {
-    this.socket = deviceSocket;
-    this.deviceName = name;
-    this.platform = platform;
-    this.type = testType;
-    this.btAddress = bluetoothAddress;
-    this.tests = tests;
+function TestDevice(deviceSocket, name, uuid, platform, testType, tests, bluetoothAddress) {
+  this.socket = deviceSocket;
+  this.deviceName = name;
+  this.uuid = uuid;
+  this.platform = platform;
+  this.type = testType;
+  this.btAddress = bluetoothAddress;
+  this.tests = tests;
 }
 
 TestDevice.prototype.SendCommand = function(command,test,data,dev,btAddresList){

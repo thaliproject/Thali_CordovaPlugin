@@ -45,7 +45,17 @@ TestFramework.prototype.addDevice = function(device) {
   if (!this.devices[device.platform]) {
     this.devices[device.platform] = [device];
   } else {
-    this.devices[device.platform].push(device);
+    // If a device with the same guid exists just update the socket else
+    // insert a new device (because devices can reconnect and re-present themselves)
+    var existing = this.devices[device.platform].filter(function(d) {
+      return (d.uuid == device.uuid);
+    });
+    if (existing.length) {
+      console.log("Updating existing device: %s", device.deviceName);
+      existing[0].socket = device.socket;
+    } else {
+      this.devices[device.platform].push(device);
+    }
   }
 
   // See if we have enough devices of platform type to start a test run

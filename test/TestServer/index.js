@@ -59,7 +59,7 @@ io.on('connection', function(socket) {
 
     // Add the new device to the test type/os it reports as belonging to
     var device = new TestDevice(
-      socket, _device.name, _device.os, _device.type, _device.tests, _device.btaddress
+      socket, _device.name, _device.uuid, _device.os, _device.type, _device.tests, _device.btaddress
     );
 
     console.log("New device presented: %s (%s) %s", _device.name, _device.os, _device.type);

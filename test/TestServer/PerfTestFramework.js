@@ -55,6 +55,7 @@ function PerfTestFramework(testConfig) {
 
   this.runningTests = [];
   this.completedTests = [];
+  this.startTimeouts = {};
 }
 
 inherits(PerfTestFramework, TestFramework);
@@ -78,7 +79,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
         this.perfTestConfig.userConfig[platform].startTimeout
       );
 
-      setTimeout(function () {
+      this.startTimeouts[platform] = setTimeout(function () {
         console.log("Start timeout elapsed for platform: %s", platform);
         self.startTests(platform);
       }, this.perfTestConfig.userConfig[platform].startTimeout);
@@ -89,7 +90,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
 PerfTestFramework.prototype.startTests = function(platform, tests) {
 
   if (this.runningTests.indexOf(platform) != -1 || this.completedTests.indexOf(platform) != -1) {
-    console.log("Tests for %s already running or completed");
+    console.log("Tests for %s already running or completed", platform);
     return;
   }
 
@@ -181,6 +182,9 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
           } else {
             // All tests are complete, generate the result report
             console.log("ALL DONE !!!");
+
+            // Cancel the startTimeout
+            clearTimeout(self.startTimeouts[platform]);
 
             var processedResults = ResultsProcessor.process(results, devices);
             console.log(processedResults);

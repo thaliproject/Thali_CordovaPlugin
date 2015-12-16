@@ -19,6 +19,7 @@
  */
 
 'use strict';
+var uuid = require('node-uuid');
 var tape = require('tape-catch');
 var io = require('socket.io-client');
 var testUtils = require("./testUtils");
@@ -172,6 +173,7 @@ thaliTape.begin = function() {
     transports: ['websocket']
   };
 
+  var uuid = uuid.v4();
   var testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
 
   testServer.on('error', function (data) {
@@ -184,7 +186,6 @@ thaliTape.begin = function() {
     // Shut down the Wifi & Bluetooth here
     testUtils.toggleRadios(false);
   });
-
 
   // Wait until we're connected
   testServer.once("connect", function() {
@@ -215,6 +216,7 @@ thaliTape.begin = function() {
     testServer.emit('present', JSON.stringify({
       "os": platform, 
       "name": deviceName,
+      "uuid": uuid,
       "type": 'unittest',
       "tests": Object.keys(tests)
     }));

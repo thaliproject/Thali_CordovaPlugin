@@ -1,4 +1,5 @@
 var test = require('tape');
+var uuid = require('node-uuid');
 var io = require('socket.io-client');
 var spawn = require('child_process').spawn;
 
@@ -9,7 +10,7 @@ test("test server starts and stops", function(t) {
   });
   server.stdout.on('data', function(data) {
     // Uncomment for debug of server
-    // console.log(new Buffer(data, 'utf8').toString()); 
+    //console.log(new Buffer(data, 'utf8').toString()); 
     server.kill('SIGINT');
   });
   server.on('exit', function(code, signal) {
@@ -31,7 +32,7 @@ function startServer(t) {
   });
   server.stdout.on('data', function(data) {
     // Uncomment for debug of server
-    // console.log(new Buffer(data, 'utf8').toString()); 
+    //console.log(new Buffer(data, 'utf8').toString()); 
   });
   server.on('exit', function(code, signal) {
     t.equal(code, 130);
@@ -41,12 +42,13 @@ function startServer(t) {
   return server;
 }
 
-function presentDevice(client, name, os, type, tests) {
+function presentDevice(client, name, uuid, os, type, tests) {
   client.emit('present', JSON.stringify({
     "os" : os,
     "name": name,
     "type": type,
-    "tests": tests
+    "tests": tests,
+    "uuid": uuid
   }));
 }
 
@@ -86,7 +88,8 @@ test("test perf test framework", function(t) {
       { transports:['websocket'], 'force new connection': true } 
     );
  
-    client.deviceName = clients.length; 
+    client.deviceName = clients.length;
+    client.uuid = uuid.v4();
     clients.push(client);
  
     client.on('error', function() {
@@ -129,6 +132,7 @@ test("test perf test framework", function(t) {
       presentDevice(
         this,
         "dev" + this.deviceName,
+        this.uuid,
         "ios", 
         "perftest", ["testSendData.js"]
       );
@@ -153,6 +157,7 @@ test("test perf test start timeout", function(t) {
     );
 
     client.deviceName = clients.length; 
+    client.uuid = uuid.v4();
     clients.push(client);
 
     client.on('error', function() {
@@ -197,6 +202,7 @@ test("test perf test start timeout", function(t) {
         presentDevice(
           this,
           "dev" + this.deviceName,
+          this.uuid,
           "ios", 
           "perftest", ["testSendData.js"]
         );
@@ -221,6 +227,7 @@ test("test concurrent perf test runs", function(t) {
     );
 
     client.deviceName = clients.length; 
+    client.uuid = uuid.v4();
     clients.push(client);
 
     client.on('error', function() {
@@ -263,6 +270,7 @@ test("test concurrent perf test runs", function(t) {
       presentDevice(
         this,
         "dev" + this.deviceName,
+        this.uuid,
         this.deviceName % 2 == 0 ? "ios" : "android", 
         "perftest", ["testSendData.js"]
       );
