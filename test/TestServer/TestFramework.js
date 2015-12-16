@@ -51,7 +51,9 @@ TestFramework.prototype.addDevice = function(device) {
       return (d.uuid == device.uuid);
     });
     if (existing.length) {
-      console.log("Updating existing device: %s (%s == %s)", device.deviceName,d.uuid,device.uuid);
+      console.log(
+        "Updating existing device: %s (%s == %s)", existing[0].deviceName, d.uuid, device.uuid
+      );
       existing[0].socket = device.socket;
     } else {
       this.devices[device.platform].push(device);
