@@ -7,7 +7,13 @@
 var util = require('util');
 var TestFramework = require('./TestFramework');
 
-function UnitTestFramework(testConfig) {
+var logger = console;
+
+function UnitTestFramework(testConfig, _logger)
+{
+  if (_logger) {
+    logger = _logger;
+  }
 
   var configFile = "./UnitTestConfig";
   if (testConfig.configFile) {
@@ -15,7 +21,7 @@ function UnitTestFramework(testConfig) {
   }
   var unitTestConfig = require(configFile);
   
-  UnitTestFramework.super_.call(this, testConfig, unitTestConfig);
+  UnitTestFramework.super_.call(this, testConfig, unitTestConfig, _logger);
   this.runningTests = [];
 }
 
@@ -30,12 +36,12 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
 
-  console.log("Starting unit test run for platform: %s", platform);
+  logger.info("Starting unit test run for platform: %s", platform);
 
   var self = this;
   function doTest(test, cb) {
 
-    console.log("Running test: " + test);
+    logger.info("Running test: " + test);
 
     // Perform a single test
 
@@ -95,7 +101,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
       // ALL DONE !!
       // All devices have completed all their tests
-      console.log("Test run complete");
+      logger.info("Test run complete");
 
       // The whole point !! Log test results from the
       // server
@@ -137,25 +143,25 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
 UnitTestFramework.prototype.testReport = function(platform, tests, results) {
 
-  console.log("\n\n-== UNIT TEST RESULTS ==-");
+  logger.info("\n\n-== UNIT TEST RESULTS ==-");
 
   var passed = 0;
   for (var test in results) {
     passed += results[test];
   }
 
-  console.log("PLATFORM: %s", platform);
-  console.log("RESULT: %s", passed == tests.length ? "PASS" : "FAIL");
-  console.log("%d of %d tests completed", Object.keys(results).length, tests.length);
-  console.log("%d/%d passed (%d failures)", passed, tests.length, tests.length - passed);
+  logger.info("PLATFORM: %s", platform);
+  logger.info("RESULT: %s", passed == tests.length ? "PASS" : "FAIL");
+  logger.info("%d of %d tests completed", Object.keys(results).length, tests.length);
+  logger.info("%d/%d passed (%d failures)", passed, tests.length, tests.length - passed);
 
-  console.log("---\n\n");
+  logger.info("---\n\n");
 
   for (test in results) {
-    console.log(test + " - " + (results[test] ? "pass" : "fail"));
+    logger.info(test + " - " + (results[test] ? "pass" : "fail"));
   }
 
-  console.log("\n\n-== END ==-");
+  logger.info("\n\n-== END ==-");
 }
 
 module.exports = UnitTestFramework;

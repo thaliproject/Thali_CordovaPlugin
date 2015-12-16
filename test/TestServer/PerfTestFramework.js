@@ -39,11 +39,13 @@ var getSecondsFromStart = function () {
     return Math.round((new Date().getTime() - startTime) / 1000);
 };
 
-var logger = function (value) {
-  console.log(new Date().toJSON() + ' (' + getSecondsFromStart() + ' sec) - ' + value);
-};
+var logger = console;
 
-function PerfTestFramework(testConfig) {
+function PerfTestFramework(testConfig, _logger) {
+
+  if (_logger) {
+    logger =_logger;
+  }
 
   var configFile = "./PerfTestConfig";
   if (testConfig.configFile) {
@@ -51,7 +53,7 @@ function PerfTestFramework(testConfig) {
   }
   this.perfTestConfig = require(configFile);
  
-  PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig);
+  PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig, _logger);
 
   this.runningTests = [];
   this.completedTests = [];
@@ -74,13 +76,13 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
       var self = this;
 
-      console.log(
+      logger.info(
         "Setting start timeout to: %d (%s)", 
         this.perfTestConfig.userConfig[platform].startTimeout, platform
       );
 
       this.startTimeouts[platform] = setTimeout(function () {
-        console.log("Start timeout elapsed for platform: %s", platform);
+        logger.info("Start timeout elapsed for platform: %s", platform);
         self.startTests(platform);
       }, this.perfTestConfig.userConfig[platform].startTimeout);
     }
@@ -90,7 +92,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
 PerfTestFramework.prototype.startTests = function(platform, tests) {
 
   if (this.runningTests.indexOf(platform) != -1 || this.completedTests.indexOf(platform) != -1) {
-    console.log("Tests for %s already running or completed", platform);
+    logger.info("Tests for %s already running or completed", platform);
     return;
   }
 
@@ -103,10 +105,10 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
   
-  console.log("Starting perf test run for platform: %s", platform);
-  console.log("Using devices:");
+  logger.info("Starting perf test run for platform: %s", platform);
+  logger.info("Using devices:");
   devices.forEach(function(dev) {
-    console.log(dev.deviceName);
+    logger.info(dev.deviceName);
   });
 
   // Filter non-null bluetooth device addresses into array
@@ -126,7 +128,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   function doTest(test) {
 
     toComplete = devices.length;
-    console.log("Setting: (%s)", platform, toComplete);
+    logger.info("Setting: (%s)", platform, toComplete);
 
     // Set up the test parameters
     var testData = self.perfTestConfig.testConfig[test];
@@ -138,7 +140,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
       device.socket.once('test data', function (data) {
 
-        console.log(
+        logger.info(
           "Received results for %s %s (%d left)", 
           device.deviceName, platform, toComplete
         );
@@ -154,12 +156,12 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
         if (--toComplete == 0) {
 
-          console.log("All test data retrieved for %s (%s)", test, device.platform);
+          logger.info("All test data retrieved for %s (%s)", test, device.platform);
 
           devices.forEach(function(_device) {
 
             if (device.results == null) {
-              console.log("No results from " + _device);
+              logger.info("No results from " + _device);
             } else {
               results.push({
                 "test" : test,
@@ -177,18 +179,18 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
           if (tests.length) {
             // Start the next test if any
             process.nextTick(function() {
-              console.log("Continuing to next test: " + tests[0]);
+              logger.info("Continuing to next test: " + tests[0]);
               doTest(tests[0]);
             });
           } else {
             // All tests are complete, generate the result report
-            console.log("ALL DONE !!!");
+            logger.info("ALL DONE !!!");
 
             // Cancel the startTimeout
             clearTimeout(self.startTimeouts[platform]);
 
             var processedResults = ResultsProcessor.process(results, devices);
-            console.log(processedResults);
+            logger.info(processedResults);
 
             // Let the devices know we're completely finished
             toComplete = devices.length;
@@ -208,7 +210,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
                     // We assume all tests runs are started before the first
                     // run finishes. If that's not the case there's not really
                     // any safe place we can exit.
-                    console.log("Server terminating normally");
+                    logger.info("Server terminating normally");
                     process.exit(0);
                   }
                 }
@@ -222,7 +224,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
       // Set a timeout, forces the device to send any data it has and teardown
       if (testData.serverTimeout) {
         device.serverTimeoutTimer = setTimeout(function() {
-          console.log("server timeout for test: %s (%s)", test, device.platform);
+          logger.info("server timeout for test: %s (%s)", test, device.platform);
           device.socket.emit("timeout");
           device.serverTimeoutTimer = null;
         }, testData.serverTimeout);

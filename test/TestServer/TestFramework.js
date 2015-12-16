@@ -6,7 +6,14 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 
-function TestFramework(testConfig, userConfig) {
+var logger = console;
+
+function TestFramework(testConfig, userConfig, _logger) {
+
+  if (_logger) {
+    logger = _logger;
+  }
+
   TestFramework.super_.call(this);
 
   this.devices = {};
@@ -56,7 +63,7 @@ TestFramework.prototype.addDevice = function(device) {
     });
 
     if (existing.length) {
-      console.log(
+      logger.info(
         "Updating existing device: %s (%s)", existing[0].deviceName, existing[0].uuid
       );
 
@@ -77,7 +84,7 @@ TestFramework.prototype.addDevice = function(device) {
 
   // See if we have enough devices of platform type to start a test run
   if (this.devices[device.platform].length === this.requiredDevices[device.platform]) {
-    console.log("Required number of devices presented");
+    logger.info("Required number of devices presented");
     this.startTests(device.platform, device.tests);
   }
 }

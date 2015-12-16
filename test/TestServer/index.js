@@ -19,12 +19,21 @@ var TestDevice = require('./TestDevice');
 var PerfTestFramework = require('./PerfTestFramework');
 var UnitTestFramework = require('./UnitTestFramework');
 
+// Create a logger
+var winston = require('winston');
+var logger = new (winston.Logger)({
+    level : 'debug',
+    transports: [
+      new (winston.transports.Console)({'timestamp':true, 'debugStdout':true})
+    ]
+});
+
 var testConfig = JSON.parse(process.argv[2]);
-var unitTestManager = new UnitTestFramework(testConfig);
-var perfTestManager = new PerfTestFramework(testConfig);
+var unitTestManager = new UnitTestFramework(testConfig, logger);
+var perfTestManager = new PerfTestFramework(testConfig, logger);
 
 process.on('SIGINT', function() {
-  console.log('Got SIGINT.  Terminating.');
+  logger.debug('Got SIGINT.  Terminating.');
   io.close();
   process.exit(130); // Ctrl-C std exit code
 });
@@ -35,7 +44,7 @@ io.on('connection', function(socket) {
   // a 'present' message
 
   socket.on('disconnect', function (reason) {
-    console.log("Socket disconnected: %s (%s)", reason, socket.deviceName);
+    logger.debug("Socket disconnected: %s (%s)", reason, socket.deviceName);
     socket.emit(
       'test_error', 
       JSON.stringify({"timeout ": "message not acceptable in current Test Server state"})
@@ -49,7 +58,7 @@ io.on('connection', function(socket) {
  
     var _device = JSON.parse(msg);
     if (!_device.os || !_device.name || !_device.type) {
-      console.log("malformed message");
+      logger.error("malformed message");
       socket.emit('error', JSON.stringify({
         "errorDescription ": "malformed message",
         "message" : msg
@@ -64,7 +73,7 @@ io.on('connection', function(socket) {
       socket, _device.name, _device.uuid, _device.os, _device.type, _device.tests, _device.btaddress
     );
 
-    console.log("New device presented: %s (%s) %s", _device.name, _device.os, _device.type);
+    logger.debug("New device presented: %s (%s) %s", _device.name, _device.os, _device.type);
 
     switch (device.type)
     {
@@ -80,18 +89,18 @@ io.on('connection', function(socket) {
       }
       break;
 
-      default : console.log('unrecognised test type: ' + device.type);
+      default : logger.error('unrecognised test type: ' + device.type);
     }
   });
 
 });
 
 app.get('/', function(req, res){
-  console.log("HTTP get called");
+  logger.info("HTTP get called");
   res.sendfile('index.html');
 });
 
 http.listen(3000, function(){
-  console.log('listening on *:3000');
+  logger.info('listening on *:3000');
 });
 
