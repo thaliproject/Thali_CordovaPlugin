@@ -173,8 +173,8 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
 
     // Acknowledge the server's request to end
+    self.testServer.io.reconnection(false); // Don't attempt to reconnect
     self.testServer.emit("end_ack");
-    self.testServer.close();
   });
 
   this.testServer.on('closed', function() {

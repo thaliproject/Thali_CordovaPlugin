@@ -45,17 +45,32 @@ TestFramework.prototype.addDevice = function(device) {
   if (!this.devices[device.platform]) {
     this.devices[device.platform] = [device];
   } else {
-    // If a device with the same guid exists just update the socket else
-    // insert a new device (because devices can reconnect and re-present themselves)
+
+    // This is annoying.. android devices will randomly disconnect and reconnect during a run
+    // When they do we need to patch the existing device record with the new socket by comparing
+    // the uuid's. The new socket won't have any of the old socket's event handlers though..
+    // .. so we need to transfer them from the old to the new socket.
+
     var existing = this.devices[device.platform].filter(function(d) {
       return (d.uuid == device.uuid);
     });
+
     if (existing.length) {
       console.log(
         "Updating existing device: %s (%s)", existing[0].deviceName, existing[0].uuid
       );
+
+      // Transfer the test data listener.. 99% of the time this will be the only one
+      var listeners = existing[0].socket.listeners('test data');
+      if (listeners.length) {
+        device.socket.on("test data", listeners[0]);
+      }
+
       existing[0].socket = device.socket;
+      return;
+
     } else {
+      // Straightforward add new device
       this.devices[device.platform].push(device);
     }
   }

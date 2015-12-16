@@ -34,8 +34,8 @@ io.on('connection', function(socket) {
   // A new device has connected to us.. we expect the next thing to happen to be
   // a 'present' message
 
-  socket.on('disconnect', function () {
-    console.log("Socket disconnected (%s)", socket.deviceName);
+  socket.on('disconnect', function (reason) {
+    console.log("Socket disconnected: %s (%s)", reason, socket.deviceName);
     socket.emit(
       'test_error', 
       JSON.stringify({"timeout ": "message not acceptable in current Test Server state"})

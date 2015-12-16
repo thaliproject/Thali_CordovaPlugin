@@ -194,7 +194,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             devices.forEach(function(_device) {
               _device.socket.once("end_ack", function() {
                 if (--toComplete == 0) {
-
+                  
                   // Record we've completed this platform's run
                   self.completedTests.push(platform);
 
@@ -207,6 +207,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
                     // We assume all tests runs are started before the first
                     // run finishes. If that's not the case there's not really
                     // any safe place we can exit.
+                    console.log("Server terminating normally");
                     process.exit(0);
                   }
                 }

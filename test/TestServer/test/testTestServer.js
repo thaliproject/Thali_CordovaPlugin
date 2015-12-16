@@ -3,7 +3,7 @@ var uuid = require('node-uuid');
 var io = require('socket.io-client');
 var spawn = require('child_process').spawn;
 
-test("test server starts and stops", function(t) {
+test("test server - starts and stops", function(t) {
   var server = spawn('node', ['./index.js', '{"devices":{"ios":4}}']); 
   server.stderr.on('data', function(data) {
     t.fail("Should be no error output");
@@ -14,7 +14,7 @@ test("test server starts and stops", function(t) {
     server.kill('SIGINT');
   });
   server.on('exit', function(code, signal) {
-    t.equal(code, 130);
+    t.equal(code, 130, "SIGINT handler should have terminated server");
     t.end();
   });
 });
@@ -32,10 +32,10 @@ function startServer(t) {
   });
   server.stdout.on('data', function(data) {
     // Uncomment for debug of server
-    //console.log(new Buffer(data, 'utf8').toString()); 
+    console.log(new Buffer(data, 'utf8').toString()); 
   });
   server.on('exit', function(code, signal) {
-    t.equal(code, 130);
+    t.equal(code, 0, "Server should have terminated gracefully");
     t.end();
   });
 
@@ -72,8 +72,7 @@ function shuffle(array)
   return array;
 }
 
-
-test("test perf test framework", function(t) {
+test("test server - perf test framework", function(t) {
 
   var server = startServer(t);
  
@@ -118,15 +117,9 @@ test("test perf test framework", function(t) {
         t.equal(numStarts, numDevices, "Shouldn't get events out of order");
         numEnds++;
         t.ok(numEnds <= numDevices, "Shouldn't get more ends than devices");
-        if (numEnds == numDevices) {
-          setTimeout(function() {
-            // Delay quit slightly to check we don't get stray messages
-            clients.forEach(function(client) {
-              client.close();
-            });
-            server.kill('SIGINT');
-          }, 3000);
-        }
+        // Cancel auto reconnect
+        this.io.reconnection(false);
+        this.emit("end_ack");
       });
 
       presentDevice(
@@ -140,7 +133,7 @@ test("test perf test framework", function(t) {
   }
 });
 
-test("test perf test start timeout", function(t) {
+test("test server - perf test start timeout", function(t) {
 
   var server = startServer(t);
  
@@ -186,14 +179,13 @@ test("test perf test start timeout", function(t) {
         t.equal(numStarts, numDevices - 1, "Shouldn't get events out of order");
         numEnds++;
         t.ok(numEnds <= numDevices - 1, "Shouldn't get more ends than devices");
+        this.io.reconnection(false);
+        this.emit("end_ack");
         if (numEnds == numDevices - 1) {
-          setTimeout(function() {
-            // Delay quit slightly to check we don't get stray messages
-            clients.forEach(function(client) {
-              client.close();
-            });
-            server.kill('SIGINT');
-          }, 3000);
+          // There'll be one socket still hanging around
+          clients.forEach(function(c) {
+            c.disconnect();
+          });
         }
       });
 
@@ -211,7 +203,7 @@ test("test perf test start timeout", function(t) {
   }
 });
 
-test("test concurrent perf test runs", function(t) {
+test("test server - concurrent perf test runs", function(t) {
 
   var server = startServer(t);
  
@@ -256,15 +248,8 @@ test("test concurrent perf test runs", function(t) {
         t.equal(numStarts, numDevices, "Shouldn't get events out of order");
         numEnds++;
         t.ok(numEnds <= numDevices, "Shouldn't get more ends than devices");
-        if (numEnds == numDevices) {
-          setTimeout(function() {
-            // Delay quit slightly to check we don't get stray messages
-            clients.forEach(function(client) {
-              client.close();
-            });
-            server.kill('SIGINT');
-          }, 3000);
-        }
+        this.io.reconnection(false);
+        this.emit("end_ack");
       });
 
       presentDevice(
@@ -272,6 +257,74 @@ test("test concurrent perf test runs", function(t) {
         "dev" + this.deviceName,
         this.uuid,
         this.deviceName % 2 == 0 ? "ios" : "android", 
+        "perftest", ["testSendData.js"]
+      );
+    });
+  }
+});
+
+test("test server - perf test framework handles disconnects", function(t) {
+
+  var server = startServer(t);
+ 
+  var numDevices = 4;
+  var numStarts = 0;
+  var numEnds = 0;
+
+  var clients = [];
+  for (var i = 0; i < numDevices; i++) {
+
+    var client = io('http://127.0.0.1:3000/',
+      { transports:['websocket'], 'force new connection': true } 
+    );
+ 
+    client.deviceName = clients.length;
+    client.uuid = uuid.v4();
+    clients.push(client);
+ 
+    client.on('error', function() {
+      t.fail();
+    });
+
+    client.on('connect', function () {
+
+      this.removeAllListeners('start');
+      this.on('start', function() {
+        numStarts++;
+        t.ok(numStarts <= numDevices, "Shouldn't get more starts than devices");
+        if (numStarts == numDevices) {
+          clients = shuffle(clients);
+          console.log("disconnecting %s", clients[0].deviceName);
+          clients[0].disconnect();
+          clients[0].connect();
+          clients.forEach(function(c) {
+            c.emit('test data', JSON.stringify({
+              "name:": "dev" + c.deviceName,
+              "time": 0,
+              "result": "ok",
+              "sendList": []
+            }));
+          });
+        }
+      });
+
+      // Disconnected client will come through here twice, don't add
+      // multiple listeners
+      this.removeAllListeners('end');
+      this.on('end', function(data) {
+        console.log("end: %s", this.deviceName);
+        t.equal(numStarts, numDevices, "Shouldn't get events out of order");
+        numEnds++;
+        t.ok(numEnds <= numDevices, "Shouldn't get more ends than devices");
+        this.io.reconnection(false);
+        this.emit("end_ack");
+      });
+
+      presentDevice(
+        this,
+        "dev" + this.deviceName,
+        this.uuid,
+        "ios", 
         "perftest", ["testSendData.js"]
       );
     });
