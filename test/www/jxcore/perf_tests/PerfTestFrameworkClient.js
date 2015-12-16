@@ -129,7 +129,7 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
       "name": self.deviceName,
       "type": "perftest",
       "tests": Object.keys(self.tests),
-      "uuid": this.uuid
+      "uuid": self.uuid
     }));
   });
 
