@@ -40,8 +40,10 @@ public class ConnectionHelper
     private static final String TAG = ConnectionHelper.class.getName();
     private static final String SERVICE_TYPE = "Cordovap2p._tcp";
     private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
+    private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
     private static final String BLUETOOTH_NAME = "Thali_Bluetooth";
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
+    private static final UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
     private static final long PEER_EXPIRATION_FOR_WIFI_PEER_DISCOVERY_IN_MILLISECONDS = 60000;
     private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 100; // TODO: Determine a way to figure out a proper value here
     private static final int PORT_NUMBER_IN_ERROR_CASES = -1;
@@ -89,7 +91,11 @@ public class ConnectionHelper
         mServerPort = port;
 
         mConnectionManager = new ConnectionManager(mContext, this, SERVICE_UUID, BLUETOOTH_NAME);
-        mDiscoveryManager = new DiscoveryManager(mContext, this, SERVICE_TYPE);
+        mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
+
+        if (!mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
+            mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
+        }
 
         boolean connectionManagerStarted = mConnectionManager.start(peerName);
         boolean discoveryManagerStarted = false;
@@ -376,6 +382,10 @@ public class ConnectionHelper
 
                 Log.i(TAG, "onConnected: Outgoing socket thread, for peer "
                         + peerProperties + ", created successfully");
+
+                // Use the system decided port the next time, if we're not already using
+                mConnectionManager.setInsecureRfcommSocketPort(
+                        ConnectionManager.SYSTEM_DECIDED_INSERCURE_RFCOMM_SOCKET_PORT);
             }
         }
 
@@ -412,6 +422,10 @@ public class ConnectionHelper
                 listener.onConnectionStatusChanged("Connection to peer " + peerProperties.toString() + " failed", PORT_NUMBER_IN_ERROR_CASES);
                 mOutgoingConnectionListeners.remove(peerProperties.getId()); // Dispose the listener
             }
+
+            // Try the alternative port the next time
+            mConnectionManager.setInsecureRfcommSocketPort(
+                    ConnectionManager.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
         }
     }
 
@@ -448,7 +462,8 @@ public class ConnectionHelper
     public void onPeerLost(PeerProperties peerProperties) {
         Log.i(TAG, "onPeerLost: " + peerProperties.toString());
 
-        if (modifyListOfDiscoveredPeers(peerProperties, false)) {
+        // If we are still connected, the peer can't certainly be lost
+        if (!hasConnection(peerProperties.getId()) && modifyListOfDiscoveredPeers(peerProperties, false)) {
             notifyPeerAvailability(peerProperties, false);
         }
     }
