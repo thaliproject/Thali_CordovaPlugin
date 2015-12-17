@@ -437,9 +437,16 @@ public class ConnectionHelper
                 mOutgoingConnectionListeners.remove(peerProperties.getId()); // Dispose the listener
             }
 
-            // Try the alternative port the next time
-            mConnectionManager.setInsecureRfcommSocketPort(
-                    ConnectionManager.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
+            if (mConnectionManager.getInsecureRfcommSocketPort() ==
+                    ConnectionManager.SYSTEM_DECIDED_INSERCURE_RFCOMM_SOCKET_PORT) {
+                // Try the alternative port the next time
+                mConnectionManager.setInsecureRfcommSocketPort(
+                        ConnectionManager.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
+            } else {
+                // Go back to system decided port
+                mConnectionManager.setInsecureRfcommSocketPort(
+                        ConnectionManager.SYSTEM_DECIDED_INSERCURE_RFCOMM_SOCKET_PORT);
+            }
         }
     }
 
