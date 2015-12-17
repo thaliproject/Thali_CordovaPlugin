@@ -44,7 +44,6 @@ public class ConnectionHelper
     private static final String BLUETOOTH_NAME = "Thali_Bluetooth";
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
     private static final UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
-    private static final long PEER_EXPIRATION_FOR_WIFI_PEER_DISCOVERY_IN_MILLISECONDS = 60000;
     private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 100; // TODO: Determine a way to figure out a proper value here
     private static final int PORT_NUMBER_IN_ERROR_CASES = -1;
 
@@ -101,10 +100,7 @@ public class ConnectionHelper
         boolean discoveryManagerStarted = false;
 
         if (connectionManagerStarted) {
-            if (mDiscoveryManager.getDiscoveryMode() == DiscoveryManager.DiscoveryMode.WIFI) {
-                mDiscoveryManager.setPeerExpiration(PEER_EXPIRATION_FOR_WIFI_PEER_DISCOVERY_IN_MILLISECONDS);
-            }
-
+            Log.i(TAG, "start: Using peer discovery mode: " + mDiscoveryManager.getDiscoveryMode());
             discoveryManagerStarted = mDiscoveryManager.start(peerName);
 
             if (discoveryManagerStarted) {
