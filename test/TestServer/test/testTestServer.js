@@ -32,7 +32,7 @@ function startServer(t) {
   });
   server.stdout.on('data', function(data) {
     // Uncomment for debug of server
-    //console.log(new Buffer(data, 'utf8').toString()); 
+    console.log(new Buffer(data, 'utf8').toString()); 
   });
   server.on('exit', function(code, signal) {
     t.equal(code, 0, "Server should have terminated gracefully");

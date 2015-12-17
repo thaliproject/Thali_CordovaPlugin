@@ -38,13 +38,17 @@ process.on('SIGINT', function() {
   process.exit(130); // Ctrl-C std exit code
 });
 
+var socketId = 0;
+
 io.on('connection', function(socket) {
 
   // A new device has connected to us.. we expect the next thing to happen to be
   // a 'present' message
 
+  socket.id = socketId++;
+
   socket.on('disconnect', function (reason) {
-    logger.debug("Socket disconnected: %s %s (%s)", reason, this, socket.deviceName);
+    logger.debug("Socket disconnected: %s %s (%s)", reason, this.id, socket.deviceName);
     socket.emit(
       'test_error', 
       JSON.stringify({"timeout ": "message not acceptable in current Test Server state"})
@@ -74,8 +78,8 @@ io.on('connection', function(socket) {
     );
 
     logger.debug(
-      "Device presented: %s (%s) %s socket:%s", 
-      _device.name, _device.os, _device.type, this
+      "Device presented: %s (%s) %s socket:%d", 
+      _device.name, _device.os, _device.type, this.id
     );
 
     switch (device.type)

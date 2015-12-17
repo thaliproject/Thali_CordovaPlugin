@@ -50,11 +50,7 @@ function PerfTestFramework(testConfig, _logger) {
  
   PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig, _logger);
 
-  this.platforms = [];
-  this.runningTests = [];
-  this.completedTests = [];
-
-  this.startTimeouts = {};
+  this.platforms = {};
 }
 
 inherits(PerfTestFramework, TestFramework);
@@ -64,10 +60,19 @@ PerfTestFramework.prototype.addDevice = function(device) {
   PerfTestFramework.super_.prototype.addDevice.call(this, device);
 
   var platform = device.platform;
-  if (this.devices[platform].length == 1) {
 
-    // Start a timer on first device discovery that will start tests regardless of 
-    // number found if honorCount is false
+  // Create some state for the new platform
+  if (!(platform in this.platforms)) {
+    this.platforms[platform] = {
+      state:"waiting",
+      startTimeout:null
+    };
+  }
+
+  // Start a timer on first device discovery that will start tests regardless of 
+  // number found if honorCount is false
+
+  if (this.devices[platform].length == 1) {
 
     if (!this.testConfig.honorCount) {
 
@@ -78,7 +83,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
         this.perfTestConfig.userConfig[platform].startTimeout, platform
       );
 
-      this.startTimeouts[platform] = setTimeout(function () {
+      this.platforms[platform].startTimeout = setTimeout(function () {
         logger.info("Start timeout elapsed for platform: %s", platform);
         self.startTests(platform);
       }, this.perfTestConfig.userConfig[platform].startTimeout);
@@ -88,7 +93,7 @@ PerfTestFramework.prototype.addDevice = function(device) {
 
 PerfTestFramework.prototype.startTests = function(platform, tests) {
 
-  if (this.runningTests.indexOf(platform) != -1 || this.completedTests.indexOf(platform) != -1) {
+  if (platform in this.platforms && this.platforms[platform].state != "waiting") {
     logger.info("Tests for %s already running or completed", platform);
     return;
   }
@@ -119,7 +124,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   var self = this;
   
   // Record that we're running tests for this platform
-  this.runningTests.push(platform);
+  this.platforms[platform].state = "running";
 
   var results = [];
   function doTest(test) {
@@ -184,7 +189,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
             logger.info("ALL DONE !!!");
 
             // Cancel the startTimeout
-            clearTimeout(self.startTimeouts[platform]);
+            clearTimeout(self.platforms[platform].startTimeout);
 
             var processedResults = ResultsProcessor.process(results, devices);
             logger.info(processedResults);
@@ -196,17 +201,18 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
                 if (--toComplete == 0) {
                   
                   // Record we've completed this platform's run
-                  self.completedTests.push(platform);
+                  self.platforms[platform].state = "completed";
 
-                  // Remove the platform from our set of running tests
-                  self.runningTests = self.runningTests.filter(function(p) {
-                    return (p != platform);
-                  });
+                  // Are all platforms now complete ?
+                  var completed = true;
+                  for (var p in self.platforms) {
+                    logger.debug("state: %s %s", p, self.platforms[p].state);
+                    if (self.platforms[p].state != "completed") {
+                      completed = false;
+                    }
+                  }
 
-                  if (self.runningTests.length == 0) {
-                    // We assume all tests runs are started before the first
-                    // run finishes. If that's not the case there's not really
-                    // any safe place we can exit.
+                  if (completed) {
                     logger.info("Server terminating normally");
                     process.exit(0);
                   }
