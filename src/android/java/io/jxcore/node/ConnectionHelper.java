@@ -144,8 +144,22 @@ public class ConnectionHelper
         return (mConnectionManager != null && mDiscoveryManager != null);
     }
 
+    /**
+     * @return True, if BLE advertising is supported. False otherwise.
+     */
     public boolean isBleAdvertisingSupported() {
-        return (mDiscoveryManager != null && mDiscoveryManager.isBleAdvertisingSupported());
+        boolean isSupported = false;
+        boolean discoveryManagerWasCreated = (mDiscoveryManager != null);
+
+        if (discoveryManagerWasCreated) {
+            isSupported = mDiscoveryManager.isBleAdvertisingSupported();
+        } else {
+            DiscoveryManager discoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
+            isSupported = discoveryManager.isBleAdvertisingSupported();
+            discoveryManager = null;
+        }
+
+        return isSupported;
     }
 
     /**
