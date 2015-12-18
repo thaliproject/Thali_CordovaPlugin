@@ -92,9 +92,10 @@ public class ConnectionHelper
         mConnectionManager = new ConnectionManager(mContext, this, SERVICE_UUID, BLUETOOTH_NAME);
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
 
-        if (!mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
+        // Use only Wi-Fi Direct based peer discovery for now until BLE is properly tested
+        //if (!mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
             mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
-        }
+        //}
 
         boolean connectionManagerStarted = mConnectionManager.start(peerName);
         boolean discoveryManagerStarted = false;
