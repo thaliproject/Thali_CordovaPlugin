@@ -218,7 +218,6 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
     }
     testData = testData[0];
     testData.peerCount = toComplete;
-    logger.debug(testData);
 
     var nextTest = function() {
       // When all devices have given us a result, complete the current test
