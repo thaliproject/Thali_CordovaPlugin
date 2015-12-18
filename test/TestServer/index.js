@@ -1,7 +1,6 @@
 /*
  Main entry point for Thali test frameworks coordinator server
-
- jx index.js "{\"devices\":{\"android\":\"3\",\"ios\":\"2\"},\"honorCount\":true}"
+ jx index.js "{\"devices\": {\"android\": 3, \"ios\": 2}, \"honorCount\": true}"
 */
 
 'use strict';
