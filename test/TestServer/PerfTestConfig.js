@@ -9,8 +9,9 @@ var config = {
     }
   },
   
-  testConfig : {
-    "testSendData.js" : {
+  testConfig : [
+    {
+      "name": "testSendData.js",
       "serverTimeout": 1200000,
       "timeout": 1000000,
       "rounds": 1,
@@ -20,7 +21,8 @@ var config = {
       "conReTryCount": 5
     },
 
-    "testFindPeers.js" : {
+    {
+      "name": "testFindPeers.js",
       "serverTimeout": 1200000,
       "timeout": 1000000,
       "rounds": 1,
@@ -30,7 +32,8 @@ var config = {
       "conReTryCount": 5
     },
 
-    "testReConnect.js" : {
+    {
+      "name": "testReConnect.js",
       "serverTimeout": 1200000,
       "timeout": 1000000,
       "rounds": 1,
@@ -39,7 +42,7 @@ var config = {
       "conReTryTimeout": 5000,
       "conReTryCount": 5
     }
-  } 
+  ] 
 };
 
 module.exports = config;

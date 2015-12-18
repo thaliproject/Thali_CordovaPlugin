@@ -174,10 +174,12 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   }
 
   if (!tests) {
-    // Default to all tests on first device
-    tests = this.devices[platform][0].tests;
+    // Default to all tests listed in config
+    tests = this.perfTestConfig.testConfig.map(function(testConfig) {
+      return testConfig.name;
+    });
   }
-  
+ 
   // Copy arrays..
   this.testsToRun = tests.slice();
   var devices = this.devices[platform].slice();
@@ -208,8 +210,15 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
     logger.info("Setting: (%s)", platform, toComplete);
 
     // Set up the test parameters
-    var testData = self.perfTestConfig.testConfig[test];
+    var testData = self.perfTestConfig.testConfig.filter(function(testConfig) {
+      return (testConfig.name == test);
+    });
+    if (testData.length != 1) {
+      throw new Error("Missing or duplicate config for test %s", test); 
+    }
+    testData = testData[0];
     testData.peerCount = toComplete;
+    logger.debug(testData);
 
     var nextTest = function() {
       // When all devices have given us a result, complete the current test

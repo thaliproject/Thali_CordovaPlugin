@@ -7,6 +7,7 @@ test("test server - starts and stops", function(t) {
   var server = spawn('node', ['./index.js', '{"devices":{"ios":4}}']); 
   server.stderr.on('data', function(data) {
     t.fail("Should be no error output");
+    console.log(new Buffer(data, 'utf8').toString()); 
   });
   server.stdout.on('data', function(data) {
     // Uncomment for debug of server
@@ -19,11 +20,15 @@ test("test server - starts and stops", function(t) {
   });
 });
 
-function startServer(t) {
+function startServer(t, testConfig) {
+
+  if (!testConfig) {
+    testConfig = "./TestPerfTestConfig.js";
+  }
 
   var server = spawn(
     'node', 
-    ['./index.js', '{"devices":{"ios":4, "android":4}, "configFile":"./TestPerfTestConfig"}']
+    ['./index.js', '{"devices":{"ios":4, "android":4}, "configFile":"' + testConfig + '"}']
   );
 
   server.stderr.on('data', function(data) {
@@ -333,7 +338,7 @@ test("test server - perf test framework handles disconnects", function(t) {
 test("test server - perf test framework handles server timeout", function(t) {
 
   var time = 0;
-  var server = startServer(t);
+  var server = startServer(t, "./TestPerfTestConfig2.js");
 
   var numTests = 0; 
   var numDevices = 4;
