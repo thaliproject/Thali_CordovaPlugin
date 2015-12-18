@@ -11,7 +11,7 @@ var config = {
 
   testConfig : {
     "testSendData.js" : {
-      "serverTimeout": 1200000,
+      "serverTimeout": 15000,
       "timeout": 1000000,
       "rounds": 1,
       "dataTimeout": 10000,
@@ -21,7 +21,7 @@ var config = {
     },
 
     "testFindPeers.js" : {
-      "serverTimeout": 1200000,
+      "serverTimeout": 15000,
       "timeout": 1000000,
       "rounds": 1,
       "dataTimeout": 10000,

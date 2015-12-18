@@ -50,6 +50,10 @@ function PerfTestFramework(testConfig, _logger) {
  
   PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig, _logger);
 
+  // The accumulate set of results
+  this.results = [];
+
+  // The platfoms we can have concurrently running the test set
   this.platforms = {};
 }
 
@@ -91,6 +95,77 @@ PerfTestFramework.prototype.addDevice = function(device) {
   }
 }
 
+PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
+
+  logger.info("All test data retrieved for %s (%s)", test, platform);
+
+  var self = this;
+
+  // Collate the results..
+  devices.forEach(function(device) {
+
+    if (device.results == null) {
+      logger.info("No results from " + device);
+    } else {
+      self.results.push({
+        "test" : test,
+        "device" : device.deviceName,
+        "time" : null,
+        "data" : device.results
+      });
+    }
+
+    // Let the completed device know it can tear down the current test
+    device.socket.emit("teardown");
+  });
+
+  // Check if we're done
+  this.testsToRun.shift();
+  if (!this.testsToRun.length) {
+
+    // All tests are complete, generate the result report
+    logger.info("ALL DONE !!!");
+
+    // Cancel the startTimeout
+    clearTimeout(this.platforms[platform].startTimeout);
+
+    var processedResults = ResultsProcessor.process(this.results, devices);
+    logger.info(processedResults);
+
+    // Let the devices know we're completely finished
+    var acksReceived = devices.length;
+    devices.forEach(function(device) {
+
+      // Send 'end' and wait for 'end_ack'
+
+      device.socket.once("end_ack", function() {
+        if (--acksReceived == 0) {
+
+          // Record we've completed this platform's run
+          self.platforms[platform].state = "completed";
+
+          // Are all platforms now complete ?
+          var completed = true;
+          for (var p in self.platforms) {
+            logger.debug("state: %s %s", p, self.platforms[p].state);
+            if (self.platforms[p].state != "completed") {
+              completed = false;
+            }
+          }
+
+          if (completed) {
+            logger.info("Server terminating normally");
+            process.exit(0);
+          }
+        }
+      });
+
+      logger.debug("end to %s", device.deviceName);
+      device.socket.emit("end", device.deviceName);
+    }); 
+  }
+}
+
 PerfTestFramework.prototype.startTests = function(platform, tests) {
 
   if (platform in this.platforms && this.platforms[platform].state != "waiting") {
@@ -104,7 +179,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   }
   
   // Copy arrays..
-  var testsToRun = tests.slice();
+  this.testsToRun = tests.slice();
   var devices = this.devices[platform].slice();
   
   logger.info("Starting perf test run for platform: %s", platform);
@@ -136,15 +211,36 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
     var testData = self.perfTestConfig.testConfig[test];
     testData.peerCount = toComplete;
 
+    var nextTest = function() {
+      // When all devices have given us a result, complete the current test
+      self.completeTest(test, platform, devices);
+      
+      if (self.testsToRun.length) {
+        process.nextTick(function() {
+          logger.info("Continuing to next test: " + self.testsToRun[0]);
+          doTest(self.testsToRun[0]);
+        });
+      }
+    }
+
+    var serverTimeout = null;
+    if (testData.serverTimeout) {
+      serverTimeout = setTimeout(function() {
+        logger.info("server timeout for test: %s (%s)", test, platform);
+        nextTest();
+      }, testData.serverTimeout);
+    }
+
     devices.forEach(function(device) {
 
+      // Reset test results for this device
       device.results = null;
 
       device.socket.once('test data', function (data) {
 
         logger.info(
-          "Received results for %s %s (%d left)", 
-          device.deviceName, platform, toComplete
+          "Received results for %s %s %s (%d left)", 
+          data, device.deviceName, platform, toComplete
         );
 
         // Cache results in the device object
@@ -157,81 +253,12 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
         }
 
         if (--toComplete == 0) {
-
-          logger.info("All test data retrieved for %s (%s)", test, device.platform);
-
-          devices.forEach(function(_device) {
-
-            if (device.results == null) {
-              logger.info("No results from " + _device);
-            } else {
-              results.push({
-                "test" : test,
-                "device" : _device.deviceName,
-                "time" : null,
-                "data" : _device.results
-              });
-            }
-
-            // Let the completed device know it can tear down the current test
-            _device.socket.emit("teardown");
-          });
-
-          testsToRun.shift();
-          if (testsToRun.length) {
-            // Start the next test if any
-            process.nextTick(function() {
-              logger.info("Continuing to next test: " + testsToRun[0]);
-              doTest(testsToRun[0]);
-            });
-          } else {
-            // All tests are complete, generate the result report
-            logger.info("ALL DONE !!!");
-
-            // Cancel the startTimeout
-            clearTimeout(self.platforms[platform].startTimeout);
-
-            var processedResults = ResultsProcessor.process(results, devices);
-            logger.info(processedResults);
-
-            // Let the devices know we're completely finished
-            toComplete = devices.length;
-            devices.forEach(function(_device) {
-              _device.socket.once("end_ack", function() {
-                if (--toComplete == 0) {
-                  
-                  // Record we've completed this platform's run
-                  self.platforms[platform].state = "completed";
-
-                  // Are all platforms now complete ?
-                  var completed = true;
-                  for (var p in self.platforms) {
-                    logger.debug("state: %s %s", p, self.platforms[p].state);
-                    if (self.platforms[p].state != "completed") {
-                      completed = false;
-                    }
-                  }
-
-                  if (completed) {
-                    logger.info("Server terminating normally");
-                    process.exit(0);
-                  }
-                }
-              });
-              _device.socket.emit("end", _device.deviceName);
-            }); 
-          }
+          nextTest();
         }
       });
 
-      // Set a timeout, forces the device to send any data it has and teardown
-      if (testData.serverTimeout) {
-        device.serverTimeoutTimer = setTimeout(function() {
-          logger.info("server timeout for test: %s (%s)", test, device.platform);
-          device.socket.emit("timeout");
-          device.serverTimeoutTimer = null;
-        }, testData.serverTimeout);
-      }
+      // Set a timeout that will move to next test
+      // regardless of whether all results are in
 
       // Begin the test..
       device.socket.emit(

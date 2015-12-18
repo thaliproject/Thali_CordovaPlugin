@@ -10,7 +10,7 @@ test("test server - starts and stops", function(t) {
   });
   server.stdout.on('data', function(data) {
     // Uncomment for debug of server
-    //console.log(new Buffer(data, 'utf8').toString()); 
+    console.log(new Buffer(data, 'utf8').toString()); 
     server.kill('SIGINT');
   });
   server.on('exit', function(code, signal) {
@@ -312,7 +312,6 @@ test("test server - perf test framework handles disconnects", function(t) {
       // multiple listeners
       this.removeAllListeners('end');
       this.on('end', function(data) {
-        console.log("end: %s", this.deviceName);
         t.equal(numStarts, numDevices, "Shouldn't get events out of order");
         numEnds++;
         t.ok(numEnds <= numDevices, "Shouldn't get more ends than devices");
@@ -330,3 +329,82 @@ test("test server - perf test framework handles disconnects", function(t) {
     });
   }
 });
+
+test("test server - perf test framework handles server timeout", function(t) {
+
+  var time = 0;
+  var server = startServer(t);
+
+  var numTests = 0; 
+  var numDevices = 4;
+  var numStarts = 0;
+  var numEnds = 0;
+
+  var clients = [];
+  for (var i = 0; i < numDevices; i++) {
+
+    var client = io('http://127.0.0.1:3000/',
+      { transports:['websocket'], 'force new connection': true } 
+    );
+ 
+    client.deviceName = clients.length;
+    client.uuid = uuid.v4();
+    clients.push(client);
+ 
+    client.on('error', function() {
+      t.fail();
+    });
+
+    client.on('connect', function () {
+
+      this.removeAllListeners('start');
+      this.on('start', function() {
+        numStarts++;
+        t.ok(numStarts <= numDevices, "Shouldn't get more starts than devices");
+        if (numStarts == numDevices) {
+          clients = shuffle(clients);
+          var numTestData = 0;
+          clients.forEach(function(c) {
+            numTestData++;
+            // Send all but one test data reports the first time
+            if (numTestData < numDevices || numTests == 1) {
+              c.emit('test data', JSON.stringify({
+                "device:": "dev" + c.deviceName,
+                "test": "test" + numTests,
+                "time": time++,
+                "result": "ok",
+                "sendList": []
+              }));
+            } else {
+              // Convenient place to reset counters
+              numStarts = 0;
+              numTestData = 0;
+              numTests++;
+            }
+          });
+        }
+      });
+
+      this.on('timeout', function(data) {
+      });
+
+      this.on('end', function(data) {
+        t.equal(numStarts, numDevices, "Shouldn't get events out of order");
+        numEnds++;
+        t.ok(numEnds <= numDevices, "Shouldn't get more ends than devices");
+        this.io.reconnection(false);
+        this.emit("end_ack");
+      });
+
+      // Note that we're sending two tests here.. 
+      presentDevice(
+        this,
+        "dev" + this.deviceName,
+        this.uuid,
+        "ios", 
+        "perftest", ["testSendData.js", "testFindPeers.js"]
+      );
+    });
+  }
+});
+
