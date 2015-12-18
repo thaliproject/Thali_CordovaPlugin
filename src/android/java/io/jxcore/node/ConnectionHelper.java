@@ -396,7 +396,7 @@ public class ConnectionHelper
 
                 // Use the system decided port the next time, if we're not already using
                 mConnectionManager.setInsecureRfcommSocketPort(
-                        ConnectionManager.SYSTEM_DECIDED_INSERCURE_RFCOMM_SOCKET_PORT);
+                        ConnectionManager.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
             }
         }
 
@@ -435,14 +435,14 @@ public class ConnectionHelper
             }
 
             if (mConnectionManager.getInsecureRfcommSocketPort() ==
-                    ConnectionManager.SYSTEM_DECIDED_INSERCURE_RFCOMM_SOCKET_PORT) {
+                    ConnectionManager.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT) {
                 // Try the alternative port the next time
                 mConnectionManager.setInsecureRfcommSocketPort(
                         ConnectionManager.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
             } else {
                 // Go back to system decided port
                 mConnectionManager.setInsecureRfcommSocketPort(
-                        ConnectionManager.SYSTEM_DECIDED_INSERCURE_RFCOMM_SOCKET_PORT);
+                        ConnectionManager.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
             }
         }
     }
