@@ -50,6 +50,9 @@ function PerfTestFramework(testConfig, _logger) {
  
   PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig, _logger);
 
+  // Map of platform to tests to run
+  this.testsToRun = {};
+
   // The accumulate set of results
   this.results = [];
 
@@ -120,8 +123,8 @@ PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
   });
 
   // Check if we're done
-  this.testsToRun.shift();
-  if (!this.testsToRun.length) {
+  this.testsToRun[platform].shift();
+  if (!this.testsToRun[platform].length) {
 
     // All tests are complete, generate the result report
     logger.info("ALL DONE !!!");
@@ -181,7 +184,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   }
  
   // Copy arrays..
-  this.testsToRun = tests.slice();
+  this.testsToRun[platform] = tests.slice();
   var devices = this.devices[platform].slice();
   
   logger.info("Starting perf test run for platform: %s", platform);
@@ -207,7 +210,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
   function doTest(test) {
 
     toComplete = devices.length;
-    logger.info("Setting: (%s)", platform, toComplete);
+    logger.info("Starting test: with %d devices (%s)", toComplete, platform);
 
     // Set up the test parameters
     var testData = self.perfTestConfig.testConfig.filter(function(testConfig) {
@@ -223,10 +226,10 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
       // When all devices have given us a result, complete the current test
       self.completeTest(test, platform, devices);
       
-      if (self.testsToRun.length) {
+      if (self.testsToRun[platform].length) {
         process.nextTick(function() {
-          logger.info("Continuing to next test: " + self.testsToRun[0]);
-          doTest(self.testsToRun[0]);
+          logger.info("Continuing to next test: " + self.testsToRun[platform][0]);
+          doTest(self.testsToRun[platform][0]);
         });
       }
     }
