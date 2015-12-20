@@ -108,7 +108,7 @@ PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
   devices.forEach(function(device) {
 
     if (device.results == null) {
-      logger.info("No results from " + device);
+      logger.info("No results from " + device.deviceName);
     } else {
       self.results.push({
         "test" : test,
@@ -124,6 +124,7 @@ PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
 
   // Check if we're done
   this.testsToRun[platform].shift();
+  logger.info("Remaining tests: %s", this.testsToRun);
   if (!this.testsToRun[platform].length) {
 
     // All tests are complete, generate the result report
