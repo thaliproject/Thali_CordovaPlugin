@@ -45,6 +45,7 @@ io.on('connection', function(socket) {
   // a 'present' message
 
   socket.id = socketId++;
+  socket.deviceName = "NOT YET SET";
 
   socket.on('disconnect', function (reason) {
     logger.debug("Socket disconnected: %s %s (%s)", reason, this.id, socket.deviceName);
