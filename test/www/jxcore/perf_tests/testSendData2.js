@@ -1,6 +1,8 @@
+var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
 var EventEmitter = require('events').EventEmitter;
+
 
 function testSendData2(testConfig, deviceName, addressList) {
 
@@ -14,6 +16,11 @@ function testSendData2(testConfig, deviceName, addressList) {
   this.runningPeer = false;
   this.emitter = new ThaliEmitter();
   this.emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
+
+  // Basic echo server..
+  this.server = net.createServer(function(socket) {
+    socket.pipe(socket);
+  });
 }
 
 inherits(testSendData2, EventEmitter);
@@ -80,10 +87,11 @@ testSendData2.prototype.startPeer = function(peerIdentifier) {
     }
 
     var bytesReceived = 0;
-    // Server acknowledges by sending a '.' for every 100 bytes it receives
     sock.on('data', function(data) {
-      console.log(data);
-      self.peers[peerIdentifier].bytesToSend -= dataLength;
+
+      // Server's just echoing back what we send..
+      self.peers[peerIdentifier].bytesToSend -= data.length;
+
       if (self.peer[peerIdentifier].bytesToSend == 0) {
         sock.end();
         self.emitter.disconnect(peerIdentifier, function() {
@@ -102,6 +110,9 @@ testSendData2.prototype.startPeer = function(peerIdentifier) {
 }
 
 testSendData2.prototype.start = function(serverPort) {
+
+  this.server.listen(serverPort, "127.0.0.1");
+
   this.emitter.startBroadcasting(this.deviceName, serverPort, function(err) {
     if (err) {
       console.log("ERROR: Couldn't start broadcasting");
