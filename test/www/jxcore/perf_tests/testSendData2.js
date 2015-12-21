@@ -86,7 +86,7 @@ testSendData2.prototype.startPeer = function(peerIdentifier) {
       var toSend = randomstring.generate(self.peers[peerIdentifier].bytesToSend >> 1);
       var success = sock.write(toSend);
       console.log("Write result: %s", sucess);
-    }
+    });
 
     var bytesReceived = 0;
     sock.on('data', function(data) {
