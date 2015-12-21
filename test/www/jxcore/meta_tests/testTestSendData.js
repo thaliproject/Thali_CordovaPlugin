@@ -64,13 +64,15 @@ test('#connector should be able to send data to a running server', function (t) 
 
 var numberOfPeers = 5;
 test('#should run test with ' + numberOfPeers + ' peers', function (t) {
+  console.log("---------------------------");
   var testData = {
     'timeout': 1500000,
     'rounds': 1,
     'dataTimeout': 10000,
     'dataAmount': 1000000,
     'conReTryTimeout': 50,
-    'conReTryCount': 5
+    'conReTryCount': 5,
+    'peerCount' : numberOfPeers
   };
 
   var testPeerList = [];
@@ -79,7 +81,7 @@ test('#should run test with ' + numberOfPeers + ' peers', function (t) {
       'address': 'device-address-' + i
     });
   }
-  var testSendData = new TestSendData(JSON.stringify(testData), 'device-identifier-me', numberOfPeers, testPeerList);
+  var testSendData = new TestSendData(testData, 'device-identifier-me', testPeerList);
   testSendData.start(testPort);
 
   testSendData.on('done', function (resultString) {

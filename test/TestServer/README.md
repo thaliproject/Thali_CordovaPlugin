@@ -20,13 +20,41 @@ defining on when the test should be timed out (if the test has not send the resu
 Here's example of the content of the Config_PerfTest.json file file
 
 ```json
- "tests": [
- {"name": "testFindPeers.js", "servertimeout": "70000","data": {...}},
- {"name": "testReConnect.js", "servertimeout": "700000","data": {...}},
- {"name": "testSendData.js",  "servertimeout": "7000000","data": {...}},
- ]
- }
- ```
+[
+  {
+    "name": "testSendData.js",
+    "serverTimeout": 1200000,
+    "timeout": 1000000,
+    "rounds": 1,
+    "dataTimeout": 20000,
+    "dataAmount": 100000,
+    "conReTryTimeout": 5000,
+    "conReTryCount": 5
+  },
+
+  {
+    "name": "testFindPeers.js",
+    "serverTimeout": 1200000,
+    "timeout": 1000000,
+    "rounds": 1,
+    "dataTimeout": 10000,
+    "dataAmount": 100000,
+    "conReTryTimeout": 5000,
+    "conReTryCount": 5
+  },
+
+  {
+    "name": "testReConnect.js",
+    "serverTimeout": 1200000,
+    "timeout": 1000000,
+    "rounds": 1,
+    "dataTimeout": 10000,
+    "dataAmount": 100000,
+    "conReTryTimeout": 5000,
+    "conReTryCount": 5
+  }
+] 
+```
  
  The reply data item includes test number, device name from which is result is from, time it took to do the whole test, and then test specific data values.  
  

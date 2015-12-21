@@ -2,6 +2,7 @@
 
 var fs = require('fs-extra-promise');
 var path = require('path');
+var thaliTape = require('./lib/thali-tape');
 
 var testsToRun = process.argv.length > 2 ? process.argv[2] : 'bv_tests';
 
@@ -11,3 +12,5 @@ fs.readdirSync(path.join(__dirname, testsToRun)).forEach(function(fileName) {
         require(path.join(__dirname, testsToRun, fileName));
     }
 });
+
+thaliTape.begin();

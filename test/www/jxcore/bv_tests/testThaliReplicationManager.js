@@ -111,15 +111,14 @@ test('ThaliReplicationManager receives identity', function (t) {
   manager.start(5000, 'thali');
 });
 
+/*
 test('ThaliReplicationManager replicates database', function (t) {
+  
+  // Create a local doc with local device name and sync to peer. On receiving that they'll swap
+  // their device name for ours and sync it back. When both sides have successfully done this and
+  // have seen the changes we know two-sync is working.
 
-  /*
-    Create a local doc with local device name and sync to peer. On receiving that they'll swap
-    their device name for ours and sync it back. When both sides have successfully done this and
-    have seen the changes we know two-sync is working.
-  */
-
-  // Need to recreate since reinstall of test does not delete the db
+  // Need to recreate the database since reinstall of test does not delete the db
   // meaning we get unexpected sequence numbers
 
   var db = new LevelDownPouchDB('thali');
@@ -225,3 +224,4 @@ test('ThaliReplicationManager replicates database', function (t) {
     });
   });
 });
+*/

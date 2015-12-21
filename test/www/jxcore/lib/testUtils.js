@@ -7,19 +7,33 @@ var os = require('os');
  * This is a NOOP on iOS and the desktop
  * @param {boolean} on - true to turn radios on and false to turn them off
  */
-exports.toggleRadios = function (on) {
-  if (!jxcore.utils.OSInfo().isMobile) {
+exports.toggleRadios = function(on) {
+
+  if (typeof jxcore == 'undefined' || !jxcore.utils.OSInfo().isMobile || 
+      !jxcore.utils.OSInfo().isAndroid) 
+  {
     return;
   }
-  console.log('Toggling radios to ' + on);
-  exports.toggleBluetooth(on, function () {
-    exports.toggleWifi(on, function () {
-      console.log('Radios toggled');
+
+  if (jxcore.utils.OSInfo().isAndroid) {
+    console.log('Toggling radios to ' + on);
+    exports.toggleBluetooth(on, function () {
+      exports.toggleWifi(on, function () {
+        console.log('Radios toggled');
+      });
     });
-  });
+  } else {
+    console.log("ERROR: toggleRadios called on unsupported platform");
+  }
 };
 
 exports.toggleWifi = function (on, callback) {
+
+  if (typeof jxcore == 'undefined') {
+    callback();
+    return;
+  }
+
   Mobile.toggleWiFi(on, function (err) {
     if (err) {
       console.log('Could not toggle Wifi - ' + err);
@@ -64,7 +78,7 @@ exports.setMyName = function(name) {
   myName = name;
 };
 
-if (jxcore.utils.OSInfo().isMobile) {
+if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
   Mobile('setLogCallback').registerAsync(function (callback) {
     LogCallback = callback;
   });

@@ -4,59 +4,28 @@
 
 'use strict';
 
-function TestDevice(deviceSocket,name,platform,testType,bluetoothAddress) {
-    this.socket = deviceSocket;
-    this.deviceName = name;
-    this.os = platform;
-    this.type = testType;
-    this.btAddress = bluetoothAddress;
+function TestDevice(deviceSocket, name, uuid, platform, testType, tests, bluetoothAddress) {
+  this.socket = deviceSocket;
+  this.deviceName = name;
+  this.uuid = uuid;
+  this.platform = platform;
+  this.type = testType;
+  this.btAddress = bluetoothAddress;
+  this.tests = tests;
 }
 
-TestDevice.prototype.getBluetoothAddress= function(){
-    return this.btAddress;
-};
-
-TestDevice.prototype.getTestType = function(){
-    return this.type;
-};
-
-TestDevice.prototype.getName = function(){
-    return this.deviceName;
-};
-
-TestDevice.prototype.compareSocket = function (socket) {
-    return (socket.id === this.socket.id);
-};
-
-TestDevice.prototype.getPlatform = function(){
-    return this.os;
-};
-
-TestDevice.prototype.start_tests = function(data){
-    this.socket.emit('start_tests', JSON.stringify({data:data}));
-};
-
 TestDevice.prototype.SendCommand = function(command,test,data,dev,btAddresList){
-    var self = this;
-    var filteredList = [];
+  var self = this;
+  var filteredList = [];
 
-    if(btAddresList && this.btAddress){
-        btAddresList.forEach(function(item) {
-             if(item.address != self.btAddress){
-                filteredList.push(item);
-            }
-        });
-    }
+  if(btAddresList && this.btAddress) {
+    btAddresList.forEach(function(item) {
+    if(item.address != self.btAddress) {
+      filteredList.push(item);
+    }});
+  }
 
-    this.socket.emit('command', JSON.stringify({command: command, testName: test, testData:data,devices:dev,addressList:filteredList}));
-};
-
-TestDevice.prototype.SendEndUnitTest = function(data){
-    this.socket.emit('end_unit_test', JSON.stringify({data:data}));
-};
-
-TestDevice.prototype.SendStartUnitTest = function(data){
-    this.socket.emit('start_unit_test', JSON.stringify({data:data}));
+  this.socket.emit('command', JSON.stringify({command: command, testName: test, testData:data,devices:dev,addressList:filteredList}));
 };
 
 module.exports = TestDevice;
