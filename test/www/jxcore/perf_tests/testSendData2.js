@@ -45,15 +45,17 @@ testSendData2.prototype.peerAvailabilityChanged = function(peers) {
 }
 
 testSendData2.prototype.pumpQueue = function() {
+
   if (this.peerQueue.length == 0 || this.runningPeer) {
     return;
   }
 
+  var done = false;
   this.peerQueue.forEach(function(peerIdentifier) {
     var peer = this.peers[peerIdentifier];
-    if (peerAvailable && peer.state == "waiting") {
+    if (peerAvailable && peer.state == "waiting" && !done) {
+      done = true;
       startPeer(peerIdentifier);
-      break;
     }
   });
 }
