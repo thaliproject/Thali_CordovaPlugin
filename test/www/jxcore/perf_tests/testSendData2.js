@@ -1,4 +1,5 @@
 var net = require('net');
+var inherits = require('util').inherits;
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
 var EventEmitter = require('events').EventEmitter;
@@ -45,16 +46,13 @@ testSendData2.prototype.peerAvailabilityChanged = function(peers) {
 }
 
 testSendData2.prototype.pumpQueue = function() {
-
   if (this.peerQueue.length == 0 || this.runningPeer) {
     return;
   }
 
-  var done = false;
   this.peerQueue.forEach(function(peerIdentifier) {
     var peer = this.peers[peerIdentifier];
-    if (peerAvailable && peer.state == "waiting" && !done) {
-      done = true;
+    if (peerAvailable && peer.state == "waiting") {
       startPeer(peerIdentifier);
     }
   });
@@ -101,9 +99,9 @@ testSendData2.prototype.startPeer = function(peerIdentifier) {
           self.peers[peerIdentifer].state == "done";
           self.runningPeer = false;
           self.pumpQueue();
-        }
+        });
       }
-    }
+    });
 
     sock.on('error', function(reason) {
       console.log("Socket error: %s", reason);
