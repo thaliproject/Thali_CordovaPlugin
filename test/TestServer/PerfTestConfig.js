@@ -10,12 +10,6 @@ var config = {
   },
   
   testConfig : [
-  {
-      "name": "testSendData2.js",
-      "serverTimeout": 120000,
-      "timeout": 100000,
-      "dataAmount": 100000,
-    },
     {
       "name": "testFindPeers.js",
       "serverTimeout": 120000,
