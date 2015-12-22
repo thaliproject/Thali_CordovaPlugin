@@ -164,7 +164,6 @@ PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
         }
       });
 
-      logger.debug("end to %s", device.deviceName);
       device.socket.emit("end", device.deviceName);
     }); 
   }
@@ -239,6 +238,7 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
     if (testData.serverTimeout) {
       serverTimeout = setTimeout(function() {
         logger.info("server timeout for test: %s (%s)", test, platform);
+        serverTimeout = null;
         nextTest();
       }, testData.serverTimeout);
     }
@@ -258,13 +258,11 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
         // Cache results in the device object
         device.results = JSON.parse(data);
 
-        // Cancel server timeout for this device
-        if (device.serverTimeoutTimer != null) {
-          clearTimeout(device.serverTimeoutTimer);
-          device.serverTimeoutTimer = null;
-        }
-
         if (--toComplete == 0) {
+          if (serverTimeout) {
+            clearTimeout(serverTimeout);
+            serverTimeout = null;
+          }
           nextTest();
         }
       });
