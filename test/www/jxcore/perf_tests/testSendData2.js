@@ -51,12 +51,21 @@ testSendData2.prototype.pumpQueue = function() {
     return;
   }
 
+  var doneCount = 0;
   this.peerQueue.forEach(function(peerIdentifier) {
     var peer = this.peers[peerIdentifier];
     if (peerAvailable && peer.state == "waiting") {
       startPeer(peerIdentifier);
+    } else if (peer.state == "done") {
+      doneCount++;
     }
   });
+
+  if (doneCount == testConfig.peerCount) {
+    // ALL DONE!!
+    console.log("TEST COMPLETE !!");
+    process.exit(0);
+  }
 }
 
 testSendData2.prototype.startPeer = function(peerIdentifier) {
