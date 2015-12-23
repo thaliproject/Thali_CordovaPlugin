@@ -20,6 +20,7 @@ function testSendData2(testConfig, deviceName, addressList) {
 
   // Basic echo server..
   this.server = net.createServer(function(socket) {
+    console.log("Remote connection accepted..");
     socket.pipe(socket);
   });
 }
@@ -77,8 +78,9 @@ testSendData2.prototype.startPeer = function(peerIdentifier) {
       return;
     }
 
-    // Connect to remove server and send bytes..
+    // Connect to bridge and send bytes..
     console.log("Link established to %s", peerIdentifer);
+
     var sock = net.connect(port, function() {
       console.log("Connected to %s", peerIdentifier);
       var toSend = randomstring.generate(self.peers[peerIdentifier].bytesToSend >> 1);
