@@ -93,18 +93,42 @@ testSendData2.prototype.startPeer = function(peerIdentifier) {
       self.peers[peerIdentifier].bytesToSend -= data.length;
 
       if (self.peer[peerIdentifier].bytesToSend == 0) {
+
+        console.log("Completed peer:%s", peerIdentifier);
+
+        // Success, finish this run
+        self.peers[peerIdentifer].state == "done";
+        self.runningPeer = false;
         sock.end();
+
         self.emitter.disconnect(peerIdentifier, function() {
-          console.log("Completed peer:%s", peerIdentifier);
-          self.peers[peerIdentifer].state == "done";
-          self.runningPeer = false;
+          // Move to next waiting peer
           self.pumpQueue();
         });
       }
     });
 
-    sock.on('error', function(reason) {
-      console.log("Socket error: %s", reason);
+    sock.on('close', function(reason) {
+      if (self.peer[peerIdentifier].state != "done") {
+
+        // We lost the link..
+        console.log("Connection lost: %s", peerIdentifier);
+
+        // Stop this attempt..
+        self.runningPeer = false;
+        self.peers[peerIdentifer].state == "waiting";
+
+        // Shuffle this peer to end of queue
+        self.peerQueue = self.peerQueue.filter(function(peer) {
+          return (peer.peerIdentifier == peerIdentifier);
+        });
+        self.peerQueue.push(peerIdentifier);
+
+        self.emitter.disconnect(peerIdentifier, function() {
+          // Move to next waiting peer
+          self.pumpQueue();
+        });
+      }
     });
   });
 }
