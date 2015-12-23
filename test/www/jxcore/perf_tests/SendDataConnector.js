@@ -10,7 +10,6 @@ var logger = function (value) {
 }
 
 function SendDataConnector(rounds,dataAmount,reTryTimeout,reTryMaxCount,dataTimeOut) {
-    console.log("daya" + dataAmount);
     this.roundsToDo         = rounds;
     this.doneRounds         = 0;
     this.toSendDataAmount   = dataAmount;
