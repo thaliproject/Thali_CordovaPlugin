@@ -4,9 +4,8 @@
 'use strict';
 
 var fs = require('fs');
-var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
-var configFile = require('./Config_PerfTest.json');
+var TestFramework = require('./TestFramework');
 var ResultsProcessor = require('./ResultsProcessor.js');
 
 /*
@@ -35,357 +34,253 @@ var ResultsProcessor = require('./ResultsProcessor.js');
    - dataAmount defines the amount of data sent through each connection before disconnecting
  */
 
-var startTime = new Date().getTime();
-var getSecondsFromStart = function () {
-    return Math.round((new Date().getTime() - startTime) / 1000);
-};
+var logger = console;
 
-var logger = function (value) {
-    console.log(new Date().toJSON() + ' (' + getSecondsFromStart() + ' sec) - ' + value);
-};
+function PerfTestFramework(testConfig, _logger) {
 
-function PerfTestFramework(platform, count, honorCount, timeOutValueToStart) {
-    this.timerId = null;
-    this.os = platform;
+  if (_logger) {
+    logger =_logger;
+  }
 
-    this.testResults = [];
-    this.currentTest = -1;
+  var configFile = "./PerfTestConfig";
+  if (testConfig.configFile) {
+    configFile = testConfig.configFile;
+  }
+  this.perfTestConfig = require(configFile);
+ 
+  PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig, _logger);
 
-    if (count <= 0) {
-        // If framework was initialized without devices,
-        // no need to do anything.
-        return;
-    }
+  // Map of platform to tests to run
+  this.testsToRun = {};
 
-    for (var i=0; i < configFile.tests.length; i++) {
-        console.log('Test ID ' + i + ' configuration: ' + configFile.tests[i].name + ', server timeout: ' + configFile.tests[i].servertimeout + ", data:");
-        console.log(configFile.tests[i].data);
-    }
+  // The accumulate set of results
+  this.results = [];
 
-    if (honorCount) {
-        logger(this.os + ' tests will start after ' + count + ' devices has connected');
-    } else {
-        logger(this.os + ' tests will start after waiting for ' + timeOutValueToStart / 1000 + ' seconds');
-    }
+  // The platfoms we can have concurrently running the test set
+  this.platforms = {};
 }
 
-inherits(PerfTestFramework, EventEmitter);
-
-PerfTestFramework.prototype.getCount = function() {
-    return this.getConnectedDevicesCount();
-}
+inherits(PerfTestFramework, TestFramework);
 
 PerfTestFramework.prototype.addDevice = function(device) {
 
-    var deviceName = device.getName();
+  PerfTestFramework.super_.prototype.addDevice.call(this, device);
 
-    if(!this.testDevices) {
-        this.testDevices = {};
+  var platform = device.platform;
+
+  // Create some state for the new platform
+  if (!(platform in this.platforms)) {
+    this.platforms[platform] = {
+      state:"waiting",
+      startTimeout:null
+    };
+  }
+
+  // Start a timer on first device discovery that will start tests regardless of 
+  // number found if honorCount is false
+
+  if (this.devices[platform].length == 1) {
+
+    if (!this.testConfig.honorCount) {
+
+      var self = this;
+
+      logger.info(
+        "Setting start timeout to: %d (%s)", 
+        this.perfTestConfig.userConfig[platform].startTimeout, platform
+      );
+
+      this.platforms[platform].startTimeout = setTimeout(function () {
+        logger.info("Start timeout elapsed for platform: %s", platform);
+        self.startTests(platform);
+      }, this.perfTestConfig.userConfig[platform].startTimeout);
     }
-
-    //do we already have it added
-    var previousItem = this.getDevice(deviceName);
-    if(previousItem && previousItem != null){
-        logger(this.os + ' ' + deviceName + ' got re-connected event');
-
-        //need to replace the device to get new socket !!
-        this.testDevices[deviceName] = device;
-        // but we do need to keep old data
-        this.testDevices[deviceName].data = previousItem.data;
-        this.testDevices[deviceName].startTime = previousItem.startTime;
-        this.testDevices[deviceName].endTime = previousItem.endTime;
-
-        return true;
-    }
-
-    // The device was not added and we have already started,
-    // thus this device is late.
-    if (this.currentTest >= 0) {
-        logger(this.os + ' ' + deviceName + ' not added anymore, because tests were already started');
-        return false;
-    }
-
-    this.testDevices[deviceName] = device;
-    logger(this.os + ' ' + deviceName + ' added (current device count ' + this.getConnectedDevicesCount() + ')');
-    return true;
+  }
 }
 
-PerfTestFramework.prototype.isDeviceAlreadyAdded = function(name) {
+PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
 
-    var previousItem = this.getDevice(name);
-    if(previousItem && previousItem != null){
-        return true;
+  logger.info("All test data retrieved for %s (%s)", test, platform);
+
+  var self = this;
+
+  // Collate the results..
+  devices.forEach(function(device) {
+
+    if (device.results == null) {
+      logger.info("No results from " + device.deviceName);
+    } else {
+      self.results.push({
+        "test" : test,
+        "device" : device.deviceName,
+        "time" : null,
+        "data" : device.results
+      });
     }
 
-    return false;
-}
+    // Let the completed device know it can tear down the current test
+    device.socket.emit("teardown");
+  });
 
-PerfTestFramework.prototype.getDevice = function(name) {
+  // Check if we're done
+  this.testsToRun[platform].shift();
+  logger.info("Remaining tests: %s", this.testsToRun);
+  if (!this.testsToRun[platform].length) {
 
-    if (!this.testDevices) {
-        return null;
-    }
+    // All tests are complete, generate the result report
+    logger.info("ALL DONE !!!");
 
-    return this.testDevices[name];
-}
+    // Cancel the startTimeout
+    clearTimeout(this.platforms[platform].startTimeout);
 
-PerfTestFramework.prototype.startTest = function(json){
+    var processedResults = ResultsProcessor.process(this.results, devices);
+    logger.info(processedResults);
 
-    //no devices were added
-    if(!this.testDevices){
-        return;
-    }
+    // Let the devices know we're completely finished
+    var acksReceived = devices.length;
+    devices.forEach(function(device) {
 
-    if(this.testDevices == null){
-        return;
-    }
+      // Send 'end' and wait for 'end_ack'
 
-    for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null){
-            this.testDevices[deviceName].start_tests(json);
-        }
-    }
+      device.socket.once("end_ack", function() {
+        if (--acksReceived == 0) {
 
-    this.devicesCount = this.getConnectedDevicesCount();
+          // Record we've completed this platform's run
+          self.platforms[platform].state = "completed";
 
-    logger(this.os + ' start testing now with ' + this.devicesCount + ' devices');
-    this.start =new Date();
-    this.doNextTest();
-}
-
-PerfTestFramework.prototype.removeDevice = function(device) {
-    if (this.testDevices && this.testDevices[device.deviceName]) {
-        logger(this.os + ' ' + device.deviceName + ' got disconnected');
-        // TODO: Right now, we are doing nothing when device disconnects, because
-        // we expect that it might reconnect at some point. However, the disconnection
-        // might also be due to the app on the device crashing in which case it
-        // will never connect back. If that is the case that needs to be tackled here
-        // we should probably remove the device from the test devices list.
-    }
-}
-
-PerfTestFramework.prototype.ClientDataReceived = function(name,data) {
-    if(!this.testDevices){
-        return;
-    }
-
-    if(this.testDevices == null){
-        return;
-    }
-
-    if(!this.testDevices[name] || this.testDevices[name] == null){
-        return;
-    }
-
-    var jsonData = JSON.parse(data);
-
-
-    //save the time and the time we got the results
-    this.testDevices[name].data = jsonData;
-    this.testDevices[name].endTime = new Date();
-
-    var responseTime = this.testDevices[name].endTime - this.testDevices[name].startTime;
-
-    var peers = 0;
-    if (jsonData.peersList && (jsonData.peersList.length > 0)) {
-        peers = jsonData.peersList.length;
-    }
-
-    var connects = 0;
-    if (jsonData.connectList && (jsonData.connectList.length > 0)) {
-        connects =jsonData.connectList.length;
-    }
-
-    var sendData = 0;
-    if (jsonData.sendList && (jsonData.sendList.length > 0)) {
-        sendData =jsonData.sendList.length;
-    }
-
-    logger(this.os + ' ' + name + ' test took ' + responseTime + 'ms - results peers[' + peers+ '], reConnects[' + connects + '], sendData[' + sendData+ ']');
-
-    if (this.getFinishedDevicesCount() == this.devicesCount) {
-        logger(this.os + ' test ID ' + this.currentTest + ' done now');
-        this.testFinished();
-    }
-}
-
-PerfTestFramework.prototype.getFinishedDevicesCount  = function(){
-    if(!this.testDevices){
-        return 0;
-    }
-
-    if(this.testDevices == null){
-        return 0;
-    }
-    var devicesFinishedCount = 0;
-
-    for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null && this.testDevices[deviceName].data != null){
-
-            if(this.testDevices[deviceName].data.result != "DISCONNECTED") {
-                devicesFinishedCount = devicesFinishedCount + 1;
+          // Are all platforms now complete ?
+          var completed = true;
+          for (var p in self.platforms) {
+            logger.debug("state: %s %s", p, self.platforms[p].state);
+            if (self.platforms[p].state != "completed") {
+              completed = false;
             }
-        }
-    }
+          }
 
-    return devicesFinishedCount;
+          if (completed) {
+            logger.info("Server terminating normally");
+            process.exit(0);
+          }
+        }
+      });
+
+      logger.debug("end to %s", device.deviceName);
+      device.socket.emit("end", device.deviceName);
+    }); 
+  }
 }
 
-PerfTestFramework.prototype.getConnectedDevicesCount  = function(){
-    if(!this.testDevices){
-        return 0;
+PerfTestFramework.prototype.startTests = function(platform, tests) {
+
+  if (platform in this.platforms && this.platforms[platform].state != "waiting") {
+    logger.info("Tests for %s already running or completed", platform);
+    return;
+  }
+
+  if (!tests) {
+    // Default to all tests listed in config
+    tests = this.perfTestConfig.testConfig.map(function(testConfig) {
+      return testConfig.name;
+    });
+  }
+ 
+  // Copy arrays..
+  this.testsToRun[platform] = tests.slice();
+  var devices = this.devices[platform].slice();
+  
+  logger.info("Starting perf test run for platform: %s", platform);
+  logger.info("Using devices:");
+  devices.forEach(function(dev) {
+    logger.info(dev.deviceName);
+  });
+
+  // Filter non-null bluetooth device addresses into array
+  var btAddresses = devices.map(function(dev) {
+    return dev.btAddress;
+  }).filter(function(addr) {
+    return (addr != null);
+  });
+
+  var toComplete;
+  var self = this;
+  
+  // Record that we're running tests for this platform
+  this.platforms[platform].state = "running";
+
+  var results = [];
+  function doTest(test) {
+
+    toComplete = devices.length;
+    logger.info("Starting test: with %d devices (%s)", toComplete, platform);
+
+    // Set up the test parameters
+    var testData = self.perfTestConfig.testConfig.filter(function(testConfig) {
+      return (testConfig.name == test);
+    });
+    if (testData.length != 1) {
+      throw new Error("Missing or duplicate config for test %s", test); 
+    }
+    testData = testData[0];
+    testData.peerCount = toComplete;
+
+    var nextTest = function() {
+      // When all devices have given us a result, complete the current test
+      self.completeTest(test, platform, devices);
+      
+      if (self.testsToRun[platform].length) {
+        process.nextTick(function() {
+          logger.info("Continuing to next test: " + self.testsToRun[platform][0]);
+          doTest(self.testsToRun[platform][0]);
+        });
+      }
     }
 
-    if(this.testDevices == null){
-        return 0;
+    var serverTimeout = null;
+    if (testData.serverTimeout) {
+      serverTimeout = setTimeout(function() {
+        logger.info("server timeout for test: %s (%s)", test, platform);
+        nextTest();
+      }, testData.serverTimeout);
     }
-    var count = 0;
-    for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null){
-            count++;
+
+    devices.forEach(function(device) {
+
+      // Reset test results for this device
+      device.results = null;
+
+      device.socket.once('test data', function (data) {
+
+        logger.info(
+          "Received results for %s %s %s (%d left)", 
+          data, device.deviceName, platform, toComplete
+        );
+
+        // Cache results in the device object
+        device.results = JSON.parse(data);
+
+        // Cancel server timeout for this device
+        if (device.serverTimeoutTimer != null) {
+          clearTimeout(device.serverTimeoutTimer);
+          device.serverTimeoutTimer = null;
         }
-    }
 
-    return count;
-}
-
-PerfTestFramework.prototype.getBluetoothAddressList  = function(){
-    if(!this.testDevices){
-        return [];
-    }
-
-    if(this.testDevices == null){
-        return [];
-    }
-    var BtAddressList = [];
-    for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null){
-            var BtAddress = this.testDevices[deviceName].getBluetoothAddress();
-            if(BtAddress) {
-                BtAddressList.push({"address":BtAddress,"tryCount":0});
-            }
+        if (--toComplete == 0) {
+          nextTest();
         }
-    }
+      });
 
+      // Set a timeout that will move to next test
+      // regardless of whether all results are in
 
-    return BtAddressList;
-}
+      // Begin the test..
+      device.socket.emit(
+        "start", 
+        { testName: test, testData: testData, addressList: btAddresses }
+      );
+    });
+  }
 
-PerfTestFramework.prototype.doNextTest  = function(){
-
-    //no devices were added
-    if(!this.testDevices){
-        return;
-    }
-
-    if(this.testDevices == null){
-        return;
-    }
-
-    var self = this;
-    if(this.timerId != null) {
-        clearTimeout(this.timerId);
-        this.timerId = null;
-    }
-
-    this.currentTest++;
-    if(configFile.tests[this.currentTest]){
-        this.doneAlready = false;
-
-        var BluetoothList = this.getBluetoothAddressList();
-
-        // If we have tests, then lets start new tests on all devices
-        for (var deviceName in this.testDevices) {
-            if(this.testDevices[deviceName] != null){
-                this.testDevices[deviceName].startTime = new Date();
-                this.testDevices[deviceName].endTime = new Date();
-                this.testDevices[deviceName].data = null;
-                this.testDevices[deviceName].SendCommand('start',configFile.tests[this.currentTest].name,JSON.stringify(configFile.tests[this.currentTest].data),(this.devicesCount - 1),BluetoothList);
-           }
-        }
-
-        if(configFile.tests[this.currentTest].servertimeout) {
-                this.timerId = setTimeout(function() {
-                    logger('Server timeout reached!');
-                    if(!self.doneAlready)
-                    {
-                        for (var deviceName in self.testDevices) {
-                            if (self.testDevices[deviceName] != null && self.testDevices[deviceName].data == null) {
-                                logger('Send timeout to ' + self.testDevices[deviceName].getName());
-                                self.testDevices[deviceName].SendCommand('timeout',"","","");
-                            }
-                        }
-                        // Above, we were sending the timeout command to all connected devices.
-                        // Below, we are having a timer that waits for certain amount of time
-                        // for devices to send their test report, but if that doesn't happen within
-                        // the time set below, we are forcing the tests to finished.
-                        // This is so that in CI, we get to print the result summary before the CI
-                        // timeouts are hit.
-                        var timeToWaitForReports = 60000; // 1 minute
-                        self.timerId = setTimeout(function() {
-                            if (!self.doneAlready) {
-                                logger('Did not get reports from all devices, but forcing tests to finish!');
-                                self.testFinished();
-                            }
-                        }, timeToWaitForReports);
-                    }
-                }, configFile.tests[this.currentTest].servertimeout);
-
-        }
-        return;
-    }
-
-    logger(this.os + ' All tests are done, preparing test report');
-    var processedResults = ResultsProcessor.process(this.testResults, this.testDevices);
-
-    for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null){
-            //if really needed, we could send the whole test data back with this command, and do the whole logging in the client side as well
-            this.testDevices[deviceName].SendCommand('end','results',JSON.stringify({"result":processedResults[deviceName]}),this.devicesCount);
-        }
-    }
-};
-
-PerfTestFramework.prototype.testFinished = function () {
-    if(!this.testDevices){
-        return;
-    }
-
-    if(this.testDevices == null){
-        return;
-    }
-
-    this.doneAlready = true;
-    for (var deviceName in this.testDevices) {
-        if (this.testDevices[deviceName] != null) {
-            if(this.testDevices[deviceName].data == null){
-                // This is an error scenario, because devices should report
-                // their results at the end of tests.
-                this.testDevices[deviceName].SendCommand('end', "", "", "");
-                this.testDevices[deviceName] = null;
-                this.devicesCount = this.getConnectedDevicesCount();
-                console.log(deviceName + ' did not have results at the end of tests - check the device logs about why!!');
-            }else {
-                var responseTime = this.testDevices[deviceName].endTime - this.testDevices[deviceName].startTime;
-                this.testResults.push({
-                    "test": this.currentTest,
-                    "device": deviceName,
-                    "time": responseTime,
-                    "data": this.testDevices[deviceName].data
-                });
-
-                //lets finalize the test by stopping it.
-                this.testDevices[deviceName].SendCommand('stop', "", "", "");
-
-                //reset values for next testing round
-                this.testDevices[deviceName].startTime = new Date();
-                this.testDevices[deviceName].endTime = new Date();
-                this.testDevices[deviceName].data = null;
-            }
-        }
-    }
-
-    this.doNextTest()
+  doTest(tests[0]);
 }
 
 module.exports = PerfTestFramework;

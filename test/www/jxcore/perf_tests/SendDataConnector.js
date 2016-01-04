@@ -10,6 +10,7 @@ var logger = function (value) {
 }
 
 function SendDataConnector(rounds,dataAmount,reTryTimeout,reTryMaxCount,dataTimeOut) {
+    console.log("daya" + dataAmount);
     this.roundsToDo         = rounds;
     this.doneRounds         = 0;
     this.toSendDataAmount   = dataAmount;
@@ -247,6 +248,8 @@ SendDataConnector.prototype.tryAgain = function() {
 SendDataConnector.prototype.oneRoundDoneNow = function() {
     var self = this;
 
+    console.log("oneRoundDownNow");
+
     if(!this.peer){
         return;
     }
@@ -268,7 +271,7 @@ SendDataConnector.prototype.oneRoundDoneNow = function() {
     this.emit('debug', 'Round of send data to peer ' + resultItem.name +
                        ' done with result: ' + resultItem.result);
 
-    if(this.roundsToDo > this.doneRounds){
+    if (this.roundsToDo > this.doneRounds){
         this.tryRounds = 0;
         this.receivedCounter = 0;
 

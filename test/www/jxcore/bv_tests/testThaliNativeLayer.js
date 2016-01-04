@@ -20,7 +20,7 @@ var test = tape({
     t.end();
   },
   teardown: function(t) {
-    if(emitterToShutDown != null){
+    if (emitterToShutDown != null){
       console.log("calling stopBroadcasting");
       emitterToShutDown.stopBroadcasting(function (err4) {
         console.log("stopBroadcasting returned " + err4);
@@ -190,7 +190,7 @@ test('ThaliEmitter can discover and connect to peers and then fail on double dis
     });
   });
 });
-
+/*
 test('ThaliEmitter can connect and send data', function (t) {
 
   var server = net.createServer(function(s) {
@@ -228,7 +228,7 @@ test('ThaliEmitter can connect and send data', function (t) {
     });
   });
 });
-
+*/
 
 test('ThaliEmitter handles socket disconnect correctly', function (t) {
 
