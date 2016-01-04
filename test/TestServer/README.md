@@ -25,7 +25,7 @@ Here's example of the content of the Config_PerfTest.json file file
     "name": "testSendData.js",
     "serverTimeout": 1200000,
     "timeout": 1000000,
-    "rounds": 3,
+    "rounds": 1,
     "dataTimeout": 20000,
     "dataAmount": 100000,
     "conReTryTimeout": 5000,
