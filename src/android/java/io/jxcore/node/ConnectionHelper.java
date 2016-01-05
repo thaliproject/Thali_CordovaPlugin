@@ -187,6 +187,19 @@ public class ConnectionHelper
     }
 
     /**
+     * @return Our Bluetooth friendly name or null, if Blueooth adapter
+     * is not resolved or an error occurs while retrieving the name.
+     */
+    public String getBluetoothName() {
+        BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
+        if (bluetooth != null) {
+            return bluetooth.getName();
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Checks if we have an incoming connection with a peer matching the given peer ID.
      * @param peerId The peer ID.
      * @return True, if connected. False otherwise.
