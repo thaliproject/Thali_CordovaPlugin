@@ -119,6 +119,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)stop
 {
+  [_nearbyServiceAdvertiser setDelegate:nil];
   [self stopAdvertising];
   _nearbyServiceAdvertiser = nil;
   _serverSessions = nil;
