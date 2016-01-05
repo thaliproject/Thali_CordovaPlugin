@@ -32,6 +32,11 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   var toComplete;
   var results = {};
 
+  if (!tests) {
+    // Default to all tests named by first device
+    tests = this.devices[platform][0].tests;
+  }
+ 
   // Copy arrays
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
