@@ -173,7 +173,6 @@ thaliTape.begin = function() {
     transports: ['websocket']
   };
 
-  var uuid = uuid.v4();
   var testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
 
   testServer.on('error', function (data) {
@@ -213,10 +212,11 @@ thaliTape.begin = function() {
       platform = 'ios';
     }
 
+    var _uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
       "os": platform, 
       "name": deviceName,
-      "uuid": uuid,
+      "uuid": _uuid,
       "type": 'unittest',
       "tests": Object.keys(tests)
     }));
