@@ -57,12 +57,11 @@ function getDeviceCharacteristics(cb) {
       });
     });
   } else {
-    var bluetoothAddress = "C0:FF:FF:EE:42:00";
     Mobile('GetDeviceName').callNative(function (deviceName) {
       // In case of iOS, the device name is used directly, because
       // the one returned in the one that user can set.
       testUtils.setMyName(deviceName);
-      cb(deviceName, bluetoothAddress);
+      cb(deviceName, null);
     });
   }
 }
