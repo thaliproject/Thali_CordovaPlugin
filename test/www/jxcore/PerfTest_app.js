@@ -21,42 +21,46 @@ function getDeviceCharacteristics(cb) {
     cb("PERF_TEST-" + Math.random(), null);
   }
   else if (jxcore.utils.OSInfo().isAndroid) {
+    Mobile('GetBluetoothAddress').callNative(function (bluetoothAddressError, bluetoothAddress) {
+      Mobile('GetBluetoothName').callNative(function (bluetoothNameError, bluetoothName) {
+        Mobile('GetDeviceName').callNative(function (deviceName) {
+          console.log('Received device characteristics:\n' +
+                      'Bluetooth address: ' + bluetoothAddress + '\n' +
+                      'Bluetooth name: ' + bluetoothName + '\n' +
+                      'Device name: ' + deviceName);
+          // In case of Android, the name used is first checked from the Bluetooth
+          // name, because that is one that user can set. If that is not set,
+          // the returned device name is used. The device name is not quaranteed to
+          // be unique, because it is concatenated from device manufacturer and model
+          // and will thus be the same in case of identical devices.
+          var myName = bluetoothName || deviceName;
+          if (!myName || !bluetoothAddress) {
+            console.log('An error while getting the device characteristics!');
+          }
+          testUtils.setMyName(myName);
+          cb(myName, bluetoothAddress);
 
-    Mobile('GetBluetoothAddress').callNative(function (err, address) {
-
-      if (err) {
-        console.log("GetBluetoothAddress returned error: " + err + ", address : " + address);
-        return;
-      }
-
-      var bluetoothAddress = address;
-      console.log("Got Device Bluetooth address: " + bluetoothAddress);
-      Mobile('GetDeviceName').callNative(function (name) {
-
-        var deviceName = name + "_PT" + Math.round((Math.random() * (10000)));
-        testUtils.setMyName(deviceName);
-
-        // once we have had the BT off and we just turned it on,
-        // we need to wait untill the BLE support is reported rigth way
-        // seen with LG G4, Not seen with Motorola Nexus 6
-        setTimeout(function () {
-          Mobile('IsBLESupported').callNative(function (err) {
-            if (err) {
-              console.log("BLE advertisement not supported: " + err );
-              return;
-            }
-            console.log("BLE supported!!");
-          });
-        }, 5000);
-
-        cb(deviceName, bluetoothAddress);
+          // Below is only for logging purposes.
+          // Once we have had the BT off and we just turned it on,
+          // we need to wait untill the BLE support is reported rigth way
+          // seen with LG G4, Not seen with Motorola Nexus 6.
+          setTimeout(function () {
+            Mobile('IsBLESupported').callNative(function (err) {
+              if (err) {
+                console.log('BLE is not supported: ' + err );
+                return;
+              }
+              console.log("BLE is supported");
+            });
+          }, 5000);
+        });
       });
     });
-
   } else {
     var bluetoothAddress = "C0:FF:FF:EE:42:00";
-    Mobile('GetDeviceName').callNative(function (name) {
-      var deviceName = name + "_PT" + Math.round((Math.random() * (10000)));
+    Mobile('GetDeviceName').callNative(function (deviceName) {
+      // In case of iOS, the device name is used directly, because
+      // the one returned in the one that user can set.
       testUtils.setMyName(deviceName);
       cb(deviceName, bluetoothAddress);
     });
