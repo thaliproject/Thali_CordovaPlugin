@@ -152,7 +152,7 @@ testSendData.prototype.start = function(serverPort) {
   this.testConnector.on('debug',this.debugCallback);
 
   console.log('check server');
-  var serverPort = this.testServer.getServerPort();
+  serverPort = this.testServer.getServerPort();
   console.log('serverPort is ' + serverPort);
 
   this.emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, this.peerAvailabilityChanged);
