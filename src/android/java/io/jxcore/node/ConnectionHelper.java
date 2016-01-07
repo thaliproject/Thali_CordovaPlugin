@@ -743,12 +743,15 @@ public class ConnectionHelper
      * utilizing Bluetooth sockets.
      */
     private synchronized void lowerBleDiscoveryPowerAndStartResetTimer() {
+        Log.i(TAG, "lowerBleDiscoveryPowerAndStartResetTimer");
+
         if (mPowerUpBleDiscoveryTimer == null) {
             DiscoveryManager.DiscoveryMode discoveryMode =
                     mDiscoveryManager.getDiscoveryMode();
 
             if (discoveryMode == DiscoveryManager.DiscoveryMode.BLE
                     || discoveryMode == DiscoveryManager.DiscoveryMode.BLE_AND_WIFI) {
+                Log.i(TAG, "lowerBleDiscoveryPowerAndStartResetTimer: Lowering the power settings");
                 mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER);
                 mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
                 createAndStartPowerUpBleDiscoveryTimer();
@@ -782,6 +785,7 @@ public class ConnectionHelper
             @Override
             public void onFinish() {
                 this.cancel();
+                Log.i(TAG, "Powering the BLE discovery back up");
                 mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
                 mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
                 mPowerUpBleDiscoveryTimer = null;

@@ -117,13 +117,14 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     @Override
     public void onStreamCopySucceeded(StreamCopyingThread who, int numberOfBytes) {
-        if (who == mReceivingThread) {
+        // Uncomment the following to debug chunks of data transferred
+        /*if (who == mReceivingThread) {
             Log.d(TAG, "The receiving thread succeeded to read/write " + numberOfBytes + " bytes");
         } else if (who == mSendingThread) {
             Log.d(TAG, "The sending thread succeeded to read/write " + numberOfBytes + " bytes");
         } else {
             Log.w(TAG, "An unidentified stream copying thread succeeded to read/write " + numberOfBytes + " bytes");
-        }
+        }*/
 
         mListener.onDataTransferred(numberOfBytes);
     }
@@ -143,11 +144,13 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, SENDING_THREAD_NAME);
             mSendingThread.setDefaultUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mSendingThread.setBufferSize(1024 * 8);
+            mSendingThread.setNotifyStreamCopyingProgress(true);
             mSendingThread.start();
 
             mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, RECEIVING_THREAD_NAME);
             mReceivingThread.setDefaultUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mReceivingThread.setBufferSize(1024 * 8);
+            mReceivingThread.setNotifyStreamCopyingProgress(true);
             mReceivingThread.start();
 
             Log.i(TAG, "startStreamCopyingThreads: OK");
