@@ -111,7 +111,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     }
 
     /**
-     * Logs the event.
+     * Logs the event and notifies the listener.
      * @param who The thread, which succeeded in reading and writing.
      * @param numberOfBytes The number of bytes read and written.
      */
@@ -124,6 +124,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         } else {
             Log.w(TAG, "An unidentified stream copying thread succeeded to read/write " + numberOfBytes + " bytes");
         }
+
+        mListener.onDataTransferred(numberOfBytes);
     }
 
     /**
