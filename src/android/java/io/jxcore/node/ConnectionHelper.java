@@ -97,7 +97,10 @@ public class ConnectionHelper
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
         mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance();
 
-        if (!mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
+        if (mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
+            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
+            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
+        } else {
             mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
         }
 
@@ -732,7 +735,9 @@ public class ConnectionHelper
     }
 
     /**
-     * Lowers the BLE discovery power settings.
+     * Lowers the BLE discovery power settings. If the power settings are already changed, the
+     * timer for resetting the settings is restarted.
+     * 
      * This method should be called when a data transfer is started to ensure a reasonable data
      * transfer speed as using BLE for discovery will likely interfere with the data transfer done
      * utilizing Bluetooth sockets.
