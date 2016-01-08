@@ -177,7 +177,8 @@ thaliTape.begin = function() {
 
   testServer.once('discard', function() {
     // This device not needed, log appropriately so CI doesn't think we've failed
-    console.log("****TEST TOOK:  ms ****" );
+    console.log("--= Surplus to requirements =--");
+    console.log("****TEST TOOK:  ms ****");
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
   });
 
