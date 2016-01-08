@@ -14,8 +14,12 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.thaliproject.p2p.btconnectorlib.*;
+import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager.ConnectionManagerState;
+import org.thaliproject.p2p.btconnectorlib.ConnectionManagerSettings;
+import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
+import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
+import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.UUID;
@@ -46,7 +50,7 @@ public class ConnectionHelper
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
     private static final UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
     private static final long POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS = 15000;
-    private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 100; // TODO: Determine a way to figure out a proper value here
+    private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 30; // TODO: Determine a way to figure out a proper value here
     private static final int PORT_NUMBER_IN_ERROR_CASES = -1;
 
     private final Context mContext;
@@ -194,7 +198,7 @@ public class ConnectionHelper
     }
 
     /**
-     * @return Our Bluetooth friendly name or null, if Blueooth adapter
+     * @return Our Bluetooth friendly name or null, if Bluetooth adapter
      * is not resolved or an error occurs while retrieving the name.
      */
     public String getBluetoothName() {
@@ -261,39 +265,46 @@ public class ConnectionHelper
         }
 
         if (isRunning()) {
-            if (hasConnection(peerIdToConnectTo)) {
-                Log.i(TAG, "connect: We already have a connection to peer with ID " + peerIdToConnectTo);
-            }
-
-            if (mOutgoingSocketThreads.size() < MAXIMUM_NUMBER_OF_CONNECTIONS) {
-                PeerProperties selectedDevice = findDiscoveredPeer(peerIdToConnectTo);
-
-                if (selectedDevice == null) {
-                    Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
-                    selectedDevice = new PeerProperties(
-                            peerIdToConnectTo, peerIdToConnectTo, peerIdToConnectTo, "", "", "");
+            if (!hasOutgoingConnection(peerIdToConnectTo)) {
+                if (hasIncomingConnection(peerIdToConnectTo)) {
+                    Log.i(TAG, "connect: We already have an incoming connection to peer with ID "
+                            + peerIdToConnectTo + ", but will connect anyway...");
                 }
 
-                if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothAddress())) {
-                    if (mConnectionManager.connect(selectedDevice)) {
-                        Log.i(TAG, "connect: Connection process successfully started (peer ID: " + peerIdToConnectTo + ")");
-                        mOutgoingConnectionListeners.put(peerIdToConnectTo, listener);
+                if (mOutgoingSocketThreads.size() < MAXIMUM_NUMBER_OF_CONNECTIONS) {
+                    PeerProperties selectedDevice = findDiscoveredPeer(peerIdToConnectTo);
+
+                    if (selectedDevice == null) {
+                        Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
+                        selectedDevice = new PeerProperties(
+                                peerIdToConnectTo, peerIdToConnectTo, peerIdToConnectTo, "", "", "");
+                    }
+
+                    if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothAddress())) {
+                        if (mConnectionManager.connect(selectedDevice)) {
+                            Log.i(TAG, "connect: Connection process successfully started (peer ID: " + peerIdToConnectTo + ")");
+                            mOutgoingConnectionListeners.put(peerIdToConnectTo, listener);
+                        } else {
+                            Log.e(TAG, "connect: Failed to start connecting");
+                            listener.onConnectionStatusChanged("Failed to start connecting", PORT_NUMBER_IN_ERROR_CASES);
+                        }
                     } else {
-                        Log.e(TAG, "connect: Failed to start connecting");
-                        listener.onConnectionStatusChanged("Failed to start connecting", PORT_NUMBER_IN_ERROR_CASES);
+                        Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress());
+                        listener.onConnectionStatusChanged(
+                                "Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress(), PORT_NUMBER_IN_ERROR_CASES);
                     }
                 } else {
-                    Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress());
-                    listener.onConnectionStatusChanged(
-                            "Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress(), PORT_NUMBER_IN_ERROR_CASES);
+                    Log.e(TAG, "connect: Maximum number of peer connections ("
+                            + mOutgoingSocketThreads.size()
+                            + ") reached, please try again after disconnecting a peer");
+                    listener.onConnectionStatusChanged("Maximum number of peer connections ("
+                            + mOutgoingSocketThreads.size()
+                            + ") reached, please try again after disconnecting a peer", PORT_NUMBER_IN_ERROR_CASES);
                 }
             } else {
-                Log.e(TAG, "connect: Maximum number of peer connections ("
-                        + mOutgoingSocketThreads.size()
-                        + ") reached, please try again after disconnecting a peer");
-                listener.onConnectionStatusChanged("Maximum number of peer connections ("
-                        + mOutgoingSocketThreads.size()
-                        + ") reached, please try again after disconnecting a peer", PORT_NUMBER_IN_ERROR_CASES);
+                Log.w(TAG, "connect: We already have an outgoing connection to peer with ID "
+                        + peerIdToConnectTo + ", aborting...");
+
             }
         } else {
             Log.e(TAG, "connect: Not running, please call start() first");
@@ -352,6 +363,8 @@ public class ConnectionHelper
             notifyPeerAvailability(peerProperties, true);
         }
 
+        final ConnectionHelper thisInstance = this;
+
         if (isIncoming) {
             IncomingSocketThread newIncomingSocketThread = null;
 
@@ -359,7 +372,12 @@ public class ConnectionHelper
                 newIncomingSocketThread = new IncomingSocketThread(bluetoothSocket, new ConnectionStatusListener() {
                     @Override
                     public void onDataTransferred(int numberOfBytes) {
-                        lowerBleDiscoveryPowerAndStartResetTimer();
+                        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                thisInstance.lowerBleDiscoveryPowerAndStartResetTimer();
+                            }
+                        });
                     }
 
                     @Override
@@ -407,7 +425,12 @@ public class ConnectionHelper
 
                     @Override
                     public void onDataTransferred(int numberOfBytes) {
-                        lowerBleDiscoveryPowerAndStartResetTimer();
+                        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                thisInstance.lowerBleDiscoveryPowerAndStartResetTimer();
+                            }
+                        });
                     }
 
                     @Override
@@ -743,8 +766,6 @@ public class ConnectionHelper
      * utilizing Bluetooth sockets.
      */
     private synchronized void lowerBleDiscoveryPowerAndStartResetTimer() {
-        Log.i(TAG, "lowerBleDiscoveryPowerAndStartResetTimer");
-
         if (mPowerUpBleDiscoveryTimer == null) {
             DiscoveryManager.DiscoveryMode discoveryMode =
                     mDiscoveryManager.getDiscoveryMode();
@@ -752,44 +773,35 @@ public class ConnectionHelper
             if (discoveryMode == DiscoveryManager.DiscoveryMode.BLE
                     || discoveryMode == DiscoveryManager.DiscoveryMode.BLE_AND_WIFI) {
                 Log.i(TAG, "lowerBleDiscoveryPowerAndStartResetTimer: Lowering the power settings");
+
+                // Create a timer to increase the power used by Bluetooth LE advertiser and scanner
+                // once the data transfer is over.
+                mPowerUpBleDiscoveryTimer = new CountDownTimer(
+                        POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS, POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS) {
+                    @Override
+                    public void onTick(long millisUntilFinished) {
+                        // Not used
+                    }
+
+                    @Override
+                    public void onFinish() {
+                        this.cancel();
+                        Log.i(TAG, "Powering the BLE discovery back up");
+                        mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
+                        mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
+                        mPowerUpBleDiscoveryTimer = null;
+                    }
+                };
+
                 mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER);
                 mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
-                createAndStartPowerUpBleDiscoveryTimer();
+
+                mPowerUpBleDiscoveryTimer.start();
             }
         } else {
             // Restart the timer
             mPowerUpBleDiscoveryTimer.cancel();
             mPowerUpBleDiscoveryTimer.start();
         }
-    }
-
-    /**
-     * Creates a timer to increase the power used by Bluetooth LE advertiser and scanner.
-     * The timer is used to restore the higher power settings after data transfer is over.
-     * During data transfer the BLE discovery needs to run a lower settings or otherwise the
-     * data transfer speed will be extremely low.
-     */
-    private synchronized void createAndStartPowerUpBleDiscoveryTimer() {
-        if (mPowerUpBleDiscoveryTimer != null) {
-            mPowerUpBleDiscoveryTimer.cancel();
-            mPowerUpBleDiscoveryTimer = null;
-        }
-
-        mPowerUpBleDiscoveryTimer = new CountDownTimer(
-                POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS, POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                // Not used
-            }
-
-            @Override
-            public void onFinish() {
-                this.cancel();
-                Log.i(TAG, "Powering the BLE discovery back up");
-                mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
-                mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
-                mPowerUpBleDiscoveryTimer = null;
-            }
-        }.start();
     }
 }
