@@ -1,5 +1,6 @@
 'use strict';
 var exec = require('child_process').exec;
+var spawn = require('child_process').spawn;
 var path = require('path');
 var os = require('os');
 var https = require('https');
@@ -206,112 +207,24 @@ function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
 }
 
 function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
-  var jxCorePluginId = 'io.jxcore.node';
-  var jxCorePluginFileName = 'io.jxcore.node.jx';
-  var jxCoreCacheRoot = os.tmpdir();
-  var jxCoreRemoteCacheRoot = '~';
-  var jxCoreCacheFolder = path.join(jxCoreCacheRoot, 'thali', 'jxcore', jxCoreVersionNumber);
-  var jxCoreCachedPlugin = path.join(jxCoreCacheFolder, jxCorePluginId);
-  var jxCoreFileLocation = path.join(jxCoreCacheFolder, jxCorePluginFileName);
-
-  return childProcessExecPromise('cordova plugin remove ' + jxCorePluginId, baseDir)
-    .then(function () {
-      return Promise.resolve();
-    })
-    .catch(function () {
-      // This shouldn't be considered an error scenario, because it meant Cordova
-      // wan't able to remove a previously-installed plugin version, which is in
-      // fact a typical scenario when Thali is installed onto a new app.
-      return Promise.resolve();
-    })
-    .then(function() {
-      var remotePath = path.join(jxCoreRemoteCacheRoot, 'thali', 'jxcore', jxCoreVersionNumber, jxCorePluginId);
-      return remoteCache.get(jxCoreCacheFolder, remotePath);
-    })
-    .then(function() {
-      // Check if the plugin is found from the local cache and use that instead
-      // of downloading it, if found.
-      if (fs.existsSync(jxCoreCachedPlugin)) {
-        console.log('Using jxcore Cordova plugin from: ' + jxCoreCachedPlugin);
-        return Promise.resolve();
-      } else {
-        fs.mkdirsSync(jxCoreCacheFolder);
-      }
-
-      return new Promise(function(resolve, reject) {
-        var requestUrl = 'http://jxcordova.cloudapp.net/' + jxCoreVersionNumber + '/' + jxCorePluginFileName;
-        var receivedData = 0;
-        var contentLength = 0;
-        var previousPercentageProgress = 0;
-        console.log('Starting to download from ' + requestUrl);
-        request(requestUrl)
-          .on('response', function (response) {
-            contentLength = response.headers['content-length'];
-            console.log('Started download of content with length: ' + contentLength);
-            console.log('Download progress: 0%');
-          })
-          .on('data', function (data) {
-            receivedData += data.length;
-            var currentPercentageProgress = parseInt(receivedData / contentLength * 100);
-            if (currentPercentageProgress !== previousPercentageProgress && currentPercentageProgress % 20 === 0) {
-              console.log('Download progress: ' + currentPercentageProgress + '%');
-              previousPercentageProgress = currentPercentageProgress;
-            }
-          })
-          .pipe(fs.createWriteStream(jxCoreFileLocation)
-          .on('finish', function() {
-            console.log('Downloaded ' + jxCorePluginFileName + ' to: ' + jxCoreFileLocation);
-            console.log('Running jx against the file downloaded to: ' + jxCoreFileLocation);
-            childProcessExecPromise('jx ' + jxCoreFileLocation, jxCoreCacheFolder)
-              .then(function () {
-                resolve();
-              }).catch(function (error) {
-                console.log('Failed to process the downloaded file');
-                // Delete the "corrupted" files so that they don't interfere in subsequent
-                // installation attempts.
-                fs.removeAsync(jxCoreCacheFolder)
-                  .then(function () {
-                    // Always reject the above-created promise
-                    // because we are in the case where unpackaging
-                    // has failed and installation should not continue.
-                    reject(error);
-                  });
-                });
-          })
-          .on('error', function(error) {
-            console.log('Error downloading from: ' + requestUrl);
-            fs.unlinkAsync(jxCoreFileLocation)
-              .then(function() {
-                reject(error);
-              }).catch(function(err) {
-                console.log('Tried to delete the bad ' + jxCorePluginFileName + ' file but failed with error: ' + err);
-                reject(error);
-              });
-          }));
-      });
-    }).then(function() {
-      var cordovaPluginFolder = path.join(jxCoreCacheFolder, jxCorePluginId);
-      console.log('Adding Cordova plugin to app at: ' + baseDir);
-      return childProcessExecPromise('cordova plugin add ' + cordovaPluginFolder, baseDir)
-        .then(function () {
-          return remoteCache.set(path.join(jxCoreCacheRoot, 'thali'), jxCoreRemoteCacheRoot);
-        })
-        .catch(function (err) {
-          console.log('Failed to add Cordova plugin from: ' + cordovaPluginFolder);
-          // If adding the Cordova plugin fails, clean the local cache folder
-          // and also purge the remote cache since failure to add the plugin indicates
-          // that the value in the cache is somehow corrupted.
-          // At the end, reject the promise to fail the entire installation, because
-          // the plugin installed here is a mandatory dependency.
-          return fs.removeAsync(jxCoreCacheFolder)
-            .then(function () {
-              return remoteCache.purge(path.join(jxCoreRemoteCacheRoot, 'thali'));
-            })
-            .then(function () {
-              return Promise.reject(err);
-            });
-        });
+  return new Promise(function(resolve, reject) {
+    console.log('Trying to install jxcore-cordova version: ' + jxCoreVersionNumber);
+    var jxcBin = path.join(__dirname, 'node_modules', '.bin', 'jxc');
+    var jxcInstall = spawn(jxcBin, ['install', jxCoreVersionNumber], { cwd: baseDir });
+    jxcInstall.stdout.on('data', function (data) {
+      console.log(data + '');
     });
+    jxcInstall.stderr.on('data', function (data) {
+      console.log(data + '');
+    });
+    jxcInstall.on('close', function (code) {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject('jxc install exited with code: ' + code);
+      }
+    });
+  });
 }
 
 module.exports = function(callback, appRootDirectory) {
