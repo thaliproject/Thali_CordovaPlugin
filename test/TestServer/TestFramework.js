@@ -85,7 +85,10 @@ TestFramework.prototype.addDevice = function(device) {
 
   // See if we have enough devices of platform type to start a test run
   if (this.devices[device.platform].length === this.requiredDevices[device.platform]) {
-    logger.info("Required number of devices presented");
+    logger.info(
+      "Required number of %s devices presented (%d)", 
+      device.platform, this.requiredDevices[device.platform]
+    );
     this.startTests(device.platform);
   } else if (this.devices[device.platform].length >= this.requiredDevices[device.platform]) {
     // Discard surplus devices..
