@@ -16,16 +16,16 @@ var ThaliEmitter = require('thali/thaliemitter');
     }
 */
 
-function testFindPeers(jsonData, name, peerCount, addressList) {
+function testFindPeers(jsonData, name, addressList) {
     var self = this;
     this.name = name;
-    this.BluetoothAddressList = addressList;
+    this.bluetoothAddressList = addressList;
     this.commandData = jsonData;
-    this.toFindCount = peerCount;
+    this.toFindCount = addressList ? addressList.length : 0;
     this.foundPeers = {};
     this.startTime = new Date();
     this.endTime = new Date();
-    this.endReason ="";
+    this.endReason = '';
     this.emitter = new ThaliEmitter();
 
     console.log('testFindPeers created ' + jsonData);

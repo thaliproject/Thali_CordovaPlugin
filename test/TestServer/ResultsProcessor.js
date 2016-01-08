@@ -196,65 +196,61 @@ module.exports.process = function (testResults, testDevices) {
     counter++;
     console.log('--------------- ' + devName + ' --------------------- : ' + counter);
 
-    if (results[devName].peersList) {// && (results[devName].peersList.length > 0)) {
+    if (results[devName].peersList) {
+      if (results[devName].peersList.length === 0) {
+        console.log('No find peers results!');
+      } else {
+        results[devName].peersList.sort(compare);
 
-      results[devName].peersList.sort(compare);
-
-      printResultLine('peersList',results[devName].peersList);
-      printMinMaxLine(results[devName].peersList);
-      combined.peersList = extendArray(results[devName].peersList,combined.peersList);
+        printResultLine('Find peers', results[devName].peersList);
+        printMinMaxLine(results[devName].peersList);
+        combined.peersList = extendArray(results[devName].peersList,combined.peersList);
+      }
     }
 
-    if (results[devName].connectList) {// && (results[devName].connectList.length > 0)) {
-      results[devName].connectList.sort(compare);
+    if (results[devName].connectList) {
+      if (results[devName].connectList.length === 0) {
+        console.log('No connect results!');
+      } else {
+        results[devName].connectList.sort(compare);
 
-      printResultLine('connectList',results[devName].connectList);
-      printMinMaxLine(results[devName].connectList);
+        printResultLine('Connect', results[devName].connectList);
+        printMinMaxLine(results[devName].connectList);
 
-      if (results[devName].connectError) {
+        if (results[devName].connectError) {
 
-        printFailedLine(
-          'connectList',
-          results[devName].connectError.failedPeer, 
-          results[devName].connectError.notTriedList, 
-          results[devName].connectList.length
-        );
+          printFailedLine(
+            'Connect',
+            results[devName].connectError.failedPeer, 
+            results[devName].connectError.notTriedList, 
+            results[devName].connectList.length
+          );
+        }
+        combined.connectList = extendArray(results[devName].connectList,combined.connectList);
       }
-      combined.connectList = extendArray(results[devName].connectList,combined.connectList);
-
-    } else if (results[devName].connectError && results[devName].connectError.failedPeer > 0) {
-      console.log(
-        "All (" + results[devName].connectError.failedPeer + 
-        ") Re-Connect test connections failed"
-      );
     }
 
-    if (results[devName].sendList) {// && (results[devName].sendList.length > 0)) {
+    if (results[devName].sendList) {
+      if (results[devName].sendList.length === 0) {
+        console.log('No send data results!');
+      } else {
+        results[devName].sendList.sort(compare);
 
-      results[devName].sendList.sort(compare);
+        printResultLine('Send data', results[devName].sendList);
+        printAverageDataRate(results[devName].sendList);
+        printMinMaxLine(results[devName].sendList);
 
-      printResultLine('sendList',results[devName].sendList);
-      printAverageDataRate(results[devName].sendList);
-      printMinMaxLine(results[devName].sendList);
+        if (results[devName].sendError) {
+          printFailedLine(
+            'Send data',
+            results[devName].sendError.failedPeer, 
+            results[devName].sendError.notTriedList, 
+            results[devName].sendList.length
+          );
+        }
 
-      if (results[devName].sendError) {
-        printFailedLine(
-          'sendList',
-          results[devName].sendError.failedPeer, 
-          results[devName].sendError.notTriedList, 
-          results[devName].sendList.length
-        );
+        combined.sendList = extendArray(results[devName].sendList,combined.sendList);
       }
-
-      combined.sendList = extendArray(results[devName].sendList,combined.sendList);
-
-    } else if (results[devName].sendError && results[devName].sendError.failedPeer > 0) {
-
-      console.log(
-        "All (" + results[devName].sendError.failedPeer + 
-        ") SendData test connections failed"
-      );
-
     }
   }
 
@@ -262,17 +258,17 @@ module.exports.process = function (testResults, testDevices) {
 
   if (combined.peersList) {
     combined.peersList.sort(compare);
-    printResultLine('peersList',combined.peersList);
+    printResultLine('Find peers', combined.peersList);
   }
 
   if (combined.connectList) {
     combined.connectList.sort(compare);
-    printResultLine('connectList',combined.connectList);
+    printResultLine('Connect', combined.connectList);
   }
 
   if (combined.sendList) {
     combined.sendList.sort(compare);
-    printResultLine('sendList',combined.sendList);
+    printResultLine('Send data', combined.sendList);
     printAverageDataRate(combined.sendList);
  }
 
