@@ -385,8 +385,14 @@ public class ConnectionHelper
                         Log.w(TAG, "onDisconnected: Incoming connection, peer "
                                 + who.getPeerProperties().toString()
                                 + " disconnected: " + errorMessage);
+                        final long threadId = who.getId();
 
-                        closeAndRemoveIncomingConnectionThread(who.getId());
+                        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                thisInstance.closeAndRemoveIncomingConnectionThread(threadId);
+                            }
+                        });
                     }
                 });
             } catch (IOException e) {
@@ -438,8 +444,14 @@ public class ConnectionHelper
                         Log.w(TAG, "onDisconnected: Outgoing connection, peer "
                                 + who.getPeerProperties().toString()
                                 + " disconnected: " + errorMessage);
+                        final String peerId = who.getPeerProperties().getId();
 
-                        closeAndRemoveOutgoingConnectionThread(who.getPeerProperties().getId(), true);
+                        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                thisInstance.closeAndRemoveOutgoingConnectionThread(peerId, true);
+                            }
+                        });
                     }
                 });
             } catch (IOException e) {
