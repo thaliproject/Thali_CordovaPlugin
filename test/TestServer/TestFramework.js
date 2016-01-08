@@ -38,7 +38,8 @@ function TestFramework(testConfig, userConfig, _logger) {
   // .. then override with userConfig which may specify a smaller number
   // of devices
   Object.keys(this.userConfig).forEach(function(platform) {
-    if (self.userConfig[platform].numDevices) {
+    // -1 indicates to inherit from testConfig (i.e. all available)
+    if (self.userConfig[platform].numDevices != -1) {
       self.requiredDevices[platform] = self.userConfig[platform].numDevices;
     }
   });
