@@ -175,6 +175,12 @@ thaliTape.begin = function() {
 
   var testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
 
+  testServer.once('discard', function() {
+    // This device not needed, log appropriately so CI doesn't think we've failed
+    console.log("****TEST TOOK:  ms ****" );
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+  });
+
   testServer.on('error', function (data) {
     var errData = JSON.parse(data);
     console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);

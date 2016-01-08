@@ -86,6 +86,10 @@ TestFramework.prototype.addDevice = function(device) {
   if (this.devices[device.platform].length === this.requiredDevices[device.platform]) {
     logger.info("Required number of devices presented");
     this.startTests(device.platform);
+  } else if (this.devices[device.platform].length >= this.requiredDevices[device.platform]) {
+    // Discard surplus devices..
+    logger.info("Discarding surplus device: %s", device.deviceName);
+    device.socket.emit("discard");
   }
 }
 
