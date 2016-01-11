@@ -2,62 +2,126 @@
 
 ## Overview
 
-The testing framework is split into two separate sets of tests:
-- Unit tests
-- Performance tests
+The testing framework comprises three basic elements:
 
-With unit test during the initialization of the test, the the coordinator server is given the number of devices included in the test, and after this the
-coordinator server is simply timing the start & teardown of the tests for the connected devices. and to achieve this its simply counting the events for each statr & stop,
-and once the count reaches the number of devices included in the test, then it will command the unit tests to continue.
+- TestServer - Co-ordinates the actions of devices running instances of the test suite.
+- Unit tests - Test suite designed to test functionality of individual units.
+- Performance tests - All-up tests, designed to determine performance of the system as a whole.
 
-With Performance tests the coordinator server is used to control the test start & stop event as well as its used to give test parameters to the devices.
-These parameters are send for each test when it is started, and each test-type defined which parameters it will use during the test.
+The Test Server coordinates the actions of devices within the test environment running one of the test suites. Concurrent execution of two different test suites is not supported i.e. all the devices must be running the same test suite at the same time. Switching between different test suites is controlled by copying the appropriate test suite main entry point to app.js which is then loaded and executed on start-up by the devices under test.
 
-Test and the parameters are defined in the Config_PerfTest.json file located in the root directory. The json file must include array of tests, and each test must include
-name, servertimeout and data values. name must be the filename of one the defined tests (testFindPeers.js/testReConnect.js/testSendData.js), servertimeout should be some reasonable value 
-defining on when the test should be timed out (if the test has not send the result data before it), and data item must include all required parameters for the defined test
+The test server is invoked thus:
 
-Here's example of the content of the Config_PerfTest.json file file
+  node index.js '{"devices":{"ios":2,"android":19}}'
 
-```json
-[
-  {
-    "name": "testSendData.js",
-    "serverTimeout": 1200000,
-    "timeout": 1000000,
-    "rounds": 1,
-    "dataTimeout": 20000,
-    "dataAmount": 100000,
-    "conReTryTimeout": 5000,
-    "conReTryCount": 5
+This is typically done by the CI system, the arguments being the number of devices of each platform that the CI system has succesfully deployed the test app to.
+
+On startup each device will connect back to the test server (the ip addresss of which is distributed in the test package) and 'present' itself as ready to execute tests. At this time it will also declare which test suite it's currently running and which tests it is aware of being present in it's distribution.
+
+Test execution proceeds according to the protocols defined by the subclasses of the TestFramework class, the Test Frameworks, provided in the TestServer directory.
+
+Each test framework has it's own config in addition to the common test framework:
+
+Unit Test Config
+================
+
+Contained in the file UnitTestConfig.js and exported directly as a module.
+
+The follwing is a typical example:
+
+```javascript
+var config = {
+  ios: {
+    // Number of devices that must be presented before the test server will commence execution
+    // -1 indicates 'all available devices', 0 means none (so that, for instance you can
+    // test a single platform at a time).
+    numDevices:2
   },
-
-  {
-    "name": "testFindPeers.js",
-    "serverTimeout": 1200000,
-    "timeout": 1000000,
-    "rounds": 1,
-    "dataTimeout": 10000,
-    "dataAmount": 100000,
-    "conReTryTimeout": 5000,
-    "conReTryCount": 5
-  },
-
-  {
-    "name": "testReConnect.js",
-    "serverTimeout": 1200000,
-    "timeout": 1000000,
-    "rounds": 1,
-    "dataTimeout": 10000,
-    "dataAmount": 100000,
-    "conReTryTimeout": 5000,
-    "conReTryCount": 5
+  android: {
+    numDevices:2
   }
-] 
+}
+
+module.exports = config;
 ```
- 
- The reply data item includes test number, device name from which is result is from, time it took to do the whole test, and then test specific data values.  
- 
+
+Unit Test execution proceeds one test at a time moving to the next test only when every device in the test has returned a result. Each test returns a pass or fail to the server. A unit test suite is cconsidered to have passed iff all tests on all devices within the suite returned a pass.
+
+
+Perf Test Config
+================
+
+Contained within the file PerfTestConfig.js and exported directly as a module.
+
+Here's example of the content of the PerfTestConfig.js:
+
+```javascript
+var config = {
+
+  userConfig : {
+    "ios" : {
+      // The time (in ms) to wait before starting the test run regardless of how many devices
+      // have been presented
+      "startTimeout": 120000
+    },
+    "android" : { 
+      "startTimeout": 120000
+    }
+  },
+  
+  testConfig : [
+    {
+      // Name of test file to be run
+      "name": "testFindPeers.js",
+      // Timeout (in ms) before the server will terminate the test run if not already complete
+      "serverTimeout": 120000,
+      // Timeout (in ms) before the test app itself will terminate if not already complete
+      // Test apps *must* return data when timing out in this fashion
+      "timeout": 100000,
+      // DEPRECATED: Number of times the test will be run by the test app
+      "rounds": 1,
+      // Timeout (in ms) before the tests will declare an error if no data received.
+      "dataTimeout": 10000,
+      // Amount of data (in bytes) to be sent/received during the test run
+      "dataAmount": 100000,
+      // Timeout (in ms) before a connection attempt is abandoned and retried
+      "conReTryTimeout": 5000,
+      // Maximum number of times a connection will be retried before an error is declared
+      "conReTryCount": 5
+    },
+    {
+      "name": "testSendData.js",
+      "serverTimeout": 120000,
+      "timeout": 100000,
+      "rounds": 1,
+      "dataTimeout": 20000,
+      "dataAmount": 100000,
+      "conReTryTimeout": 5000,
+      "conReTryCount": 5
+    }
+  ] 
+};
+
+module.exports = config;
+```
+
+There are two main sections:
+
+userConfig
+----------
+
+Intended to be changed by the user as required during the test process and containing settings generally global to the entire test suite. There are as many different subsections as there are platforms currently installed (or not) in the test system.
+
+testConfig
+----------
+
+A list of tests to be run. Tests may appear multiple times and are executed in the strict order in which they are declared. Values appearing here are test specific but many are found in all tests.
+
+Test Completion
+===============
+
+As each test completes it will return results to the Test Server. Once all devices have returned results (or have timed out) the test server will instruct devices to move on to the next test.
+
  Below is example of the reply data item:
 
  ```json
@@ -68,7 +132,7 @@ Here's example of the content of the Config_PerfTest.json file file
  }
   ```
 
- ## Content of the Config_PerfTest.json
+ ## The Perf Test Suite in detail
  
  ### testFindPeers
  

@@ -13,12 +13,11 @@ var test = tape({
   }
 });
 
-test('#should be able to add devices to the framework', function (t) {
+test('should be able to add devices to the framework', function (t) {
   var testConfig = JSON.parse('{"devices":{"ios":2}, "honorCount":true}');
   var perfTestFramework = new PerfTestFramework(testConfig);
-  var testDevice = new TestDevice(null, "a device", "ios", "perftest", [], null);
+  var testDevice = new TestDevice(null, 'Some name', 'uuid', 'ios', 'perftest', [], null);
   perfTestFramework.addDevice(testDevice);
-  console.log(perfTestFramework);
-  t.equal(perfTestFramework.devices["ios"].length, 1);
+  t.equal(perfTestFramework.devices['ios'].length, 1);
   t.end();
 });
