@@ -9,7 +9,6 @@ var Promise = require('lie');
 var fs = require('fs-extra-promise');
 var url = require('url');
 var request = require('request');
-var remoteCache = require('./remote-cache.js');
 var FILE_NOT_FOUND = "ENOENT";
 var MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT = "localdev"; // If this file exists in the thaliDontCheckIn directory then
 // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
