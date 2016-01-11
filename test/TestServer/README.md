@@ -8,7 +8,7 @@ The testing framework comprises three basic elements:
 - Unit tests - Test suite designed to test functionality of individual units.
 - Performance tests - All-up tests, designed to determine performance of the system as a whole.
 
-The Test Server coordinates the actions of devices within the test environment running one of the test suites. Concurrent execution of two different test suites is not supported i.e. all the devices must be running the same test suite at the same time. Switching between different test suites is controlled by copying the appropriate test suite main entry point to app.js which is then loaded and execute on start-up by the devices under test.
+The Test Server coordinates the actions of devices within the test environment running one of the test suites. Concurrent execution of two different test suites is not supported i.e. all the devices must be running the same test suite at the same time. Switching between different test suites is controlled by copying the appropriate test suite main entry point to app.js which is then loaded and executed on start-up by the devices under test.
 
 The test server is invoked thus:
 
@@ -18,14 +18,14 @@ This is typically done by the CI system, the arguments being the number of devic
 
 On startup each device will connect back to the test server (the ip addresss of which is distributed in the test package) and 'present' itself as ready to execute tests. At this time it will also declare which test suite it's currently running and which tests it is aware of being present in it's distribution.
 
-Test execut$ion then proceeds according to the protocols defined by the subclasses of the TestFramework class, the Test Frameworks, provided in the TestServer directory.
+Test execution proceeds according to the protocols defined by the subclasses of the TestFramework class, the Test Frameworks, provided in the TestServer directory.
 
 Each test framework has it's own config in addition to the common test framework:
 
 Unit Test Config
 ================
 
-Contained with the file UnitTestConfig.js and exported directly as a module.
+Contained in the file UnitTestConfig.js and exported directly as a module.
 
 The follwing is a typical example:
 
@@ -110,12 +110,12 @@ There are two main sections:
 userConfig
 ----------
 
-Intended to be changed by the user as required during the test process and containing settings generally global to the entire test suite. There are as many different subsections as there are platforms currently installed in the test system.
+Intended to be changed by the user as required during the test process and containing settings generally global to the entire test suite. There are as many different subsections as there are platforms currently installed (or not) in the test system.
 
 testConfig
 ----------
 
-A list of tests to be run. Tests may appear multiple times and are executed in the strict order in which the are declared. Values appearing here are test specific but many are found in all tests.
+A list of tests to be run. Tests may appear multiple times and are executed in the strict order in which they are declared. Values appearing here are test specific but many are found in all tests.
 
 Test Completion
 ===============
