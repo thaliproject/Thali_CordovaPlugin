@@ -170,8 +170,15 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     if (!doWeNeedToUninstall) {
       return;
     }
-    console.log('Removing previously installed Thali Cordova plugin');
-    return childProcessExecPromise('cordova plugin remove org.thaliproject.p2p', appRootDirectory)
+    console.log('Trying to remove previously installed Thali Cordova plugin');
+    var pluginRemoveCommand = 'cordova plugin remove org.thaliproject.p2p';
+    return childProcessExecPromise(pluginRemoveCommand, appRootDirectory)
+    .catch(function (err) {
+      // Resolve the promise even if plugin removal fails, because it is possible
+      // that the user has removed the plugin outside of this install script, but there
+      // is still the left-over file that says this script has added the plugins.
+      return Promise.resolve();
+    });
   })
 }
 
