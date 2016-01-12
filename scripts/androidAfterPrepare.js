@@ -1,7 +1,6 @@
 'use strict';
 
 var fs = require('fs-extra-promise');
-
 var path = require('path');
 
 /**
@@ -17,36 +16,41 @@ var path = require('path');
  * the special ext property that Cordova declares. But honestly, I'll figure it
  * out later.
  */
-function updateAndroidSDKVersion(appRoot) {
-   var androidManifestLocation = path.join(appRoot, "platforms/android/AndroidManifest.xml");
-   var originalContent = fs.readFileSync(androidManifestLocation).toString();
-    // Different version of Cordova use different mins, yes we need to replace this with xpath
-   var newContent = originalContent
-       .replace("android:minSdkVersion=\"10\"", "android:minSdkVersion=\"19\"")
-       .replace("android:minSdkVersion=\"14\"", "android:minSdkVersion=\"19\"");
-   fs.writeFileSync(androidManifestLocation, newContent);
-}
+var updateAndroidSDKVersion = function (appRoot) {
+  var androidManifestLocation = path.join(appRoot, 'platforms/android/AndroidManifest.xml');
+  var originalContent = fs.readFileSync(androidManifestLocation).toString();
+  // Different version of Cordova use different mins, yes we need to replace this with xpath
+  var newContent = originalContent
+    .replace('android:minSdkVersion="10"', 'android:minSdkVersion="19"')
+    .replace('android:minSdkVersion="14"', 'android:minSdkVersion="19"');
+  fs.writeFileSync(androidManifestLocation, newContent);
+};
 
-function replaceJXCoreExtension(appRoot) {
+var replaceJXCoreExtension = function (appRoot) {
+  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/android/java/io/jxcore/node/JXcoreExtension.java');
+  var targetFile = path.join(appRoot, 'platforms/android/src/io/jxcore/node/JXcoreExtension.java');
+  try {
+    var sourceContent = fs.readFileSync(sourceFile);
+    fs.writeFileSync(targetFile, sourceContent);
+  } catch (e) {
+    console.log(e);
+    console.log('Failed to update the JXcoreExtension.java file!');
+    console.log('Please make sure plugins org.thaliproject.p2p and io.jxcore.node are installed.')
+    // Exit the process on this error, because it is a hard requirement for this
+    // plugin to get the right JXcoreExtension.java or otherwise there will be
+    // a build error when the app is tried to be built.
+    process.exit(-1);
+  }
+};
 
-    var sourceFile = path.join(appRoot, "plugins/org.thaliproject.p2p/src/android/java/io/jxcore/node/JXcoreExtension.java");
-    var targetFile = path.join(appRoot, "platforms/android/src/io/jxcore/node/JXcoreExtension.java");
-    try {
-      var sourceContent = fs.readFileSync(sourceFile);
-      fs.writeFileSync(targetFile, sourceContent);
-    } catch (e) {
-      console.log("+++ WARNING +++ Please re-add io.jxcore.node plugin");
-    }
-}
-
-function removeInstallFromPlatform(appRoot) {
-    var installDir = path.join(appRoot, "platforms/android/assets/www/jxcore/node_modules/thali/install");
-    fs.remove(installDir);
-}
+var removeInstallFromPlatform = function (appRoot) {
+  var installDir = path.join(appRoot, 'platforms/android/assets/www/jxcore/node_modules/thali/install');
+  fs.removeSync(installDir);
+};
 
 module.exports = function (context) {
-    var appRoot = context.opts.projectRoot;
-    updateAndroidSDKVersion(appRoot);
-    replaceJXCoreExtension(appRoot);
-    removeInstallFromPlatform(appRoot);
+  var appRoot = context.opts.projectRoot;
+  updateAndroidSDKVersion(appRoot);
+  replaceJXCoreExtension(appRoot);
+  removeInstallFromPlatform(appRoot);
 };
