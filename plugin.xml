@@ -30,8 +30,7 @@
         <source-file src="src/android/java/io/jxcore/node/OutgoingSocketThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/SocketThreadBase.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
-        <hook type="after_prepare" src="scripts/androidAfterPrepare.js"/>
-        <!--<hook type="after_platform_add" src="scripts/androidAfterPlatformAdd.js"/>-->
+        <hook type="before_compile" src="scripts/androidBeforeCompile.js" />
     </platform>
 
     <!-- iOS -->
