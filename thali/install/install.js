@@ -325,7 +325,7 @@ module.exports = function(callback, appRootDirectory) {
 
   var thaliProjectName = "thaliproject";
   var thaliDepotName = "Thali_CordovaPlugin";
-  var thaliBranchName = "master";
+  var thaliBranchName = "npmv2.0.4";
 
   fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, jxCoreVersionNumber)
     .then(function () {
