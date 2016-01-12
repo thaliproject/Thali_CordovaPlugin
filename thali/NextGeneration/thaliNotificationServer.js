@@ -15,7 +15,7 @@ var Promise = require('lie');
  * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
  * local device's public and private keys
  * @param {number} secondsUntilExpiration - The number of seconds into the
- * future after which the beacons should expire.}
+ * future after which the beacons should expire.
  * @constructor
  */
 function ThaliNotificationServer(router, ecdhForLocalDevice,
