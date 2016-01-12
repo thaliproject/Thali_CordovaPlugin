@@ -21,8 +21,13 @@ function childProcessExecPromise(command, currentWorkingDirectory) {
     exec(command, { cwd: currentWorkingDirectory }, function(error, stdout, stderr) {
       if (error) {
         reject(error);
+        return;
       }
-      resolve(stdout.toString());
+      // Log output even if command doesn't exit with an error,
+      // because otherwise useful debugging information might get lost.
+      if (stdout) console.log(stdout);
+      if (stderr) console.log(stderr);
+      resolve();
     });
   })
 }
