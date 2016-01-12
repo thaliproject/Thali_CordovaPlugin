@@ -31,6 +31,11 @@ ERROR_ABORT() {
 # that issue.
 ulimit -n 512;ERROR_ABORT
 
+# Trial to pre-fetch jxcore-cordova plugin
+jx npm install jxc;ERROR_ABORT
+./node_modules/jxc/bin/jxc.bin.js config set cache;ERROR_ABORT
+./node_modules/jxc/bin/jxc.bin.js download 0.0.8;ERROR_ABORT
+
 # Remove the previous build result (if any) to start from a clean state.
 rm -rf ../ThaliTest;ERROR_ABORT
 
