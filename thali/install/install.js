@@ -174,6 +174,7 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     var pluginRemoveCommand = 'cordova plugin remove org.thaliproject.p2p';
     return childProcessExecPromise(pluginRemoveCommand, appRootDirectory)
     .catch(function (err) {
+      console.log('Ignoring a non-critical error: ' + err);
       // Resolve the promise even if plugin removal fails, because it is possible
       // that the user has removed the plugin outside of this install script, but there
       // is still the left-over file that says this script has added the plugins.

@@ -94,9 +94,9 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
 }
 
 /**
- * Returns a file path to a temporary directory that can be used by tests to
- * store data that does not have to be persisted between app restarts.
- * The temporary directory is removed when the process exists.
+ * Returns the file path to the temporary directory that can be used by tests
+ * to store data that does not have to be persisted between app restarts.
+ * The temporary directory is removed when the process exits.
  */
 var tmpObject = null;
 exports.tmpDirectory = function () {
