@@ -6,6 +6,15 @@ if (!jxcore.utils.OSInfo().isMobile) {
 
 var tape = require('../lib/thali-tape');
 
+var test = tape({
+  setup: function(t) {
+    t.end();
+  },
+  teardown: function(t) {
+    t.end();
+  }
+});
+
 test('Can call Start/StopListeningForAdvertisements', function (t) {
   Mobile('StartListeningForAdvertisements').callNative(function (err) {
     t.notOk(err, 'Can call StartListeningForAdvertisements without error');
@@ -16,26 +25,12 @@ test('Can call Start/StopListeningForAdvertisements', function (t) {
   });
 });
 
-test('Calling StopListeningForAdvertisements before Start is an error', function (t) {
-  Mobile('StopListeningForAdvertisements').callNative(function (err) {
-    t.Ok(err, 'Calling Stop before Start is an error');
-    t.end();
-  });
-});
-
-test('Can call Start/StopUpdateAdvertisingAndListenForIncomingConnections', function (t) {
-  Mobile('StartUpdateAdvertisingAndListenForIncomingConnections').callNative(function (err) {
-    t.notOk(err, 'Can call StartUpdateAdvertisingAndListenForIncomingConnections without error');
-    Mobile('Can StopUpdateAdvertisingAndListenForIncomingConnections').callNative(function (err) {
-      t.notOk(err, 'Can call StopUpdateAdvertisingAndListenForIncomingConnections without error');
+test('Calling StartListeningForAdvertisements twice is an error', function (t) {
+  Mobile('StartListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'Can call StartListeningForAdvertisements without error');
+    Mobile('StartListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err == "Call Stop!", 'Calling Start twice is an error');
       t.end();
     });
-  });
-});
-
-test('Calling StopUpdateAdvertisingAndListenForIncomingConnectionsStopUAALFIC before start is an error", function (t) {
-  Mobile('StopUpdateAdvertisingAndListenForIncomingConnections').callNative(function (err) {
-    t.notOk(err, 'Calling Stop before Start is an error');
-    t.end();
   });
 });
