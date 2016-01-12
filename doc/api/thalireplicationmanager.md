@@ -79,7 +79,7 @@ manager.on('started', function () {
   console.log('Thali replication manager started');
 });
 
-manager.start(5000 /* port */, 'thali' /* db name */, 'deviceName' /* optaional device name*/);
+manager.start(5000 /* port */, 'thali' /* db name */, 'deviceName' /* optional device name*/);
 ```
 ***
 
