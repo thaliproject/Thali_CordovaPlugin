@@ -216,8 +216,8 @@ function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
 function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
   return new Promise(function(resolve, reject) {
     console.log('Trying to install jxcore-cordova version: ' + jxCoreVersionNumber);
-    var jxcBin = path.join(__dirname, 'node_modules', '.bin', 'jxc');
-    var jxcInstall = spawn(jxcBin, ['install', jxCoreVersionNumber], { cwd: baseDir });
+    var jxcBin = path.join(__dirname, 'node_modules', 'jxc', 'bin', 'jxc.bin.js');
+    var jxcInstall = spawn('jx', [jxcBin, 'install', jxCoreVersionNumber], { cwd: baseDir });
     jxcInstall.stdout.on('data', function (data) {
       console.log(data + '');
     });
