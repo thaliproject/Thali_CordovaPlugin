@@ -164,16 +164,14 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
   return fs.readFileAsync(weAddedPluginsFile).catch(function(err) {
     if (err) {
       if (err.code == FILE_NOT_FOUND) {
-        return false;
+        return Promise.resolve(false);
       }
-
       return Promise.reject(err);
     }
-
-    return true;
+    return Promise.resolve(true);
   }).then(function(doWeNeedToUninstall) {
     if (!doWeNeedToUninstall) {
-      return;
+      return Promise.resolve();
     }
     console.log('Trying to remove previously installed Thali Cordova plugin');
     var pluginRemoveCommand = 'cordova plugin remove org.thaliproject.p2p';
