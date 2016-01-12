@@ -57,14 +57,14 @@ var manager = new ThaliReplicationManager(db);
 
 ## Methods
 
-### `ThaliReplicationManager.prototype.start(deviceName, port, dbName)`
+### `ThaliReplicationManager.prototype.start(port, dbName, [deviceName])`
 
 This method starts the Thali Replication Manager with the given device name, port number used for synchronization and database name to synchronize.  Once called this method emits the `starting` event.  Once started, the `started` event is fired.  If there is an error in starting the Thali Replication Manager, the `startError` event will fire.
 
 #### Arguments:
-1. `deviceName`: `String` - the device name to start broadcasting.
-2. `port`: `Number` - the port number used for synchronization.
-3. `dbName`: `String` - the name of the database.
+1. `port`: `Number` - the port number used for synchronization.
+2. `dbName`: `String` - the name of the database.
+3. `deviceName`: `String` - (optional) the device name to start broadcasting. If not supplied, it will be obtained from the cryptomanager (as a public key hash).
 
 #### Example:
 
@@ -79,7 +79,7 @@ manager.on('started', function () {
   console.log('Thali replication manager started');
 });
 
-manager.start('deviceName', 5000 /* port */, 'thali' /* db name */);
+manager.start(5000 /* port */, 'thali' /* db name */, 'deviceName' /* optaional device name*/);
 ```
 ***
 
