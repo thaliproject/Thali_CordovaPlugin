@@ -31,8 +31,7 @@ ERROR_ABORT() {
 # that issue.
 ulimit -n 512;ERROR_ABORT
 
-# Remove the previous build result (if any) to start from a clean state.
-rm -rf ../ThaliTest;ERROR_ABORT
+PROJECT_ROOT=$(pwd)
 
 # A hack to workaround an issue where the install scripts assume that the
 # folder of the Thali Cordova plugin is called exactly Thali_CordovaPlugin,
@@ -42,7 +41,16 @@ THALI_DIRECTORY="../Thali_CordovaPlugin"
 if [ ! -d "$THALI_DIRECTORY" ]
 then
   cp -R . $THALI_DIRECTORY;ERROR_ABORT
+  cd $THALI_DIRECTORY;ERROR_ABORT
 fi
+
+# Run first the tests that can be run on desktop
+thali/install/setUpDesktop.sh;ERROR_ABORT
+cd test/www/jxcore/;ERROR_ABORT
+jx npm test;ERROR_ABORT
+# Make sure we are back in the project root folder
+# after the test execution
+cd $PROJECT_ROOT;ERROR_ABORT
 
 # Check the existence of the script that in CI gives the right test server
 # IP address.
@@ -57,6 +65,9 @@ else
   # will be generated later in the build process based on the current host.
   SERVER_ADDRESS=""
 fi
+
+# Remove the previous build result (if any) to start from a clean state.
+rm -rf ../ThaliTest;ERROR_ABORT
 
 # Either PerfTest_app.js or UnitTest_app.js
 TEST_TYPE="UnitTest_app.js"
