@@ -25,19 +25,38 @@ module.exports.actionState = {
  *
  * When an action is created its state MUST be CREATED.
  *
+ * If either nonContentionLifeSpan or contentionLifeSpan are not numbers
+ * or are any integer less than
+ * {@link module:thaliPeerAction~PeerAction.MINIMUM_ACTION_LENGTH} then a
+ * bad argument error MUST be returned.
+ *
  * @public
  * @interface PeerAction
  * @constructor
  * @param {string} peerIdentifier
  * @param {module:thaliMobile.connectionTypes} connectionType
  * @param {string} actionType
+ * @param {number} nonContentionLifeSpan The maximum number of milliseconds
+ * to run the job before calling kill if there are no other jobs on the queue.
+ * @param {number} contentionLifeSpan The maximum number of milliseconds to run
+ * the job before calling kill if there are other jobs that are blocked by
+ * this job.
  */
-function PeerAction (peerIdentifier, connectionType, actionType) {
+function PeerAction (peerIdentifier, connectionType, actionType,
+                     nonContentionLifeSpan, contentionLifeSpan) {
   this.peerIdentifier = peerIdentifier;
   this.connectionType = connectionType;
   this.actionType = actionType;
   this.actionState = module.exports.actionState.STARTED;
+  this.nonContentionLifeSpan = nonContentionLifeSpan;
+  this.contentionLifeSpan = contentionLifeSpan;
 }
+
+/**
+ * The minimum amount of time in milliseconds that a life span must be set to.
+ * @type {number}
+ */
+PeerAction.MINIMUM_ACTION_LENGTH = 10;
 
 /**
  * The remote peer this action targets
@@ -70,6 +89,30 @@ PeerAction.prototype.actionType = null;
 
 PeerAction.prototype.getActionType = function () {
   return this.actionType;
+};
+
+/**
+ * The time in milliseconds to run the job before calling kill if there are no
+ * other jobs in contention.
+ * @private
+ * @type {number}
+ */
+PeerAction.prototype.nonContentionLifeSpan = null;
+
+PeerAction.prototype.getNonContentionLifeSpan = function () {
+  return this.nonContentionLifeSpan;
+};
+
+/**
+ * The time in milliseconds to run the job before calling kill if there are
+ * other jobs being blocked by this job.
+ * @private
+ * @type {number}
+ */
+PeerAction.prototype.contentionLifeSpan = null;
+
+PeerAction.prototype.getContentionLifeSpan = function () {
+  return this.contentionLifeSpan;
 };
 
 /**

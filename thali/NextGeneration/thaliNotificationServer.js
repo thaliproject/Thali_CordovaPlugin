@@ -5,8 +5,8 @@ var Promise = require('lie');
 /** @module thaliNotificationServer */
 
 /**
- * This class will register the path to retrieve beacons on the submitted
- * router object.
+ * @classdesc This class will register the path to retrieve beacons on the
+ * submitted router object.
  *
  * The constructor MUST NOT take any action. It can only record values.
  *
