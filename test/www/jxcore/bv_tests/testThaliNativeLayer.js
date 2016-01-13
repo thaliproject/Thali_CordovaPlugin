@@ -238,7 +238,7 @@ test('ThaliEmitter handles socket disconnect correctly', function (t) {
     s.pipe(s);
   });
 
-  server.listen(5001, function() {
+  server.listen(5002, function() {
     console.log("echo server started");
   });
 
