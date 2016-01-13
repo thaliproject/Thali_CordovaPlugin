@@ -39,7 +39,7 @@ function TestFramework(testConfig, userConfig, _logger) {
   // of devices
   Object.keys(this.userConfig).forEach(function(platform) {
     // -1 indicates to inherit from testConfig (i.e. all available)
-    if (self.userConfig[platform].numDevices != -1) {
+    if (self.userConfig[platform].numDevices && self.userConfig[platform].numDevices !== -1) {
       self.requiredDevices[platform] = self.userConfig[platform].numDevices;
     }
   });
