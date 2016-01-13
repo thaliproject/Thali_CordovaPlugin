@@ -44,7 +44,7 @@ Follow the instructions at [http://jxcore.com/downloads/](http://jxcore.com/down
 installation worked:
 ```
 $ jx -jxv
-v 0.3.0.5
+v 0.3.1.0
 ```
 
 ### Install Cordova
