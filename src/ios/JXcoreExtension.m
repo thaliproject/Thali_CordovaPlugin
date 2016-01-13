@@ -40,50 +40,39 @@
 
   // Export the public API to node
 
-  // StartBroadcasting
+  // StartListeningForAdvertisements
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
   {
-    NSLog(@"jxcore: startBroadcasting");
+    NSLog(@"jxcore: StartListeningForAdvertisements");
 
-    if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || 
-        ![params[1] isKindOfClass:[NSNumber class]])
+    if ([theApp startListeningForAdvertisements])
     {
-      NSLog(@"jxcore: startBroadcasting: badParam");
-      [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-    }
-    else
-    {
-      if ([theApp startBroadcasting:params[0] serverPort:params[1]])
-      {
-        NSLog(@"jxcore: startBroadcasting: success");
-        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-      }
-      else
-      {
-        NSLog(@"jxcore: startBroadcasting: failure");
-        [JXcore callEventCallback:callbackId withParams:@[@"Already broadcasting"]];
-      }
-    }
-  } withName:@"StartBroadcasting"];
-
-    
-  // StopBroadcasting
-  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
-  {
-    NSLog(@"jxcore: stopBroadcasting");
-
-    if ([theApp stopBroadcasting])
-    {
-      NSLog(@"jxcore: stopBroadcasting: success");
+      NSLog(@"jxcore: StartListeningForAdvertisements: success");
       [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
     }
     else
     {
-      NSLog(@"jxcore: stopBroadcasting: failure");
-      [JXcore callEventCallback:callbackId withParams:@[@"Not broadcasting"]];
+      NSLog(@"jxcore: StartListeningForAdvertisements: failure");
+      [JXcore callEventCallback:callbackId withParams:@[@"Call Stop!"]];
     }
-  } withName:@"StopBroadcasting"];
+  } withName:@"StartListeningForAdvertisements"];
 
+  // StopListeningForAdvertisements
+  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+  {
+    NSLog(@"jxcore: StopListeningForAdvertisements");
+
+    if ([theApp stopListeningForAdvertisements])
+    {
+      NSLog(@"jxcore: StopListeningForAdvertisements: success");
+      [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+    }
+    else
+    {
+      NSLog(@"jxcore: StopListeningForAdvertisements: failure");
+      [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+    }
+  } withName:@"StopListeningForAdvertisements"];
 
   // Connect
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)

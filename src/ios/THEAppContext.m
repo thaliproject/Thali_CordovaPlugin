@@ -60,9 +60,11 @@ NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
 @implementation THEAppContext
 {
 @private
-  // The communications enabled atomic flag.
-  THEAtomicFlag * _atomicFlagCommunicationsEnabled;
+  // isListening atomic flag
+  THEAtomicFlag * _isListening;
     
+  THEAtomicFlag * _atomicFlagCommunicationsEnabled;
+
   // The reachability handler reference.
   id reachabilityHandlerReference;
 
@@ -110,6 +112,35 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     
   // Done.
   return appContext;
+}
+
+
+// Starts up the server components
+- (BOOL)startListeningForAdvertisements
+{
+  if ([_isListening isClear])
+  {
+    if ([_isListening trySet])
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Stops listening 
+- (BOOL)stopListeningForAdvertisements
+{
+  if ([_isListening isSet])
+  {
+    if ([_isListening tryClear])
+    {
+      // Stop
+    }
+  }
+
+  return true;
 }
 
 
@@ -358,6 +389,7 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   }
     
   // Intialize.
+  _isListening = [[THEAtomicFlag alloc] init];
   _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
  
   // We don't really know yet, assum the worst, we'll get an update

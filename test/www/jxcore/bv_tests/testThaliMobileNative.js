@@ -29,7 +29,8 @@ test('Calling StartListeningForAdvertisements twice is an error', function (t) {
   Mobile('StartListeningForAdvertisements').callNative(function (err) {
     t.notOk(err, 'Can call StartListeningForAdvertisements without error');
     Mobile('StartListeningForAdvertisements').callNative(function (err) {
-      t.notOk(err == "Call Stop!", 'Calling Start twice is an error');
+      t.ok(err, 'Calling Start twice is an error');
+      t.ok(err == "Call Stop!", 'Error must be "Call Stop!"');
       t.end();
     });
   });

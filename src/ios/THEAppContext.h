@@ -39,6 +39,12 @@ typedef void(^ConnectCallback)(NSString *error, uint port);
 // Class singleton.
 + (instancetype)singleton;
 
+// Start the server components
+- (BOOL)startListeningForAdvertisements;
+
+// Stop the server components
+- (BOOL)stopListeningForAdvertisements;
+
 // Starts communications.
 - (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
 
