@@ -63,11 +63,12 @@ test('muxServerBridge', function (t) {
           var clientPort = muxClientBridge.address().port;
 
           var socket = net.createConnection({port: clientPort}, function () {
-            socket.end(new Buffer(testMessage));
+            socket.write(new Buffer(testMessage));
           });
 
           socket.on('data', function (data) {
             t.equal(testMessage, String(data), 'String should be length:' + testMessage.length);
+            socket.end();
             t.end();
 
             muxClientBridge.on('close', function () {
