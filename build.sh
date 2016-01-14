@@ -92,3 +92,5 @@ then
   rm -rf ThaliTest.app;ERROR_ABORT
   cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
 fi
+
+EXIT_ON_PURPOSE_;ERROR_ABORT
