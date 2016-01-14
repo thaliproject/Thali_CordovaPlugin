@@ -36,8 +36,12 @@
     "Plugin",
     "P2P",
     "BlueTooth",
-    "WiFi-Direct",
-    "node.js"
+    "BLE",
+    "Multipeer Connectivity Framework",
+    "node.js",
+    "Android",
+    "iOS",
+    "Cordova"
   ],
   "author": "Microsoft Corporation",
   "license": "MIT",
