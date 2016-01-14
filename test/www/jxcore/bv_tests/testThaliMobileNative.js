@@ -35,3 +35,30 @@ test('Calling StartListeningForAdvertisements twice is an error', function (t) {
     });
   });
 });
+
+test('Can call Start/StopUpdateAdvertisingAndListenForIncomingConnections', function (t) {
+  Mobile('StartUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
+    t.notOk(err, 'Can call StartUpdateAdvertisingAndListenForIncomingConnections without error');
+    Mobile('StopUpdateAdvertisingAndListenForIncomingConnections').callNative(function (err) {
+      t.notOk(
+        err, 'Can call StopUpdateAdvertisingsingAndListenForIncomingConnections without error'
+      );
+      t.end();
+    });
+  });
+});
+
+test('Calling StartUpdateAdvertisingAndListeningForIncomingConnections twice is NOT and error', 
+function (t) {
+  Mobile('StartUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
+    t.notOk(err, 'Can call StartUpdateAdvertisingAndListenForIncomingConnections without error');
+    Mobile('StartUpdateAdvertisingAndListenForIncomingConnections').callNative(4243, 
+    function (err) {
+      t.notOk(
+        err, 
+        'Can call StartUpdateAdvertisingsingAndListenForIncomingConnections twice without error'
+      );
+      t.end();
+    });
+  });
+});

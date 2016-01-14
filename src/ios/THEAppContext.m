@@ -60,9 +60,13 @@ NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
 @implementation THEAppContext
 {
 @private
-  // isListening atomic flag
+  // true if we're listening for advertisements
   THEAtomicFlag * _isListening;
-    
+
+  // true if we're advertising
+  THEAtomicFlag * _isAdvertising;
+  
+  // MORIBUND  
   THEAtomicFlag * _atomicFlagCommunicationsEnabled;
 
   // The reachability handler reference.
@@ -115,7 +119,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 }
 
 
-// Starts up the server components
+// Starts up the client components
 - (BOOL)startListeningForAdvertisements
 {
   if ([_isListening isClear])
@@ -129,7 +133,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   return false;
 }
 
-// Stops listening 
+// Stops client components 
 - (BOOL)stopListeningForAdvertisements
 {
   if ([_isListening isSet])
@@ -138,6 +142,36 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     {
       // Stop
     }
+  }
+
+  return true;
+}
+
+// Starts up the server components
+- (BOOL)startUpdateAdvertisingAndListenForIncomingConnections
+{
+  if ([_isAdvertising isClear])
+  {
+    if ([_isAdvertising trySet])
+    {
+      // Start fresh
+    }
+  }
+  else
+  {
+    // Update
+  }
+
+  return true;
+}
+
+// Stops server components
+- (BOOL)stopUpdateAdvertisingAndListenForIncomingConnections
+{
+  if ([_isAdvertising isSet])
+  {
+    // Stop
+    [_isAdvertising tryClear];
   }
 
   return true;
