@@ -8,11 +8,12 @@ var crypto = require('crypto');
 var tape = require('../lib/thali-tape');
 var cryptomanager = require('thali/thalicryptomanager');
 var os = require('os');
+var testUtils = require('../lib/testUtils.js');
 
 // get the values needed for running the tests
 var configValues = cryptomanager.getConfigValuesForTestingOnly();
 
-var fileLocation = path.join(os.tmpdir(), './pkcs12folder');
+var fileLocation = path.join(testUtils.tmpDirectory(), './pkcs12folder');
 
 // test setup & teardown activities
 var test = tape({

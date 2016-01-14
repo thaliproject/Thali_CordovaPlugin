@@ -33,8 +33,9 @@ test('multiplex can send data', function (t) {
     socket.pipe(plex1).pipe(socket);
   });
 
-  server.listen(6001, function () {
-    var socket = net.createConnection({port: 6001}, function () {
+  server.listen(0, function () {
+    var serverPort = server.address().port;
+    var socket = net.createConnection({port: serverPort}, function () {
       var plex2 = multiplex();
       var stream = plex2.createStream();
       stream.write(new Buffer(testMessage));
@@ -48,12 +49,13 @@ test('muxServerBridge', function (t) {
   var len = 200;
   var testMessage = randomstring.generate(len);
 
-  var server = net.createServer(function (socket) {
+  var testServer = net.createServer(function (socket) {
     socket.pipe(socket);
   });
 
-  server.listen(6001, function () {
-    var muxServerBridge = tcpmultiplex.muxServerBridge(6001);
+  testServer.listen(0, function () {
+    var testServerPort = testServer.address().port;
+    var muxServerBridge = tcpmultiplex.muxServerBridge(testServerPort);
     muxServerBridge.listen(function () {
       var serverPort = muxServerBridge.address().port;
 
