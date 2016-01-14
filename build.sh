@@ -93,4 +93,4 @@ then
   cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
 fi
 
-EXIT_ON_PURPOSE___;ERROR_ABORT
+EXIT_ON_PURPOSE____;ERROR_ABORT
