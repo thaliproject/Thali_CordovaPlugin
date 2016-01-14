@@ -90,7 +90,10 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       });
 
       // Start setup for this test
-      device.socket.emit("setup", test);
+      setTimeout(function() {
+        // Bit of a hack this timeout, give client time to add listener
+        device.socket.emit("setup", test);
+      }, 1000);
     });
   }
 
