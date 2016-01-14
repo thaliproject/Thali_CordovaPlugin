@@ -1,0 +1,279 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D4E619F71C47DEA500903813 /* THEAppContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D4E619F11C47DEA500903813 /* THEAppContext.m */; };
+		D4E619F81C47DEA500903813 /* THEPeer.m in Sources */ = {isa = PBXBuildFile; fileRef = D4E619F31C47DEA500903813 /* THEPeer.m */; };
+		D4E619F91C47DEA500903813 /* THEPeerBluetooth.m in Sources */ = {isa = PBXBuildFile; fileRef = D4E619F51C47DEA500903813 /* THEPeerBluetooth.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D4E619E21C47DE5E00903813 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		D4E619E41C47DE5E00903813 /* libThali.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libThali.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4E619F01C47DEA500903813 /* THEAppContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEAppContext.h; path = ../../THEAppContext.h; sourceTree = "<group>"; };
+		D4E619F11C47DEA500903813 /* THEAppContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEAppContext.m; path = ../../THEAppContext.m; sourceTree = "<group>"; };
+		D4E619F21C47DEA500903813 /* THEPeer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEPeer.h; path = ../../THEPeer.h; sourceTree = "<group>"; };
+		D4E619F31C47DEA500903813 /* THEPeer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEPeer.m; path = ../../THEPeer.m; sourceTree = "<group>"; };
+		D4E619F41C47DEA500903813 /* THEPeerBluetooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEPeerBluetooth.h; path = ../../THEPeerBluetooth.h; sourceTree = "<group>"; };
+		D4E619F51C47DEA500903813 /* THEPeerBluetooth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEPeerBluetooth.m; path = ../../THEPeerBluetooth.m; sourceTree = "<group>"; };
+		D4E619F61C47DEA500903813 /* THEPeerBluetoothDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEPeerBluetoothDelegate.h; path = ../../THEPeerBluetoothDelegate.h; sourceTree = "<group>"; };
+		D4E619FA1C47DEC200903813 /* GCDAsyncSocket */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GCDAsyncSocket; path = ../../GCDAsyncSocket; sourceTree = "<group>"; };
+		D4E619FC1C47DEC200903813 /* MultipeerConnectivity */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MultipeerConnectivity; path = ../../MultipeerConnectivity; sourceTree = "<group>"; };
+		D4E619FD1C47DEC200903813 /* NPReachability */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NPReachability; path = ../../NPReachability; sourceTree = "<group>"; };
+		D4E619FE1C47DEC200903813 /* Utility */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Utility; path = ../../Utility; sourceTree = "<group>"; };
+		D4E61A001C47E49900903813 /* THEThaliEventDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEThaliEventDelegate.h; path = ../../THEThaliEventDelegate.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D4E619E11C47DE5E00903813 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D4E619DB1C47DE5E00903813 = {
+			isa = PBXGroup;
+			children = (
+				D4E619FA1C47DEC200903813 /* GCDAsyncSocket */,
+				D4E619FC1C47DEC200903813 /* MultipeerConnectivity */,
+				D4E619FD1C47DEC200903813 /* NPReachability */,
+				D4E619FE1C47DEC200903813 /* Utility */,
+				D4E619F01C47DEA500903813 /* THEAppContext.h */,
+				D4E619F11C47DEA500903813 /* THEAppContext.m */,
+				D4E61A001C47E49900903813 /* THEThaliEventDelegate.h */,
+				D4E619F21C47DEA500903813 /* THEPeer.h */,
+				D4E619F31C47DEA500903813 /* THEPeer.m */,
+				D4E619F41C47DEA500903813 /* THEPeerBluetooth.h */,
+				D4E619F51C47DEA500903813 /* THEPeerBluetooth.m */,
+				D4E619F61C47DEA500903813 /* THEPeerBluetoothDelegate.h */,
+				D4E619E51C47DE5E00903813 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D4E619E51C47DE5E00903813 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D4E619E41C47DE5E00903813 /* libThali.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D4E619E31C47DE5E00903813 /* Thali */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D4E619ED1C47DE5E00903813 /* Build configuration list for PBXNativeTarget "Thali" */;
+			buildPhases = (
+				D4E619E01C47DE5E00903813 /* Sources */,
+				D4E619E11C47DE5E00903813 /* Frameworks */,
+				D4E619E21C47DE5E00903813 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Thali;
+			productName = Thali;
+			productReference = D4E619E41C47DE5E00903813 /* libThali.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D4E619DC1C47DE5E00903813 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0720;
+				ORGANIZATIONNAME = Microsoft;
+				TargetAttributes = {
+					D4E619E31C47DE5E00903813 = {
+						CreatedOnToolsVersion = 7.2;
+					};
+				};
+			};
+			buildConfigurationList = D4E619DF1C47DE5E00903813 /* Build configuration list for PBXProject "Thali" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D4E619DB1C47DE5E00903813;
+			productRefGroup = D4E619E51C47DE5E00903813 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D4E619E31C47DE5E00903813 /* Thali */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D4E619E01C47DE5E00903813 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D4E619F71C47DEA500903813 /* THEAppContext.m in Sources */,
+				D4E619F81C47DEA500903813 /* THEPeer.m in Sources */,
+				D4E619F91C47DEA500903813 /* THEPeerBluetooth.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D4E619EB1C47DE5E00903813 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		D4E619EC1C47DE5E00903813 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D4E619EE1C47DE5E00903813 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					../../Utility,
+					../../NPReachability,
+					../../MultipeerConnectivity,
+					../../GCDAsyncSocket,
+				);
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		D4E619EF1C47DE5E00903813 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					../../Utility,
+					../../NPReachability,
+					../../MultipeerConnectivity,
+					../../GCDAsyncSocket,
+				);
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D4E619DF1C47DE5E00903813 /* Build configuration list for PBXProject "Thali" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D4E619EB1C47DE5E00903813 /* Debug */,
+				D4E619EC1C47DE5E00903813 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D4E619ED1C47DE5E00903813 /* Build configuration list for PBXNativeTarget "Thali" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D4E619EE1C47DE5E00903813 /* Debug */,
+				D4E619EF1C47DE5E00903813 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D4E619DC1C47DE5E00903813 /* Project object */;
+}
