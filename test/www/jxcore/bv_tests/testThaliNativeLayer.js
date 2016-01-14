@@ -1,4 +1,8 @@
-"use strict";
+'use strict';
+
+if (typeof Mobile === 'undefined') {
+  return;
+}
 
 var net = require('net');
 var randomstring = require('randomstring');

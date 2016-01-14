@@ -2,11 +2,12 @@
 
 var spawn = require('child_process').spawn;
 var path = require('path');
+var thaliTape = require('./lib/thali-tape.js');
 
-var TEST_TO_RUN = process.argv.length > 2 ? process.argv[2] : 'bv_tests/testThaliReplicationManager.js';
-var NUMBER_OF_INSTANCES = process.argv.length > 3 ? process.argv[3] : 1;
+var TEST_TO_RUN = process.argv.length > 2 ? process.argv[2] : 'UnitTest_app.js';
+var NUMBER_OF_INSTANCES = process.argv.length > 3 ? process.argv[3] : 2;
 var LOG_TEST_SERVER = true;
-var LOG_INSTANCES = true;
+var LOG_INSTANCES = false;
 
 var logInstanceOutput = function (data, instanceId) {
   if (LOG_TEST_SERVER && instanceId === null) {
@@ -32,7 +33,7 @@ var setListeners = function (instance, instanceId) {
 var testServerConfiguration = {
   'devices': {
     'android': 0,
-    'ios': 2
+    'ios': NUMBER_OF_INSTANCES
   },
   'honorCount': true
 };

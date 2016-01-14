@@ -86,6 +86,12 @@ mocks.Disconnect = function (args, callback) {
   });
 };
 
+mocks.GetDeviceName = function (args, callback) {
+  setImmediate(function () {
+    callback(randomDeviceName);
+  });
+};
+
 var Mobile = function (key) {
   return {
     callNative: function () {

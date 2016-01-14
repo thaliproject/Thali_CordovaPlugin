@@ -1,4 +1,8 @@
-"use strict";
+'use strict';
+
+if (typeof Mobile === 'undefined') {
+  return;
+}
 
 var os = require('os');
 var path = require('path');

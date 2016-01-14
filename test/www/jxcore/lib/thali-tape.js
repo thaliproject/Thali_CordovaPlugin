@@ -230,7 +230,9 @@ thaliTape.begin = function() {
   });
 }
 
-if (typeof jxcore == 'undefined' || jxcore.utils.OSInfo().isMobile)
+if (typeof jxcore === 'undefined' ||
+    jxcore.utils.OSInfo().isMobile ||
+    (typeof Mobile !== 'undefined' && Mobile.iAmAMock))
 {
   // On mobile, or outside of jxcore (some dev scenarios) we use server-coordinated thaliTape
   exports = thaliTape;

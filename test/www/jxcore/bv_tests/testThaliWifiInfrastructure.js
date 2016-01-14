@@ -1,4 +1,8 @@
-"use strict";
+'use strict';
+
+if (typeof Mobile === 'undefined') {
+  return;
+}
 
 var ThaliWifiInfrastructure = require('thali/ThaliWifiInfrastructure');
 var tape = require('../lib/thali-tape');
