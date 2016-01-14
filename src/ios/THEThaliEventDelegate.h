@@ -22,28 +22,18 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEMultipeerServer.h
+//  THEThaliEventDelegate.h
 //
 
-#import <MultipeerConnectivity/MultipeerConnectivity.h>
+// Defines an interface through which the peer discovery library can signal
+// it's enclosing application
 
-// Encapsulate the local server, handles advertising the serviceType and accepting
-// connections from remote clients
-@interface THEMultipeerServer : NSObject <MCNearbyServiceAdvertiserDelegate>
+// THEThaliEventDelegate protocol.
+@protocol THEThaliEventDelegate <NSObject>
 
-- (id) initWithPeerId:(MCPeerID *)peerId 
-   withPeerIdentifier:(NSString *)peerIdentifier
-       withServerPort:(unsigned short)serverPort
-      withServiceType:(NSString *)serviceType; 
-
-// Start/stop advertising
-- (void)start;
-- (void)stop;
-
-// Restart advertising without killing existing sessions
-- (void)restart;
-
-// Set reset callback for managing restarts
-- (void)setTimerResetCallback:(void (^)(void))timerCallback;
+- (void)peerAvailabilityChanged:(NSString *)peerJSON;
+- (void)networkChanged:(NSString *)json;
+- (void)appEnteringBackground;
+- (void)appEnteredForeground;
 
 @end

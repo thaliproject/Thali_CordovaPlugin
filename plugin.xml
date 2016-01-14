@@ -41,6 +41,8 @@
         <framework src="MultipeerConnectivity.framework" />
         <framework src="CoreBluetooth.framework" />
         <framework src="SystemConfiguration.framework" />
+        <header-file src="src/ios/THEThaliEventDelegate.h"
+          compiler-flags="-Werror"/>
         <source-file src="src/ios/JXcoreExtension.m"
           compiler-flags="-Werror"/>
         <header-file src="src/ios/Utility/THEThreading.h"
@@ -67,10 +69,6 @@
           compiler-flags="-Werror"/>
         <source-file src="src/ios/THEPeerBluetooth.m" 
           compiler-flags="-Werror"/>
-        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSession.h" 
-          compiler-flags="-Werror"/>
-        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerSession.m" 
-          compiler-flags="-Werror -std=gnu99"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerDiscoveryDelegate.h" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClient.h" 

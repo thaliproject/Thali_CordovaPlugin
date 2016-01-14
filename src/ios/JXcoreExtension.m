@@ -25,18 +25,64 @@
 //  JXcoreExtension.m
 //
 
+#import "JXcore.h"
+#import "THEThreading.h"
 #import "JXcoreExtension.h"
 #import "THEAppContext.h"
-
-#import "JXcore.h"
+#import "THEThaliEventDelegate.h"
 
 // JXcoreExtension implementation.
+
+@interface JXcoreExtension (Internal) <THEThaliEventDelegate>
+
+- (void)peerAvailabilityChanged:(NSString *)peerJSON;
+- (void)networkChanged:(NSString *)json;
+- (void)appEnteringBackground;
+- (void)appEnteredForeground;
+
+@end
+
+// JavaScript callbacks.
+NSString * const kNetworkChanged = @"networkChanged";
+NSString * const kPeerAvailabilityChanged = @"peerAvailabilityChanged";
+NSString * const kAppEnteringBackground = @"appEnteringBackground";
+NSString * const kAppEnteredForeground = @"appEnteredForeground";
+
 @implementation JXcoreExtension
+
+- (void)peerAvailabilityChanged:(NSString *)peerJSON
+{
+  // Fire the peerAvailabilityChanged event.
+  OnMainThread(^{
+    [JXcore callEventCallback:kPeerAvailabilityChanged
+                     withJSON:peerJSON];
+  });
+}
+
+- (void)networkChanged:(NSString *)json
+{
+  // Fire the networkChanged event.
+  OnMainThread(^{
+      [JXcore callEventCallback:kNetworkChanged
+                       withJSON:json];
+  });
+}
+
+- (void)appEnteringBackground
+{
+  [JXcore callEventCallback:kAppEnteringBackground withParams:@[]];
+}
+
+- (void)appEnteredForeground
+{
+  [JXcore callEventCallback:kAppEnteredForeground withParams:@[]];
+}
 
 // Defines methods.
 - (void)defineMethods
 {
   THEAppContext *theApp = [THEAppContext singleton];
+  [theApp setThaliEventDelegate:self];
 
   // Export the public API to node
 
@@ -87,7 +133,7 @@
     }
     else 
     {
-      if ([theApp startUpdateAdvertisingAndListenForIncomingConnections])
+      if ([theApp startUpdateAdvertisingAndListenForIncomingConnections:(unsigned short)params[0]])
       {
         NSLog(@"jxcore: StartUpdateAdvertisingAndListenForIncomingConnections: success");
         [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];

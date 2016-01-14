@@ -26,18 +26,16 @@
 //
 
 #import <pthread.h>
-#include "jx.h"
-#import "JXcore.h"
 #import "THEAtomicFlag.h"
 #import "THEThreading.h"
 #import "NPReachability.h"
 #import "THEPeerBluetooth.h"
-#import "THEMultipeerSession.h"
+#import "THEMultipeerClient.h"
+#import "THEMultipeerServer.h"
 #import "THEAppContext.h"
 #import "THEPeer.h"
+#import "THEThaliEventDelegate.h"
 
-// JavaScript callbacks.
-NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
 
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal)
@@ -60,6 +58,9 @@ NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
 @implementation THEAppContext
 {
 @private
+  // the event delegate to which we'll deliver key events
+  id<THEThaliEventDelegate> _eventDelegate;
+  
   // true if we're listening for advertisements
   THEAtomicFlag * _isListening;
 
@@ -75,15 +76,22 @@ NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
   // Bluetooth enabled state
   bool _bluetoothEnabled;
 
+  // MPCF peer ID
+  MCPeerID * _peerID;
+ 
   // Our current app level id
-  NSString *_peerIdentifier;
+  NSString * _peerIdentifier;
     
   // Peer Bluetooth.
   THEPeerBluetooth * _peerBluetooth;
-    
-  // Peer Networking.
-  THEMultipeerSession * _multipeerSession;
-    
+ 
+  // The multipeer client which will handle browsing and connecting for us
+  THEMultipeerClient *_client;
+
+  // The multipeer server which will handle advertising out service and accepting 
+  // connections from remote clients
+  THEMultipeerServer *_server;
+   
   // The mutex used to protect access to things below.
   pthread_mutex_t _mutex;
     
@@ -92,6 +100,7 @@ NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
 }
 
 // CONSTANTS
+static NSString *const THALI_SERVICE_TYPE = @"Thali";
 static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B";
 
 // Singleton.
@@ -118,6 +127,18 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   return appContext;
 }
 
+// ctor
+- (id)init
+{
+  _peerIdentifier = [[[NSUUID alloc] init] UUIDString];
+  _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
+  return self;
+}
+
+- (void)setThaliEventDelegate:(id)eventDelegate
+{
+  _eventDelegate = eventDelegate;
+}
 
 // Starts up the client components
 - (BOOL)startListeningForAdvertisements
@@ -126,6 +147,14 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   {
     if ([_isListening trySet])
     {
+      _client = [[THEMultipeerClient alloc] 
+                          initWithPeerId:_peerID
+                      withPeerIdentifier:_peerIdentifier
+                         withServiceType:THALI_SERVICE_TYPE
+                   withDiscoveryDelegate:self];
+
+      [_client start];
+
       return true;
     }
   }
@@ -141,6 +170,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     if ([_isListening tryClear])
     {
       // Stop
+      [_client stop];
     }
   }
 
@@ -148,13 +178,19 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 }
 
 // Starts up the server components
-- (BOOL)startUpdateAdvertisingAndListenForIncomingConnections
+- (BOOL)startUpdateAdvertisingAndListenForIncomingConnections:(unsigned short)serverPort
 {
   if ([_isAdvertising isClear])
   {
     if ([_isAdvertising trySet])
     {
-      // Start fresh
+      // Start up the server   
+      _server = [[THEMultipeerServer alloc] initWithPeerId: _peerID 
+                    withPeerIdentifier: _peerIdentifier
+                        withServerPort: serverPort
+                       withServiceType: THALI_SERVICE_TYPE];
+
+      [_server start];
     }
   }
   else
@@ -171,7 +207,10 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   if ([_isAdvertising isSet])
   {
     // Stop
-    [_isAdvertising tryClear];
+    if ([_isAdvertising tryClear])
+    {
+      [_server stop];
+    }
   }
 
   return true;
@@ -181,12 +220,12 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 // Starts communications.
 - (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort
 {
-  if ([_atomicFlagCommunicationsEnabled trySet])
-  {
-    _peerIdentifier = [[NSString alloc] initWithString:peerIdentifier];
+  //if ([_atomicFlagCommunicationsEnabled trySet])
+  //{
+  //  _peerIdentifier = [[NSString alloc] initWithString:peerIdentifier];
 
     // Somewhere to put our peers
-    _peers = [[NSMutableDictionary alloc] init];
+    //_peers = [[NSMutableDictionary alloc] init];
 
     /*
       Temporarily disable the BLE stack since it's not required for 
@@ -205,7 +244,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
        
 
     // Intitialise the multipeer connectivity stack..
-    _multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
+    /*_multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
                                                           peerIdentifier:peerIdentifier
                                                                 peerName:[serverPort stringValue]
                                                        discoveryDelegate:self];
@@ -221,14 +260,14 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 
     return true;
   }
-
+  */
   return false;
 }
 
 // Stops communications.
 - (BOOL)stopBroadcasting
 {
-  if ([_atomicFlagCommunicationsEnabled tryClear])
+/*  if ([_atomicFlagCommunicationsEnabled tryClear])
   {
     //[_peerBluetooth stop];
     [_multipeerSession stop];
@@ -245,7 +284,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     _peers = nil;
     return YES;
   }
-    
+  */
   NSLog(@"app: didn't stop broadcasting");
   return NO;
 }
@@ -260,9 +299,9 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
       connectCallback(@"app: Not initialised", 0);
       return NO;
   }
-    
-  return [_multipeerSession connectToPeerServerWithPeerIdentifier:peerIdentifier 
-                                              withConnectCallback:connectCallback];
+
+  return [_client connectToPeerWithPeerIdentifier:peerIdentifier
+                              withConnectCallback:(void(^)(NSString *, uint))connectCallback];
 }
 
 // Disconnects from the peer server with the specified peer identifier.
@@ -275,7 +314,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     return NO;
   }
     
-  return [_multipeerSession disconnectFromPeerServerWithPeerIdentifier:peerIdentifier];
+  return [_client disconnectFromPeerWithPeerIdentifier:peerIdentifier];
 }
 
 // Kill connection with extreme prejudice, no clean-up, testing only
@@ -287,7 +326,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     return NO;
   }
 
-  return [_multipeerSession killConnection:peerIdentifier];
+  return [_client killConnection:peerIdentifier];
 }
 
 ////////////////////////////////////////////////////////////
@@ -318,11 +357,10 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   // Unlock.
   pthread_mutex_unlock(&_mutex);
 
-  // Fire the peerAvailabilityChanged event.
-  OnMainThread(^{
-    [JXcore callEventCallback:kPeerAvailabilityChanged
-                     withJSON:[peer JSON]];
-  });
+  if (_eventDelegate)
+  {
+    [_eventDelegate peerAvailabilityChanged:[peer JSON]];
+  }
 }
 
 - (void)didLosePeerIdentifier:(NSString *)peerIdentifier
@@ -343,10 +381,10 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   // Fire the peerAvailabilityChanged event.
   if (peer)
   {
-    OnMainThread(^{
-        [JXcore callEventCallback:kPeerAvailabilityChanged
-                         withJSON:[peer JSON]];
-    });
+    if (_eventDelegate)
+    {
+      [_eventDelegate peerAvailabilityChanged:[peer JSON]];
+    }
   }
 }
 
@@ -391,11 +429,10 @@ didConnectPeerIdentifier:(NSString *)peerIdentifier
   // Unlock.
   pthread_mutex_unlock(&_mutex);
 
-  // Fire the peerAvailabilityChanged event.
-  OnMainThread(^{
-      [JXcore callEventCallback:kPeerAvailabilityChanged
-                       withJSON:[peer JSON]];
-  });
+  if (_eventDelegate)
+  {
+    [_eventDelegate peerAvailabilityChanged:[peer JSON]];
+  }
 }
 
 // Notifies the delegate that a peer was disconnected.
@@ -472,25 +509,28 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
         json = @"{ \"isAvailable\": false }";
     }
 
-    // Fire the networkChanged event.
-    OnMainThread(^{
-        [JXcore callEventCallback:@"networkChanged"
-                         withJSON:json];
-    });
+    if (_eventDelegate)
+    {
+      [_eventDelegate networkChanged: json];
+    }
 }
 
 // UIApplicationWillResignActiveNotification callback.
 - (void)applicationWillResignActiveNotification:(NSNotification *)notification
 {
-    [JXcore callEventCallback:@"appEnteringBackground"
-                   withParams:@[]];
+    if (_eventDelegate)
+    {
+      [_eventDelegate appEnteringBackground];
+    }
 }
 
 // UIApplicationDidBecomeActiveNotification callback.
 - (void)applicationDidBecomeActiveNotification:(NSNotification *)notification
 {
-    [JXcore callEventCallback:@"appEnteredForeground"
-                   withParams:@[]];
+    if (_eventDelegate)
+    {
+      [_eventDelegate appEnteredForeground];
+    }
 }
 
 @end

@@ -226,6 +226,8 @@
 		D4E619EE1C47DE5E00903813 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_PEDANTIC = YES;
 				HEADER_SEARCH_PATHS = (
 					../../Utility,
 					../../NPReachability,
@@ -241,6 +243,8 @@
 		D4E619EF1C47DE5E00903813 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_PEDANTIC = YES;
 				HEADER_SEARCH_PATHS = (
 					../../Utility,
 					../../NPReachability,

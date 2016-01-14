@@ -28,6 +28,7 @@
 #import <Foundation/Foundation.h>
 #import "THEMultipeerDiscoveryDelegate.h"
 #import "THEPeerBluetoothDelegate.h"
+#import "THEThaliEventDelegate.h"
 
 // Callback that will be called when the lower levels have established
 // a client relay in response to a connect
@@ -36,8 +37,14 @@ typedef void(^ConnectCallback)(NSString *error, uint port);
 // THEAppContext interface.
 @interface THEAppContext : NSObject <THEMultipeerDiscoveryDelegate, THEPeerBluetoothDelegate>
 
+// ctor
+- (id)init;
+
 // Class singleton.
 + (instancetype)singleton;
+
+// Set the event delegate
+- (void)setThaliEventDelegate:(id<THEThaliEventDelegate>) eventDelegate;
 
 // Start the client components
 - (BOOL)startListeningForAdvertisements;
@@ -46,7 +53,7 @@ typedef void(^ConnectCallback)(NSString *error, uint port);
 - (BOOL)stopListeningForAdvertisements;
 
 // Start the server components
-- (BOOL)startUpdateAdvertisingAndListenForIncomingConnections;
+- (BOOL)startUpdateAdvertisingAndListenForIncomingConnections:(unsigned short)serverPort;
 
 // Stop the server components
 - (BOOL)stopUpdateAdvertisingAndListenForIncomingConnections;

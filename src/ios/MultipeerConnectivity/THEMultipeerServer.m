@@ -41,11 +41,10 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     // Application level identifiers
     NSString *_peerIdentifier;
-    NSString *_peerName;
     NSString *_serviceType;
 
     // The port on which the application level is listening
-    uint _serverPort;
+    unsigned short _serverPort;
 
     // Map of sessions for all the peers we know about
     THESessionDictionary *_serverSessions;
@@ -55,8 +54,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 }
 
 -(id) initWithPeerId:(MCPeerID *)peerId 
-    withPeerIdentifier:(NSString *)peerIdentifier 
-          withPeerName:(NSString *)peerName
+    withPeerIdentifier:(NSString *)peerIdentifier
+        withServerPort:(unsigned short)serverPort
        withServiceType:(NSString *)serviceType
 {
     self = [super init];
@@ -69,8 +68,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     _localPeerId = peerId;
 
-    _peerName = peerName;
-
     // Make peerIdentifier guaranteed to be unique per MCPeerID so that
     // clients can distinguish stale server sessions with the same peerIdentifier
     NSMutableString *tempString = [[NSMutableString alloc] initWithString:peerIdentifier];
@@ -82,10 +79,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     _peerIdentifier = tempString;
     _serviceType = serviceType;
-
-    // peer name doubles up as server port in current impl.
-    // This is the port the node server is listening to on localhost
-    _serverPort = [peerName intValue];
+    _serverPort = serverPort;
 
     return self;
 }
