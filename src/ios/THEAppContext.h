@@ -37,9 +37,6 @@ typedef void(^ConnectCallback)(NSString *error, uint port);
 // THEAppContext interface.
 @interface THEAppContext : NSObject <THEMultipeerDiscoveryDelegate, THEPeerBluetoothDelegate>
 
-// ctor
-- (id)init;
-
 // Class singleton.
 + (instancetype)singleton;
 

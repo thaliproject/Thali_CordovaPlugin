@@ -40,8 +40,8 @@
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal)
 
-// Class initializer.
-- (instancetype)init;
+// ctor
+- (id)init;
 
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent;
@@ -125,14 +125,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     
   // Done.
   return appContext;
-}
-
-// ctor
-- (id)init
-{
-  _peerIdentifier = [[[NSUUID alloc] init] UUIDString];
-  _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
-  return self;
 }
 
 - (void)setThaliEventDelegate:(id)eventDelegate
@@ -459,9 +451,11 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     return nil;
   }
     
-  // Intialize.
+  _peerIdentifier = [[[NSUUID alloc] init] UUIDString];
+  _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
+
   _isListening = [[THEAtomicFlag alloc] init];
-  _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
+  _isAdvertising = [[THEAtomicFlag alloc] init];
  
   // We don't really know yet, assum the worst, we'll get an update
   // when we initialise the BT stack 
