@@ -6,8 +6,8 @@ var inherits = require('util').inherits;
 var randomstring = require('randomstring');
 
 var logger = function (value) {
-    console.log(new Date().toJSON() + ' SendDataConnector.js: ' + value);
-}
+  //console.log(new Date().toJSON() + ' SendDataConnector.js: ' + value);
+};
 
 function SendDataConnector(rounds,dataAmount,reTryTimeout,reTryMaxCount,dataTimeOut) {
     console.log("daya" + dataAmount);
