@@ -12,6 +12,7 @@ gradlew.bat
 # Nodejs
 node_modules
 npm-debug.log
+
 # Cordova
 out/
 
@@ -22,3 +23,6 @@ out/
 # Testing
 test/TestServer/server-address.js
 test/www/jxcore/server-address.js
+
+# Misc
+thali/readme.md
