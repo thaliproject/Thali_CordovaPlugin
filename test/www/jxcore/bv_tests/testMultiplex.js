@@ -44,7 +44,7 @@ test('multiplex can send data', function (t) {
     });
   });
 });
-/*
+
 test('muxServerBridge', function (t) {
   var len = 200;
   var testMessage = randomstring.generate(len);
@@ -65,24 +65,26 @@ test('muxServerBridge', function (t) {
           var clientPort = muxClientBridge.address().port;
 
           var socket = net.createConnection({port: clientPort}, function () {
-            socket.end(new Buffer(testMessage));
+            socket.write(new Buffer(testMessage));
           });
 
           socket.on('data', function (data) {
             t.equal(testMessage, String(data), 'String should be length:' + testMessage.length);
-            t.end();
+            socket.end();
 
             muxClientBridge.on('close', function () {
               console.log('closed');
             });
 
-            muxClientBridge.close();
-            muxServerBridge.close();
-            server.close();
+            muxClientBridge.exit(function () {
+              muxServerBridge.exit(function () {
+                testServer.close();
+                t.end();
+              });
+            });
           });
         });
       });
     });
   });
 });
-*/
