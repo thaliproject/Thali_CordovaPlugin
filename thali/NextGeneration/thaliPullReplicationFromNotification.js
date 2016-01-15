@@ -23,34 +23,26 @@
  */
 
 /**
- * Records a peer's ID and what databases we are expected to synch when we
- * connect to that peer.
- *
- * @public
- * @typedef {Object} NotificationSubscription
- * @property {string} peerKey A base 64 URL safe encoded public key identifying
- * the peer
- * @property {string[]} dbsToSync An array of DB names, these names will be
- * appended to a HTTP URL of the form 'http://domain OR ip/'.
- *
- */
-
-
-/**
  * @classdesc This class will listen for
  * {@link module:thaliNotificationClient.event:peerAdvertisesDataForUs} events
  * and then schedule replications.
  *
  * If we receive a notification for a peer that is on our list then we will
- * check to see if we have already enqueued a job for them. If we have then
- * we don't need to do anything. If there is no enqueued job or if there is
- * a running job then we must enqueue a replication work item.
+ * check to see if we have already enqueued a job for them. If we have then we
+ * will have to dequeue it and create a new job since a second notification
+ * should really only have happened if some the values for the peer have
+ * changed. If there is no enqueued job or if there is a running job then we
+ * must enqueue a replication work item.
  *
  * Enqueued jobs are expected to handle replicating the databases in the list
  * we were given. Note that we must late bind the entries in the list so that
  * if there is an update to the list of DBs that a peer is supposed to synch
  * between the time the peer is enqueued and when it is run then we will always
  * use the latest list.
+ *
+ * When we schedule a
+ *
+ * If we receive a notification that a peer is no longer available
  *
  * @public
  * @param {PouchDB} pouchDB
@@ -62,6 +54,21 @@ function ThaliPullReplicationFromNotification(pouchDB, thaliPeerPoolInterface,
                                               thaliNotificationClient) {
 
 }
+
+ThaliPullReplicationFromNotification.prototype._notificationSubscriptions =
+  null;
+
+/**
+ * @public
+ * @typedef {Object} replicationDescription
+ * @property {string} databaseName This is a DB name that will be used to
+ * replicate to a local DB and will be appended to "http://domain or IP:port/"
+ * to create the remote name.
+ * @property {boolean} liveReplication If true this specifies that when
+ * replication starts it should continue until the peer is no longer available.
+ * Note that setting this value to true will block replicating any other DBs
+ * for this peer since we currently only replicate one DB at a time.
+ */
 
 /**
  * This sets the complete list of peers and DBs to synch for those peers when
@@ -80,11 +87,16 @@ function ThaliPullReplicationFromNotification(pouchDB, thaliPeerPoolInterface,
  *
  * We will not start listening for events until the first call to this method.
  *
- * @param {NotificationSubscription[]} notificationSubscriptions
+ * @param {Object.<string, replicationDescription[]>} notificationSubscriptions
+ * The key is a base 64 url safe encoded public key that identifies the peer.
+ * The value is an array of descriptions specifying what DBs to replicate for
+ * this peer.
  */
 ThaliPullReplicationFromNotification.prototype.setNotifications =
   function (notificationSubscriptions) {
-
+    // Do check that the value is valid
+    ThaliPullReplicationFromNotification.prototype._notificationSubscriptions =
+      notificationSubscriptions;
   };
 
 module.exports = ThaliPullReplicationFromNotification;

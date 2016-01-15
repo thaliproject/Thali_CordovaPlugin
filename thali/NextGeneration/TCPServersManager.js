@@ -9,8 +9,8 @@ var Promise = require('lie');
  *
  * This is where we manage creating multiplex objects. For all intents and
  * purposes this file should be treated as part of {@link
- * module:thaliMobileNative}. We have broken this functionality out here in
- * order to make the code more maintainable and easier to follow.
+ * module:thaliMobileNativeWrapper}. We have broken this functionality out here
+ * in order to make the code more maintainable and easier to follow.
  *
  * When dealing with incoming connections this code creates a multiplex object
  * to handle de-multiplexing the incoming connections and in the iOS case to
@@ -113,7 +113,7 @@ var Promise = require('lie');
  * Maximum number of peers we support simultaneously advertising
  * @type {number}
  */
-var maxPeersToAdvertise = 1000;
+var maxPeersToAdvertise = 20;
 
 /**
  * This method will call
@@ -161,14 +161,14 @@ TCPServersManager.prototype.stop = function() {
 };
 
 /**
- * This method creates a TCP listener to handle requests from the native layer
- * and to then pass them through a multiplex object who will route all the
- * multiplexed connections to routerPort, the port the system has hosted the
- * submitted router object on. The TCP listener will be started on port 0 and
- * the port it is hosted on will be returned in the promise. This is the port
- * that MUST be submitted to the native layer's {@link
- * external:"Mobile('startUpdateAdvertisingAndListening')".ca
- * llNative} command.
+ * This method creates a TCP listener (which MUST use {@link
+ * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) to handle requests
+ * from the native layer and to then pass them through a multiplex object who
+ * will route all the multiplexed connections to routerPort, the port the system
+ * has hosted the submitted router object on. The TCP listener will be started
+ * on port 0 and the port it is hosted on will be returned in the promise. This
+ * is the port that MUST be submitted to the native layer's {@link
+ * external:"Mobile('startUpdateAdvertisingAndListening')".callNative} command.
  *
  * If this method is called when we are not in the start state then an exception
  * MUST be thrown because this is a private method and something very bad just

@@ -36,20 +36,13 @@ module.exports.actionState = {
  * @param {string} peerIdentifier
  * @param {module:thaliMobile.connectionTypes} connectionType
  * @param {string} actionType
- * @param {number} nonContentionLifeSpan The maximum number of milliseconds
- * to run the job before calling kill if there are no other jobs on the queue.
- * @param {number} contentionLifeSpan The maximum number of milliseconds to run
- * the job before calling kill if there are other jobs that are blocked by
- * this job.
  */
-function PeerAction (peerIdentifier, connectionType, actionType,
-                     nonContentionLifeSpan, contentionLifeSpan) {
+function PeerAction (peerIdentifier, connectionType, actionType)
+{
   this.peerIdentifier = peerIdentifier;
   this.connectionType = connectionType;
   this.actionType = actionType;
   this.actionState = module.exports.actionState.STARTED;
-  this.nonContentionLifeSpan = nonContentionLifeSpan;
-  this.contentionLifeSpan = contentionLifeSpan;
 }
 
 /**
@@ -92,30 +85,6 @@ PeerAction.prototype.getActionType = function () {
 };
 
 /**
- * The time in milliseconds to run the job before calling kill if there are no
- * other jobs in contention.
- * @private
- * @type {number}
- */
-PeerAction.prototype.nonContentionLifeSpan = null;
-
-PeerAction.prototype.getNonContentionLifeSpan = function () {
-  return this.nonContentionLifeSpan;
-};
-
-/**
- * The time in milliseconds to run the job before calling kill if there are
- * other jobs being blocked by this job.
- * @private
- * @type {number}
- */
-PeerAction.prototype.contentionLifeSpan = null;
-
-PeerAction.prototype.getContentionLifeSpan = function () {
-  return this.contentionLifeSpan;
-};
-
-/**
  * The current state of the action
  * @private
  * @type {module:thaliPeerAction.actionState}
@@ -134,10 +103,12 @@ PeerAction.prototype.getActionState = function () {
  *
  * Start is idempotent so multiple calls MUST NOT directly cause a state change.
  * That is, if the action hasn't started then the first call to start will
- * start it and further calls will accomplish nothing.
+ * start it and further calls will accomplish nothing more than just returning
+ * the same promise that the original call returned.
  *
  * If start is called on an action that has completed, successfully or not, then
- * an error object MUST be returned with the value "action has completed."
+ * the returned promised must be resolved with an error object MUST with the
+ * value "action has completed."
  *
  * If the action fails due to a network issue it is important that this be
  * reported to the pool because it can use this information to decide how to

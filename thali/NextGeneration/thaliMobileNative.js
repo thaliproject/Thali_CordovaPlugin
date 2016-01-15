@@ -112,8 +112,8 @@
  *
  * @public
  * @function external:"Mobile('startUpdateAdvertisingAndListening')".callNative
- * @param {number} portNumber The port on 127.0.0.1 that any incoming connections over the native non-TCP/IP transport
- * should be bridged to.
+ * @param {number} portNumber The port on 127.0.0.1 that any incoming
+ * connections over the native non-TCP/IP transport should be bridged to.
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 
@@ -412,11 +412,14 @@ var radioState = {
   ON: 'on',
   /** The radio exists on the device but is turned off. */
   OFF: 'off',
-  /** The radio exists on the device and is on but for some reason the system won't let us use it. */
+  /** The radio exists on the device and is on but for some reason the system
+   * won't let us use it. */
   UNAVAILABLE: 'unavailable',
-  /** We depend on this radio type for this platform type but it doesn't appear to exist on this device. */
+  /** We depend on this radio type for this platform type but it doesn't appear
+   * to exist on this device. */
   NOT_HERE: 'notHere',
-  /** Thali doesn't use this radio type on this platform and so makes no effort to determine its state. */
+  /** Thali doesn't use this radio type on this platform and so makes no effort
+   * to determine its state. */
   DO_NOT_CARE: 'doNotCare'
 };
 
@@ -479,7 +482,8 @@ var radioState = {
  *
  * @public
  * @callback incomingConnectionToPortNumberFailedCallback
- * @property {number} portNumber The 127.0.0.1 port that the TCP/IP bridge tried to connect to.
+ * @property {number} portNumber The 127.0.0.1 port that the TCP/IP bridge tried
+ * to connect to.
  */
 
 /**
