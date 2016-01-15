@@ -5,7 +5,10 @@ package io.jxcore.node;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothSocket;
+import android.bluetooth.le.AdvertiseSettings;
+import android.bluetooth.le.ScanSettings;
 import android.content.Context;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.util.Log;
 import org.json.JSONArray;
@@ -13,7 +16,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager.ConnectionManagerState;
+import org.thaliproject.p2p.btconnectorlib.ConnectionManagerSettings;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
+import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import java.io.IOException;
 import java.util.HashMap;
@@ -44,7 +49,8 @@ public class ConnectionHelper
     private static final String BLUETOOTH_NAME = "Thali_Bluetooth";
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
     private static final UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
-    private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 100; // TODO: Determine a way to figure out a proper value here
+    private static final long POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS = 15000;
+    private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 30; // TODO: Determine a way to figure out a proper value here
     private static final int PORT_NUMBER_IN_ERROR_CASES = -1;
 
     private final Context mContext;
@@ -55,6 +61,8 @@ public class ConnectionHelper
     private final HashMap<String, JxCoreExtensionListener> mOutgoingConnectionListeners = new HashMap<String, JxCoreExtensionListener>();
     private ConnectionManager mConnectionManager = null;
     private DiscoveryManager mDiscoveryManager = null;
+    private DiscoveryManagerSettings mDiscoveryManagerSettings = null;
+    private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPort = 0;
 
     /**
@@ -91,11 +99,14 @@ public class ConnectionHelper
 
         mConnectionManager = new ConnectionManager(mContext, this, SERVICE_UUID, BLUETOOTH_NAME);
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
+        mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance();
 
-        // Use only Wi-Fi Direct based peer discovery for now until BLE is properly tested
-        //if (!mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
+        if (mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
+            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
+            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
+        } else {
             mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
-        //}
+        }
 
         boolean connectionManagerStarted = mConnectionManager.start(peerName);
         boolean discoveryManagerStarted = false;
@@ -187,6 +198,18 @@ public class ConnectionHelper
     }
 
     /**
+     * @return Our Bluetooth friendly name or null, if Bluetooth adapter
+     * is not resolved or an error occurs while retrieving the name.
+     */
+    public String getBluetoothName() {
+        BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
+        if (bluetooth != null) {
+            return bluetooth.getName();
+        }
+        return null;
+    }
+
+    /**
      * Checks if we have an incoming connection with a peer matching the given peer ID.
      * @param peerId The peer ID.
      * @return True, if connected. False otherwise.
@@ -242,43 +265,66 @@ public class ConnectionHelper
         }
 
         if (isRunning()) {
-            if (hasConnection(peerIdToConnectTo)) {
-                Log.i(TAG, "connect: We already have a connection to peer with ID " + peerIdToConnectTo);
-            }
-
-            if (mOutgoingSocketThreads.size() < MAXIMUM_NUMBER_OF_CONNECTIONS) {
-                PeerProperties selectedDevice = findDiscoveredPeer(peerIdToConnectTo);
-
-                if (selectedDevice == null) {
-                    Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
-                    selectedDevice = new PeerProperties(
-                            peerIdToConnectTo, peerIdToConnectTo, peerIdToConnectTo, "", "", "");
+            if (!hasOutgoingConnection(peerIdToConnectTo)) {
+                if (hasIncomingConnection(peerIdToConnectTo)) {
+                    Log.i(TAG, "connect: We already have an incoming connection to peer with ID "
+                            + peerIdToConnectTo + ", but will connect anyway...");
                 }
 
-                if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothAddress())) {
-                    if (mConnectionManager.connect(selectedDevice)) {
-                        Log.i(TAG, "connect: Connection process successfully started (peer ID: " + peerIdToConnectTo + ")");
-                        mOutgoingConnectionListeners.put(peerIdToConnectTo, listener);
+                if (mOutgoingSocketThreads.size() < MAXIMUM_NUMBER_OF_CONNECTIONS) {
+                    PeerProperties selectedDevice = findDiscoveredPeer(peerIdToConnectTo);
+
+                    if (selectedDevice == null) {
+                        Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
+                        selectedDevice = new PeerProperties(
+                                peerIdToConnectTo, peerIdToConnectTo, peerIdToConnectTo, "", "", "");
+                    }
+
+                    if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothAddress())) {
+                        if (mConnectionManager.connect(selectedDevice)) {
+                            Log.i(TAG, "connect: Connection process successfully started (peer ID: " + peerIdToConnectTo + ")");
+                            mOutgoingConnectionListeners.put(peerIdToConnectTo, listener);
+                        } else {
+                            Log.e(TAG, "connect: Failed to start connecting");
+                            listener.onConnectionStatusChanged("Failed to start connecting", PORT_NUMBER_IN_ERROR_CASES);
+                        }
                     } else {
-                        Log.e(TAG, "connect: Failed to start connecting");
-                        listener.onConnectionStatusChanged("Failed to start connecting", PORT_NUMBER_IN_ERROR_CASES);
+                        Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress());
+                        listener.onConnectionStatusChanged(
+                                "Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress(), PORT_NUMBER_IN_ERROR_CASES);
                     }
                 } else {
-                    Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress());
-                    listener.onConnectionStatusChanged(
-                            "Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress(), PORT_NUMBER_IN_ERROR_CASES);
+                    Log.e(TAG, "connect: Maximum number of peer connections ("
+                            + mOutgoingSocketThreads.size()
+                            + ") reached, please try again after disconnecting a peer");
+                    listener.onConnectionStatusChanged("Maximum number of peer connections ("
+                            + mOutgoingSocketThreads.size()
+                            + ") reached, please try again after disconnecting a peer", PORT_NUMBER_IN_ERROR_CASES);
                 }
             } else {
-                Log.e(TAG, "connect: Maximum number of peer connections ("
-                        + mOutgoingSocketThreads.size()
-                        + ") reached, please try again after disconnecting a peer");
-                listener.onConnectionStatusChanged("Maximum number of peer connections ("
-                        + mOutgoingSocketThreads.size()
-                        + ") reached, please try again after disconnecting a peer", PORT_NUMBER_IN_ERROR_CASES);
+                Log.w(TAG, "connect: We already have an outgoing connection to peer with ID "
+                        + peerIdToConnectTo + ", aborting...");
+
             }
         } else {
             Log.e(TAG, "connect: Not running, please call start() first");
             listener.onConnectionStatusChanged("Not running, please call start() first", PORT_NUMBER_IN_ERROR_CASES);
+        }
+    }
+
+    /**
+     * Toggles between the system decided and the default alternative insecure RFCOMM port number.
+     */
+    public void toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber() {
+        ConnectionManagerSettings settings = ConnectionManagerSettings.getInstance();
+
+        if (settings.getInsecureRfcommSocketPortNumber() ==
+                ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT) {
+            settings.setInsecureRfcommSocketPortNumber(
+                    ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
+        } else {
+            settings.setInsecureRfcommSocketPortNumber(
+                    ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
         }
     }
 
@@ -317,18 +363,36 @@ public class ConnectionHelper
             notifyPeerAvailability(peerProperties, true);
         }
 
+        final ConnectionHelper thisInstance = this;
+
         if (isIncoming) {
             IncomingSocketThread newIncomingSocketThread = null;
 
             try {
                 newIncomingSocketThread = new IncomingSocketThread(bluetoothSocket, new ConnectionStatusListener() {
                     @Override
+                    public void onDataTransferred(int numberOfBytes) {
+                        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                thisInstance.lowerBleDiscoveryPowerAndStartResetTimer();
+                            }
+                        });
+                    }
+
+                    @Override
                     public void onDisconnected(SocketThreadBase who, String errorMessage) {
                         Log.w(TAG, "onDisconnected: Incoming connection, peer "
                                 + who.getPeerProperties().toString()
                                 + " disconnected: " + errorMessage);
+                        final long threadId = who.getId();
 
-                        closeAndRemoveIncomingConnectionThread(who.getId());
+                        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                thisInstance.closeAndRemoveIncomingConnectionThread(threadId);
+                            }
+                        });
                     }
                 });
             } catch (IOException e) {
@@ -366,12 +430,28 @@ public class ConnectionHelper
                     }
 
                     @Override
+                    public void onDataTransferred(int numberOfBytes) {
+                        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                thisInstance.lowerBleDiscoveryPowerAndStartResetTimer();
+                            }
+                        });
+                    }
+
+                    @Override
                     public void onDisconnected(SocketThreadBase who, String errorMessage) {
                         Log.w(TAG, "onDisconnected: Outgoing connection, peer "
                                 + who.getPeerProperties().toString()
                                 + " disconnected: " + errorMessage);
+                        final String peerId = who.getPeerProperties().getId();
 
-                        closeAndRemoveOutgoingConnectionThread(who.getPeerProperties().getId(), true);
+                        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                thisInstance.closeAndRemoveOutgoingConnectionThread(peerId, true);
+                            }
+                        });
                     }
                 });
             } catch (IOException e) {
@@ -395,8 +475,8 @@ public class ConnectionHelper
                         + peerProperties + ", created successfully");
 
                 // Use the system decided port the next time, if we're not already using
-                mConnectionManager.setInsecureRfcommSocketPort(
-                        ConnectionManager.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
+                ConnectionManagerSettings.getInstance().setInsecureRfcommSocketPortNumber(
+                        ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
             }
         }
 
@@ -417,33 +497,29 @@ public class ConnectionHelper
                 listener.onConnectionStatusChanged("Connection to peer " + peerProperties.toString() + " timed out", PORT_NUMBER_IN_ERROR_CASES);
                 mOutgoingConnectionListeners.remove(peerProperties.getId()); // Dispose the listener
             }
+
+            toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();
         }
     }
 
     /**
      * Forwards the connection failure to the correct listener.
      * @param peerProperties The peer properties.
+     * @param errorMessage The error message.
      */
     @Override
-    public void onConnectionFailed(PeerProperties peerProperties) {
+    public void onConnectionFailed(PeerProperties peerProperties, String errorMessage) {
         if (peerProperties != null) {
             final JxCoreExtensionListener listener = mOutgoingConnectionListeners.get(peerProperties.getId());
 
             if (listener != null) {
-                listener.onConnectionStatusChanged("Connection to peer " + peerProperties.toString() + " failed", PORT_NUMBER_IN_ERROR_CASES);
+                listener.onConnectionStatusChanged("Connection to peer " + peerProperties.toString()
+                        + " failed: " + errorMessage, PORT_NUMBER_IN_ERROR_CASES);
+
                 mOutgoingConnectionListeners.remove(peerProperties.getId()); // Dispose the listener
             }
 
-            if (mConnectionManager.getInsecureRfcommSocketPort() ==
-                    ConnectionManager.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT) {
-                // Try the alternative port the next time
-                mConnectionManager.setInsecureRfcommSocketPort(
-                        ConnectionManager.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
-            } else {
-                // Go back to system decided port
-                mConnectionManager.setInsecureRfcommSocketPort(
-                        ConnectionManager.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
-            }
+            toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();
         }
     }
 
@@ -470,6 +546,18 @@ public class ConnectionHelper
         if (modifyListOfDiscoveredPeers(peerProperties, true)) {
             notifyPeerAvailability(peerProperties, true);
         }
+    }
+
+    /**
+     * Called when one or more properties of a peer already discovered is updated.
+     * @param peerProperties The peer properties.
+     */
+    @Override
+    public void onPeerUpdated(PeerProperties peerProperties) {
+        Log.i(TAG, "onPeerUpdated: " + peerProperties.toString()
+                + ", Bluetooth address: " + peerProperties.getBluetoothAddress()
+                + ", device name: " + peerProperties.getDeviceName()
+                + ", device address: " + peerProperties.getDeviceAddress());
     }
 
     /**
@@ -678,6 +766,54 @@ public class ConnectionHelper
             JSONArray jsonArray = new JSONArray();
             jsonArray.put(jsonObject);
             jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_PEER_AVAILABILITY_CHANGED, jsonArray.toString());
+        }
+    }
+
+    /**
+     * Lowers the BLE discovery power settings. If the power settings are already changed, the
+     * timer for resetting the settings is restarted.
+     * 
+     * This method should be called when a data transfer is started to ensure a reasonable data
+     * transfer speed as using BLE for discovery will likely interfere with the data transfer done
+     * utilizing Bluetooth sockets.
+     */
+    private synchronized void lowerBleDiscoveryPowerAndStartResetTimer() {
+        if (mPowerUpBleDiscoveryTimer == null) {
+            DiscoveryManager.DiscoveryMode discoveryMode =
+                    mDiscoveryManager.getDiscoveryMode();
+
+            if (discoveryMode == DiscoveryManager.DiscoveryMode.BLE
+                    || discoveryMode == DiscoveryManager.DiscoveryMode.BLE_AND_WIFI) {
+                Log.i(TAG, "lowerBleDiscoveryPowerAndStartResetTimer: Lowering the power settings");
+
+                // Create a timer to increase the power used by Bluetooth LE advertiser and scanner
+                // once the data transfer is over.
+                mPowerUpBleDiscoveryTimer = new CountDownTimer(
+                        POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS, POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS) {
+                    @Override
+                    public void onTick(long millisUntilFinished) {
+                        // Not used
+                    }
+
+                    @Override
+                    public void onFinish() {
+                        this.cancel();
+                        Log.i(TAG, "Powering the BLE discovery back up");
+                        mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
+                        mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
+                        mPowerUpBleDiscoveryTimer = null;
+                    }
+                };
+
+                mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER);
+                mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
+
+                mPowerUpBleDiscoveryTimer.start();
+            }
+        } else {
+            // Restart the timer
+            mPowerUpBleDiscoveryTimer.cancel();
+            mPowerUpBleDiscoveryTimer.start();
         }
     }
 }

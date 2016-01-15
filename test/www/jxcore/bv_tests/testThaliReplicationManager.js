@@ -111,7 +111,6 @@ test('ThaliReplicationManager receives identity', function (t) {
   manager.start(5000, 'thali');
 });
 
-/*
 test('ThaliReplicationManager replicates database', function (t) {
   
   // Create a local doc with local device name and sync to peer. On receiving that they'll swap
@@ -224,4 +223,3 @@ test('ThaliReplicationManager replicates database', function (t) {
     });
   });
 });
-*/

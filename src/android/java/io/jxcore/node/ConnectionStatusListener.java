@@ -22,6 +22,13 @@ abstract class ConnectionStatusListener {
     }
 
     /**
+     * Called when data is transferred (read and/or written).
+     * @param numberOfBytes The number of bytes of data transferred.
+     */
+    void onDataTransferred(int numberOfBytes) {
+    }
+
+    /**
      * Called when disconnected.
      * @param who The thread, which reported the event.
      * @param errorMessage The error message.

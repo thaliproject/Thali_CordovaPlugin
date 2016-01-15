@@ -124,7 +124,6 @@ PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
 
   // Check if we're done
   this.testsToRun[platform].shift();
-  logger.info("Remaining tests: %s", this.testsToRun);
   if (!this.testsToRun[platform].length) {
 
     // All tests are complete, generate the result report
@@ -166,7 +165,9 @@ PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
 
       logger.debug("end to %s", device.deviceName);
       device.socket.emit("end", device.deviceName);
-    }); 
+    });
+  } else {
+    logger.info("Remaining tests: %s", this.testsToRun[platform]);
   }
 }
 
@@ -223,25 +224,33 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
     testData = testData[0];
     testData.peerCount = toComplete;
 
+    // Set a timeout that will move to next test
+    // regardless of whether all results are in
+    var serverTimeoutTimer = null;
+    if (testData.serverTimeout) {
+      serverTimeoutTimer = setTimeout(function() {
+        logger.info("server timeout for test: %s (%s)", test, platform);
+        nextTest();
+      }, testData.serverTimeout);
+    }
+
     var nextTest = function() {
       // When all devices have given us a result, complete the current test
       self.completeTest(test, platform, devices);
-      
+
+      // Cancel the server timeout
+      if (serverTimeoutTimer !== null) {
+        clearTimeout(serverTimeoutTimer);
+        serverTimeoutTimer = null;
+      }
+
       if (self.testsToRun[platform].length) {
         process.nextTick(function() {
           logger.info("Continuing to next test: " + self.testsToRun[platform][0]);
           doTest(self.testsToRun[platform][0]);
         });
       }
-    }
-
-    var serverTimeout = null;
-    if (testData.serverTimeout) {
-      serverTimeout = setTimeout(function() {
-        logger.info("server timeout for test: %s (%s)", test, platform);
-        nextTest();
-      }, testData.serverTimeout);
-    }
+    };
 
     devices.forEach(function(device) {
 
@@ -250,27 +259,20 @@ PerfTestFramework.prototype.startTests = function(platform, tests) {
 
       device.socket.once('test data', function (data) {
 
+        // Cache results in the device object
+        device.results = JSON.parse(data);
+
+        toComplete--;
+
         logger.info(
           "Received results for %s %s %s (%d left)", 
           data, device.deviceName, platform, toComplete
         );
 
-        // Cache results in the device object
-        device.results = JSON.parse(data);
-
-        // Cancel server timeout for this device
-        if (device.serverTimeoutTimer != null) {
-          clearTimeout(device.serverTimeoutTimer);
-          device.serverTimeoutTimer = null;
-        }
-
-        if (--toComplete == 0) {
+        if (toComplete === 0) {
           nextTest();
         }
       });
-
-      // Set a timeout that will move to next test
-      // regardless of whether all results are in
 
       // Begin the test..
       device.socket.emit(

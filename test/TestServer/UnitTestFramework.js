@@ -32,6 +32,11 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   var toComplete;
   var results = {};
 
+  if (!tests) {
+    // Default to all tests named by first device
+    tests = this.devices[platform][0].tests;
+  }
+ 
   // Copy arrays
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
@@ -155,7 +160,7 @@ UnitTestFramework.prototype.testReport = function(platform, tests, results) {
   logger.info("%d of %d tests completed", Object.keys(results).length, tests.length);
   logger.info("%d/%d passed (%d failures)", passed, tests.length, tests.length - passed);
 
-  logger.info("---\n\n");
+  logger.info("--- Test Details ---\n\n");
 
   for (test in results) {
     logger.info(test + " - " + (results[test] ? "pass" : "fail"));

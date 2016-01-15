@@ -97,8 +97,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)stop
 {
-  [self stopBrowsing];
   [_nearbyServiceBrowser setDelegate:nil];
+  [self stopBrowsing];
   _nearbyServiceBrowser = nil;
   _clientSessions = nil;
 }
