@@ -4,7 +4,9 @@
   "description": "Thali Cordova Plugin JXCore",
   "main": "runTests.js",
   "scripts": {
-    "test": "jx runTests.js"
+    "test": "jx runTests.js",
+    "test-meta": "jx runTests.js meta_tests",
+    "test-coordinated": "jx runCoordinatedTests.js"
   },
   "keywords": [
     "Thali",
