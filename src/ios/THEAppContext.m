@@ -33,7 +33,6 @@
 #import "THEMultipeerClient.h"
 #import "THEMultipeerServer.h"
 #import "THEAppContext.h"
-#import "THEPeer.h"
 #import "THEThaliEventDelegate.h"
 
 
@@ -45,6 +44,9 @@
 
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent;
+
+// Fire peerAvailabilityChanged event
+- (void)firePeerAvailabilityChangedEvent:(NSMutableDictionary *)peer;
 
 // UIApplicationWillResignActiveNotification callback.
 - (void)applicationWillResignActiveNotification:(NSNotification *)notification;
@@ -330,29 +332,28 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   // Lock.
   pthread_mutex_lock(&_mutex);
   
-  // Find the peer.
-  THEPeer * peer = _peers[peerIdentifier];
+  NSMutableDictionary * peer = [_peers objectForKey:peerIdentifier];
   
-  // If this is a new peer, add it.
   if (!peer)
   {
-    // Allocate and initialize the peer, add it to the peers dictionary.
-    peer = [[THEPeer alloc] initWithIdentifier:peerIdentifier
-                                          name:peerName];
-    [_peers setObject:peer
-               forKey:peerIdentifier];
+    peer = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
+      peerIdentifier, @"peerIdentifier",
+      @true, @"peerAvailable",
+      @false, @"pleaseConnect",
+      nil
+    ];
+ 
+    [_peers setObject:peer forKey:peerIdentifier];
   }
-    
-  // Update the peer state.
-  [peer setAvailable:YES];
-    
+  else
+  {
+    peer[@"peerIdentifier"] = @true;
+  }
+  
   // Unlock.
   pthread_mutex_unlock(&_mutex);
 
-  if (_eventDelegate)
-  {
-    [_eventDelegate peerAvailabilityChanged:[peer JSON]];
-  }
+  [self firePeerAvailabilityChangedEvent: peer];
 }
 
 - (void)didLosePeerIdentifier:(NSString *)peerIdentifier
@@ -361,10 +362,10 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   pthread_mutex_lock(&_mutex);
     
   // Find the peer.
-  THEPeer * peer = _peers[peerIdentifier];
+  NSMutableDictionary *peer = _peers[peerIdentifier];
   if (peer)
   {
-    [peer setAvailable:NO];
+    peer[@"peerAvailable"] = false;
   }
 
   // Unlock.
@@ -373,10 +374,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   // Fire the peerAvailabilityChanged event.
   if (peer)
   {
-    if (_eventDelegate)
-    {
-      [_eventDelegate peerAvailabilityChanged:[peer JSON]];
-    }
+    [self firePeerAvailabilityChangedEvent: peer];
   }
 }
 
@@ -405,7 +403,7 @@ didConnectPeerIdentifier:(NSString *)peerIdentifier
   pthread_mutex_lock(&_mutex);
 
   // Find the peer. If we found it, simply return.
-  THEPeer * peer = [_peers objectForKey:peerIdentifier];
+/*  THEPeer * peer = [_peers objectForKey:peerIdentifier];
   if (peer)
   {
       pthread_mutex_unlock(&_mutex);
@@ -417,14 +415,14 @@ didConnectPeerIdentifier:(NSString *)peerIdentifier
                                           name:peerName];
   [_peers setObject:peer
              forKey:peerIdentifier];
-
+*/
   // Unlock.
   pthread_mutex_unlock(&_mutex);
 
-  if (_eventDelegate)
-  {
-    [_eventDelegate peerAvailabilityChanged:[peer JSON]];
-  }
+  //if (_eventDelegate)
+  //{
+  //  [_eventDelegate peerAvailabilityChanged:[peer JSON]];
+  //}
 }
 
 // Notifies the delegate that a peer was disconnected.
@@ -480,6 +478,21 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
 
     // Done.
   return self;
+}
+
+- (void)firePeerAvailabilityChangedEvent:(NSMutableDictionary *)peer
+{
+  if (_eventDelegate)
+  {
+    NSArray *peerArray = [[NSArray alloc] initWithObjects:peer, nil];
+    
+    NSString *peerJSON = [[NSString alloc] initWithData:
+      [NSJSONSerialization dataWithJSONObject:peerArray options:0 error:nil]
+      encoding:NSUTF8StringEncoding
+    ];
+
+    [_eventDelegate peerAvailabilityChanged:peerJSON];
+  }
 }
 
 // Fires the network changed event.

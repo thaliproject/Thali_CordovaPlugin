@@ -7,7 +7,7 @@
 
 var config = {
   ios: {
-    numDevices:1
+    numDevices:2
   },
   android: {
     numDevices:0

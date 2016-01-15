@@ -59,10 +59,6 @@
           compiler-flags="-Werror"/>
         <source-file src="src/ios/THEAppContext.m" 
           compiler-flags="-Werror"/>
-        <header-file src="src/ios/THEPeer.h" 
-          compiler-flags="-Werror"/>
-        <source-file src="src/ios/THEPeer.m" 
-          compiler-flags="-Werror"/>
         <header-file src="src/ios/THEPeerBluetoothDelegate.h" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/THEPeerBluetooth.h" 

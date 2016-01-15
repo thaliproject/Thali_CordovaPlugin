@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		D4E619F71C47DEA500903813 /* THEAppContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D4E619F11C47DEA500903813 /* THEAppContext.m */; };
-		D4E619F81C47DEA500903813 /* THEPeer.m in Sources */ = {isa = PBXBuildFile; fileRef = D4E619F31C47DEA500903813 /* THEPeer.m */; };
 		D4E619F91C47DEA500903813 /* THEPeerBluetooth.m in Sources */ = {isa = PBXBuildFile; fileRef = D4E619F51C47DEA500903813 /* THEPeerBluetooth.m */; };
 /* End PBXBuildFile section */
 
@@ -28,8 +27,6 @@
 		D4E619E41C47DE5E00903813 /* libThali.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libThali.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4E619F01C47DEA500903813 /* THEAppContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEAppContext.h; path = ../../THEAppContext.h; sourceTree = "<group>"; };
 		D4E619F11C47DEA500903813 /* THEAppContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEAppContext.m; path = ../../THEAppContext.m; sourceTree = "<group>"; };
-		D4E619F21C47DEA500903813 /* THEPeer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEPeer.h; path = ../../THEPeer.h; sourceTree = "<group>"; };
-		D4E619F31C47DEA500903813 /* THEPeer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEPeer.m; path = ../../THEPeer.m; sourceTree = "<group>"; };
 		D4E619F41C47DEA500903813 /* THEPeerBluetooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEPeerBluetooth.h; path = ../../THEPeerBluetooth.h; sourceTree = "<group>"; };
 		D4E619F51C47DEA500903813 /* THEPeerBluetooth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEPeerBluetooth.m; path = ../../THEPeerBluetooth.m; sourceTree = "<group>"; };
 		D4E619F61C47DEA500903813 /* THEPeerBluetoothDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEPeerBluetoothDelegate.h; path = ../../THEPeerBluetoothDelegate.h; sourceTree = "<group>"; };
@@ -61,8 +58,6 @@
 				D4E619F01C47DEA500903813 /* THEAppContext.h */,
 				D4E619F11C47DEA500903813 /* THEAppContext.m */,
 				D4E61A001C47E49900903813 /* THEThaliEventDelegate.h */,
-				D4E619F21C47DEA500903813 /* THEPeer.h */,
-				D4E619F31C47DEA500903813 /* THEPeer.m */,
 				D4E619F41C47DEA500903813 /* THEPeerBluetooth.h */,
 				D4E619F51C47DEA500903813 /* THEPeerBluetooth.m */,
 				D4E619F61C47DEA500903813 /* THEPeerBluetoothDelegate.h */,
@@ -135,7 +130,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D4E619F71C47DEA500903813 /* THEAppContext.m in Sources */,
-				D4E619F81C47DEA500903813 /* THEPeer.m in Sources */,
 				D4E619F91C47DEA500903813 /* THEPeerBluetooth.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

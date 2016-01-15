@@ -44,7 +44,7 @@
 
 // JavaScript callbacks.
 NSString * const kNetworkChanged = @"networkChanged";
-NSString * const kPeerAvailabilityChanged = @"peerAvailabilityChanged";
+NSString * const kPeerAvailabilityChanged = @"PeerAvailabilityChanged";
 NSString * const kAppEnteringBackground = @"appEnteringBackground";
 NSString * const kAppEnteredForeground = @"appEnteredForeground";
 

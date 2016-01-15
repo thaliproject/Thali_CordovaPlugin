@@ -11,7 +11,18 @@ var test = tape({
     t.end();
   },
   teardown: function(t) {
-    t.end();
+    // Need to call stops here to ensure we're in stopped state since Mobile is a static
+    // singleton
+    Mobile('StopListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, "Should be able to call StopListeningForAdvertisments in teardown");
+      Mobile('StopUpdateAdvertisingAndListenForIncomingConnections').callNative(function(err) {
+        t.notOk(
+          err, 
+          "Should be able to call StopAdvertisingAndListenForIncomingConnections in teardown"
+        );
+        t.end();
+      });
+    });
   }
 });
 
@@ -62,3 +73,35 @@ function (t) {
     });
   });
 });
+
+test('PeerAvailabilityChange is called', function (t) {
+
+  var complete = false;
+
+  Mobile("PeerAvailabilityChanged").registerToNative(function(peers) {
+
+    if (!complete)
+    {
+      t.ok(peers instanceof Array, "peers must be an array");
+      t.ok(peers.length != 0, "peers must not be zero-length");
+
+      t.ok(peers[0].hasOwnProperty("peerIdentifier"), "peer must have peerIdentifier");
+      t.ok(typeof peers[0].peerIdentifier === 'string', "peerIdentifier must be a string");
+      
+      t.ok(peers[0].hasOwnProperty("peerAvailable"), "peer must have peerAvailable");
+      t.ok(peers[0].hasOwnProperty("pleaseConnect"), "peer must have pleaseConnect");
+
+      complete = true;
+      t.end();
+    }
+  });
+
+  Mobile('StartUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
+    t.notOk(err, 'Can call StartUpdateAdvertisingAndListenForIncomingConnections without error');
+    Mobile('StartListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call StartListeningForAdvertisements without error');
+    });
+  });
+});
+
+
