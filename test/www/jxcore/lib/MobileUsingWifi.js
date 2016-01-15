@@ -140,9 +140,12 @@ Mobile.iAmAMock = true;
 Mobile.TriggerConnectionError = function () {
   if (connectionErrorCallback !== null) {
     Object.keys(peersConnected).forEach(function (key) {
-      connectionErrorCallback({
-        peerIdentifier: key
-      });
+      if (peersConnected[key] === true) {
+        peersConnected[key] = false;
+        connectionErrorCallback({
+          peerIdentifier: key
+        });
+      }
     });
   }
 }

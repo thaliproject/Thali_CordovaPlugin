@@ -320,6 +320,12 @@ test('ThaliEmitter handles socket disconnect correctly', function (t) {
             connectWithRetry(peer.peerIdentifier, function(err1, port) {
 
               t.assert(err1 == null, "First connect should succeed");
+
+              if (err1) {
+                t.end();
+                return;
+              }
+
               sendData(port, function(success) {
                 t.assert(success == true, "First send should succeed");
               });
@@ -332,6 +338,11 @@ test('ThaliEmitter handles socket disconnect correctly', function (t) {
                 connectWithRetry(peer.peerIdentifier, function(err2, port) {
 
                   t.assert(err2 == null, "Second connect should succeed");
+
+                  if (err2) {
+                    t.end();
+                    return;
+                  }
 
                   sendData(port, function(success) {
                     done = true;
