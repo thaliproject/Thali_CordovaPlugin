@@ -16,7 +16,7 @@ testUtils.toggleRadios(true);
 
 Mobile('GetDeviceName').callNative(function (name) {
   console.log("My device name is: %s", name);
-  testUtils.setMyName(name);
+  testUtils.setName(name);
   require('./runTests.js');
   console.log('Test app app.js loaded');
 });

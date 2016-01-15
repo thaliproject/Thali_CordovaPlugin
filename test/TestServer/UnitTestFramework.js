@@ -46,7 +46,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   var self = this;
   function doTest(test, cb) {
 
-    logger.info("Running test: " + test);
+    logger.info("Running on %s test: %s", platform, test);
 
     // Perform a single test
 
@@ -106,7 +106,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
       // ALL DONE !!
       // All devices have completed all their tests
-      logger.info("Test run complete");
+      logger.info("Test run on %s complete", platform);
 
       // The whole point !! Log test results from the
       // server

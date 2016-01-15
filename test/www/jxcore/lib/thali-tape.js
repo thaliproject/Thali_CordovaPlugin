@@ -38,7 +38,6 @@ process.on('unhandledRejection', function(err) {
 });
 
 var tests = {};
-var deviceName = "UNITTEST-" + Math.random();
 
 function declareTest(testServer, name, setup, teardown, opts, cb) {
 
@@ -222,7 +221,7 @@ thaliTape.begin = function() {
     var _uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
       "os": platform, 
-      "name": deviceName,
+      "name": testUtils.getName(),
       "uuid": _uuid,
       "type": 'unittest',
       "tests": Object.keys(tests)

@@ -37,7 +37,7 @@ function getDeviceCharacteristics(cb) {
           if (!myName || !bluetoothAddress) {
             console.log('An error while getting the device characteristics!');
           }
-          testUtils.setMyName(myName);
+          testUtils.setName(myName);
           cb(myName, bluetoothAddress);
 
           // Below is only for logging purposes.
@@ -60,7 +60,7 @@ function getDeviceCharacteristics(cb) {
     Mobile('GetDeviceName').callNative(function (deviceName) {
       // In case of iOS, the device name is used directly, because
       // the one returned in the one that user can set.
-      testUtils.setMyName(deviceName);
+      testUtils.setName(deviceName);
       cb(deviceName, null);
     });
   }

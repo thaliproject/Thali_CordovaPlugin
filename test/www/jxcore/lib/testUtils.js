@@ -1,5 +1,4 @@
 var LogCallback;
-var myName;
 var os = require('os');
 var tmp = require('tmp');
 
@@ -70,13 +69,22 @@ exports.logMessageToScreen = function(message) {
   }
 };
 
+var myName;
 
 /**
- * Sets the myName value returned on the getMyName call used in Cordova from the test framework's Cordova WebView
+ * Set the name given used by this device. The name is
+ * retrievable via a function exposed to the Cordova side.
  * @param name
  */
-exports.setMyName = function(name) {
+exports.setName = function (name) {
   myName = name;
+};
+
+/**
+ * Get the name of this device.
+ */
+exports.getName = function () {
+  return myName;
 };
 
 if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
