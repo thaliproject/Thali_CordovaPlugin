@@ -23,6 +23,7 @@ public class JXcoreExtension {
 
     public final static String METHOD_NAME_SHOW_TOAST = "ShowToast";
     public final static String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "GetBluetoothAddress";
+    public final static String METHOD_NAME_GET_BLUETOOTH_NAME = "GetBluetoothName";
     public final static String METHOD_NAME_RECONNECT_WIFI_AP = "ReconnectWifiAP";
     public final static String METHOD_NAME_IS_BLE_SUPPORTED = "IsBLESupported";
 
@@ -77,6 +78,27 @@ public class JXcoreExtension {
                 //all is well, so lets return null as first argument
                 args.add(null);
                 args.add(btAddressString);
+
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+        jxcore.RegisterMethod(METHOD_NAME_GET_BLUETOOTH_NAME, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                String btNameString = mConnectionHelper.getBluetoothName();
+
+                if (btNameString == null) {
+                    args.add("Unable to get the Bluetooth name");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
+                }
+
+                args.add(null); // All is well
+                args.add(btNameString);
 
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }

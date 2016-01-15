@@ -173,8 +173,14 @@ thaliTape.begin = function() {
     transports: ['websocket']
   };
 
-  var uuid = uuid.v4();
   var testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
+
+  testServer.once('discard', function() {
+    // This device not needed, log appropriately so CI doesn't think we've failed
+    console.log("--= Surplus to requirements =--");
+    console.log("****TEST TOOK:  ms ****");
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+  });
 
   testServer.on('error', function (data) {
     var errData = JSON.parse(data);
@@ -213,10 +219,11 @@ thaliTape.begin = function() {
       platform = 'ios';
     }
 
+    var _uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
       "os": platform, 
       "name": deviceName,
-      "uuid": uuid,
+      "uuid": _uuid,
       "type": 'unittest',
       "tests": Object.keys(tests)
     }));

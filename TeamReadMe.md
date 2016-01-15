@@ -28,34 +28,51 @@ For all of this to work we have to have files in at least four different places:
 * __BinTray__ - We have our own bintray available [here](https://bintray.com/thali/Thali) where we publish the btconnectorlib2 JAR for Android
 
 ## Managing a new release
+
+The release preparations start from updating the dependency in the thali NPM package. This is needed
+so that the NPM package installations picks up the matching version of the Thali Cordova plugin.
+
+The file at `thali/install/install.js` has a variable `thaliBranchName` inside the function it exports.
+The value must be matching to the release you are about to make, for example, `npmv2.0.4`.
+
+There are different levels that the version can be bumped to.
+Please read the [version](https://docs.npmjs.com/cli/version) docs to understand the choices and make sure
+you read up on [semver](http://semver.org/).
+
+The right version must also be updated to `thali/package.json`, for example, `2.0.4`.
+
+After the versions are updated, the release should be tagged in git. This can be done with something like
+`git tag npmv2.0.4`.
+
+Then, the changes done should be pushed to git and in addition, the new tag needs to be pushed as well with
+`git push --tags`.
+
+Next step is to create a release in GitHub:
+1. Go to the releases tab on the front page of the project on GitHub
+2. Hit 'Draft a new release'
+3. In 'Tag version' enter the right tag, for a NPM release this will be the NPM tag that was generated above and should already be in the tag list on GitHub. For example, `npmv2.0.4`. If you got the tag right, then GitHub will say 'Existing Tag'.
+4. Enter a release title, typically this is something like "Story X - Y"
+5. Enter a description that briefly specifies what functionality or bug fixes were added
+6. For now make sure to check "This is a pre-release"
+7. Hit publish release!
+
+Now there is the right version of the Cordova plugin in the location from which the NPM package installation
+can pick it up.
+
 ### Updating NPM
-In preparation for a new release we have to publish a new version to NPM. Strictly speaking this is only necessary 
-if we changed any of the .js files but realistically all of our stories require that so just assume it. 
 
 1. Navigate to the thali sub-directory
 2. Run `git status` and make sure it is clean
-3. Run `npm version patch -m "Upgrade to %s because of..."`
-  1. Note the word 'patch'. There are different levels that the version can be bumped to. Please read the [version](https://docs.npmjs.com/cli/version) docs to understand the choices and make sure you read up on [semver](http://semver.org/). This command will bump the version in the package.json and create a GIT update tagged with that version.
-  2. On my Mac the npm version command does not work properly. It will upgrade the package.json but that is it. It won't do the GIT commit or the GIT tag. So once I run npm version I still have to do the commit and tagging myself. I first issued `git tag -a npmv1.0.21 -m "Thali NPM Version 1.0.21"` and then I issued `git push --tags`
-4. Run `npm publish`
+3. Run `npm publish`
 
-Also keep in mind that thali/install/install.js has a variable called 'thaliBranchName" that points to the branch 
-where we will download the cordova code from. Right now that branch points at story_0 but soon enough we will 
-change it to point at master. For most folks it's o.k. to leave this because when we dev on a local branch we tend
-to get our files locally, not from NPM. But it's good to be aware of this variable's existence.
+If you want to verify the release package before publishing it, you can use `npm pack` to create a tgz file.
+Then, you can point `jx npm install` into this tgz to install the package locally and make sure the installation
+works properly and the matching version of the Thali Cordova plugin got installed.
 
 ### The rest of the process
 1. Write up a blog article for Thali's blog (this will be auto-reposted to Twitter)
 2. Go to [stories](https://github.com/thaliproject/thali/blob/gh-pages/stories.md) and mark the story as completed. This requires both marking it completed in the table of contents and then use `~~` wrappers to strike out the entry in the body.
-3. Go to GitHub and create a release
- 1. Go to the releases tab on the front page of the project on GitHub
- 2. Hit 'Draft a new release'
- 3. In 'Tag version' enter the right tag, for a NPM release this will be the NPM tag that was generated above and should already be in the tag list on GitHub. For example, 'npmv1.0.22'. If you got the tag right then GitHub will say 'Existing Tag'.
- 4. Enter a release title, typically this is something like "Story X - Y"
- 5. Enter a description that briefly specifies what functionality or bug fixes were added
- 6. For now make sure to check "This is a pre-release"
- 7. Hit publish release!
-4. Go to internal metrics spreadsheet and add the release to both the shared code and blog tabs.
+3. Go to internal metrics spreadsheet and add the release to both the shared code and blog tabs.
 
 ## Want to develop locally?
 

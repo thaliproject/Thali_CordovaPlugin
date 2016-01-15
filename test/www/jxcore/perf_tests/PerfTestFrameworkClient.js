@@ -125,11 +125,12 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
     }
 
     self.testServer.emit('present', JSON.stringify({
-      "os" : platform,
-      "name": self.deviceName,
-      "type": "perftest",
-      "tests": Object.keys(self.tests),
-      "uuid": self.uuid
+      'os' : platform,
+      'name': self.deviceName,
+      'type': "perftest",
+      'tests': Object.keys(self.tests),
+      'uuid': self.uuid,
+      'btaddress': self.bluetoothAddress || null
     }));
   });
 
@@ -143,10 +144,19 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
       return;
     }
 
+    var filteredAddressList = testData.addressList.filter(function (address) {
+      return address !== self.bluetoothAddress;
+    }).map(function (address) {
+      return {
+        address: address,
+        tryCount: 0
+      };
+    });
+
     self.currentTest = new self.tests[testData.testName] (
       testData.testData,
       self.deviceName,
-      shuffle(testData.addressList)
+      shuffle(filteredAddressList)
     );
 
     self.setCallbacks(self.currentTest);
