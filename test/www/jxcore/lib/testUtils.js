@@ -103,11 +103,15 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
 
 /**
  * Returns the file path to the temporary directory that can be used by tests
- * to store data that does not have to be persisted between app restarts.
- * The temporary directory is removed when the process exits.
+ * to store temporary data.
+ * On desktop, returns a directory that does not persist between app restarts
+ * and is removed when the process exits.
  */
 var tmpObject = null;
 exports.tmpDirectory = function () {
+  if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+    return os.tmpdir();
+  }
   if (tmpObject === null) {
     tmp.setGracefulCleanup();
     tmpObject = tmp.dirSync({

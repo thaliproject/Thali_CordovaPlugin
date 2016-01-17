@@ -9,8 +9,6 @@ var path = require('path');
 var http = require('http');
 var tape = require('../lib/thali-tape');
 var testUtils = require('../lib/testUtils.js');
-var MobileUsingWifi = require('../lib/MobileUsingWifi.js');
-var OriginalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
 var uuid = require('uuid');
 var util = require('util');
 var express = require('express');
@@ -34,7 +32,6 @@ var testReplicationManager;
 var testServer;
 var test = tape({
   setup: function(t) {
-    global.Mobile = MobileUsingWifi;
     testReplicationManager = null;
     testServer = null;
     t.end();
@@ -46,7 +43,6 @@ var test = tape({
     if (testServer !== null) {
       testServer.close();
     }
-    global.Mobile = OriginalMobile;
     t.end();
   }
 });
@@ -135,103 +131,108 @@ test('ThaliReplicationManager replicates database', function (t) {
   // have seen the changes we know two-sync is working.
 
   var db = new LevelDownPouchDB('thali');
+  // Need to recreate the database since reinstall of test does not delete the db
+  // meaning we get unexpected sequence numbers.
+  db.destroy().then(function (response) {
+    db = new LevelDownPouchDB('thali');
 
-  var mydevicename = null;
-  var mydocid = uuid.v4();
-  var mydoc = {
-    _id: mydocid
-  };
+    var mydevicename = null;
+    var mydocid = uuid.v4();
+    var mydoc = {
+      _id: mydocid
+    };
 
-  // Listen for changes from the other side
+    // Listen for changes from the other side
 
-  var localSeq = null;
-  var remoteSeq = null;
+    var localSeq = null;
+    var remoteSeq = null;
 
-  var seenLocalChanges = false;
-  var seenRemoteChanges = false;
+    var seenLocalChanges = false;
+    var seenRemoteChanges = false;
 
-  var manager = new ThaliReplicationManager(db);
-  testReplicationManager = manager;
+    var manager = new ThaliReplicationManager(db);
+    testReplicationManager = manager;
 
-  var changes = db.changes({
-    since: 'now',
-    live: true,
-    include_docs: true
-  }).on('change', function(change) {
-    var doc = change.doc;
-    if (doc._id == mydocid) {
-      if (localSeq == null) {
-        localSeq = change.seq;
-        t.ok(doc.data == mydevicename, "1st change of local doc should contain local id");
+    var changes = db.changes({
+      since: 'now',
+      live: true,
+      include_docs: true
+    }).on('change', function(change) {
+      var doc = change.doc;
+      if (doc._id == mydocid) {
+        if (localSeq == null) {
+          localSeq = change.seq;
+          t.ok(doc.data == mydevicename, "1st change of local doc should contain local id");
+        } else {
+          t.ok(change.seq > localSeq, "Local changes occur in strict order");
+          t.ok(doc.data != mydevicename, "2nd change of local doc should contain remote id");
+          seenLocalChanges = true;
+          if (seenRemoteChanges) {
+            t.end();
+          }
+        }
       } else {
-        t.ok(change.seq > localSeq, "Local changes occur in strict order");
-        t.ok(doc.data != mydevicename, "2nd change of local doc should contain remote id");
-        seenLocalChanges = true;
-        if (seenRemoteChanges) {
-          t.end();
+        if (remoteSeq == null) {
+          remoteSeq = change.seq;
+          t.ok(doc.data != mydevicename, "1st change of remote doc should contain remote id");
+          doc.data = mydevicename;
+          db.put(doc, function(err, result) {
+            t.notOk(err, "Can update remote doc without error");
+            console.log(util.inspect(err));
+            console.log(util.inspect(result));
+          });
+        } else {
+          t.ok(change.seq > remoteSeq, "Remote changes occur in strict order");
+          seenRemoteChanges = true;
+          if (seenLocalChanges) {
+            t.end();
+          }
         }
       }
-    } else {
-      if (remoteSeq == null) {
-        remoteSeq = change.seq;
-        t.ok(doc.data != mydevicename, "1st change of remote doc should contain remote id");
-        doc.data = mydevicename;
-        db.put(doc, function(err, result) {
-          t.notOk(err, "Can update remote doc without error");
-          console.log(util.inspect(err));
-          console.log(util.inspect(result));
+    }).on('complete', function(info) {
+      console.log(info);
+    }).on('error', function (err) {
+      err = err ? " (" + err + ")" : "";
+      t.notOk(err, "Should not see errors in changes" + err);
+    });
+
+    manager.on('startError', function () {
+      t.fail('startError event should not be emitted');
+      t.end();
+    });
+
+    manager.on('stopError', function () {
+      t.fail('stopError event should not be emitted');
+      t.end();
+    });
+
+    manager.on('started', function () {
+      manager.getDeviceIdentity(function (err, deviceName) {
+
+        t.notOk(err, "getDeviceIdentity should not return an error");
+        t.ok(deviceName, "deviceName should not be null");
+
+        // Actually create the new doc
+        mydevicename = deviceName;
+        mydoc.data = mydevicename;
+        // Use blob to ensure we can transfer large files
+        mydoc.blob = randomstring.generate(1024 * 1024);
+
+        var r = db.put(mydoc, function (err, result) {
+          err = err ? " (" + err + ")" : "";
+          t.notOk(err, "Should be able to put doc without error" + err);
         });
-      } else {
-        t.ok(change.seq > remoteSeq, "Remote changes occur in strict order");
-        seenRemoteChanges = true;
-        if (seenLocalChanges) {
-          t.end();
-        }
-      }
-    }
-  }).on('complete', function(info) {
-    console.log(info);
-  }).on('error', function (err) {
-    err = err ? " (" + err + ")" : "";
-    t.notOk(err, "Should not see errors in changes" + err);
-  });
-
-  manager.on('startError', function () {
-    t.fail('startError event should not be emitted');
-    t.end();
-  });
-
-  manager.on('stopError', function () {
-    t.fail('stopError event should not be emitted');
-    t.end();
-  });
-
-  manager.on('started', function () {
-    manager.getDeviceIdentity(function (err, deviceName) {
-
-      t.notOk(err, "getDeviceIdentity should not return an error");
-      t.ok(deviceName, "deviceName should not be null");
-
-      // Actually create the new doc
-      mydevicename = deviceName;
-      mydoc.data = mydevicename;
-      // Use blob to ensure we can transfer large files
-      mydoc.blob = randomstring.generate(1024 * 1024);
-
-      var r = db.put(mydoc, function (err, result) {
-        err = err ? " (" + err + ")" : "";
-        t.notOk(err, "Should be able to put doc without error" + err);
       });
     });
-  });
 
-  var app = express();
-  app.disable('x-powered-by');
-  app.use('/db', require('express-pouchdb')(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
-  var server = http.createServer(app).listen(function () {
-    // Start replication
-    manager.start(server.address().port, 'thali');
+    var app = express();
+    app.disable('x-powered-by');
+    app.use('/db', require('express-pouchdb')(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
+    var server = http.createServer(app).listen(function () {
+      // Start replication
+      manager.start(server.address().port, 'thali');
+    });
+    app.set('port', server.address().port);
+    testServer = server;
   });
-  app.set('port', server.address().port);
-  testServer = server;
 });

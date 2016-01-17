@@ -8,8 +8,6 @@ var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
 var tape = require('../lib/thali-tape');
-var MobileUsingWifi = require('../lib/MobileUsingWifi.js');
-var OriginalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
 
 function newPeerIdentifier() {
   return (+ new Date()).toString() + "." + process.pid;
@@ -19,7 +17,6 @@ var  emitterToShutDown = null;
 
 var test = tape({
   setup: function(t) {
-    global.Mobile = MobileUsingWifi;
     t.end();
   },
   teardown: function(t) {
@@ -30,7 +27,6 @@ var test = tape({
       });
       emitterToShutDown = null;
     }
-    global.Mobile = OriginalMobile;
     t.end();
   }
 });

@@ -1,6 +1,6 @@
 'use strict';
 
-var ThaliWifiInfrastructure = require('thali/ThaliWifiInfrastructure');
+var ThaliWifiInfrastructure = require('thali/thaliWifiInfrastructure');
 var tape = require('../lib/thali-tape');
 var nodessdp = require('node-ssdp');
 
