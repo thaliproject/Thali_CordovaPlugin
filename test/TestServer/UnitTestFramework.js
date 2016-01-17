@@ -22,7 +22,12 @@ function UnitTestFramework(testConfig, _logger)
   var unitTestConfig = require(configFile);
   
   UnitTestFramework.super_.call(this, testConfig, unitTestConfig, _logger);
-  this.runningTests = [];
+
+  // Track which platforms we expect to be running on
+  var self = this;
+  self.runningTests = Object.keys(self.requiredDevices).filter(function (platform) {
+    return self.requiredDevices[platform];
+  });
 }
 
 util.inherits(UnitTestFramework, TestFramework);
@@ -117,7 +122,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         device.socket.emit("complete");
       });
 
-      // We're done runnign for this platform..
+      // We're done running for this platform..
       self.runningTests = self.runningTests.filter(function(p) {
         return (p != platform);
       });
@@ -130,7 +135,6 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   }
 
   toComplete = devices.length;
-  this.runningTests.push(platform);
 
   devices.forEach(function(device) {
     // Wait for devices to signal they've scheduled their
