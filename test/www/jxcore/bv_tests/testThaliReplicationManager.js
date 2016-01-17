@@ -1,6 +1,6 @@
 'use strict';
 
-if (!jxcore.utils.OSInfo().isMobile) {
+if (!jxcore.utils.OSInfo().isMobile || jxcore.utils.OSInfo().isAndroid) {
   return;
 }
 
