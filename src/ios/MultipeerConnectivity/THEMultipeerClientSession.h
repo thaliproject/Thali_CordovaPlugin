@@ -41,8 +41,10 @@
                    withRemotePeerID:(MCPeerID *)remotePeerID
            withRemotePeerIdentifier:(NSString *)remotePeerIdentifier;
 
+/*
 - (void)onPeerLost;
 - (void)disconnectFromPeer;
+*/
 
 @end;
 

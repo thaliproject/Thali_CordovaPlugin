@@ -13,12 +13,12 @@ var test = tape({
   teardown: function(t) {
     // Need to call stops here to ensure we're in stopped state since Mobile is a static
     // singleton
-    Mobile('StopListeningForAdvertisements').callNative(function (err) {
-      t.notOk(err, "Should be able to call StopListeningForAdvertisments in teardown");
-      Mobile('StopUpdateAdvertisingAndListenForIncomingConnections').callNative(function(err) {
+    Mobile('stopListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, "Should be able to call stopListeningForAdvertisments in teardown");
+      Mobile('stopUpdateAdvertisingAndListenForIncomingConnections').callNative(function(err) {
         t.notOk(
           err, 
-          "Should be able to call StopAdvertisingAndListenForIncomingConnections in teardown"
+          "Should be able to call stopAdvertisingAndListenForIncomingConnections in teardown"
         );
         t.end();
       });
@@ -26,48 +26,48 @@ var test = tape({
   }
 });
 
-test('Can call Start/StopListeningForAdvertisements', function (t) {
-  Mobile('StartListeningForAdvertisements').callNative(function (err) {
-    t.notOk(err, 'Can call StartListeningForAdvertisements without error');
-    Mobile('StopListeningForAdvertisements').callNative(function (err) {
-      t.notOk(err, 'Can call StopListeningForAdvertisements without error');
+test('Can call start/stopListeningForAdvertisements', function (t) {
+  Mobile('startListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    Mobile('stopListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call stopListeningForAdvertisements without error');
       t.end();
     });
   });
 });
 
-test('Calling StartListeningForAdvertisements twice is an error', function (t) {
-  Mobile('StartListeningForAdvertisements').callNative(function (err) {
-    t.notOk(err, 'Can call StartListeningForAdvertisements without error');
-    Mobile('StartListeningForAdvertisements').callNative(function (err) {
-      t.ok(err, 'Calling Start twice is an error');
+test('Calling startListeningForAdvertisements twice is an error', function (t) {
+  Mobile('startListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.ok(err, 'Calling start twice is an error');
       t.ok(err == "Call Stop!", 'Error must be "Call Stop!"');
       t.end();
     });
   });
 });
 
-test('Can call Start/StopUpdateAdvertisingAndListenForIncomingConnections', function (t) {
-  Mobile('StartUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
-    t.notOk(err, 'Can call StartUpdateAdvertisingAndListenForIncomingConnections without error');
-    Mobile('StopUpdateAdvertisingAndListenForIncomingConnections').callNative(function (err) {
+test('Can call start/stopUpdateAdvertisingAndListenForIncomingConnections', function (t) {
+  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListenForIncomingConnections without error');
+    Mobile('stopUpdateAdvertisingAndListenForIncomingConnections').callNative(function (err) {
       t.notOk(
-        err, 'Can call StopUpdateAdvertisingsingAndListenForIncomingConnections without error'
+        err, 'Can call stopUpdateAdvertisingAndListenForIncomingConnections without error'
       );
       t.end();
     });
   });
 });
 
-test('Calling StartUpdateAdvertisingAndListeningForIncomingConnections twice is NOT and error', 
+test('Calling startUpdateAdvertisingAndListeningForIncomingConnections twice is NOT and error', 
 function (t) {
-  Mobile('StartUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
-    t.notOk(err, 'Can call StartUpdateAdvertisingAndListenForIncomingConnections without error');
-    Mobile('StartUpdateAdvertisingAndListenForIncomingConnections').callNative(4243, 
+  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListenForIncomingConnections without error');
+    Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4243, 
     function (err) {
       t.notOk(
         err, 
-        'Can call StartUpdateAdvertisingsingAndListenForIncomingConnections twice without error'
+        'Can call startUpdateAdvertisingAndListenForIncomingConnections twice without error'
       );
       t.end();
     });
@@ -96,12 +96,43 @@ test('PeerAvailabilityChange is called', function (t) {
     }
   });
 
-  Mobile('StartUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
-    t.notOk(err, 'Can call StartUpdateAdvertisingAndListenForIncomingConnections without error');
-    Mobile('StartListeningForAdvertisements').callNative(function (err) {
-      t.notOk(err, 'Can call StartListeningForAdvertisements without error');
+  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListenForIncomingConnections without error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call startListeningForAdvertisements without error');
     });
   });
 });
 
+test('Can connect to a remote peer', function (t) {
 
+  var complete = false;
+
+  Mobile("PeerAvailabilityChanged").registerToNative(function(peers) {
+    peers.forEach(function(peer) {
+      if (peer.peerAvailable) {
+        Mobile("Connect", function(err, connection) {
+          // We're happy here if we make a connection to anyone
+          if (err == null) {
+            if (!complete) {
+              t.ok(connection.listeningPort, "Connection must have listeningPort");
+              t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
+              t.ok(connection.clientPort, "Connection must have clientPort");
+              t.ok(typeof connection.clientPort === 'number', "listeningPort must be a number");
+              t.ok(connection.serverPort, "Connection must have serverPort");
+              t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
+              t.end();
+            }
+          }
+        });
+      }
+    });
+  });
+
+  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListenForIncomingConnections without error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    });
+  });
+});

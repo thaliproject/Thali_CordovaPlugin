@@ -75,11 +75,29 @@
 
     assert(_connectCallback != nil);
 
-    _connectCallback(error, port);
+    NSString *connectionJSON = nil;
+
+    if (!error)
+    {
+      NSMutableDictionary connection = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
+        port, @"listeningPort",
+        1, @"clientPort",
+        1, @"serverPort",
+        nil
+      ];
+   
+      connectionJSON = [[NSString alloc] initWithData:
+        [NSJSONSerialization dataWithJSONObject:peerArray options:0 error:nil]
+        encoding:NSUTF8StringEncoding
+      ];
+    }
+
+    _connectCallback(error, connectionJSON);
     _connectCallback = nil;
   }
 }
 
+/*
 - (void)fireConnectionErrorEvent
 {
   NSLog(@"client session: fireConnectionErrorEvent: %@", [self remotePeerIdentifier]);
@@ -107,6 +125,7 @@
     [JXcore callEventCallback:kPeerConnectionError withJSON:jsonString];
   });
 }
+*/
 
 - (THEMultipeerSocketRelay *)newSocketRelay
 {
@@ -128,8 +147,8 @@
 
     if (prevState == THEPeerSessionStateConnecting)
       [self fireConnectCallback:@"Peer disconnected" withPort:0];
-    else if (prevState == THEPeerSessionStateConnected)
-      [self fireConnectionErrorEvent];
+    //else if (prevState == THEPeerSessionStateConnected)
+    //  [self fireConnectionErrorEvent];
     else
     {
       NSLog(@"client session: Unexpected state (disconnected) in onLinkFailure");
@@ -154,7 +173,7 @@
 }
 
 // User-initiated disconnect
-- (void)disconnectFromPeer
+/*- (void)disconnectFromPeer
 {
   @synchronized(self)
   {
@@ -168,7 +187,7 @@
     if (prevState == THEPeerSessionStateConnecting && _connectCallback != nil)
       [self fireConnectCallback:@"Peer disconnected" withPort:0];
   }
-}
+}*/
 
 
 // ClientSocketRelayDelegate methods

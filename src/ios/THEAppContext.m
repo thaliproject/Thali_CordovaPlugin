@@ -69,9 +69,6 @@
   // true if we're advertising
   THEAtomicFlag * _isAdvertising;
   
-  // MORIBUND  
-  THEAtomicFlag * _atomicFlagCommunicationsEnabled;
-
   // The reachability handler reference.
   id reachabilityHandlerReference;
 
@@ -285,40 +282,27 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 
 // Connects to the peer server with the specified peer identifier.
 - (BOOL)connectToPeer:(NSString *)peerIdentifier 
-      connectCallback:(void(^)(NSString *, uint))connectCallback
+      connectCallback:(void(^)(NSString *, NSString *))connectCallback
 {
-  if ([_atomicFlagCommunicationsEnabled isClear])
+  if ([_isListening isClear])
   {
-      NSLog(@"Communications not enabled");
-      connectCallback(@"app: Not initialised", 0);
+      NSLog(@"Not listening");
+      connectCallback(@"StartListeningForAdvertisements is not active", 0);
       return NO;
   }
 
   return [_client connectToPeerWithPeerIdentifier:peerIdentifier
-                              withConnectCallback:(void(^)(NSString *, uint))connectCallback];
-}
-
-// Disconnects from the peer server with the specified peer identifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier
-{
-  // If communications are not enabled, return NO.
-  if ([_atomicFlagCommunicationsEnabled isClear])
-  {
-    NSLog(@"Communications not enabled");
-    return NO;
-  }
-    
-  return [_client disconnectFromPeerWithPeerIdentifier:peerIdentifier];
+                              withConnectCallback:(void(^)(NSString *, NSString *))connectCallback];
 }
 
 // Kill connection with extreme prejudice, no clean-up, testing only
 - (BOOL)killConnection:(NSString *)peerIdentifier
 {
-  if ([_atomicFlagCommunicationsEnabled isClear])
+  /*if ([_atomicFlagCommunicationsEnabled isClear])
   {
     NSLog(@"Communications not enabled");
     return NO;
-  }
+  }*/
 
   return [_client killConnection:peerIdentifier];
 }

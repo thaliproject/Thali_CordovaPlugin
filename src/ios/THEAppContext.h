@@ -32,7 +32,7 @@
 
 // Callback that will be called when the lower levels have established
 // a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, uint port);
+typedef void(^ConnectCallback)(NSString *error, NSString *jsonConnection);
 
 // THEAppContext interface.
 @interface THEAppContext : NSObject <THEMultipeerDiscoveryDelegate, THEPeerBluetoothDelegate>
@@ -55,17 +55,8 @@ typedef void(^ConnectCallback)(NSString *error, uint port);
 // Stop the server components
 - (BOOL)stopUpdateAdvertisingAndListenForIncomingConnections;
 
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
-
-// Stops communications.
-- (BOOL)stopBroadcasting;
-
 // Connects to the peer with the specified peer identifier.
 - (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
 
 // Kill connection without cleanup - Testing only !!
 - (BOOL)killConnection:(NSString *)peerIdentifier;
