@@ -94,13 +94,17 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         }
       });
 
-      // The timeout is added as a workaround for an issue
-      // where the client hasn't necessarily had time
-      // to add correct listeners on the socket
-      setTimeout(function() {
-        // Start setup for this test
+      if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+        // The timeout is added as a workaround for an issue
+        // where the client hasn't necessarily had time
+        // to add correct listeners on the socket
+        setTimeout(function() {
+          // Start setup for this test
+          device.socket.emit("setup", test);
+        }, 1000);
+      } else {
         device.socket.emit("setup", test);
-      }, 1000);
+      }
     });
   }
 
