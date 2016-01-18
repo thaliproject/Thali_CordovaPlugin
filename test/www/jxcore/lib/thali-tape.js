@@ -38,7 +38,6 @@ process.on('unhandledRejection', function(err) {
 });
 
 var tests = {};
-var deviceName = "UNITTEST-" + Math.random();
 
 function declareTest(testServer, name, setup, teardown, opts, cb) {
 
@@ -55,8 +54,10 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
   tape('setup', function(t) {
     // Run setup function when the testServer tells us
     testServer.once("setup", function(_name) {
+      t.on('end', function() {
+        testServer.emit('setup_complete', JSON.stringify({"test":_name}));
+      });
       setup(t);
-      testServer.emit('setup_complete', JSON.stringify({"test":_name}));
     });
   });
 
@@ -82,8 +83,10 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
   tape("teardown", function(t) {
     // Run teardown function when the server tells us
     testServer.once("teardown", function(_name) {
+      t.on('end', function() {
+        testServer.emit('teardown_complete', JSON.stringify({"test":_name}));
+      });
       teardown(t);
-      testServer.emit('teardown_complete', JSON.stringify({"test":_name}));
     }); 
   });
 };
@@ -222,7 +225,7 @@ thaliTape.begin = function() {
     var _uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
       "os": platform, 
-      "name": deviceName,
+      "name": testUtils.getName(),
       "uuid": _uuid,
       "type": 'unittest',
       "tests": Object.keys(tests)
@@ -230,7 +233,9 @@ thaliTape.begin = function() {
   });
 }
 
-if (typeof jxcore == 'undefined' || jxcore.utils.OSInfo().isMobile)
+if (typeof jxcore === 'undefined' ||
+    jxcore.utils.OSInfo().isMobile ||
+    (typeof Mobile !== 'undefined' && Mobile.iAmAMock))
 {
   // On mobile, or outside of jxcore (some dev scenarios) we use server-coordinated thaliTape
   exports = thaliTape;
