@@ -22,7 +22,12 @@ function UnitTestFramework(testConfig, _logger)
   var unitTestConfig = require(configFile);
   
   UnitTestFramework.super_.call(this, testConfig, unitTestConfig, _logger);
-  this.runningTests = [];
+
+  // Track which platforms we expect to be running on
+  var self = this;
+  self.runningTests = Object.keys(self.requiredDevices).filter(function (platform) {
+    return self.requiredDevices[platform];
+  });
 }
 
 util.inherits(UnitTestFramework, TestFramework);
@@ -32,6 +37,11 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   var toComplete;
   var results = {};
 
+  if (!tests) {
+    // Default to all tests named by first device
+    tests = this.devices[platform][0].tests;
+  }
+ 
   // Copy arrays
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
@@ -41,7 +51,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   var self = this;
   function doTest(test, cb) {
 
-    logger.info("Running test: " + test);
+    logger.info("Running on %s test: %s", platform, test);
 
     // Perform a single test
 
@@ -84,8 +94,17 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         }
       });
 
-      // Start setup for this test
-      device.socket.emit("setup", test);
+      if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+        // The timeout is added as a workaround for an issue
+        // where the client hasn't necessarily had time
+        // to add correct listeners on the socket
+        setTimeout(function() {
+          // Start setup for this test
+          device.socket.emit("setup", test);
+        }, 1000);
+      } else {
+        device.socket.emit("setup", test);
+      }
     });
   }
 
@@ -101,7 +120,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
       // ALL DONE !!
       // All devices have completed all their tests
-      logger.info("Test run complete");
+      logger.info("Test run on %s complete", platform);
 
       // The whole point !! Log test results from the
       // server
@@ -112,7 +131,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         device.socket.emit("complete");
       });
 
-      // We're done runnign for this platform..
+      // We're done running for this platform..
       self.runningTests = self.runningTests.filter(function(p) {
         return (p != platform);
       });
@@ -125,7 +144,6 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   }
 
   toComplete = devices.length;
-  this.runningTests.push(platform);
 
   devices.forEach(function(device) {
     // Wait for devices to signal they've scheduled their
@@ -155,7 +173,7 @@ UnitTestFramework.prototype.testReport = function(platform, tests, results) {
   logger.info("%d of %d tests completed", Object.keys(results).length, tests.length);
   logger.info("%d/%d passed (%d failures)", passed, tests.length, tests.length - passed);
 
-  logger.info("---\n\n");
+  logger.info("--- Test Details ---\n\n");
 
   for (test in results) {
     logger.info(test + " - " + (results[test] ? "pass" : "fail"));

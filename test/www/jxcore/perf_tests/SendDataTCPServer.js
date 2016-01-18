@@ -3,8 +3,8 @@
 var net = require('net');
 
 var logger = function (value) {
-    console.log(new Date().toJSON() + ' SendDataTCPServer.js: ' + value);
-}
+  //console.log(new Date().toJSON() + ' SendDataTCPServer.js: ' + value);
+};
 
 function SendDataTCPServer(port) {
     var self = this;
@@ -28,9 +28,7 @@ function SendDataTCPServer(port) {
         });
 
         c.on('data', function (data) {
-            // The received data in bytes is gotten by multiplying the data.length
-            // by 2, because each character in the data stream consumes 2 bytes.
-            receivedDataInBytes = receivedDataInBytes + (data.length * 2);
+            receivedDataInBytes += data.length;
             logger('TCP/IP server has received ' + receivedDataInBytes + ' bytes of data');
             var dataSincePreviousReport = receivedDataInBytes - lastReportedAmount;
 
