@@ -107,6 +107,7 @@ test('peerAvailabilityChange is called', function (t) {
 test('Can connect to a remote peer', function (t) {
 
   var complete = false;
+  var applicationPort = 4242;
 
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {
@@ -119,10 +120,10 @@ test('Can connect to a remote peer', function (t) {
               console.log(connection);
               t.ok(connection.listeningPort, "Connection must have listeningPort");
               t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
-              t.ok(connection.clientPort, "Connection must have clientPort");
-              t.ok(typeof connection.clientPort === 'number', "listeningPort must be a number");
-              t.ok(connection.serverPort, "Connection must have serverPort");
-              t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
+              t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
+              t.ok(!connection.clientPort, "clientPort must be null");
+              t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
+              t.ok(!connection.serverPort, "serverPort must be null");
               t.end();
             }
           }
@@ -131,7 +132,8 @@ test('Can connect to a remote peer', function (t) {
     });
   });
 
-  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
+  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(applicationPort, 
+  function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListenForIncomingConnections without error');
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'Can call startListeningForAdvertisements without error');

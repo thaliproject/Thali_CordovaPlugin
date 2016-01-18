@@ -79,8 +79,8 @@
     {
       NSMutableDictionary *connection = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
         [NSNumber numberWithInteger:port], @"listeningPort",
-        [NSNumber numberWithInteger:1], @"clientPort",
-        [NSNumber numberWithInteger:1], @"serverPort",
+        [NSNumber numberWithInteger:0], @"clientPort",
+        [NSNumber numberWithInteger:0], @"serverPort",
         nil
       ];
    
