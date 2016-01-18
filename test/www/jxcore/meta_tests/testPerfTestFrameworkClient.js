@@ -17,7 +17,7 @@ var test = tape({
   }
 });
 
-test('#passing wrong test name should throw', function (t) {
+test('passing wrong test name should throw', function (t) {
 
   var mockServer = new EventEmitter();
   var perfTestFrameworkClient = new PerfTestFrameworkClient('Some device name', null, mockServer);
@@ -32,5 +32,34 @@ test('#passing wrong test name should throw', function (t) {
     'addressList': []
   };
 
-  mockServer.emit("start", testData); 
+  mockServer.emit("start", testData);
+});
+
+test('own address should be filtered out and try count reseted', function (t) {
+  var myAddress = 'C0:EE:EE:EE:42:00'
+  var dummyAddress = 'C0:FF:FF:EE:42:00';
+
+  var mockServer = new EventEmitter();
+  var perfTestFrameworkClient = new PerfTestFrameworkClient('Some device name', myAddress, mockServer);
+
+  perfTestFrameworkClient.tests = {
+    'mockTest': function (testData, deviceName, addressList) {
+      t.ok(addressList.length === 1, 'own address filtered out');
+      t.ok(addressList[0].address === dummyAddress, 'other addresses in the address property');
+      t.ok(addressList[0].tryCount === 0, 'try count is 0 in the beginning');
+      return {
+        start: function () {
+          t.end();
+        },
+        on: function () {}
+      };
+    }
+  };
+
+  var testData = {
+    'testName': 'mockTest',
+    'addressList': [myAddress, dummyAddress]
+  };
+
+  mockServer.emit('start', testData);
 });

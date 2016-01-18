@@ -1,12 +1,14 @@
-"use strict";
+'use strict';
 
-if (!jxcore.utils.OSInfo().isMobile) {
+if (!jxcore.utils.OSInfo().isMobile || jxcore.utils.OSInfo().isAndroid) {
   return;
 }
 
 var os = require('os');
 var path = require('path');
+var http = require('http');
 var tape = require('../lib/thali-tape');
+var testUtils = require('../lib/testUtils.js');
 var uuid = require('uuid');
 var util = require('util');
 var express = require('express');
@@ -15,24 +17,35 @@ var bodyParser = require('body-parser');
 var randomstring = require('randomstring');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
 
-var dbPath = path.join(os.tmpdir(), 'pouchdb');
+// Use a folder specific to this test so that the database content
+// will not interfere with any other databases that might be created
+// during other tests.
+var dbPath = path.join(testUtils.tmpDirectory(), 'pouch-for-replication-test');
 var LevelDownPouchDB = process.platform === 'android' || process.platform === 'ios' ?
     PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath}) :
     PouchDB.defaults({db: require('leveldown'), prefix: dbPath});
 
+// A variable accessible from the tests and from the setup/teardown functions
+// that can be used to make sure that replication managers created during
+// tests are stopped properly.
+var testReplicationManager;
+var testServer;
 var test = tape({
   setup: function(t) {
+    testReplicationManager = null;
+    testServer = null;
     t.end();
   },
   teardown: function(t) {
-    if (t.__manager) {
-      t.__manager.stop();
+    if (testReplicationManager !== null) {
+      testReplicationManager.stop();
+    }
+    if (testServer !== null) {
+      testServer.close();
     }
     t.end();
   }
 });
-
-// test setup & teardown activities
 
 test('ThaliReplicationManager can call start without error', function (t) {
 
@@ -79,7 +92,7 @@ test('ThaliReplicationManager can call start without error', function (t) {
     t.end();
   });
 
-  manager.start(5000, 'thali');
+  manager.start(0, 'thali');
 });
 
 test('ThaliReplicationManager receives identity', function (t) {
@@ -108,22 +121,19 @@ test('ThaliReplicationManager receives identity', function (t) {
     t.end();
   });
 
-  manager.start(5000, 'thali');
+  manager.start(0, 'thali');
 });
 
-/*
 test('ThaliReplicationManager replicates database', function (t) {
   
   // Create a local doc with local device name and sync to peer. On receiving that they'll swap
   // their device name for ours and sync it back. When both sides have successfully done this and
   // have seen the changes we know two-sync is working.
 
-  // Need to recreate the database since reinstall of test does not delete the db
-  // meaning we get unexpected sequence numbers
-
   var db = new LevelDownPouchDB('thali');
-  db.destroy(function(response) {
-
+  // Need to recreate the database since reinstall of test does not delete the db
+  // meaning we get unexpected sequence numbers.
+  db.destroy().then(function (response) {
     db = new LevelDownPouchDB('thali');
 
     var mydevicename = null;
@@ -141,7 +151,7 @@ test('ThaliReplicationManager replicates database', function (t) {
     var seenRemoteChanges = false;
 
     var manager = new ThaliReplicationManager(db);
-    t.__manager = manager;
+    testReplicationManager = manager;
 
     var changes = db.changes({
       since: 'now',
@@ -218,10 +228,11 @@ test('ThaliReplicationManager replicates database', function (t) {
     var app = express();
     app.disable('x-powered-by');
     app.use('/db', require('express-pouchdb')(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
-    app.listen(4242, function() {
+    var server = http.createServer(app).listen(function () {
       // Start replication
-      manager.start(4242, 'thali');
+      manager.start(server.address().port, 'thali');
     });
+    app.set('port', server.address().port);
+    testServer = server;
   });
 });
-*/

@@ -67,17 +67,23 @@ environment.
 All of the tests are designed to be run on the desktop. Tests that require the ThaliEmitter (our mobile environment)
 will de-activate themselves when run on the desktop. What is especially nice about running on the desktop is that
 one can develop and debug directly in the Thali_CordovaPlugin directory. There is no need to do the kind of 
-copying and pasting that Cordova development normally requires. Note that only the unit tests run on the desktop.
-The perf tests are focused exclusively on measuring on the wire perf and so don't make sense (yet) on the desktop.
+copying and pasting that Cordova development normally requires.
 
 To set up your desktop environment for development go to Thali_CordovaPlugin/thali/install and run 
 `sudo jx npm run setupDesktop`.
 
-Sudo is needed because this script installs a symbolic link into your global NPM directory.
+Sudo might be needed because this script installs a symbolic link into your global NPM directory.
 
-You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing `jx UnitTest_app.js`. But the
-tests will happily run stand alone so you can run a test directly (e.g. `jx testConnectionTable.js`) thus allowing
-you to easily run and debug individual tests.
+You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing one of the following:
+
+```
+$ jx npm test
+$ jx npm run test-meta
+$ jx npm run test-coordinated
+```
+
+Some tests will also happily run stand alone so you can run a test directly (e.g. `jx bv_tests/testThaliCryptoManager.js`)
+thus allowing you to easily run and debug individual tests.
 
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.

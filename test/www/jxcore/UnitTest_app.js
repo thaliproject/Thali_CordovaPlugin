@@ -8,10 +8,15 @@
 
 var testUtils = require("./lib/testUtils");
 
+if (typeof Mobile === 'undefined') {
+  global.Mobile = require('./lib/MobileUsingWifi.js');
+}
+
 testUtils.toggleRadios(true);
 
 Mobile('GetDeviceName').callNative(function (name) {
-  testUtils.setMyName(name);
+  console.log("My device name is: %s", name);
+  testUtils.setName(name);
   require('./runTests.js');
   console.log('Test app app.js loaded');
 });

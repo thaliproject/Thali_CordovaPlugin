@@ -6,8 +6,8 @@ var inherits = require('util').inherits;
 var randomstring = require('randomstring');
 
 var logger = function (value) {
-    console.log(new Date().toJSON() + ' SendDataConnector.js: ' + value);
-}
+  //console.log(new Date().toJSON() + ' SendDataConnector.js: ' + value);
+};
 
 function SendDataConnector(rounds,dataAmount,reTryTimeout,reTryMaxCount,dataTimeOut) {
     console.log("daya" + dataAmount);
@@ -129,12 +129,15 @@ SendDataConnector.prototype.doConnect = function(peer) {
             logger("CLIENT starting client ");
 
             self.clientSocket = net.connect(port, function () {
-                // self.toSendDataAmount is the wanted amount of data in bytes.
+                // self.toSendDataAmount is the wanted amount of data in bytes. Since
+                // we are generating the data so that it contains only ASCII characters
+                // the right amount of characters is the same as the wanted amount of bytes.
                 var remainingSendAmount = self.toSendDataAmount - self.receivedCounter;
                 logger('CLIENT now sending ' + remainingSendAmount + ' bytes of data');
-                // The size of a single character in a string is 2 bytes so splitting the
-                // the wanted amount of bytes to get string with right length.
-                var testMessage = randomstring.generate(remainingSendAmount / 2);
+                var testMessage = randomstring.generate({
+                  length: remainingSendAmount,
+                  charset: 'alphanumeric'
+                });
                 self.resetDataTimeout(peer);
                 self.clientSocket.write(testMessage);
             });
