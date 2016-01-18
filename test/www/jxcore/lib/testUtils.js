@@ -120,3 +120,19 @@ exports.tmpDirectory = function () {
   }
   return tmpObject.name;
 };
+
+if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
+  // Below is only for logging purposes.
+  // Once we have had the BT off and we just turned it on,
+  // we need to wait untill the BLE support is reported rigth way
+  // seen with LG G4, Not seen with Motorola Nexus 6.
+  setTimeout(function () {
+    Mobile('IsBLESupported').callNative(function (err) {
+      if (err) {
+        console.log('BLE advertisement is not supported: ' + err );
+        return;
+      }
+      console.log("BLE advertisement is supported");
+    });
+  }, 5000);
+}
