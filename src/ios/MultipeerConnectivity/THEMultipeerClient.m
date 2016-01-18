@@ -169,7 +169,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   return success;
 }
 
-- (BOOL)disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier
+/*- (BOOL)disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier
 {
   __block BOOL success = NO;
 
@@ -191,6 +191,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     
   return success; 
 }
+*/
 
 - (BOOL)killConnection:(NSString *)peerIdentifier
 {

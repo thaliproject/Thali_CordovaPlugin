@@ -51,7 +51,7 @@ withDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate;
                     withConnectCallback:(ConnectCallback)connectCallback;
 
 // Disconnect to a remote peer identified by the application level identifier
-- (BOOL)disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier;
+// - (BOOL)disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier;
 
 // Kill connection for testing purposes
 - (BOOL)killConnection:(NSString *)peerIdentifier;

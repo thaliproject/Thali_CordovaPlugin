@@ -44,7 +44,7 @@
 
 // JavaScript callbacks.
 NSString * const kNetworkChanged = @"networkChanged";
-NSString * const kPeerAvailabilityChanged = @"PeerAvailabilityChanged";
+NSString * const kPeerAvailabilityChanged = @"peerAvailabilityChanged";
 NSString * const kAppEnteringBackground = @"appEnteringBackground";
 NSString * const kAppEnteredForeground = @"appEnteredForeground";
 
@@ -174,17 +174,17 @@ NSString * const kAppEnteredForeground = @"appEnteredForeground";
     else
     {
       NSLog(@"jxcore: connect %@", params[0]);
-      void (^connectCallback)(NSString *, uint) = ^(NSString *errorMsg, uint port) 
+      void (^connectCallback)(NSString *, NSString *) = ^(NSString *errorMsg, NSString *connection) 
       {
         if (errorMsg == nil)
         {
           NSLog(@"jxcore: connect: success");
-          [JXcore callEventCallback:callbackId withParams:@[[NSNull null], @(port)]];
+          [JXcore callEventCallback:callbackId withParams:@[[NSNull null], connection]];
         }
         else
         {
           NSLog(@"jxcore: connect: fail: %@", errorMsg);
-          [JXcore callEventCallback:callbackId withParams:@[errorMsg, @(port)]];
+          [JXcore callEventCallback:callbackId withParams:@[errorMsg, [NSNull null]]];
         }
       };
 

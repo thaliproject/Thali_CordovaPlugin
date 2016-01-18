@@ -29,8 +29,6 @@
 #import "THEMultipeerClientSession.h"
 #import "THEMultipeerClientSocketRelay.h"
 
-#include "jx.h"
-#import "JXcore.h"
 #import "THEThreading.h"
 
 @implementation THEMultipeerClientSession
@@ -79,15 +77,15 @@
 
     if (!error)
     {
-      NSMutableDictionary connection = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
-        port, @"listeningPort",
-        1, @"clientPort",
-        1, @"serverPort",
+      NSMutableDictionary *connection = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
+        [NSNumber numberWithInteger:port], @"listeningPort",
+        [NSNumber numberWithInteger:1], @"clientPort",
+        [NSNumber numberWithInteger:1], @"serverPort",
         nil
       ];
    
       connectionJSON = [[NSString alloc] initWithData:
-        [NSJSONSerialization dataWithJSONObject:peerArray options:0 error:nil]
+        [NSJSONSerialization dataWithJSONObject:connection options:0 error:nil]
         encoding:NSUTF8StringEncoding
       ];
     }
@@ -147,14 +145,14 @@
 
     if (prevState == THEPeerSessionStateConnecting)
       [self fireConnectCallback:@"Peer disconnected" withPort:0];
-    //else if (prevState == THEPeerSessionStateConnected)
-    //  [self fireConnectionErrorEvent];
-    else
+    /*
+    else if (prevState == THEPeerSessionStateConnected)
+      [self fireConnectionErrorEvent];
     {
       NSLog(@"client session: Unexpected state (disconnected) in onLinkFailure");
       [NSException raise:@"Unexpected state" 
         format:@"state %lu was unexpected in onLinkFailure", (unsigned long)[self connectionState]];
-    }
+    }*/
   }
 }
 

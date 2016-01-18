@@ -74,11 +74,11 @@ function (t) {
   });
 });
 
-test('PeerAvailabilityChange is called', function (t) {
+test('peerAvailabilityChange is called', function (t) {
 
   var complete = false;
 
-  Mobile("PeerAvailabilityChanged").registerToNative(function(peers) {
+  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
 
     if (!complete)
     {
@@ -108,13 +108,15 @@ test('Can connect to a remote peer', function (t) {
 
   var complete = false;
 
-  Mobile("PeerAvailabilityChanged").registerToNative(function(peers) {
+  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {
       if (peer.peerAvailable) {
-        Mobile("Connect", function(err, connection) {
+        Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
           // We're happy here if we make a connection to anyone
           if (err == null) {
+            connection = JSON.parse(connection);
             if (!complete) {
+              console.log(connection);
               t.ok(connection.listeningPort, "Connection must have listeningPort");
               t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
               t.ok(connection.clientPort, "Connection must have clientPort");

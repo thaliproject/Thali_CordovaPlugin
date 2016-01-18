@@ -270,7 +270,7 @@ typedef enum relayStates {
 
       case NSStreamEventHasBytesAvailable:
       {
-        const uint BUFFER_LEN = 1024;
+        #define BUFFER_LEN 1024
         static uint8_t buffer[BUFFER_LEN];
 
         @synchronized(self)
