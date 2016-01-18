@@ -24,10 +24,12 @@ var test = tape({
       console.log("calling stopBroadcasting");
       emitterToShutDown.stopBroadcasting(function (err4) {
         console.log("stopBroadcasting returned " + err4);
+        t.end();
       });
       emitterToShutDown = null;
+    } else {
+      t.end();
     }
-    t.end();
   }
 });
 

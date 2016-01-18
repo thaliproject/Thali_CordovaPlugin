@@ -94,8 +94,13 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         }
       });
 
-      // Start setup for this test
-      device.socket.emit("setup", test);
+      // The timeout is added as a workaround for an issue
+      // where the client hasn't necessarily had time
+      // to add correct listeners on the socket
+      setTimeout(function() {
+        // Start setup for this test
+        device.socket.emit("setup", test);
+      }, 1000);
     });
   }
 

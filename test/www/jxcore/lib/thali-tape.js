@@ -54,8 +54,10 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
   tape('setup', function(t) {
     // Run setup function when the testServer tells us
     testServer.once("setup", function(_name) {
+      t.on('end', function() {
+        testServer.emit('setup_complete', JSON.stringify({"test":_name}));
+      });
       setup(t);
-      testServer.emit('setup_complete', JSON.stringify({"test":_name}));
     });
   });
 
@@ -81,8 +83,10 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
   tape("teardown", function(t) {
     // Run teardown function when the server tells us
     testServer.once("teardown", function(_name) {
+      t.on('end', function() {
+        testServer.emit('teardown_complete', JSON.stringify({"test":_name}));
+      });
       teardown(t);
-      testServer.emit('teardown_complete', JSON.stringify({"test":_name}));
     }); 
   });
 };
