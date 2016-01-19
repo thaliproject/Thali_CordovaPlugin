@@ -28,7 +28,24 @@ mocks.StartBroadcasting = function (args, callback) {
   // way to be able to complete the mock against the older
   // version of the Thali specification.
   wifiInfrastructure._setLocation(null, port, null);
-  wifiInfrastructure.startListeningForAdvertisements()
+  wifiInfrastructure.start({
+    listen: function (listenPort, listenCallback) {
+      setImmediate(listenCallback);
+      return {
+        close: function (closeCallback) {
+          setImmediate(closeCallback);
+        },
+        address: function () {
+          return {
+            port: port
+          }
+        }
+      }
+    }
+  })
+  .then(function () {
+    return wifiInfrastructure.startListeningForAdvertisements();
+  })
   .then(function () {
     return wifiInfrastructure.startUpdateAdvertisingAndListening();
   })
@@ -39,11 +56,7 @@ mocks.StartBroadcasting = function (args, callback) {
 
 mocks.StopBroadcasting = function (args, callback) {
   broadcastingStarted = false;
-  wifiInfrastructure.stopListeningForAdvertisements()
-  .then(function () {
-    return wifiInfrastructure.stopAdvertisingAndListening();
-  })
-  .then(function () {
+  wifiInfrastructure.stop().then(function () {
     callback(null);
   });
 };

@@ -88,7 +88,7 @@ test('#start should fail if called twice in a row', function (t) {
   });
 });
 
-test('#start should start hosting given router object', function (t) {
+test('#startUpdateAdvertisingAndListening should start hosting given router object', function (t) {
   var app = express();
   app.get('/', function (req, res) {
     res.send('foobar');
@@ -96,6 +96,9 @@ test('#start should start hosting given router object', function (t) {
   wifiInfrastructure.stop()
   .then(function () {
     return wifiInfrastructure.start(app);
+  })
+  .then(function () {
+    return wifiInfrastructure.startUpdateAdvertisingAndListening();
   })
   .then(function () {
     http.get({

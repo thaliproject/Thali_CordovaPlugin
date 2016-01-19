@@ -33,6 +33,7 @@ process.on('uncaughtException', function(err) {
 
 process.on('unhandledRejection', function(err) {
   console.log("Uncaught Promise Rejection: " + JSON.stringify(err));
+  console.trace(err);
   console.log("****TEST TOOK:  ms ****" );
   console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
 });

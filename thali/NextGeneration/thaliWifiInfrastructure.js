@@ -43,13 +43,15 @@ var THALI_USN = 'urn:schemas-upnp-org:service:Thali';
  * @fires event:networkChangedWifi
  * @fires discoveryAdvertisingStateUpdateWifiEvent
  */
-function ThaliWifiInfrastructure (deviceName, port) {
+function ThaliWifiInfrastructure (deviceName) {
   EventEmitter.call(this);
   this.thaliUsn = THALI_USN;
   this.deviceName = deviceName || crypto.randomBytes(16).toString('base64');
-  this.port = port || 0;
-  this.server = null;
+  // Use port 0 so that random available port
+  // will get used.
+  this.port = 0;
   this.router = null;
+  this.routerServer = null;
   this.started = null;
   this.listening = null;
   this.advertising = null;
@@ -154,12 +156,7 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
   }
   self.started = true;
   self.router = router;
-  return new Promise(function(resolve, reject) {
-    self.server = self.router.listen(self.port, function () {
-      self.port = self.server.address().port;
-      resolve();
-    });
-  });
+  return Promise.resolve();
 };
 
 /**
@@ -179,16 +176,8 @@ ThaliWifiInfrastructure.prototype.stop = function () {
     return Promise.resolve();
   }
   self.started = false;
-  return new Promise(function(resolve, reject) {
-    self.server.close(function () {
-      self.stopAdvertisingAndListening()
-      .then(function () {
-        return self.stopListeningForAdvertisements();
-      })
-      .then(function () {
-        resolve();
-      });
-    });
+  return self.stopAdvertisingAndListening().then(function () {
+    return self.stopListeningForAdvertisements();
   });
 };
 
@@ -307,21 +296,27 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function() {
+ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function () {
   var self = this;
-  // TODO: USN should be regenerated every time this method is called, because
-  // according to the specification, that happens when the beacon string is changed.
-  // Is below enough or should we use some uuid library or something else?
+  if (!self.router) {
+    return Promise.reject('Bad Router');
+  }
   var randomString = crypto.randomBytes(16).toString('base64');
   // TODO: Appends to USN list, but does not remove.
   this._server.addUSN(this.thaliUsn + '::' + randomString);
-  if (this.advertising) {
+  if (this.advertising === true) {
     return Promise.resolve();
   }
   this.advertising = true;
   return new Promise(function(resolve, reject) {
-    self._server.start(function () {
-      resolve();
+    self.routerServer = self.router.listen(self.port, function () {
+      self.port = self.routerServer.address().port;
+      // We need to update the location string, because the port
+      // may have changed when we re-start the router server.
+      self._setLocation();
+      self._server.start(function () {
+        resolve();
+      });
     });
   });
 };
@@ -348,7 +343,14 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
   this.advertising = false;
   return new Promise(function(resolve, reject) {
     self._server.stop(function () {
-      resolve();
+      self.routerServer.close(function () {
+        // The port needs to be reset, because
+        // otherwise there is no guarantee that
+        // the same port is available next time
+        // we start the router server.
+        self.port = 0;
+        resolve();
+      });
     });
   });
 };
