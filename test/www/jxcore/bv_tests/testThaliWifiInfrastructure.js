@@ -1,6 +1,6 @@
 'use strict';
 
-var ThaliWifiInfrastructure = require('thali/thaliWifiInfrastructure');
+var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
 var tape = require('../lib/thali-tape');
 var nodessdp = require('node-ssdp');
 
@@ -14,7 +14,7 @@ var test = tape({
   },
   teardown: function(t) {
     // Stop everything at the end of tests to make sure the next test starts from clean state
-    wifiInfrastructure.stopAdvertisingAndListeningForIncomingConnections()
+    wifiInfrastructure.stopAdvertisingAndListening()
     .then(function () {
       return wifiInfrastructure.stopListeningForAdvertisements();
     })
@@ -43,16 +43,16 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
   });
 });
 
-test('#startUpdateAdvertisingAndListenForIncomingConnections should use different USN after every invocation', function (t) {
+test('#startUpdateAdvertisingAndListening should use different USN after every invocation', function (t) {
   var originalAddUsn = wifiInfrastructure._server.addUSN;
   var currentUsn;
   wifiInfrastructure._server.addUSN = function(usn) {
     currentUsn = usn;
   };
-  wifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections()
+  wifiInfrastructure.startUpdateAdvertisingAndListening()
   .then(function() {
     var firstUsn = currentUsn;
-    wifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections()
+    wifiInfrastructure.startUpdateAdvertisingAndListening()
     .then(function() {
       t.notEqual(firstUsn, currentUsn);
       wifiInfrastructure._server.addUSN = originalAddUsn;
@@ -65,14 +65,14 @@ test('verify that Thali-specific messages are filtered correctly', function (t) 
   var irrelevantMessage = {
     USN: 'foobar'
   };
-  t.equal(true, wifiInfrastructure.shouldBeIgnored(irrelevantMessage), 'irrelevant messages should be ignored');
+  t.equal(true, wifiInfrastructure._shouldBeIgnored(irrelevantMessage), 'irrelevant messages should be ignored');
   var relevantMessage = {
     USN: wifiInfrastructure.thaliUsn
   };
-  t.equal(false, wifiInfrastructure.shouldBeIgnored(relevantMessage), 'relevant messages should not be ignored');
+  t.equal(false, wifiInfrastructure._shouldBeIgnored(relevantMessage), 'relevant messages should not be ignored');
   var messageFromSelf = {
     USN: TEST_DEVICE_NAME + ':' + wifiInfrastructure.thaliUsn
   };
-  t.equal(true, wifiInfrastructure.shouldBeIgnored(messageFromSelf), 'messages from this device should be ignored');
+  t.equal(true, wifiInfrastructure._shouldBeIgnored(messageFromSelf), 'messages from this device should be ignored');
   t.end();
 });

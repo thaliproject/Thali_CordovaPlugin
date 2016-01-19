@@ -5,7 +5,7 @@ var net = require('net');
 var url = require('url');
 
 var testUtils = require('./testUtils.js');
-var ThaliWifiInfrastructure = require('thali/ThaliWifiInfrastructure');
+var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
 
 var randomSuffix = '' + Math.round((Math.random() * 10000))
 var randomDeviceName = 'device-' + randomSuffix;
@@ -30,7 +30,7 @@ mocks.StartBroadcasting = function (args, callback) {
   wifiInfrastructure._setLocation(null, port, null);
   wifiInfrastructure.startListeningForAdvertisements()
   .then(function () {
-    return wifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections();
+    return wifiInfrastructure.startUpdateAdvertisingAndListening();
   })
   .then(function () {
     callback(null);
@@ -41,7 +41,7 @@ mocks.StopBroadcasting = function (args, callback) {
   broadcastingStarted = false;
   wifiInfrastructure.stopListeningForAdvertisements()
   .then(function () {
-    return wifiInfrastructure.stopAdvertisingAndListeningForIncomingConnections();
+    return wifiInfrastructure.stopAdvertisingAndListening();
   })
   .then(function () {
     callback(null);
