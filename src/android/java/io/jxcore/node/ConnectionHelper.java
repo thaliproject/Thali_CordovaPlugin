@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import android.os.Build;
+
 /**
  * Wraps the Android connector library functionality and provides an interface for JXcore layer
  * (with the help of JXcoreExtensions class).
@@ -70,6 +72,8 @@ public class ConnectionHelper
      */
     public ConnectionHelper() {
         mContext = jxcore.activity.getBaseContext();
+
+        Log.i(TAG, "Build version SDK_INT: " + Build.VERSION.SDK_INT);
 
         mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
             @Override
