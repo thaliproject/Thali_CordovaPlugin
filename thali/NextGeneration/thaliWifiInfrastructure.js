@@ -37,9 +37,6 @@ var THALI_USN = 'urn:schemas-upnp-org:service:Thali';
  * instances are already specified to use whatever ports are available the
  * different instances should not run into each other.
  *
- * __Open Issue:__ We need to confirm that the different instances will see
- * each other's SSDP advertisements and queries.
- *
  * @public
  * @constructor
  * @fires event:wifiPeerAvailabilityChanged
@@ -51,6 +48,9 @@ function ThaliWifiInfrastructure (deviceName, port) {
   this.thaliUsn = THALI_USN;
   this.deviceName = deviceName || crypto.randomBytes(16).toString('base64');
   this.port = port || 0;
+  this.server = null;
+  this.router = null;
+  this.started = null;
   this.listening = null;
   this.advertising = null;
   // A variable to hold information about known peer availability states
@@ -148,7 +148,18 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.start = function (router) {
-  return new Promise();
+  var self = this;
+  if (self.started === true) {
+    return Promise.reject('Call Stop!');
+  }
+  self.started = true;
+  self.router = router;
+  return new Promise(function(resolve, reject) {
+    self.server = self.router.listen(self.port, function () {
+      self.port = self.server.address().port;
+      resolve();
+    });
+  });
 };
 
 /**
@@ -163,7 +174,22 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.stop = function () {
-  return new Promise();
+  var self = this;
+  if (self.started === false) {
+    return Promise.resolve();
+  }
+  self.started = false;
+  return new Promise(function(resolve, reject) {
+    self.server.close(function () {
+      self.stopAdvertisingAndListening()
+      .then(function () {
+        return self.stopListeningForAdvertisements();
+      })
+      .then(function () {
+        resolve();
+      });
+    });
+  });
 };
 
 /**
