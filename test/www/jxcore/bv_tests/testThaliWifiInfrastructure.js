@@ -5,10 +5,11 @@ var tape = require('../lib/thali-tape');
 var nodessdp = require('node-ssdp');
 var express = require('express');
 var http = require('http');
+var uuid = require('node-uuid');
 
-var TEST_DEVICE_NAME = 'testDeviceName'
+var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
-var wifiInfrastructure = new ThaliWifiInfrastructure(TEST_DEVICE_NAME);
+var wifiInfrastructure = new ThaliWifiInfrastructure();
 
 var test = tape({
   setup: function(t) {
@@ -30,8 +31,9 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
   var testServer = new nodessdp.Server({
     location: testLocation,
     allowWildcards: true,
-    udn: 'somePeerDeviceName' + ':' + wifiInfrastructure.thaliUsn
+    udn: THALI_NT
   });
+  testServer.setUSN('uuid:' + uuid.v4());
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', function (data) {
     t.equal(data[0].peerLocation, testLocation);
     testServer.stop(function () {
@@ -44,9 +46,9 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
 });
 
 test('#startUpdateAdvertisingAndListening should use different USN after every invocation', function (t) {
-  var originalAddUsn = wifiInfrastructure._server.addUSN;
+  var originalSetUsn = wifiInfrastructure._server.setUSN;
   var currentUsn;
-  wifiInfrastructure._server.addUSN = function(usn) {
+  wifiInfrastructure._server.setUSN = function(usn) {
     currentUsn = usn;
   };
   wifiInfrastructure.startUpdateAdvertisingAndListening()
@@ -55,7 +57,7 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
     wifiInfrastructure.startUpdateAdvertisingAndListening()
     .then(function() {
       t.notEqual(firstUsn, currentUsn);
-      wifiInfrastructure._server.addUSN = originalAddUsn;
+      wifiInfrastructure._server.setUSN = originalSetUsn;
       t.end();
     });
   });
@@ -63,15 +65,17 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
 
 test('verify that Thali-specific messages are filtered correctly', function (t) {
   var irrelevantMessage = {
-    USN: 'foobar'
+    NT: 'foobar'
   };
   t.equal(true, wifiInfrastructure._shouldBeIgnored(irrelevantMessage), 'irrelevant messages should be ignored');
   var relevantMessage = {
-    USN: wifiInfrastructure.thaliUsn
+    NT: THALI_NT,
+    USN: uuid.v4()
   };
   t.equal(false, wifiInfrastructure._shouldBeIgnored(relevantMessage), 'relevant messages should not be ignored');
   var messageFromSelf = {
-    USN: TEST_DEVICE_NAME + ':' + wifiInfrastructure.thaliUsn
+    NT: THALI_NT,
+    USN: wifiInfrastructure.usn
   };
   t.equal(true, wifiInfrastructure._shouldBeIgnored(messageFromSelf), 'messages from this device should be ignored');
   t.end();

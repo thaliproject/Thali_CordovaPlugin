@@ -5,9 +5,9 @@ var inherits = require('util').inherits;
 var Promise = require('lie');
 var nodessdp = require('node-ssdp');
 var ip = require('ip');
-var crypto = require('crypto');
+var uuid = require('node-uuid');
 
-var THALI_USN_PREFIX = 'urn:schemas-upnp-org:service:Thali';
+var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
 /** @module ThaliWifiInfrastructure */
 
@@ -43,10 +43,9 @@ var THALI_USN_PREFIX = 'urn:schemas-upnp-org:service:Thali';
  * @fires event:networkChangedWifi
  * @fires discoveryAdvertisingStateUpdateWifiEvent
  */
-function ThaliWifiInfrastructure (deviceName) {
+function ThaliWifiInfrastructure () {
   EventEmitter.call(this);
-  this.thaliUsn = THALI_USN_PREFIX;
-  this.deviceName = deviceName || crypto.randomBytes(16).toString('base64');
+  this.usn = null;
   // Use port 0 so that random available port
   // will get used.
   this.port = 0;
@@ -59,7 +58,7 @@ function ThaliWifiInfrastructure (deviceName) {
   // and used to avoid emitting peer availability changes in case the
   // availability hasn't changed from the previous known value.
   this.peerAvailabilities = {};
-  this._init(deviceName);
+  this._init();
 }
 
 inherits(ThaliWifiInfrastructure, EventEmitter);
@@ -70,7 +69,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
     allowWildcards: true,
     logJSON: false,
     logLevel: 'trace',
-    udn: this.deviceName
+    udn: THALI_NT
   };
   this._server = new nodessdp.Server(serverOptions);
   this._setLocation();
@@ -116,10 +115,11 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 // Function used to filter out SSDP messages that are not
 // relevant for Thali.
 ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
-  // First check if the data contains the Thali-specific USN.
-  if (data.USN.indexOf(this.thaliUsn) >= 0) {
+  console.log(data);
+  // First check if the data contains the Thali-specific NT.
+  if (data.NT === THALI_NT) {
     // Filtering out messages from ourselves.
-    if (data.USN.indexOf(this.deviceName) === 0) {
+    if (data.USN === this.usn) {
       return true;
     } else {
       return false;
@@ -302,13 +302,12 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
   if (!self.router) {
     return Promise.reject('Bad Router');
   }
-  var randomString = crypto.randomBytes(16).toString('base64');
-  // TODO: Appends to USN list, but does not remove.
-  this._server.addUSN(this.thaliUsn + '::' + randomString);
-  if (this.advertising === true) {
+  self.usn = 'uuid:' + uuid.v4();
+  self._server.setUSN(self.usn);
+  if (self.advertising === true) {
     return Promise.resolve();
   }
-  this.advertising = true;
+  self.advertising = true;
   return new Promise(function(resolve, reject) {
     self.routerServer = self.router.listen(self.port, function () {
       self.port = self.routerServer.address().port;
