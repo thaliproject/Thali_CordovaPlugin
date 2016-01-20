@@ -5,8 +5,6 @@ var Promise = require('lie');
 /** @module ThaliWifiInfrastructure */
 
 /**
- * @file
- *
  * This is the interface used to manage local discover of peers over a Wi-Fi
  * Infrastructure mode access point.
  *
@@ -20,9 +18,10 @@ var Promise = require('lie');
  *
  * All stop methods in this file are idempotent so they can be called multiple
  * times in a row without causing a state change.
- */
-
-/**
+ *
+ * @public
+ * @constructor
+ *
  * This creates an object to manage a WiFi instance. During production we will
  * have exactly one instance running but for testing purposes it's very useful
  * to be able to run multiple instances. So long as the SSDP code uses a
@@ -33,8 +32,6 @@ var Promise = require('lie');
  * __Open Issue:__ We need to confirm that the different instances will see
  * each other's SSDP advertisements and queries.
  *
- * @public
- * @constructor
  * @fires event:wifiPeerAvailabilityChanged
  * @fires event:networkChangedWifi
  * @fires discoveryAdvertisingStateUpdateWifiEvent
@@ -153,6 +150,9 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  * called. If the device switches access points (e.g. the BSSID changes) or if
  * WiFi is lost then the server will be shut down. It is up to the caller to
  * catch the networkChanged event and to call start advertising again.
+ *
+ * The server created to host the router MUST use {@link
+  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}
  *
  * __OPEN ISSUE:__ If we have a properly configured multiple AP network then
  * all the APs will have different BSSID values but identical SSID values and

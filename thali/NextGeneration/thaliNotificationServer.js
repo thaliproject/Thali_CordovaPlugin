@@ -27,7 +27,8 @@ function ThaliNotificationServer(router, ecdhForLocalDevice,
  * When called for the first time on an instance of ThaliNotificationServer
  * the route "/NotificationBeacons" MUST be registered on the submitted
  * router object with a GET handler. Registration of the path on the router
- * MUST occur at most once.
+ * MUST occur at most once. The notification server MUST use {@link
+  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}
  *
  * If publicKeysToNotify is null then any GET requests on the endpoint MUST be
  * responded to with 204 No Content per the

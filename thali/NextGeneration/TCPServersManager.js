@@ -271,8 +271,9 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
 };
 
 /**
- * This creates a local TCP server to accept incoming connections from the Thali
- * app that will be sent to the identified peer.
+ * This creates a local TCP server (which MUST use {@link
+ * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) to accept incoming
+ * connections from the Thali app that will be sent to the identified peer.
  *
  * If this method is called before start is called then a "Start First!" error
  * MUST be thrown. If this method is called after stop is called then a "We are

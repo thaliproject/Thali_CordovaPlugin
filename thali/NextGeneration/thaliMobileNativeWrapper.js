@@ -38,7 +38,9 @@ var EventEmitter = require('events');
 /**
  * This method MUST be called before any other method here other than
  * registering for events on the emitter. This method will cause us to:
- * - create a TCP server on a random port and host the router on that server.
+ * - create a TCP server (which MUST use {@link
+ * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) on a random port and
+ * host the router on that server.
  * - create a {@link module:TCPServersManager}.
  * - listen for the {@link module:TCPServersManager~failedConnection} event and
  * then repeat it.
