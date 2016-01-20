@@ -7,7 +7,7 @@ var nodessdp = require('node-ssdp');
 var ip = require('ip');
 var crypto = require('crypto');
 
-var THALI_USN = 'urn:schemas-upnp-org:service:Thali';
+var THALI_USN_PREFIX = 'urn:schemas-upnp-org:service:Thali';
 
 /** @module ThaliWifiInfrastructure */
 
@@ -45,7 +45,7 @@ var THALI_USN = 'urn:schemas-upnp-org:service:Thali';
  */
 function ThaliWifiInfrastructure (deviceName) {
   EventEmitter.call(this);
-  this.thaliUsn = THALI_USN;
+  this.thaliUsn = THALI_USN_PREFIX;
   this.deviceName = deviceName || crypto.randomBytes(16).toString('base64');
   // Use port 0 so that random available port
   // will get used.
@@ -118,8 +118,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
   // First check if the data contains the Thali-specific USN.
   if (data.USN.indexOf(this.thaliUsn) >= 0) {
-    // We also discover ourself via SSDP to need to filter
-    // out the messages that are originating from this device.
+    // Filtering out messages from ourselves.
     if (data.USN.indexOf(this.deviceName) === 0) {
       return true;
     } else {
@@ -379,10 +378,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
  * @event wifiPeerAvailabilityChanged
  * @public
  * @property {string} peerIdentifier This is the USN value
- * @property {string} hostAddress This can be either an IP address or a DNS
- * address encoded as a string
- * @property {number} portNumber The port on the hostAddress to use to connect
- * to the peer
+ * @property {string} peerLocation The URL of the peer
  */
 
 /**
