@@ -20,15 +20,17 @@ exec('cordova info', function (error, stdout, stderr) {
   }
   var installDirectory = path.join(__dirname, 'install');
   exec('jx npm install --autoremove "*.gz"', { cwd: installDirectory }, function (error, stdout, stderr) {
+    // Log the output in all cases since it might contain useful
+    // debugging information.
+    if (stdout) console.log(stdout);
+    if (stderr) console.log(stderr);
+
     if (error) {
-      // In error cases, log all possible debug output
-      console.log(stdout);
-      console.log(stderr);
       console.log('Could not install dependencies for install directory. - ' + error);
       process.exit(1);
     }
 
-      require(installDirectory)(function (err, data) {
+    require(installDirectory)(function (err, data) {
       if (err) {
         console.log('Failed with - ' + err);
         process.exit(1);

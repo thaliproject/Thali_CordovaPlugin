@@ -164,7 +164,7 @@
  * other words we are pushing an iOS bug up from the iOS native code into
  * Node.js and requiring us to solve it up in Node.js land. For all the gory
  * details on how this works see the [binding
- * spec](http://www.thaliproject.org/presenceprotocolBindings.md).
+ * spec](http://thaliproject.org/PresenceProtocolBindings/).
  *
  * We use the `clientPort` value below so that the mux layer can figure out
  * which of its connections is the one it needs to use to talk to the desired
@@ -218,9 +218,12 @@
  * but we enforce it on Android as well in order to keep the platform
  * consistent.
  *
- * If this method is called consecutively with the same peerIdentifier then if
- * a connection already exists its port MUST be returned otherwise a new
- * connection MUST be created. In the case of Android there MUST be at most one
+ * If this method is called consecutively with the same peerIdentifier and a
+ * connection is either in progress or already exists then an error MUST
+ * be returned. Otherwise a new
+ * connection MUST be created. 
+ * 
+ * In the case of Android there MUST be at most one
  * Bluetooth client connection between this peer and the identified remote peer.
  * In the case of iOS there MUST be at most one MCSession between this peer and
  * the identified remote peer. In the case of iOS if this peer is lexically
@@ -269,6 +272,7 @@
  * |--------------|-------------|
  * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
  * | startListeningForAdvertisements is not active | Go start it! |
+ * | Alreading connect(ing/ed) | There already is a connection or a request to createone is already in process |
  * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
  * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
  * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
@@ -357,7 +361,8 @@
  * MUST keep the total size of these notifications down (e.g. don't DOS node).
  * So if we are getting lots of repeated announcements we can throw those away
  * and if we are just getting large numbers of unique announcements then it's
- * better to drop some than starve out Node.
+ * better to drop some than starve out Node. When overloaded with too many
+ * announcements prefer to drop the oldest ones first.
  *
  * @public
  * @function external:"Mobile('peerAvailabilityChanged')".registerToNative
@@ -453,13 +458,12 @@ var radioState = {
 /**
  * Any time the state of the network changes (meaning any of the values in the
  * {@link module:thaliMobileNative~networkChanged} object are altered) any
- * callbacks registered with this method will be called. Note that calls to this
- * callback can start at any time once the system has been initialized so it
- * might not be possible to grab all the instances of this event before the
- * application code is fully running. This is considered acceptable because if
- * there are problems with network state when calling methods on this object an
- * error wil be returned. So the caller should really only care about this event
- * once they have called methods on this object.
+ * callbacks registered with this method will be called. The native layer is
+ * obligated to send an instance of this callback in response to the first
+ * subscription it gets to this event. This will be used by the 
+ * {@link module:thaliMobileNativeWrapper} to initialize its tracking of
+ * the network's state for 
+ * {@link module:thaliMobileNativeWrapper~getNonTCPNetworkStatus}.
  *
  * The callbacks MUST NOT be sent more frequently than every 100 ms. If
  * multiple network changes occur during that period then only the last update
@@ -492,7 +496,13 @@ var radioState = {
  *
  * This event MUST NOT be sent more often than every 100 ms. This means that
  * one cannot count the number of instances of this event in order to count how
- * many connections were missed.
+ * many connections were missed. This also means that the native layer is only
+ * required to track exactly one instance of this event for any given port within
+ * the 100 ms window. In other words if the systetm is listening on port X and
+ * 10,000 incoming requests come for port X within 100 ms (that would be impressive)
+ * then the native layer is only obligated to send up exactly one notification of
+ * the problem. This is because the native app only needs to know that its port is
+ * either overloaded or down as a general notification.
  *
  * @public
  * @function external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative

@@ -218,6 +218,26 @@ module.exports.stopAdvertisingAndListening = function () {
 };
 
 /**
+ * This method returns the last value sent by the
+ * {@link module:thaliMobileNativeWrapper.event:networkChangedNonTCP}
+ * event.
+ * 
+ * The reason we use a promise is that there is a race condition where
+ * someone could call this before we have gotten the first network
+ * status event. Rather than force everyone to play the game
+ * where they have to subscribe to the event and call this method
+ * just to figure out the status for things like UX that says
+ * "Hey you don't have the right radio!" we just use a promise that
+ * won't return until we have a value.
+ * 
+ * @public
+ * @returns {Promise<module:thaliMobileNative~networkChanged>}
+ */
+module.exports.getNonTCPNetworkStatus = function() {
+  return new Promise();
+}
+
+/**
  * # WARNING: This method is intended for internal Thali testing only. DO NOT
  * USE!
  *
