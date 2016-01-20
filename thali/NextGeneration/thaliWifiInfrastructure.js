@@ -9,6 +9,18 @@ var crypto = require('crypto');
 
 var THALI_USN_PREFIX = 'urn:schemas-upnp-org:service:Thali';
 
+// Global queueing
+var globalPromise = Promise.resolve();
+
+function enqueue(fn) {
+  globalPromise = globalPromise.then(function () {
+    return new Promise(function (resolve, reject) {
+      fn(resolve, reject);
+    });
+  });
+  return globalPromise;
+}
+
 /** @module ThaliWifiInfrastructure */
 
 /**
@@ -150,12 +162,14 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
  */
 ThaliWifiInfrastructure.prototype.start = function (router) {
   var self = this;
-  if (self.started === true) {
-    return Promise.reject('Call Stop!');
-  }
-  self.started = true;
-  self.router = router;
-  return Promise.resolve();
+  return enqueue(function (resolve, reject) {
+    if (self.started === true) {
+      return reject('Call Stop!');
+    }
+    self.started = true;
+    self.router = router;
+    return resolve();
+  });
 };
 
 /**
@@ -171,12 +185,14 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
  */
 ThaliWifiInfrastructure.prototype.stop = function () {
   var self = this;
-  if (self.started === false) {
-    return Promise.resolve();
-  }
-  self.started = false;
-  return self.stopAdvertisingAndListening().then(function () {
-    return self.stopListeningForAdvertisements();
+  return enqueue(function (resolve, reject) {
+    if (self.started === false) {
+      return resolve();
+    }
+    self.started = false;
+    return self.stopAdvertisingAndListening().then(function () {
+      return self.stopListeningForAdvertisements();
+    });
   });
 };
 
