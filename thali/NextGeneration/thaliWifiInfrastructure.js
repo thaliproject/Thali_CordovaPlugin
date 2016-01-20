@@ -246,13 +246,15 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  * This method will start advertising the peer's presence over the local Wi-Fi
  * Infrastructure Mode discovery mechanism (currently SSDP). When creating the
  * UDP socket for SSDP the socket MUST be "udp4". When socket.bind is called to
- * bind the socket to the SSDP multicast address and port, a random port will
- * automatically be picked by Node.js to bind the UDP port to locally. This
- * address is needed in order to set the location header in SSDP messages. This
- * port can be discovered via socket.address().port in the callback to the
- * socket.bind call. Note that we MUST make sure that the SSDP local UDP port is
- * picked randomly so we do not have collisions between multiple instances of
- * {@link module:ThaliWifiInfrastructure}. Also note that the implementation of
+ * bind the socket the SSDP multicast address 239.255.255.250 and port 1900 MUST
+ * be chosen as they are the reserved address and port for SSDP.
+ * 
+ * __OPEN ISSUE:__ What happens on Android or iOS or the desktop OS's for that
+ * matter if multiple apps all try to bind to the same UDP multicast address?
+ * It should be fine. But it's important to find out so that other apps can't
+ * block us.
+ *
+ * Also note that the implementation of
  * SSDP MUST recognize advertisements from its own instance and ignore them.
  * However it is possible to have multiple independent instances of
  * ThaliWiFiInfrastructure on the same device and we MUST process advertisements
