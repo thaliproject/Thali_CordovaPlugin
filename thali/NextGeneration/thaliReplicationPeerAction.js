@@ -7,7 +7,15 @@ var actionState = require('thaliPeerAction').actionState;
 
 /** @module thaliReplicationPeerAction */
 
-function ThaliReplicationPeerAction(peerId, notificationSubscriptions,
+/**
+ * @classdesc Manages replicating information with a peer we have discovered
+ * via notifications.
+ * @param peerId
+ * @param peerAdvertisesDataForUs
+ * @param pouchDB
+ * @constructor
+ */
+function ThaliReplicationPeerAction(peerId,
                                     peerAdvertisesDataForUs,
                                     pouchDB) {
 

@@ -2,6 +2,10 @@
 
 /** @module thaliACLEnforcer */
 
+
+// TODO: Make sure that we properly enforce the ACL on _Local/<uniqueid> so that
+// only the peer with that ID can write to it.
+
 /**
  * Whenever a peer successfully authenticates a connection this event will be
  * fired. Note that depending on how many connections the peer is creating this
