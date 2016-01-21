@@ -182,7 +182,7 @@
   return [_server session:peerIdentifier];
 }
 
-- (void)didFindPeerIdentifier:(NSString *)peerIdentifier byServer:(bool)byServer
+- (void)didFindPeerIdentifier:(NSString *)peerIdentifier byServer:(BOOL)byServer
 {
   if (_peerDiscoveryDelegate)
   {
