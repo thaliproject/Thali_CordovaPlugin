@@ -158,7 +158,6 @@ var MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 10;
  *
  * @param {module:thaliNotificationServer~ThaliNotificationServer} thaliNotificationServer
  * This is the server we will use to push out notifications.
- * @param {module:thaliACLEnforcer~ThaliAclEnforcer} thaliAclEnforcer
  * @param {PouchDB} pouchDB database we are tracking changes on.
  * @constructor
  */
