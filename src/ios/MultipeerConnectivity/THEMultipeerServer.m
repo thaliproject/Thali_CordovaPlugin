@@ -54,14 +54,19 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     // Timer reset callback
     void (^_timerCallback)(void);
   
+    // Object that will get to hear about peers we 'discover'
+    id<THEMultipeerDiscoveryDelegate> _multipeerDiscoveryDelegate;
+  
     // Object that can see server session states
-    id<THEMultipeerSessionStateDelegate> _clientSessionStateDelegate;
+    id<THEMultipeerSessionStateDelegate> _sessionStateDelegate;
 }
 
 - (instancetype)initWithPeerID:(MCPeerID *)peerId
-  withPeerIdentifier:(NSString *)peerIdentifier
-     withServiceType:(NSString *)serviceType
-      withServerPort:(unsigned short)serverPort
+              withPeerIdentifier:(NSString *)peerIdentifier
+                 withServiceType:(NSString *)serviceType
+                  withServerPort:(unsigned short)serverPort
+  withMultipeerDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)multipeerDiscoveryDelegate
+        withSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)sessionStateDelegate
 {
     self = [super init];
     if (!self)
@@ -88,12 +93,10 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     _serviceType = serviceType;
     _serverPort = serverPort;
 
-    return self;
-}
+    _sessionStateDelegate = sessionStateDelegate;
+    _multipeerDiscoveryDelegate = multipeerDiscoveryDelegate;
 
-- (void)setSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)sessionStateDelegate
-{
-  _clientSessionStateDelegate = sessionStateDelegate;
+    return self;
 }
 
 - (void)setTimerResetCallback:(void (^)(void))timerCallback
@@ -142,12 +145,9 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   [self startAdvertising];
 }
 
-// THEMultipeerSessionStateDelegate
-///////////////////////////////////
-
-- (const THEMultipeerPeerSession *)session:(NSString *)peerIdentifier
+- (const THEMultipeerServerSession *)session:(NSString *)peerIdentifier
 {
-  __block THEMultipeerPeerSession *session = nil;
+  __block THEMultipeerServerSession *session = nil;
   
   [_serverSessions updateForPeerIdentifier:peerIdentifier
                                updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
@@ -155,7 +155,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)p;
     if (serverSession)
     {
-      session = (THEMultipeerServerSession *)serverSession;
+      session = serverSession;
     }
 
     return serverSession;

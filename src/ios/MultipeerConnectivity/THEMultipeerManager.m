@@ -97,7 +97,9 @@
       _server = [[THEMultipeerServer alloc] initWithPeerID:_peerID
                                         withPeerIdentifier:_peerIdentifier
                                            withServiceType:_serviceType
-                                            withServerPort:serverPort];
+                                            withServerPort:serverPort
+                            withMultipeerDiscoveryDelegate:self
+                                  withSessionStateDelegate:self];
       [_server start];
       NSLog(@"THEMultipeerManager initialized peer %@", _peerIdentifier);
       return true;
@@ -145,6 +147,7 @@
       _client = [[THEMultipeerClient alloc] initWithPeerId:_peerID
                                            withServiceType:_serviceType
                                         withPeerIdentifier:_peerIdentifier
+                                       withSessionDelegate:self
                             withMultipeerDiscoveryDelegate:self];
       [_client start];
 
@@ -169,12 +172,36 @@
   return false;
 }
 
-- (void)didFindPeerIdentifier:(NSString *)peerIdentifier
+- (const THEMultipeerClientSession *)clientSession:(NSString *)peerIdentifier
 {
+  return [_client session:peerIdentifier];
+}
+
+- (const THEMultipeerServerSession *)serverSession:(NSString *)peerIdentifier
+{
+  return [_server session:peerIdentifier];
+}
+
+- (void)didFindPeerIdentifier:(NSString *)peerIdentifier byServer:(bool)byServer
+{
+  if (_peerDiscoveryDelegate)
+  {
+    NSDictionary *peer = @{
+      @"peerIdentifier" : peerIdentifier,
+      @"isAvailable" : @true,
+      @"pleaseConnection" : byServer ? @true : @false
+    };
+    
+    [_peerDiscoveryDelegate didFindPeer:peer];
+  }
 }
 
 - (void)didLosePeerIdentifier:(NSString *)peerIdentifier
 {
+  if (_peerDiscoveryDelegate)
+  {
+    [_peerDiscoveryDelegate didLosePeer:peerIdentifier];
+  }
 }
 
 - (void)didAcceptIncomingConnectionFromPeerIdentifier:(NSString *)peerIdentifier

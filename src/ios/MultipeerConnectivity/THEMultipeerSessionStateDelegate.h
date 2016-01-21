@@ -25,12 +25,14 @@
 //  THEMultipeerSessionStateDelegate.h
 //
 
-#import "THEMultipeerPeerSession.h"
+#import "THEMultipeerClientSession.h"
+#import "THEMultipeerServerSession.h"
 
 // Protocol implemented by classes wishing to know global session state
 @protocol THEMultipeerSessionStateDelegate <NSObject>
 
-- (const THEMultipeerPeerSession *)session:(NSString *)peerIdentifier;
+- (const THEMultipeerClientSession *)clientSession:(NSString *)peerIdentifier;
+- (const THEMultipeerServerSession *)serverSession:(NSString *)peerIdentifier;
 
 @end
 

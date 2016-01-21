@@ -32,7 +32,7 @@
 
 // Encapsulates the local client functionality such as discovering and 
 // connecting to remote servers.
-@interface THEMultipeerClient : NSObject <MCNearbyServiceBrowserDelegate, THEMultipeerSessionStateDelegate>
+@interface THEMultipeerClient : NSObject <MCNearbyServiceBrowserDelegate>
 
 // Service type here is what we're looking for, not what we may be advertising 
 // (although they'll usually be the same)
@@ -40,6 +40,7 @@
 - (instancetype)initWithPeerId:(MCPeerID *)peerId
                  withServiceType:(NSString *)serviceType
               withPeerIdentifier:(NSString *)peerIdentifier
+             withSessionDelegate:(id<THEMultipeerSessionStateDelegate>)sessionDelegate
   withMultipeerDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate;
 
 // Start and stop the client (i.e. the peer discovery process)
@@ -53,14 +54,11 @@
 - (BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
                     withConnectCallback:(ConnectCallback)connectCallback;
 
-// Disconnect to a remote peer identified by the application level identifier
-// - (BOOL)disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier;
-
 // Kill connection for testing purposes
 - (BOOL)killConnection:(NSString *)peerIdentifier;
 
-- (void)setSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)sessionStateDelegate;
-
 - (void)didAcceptIncomingConnectionFromPeerIdentifier:(NSString *)peerIdentifier;
+
+- (const THEMultipeerClientSession *)session:(NSString *)peerIdentifier;
 
 @end

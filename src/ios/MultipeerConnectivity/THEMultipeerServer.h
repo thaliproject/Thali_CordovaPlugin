@@ -28,16 +28,20 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
 #import "THEMultipeerPeerSession.h"
+#import "THEMultipeerDiscoveryDelegate.h"
 #import "THEMultipeerSessionStateDelegate.h"
 
 // Encapsulate the local server, handles advertising the serviceType and accepting
 // connections from remote clients
-@interface THEMultipeerServer : NSObject <MCNearbyServiceAdvertiserDelegate, THEMultipeerSessionStateDelegate>
+@interface THEMultipeerServer : NSObject <MCNearbyServiceAdvertiserDelegate>
 
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
             withPeerIdentifier:(NSString *)peerIdentifier
                withServiceType:(NSString *)serviceType
-                withServerPort:(unsigned short)serverPort;
+                withServerPort:(unsigned short)serverPort
+withMultipeerDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)multipeerDiscoveryDelegate
+      withSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)sessionStateDelegate;
+
 
 // Start/stop advertising
 - (void)start;
@@ -49,6 +53,6 @@
 // Set reset callback for managing restarts
 - (void)setTimerResetCallback:(void (^)(void))timerCallback;
 
-- (void)setSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)sessionStateDelegte;
+- (const THEMultipeerServerSession *)session:(NSString *)peerIdentifier;
 
 @end

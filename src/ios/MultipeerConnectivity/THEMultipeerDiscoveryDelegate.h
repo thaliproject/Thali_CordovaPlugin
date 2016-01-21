@@ -29,8 +29,9 @@
 // inform it's delegate about the visibility of peers
 @protocol THEMultipeerDiscoveryDelegate <NSObject>
 
-// Notifies the delegate that a peer was found.
-- (void)didFindPeerIdentifier:(NSString *)peerIdentifier;
+// Notifies the delegate that a peer was found and who found it (server finding a peer
+// indicated a reverse connection is being requested)
+- (void)didFindPeerIdentifier:(NSString *)peer byServer:(BOOL)byServer;
 
 // Notifies the delegate that a peer was lost.
 - (void)didLosePeerIdentifier:(NSString *)peerIdentifier;
