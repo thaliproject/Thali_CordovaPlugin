@@ -45,6 +45,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   MCPeerID * _remotePeerID;
   NSString * _remotePeerIdentifier;
 
+  THEPeerSessionState _connectionState;
+
   // Debugging purposes only
   NSString * _sessionType;
 }
@@ -107,9 +109,19 @@ static NSDictionary *stateChanges = nil;
   return _remotePeerID;
 }
 
--(NSString *)remotePeerIdentifier
+- (NSString *)remotePeerIdentifier
 {
   return _remotePeerIdentifier;
+}
+
+- (void)updateRemotePeerIdentifier:(NSString *)remotePeerIdentifier
+{
+  _remotePeerIdentifier = remotePeerIdentifier;
+}
+
+- (THEPeerSessionState)connectionState
+{
+  return _connectionState;
 }
 
 -(void)setInputStream:(NSInputStream *)inputStream
@@ -191,6 +203,11 @@ static NSDictionary *stateChanges = nil;
 - (void)onLinkFailure
 {
   // Nothing for base/server class to do here
+}
+
+- (const THEMultipeerSocketRelay *)relay
+{
+  return _relay;
 }
 
 // MCSessionDelegate

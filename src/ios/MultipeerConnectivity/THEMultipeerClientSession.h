@@ -25,12 +25,12 @@
 //  THEMultipeerClientSession.h
 //
 
+#import "THEAppContext.h"
 #import "THEMultipeerPeerSession.h"
 #import "THEMultipeerClientSocketRelayDelegate.h"
 
 // Session type managed by clients (and so references a remote server)
-@interface THEMultipeerClientSession : THEMultipeerPeerSession 
-                                        <THEMultipeerClientSocketRelayDelegate>
+@interface THEMultipeerClientSession : THEMultipeerPeerSession <THEMultipeerClientSocketRelayDelegate>
 
 @property (atomic) BOOL visible;
 
@@ -42,7 +42,6 @@
            withRemotePeerIdentifier:(NSString *)remotePeerIdentifier;
 
 - (void)onPeerLost;
-//- (void)disconnectFromPeer;
 
 @end
 

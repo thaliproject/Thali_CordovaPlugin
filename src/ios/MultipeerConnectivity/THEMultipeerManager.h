@@ -28,36 +28,31 @@
 #import <Foundation/Foundation.h>
 
 #import "THEAppContext.h"
+#import "THEPeerDiscoveryDelegate.h"
 #import "THEMultipeerDiscoveryDelegate.h"
 
-// Wraps all the functionality of the networking stack and presents to the upper layers.
-// Contains both client and server members which will discover and connect (the client) and
-// advertise and accept (the server) connections from remote peers.
-@interface THEMultipeerSession : NSObject
+// Co-ordinates the actions of the MPCF client and server components
+@interface THEMultipeerManager : NSObject <THEMultipeerDiscoveryDelegate>
  
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType
-                     peerIdentifier:(NSString *)peerIdentifier
-                           peerName:(NSString *)peerName
-                  discoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)delegate;
+                 withPeerIdentifier:(NSString *)peerIdentifier
+          withPeerDiscoveryDelegate:(id<THEPeerDiscoveryDelegate>)delegate;
 
 // Starts multipeer session both discovering and advertising
-- (void)start;
+- (BOOL)startServerWithServerPort:(unsigned short)serverPort;
+- (BOOL)stopServer;
 
-// Stop discovering and advertising, must be called before destrution
-- (void)stop;
+- (BOOL)startClient;
+- (BOOL)stopClient;
 
-// Connects to the peer server with the specified peer identifier. |connectCallback| will
+// Connects to the peer with the specified peer identifier. |connectCallback| will
 // be called when the connection completes with first param being any error message or nil and
 // second param being the port number the relay is listening on
-- (BOOL)connectToPeerServerWithPeerIdentifier:(NSString *)peerIdentifier 
-                          withConnectCallback:(ConnectCallback)connectCallback;
-
-// Connects from the peer server with the specified peer identifier.
-- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSString *)peerIdentifier;
+- (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
+                    withConnectCallback:(ConnectCallback)connectCallback;
 
 // Kill the connection without clean-up. Testing only !!
 - (BOOL)killConnection:(NSString *)peerIdentifier;
-
 
 @end

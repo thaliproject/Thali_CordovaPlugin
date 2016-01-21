@@ -7,16 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D401726E1C510AD20072022A /* THEMultipeerClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172581C510AD10072022A /* THEMultipeerClient.m */; };
+		D401726F1C510AD20072022A /* THEMultipeerClientSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D401725A1C510AD10072022A /* THEMultipeerClientSession.m */; };
+		D40172701C510AD20072022A /* THEMultipeerClientSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D401725C1C510AD10072022A /* THEMultipeerClientSocketRelay.m */; };
+		D40172711C510AD20072022A /* THEMultipeerManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172611C510AD10072022A /* THEMultipeerManager.m */; };
+		D40172721C510AD20072022A /* THEMultipeerPeerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172631C510AD10072022A /* THEMultipeerPeerSession.m */; };
+		D40172731C510AD20072022A /* THEMultipeerServer.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172651C510AD10072022A /* THEMultipeerServer.m */; };
+		D40172741C510AD20072022A /* THEMultipeerServerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172671C510AD10072022A /* THEMultipeerServerSession.m */; };
+		D40172751C510AD20072022A /* THEMultipeerServerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172691C510AD10072022A /* THEMultipeerServerSocketRelay.m */; };
+		D40172761C510AD20072022A /* THEMultipeerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D401726D1C510AD10072022A /* THEMultipeerSocketRelay.m */; };
+		D401727B1C510B8A0072022A /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D401727A1C510B8A0072022A /* GCDAsyncSocket.m */; };
+		D40172831C510B9D0072022A /* THEAtomicFlag.m in Sources */ = {isa = PBXBuildFile; fileRef = D401727D1C510B9D0072022A /* THEAtomicFlag.m */; };
+		D40172841C510B9D0072022A /* THEProtectedMutableDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D401727F1C510B9D0072022A /* THEProtectedMutableDictionary.m */; };
+		D40172851C510B9D0072022A /* THESessionDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172811C510B9D0072022A /* THESessionDictionary.m */; };
 		D430790C1C4D404E0084C0EE /* THEAppContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D4E619F11C47DEA500903813 /* THEAppContext.m */; };
 		D430790D1C4D404E0084C0EE /* THEPeerBluetooth.m in Sources */ = {isa = PBXBuildFile; fileRef = D4E619F51C47DEA500903813 /* THEPeerBluetooth.m */; };
-		D43079181C4D408A0084C0EE /* THEMultipeerClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D430790F1C4D408A0084C0EE /* THEMultipeerClient.m */; };
-		D43079191C4D408A0084C0EE /* THEMultipeerClientSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D43079101C4D408A0084C0EE /* THEMultipeerClientSession.m */; };
-		D430791A1C4D408A0084C0EE /* THEMultipeerClientSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D43079111C4D408A0084C0EE /* THEMultipeerClientSocketRelay.m */; };
-		D430791B1C4D408A0084C0EE /* THEMultipeerPeerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D43079121C4D408A0084C0EE /* THEMultipeerPeerSession.m */; };
-		D430791C1C4D408A0084C0EE /* THEMultipeerServer.m in Sources */ = {isa = PBXBuildFile; fileRef = D43079131C4D408A0084C0EE /* THEMultipeerServer.m */; };
-		D430791D1C4D408A0084C0EE /* THEMultipeerServerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D43079141C4D408A0084C0EE /* THEMultipeerServerSession.m */; };
-		D430791E1C4D408A0084C0EE /* THEMultipeerServerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D43079151C4D408A0084C0EE /* THEMultipeerServerSocketRelay.m */; };
-		D43079201C4D408A0084C0EE /* THEMultipeerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D43079171C4D408A0084C0EE /* THEMultipeerSocketRelay.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,25 +37,44 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		D430790F1C4D408A0084C0EE /* THEMultipeerClient.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerClient.m; path = ../../MultipeerConnectivity/THEMultipeerClient.m; sourceTree = "<group>"; };
-		D43079101C4D408A0084C0EE /* THEMultipeerClientSession.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerClientSession.m; path = ../../MultipeerConnectivity/THEMultipeerClientSession.m; sourceTree = "<group>"; };
-		D43079111C4D408A0084C0EE /* THEMultipeerClientSocketRelay.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerClientSocketRelay.m; path = ../../MultipeerConnectivity/THEMultipeerClientSocketRelay.m; sourceTree = "<group>"; };
-		D43079121C4D408A0084C0EE /* THEMultipeerPeerSession.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerPeerSession.m; path = ../../MultipeerConnectivity/THEMultipeerPeerSession.m; sourceTree = "<group>"; };
-		D43079131C4D408A0084C0EE /* THEMultipeerServer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerServer.m; path = ../../MultipeerConnectivity/THEMultipeerServer.m; sourceTree = "<group>"; };
-		D43079141C4D408A0084C0EE /* THEMultipeerServerSession.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerServerSession.m; path = ../../MultipeerConnectivity/THEMultipeerServerSession.m; sourceTree = "<group>"; };
-		D43079151C4D408A0084C0EE /* THEMultipeerServerSocketRelay.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerServerSocketRelay.m; path = ../../MultipeerConnectivity/THEMultipeerServerSocketRelay.m; sourceTree = "<group>"; };
-		D43079161C4D408A0084C0EE /* THEMultipeerSession.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerSession.m; path = ../../MultipeerConnectivity/THEMultipeerSession.m; sourceTree = "<group>"; };
-		D43079171C4D408A0084C0EE /* THEMultipeerSocketRelay.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerSocketRelay.m; path = ../../MultipeerConnectivity/THEMultipeerSocketRelay.m; sourceTree = "<group>"; };
+		D40172571C510AD10072022A /* THEMultipeerClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerClient.h; path = ../../MultipeerConnectivity/THEMultipeerClient.h; sourceTree = "<group>"; };
+		D40172581C510AD10072022A /* THEMultipeerClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerClient.m; path = ../../MultipeerConnectivity/THEMultipeerClient.m; sourceTree = "<group>"; };
+		D40172591C510AD10072022A /* THEMultipeerClientSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerClientSession.h; path = ../../MultipeerConnectivity/THEMultipeerClientSession.h; sourceTree = "<group>"; };
+		D401725A1C510AD10072022A /* THEMultipeerClientSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerClientSession.m; path = ../../MultipeerConnectivity/THEMultipeerClientSession.m; sourceTree = "<group>"; };
+		D401725B1C510AD10072022A /* THEMultipeerClientSocketRelay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerClientSocketRelay.h; path = ../../MultipeerConnectivity/THEMultipeerClientSocketRelay.h; sourceTree = "<group>"; };
+		D401725C1C510AD10072022A /* THEMultipeerClientSocketRelay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerClientSocketRelay.m; path = ../../MultipeerConnectivity/THEMultipeerClientSocketRelay.m; sourceTree = "<group>"; };
+		D401725D1C510AD10072022A /* THEMultipeerClientSocketRelayDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerClientSocketRelayDelegate.h; path = ../../MultipeerConnectivity/THEMultipeerClientSocketRelayDelegate.h; sourceTree = "<group>"; };
+		D401725E1C510AD10072022A /* THEMultipeerDiscoveryDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerDiscoveryDelegate.h; path = ../../MultipeerConnectivity/THEMultipeerDiscoveryDelegate.h; sourceTree = "<group>"; };
+		D40172601C510AD10072022A /* THEMultipeerManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerManager.h; path = ../../MultipeerConnectivity/THEMultipeerManager.h; sourceTree = "<group>"; };
+		D40172611C510AD10072022A /* THEMultipeerManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerManager.m; path = ../../MultipeerConnectivity/THEMultipeerManager.m; sourceTree = "<group>"; };
+		D40172621C510AD10072022A /* THEMultipeerPeerSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerPeerSession.h; path = ../../MultipeerConnectivity/THEMultipeerPeerSession.h; sourceTree = "<group>"; };
+		D40172631C510AD10072022A /* THEMultipeerPeerSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerPeerSession.m; path = ../../MultipeerConnectivity/THEMultipeerPeerSession.m; sourceTree = "<group>"; };
+		D40172641C510AD10072022A /* THEMultipeerServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerServer.h; path = ../../MultipeerConnectivity/THEMultipeerServer.h; sourceTree = "<group>"; };
+		D40172651C510AD10072022A /* THEMultipeerServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerServer.m; path = ../../MultipeerConnectivity/THEMultipeerServer.m; sourceTree = "<group>"; };
+		D40172661C510AD10072022A /* THEMultipeerServerSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerServerSession.h; path = ../../MultipeerConnectivity/THEMultipeerServerSession.h; sourceTree = "<group>"; };
+		D40172671C510AD10072022A /* THEMultipeerServerSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerServerSession.m; path = ../../MultipeerConnectivity/THEMultipeerServerSession.m; sourceTree = "<group>"; };
+		D40172681C510AD10072022A /* THEMultipeerServerSocketRelay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerServerSocketRelay.h; path = ../../MultipeerConnectivity/THEMultipeerServerSocketRelay.h; sourceTree = "<group>"; };
+		D40172691C510AD10072022A /* THEMultipeerServerSocketRelay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerServerSocketRelay.m; path = ../../MultipeerConnectivity/THEMultipeerServerSocketRelay.m; sourceTree = "<group>"; };
+		D401726A1C510AD10072022A /* THEMultipeerServerSocketRelayDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerServerSocketRelayDelegate.h; path = ../../MultipeerConnectivity/THEMultipeerServerSocketRelayDelegate.h; sourceTree = "<group>"; };
+		D401726B1C510AD10072022A /* THEMultipeerSessionStateDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerSessionStateDelegate.h; path = ../../MultipeerConnectivity/THEMultipeerSessionStateDelegate.h; sourceTree = "<group>"; };
+		D401726C1C510AD10072022A /* THEMultipeerSocketRelay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEMultipeerSocketRelay.h; path = ../../MultipeerConnectivity/THEMultipeerSocketRelay.h; sourceTree = "<group>"; };
+		D401726D1C510AD10072022A /* THEMultipeerSocketRelay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerSocketRelay.m; path = ../../MultipeerConnectivity/THEMultipeerSocketRelay.m; sourceTree = "<group>"; };
+		D40172781C510B700072022A /* THEPeerDiscoveryDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEPeerDiscoveryDelegate.h; path = ../../THEPeerDiscoveryDelegate.h; sourceTree = "<group>"; };
+		D40172791C510B8A0072022A /* GCDAsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GCDAsyncSocket.h; path = ../../GCDAsyncSocket/GCDAsyncSocket.h; sourceTree = "<group>"; };
+		D401727A1C510B8A0072022A /* GCDAsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GCDAsyncSocket.m; path = ../../GCDAsyncSocket/GCDAsyncSocket.m; sourceTree = "<group>"; };
+		D401727C1C510B9D0072022A /* THEAtomicFlag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEAtomicFlag.h; path = ../../Utility/THEAtomicFlag.h; sourceTree = "<group>"; };
+		D401727D1C510B9D0072022A /* THEAtomicFlag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEAtomicFlag.m; path = ../../Utility/THEAtomicFlag.m; sourceTree = "<group>"; };
+		D401727E1C510B9D0072022A /* THEProtectedMutableDictionary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEProtectedMutableDictionary.h; path = ../../Utility/THEProtectedMutableDictionary.h; sourceTree = "<group>"; };
+		D401727F1C510B9D0072022A /* THEProtectedMutableDictionary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEProtectedMutableDictionary.m; path = ../../Utility/THEProtectedMutableDictionary.m; sourceTree = "<group>"; };
+		D40172801C510B9D0072022A /* THESessionDictionary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THESessionDictionary.h; path = ../../Utility/THESessionDictionary.h; sourceTree = "<group>"; };
+		D40172811C510B9D0072022A /* THESessionDictionary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THESessionDictionary.m; path = ../../Utility/THESessionDictionary.m; sourceTree = "<group>"; };
+		D40172821C510B9D0072022A /* THEThreading.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEThreading.h; path = ../../Utility/THEThreading.h; sourceTree = "<group>"; };
 		D4E619E41C47DE5E00903813 /* libThali.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libThali.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4E619F01C47DEA500903813 /* THEAppContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEAppContext.h; path = ../../THEAppContext.h; sourceTree = "<group>"; };
 		D4E619F11C47DEA500903813 /* THEAppContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEAppContext.m; path = ../../THEAppContext.m; sourceTree = "<group>"; };
 		D4E619F41C47DEA500903813 /* THEPeerBluetooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEPeerBluetooth.h; path = ../../THEPeerBluetooth.h; sourceTree = "<group>"; };
 		D4E619F51C47DEA500903813 /* THEPeerBluetooth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEPeerBluetooth.m; path = ../../THEPeerBluetooth.m; sourceTree = "<group>"; };
 		D4E619F61C47DEA500903813 /* THEPeerBluetoothDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEPeerBluetoothDelegate.h; path = ../../THEPeerBluetoothDelegate.h; sourceTree = "<group>"; };
-		D4E619FA1C47DEC200903813 /* GCDAsyncSocket */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GCDAsyncSocket; path = ../../GCDAsyncSocket; sourceTree = "<group>"; };
-		D4E619FC1C47DEC200903813 /* MultipeerConnectivity */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MultipeerConnectivity; path = ../../MultipeerConnectivity; sourceTree = "<group>"; };
-		D4E619FD1C47DEC200903813 /* NPReachability */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NPReachability; path = ../../NPReachability; sourceTree = "<group>"; };
-		D4E619FE1C47DEC200903813 /* Utility */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Utility; path = ../../Utility; sourceTree = "<group>"; };
 		D4E61A001C47E49900903813 /* THEThaliEventDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THEThaliEventDelegate.h; path = ../../THEThaliEventDelegate.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -68,19 +92,38 @@
 		D4E619DB1C47DE5E00903813 = {
 			isa = PBXGroup;
 			children = (
-				D430790F1C4D408A0084C0EE /* THEMultipeerClient.m */,
-				D43079101C4D408A0084C0EE /* THEMultipeerClientSession.m */,
-				D43079111C4D408A0084C0EE /* THEMultipeerClientSocketRelay.m */,
-				D43079121C4D408A0084C0EE /* THEMultipeerPeerSession.m */,
-				D43079131C4D408A0084C0EE /* THEMultipeerServer.m */,
-				D43079141C4D408A0084C0EE /* THEMultipeerServerSession.m */,
-				D43079151C4D408A0084C0EE /* THEMultipeerServerSocketRelay.m */,
-				D43079161C4D408A0084C0EE /* THEMultipeerSession.m */,
-				D43079171C4D408A0084C0EE /* THEMultipeerSocketRelay.m */,
-				D4E619FA1C47DEC200903813 /* GCDAsyncSocket */,
-				D4E619FC1C47DEC200903813 /* MultipeerConnectivity */,
-				D4E619FD1C47DEC200903813 /* NPReachability */,
-				D4E619FE1C47DEC200903813 /* Utility */,
+				D401727C1C510B9D0072022A /* THEAtomicFlag.h */,
+				D401727D1C510B9D0072022A /* THEAtomicFlag.m */,
+				D401727E1C510B9D0072022A /* THEProtectedMutableDictionary.h */,
+				D401727F1C510B9D0072022A /* THEProtectedMutableDictionary.m */,
+				D40172801C510B9D0072022A /* THESessionDictionary.h */,
+				D40172811C510B9D0072022A /* THESessionDictionary.m */,
+				D40172821C510B9D0072022A /* THEThreading.h */,
+				D40172791C510B8A0072022A /* GCDAsyncSocket.h */,
+				D401727A1C510B8A0072022A /* GCDAsyncSocket.m */,
+				D40172781C510B700072022A /* THEPeerDiscoveryDelegate.h */,
+				D40172571C510AD10072022A /* THEMultipeerClient.h */,
+				D40172581C510AD10072022A /* THEMultipeerClient.m */,
+				D40172591C510AD10072022A /* THEMultipeerClientSession.h */,
+				D401725A1C510AD10072022A /* THEMultipeerClientSession.m */,
+				D401725B1C510AD10072022A /* THEMultipeerClientSocketRelay.h */,
+				D401725C1C510AD10072022A /* THEMultipeerClientSocketRelay.m */,
+				D401725D1C510AD10072022A /* THEMultipeerClientSocketRelayDelegate.h */,
+				D401725E1C510AD10072022A /* THEMultipeerDiscoveryDelegate.h */,
+				D40172601C510AD10072022A /* THEMultipeerManager.h */,
+				D40172611C510AD10072022A /* THEMultipeerManager.m */,
+				D40172621C510AD10072022A /* THEMultipeerPeerSession.h */,
+				D40172631C510AD10072022A /* THEMultipeerPeerSession.m */,
+				D40172641C510AD10072022A /* THEMultipeerServer.h */,
+				D40172651C510AD10072022A /* THEMultipeerServer.m */,
+				D40172661C510AD10072022A /* THEMultipeerServerSession.h */,
+				D40172671C510AD10072022A /* THEMultipeerServerSession.m */,
+				D40172681C510AD10072022A /* THEMultipeerServerSocketRelay.h */,
+				D40172691C510AD10072022A /* THEMultipeerServerSocketRelay.m */,
+				D401726A1C510AD10072022A /* THEMultipeerServerSocketRelayDelegate.h */,
+				D401726B1C510AD10072022A /* THEMultipeerSessionStateDelegate.h */,
+				D401726C1C510AD10072022A /* THEMultipeerSocketRelay.h */,
+				D401726D1C510AD10072022A /* THEMultipeerSocketRelay.m */,
 				D4E619F01C47DEA500903813 /* THEAppContext.h */,
 				D4E619F11C47DEA500903813 /* THEAppContext.m */,
 				D4E61A001C47E49900903813 /* THEThaliEventDelegate.h */,
@@ -155,16 +198,21 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D43079181C4D408A0084C0EE /* THEMultipeerClient.m in Sources */,
-				D43079191C4D408A0084C0EE /* THEMultipeerClientSession.m in Sources */,
-				D430791A1C4D408A0084C0EE /* THEMultipeerClientSocketRelay.m in Sources */,
-				D430791B1C4D408A0084C0EE /* THEMultipeerPeerSession.m in Sources */,
-				D430791C1C4D408A0084C0EE /* THEMultipeerServer.m in Sources */,
-				D430791D1C4D408A0084C0EE /* THEMultipeerServerSession.m in Sources */,
-				D430791E1C4D408A0084C0EE /* THEMultipeerServerSocketRelay.m in Sources */,
-				D43079201C4D408A0084C0EE /* THEMultipeerSocketRelay.m in Sources */,
+				D401727B1C510B8A0072022A /* GCDAsyncSocket.m in Sources */,
+				D40172721C510AD20072022A /* THEMultipeerPeerSession.m in Sources */,
+				D40172761C510AD20072022A /* THEMultipeerSocketRelay.m in Sources */,
 				D430790C1C4D404E0084C0EE /* THEAppContext.m in Sources */,
+				D40172831C510B9D0072022A /* THEAtomicFlag.m in Sources */,
+				D40172711C510AD20072022A /* THEMultipeerManager.m in Sources */,
+				D40172851C510B9D0072022A /* THESessionDictionary.m in Sources */,
+				D401726F1C510AD20072022A /* THEMultipeerClientSession.m in Sources */,
+				D40172701C510AD20072022A /* THEMultipeerClientSocketRelay.m in Sources */,
+				D401726E1C510AD20072022A /* THEMultipeerClient.m in Sources */,
+				D40172841C510B9D0072022A /* THEProtectedMutableDictionary.m in Sources */,
+				D40172731C510AD20072022A /* THEMultipeerServer.m in Sources */,
 				D430790D1C4D404E0084C0EE /* THEPeerBluetooth.m in Sources */,
+				D40172741C510AD20072022A /* THEMultipeerServerSession.m in Sources */,
+				D40172751C510AD20072022A /* THEMultipeerServerSocketRelay.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

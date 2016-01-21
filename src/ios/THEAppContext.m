@@ -25,16 +25,16 @@
 //  THEAppContext.m
 //
 
-#import <pthread.h>
-#import "THEAtomicFlag.h"
-#import "THEThreading.h"
-#import "NPReachability.h"
-#import "THEPeerBluetooth.h"
-#import "THEMultipeerClient.h"
-#import "THEMultipeerServer.h"
-#import "THEAppContext.h"
-#import "THEThaliEventDelegate.h"
+@import UIKit;
 
+#import <pthread.h>
+#import "NPReachability.h"
+
+#import "THEAppContext.h"
+#import "THEThreading.h"
+#import "THEPeerBluetooth.h"
+#import "THEMultipeerManager.h"
+#import "THEThaliEventDelegate.h"
 
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal)
@@ -46,7 +46,7 @@
 - (void)fireNetworkChangedEvent;
 
 // Fire peerAvailabilityChanged event
-- (void)firePeerAvailabilityChangedEvent:(NSMutableDictionary *)peer;
+- (void)firePeerAvailabilityChangedEvent:(NSDictionary *)peer;
 
 // UIApplicationWillResignActiveNotification callback.
 - (void)applicationWillResignActiveNotification:(NSNotification *)notification;
@@ -62,35 +62,22 @@
 @private
   // the event delegate to which we'll deliver key events
   id<THEThaliEventDelegate> _eventDelegate;
-  
-  // true if we're listening for advertisements
-  THEAtomicFlag * _isListening;
-
-  // true if we're advertising
-  THEAtomicFlag * _isAdvertising;
-  
+ 
   // The reachability handler reference.
   id reachabilityHandlerReference;
 
   // Bluetooth enabled state
   bool _bluetoothEnabled;
 
-  // MPCF peer ID
-  MCPeerID * _peerID;
- 
   // Our current app level id
   NSString * _peerIdentifier;
     
   // Peer Bluetooth.
   THEPeerBluetooth * _peerBluetooth;
  
-  // The multipeer client which will handle browsing and connecting for us
-  THEMultipeerClient *_client;
+  // The multipeer manager, co-ordinates client and server
+  THEMultipeerManager *_multipeerManager;
 
-  // The multipeer server which will handle advertising out service and accepting 
-  // connections from remote clients
-  THEMultipeerServer *_server;
-   
   // The mutex used to protect access to things below.
   pthread_mutex_t _mutex;
     
@@ -99,7 +86,7 @@
 }
 
 // CONSTANTS
-static NSString *const THALI_SERVICE_TYPE = @"Thali";
+static NSString *const THALI_SERVICE_TYPE = @"thaliproject";
 static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B";
 
 // Singleton.
@@ -134,77 +121,25 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 // Starts up the client components
 - (BOOL)startListeningForAdvertisements
 {
-  if ([_isListening isClear])
-  {
-    if ([_isListening trySet])
-    {
-      _client = [[THEMultipeerClient alloc] 
-                          initWithPeerId:_peerID
-                      withPeerIdentifier:_peerIdentifier
-                         withServiceType:THALI_SERVICE_TYPE
-                   withDiscoveryDelegate:self];
-
-      [_client start];
-
-      return true;
-    }
-  }
-
-  return false;
+  return [_multipeerManager startClient];
 }
 
 // Stops client components 
 - (BOOL)stopListeningForAdvertisements
 {
-  if ([_isListening isSet])
-  {
-    if ([_isListening tryClear])
-    {
-      // Stop
-      [_client stop];
-    }
-  }
-
-  return true;
+  return [_multipeerManager stopClient];
 }
 
 // Starts up the server components
-- (BOOL)startUpdateAdvertisingAndListenForIncomingConnections:(unsigned short)serverPort
+- (BOOL)startUpdateAdvertisingAndListening:(unsigned short)serverPort
 {
-  if ([_isAdvertising isClear])
-  {
-    if ([_isAdvertising trySet])
-    {
-      // Start up the server   
-      _server = [[THEMultipeerServer alloc] initWithPeerId: _peerID 
-                    withPeerIdentifier: _peerIdentifier
-                        withServerPort: serverPort
-                       withServiceType: THALI_SERVICE_TYPE];
-
-      [_server start];
-    }
-  }
-  else
-  {
-    // Update
-  }
-
-  return true;
+  return [_multipeerManager startServerWithServerPort:serverPort];
 }
 
 // Stops server components
-- (BOOL)stopUpdateAdvertisingAndListenForIncomingConnections
+- (BOOL)stopAdvertisingAndListening
 {
-  if ([_isAdvertising isSet])
-  {
-    // Stop
-    if ([_isAdvertising tryClear])
-    {
-      [_server stop];
-    }
-  }
-
-  return true;
+  return [_multipeerManager stopServer];
 }
 
 
@@ -284,82 +219,23 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 - (BOOL)connectToPeer:(NSString *)peerIdentifier 
       connectCallback:(void(^)(NSString *, NSString *))connectCallback
 {
-  if ([_isListening isClear])
-  {
-      NSLog(@"Not listening");
-      connectCallback(@"StartListeningForAdvertisements is not active", 0);
-      return NO;
-  }
-
-  return [_client connectToPeerWithPeerIdentifier:peerIdentifier
-                              withConnectCallback:(void(^)(NSString *, NSString *))connectCallback];
+  return [_multipeerManager connectToPeerWithPeerIdentifier:peerIdentifier
+                                              withConnectCallback:connectCallback];
 }
 
 // Kill connection with extreme prejudice, no clean-up, testing only
 - (BOOL)killConnection:(NSString *)peerIdentifier
 {
-  /*if ([_atomicFlagCommunicationsEnabled isClear])
-  {
-    NSLog(@"Communications not enabled");
-    return NO;
-  }*/
-
-  return [_client killConnection:peerIdentifier];
+  return false;
 }
 
-////////////////////////////////////////////////////////////
-// THEAppContext <THEMultipeerDiscoveryDelegate> implementation.
-////////////////////////////////////////////////////////////
-
-- (void)didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
+- (void)didFindPeer:(NSDictionary *)peer
 {
-  // Lock.
-  pthread_mutex_lock(&_mutex);
-  
-  NSMutableDictionary * peer = [_peers objectForKey:peerIdentifier];
-  
-  if (!peer)
-  {
-    peer = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
-      peerIdentifier, @"peerIdentifier",
-      @true, @"peerAvailable",
-      @false, @"pleaseConnect",
-      nil
-    ];
- 
-    [_peers setObject:peer forKey:peerIdentifier];
-  }
-  else
-  {
-    peer[@"peerIdentifier"] = @true;
-  }
-  
-  // Unlock.
-  pthread_mutex_unlock(&_mutex);
-
-  [self firePeerAvailabilityChangedEvent: peer];
+  [self firePeerAvailabilityChangedEvent:peer];
 }
 
-- (void)didLosePeerIdentifier:(NSString *)peerIdentifier
+- (void)didLosePeer:(NSString *)peerIdentifier
 {
-  // Lock.
-  pthread_mutex_lock(&_mutex);
-    
-  // Find the peer.
-  NSMutableDictionary *peer = _peers[peerIdentifier];
-  if (peer)
-  {
-    peer[@"peerAvailable"] = false;
-  }
-
-  // Unlock.
-  pthread_mutex_unlock(&_mutex);
-    
-  // Fire the peerAvailabilityChanged event.
-  if (peer)
-  {
-    [self firePeerAvailabilityChangedEvent: peer];
-  }
 }
 
 ///////////////////////////////////////////////////////////
@@ -434,11 +310,7 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   }
     
   _peerIdentifier = [[[NSUUID alloc] init] UUIDString];
-  _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
 
-  _isListening = [[THEAtomicFlag alloc] init];
-  _isAdvertising = [[THEAtomicFlag alloc] init];
- 
   // We don't really know yet, assum the worst, we'll get an update
   // when we initialise the BT stack 
   _bluetoothEnabled = false;
@@ -464,7 +336,7 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   return self;
 }
 
-- (void)firePeerAvailabilityChangedEvent:(NSMutableDictionary *)peer
+- (void)firePeerAvailabilityChangedEvent:(NSDictionary *)peer
 {
   if (_eventDelegate)
   {

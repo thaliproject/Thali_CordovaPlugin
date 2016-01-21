@@ -70,19 +70,32 @@
     // of storing duplicate peerIdentifers (which we couldn't do by simply making them the key
     // since the framework doesn't talk to us in those terms)
 
+    // Cache the current peerIdentifier for this session
+    NSString *prevPeerIdentifier = [v remotePeerIdentifier];
+    
+    // Carry out the update.. the returned session may be an entirely different
+    // one with a different remotePeerIdentifer
     THEMultipeerPeerSession *session = updateBlock(v);
 
     if (session == nil)
     {
-      // session object is about to be removed from the base dict, remove the 
-      // corresponding mapping from it's peerIdentifier
-      [_peerIdentifiers removeObjectForKey:[v remotePeerIdentifier]];
+      // session object is being deleted, remove the
+      // corresponding mapping for it's peerIdentifier
+      [_peerIdentifiers removeObjectForKey:prevPeerIdentifier];
     }
     else
     {
-      // update our mapping, usual case is no change
+      // Session object has been updated, it may have been completely replaced
       if (session != v)
       {
+        // New session object..
+        if ([prevPeerIdentifier compare:[session remotePeerIdentifier]] != NSOrderedSame)
+        {
+          // remove peerIdentifier mapping if it's changed
+          [_peerIdentifiers removeObjectForKey:prevPeerIdentifier];
+        }
+        
+        // Add the new peerIdentifier mapping
         _peerIdentifiers[[session remotePeerIdentifier]] = peerID;
       }
     }

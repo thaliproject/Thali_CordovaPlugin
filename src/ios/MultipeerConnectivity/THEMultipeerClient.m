@@ -26,6 +26,7 @@
 
 #import "THEMultipeerClient.h"
 #import "THEMultipeerClientSession.h"
+#import "THEMultipeerServerSession.h"
 
 #import "THESessionDictionary.h"
 
@@ -39,7 +40,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   MCPeerID * _localPeerId;
 
   // App-level peer identifier
-  NSString * _localPeerIdentifier;
+  //NSString * _localPeerIdentifier;
 
   // The multipeer browser
   MCNearbyServiceBrowser * _nearbyServiceBrowser;
@@ -52,12 +53,19 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
   // Dict of all the servers ids we're current aware against their session states
   THESessionDictionary *_clientSessions;
+  
+  // Object that can see server session states..
+  id<THEMultipeerSessionStateDelegate> _serverSessionStateDelegate;
+  
+  // Map of pending reverse connections (the connections we initiated
+  // but will be completed by the remote connecting back to us)
+  NSMutableDictionary *_pendingReverseConnections;
 }
 
-- (id)initWithPeerId:(MCPeerID *)peerId 
+- (id)initWithPeerId:(MCPeerID *)peerId
+                        withServiceType:(NSString *)serviceType
                      withPeerIdentifier:(NSString *)peerIdentifier
-                        withServiceType:(NSString *)serviceType 
-                  withDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate
+         withMultipeerDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate
 {
   self = [super init];
   if (!self)
@@ -73,7 +81,14 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
   _multipeerDiscoveryDelegate = discoveryDelegate;
 
+  _pendingReverseConnections = [[NSMutableDictionary alloc] init];
+  
   return self;
+}
+
+- (void)setSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)serverSessionStateDelegate
+{
+  _serverSessionStateDelegate = serverSessionStateDelegate;
 }
 
 - (void)start
@@ -114,12 +129,61 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   [self startBrowsing];
 }
 
+- (void)callConnectCallback:(ConnectCallback)connectCallback
+                           withListeningPort:(unsigned short)listeningPort
+                              withClientPort:(unsigned short)clientPort
+                              withServerPort:(unsigned short)serverPort
+{
+  NSMutableDictionary *connection = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
+    [NSNumber numberWithInteger:listeningPort], @"listeningPort",
+    [NSNumber numberWithInteger:clientPort], @"clientPort",
+    [NSNumber numberWithInteger:serverPort], @"serverPort",
+    nil
+  ];
+
+  NSString *connectionJSON = [[NSString alloc] initWithData:
+    [NSJSONSerialization dataWithJSONObject:connection options:0 error:nil]
+    encoding:NSUTF8StringEncoding
+  ];
+
+  connectCallback(nil, connectionJSON);
+}
+
 - (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
                     withConnectCallback:(ConnectCallback)connectCallback
 {
   __block BOOL success = NO;
   __block THEMultipeerClientSession *clientSession = nil;
 
+  if (_serverSessionStateDelegate)
+  {
+    // Check if there's a server session already
+    const THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)[_serverSessionStateDelegate session:peerIdentifier];
+    
+    if (serverSession && [serverSession connectionState] != THEPeerSessionStateConnected)
+    {
+      if ([serverSession connectionState] == THEPeerSessionStateConnected)
+      {
+        // We already have a remote-initiated session to this peer, return the details
+        [self callConnectCallback:connectCallback withListeningPort:0
+                                                     withClientPort:[serverSession clientPort]
+                                                     withServerPort:[serverSession serverPort]];
+        return YES;
+      }
+      else if ([serverSession connectionState] == THEPeerSessionStateConnecting)
+      {
+        // We're in the process of accepting a connection from the remote peer, have them call us
+        // back when it's completed
+        [serverSession addConnectCallback:^void(unsigned short clientPort, unsigned short serverPort) {
+          [self callConnectCallback:connectCallback withListeningPort:0
+                                                       withClientPort:clientPort
+                                                       withServerPort:serverPort];
+        }];
+        return YES;
+      }
+    }
+  }
+  
   [_clientSessions updateForPeerIdentifier:peerIdentifier 
                                updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
 
@@ -129,17 +193,28 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       if (![clientSession visible])
       {
         success = NO;
-        NSLog(@"client: connect: unreachable %@", peerIdentifier);
+        NSLog( @"client: connect: unreachable %@", peerIdentifier);
         connectCallback(@"Peer unreachable", 0);
       }
       else
       {
-        // Start connection process from the top
+        // Start connection process from the top if no existing connection
         if ([clientSession connectionState] == THEPeerSessionStateNotConnected)
         {
-          // connect will create the networking resources required to establish the session
-          [clientSession connectWithConnectCallback:(ConnectCallback)connectCallback];
-
+          if ([_localPeerIdentifier compare:peerIdentifier] == NSOrderedAscending)
+          {
+            // connect will create the networking resources required to establish the session
+            [clientSession connectWithConnectCallback:(ConnectCallback)connectCallback];
+          }
+          else
+          {
+            @synchronized(_pendingReverseConnections)
+            {
+              _pendingReverseConnections[peerIdentifier] = connectCallback;
+            }
+            [clientSession connect];
+          }
+          
           [_nearbyServiceBrowser invitePeer:[clientSession remotePeerID]
                                   toSession:[clientSession session]
                                 withContext:
@@ -216,6 +291,56 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   }];
 
   return success;
+}
+
+- (void)didAcceptIncomingConnectionFromPeerIdentifier:(NSString *)peerIdentifier
+{
+  // Server component has just accepted an incoming connection.. this may be a reverse
+  // connect that we initiated.
+  
+  @synchronized(_pendingReverseConnections)
+  {
+    ConnectCallback connectCallback = [_pendingReverseConnections objectForKey:peerIdentifier];
+    if (connectCallback != nil)
+    {
+      if (_serverSessionStateDelegate)
+      {
+        THEMultipeerServerSession *serverSession =
+        (THEMultipeerServerSession *)[_serverSessionStateDelegate session:peerIdentifier];
+        
+        assert(serverSession);
+        
+        [self callConnectCallback:connectCallback withListeningPort:0
+                   withClientPort:[serverSession clientPort]
+                   withServerPort:[serverSession serverPort]];
+      }
+    }
+    [_pendingReverseConnections removeObjectForKey:peerIdentifier];
+  }
+}
+
+// THEMultipeerSessionStateDelegate
+///////////////////////////////////
+
+- (const THEMultipeerPeerSession *)session:(NSString *)peerIdentifier
+{
+  // Let external component peek at our session states
+  
+  __block THEMultipeerPeerSession *session = nil;
+  
+  [_clientSessions updateForPeerIdentifier:peerIdentifier
+                               updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
+
+    THEMultipeerClientSession *clientSession = (THEMultipeerClientSession *)p;
+    if (clientSession)
+    {
+      session = (THEMultipeerClientSession *)clientSession;
+    }
+
+    return clientSession;
+  }];
+  
+  return session;
 }
 
 // MCNearbyServiceBrowserDelegate

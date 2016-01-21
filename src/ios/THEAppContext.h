@@ -26,16 +26,16 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "THEMultipeerDiscoveryDelegate.h"
-#import "THEPeerBluetoothDelegate.h"
+
 #import "THEThaliEventDelegate.h"
+#import "THEPeerDiscoveryDelegate.h"
 
 // Callback that will be called when the lower levels have established
 // a client relay in response to a connect
 typedef void(^ConnectCallback)(NSString *error, NSString *jsonConnection);
 
 // THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerDiscoveryDelegate, THEPeerBluetoothDelegate>
+@interface THEAppContext : NSObject <THEPeerDiscoveryDelegate>
 
 // Class singleton.
 + (instancetype)singleton;
@@ -50,15 +50,18 @@ typedef void(^ConnectCallback)(NSString *error, NSString *jsonConnection);
 - (BOOL)stopListeningForAdvertisements;
 
 // Start the server components
-- (BOOL)startUpdateAdvertisingAndListenForIncomingConnections:(unsigned short)serverPort;
+- (BOOL)startUpdateAdvertisingAndListening:(unsigned short)serverPort;
 
 // Stop the server components
-- (BOOL)stopUpdateAdvertisingAndListenForIncomingConnections;
+- (BOOL)stopAdvertisingAndListening;
 
 // Connects to the peer with the specified peer identifier.
 - (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
 
 // Kill connection without cleanup - Testing only !!
 - (BOOL)killConnection:(NSString *)peerIdentifier;
+
+- (void)didFindPeer:(NSDictionary *)peer;
+- (void)didLosePeer:(NSString *)peerIdentifier;
 
 @end

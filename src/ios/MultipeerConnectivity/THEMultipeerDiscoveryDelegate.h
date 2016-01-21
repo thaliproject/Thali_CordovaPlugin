@@ -30,9 +30,12 @@
 @protocol THEMultipeerDiscoveryDelegate <NSObject>
 
 // Notifies the delegate that a peer was found.
-- (void)didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName;
+- (void)didFindPeerIdentifier:(NSString *)peerIdentifier;
 
 // Notifies the delegate that a peer was lost.
 - (void)didLosePeerIdentifier:(NSString *)peerIdentifier;
+
+// Notifies delegate a connection was made
+- (void)didAcceptIncomingConnectionFromPeerIdentifier:(NSString *)peerIdentifier;
 
 @end

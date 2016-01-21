@@ -27,17 +27,20 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
 #import "THEAppContext.h"
+#import "THEMultipeerDiscoveryDelegate.h"
+#import "THEMultipeerSessionStateDelegate.h"
 
 // Encapsulates the local client functionality such as discovering and 
 // connecting to remote servers.
-@interface THEMultipeerClient : NSObject <MCNearbyServiceBrowserDelegate>
+@interface THEMultipeerClient : NSObject <MCNearbyServiceBrowserDelegate, THEMultipeerSessionStateDelegate>
 
 // Service type here is what we're looking for, not what we may be advertising 
 // (although they'll usually be the same)
-- (id)initWithPeerId:(MCPeerID *)peerId
-  withPeerIdentifier:(NSString *)peerIdentifier
-     withServiceType:(NSString *)serviceType 
-withDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate;
+
+- (instancetype)initWithPeerId:(MCPeerID *)peerId
+                 withServiceType:(NSString *)serviceType
+              withPeerIdentifier:(NSString *)peerIdentifier
+  withMultipeerDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate;
 
 // Start and stop the client (i.e. the peer discovery process)
 - (void)start;
@@ -55,5 +58,9 @@ withDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate;
 
 // Kill connection for testing purposes
 - (BOOL)killConnection:(NSString *)peerIdentifier;
+
+- (void)setSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)sessionStateDelegate;
+
+- (void)didAcceptIncomingConnectionFromPeerIdentifier:(NSString *)peerIdentifier;
 
 @end

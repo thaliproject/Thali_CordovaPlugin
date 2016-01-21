@@ -22,17 +22,16 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEMultipeerServerSocketRelay.m
+//  THEMultipeerServerSocketRelayDelegate.h
 //
 
-#import <Foundation/Foundation.h>
-#import <MultipeerConnectivity/MultipeerConnectivity.h>
+// Protocol implemented by classes wishing to know about socket related events
+@protocol THEMultipeerServerSocketRelayDelegate <NSObject>
 
-#import "THEMultipeerSocketRelay.h"
-#import "THEMultipeerServerSocketRelayDelegate.h"
+// Called when the server socket succesfully connects to the app's listening socket
+- (void)didConnectWithClientPort:(unsigned short)clientPort withServerPort:(unsigned short)serverPort;
 
-@interface THEMultipeerServerSocketRelay : THEMultipeerSocketRelay
-
--(instancetype)initWithServerPort:(unsigned short)serverPort withDelegate:(id<THEMultipeerServerSocketRelayDelegate>)delegate;
+// Called when the server socket fails to connect
+- (void)didFailToConnectWithServerPort:(unsigned short)serverPort;
 
 @end

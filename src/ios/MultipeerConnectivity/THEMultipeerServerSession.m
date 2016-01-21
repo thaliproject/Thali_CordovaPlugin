@@ -29,6 +29,11 @@
 #import "THEMultipeerServerSocketRelay.h"
 
 @implementation THEMultipeerServerSession
+{
+  unsigned short _serverPort;
+  unsigned short _clientPort;
+  void (^_connectCallback)(unsigned short, unsigned short);
+}
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
                    withRemotePeerID:(MCPeerID *)remotePeerID
@@ -43,15 +48,57 @@
   {
     return nil;
   }
-    
+  
+  _clientPort = 0;
   _serverPort = serverPort;
-
+  _connectCallback = nil;
+  
   return self;
+}
+
+- (unsigned short)clientPort
+{
+  return _clientPort;
+}
+
+- (unsigned short)serverPort
+{
+  return _serverPort;
+}
+
+- (void)updateRemotePeerIdentifier:(NSString *)remotePeerIdentifier
+{
+  [super updateRemotePeerIdentifier:remotePeerIdentifier];
 }
 
 - (THEMultipeerSocketRelay *)newSocketRelay
 {
-  return [[THEMultipeerServerSocketRelay alloc] initWithServerPort:_serverPort];
+  return [[THEMultipeerServerSocketRelay alloc] initWithServerPort:_serverPort withDelegate:self];
+}
+
+- (void)addConnectCallback:(void (^)(unsigned short, unsigned short))connectCallback;
+{
+  _connectCallback = connectCallback;
+}
+
+- (void)didConnectWithClientPort:(unsigned short)clientPort withServerPort:(unsigned short)serverPort
+{
+  _clientPort = clientPort;
+  
+  if (_connectCallback)
+  {
+    _connectCallback(clientPort, serverPort);
+    _connectCallback = nil;
+  }
+}
+
+- (void)didFailToConnectWithServerPort:(unsigned short)serverPort
+{
+  if (_connectCallback)
+  {
+    _connectCallback(0, 0);
+    _connectCallback = nil;
+  }
 }
 
 @end

@@ -22,17 +22,16 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEMultipeerServerSocketRelay.m
+//  THEMultipeerSessionStateDelegate.h
 //
 
-#import <Foundation/Foundation.h>
-#import <MultipeerConnectivity/MultipeerConnectivity.h>
+#import "THEMultipeerPeerSession.h"
 
-#import "THEMultipeerSocketRelay.h"
-#import "THEMultipeerServerSocketRelayDelegate.h"
+// Protocol implemented by classes wishing to know global session state
+@protocol THEMultipeerSessionStateDelegate <NSObject>
 
-@interface THEMultipeerServerSocketRelay : THEMultipeerSocketRelay
-
--(instancetype)initWithServerPort:(unsigned short)serverPort withDelegate:(id<THEMultipeerServerSocketRelayDelegate>)delegate;
+- (const THEMultipeerPeerSession *)session:(NSString *)peerIdentifier;
 
 @end
+
+

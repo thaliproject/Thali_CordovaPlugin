@@ -26,6 +26,7 @@
 
 #import "THEMultipeerServer.h"
 #import "THEMultipeerServerSession.h"
+#import "THEMultipeerClientSession.h"
 
 #import "THESessionDictionary.h"
 
@@ -40,7 +41,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     MCNearbyServiceAdvertiser * _nearbyServiceAdvertiser;
 
     // Application level identifiers
-    NSString *_peerIdentifier;
+    NSString *_basePeerIdentifier;
+    NSString *_uniquePeerIdentifier;
     NSString *_serviceType;
 
     // The port on which the application level is listening
@@ -51,12 +53,15 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     // Timer reset callback
     void (^_timerCallback)(void);
+  
+    // Object that can see server session states
+    id<THEMultipeerSessionStateDelegate> _clientSessionStateDelegate;
 }
 
--(id) initWithPeerId:(MCPeerID *)peerId 
-    withPeerIdentifier:(NSString *)peerIdentifier
-        withServerPort:(unsigned short)serverPort
-       withServiceType:(NSString *)serviceType
+- (instancetype)initWithPeerID:(MCPeerID *)peerId
+  withPeerIdentifier:(NSString *)peerIdentifier
+     withServiceType:(NSString *)serviceType
+      withServerPort:(unsigned short)serverPort
 {
     self = [super init];
     if (!self)
@@ -65,23 +70,30 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     }
 
     // Init the basic multipeer server session
-
     _localPeerId = peerId;
+    _basePeerIdentifier = peerIdentifier;
+  
+    // Make a unique identifier per MCPeerID so that clients can distinguish stale server
+    // sessions with the same peerIdentifier
+  
+    NSMutableString *tempString = [[NSMutableString alloc] initWithString:_basePeerIdentifier];
 
-    // Make peerIdentifier guaranteed to be unique per MCPeerID so that
-    // clients can distinguish stale server sessions with the same peerIdentifier
-    NSMutableString *tempString = [[NSMutableString alloc] initWithString:peerIdentifier];
-
-    unsigned long hash = [peerId hash];
+    unsigned long hash = [_localPeerId hash];
     NSData *base64 = [NSData dataWithBytes:&hash length:sizeof(hash)]; 
     [tempString appendString: @"."];
     [tempString appendString: [base64 base64EncodedStringWithOptions:0]];
 
-    _peerIdentifier = tempString;
+    _uniquePeerIdentifier = tempString;
+
     _serviceType = serviceType;
     _serverPort = serverPort;
 
     return self;
+}
+
+- (void)setSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)sessionStateDelegate
+{
+  _clientSessionStateDelegate = sessionStateDelegate;
 }
 
 - (void)setTimerResetCallback:(void (^)(void))timerCallback
@@ -91,13 +103,13 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)start
 {
-  NSLog(@"server: starting %@", _peerIdentifier);
+  NSLog(@"server: starting %@", _uniquePeerIdentifier);
 
   _serverSessions = [[THESessionDictionary alloc] init];
 
   _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
       initWithPeer:_localPeerId 
-     discoveryInfo:@{ PEER_IDENTIFIER_KEY: _peerIdentifier } 
+     discoveryInfo:@{ PEER_IDENTIFIER_KEY: _uniquePeerIdentifier }
        serviceType:_serviceType
   ];
   [_nearbyServiceAdvertiser setDelegate:self];
@@ -130,6 +142,29 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   [self startAdvertising];
 }
 
+// THEMultipeerSessionStateDelegate
+///////////////////////////////////
+
+- (const THEMultipeerPeerSession *)session:(NSString *)peerIdentifier
+{
+  __block THEMultipeerPeerSession *session = nil;
+  
+  [_serverSessions updateForPeerIdentifier:peerIdentifier
+                               updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
+
+    THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)p;
+    if (serverSession)
+    {
+      session = (THEMultipeerServerSession *)serverSession;
+    }
+
+    return serverSession;
+  }];
+  
+  return session;
+}
+
+
 // MCNearbyServiceAdvertiserDelegate
 ////////////////////////////////////
 
@@ -145,7 +180,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   if (_timerCallback)
     _timerCallback();
  
-  NSString *peerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
+  NSString *remotePeerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
   
   [_serverSessions updateForPeerID:peerID 
                        updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
@@ -154,23 +189,25 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     if (serverSession && ([[serverSession remotePeerID] hash] == [peerID hash]))
     {
-      assert([[serverSession remotePeerIdentifier] isEqualToString:peerIdentifier]);
-
       // Disconnect any existing session, see note below
-      NSLog(@"server: disconnecting to refresh session (%@)", peerIdentifier);
+      NSLog(@"server: disconnecting to refresh session (%@)", [serverSession remotePeerIdentifier]);
       [serverSession disconnect];
+      
+      // Update remotePeerIdentifier (it may have changed)
+      NSLog(@"server: updateing remote session: %@->%@", [serverSession remotePeerIdentifier], remotePeerIdentifier);
+      [serverSession updateRemotePeerIdentifier:remotePeerIdentifier];
     }
     else
     {
       serverSession = [[THEMultipeerServerSession alloc] initWithLocalPeerID:_localPeerId
                                                             withRemotePeerID:peerID
-                                                    withRemotePeerIdentifier:peerIdentifier
+                                                    withRemotePeerIdentifier:remotePeerIdentifier
                                                               withServerPort:_serverPort];
     }
 
     // Create a new session for each client, even if one already
     // existed. If we're seeing invitations from peers we already have sessions
-    // with then the other side had restarted and our session is stale (we often
+    // with then the other side has restarted and our session is stale (we often
     // don't see the other side disconnect)
 
     _serverSession = serverSession;
@@ -178,8 +215,13 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return serverSession;
   }];
 
-  NSLog(@"server: accepting invitation %@", peerIdentifier);
-  invitationHandler(YES, [_serverSession session]);
+
+    NSLog(@"server: accepting invitation %@", remotePeerIdentifier);
+    invitationHandler(YES, [_serverSession session]);
+
+    NSLog(@"server: rejecting invitation %@", remotePeerIdentifier);
+    invitationHandler(NO, [_serverSession session]);
+
 }
 
 - (void)advertiser:(MCNearbyServiceAdvertiser *)advertiser didNotStartAdvertisingPeer:(NSError *)error

@@ -22,7 +22,7 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEMultipeerClientSocketRelayDelegate.m
+//  THEMultipeerClientSocketRelayDelegate.h
 //
 
 // Protocol implemented by classes wishing to know about socket related events
