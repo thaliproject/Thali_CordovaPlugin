@@ -15,10 +15,10 @@ var test = tape({
     // singleton
     Mobile('stopListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, "Should be able to call stopListeningForAdvertisments in teardown");
-      Mobile('stopUpdateAdvertisingAndListenForIncomingConnections').callNative(function(err) {
+      Mobile('stopAdvertisingAndListening').callNative(function(err) {
         t.notOk(
           err, 
-          "Should be able to call stopAdvertisingAndListenForIncomingConnections in teardown"
+          "Should be able to call stopAdvertisingAndListening in teardown"
         );
         t.end();
       });
@@ -47,12 +47,12 @@ test('Calling startListeningForAdvertisements twice is an error', function (t) {
   });
 });
 
-test('Can call start/stopUpdateAdvertisingAndListenForIncomingConnections', function (t) {
-  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
-    t.notOk(err, 'Can call startUpdateAdvertisingAndListenForIncomingConnections without error');
-    Mobile('stopUpdateAdvertisingAndListenForIncomingConnections').callNative(function (err) {
+test('Can call start/stopUpdateAdvertisingAndListening', function (t) {
+  Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('stopAdvertisingAndListening').callNative(function (err) {
       t.notOk(
-        err, 'Can call stopUpdateAdvertisingAndListenForIncomingConnections without error'
+        err, 'Can call stopAdvertisingAndListening without error'
       );
       t.end();
     });
@@ -61,13 +61,13 @@ test('Can call start/stopUpdateAdvertisingAndListenForIncomingConnections', func
 
 test('Calling startUpdateAdvertisingAndListeningForIncomingConnections twice is NOT and error', 
 function (t) {
-  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
-    t.notOk(err, 'Can call startUpdateAdvertisingAndListenForIncomingConnections without error');
-    Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4243, 
+  Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('startUpdateAdvertisingAndListening').callNative(4243, 
     function (err) {
       t.notOk(
         err, 
-        'Can call startUpdateAdvertisingAndListenForIncomingConnections twice without error'
+        'Can call startUpdateAdvertisingAndListening twice without error'
       );
       t.end();
     });
@@ -96,8 +96,8 @@ test('peerAvailabilityChange is called', function (t) {
     }
   });
 
-  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(4242, function (err) {
-    t.notOk(err, 'Can call startUpdateAdvertisingAndListenForIncomingConnections without error');
+  Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListeningwithout error');
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'Can call startListeningForAdvertisements without error');
     });
@@ -132,9 +132,9 @@ test('Can connect to a remote peer', function (t) {
     });
   });
 
-  Mobile('startUpdateAdvertisingAndListenForIncomingConnections').callNative(applicationPort, 
+  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
   function (err) {
-    t.notOk(err, 'Can call startUpdateAdvertisingAndListenForIncomingConnections without error');
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'Can call startListeningForAdvertisements without error');
     });

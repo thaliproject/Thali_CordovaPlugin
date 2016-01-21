@@ -179,29 +179,45 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   // correctly).
   if (_timerCallback)
     _timerCallback();
- 
-  NSString *remotePeerIdentifier = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
+
+  // Crack the context into it's constiuent parts..
+  NSString *stringContext = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
+  NSArray<NSString *> *contextParts = [stringContext componentsSeparatedByString:@"+"];
+  if ([contextParts count] != 2)
+  {
+    NSLog(@"server: context did not parse");
+    return;
+  }
+
+  NSString *remotePeerUUID = contextParts[0];
+  NSString *localPeerIdentifier = contextParts[1];
+  
+  NSArray<NSString *> *localParts = [localPeerIdentifier componentsSeparatedByString:@":"];
+  if ([localParts count] != 2)
+  {
+    NSLog(@"server: local id did not parse");
+    return;
+  }
+
+  NSString *localPeerUUID = localParts[0];
   
   [_serverSessions updateForPeerID:peerID 
                        updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
 
     THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)p;
-
+    assert([remotePeerUUID compare:[serverSession remotePeerIdentifier]] == NSOrderedSame);
+    
     if (serverSession && ([[serverSession remotePeerID] hash] == [peerID hash]))
     {
       // Disconnect any existing session, see note below
       NSLog(@"server: disconnecting to refresh session (%@)", [serverSession remotePeerIdentifier]);
       [serverSession disconnect];
-      
-      // Update remotePeerIdentifier (it may have changed)
-      NSLog(@"server: updating remote session: %@->%@", [serverSession remotePeerIdentifier], remotePeerIdentifier);
-      [serverSession updateRemotePeerIdentifier:remotePeerIdentifier];
     }
     else
     {
       serverSession = [[THEMultipeerServerSession alloc] initWithLocalPeerID:_localPeerId
                                                             withRemotePeerID:peerID
-                                                    withRemotePeerIdentifier:remotePeerIdentifier
+                                                    withRemotePeerIdentifier:remotePeerUUID
                                                               withServerPort:_serverPort];
     }
 
@@ -215,16 +231,28 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return serverSession;
   }];
 
-  if ([_localPeerIdentifier compare:remotePeerIdentifier] == NSOrderedAscending)
+  if ([_localPeerIdentifier compare:localPeerIdentifier] != NSOrderedSame)
   {
-    NSLog(@"server: rejecting invitation %@", remotePeerIdentifier);
+    // Remote is trying to connect to a previous generation of us, reject
+    NSLog(
+      @"server: rejecting invitation from %@ due to previous generation (%@ != %@)",
+      remotePeerUUID, _localPeerIdentifier, localPeerIdentifier
+    );
     invitationHandler(NO, [_serverSession session]);
-    [_multipeerDiscoveryDelegate didFindPeerIdentifier:remotePeerIdentifier byServer:true];
-    return;
   }
+  else
+  {
+    if ([localPeerUUID compare:remotePeerUUID] == NSOrderedAscending)
+    {
+      NSLog(@"server: rejecting invitation for lexical ordering %@", remotePeerUUID);
+      invitationHandler(NO, [_serverSession session]);
+      [_multipeerDiscoveryDelegate didFindPeerIdentifier:remotePeerUUID byServer:true];
+      return;
+    }
 
-  NSLog(@"server: accepting invitation %@", remotePeerIdentifier);
-  invitationHandler(YES, [_serverSession session]);
+    NSLog(@"server: accepting invitation %@", remotePeerUUID);
+    invitationHandler(YES, [_serverSession session]);
+  }
 }
 
 - (void)advertiser:(MCNearbyServiceAdvertiser *)advertiser didNotStartAdvertisingPeer:(NSError *)error
@@ -233,4 +261,3 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 }
 
 @end
-

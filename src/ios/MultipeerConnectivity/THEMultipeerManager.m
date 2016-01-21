@@ -70,40 +70,57 @@
                      withPeerIdentifier:(NSString *)peerIdentifier
           withPeerDiscoveryDelegate:(id<THEPeerDiscoveryDelegate>)delegate;
 {
-    self = [super init];
+  self = [super init];
     
-    if (!self)
-    {
-        return nil;
-    }
+  if (!self)
+  {
+      return nil;
+  }
   
-    _peerDiscoveryDelegate = delegate;
-    _serviceType = serviceType;
+  _peerDiscoveryDelegate = delegate;
+  _serviceType = serviceType;
 
-    _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
-    _peerIdentifier = peerIdentifier;
+  _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
+  _peerIdentifier = [peerIdentifier stringByAppendingString:@":0"];
   
-    return self;
+  _isListening = [[THEAtomicFlag alloc] init];
+  _isAdvertising = [[THEAtomicFlag alloc] init];
+
+  return self;
 }
 
 // Starts peer networking.
 - (BOOL)startServerWithServerPort:(unsigned short)serverPort
 {
-  if ([_isAdvertising isClear])
+  if ([_isAdvertising isSet])
   {
-    if ([_isAdvertising trySet])
+    if (![self stopServer])
     {
-      // Start up the networking components
-      _server = [[THEMultipeerServer alloc] initWithPeerID:_peerID
-                                        withPeerIdentifier:_peerIdentifier
-                                           withServiceType:_serviceType
-                                            withServerPort:serverPort
-                            withMultipeerDiscoveryDelegate:self
-                                  withSessionStateDelegate:self];
-      [_server start];
-      NSLog(@"THEMultipeerManager initialized peer %@", _peerIdentifier);
-      return true;
+      return false;
     }
+  }
+
+  if ([_isAdvertising trySet])
+  {
+    // Increment the generation counter at the end of peerId
+    NSArray<NSString *> *peerParts = [_peerIdentifier componentsSeparatedByString:@":"];
+    assert([peerParts count] == 2);
+    uint generation = [peerParts[1] intValue] + 1;
+    _peerIdentifier = [
+      peerParts[0] stringByAppendingString:[NSString stringWithFormat:@":%d", generation]
+    ];
+      
+    // Start up the networking components
+    _server = [[THEMultipeerServer alloc] initWithPeerID:_peerID
+                                      withPeerIdentifier:_peerIdentifier
+                                         withServiceType:_serviceType
+                                          withServerPort:serverPort
+                          withMultipeerDiscoveryDelegate:self
+                                withSessionStateDelegate:self];
+    [_server start];
+
+    NSLog(@"THEMultipeerManager initialized peer %@", _peerIdentifier);
+    return true;
   }
 
   /*__weak typeof(self) weakSelf = self;
@@ -132,10 +149,9 @@
       //[self stopRestartTimer];
       [_server stop];
       _server = nil;
-      return true;
     }
   }
-  return false;
+  return true;
 }
 
 - (BOOL)startClient
@@ -166,10 +182,9 @@
     {
       [_client stop];
        _client = nil;
-      return true;
     }
   }
-  return false;
+  return true;
 }
 
 - (const THEMultipeerClientSession *)clientSession:(NSString *)peerIdentifier
@@ -179,7 +194,8 @@
 
 - (const THEMultipeerServerSession *)serverSession:(NSString *)peerIdentifier
 {
-  return [_server session:peerIdentifier];
+  NSString *uuid = [peerIdentifier componentsSeparatedByString:@":"][0];
+  return [_server session:uuid];
 }
 
 - (void)didFindPeerIdentifier:(NSString *)peerIdentifier byServer:(BOOL)byServer
@@ -188,8 +204,8 @@
   {
     NSDictionary *peer = @{
       @"peerIdentifier" : peerIdentifier,
-      @"isAvailable" : @true,
-      @"pleaseConnection" : byServer ? @true : @false
+      @"peerAvailable" : @true,
+      @"pleaseConnect" : byServer ? @true : @false
     };
     
     [_peerDiscoveryDelegate didFindPeer:peer];

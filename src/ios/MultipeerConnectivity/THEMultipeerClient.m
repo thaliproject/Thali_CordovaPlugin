@@ -209,10 +209,10 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
             [clientSession connect];
           }
           
+          NSString *context = [NSString stringWithFormat:@"%@+%@", _localPeerIdentifier, peerIdentifier];
           [_nearbyServiceBrowser invitePeer:[clientSession remotePeerID]
                                   toSession:[clientSession session]
-                                withContext:
-                                  [_localPeerIdentifier dataUsingEncoding:NSUTF8StringEncoding]
+                                withContext:[context dataUsingEncoding:NSUTF8StringEncoding]
                                     timeout:30];
 
           success = YES;

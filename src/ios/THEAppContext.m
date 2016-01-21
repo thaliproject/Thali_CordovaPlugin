@@ -276,7 +276,7 @@ didConnectPeerIdentifier:(NSString *)peerIdentifier
   [_peers setObject:peer
              forKey:peerIdentifier];
 */
-  // Unlock.
+  // Unlock
   pthread_mutex_unlock(&_mutex);
 
   //if (_eventDelegate)
@@ -318,6 +318,9 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   // Initialize the the mutex 
   pthread_mutex_init(&_mutex, NULL);
 
+  _multipeerManager = [[THEMultipeerManager alloc] initWithServiceType:THALI_SERVICE_TYPE
+                                                    withPeerIdentifier:_peerIdentifier
+                                             withPeerDiscoveryDelegate:self];
   // Get the default notification center.
   NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];
     
