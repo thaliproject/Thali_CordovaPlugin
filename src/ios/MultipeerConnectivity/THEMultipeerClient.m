@@ -40,7 +40,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   MCPeerID * _localPeerId;
 
   // App-level peer identifier
-  //NSString * _localPeerIdentifier;
+  NSString * _localPeerIdentifier;
 
   // The multipeer browser
   MCNearbyServiceBrowser * _nearbyServiceBrowser;
@@ -384,8 +384,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   {
     // A new peer or one that has become visible again. Only
     // contact delegate when the state changes (we get duplicates a lot)
-    [_multipeerDiscoveryDelegate didFindPeerIdentifier:[clientSession remotePeerIdentifier] 
-                                            peerName:info[PEER_NAME_KEY]];
+    [_multipeerDiscoveryDelegate didFindPeerIdentifier:[clientSession remotePeerIdentifier]];
   }
 }
 
