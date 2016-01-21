@@ -191,6 +191,8 @@ ThaliNotificationClient.ACTION_TYPE = 'GetRequestBeacon';
  * @property {number} suggestedTCPTimeout Provides a hint to what time out to
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
+ * @property {module:thaliMobile.connectionTypes} connectionType The type of
+ * connection that will be used when connecting to this peer.
  */
 
 module.exports = ThaliNotificationClient;

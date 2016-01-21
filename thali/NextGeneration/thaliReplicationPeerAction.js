@@ -10,47 +10,58 @@ var actionState = require('thaliPeerAction').actionState;
 /**
  * @classdesc Manages replicating information with a peer we have discovered
  * via notifications.
- * @param peerId
- * @param peerAdvertisesDataForUs
- * @param pouchDB
+ * @private
+ * @param {string} peerId A base64 encoded public key identifying the peer who
+ * we are to replicate with.
+ * @param {module:thaliNotificationClient.event:peerAdvertisesDataForUs} peerAdvertisesDataForUs
+ * The notification that triggered this replication. This gives us the
+ * information we need to create a connection as well the connection type
+ * we need for the base class's constructor.
+ * @param {PouchDB} pouchDB The pouchDB database we will use to replicate into.
+ * Note that we will get the name for the remote database by taking this
+ * database's name and appending it to http://[hostAddress]:[portNumber]/db/
+ * [name] where hostAddress and portNumber are from the previous argument.
  * @constructor
  */
 function ThaliReplicationPeerAction(peerId,
                                     peerAdvertisesDataForUs,
                                     pouchDB) {
-
+  // remember to call the base class's constructor
 }
 
 util.inherits(ThaliReplicationPeerAction, PeerAction);
 
+/**
+ * The actionType we will use when calling the base class's constructor.
+ *
+ * @private
+ * @type {string}
+ */
+ThaliReplicationPeerAction.actionType = "ReplicationAction";
+
 ThaliReplicationPeerAction.prototype.resultPromise = null;
 
 /**
- * When start is called we will look up the peerId in the
- * notificationSubscriptions to get the current list of databases to replicate
- * for the identified peer.
- *
- * For now we will walk through each of the requested databases one by one. Each
- * replication should fully saturate the network link so doing multiple
- * replications in parallel shouldn't necessary provide a performance
- * improvement. And if we over saturate the link with requests we will end
- * up causing connection failures. And yes, this means that if a DB has
- * liveReplication = true that it will block everything else.
- *
- * We will use the passed in pouchDB object to create each database. We need
+ * When start is called we will start a replication with the remote peer using
+ * the settings specified below. We need
  * to set the ajax option in order to set the psk related values from
  * peerAdvertisesDataForUs. We will need to create the URL using the
  * hostAddress and portNumber from peerAdvertisesDataForUs. Also make sure to
  * set skip_setup to true.
  *
- * If we get an error that the database doesn't exist that's fine, just continue
- * to the next database. We should log a low priority error that we tried
- * to get to a database that doesn't exist. DO NOT log the peer ID.
+ * If we get an error that the database doesn't exist on the remote machine that
+ * is fine, we're done. Although we should log a low priority error that we
+ * tried to get to a database that doesn't exist. DO NOT log the peer ID.
  *
- * We then need to use db.replication.to with the remoteDB as just the DB
- * name we got from notificationSubscriptions. This will be the local DB we
+ * We then need to use db.replication.to with the remoteDB using the URL
+ * specified in the constructor.. This will be the local DB we
  * will copy to. We need to do things this way so we can set the AJAX
  * options for PSK.
+ *
+ * __OPEN ISSUE:__ I'm only sure that the options.ajax works on the PouchDB
+ * constructor. I have no idea if we can submit options.ajax on a replication.
+ * If not then we will need to accept a PouchDB constructor object with a DB
+ * name and create everything from scratch.
  *
  * For replication options.retry = true. options.live will equal the value of
  * liveReplication on the database's entry in notificationSubscriptions.

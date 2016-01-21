@@ -25,10 +25,9 @@ module.exports.actionState = {
  *
  * When an action is created its state MUST be CREATED.
  *
- * If either nonContentionLifeSpan or contentionLifeSpan are not numbers
- * or are any integer less than
- * {@link module:thaliPeerAction~PeerAction.MINIMUM_ACTION_LENGTH} then a
- * bad argument error MUST be returned.
+ * BugBug: In a sane world we would have limits on how long an action can run
+ * and we would even set up those limits as a config item. But for now we let
+ * each action own the stage for as long as it would like.
  *
  * @public
  * @interface PeerAction
@@ -44,12 +43,6 @@ function PeerAction (peerIdentifier, connectionType, actionType)
   this.actionType = actionType;
   this.actionState = module.exports.actionState.STARTED;
 }
-
-/**
- * The minimum amount of time in milliseconds that a life span must be set to.
- * @type {number}
- */
-PeerAction.MINIMUM_ACTION_LENGTH = 10;
 
 /**
  * The remote peer this action targets
