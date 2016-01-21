@@ -25,10 +25,10 @@ var Promise = require('lie');
  * @constructor
  */
 function PromiseQueue () {
-
+  this.globalPromise = Promise.resolve(true);
 }
 
-PromiseQueue.prototype.globalPromise = Promise.resolve(true);
+PromiseQueue.prototype.globalPromise = null;
 
 /**
  * We use two different promises to wrap things up, this lets us make sure
