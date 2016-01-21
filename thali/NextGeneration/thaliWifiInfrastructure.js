@@ -71,9 +71,6 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
     adInterval: 500,
-    allowWildcards: true,
-    logJSON: false,
-    logLevel: 'trace',
     udn: THALI_NT
   };
   this._server = new nodessdp.Server(serverOptions);

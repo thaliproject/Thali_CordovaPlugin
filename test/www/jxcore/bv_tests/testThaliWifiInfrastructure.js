@@ -32,7 +32,6 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
   var testLocation = 'http://' + testHostAddress + ':' + testPort;
   var testServer = new nodessdp.Server({
     location: testLocation,
-    allowWildcards: true,
     udn: THALI_NT
   });
   testServer.setUSN('uuid:' + uuid.v4());
@@ -50,20 +49,31 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
 });
 
 test('#startUpdateAdvertisingAndListening should use different USN after every invocation', function (t) {
-  var originalSetUsn = wifiInfrastructure._server.setUSN;
-  var currentUsn;
-  wifiInfrastructure._server.setUSN = function(usn) {
-    currentUsn = usn;
-  };
-  wifiInfrastructure.startUpdateAdvertisingAndListening()
-  .then(function() {
-    var firstUsn = currentUsn;
-    wifiInfrastructure.startUpdateAdvertisingAndListening()
-    .then(function() {
-      t.notEqual(firstUsn, currentUsn);
-      wifiInfrastructure._server.setUSN = originalSetUsn;
-      t.end();
-    });
+  var testClient = new nodessdp.Client();
+
+  var firstUSN = null;
+  testClient.on('advertise-alive', function (data) {
+    // Check for the Thali NT in case there is some other
+    // SSDP traffic in the network.
+    if (data.NT === THALI_NT) {
+      if (firstUSN !== null) {
+        t.notEqual(firstUSN, data.USN, 'USN should have changed from the first one');
+        testClient.stop(function () {
+          t.end();
+        });
+      } else {
+        firstUSN = data.USN;
+        // This is the second call to the update function and after
+        // this call, the USN value should have been changed.
+        wifiInfrastructure.startUpdateAdvertisingAndListening();
+      }
+    }
+  });
+
+  testClient.start(function () {
+    // This is the first call to the update function after which
+    // some USN value should be advertised.
+    wifiInfrastructure.startUpdateAdvertisingAndListening();
   });
 });
 

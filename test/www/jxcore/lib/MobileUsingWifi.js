@@ -9,7 +9,7 @@ var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastruct
 
 var randomSuffix = '' + Math.round((Math.random() * 10000))
 var randomDeviceName = 'device-' + randomSuffix;
-var wifiInfrastructure = new ThaliWifiInfrastructure(randomDeviceName);
+var wifiInfrastructure = new ThaliWifiInfrastructure();
 
 var mocks = {};
 var broadcastingStarted = false;
