@@ -25,7 +25,7 @@
 //  THEAppContext.m
 //
 
-@import UIKit;
+#import <UIKit/UIKit.h>
 
 #import <pthread.h>
 #import "NPReachability.h"

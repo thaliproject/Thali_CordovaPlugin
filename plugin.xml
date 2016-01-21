@@ -69,6 +69,8 @@
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerDiscoveryDelegate.h" 
           compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSessionStateDelegate.h" 
+          compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerManager.h" 
           compiler-flags="-Werror"/>
         <source-file src="src/ios/MultipeerConnectivity/THEMultipeerManager.m" 
@@ -102,6 +104,8 @@
         <source-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSocketRelay.m" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSocketRelayDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSocketRelayDelegate.h" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSocketRelay.h" 
           compiler-flags="-Werror"/>
