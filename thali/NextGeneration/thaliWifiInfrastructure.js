@@ -6,6 +6,8 @@ var Promise = require('lie');
 var nodessdp = require('node-ssdp');
 var ip = require('ip');
 var uuid = require('node-uuid');
+var url = require('url');
+var logger = require('../thalilogger')('thaliWifiInfrastructure');
 
 var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
@@ -89,20 +91,26 @@ ThaliWifiInfrastructure.prototype._init = function () {
   }.bind(this));
 };
 
-ThaliWifiInfrastructure.prototype._setLocation = function (address, port, path) {
+ThaliWifiInfrastructure.prototype._setLocation = function (address, port) {
   address = address || ip.address();
   port = port || this.port;
-  path = path || 'NotificationBeacons';
-  this._server._location = 'http://' + address + ':' + port + '/' + path;
+  this._server._location = 'http://' + address + ':' + port;
 };
 
 ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
   if (this._shouldBeIgnored(data)) {
     return;
   }
+  var parsedLocation = url.parse(data.LOCATION);
+  var portNumber = parseInt(parsedLocation.port);
+  if (isNaN(portNumber)) {
+    logger.warn('Failed to parse port number from location: %s', data.LOCATION);
+    return;
+  }
   var peer = {
     peerIdentifier: data.USN,
-    peerLocation: data.LOCATION,
+    hostAddress: parsedLocation.hostname,
+    portNumber: portNumber,
     peerAvailable: available
   };
   if (this.peerAvailabilities[peer.peerIdentifier] === available) {
@@ -115,7 +123,6 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 // Function used to filter out SSDP messages that are not
 // relevant for Thali.
 ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
-  console.log(data);
   // First check if the data contains the Thali-specific NT.
   if (data.NT === THALI_NT) {
     // Filtering out messages from ourselves.
@@ -379,7 +386,10 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
  * @event wifiPeerAvailabilityChanged
  * @public
  * @property {string} peerIdentifier This is the USN value
- * @property {string} peerLocation The URL of the peer
+ * @property {string} hostAddress This can be either an IP address or a DNS
+ * address encoded as a string
+ * @property {number} portNumber The port on the hostAddress to use to connect
+ * to the peer
  */
 
 /**

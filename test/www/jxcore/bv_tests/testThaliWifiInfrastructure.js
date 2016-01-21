@@ -27,7 +27,9 @@ var test = tape({
 });
 
 test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged after test peer becomes available', function (t) {
-  var testLocation = 'http://foo.bar/baz';
+  var testHostAddress = 'foo.bar';
+  var testPort = 8080;
+  var testLocation = 'http://' + testHostAddress + ':' + testPort;
   var testServer = new nodessdp.Server({
     location: testLocation,
     allowWildcards: true,
@@ -35,7 +37,9 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
   });
   testServer.setUSN('uuid:' + uuid.v4());
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', function (data) {
-    t.equal(data[0].peerLocation, testLocation);
+    var peer = data[0];
+    t.equal(peer.hostAddress, testHostAddress, 'host address should match');
+    t.equal(peer.portNumber, testPort, 'port should match');
     testServer.stop(function () {
       t.end();
     });
@@ -86,7 +90,7 @@ test('#start should fail if called twice in a row', function (t) {
   // done once in the setup phase
   wifiInfrastructure.start(express())
   .catch(function (error) {
-    t.ok(error === 'Call Stop!', 'specific error should be received');
+    t.equal(error, 'Call Stop!', 'specific error should be received');
     t.end();
   });
 });
@@ -108,7 +112,7 @@ test('#startUpdateAdvertisingAndListening should start hosting given router obje
       port: wifiInfrastructure.port,
       agent: false // to prevent connection keep-alive
     }, function (res) {
-      t.ok(res.statusCode === 200, 'server should respond with code 200');
+      t.equal(res.statusCode, 200, 'server should respond with code 200');
       t.end();
     });
   });
@@ -117,11 +121,11 @@ test('#startUpdateAdvertisingAndListening should start hosting given router obje
 test('#stop can be called multiple times in a row', function (t) {
   wifiInfrastructure.stop()
   .then(function () {
-    t.ok(wifiInfrastructure.started === false, 'should be in stopped state');
+    t.equal(wifiInfrastructure.started, false, 'should be in stopped state');
     return wifiInfrastructure.stop();
   })
   .then(function () {
-    t.ok(wifiInfrastructure.started === false, 'should still be in stopped state');
+    t.equal(wifiInfrastructure.started, false, 'should still be in stopped state');
     t.end();
   });
 });
