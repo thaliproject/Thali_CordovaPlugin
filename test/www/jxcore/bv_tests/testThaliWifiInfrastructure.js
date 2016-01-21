@@ -13,7 +13,7 @@ var wifiInfrastructure = new ThaliWifiInfrastructure();
 
 var test = tape({
   setup: function(t) {
-    wifiInfrastructure.start(express()).then(function () {
+    wifiInfrastructure.start(express.Router()).then(function () {
       t.end();
     });
   },
@@ -88,27 +88,43 @@ test('verify that Thali-specific messages are filtered correctly', function (t) 
 test('#start should fail if called twice in a row', function (t) {
   // The start here is already the second since it is being
   // done once in the setup phase
-  wifiInfrastructure.start(express())
+  wifiInfrastructure.start(express.Router())
   .catch(function (error) {
-    t.equal(error, 'Call Stop!', 'specific error should be received');
+    t.equal(error.message, 'Call Stop!', 'specific error should be received');
+    t.end();
+  });
+});
+
+test('#startUpdateAdvertisingAndListening should fail invalid router has been passed', function (t) {
+  wifiInfrastructure.stop()
+  .then(function () {
+    return wifiInfrastructure.start('invalid router object');
+  })
+  .then(function () {
+    return wifiInfrastructure.startUpdateAdvertisingAndListening();
+  })
+  .catch(function (error) {
+    t.equal(error.message, 'Bad Router', 'specific error should be received');
     t.end();
   });
 });
 
 test('#startUpdateAdvertisingAndListening should start hosting given router object', function (t) {
-  var app = express();
-  app.get('/', function (req, res) {
+  var router = express.Router();
+  var testPath = '/test';
+  router.get(testPath, function (req, res) {
     res.send('foobar');
   });
   wifiInfrastructure.stop()
   .then(function () {
-    return wifiInfrastructure.start(app);
+    return wifiInfrastructure.start(router);
   })
   .then(function () {
     return wifiInfrastructure.startUpdateAdvertisingAndListening();
   })
   .then(function () {
     http.get({
+      path: testPath,
       port: wifiInfrastructure.port,
       agent: false // to prevent connection keep-alive
     }, function (res) {

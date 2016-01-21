@@ -7,6 +7,7 @@ var nodessdp = require('node-ssdp');
 var ip = require('ip');
 var uuid = require('node-uuid');
 var url = require('url');
+var express = require('express');
 var logger = require('../thalilogger')('thaliWifiInfrastructure');
 
 var THALI_NT = 'http://www.thaliproject.org/ssdp';
@@ -51,8 +52,10 @@ function ThaliWifiInfrastructure () {
   // Use port 0 so that random available port
   // will get used.
   this.port = 0;
+  this.expressApp = null;
   this.router = null;
   this.routerServer = null;
+  this.routerServerErrorListener = null;
   this.started = null;
   this.listening = null;
   this.advertising = null;
@@ -158,7 +161,7 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
 ThaliWifiInfrastructure.prototype.start = function (router) {
   var self = this;
   if (self.started === true) {
-    return Promise.reject('Call Stop!');
+    return Promise.reject(new Error('Call Stop!'));
   }
   self.started = true;
   self.router = router;
@@ -306,25 +309,44 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  */
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function () {
   var self = this;
+  if (self.started === false) {
+    return Promise.reject(new Error('Call Start!'));
+  }
   if (!self.router) {
-    return Promise.reject('Bad Router');
+    return Promise.reject(new Error('Bad Router'));
   }
   self.usn = 'uuid:' + uuid.v4();
   self._server.setUSN(self.usn);
   if (self.advertising === true) {
     return Promise.resolve();
   }
-  self.advertising = true;
   return new Promise(function(resolve, reject) {
-    self.routerServer = self.router.listen(self.port, function () {
+    self.expressApp = express();
+    try {
+      self.expressApp.use('/', self.router);
+    } catch (error) {
+      logger.error('Unable to use the given router: %s', error.toString());
+      reject(new Error('Bad Router'));
+      return;
+    }
+    self.routerServer = self.expressApp.listen(self.port, function () {
       self.port = self.routerServer.address().port;
       // We need to update the location string, because the port
       // may have changed when we re-start the router server.
       self._setLocation();
       self._server.start(function () {
+        self.advertising = true;
         resolve();
       });
     });
+    self.routerServerErrorListener = function (error) {
+      // This error may also occur after this promise is already resolved
+      // in which case below reject doesn't have any effect and instead,
+      // the error is only logged.
+      logger.error('Router server emitted an error: %s', error.toString());
+      reject(new Error('Unspecified Error with Radio infrastructure'));
+    };
+    self.routerServer.on('error', self.routerServerErrorListener);
   });
 };
 
@@ -356,6 +378,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
         // the same port is available next time
         // we start the router server.
         self.port = 0;
+        self.routerServer.removeListener('error', self.routerServerErrorListener);
         resolve();
       });
     });
