@@ -6,11 +6,8 @@ var unhandledRejectionHandler = null;
 
 function unHandledRejectionHandler(t) {
   return function(error, self) {
-    // BUGBUG: I am disabling this check for now because I think the error is
-    // due to a bug in Lie. I have filed
-    // https://github.com/thaliproject/Thali_CordovaPlugin/issues/473 to track.
-    //t.fail('Got an unhandled rejection error: ' + error + ", " +
-    //  JSON.stringify(self));
+    t.fail('Got an unhandled rejection error: ' + error + ", " +
+      JSON.stringify(self));
   }
 }
 

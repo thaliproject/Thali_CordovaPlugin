@@ -8,7 +8,7 @@
     "express": "4.13.3",
     "ip": "^1.0.1",
     "javascript-state-machine": "^2.3.5",
-    "lie": "^3.0.1",
+    "lie": "^3.0.2",
     "multiplex": "^6.2.2",
     "node-ssdp": "thaliproject/node-ssdp#thali-changes",
     "request": "^2.64.0",
