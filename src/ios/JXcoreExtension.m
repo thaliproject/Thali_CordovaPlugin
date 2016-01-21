@@ -121,47 +121,47 @@ NSString * const kAppEnteredForeground = @"appEnteredForeground";
   } withName:@"stopListeningForAdvertisements"];
 
 
-  // StartUpdateAdvertisingAndListenForIncomingConnections
+  // StartUpdateAdvertisingAndListening
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
   {
-    NSLog(@"jxcore: startUpdateAdvertisingAndListenForIncomingConnections");
+    NSLog(@"jxcore: startUpdateAdvertisingAndListening");
 
     if ([params count] != 2 || ![params[0] isKindOfClass:[NSNumber class]])
     {
-      NSLog(@"jxcore: startUpdateAdvertisingAndListenForIncomingConnections: bad arg");
+      NSLog(@"jxcore: startUpdateAdvertisingAndListening: bad arg");
       [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
     }
     else 
     {
-      if ([theApp startUpdateAdvertisingAndListenForIncomingConnections:(unsigned short)params[0]])
+      if ([theApp startUpdateAdvertisingAndListening:(unsigned short)params[0]])
       {
-        NSLog(@"jxcore: startUpdateAdvertisingAndListenForIncomingConnections: success");
+        NSLog(@"jxcore: startUpdateAdvertisingAndListening: success");
         [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
       }
       else
       {
-        NSLog(@"jxcore: startUpdateAdvertisingAndListenForIncomingConnections: failure");
+        NSLog(@"jxcore: startUpdateAdvertisingAndListening: failure");
         [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
       }
     }
-  } withName:@"startUpdateAdvertisingAndListenForIncomingConnections"];
+  } withName:@"startUpdateAdvertisingAndListening"];
 
   // StopUpdateAdvertisingAndListenForIncomingConnections
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
   {
-    NSLog(@"jxcore: stopUpdateAdvertisingAndListenForIncomingConnections");
+    NSLog(@"jxcore: stopAdvertisingAndListening");
 
-    if ([theApp stopUpdateAdvertisingAndListenForIncomingConnections])
+    if ([theApp stopAdvertisingAndListening])
     {
-      NSLog(@"jxcore: stopUpdateAdvertisingAndListenForIncomingConnections: success");
+      NSLog(@"jxcore: stopAdvertisingAndListening: success");
       [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
     }
     else
     {
-      NSLog(@"jxcore: stopUpdateAdvertisingAndListenForIncomingConnections: failure");
+      NSLog(@"jxcore: stopAdvertisingAndListening: failure");
       [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
     }
-  } withName:@"stopUpdateAdvertisingAndListenForIncomingConnections"];
+  } withName:@"stopAdvertisingAndListening"];
  
   // Connect
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)

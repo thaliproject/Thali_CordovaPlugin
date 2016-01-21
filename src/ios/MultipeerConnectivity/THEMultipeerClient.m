@@ -152,32 +152,29 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   __block BOOL success = NO;
   __block THEMultipeerClientSession *clientSession = nil;
 
-  if (_sessionStateDelegate)
+  // Check if there's a server session already
+  const THEMultipeerServerSession *serverSession = [_sessionStateDelegate serverSession:peerIdentifier];
+  
+  if (serverSession && [serverSession connectionState] != THEPeerSessionStateConnected)
   {
-    // Check if there's a server session already
-    const THEMultipeerServerSession *serverSession = [_sessionStateDelegate serverSession:peerIdentifier];
-    
-    if (serverSession && [serverSession connectionState] != THEPeerSessionStateConnected)
+    if ([serverSession connectionState] == THEPeerSessionStateConnected)
     {
-      if ([serverSession connectionState] == THEPeerSessionStateConnected)
-      {
-        // We already have a remote-initiated session to this peer, return the details
+      // We already have a remote-initiated session to this peer, return the details
+      [self callConnectCallback:connectCallback withListeningPort:0
+                                                   withClientPort:[serverSession clientPort]
+                                                   withServerPort:[serverSession serverPort]];
+      return YES;
+    }
+    else if ([serverSession connectionState] == THEPeerSessionStateConnecting)
+    {
+      // We're in the process of accepting a connection from the remote peer, have them call us
+      // back when it's completed
+      [serverSession addConnectCallback:^void(unsigned short clientPort, unsigned short serverPort) {
         [self callConnectCallback:connectCallback withListeningPort:0
-                                                     withClientPort:[serverSession clientPort]
-                                                     withServerPort:[serverSession serverPort]];
-        return YES;
-      }
-      else if ([serverSession connectionState] == THEPeerSessionStateConnecting)
-      {
-        // We're in the process of accepting a connection from the remote peer, have them call us
-        // back when it's completed
-        [serverSession addConnectCallback:^void(unsigned short clientPort, unsigned short serverPort) {
-          [self callConnectCallback:connectCallback withListeningPort:0
-                                                       withClientPort:clientPort
-                                                       withServerPort:serverPort];
-        }];
-        return YES;
-      }
+                                                     withClientPort:clientPort
+                                                     withServerPort:serverPort];
+      }];
+      return YES;
     }
   }
   

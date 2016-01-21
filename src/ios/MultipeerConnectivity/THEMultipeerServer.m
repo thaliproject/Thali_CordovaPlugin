@@ -41,7 +41,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     MCNearbyServiceAdvertiser * _nearbyServiceAdvertiser;
 
     // Application level identifiers
-    NSString *_basePeerIdentifier;
+    NSString *_localPeerIdentifier;
     NSString *_uniquePeerIdentifier;
     NSString *_serviceType;
 
@@ -76,12 +76,12 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     // Init the basic multipeer server session
     _localPeerId = peerId;
-    _basePeerIdentifier = peerIdentifier;
+    _localPeerIdentifier = peerIdentifier;
   
     // Make a unique identifier per MCPeerID so that clients can distinguish stale server
     // sessions with the same peerIdentifier
   
-    NSMutableString *tempString = [[NSMutableString alloc] initWithString:_basePeerIdentifier];
+    NSMutableString *tempString = [[NSMutableString alloc] initWithString:_localPeerIdentifier];
 
     unsigned long hash = [_localPeerId hash];
     NSData *base64 = [NSData dataWithBytes:&hash length:sizeof(hash)]; 
@@ -194,7 +194,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       [serverSession disconnect];
       
       // Update remotePeerIdentifier (it may have changed)
-      NSLog(@"server: updateing remote session: %@->%@", [serverSession remotePeerIdentifier], remotePeerIdentifier);
+      NSLog(@"server: updating remote session: %@->%@", [serverSession remotePeerIdentifier], remotePeerIdentifier);
       [serverSession updateRemotePeerIdentifier:remotePeerIdentifier];
     }
     else
@@ -215,13 +215,16 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return serverSession;
   }];
 
-
-    NSLog(@"server: accepting invitation %@", remotePeerIdentifier);
-    invitationHandler(YES, [_serverSession session]);
-
+  if ([_localPeerIdentifier compare:remotePeerIdentifier] == NSOrderedAscending)
+  {
     NSLog(@"server: rejecting invitation %@", remotePeerIdentifier);
     invitationHandler(NO, [_serverSession session]);
+    [_multipeerDiscoveryDelegate didFindPeerIdentifier:remotePeerIdentifier byServer:true];
+    return;
+  }
 
+  NSLog(@"server: accepting invitation %@", remotePeerIdentifier);
+  invitationHandler(YES, [_serverSession session]);
 }
 
 - (void)advertiser:(MCNearbyServiceAdvertiser *)advertiser didNotStartAdvertisingPeer:(NSError *)error

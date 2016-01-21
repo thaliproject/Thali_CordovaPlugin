@@ -65,7 +65,13 @@
           compiler-flags="-Werror"/>
         <source-file src="src/ios/THEPeerBluetooth.m" 
           compiler-flags="-Werror"/>
+        <header-file src="src/ios/THEPeerDiscoveryDelegate.h" 
+          compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerDiscoveryDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerManager.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerManager.m" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClient.h" 
           compiler-flags="-Werror"/>
