@@ -29,10 +29,11 @@
 #import "THEAppContext.h"
 #import "THEMultipeerDiscoveryDelegate.h"
 #import "THEMultipeerSessionStateDelegate.h"
+#import "THEMultipeerServerConnectionDelegate.h"
 
 // Encapsulates the local client functionality such as discovering and 
 // connecting to remote servers.
-@interface THEMultipeerClient : NSObject <MCNearbyServiceBrowserDelegate>
+@interface THEMultipeerClient : NSObject <MCNearbyServiceBrowserDelegate, THEMultipeerServerConnectionDelegate>
 
 // Service type here is what we're looking for, not what we may be advertising 
 // (although they'll usually be the same)
@@ -56,8 +57,6 @@
 
 // Kill connection for testing purposes
 - (BOOL)killConnection:(NSString *)peerIdentifier;
-
-- (void)didAcceptIncomingConnectionFromPeerIdentifier:(NSString *)peerIdentifier;
 
 - (const THEMultipeerClientSession *)session:(NSString *)peerIdentifier;
 

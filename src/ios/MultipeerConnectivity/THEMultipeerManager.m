@@ -225,7 +225,12 @@
                      withClientPort:(unsigned short)clientPort
                      withServerPort:(unsigned short)serverPort
 {
-  // Call client
+  // The server's just completed a connection, it may be a reverse connection initiated by the
+  // client so let the client have a look..
+  if (_client)
+  {
+  
+  }
 }
 
 /*- (void)startRestartTimer

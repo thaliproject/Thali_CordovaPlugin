@@ -160,6 +160,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   {
     if ([serverSession connectionState] == THEPeerSessionStateConnected)
     {
+      NSLog(@"client: server already connected");
+
       // We already have a remote-initiated session to this peer, return the details
       [self callConnectCallback:connectCallback withListeningPort:0
                                                    withClientPort:[serverSession clientPort]
@@ -168,14 +170,15 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     }
     else if ([serverSession connectionState] == THEPeerSessionStateConnecting)
     {
-      // We're in the process of accepting a connection from the remote peer, have them call us
-      // back when it's completed
-      /*[serverSession addConnectCallback:^void(unsigned short clientPort, unsigned short serverPort)
+      // We're already in the process of accepting a connection from this peer
+      // Just wait for it to complete.
+
+      NSLog(@"client: server already connecting");
+      @synchronized(_pendingReverseConnections)
       {
-        [self callConnectCallback:connectCallback withListeningPort:0
-                                                     withClientPort:clientPort
-                                                     withServerPort:serverPort];
-      }];*/
+        _pendingReverseConnections[peerIdentifier] = connectCallback;
+      }
+
       return YES;
     }
   }
@@ -204,14 +207,17 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
           }
           else
           {
+            // The server will connect to us..
+            NSLog(@"client: server will connect");
             @synchronized(_pendingReverseConnections)
             {
               _pendingReverseConnections[peerIdentifier] = connectCallback;
             }
-            [clientSession connect];
           }
           
-          NSString *context = [NSString stringWithFormat:@"%@+%@", _localPeerIdentifier, peerIdentifier];
+          NSString *context = [NSString stringWithFormat:@"%@+%@", 
+                                  _localPeerIdentifier, peerIdentifier];
+
           [_nearbyServiceBrowser invitePeer:[clientSession remotePeerID]
                                   toSession:[clientSession session]
                                 withContext:[context dataUsingEncoding:NSUTF8StringEncoding]
@@ -265,30 +271,26 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   return success;
 }
 
-- (void)didAcceptIncomingConnectionFromPeerIdentifier:(NSString *)peerIdentifier
+- (void)serverDidCompleteConnection:(NSString *)peerIdentifier
+                     withClientPort:(unsigned short)clientPort
+                     withServerPort:(unsigned short)serverPort
 {
-  // Server component has just accepted an incoming connection.. this may be a reverse
+  // Server component has just completed an incoming connection.. this may be a reverse
   // connect that we initiated.
   
-  /*@synchronized(_pendingReverseConnections)
+  @synchronized(_pendingReverseConnections)
   {
-    ConnectCallback connectCallback = [_pendingReverseConnections objectForKey:peerIdentifier];
+    ClientConnectCallback connectCallback = [_pendingReverseConnections objectForKey:peerIdentifier];
+    assert(connectCallback);
+    
     if (connectCallback != nil)
     {
-      if (_sessionStateDelegate)
-      {
-        THEMultipeerServerSession *serverSession =
-        (THEMultipeerServerSession *)[_serverSessionStateDelegate session:peerIdentifier];
-        
-        assert(serverSession);
-        
-        [self callConnectCallback:connectCallback withListeningPort:0
-                   withClientPort:[serverSession clientPort]
-                   withServerPort:[serverSession serverPort]];
-      }
+      [self callConnectCallback:connectCallback withListeningPort:0
+                                                   withClientPort:clientPort
+                                                   withServerPort:serverPort];
     }
     [_pendingReverseConnections removeObjectForKey:peerIdentifier];
-  }*/
+  }
 }
 
 // THEMultipeerSessionStateDelegate

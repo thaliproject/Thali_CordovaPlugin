@@ -215,17 +215,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                                                               withServerPort:_serverPort];
     }
 
-    // Create a new session for each client, even if one already
-    // existed. If we're seeing invitations from peers we already have sessions
-    // with then the other side has restarted and our session is stale (we often
-    // don't see the other side disconnect)
-
     _serverSession = serverSession;
-    [serverSession connectWithConnectCallback:^void(NSString *p, unsigned short c, unsigned short s) {
-      [_multipeerServerConnectionDelegate serverDidCompleteConnection:p
-                                                       withClientPort:c
-                                                       withServerPort:s];
-    }];
     return serverSession;
   }];
 
@@ -247,6 +237,12 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       [_multipeerDiscoveryDelegate didFindPeerIdentifier:remotePeerUUID byServer:true];
       return;
     }
+
+    [_serverSession connectWithConnectCallback:^void(NSString *p, unsigned short c, unsigned short s) {
+      [_multipeerServerConnectionDelegate serverDidCompleteConnection:p
+                                                       withClientPort:c
+                                                       withServerPort:s];
+    }];
 
     NSLog(@"server: accepting invitation %@", remotePeerUUID);
     invitationHandler(YES, [_serverSession session]);
