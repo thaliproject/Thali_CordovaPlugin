@@ -50,8 +50,6 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 - (NSString *)remotePeerIdentifier;
 - (THEPeerSessionState)connectionState;
 
-- (void)updateRemotePeerIdentifier:(NSString *)remotePeerIdentifier;
-
 - (MCSession *)session;
 
 - (void)connect;

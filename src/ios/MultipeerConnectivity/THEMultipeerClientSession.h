@@ -35,7 +35,7 @@
 @property (atomic) BOOL visible;
 
 // Clients need to specialise connect in order to receive the connect callback
-- (void)connectWithConnectCallback:(ConnectCallback)connectCallback;
+- (void)connectWithConnectCallback:(ClientConnectCallback)connectCallback;
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
                    withRemotePeerID:(MCPeerID *)remotePeerID

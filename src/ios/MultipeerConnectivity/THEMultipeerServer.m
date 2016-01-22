@@ -42,7 +42,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
     // Application level identifiers
     NSString *_localPeerIdentifier;
-    NSString *_uniquePeerIdentifier;
     NSString *_serviceType;
 
     // The port on which the application level is listening
@@ -59,14 +58,19 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   
     // Object that can see server session states
     id<THEMultipeerSessionStateDelegate> _sessionStateDelegate;
+  
+    // Object that will hear about server completed connections
+    id<THEMultipeerServerConnectionDelegate> _multipeerServerConnectionDelegate;
 }
 
 - (instancetype)initWithPeerID:(MCPeerID *)peerId
-              withPeerIdentifier:(NSString *)peerIdentifier
-                 withServiceType:(NSString *)serviceType
-                  withServerPort:(unsigned short)serverPort
-  withMultipeerDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)multipeerDiscoveryDelegate
-        withSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)sessionStateDelegate
+                       withPeerIdentifier:(NSString *)peerIdentifier
+                          withServiceType:(NSString *)serviceType
+                           withServerPort:(unsigned short)serverPort
+           withMultipeerDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)multipeerDiscoveryDelegate
+                 withSessionStateDelegate:(id<THEMultipeerSessionStateDelegate>)sessionStateDelegate
+    withMultipeerServerConnectionDelegate:(id<THEMultipeerServerConnectionDelegate>)multipeerServerConnectionDelegate
+
 {
     self = [super init];
     if (!self)
@@ -78,24 +82,13 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     _localPeerId = peerId;
     _localPeerIdentifier = peerIdentifier;
   
-    // Make a unique identifier per MCPeerID so that clients can distinguish stale server
-    // sessions with the same peerIdentifier
-  
-    NSMutableString *tempString = [[NSMutableString alloc] initWithString:_localPeerIdentifier];
-
-    unsigned long hash = [_localPeerId hash];
-    NSData *base64 = [NSData dataWithBytes:&hash length:sizeof(hash)]; 
-    [tempString appendString: @"."];
-    [tempString appendString: [base64 base64EncodedStringWithOptions:0]];
-
-    _uniquePeerIdentifier = tempString;
-
     _serviceType = serviceType;
     _serverPort = serverPort;
 
     _sessionStateDelegate = sessionStateDelegate;
     _multipeerDiscoveryDelegate = multipeerDiscoveryDelegate;
-
+    _multipeerServerConnectionDelegate = multipeerServerConnectionDelegate;
+  
     return self;
 }
 
@@ -106,13 +99,13 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 
 - (void)start
 {
-  NSLog(@"server: starting %@", _uniquePeerIdentifier);
+  NSLog(@"server: starting %@", _localPeerIdentifier);
 
   _serverSessions = [[THESessionDictionary alloc] init];
 
   _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] 
       initWithPeer:_localPeerId 
-     discoveryInfo:@{ PEER_IDENTIFIER_KEY: _uniquePeerIdentifier }
+     discoveryInfo:@{ PEER_IDENTIFIER_KEY: _localPeerIdentifier }
        serviceType:_serviceType
   ];
   [_nearbyServiceAdvertiser setDelegate:self];
@@ -205,10 +198,11 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                        updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
 
     THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)p;
-    assert([remotePeerUUID compare:[serverSession remotePeerIdentifier]] == NSOrderedSame);
     
     if (serverSession && ([[serverSession remotePeerID] hash] == [peerID hash]))
     {
+      assert([remotePeerUUID compare:[serverSession remotePeerIdentifier]] == NSOrderedSame);
+      
       // Disconnect any existing session, see note below
       NSLog(@"server: disconnecting to refresh session (%@)", [serverSession remotePeerIdentifier]);
       [serverSession disconnect];
@@ -227,7 +221,11 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     // don't see the other side disconnect)
 
     _serverSession = serverSession;
-    [serverSession connect];
+    [serverSession connectWithConnectCallback:^void(NSString *p, unsigned short c, unsigned short s) {
+      [_multipeerServerConnectionDelegate serverDidCompleteConnection:p
+                                                       withClientPort:c
+                                                       withServerPort:s];
+    }];
     return serverSession;
   }];
 

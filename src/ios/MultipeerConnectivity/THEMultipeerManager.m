@@ -81,7 +81,7 @@
   _serviceType = serviceType;
 
   _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
-  _peerIdentifier = [peerIdentifier stringByAppendingString:@":0"];
+  _peerIdentifier = peerIdentifier;
   
   _isListening = [[THEAtomicFlag alloc] init];
   _isAdvertising = [[THEAtomicFlag alloc] init];
@@ -92,6 +92,8 @@
 // Starts peer networking.
 - (BOOL)startServerWithServerPort:(unsigned short)serverPort
 {
+  static unsigned int serverGeneration = 0;
+  
   if ([_isAdvertising isSet])
   {
     if (![self stopServer])
@@ -103,20 +105,19 @@
   if ([_isAdvertising trySet])
   {
     // Increment the generation counter at the end of peerId
-    NSArray<NSString *> *peerParts = [_peerIdentifier componentsSeparatedByString:@":"];
-    assert([peerParts count] == 2);
-    uint generation = [peerParts[1] intValue] + 1;
-    _peerIdentifier = [
-      peerParts[0] stringByAppendingString:[NSString stringWithFormat:@":%d", generation]
-    ];
-      
+
     // Start up the networking components
+    NSString *_serverPeerIdentifier = [
+      _peerIdentifier stringByAppendingString:[NSString stringWithFormat:@":%d", ++serverGeneration]
+    ];
+
     _server = [[THEMultipeerServer alloc] initWithPeerID:_peerID
-                                      withPeerIdentifier:_peerIdentifier
+                                      withPeerIdentifier:_serverPeerIdentifier
                                          withServiceType:_serviceType
                                           withServerPort:serverPort
                           withMultipeerDiscoveryDelegate:self
-                                withSessionStateDelegate:self];
+                                withSessionStateDelegate:self
+                   withMultipeerServerConnectionDelegate:self];
     [_server start];
 
     NSLog(@"THEMultipeerManager initialized peer %@", _peerIdentifier);
@@ -220,8 +221,11 @@
   }
 }
 
-- (void)didAcceptIncomingConnectionFromPeerIdentifier:(NSString *)peerIdentifier
+- (void)serverDidCompleteConnection:(NSString *)peerIdentifier
+                     withClientPort:(unsigned short)clientPort
+                     withServerPort:(unsigned short)serverPort
 {
+  // Call client
 }
 
 /*- (void)startRestartTimer

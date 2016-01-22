@@ -28,6 +28,8 @@
 #import "THEMultipeerPeerSession.h"
 #import "THEMultipeerServerSocketRelay.h"
 
+typedef void (^ServerConnectCallback)(NSString *, unsigned short, unsigned short);
+
 // The sesssion type managed by a server (and so references a client)
 @interface THEMultipeerServerSession : THEMultipeerPeerSession <THEMultipeerServerSocketRelayDelegate>
 
@@ -36,10 +38,9 @@
  withRemotePeerIdentifier:(NSString *)peerIdentifier 
            withServerPort:(uint)serverPort;
 
+- (void)connectWithConnectCallback:(ServerConnectCallback)connectCallback;
+
 - (unsigned short)clientPort;
 - (unsigned short)serverPort;
-- (void)updateRemotePeerIdentifier:(NSString *)remotePeerIdentifier;
-
-- (void)addConnectCallback:(void (^)(unsigned short, unsigned short))connectCallback;
 
 @end

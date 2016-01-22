@@ -31,9 +31,11 @@
 #import "THEPeerDiscoveryDelegate.h"
 #import "THEMultipeerDiscoveryDelegate.h"
 #import "THEMultipeerSessionStateDelegate.h"
+#import "THEMultipeerServerConnectionDelegate.h"
 
 // Co-ordinates the actions of the MPCF client and server components
-@interface THEMultipeerManager : NSObject <THEMultipeerDiscoveryDelegate, THEMultipeerSessionStateDelegate>
+@interface THEMultipeerManager : NSObject
+  <THEMultipeerDiscoveryDelegate, THEMultipeerServerConnectionDelegate, THEMultipeerSessionStateDelegate>
  
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType
@@ -51,7 +53,7 @@
 // be called when the connection completes with first param being any error message or nil and
 // second param being the port number the relay is listening on
 - (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
-                    withConnectCallback:(ConnectCallback)connectCallback;
+                    withConnectCallback:(ClientConnectCallback)connectCallback;
 
 // Kill the connection without clean-up. Testing only !!
 - (BOOL)killConnection:(NSString *)peerIdentifier;

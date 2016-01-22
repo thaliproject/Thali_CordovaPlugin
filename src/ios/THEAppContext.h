@@ -32,7 +32,7 @@
 
 // Callback that will be called when the lower levels have established
 // a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, NSString *jsonConnection);
+typedef void(^ClientConnectCallback)(NSString *error, NSString *jsonConnection);
 
 // THEAppContext interface.
 @interface THEAppContext : NSObject <THEPeerDiscoveryDelegate>
@@ -56,7 +56,7 @@ typedef void(^ConnectCallback)(NSString *error, NSString *jsonConnection);
 - (BOOL)stopAdvertisingAndListening;
 
 // Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
+- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ClientConnectCallback)connectCallback;
 
 // Kill connection without cleanup - Testing only !!
 - (BOOL)killConnection:(NSString *)peerIdentifier;

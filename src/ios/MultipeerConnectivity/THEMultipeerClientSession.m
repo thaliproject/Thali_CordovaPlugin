@@ -35,7 +35,7 @@
 {
   // Callback to fire when a connection completes (in fact when the relay
   // has established it's listening socket)
-  ConnectCallback _connectCallback;
+  ClientConnectCallback _connectCallback;
 }
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
@@ -54,14 +54,14 @@
   return self;
 }
 
-- (void)connectWithConnectCallback:(ConnectCallback)connectCallback
+- (void)connectWithConnectCallback:(ClientConnectCallback)connectCallback
 {
   @synchronized(self)
   {
     assert(_connectCallback == nil);
 
-    [super connect];
     _connectCallback = connectCallback;
+    [super connect];
   }
 }
 

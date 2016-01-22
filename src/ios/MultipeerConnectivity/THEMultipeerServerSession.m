@@ -32,7 +32,7 @@
 {
   unsigned short _serverPort;
   unsigned short _clientPort;
-  void (^_connectCallback)(unsigned short, unsigned short);
+  ServerConnectCallback _connectCallback;
 }
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
@@ -56,6 +56,17 @@
   return self;
 }
 
+- (void)connectWithConnectCallback:(ServerConnectCallback)connectCallback
+{
+  @synchronized(self)
+  {
+    assert(_connectCallback == nil);
+
+    _connectCallback = connectCallback;
+    [super connect];
+  }
+}
+
 - (unsigned short)clientPort
 {
   return _clientPort;
@@ -66,38 +77,42 @@
   return _serverPort;
 }
 
-- (void)updateRemotePeerIdentifier:(NSString *)remotePeerIdentifier
-{
-  [super updateRemotePeerIdentifier:remotePeerIdentifier];
-}
-
 - (THEMultipeerSocketRelay *)newSocketRelay
 {
   return [[THEMultipeerServerSocketRelay alloc] initWithServerPort:_serverPort withDelegate:self];
 }
 
+
+/*
+- (void)addConnectCallback:(void (^)(unsigned short, unsigned short))connectCallback;
 - (void)addConnectCallback:(void (^)(unsigned short, unsigned short))connectCallback;
 {
   _connectCallback = connectCallback;
-}
+}*/
 
 - (void)didConnectWithClientPort:(unsigned short)clientPort withServerPort:(unsigned short)serverPort
 {
-  _clientPort = clientPort;
-  
-  if (_connectCallback)
+  @synchronized(self)
   {
-    _connectCallback(clientPort, serverPort);
-    _connectCallback = nil;
+    _clientPort = clientPort;
+    
+    if (_connectCallback)
+    {
+      _connectCallback([self remotePeerIdentifier], clientPort, serverPort);
+      _connectCallback = nil;
+    }
   }
 }
 
 - (void)didFailToConnectWithServerPort:(unsigned short)serverPort
 {
-  if (_connectCallback)
+  @synchronized(self)
   {
-    _connectCallback(0, 0);
-    _connectCallback = nil;
+    if (_connectCallback)
+    {
+      _connectCallback([self remotePeerIdentifier], 0, 0);
+      _connectCallback = nil;
+    }
   }
 }
 

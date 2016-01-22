@@ -114,11 +114,6 @@ static NSDictionary *stateChanges = nil;
   return _remotePeerIdentifier;
 }
 
-- (void)updateRemotePeerIdentifier:(NSString *)remotePeerIdentifier
-{
-  _remotePeerIdentifier = remotePeerIdentifier;
-}
-
 - (THEPeerSessionState)connectionState
 {
   return _connectionState;

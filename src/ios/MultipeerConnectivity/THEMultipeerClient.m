@@ -126,7 +126,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   [self startBrowsing];
 }
 
-- (void)callConnectCallback:(ConnectCallback)connectCallback
+- (void)callConnectCallback:(ClientConnectCallback)connectCallback
                            withListeningPort:(unsigned short)listeningPort
                               withClientPort:(unsigned short)clientPort
                               withServerPort:(unsigned short)serverPort
@@ -147,13 +147,14 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 }
 
 - (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
-                    withConnectCallback:(ConnectCallback)connectCallback
+                    withConnectCallback:(ClientConnectCallback)connectCallback
 {
   __block BOOL success = NO;
   __block THEMultipeerClientSession *clientSession = nil;
 
   // Check if there's a server session already
-  const THEMultipeerServerSession *serverSession = [_sessionStateDelegate serverSession:peerIdentifier];
+  const THEMultipeerServerSession *serverSession = 
+    [_sessionStateDelegate serverSession:peerIdentifier];
   
   if (serverSession && [serverSession connectionState] != THEPeerSessionStateConnected)
   {
@@ -169,11 +170,12 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     {
       // We're in the process of accepting a connection from the remote peer, have them call us
       // back when it's completed
-      [serverSession addConnectCallback:^void(unsigned short clientPort, unsigned short serverPort) {
+      /*[serverSession addConnectCallback:^void(unsigned short clientPort, unsigned short serverPort)
+      {
         [self callConnectCallback:connectCallback withListeningPort:0
                                                      withClientPort:clientPort
                                                      withServerPort:serverPort];
-      }];
+      }];*/
       return YES;
     }
   }
@@ -198,7 +200,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
           if ([_localPeerIdentifier compare:peerIdentifier] == NSOrderedAscending)
           {
             // connect will create the networking resources required to establish the session
-            [clientSession connectWithConnectCallback:(ConnectCallback)connectCallback];
+            [clientSession connectWithConnectCallback:(ClientConnectCallback)connectCallback];
           }
           else
           {

@@ -52,7 +52,7 @@
 
 // Connect to a remote peer identified by the application level identifier,
 - (BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
-                    withConnectCallback:(ConnectCallback)connectCallback;
+                    withConnectCallback:(ClientConnectCallback)connectCallback;
 
 // Kill connection for testing purposes
 - (BOOL)killConnection:(NSString *)peerIdentifier;
