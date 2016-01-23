@@ -78,10 +78,33 @@ NSString * const kAppEnteredForeground = @"appEnteredForeground";
   [JXcore callEventCallback:kAppEnteredForeground withParams:@[]];
 }
 
++ (THEAppContext *)theAppContext
+{
+  // Singleton instance.
+  static THEAppContext * appContext = nil;
+    
+  // If unallocated, allocate.
+  if (!appContext)
+  {
+    // Allocator.
+    void (^allocator)() = ^
+    {
+      appContext = [[THEAppContext alloc] init];
+    };
+        
+    // Dispatch allocator once.
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, allocator);
+  }
+    
+  // Done.
+  return appContext;
+}
+
 // Defines methods.
 - (void)defineMethods
 {
-  THEAppContext *theApp = [THEAppContext singleton];
+  THEAppContext *theApp = [self thAppContext];
   [theApp setThaliEventDelegate:self];
 
   // Export the public API to node

@@ -4,6 +4,11 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
+		<key>TestApp.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
 		<key>Thali.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
@@ -12,6 +17,36 @@
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
+		<key>D4553B5C1C52A48000AA8C30</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>D4553B6B1C52A98500AA8C30</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>D4553B831C52A98500AA8C30</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>D4553B981C52ACFE00AA8C30</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>D4553BA71C52ADC700AA8C30</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>D4553BBF1C52ADC700AA8C30</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
 		<key>D4E619E31C47DE5E00903813</key>
 		<dict>
 			<key>primary</key>

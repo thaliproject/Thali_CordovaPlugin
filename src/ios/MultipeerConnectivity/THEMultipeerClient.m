@@ -213,6 +213,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
             {
               _pendingReverseConnections[peerIdentifier] = connectCallback;
             }
+
+            [clientSession connect];
           }
           
           NSString *context = [NSString stringWithFormat:@"%@+%@", 

@@ -230,7 +230,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   }
   else
   {
-    if ([localPeerUUID compare:remotePeerUUID] == NSOrderedAscending)
+    if ([localPeerUUID compare:remotePeerUUID] == NSOrderedDescending)
     {
       NSLog(@"server: rejecting invitation for lexical ordering %@", remotePeerUUID);
       invitationHandler(NO, [_serverSession session]);

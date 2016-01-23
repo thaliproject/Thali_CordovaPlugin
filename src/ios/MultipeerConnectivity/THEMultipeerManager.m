@@ -40,6 +40,8 @@
 {
   // Application level identifiers
   NSString * _serviceType;
+  
+  NSString * _peerUUID;
   NSString * _peerIdentifier;
 
   // Our local peer id
@@ -81,7 +83,9 @@
   _serviceType = serviceType;
 
   _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
-  _peerIdentifier = peerIdentifier;
+
+  _peerUUID = peerIdentifier;
+  _peerIdentifier = [peerIdentifier stringByAppendingString:@":0"];
   
   _isListening = [[THEAtomicFlag alloc] init];
   _isAdvertising = [[THEAtomicFlag alloc] init];
@@ -107,12 +111,12 @@
     // Increment the generation counter at the end of peerId
 
     // Start up the networking components
-    NSString *_serverPeerIdentifier = [
-      _peerIdentifier stringByAppendingString:[NSString stringWithFormat:@":%d", ++serverGeneration]
+    _peerIdentifier = [
+      _peerUUID stringByAppendingString:[NSString stringWithFormat:@":%d", ++serverGeneration]
     ];
-
+    
     _server = [[THEMultipeerServer alloc] initWithPeerID:_peerID
-                                      withPeerIdentifier:_serverPeerIdentifier
+                                      withPeerIdentifier:_peerIdentifier
                                          withServiceType:_serviceType
                                           withServerPort:serverPort
                           withMultipeerDiscoveryDelegate:self

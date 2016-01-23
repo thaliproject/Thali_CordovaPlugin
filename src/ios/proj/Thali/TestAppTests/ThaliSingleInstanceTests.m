@@ -1,0 +1,58 @@
+//
+//  TestAppTests.m
+//  TestAppTests
+//
+//  Created by tobe on 22/01/2016.
+//  Copyright © 2016 Microsoft. All rights reserved.
+//
+
+#import <XCTest/XCTest.h>
+#import "../../../THEAppContext.h"
+
+@interface ThaliSingleInstanceTests : XCTestCase
+@end
+
+@implementation ThaliSingleInstanceTests
+{
+  THEAppContext *_app;
+}
+
+- (void)setUp {
+    [super setUp];
+    _app = [[THEAppContext alloc] init];
+}
+
+- (void)tearDown {
+    // Put teardown code here. This method is called after the invocation of each test method in the class.
+    [super tearDown];
+    _app = nil;
+}
+
+- (void)testCanStartListening {
+  XCTAssertTrue([_app startListeningForAdvertisements]);
+}
+
+- (void)testStartListeningTwiceIsAnError {
+  XCTAssertTrue([_app startListeningForAdvertisements]);
+  XCTAssertFalse([_app startListeningForAdvertisements]);
+}
+
+- (void)testStopListeningIsNotAnError {
+  XCTAssertTrue([_app stopListeningForAdvertisements]);
+}
+
+- (void)testStartAdvertising {
+  XCTAssertTrue([_app startUpdateAdvertisingAndListening:4242]);
+}
+
+- (void)testStopAdvertisingIsNotAnError {
+  XCTAssertTrue([_app stopAdvertisingAndListening]);
+}
+
+- (void)testStartAdvertisingTwiceIsNotAnError {
+  XCTAssertTrue([_app startUpdateAdvertisingAndListening:4242]);
+  XCTAssertTrue([_app startUpdateAdvertisingAndListening:4242]);
+}
+
+
+@end

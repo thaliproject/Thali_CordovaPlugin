@@ -90,29 +90,6 @@ static NSString *const THALI_SERVICE_TYPE = @"thaliproject";
 static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B";
 
 // Singleton.
-+ (instancetype)singleton
-{
-  // Singleton instance.
-  static THEAppContext * appContext = nil;
-    
-  // If unallocated, allocate.
-  if (!appContext)
-  {
-    // Allocator.
-    void (^allocator)() = ^
-    {
-      appContext = [[THEAppContext alloc] init];
-    };
-        
-    // Dispatch allocator once.
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, allocator);
-  }
-    
-  // Done.
-  return appContext;
-}
-
 - (void)setThaliEventDelegate:(id)eventDelegate
 {
   _eventDelegate = eventDelegate;
@@ -141,7 +118,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 {
   return [_multipeerManager stopServer];
 }
-
 
 // Starts communications.
 - (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort

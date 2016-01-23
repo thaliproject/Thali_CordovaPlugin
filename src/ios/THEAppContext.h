@@ -37,9 +37,6 @@ typedef void(^ClientConnectCallback)(NSString *error, NSString *jsonConnection);
 // THEAppContext interface.
 @interface THEAppContext : NSObject <THEPeerDiscoveryDelegate>
 
-// Class singleton.
-+ (instancetype)singleton;
-
 // Set the event delegate
 - (void)setThaliEventDelegate:(id<THEThaliEventDelegate>) eventDelegate;
 

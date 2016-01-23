@@ -69,6 +69,12 @@
 {
   @synchronized(self)
   {
+    if (!_connectCallback)
+    {
+      NSLog(@"client session: no connect callabck (server initiated)");
+      return;
+    }
+    
     NSLog(@"client session: fireConnectCallback: %@", [self remotePeerIdentifier]);
 
     assert(_connectCallback != nil);
