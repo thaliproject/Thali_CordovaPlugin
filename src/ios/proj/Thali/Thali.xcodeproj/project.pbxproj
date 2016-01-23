@@ -33,6 +33,7 @@
 		D4B4605B1C51154000940B96 /* THEAtomicFlag.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460581C51154000940B96 /* THEAtomicFlag.m */; };
 		D4B4605C1C51154000940B96 /* THEProtectedMutableDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */; };
 		D4B4605D1C51154000940B96 /* THESessionDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B4605A1C51154000940B96 /* THESessionDictionary.m */; };
+		D4C650DD1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +97,7 @@
 		D4B460581C51154000940B96 /* THEAtomicFlag.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEAtomicFlag.m; path = ../../Utility/THEAtomicFlag.m; sourceTree = "<group>"; };
 		D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEProtectedMutableDictionary.m; path = ../../Utility/THEProtectedMutableDictionary.m; sourceTree = "<group>"; };
 		D4B4605A1C51154000940B96 /* THESessionDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THESessionDictionary.m; path = ../../Utility/THESessionDictionary.m; sourceTree = "<group>"; };
+		D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThaliMultipleInstanceTests.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -153,6 +155,7 @@
 		D4553BC31C52ADC700AA8C30 /* TestAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */,
 				D4553BC41C52ADC700AA8C30 /* ThaliSingleInstanceTests.m */,
 				D4553BC61C52ADC700AA8C30 /* Info.plist */,
 			);
@@ -349,6 +352,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D4553BC51C52ADC700AA8C30 /* ThaliSingleInstanceTests.m in Sources */,
+				D4C650DD1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
