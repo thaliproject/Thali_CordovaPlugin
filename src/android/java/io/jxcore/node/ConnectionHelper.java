@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+/* Copyright (c) 2015-2016 Microsoft Corporation. This software is licensed under the MIT License.
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
@@ -20,6 +20,8 @@ import org.thaliproject.p2p.btconnectorlib.ConnectionManagerSettings;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothUtils;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.UUID;
@@ -32,7 +34,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ConnectionHelper
         implements
             ConnectionManager.ConnectionManagerListener,
-            DiscoveryManager.DiscoveryManagerListener {
+            DiscoveryManager.DiscoveryManagerListener,
+            PeerAndConnectionModel.Listener {
     /**
      * A listener interface for relaying connection status change events to Node layer.
      * This interface only applies to outgoing connection attempts (i.e. when you call
@@ -55,10 +58,8 @@ public class ConnectionHelper
 
     private final Context mContext;
     private final Thread.UncaughtExceptionHandler mThreadUncaughtExceptionHandler;
-    private final CopyOnWriteArrayList<PeerProperties> mDiscoveredPeers = new CopyOnWriteArrayList<PeerProperties>();
-    private final CopyOnWriteArrayList<IncomingSocketThread> mIncomingSocketThreads = new CopyOnWriteArrayList<IncomingSocketThread>();
-    private final CopyOnWriteArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new CopyOnWriteArrayList<OutgoingSocketThread>();
-    private final HashMap<String, JxCoreExtensionListener> mOutgoingConnectionListeners = new HashMap<String, JxCoreExtensionListener>();
+    private final PeerAndConnectionModel mPeerAndConnectionModel;
+    private final HashMap<String, JxCoreExtensionListener> mOutgoingConnectionListeners;
     private ConnectionManager mConnectionManager = null;
     private DiscoveryManager mDiscoveryManager = null;
     private DiscoveryManagerSettings mDiscoveryManagerSettings = null;
@@ -85,6 +86,9 @@ public class ConnectionHelper
                 });
             }
         };
+
+        mPeerAndConnectionModel = new PeerAndConnectionModel(this);
+        mOutgoingConnectionListeners = new HashMap<String, JxCoreExtensionListener>();
     }
 
     /**
@@ -99,20 +103,20 @@ public class ConnectionHelper
 
         mConnectionManager = new ConnectionManager(mContext, this, SERVICE_UUID, BLUETOOTH_NAME);
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
-        mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance();
+        mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance(mContext);
 
-        if (mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
+        if (mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
             mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
             mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
         } else {
-            mDiscoveryManager.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
+            mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
         }
 
         boolean connectionManagerStarted = mConnectionManager.start(peerName);
         boolean discoveryManagerStarted = false;
 
         if (connectionManagerStarted) {
-            Log.i(TAG, "start: Using peer discovery mode: " + mDiscoveryManager.getDiscoveryMode());
+            Log.i(TAG, "start: Using peer discovery mode: " + mDiscoveryManagerSettings.getDiscoveryMode());
             discoveryManagerStarted = mDiscoveryManager.start(peerName);
 
             if (discoveryManagerStarted) {
@@ -144,8 +148,17 @@ public class ConnectionHelper
             mDiscoveryManager = null;
         }
 
-        closeAndRemoveAllOutgoingConnections();
-        closeAndRemoveAllIncomingConnections();
+        killAllConnections();
+    }
+
+    /**
+     * Kills all connections.
+     * @return The number of incoming connections killed.
+     */
+    public synchronized int killAllConnections() {
+        mPeerAndConnectionModel.closeAndRemoveAllOutgoingConnections();
+        mOutgoingConnectionListeners.clear();
+        return mPeerAndConnectionModel.closeAndRemoveAllIncomingConnections();
     }
 
     public boolean isRunning() {
@@ -155,15 +168,15 @@ public class ConnectionHelper
     /**
      * @return True, if BLE advertising is supported. False otherwise.
      */
-    public boolean isBleAdvertisingSupported() {
+    public boolean isBleMultipleAdvertisementSupported() {
         boolean isSupported = false;
         boolean discoveryManagerWasCreated = (mDiscoveryManager != null);
 
         if (discoveryManagerWasCreated) {
-            isSupported = mDiscoveryManager.isBleAdvertisingSupported();
+            isSupported = mDiscoveryManager.isBleMultipleAdvertisementSupported();
         } else {
             DiscoveryManager discoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
-            isSupported = discoveryManager.isBleAdvertisingSupported();
+            isSupported = discoveryManager.isBleMultipleAdvertisementSupported();
             discoveryManager = null;
         }
 
@@ -177,7 +190,7 @@ public class ConnectionHelper
      */
     public synchronized boolean disconnectOutgoingConnection(final String peerId) {
         Log.d(TAG, "disconnectOutgoingConnection: Trying to close connection to peer with ID " + peerId);
-        boolean success = closeAndRemoveOutgoingConnectionThread(peerId, false);
+        boolean success = mPeerAndConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId, false);
 
         if (success) {
             Log.i(TAG, "disconnectOutgoingConnection: Successfully disconnected (peer ID: " + peerId);
@@ -190,11 +203,16 @@ public class ConnectionHelper
     }
 
     /**
-     * @return Our Bluetooth address or empty string, if not resolved.
+     * @return Our Bluetooth MAC address or an empty string, if not resolved.
      */
-    public String getBluetoothAddress() {
-        BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
-        return bluetooth == null ? "" : bluetooth.getAddress();
+    public String getBluetoothMacAddress() {
+        String bluetoothMacAddress = mDiscoveryManager.getBluetoothMacAddress();
+
+        if (BluetoothUtils.isBluetoothMacAddressUnknown(bluetoothMacAddress)) {
+            bluetoothMacAddress = "";
+        }
+
+        return bluetoothMacAddress;
     }
 
     /**
@@ -202,53 +220,13 @@ public class ConnectionHelper
      * is not resolved or an error occurs while retrieving the name.
      */
     public String getBluetoothName() {
-        BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
-        if (bluetooth != null) {
-            return bluetooth.getName();
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        if (bluetoothAdapter != null) {
+            return bluetoothAdapter.getName();
         }
+
         return null;
-    }
-
-    /**
-     * Checks if we have an incoming connection with a peer matching the given peer ID.
-     * @param peerId The peer ID.
-     * @return True, if connected. False otherwise.
-     */
-    public synchronized boolean hasIncomingConnection(final String peerId) {
-        return (findSocketThread(peerId, true) != null);
-    }
-
-    /**
-     * Checks if we have an outgoing connection with a peer matching the given peer ID.
-     * @param peerId The peer ID.
-     * @return True, if connected. False otherwise.
-     */
-    public synchronized boolean hasOutgoingConnection(final String peerId) {
-        return (findSocketThread(peerId, false) != null);
-    }
-
-    /**
-     * Checks if we have either an incoming or outgoing connection with a peer matching the given ID.
-     * @param peerId The peer ID.
-     * @return True, if connected. False otherwise.
-     */
-    public synchronized boolean hasConnection(final String peerId) {
-        boolean hasIncoming = hasIncomingConnection(peerId);
-        boolean hasOutgoing = hasOutgoingConnection(peerId);
-
-        if (hasIncoming) {
-            Log.d(TAG, "hasConnection: We have an incoming connection with peer with ID " + peerId);
-        }
-
-        if (hasOutgoing) {
-            Log.d(TAG, "hasConnection: We have an outgoing connection with peer with ID " + peerId);
-        }
-
-        if (!hasIncoming && !hasOutgoing){
-            Log.d(TAG, "hasConnection: No connection with peer with ID " + peerId);
-        }
-
-        return (hasIncoming || hasOutgoing);
     }
 
     /**
@@ -265,14 +243,14 @@ public class ConnectionHelper
         }
 
         if (isRunning()) {
-            if (!hasOutgoingConnection(peerIdToConnectTo)) {
-                if (hasIncomingConnection(peerIdToConnectTo)) {
+            if (!mPeerAndConnectionModel.hasOutgoingConnection(peerIdToConnectTo)) {
+                if (mPeerAndConnectionModel.hasIncomingConnection(peerIdToConnectTo)) {
                     Log.i(TAG, "connect: We already have an incoming connection to peer with ID "
                             + peerIdToConnectTo + ", but will connect anyway...");
                 }
 
-                if (mOutgoingSocketThreads.size() < MAXIMUM_NUMBER_OF_CONNECTIONS) {
-                    PeerProperties selectedDevice = findDiscoveredPeer(peerIdToConnectTo);
+                if (mPeerAndConnectionModel.getNumberOfCurrentOutgoingConnections() < MAXIMUM_NUMBER_OF_CONNECTIONS) {
+                    PeerProperties selectedDevice = mPeerAndConnectionModel.findDiscoveredPeer(peerIdToConnectTo);
 
                     if (selectedDevice == null) {
                         Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
@@ -295,10 +273,10 @@ public class ConnectionHelper
                     }
                 } else {
                     Log.e(TAG, "connect: Maximum number of peer connections ("
-                            + mOutgoingSocketThreads.size()
+                            + mPeerAndConnectionModel.getNumberOfCurrentOutgoingConnections()
                             + ") reached, please try again after disconnecting a peer");
                     listener.onConnectionStatusChanged("Maximum number of peer connections ("
-                            + mOutgoingSocketThreads.size()
+                            + mPeerAndConnectionModel.getNumberOfCurrentOutgoingConnections()
                             + ") reached, please try again after disconnecting a peer", PORT_NUMBER_IN_ERROR_CASES);
                 }
             } else {
@@ -316,7 +294,7 @@ public class ConnectionHelper
      * Toggles between the system decided and the default alternative insecure RFCOMM port number.
      */
     public void toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber() {
-        ConnectionManagerSettings settings = ConnectionManagerSettings.getInstance();
+        ConnectionManagerSettings settings = ConnectionManagerSettings.getInstance(mContext);
 
         if (settings.getInsecureRfcommSocketPortNumber() ==
                 ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT) {
@@ -354,12 +332,12 @@ public class ConnectionHelper
             throw new RuntimeException("onConnected: Bluetooth socket is null");
         }
 
-        if (hasConnection(peerProperties.getId())) {
+        if (mPeerAndConnectionModel.hasConnection(peerProperties.getId())) {
             Log.w(TAG, "onConnected: Already connected with peer " + peerProperties.toString() + ", continuing anyway...");
         }
 
         // Add the peer to the list, if was not discovered before
-        if (modifyListOfDiscoveredPeers(peerProperties, true)) {
+        if (mPeerAndConnectionModel.modifyListOfDiscoveredPeers(peerProperties, true)) {
             notifyPeerAvailability(peerProperties, true);
         }
 
@@ -390,7 +368,8 @@ public class ConnectionHelper
                         new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
                             @Override
                             public void run() {
-                                thisInstance.closeAndRemoveIncomingConnectionThread(threadId);
+                                thisInstance.mPeerAndConnectionModel
+                                    .closeAndRemoveIncomingConnectionThread(threadId);
                             }
                         });
                     }
@@ -404,7 +383,7 @@ public class ConnectionHelper
                 newIncomingSocketThread.setDefaultUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
                 newIncomingSocketThread.setPeerProperties(peerProperties);
                 newIncomingSocketThread.setHttpPort(mServerPort);
-                mIncomingSocketThreads.add(newIncomingSocketThread);
+                mPeerAndConnectionModel.addConnectionThread(newIncomingSocketThread);
 
                 newIncomingSocketThread.start();
 
@@ -449,7 +428,8 @@ public class ConnectionHelper
                         new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
                             @Override
                             public void run() {
-                                thisInstance.closeAndRemoveOutgoingConnectionThread(peerId, true);
+                                thisInstance.mPeerAndConnectionModel
+                                        .closeAndRemoveOutgoingConnectionThread(peerId, true);
                             }
                         });
                     }
@@ -467,7 +447,7 @@ public class ConnectionHelper
             if (newOutgoingSocketThread != null) {
                 newOutgoingSocketThread.setDefaultUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
                 newOutgoingSocketThread.setPeerProperties(peerProperties);
-                mOutgoingSocketThreads.add(newOutgoingSocketThread);
+                mPeerAndConnectionModel.addConnectionThread(newOutgoingSocketThread);
 
                 newOutgoingSocketThread.start();
 
@@ -475,13 +455,13 @@ public class ConnectionHelper
                         + peerProperties + ", created successfully");
 
                 // Use the system decided port the next time, if we're not already using
-                ConnectionManagerSettings.getInstance().setInsecureRfcommSocketPortNumber(
+                ConnectionManagerSettings.getInstance(mContext).setInsecureRfcommSocketPortNumber(
                         ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
             }
         }
 
         Log.d(TAG, "onConnected: The total number of connections is now "
-                + (mIncomingSocketThreads.size() + mOutgoingSocketThreads.size()));
+                + mPeerAndConnectionModel.getNumberOfCurrentConnections());
     }
 
     /**
@@ -523,6 +503,16 @@ public class ConnectionHelper
         }
     }
 
+    @Override
+    public boolean onPermissionCheckRequired(String permission) {
+        Log.i(TAG, "onPermissionCheckRequired: " + permission);
+        Log.e(TAG, "onPermissionCheckRequired: Not implemented");
+
+        // TODO: Implement
+
+        return false;
+    }
+
     /**
      * Does nothing but logs the new state.
      * @param discoveryManagerState The new state.
@@ -530,6 +520,21 @@ public class ConnectionHelper
     @Override
     public void onDiscoveryManagerStateChanged(DiscoveryManager.DiscoveryManagerState discoveryManagerState) {
         Log.i(TAG, "onDiscoveryManagerStateChanged: " + discoveryManagerState.toString());
+    }
+
+    @Override
+    public void onProvideBluetoothMacAddressRequest(String requestId) {
+        Log.d(TAG, "onProvideBluetoothMacAddressRequest: Request ID: " + requestId);
+    }
+
+    @Override
+    public void onPeerReadyToProvideBluetoothMacAddress() {
+        Log.d(TAG, "onPeerReadyToProvideBluetoothMacAddress");
+    }
+
+    @Override
+    public void onBluetoothMacAddressResolved(String bluetoothMacAddress) {
+        Log.d(TAG, "onBluetoothMacAddressResolved: " + bluetoothMacAddress);
     }
 
     /**
@@ -543,7 +548,7 @@ public class ConnectionHelper
                 + ", device name: " + peerProperties.getDeviceName()
                 + ", device address: " + peerProperties.getDeviceAddress());
 
-        if (modifyListOfDiscoveredPeers(peerProperties, true)) {
+        if (mPeerAndConnectionModel.modifyListOfDiscoveredPeers(peerProperties, true)) {
             notifyPeerAvailability(peerProperties, true);
         }
     }
@@ -569,178 +574,20 @@ public class ConnectionHelper
         Log.i(TAG, "onPeerLost: " + peerProperties.toString());
 
         // If we are still connected, the peer can't certainly be lost
-        if (!hasConnection(peerProperties.getId()) && modifyListOfDiscoveredPeers(peerProperties, false)) {
+        if (!mPeerAndConnectionModel.hasConnection(peerProperties.getId())
+                && mPeerAndConnectionModel.modifyListOfDiscoveredPeers(peerProperties, false)) {
             notifyPeerAvailability(peerProperties, false);
         }
     }
 
     /**
-     * Tries to find a socket thread with the given peer ID.
-     * @param peerId The peer ID associated with the socket thread.
-     * @param isIncoming If true, will search from incoming connections. If false, will search from outgoing connections.
-     * @return The socket thread or null if not found.
+     * From PeerAndConnectionModel.Listener
+     *
+     * @param peerId The ID of the peer.
      */
-    private synchronized SocketThreadBase findSocketThread(final String peerId, final boolean isIncoming) {
-        if (isIncoming) {
-            for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
-                if (incomingSocketThread != null && incomingSocketThread.getPeerProperties().getId().equalsIgnoreCase(peerId)) {
-                    return incomingSocketThread;
-                }
-            }
-        } else {
-            for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
-                if (outgoingSocketThread != null && outgoingSocketThread.getPeerProperties().getId().equalsIgnoreCase(peerId)) {
-                    return outgoingSocketThread;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Closes and removes an incoming connection thread with the given ID.
-     * @param incomingThreadId The ID of the incoming connection thread.
-     * @return True, if the thread was found, the connection was closed and the thread was removed from the list.
-     */
-    private synchronized boolean closeAndRemoveIncomingConnectionThread(final long incomingThreadId) {
-        boolean wasFoundClosedAndRemoved = false;
-
-        for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
-            if (incomingSocketThread != null && incomingSocketThread.getId() == incomingThreadId) {
-                Log.i(TAG, "closeAndRemoveIncomingConnectionThread: Closing and removing incoming connection thread with ID " + incomingThreadId);
-                mIncomingSocketThreads.remove(incomingSocketThread);
-                incomingSocketThread.close();
-                wasFoundClosedAndRemoved = true;
-                break;
-            }
-        }
-
-        Log.d(TAG, "closeAndRemoveIncomingConnectionThread: " + mIncomingSocketThreads.size() + " incoming connection(s) left");
-        return wasFoundClosedAndRemoved;
-    }
-
-    /**
-     * Closes and removes an outgoing connection with the given peer ID.
-     * @param peerId The ID of the peer to disconnect.
-     * @param notifyError If true, will notify the Node layer about a connection error.
-     * @return True, if the thread was found, the connection was closed and the thread was removed from the list.
-     */
-    private synchronized boolean closeAndRemoveOutgoingConnectionThread(
-            final String peerId, boolean notifyError) {
-        boolean wasFoundAndDisconnected = false;
-        SocketThreadBase socketThread = findSocketThread(peerId, false);
-
-        if (socketThread != null) {
-            Log.i(TAG, "closeAndRemoveOutgoingConnectionThread: Closing connection, peer ID: " + peerId);
-            mOutgoingConnectionListeners.remove(peerId);
-            mOutgoingSocketThreads.remove(socketThread);
-            socketThread.close();
-            wasFoundAndDisconnected = true;
-
-            if (notifyError) {
-                JSONObject jsonObject = new JSONObject();
-
-                try {
-                    jsonObject.put(JXcoreExtension.EVENT_VALUE_PEER_ID, peerId);
-                } catch (JSONException e) {
-                    Log.e(TAG, "closeAndRemoveOutgoingConnectionThread: Failed to construct a JSON object: " + e.getMessage(), e);
-                }
-
-                jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_CONNECTION_ERROR, jsonObject.toString());
-            }
-        }
-
-        if (!wasFoundAndDisconnected) {
-            Log.e(TAG, "closeAndRemoveOutgoingConnectionThread: Failed to find an outgoing connection to peer with ID " + peerId);
-        }
-
-        Log.d(TAG, "closeAndRemoveOutgoingConnectionThread: " + mOutgoingSocketThreads.size() + " outgoing connection(s) left");
-        return wasFoundAndDisconnected;
-    }
-
-    /**
-     * Disconnects all outgoing connections.
-     */
-    private synchronized void closeAndRemoveAllOutgoingConnections() {
-        for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
-            if (outgoingSocketThread != null) {
-                Log.d(TAG, "closeAndRemoveAllOutgoingConnections: Peer: " + outgoingSocketThread.getPeerProperties().toString());
-                outgoingSocketThread.close();
-            }
-        }
-
-        mOutgoingConnectionListeners.clear();
-        mOutgoingSocketThreads.clear();
-    }
-
-    /**
-     * Disconnects all incoming connections.
-     * This method should only be used internally and should, in the future, made private.
-     * For now, this method can be used for testing to emulate 'peer disconnecting' events.
-     * @return The number of connections closed.
-     */
-    public synchronized int closeAndRemoveAllIncomingConnections() {
-        int numberOfConnectionsClosed = 0;
-
-        for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
-            if (incomingSocketThread != null) {
-                Log.d(TAG, "closeAndRemoveAllIncomingConnections: Peer: " + incomingSocketThread.getPeerProperties().toString());
-                incomingSocketThread.close();
-                numberOfConnectionsClosed++;
-            }
-        }
-
-        mIncomingSocketThreads.clear();
-        return numberOfConnectionsClosed;
-    }
-
-    /**
-     * Tries to find a peer with the given ID.
-     * @param peerId The ID of the peer to find.
-     * @return The properties of the found peer or null, if not found.
-     */
-    private synchronized PeerProperties findDiscoveredPeer(final String peerId) {
-        PeerProperties peerProperties = null;
-
-        for (PeerProperties existingPeerProperties : mDiscoveredPeers) {
-            if (existingPeerProperties != null && existingPeerProperties.getId().contentEquals(peerId)) {
-                peerProperties = existingPeerProperties;
-                break;
-            }
-        }
-
-        return peerProperties;
-    }
-
-    /**
-     * Adds/removes the given peer to/from the list of discovered peers.
-     * @param peerProperties The peer properties.
-     * @param add If true, will try to add. If false, will try to remove.
-     * @return True, if successfully added/removed.
-     */
-    private synchronized boolean modifyListOfDiscoveredPeers(PeerProperties peerProperties, boolean add) {
-        boolean success = false;
-
-        if (add) {
-            if (findDiscoveredPeer(peerProperties.getId()) != null) {
-                Log.w(TAG, "modifyListOfDiscoveredPeers: Peer " + peerProperties.toString()
-                        + " already in the list, will not add again");
-            } else {
-                mDiscoveredPeers.add(peerProperties);
-                success = true;
-            }
-        } else {
-            // Remove
-            PeerProperties peerPropertiesToRemove = findDiscoveredPeer(peerProperties.getId());
-
-            if (peerPropertiesToRemove != null && mDiscoveredPeers.remove(peerPropertiesToRemove)) {
-                Log.d(TAG, "modifyListOfDiscoveredPeers: Peer " + peerProperties.toString() + " removed");
-                success = true;
-            }
-        }
-
-        return success;
+    @Override
+    public void onConnectionClosed(String peerId) {
+        mOutgoingConnectionListeners.remove(peerId);
     }
 
     /**
@@ -780,7 +627,7 @@ public class ConnectionHelper
     private synchronized void lowerBleDiscoveryPowerAndStartResetTimer() {
         if (mPowerUpBleDiscoveryTimer == null) {
             DiscoveryManager.DiscoveryMode discoveryMode =
-                    mDiscoveryManager.getDiscoveryMode();
+                    mDiscoveryManagerSettings.getDiscoveryMode();
 
             if (discoveryMode == DiscoveryManager.DiscoveryMode.BLE
                     || discoveryMode == DiscoveryManager.DiscoveryMode.BLE_AND_WIFI) {
