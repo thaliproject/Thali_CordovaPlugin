@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+/* Copyright (c) 2015-2016 Microsoft Corporation. This software is licensed under the MIT License.
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
@@ -32,7 +32,7 @@ public class JXcoreExtension {
 
     public final static String METHOD_NAME_CONNECT = "Connect";
     public final static String METHOD_NAME_DISCONNECT = "Disconnect";
-    public final static String METHOD_NAME_KILL_CONNECTION = "KillConnection";
+    public final static String METHOD_NAME_KILL_ALL_CONNECTIONS = "KillConnection";
 
     public static void LoadExtensions() {
         final ConnectionHelper mConnectionHelper = new ConnectionHelper();
@@ -64,22 +64,19 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_GET_BLUETOOTH_ADDRESS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                String btAddressString = mConnectionHelper.getBluetoothAddress();
+                String bluetoothMacAddress = mConnectionHelper.getBluetoothMacAddress();
 
-                if (btAddressString == null) {
-                    args.add("returned Bluetooth address is null");
+                if (bluetoothMacAddress == null || bluetoothMacAddress.length() == 0) {
+                    args.add("Bluetooth MAC address not known");
                     jxcore.CallJSMethod(callbackId, args.toArray());
-                    return;
+                } else {
+                    args.add(null);
+                    args.add(bluetoothMacAddress);
+
+                    jxcore.CallJSMethod(callbackId, args.toArray());
                 }
-
-                //all is well, so lets return null as first argument
-                args.add(null);
-                args.add(btAddressString);
-
-                jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
 
@@ -109,9 +106,9 @@ public class JXcoreExtension {
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                boolean isBleAdvertisingSupported = mConnectionHelper.isBleAdvertisingSupported();
+                boolean isBleMultipleAdvertisementSupported = mConnectionHelper.isBleMultipleAdvertisementSupported();
 
-                if (isBleAdvertisingSupported) {
+                if (isBleMultipleAdvertisementSupported) {
                     args.add(null); // All is well
                     args.add("Bluetooth LE advertising is supported");
 
@@ -229,12 +226,12 @@ public class JXcoreExtension {
           }
       });
 
-        jxcore.RegisterMethod(METHOD_NAME_KILL_CONNECTION, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_KILL_ALL_CONNECTIONS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
                 ArrayList<Object> args = new ArrayList<Object>();
-                if (mConnectionHelper.closeAndRemoveAllIncomingConnections() == 0) {
+                if (mConnectionHelper.killAllConnections() == 0) {
                     args.add("No incoming connection to disconnect");
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
