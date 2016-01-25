@@ -221,8 +221,8 @@
  * If this method is called consecutively with the same peerIdentifier and a
  * connection is either in progress or already exists then an error MUST
  * be returned. Otherwise a new
- * connection MUST be created. 
- * 
+ * connection MUST be created.
+ *
  * In the case of Android there MUST be at most one
  * Bluetooth client connection between this peer and the identified remote peer.
  * In the case of iOS there MUST be at most one MCSession between this peer and
@@ -436,6 +436,7 @@ var radioState = {
  * @property {module:thaliMobileNative~radioState} blueToothLowEnergy
  * @property {module:thaliMobileNative~radioState} blueTooth
  * @property {module:thaliMobileNative~radioState} wifi
+ * @property {module:thaliMobileNative~radioState} cellular
  * @property {string} bssidName If null this value indicates that either
  * wifiRadioOn is not 'on' or that the Wi-Fi isn't currently connected to an
  * access point. If non-null then this is the BSSID of the access point that
@@ -460,9 +461,9 @@ var radioState = {
  * {@link module:thaliMobileNative~networkChanged} object are altered) any
  * callbacks registered with this method will be called. The native layer is
  * obligated to send an instance of this callback in response to the first
- * subscription it gets to this event. This will be used by the 
+ * subscription it gets to this event. This will be used by the
  * {@link module:thaliMobileNativeWrapper} to initialize its tracking of
- * the network's state for 
+ * the network's state for
  * {@link module:thaliMobileNativeWrapper~getNonTCPNetworkStatus}.
  *
  * The callbacks MUST NOT be sent more frequently than every 100 ms. If

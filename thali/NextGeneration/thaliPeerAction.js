@@ -146,6 +146,10 @@ PeerAction.prototype.start = function (httpAgentPool) {
  *
  * When kill returns the action's state MUST be set to KILLED.
  *
+ * It's fine to call kill on an action that has been submitted to a peer pool.
+ * When the action is enqueued the peer pool will override the action's kill
+ * method with its own kill method that will then call this kill method.
+ *
  * @public
  * @returns {?Error}
  */

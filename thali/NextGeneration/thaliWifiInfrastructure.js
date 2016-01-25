@@ -130,7 +130,7 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  * UDP socket for SSDP the socket MUST be "udp4". When socket.bind is called to
  * bind the socket the SSDP multicast address 239.255.255.250 and port 1900 MUST
  * be chosen as they are the reserved address and port for SSDP.
- * 
+ *
  * __OPEN ISSUE:__ What happens on Android or iOS or the desktop OS's for that
  * matter if multiple apps all try to bind to the same UDP multicast address?
  * It should be fine. But it's important to find out so that other apps can't
@@ -265,11 +265,11 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
  * OS/X or Windows. In the case that we are running on those platforms then If
  * we are running on those platforms then blueToothLowEnergy and blueTooth MUST
- * both return radioState set to `doNotCare`. Also note that these platforms
- * don't generally support a push based way to detect WiFi state (at least not
- * without writing native code). So for now we can use polling and something
- * like [network-scanner](https://www.npmjs.com/package/network-scanner) to give
- * us some sense of the system's state.
+ * both return radioState set to `doNotCare`. For now we MUST use the JXcore
+ * Mobile.getConnectionStatus call which will at least tell us if we have no
+ * Internet, Wifi or Cell (unfortunately it presents these as mutually exclusive
+ * options which isn't strictly true on iOS but that's o.k. because we are on
+ * desktop).
  *
  * @public
  * @event networkChangedWifi

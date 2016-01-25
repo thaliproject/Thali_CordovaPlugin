@@ -177,6 +177,10 @@ module.exports.stopListeningForAdvertisements = function () {
  * from {@link module:TCPServersManager.start} output to {@link
  * external:"Mobile('startUpdateAdvertisingAndListening')".callNative}.
  *
+ * If the TCP connection established by the native layer to the previously
+ * specified port is terminated by the server for any reason then the native
+ * layer MUST tear down the associated Bluetooth socket or MPCF mcSession.
+ *
  * ## Repeated calls
  *
  * By design this method is intended to be called multiple times without calling
@@ -223,12 +227,11 @@ module.exports.stopAdvertisingAndListening = function () {
  * {@link module:thaliMobileNativeWrapper.event:networkChangedNonTCP}
  * event.
  *
- * The reason we use a promise is that there is a race condition where
- * someone could call this before we have gotten the first network
- * status event. Rather than force everyone to play the game
- * where they have to subscribe to the event and call this method
- * just to figure out the status for things like UX that says
- * "Hey you don't have the right radio!" we just use a promise that
+ * The reason we use a promise is that there is a race condition where someone
+ * could call this before we have gotten the first network status event. Rather
+ * than force everyone to play the game where they have to subscribe to the
+ * event and call this method just to figure out the status for things like UX
+ * that says "Hey you don't have the right radio!" we just use a promise that
  * won't return until we have a value.
  *
  * @public
@@ -236,7 +239,17 @@ module.exports.stopAdvertisingAndListening = function () {
  */
 module.exports.getNonTCPNetworkStatus = function() {
   return new Promise();
-}
+};
+
+/**
+ * This is used for native connections and calls through to TCPServersManager.
+ *
+ * @param {Object} incomingConnectionId
+ * @returns {Promise<?Error>}
+ */
+module.exports.terminateConnection = function (incomingConnectionId) {
+  return new Promise();
+};
 
 /**
  * # WARNING: This method is intended for internal Thali testing only. DO NOT
@@ -387,6 +400,8 @@ module.exports.killConnections = function () {
  * @fires event:incomingConnectionToPortNumberFailed
  * @fires event:discoveryAdvertisingStateUpdateNonTCPEvent
  * @fires module:TCPServersManager~failedConnection We repeat these events
+ * @fires module:TCPServersManager~incomingConnectionState we repeat these
+ * events.
  */
 module.exports.emitter = new EventEmitter();
 
