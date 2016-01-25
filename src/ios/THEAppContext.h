@@ -61,4 +61,9 @@ typedef void(^ClientConnectCallback)(NSString *error, NSString *jsonConnection);
 - (void)didFindPeer:(NSDictionary *)peer;
 - (void)didLosePeer:(NSString *)peerIdentifier;
 
+#ifdef DEBUG
+// A set of functions which make testing a lot easier
+- (void)setPeerIdentifier:(NSString *)peerIdentifier;
+#endif
+
 @end

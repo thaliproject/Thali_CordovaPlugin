@@ -95,6 +95,10 @@
 
 - (void)testCanConnectToPeer
 {
+  // Ensure _app1 and _app2 sort consistently between runs
+  [_app1 setPeerIdentifier:@"A"];
+  [_app2 setPeerIdentifier:@"B"];
+  
   [_app1 setThaliEventDelegate:self];
   [_app1 startListeningForAdvertisements];
   
