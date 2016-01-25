@@ -5,8 +5,6 @@ var Promise = require('lie');
 /** @module ThaliWifiInfrastructure */
 
 /**
- * @file
- *
  * This is the interface used to manage local discover of peers over a Wi-Fi
  * Infrastructure mode access point.
  *
@@ -20,9 +18,10 @@ var Promise = require('lie');
  *
  * All stop methods in this file are idempotent so they can be called multiple
  * times in a row without causing a state change.
- */
-
-/**
+ *
+ * @public
+ * @constructor
+ *
  * This creates an object to manage a WiFi instance. During production we will
  * have exactly one instance running but for testing purposes it's very useful
  * to be able to run multiple instances. So long as the SSDP code uses a
@@ -33,8 +32,6 @@ var Promise = require('lie');
  * __Open Issue:__ We need to confirm that the different instances will see
  * each other's SSDP advertisements and queries.
  *
- * @public
- * @constructor
  * @fires event:wifiPeerAvailabilityChanged
  * @fires event:networkChangedWifi
  * @fires discoveryAdvertisingStateUpdateWifiEvent
@@ -133,7 +130,7 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  * UDP socket for SSDP the socket MUST be "udp4". When socket.bind is called to
  * bind the socket the SSDP multicast address 239.255.255.250 and port 1900 MUST
  * be chosen as they are the reserved address and port for SSDP.
- * 
+ *
  * __OPEN ISSUE:__ What happens on Android or iOS or the desktop OS's for that
  * matter if multiple apps all try to bind to the same UDP multicast address?
  * It should be fine. But it's important to find out so that other apps can't
@@ -155,6 +152,9 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  * called. If the device switches access points (e.g. the BSSID changes) or if
  * WiFi is lost then the server will be shut down. It is up to the caller to
  * catch the networkChanged event and to call start advertising again.
+ *
+ * The server created to host the router MUST use {@link
+  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}
  *
  * __OPEN ISSUE:__ If we have a properly configured multiple AP network then
  * all the APs will have different BSSID values but identical SSID values and
@@ -265,11 +265,11 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
  * OS/X or Windows. In the case that we are running on those platforms then If
  * we are running on those platforms then blueToothLowEnergy and blueTooth MUST
- * both return radioState set to `doNotCare`. Also note that these platforms
- * don't generally support a push based way to detect WiFi state (at least not
- * without writing native code). So for now we can use polling and something
- * like [network-scanner](https://www.npmjs.com/package/network-scanner) to give
- * us some sense of the system's state.
+ * both return radioState set to `doNotCare`. For now we MUST use the JXcore
+ * Mobile.getConnectionStatus call which will at least tell us if we have no
+ * Internet, Wifi or Cell (unfortunately it presents these as mutually exclusive
+ * options which isn't strictly true on iOS but that's o.k. because we are on
+ * desktop).
  *
  * @public
  * @event networkChangedWifi

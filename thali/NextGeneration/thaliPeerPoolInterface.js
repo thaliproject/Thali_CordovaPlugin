@@ -3,12 +3,10 @@
 /** @module thaliPeerPoolInterface */
 
 /**
- * Interface for a class that can manage communications with remote peers. All
- * requests to communicate with remote peers are submitted as action class
- * instances to a pool who decides how many actions of which types to allow.
- * The pool will also track how many incoming connections there are and turn
- * off advertising when necessary to keep the number of connections at an
- * acceptable limit.
+ * @classdesc Interface for a class that can manage communications with remote
+ * peers. All requests to communicate with remote peers are submitted as action
+ * class instances to a pool who decides how many actions of which types to
+ * allow.
  *
  * __Open Issue:__ One suspects that it will turn out that Bluetooth has a fixed
  * limit for how many connections it can have regardless of who initiated them.
@@ -51,35 +49,20 @@ function ThaliPeerPoolInterface() {
  * If peerAction is null or not a peerAction object then a "Bad peerAction"
  * error MUST be returned.
  *
+ * When an action is submitted the pool MUST override the action's kill method
+ * so as to be able to intercept it. When kill is called if the action has
+ * not started yet then it will just be removed from the queue and the action's
+ * own kill method called just for completeness sake (it should be a NOOP). If
+ * kill is called and the action has started then first the action's kill
+ * method MUST be called and then the action must be removed from running and
+ * discarded.
+ *
  * @public
  * @param {module:thaliPeerAction~PeerAction} peerAction
  * @returns {?Error} Null unless there is a problem in which case Error is
  * returned.
  */
 ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
-  return null;
-};
-
-/**
- * Requests that the identified action be killed. The exact meaning of kill
- * depends on the state of the action.
- *
- * If the action is still in the pool's queue then it MUST be removed from the
- * queue, the kill method called on the action and then the pool MUST stop
- * tracking that action.
- *
- * If the action was started by the pool and is in its started state but has not
- * finished yet then the kill method MUST be called on the action and the pool
- * MUST NOT track the action any further.
- *
- * If the action is not recognized then this is treated as a success and null is
- * returned.
- *
- * @param {module:thaliPeerAction~PeerAction} peerAction
- * @returns {?Error} Null will be returned if the kill succeeded otherwise an
- * Error object will be returned.
- */
-ThaliPeerPoolInterface.prototype.kill = function (peerAction) {
   return null;
 };
 

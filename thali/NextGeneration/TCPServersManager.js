@@ -5,12 +5,16 @@ var Promise = require('lie');
 /** @module TCPServersManager */
 
 /**
- * @file
- *
- * This is where we manage creating multiplex objects. For all intents and
- * purposes this file should be treated as part of {@link
- * module:thaliMobileNative}. We have broken this functionality out here in
- * order to make the code more maintainable and easier to follow.
+ * Maximum number of peers we support simultaneously advertising
+ * @type {number}
+ */
+var maxPeersToAdvertise = 20;
+
+/**
+ * @classdesc This is where we manage creating multiplex objects. For all
+ * intents and purposes this file should be treated as part of {@link
+ * module:thaliMobileNativeWrapper}. We have broken this functionality out here
+ * in order to make the code more maintainable and easier to follow.
  *
  * When dealing with incoming connections this code creates a multiplex object
  * to handle de-multiplexing the incoming connections and in the iOS case to
@@ -107,13 +111,18 @@ var Promise = require('lie');
  *  The same logic applies when an individual stream belonging to multiplex
  *  object gets closed. Was it closed by its paired TCP connection? If so, then
  *  it's done. Otherwise it needs to close that connection.
+ *
+ * @public
+ * @constructor
+ * @param {number} routerPort The port that the system is hosting the local
+ * router instance for the Thali Application.
+ * @fires event:routerPortConnectionFailed
+ * @fires event:failedConnection
+ * @fires event:incomingConnectionState
  */
+function TCPServersManager(routerPort) {
 
-/**
- * Maximum number of peers we support simultaneously advertising
- * @type {number}
- */
-var maxPeersToAdvertise = 1000;
+}
 
 /**
  * This method will call
@@ -161,14 +170,14 @@ TCPServersManager.prototype.stop = function() {
 };
 
 /**
- * This method creates a TCP listener to handle requests from the native layer
- * and to then pass them through a multiplex object who will route all the
- * multiplexed connections to routerPort, the port the system has hosted the
- * submitted router object on. The TCP listener will be started on port 0 and
- * the port it is hosted on will be returned in the promise. This is the port
- * that MUST be submitted to the native layer's {@link
- * external:"Mobile('startUpdateAdvertisingAndListening')".ca
- * llNative} command.
+ * This method creates a TCP listener (which MUST use {@link
+ * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) to handle requests
+ * from the native layer and to then pass them through a multiplex object who
+ * will route all the multiplexed connections to routerPort, the port the system
+ * has hosted the submitted router object on. The TCP listener will be started
+ * on port 0 and the port it is hosted on will be returned in the promise. This
+ * is the port that MUST be submitted to the native layer's {@link
+ * external:"Mobile('startUpdateAdvertisingAndListening')".callNative} command.
  *
  * If this method is called when we are not in the start state then an exception
  * MUST be thrown because this is a private method and something very bad just
@@ -187,6 +196,11 @@ TCPServersManager.prototype.stop = function() {
  * The created multiplex object MUST be recorded with an index of the client
  * port used by the incoming TCP socket.
  *
+ * A unique ID MUST be created for this connection and stored with this
+ * connection and then a
+ * {@link module:TCPServersManager.event:incomingConnectionState} event MUST
+ * be fired.
+ *
  * ### Error Event
  *
  * The error MUST be logged.
@@ -194,6 +208,9 @@ TCPServersManager.prototype.stop = function() {
  * ### Close Event
  *
  * We MUST call destroy on all multiplex objects spawned by this TCP listener.
+ *
+ * We MUST also fire a
+ * {@link module:TCPServersManager.event:incomingConnectionState} event.
  *
  * ## Incoming TCP socket returned by the server's connect event
  *
@@ -271,8 +288,9 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
 };
 
 /**
- * This creates a local TCP server to accept incoming connections from the Thali
- * app that will be sent to the identified peer.
+ * This creates a local TCP server (which MUST use {@link
+ * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) to accept incoming
+ * connections from the Thali app that will be sent to the identified peer.
  *
  * If this method is called before start is called then a "Start First!" error
  * MUST be thrown. If this method is called after stop is called then a "We are
@@ -461,11 +479,31 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 };
 
 /**
+ * Terminates an incoming connection with the associated incomingConnectionId.
+ *
+ * It is NOT an error to terminate a connection that on longer exists.
+ *
+ * This method MUST be idempotent so multiple calls with the same value MUST NOT
+ * cause an error or a state change.
+ *
+ * @param {Object} incomingConnectionId
+ * @returns {Promise<?error>}
+ */
+TCPServersManager.prototype.terminateIncomingConnection =
+  function (incomingConnectionId) {
+    return new Promise();
+  };
+
+/**
  * Notifies the listener of a failed connection attempt. This is mostly used to
  * determine when we have hit the local maximum connection limit but it's used
  * any time there is a connection error since the only other hint that a
  * connection is failed is that the TCP/IP connection to the 127.0.0.1 port will
  * fail.
+ *
+ * In the case that this error is generated from a callback to the
+ * {@link external:"Mobile('connect')".callNative} method then the error
+ * returned by connect MUST be returned in this event.
  *
  * @public
  * @event failedConnection
@@ -483,19 +521,27 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
  */
 
 /**
- * An instance of this class is used by {@link module:thaliMobileNativeWrapper}
- * to create the TCP servers needed to handle non-TCP incoming and outgoing
- * connections.
+ * @readonly
+ * @public
+ * @enum {string}
+ */
+TCPServersManager.incomingConnectionState = {
+  "CONNECTED": "connected",
+  "DISCONNECTED": "disconnected"
+};
+
+/**
+ * Notifies the listener when a connection is formed or cut. We use the
+ * incomingConnectionId rather than say client TCP ports to prevent confusion in
+ * the (unlikely) case that the same port is used twice.
  *
  * @public
- * @constructor
- * @param {number} routerPort The port that the system is hosting the local
- * router instance for the Thali Application.
- * @fires event:routerPortConnectionFailed
- * @fires event:failedConnection
+ * @event incomingConnectionState
+ * @property {Object} incomingConnectionId Uniquely identifies an incoming
+ * connection. The only legal operation on this object is an equality check.
+ * Otherwise the object must be treated as opaque.
+ * @property {module:TCPServersManager~TCPServersManager.incomingConnectionState} state
+ * Indicated if the connection has been established or cut.
  */
-function TCPServersManager(routerPort) {
-
-}
 
 module.exports = TCPServersManager;

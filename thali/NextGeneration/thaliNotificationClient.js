@@ -6,7 +6,7 @@ var thaliPeerDictionary = require('thaliPeerDictionary');
 /** @module thaliNotificationClient */
 
 /**
- * Creates a class that can register to receive the {@link
+ * @classdesc Creates a class that can register to receive the {@link
  * module:thaliMobile.event:peerAvailabilityChanged} event. It will listen for
  * the event and upon receiving it, will enqueue an action with the
  * submitted thaliPeerPool. Once called back by the pool then the callback will
@@ -191,6 +191,8 @@ ThaliNotificationClient.ACTION_TYPE = 'GetRequestBeacon';
  * @property {number} suggestedTCPTimeout Provides a hint to what time out to
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
+ * @property {module:thaliMobile.connectionTypes} connectionType The type of
+ * connection that will be used when connecting to this peer.
  */
 
 module.exports = ThaliNotificationClient;
