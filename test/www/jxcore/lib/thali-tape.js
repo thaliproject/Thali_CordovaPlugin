@@ -29,6 +29,7 @@ process.on('uncaughtException', function(err) {
   console.log(err.stack);
   console.log("****TEST TOOK:  ms ****" );
   console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
+  process.exit(1);
 });
 
 process.on('unhandledRejection', function(err) {
@@ -36,6 +37,7 @@ process.on('unhandledRejection', function(err) {
   console.trace(err);
   console.log("****TEST TOOK:  ms ****" );
   console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
+  process.exit(1);
 });
 
 var tests = {};
