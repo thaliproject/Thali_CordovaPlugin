@@ -38,6 +38,8 @@ function _PeerNotificationListHandler(pouchDB) {
 _PeerNotificationListHandler.PEER_NOTIFICATION_POUCHDB =
   'ThaliPeerNotificationDB';
 
+_PeerNotificationListHandler.prototype.changeEntries = [];
+
 /**
  * Replaces all the entries we are tracking with the submitted list. The list
  * is treated as being in order for purposes of handling limits on how many
@@ -159,11 +161,15 @@ var MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 10;
  * @param {module:thaliNotificationServer~ThaliNotificationServer} thaliNotificationServer
  * This is the server we will use to push out notifications.
  * @param {PouchDB} pouchDB database we are tracking changes on.
+ * @param {module:thaliSendNotificationBasedOnReplication~ChangesFilter} changesFilter
+ * We callback this function on each change to get an updated list of who to
+ * notify about the changes.
  * @constructor
  */
 function ThaliSendNotificationBasedOnReplication(
   thaliNotificationServer,
-  pouchDB) {
+  pouchDB,
+  changesFilter) {
 
 }
 
