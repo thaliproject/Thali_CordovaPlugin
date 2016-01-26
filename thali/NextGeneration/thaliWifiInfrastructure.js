@@ -8,6 +8,7 @@ var ip = require('ip');
 var uuid = require('node-uuid');
 var url = require('url');
 var express = require('express');
+var validations = require('../validations');
 var logger = require('../thalilogger')('thaliWifiInfrastructure');
 
 var THALI_NT = 'http://www.thaliproject.org/ssdp';
@@ -95,25 +96,37 @@ ThaliWifiInfrastructure.prototype._setLocation = function (address, port) {
 
 ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
   if (this._shouldBeIgnored(data)) {
-    return;
+    return false;
   }
   var parsedLocation = url.parse(data.LOCATION);
   var portNumber = parseInt(parsedLocation.port);
-  if (isNaN(portNumber)) {
-    logger.warn('Failed to parse port number from location: %s', data.LOCATION);
-    return;
+  try {
+    validations.ensureValidPort(portNumber);
+  } catch (error) {
+    logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
+    return false;
   }
+
+  var usn = data.USN
+  try {
+    validations.ensureNonNullOrEmptyString(usn);
+  } catch (error) {
+    logger.warn('Received an invalid USN value: %s', data.USN);
+    return false;
+  }
+
   var peer = {
-    peerIdentifier: data.USN,
+    peerIdentifier: usn,
     hostAddress: parsedLocation.hostname,
     portNumber: portNumber,
     peerAvailable: available
   };
   if (this.peerAvailabilities[peer.peerIdentifier] === available) {
-    return;
+    return false;
   }
   this.peerAvailabilities[peer.peerIdentifier] = available;
   this.emit('wifiPeerAvailabilityChanged', [peer]);
+  return true;
 };
 
 // Function used to filter out SSDP messages that are not
@@ -152,12 +165,11 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.start = function (router) {
-  var self = this;
-  if (self.started === true) {
+  if (this.started === true) {
     return Promise.reject(new Error('Call Stop!'));
   }
-  self.started = true;
-  self.router = router;
+  this.started = true;
+  this.router = router;
   return Promise.resolve();
 };
 

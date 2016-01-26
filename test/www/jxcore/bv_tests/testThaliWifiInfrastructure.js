@@ -35,14 +35,16 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
     udn: THALI_NT
   });
   testServer.setUSN('uuid:' + uuid.v4());
-  wifiInfrastructure.on('wifiPeerAvailabilityChanged', function (data) {
+  var wifiPeerAvailabilityChangedListener = function (data) {
     var peer = data[0];
     t.equal(peer.hostAddress, testHostAddress, 'host address should match');
     t.equal(peer.portNumber, testPort, 'port should match');
+    wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', wifiPeerAvailabilityChangedListener);
     testServer.stop(function () {
       t.end();
     });
-  });
+  };
+  wifiInfrastructure.on('wifiPeerAvailabilityChanged', wifiPeerAvailabilityChangedListener);
   testServer.start(function () {
     wifiInfrastructure.startListeningForAdvertisements();
   });
@@ -75,6 +77,21 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
     // some USN value should be advertised.
     wifiInfrastructure.startUpdateAdvertisingAndListening();
   });
+});
+
+test('messages with invalid location or USN should be ignored', function (t) {
+  var testMessage = {
+    NT: THALI_NT,
+    USN: uuid.v4(),
+    LOCATION: 'http://foo.bar:90000'
+  };
+  var handledMessage = wifiInfrastructure._handleMessage(testMessage, true);
+  t.equals(handledMessage, false, 'should not have emitted with invalid port');
+  testMessage.USN = '';
+  testMessage.LOCATION = 'http://foo.bar:50000';
+  handledMessage = wifiInfrastructure._handleMessage(testMessage, true);
+  t.equals(handledMessage, false, 'should not have emitted with invalid USN');
+  t.end();
 });
 
 test('verify that Thali-specific messages are filtered correctly', function (t) {
