@@ -9,7 +9,7 @@ var thaliPeerDictionary = require('thaliPeerDictionary');
  * @classdesc Creates a class that can register to receive the {@link
  * module:thaliMobile.event:peerAvailabilityChanged} event. It will listen for
  * the event and upon receiving it, will enqueue an action with the
- * submitted thaliPeerPool. Once called back by the pool then the callback will
+ * submitted thaliPeerPoolInterface. Once called back by the pool then the callback will
  * issue a HTTP GET request to retrieve the notification beacons for the peer,
  * parse them, see if one matches and if so then fire a {@link
  * module:thaliNotificationClient.event:peerAdvertisesDataForUs}. Callers can
@@ -17,7 +17,7 @@ var thaliPeerDictionary = require('thaliPeerDictionary');
  *
  * @public
  * @constructor
- * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} thaliPeerPool
+ * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} thaliPeerPoolInterface
  * Requests to retrieve notification beacons are enqueued on this object in
  * order to make sure we don't overwhelm our bandwidth or native communication
  * capabilities.
@@ -27,7 +27,7 @@ var thaliPeerDictionary = require('thaliPeerDictionary');
  * which peers we are interested in talking to.
  * @fires module:thaliNotificationClient.event:peerAdvertisesDataForUs
  */
-function ThaliNotificationClient(thaliPeerPool, ecdhForLocalDevice,
+function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice,
                                  addressBookCallback) {
   EventEmitter.call(this);
   this._init();

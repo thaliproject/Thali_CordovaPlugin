@@ -67,13 +67,25 @@ function ThaliNotificationServer(router, ecdhForLocalDevice,
  * 'Advertising is off' - We do not have advertising activated so we can't
  * advertise anything.
  *
- * @param {string[]} publicKeysToNotify - An array of strings holding base64 url
- * safe encoded ECDH public keys
+ * @param {string[]} [publicKeysToNotify] - An array of strings holding base64
+ * url safe encoded ECDH public keys
  * @returns {Promise<?error>} Returns null if everything went fine otherwise
  * returns an error object.
  */
 ThaliNotificationServer.prototype.setBeacons = function (publicKeysToNotify) {
   return new Promise();
+};
+
+/**
+ * Stops the beacon server. This method MUST be idempotent so multiple calls
+ * to it with an intervening call to setBeacons MUST NOT cause a state change.
+ *
+ * @public
+ * @param {Callback} callback A standard node.js callback, the first param is
+ * error.
+ */
+ThaliNotificationServer.prototype.stop = function (callback) {
+
 };
 
 module.exports.ThaliNotificationServer = ThaliNotificationServer;

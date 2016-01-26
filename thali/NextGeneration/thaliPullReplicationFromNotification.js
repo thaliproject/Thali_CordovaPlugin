@@ -3,26 +3,6 @@
 /** @module thaliPullReplicationFromNotification */
 
 /**
- * We will be given a structure that has a peer ID and a list of databases
- * we want to try to synch for that peer ID. As we get notified of peers being
- * around if they are on the list then we will enqueue an action to sync with
- * them.
- *
- * We need to be smart enough that if we have already enqueue a job to
- * replicate something that hasn't run yet that we don't keep enqueing more
- * jobs for the same peer. In other words, for any given peer we should have
- * exactly one job in the queue.
- *
- * We get a peerAdvertisesDataForUs and first we check to see if we have a job
- * enqueued. If we do then we can ignore the notification.
- *
- * If we have a job running then for now we will enqueue new job. It's not
- * great but it's not horrible either.
- *
- *
- */
-
-/**
  * @classdesc This class will listen for
  * {@link module:thaliNotificationClient.event:peerAdvertisesDataForUs} events
  * and then schedule replications.
@@ -74,15 +54,15 @@ ThaliPullReplicationFromNotification.prototype._notificationSubscriptions =
  *
  * We will not start listening for events until the first call to this method.
  *
- * @param {string[]} notificationSubscriptions
+ * @param {string[]} publicKeysToNotify
  * An array of base 64 url safe encoded public key that identifies the peers we
  * should watch for notifications from.
  */
 ThaliPullReplicationFromNotification.prototype.setNotifications =
-  function (notificationSubscriptions) {
+  function (publicKeysToNotify) {
     // Do check that the value is valid
     ThaliPullReplicationFromNotification.prototype._notificationSubscriptions =
-      notificationSubscriptions;
+      publicKeysToNotify;
   };
 
 module.exports = ThaliPullReplicationFromNotification;

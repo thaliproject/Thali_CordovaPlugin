@@ -167,4 +167,12 @@ function ThaliSendNotificationBasedOnReplication(
 
 }
 
+ThaliSendNotificationBasedOnReplication.prototype.start = function () {
+
+};
+
+ThaliSendNotificationBasedOnReplication.prototype.stop = function(callback) {
+
+};
+
 module.exports = ThaliSendNotificationBasedOnReplication;
