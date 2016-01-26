@@ -126,7 +126,7 @@ function TCPServersManager(routerPort) {
 
 /**
  * This method will call
- * {@link module:TCPServersManager~TCPServersManager#createNativeListener}
+ * {@link module:tcpServersManager~TCPServersManager#createNativeListener}
  * using the routerPort from the constructor and record the returned port.
  *
  * This method is idempotent and so MUST be able to be called multiple times
@@ -135,7 +135,7 @@ function TCPServersManager(routerPort) {
  * If called successfully then the object is in the start state.
  *
  * If this method is called after a call to
- * {@link TCPServersManager~TCPServersManager#stop} then a "We are stopped!"
+ * {@link tcpServersManager~TCPServersManager#stop} then a "We are stopped!"
  * error MUST be thrown.
  *
  * @public
@@ -149,9 +149,9 @@ TCPServersManager.prototype.start = function() {
 
 /**
  * This will cause destroy to be called on the TCP server created by {@link
- * module:TCPServersManager.createNativeListener} and then on all the TCP
+ * module:tcpServersManager.createNativeListener} and then on all the TCP
  * servers created by {@link
- * module:TCPServersManager.connectToPeerViaNativeLayer}.
+ * module:tcpServersManager.connectToPeerViaNativeLayer}.
  *
  * This method is idempotent and so MUST be able to be called multiple times in
  * a row without changing state.
@@ -345,7 +345,7 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
 
  * If clientPort/serverPort are not null then we MUST confirm that the
  * serverPort matches the port that the server created in {@link
- * module:TCPServersManager.createNativeListener} is listening on and if not
+ * module:tcpServersManager.createNativeListener} is listening on and if not
  * then we MUST call destroy on the incoming TCP connection, fire a {@link
  * event:failedConnection} event with the error set to "Mismatched serverPort",
  * and act as if connection had not been called (e.g. the next connection will

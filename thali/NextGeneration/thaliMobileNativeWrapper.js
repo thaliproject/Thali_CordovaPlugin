@@ -41,13 +41,13 @@ var EventEmitter = require('events');
  * - create a TCP server (which MUST use {@link
  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) on a random port and
  * host the router on that server.
- * - create a {@link module:TCPServersManager}.
- * - listen for the {@link module:TCPServersManager~failedConnection} event and
+ * - create a {@link module:tcpServersManager}.
+ * - listen for the {@link module:tcpServersManager~failedConnection} event and
  * then repeat it.
- * - listen for the {@link module:TCPServersManager~routerPortConnectionFailed}
+ * - listen for the {@link module:tcpServersManager~routerPortConnectionFailed}
  * event which we will then cause us to fire a {@link
  * event:incomingConnectionToPortNumberFailed}.
- * - call start on the {@link module:TCPServersManager} object and record the
+ * - call start on the {@link module:tcpServersManager} object and record the
  * returned port.
  *
  * We MUST register for the native layer handlers exactly once.
@@ -72,7 +72,7 @@ module.exports.start = function (router) {
 
 /**
  * This method will call all the stop methods, call stop on the {@link
- * module:TCPServersManager} object and close the TCP server hosting the router.
+ * module:tcpServersManager} object and close the TCP server hosting the router.
  *
  * Once called the object is in stop state.
  *
@@ -300,7 +300,7 @@ module.exports.killConnections = function () {
  * set.
  *
  * If a peer's peerAvailable is set to true then we MUST call {@link
- * module:TCPServersManager.createPeerListener}. If an error is returned then
+ * module:tcpServersManager.createPeerListener}. If an error is returned then
  * the error MUST be logged and we MUST treat this as if we received the value
  * with peerAvailable equal to false. If the call is a success then we MUST
  * issue a {@link event:nonTCPPeerAvailabilityChangedEvent} with peerIdentifier
@@ -339,7 +339,7 @@ module.exports.killConnections = function () {
  * module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} for details on
  * how to process each peer.
  *
- * If we receive a {@link module:TCPServersManager~failedConnection} then we
+ * If we receive a {@link module:tcpServersManager~failedConnection} then we
  * MUST treat that as the equivalent of having received a peer for
  * nonTCPPeerAvailabilityChanged with peerAvailable set to false.
  *
@@ -382,7 +382,7 @@ module.exports.killConnections = function () {
  * This event specifies that our internal TCP servers are no longer accepting
  * connections so we are in serious trouble. Stopping and restarting is almost
  * certainly necessary at this point. We can discover this either because of an
- * error in {@link module:TCPServersManager} or because of {@link
+ * error in {@link module:tcpServersManager} or because of {@link
  * external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative}.
  *
  * @public
