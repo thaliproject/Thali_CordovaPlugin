@@ -76,11 +76,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
   this._server = new nodessdp.Server(serverOptions);
   this._setLocation();
 
-  this._client = new nodessdp.Client({
-    allowWildcards: true,
-    logJSON: false,
-    logLevel: 'trace'
-  });
+  this._client = new nodessdp.Client();
 
   this._client.on('advertise-alive', function (data) {
     this._handleMessage(data, true);
