@@ -216,10 +216,10 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  */
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
   var self = this;
-  if (this.listening) {
+  if (self.listening) {
     return Promise.resolve();
   }
-  this.listening = true;
+  self.listening = true;
   return new Promise(function(resolve, reject) {
     self._client.start(function () {
       resolve();
@@ -246,10 +246,10 @@ ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () 
  */
 ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
   var self = this;
-  if (!this.listening) {
+  if (!self.listening) {
     return Promise.resolve();
   }
-  this.listening = false;
+  self.listening = false;
   return new Promise(function(resolve, reject) {
     self._client.stop(function () {
       resolve();
@@ -371,10 +371,10 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
  */
 ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
   var self = this;
-  if (!this.advertising) {
+  if (!self.advertising) {
     return Promise.resolve();
   }
-  this.advertising = false;
+  self.advertising = false;
   return new Promise(function(resolve, reject) {
     self._server.stop(function () {
       self.routerServer.close(function () {
