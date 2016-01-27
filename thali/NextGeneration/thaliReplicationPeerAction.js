@@ -11,8 +11,8 @@ var actionState = require('thaliPeerAction').actionState;
  * @classdesc Manages replicating information with a peer we have discovered
  * via notifications.
  * @private
- * @param {string} peerId A base64 encoded public key identifying the peer who
- * we are to replicate with.
+ * @param {buffer} peerId A buffer containing the public key identifying the
+ * peer who we are to replicate with.
  * @param {module:thaliNotificationClient.event:peerAdvertisesDataForUs} peerAdvertisesDataForUs
  * The notification that triggered this replication. This gives us the
  * information we need to create a connection as well the connection type
@@ -37,7 +37,7 @@ util.inherits(ThaliReplicationPeerAction, PeerAction);
  * @private
  * @type {string}
  */
-ThaliReplicationPeerAction.actionType = "ReplicationAction";
+ThaliReplicationPeerAction.actionType = 'ReplicationAction';
 
 /**
  * The number of seconds we will wait for an existing live replication to have
@@ -129,11 +129,11 @@ ThaliReplicationPeerAction.prototype.resultPromise = null;
  * @param httpAgentPool
  * @returns {Promise<?Error>}
  */
-ThaliReplicationPeerAction.prototype.start = function(httpAgentPool) {
+ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   switch(this.getActionType()) {
     case actionState.CREATED: {
       this.actionState = module.exports.actionState.STARTED;
-      this.resultPromise = new Promise(function(resolve, reject) {
+      this.resultPromise = new Promise(function (resolve, reject) {
 
       });
       return this.resultPromise;
@@ -159,7 +159,7 @@ ThaliReplicationPeerAction.prototype.start = function(httpAgentPool) {
  * is that we call the cancel object we got on the replication.
  *
  */
-ThaliReplicationPeerAction.prototype.kill = function() {
+ThaliReplicationPeerAction.prototype.kill = function () {
 
 };
 

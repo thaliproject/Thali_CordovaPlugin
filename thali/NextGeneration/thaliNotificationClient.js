@@ -8,8 +8,8 @@ var thaliPeerDictionary = require('thaliPeerDictionary');
 /**
  * @classdesc Creates a class that can register to receive the {@link
  * module:thaliMobile.event:peerAvailabilityChanged} event. It will listen for
- * the event and upon receiving it, will enqueue an action with the
- * submitted thaliPeerPoolInterface. Once called back by the pool then the callback will
+ * the event and upon receiving it, will enqueue an action with the submitted
+ * thaliPeerPoolInterface. Once called back by the pool then the callback will
  * issue a HTTP GET request to retrieve the notification beacons for the peer,
  * parse them, see if one matches and if so then fire a {@link
  * module:thaliNotificationClient.event:peerAdvertisesDataForUs}. Callers can
@@ -23,12 +23,9 @@ var thaliPeerDictionary = require('thaliPeerDictionary');
  * capabilities.
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
- * @param {addressBookCallback} addressBookCallback An object used to validate
- * which peers we are interested in talking to.
  * @fires module:thaliNotificationClient.event:peerAdvertisesDataForUs
  */
-function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice,
-                                 addressBookCallback) {
+function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
   EventEmitter.call(this);
   this._init();
   this.peerDictionary = new thaliPeerDictionary.PeerDictionary();
@@ -47,8 +44,9 @@ ThaliNotificationClient.prototype.peerDictionary = null;
  * {@link module:thaliMobile} object for the {@link
  * module:thaliMobile.event:peerAvailabilityChanged} event.
  *
- * This method MUST be idempotent so calling it twice in a row MUST NOT cause
- * multiple listeners to be registered with thaliMobile.
+ * This method is not idempotent since it can be called multiple times with
+ * different prioritization lists but repeated start calls MUST only update that
+ * list and MUST NOT cause multiple listeners to be registered with thaliMobile.
  *
  * ### Handling peerAvailabilityChanged Events
  *
@@ -141,10 +139,21 @@ ThaliNotificationClient.prototype.peerDictionary = null;
  *  peerIdentifier and move on.
  *
  * @public
+ * @param {Buffer[]} prioritizedReplicationList Used to decide what peer
+ * notifications to pay attention to and when scheduling replications what
+ * order to schedule them in (if possible). This list consists of an array
+ * of buffers that contain the serialization of the public ECDH keys of the
+ * peers we are interested in synching with.
+ *
+ * BUGBUG: Having to give a flat prioritizedReplicationList is obviously a
+ * bad idea as it limits the effective size of that list to something we
+ * are o.k. passing around. If we ever want a bigger list we need a lookup
+ * object. But for now we decided to stick with simplicity.
  */
-ThaliNotificationClient.prototype.start = function () {
+ThaliNotificationClient.prototype.start =
+  function (prioritizedReplicationList) {
 
-};
+  };
 
 /**
  * Will remove the listener registered on the global thaliMobile object, if
@@ -178,8 +187,8 @@ ThaliNotificationClient.ACTION_TYPE = 'GetRequestBeacon';
  * @public
  * @event module:thaliNotificationClient.event:peerAdvertisesDataForUs
  * @type {Object}
- * @property {buffer} keyId The buffer contains the HKey as defined
- * [here](https://github.com/thaliproject/thali/blob/gh-pages/pages/documentation/PresenceProtocolForOpportunisticSynching.md#processing-the-pre-amble-and-beacons).
+ * @property {buffer} keyId The buffer contains the ECDH public key for the
+ * peer.
  * @property {string} pskIdentifyField This is the value to put in the PSK
  * identity field of the ClientKeyExchange message when establishing a TLS
  * connection using PSK. This value is generated
