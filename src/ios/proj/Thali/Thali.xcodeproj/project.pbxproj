@@ -7,17 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D40172881C5114210072022A /* THEAppContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172861C5114210072022A /* THEAppContext.m */; };
-		D40172891C5114210072022A /* THEPeerBluetooth.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172871C5114210072022A /* THEPeerBluetooth.m */; };
-		D40172931C5114410072022A /* THEMultipeerClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728A1C5114410072022A /* THEMultipeerClient.m */; };
-		D40172941C5114410072022A /* THEMultipeerClientSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728B1C5114410072022A /* THEMultipeerClientSession.m */; };
-		D40172951C5114410072022A /* THEMultipeerClientSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728C1C5114410072022A /* THEMultipeerClientSocketRelay.m */; };
-		D40172961C5114410072022A /* THEMultipeerManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728D1C5114410072022A /* THEMultipeerManager.m */; };
-		D40172971C5114410072022A /* THEMultipeerPeerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728E1C5114410072022A /* THEMultipeerPeerSession.m */; };
-		D40172981C5114410072022A /* THEMultipeerServer.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728F1C5114410072022A /* THEMultipeerServer.m */; };
-		D40172991C5114410072022A /* THEMultipeerServerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172901C5114410072022A /* THEMultipeerServerSession.m */; };
-		D401729A1C5114410072022A /* THEMultipeerServerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172911C5114410072022A /* THEMultipeerServerSocketRelay.m */; };
-		D401729B1C5114410072022A /* THEMultipeerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172921C5114410072022A /* THEMultipeerSocketRelay.m */; };
+		D43F82C81C59312C0055D44F /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D4553BD31C52B57E00AA8C30 /* SystemConfiguration.framework */; };
+		D43F82D91C59330C0055D44F /* THEAtomicFlag.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460581C51154000940B96 /* THEAtomicFlag.m */; };
+		D43F82DA1C59330C0055D44F /* THEProtectedMutableDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */; };
+		D43F82DB1C59330C0055D44F /* THESessionDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B4605A1C51154000940B96 /* THESessionDictionary.m */; };
+		D43F82DC1C59330C0055D44F /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460561C51152F00940B96 /* GCDAsyncSocket.m */; };
+		D43F82DD1C59330C0055D44F /* NPReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460541C51151B00940B96 /* NPReachability.m */; };
+		D43F82DE1C59330C0055D44F /* THEMultipeerClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728A1C5114410072022A /* THEMultipeerClient.m */; };
+		D43F82DF1C59330C0055D44F /* THEMultipeerClientSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728B1C5114410072022A /* THEMultipeerClientSession.m */; };
+		D43F82E01C59330C0055D44F /* THEMultipeerClientSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728C1C5114410072022A /* THEMultipeerClientSocketRelay.m */; };
+		D43F82E11C59330C0055D44F /* THEMultipeerManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728D1C5114410072022A /* THEMultipeerManager.m */; };
+		D43F82E21C59330C0055D44F /* THEMultipeerPeerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728E1C5114410072022A /* THEMultipeerPeerSession.m */; };
+		D43F82E31C59330C0055D44F /* THEMultipeerServer.m in Sources */ = {isa = PBXBuildFile; fileRef = D401728F1C5114410072022A /* THEMultipeerServer.m */; };
+		D43F82E41C59330C0055D44F /* THEMultipeerServerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172901C5114410072022A /* THEMultipeerServerSession.m */; };
+		D43F82E51C59330C0055D44F /* THEMultipeerServerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172911C5114410072022A /* THEMultipeerServerSocketRelay.m */; };
+		D43F82E61C59330C0055D44F /* THEMultipeerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172921C5114410072022A /* THEMultipeerSocketRelay.m */; };
+		D43F82E71C59330C0055D44F /* THEAppContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172861C5114210072022A /* THEAppContext.m */; };
+		D43F82E81C59330C0055D44F /* THEPeerBluetooth.m in Sources */ = {isa = PBXBuildFile; fileRef = D40172871C5114210072022A /* THEPeerBluetooth.m */; };
 		D4553BAC1C52ADC700AA8C30 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = D4553BAB1C52ADC700AA8C30 /* main.m */; };
 		D4553BAF1C52ADC700AA8C30 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = D4553BAE1C52ADC700AA8C30 /* AppDelegate.m */; };
 		D4553BB21C52ADC700AA8C30 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D4553BB11C52ADC700AA8C30 /* ViewController.m */; };
@@ -25,14 +31,6 @@
 		D4553BB71C52ADC700AA8C30 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D4553BB61C52ADC700AA8C30 /* Assets.xcassets */; };
 		D4553BBA1C52ADC700AA8C30 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D4553BB81C52ADC700AA8C30 /* LaunchScreen.storyboard */; };
 		D4553BC51C52ADC700AA8C30 /* ThaliSingleInstanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D4553BC41C52ADC700AA8C30 /* ThaliSingleInstanceTests.m */; };
-		D4553BCE1C52B4B900AA8C30 /* libThali.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D4553B921C52ABC100AA8C30 /* libThali.a */; };
-		D4553BD01C52B4F000AA8C30 /* MultipeerConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D4553BCF1C52B4F000AA8C30 /* MultipeerConnectivity.framework */; };
-		D4553BD41C52B57E00AA8C30 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D4553BD31C52B57E00AA8C30 /* SystemConfiguration.framework */; };
-		D4B460551C51151B00940B96 /* NPReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460541C51151B00940B96 /* NPReachability.m */; };
-		D4B460571C51152F00940B96 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460561C51152F00940B96 /* GCDAsyncSocket.m */; settings = {COMPILER_FLAGS = "-Wno-gnu -Wno-deprecated-declarations"; }; };
-		D4B4605B1C51154000940B96 /* THEAtomicFlag.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460581C51154000940B96 /* THEAtomicFlag.m */; };
-		D4B4605C1C51154000940B96 /* THEProtectedMutableDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */; };
-		D4B4605D1C51154000940B96 /* THESessionDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B4605A1C51154000940B96 /* THESessionDictionary.m */; };
 		D4C650DD1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */; };
 /* End PBXBuildFile section */
 
@@ -45,18 +43,6 @@
 			remoteInfo = TestApp;
 		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		D4E619E21C47DE5E00903813 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "include/$(PRODUCT_NAME)";
-			dstSubfolderSpec = 16;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		D40172861C5114210072022A /* THEAppContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEAppContext.m; path = ../../THEAppContext.m; sourceTree = "<group>"; };
@@ -75,8 +61,7 @@
 		D401729E1C5114840072022A /* THEPeerBluetoothDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = THEPeerBluetoothDelegate.h; path = ../../THEPeerBluetoothDelegate.h; sourceTree = "<group>"; };
 		D401729F1C5114840072022A /* THEPeerDiscoveryDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = THEPeerDiscoveryDelegate.h; path = ../../THEPeerDiscoveryDelegate.h; sourceTree = "<group>"; };
 		D40172A01C5114840072022A /* THEThaliEventDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = THEThaliEventDelegate.h; path = ../../THEThaliEventDelegate.h; sourceTree = "<group>"; };
-		D4553B921C52ABC100AA8C30 /* libThali.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libThali.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		D4553BA81C52ADC700AA8C30 /* TestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4553BA81C52ADC700AA8C30 /* TestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = TestApp.app; path = "/Users/tobe/src/Thali_CordovaPlugin/src/ios/proj/Thali/build/Debug-iphoneos/TestApp.app"; sourceTree = "<absolute>"; };
 		D4553BAB1C52ADC700AA8C30 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		D4553BAD1C52ADC700AA8C30 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		D4553BAE1C52ADC700AA8C30 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -86,7 +71,7 @@
 		D4553BB61C52ADC700AA8C30 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D4553BB91C52ADC700AA8C30 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		D4553BBB1C52ADC700AA8C30 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D4553BC01C52ADC700AA8C30 /* TestAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4553BC01C52ADC700AA8C30 /* TestAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = TestAppTests.xctest; path = "/Users/tobe/src/Thali_CordovaPlugin/src/ios/proj/Thali/build/Debug-iphoneos/TestAppTests.xctest"; sourceTree = "<absolute>"; };
 		D4553BC41C52ADC700AA8C30 /* ThaliSingleInstanceTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ThaliSingleInstanceTests.m; sourceTree = "<group>"; };
 		D4553BC61C52ADC700AA8C30 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D4553BCF1C52B4F000AA8C30 /* MultipeerConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MultipeerConnectivity.framework; path = System/Library/Frameworks/MultipeerConnectivity.framework; sourceTree = SDKROOT; };
@@ -112,16 +97,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D4553BD41C52B57E00AA8C30 /* SystemConfiguration.framework in Frameworks */,
-				D4553BD01C52B4F000AA8C30 /* MultipeerConnectivity.framework in Frameworks */,
-				D4553BCE1C52B4B900AA8C30 /* libThali.a in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D4E619E11C47DE5E00903813 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
+				D43F82C81C59312C0055D44F /* SystemConfiguration.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -189,10 +165,7 @@
 				D40172921C5114410072022A /* THEMultipeerSocketRelay.m */,
 				D40172861C5114210072022A /* THEAppContext.m */,
 				D40172871C5114210072022A /* THEPeerBluetooth.m */,
-				D4553B921C52ABC100AA8C30 /* libThali.a */,
-				D4553BA81C52ADC700AA8C30 /* TestApp.app */,
 				D4553BA91C52ADC700AA8C30 /* TestApp */,
-				D4553BC01C52ADC700AA8C30 /* TestAppTests.xctest */,
 				D4553BC31C52ADC700AA8C30 /* TestAppTests */,
 			);
 			sourceTree = "<group>";
@@ -235,23 +208,6 @@
 			productReference = D4553BC01C52ADC700AA8C30 /* TestAppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		D4E619E31C47DE5E00903813 /* Thali */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D4E619ED1C47DE5E00903813 /* Build configuration list for PBXNativeTarget "Thali" */;
-			buildPhases = (
-				D430790B1C4D403E0084C0EE /* Sources */,
-				D4E619E11C47DE5E00903813 /* Frameworks */,
-				D4E619E21C47DE5E00903813 /* CopyFiles */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = Thali;
-			productName = Thali;
-			productReference = D4553B921C52ABC100AA8C30 /* libThali.a */;
-			productType = "com.apple.product-type.library.static";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -268,9 +224,6 @@
 						CreatedOnToolsVersion = 7.2;
 						TestTargetID = D4553BA71C52ADC700AA8C30;
 					};
-					D4E619E31C47DE5E00903813 = {
-						CreatedOnToolsVersion = 7.2;
-					};
 				};
 			};
 			buildConfigurationList = D4E619DF1C47DE5E00903813 /* Build configuration list for PBXProject "Thali" */;
@@ -286,7 +239,6 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D4E619E31C47DE5E00903813 /* Thali */,
 				D4553BA71C52ADC700AA8C30 /* TestApp */,
 				D4553BBF1C52ADC700AA8C30 /* TestAppTests */,
 			);
@@ -314,33 +266,26 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D430790B1C4D403E0084C0EE /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D4B4605B1C51154000940B96 /* THEAtomicFlag.m in Sources */,
-				D4B4605C1C51154000940B96 /* THEProtectedMutableDictionary.m in Sources */,
-				D4B4605D1C51154000940B96 /* THESessionDictionary.m in Sources */,
-				D4B460571C51152F00940B96 /* GCDAsyncSocket.m in Sources */,
-				D4B460551C51151B00940B96 /* NPReachability.m in Sources */,
-				D40172931C5114410072022A /* THEMultipeerClient.m in Sources */,
-				D40172941C5114410072022A /* THEMultipeerClientSession.m in Sources */,
-				D40172951C5114410072022A /* THEMultipeerClientSocketRelay.m in Sources */,
-				D40172961C5114410072022A /* THEMultipeerManager.m in Sources */,
-				D40172971C5114410072022A /* THEMultipeerPeerSession.m in Sources */,
-				D40172981C5114410072022A /* THEMultipeerServer.m in Sources */,
-				D40172991C5114410072022A /* THEMultipeerServerSession.m in Sources */,
-				D401729A1C5114410072022A /* THEMultipeerServerSocketRelay.m in Sources */,
-				D401729B1C5114410072022A /* THEMultipeerSocketRelay.m in Sources */,
-				D40172891C5114210072022A /* THEPeerBluetooth.m in Sources */,
-				D40172881C5114210072022A /* THEAppContext.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D4553BA41C52ADC700AA8C30 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D43F82D91C59330C0055D44F /* THEAtomicFlag.m in Sources */,
+				D43F82DA1C59330C0055D44F /* THEProtectedMutableDictionary.m in Sources */,
+				D43F82DB1C59330C0055D44F /* THESessionDictionary.m in Sources */,
+				D43F82DC1C59330C0055D44F /* GCDAsyncSocket.m in Sources */,
+				D43F82DD1C59330C0055D44F /* NPReachability.m in Sources */,
+				D43F82DE1C59330C0055D44F /* THEMultipeerClient.m in Sources */,
+				D43F82DF1C59330C0055D44F /* THEMultipeerClientSession.m in Sources */,
+				D43F82E01C59330C0055D44F /* THEMultipeerClientSocketRelay.m in Sources */,
+				D43F82E11C59330C0055D44F /* THEMultipeerManager.m in Sources */,
+				D43F82E21C59330C0055D44F /* THEMultipeerPeerSession.m in Sources */,
+				D43F82E31C59330C0055D44F /* THEMultipeerServer.m in Sources */,
+				D43F82E41C59330C0055D44F /* THEMultipeerServerSession.m in Sources */,
+				D43F82E51C59330C0055D44F /* THEMultipeerServerSocketRelay.m in Sources */,
+				D43F82E61C59330C0055D44F /* THEMultipeerSocketRelay.m in Sources */,
+				D43F82E71C59330C0055D44F /* THEAppContext.m in Sources */,
+				D43F82E81C59330C0055D44F /* THEPeerBluetooth.m in Sources */,
 				D4553BB21C52ADC700AA8C30 /* ViewController.m in Sources */,
 				D4553BAF1C52ADC700AA8C30 /* AppDelegate.m in Sources */,
 				D4553BAC1C52ADC700AA8C30 /* main.m in Sources */,
@@ -520,44 +465,6 @@
 			};
 			name = Release;
 		};
-		D4E619EE1C47DE5E00903813 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
-				GCC_WARN_PEDANTIC = YES;
-				HEADER_SEARCH_PATHS = (
-					../../Utility,
-					../../NPReachability,
-					../../MultipeerConnectivity,
-					../../GCDAsyncSocket,
-				);
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos9.2;
-				SKIP_INSTALL = YES;
-			};
-			name = Debug;
-		};
-		D4E619EF1C47DE5E00903813 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
-				GCC_WARN_PEDANTIC = YES;
-				HEADER_SEARCH_PATHS = (
-					../../Utility,
-					../../NPReachability,
-					../../MultipeerConnectivity,
-					../../GCDAsyncSocket,
-				);
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos9.2;
-				SKIP_INSTALL = YES;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -584,15 +491,6 @@
 			buildConfigurations = (
 				D4E619EB1C47DE5E00903813 /* Debug */,
 				D4E619EC1C47DE5E00903813 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		D4E619ED1C47DE5E00903813 /* Build configuration list for PBXNativeTarget "Thali" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D4E619EE1C47DE5E00903813 /* Debug */,
-				D4E619EF1C47DE5E00903813 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

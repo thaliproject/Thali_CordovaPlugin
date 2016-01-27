@@ -28,7 +28,7 @@
 #import "THEMultipeerClientSession.h"
 #import "THEMultipeerServerSession.h"
 
-#import "THESessionDictionary.h"
+#import "../Utility/THESessionDictionary.h"
 
 static NSString * const PEER_NAME_KEY        = @"PeerName";
 static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";

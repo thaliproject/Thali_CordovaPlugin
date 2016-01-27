@@ -28,12 +28,11 @@
 #import <UIKit/UIKit.h>
 
 #import <pthread.h>
-#import "NPReachability.h"
+#import "NPReachability/NPReachability.h"
 
 #import "THEAppContext.h"
-#import "THEThreading.h"
 #import "THEPeerBluetooth.h"
-#import "THEMultipeerManager.h"
+#import "MultipeerConnectivity/THEMultipeerManager.h"
 #import "THEThaliEventDelegate.h"
 
 // THEAppContext (Internal) interface.

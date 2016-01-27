@@ -58,8 +58,7 @@
 // Kill the connection without clean-up. Testing only !!
 - (BOOL)killConnection:(NSString *)peerIdentifier;
 
-#ifdef DEBUG
+// Allow external components to see our current id
 - (NSString *)localPeerIdentifier;
-#endif
 
 @end

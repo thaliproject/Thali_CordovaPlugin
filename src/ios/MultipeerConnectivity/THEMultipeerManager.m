@@ -28,8 +28,6 @@
 #import <pthread.h>
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
-#import "THEThreading.h"
-
 #import "THEMultipeerManager.h"
 #import "THEMultipeerClient.h"
 #import "THEMultipeerServer.h"
@@ -91,12 +89,10 @@
   return self;
 }
 
-#ifdef DEBUG
 - (NSString *)localPeerIdentifier
 {
   return _peerIdentifier;
 }
-#endif
 
 // Starts peer networking.
 - (BOOL)startServerWithServerPort:(unsigned short)serverPort

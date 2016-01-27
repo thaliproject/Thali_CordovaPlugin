@@ -29,8 +29,6 @@
 #import "THEMultipeerClientSession.h"
 #import "THEMultipeerClientSocketRelay.h"
 
-#import "THEThreading.h"
-
 @implementation THEMultipeerClientSession
 {
   // Callback to fire when a connection completes (in fact when the relay
