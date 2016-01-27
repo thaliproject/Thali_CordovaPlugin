@@ -126,7 +126,8 @@ ThaliReplicationPeerAction.prototype.resultPromise = null;
  * Make sure to keep the cancel object returned by the replicate call. Well
  * need it for kill.
  *
- * @param httpAgentPool
+ * @param {http.Agent} httpAgentPool This is the HTTP connection pool to use
+ * when creating HTTP requests related to this action.
  * @returns {Promise<?Error>}
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
