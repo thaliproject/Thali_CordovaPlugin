@@ -373,13 +373,13 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
       // may have changed when we re-start the router server.
       self._setLocation();
       self._server.start(function () {
-        self.advertising = true;
         // Remove the error listener we had during the resolution of this
         // promise and add one that is listening for errors that may
         // occur any time.
         self.routerServer.removeListener('error', startErrorListener);
         self.routerServer.on('error', self.routerServerErrorListener);
-        resolve();
+        self.advertising = true;
+        return resolve();
       });
     };
     self.routerServer = self.expressApp.listen(self.port, listeningHandler);
@@ -407,7 +407,6 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function (skipPr
     if (!self.advertising) {
       return resolve();
     }
-    self.advertising = false;
     self._server.stop(function () {
       self.routerServer.close(function () {
         // The port needs to be reset, because
@@ -417,7 +416,8 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function (skipPr
         self.port = 0;
         self.routerServer.removeListener('error', self.routerServerErrorListener);
         self.routerServer = null;
-        resolve();
+        self.advertising = false;
+        return resolve();
       });
     });
   };

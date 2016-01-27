@@ -201,6 +201,42 @@ test('#stop can be called multiple times in a row', function (t) {
   });
 });
 
+test('#startListeningForAdvertisements can be called multiple times in a row', function (t) {
+  wifiInfrastructure.startListeningForAdvertisements()
+  .then(function () {
+    t.equal(wifiInfrastructure.listening, true, 'should be in listening state');
+    return wifiInfrastructure.startListeningForAdvertisements();
+  })
+  .then(function () {
+    t.equal(wifiInfrastructure.listening, true, 'should still be in listening state');
+    t.end();
+  });
+});
+
+test('#stopListeningForAdvertisements can be called multiple times in a row', function (t) {
+  wifiInfrastructure.stopListeningForAdvertisements()
+  .then(function () {
+    t.equal(wifiInfrastructure.listening, false, 'should not be in listening state');
+    return wifiInfrastructure.stopListeningForAdvertisements();
+  })
+  .then(function () {
+    t.equal(wifiInfrastructure.listening, false, 'should still not be in listening state');
+    t.end();
+  });
+});
+
+test('#stopAdvertisingAndListening can be called multiple times in a row', function (t) {
+  wifiInfrastructure.stopAdvertisingAndListening()
+  .then(function () {
+    t.equal(wifiInfrastructure.advertising, false, 'should not be in advertising state');
+    return wifiInfrastructure.stopAdvertisingAndListening();
+  })
+  .then(function () {
+    t.equal(wifiInfrastructure.advertising, false, 'should still not be in advertising state');
+    t.end();
+  });
+});
+
 test('functions are run from a queue in the right order', function (t) {
   var firstSpy = sinon.spy();
   var secondSpy = sinon.spy();
