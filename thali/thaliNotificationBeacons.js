@@ -1,12 +1,11 @@
 'use strict';
 
-var HKDF = require('./hkdf');
 var crypto = require('crypto');
 
 // Constants
-var BASE64 = 'base64';
 var SHA256 = 'sha256';
 var SECP256K1 = 'secp256k1';
+var GCM = 'aes-256-gcm';
 
 /*
 Matt: Please make sure to see if you can find Srikanth's code in Node and of course you can look at the Java source code
@@ -25,6 +24,57 @@ function NotificationBeacons() {}
  */
 NotificationBeacons.prototype.generatePreambleAndBeacons =
   function(publicKeysToNotify, ecdhForLocalDevice, secondsUntilExpiration) {
+    // http://code.runnable.com/VGaBmn68rzMa5p9K/aes-256-gcm-nodejs-encryption-for-node-js-and-hello-world
+
+    var beacons = [];
+
+    var ke = crypto.createECDH(SECP256K1);
+    var kePublic = ke.generateKeys();
+
+    // TODO: Look at long.js https://www.npmjs.com/package/long
+
+    var unencryptedKeyIdHash = crypto.createHash(SHA256);
+    unencryptedKeyIdHash.update(ecdhForLocalDevice.getPublicKey());
+    var unencryptedKeyId = unencryptedKeyIdHash.digest().slice(0, 16);
+
+    for (var i = 0, len = publicKeysToNotify.length; i < len; i++) {
+      // TODO: Make sure safe URL base64
+
+      var pubKey = publicKeysToNotify[i];
+
+      var sxyECDH = crypto.createECDH(SECP256K1);
+      sxyECDH.setPrivateKey(ecdhForLocalDevice.getPrivateKey());
+      var sxy = sxyECDH.computeSecret(new Buffer(pubKey));
+
+      var hkxy = new Buffer(); // TODO use hkdf
+
+      var beaconHmacx = crypto.createHmac('sha256', hkxy);
+      beaconHmacx.update(secondsUntilExpiration);
+      var beaconHmac = beaconHmacx.digest().slice(0, 16);
+
+      var sey = ke.computeSecret(new Buffer(pubKey));
+      var keyingMaterial = new Buffer(); // TODO: see HKDF again
+      var iv = keyingMaterial.slice(0, 16);
+      var hkey = keyingMaterial.slice(16, 32);
+
+      var c = crypto.createCipheriv(GCM, 'a password');
+
+      beacons.push(
+
+      );
+
+      /*
+      Sey = ECDH(Ke.private(), PubKy)
+      KeyingMaterial = HKDF(SHA256, Sey, Expiration, 32)
+      IV = KeyingMaterial.slice(0,16)
+      HKey = KeyingMaterial.slice(16, 32)
+      beacons.append(AESEncrypt(GCM, HKey, IV, 128, UnencryptedKeyId) + BeaconHmac)
+      */
+    }
+
+    return new Buffer(beacons);
+
+
     // This implements the generateBeacons function from the specs. I don't take the IV or Ke as arguments because
     // those can be generated inside the function.
     // Note that you will need to use crypto.ECDH to implement this functionality which was introduced in Node 0.12
@@ -46,16 +96,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
  * @returns {Buffer} - A buffer containing the beacon
  */
 function generateBeacon(publicKey, ecdhWithPrivateKey, IV, Ke, expirationValue) {
-  var unencryptedKeyIdHash = crypto.createHash(SHA256);
-  unencryptedKeyIdHash.update(ecdhWithPrivateKey.getPublicKey());
-  var unencryptedKeyId = unencryptedKeyIdHash.digest(BASE64);
 
-  var sxy = crypto
-    .createECDH(SECP256K1)
-    .setPrivateKey(ecdhWithPrivateKey.getPrivateKey(), BASE64)
-    .computeSecret(publicKey, BASE64);
-
-  var hkxy = HKDF(SHA256, expirationValue, sxy).derive('', 32);
 }
 
 /**
