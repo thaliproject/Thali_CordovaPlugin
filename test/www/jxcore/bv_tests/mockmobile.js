@@ -1,5 +1,4 @@
 "use strict";
-var os = require('os');
 
 var keys = {};
 
@@ -20,9 +19,7 @@ Mobile.setGetDocumentsPathReturnValues = function (errArg, fileLocationArg) {
 };
 
 Mobile.GetDocumentsPath = function (cb) {
-  setImmediate(function () {
-    cb(null, os.tmpdir());
-  });
+  cb(errArgGetDocumentsPath, fileLocationArgGetDocumentsPath);
 };
 
 Mobile.invokeNative = function (key, arg) {
