@@ -2,7 +2,6 @@
 
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
-var Promise = require('lie');
 var nodessdp = require('node-ssdp');
 var ip = require('ip');
 var uuid = require('node-uuid');
@@ -10,6 +9,10 @@ var url = require('url');
 var express = require('express');
 var validations = require('../validations');
 var logger = require('../thalilogger')('thaliWifiInfrastructure');
+
+var Promise = require('lie');
+var PromiseQueue = require('./promiseQueue');
+var promiseQueue = new PromiseQueue();
 
 var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
@@ -165,12 +168,15 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.start = function (router) {
-  if (this.started === true) {
-    return Promise.reject(new Error('Call Stop!'));
-  }
-  this.started = true;
-  this.router = router;
-  return Promise.resolve();
+  var self = this;
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.started === true) {
+      return reject(new Error('Call Stop!'));
+    }
+    self.started = true;
+    self.router = router;
+    return resolve();
+  });
 };
 
 /**
@@ -186,12 +192,21 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
  */
 ThaliWifiInfrastructure.prototype.stop = function () {
   var self = this;
-  if (self.started === false) {
-    return Promise.resolve();
-  }
-  self.started = false;
-  return self.stopAdvertisingAndListening().then(function () {
-    return self.stopListeningForAdvertisements();
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.started === false) {
+      return resolve();
+    }
+    self.stopAdvertisingAndListening(true)
+    .then(function () {
+      return self.stopListeningForAdvertisements(true);
+    })
+    .then(function () {
+      self.started = false;
+      return resolve();
+    })
+    .catch(function (error) {
+      reject(error);
+    });
   });
 };
 
@@ -216,13 +231,13 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  */
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
   var self = this;
-  if (self.listening) {
-    return Promise.resolve();
-  }
-  self.listening = true;
-  return new Promise(function(resolve, reject) {
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.listening) {
+      return resolve();
+    }
     self._client.start(function () {
-      resolve();
+      self.listening = true;
+      return resolve();
     });
   });
 };
@@ -244,17 +259,22 @@ ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () 
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
+ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function (skipPromiseQueue) {
   var self = this;
-  if (!self.listening) {
-    return Promise.resolve();
-  }
-  self.listening = false;
-  return new Promise(function(resolve, reject) {
+  var action = function (resolve, reject) {
+    if (!self.listening) {
+      return resolve();
+    }
     self._client.stop(function () {
-      resolve();
+      self.listening = false;
+      return resolve();
     });
-  });
+  };
+  if (skipPromiseQueue === true) {
+    return new Promise(action);
+  } else {
+    return promiseQueue.enqueue(action);
+  }
 };
 
 /**
@@ -314,25 +334,24 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  */
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function () {
   var self = this;
-  if (self.started === false) {
-    return Promise.reject(new Error('Call Start!'));
-  }
-  if (!self.router) {
-    return Promise.reject(new Error('Bad Router'));
-  }
-  self.usn = 'urn:uuid:' + uuid.v4();
-  self._server.setUSN(self.usn);
-  if (self.advertising === true) {
-    return Promise.resolve();
-  }
-  return new Promise(function(resolve, reject) {
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.started === false) {
+      return reject(new Error('Call Start!'));
+    }
+    if (!self.router) {
+      return reject(new Error('Bad Router'));
+    }
+    self.usn = 'urn:uuid:' + uuid.v4();
+    self._server.setUSN(self.usn);
+    if (self.advertising === true) {
+      return resolve();
+    }
     self.expressApp = express();
     try {
       self.expressApp.use('/', self.router);
     } catch (error) {
       logger.error('Unable to use the given router: %s', error.toString());
-      reject(new Error('Bad Router'));
-      return;
+      return reject(new Error('Bad Router'));
     }
     var startErrorListener = function (error) {
       logger.error('Router server emitted an error: %s', error.toString());
@@ -382,13 +401,13 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
+ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function (skipPromiseQueue) {
   var self = this;
-  if (!self.advertising) {
-    return Promise.resolve();
-  }
-  self.advertising = false;
-  return new Promise(function(resolve, reject) {
+  var action = function (resolve, reject) {
+    if (!self.advertising) {
+      return resolve();
+    }
+    self.advertising = false;
     self._server.stop(function () {
       self.routerServer.close(function () {
         // The port needs to be reset, because
@@ -401,7 +420,12 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
         resolve();
       });
     });
-  });
+  };
+  if (skipPromiseQueue === true) {
+    return new Promise(action);
+  } else {
+    return promiseQueue.enqueue(action);
+  }
 };
 
 /**

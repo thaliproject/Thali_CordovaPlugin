@@ -7,6 +7,7 @@ var express = require('express');
 var http = require('http');
 var net = require('net');
 var uuid = require('node-uuid');
+var sinon = require('sinon');
 
 var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
@@ -196,6 +197,28 @@ test('#stop can be called multiple times in a row', function (t) {
   })
   .then(function () {
     t.equal(wifiInfrastructure.started, false, 'should still be in stopped state');
+    t.end();
+  });
+});
+
+test('functions are run from a queue in the right order', function (t) {
+  var firstSpy = sinon.spy();
+  var secondSpy = sinon.spy();
+  var thirdSpy = sinon.spy();
+  wifiInfrastructure.startUpdateAdvertisingAndListening()
+  .then(function () {
+    firstSpy();
+  });
+  wifiInfrastructure.stop()
+  .then(function () {
+    secondSpy();
+  });
+  wifiInfrastructure.start()
+  .then(function () {
+    thirdSpy();
+    t.ok(firstSpy.calledBefore(secondSpy) &&
+         secondSpy.calledBefore(thirdSpy),
+         'call order must match');
     t.end();
   });
 });
