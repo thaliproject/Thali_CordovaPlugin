@@ -82,14 +82,6 @@
   return [[THEMultipeerServerSocketRelay alloc] initWithServerPort:_serverPort withDelegate:self];
 }
 
-
-/*
-- (void)addConnectCallback:(void (^)(unsigned short, unsigned short))connectCallback;
-- (void)addConnectCallback:(void (^)(unsigned short, unsigned short))connectCallback;
-{
-  _connectCallback = connectCallback;
-}*/
-
 - (void)didConnectWithClientPort:(unsigned short)clientPort withServerPort:(unsigned short)serverPort
 {
   @synchronized(self)
@@ -98,7 +90,7 @@
     
     if (_connectCallback)
     {
-      _connectCallback([self remotePeerIdentifier], clientPort, serverPort);
+      _connectCallback([self remotePeerUUID], clientPort, serverPort);
       _connectCallback = nil;
     }
   }

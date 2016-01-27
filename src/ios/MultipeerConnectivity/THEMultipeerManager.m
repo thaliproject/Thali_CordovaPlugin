@@ -29,7 +29,6 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
 #import "THEThreading.h"
-#import "THEAtomicFlag.h"
 
 #import "THEMultipeerManager.h"
 #import "THEMultipeerClient.h"
@@ -47,12 +46,10 @@
   // Our local peer id
   MCPeerID * _peerID;
  
-  // true if we're listening for advertisements
-  THEAtomicFlag * _isListening;
-
-  // true if we're advertising
-  THEAtomicFlag * _isAdvertising;
-   
+  // Are we *really* listening or do we just have a
+  // client running ?
+  bool _isListening;
+  
   // Mutex used to synchronize access to the things below.
   // The multipeer client which will handle browsing and connecting for us
   THEMultipeerClient *_client;
@@ -62,6 +59,8 @@
   // through this manager component
   THEMultipeerServer *_server;
 
+  unsigned int _serverGeneration;
+  
   // Restart timer
   // NSTimer *_restartTimer;
 
@@ -87,32 +86,31 @@
   _peerUUID = peerIdentifier;
   _peerIdentifier = [peerIdentifier stringByAppendingString:@":0"];
   
-  _isListening = [[THEAtomicFlag alloc] init];
-  _isAdvertising = [[THEAtomicFlag alloc] init];
+  _serverGeneration = 0;
 
   return self;
 }
 
+#ifdef DEBUG
+- (NSString *)localPeerIdentifier
+{
+  return _peerIdentifier;
+}
+#endif
+
 // Starts peer networking.
 - (BOOL)startServerWithServerPort:(unsigned short)serverPort
 {
-  static unsigned int serverGeneration = 0;
-  
-  if ([_isAdvertising isSet])
+  @synchronized(self)
   {
-    if (![self stopServer])
-    {
-      return false;
-    }
-  }
+    if (_server)
+      [self stopServer];
 
-  if ([_isAdvertising trySet])
-  {
     // Increment the generation counter at the end of peerId
 
     // Start up the networking components
     _peerIdentifier = [
-      _peerUUID stringByAppendingString:[NSString stringWithFormat:@":%d", ++serverGeneration]
+      _peerUUID stringByAppendingString:[NSString stringWithFormat:@":%d", ++_serverGeneration]
     ];
     
     _server = [[THEMultipeerServer alloc] initWithPeerID:_peerID
@@ -124,9 +122,13 @@
                    withMultipeerServerConnectionDelegate:self];
     [_server start];
 
+    // We *need* a client to perform reverse connections on
+    [self startClient];
+    
     NSLog(@"THEMultipeerManager initialized peer %@", _peerIdentifier);
-    return true;
   }
+
+  return true;
 
   /*__weak typeof(self) weakSelf = self;
   [_server setTimerResetCallback: ^void (void) {
@@ -139,21 +141,51 @@
 
   // Kick off the restart timer
   // [self startRestartTimer];
-  
-  return false;
 }
 
 - (BOOL)stopServer
 {
-  NSLog(@"THEMultipeerManager stopping peer");
-
-  if ([_isAdvertising isSet])
+  @synchronized(self)
   {
-    if ([_isAdvertising tryClear])
+    NSLog(@"THEMultipeerManager stopping peer");
+
+    if (_server)
     {
-      //[self stopRestartTimer];
       [_server stop];
       _server = nil;
+    }
+    
+    if (!_isListening)
+    {
+      [self stopClient];
+    }
+  }
+  
+  return true;
+}
+
+- (BOOL)startListening
+{
+  @synchronized(self)
+  {
+    if (_isListening)
+      return false;
+    
+    [self stopClient];
+    _isListening = true;
+    [self startClient];
+  }
+  return true;
+}
+
+- (BOOL)stopListening
+{
+  @synchronized(self)
+  {
+    _isListening = false;
+    if (!_server)
+    {
+      [self stopClient];
     }
   }
   return true;
@@ -161,9 +193,9 @@
 
 - (BOOL)startClient
 {
-  if ([_isListening isClear])
+  @synchronized(self)
   {
-    if ([_isListening trySet])
+    if (!_client)
     {
       _client = [[THEMultipeerClient alloc] initWithPeerId:_peerID
                                            withServiceType:_serviceType
@@ -174,6 +206,10 @@
 
       return true;
     }
+    else
+    {
+      [_client updateLocalPeerIdentifier:_peerIdentifier];
+    }
   }
 
   return false;
@@ -181,9 +217,9 @@
 
 - (BOOL)stopClient
 {
-  if ([_isListening isSet])
+  @synchronized(self)
   {
-    if ([_isListening tryClear])
+    if (_client)
     {
       [_client stop];
        _client = nil;
@@ -194,46 +230,61 @@
 
 - (const THEMultipeerClientSession *)clientSession:(NSString *)peerIdentifier
 {
-  return [_client session:peerIdentifier];
+  NSString *uuid = [peerIdentifier componentsSeparatedByString:@":"][0];
+  return [_client sessionForUUID:uuid];
 }
 
 - (const THEMultipeerServerSession *)serverSession:(NSString *)peerIdentifier
 {
   NSString *uuid = [peerIdentifier componentsSeparatedByString:@":"][0];
-  return [_server session:uuid];
+  return [_server sessionForUUID:uuid];
 }
 
-- (void)didFindPeerIdentifier:(NSString *)peerIdentifier byServer:(BOOL)byServer
+- (void)didFindPeerIdentifier:(NSString *)peerIdentifier pleaseConnect:(BOOL)pleaseConnect
 {
-  if (_peerDiscoveryDelegate)
+  @synchronized(self)
   {
-    NSDictionary *peer = @{
-      @"peerIdentifier" : peerIdentifier,
-      @"peerAvailable" : @true,
-      @"pleaseConnect" : byServer ? @true : @false
-    };
-    
-    [_peerDiscoveryDelegate didFindPeer:peer];
+    if (_isListening)
+    {
+      if (_peerDiscoveryDelegate)
+      {
+        NSDictionary *peer = @{
+          @"peerIdentifier" : peerIdentifier,
+          @"peerAvailable" : @true,
+          @"pleaseConnect" : pleaseConnect ? @true : @false
+        };
+        
+        [_peerDiscoveryDelegate didFindPeer:peer];
+      }
+    }
   }
 }
 
 - (void)didLosePeerIdentifier:(NSString *)peerIdentifier
 {
-  if (_peerDiscoveryDelegate)
+  @synchronized(self)
   {
-    [_peerDiscoveryDelegate didLosePeer:peerIdentifier];
+    if (_isListening)
+    {
+      if (_peerDiscoveryDelegate)
+      {
+        [_peerDiscoveryDelegate didLosePeer:peerIdentifier];
+      }
+    }
   }
 }
 
-- (void)serverDidCompleteConnection:(NSString *)peerIdentifier
-                     withClientPort:(unsigned short)clientPort
-                     withServerPort:(unsigned short)serverPort
+- (void)didCompleteReverseConnection:(NSString *)peerIdentifier
+                      withClientPort:(unsigned short)clientPort
+                      withServerPort:(unsigned short)serverPort
 {
   // The server's just completed a connection, it may be a reverse connection initiated by the
   // client so let the client have a look..
   if (_client)
   {
-  
+    [_client didCompleteReverseConnection:peerIdentifier
+                           withClientPort:clientPort
+                           withServerPort:serverPort];
   }
 }
 
@@ -267,7 +318,7 @@
 }*/
 
 - (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
-                          withConnectCallback:(void(^)(NSString *, NSString *))connectCallback
+                          withConnectCallback:(ClientConnectCallback)connectCallback
 {
   // Connect to a previously discovered peer
   return [_client connectToPeerWithPeerIdentifier:peerIdentifier 

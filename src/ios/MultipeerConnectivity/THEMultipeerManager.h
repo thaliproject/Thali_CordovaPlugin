@@ -46,8 +46,8 @@
 - (BOOL)startServerWithServerPort:(unsigned short)serverPort;
 - (BOOL)stopServer;
 
-- (BOOL)startClient;
-- (BOOL)stopClient;
+- (BOOL)startListening;
+- (BOOL)stopListening;
 
 // Connects to the peer with the specified peer identifier. |connectCallback| will
 // be called when the connection completes with first param being any error message or nil and
@@ -57,5 +57,9 @@
 
 // Kill the connection without clean-up. Testing only !!
 - (BOOL)killConnection:(NSString *)peerIdentifier;
+
+#ifdef DEBUG
+- (NSString *)localPeerIdentifier;
+#endif
 
 @end

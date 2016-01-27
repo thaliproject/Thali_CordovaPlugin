@@ -47,12 +47,15 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
                     withSessionType:(NSString *)sessionType;
 
 - (MCPeerID *)remotePeerID;
+- (NSString *)remotePeerUUID;
 - (NSString *)remotePeerIdentifier;
 - (THEPeerSessionState)connectionState;
 
 - (MCSession *)session;
 
 - (void)connect;
+- (void)reverseConnect;
+
 - (void)disconnect;
 
 // Kill for testing only !!
@@ -63,6 +66,8 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 
 // Accessor for the relay
 - (const THEMultipeerSocketRelay *)relay;
+
++ (NSString *)peerUUIDFromPeerIdentifier:(NSString *)peerIdentifier;
 
 @end
 

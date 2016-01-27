@@ -20,6 +20,7 @@
     return nil;
   }
   
+  _delegate = delegate;
   _serverPort = serverPort;
 
   return self;

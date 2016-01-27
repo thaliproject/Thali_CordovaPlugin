@@ -114,6 +114,17 @@ static NSDictionary *stateChanges = nil;
   return _remotePeerIdentifier;
 }
 
+- (NSString *)remotePeerUUID
+{
+  return [THEMultipeerPeerSession peerUUIDFromPeerIdentifier:_remotePeerIdentifier];
+}
+
++ (NSString *)peerUUIDFromPeerIdentifier:(NSString *)peerIdentifier
+{
+  NSString *uuid = [peerIdentifier componentsSeparatedByString:@":"][0];
+  return uuid;
+}
+
 - (THEPeerSessionState)connectionState
 {
   return _connectionState;
@@ -121,11 +132,13 @@ static NSDictionary *stateChanges = nil;
 
 -(void)setInputStream:(NSInputStream *)inputStream
 {
+  assert(_relay);
   [_relay setInputStream:inputStream];
 }
 
 -(void)setOutputStream:(NSOutputStream *)outputStream
 {
+  assert(_relay);
   [_relay setOutputStream:outputStream];
 }
 
@@ -148,6 +161,25 @@ static NSDictionary *stateChanges = nil;
     _relay = [self newSocketRelay];
 
     _session = [[MCSession alloc] initWithPeer:_localPeerID 
+                              securityIdentity:nil 
+                          encryptionPreference:MCEncryptionNone];
+    _session.delegate = self;
+  }
+}
+
+-(void)reverseConnect
+{
+  @synchronized(self)
+  {
+    // Create the transport session, not the relay.
+    // We don't expect this session to ever complete
+
+    assert(_relay == nil && _session == nil);
+
+    NSLog(@"%@ session: reverseConnect", _sessionType);
+    [self changeState:THEPeerSessionStateConnecting];
+
+    _session = [[MCSession alloc] initWithPeer:_localPeerID
                               securityIdentity:nil 
                           encryptionPreference:MCEncryptionNone];
     _session.delegate = self;

@@ -37,7 +37,7 @@
 -(void)updateForPeerID:(MCPeerID *)peerID 
            updateBlock:(THEMultipeerPeerSession *(^)(THEMultipeerPeerSession *))updateBlock;
 
--(void)updateForPeerIdentifier:(NSString *)peerIdentifier
+-(void)updateForPeerUUID:(NSString *)peerUUID
                    updateBlock:(THEMultipeerPeerSession *(^)(THEMultipeerPeerSession *))updateBlock;
 
 @end

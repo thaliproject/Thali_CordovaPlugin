@@ -35,7 +35,7 @@ typedef void (^ServerConnectCallback)(NSString *, unsigned short, unsigned short
 
 - (id)initWithLocalPeerID:(MCPeerID *)localPeerID
          withRemotePeerID:(MCPeerID *)remotePeerID
- withRemotePeerIdentifier:(NSString *)peerIdentifier 
+       withRemotePeerIdentifier:(NSString *)peerIdentifier
            withServerPort:(uint)serverPort;
 
 - (void)connectWithConnectCallback:(ServerConnectCallback)connectCallback;

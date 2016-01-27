@@ -32,7 +32,7 @@
 
 // Callback that will be called when the lower levels have established
 // a client relay in response to a connect
-typedef void(^ClientConnectCallback)(NSString *error, NSString *jsonConnection);
+typedef void(^ClientConnectCallback)(NSString *error, NSDictionary *connection);
 
 // THEAppContext interface.
 @interface THEAppContext : NSObject <THEPeerDiscoveryDelegate>

@@ -98,13 +98,13 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 // Starts up the client components
 - (BOOL)startListeningForAdvertisements
 {
-  return [_multipeerManager startClient];
+  return [_multipeerManager startListening];
 }
 
 // Stops client components 
 - (BOOL)stopListeningForAdvertisements
 {
-  return [_multipeerManager stopClient];
+  return [_multipeerManager stopListening];
 }
 
 // Starts up the server components
@@ -193,7 +193,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 
 // Connects to the peer server with the specified peer identifier.
 - (BOOL)connectToPeer:(NSString *)peerIdentifier 
-      connectCallback:(void(^)(NSString *, NSString *))connectCallback
+      connectCallback:(ClientConnectCallback)connectCallback
 {
   return [_multipeerManager connectToPeerWithPeerIdentifier:peerIdentifier
                                               withConnectCallback:connectCallback];

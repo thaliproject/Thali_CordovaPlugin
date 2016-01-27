@@ -43,8 +43,8 @@
 
 - (void)dealloc
 {
-  for (id peerIdentifier in _peerIdentifiers) {
-    [self updateForPeerIdentifier:peerIdentifier 
+  for (id peerUUID in _peerIdentifiers) {
+    [self updateForPeerUUID:peerUUID
                       updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
       if (p.connectionState != THEPeerSessionStateNotConnected)
       {
@@ -71,7 +71,7 @@
     // since the framework doesn't talk to us in those terms)
 
     // Cache the current peerIdentifier for this session
-    NSString *prevPeerIdentifier = [v remotePeerIdentifier];
+    NSString *prevPeerUUID = [v remotePeerUUID];
     
     // Carry out the update.. the returned session may be an entirely different
     // one with a different remotePeerIdentifer
@@ -81,7 +81,7 @@
     {
       // session object is being deleted, remove the
       // corresponding mapping for it's peerIdentifier
-      [_peerIdentifiers removeObjectForKey:prevPeerIdentifier];
+      [_peerIdentifiers removeObjectForKey:prevPeerUUID];
     }
     else
     {
@@ -89,14 +89,14 @@
       if (session != v)
       {
         // New session object..
-        if ([prevPeerIdentifier compare:[session remotePeerIdentifier]] != NSOrderedSame)
+        if ([prevPeerUUID compare:[session remotePeerUUID]] != NSOrderedSame)
         {
           // remove peerIdentifier mapping if it's changed
-          [_peerIdentifiers removeObjectForKey:prevPeerIdentifier];
+          [_peerIdentifiers removeObjectForKey:prevPeerUUID];
         }
         
         // Add the new peerIdentifier mapping
-        _peerIdentifiers[[session remotePeerIdentifier]] = peerID;
+        _peerIdentifiers[[session remotePeerUUID]] = peerID;
       }
     }
 
@@ -106,10 +106,10 @@
   [super updateForKey:peerID updateBlock:(NSObject *(^)(NSObject *))updateWrapper];  
 }
 
--(void)updateForPeerIdentifier:(NSString *)peerIdentifier
+-(void)updateForPeerUUID:(NSString *)peerUUID
                    updateBlock:(THEMultipeerPeerSession *(^)(THEMultipeerPeerSession *))updateBlock;
 {
-  [self updateForPeerID:_peerIdentifiers[peerIdentifier] updateBlock:updateBlock];
+  [self updateForPeerID:_peerIdentifiers[peerUUID] updateBlock:updateBlock];
 }
 
 @end

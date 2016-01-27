@@ -65,6 +65,7 @@
   }
 }
 
+
 - (void)fireConnectCallback:(NSString *)error withPort:(uint)port
 {
   @synchronized(self)
@@ -75,28 +76,22 @@
       return;
     }
     
-    NSLog(@"client session: fireConnectCallback: %@", [self remotePeerIdentifier]);
+    NSLog(@"client session: fireConnectCallback: %@", [self remotePeerUUID]);
 
     assert(_connectCallback != nil);
 
-    NSString *connectionJSON = nil;
-
+    NSMutableDictionary *connection = nil;
     if (!error)
     {
-      NSMutableDictionary *connection = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
+      connection = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
         [NSNumber numberWithInteger:port], @"listeningPort",
         [NSNumber numberWithInteger:0], @"clientPort",
         [NSNumber numberWithInteger:0], @"serverPort",
         nil
       ];
-   
-      connectionJSON = [[NSString alloc] initWithData:
-        [NSJSONSerialization dataWithJSONObject:connection options:0 error:nil]
-        encoding:NSUTF8StringEncoding
-      ];
     }
 
-    _connectCallback(error, connectionJSON);
+    _connectCallback(error, connection);
     _connectCallback = nil;
   }
 }
@@ -133,7 +128,7 @@
 
 - (THEMultipeerSocketRelay *)newSocketRelay
 {
-  return [[THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self remotePeerIdentifier] 
+  return [[THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self remotePeerUUID]
                                                     withDelegate:self];
 }
 
@@ -142,7 +137,7 @@
 {
   @synchronized(self)
   {
-    NSLog(@"client session: onLinkFailure: %@", [self remotePeerIdentifier]);
+    NSLog(@"client session: onLinkFailure: %@", [self remotePeerUUID]);
 
     assert([self connectionState] != THEPeerSessionStateNotConnected);
 
@@ -167,7 +162,7 @@
 {
   @synchronized(self)
   {
-    NSLog(@"client session: onPeerLost: %@", [self remotePeerIdentifier]);
+    NSLog(@"client session: onPeerLost: %@", [self remotePeerUUID]);
     // Losing peers is independent of losing the link so
     // we may already be disconnected
     if ([self connectionState] != THEPeerSessionStateNotConnected)
@@ -224,7 +219,7 @@
 - (void)didDisconnectFromPeer
 {
   // The p2p socket has been closed
-  NSLog(@"client session: socket closed: %@", [self remotePeerIdentifier]);
+  NSLog(@"client session: socket closed: %@", [self remotePeerUUID]);
   [self onLinkFailure];
 }
 

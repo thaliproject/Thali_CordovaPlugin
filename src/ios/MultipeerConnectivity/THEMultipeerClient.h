@@ -52,12 +52,19 @@
 - (void)restart;
 
 // Connect to a remote peer identified by the application level identifier,
-- (BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
+- (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
                     withConnectCallback:(ClientConnectCallback)connectCallback;
 
 // Kill connection for testing purposes
 - (BOOL)killConnection:(NSString *)peerIdentifier;
 
-- (const THEMultipeerClientSession *)session:(NSString *)peerIdentifier;
+- (const THEMultipeerClientSession *)sessionForUUID:(NSString *)peerUUID;
 
+- (void)updateLocalPeerIdentifier:(NSString *)localPeerIdentifier;
+
+// The server component is telling us it just completed a connectio, it may be on
+// we initiated.
+- (void)didCompleteReverseConnection:(NSString *)peerIdentifier
+                      withClientPort:(unsigned short)clientPort
+                      withServerPort:(unsigned short)serverPort;
 @end

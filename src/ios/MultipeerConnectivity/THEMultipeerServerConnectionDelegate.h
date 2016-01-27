@@ -30,9 +30,9 @@
 @protocol THEMultipeerServerConnectionDelegate <NSObject>
 
 // Notifies delegate a connection was made
-- (void)serverDidCompleteConnection:(NSString *)peerIdentifier
-                     withClientPort:(unsigned short)clientPort
-                     withServerPort:(unsigned short)serverPort;
+- (void)didCompleteReverseConnection:(NSString *)peerIdentifier
+                      withClientPort:(unsigned short)clientPort
+                      withServerPort:(unsigned short)serverPort;
 
 @end
 

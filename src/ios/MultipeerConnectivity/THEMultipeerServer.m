@@ -138,11 +138,11 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   [self startAdvertising];
 }
 
-- (const THEMultipeerServerSession *)session:(NSString *)peerIdentifier
+- (const THEMultipeerServerSession *)sessionForUUID:(NSString *)peerUUID
 {
   __block THEMultipeerServerSession *session = nil;
   
-  [_serverSessions updateForPeerIdentifier:peerIdentifier
+  [_serverSessions updateForPeerUUID:peerUUID
                                updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
 
     THEMultipeerServerSession *serverSession = (THEMultipeerServerSession *)p;
@@ -182,17 +182,11 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     return;
   }
 
-  NSString *remotePeerUUID = contextParts[0];
+  NSString *remotePeerIdentifier = contextParts[0];
   NSString *localPeerIdentifier = contextParts[1];
   
-  NSArray<NSString *> *localParts = [localPeerIdentifier componentsSeparatedByString:@":"];
-  if ([localParts count] != 2)
-  {
-    NSLog(@"server: local id did not parse");
-    return;
-  }
-
-  NSString *localPeerUUID = localParts[0];
+  NSString *remotePeerUUID = [THEMultipeerPeerSession peerUUIDFromPeerIdentifier:remotePeerIdentifier];
+  NSString *localPeerUUID = [THEMultipeerPeerSession peerUUIDFromPeerIdentifier:localPeerIdentifier];
   
   [_serverSessions updateForPeerID:peerID 
                        updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
@@ -201,17 +195,17 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     
     if (serverSession && ([[serverSession remotePeerID] hash] == [peerID hash]))
     {
-      assert([remotePeerUUID compare:[serverSession remotePeerIdentifier]] == NSOrderedSame);
+      assert([remotePeerUUID compare:[serverSession remotePeerUUID]] == NSOrderedSame);
       
       // Disconnect any existing session, see note below
-      NSLog(@"server: disconnecting to refresh session (%@)", [serverSession remotePeerIdentifier]);
+      NSLog(@"server: disconnecting to refresh session (%@)", [serverSession remotePeerUUID]);
       [serverSession disconnect];
     }
     else
     {
       serverSession = [[THEMultipeerServerSession alloc] initWithLocalPeerID:_localPeerId
                                                             withRemotePeerID:peerID
-                                                    withRemotePeerIdentifier:remotePeerUUID
+                                                    withRemotePeerIdentifier:remotePeerIdentifier
                                                               withServerPort:_serverPort];
     }
 
@@ -234,14 +228,14 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
     {
       NSLog(@"server: rejecting invitation for lexical ordering %@", remotePeerUUID);
       invitationHandler(NO, [_serverSession session]);
-      [_multipeerDiscoveryDelegate didFindPeerIdentifier:remotePeerUUID byServer:true];
+      [_multipeerDiscoveryDelegate didFindPeerIdentifier:remotePeerIdentifier pleaseConnect:true];
       return;
     }
 
     [_serverSession connectWithConnectCallback:^void(NSString *p, unsigned short c, unsigned short s) {
-      [_multipeerServerConnectionDelegate serverDidCompleteConnection:p
-                                                       withClientPort:c
-                                                       withServerPort:s];
+      [_multipeerServerConnectionDelegate didCompleteReverseConnection:p
+                                                        withClientPort:c
+                                                        withServerPort:s];
     }];
 
     NSLog(@"server: accepting invitation %@", remotePeerUUID);

@@ -55,6 +55,6 @@
 // Set reset callback for managing restarts
 - (void)setTimerResetCallback:(void (^)(void))timerCallback;
 
-- (const THEMultipeerServerSession *)session:(NSString *)peerIdentifier;
+- (const THEMultipeerServerSession *)sessionForUUID:(NSString *)peerUUID;
 
 @end
