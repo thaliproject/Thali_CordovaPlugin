@@ -1,9 +1,5 @@
 'use strict';
 
-var util = require('util');
-var net = require('net');
-var http = require('http');
-
 /** @module makeIntoCloseAllServer */
 
 /**
@@ -14,15 +10,17 @@ var http = require('http');
  * as close the server itself.
  *
  * @public
- * @param server
+ * @param {net.Server} server
  * @returns {Object}
  */
 function makeIntoCloseAllServer(server) {
   var connections = [];
 
   server.on('connection', function (socket) {
-    socket.on('close', function() {
-      var index = connections.findIndex(connection);
+    socket.on('close', function () {
+      var index = connections.findIndex(function (socket) {
+        return socket === socket;
+      });
       if (index === -1) {
         // Log this, it shouldn't have happened.
       }
@@ -30,13 +28,21 @@ function makeIntoCloseAllServer(server) {
     });
   });
 
-  // We don't override close because we don't want to change its semantics.
-  server.closeAll = function () {
+  /**
+   * Closes the server and then closes all incoming connections to the server.
+   *
+   * @param {callback} [callback]
+   */
+  server.closeAll = function (callback) {
+    // By closing the server first we prevent any new incoming connections
+    // to the server.
+    // Also note that the callback won't be called until all the connections
+    // are destroyed because the destroy calls are synchronous.
+    this.close(callback);
     connections.forEach(function (connection) {
       connection.destroy();
     });
     connections = null;
-    this.close();
   };
 
   return server;

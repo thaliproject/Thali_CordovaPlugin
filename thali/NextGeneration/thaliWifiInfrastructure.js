@@ -247,7 +247,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
  * in status (e.g. someone turned off Wifi) then this class MUST issue this
  * event itself. That is, it must have hooked into the start/stop methods,
  * start/stop discovery/advertising methods, {@link
- * module:thaliMobileNativeWrapper.nonTCPPeerAvailabilityChangedEvent} events
+ * module:thaliMobileNativeWrapper.networkChangedNonTCP} events
  * when we are on mobile devices and {@link
  * module:ThaliWifiInfrastructure.networkChangedWifi} when we are on desktop to
  * figure out when status has changed and this event needs to be fired.
@@ -260,16 +260,17 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
 
 /**
  * For the definition of this event please see {@link
- * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}.
+ * module:thaliMobileNativeWrapper.event:networkChangedNonTCP}.
  *
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
  * OS/X or Windows. In the case that we are running on those platforms then If
  * we are running on those platforms then blueToothLowEnergy and blueTooth MUST
- * both return radioState set to `doNotCare`. For now we MUST use the JXcore
- * Mobile.getConnectionStatus call which will at least tell us if we have no
- * Internet, Wifi or Cell (unfortunately it presents these as mutually exclusive
- * options which isn't strictly true on iOS but that's o.k. because we are on
- * desktop).
+ * both return radioState set to `doNotCare`. We really don't have a good
+ * solution for status when we are on desktop since even JXcore's
+ * Mobile.getConnectionStatus call doesn't appear to work there. But strictly
+ * speaking we don't formally support desktop yet. In any case for now this
+ * should just fire an automatic dummy 'everything is fine' value when we are
+ * on desktop on the first subscription.
  *
  * @public
  * @event networkChangedWifi

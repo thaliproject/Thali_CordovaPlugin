@@ -3,26 +3,6 @@
 /** @module thaliPullReplicationFromNotification */
 
 /**
- * We will be given a structure that has a peer ID and a list of databases
- * we want to try to synch for that peer ID. As we get notified of peers being
- * around if they are on the list then we will enqueue an action to sync with
- * them.
- *
- * We need to be smart enough that if we have already enqueue a job to
- * replicate something that hasn't run yet that we don't keep enqueing more
- * jobs for the same peer. In other words, for any given peer we should have
- * exactly one job in the queue.
- *
- * We get a peerAdvertisesDataForUs and first we check to see if we have a job
- * enqueued. If we do then we can ignore the notification.
- *
- * If we have a job running then for now we will enqueue new job. It's not
- * great but it's not horrible either.
- *
- *
- */
-
-/**
  * @classdesc This class will listen for
  * {@link module:thaliNotificationClient.event:peerAdvertisesDataForUs} events
  * and then schedule replications.
@@ -50,39 +30,41 @@
  * name of the remote DB MUST be http://[host from discovery]:[port from
  * discovery]/db/[name] where name is taken from pouchDB.info's db_name field.
  * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} thaliPeerPoolInterface
- * @param {module:thaliNotificationClient~ThaliNotificationClient} thaliNotificationClient
+ * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
+ * with the local device's public and private keys.
  * @constructor
  */
-function ThaliPullReplicationFromNotification(pouchDB, thaliPeerPoolInterface,
-                                              thaliNotificationClient) {
+function ThaliPullReplicationFromNotification(pouchDB,
+                                              thaliPeerPoolInterface,
+                                              ecdhForLocalDevice) {
 
 }
 
-ThaliPullReplicationFromNotification.prototype._notificationSubscriptions =
-  null;
+/**
+ * Starts to listen for peer discovery events for interesting peers and
+ * then tries to do a pull replication from them.
+ *
+ * @public
+ * @param {Buffer[]} prioritizedReplicationList Used to decide what peer
+ * notifications to pay attention to and when scheduling replications what
+ * order to schedule them in (if possible). This list consists of an array
+ * of buffers that contain the serialization of the public ECDH keys of the
+ * peers we are interested in synching with.
+ */
+ThaliPullReplicationFromNotification.prototype.start =
+  function (prioritizedReplicationList) {
+    // start thaliNotificationClient here
+  };
 
 /**
- * This sets the complete list of peers and DBs to synch for those peers when
- * we connect to them. It is legal to submit an empty or null value, it just
- * means we should not follow up on notifications from anyone.
+ * Stops listening for new peer discovery and shuts down all replication
+ * actions.
  *
- * If we have enqueued work for a peer whose name is removed from the table
- * then we will remove that peer's enqueued work.
- *
- * If however a peer who was removed from the list has a job currently running
- * then we will kill that job immediately.
- *
- * We will not start listening for events until the first call to this method.
- *
- * @param {string[]} notificationSubscriptions
- * An array of base 64 url safe encoded public key that identifies the peers we
- * should watch for notifications from.
+ * This method is idempotent.
  */
-ThaliPullReplicationFromNotification.prototype.setNotifications =
-  function (notificationSubscriptions) {
-    // Do check that the value is valid
-    ThaliPullReplicationFromNotification.prototype._notificationSubscriptions =
-      notificationSubscriptions;
-  };
+ThaliPullReplicationFromNotification.prototype.stop = function () {
+  // stop thaliNotificationClient here
+};
+
 
 module.exports = ThaliPullReplicationFromNotification;

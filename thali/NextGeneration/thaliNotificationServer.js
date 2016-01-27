@@ -6,15 +6,15 @@ var Promise = require('lie');
 
 /**
  * @classdesc This class will register the path to retrieve beacons on the
- * submitted router object.
+ * submitted router object and handle any beacon requests.
  *
  * The constructor MUST NOT take any action. It can only record values.
  *
  * @param {Object} router An express router object that the class will use
  * to register its path.
- * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
+ * @param {ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized with the
  * local device's public and private keys
- * @param {number} secondsUntilExpiration - The number of seconds into the
+ * @param {number} secondsUntilExpiration The number of seconds into the
  * future after which the beacons should expire.
  * @constructor
  */
@@ -22,6 +22,15 @@ function ThaliNotificationServer(router, ecdhForLocalDevice,
                                  secondsUntilExpiration) {
 
 }
+
+/**
+ * This method will cause the router object to have the beacon route registered
+ * on it. This method is idempotent. But notice that there is no stop. This is
+ * because there is no supported way in Express to unregister a route.
+ */
+ThaliNotificationServer.prototype.start = function () {
+
+};
 
 /**
  * When called for the first time on an instance of ThaliNotificationServer
@@ -67,13 +76,14 @@ function ThaliNotificationServer(router, ecdhForLocalDevice,
  * 'Advertising is off' - We do not have advertising activated so we can't
  * advertise anything.
  *
- * @param {string[]} publicKeysToNotify - An array of strings holding base64 url
- * safe encoded ECDH public keys
+ * @param {buffer[]} [publicKeysToNotify] - An array of buffers holding the
+ * ECDH public keys to notify that we have data for them.
  * @returns {Promise<?error>} Returns null if everything went fine otherwise
  * returns an error object.
  */
 ThaliNotificationServer.prototype.setBeacons = function (publicKeysToNotify) {
   return new Promise();
 };
+
 
 module.exports.ThaliNotificationServer = ThaliNotificationServer;

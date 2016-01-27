@@ -113,28 +113,6 @@ var UPDATE_WINDOWS_BACKGROUND = 250;
  */
 var MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 10;
 
-
-/**
- * We monitor the PouchDB database's change feed and when we receive a change
- * we have to know who to tell about it. We don't want to notify the person
- * who caused the change but we don't know who that is. So we use this callback
- * to let the programmer tell us who should we notify about this change.
- *
- * We supply to the callback, in addition to the change, a complete list of all
- * the peers we currently plan on notifying. This function then returns a
- * complete list of who we should notify, in priority order. In practice this
- * means that most filters should only add names and maybe change order but not
- * remove names. An obvious exception to the remove name rule would be if a name
- * is on a prohibited list.
- *
- * @callback ChangesFilter
- * @param {info} change This is the change object given to use by PouchDB
- * @param {string[]} currentChangeList List of peers we are currently planning
- * on notifying of changes.
- * @returns {string[]} This is an array of strings holding
- * base64 url safe encoded ECDH public keys that we will notify about changes.
- */
-
 /**
  * @classdesc This class handles determining who to notify about changes to
  * a local database. In the simplest case we just monitor changes to the
@@ -158,8 +136,12 @@ var MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 10;
  * class in the same app or errors will occur. We absolutely can fix that if
  * someone has a killer scenario they are shipping that needs this fixed.
  *
- * @param {module:thaliNotificationServer~ThaliNotificationServer} thaliNotificationServer
- * This is the server we will use to push out notifications.
+ * @param {Object} router An express router object that the class will use
+ * to register its path.
+ * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
+ * local device's public and private keys
+ * @param {number} secondsUntilExpiration - The number of seconds into the
+ * future after which the beacons should expire.
  * @param {PouchDB} pouchDB database we are tracking changes on.
  * @param {module:thaliSendNotificationBasedOnReplication~ChangesFilter} changesFilter
  * We callback this function on each change to get an updated list of who to
@@ -167,10 +149,42 @@ var MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 10;
  * @constructor
  */
 function ThaliSendNotificationBasedOnReplication(
-  thaliNotificationServer,
+  router,
+  ecdhForLocalDevice,
+  secondsUntilExpiration,
   pouchDB,
   changesFilter) {
 
 }
+
+/**
+ * Will start monitoring the submitted pouchDB and updating the notification
+ * layer with peers to notify of changes.
+ *
+ * This method is not idempotent as multiple calls with different arguments
+ * will cause us to update the beacons we are sending out.
+ *
+ * @public
+ * @param {Buffer[]} prioritizedPeersToNotifyOfChanges This is the list of peers
+ * who are to be notified whenever there is a change to the database. The array
+ * contains a serialization of the public ECDH keys of the relevant peers.
+ * @returns {Promise<?Error>} resolves to null if the beacons were successfully
+ * updated otherwise rejects with an Error.
+ */
+ThaliSendNotificationBasedOnReplication.prototype.start =
+  function (prioritizedPeersToNotifyOfChanges) {
+    // start thaliNotificationServer
+    return new Promise();
+  };
+
+/**
+ * Will stop monitoring the submitted pouchDB and set the notification layer
+ * with an empty peers list of folks to notify of changes.
+ *
+ * @public
+ */
+ThaliSendNotificationBasedOnReplication.prototype.stop = function () {
+  // stop thaliNotificationServer
+};
 
 module.exports = ThaliSendNotificationBasedOnReplication;
