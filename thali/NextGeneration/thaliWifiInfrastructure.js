@@ -320,7 +320,7 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
   if (!self.router) {
     return Promise.reject(new Error('Bad Router'));
   }
-  self.usn = 'uuid:' + uuid.v4();
+  self.usn = 'urn:uuid:' + uuid.v4();
   self._server.setUSN(self.usn);
   if (self.advertising === true) {
     return Promise.resolve();

@@ -35,7 +35,7 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
     location: testLocation,
     udn: THALI_NT
   });
-  testServer.setUSN('uuid:' + uuid.v4());
+  testServer.setUSN('urn:uuid:' + uuid.v4());
   var wifiPeerAvailabilityChangedListener = function (data) {
     var peer = data[0];
     t.equal(peer.hostAddress, testHostAddress, 'host address should match');
