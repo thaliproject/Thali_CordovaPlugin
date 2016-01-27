@@ -5,6 +5,7 @@ var tape = require('../lib/thali-tape');
 var nodessdp = require('node-ssdp');
 var express = require('express');
 var http = require('http');
+var net = require('net');
 var uuid = require('node-uuid');
 
 var THALI_NT = 'http://www.thaliproject.org/ssdp';
@@ -133,6 +134,32 @@ test('#startUpdateAdvertisingAndListening should fail invalid router has been pa
   .catch(function (error) {
     t.equal(error.message, 'Bad Router', 'specific error should be received');
     t.end();
+  });
+});
+
+test('#startUpdateAdvertisingAndListening should fail if router server starting fails', function (t) {
+  // Save the old port so that it can be reassigned after the test.
+  var oldPort = wifiInfrastructure.port;
+  // Create a test server that is used to block the port
+  // onto which the router server is tried to be started.
+  var testServer = net.createServer(function (c) {
+    // NOOP
+  });
+  testServer.listen(0, function () {
+    var testServerPort = testServer.address().port;
+    // Set the port to be the same on which we already
+    // have our test server running. This should
+    // create a failure when trying to start the router
+    // server on the same port.
+    wifiInfrastructure.port = testServerPort;
+    wifiInfrastructure.startUpdateAdvertisingAndListening()
+    .catch(function (error) {
+      t.equals(error.message, 'Unspecified Error with Radio infrastructure', 'specific error expected');
+      wifiInfrastructure.port = oldPort;
+      testServer.close(function () {
+        t.end()
+      });
+    });
   });
 });
 

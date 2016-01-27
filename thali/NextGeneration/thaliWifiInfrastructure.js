@@ -334,24 +334,37 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
       reject(new Error('Bad Router'));
       return;
     }
-    self.routerServer = self.expressApp.listen(self.port, function () {
+    var startErrorListener = function (error) {
+      logger.error('Router server emitted an error: %s', error.toString());
+      self.routerServer.removeListener('error', startErrorListener);
+      self.routerServer = null
+      reject(new Error('Unspecified Error with Radio infrastructure'));
+    };
+    self.routerServerErrorListener = function (error) {
+      // Error is only logged, because it was determined this should
+      // not occur in normal use cases and it wasn't worthwhile to
+      // specify a custom error that the upper layers should listen to.
+      // If this error is seen in real scenario, a proper error handling
+      // should be specified and implemented.
+      logger.error('Router server emitted an error: %s', error.toString());
+    };
+    var listeningHandler = function () {
       self.port = self.routerServer.address().port;
       // We need to update the location string, because the port
       // may have changed when we re-start the router server.
       self._setLocation();
       self._server.start(function () {
         self.advertising = true;
+        // Remove the error listener we had during the resolution of this
+        // promise and add one that is listening for errors that may
+        // occur any time.
+        self.routerServer.removeListener('error', startErrorListener);
+        self.routerServer.on('error', self.routerServerErrorListener);
         resolve();
       });
-    });
-    self.routerServerErrorListener = function (error) {
-      // This error may also occur after this promise is already resolved
-      // in which case below reject doesn't have any effect and instead,
-      // the error is only logged.
-      logger.error('Router server emitted an error: %s', error.toString());
-      reject(new Error('Unspecified Error with Radio infrastructure'));
     };
-    self.routerServer.on('error', self.routerServerErrorListener);
+    self.routerServer = self.expressApp.listen(self.port, listeningHandler);
+    self.routerServer.on('error', startErrorListener);
   });
 };
 
@@ -384,6 +397,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
         // we start the router server.
         self.port = 0;
         self.routerServer.removeListener('error', self.routerServerErrorListener);
+        self.routerServer = null;
         resolve();
       });
     });
