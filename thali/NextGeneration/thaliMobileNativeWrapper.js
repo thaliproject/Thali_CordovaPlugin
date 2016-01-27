@@ -369,8 +369,8 @@ module.exports.killConnections = function () {
 /**
  * Provides a notification when the network's state changes as well as when our
  * use of the network changes, specifically when discovery or
- * advertising/listening starts and stops. This event can start firing as soon
- * as the system starts.
+ * advertising/listening starts and stops. This event MUST fire with the current
+ * network state when the first subscription to the event is received.
  *
  * @public
  * @event networkChangedNonTCP

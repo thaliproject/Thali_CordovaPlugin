@@ -11,18 +11,24 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
  * instance or bad stuff can happen.
  * @public
  * @param {PouchDB} pouchDB pouchDB database we are tracking changes on.
- * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} thaliPeerPoolInterface
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized with
  * the local device's public and private keys.
+ * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} [thaliPeerPoolInterface]
+ * If your app doesn't specify its own pool interface you will seriously
+ * regret it as the default one has awful behavior. Building your own
+ * thaliPeerPoolInterface is pretty much a requirement for a decent Thali
+ * app.
  * @param {Object} [router] An express router object that the class will use
- * to register its path.
+ * to register its path. Note that unles your application needs its own
+ * custom HTTP endpoints exposed and/or you are dropping in Thali extensions
+ * like identity exchange then you don't need this object.
  * @param {number} [secondsUntilExpiration] The number of seconds into the
  * future after which the beacons should expire.
  * @constructor
  */
 function ThaliReplicationManager(pouchDB,
-                                 thaliPeerPoolInterface,
                                  ecdhForLocalDevice,
+                                 thaliPeerPoolInterface,
                                  router,
                                  secondsUntilExpiration) {
   this._thaliSendNotificationBasedOnReplication =
@@ -52,21 +58,16 @@ ThaliReplicationManager.prototype._thaliPullReplicationFromNotification = null;
  * This method is not idempotent as each call to start with different arguments
  * will cause the related states to be changed.
  *
- * @param {Buffer[]} prioritizedReplicationList Used to decide what peer
- * notifications to pay attention to and when scheduling replications what
- * order to schedule them in (if possible). This list consists of an array
- * of buffers that contain the serialization of the public ECDH keys of the
- * peers we are interested in synching with.
- * @param {Buffer[]} prioritizedPeersToNotifyOfChanges This is the list of peers
- * who are to be notified whenever there is a change to the database. The array
- * contains a serialization of the public ECDH keys of the relevant peers.
+ * @param {Buffer[]} [arrayOfRemoteKeys] This is the list of ECDH public keys
+ * that we should be willing to send notifications of our changes to and receive
+ * notifications of changes from.
  * @returns {Promise<?Error>}
  */
 ThaliReplicationManager.prototype.start =
-  function (prioritizedReplicationList, prioritizedPeersToNotifyOfChanges) {
+  function (arrayOfRemoteKeys) {
     var self = this;
     self._thaliPullReplicationFromNotification
-          .start(prioritizedReplicationList);
+          .start(arrayOfRemoteKeys);
     return ThaliMobile.start().then(function () {
       /*
       Ideally we could call startListening and startUpdateAdvertising separately
@@ -89,7 +90,7 @@ ThaliReplicationManager.prototype.start =
       return ThaliMobile.startUpdateAdvertisingAndListening();
     }).then(function () {
       return self._thaliSendNotificationBasedOnReplication
-        .start(prioritizedPeersToNotifyOfChanges);
+        .start(arrayOfRemoteKeys);
     });
   };
 

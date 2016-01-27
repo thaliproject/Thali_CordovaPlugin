@@ -247,7 +247,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
  * in status (e.g. someone turned off Wifi) then this class MUST issue this
  * event itself. That is, it must have hooked into the start/stop methods,
  * start/stop discovery/advertising methods, {@link
- * module:thaliMobileNativeWrapper.nonTCPPeerAvailabilityChangedEvent} events
+ * module:thaliMobileNativeWrapper.networkChangedNonTCP} events
  * when we are on mobile devices and {@link
  * module:ThaliWifiInfrastructure.networkChangedWifi} when we are on desktop to
  * figure out when status has changed and this event needs to be fired.
@@ -260,7 +260,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
 
 /**
  * For the definition of this event please see {@link
- * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}.
+ * module:thaliMobileNativeWrapper.event:networkChangedNonTCP}.
  *
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
  * OS/X or Windows. In the case that we are running on those platforms then If
