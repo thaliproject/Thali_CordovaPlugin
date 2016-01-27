@@ -1,6 +1,17 @@
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
 var Promise = require('lie');
+var nodessdp = require('node-ssdp');
+var ip = require('ip');
+var uuid = require('node-uuid');
+var url = require('url');
+var express = require('express');
+var validations = require('../validations');
+var logger = require('../thalilogger')('thaliWifiInfrastructure');
+
+var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
 /** @module ThaliWifiInfrastructure */
 
@@ -30,18 +41,108 @@ var Promise = require('lie');
  * instances are already specified to use whatever ports are available the
  * different instances should not run into each other.
  *
- * __Open Issue:__ We need to confirm that the different instances will see
- * each other's SSDP advertisements and queries.
- *
  * @public
  * @constructor
  * @fires event:wifiPeerAvailabilityChanged
  * @fires event:networkChangedWifi
  * @fires discoveryAdvertisingStateUpdateWifiEvent
  */
-function ThaliWifiInfrastructure() {
-
+function ThaliWifiInfrastructure () {
+  EventEmitter.call(this);
+  this.usn = null;
+  // Use port 0 so that random available port
+  // will get used.
+  this.port = 0;
+  this.expressApp = null;
+  this.router = null;
+  this.routerServer = null;
+  this.routerServerErrorListener = null;
+  this.started = null;
+  this.listening = null;
+  this.advertising = null;
+  // A variable to hold information about known peer availability states
+  // and used to avoid emitting peer availability changes in case the
+  // availability hasn't changed from the previous known value.
+  this.peerAvailabilities = {};
+  this._init();
 }
+
+inherits(ThaliWifiInfrastructure, EventEmitter);
+
+ThaliWifiInfrastructure.prototype._init = function () {
+  var serverOptions = {
+    adInterval: 500,
+    udn: THALI_NT
+  };
+  this._server = new nodessdp.Server(serverOptions);
+  this._setLocation();
+
+  this._client = new nodessdp.Client();
+
+  this._client.on('advertise-alive', function (data) {
+    this._handleMessage(data, true);
+  }.bind(this));
+
+  this._client.on('advertise-bye', function (data) {
+    this._handleMessage(data, false);
+  }.bind(this));
+};
+
+ThaliWifiInfrastructure.prototype._setLocation = function (address, port) {
+  address = address || ip.address();
+  port = port || this.port;
+  this._server._location = 'http://' + address + ':' + port;
+};
+
+ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
+  if (this._shouldBeIgnored(data)) {
+    return false;
+  }
+  var parsedLocation = url.parse(data.LOCATION);
+  var portNumber = parseInt(parsedLocation.port);
+  try {
+    validations.ensureValidPort(portNumber);
+  } catch (error) {
+    logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
+    return false;
+  }
+
+  var usn = data.USN
+  try {
+    validations.ensureNonNullOrEmptyString(usn);
+  } catch (error) {
+    logger.warn('Received an invalid USN value: %s', data.USN);
+    return false;
+  }
+
+  var peer = {
+    peerIdentifier: usn,
+    hostAddress: parsedLocation.hostname,
+    portNumber: portNumber,
+    peerAvailable: available
+  };
+  if (this.peerAvailabilities[peer.peerIdentifier] === available) {
+    return false;
+  }
+  this.peerAvailabilities[peer.peerIdentifier] = available;
+  this.emit('wifiPeerAvailabilityChanged', [peer]);
+  return true;
+};
+
+// Function used to filter out SSDP messages that are not
+// relevant for Thali.
+ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
+  // First check if the data contains the Thali-specific NT.
+  if (data.NT === THALI_NT) {
+    // Filtering out messages from ourselves.
+    if (data.USN === this.usn) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  return true;
+};
 
 /**
  * This method MUST be called before any other method here other than
@@ -64,7 +165,12 @@ function ThaliWifiInfrastructure() {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.start = function (router) {
-  return new Promise();
+  if (this.started === true) {
+    return Promise.reject(new Error('Call Stop!'));
+  }
+  this.started = true;
+  this.router = router;
+  return Promise.resolve();
 };
 
 /**
@@ -79,7 +185,14 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.stop = function () {
-  return new Promise();
+  var self = this;
+  if (self.started === false) {
+    return Promise.resolve();
+  }
+  self.started = false;
+  return self.stopAdvertisingAndListening().then(function () {
+    return self.stopListeningForAdvertisements();
+  });
 };
 
 /**
@@ -101,10 +214,18 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
-  function () {
-    return new Promise();
-  };
+ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
+  var self = this;
+  if (self.listening) {
+    return Promise.resolve();
+  }
+  self.listening = true;
+  return new Promise(function(resolve, reject) {
+    self._client.start(function () {
+      resolve();
+    });
+  });
+};
 
 /**
  * This will stop the local Wi-Fi Infrastructure Mode discovery mechanism
@@ -124,7 +245,16 @@ ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
-  return new Promise();
+  var self = this;
+  if (!self.listening) {
+    return Promise.resolve();
+  }
+  self.listening = false;
+  return new Promise(function(resolve, reject) {
+    self._client.stop(function () {
+      resolve();
+    });
+  });
 };
 
 /**
@@ -182,8 +312,60 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function() {
-  return new Promise();
+ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function () {
+  var self = this;
+  if (self.started === false) {
+    return Promise.reject(new Error('Call Start!'));
+  }
+  if (!self.router) {
+    return Promise.reject(new Error('Bad Router'));
+  }
+  self.usn = 'urn:uuid:' + uuid.v4();
+  self._server.setUSN(self.usn);
+  if (self.advertising === true) {
+    return Promise.resolve();
+  }
+  return new Promise(function(resolve, reject) {
+    self.expressApp = express();
+    try {
+      self.expressApp.use('/', self.router);
+    } catch (error) {
+      logger.error('Unable to use the given router: %s', error.toString());
+      reject(new Error('Bad Router'));
+      return;
+    }
+    var startErrorListener = function (error) {
+      logger.error('Router server emitted an error: %s', error.toString());
+      self.routerServer.removeListener('error', startErrorListener);
+      self.routerServer = null
+      reject(new Error('Unspecified Error with Radio infrastructure'));
+    };
+    self.routerServerErrorListener = function (error) {
+      // Error is only logged, because it was determined this should
+      // not occur in normal use cases and it wasn't worthwhile to
+      // specify a custom error that the upper layers should listen to.
+      // If this error is seen in real scenario, a proper error handling
+      // should be specified and implemented.
+      logger.error('Router server emitted an error: %s', error.toString());
+    };
+    var listeningHandler = function () {
+      self.port = self.routerServer.address().port;
+      // We need to update the location string, because the port
+      // may have changed when we re-start the router server.
+      self._setLocation();
+      self._server.start(function () {
+        self.advertising = true;
+        // Remove the error listener we had during the resolution of this
+        // promise and add one that is listening for errors that may
+        // occur any time.
+        self.routerServer.removeListener('error', startErrorListener);
+        self.routerServer.on('error', self.routerServerErrorListener);
+        resolve();
+      });
+    };
+    self.routerServer = self.expressApp.listen(self.port, listeningHandler);
+    self.routerServer.on('error', startErrorListener);
+  });
 };
 
 /**
@@ -201,7 +383,25 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function(
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
-  return new Promise();
+  var self = this;
+  if (!self.advertising) {
+    return Promise.resolve();
+  }
+  self.advertising = false;
+  return new Promise(function(resolve, reject) {
+    self._server.stop(function () {
+      self.routerServer.close(function () {
+        // The port needs to be reset, because
+        // otherwise there is no guarantee that
+        // the same port is available next time
+        // we start the router server.
+        self.port = 0;
+        self.routerServer.removeListener('error', self.routerServerErrorListener);
+        self.routerServer = null;
+        resolve();
+      });
+    });
+  });
 };
 
 /**

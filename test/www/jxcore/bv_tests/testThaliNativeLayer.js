@@ -1,6 +1,6 @@
 'use strict';
 
-if (typeof Mobile === 'undefined') {
+if (!jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
