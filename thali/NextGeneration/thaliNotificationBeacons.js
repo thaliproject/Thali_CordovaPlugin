@@ -1,6 +1,7 @@
 'use strict';
 
 var crypto = require('crypto');
+var Long = require('long');
 var HKDF = require('./hkdf');
 
 // Constants
@@ -37,10 +38,12 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 
     // Generate preamble
     var kePublic = ke.generateKeys();
-    var expiration = new Buffer(8); // Ensure 64-bit integer buffer
-    expiration.fill(0);             // Don't be stupid and not zero the buffer
-    expiration.writeUInt32BE(secondsUntilExpiration >> 8, 0);     // Write the high order bits
-    expiration.writeUInt32BE(secondsUntilExpiration & 0x00ff, 4); // Write the low order bits
+    var expirationLong = Long.fromNumber(secondsUntilExpiration);
+    var expiration = new Buffer(8);
+    expiration.fill(0);
+    expiration.writeInt32BE(expirationLong.high, 0);
+    expiration.writeInt32BE(expirationLong.low, 4);
+
     beacons.push(Buffer.concat(kePublic, expiration));
 
     // UnencryptedKeyId = SHA256(Kx.public().encode()).first(16)
@@ -112,7 +115,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 NotificationBeacons.prototype.parseBeacons =
   function(beaconStreamWithPreAmble, ecdhForLocalDevice, addressBookCallback) {
 
-    
+
 
     // Unlike the pseudo code this function assumes it will be passed the entire preamble and beacon stream. Therefore
     // the PubKe and the expiration can be parsed out of the beaconStreamWithPreAmble as defined in the spec.

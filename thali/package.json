@@ -8,6 +8,7 @@
     "express": "4.13.3",
     "javascript-state-machine": "^2.3.5",
     "lie": "^3.0.1",
+    "long": "^3.0.3",
     "multiplex": "^6.2.2",
     "request": "^2.64.0",
     "urlsafe-base64": "^1.0.0",
