@@ -42,8 +42,6 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
     var unencryptedKeyId = unencryptedKeyIdHash.digest().slice(0, 16);
 
     for (var i = 0, len = publicKeysToNotify.length; i < len; i++) {
-      // TODO: Make sure safe URL base64
-
       var pubKey = publicKeysToNotify[i];
 
       var sxy = crypto.createECDH(SECP256K1);
@@ -63,6 +61,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 
       var aes = crypto.createCipheriv(GCM, hkey, iv);
       aes.udpate(unencryptedKeyId);
+      aes = aes.digest();
 
       beacons.push(
         Buffer.concat(aes, beaconHmac)
