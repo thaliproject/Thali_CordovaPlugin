@@ -101,14 +101,6 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
   if (this._shouldBeIgnored(data)) {
     return false;
   }
-  var parsedLocation = url.parse(data.LOCATION);
-  var portNumber = parseInt(parsedLocation.port);
-  try {
-    validations.ensureValidPort(portNumber);
-  } catch (error) {
-    logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
-    return false;
-  }
 
   var usn = data.USN
   try {
@@ -120,10 +112,23 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 
   var peer = {
     peerIdentifier: usn,
-    hostAddress: parsedLocation.hostname,
-    portNumber: portNumber,
     peerAvailable: available
   };
+
+  // We expect location only in alive messages.
+  if (available === true) {
+    var parsedLocation = url.parse(data.LOCATION);
+    var portNumber = parseInt(parsedLocation.port);
+    try {
+      validations.ensureValidPort(portNumber);
+    } catch (error) {
+      logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
+      return false;
+    }
+    peer.hostAddress = parsedLocation.hostname;
+    peer.portNumber = portNumber;
+  }
+
   if (this.peerAvailabilities[peer.peerIdentifier] === available) {
     return false;
   }

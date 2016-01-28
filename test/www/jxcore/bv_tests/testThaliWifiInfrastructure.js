@@ -28,7 +28,7 @@ var test = tape({
   }
 });
 
-test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged after test peer becomes available', function (t) {
+test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged events should be emitted', function (t) {
   var testHostAddress = 'foo.bar';
   var testPort = 8080;
   var testLocation = 'http://' + testHostAddress + ':' + testPort;
@@ -37,16 +37,26 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
     udn: THALI_NT
   });
   testServer.setUSN('urn:uuid:' + uuid.v4());
-  var wifiPeerAvailabilityChangedListener = function (data) {
+  var peerAvailableListener = function (data) {
     var peer = data[0];
     t.equal(peer.hostAddress, testHostAddress, 'host address should match');
     t.equal(peer.portNumber, testPort, 'port should match');
-    wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', wifiPeerAvailabilityChangedListener);
-    testServer.stop(function () {
+    t.equal(peer.peerAvailable, true, 'peer should be available');
+    wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
+
+    var peerUnavailableListener = function (data) {
+      var peer = data[0];
+      t.equal(peer.peerAvailable, false, 'peer should be unavailable');
+      wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerUnavailableListener);
       t.end();
+    };
+    wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerUnavailableListener);
+    testServer.stop(function () {
+      // When server is stopped, it shold trigger the byebye messages
+      // that emit the wifiPeerAvailabilityChanged to which we listen above.
     });
   };
-  wifiInfrastructure.on('wifiPeerAvailabilityChanged', wifiPeerAvailabilityChangedListener);
+  wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerAvailableListener);
   testServer.start(function () {
     wifiInfrastructure.startListeningForAdvertisements();
   });
