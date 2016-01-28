@@ -32,6 +32,8 @@
 		D4553BBA1C52ADC700AA8C30 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D4553BB81C52ADC700AA8C30 /* LaunchScreen.storyboard */; };
 		D4553BC51C52ADC700AA8C30 /* ThaliSingleInstanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D4553BC41C52ADC700AA8C30 /* ThaliSingleInstanceTests.m */; };
 		D4C650DD1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */; };
+		D4F8E5521C5A7A0D00349C01 /* TestEchoClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D4F8E54F1C5A7A0D00349C01 /* TestEchoClient.m */; };
+		D4F8E5531C5A7A0D00349C01 /* TestEchoServer.m in Sources */ = {isa = PBXBuildFile; fileRef = D4F8E5511C5A7A0D00349C01 /* TestEchoServer.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,8 +83,12 @@
 		D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEProtectedMutableDictionary.m; path = ../../Utility/THEProtectedMutableDictionary.m; sourceTree = "<group>"; };
 		D4B4605A1C51154000940B96 /* THESessionDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THESessionDictionary.m; path = ../../Utility/THESessionDictionary.m; sourceTree = "<group>"; };
 		D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThaliMultipleInstanceTests.m; sourceTree = "<group>"; };
-		D4F8E5481C5A58B700349C01 /* TestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = TestApp.app; path = "/Users/tobe/src/Thali_CordovaPlugin/src/ios/proj/Thali/build/Debug-iphoneos/TestApp.app"; sourceTree = "<absolute>"; };
-		D4F8E5491C5A58B700349C01 /* TestAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = TestAppTests.xctest; path = "/Users/tobe/src/Thali_CordovaPlugin/src/ios/proj/Thali/build/Debug-iphoneos/TestAppTests.xctest"; sourceTree = "<absolute>"; };
+		D4F8E54C1C5A777D00349C01 /* TestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4F8E54D1C5A777D00349C01 /* TestAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4F8E54E1C5A7A0D00349C01 /* TestEchoClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestEchoClient.h; sourceTree = "<group>"; };
+		D4F8E54F1C5A7A0D00349C01 /* TestEchoClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestEchoClient.m; sourceTree = "<group>"; };
+		D4F8E5501C5A7A0D00349C01 /* TestEchoServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestEchoServer.h; sourceTree = "<group>"; };
+		D4F8E5511C5A7A0D00349C01 /* TestEchoServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestEchoServer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +137,10 @@
 		D4553BC31C52ADC700AA8C30 /* TestAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				D4F8E54E1C5A7A0D00349C01 /* TestEchoClient.h */,
+				D4F8E54F1C5A7A0D00349C01 /* TestEchoClient.m */,
+				D4F8E5501C5A7A0D00349C01 /* TestEchoServer.h */,
+				D4F8E5511C5A7A0D00349C01 /* TestEchoServer.m */,
 				D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */,
 				D4553BC41C52ADC700AA8C30 /* ThaliSingleInstanceTests.m */,
 				D4553BC61C52ADC700AA8C30 /* Info.plist */,
@@ -167,6 +177,8 @@
 				D40172871C5114210072022A /* THEPeerBluetooth.m */,
 				D4553BA91C52ADC700AA8C30 /* TestApp */,
 				D4553BC31C52ADC700AA8C30 /* TestAppTests */,
+				D4F8E54C1C5A777D00349C01 /* TestApp.app */,
+				D4F8E54D1C5A777D00349C01 /* TestAppTests.xctest */,
 			);
 			sourceTree = "<group>";
 		};
@@ -187,7 +199,7 @@
 			);
 			name = TestApp;
 			productName = TestApp;
-			productReference = D4F8E5481C5A58B700349C01 /* TestApp.app */;
+			productReference = D4F8E54C1C5A777D00349C01 /* TestApp.app */;
 			productType = "com.apple.product-type.application";
 		};
 		D4553BBF1C52ADC700AA8C30 /* TestAppTests */ = {
@@ -205,7 +217,7 @@
 			);
 			name = TestAppTests;
 			productName = TestAppTests;
-			productReference = D4F8E5491C5A58B700349C01 /* TestAppTests.xctest */;
+			productReference = D4F8E54D1C5A777D00349C01 /* TestAppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -296,6 +308,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4F8E5521C5A7A0D00349C01 /* TestEchoClient.m in Sources */,
+				D4F8E5531C5A7A0D00349C01 /* TestEchoServer.m in Sources */,
 				D4553BC51C52ADC700AA8C30 /* ThaliSingleInstanceTests.m in Sources */,
 				D4C650DD1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m in Sources */,
 			);

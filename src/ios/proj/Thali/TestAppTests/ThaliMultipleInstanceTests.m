@@ -7,142 +7,15 @@
 //
 
 #import <XCTest/XCTest.h>
-#import "../../../GCDAsyncSocket/GCDAsyncSocket.h"
+#import "TestEchoClient.h"
+#import "TestEchoServer.h"
 #import "../../../MultipeerConnectivity/THEMultipeerManager.h"
-
-@interface TestEchoServer : NSObject <GCDAsyncSocketDelegate>
-- (BOOL)start:(unsigned short)port;
-- (BOOL)stop;
-@end
-
-@implementation TestEchoServer
-{
-  GCDAsyncSocket *_serverSocket;
-  NSMutableArray<GCDAsyncSocket *> *_clientSockets;
-}
-
-- (BOOL)start:(unsigned short)port
-{
-  _clientSockets = [[NSMutableArray alloc] init];
-  
-  _serverSocket = [[GCDAsyncSocket alloc]
-                    initWithDelegate:self
-                       delegateQueue:dispatch_get_main_queue()];
-  
-  NSError *err;
-  return [_serverSocket acceptOnPort:port error:&err];
-}
-
-- (BOOL)stop
-{
-  [_serverSocket setDelegate:nil];
-  [_serverSocket disconnect];
-  _serverSocket = nil;
-  
-  for (GCDAsyncSocket *sock in _clientSockets)
-  {
-    [sock setDelegate:nil];
-    [sock disconnect];
-  }
-  
-  return true;
-}
-
-- (void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)acceptedSocket
-{
-  [_clientSockets addObject:acceptedSocket];
-  [acceptedSocket readDataWithTimeout:-1 tag:0];
-}
-
-- (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
-{
-  [sock writeData:data withTimeout:-1 tag:0];
-}
-
-@end
-
-@interface TestEchoClient : NSObject <GCDAsyncSocketDelegate>
-- (instancetype)initWithSocket:(GCDAsyncSocket *)sock;
-- (instancetype)initWithPort:(unsigned short)serverPort withConnectHandler:(void (^)(void))connectHandler;
-- (void)stop;
-@end
-
-@implementation TestEchoClient
-{
-  GCDAsyncSocket *_socket;
-  void (^_connectHandler)(void);
-@public
-  void (^_readHandler)(NSData *);
-}
-
-- (instancetype)initWithSocket:(GCDAsyncSocket *)sock
-{
-  self = [super init];
-  if (!self)
-  {
-    return nil;
-  }
-
-  _socket = sock;
-
-  return self;
-}
-
-- (instancetype)initWithPort:(unsigned short)serverPort withConnectHandler:(void (^)(void))connectHandler
-{
-  self = [super init];
-  if (!self)
-  {
-    return nil;
-  }
-
-  _socket = [[GCDAsyncSocket alloc] 
-                initWithDelegate:self
-                   delegateQueue:dispatch_get_main_queue()];
-  
-  _connectHandler = connectHandler;
-  [_socket connectToHost:@"127.0.0.1" onPort:serverPort error:nil];
-
-  return self;
-}
-
-- (void)stop
-{
-  if (_socket)
-  {
-    [_socket disconnect];
-    _socket = nil;
-  }
-}
-
-- (void)write:(NSData *)data
-{
-  [_socket writeData:data withTimeout:-1 tag:0];
-}
-
-- (void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
-{
-  [_socket readDataWithTimeout:-1 tag:0];
-
-  if (_connectHandler)
-  {
-    _connectHandler();
-  }
-}
-
-- (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
-{
-  if (_readHandler)
-  {
-    _readHandler(data);
-  }
-  [_socket readDataWithTimeout:-1 tag:0];
-}
-
-@end
 
 @interface THETestDiscoveryEventHandler : NSObject <THEPeerDiscoveryDelegate>
 {
+  // Implement the THEPeerDiscoverDelegate in a way that makes it easy for tests
+  // to supply blocks as event handlers.
+
 @public
   void (^_didFindPeerHandler)(NSDictionary *);
 }
@@ -163,6 +36,9 @@
 }
 
 @end
+
+// The Tests
+/////////////
 
 @interface ThaliMultipleInstanceTests : XCTestCase
 @end
@@ -187,6 +63,7 @@ static double _baseUUID = 0;
     _baseUUID = [[NSDate date] timeIntervalSince1970];
   }
   
+  // UUID1 < UUID2, always.
   NSString *uuid1 = [[[NSNumber alloc] initWithDouble:++_baseUUID] stringValue];
   NSString *uuid2 = [[[NSNumber alloc] initWithDouble:++_baseUUID] stringValue];
   
@@ -214,6 +91,8 @@ static double _baseUUID = 0;
 {
   [_app1 startListening];
   [_app2 startServerWithServerPort:4242];
+  
+  // Simple check that peers are discovered
   
   __block NSDictionary *clientPeer = nil;
   __weak THEMultipeerManager *weakApp2 = _app2;
@@ -511,12 +390,12 @@ static double _baseUUID = 0;
   NSMutableData *receiveBuffer = [[NSMutableData alloc] init];
   NSData *toSend = [[[[NSUUID alloc]init] UUIDString] dataUsingEncoding:NSUTF8StringEncoding];
   XCTestExpectation *receiveExpectation = [self expectationWithDescription:@"client receives it's data"];
-  client->_readHandler = ^void(NSData *data) {
+  [client setReadHandler: ^void(NSData *data) {
       [receiveBuffer appendBytes:[data bytes] length:[data length]];
       if ([receiveBuffer length] == [toSend length]) {
         [receiveExpectation fulfill];
       }
-  };
+  }];
   
   [client write:toSend];
 
@@ -530,5 +409,143 @@ static double _baseUUID = 0;
   XCTAssertTrue([toSend isEqualToData:receiveBuffer]);
 }
 
+
+- (void)testCanSendDataBackwards
+{
+  TestEchoServer *echoServer1 = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer1 start:4141]);
+
+  TestEchoServer *echoServer2 = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer2 start:4242]);
+  
+  // app2 > app1 therefore app1 can only connect to app2 via a reverse connection
+  
+  [_app1 startListening];
+  [_app1 startServerWithServerPort:4141];
+  
+  [_app2 startListening];
+  [_app2 startServerWithServerPort:4242];
+
+  // First, we wait for app1 to discover app2
+  
+  __block NSDictionary *clientPeer = nil;
+  XCTestExpectation *clientExpectation = [self expectationWithDescription:@"client peerAvailabilityHandler is called"];
+  
+  __weak THEMultipeerManager *weakApp2 = _app2;
+  _app1Handler->_didFindPeerHandler = ^void(NSDictionary *p)
+  {
+    // Screen out the ghosts (dead sessions still floating around the ether)
+    if ([p[@"peerIdentifier"] isEqual: [weakApp2 localPeerIdentifier]])
+    {
+      clientPeer = p;
+      [clientExpectation fulfill];
+    }
+  };
+  
+  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+  
+
+  // Next we will tell app1 to connect to app2, since app1 < app2 this will force a reverse
+  // connection i.e. app2 will see the invite from app1 and reject it but signal to user land
+  // that a connection is being requested via pleaseConnect in the peerAvailibility event
+  // User code receiving that event will then initiate the reverse connection.
+  
+  __block NSString *serverConnectError;
+  __block NSDictionary *serverPeer = nil;
+  __block NSDictionary *serverConnectDetails = nil;
+
+  // Set up the handler user-land handler for app2 to process the connect request
+  
+  __weak THEMultipeerManager *weakApp1 = _app1;
+  XCTestExpectation *serverExpectation = [self expectationWithDescription:@"server peerAvailabilityHandler is called"];
+  _app2Handler->_didFindPeerHandler = ^void(NSDictionary *p)
+  {
+    if ([p[@"peerIdentifier"] isEqual: [weakApp1 localPeerIdentifier]])
+    {
+      serverPeer = p;
+      if ([(NSNumber *)serverPeer[@"pleaseConnect"] compare:@YES] == NSOrderedSame)
+      {
+        [weakApp2 connectToPeerWithPeerIdentifier:serverPeer[@"peerIdentifier"]
+          withConnectCallback:^void(NSString *error, NSDictionary *connection) {
+            serverConnectError = error;
+            serverConnectDetails = connection;
+            if (serverConnectDetails) {
+              [serverExpectation fulfill];
+            }
+          }
+        ];
+      }
+    }
+  };
+
+  // Start the process by having app1 request connect to app2. Once the reverse connection is
+  // established we expect our connectCallback to be called in the normal manner, albeit with
+  // a different set of parameters.
+  
+  __block NSString *clientConnectError;
+  __block NSDictionary *clientConnectDetails;
+  XCTestExpectation *connectExpectation = [self expectationWithDescription:@"connect should succeed"];
+  [_app1 connectToPeerWithPeerIdentifier:clientPeer[@"peerIdentifier"]
+                    withConnectCallback:^void(NSString *error, NSDictionary *connection)
+    {
+      clientConnectError = error;
+      clientConnectDetails = connection;
+      if (clientConnectDetails) {
+        [connectExpectation fulfill];
+    }
+  }];
+  
+
+  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+
+  // Connect to the local server on *app2*
+  unsigned short serverPort = [serverConnectDetails[@"listeningPort"] intValue];
+  XCTestExpectation *serverConnectExpectation = [self expectationWithDescription:@"client connect should succeed"];
+
+  TestEchoClient *client = [[TestEchoClient alloc]
+    initWithPort:serverPort withConnectHandler:^void(void) {
+      [serverConnectExpectation fulfill];
+  }];
+  
+  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+  
+  // Expect to have data written echoed back
+  NSMutableData *receiveBuffer = [[NSMutableData alloc] init];
+  NSData *toSend = [[[[NSUUID alloc]init] UUIDString] dataUsingEncoding:NSUTF8StringEncoding];
+  XCTestExpectation *receiveExpectation = [self expectationWithDescription:@"client receives it's data"];
+  [client setReadHandler: ^void(NSData *data) {
+      [receiveBuffer appendBytes:[data bytes] length:[data length]];
+      if ([receiveBuffer length] == [toSend length]) {
+        [receiveExpectation fulfill];
+      }
+  }];
+  
+  [client write:toSend];
+
+  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+  // Check we got what we send
+  XCTAssertTrue([toSend isEqualToData:receiveBuffer]);
+  
+  [echoServer2 stop];
+  [echoServer1 stop];
+}
 
 @end
