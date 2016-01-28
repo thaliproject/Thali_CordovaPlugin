@@ -11,7 +11,7 @@ var SECP256K1 = 'secp256k1';
 TODO: Revisit GCM when available in JXcore
 http://code.runnable.com/VGaBmn68rzMa5p9K/aes-256-gcm-nodejs-encryption-for-node-js-and-hello-world
 */
-var GCM = 'aes-128';
+var GCM = 'aes128';
 
 /*
 Latest version of spec https://github.com/thaliproject/thali/blob/gh-pages/pages/documentation/PresenceProtocolForOpportunisticSynching.md
@@ -37,14 +37,13 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
     var ke = crypto.createECDH(SECP256K1);
 
     // Generate preamble
-    var kePublic = ke.generateKeys();
+    var pubKe = ke.generateKeys();
     var expirationLong = Long.fromNumber(secondsUntilExpiration);
     var expiration = new Buffer(8);
-    expiration.fill(0);
     expiration.writeInt32BE(expirationLong.high, 0);
     expiration.writeInt32BE(expirationLong.low, 4);
 
-    beacons.push(Buffer.concat(kePublic, expiration));
+    beacons.push(Buffer.concat(pubKe, expiration));
 
     // UnencryptedKeyId = SHA256(Kx.public().encode()).first(16)
     var unencryptedKeyId = crypto.createHash(SHA256);
@@ -52,26 +51,24 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
     unencryptedKeyId = unencryptedKeyId.digest().slice(0, 16);
 
     for (var i = 0, len = publicKeysToNotify.length; i < len; i++) {
-      var pubKey = publicKeysToNotify[i];
+      var pubKy = publicKeysToNotify[i];
 
       // Sxy = ECDH(Kx.private(), PubKy)
-      var sxy = crypto.createECDH(SECP256K1);
-      sxy.setPrivateKey(ecdhForLocalDevice.getPrivateKey());
-      sxy = sxy.computeSecret(pubKey);
+      var sxy = ecdhForLocalDevice.computeSecret(pubKy);
 
       // HKxy = HKDF(SHA256, Sxy, Expiration, 32)
-      var hkxy = HKDF(SHA256, sxy, secondsUntilExpiration).derive('', 32);
+      var hkxy = HKDF(SHA256, sxy, expiration).derive('', 32);
 
       // BeaconHmac = HMAC(SHA256, HKxy, Expiration).first(16)
       var beaconHmac = crypto.createHmac('sha256', hkxy);
-      beaconHmac.update(secondsUntilExpiration);
+      beaconHmac.update(expiration);
       beaconHmac = beaconHmac.digest().slice(0, 16);
 
       // Sey = ECDH(Ke.private(), PubKy)
-      var sey = ke.computeSecret(pubKey);
+      var sey = ke.computeSecret(pubKy);
 
       // KeyingMaterial = HKDF(SHA256, Sey, Expiration, 32)
-      var keyingMaterial = HKDF(SHA256, sey, secondsUntilExpiration).derive('', 32);
+      var keyingMaterial = HKDF(SHA256, sey, expiration).derive('', 32);
 
       // IV = KeyingMaterial.slice(0,16)
       var iv = keyingMaterial.slice(0, 16);
@@ -98,7 +95,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
  * function is used to retrieve the full public key so that the beacon validation process can complete.
  * @callback addressBookCallback
  * @param {Buffer} unencryptedKeyId - This is a Buffer containing the unencryptedKeId
- * @returns {string} - The base64 encoded public key associated with the unecryptedKeyId or null if the remove peer is
+ * @returns {Buffer} - The base64 encoded public key associated with the unecryptedKeyId or null if the remove peer is
  * not one the local peer recognizes or wishes to communicate with
  */
 
@@ -115,10 +112,77 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 NotificationBeacons.prototype.parseBeacons =
   function(beaconStreamWithPreAmble, ecdhForLocalDevice, addressBookCallback) {
 
+    var chunkSize = 48, len = beaconStreamWithPreAmble.length;
 
+    // Ensure that is an ECDH secp256k1 public key
+    var pubKe = beaconStreamWithPreAmble.slice(0, 65);
+    if (pubKe.length !== 65) {
+      throw new Error('Preamble public key must be from ECDH secp256k1');
+    }
 
-    // Unlike the pseudo code this function assumes it will be passed the entire preamble and beacon stream. Therefore
-    // the PubKe and the expiration can be parsed out of the beaconStreamWithPreAmble as defined in the spec.
+    // Ensure that expiration is 64-bit integer
+    var expiration = beaconStreamWithPreAmble.slice(65, 8);
+    if (expiration !== 8) {
+      throw new Error('Preamble expiration must be a 64 bit integer');
+    }
+
+    for (var i = 73; i < len; i += chunkSize) {
+      // encryptedBeaconKeyId = beaconStream.read(48)
+      var encryptedBeaconKeyId = beaconStreamWithPreAmble.slice(i, i + chunkSize);
+      if (encryptedBeaconKeyId.length !== 48) {
+        throw new Error('Malformed encyrpted beacon key ID');
+      }
+
+      // Sey = ECDH(Ky.private, PubKe)
+      var sey = ecdhForLocalDevice.computeSecret(pubKe);
+
+      // KeyingMaterial = HKDF(SHA256, Sey, Expiration, 32)
+      var keyingMaterial = HKDF(SHA256, sey, expiration).derive('', 32);
+
+      // IV = KeyingMaterial.slice(0,16)
+      var iv = keyingMaterial.slice(0, 16);
+
+      // HKey = KeyingMaterial.slice(16, 32)
+      var hkey = keyingMaterial.slice(16, 32);
+
+      // UnencryptedKeyId = AESDecrypt(GCM, HKey, IV, 128, encryptedBeaconKeyId.slice(0, 32))
+      var unencryptedKeyId;
+      try {
+        unencryptedKeyId = crypto.createDecipheriv(GCM, hkey, iv);
+        unencryptedKeyId.udpate(encryptedBeaconKeyId.slice(0, 32));
+        unencryptedKeyId = unencryptedKeyId.digest();
+      } catch (e) {
+        // GCM mac check failed
+        continue;
+      }
+      // PubKx = addressBook.get(UnencryptedKeyId)
+      var pubKx = addressBookCallback(unencryptedKeyId);
+
+      if (pubKx === null) {
+        // Device that claims to have sent the announcement is not recognized
+        // Once we find a matching beacon we stop, even if the sender is unrecognized
+        return null;
+      }
+
+      // BeaconHmac = encryptedBeaconKeyId.slice(32, 48)
+      var beaconHmac = encryptedBeaconKeyId.slice(32, 48);
+
+      // Sxy = ECDH(Ky.private(), PubKx)
+      var sxy = ecdhForLocalDevice.computeSecret(pubKx);
+
+      // HKxy = HKDF(SHA256, Sxy, Expiration, 32)
+      var hkxy = HKDF(SHA256, sxy, expiration).derive('', 32);
+
+      // BeaconHmac.equals(HMAC(SHA256, HKxy, Expiration).first(16)
+      var otherBeaconHmac = crypto.createHmac('sha256', hkxy);
+      otherBeaconHmac.update(expiration);
+      otherBeaconHmac = otherBeaconHmac.digest().slice(0, 16);
+      if (beaconHmac.equals(otherBeaconHmac)) {
+        return unencryptedKeyId;
+      }
+    }
+
+    return null;
 };
 
 module.exports = NotificationBeacons;
