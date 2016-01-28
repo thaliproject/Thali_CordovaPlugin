@@ -6,7 +6,7 @@ var HKDF = require('./hkdf');
 // Constants
 var SHA256 = 'sha256';
 var SECP256K1 = 'secp256k1';
-var GCM = 'aes-128-gcm';
+var GCM = 'aes-128';
 
 /*
 Matt: Please make sure to see if you can find Srikanth's code in Node and of course you can look at the Java source code
