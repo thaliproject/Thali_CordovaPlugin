@@ -51,12 +51,92 @@
 - (void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)acceptedSocket
 {
   [_clientSockets addObject:acceptedSocket];
-  //[acceptedSocket readDataWithTimeout:-1 tag:0];
+  [acceptedSocket readDataWithTimeout:-1 tag:0];
 }
 
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
   [sock writeData:data withTimeout:-1 tag:0];
+}
+
+@end
+
+@interface TestEchoClient : NSObject <GCDAsyncSocketDelegate>
+- (instancetype)initWithSocket:(GCDAsyncSocket *)sock;
+- (instancetype)initWithPort:(unsigned short)serverPort withConnectHandler:(void (^)(void))connectHandler;
+- (void)stop;
+@end
+
+@implementation TestEchoClient
+{
+  GCDAsyncSocket *_socket;
+  void (^_connectHandler)(void);
+@public
+  void (^_readHandler)(NSData *);
+}
+
+- (instancetype)initWithSocket:(GCDAsyncSocket *)sock
+{
+  self = [super init];
+  if (!self)
+  {
+    return nil;
+  }
+
+  _socket = sock;
+
+  return self;
+}
+
+- (instancetype)initWithPort:(unsigned short)serverPort withConnectHandler:(void (^)(void))connectHandler
+{
+  self = [super init];
+  if (!self)
+  {
+    return nil;
+  }
+
+  _socket = [[GCDAsyncSocket alloc] 
+                initWithDelegate:self
+                   delegateQueue:dispatch_get_main_queue()];
+  
+  _connectHandler = connectHandler;
+  [_socket connectToHost:@"127.0.0.1" onPort:serverPort error:nil];
+
+  return self;
+}
+
+- (void)stop
+{
+  if (_socket)
+  {
+    [_socket disconnect];
+    _socket = nil;
+  }
+}
+
+- (void)write:(NSData *)data
+{
+  [_socket writeData:data withTimeout:-1 tag:0];
+}
+
+- (void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
+{
+  [_socket readDataWithTimeout:-1 tag:0];
+
+  if (_connectHandler)
+  {
+    _connectHandler();
+  }
+}
+
+- (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
+{
+  if (_readHandler)
+  {
+    _readHandler(data);
+  }
+  [_socket readDataWithTimeout:-1 tag:0];
 }
 
 @end
@@ -349,6 +429,105 @@ static double _baseUUID = 0;
   
   [echoServer2 stop];
   [echoServer1 stop];
+}
+
+- (void)testCanSendDataForwards
+{
+  TestEchoServer *echoServer1 = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer1 start:4141]);
+
+  TestEchoServer *echoServer2 = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer2 start:4242]);
+  
+  // app2 > app1 therefore app2 can only connect to app2 via a forward connection
+  
+  [_app1 startListening];
+  [_app1 startServerWithServerPort:4141];
+  
+  [_app2 startListening];
+  [_app2 startServerWithServerPort:4242];
+
+  // Straightforward case of app2 connecting to app1
+
+  // First wait for app2 to discover app1
+  
+  __block NSDictionary *clientPeer = nil;
+  __weak THEMultipeerManager *weakApp1 = _app1;
+  XCTestExpectation *clientExpectation = [self expectationWithDescription:@"client peerAvailabilityHandler is called"];
+  _app2Handler->_didFindPeerHandler = ^void(NSDictionary *p)
+  {
+    if ([p[@"peerIdentifier"] isEqual: [weakApp1 localPeerIdentifier]])
+    {
+      clientPeer = p;
+      [clientExpectation fulfill];
+    }
+  };
+  
+  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+  // Now start the connection..
+  __block NSString *clientConnectError;
+  __block NSDictionary *clientConnectDetails;
+  XCTestExpectation *connectExpectation = [self expectationWithDescription:@"connect should succeed"];
+  [_app2 connectToPeerWithPeerIdentifier:clientPeer[@"peerIdentifier"]
+                    withConnectCallback:^void(NSString *error, NSDictionary *connection)
+    {
+      clientConnectError = error;
+      clientConnectDetails = connection;
+      if (clientConnectDetails) {
+        [connectExpectation fulfill];
+    }
+  }];
+  
+
+  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+  // We should now be able to send data over the new connection
+  
+  // Connect to the local server
+  unsigned short serverPort = [clientConnectDetails[@"listeningPort"] intValue];
+  XCTestExpectation *clientConnectExpectation = [self expectationWithDescription:@"client connect should succeed"];
+
+  TestEchoClient *client = [[TestEchoClient alloc]
+    initWithPort:serverPort withConnectHandler:^void(void) {
+      [clientConnectExpectation fulfill];
+  }];
+  
+  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+  
+  // Expect to have data written echoed back
+  NSMutableData *receiveBuffer = [[NSMutableData alloc] init];
+  NSData *toSend = [[[[NSUUID alloc]init] UUIDString] dataUsingEncoding:NSUTF8StringEncoding];
+  XCTestExpectation *receiveExpectation = [self expectationWithDescription:@"client receives it's data"];
+  client->_readHandler = ^void(NSData *data) {
+      [receiveBuffer appendBytes:[data bytes] length:[data length]];
+      if ([receiveBuffer length] == [toSend length]) {
+        [receiveExpectation fulfill];
+      }
+  };
+  
+  [client write:toSend];
+
+  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+  // Check we got what we send
+  XCTAssertTrue([toSend isEqualToData:receiveBuffer]);
 }
 
 
