@@ -141,7 +141,6 @@ static double _baseUUID = 0;
 
   _app1Handler->_didFindPeerHandler = ^void(NSDictionary *p)
   {
-    // Screen out the ghosts (dead sessions still floating around the ether)
     if ([p[@"peerIdentifier"] isEqual: [weakApp2 localPeerIdentifier]])
     {
       clientPeer = p;
@@ -174,17 +173,18 @@ static double _baseUUID = 0;
   [_app1 startListening];
   [_app1 startServerWithServerPort:4141];
   
-  // App2 must be both listening and serving to be able to
-  // make the reverse connection.
   [_app2 startListening];
   [_app2 startServerWithServerPort:4242];
+
+  // Straightforward case of app2 connecting to app1
+
+  // First wait for app2 to discover app1
   
   __block NSDictionary *clientPeer = nil;
   __weak THEMultipeerManager *weakApp1 = _app1;
   XCTestExpectation *clientExpectation = [self expectationWithDescription:@"client peerAvailabilityHandler is called"];
   _app2Handler->_didFindPeerHandler = ^void(NSDictionary *p)
   {
-    // Screen out the ghosts (dead sessions still floating around the ether)
     if ([p[@"peerIdentifier"] isEqual: [weakApp1 localPeerIdentifier]])
     {
       clientPeer = p;
@@ -198,8 +198,7 @@ static double _baseUUID = 0;
     }
   }];
 
-  _app2Handler = nil;
-
+  // Now start the connection..
   __block NSString *clientConnectError;
   __block NSDictionary *clientConnectDetails;
   XCTestExpectation *connectExpectation = [self expectationWithDescription:@"connect should succeed"];
@@ -220,7 +219,8 @@ static double _baseUUID = 0;
     }
   }];
 
-  // This was a reverse connection, check details match
+  // This should have been a forward connection, check details match
+  
   XCTAssertTrue(clientConnectDetails[@"listeningPort"] != nil);
   XCTAssertTrue([clientConnectDetails[@"listeningPort"] isKindOfClass:[NSNumber class]]);
   XCTAssertTrue([[clientConnectDetails objectForKey:@"listeningPort"] intValue] != 0);
@@ -250,10 +250,10 @@ static double _baseUUID = 0;
   [_app1 startListening];
   [_app1 startServerWithServerPort:4141];
   
-  // App2 must be both listening and serving to be able to
-  // make the reverse connection.
   [_app2 startListening];
   [_app2 startServerWithServerPort:4242];
+
+  // First, we wait for app1 to discover app2
   
   __block NSDictionary *clientPeer = nil;
   XCTestExpectation *clientExpectation = [self expectationWithDescription:@"client peerAvailabilityHandler is called"];
@@ -275,17 +275,22 @@ static double _baseUUID = 0;
     }
   }];
   
-  _app1Handler = nil;
+
+  // Next we will tell app1 to connect to app2, since app1 < app2 this will force a reverse
+  // connection i.e. app2 will see the invite from app1 and reject it but signal to user land
+  // that a connection is being requested via pleaseConnect in the peerAvailibility event
+  // User code receiving that event will then initiate the reverse connection.
   
   __block NSString *serverConnectError;
   __block NSDictionary *serverPeer = nil;
   __block NSDictionary *serverConnectDetails = nil;
 
+  // Set up the handler user-land handler for app2 to process the connect request
+  
   __weak THEMultipeerManager *weakApp1 = _app1;
   XCTestExpectation *serverExpectation = [self expectationWithDescription:@"server peerAvailabilityHandler is called"];
   _app2Handler->_didFindPeerHandler = ^void(NSDictionary *p)
   {
-    // Screen out the ghosts (dead sessions still floating around the ether)
     if ([p[@"peerIdentifier"] isEqual: [weakApp1 localPeerIdentifier]])
     {
       serverPeer = p;
@@ -304,7 +309,10 @@ static double _baseUUID = 0;
     }
   };
 
-
+  // Start the process by having app1 request connect to app2. Once the reverse connection is
+  // established we expect our connectCallback to be called in the normal manner, albeit with
+  // a different set of parameters.
+  
   __block NSString *clientConnectError;
   __block NSDictionary *clientConnectDetails;
   XCTestExpectation *connectExpectation = [self expectationWithDescription:@"connect should succeed"];
@@ -325,7 +333,8 @@ static double _baseUUID = 0;
     }
   }];
 
-  // This was a reverse connection, check details match
+  // This should have been a reverse connection, check the details are what we expect
+  
   XCTAssertTrue(clientConnectDetails[@"listeningPort"] != nil);
   XCTAssertTrue([clientConnectDetails[@"listeningPort"] isKindOfClass:[NSNumber class]]);
   XCTAssertTrue([[clientConnectDetails objectForKey:@"listeningPort"] intValue] == 0);

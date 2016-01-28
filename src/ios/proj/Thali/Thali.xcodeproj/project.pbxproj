@@ -61,7 +61,6 @@
 		D401729E1C5114840072022A /* THEPeerBluetoothDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = THEPeerBluetoothDelegate.h; path = ../../THEPeerBluetoothDelegate.h; sourceTree = "<group>"; };
 		D401729F1C5114840072022A /* THEPeerDiscoveryDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = THEPeerDiscoveryDelegate.h; path = ../../THEPeerDiscoveryDelegate.h; sourceTree = "<group>"; };
 		D40172A01C5114840072022A /* THEThaliEventDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = THEThaliEventDelegate.h; path = ../../THEThaliEventDelegate.h; sourceTree = "<group>"; };
-		D4553BA81C52ADC700AA8C30 /* TestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = TestApp.app; path = "/Users/tobe/src/Thali_CordovaPlugin/src/ios/proj/Thali/build/Debug-iphoneos/TestApp.app"; sourceTree = "<absolute>"; };
 		D4553BAB1C52ADC700AA8C30 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		D4553BAD1C52ADC700AA8C30 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		D4553BAE1C52ADC700AA8C30 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -71,7 +70,6 @@
 		D4553BB61C52ADC700AA8C30 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D4553BB91C52ADC700AA8C30 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		D4553BBB1C52ADC700AA8C30 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D4553BC01C52ADC700AA8C30 /* TestAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = TestAppTests.xctest; path = "/Users/tobe/src/Thali_CordovaPlugin/src/ios/proj/Thali/build/Debug-iphoneos/TestAppTests.xctest"; sourceTree = "<absolute>"; };
 		D4553BC41C52ADC700AA8C30 /* ThaliSingleInstanceTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ThaliSingleInstanceTests.m; sourceTree = "<group>"; };
 		D4553BC61C52ADC700AA8C30 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D4553BCF1C52B4F000AA8C30 /* MultipeerConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MultipeerConnectivity.framework; path = System/Library/Frameworks/MultipeerConnectivity.framework; sourceTree = SDKROOT; };
@@ -83,6 +81,8 @@
 		D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEProtectedMutableDictionary.m; path = ../../Utility/THEProtectedMutableDictionary.m; sourceTree = "<group>"; };
 		D4B4605A1C51154000940B96 /* THESessionDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THESessionDictionary.m; path = ../../Utility/THESessionDictionary.m; sourceTree = "<group>"; };
 		D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThaliMultipleInstanceTests.m; sourceTree = "<group>"; };
+		D4F8E5481C5A58B700349C01 /* TestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = TestApp.app; path = "/Users/tobe/src/Thali_CordovaPlugin/src/ios/proj/Thali/build/Debug-iphoneos/TestApp.app"; sourceTree = "<absolute>"; };
+		D4F8E5491C5A58B700349C01 /* TestAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = TestAppTests.xctest; path = "/Users/tobe/src/Thali_CordovaPlugin/src/ios/proj/Thali/build/Debug-iphoneos/TestAppTests.xctest"; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -187,7 +187,7 @@
 			);
 			name = TestApp;
 			productName = TestApp;
-			productReference = D4553BA81C52ADC700AA8C30 /* TestApp.app */;
+			productReference = D4F8E5481C5A58B700349C01 /* TestApp.app */;
 			productType = "com.apple.product-type.application";
 		};
 		D4553BBF1C52ADC700AA8C30 /* TestAppTests */ = {
@@ -205,7 +205,7 @@
 			);
 			name = TestAppTests;
 			productName = TestAppTests;
-			productReference = D4553BC01C52ADC700AA8C30 /* TestAppTests.xctest */;
+			productReference = D4F8E5491C5A58B700349C01 /* TestAppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
