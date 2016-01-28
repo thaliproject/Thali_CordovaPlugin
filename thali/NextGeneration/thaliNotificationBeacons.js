@@ -35,7 +35,10 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 
     var ke = crypto.createECDH(SECP256K1);
 
-    // TODO: Look at long.js https://www.npmjs.com/package/long
+    // TODO: Generate preamble
+    var kePublic = ke.generateKeys();
+    // Look at long.js https://www.npmjs.com/package/long
+    beacons.push(kePublic /* + expiration */);
 
     var unencryptedKeyIdHash = crypto.createHash(SHA256);
     unencryptedKeyIdHash.update(ecdhForLocalDevice.getPublicKey());
