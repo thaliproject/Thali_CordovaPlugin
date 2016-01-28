@@ -380,6 +380,8 @@ public class ConnectionHelper
             }
 
             if (newIncomingSocketThread != null) {
+                lowerBleDiscoveryPowerAndStartResetTimer();
+
                 newIncomingSocketThread.setDefaultUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
                 newIncomingSocketThread.setPeerProperties(peerProperties);
                 newIncomingSocketThread.setHttpPort(mServerPort);
@@ -445,6 +447,8 @@ public class ConnectionHelper
             }
 
             if (newOutgoingSocketThread != null) {
+                lowerBleDiscoveryPowerAndStartResetTimer();
+
                 newOutgoingSocketThread.setDefaultUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
                 newOutgoingSocketThread.setPeerProperties(peerProperties);
                 mPeerAndConnectionModel.addConnectionThread(newOutgoingSocketThread);
