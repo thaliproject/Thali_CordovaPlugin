@@ -66,21 +66,38 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
   var testClient = new nodessdp.Client();
 
   var firstUSN = null;
+  var secondUSN = null
   testClient.on('advertise-alive', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
-    if (data.NT === THALI_NT) {
-      if (firstUSN !== null) {
-        t.notEqual(firstUSN, data.USN, 'USN should have changed from the first one');
-        testClient.stop(function () {
-          t.end();
-        });
-      } else {
-        firstUSN = data.USN;
-        // This is the second call to the update function and after
-        // this call, the USN value should have been changed.
-        wifiInfrastructure.startUpdateAdvertisingAndListening();
-      }
+    if (data.NT !== THALI_NT) {
+      return;
+    }
+    if (firstUSN !== null) {
+      secondUSN = data.USN;
+      t.notEqual(firstUSN, secondUSN, 'USN should have changed from the first one');
+      wifiInfrastructure.stopAdvertisingAndListening();
+    } else {
+      firstUSN = data.USN;
+      // This is the second call to the update function and after
+      // this call, the USN value should have been changed.
+      wifiInfrastructure.startUpdateAdvertisingAndListening();
+    }
+  });
+  testClient.on('advertise-bye', function (data) {
+    // Check for the Thali NT in case there is some other
+    // SSDP traffic in the network.
+    if (data.NT !== THALI_NT) {
+      return;
+    }
+    if (data.USN === firstUSN) {
+      t.equals(secondUSN, null, 'when receiving the first byebye, the second USN should not be set yet');
+    }
+    if (data.USN === secondUSN) {
+      t.ok(firstUSN, 'when receiving the second byebye, the first USN should be already set');
+      testClient.stop(function () {
+        t.end();
+      });
     }
   });
 

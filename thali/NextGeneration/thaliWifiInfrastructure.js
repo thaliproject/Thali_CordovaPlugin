@@ -346,49 +346,62 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
     if (!self.router) {
       return reject(new Error('Bad Router'));
     }
+
+    // Generate a new USN value to flag that something has changed
+    // in this peer.
     self.usn = 'urn:uuid:' + uuid.v4();
-    self._server.setUSN(self.usn);
+
     if (self.advertising === true) {
-      return resolve();
-    }
-    self.expressApp = express();
-    try {
-      self.expressApp.use('/', self.router);
-    } catch (error) {
-      logger.error('Unable to use the given router: %s', error.toString());
-      return reject(new Error('Bad Router'));
-    }
-    var startErrorListener = function (error) {
-      logger.error('Router server emitted an error: %s', error.toString());
-      self.routerServer.removeListener('error', startErrorListener);
-      self.routerServer = null
-      reject(new Error('Unspecified Error with Radio infrastructure'));
-    };
-    self.routerServerErrorListener = function (error) {
-      // Error is only logged, because it was determined this should
-      // not occur in normal use cases and it wasn't worthwhile to
-      // specify a custom error that the upper layers should listen to.
-      // If this error is seen in real scenario, a proper error handling
-      // should be specified and implemented.
-      logger.error('Router server emitted an error: %s', error.toString());
-    };
-    var listeningHandler = function () {
-      self.port = self.routerServer.address().port;
-      // We need to update the location string, because the port
-      // may have changed when we re-start the router server.
-      self._setLocation();
-      self._server.start(function () {
-        // Remove the error listener we had during the resolution of this
-        // promise and add one that is listening for errors that may
-        // occur any time.
-        self.routerServer.removeListener('error', startErrorListener);
-        self.routerServer.on('error', self.routerServerErrorListener);
-        self.advertising = true;
-        return resolve();
+      // If we were already advertising, we need to restart the server
+      // so that a byebye is issued for the old USN and and alive
+      // message for the new one.
+      self._server.stop(function () {
+        self._server.setUSN(self.usn);
+        self._server.start(function () {
+          return resolve();
+        });
       });
-    };
-    self.routerServer = self.expressApp.listen(self.port, listeningHandler);
-    self.routerServer.on('error', startErrorListener);
+    } else {
+      self.expressApp = express();
+      try {
+        self.expressApp.use('/', self.router);
+      } catch (error) {
+        logger.error('Unable to use the given router: %s', error.toString());
+        return reject(new Error('Bad Router'));
+      }
+      var startErrorListener = function (error) {
+        logger.error('Router server emitted an error: %s', error.toString());
+        self.routerServer.removeListener('error', startErrorListener);
+        self.routerServer = null
+        reject(new Error('Unspecified Error with Radio infrastructure'));
+      };
+      self.routerServerErrorListener = function (error) {
+        // Error is only logged, because it was determined this should
+        // not occur in normal use cases and it wasn't worthwhile to
+        // specify a custom error that the upper layers should listen to.
+        // If this error is seen in real scenario, a proper error handling
+        // should be specified and implemented.
+        logger.error('Router server emitted an error: %s', error.toString());
+      };
+      var listeningHandler = function () {
+        self.port = self.routerServer.address().port;
+        self._server.setUSN(self.usn);
+        // We need to update the location string, because the port
+        // may have changed when we re-start the router server.
+        self._setLocation();
+        self._server.start(function () {
+          // Remove the error listener we had during the resolution of this
+          // promise and add one that is listening for errors that may
+          // occur any time.
+          self.routerServer.removeListener('error', startErrorListener);
+          self.routerServer.on('error', self.routerServerErrorListener);
+          self.advertising = true;
+          return resolve();
+        });
+      };
+      self.routerServer = self.expressApp.listen(self.port, listeningHandler);
+      self.routerServer.on('error', startErrorListener);
+    }
   });
 };
 
