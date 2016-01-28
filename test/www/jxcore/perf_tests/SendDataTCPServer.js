@@ -3,8 +3,8 @@
 var net = require('net');
 
 var logger = function (value) {
-    console.log(new Date().toJSON() + ' SendDataTCPServer.js: ' + value);
-}
+  //console.log(new Date().toJSON() + ' SendDataTCPServer.js: ' + value);
+};
 
 function SendDataTCPServer(port) {
     var self = this;

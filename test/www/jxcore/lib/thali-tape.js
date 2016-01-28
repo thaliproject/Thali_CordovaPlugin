@@ -29,16 +29,18 @@ process.on('uncaughtException', function(err) {
   console.log(err.stack);
   console.log("****TEST TOOK:  ms ****" );
   console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
+  process.exit(1);
 });
 
 process.on('unhandledRejection', function(err) {
   console.log("Uncaught Promise Rejection: " + JSON.stringify(err));
+  console.trace(err);
   console.log("****TEST TOOK:  ms ****" );
   console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
+  process.exit(1);
 });
 
 var tests = {};
-var deviceName = "UNITTEST-" + Math.random();
 
 function declareTest(testServer, name, setup, teardown, opts, cb) {
 
@@ -55,8 +57,10 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
   tape('setup', function(t) {
     // Run setup function when the testServer tells us
     testServer.once("setup", function(_name) {
+      t.on('end', function() {
+        testServer.emit('setup_complete', JSON.stringify({"test":_name}));
+      });
       setup(t);
-      testServer.emit('setup_complete', JSON.stringify({"test":_name}));
     });
   });
 
@@ -82,8 +86,10 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
   tape("teardown", function(t) {
     // Run teardown function when the server tells us
     testServer.once("teardown", function(_name) {
+      t.on('end', function() {
+        testServer.emit('teardown_complete', JSON.stringify({"test":_name}));
+      });
       teardown(t);
-      testServer.emit('teardown_complete', JSON.stringify({"test":_name}));
     }); 
   });
 };
@@ -173,8 +179,14 @@ thaliTape.begin = function() {
     transports: ['websocket']
   };
 
-  var uuid = uuid.v4();
   var testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
+
+  testServer.once('discard', function() {
+    // This device not needed, log appropriately so CI doesn't think we've failed
+    console.log("--= Surplus to requirements =--");
+    console.log("****TEST TOOK:  ms ****");
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
+  });
 
   testServer.on('error', function (data) {
     var errData = JSON.parse(data);
@@ -213,17 +225,20 @@ thaliTape.begin = function() {
       platform = 'ios';
     }
 
+    var _uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
       "os": platform, 
-      "name": deviceName,
-      "uuid": uuid,
+      "name": testUtils.getName(),
+      "uuid": _uuid,
       "type": 'unittest',
       "tests": Object.keys(tests)
     }));
   });
 }
 
-if (typeof jxcore == 'undefined' || jxcore.utils.OSInfo().isMobile)
+if (typeof jxcore === 'undefined' ||
+    jxcore.utils.OSInfo().isMobile ||
+    (typeof Mobile !== 'undefined' && Mobile.iAmAMock))
 {
   // On mobile, or outside of jxcore (some dev scenarios) we use server-coordinated thaliTape
   exports = thaliTape;
