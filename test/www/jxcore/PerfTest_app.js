@@ -37,22 +37,8 @@ function getDeviceCharacteristics(cb) {
           if (!myName || !bluetoothAddress) {
             console.log('An error while getting the device characteristics!');
           }
-          testUtils.setMyName(myName);
+          testUtils.setName(myName);
           cb(myName, bluetoothAddress);
-
-          // Below is only for logging purposes.
-          // Once we have had the BT off and we just turned it on,
-          // we need to wait untill the BLE support is reported rigth way
-          // seen with LG G4, Not seen with Motorola Nexus 6.
-          setTimeout(function () {
-            Mobile('IsBLESupported').callNative(function (err) {
-              if (err) {
-                console.log('BLE is not supported: ' + err );
-                return;
-              }
-              console.log("BLE is supported");
-            });
-          }, 5000);
         });
       });
     });
@@ -60,7 +46,7 @@ function getDeviceCharacteristics(cb) {
     Mobile('GetDeviceName').callNative(function (deviceName) {
       // In case of iOS, the device name is used directly, because
       // the one returned in the one that user can set.
-      testUtils.setMyName(deviceName);
+      testUtils.setName(deviceName);
       cb(deviceName, null);
     });
   }

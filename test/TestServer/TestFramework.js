@@ -39,7 +39,7 @@ function TestFramework(testConfig, userConfig, _logger) {
   // of devices
   Object.keys(this.userConfig).forEach(function(platform) {
     // -1 indicates to inherit from testConfig (i.e. all available)
-    if (self.userConfig[platform].numDevices != -1) {
+    if (self.userConfig[platform].numDevices && self.userConfig[platform].numDevices !== -1) {
       self.requiredDevices[platform] = self.userConfig[platform].numDevices;
     }
   });
@@ -93,14 +93,14 @@ TestFramework.prototype.addDevice = function(device) {
   } else if (this.devices[device.platform].length >= this.requiredDevices[device.platform]) {
     // Discard surplus devices..
     logger.info("Discarding surplus device: %s", device.deviceName);
+    this.removeDevice(device);
     device.socket.emit("discard");
   }
 }
 
-TestFramework.prototype.removeDevice = function(device) {
+TestFramework.prototype.removeDevice = function (device) {
   var i = this.devices[device.platform].indexOf(device);
   this.devices[device.platform].splice(i, 1);
-  assert(this.devices[device.platform].indexOf(device) == -1);
-}
+};
 
 module.exports = TestFramework;

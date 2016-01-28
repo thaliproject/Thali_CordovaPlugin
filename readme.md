@@ -44,7 +44,7 @@ Follow the instructions at [http://jxcore.com/downloads/](http://jxcore.com/down
 installation worked:
 ```
 $ jx -jxv
-v 0.3.0.5
+v 0.3.1.0
 ```
 
 ### Install Cordova
@@ -66,17 +66,16 @@ $ cordova create ThaliTest com.test.thalitest ThaliTest
 
 To use Thali in a Cordova project one must do the following:
 
-5. Make sure to add whatever platforms you are using in Cordova using `cordova platform add` (android | ios)
-1. Add a subfolder to www named jxcore (case sensitivity matters)
-2. Inside the jxcore folder create the app.js for your application
-3. Inside the jxcore folder create the package.json for your application
+1. Make sure to add whatever platforms you are using in Cordova using `cordova platform add` (android | ios)
+2. Add a subfolder to www named jxcore (case sensitivity matters)
+3. Inside the jxcore folder create the app.js for your application
+4. Inside the jxcore folder create the package.json for your application
  * `jx npm init` provides an easy to use wizard that will create a basic package.json file
-4. Inside the jxcore folder run the command `jx install thali --autoremove "*.gz" --save`
-5. Make sure to run `cordova build` as this is critical to moving key files into place
- * Yes, an exception did get thrown during the build. No, it isn't harmful. No, we haven't quite figured out
- why it gets thrown, the verbose debug logs aren't saying anything useful.
+5. Inside the jxcore folder run the command `jx install thali --autoremove "*.gz" --save`
+6. Make sure to run `cordova build` as this is critical to moving key files into place
 
-Now you can run your app.
+Now you can run your app. The Android devices need to have OS version Lollipop or later for things to work properly
+(Thali uses class `BluetoothLeAdvertiser`, which was added in API level 21).
 
 Note that Thali uses a subdirectory in your project called thaliDontCheckin to manage certain downloads. Per the name of the directory, please don't check it in to your repro.
 

@@ -228,7 +228,7 @@ module.exports.connectionTypes = {
  * a peer being available over Android before we declare them gone?
  *
  * __Open Issue:__ A really obvious optimization would be to hook this code
- * into the {@link module:TCPServersManager} so it could see if we have a
+ * into the {@link module:tcpServersManager} so it could see if we have a
  * Bluetooth or MPCF connection running with a particular peer. If we do then
  * obviously we wouldn't want to declare them gone even if we don't see them on
  * BLE or if MPCF told us they were gone.

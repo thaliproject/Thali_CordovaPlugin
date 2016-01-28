@@ -33,7 +33,7 @@ var somePeer = {
 };
 var testPort = 8889;
 
-test('#connector should fail if server not running', function (t) {
+test('connector should fail if server not running', function (t) {
   var retryCount = 0; // Make it 0 so that we fail after first attempt
   var sendDataConnector = new SendDataConnector(1, 0, 0, retryCount, 0);
 
@@ -46,7 +46,7 @@ test('#connector should fail if server not running', function (t) {
   sendDataConnector.Start(somePeer);
 });
 
-test('#connector should be able to send data to a running server', function (t) {
+test('connector should be able to send data to a running server', function (t) {
   var retryTimeout = 200;
   var dataAmount = 1000000; // amount in bytes
   var sendDataConnector = new SendDataConnector(1, dataAmount, retryTimeout, 0, 0);
@@ -63,8 +63,8 @@ test('#connector should be able to send data to a running server', function (t) 
 });
 
 var numberOfPeers = 5;
-test('#should run test with ' + numberOfPeers + ' peers', function (t) {
-  console.log("---------------------------");
+
+test('should run test with ' + numberOfPeers + ' peers', function (t) {
   var testData = {
     'timeout': 1500000,
     'rounds': 1,
