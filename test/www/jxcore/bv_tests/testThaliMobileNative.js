@@ -59,7 +59,7 @@ test('Can call start/stopUpdateAdvertisingAndListening', function (t) {
   });
 });
 
-test('Calling startUpdateAdvertisingAndListeningForIncomingConnections twice is NOT and error', 
+test('Calling startUpdateAdvertisingAndListening twice is NOT and error', 
 function (t) {
   Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
