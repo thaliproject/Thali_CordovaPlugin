@@ -6,13 +6,15 @@ var HKDF = require('./hkdf');
 // Constants
 var SHA256 = 'sha256';
 var SECP256K1 = 'secp256k1';
+/*
+TODO: Revisit GCM when available in JXcore
+http://code.runnable.com/VGaBmn68rzMa5p9K/aes-256-gcm-nodejs-encryption-for-node-js-and-hello-world
+*/
 var GCM = 'aes-128';
 
 /*
-Matt: Please make sure to see if you can find Srikanth's code in Node and of course you can look at the Java source code
-and tests linked to in the spec, the latest version of which is at https://github.com/thaliproject/thali/blob/yaronyg-patch-4/presenceprotocolforopportunisticsynching.md
- */
-
+Latest version of spec https://github.com/thaliproject/thali/blob/gh-pages/pages/documentation/PresenceProtocolForOpportunisticSynching.md
+*/
 function NotificationBeacons() {}
 
 /**
@@ -29,86 +31,61 @@ function NotificationBeacons() {}
  */
 NotificationBeacons.prototype.generatePreambleAndBeacons =
   function(publicKeysToNotify, ecdhForLocalDevice, secondsUntilExpiration) {
-    // http://code.runnable.com/VGaBmn68rzMa5p9K/aes-256-gcm-nodejs-encryption-for-node-js-and-hello-world
-
     var beacons = [];
 
     var ke = crypto.createECDH(SECP256K1);
 
-    // TODO: Generate preamble
+    // Generate preamble
     var kePublic = ke.generateKeys();
-    // Look at long.js https://www.npmjs.com/package/long
-    beacons.push(kePublic /* + expiration */);
+    var expiration = new Buffer(8); // Ensure 64-bit integer buffer
+    expiration.fill(0);             // Don't be stupid and not zero the buffer
+    expiration.writeUInt32BE(secondsUntilExpiration >> 8, 0);     // Write the high order bits
+    expiration.writeUInt32BE(secondsUntilExpiration & 0x00ff, 4); // Write the low order bits
+    beacons.push(Buffer.concat(kePublic, expiration));
 
-    var unencryptedKeyIdHash = crypto.createHash(SHA256);
-    unencryptedKeyIdHash.update(ecdhForLocalDevice.getPublicKey());
-    var unencryptedKeyId = unencryptedKeyIdHash.digest().slice(0, 16);
+    // UnencryptedKeyId = SHA256(Kx.public().encode()).first(16)
+    var unencryptedKeyId = crypto.createHash(SHA256);
+    unencryptedKeyId.update(ecdhForLocalDevice.getPublicKey());
+    unencryptedKeyId = unencryptedKeyId.digest().slice(0, 16);
 
     for (var i = 0, len = publicKeysToNotify.length; i < len; i++) {
       var pubKey = publicKeysToNotify[i];
 
+      // Sxy = ECDH(Kx.private(), PubKy)
       var sxy = crypto.createECDH(SECP256K1);
       sxy.setPrivateKey(ecdhForLocalDevice.getPrivateKey());
       sxy = sxy.computeSecret(pubKey);
 
+      // HKxy = HKDF(SHA256, Sxy, Expiration, 32)
       var hkxy = HKDF(SHA256, sxy, secondsUntilExpiration).derive('', 32);
 
+      // BeaconHmac = HMAC(SHA256, HKxy, Expiration).first(16)
       var beaconHmac = crypto.createHmac('sha256', hkxy);
       beaconHmac.update(secondsUntilExpiration);
       beaconHmac = beaconHmac.digest().slice(0, 16);
 
+      // Sey = ECDH(Ke.private(), PubKy)
       var sey = ke.computeSecret(pubKey);
+
+      // KeyingMaterial = HKDF(SHA256, Sey, Expiration, 32)
       var keyingMaterial = HKDF(SHA256, sey, secondsUntilExpiration).derive('', 32);
+
+      // IV = KeyingMaterial.slice(0,16)
       var iv = keyingMaterial.slice(0, 16);
+
+      // HKey = KeyingMaterial.slice(16, 32)
       var hkey = keyingMaterial.slice(16, 32);
 
+      // beacons.append(AESEncrypt(GCM, HKey, IV, 128, UnencryptedKeyId) + BeaconHmac)
       var aes = crypto.createCipheriv(GCM, hkey, iv);
       aes.udpate(unencryptedKeyId);
       aes = aes.digest();
 
-      beacons.push(
-        Buffer.concat(aes, beaconHmac)
-      );
-
-      /*
-      Sxy = ECDH(Kx.private(), PubKy)
-      HKxy = HKDF(SHA256, Sxy, Expiration, 32)
-      BeaconHmac = HMAC(SHA256, HKxy, Expiration).first(16)
-
-      Sey = ECDH(Ke.private(), PubKy)
-      KeyingMaterial = HKDF(SHA256, Sey, Expiration, 32)
-      IV = KeyingMaterial.slice(0,16)
-      HKey = KeyingMaterial.slice(16, 32)
-      beacons.append(AESEncrypt(GCM, HKey, IV, 128, UnencryptedKeyId) + BeaconHmac)
-      */
+      beacons.push(Buffer.concat(aes, beaconHmac));
     }
 
     return new Buffer(beacons);
-
-
-    // This implements the generateBeacons function from the specs. I don't take the IV or Ke as arguments because
-    // those can be generated inside the function.
-    // Note that you will need to use crypto.ECDH to implement this functionality which was introduced in Node 0.12
-    // and isn't in JXcore yet. So for now please just develop using Node 0.12 or Node 4 until we get this back ported
-    // to JXcore. The complication with using Node 0.12 is that it won't have the custom extension we need to
-    // crypto that JXcore provided to support HKDF. See http://jxcore.com/docs/crypto.html#cryptogeneratehkdfbytestogenerate-publickey-salt-digestbuffer
-    // The work around is to use https://www.npmjs.com/package/node-hkdf but we *MUST* remove this quickly because
-    // it doesn't have a published license.
-
 };
-
-/**
- * Generates a single beacon using the specified values.
- * @param {string} publicKey - This is a base64 encoded public key we need to create a beacon for
- * @param {ECDH} ecdhWithPrivateKey - A Crypto.ECDH object initialized with the local device's public and private keys
- * @param {Buffer} IV - The IV to use for this beacon (we use the same IV for all beacons)
- * @param {ECDH} Ke - A Crypto.ECDH object initialized with the public and private ephemeral key
- * @param {Buffer} expirationValue - The calculated expirationValue used the pre-amble that pairs with this beacon
- * @returns {Buffer} - A buffer containing the beacon
- */
-function generateBeacon(publicKey, ecdhWithPrivateKey, IV, Ke, expirationValue) {
-
-}
 
 /**
  * This callback is used to lookup if the public key hash retrieved from a notification beacon belongs to a peer
@@ -134,6 +111,9 @@ function generateBeacon(publicKey, ecdhWithPrivateKey, IV, Ke, expirationValue) 
  */
 NotificationBeacons.prototype.parseBeacons =
   function(beaconStreamWithPreAmble, ecdhForLocalDevice, addressBookCallback) {
+
+    
+
     // Unlike the pseudo code this function assumes it will be passed the entire preamble and beacon stream. Therefore
     // the PubKe and the expiration can be parsed out of the beaconStreamWithPreAmble as defined in the spec.
 };
