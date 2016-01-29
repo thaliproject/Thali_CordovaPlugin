@@ -14,4 +14,4 @@ cd install
 jx npm install
 cd ../../test/www/jxcore
 jx npm link thali
-jx npm install
+jx npm install --no-optional
