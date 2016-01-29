@@ -47,8 +47,8 @@ fi
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
-jx npm test;ERROR_ABORT
-jx npm run test-meta;ERROR_ABORT
+#jx npm test;ERROR_ABORT
+#jx npm run test-meta;ERROR_ABORT
 # Disabled coordinated tests since there was some
 # issue with them in the CI.
 #jx npm run test-coordinated;ERROR_ABORT
@@ -74,7 +74,7 @@ fi
 rm -rf ../ThaliTest;ERROR_ABORT
 
 # Either PerfTest_app.js or UnitTest_app.js
-TEST_TYPE="UnitTest_app.js"
+TEST_TYPE="PerfTest_app.js"
 
 # The line below is really supposed to be 'jx npm run setupUnit -- $SERVER_ADDRESS' but getting the last argument
 # passed through npm run and then into sh script seems to be a step too far. Eventually we could use an

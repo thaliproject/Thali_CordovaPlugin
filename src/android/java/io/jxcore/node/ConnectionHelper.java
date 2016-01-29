@@ -170,14 +170,12 @@ public class ConnectionHelper
      */
     public boolean isBleMultipleAdvertisementSupported() {
         boolean isSupported = false;
-        boolean discoveryManagerWasCreated = (mDiscoveryManager != null);
 
-        if (discoveryManagerWasCreated) {
+        if (mDiscoveryManager != null) {
             isSupported = mDiscoveryManager.isBleMultipleAdvertisementSupported();
         } else {
             DiscoveryManager discoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
             isSupported = discoveryManager.isBleMultipleAdvertisementSupported();
-            discoveryManager = null;
         }
 
         return isSupported;
@@ -206,7 +204,14 @@ public class ConnectionHelper
      * @return Our Bluetooth MAC address or an empty string, if not resolved.
      */
     public String getBluetoothMacAddress() {
-        String bluetoothMacAddress = mDiscoveryManager.getBluetoothMacAddress();
+        String bluetoothMacAddress = null;
+
+        if (mDiscoveryManager != null) {
+            bluetoothMacAddress = mDiscoveryManager.getBluetoothMacAddress();
+        } else {
+            DiscoveryManager discoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
+            bluetoothMacAddress = discoveryManager.getBluetoothMacAddress();
+        }
 
         if (BluetoothUtils.isBluetoothMacAddressUnknown(bluetoothMacAddress)) {
             bluetoothMacAddress = "";
