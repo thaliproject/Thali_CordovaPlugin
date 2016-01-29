@@ -5,11 +5,11 @@ var net = require('net');
 var url = require('url');
 
 var testUtils = require('./testUtils.js');
-var ThaliWifiInfrastructure = require('thali/ThaliWifiInfrastructure');
+var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
 
 var randomSuffix = '' + Math.round((Math.random() * 10000))
 var randomDeviceName = 'device-' + randomSuffix;
-var wifiInfrastructure = new ThaliWifiInfrastructure(randomDeviceName);
+var wifiInfrastructure = new ThaliWifiInfrastructure();
 
 var mocks = {};
 var broadcastingStarted = false;
@@ -28,9 +28,26 @@ mocks.StartBroadcasting = function (args, callback) {
   // way to be able to complete the mock against the older
   // version of the Thali specification.
   wifiInfrastructure._setLocation(null, port, null);
-  wifiInfrastructure.startListeningForAdvertisements()
+  wifiInfrastructure.start({
+    listen: function (listenPort, listenCallback) {
+      setImmediate(listenCallback);
+      return {
+        close: function (closeCallback) {
+          setImmediate(closeCallback);
+        },
+        address: function () {
+          return {
+            port: port
+          }
+        }
+      }
+    }
+  })
   .then(function () {
-    return wifiInfrastructure.startUpdateAdvertisingAndListenForIncomingConnections();
+    return wifiInfrastructure.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return wifiInfrastructure.startUpdateAdvertisingAndListening();
   })
   .then(function () {
     callback(null);
@@ -39,11 +56,7 @@ mocks.StartBroadcasting = function (args, callback) {
 
 mocks.StopBroadcasting = function (args, callback) {
   broadcastingStarted = false;
-  wifiInfrastructure.stopListeningForAdvertisements()
-  .then(function () {
-    return wifiInfrastructure.stopAdvertisingAndListeningForIncomingConnections();
-  })
-  .then(function () {
+  wifiInfrastructure.stop().then(function () {
     callback(null);
   });
 };

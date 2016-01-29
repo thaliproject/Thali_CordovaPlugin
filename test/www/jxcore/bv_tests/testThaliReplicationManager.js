@@ -21,9 +21,7 @@ var ThaliReplicationManager = require('thali/thalireplicationmanager');
 // will not interfere with any other databases that might be created
 // during other tests.
 var dbPath = path.join(testUtils.tmpDirectory(), 'pouch-for-replication-test');
-var LevelDownPouchDB = process.platform === 'android' || process.platform === 'ios' ?
-    PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath}) :
-    PouchDB.defaults({db: require('leveldown'), prefix: dbPath});
+var LevelDownPouchDB = PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath});
 
 // A variable accessible from the tests and from the setup/teardown functions
 // that can be used to make sure that replication managers created during
