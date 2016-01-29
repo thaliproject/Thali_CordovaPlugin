@@ -37,7 +37,7 @@ test('#generatePreambleAndBeacons empty keys to notify', function (t) {
 
   t.equal(pubKe.length, 65);
   t.equal(expirationBuffer, 8);
-  t.equal(Long.fromBits(expirationBuffer.slice(4, 4), expirationBuffer.slice(0, 4)), expiration);
+  t.equal(Long.fromBits(expirationBuffer.slice(4, 4), expirationBuffer.slice(0, 4)).toNumber(), expiration);
 
   t.end();
 });
