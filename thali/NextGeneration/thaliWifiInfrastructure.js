@@ -2,7 +2,6 @@
 
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
-var Promise = require('lie');
 var nodessdp = require('node-ssdp');
 var ip = require('ip');
 var uuid = require('node-uuid');
@@ -10,6 +9,10 @@ var url = require('url');
 var express = require('express');
 var validations = require('../validations');
 var logger = require('../thalilogger')('thaliWifiInfrastructure');
+
+var Promise = require('lie');
+var PromiseQueue = require('./promiseQueue');
+var promiseQueue = new PromiseQueue();
 
 var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
@@ -98,14 +101,6 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
   if (this._shouldBeIgnored(data)) {
     return false;
   }
-  var parsedLocation = url.parse(data.LOCATION);
-  var portNumber = parseInt(parsedLocation.port);
-  try {
-    validations.ensureValidPort(portNumber);
-  } catch (error) {
-    logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
-    return false;
-  }
 
   var usn = data.USN
   try {
@@ -117,10 +112,23 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 
   var peer = {
     peerIdentifier: usn,
-    hostAddress: parsedLocation.hostname,
-    portNumber: portNumber,
     peerAvailable: available
   };
+
+  // We expect location only in alive messages.
+  if (available === true) {
+    var parsedLocation = url.parse(data.LOCATION);
+    var portNumber = parseInt(parsedLocation.port);
+    try {
+      validations.ensureValidPort(portNumber);
+    } catch (error) {
+      logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
+      return false;
+    }
+    peer.hostAddress = parsedLocation.hostname;
+    peer.portNumber = portNumber;
+  }
+
   if (this.peerAvailabilities[peer.peerIdentifier] === available) {
     return false;
   }
@@ -165,12 +173,15 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.start = function (router) {
-  if (this.started === true) {
-    return Promise.reject(new Error('Call Stop!'));
-  }
-  this.started = true;
-  this.router = router;
-  return Promise.resolve();
+  var self = this;
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.started === true) {
+      return reject(new Error('Call Stop!'));
+    }
+    self.started = true;
+    self.router = router;
+    return resolve();
+  });
 };
 
 /**
@@ -186,12 +197,21 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
  */
 ThaliWifiInfrastructure.prototype.stop = function () {
   var self = this;
-  if (self.started === false) {
-    return Promise.resolve();
-  }
-  self.started = false;
-  return self.stopAdvertisingAndListening().then(function () {
-    return self.stopListeningForAdvertisements();
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.started === false) {
+      return resolve();
+    }
+    self.stopAdvertisingAndListening(true)
+    .then(function () {
+      return self.stopListeningForAdvertisements(true);
+    })
+    .then(function () {
+      self.started = false;
+      return resolve();
+    })
+    .catch(function (error) {
+      reject(error);
+    });
   });
 };
 
@@ -216,13 +236,13 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  */
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
   var self = this;
-  if (self.listening) {
-    return Promise.resolve();
-  }
-  self.listening = true;
-  return new Promise(function(resolve, reject) {
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.listening) {
+      return resolve();
+    }
     self._client.start(function () {
-      resolve();
+      self.listening = true;
+      return resolve();
     });
   });
 };
@@ -244,17 +264,22 @@ ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () 
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
+ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function (skipPromiseQueue) {
   var self = this;
-  if (!self.listening) {
-    return Promise.resolve();
-  }
-  self.listening = false;
-  return new Promise(function(resolve, reject) {
+  var action = function (resolve, reject) {
+    if (!self.listening) {
+      return resolve();
+    }
     self._client.stop(function () {
-      resolve();
+      self.listening = false;
+      return resolve();
     });
-  });
+  };
+  if (skipPromiseQueue === true) {
+    return new Promise(action);
+  } else {
+    return promiseQueue.enqueue(action);
+  }
 };
 
 /**
@@ -314,57 +339,69 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  */
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function () {
   var self = this;
-  if (self.started === false) {
-    return Promise.reject(new Error('Call Start!'));
-  }
-  if (!self.router) {
-    return Promise.reject(new Error('Bad Router'));
-  }
-  self.usn = 'urn:uuid:' + uuid.v4();
-  self._server.setUSN(self.usn);
-  if (self.advertising === true) {
-    return Promise.resolve();
-  }
-  return new Promise(function(resolve, reject) {
-    self.expressApp = express();
-    try {
-      self.expressApp.use('/', self.router);
-    } catch (error) {
-      logger.error('Unable to use the given router: %s', error.toString());
-      reject(new Error('Bad Router'));
-      return;
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.started === false) {
+      return reject(new Error('Call Start!'));
     }
-    var startErrorListener = function (error) {
-      logger.error('Router server emitted an error: %s', error.toString());
-      self.routerServer.removeListener('error', startErrorListener);
-      self.routerServer = null
-      reject(new Error('Unspecified Error with Radio infrastructure'));
-    };
-    self.routerServerErrorListener = function (error) {
-      // Error is only logged, because it was determined this should
-      // not occur in normal use cases and it wasn't worthwhile to
-      // specify a custom error that the upper layers should listen to.
-      // If this error is seen in real scenario, a proper error handling
-      // should be specified and implemented.
-      logger.error('Router server emitted an error: %s', error.toString());
-    };
-    var listeningHandler = function () {
-      self.port = self.routerServer.address().port;
-      // We need to update the location string, because the port
-      // may have changed when we re-start the router server.
-      self._setLocation();
-      self._server.start(function () {
-        self.advertising = true;
-        // Remove the error listener we had during the resolution of this
-        // promise and add one that is listening for errors that may
-        // occur any time.
-        self.routerServer.removeListener('error', startErrorListener);
-        self.routerServer.on('error', self.routerServerErrorListener);
-        resolve();
+    if (!self.router) {
+      return reject(new Error('Bad Router'));
+    }
+
+    // Generate a new USN value to flag that something has changed
+    // in this peer.
+    self.usn = 'urn:uuid:' + uuid.v4();
+
+    if (self.advertising === true) {
+      // If we were already advertising, we need to restart the server
+      // so that a byebye is issued for the old USN and and alive
+      // message for the new one.
+      self._server.stop(function () {
+        self._server.setUSN(self.usn);
+        self._server.start(function () {
+          return resolve();
+        });
       });
-    };
-    self.routerServer = self.expressApp.listen(self.port, listeningHandler);
-    self.routerServer.on('error', startErrorListener);
+    } else {
+      self.expressApp = express();
+      try {
+        self.expressApp.use('/', self.router);
+      } catch (error) {
+        logger.error('Unable to use the given router: %s', error.toString());
+        return reject(new Error('Bad Router'));
+      }
+      var startErrorListener = function (error) {
+        logger.error('Router server emitted an error: %s', error.toString());
+        self.routerServer.removeListener('error', startErrorListener);
+        self.routerServer = null
+        reject(new Error('Unspecified Error with Radio infrastructure'));
+      };
+      self.routerServerErrorListener = function (error) {
+        // Error is only logged, because it was determined this should
+        // not occur in normal use cases and it wasn't worthwhile to
+        // specify a custom error that the upper layers should listen to.
+        // If this error is seen in real scenario, a proper error handling
+        // should be specified and implemented.
+        logger.error('Router server emitted an error: %s', error.toString());
+      };
+      var listeningHandler = function () {
+        self.port = self.routerServer.address().port;
+        self._server.setUSN(self.usn);
+        // We need to update the location string, because the port
+        // may have changed when we re-start the router server.
+        self._setLocation();
+        self._server.start(function () {
+          // Remove the error listener we had during the resolution of this
+          // promise and add one that is listening for errors that may
+          // occur any time.
+          self.routerServer.removeListener('error', startErrorListener);
+          self.routerServer.on('error', self.routerServerErrorListener);
+          self.advertising = true;
+          return resolve();
+        });
+      };
+      self.routerServer = self.expressApp.listen(self.port, listeningHandler);
+      self.routerServer.on('error', startErrorListener);
+    }
   });
 };
 
@@ -382,13 +419,12 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
+ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function (skipPromiseQueue) {
   var self = this;
-  if (!self.advertising) {
-    return Promise.resolve();
-  }
-  self.advertising = false;
-  return new Promise(function(resolve, reject) {
+  var action = function (resolve, reject) {
+    if (!self.advertising) {
+      return resolve();
+    }
     self._server.stop(function () {
       self.routerServer.close(function () {
         // The port needs to be reset, because
@@ -398,10 +434,16 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
         self.port = 0;
         self.routerServer.removeListener('error', self.routerServerErrorListener);
         self.routerServer = null;
-        resolve();
+        self.advertising = false;
+        return resolve();
       });
     });
-  });
+  };
+  if (skipPromiseQueue === true) {
+    return new Promise(action);
+  } else {
+    return promiseQueue.enqueue(action);
+  }
 };
 
 /**

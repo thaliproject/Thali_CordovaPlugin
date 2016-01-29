@@ -7,6 +7,7 @@ var express = require('express');
 var http = require('http');
 var net = require('net');
 var uuid = require('node-uuid');
+var sinon = require('sinon');
 
 var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
@@ -27,7 +28,7 @@ var test = tape({
   }
 });
 
-test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged after test peer becomes available', function (t) {
+test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged events should be emitted', function (t) {
   var testHostAddress = 'foo.bar';
   var testPort = 8080;
   var testLocation = 'http://' + testHostAddress + ':' + testPort;
@@ -36,16 +37,26 @@ test('#startListeningForAdvertisements should emit wifiPeerAvailabilityChanged a
     udn: THALI_NT
   });
   testServer.setUSN('urn:uuid:' + uuid.v4());
-  var wifiPeerAvailabilityChangedListener = function (data) {
+  var peerAvailableListener = function (data) {
     var peer = data[0];
     t.equal(peer.hostAddress, testHostAddress, 'host address should match');
     t.equal(peer.portNumber, testPort, 'port should match');
-    wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', wifiPeerAvailabilityChangedListener);
-    testServer.stop(function () {
+    t.equal(peer.peerAvailable, true, 'peer should be available');
+    wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
+
+    var peerUnavailableListener = function (data) {
+      var peer = data[0];
+      t.equal(peer.peerAvailable, false, 'peer should be unavailable');
+      wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerUnavailableListener);
       t.end();
+    };
+    wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerUnavailableListener);
+    testServer.stop(function () {
+      // When server is stopped, it shold trigger the byebye messages
+      // that emit the wifiPeerAvailabilityChanged to which we listen above.
     });
   };
-  wifiInfrastructure.on('wifiPeerAvailabilityChanged', wifiPeerAvailabilityChangedListener);
+  wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerAvailableListener);
   testServer.start(function () {
     wifiInfrastructure.startListeningForAdvertisements();
   });
@@ -55,21 +66,38 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
   var testClient = new nodessdp.Client();
 
   var firstUSN = null;
+  var secondUSN = null
   testClient.on('advertise-alive', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
-    if (data.NT === THALI_NT) {
-      if (firstUSN !== null) {
-        t.notEqual(firstUSN, data.USN, 'USN should have changed from the first one');
-        testClient.stop(function () {
-          t.end();
-        });
-      } else {
-        firstUSN = data.USN;
-        // This is the second call to the update function and after
-        // this call, the USN value should have been changed.
-        wifiInfrastructure.startUpdateAdvertisingAndListening();
-      }
+    if (data.NT !== THALI_NT) {
+      return;
+    }
+    if (firstUSN !== null) {
+      secondUSN = data.USN;
+      t.notEqual(firstUSN, secondUSN, 'USN should have changed from the first one');
+      wifiInfrastructure.stopAdvertisingAndListening();
+    } else {
+      firstUSN = data.USN;
+      // This is the second call to the update function and after
+      // this call, the USN value should have been changed.
+      wifiInfrastructure.startUpdateAdvertisingAndListening();
+    }
+  });
+  testClient.on('advertise-bye', function (data) {
+    // Check for the Thali NT in case there is some other
+    // SSDP traffic in the network.
+    if (data.NT !== THALI_NT) {
+      return;
+    }
+    if (data.USN === firstUSN) {
+      t.equals(secondUSN, null, 'when receiving the first byebye, the second USN should not be set yet');
+    }
+    if (data.USN === secondUSN) {
+      t.ok(firstUSN, 'when receiving the second byebye, the first USN should be already set');
+      testClient.stop(function () {
+        t.end();
+      });
     }
   });
 
@@ -196,6 +224,64 @@ test('#stop can be called multiple times in a row', function (t) {
   })
   .then(function () {
     t.equal(wifiInfrastructure.started, false, 'should still be in stopped state');
+    t.end();
+  });
+});
+
+test('#startListeningForAdvertisements can be called multiple times in a row', function (t) {
+  wifiInfrastructure.startListeningForAdvertisements()
+  .then(function () {
+    t.equal(wifiInfrastructure.listening, true, 'should be in listening state');
+    return wifiInfrastructure.startListeningForAdvertisements();
+  })
+  .then(function () {
+    t.equal(wifiInfrastructure.listening, true, 'should still be in listening state');
+    t.end();
+  });
+});
+
+test('#stopListeningForAdvertisements can be called multiple times in a row', function (t) {
+  wifiInfrastructure.stopListeningForAdvertisements()
+  .then(function () {
+    t.equal(wifiInfrastructure.listening, false, 'should not be in listening state');
+    return wifiInfrastructure.stopListeningForAdvertisements();
+  })
+  .then(function () {
+    t.equal(wifiInfrastructure.listening, false, 'should still not be in listening state');
+    t.end();
+  });
+});
+
+test('#stopAdvertisingAndListening can be called multiple times in a row', function (t) {
+  wifiInfrastructure.stopAdvertisingAndListening()
+  .then(function () {
+    t.equal(wifiInfrastructure.advertising, false, 'should not be in advertising state');
+    return wifiInfrastructure.stopAdvertisingAndListening();
+  })
+  .then(function () {
+    t.equal(wifiInfrastructure.advertising, false, 'should still not be in advertising state');
+    t.end();
+  });
+});
+
+test('functions are run from a queue in the right order', function (t) {
+  var firstSpy = sinon.spy();
+  var secondSpy = sinon.spy();
+  var thirdSpy = sinon.spy();
+  wifiInfrastructure.startUpdateAdvertisingAndListening()
+  .then(function () {
+    firstSpy();
+  });
+  wifiInfrastructure.stop()
+  .then(function () {
+    secondSpy();
+  });
+  wifiInfrastructure.start()
+  .then(function () {
+    thirdSpy();
+    t.ok(firstSpy.calledBefore(secondSpy) &&
+         secondSpy.calledBefore(thirdSpy),
+         'call order must match');
     t.end();
   });
 });
