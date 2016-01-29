@@ -29,7 +29,6 @@
 #import "THEMultipeerPeerSession.h"
 #import "THEMultipeerSocketRelay.h"
 
-
 static NSString * const THALI_STREAM = @"ThaliStream";
 
 @interface THEMultipeerPeerSession()

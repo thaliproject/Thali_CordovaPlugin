@@ -25,7 +25,6 @@
 //  THEMultipeerManager.m
 //
 
-#import <pthread.h>
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
 #import "THEMultipeerManager.h"

@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		D43F82C81C59312C0055D44F /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D4553BD31C52B57E00AA8C30 /* SystemConfiguration.framework */; };
-		D43F82D91C59330C0055D44F /* THEAtomicFlag.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460581C51154000940B96 /* THEAtomicFlag.m */; };
 		D43F82DA1C59330C0055D44F /* THEProtectedMutableDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */; };
 		D43F82DB1C59330C0055D44F /* THESessionDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B4605A1C51154000940B96 /* THESessionDictionary.m */; };
 		D43F82DC1C59330C0055D44F /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460561C51152F00940B96 /* GCDAsyncSocket.m */; };
@@ -79,7 +78,6 @@
 		D4553BD31C52B57E00AA8C30 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		D4B460541C51151B00940B96 /* NPReachability.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = NPReachability.m; path = ../../NPReachability/NPReachability.m; sourceTree = "<group>"; };
 		D4B460561C51152F00940B96 /* GCDAsyncSocket.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = GCDAsyncSocket.m; path = ../../GCDAsyncSocket/GCDAsyncSocket.m; sourceTree = "<group>"; };
-		D4B460581C51154000940B96 /* THEAtomicFlag.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEAtomicFlag.m; path = ../../Utility/THEAtomicFlag.m; sourceTree = "<group>"; };
 		D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEProtectedMutableDictionary.m; path = ../../Utility/THEProtectedMutableDictionary.m; sourceTree = "<group>"; };
 		D4B4605A1C51154000940B96 /* THESessionDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THESessionDictionary.m; path = ../../Utility/THESessionDictionary.m; sourceTree = "<group>"; };
 		D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThaliMultipleInstanceTests.m; sourceTree = "<group>"; };
@@ -154,7 +152,6 @@
 				D4553BD31C52B57E00AA8C30 /* SystemConfiguration.framework */,
 				D4553BD11C52B50400AA8C30 /* CFNetwork.framework */,
 				D4553BCF1C52B4F000AA8C30 /* MultipeerConnectivity.framework */,
-				D4B460581C51154000940B96 /* THEAtomicFlag.m */,
 				D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */,
 				D4B4605A1C51154000940B96 /* THESessionDictionary.m */,
 				D4B460561C51152F00940B96 /* GCDAsyncSocket.m */,
@@ -282,7 +279,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D43F82D91C59330C0055D44F /* THEAtomicFlag.m in Sources */,
 				D43F82DA1C59330C0055D44F /* THEProtectedMutableDictionary.m in Sources */,
 				D43F82DB1C59330C0055D44F /* THESessionDictionary.m in Sources */,
 				D43F82DC1C59330C0055D44F /* GCDAsyncSocket.m in Sources */,
@@ -348,7 +344,9 @@
 		D4553BC81C52ADC700AA8C30 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				HEADER_SEARCH_PATHS = Utility;
 				INFOPLIST_FILE = TestApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
@@ -361,7 +359,9 @@
 		D4553BC91C52ADC700AA8C30 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				HEADER_SEARCH_PATHS = Utility;
 				INFOPLIST_FILE = TestApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";

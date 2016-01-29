@@ -27,12 +27,10 @@
 
 #import <UIKit/UIKit.h>
 
-#import <pthread.h>
-#import "NPReachability/NPReachability.h"
-
 #import "THEAppContext.h"
+#import "NPReachability.h"
 #import "THEPeerBluetooth.h"
-#import "MultipeerConnectivity/THEMultipeerManager.h"
+#import "THEMultipeerManager.h"
 #import "THEThaliEventDelegate.h"
 
 // THEAppContext (Internal) interface.
@@ -227,13 +225,12 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 // Receive notifications from the bluetooth stack about radio state
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth didUpdateState:(BOOL)bluetoothEnabled
 {
-  pthread_mutex_lock(&_mutex);
-
-  // This will always be called regardless of BT state
-  _bluetoothEnabled = bluetoothEnabled;
-  [self fireNetworkChangedEvent];
-
-  pthread_mutex_unlock(&_mutex);
+  @synchronized(self)
+  {
+    // This will always be called regardless of BT state
+    _bluetoothEnabled = bluetoothEnabled;
+    [self fireNetworkChangedEvent];
+  }
 }
 
 // Notifies the delegate that a peer was connected.
@@ -241,9 +238,8 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 didConnectPeerIdentifier:(NSString *)peerIdentifier
                 peerName:(NSString *)peerName
 {
-  // Lock.
-  pthread_mutex_lock(&_mutex);
-
+  @synchronized(self)
+  {
   // Find the peer. If we found it, simply return.
 /*  THEPeer * peer = [_peers objectForKey:peerIdentifier];
   if (peer)
@@ -258,8 +254,7 @@ didConnectPeerIdentifier:(NSString *)peerIdentifier
   [_peers setObject:peer
              forKey:peerIdentifier];
 */
-  // Unlock
-  pthread_mutex_unlock(&_mutex);
+  }
 
   //if (_eventDelegate)
   //{
@@ -297,9 +292,6 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   // when we initialise the BT stack 
   _bluetoothEnabled = false;
   
-  // Initialize the the mutex 
-  pthread_mutex_init(&_mutex, NULL);
-
   _multipeerManager = [[THEMultipeerManager alloc] initWithServiceType:THALI_SERVICE_TYPE
                                                     withPeerIdentifier:_peerIdentifier
                                              withPeerDiscoveryDelegate:self];
