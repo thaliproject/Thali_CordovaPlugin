@@ -2,9 +2,9 @@
 var tape = require('../lib/thali-tape');
 var PromiseQueue = require('thali/NextGeneration/promiseQueue');
 
-var unhandledRejectionHandler = null;
+var currentUnhandledRejectionHandler = null;
 
-function unHandledRejectionHandler(t) {
+function unhandledRejectionHandler(t) {
   return function (error, self) {
     t.fail('Got an unhandled rejection error: ' + error + ', ' +
       JSON.stringify(self));
@@ -13,12 +13,13 @@ function unHandledRejectionHandler(t) {
 
 var test = tape({
   setup: function (t) {
-    unhandledRejectionHandler = unHandledRejectionHandler(t);
-    process.on('unhandledRejection', unhandledRejectionHandler);
+    currentUnhandledRejectionHandler = unhandledRejectionHandler(t);
+    process.on('unhandledRejection', currentUnhandledRejectionHandler);
     t.end();
   },
   teardown: function (t) {
-    process.removeListener('unhandledRejection', unhandledRejectionHandler);
+    process.removeListener('unhandledRejection',
+      currentUnhandledRejectionHandler);
     t.end();
   }
 });

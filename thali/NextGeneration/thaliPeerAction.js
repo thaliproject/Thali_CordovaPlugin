@@ -25,6 +25,10 @@ module.exports.actionState = {
  *
  * When an action is created its state MUST be CREATED.
  *
+ * BugBug: In a sane world we would have limits on how long an action can run
+ * and we would even set up those limits as a config item. But for now we let
+ * each action own the stage for as long as it would like.
+ *
  * @public
  * @interface PeerAction
  * @constructor
@@ -32,7 +36,8 @@ module.exports.actionState = {
  * @param {module:thaliMobile.connectionTypes} connectionType
  * @param {string} actionType
  */
-function PeerAction (peerIdentifier, connectionType, actionType) {
+function PeerAction (peerIdentifier, connectionType, actionType)
+{
   this.peerIdentifier = peerIdentifier;
   this.connectionType = connectionType;
   this.actionType = actionType;
@@ -91,10 +96,12 @@ PeerAction.prototype.getActionState = function () {
  *
  * Start is idempotent so multiple calls MUST NOT directly cause a state change.
  * That is, if the action hasn't started then the first call to start will
- * start it and further calls will accomplish nothing.
+ * start it and further calls will accomplish nothing more than just returning
+ * the same promise that the original call returned.
  *
  * If start is called on an action that has completed, successfully or not, then
- * an error object MUST be returned with the value "action has completed."
+ * the returned promised must be resolved with an error object MUST with the
+ * value "action has completed."
  *
  * If the action fails due to a network issue it is important that this be
  * reported to the pool because it can use this information to decide how to
@@ -138,6 +145,10 @@ PeerAction.prototype.start = function (httpAgentPool) {
  * change.
  *
  * When kill returns the action's state MUST be set to KILLED.
+ *
+ * It's fine to call kill on an action that has been submitted to a peer pool.
+ * When the action is enqueued the peer pool will override the action's kill
+ * method with its own kill method that will then call this kill method.
  *
  * @public
  * @returns {?Error}
