@@ -1,9 +1,21 @@
 'use strict';
 
 var Promise = require('lie');
-var thaliMobileNativeWrapper = require('thaliMobileNativeWrapper');
-var thaliWifiInfrastructure = require('ThaliWifiInfrastructure')();
-var EventEmitter = require('events');
+var inherits = require('util').inherits;
+var EventEmitter = require('events').EventEmitter;
+//var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
+var thaliMobileNativeWrapper = new EventEmitter(); // TODO: Use real class once implemented
+
+var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
+var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
+
+var promiseResultSuccessOrFailure = function (promise) {
+  return promise.then(function (success) {
+    return success;
+  }).catch(function (failure) {
+    return failure;
+  });
+};
 
 /** @module thaliMobile */
 
@@ -128,7 +140,15 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopListeningForAdvertisements = function () {
-  return new Promise();
+  return Promise.all([
+    promiseResultSuccessOrFailure(
+      thaliWifiInfrastructure.stopListeningForAdvertisements())
+  ]).then(function (results) {
+    return {
+      wifiResult: results[0] || null
+      //nativeResult: results[1] || null
+    };
+  });
 };
 
 /**
