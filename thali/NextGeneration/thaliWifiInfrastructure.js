@@ -1,10 +1,26 @@
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+var nodessdp = require('node-ssdp');
+var ip = require('ip');
+var uuid = require('node-uuid');
+var url = require('url');
+var express = require('express');
+var validations = require('../validations');
+var logger = require('../thalilogger')('thaliWifiInfrastructure');
+
 var Promise = require('lie');
+var PromiseQueue = require('./promiseQueue');
+var promiseQueue = new PromiseQueue();
+
+var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
 /** @module ThaliWifiInfrastructure */
 
 /**
+ * @file
+ *
  * This is the interface used to manage local discover of peers over a Wi-Fi
  * Infrastructure mode access point.
  *
@@ -18,10 +34,9 @@ var Promise = require('lie');
  *
  * All stop methods in this file are idempotent so they can be called multiple
  * times in a row without causing a state change.
- *
- * @public
- * @constructor
- *
+ */
+
+/**
  * This creates an object to manage a WiFi instance. During production we will
  * have exactly one instance running but for testing purposes it's very useful
  * to be able to run multiple instances. So long as the SSDP code uses a
@@ -29,16 +44,113 @@ var Promise = require('lie');
  * instances are already specified to use whatever ports are available the
  * different instances should not run into each other.
  *
- * __Open Issue:__ We need to confirm that the different instances will see
- * each other's SSDP advertisements and queries.
- *
+ * @public
+ * @constructor
  * @fires event:wifiPeerAvailabilityChanged
  * @fires event:networkChangedWifi
  * @fires discoveryAdvertisingStateUpdateWifiEvent
  */
-function ThaliWifiInfrastructure() {
-
+function ThaliWifiInfrastructure () {
+  EventEmitter.call(this);
+  this.usn = null;
+  // Use port 0 so that random available port
+  // will get used.
+  this.port = 0;
+  this.expressApp = null;
+  this.router = null;
+  this.routerServer = null;
+  this.routerServerErrorListener = null;
+  this.started = null;
+  this.listening = null;
+  this.advertising = null;
+  // A variable to hold information about known peer availability states
+  // and used to avoid emitting peer availability changes in case the
+  // availability hasn't changed from the previous known value.
+  this.peerAvailabilities = {};
+  this._init();
 }
+
+inherits(ThaliWifiInfrastructure, EventEmitter);
+
+ThaliWifiInfrastructure.prototype._init = function () {
+  var serverOptions = {
+    adInterval: 500,
+    udn: THALI_NT
+  };
+  this._server = new nodessdp.Server(serverOptions);
+  this._setLocation();
+
+  this._client = new nodessdp.Client();
+
+  this._client.on('advertise-alive', function (data) {
+    this._handleMessage(data, true);
+  }.bind(this));
+
+  this._client.on('advertise-bye', function (data) {
+    this._handleMessage(data, false);
+  }.bind(this));
+};
+
+ThaliWifiInfrastructure.prototype._setLocation = function (address, port) {
+  address = address || ip.address();
+  port = port || this.port;
+  this._server._location = 'http://' + address + ':' + port;
+};
+
+ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
+  if (this._shouldBeIgnored(data)) {
+    return false;
+  }
+
+  var usn = data.USN
+  try {
+    validations.ensureNonNullOrEmptyString(usn);
+  } catch (error) {
+    logger.warn('Received an invalid USN value: %s', data.USN);
+    return false;
+  }
+
+  var peer = {
+    peerIdentifier: usn,
+    peerAvailable: available
+  };
+
+  // We expect location only in alive messages.
+  if (available === true) {
+    var parsedLocation = url.parse(data.LOCATION);
+    var portNumber = parseInt(parsedLocation.port);
+    try {
+      validations.ensureValidPort(portNumber);
+    } catch (error) {
+      logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
+      return false;
+    }
+    peer.hostAddress = parsedLocation.hostname;
+    peer.portNumber = portNumber;
+  }
+
+  if (this.peerAvailabilities[peer.peerIdentifier] === available) {
+    return false;
+  }
+  this.peerAvailabilities[peer.peerIdentifier] = available;
+  this.emit('wifiPeerAvailabilityChanged', [peer]);
+  return true;
+};
+
+// Function used to filter out SSDP messages that are not
+// relevant for Thali.
+ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
+  // First check if the data contains the Thali-specific NT.
+  if (data.NT === THALI_NT) {
+    // Filtering out messages from ourselves.
+    if (data.USN === this.usn) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  return true;
+};
 
 /**
  * This method MUST be called before any other method here other than
@@ -61,7 +173,15 @@ function ThaliWifiInfrastructure() {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.start = function (router) {
-  return new Promise();
+  var self = this;
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.started === true) {
+      return reject(new Error('Call Stop!'));
+    }
+    self.started = true;
+    self.router = router;
+    return resolve();
+  });
 };
 
 /**
@@ -76,7 +196,23 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.stop = function () {
-  return new Promise();
+  var self = this;
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.started === false) {
+      return resolve();
+    }
+    self.stopAdvertisingAndListening(true)
+    .then(function () {
+      return self.stopListeningForAdvertisements(true);
+    })
+    .then(function () {
+      self.started = false;
+      return resolve();
+    })
+    .catch(function (error) {
+      reject(error);
+    });
+  });
 };
 
 /**
@@ -98,10 +234,18 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
-  function () {
-    return new Promise();
-  };
+ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
+  var self = this;
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.listening) {
+      return resolve();
+    }
+    self._client.start(function () {
+      self.listening = true;
+      return resolve();
+    });
+  });
+};
 
 /**
  * This will stop the local Wi-Fi Infrastructure Mode discovery mechanism
@@ -120,8 +264,22 @@ ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
-  return new Promise();
+ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function (skipPromiseQueue) {
+  var self = this;
+  var action = function (resolve, reject) {
+    if (!self.listening) {
+      return resolve();
+    }
+    self._client.stop(function () {
+      self.listening = false;
+      return resolve();
+    });
+  };
+  if (skipPromiseQueue === true) {
+    return new Promise(action);
+  } else {
+    return promiseQueue.enqueue(action);
+  }
 };
 
 /**
@@ -130,7 +288,7 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  * UDP socket for SSDP the socket MUST be "udp4". When socket.bind is called to
  * bind the socket the SSDP multicast address 239.255.255.250 and port 1900 MUST
  * be chosen as they are the reserved address and port for SSDP.
- *
+ * 
  * __OPEN ISSUE:__ What happens on Android or iOS or the desktop OS's for that
  * matter if multiple apps all try to bind to the same UDP multicast address?
  * It should be fine. But it's important to find out so that other apps can't
@@ -152,9 +310,6 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  * called. If the device switches access points (e.g. the BSSID changes) or if
  * WiFi is lost then the server will be shut down. It is up to the caller to
  * catch the networkChanged event and to call start advertising again.
- *
- * The server created to host the router MUST use {@link
-  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}
  *
  * __OPEN ISSUE:__ If we have a properly configured multiple AP network then
  * all the APs will have different BSSID values but identical SSID values and
@@ -182,8 +337,72 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function () {
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function() {
-  return new Promise();
+ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function () {
+  var self = this;
+  return promiseQueue.enqueue(function(resolve, reject) {
+    if (self.started === false) {
+      return reject(new Error('Call Start!'));
+    }
+    if (!self.router) {
+      return reject(new Error('Bad Router'));
+    }
+
+    // Generate a new USN value to flag that something has changed
+    // in this peer.
+    self.usn = 'urn:uuid:' + uuid.v4();
+
+    if (self.advertising === true) {
+      // If we were already advertising, we need to restart the server
+      // so that a byebye is issued for the old USN and and alive
+      // message for the new one.
+      self._server.stop(function () {
+        self._server.setUSN(self.usn);
+        self._server.start(function () {
+          return resolve();
+        });
+      });
+    } else {
+      self.expressApp = express();
+      try {
+        self.expressApp.use('/', self.router);
+      } catch (error) {
+        logger.error('Unable to use the given router: %s', error.toString());
+        return reject(new Error('Bad Router'));
+      }
+      var startErrorListener = function (error) {
+        logger.error('Router server emitted an error: %s', error.toString());
+        self.routerServer.removeListener('error', startErrorListener);
+        self.routerServer = null
+        reject(new Error('Unspecified Error with Radio infrastructure'));
+      };
+      self.routerServerErrorListener = function (error) {
+        // Error is only logged, because it was determined this should
+        // not occur in normal use cases and it wasn't worthwhile to
+        // specify a custom error that the upper layers should listen to.
+        // If this error is seen in real scenario, a proper error handling
+        // should be specified and implemented.
+        logger.error('Router server emitted an error: %s', error.toString());
+      };
+      var listeningHandler = function () {
+        self.port = self.routerServer.address().port;
+        self._server.setUSN(self.usn);
+        // We need to update the location string, because the port
+        // may have changed when we re-start the router server.
+        self._setLocation();
+        self._server.start(function () {
+          // Remove the error listener we had during the resolution of this
+          // promise and add one that is listening for errors that may
+          // occur any time.
+          self.routerServer.removeListener('error', startErrorListener);
+          self.routerServer.on('error', self.routerServerErrorListener);
+          self.advertising = true;
+          return resolve();
+        });
+      };
+      self.routerServer = self.expressApp.listen(self.port, listeningHandler);
+      self.routerServer.on('error', startErrorListener);
+    }
+  });
 };
 
 /**
@@ -200,8 +419,31 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function(
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
-  return new Promise();
+ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function (skipPromiseQueue) {
+  var self = this;
+  var action = function (resolve, reject) {
+    if (!self.advertising) {
+      return resolve();
+    }
+    self._server.stop(function () {
+      self.routerServer.close(function () {
+        // The port needs to be reset, because
+        // otherwise there is no guarantee that
+        // the same port is available next time
+        // we start the router server.
+        self.port = 0;
+        self.routerServer.removeListener('error', self.routerServerErrorListener);
+        self.routerServer = null;
+        self.advertising = false;
+        return resolve();
+      });
+    });
+  };
+  if (skipPromiseQueue === true) {
+    return new Promise(action);
+  } else {
+    return promiseQueue.enqueue(action);
+  }
 };
 
 /**
@@ -247,7 +489,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
  * in status (e.g. someone turned off Wifi) then this class MUST issue this
  * event itself. That is, it must have hooked into the start/stop methods,
  * start/stop discovery/advertising methods, {@link
- * module:thaliMobileNativeWrapper.networkChangedNonTCP} events
+ * module:thaliMobileNativeWrapper.nonTCPPeerAvailabilityChangedEvent} events
  * when we are on mobile devices and {@link
  * module:ThaliWifiInfrastructure.networkChangedWifi} when we are on desktop to
  * figure out when status has changed and this event needs to be fired.
@@ -260,17 +502,16 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
 
 /**
  * For the definition of this event please see {@link
- * module:thaliMobileNativeWrapper.event:networkChangedNonTCP}.
+ * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}.
  *
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
  * OS/X or Windows. In the case that we are running on those platforms then If
  * we are running on those platforms then bluetoothLowEnergy and bluetooth MUST
- * both return radioState set to `doNotCare`. We really don't have a good
- * solution for status when we are on desktop since even JXcore's
- * Mobile.getConnectionStatus call doesn't appear to work there. But strictly
- * speaking we don't formally support desktop yet. In any case for now this
- * should just fire an automatic dummy 'everything is fine' value when we are
- * on desktop on the first subscription.
+ * both return radioState set to `doNotCare`. Also note that these platforms
+ * don't generally support a push based way to detect WiFi state (at least not
+ * without writing native code). So for now we can use polling and something
+ * like [network-scanner](https://www.npmjs.com/package/network-scanner) to give
+ * us some sense of the system's state.
  *
  * @public
  * @event networkChangedWifi
