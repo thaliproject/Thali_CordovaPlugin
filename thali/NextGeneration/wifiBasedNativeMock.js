@@ -351,7 +351,7 @@ MobileCallInstance.prototype.discoveryAdvertisingStateUpdateNonTCP =
 /**
  * At this point this event would only fire because we called toggleBluetooth
  * or toggleWifi. For the moment we will treat toggleBluetooth and turning
- * on/off both blueToothLowEnergy and blueTooth.
+ * on/off both bluetoothLowEnergy and bluetooth.
  *
  * __Open Issue:__ Near as I can tell both Android and iOS have a single
  * Bluetooth switch that activates and de-activates Bluetooth and BLE. Note

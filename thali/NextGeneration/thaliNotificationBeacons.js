@@ -14,13 +14,14 @@ portunisticsynching.md
  * This function will generate a buffer containing the notification preamble and
  * beacons for the given set of public keys using the supplied private key and
  * set to the specified seconds until expiration.
- * @param {string[]} publicKeysToNotify - An array of strings holding base64 url
- * safe encoded ECDH public keys
+ * @param {buffer[]} publicKeysToNotify - An array of buffers holding ECDH
+ * public keys.
  * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
  * local device's public and private keys
  * @param {number} secondsUntilExpiration - The number of seconds into the
  * future after which the beacons should expire.
- * @returns {Buffer} - A buffer containing the serialized preamble and beacons
+ * @returns {Promise<Buffer|Error>} A buffer containing the serialized preamble
+ * and beacons
  */
 module.exports.generatePreambleAndBeacons = function (publicKeysToNotify,
                                                       ecdhForLocalDevice,
@@ -42,8 +43,8 @@ module.exports.generatePreambleAndBeacons = function (publicKeysToNotify,
 
 /**
  * Generates a single beacon using the specified values.
- * @param {string} publicKey - This is a base64 url safe encoded public key we
- * need to create a beacon for
+ * @param {buffer} publicKey - An ECDH public key we need to create a beacon
+ * for.
  * @param {ECDH} ecdhWithPrivateKey - A Crypto.ECDH object initialized with the
  * local device's public and private keys
  * @param {Buffer} IV - The IV to use for this beacon (we use the same IV for
@@ -71,7 +72,7 @@ function generateBeacon(publicKey, ecdhWithPrivateKey, IV, Ke, expirationValue)
  * @callback addressBookCallback
  * @param {Buffer} unencryptedKeyId - This is a Buffer containing the
  * unencryptedKeId.
- * @returns {string} - The base64 url safe encoded public key associated with
+ * @returns {buffer} - A buffer containing the ECDH public key associated with
  * the unecryptedKeyId or null if the remote peer is not one the local peer
  * recognizes or wishes to communicate with.
  */

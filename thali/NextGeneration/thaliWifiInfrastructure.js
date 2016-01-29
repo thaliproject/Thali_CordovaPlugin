@@ -264,7 +264,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function() {
  *
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
  * OS/X or Windows. In the case that we are running on those platforms then If
- * we are running on those platforms then blueToothLowEnergy and blueTooth MUST
+ * we are running on those platforms then bluetoothLowEnergy and bluetooth MUST
  * both return radioState set to `doNotCare`. We really don't have a good
  * solution for status when we are on desktop since even JXcore's
  * Mobile.getConnectionStatus call doesn't appear to work there. But strictly

@@ -5,6 +5,8 @@ var tape = require('../lib/thali-tape');
 var testUtils = require('../lib/testUtils.js');
 var ThaliSendNotificationBasedOnReplication =
   require('thali/NextGeneration/thaliSendNotificationBasedOnReplication');
+var proxyquire = require('proxyquire');
+var sinon = require('sinon');
 
 var test = tape({
   setup: function (t) {
@@ -15,87 +17,7 @@ var test = tape({
   }
 });
 
-/**
- * @cloassdesc Used to test a callback that will be called multiple times.
- *
- * @param t
- * @constructor
- */
-function CallBackTestRig(t) {
-  this.t = t;
-}
-
-CallBackTestRig.prototype.t = null;
-
-CallBackTestRig.prototype.finalHandlerCalled = false;
-
-CallBackTestRig.prototype.finalHandler = null;
-
-CallBackTestRig.prototype._queuedEventHandlers = [];
-
-CallBackTestRig.prototype._runFunction = function (t, fn, rawArgs) {
-  var successOrFailResult = false;
-  function successOrFailFunction(result) {
-    successOrFailResult = result;
-  }
-
-  var newArguments = Array.prototype.push.apply(successOrFailFunction, rawArgs);
-  var result = fn.apply(this, newArguments);
-  t.ok(successOrFailResult, 'Handler Not Ok');
-  return result;
-};
-
-CallBackTestRig.prototype.localEventHandler = function () {
-
-  if (this.finalHandler) {
-    if (this.finalHandlerCalled) {
-      t.fail('We got an event after the final handler was called.');
-      return;
-    }
-
-    if (this._queuedEventHandlers.length === 0) {
-      var result = this._runFunction(t, this.finalHandler, arguments);
-      this.finalHandlerCalled = true;
-      return result;
-    }
-  }
-
-  return this._runFunction(t, this._queuedEventHandlers.pop(), arguments);
-};
-
-/**
- * This is the function to be passed in the arguments provided by the callback.
- * We will insert a first argument which is a function that MUST be called
- * synchronously before the submitted fn returns that indicates if the call
- * was successful or not.
- * @param fn
- */
-CallBackTestRig.prototype.nextEvent = function (fn) {
-  if (this.finalHandler) {
-    t.fail('Received a nextEvent call after final handler set.');
-    return;
-  }
-
-  this._queuedEventHandlers.push(fn);
-};
-
-CallBackTestRig.prototype.finalEvent = function (fn) {
-  if (this.finalHandler) {
-    t.fail('finalEvent called more than once.');
-    return;
-  }
-
-  t.finalHandler = fn;
-};
-
-
-
-
 test('ChangesFilter Handler', function () {
-
-});
-
-test('Changes timer logic', function () {
 
 });
 
