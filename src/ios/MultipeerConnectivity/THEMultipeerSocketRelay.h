@@ -25,7 +25,7 @@
 //  THEMultipeerSocketRelay.h
 //
 
-#import "../GCDAsyncSocket/GCDAsyncSocket.h"
+#import "GCDAsyncSocket.h"
 
 // Base class of the networking relay which passes data it receives via the input/output
 // streams over the multipeer session to and from the application over a local socket 

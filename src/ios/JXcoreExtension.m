@@ -50,21 +50,21 @@ NSString * const kAppEnteredForeground = @"appEnteredForeground";
 
 @implementation JXcoreExtension
 
-- (void)peerAvailabilityChanged:(NSString *)peerJSON
+- (void)peerAvailabilityChanged:(NSArray<NSDictionary *> *)peers
 {
   // Fire the peerAvailabilityChanged event.
   OnMainThread(^{
     [JXcore callEventCallback:kPeerAvailabilityChanged
-                     withJSON:peerJSON];
+                     withJSON:[JXcoreExtension objectToJSON:peers]];
   });
 }
 
-- (void)networkChanged:(NSString *)json
+- (void)networkChanged:(NSDictionary *)networkStatus
 {
   // Fire the networkChanged event.
   OnMainThread(^{
       [JXcore callEventCallback:kNetworkChanged
-                       withJSON:json];
+                       withJSON:[JXcoreExtension objectToJSON:networkStatus]];
   });
 }
 
@@ -101,10 +101,26 @@ NSString * const kAppEnteredForeground = @"appEnteredForeground";
   return appContext;
 }
 
++ (NSString *)objectToJSON:(NSObject *)object
+{
+  NSError *err = nil;
+  NSString *json = [[NSString alloc] initWithData:
+    [NSJSONSerialization dataWithJSONObject:object options:0 error:&err]
+    encoding:NSUTF8StringEncoding
+  ];
+
+  if (err != nil)
+  {
+    @throw err;
+  }
+
+  return json;
+}
+
 // Defines methods.
 - (void)defineMethods
 {
-  THEAppContext *theApp = [self thAppContext];
+  THEAppContext *theApp = [JXcoreExtension theAppContext];
   [theApp setThaliEventDelegate:self];
 
   // Export the public API to node
@@ -197,12 +213,13 @@ NSString * const kAppEnteredForeground = @"appEnteredForeground";
     else
     {
       NSLog(@"jxcore: connect %@", params[0]);
-      void (^connectCallback)(NSString *, NSString *) = ^(NSString *errorMsg, NSString *connection) 
+      ClientConnectCallback connectCallback = ^(NSString *errorMsg, NSDictionary *connection) 
       {
         if (errorMsg == nil)
         {
           NSLog(@"jxcore: connect: success");
-          [JXcore callEventCallback:callbackId withParams:@[[NSNull null], connection]];
+          [JXcore callEventCallback:callbackId withParams:
+            @[[NSNull null], [JXcoreExtension objectToJSON:connection]]];
         }
         else
         {

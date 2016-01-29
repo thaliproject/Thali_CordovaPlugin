@@ -31,8 +31,8 @@
 // THEThaliEventDelegate protocol.
 @protocol THEThaliEventDelegate <NSObject>
 
-- (void)peerAvailabilityChanged:(NSString *)peerJSON;
-- (void)networkChanged:(NSString *)json;
+- (void)peerAvailabilityChanged:(NSArray<NSDictionary *>*)peers;
+- (void)networkChanged:(NSDictionary *)networkStatus;
 - (void)appEnteringBackground;
 - (void)appEnteredForeground;
 

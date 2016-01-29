@@ -46,10 +46,6 @@
           compiler-flags="-Werror"/>
         <header-file src="src/ios/Utility/THEThreading.h"
           compiler-flags="-Werror" />
-        <header-file src="src/ios/Utility/THEAtomicFlag.h"
-          compiler-flags="-Werror" />
-        <source-file src="src/ios/Utility/THEAtomicFlag.m" 
-          compiler-flags="-Werror"/>
         <header-file src="src/ios/NPReachability/NPReachability.h" 
           compiler-flags="-Werror"/>
         <source-file src="src/ios/NPReachability/NPReachability.m" 

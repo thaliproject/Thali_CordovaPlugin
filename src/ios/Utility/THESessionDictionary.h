@@ -28,7 +28,7 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
 #import "THEProtectedMutableDictionary.h"
-#import "../MultipeerConnectivity/THEMultipeerPeerSession.h"
+#import "THEMultipeerPeerSession.h"
 
 // Specialisation of the the protected mutable dict class for conveniently working with 
 // peer sessions

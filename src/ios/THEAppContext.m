@@ -317,42 +317,42 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
 {
   if (_eventDelegate)
   {
+    // delegate expects an array of peers
     NSArray *peerArray = [[NSArray alloc] initWithObjects:peer, nil];
-    
-    NSString *peerJSON = [[NSString alloc] initWithData:
-      [NSJSONSerialization dataWithJSONObject:peerArray options:0 error:nil]
-      encoding:NSUTF8StringEncoding
-    ];
-
-    [_eventDelegate peerAvailabilityChanged:peerJSON];
+    [_eventDelegate peerAvailabilityChanged:peerArray];
   }
 }
 
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent
 {
-    NSString * json;
+  NSDictionary *networkStatus;
 
-    // NPReachability only tells us what kind of IP connection we're capable
-    // of. Need to take bluetooth into account also
+  // NPReachability only tells us what kind of IP connection we're capable
+  // of. Need to take bluetooth into account also
 
-    BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
+  BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
 
-    if (reachable)
-    {
-        json = [NSString stringWithFormat:@"{ \"isAvailable\": %@, \"isWiFi\": %@ }",
-                @"true", ([[NPReachability sharedInstance] currentReachabilityFlags] & 
-                  kSCNetworkReachabilityFlagsIsWWAN) == 0 ? @"true" : @"false"];
-    }
-    else
-    {
-        json = @"{ \"isAvailable\": false }";
-    }
+  if (reachable)
+  {
+    BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
 
-    if (_eventDelegate)
-    {
-      [_eventDelegate networkChanged: json];
-    }
+    networkStatus = @{
+      @"isAvailable" : [[NSNumber alloc] initWithBool:true],
+      @"isWifi" : [[NSNumber alloc] initWithBool:isWifi]
+    };
+  }
+  else
+  {
+    networkStatus = @{
+      @"isAvailable": [[NSNumber alloc] initWithBool:false]
+    };
+  }
+
+  if (_eventDelegate)
+  {
+    [_eventDelegate networkChanged: networkStatus];
+  }
 }
 
 // UIApplicationWillResignActiveNotification callback.
