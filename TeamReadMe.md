@@ -12,7 +12,7 @@ We have made the decision to drive the management process from NPM in the JXCore
 both into JXCore and into Cordova one must go to www/jxcore in the app project and do a `jx install`. This will install Thali's
 Javascript files from NPM but it will also run a post install script that will then install Thali's Cordova plugin.
 
-Normally to update a NPM one issues `jx npm install` or `jx npm update` and that will update the Javascript files.
+Normally to update a NPM one issues `jx install` or `jx npm update` and that will update the Javascript files.
 That applies here as well, however, in addition the install script run from the NPM install is also smart enough to figure out if the Cordova plugin
 needs to be updated and if so it will handle that as well.
 
@@ -66,7 +66,7 @@ can pick it up.
 3. Run `npm publish`
 
 If you want to verify the release package before publishing it, you can use `npm pack` to create a tgz file.
-Then, you can point `jx npm install` into this tgz to install the package locally and make sure the installation
+Then, you can point `jx install` into this tgz to install the package locally and make sure the installation
 works properly and the matching version of the Thali Cordova plugin got installed.
 
 ### The rest of the process
@@ -83,7 +83,7 @@ to remember to move all the content back to Thali_CordovaPlugin. It's annoying. 
 2. Then create a directory called `localdev` under `thaliDontCheckIn`
 3. Now when you want to build your project with a new version of Thali_CordovaPlugin:
  1. Go to your App's www/jxcore subdirectory
- 2. issue `jx npm install ../../../Thali_CordovaPlugin/thali --save`
+ 2. issue `jx install ../../../Thali_CordovaPlugin/thali --save`
 
 Note that we do depend in other places on your Thali_CordovaPlugin directory being a sibling of your application's root.
 
@@ -99,7 +99,7 @@ Follow the [node-gyp installation documentation](https://github.com/TooTallNate/
 
 To change the version of Visual Studio used, use the `--msvs_version` option during the installation, for example to use Visual Studio 2015:
 ```
-$ jx npm install --msvs_version=2015
+$ jx install --msvs_version=2015
 ```
 
 ## Android Requirements

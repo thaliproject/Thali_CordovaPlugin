@@ -19,7 +19,7 @@ exec('cordova info', function (error, stdout, stderr) {
     process.exit(1);
   }
   var installDirectory = path.join(__dirname, 'install');
-  exec('jx npm install --autoremove "*.gz"', { cwd: installDirectory }, function (error, stdout, stderr) {
+  exec('cd ..jx install --autoremove "*.gz"', { cwd: installDirectory }, function (error, stdout, stderr) {
     // Log the output in all cases since it might contain useful
     // debugging information.
     if (stdout) console.log(stdout);

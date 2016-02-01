@@ -52,7 +52,7 @@ To run the mobile tests:
 1. Go to Thali_CordovaPlugin/thali/install
 2. Run either `jx npm run setupUnit` or `jx npm run setupPerf` depending on what type of test project you want to
 create. 
-2.1 The script will create a sibling directory to Thali_CordovaPlugin called ThaliTest and will compile it for both
+ 1. The script will create a sibling directory to Thali_CordovaPlugin called ThaliTest and will compile it for both
 Android and iOS. This assumes you are running on a Mac with all the right tools.
 3. Go to Thali_CordovaPlugin/test/TestServer
 4. Examine Config_PerfTest.json or Config_UnitTest.json (depending on the test type you are running) and make sure it

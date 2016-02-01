@@ -5,13 +5,13 @@ set -e
 
 cd `dirname $0`
 cd ../../test/TestServer
-jx npm install
+jx install
 jx generateServerAddress.js
 cd ../../thali
-jx npm install
-jx npm link
+jx install
+jx link
 cd install
-jx npm install
+jx install
 cd ../../test/www/jxcore
-jx npm link thali
-jx npm install --no-optional
+jx link thali
+jx install --no-optional
