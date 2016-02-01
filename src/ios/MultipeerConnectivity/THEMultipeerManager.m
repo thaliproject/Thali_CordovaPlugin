@@ -58,8 +58,9 @@
 
   unsigned int _serverGeneration;
   
-  // Restart timer
-  // NSTimer *_restartTimer;
+  // Restart timers
+  NSTimer *_serverRestartTimer;
+  NSTimer *_clientRestartTimer;
 
   __weak id<THEPeerDiscoveryDelegate> _peerDiscoveryDelegate;
 }
@@ -121,21 +122,20 @@
     [self startClient];
     
     NSLog(@"THEMultipeerManager initialized peer %@", _peerIdentifier);
+
+    __weak typeof(self) weakSelf = self;
+    [_server setTimerResetCallback: ^void (void) {
+      // Reset the restart timer
+      NSLog(@"multipeer session: reset timer");
+      [weakSelf stopServerRestartTimer];
+      [weakSelf startServerRestartTimer];
+    }];
+    
+    // Kick off the restart timer
+    [self startServerRestartTimer];
   }
 
   return true;
-
-  /*__weak typeof(self) weakSelf = self;
-  [_server setTimerResetCallback: ^void (void) {
-    // Reset the restart timer
-    NSLog(@"multipeer session: reset timer");
-    [weakSelf stopRestartTimer];
-    [weakSelf startRestartTimer];
-  }];
-  */
-
-  // Kick off the restart timer
-  // [self startRestartTimer];
 }
 
 - (BOOL)stopServer
@@ -148,6 +148,7 @@
     {
       [_server stop];
       _server = nil;
+      [self stopServerRestartTimer];
     }
     
     if (!_isListening)
@@ -198,7 +199,8 @@
                                        withSessionDelegate:self
                             withMultipeerDiscoveryDelegate:self];
       [_client start];
-
+      [self startClientRestartTimer];
+      
       return true;
     }
     else
@@ -218,6 +220,7 @@
     {
       [_client stop];
        _client = nil;
+      [self stopClientRestartTimer];
     }
   }
   return true;
@@ -283,34 +286,66 @@
   }
 }
 
-/*- (void)startRestartTimer
+- (void)startServerRestartTimer
 {
   // Set a timer that, if it ever fires, will restart browsing and advertising
-  NSLog(@"multipeer session: start timer: %p", self);
+/*  NSLog(@"multipeer manager: start server restart timer: %p", self);
 
-  OnMainThread(^{
-    assert([NSThread isMainThread]);
-    _restartTimer = [NSTimer scheduledTimerWithTimeInterval:30
-                                                     target:self
-                                                   selector:@selector(restart:)
-                                                   userInfo:nil
-                                                    repeats:YES];
-  });
-}
-
-- (void)stopRestartTimer
-{
-  NSLog(@"multipeer session: stop timer");
-  [_restartTimer invalidate];
-}
+  _serverRestartTimer = [NSTimer scheduledTimerWithTimeInterval:20
+                                                   target:self
+                                                 selector:@selector(restartServer:)
+                                                 userInfo:nil
+                                                  repeats:YES];
+  
+  [[NSRunLoop mainRunLoop] addTimer:_serverRestartTimer forMode:NSRunLoopCommonModes];
 */
+}
 
-/*- (void)restart:(NSTimer *)timer
+- (void)stopServerRestartTimer
 {
-  NSLog(@"multipeer session: restart");
-  [_server restart];
+  /*NSLog(@"multipeer manager: stop server timer");
+  @synchronized(self)
+  {
+    [_serverRestartTimer invalidate];
+    _serverRestartTimer = nil;
+  }*/
+}
+
+- (void)startClientRestartTimer
+{
+  // Set a timer that, if it ever fires, will restart browsing and advertising
+  NSLog(@"multipeer manager: start client restart timer: %p", self);
+
+  _clientRestartTimer = [NSTimer scheduledTimerWithTimeInterval:20
+                                                   target:self
+                                                 selector:@selector(restartClient:)
+                                                 userInfo:nil
+                                                  repeats:YES];
+  
+  [[NSRunLoop mainRunLoop] addTimer:_clientRestartTimer forMode:NSRunLoopCommonModes];
+}
+
+- (void)stopClientRestartTimer
+{
+  NSLog(@"multipeer manager: stop client timer");
+  @synchronized(self)
+  {
+    [_clientRestartTimer invalidate];
+    _clientRestartTimer = nil;
+  }
+}
+
+- (void)restartClient:(NSTimer *)timer
+{
+  NSLog(@"multipeer manager: restart client");
   [_client restart];
-}*/
+}
+
+- (void)restartServer:(NSTimer *)timer
+{
+  NSLog(@"multipeer manager: restart server");
+  [_server restart];
+}
 
 - (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
                           withConnectCallback:(ClientConnectCallback)connectCallback
