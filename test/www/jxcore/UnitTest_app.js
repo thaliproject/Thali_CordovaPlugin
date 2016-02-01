@@ -4,9 +4,9 @@
  * This effectively acts as main entry point to the unit test app
  */
 
-"use strict";
+'use strict';
 
-var testUtils = require("./lib/testUtils");
+var testUtils = require('./lib/testUtils');
 
 if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/MobileUsingWifi.js');
@@ -15,7 +15,7 @@ if (typeof Mobile === 'undefined') {
 testUtils.toggleRadios(true);
 
 Mobile('GetDeviceName').callNative(function (name) {
-  console.log("My device name is: %s", name);
+  console.log('My device name is: %s', name);
   testUtils.setName(name);
   require('./runTests.js');
   console.log('Test app app.js loaded');
