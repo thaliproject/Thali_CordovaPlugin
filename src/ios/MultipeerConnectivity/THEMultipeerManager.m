@@ -291,12 +291,15 @@
   // Set a timer that, if it ever fires, will restart browsing and advertising
 /*  NSLog(@"multipeer manager: start server restart timer: %p", self);
 
-  _serverRestartTimer = [NSTimer scheduledTimerWithTimeInterval:20
-                                                   target:self
-                                                 selector:@selector(restartServer:)
-                                                 userInfo:nil
-                                                  repeats:YES];
-  
+  dispatch_async(dispatch_get_main_queue(), ^{
+    _serverRestartTimer = [NSTimer scheduledTimerWithTimeInterval:20
+                                                           target:self
+                                                         selector:@selector(serverClient:)
+                                                         userInfo:nil
+                                                          repeats:YES];
+    }
+  );
+ 
   [[NSRunLoop mainRunLoop] addTimer:_serverRestartTimer forMode:NSRunLoopCommonModes];
 */
 }
@@ -316,13 +319,14 @@
   // Set a timer that, if it ever fires, will restart browsing and advertising
   NSLog(@"multipeer manager: start client restart timer: %p", self);
 
-  _clientRestartTimer = [NSTimer scheduledTimerWithTimeInterval:20
-                                                   target:self
-                                                 selector:@selector(restartClient:)
-                                                 userInfo:nil
-                                                  repeats:YES];
-  
-  [[NSRunLoop mainRunLoop] addTimer:_clientRestartTimer forMode:NSRunLoopCommonModes];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    _clientRestartTimer = [NSTimer scheduledTimerWithTimeInterval:20
+                                                           target:self
+                                                         selector:@selector(restartClient:)
+                                                         userInfo:nil
+                                                          repeats:YES];
+    }
+  );
 }
 
 - (void)stopClientRestartTimer
