@@ -1,5 +1,10 @@
 "use strict";
 
+if (jxcore.utils.OSInfo().isAndroid) {
+  // REMOVE ME WHEN READY TO TEST ANDROID !!!
+  return;
+}
+
 if (!jxcore.utils.OSInfo().isMobile) {
   return;
 }

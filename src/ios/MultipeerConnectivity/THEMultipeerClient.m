@@ -348,7 +348,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       {
         NSLog(@"client: found updated peer: %@", remotePeerIdentifier);
         [clientSession updateRemotePeerIdentifier:remotePeerIdentifier];
-        previouslyVisible= FALSE;
+        previouslyVisible = FALSE;
       }
       else
       {
@@ -364,13 +364,13 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
                                        withRemotePeerID:peerID 
                                withRemotePeerIdentifier:remotePeerIdentifier];
       NSLog(@"client: found new peer: %@", [clientSession remotePeerIdentifier]);
-      [clientSession setVisible:YES];
     }
     
+    [clientSession setVisible:YES];    
     return clientSession;
   }];
 
-  if (clientSession && previouslyVisible == NO)
+  if (clientSession && previouslyVisible == FALSE)
   {
     // A new peer or one that has become visible again. Only
     // contact delegate when the state changes (we get duplicates a lot)
