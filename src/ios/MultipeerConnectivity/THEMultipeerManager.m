@@ -123,7 +123,7 @@
     
     NSLog(@"THEMultipeerManager initialized peer %@", _peerIdentifier);
 
-    __weak typeof(self) weakSelf = self;
+    __weak __typeof(self) weakSelf = self;
     [_server setTimerResetCallback: ^void (void) {
       // Reset the restart timer
       NSLog(@"multipeer session: reset timer");
