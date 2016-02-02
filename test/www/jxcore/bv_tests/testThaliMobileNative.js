@@ -114,6 +114,12 @@ test('Can connect to a remote peer', function (t) {
   var complete = false;
   var applicationPort = 4242;
 
+  var echoServer = net.createServer(function(socket) {
+    socket.pipe(socket);
+  });
+
+  echoServer.listen(applicationPort, '127.0.0.1');
+
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {
       if (peer.peerAvailable) {
