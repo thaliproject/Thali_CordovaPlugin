@@ -38,7 +38,7 @@ test('#generatePreambleAndBeacons empty keys to notify', function (t) {
 
   t.equal(pubKe.length, 65);
   t.equal(expirationBuffer.length, 8);
-  t.equal(Long.fromBits(expirationBuffer.readInt32BE(0) << 8, expirationBuffer.readInt32BE(4)).toNumber(), expiration);
+  t.equal(Long.fromBits(expirationBuffer.readInt32BE(4), expirationBuffer.readInt32BE(0) << 8).toNumber(), expiration);
   t.equal(results.length, 65 + 8);
   t.end();
 });
@@ -61,7 +61,13 @@ test('#generatePreambleAndBeacons multiple keys to notify', function (t) {
     expiration
   );
 
-  t.equal(results.length, 65 + 8 + 48 + 48 + 48);
+  var pubKe = results.slice(0, 65);
+  var expirationBuffer = results.slice(65, 65 + 8);
+
+  t.equal(pubKe.length, 65);
+  t.equal(expirationBuffer.length, 8);
+  t.equal(Long.fromBits(expirationBuffer.readInt32BE(4), expirationBuffer.readInt32BE(0) << 8).toNumber(), expiration);
+  t.equal(results.length, 65 + 8 + 32 + 32 + 32);
 
   t.end();
 });
