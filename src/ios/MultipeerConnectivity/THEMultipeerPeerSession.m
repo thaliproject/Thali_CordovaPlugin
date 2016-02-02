@@ -113,6 +113,11 @@ static NSDictionary *stateChanges = nil;
   return _remotePeerIdentifier;
 }
 
+- (void)updateRemotePeerIdentifier:(NSString *)remotePeerIdentifier
+{
+  _remotePeerIdentifier = remotePeerIdentifier;
+}
+
 - (NSString *)remotePeerUUID
 {
   return [THEMultipeerPeerSession peerUUIDFromPeerIdentifier:_remotePeerIdentifier];

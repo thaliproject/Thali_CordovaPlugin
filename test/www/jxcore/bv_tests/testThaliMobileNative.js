@@ -1,5 +1,10 @@
 "use strict";
 
+if (jxcore.utils.OSInfo().isAndroid) {
+  // REMOVE ME WHEN READY TO TEST ANDROID !!!
+  return;
+}
+
 if (!jxcore.utils.OSInfo().isMobile) {
   return;
 }
@@ -108,6 +113,12 @@ test('Can connect to a remote peer', function (t) {
 
   var complete = false;
   var applicationPort = 4242;
+
+  var echoServer = net.createServer(function(socket) {
+    socket.pipe(socket);
+  });
+
+  echoServer.listen(applicationPort, '127.0.0.1');
 
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {

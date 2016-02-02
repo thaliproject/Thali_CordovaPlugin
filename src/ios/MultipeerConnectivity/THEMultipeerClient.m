@@ -321,51 +321,6 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   return session;
 }
 
-- (void)didFindPeer:(MCPeerID *)peerID withPeerIdentifier:(NSString *)peerIdentifier pleaseConnect:(BOOL)pleaseConnect
-{
-  __block BOOL previouslyVisible = NO;
-  __block THEMultipeerClientSession *clientSession = nil;
-
-  // Find or create an app session for this peer..
-  [_clientSessions updateForPeerID:peerID 
-                       updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
-
-    THEMultipeerClientSession *session = (THEMultipeerClientSession *)p;
-
-    
-    NSString *peerUUID = [THEMultipeerPeerSession peerUUIDFromPeerIdentifier:peerIdentifier];
-    if (session && ([[session remotePeerID] hash] == [peerID hash]) && 
-        [peerUUID isEqualToString:[session remotePeerUUID]])
-    {
-      clientSession = session;
-      previouslyVisible = clientSession.visible;
-    }
-    else
-    {
-      // Don't create a session if this is the server telling us to request a reverse connection
-      // since it wont work until we've seen the advertisement
-      if (!pleaseConnect)
-      {
-        // We've found a new peer, create a new record
-        clientSession = [[THEMultipeerClientSession alloc] 
-                                      initWithLocalPeerID:_localPeerId 
-                                         withRemotePeerID:peerID 
-                                 withRemotePeerIdentifier:peerIdentifier];
-        NSLog(@"client: found peer: %@", [clientSession remotePeerUUID]);
-        [clientSession setVisible:YES];
-      }
-    }
-    
-    return clientSession;
-  }];
-
-  if (clientSession && previouslyVisible == NO)
-  {
-    // A new peer or one that has become visible again. Only
-    // contact delegate when the state changes (we get duplicates a lot)
-    [_multipeerDiscoveryDelegate didFindPeerIdentifier:[clientSession remotePeerIdentifier] pleaseConnect:pleaseConnect];
-  }
-}
 
 // MCNearbyServiceBrowserDelegate
 /////////////////////////////////
@@ -373,8 +328,55 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
 - (void)browser:(MCNearbyServiceBrowser *)browser foundPeer:(MCPeerID *)peerID 
                                           withDiscoveryInfo:(NSDictionary *)info
 {
-  NSString *peerIdentifier = info[PEER_IDENTIFIER_KEY];
-  [self didFindPeer:peerID withPeerIdentifier:peerIdentifier pleaseConnect:false];
+  __block BOOL previouslyVisible = NO;
+  __block THEMultipeerClientSession *clientSession = nil;
+  NSString *remotePeerIdentifier = info[PEER_IDENTIFIER_KEY];
+
+  // Find or create an app session for this peer..
+  [_clientSessions updateForPeerID:peerID 
+                       updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
+
+    THEMultipeerClientSession *session = (THEMultipeerClientSession *)p;
+
+    NSString *peerUUID = [THEMultipeerPeerSession peerUUIDFromPeerIdentifier:remotePeerIdentifier];
+    if (session && ([[session remotePeerID] hash] == [peerID hash]) && 
+        [peerUUID isEqualToString:[session remotePeerUUID]])
+    {
+      clientSession = session;
+      // We found a session matching the UUID, the peerIdentifier may have changed though
+      if ([remotePeerIdentifier compare:[clientSession remotePeerIdentifier]] != NSOrderedSame)
+      {
+        NSLog(@"client: found updated peer: %@", remotePeerIdentifier);
+        [clientSession updateRemotePeerIdentifier:remotePeerIdentifier];
+        previouslyVisible = FALSE;
+      }
+      else
+      {
+        NSLog(@"client: found existing peer: %@", remotePeerIdentifier);
+        previouslyVisible = clientSession.visible;
+      }
+    }
+    else
+    {
+      // We've found a new peer, create a new record
+      clientSession = [[THEMultipeerClientSession alloc] 
+                                    initWithLocalPeerID:_localPeerId 
+                                       withRemotePeerID:peerID 
+                               withRemotePeerIdentifier:remotePeerIdentifier];
+      NSLog(@"client: found new peer: %@", [clientSession remotePeerIdentifier]);
+    }
+    
+    [clientSession setVisible:YES];    
+    return clientSession;
+  }];
+
+  if (clientSession && previouslyVisible == FALSE)
+  {
+    // A new peer or one that has become visible again. Only
+    // contact delegate when the state changes (we get duplicates a lot)
+    [_multipeerDiscoveryDelegate didFindPeerIdentifier:[clientSession remotePeerIdentifier] 
+                                         pleaseConnect:false];
+  }
 }
 
 // Notifies the delegate that a peer was lost.

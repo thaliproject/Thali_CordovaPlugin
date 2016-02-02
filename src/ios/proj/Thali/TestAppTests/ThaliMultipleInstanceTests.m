@@ -310,6 +310,113 @@ static double _baseUUID = 0;
   [echoServer1 stop];
 }
 
+- (void)testMutateBeacons
+{
+  // Check we can make connections when the server is changing it's id
+
+  TestEchoServer *echoServer1 = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer1 start:4141]);
+
+  TestEchoServer *echoServer2 = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer2 start:4242]);
+  
+  // app2 > app1 therefore app2 can only connect to app1 via a forward connection
+
+  // First wait for app2 to discover app1
+  
+  __block NSDictionary *clientPeer = nil;
+  __weak THEMultipeerManager *weakApp1 = _app1;
+  XCTestExpectation *clientExpectation = [self expectationWithDescription:@"client peerAvailabilityHandler is called"];
+  _app2Handler->_didFindPeerHandler = ^void(NSDictionary *p)
+  {
+    if ([p[@"peerIdentifier"] isEqual: [weakApp1 localPeerIdentifier]])
+    {
+      clientPeer = p;
+      [clientExpectation fulfill];
+    }
+  };
+  
+  [_app1 startListening];
+  [_app1 startServerWithServerPort:4141];
+  
+  [_app2 startListening];
+  [_app2 startServerWithServerPort:4242];
+
+  // Straightforward case of app2 connecting to app1
+
+  
+  [self waitForExpectationsWithTimeout:60.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+
+  // Set up the next handler
+  
+  clientPeer = nil;
+  clientExpectation = [self expectationWithDescription:@"client peerAvailabilityHandler is called"];
+  _app2Handler->_didFindPeerHandler = ^void(NSDictionary *p)
+  {
+    // Should be rediscovered..
+    if ([p[@"peerIdentifier"] isEqual: [weakApp1 localPeerIdentifier]])
+    {
+      clientPeer = p;
+      [clientExpectation fulfill];
+    }
+  };
+
+
+  // app1 changes it's id
+  [_app1 startServerWithServerPort:4242];
+
+
+  [self waitForExpectationsWithTimeout:60.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+
+  // Now start the connection..
+  __block NSString *clientConnectError;
+  __block NSDictionary *clientConnectDetails;
+  XCTestExpectation *connectExpectation = [self expectationWithDescription:@"connect should succeed"];
+  [_app2 connectToPeerWithPeerIdentifier:clientPeer[@"peerIdentifier"]
+                    withConnectCallback:^void(NSString *error, NSDictionary *connection)
+    {
+      clientConnectError = error;
+      clientConnectDetails = connection;
+      if (clientConnectDetails) {
+        [connectExpectation fulfill];
+    }
+  }];
+  
+
+  [self waitForExpectationsWithTimeout:60.0 handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+  // This should have been a forward connection, check details match
+  
+  XCTAssertTrue(clientConnectDetails[@"listeningPort"] != nil);
+  XCTAssertTrue([clientConnectDetails[@"listeningPort"] isKindOfClass:[NSNumber class]]);
+  XCTAssertTrue([[clientConnectDetails objectForKey:@"listeningPort"] intValue] != 0);
+  
+  XCTAssertTrue(clientConnectDetails[@"clientPort"] != nil);
+  XCTAssertTrue([clientConnectDetails[@"clientPort"] isKindOfClass:[NSNumber class]]);
+  XCTAssertTrue([clientConnectDetails[@"clientPort"] intValue] == 0);
+  
+  XCTAssertTrue(clientConnectDetails[@"serverPort"] != nil);
+  XCTAssertTrue([clientConnectDetails[@"serverPort"] isKindOfClass:[NSNumber class]]);
+  XCTAssertTrue([clientConnectDetails[@"serverPort"] intValue] == 0);
+  
+  [echoServer2 stop];
+  [echoServer1 stop];
+}
+
 - (void)testCanSendDataForwards
 {
   TestEchoServer *echoServer1 = [[TestEchoServer alloc] init];
