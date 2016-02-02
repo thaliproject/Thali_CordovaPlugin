@@ -32,7 +32,7 @@ if [ $runningInMinGw == true ]; then
     rm -rf $repositoryRoot/test/www/jxcore/node_modules/thali
     cp -R $repositoryRoot/test/www/ ThaliTest/
 else
-    cp -R $repositoryRoot/test/www/ ThaliTest/www
+    rsync -a --no-links $repositoryRoot/test/www/ ThaliTest/www
 fi
 
 cd ThaliTest
