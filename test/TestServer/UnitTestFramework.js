@@ -101,7 +101,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         setTimeout(function() {
           // Start setup for this test
           device.socket.emit("setup", test);
-        }, 1000);
+        }, 3000);
       } else {
         device.socket.emit("setup", test);
       }
