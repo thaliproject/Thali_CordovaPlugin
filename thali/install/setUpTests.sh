@@ -29,7 +29,7 @@ if [ $runningInMinGw == true ]; then
     # The thali package might be installed as link and there will
     # be troubles later on if this link is tried to be copied so
     # remove it here.
-    rm -rf $repositoryRoot/test/www/jxcore/node_pmodules/thali
+    rm -rf $repositoryRoot/test/www/jxcore/node_modules/thali
     cp -R $repositoryRoot/test/www/ ThaliTest/
 else
     rm -rf $repositoryRoot/test/www/jxcore/node_modules/thali
