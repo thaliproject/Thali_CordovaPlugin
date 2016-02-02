@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('../lib/thali-tape');
+var tape = require('wrapping-tape');
 var NotificationBeacons = require('thali/NextGeneration/thaliNotificationBeacons');
 var crypto = require('crypto');
 var Long = require('long');
@@ -24,6 +24,7 @@ var test = tape({
 test('#generatePreambleAndBeacons empty keys to notify', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(SECP256K1);
+  localDevice.generateKeys();
   var expiration = 9000;
 
   var results = notificationBecons.generatePreambleAndBeacons(
@@ -33,18 +34,19 @@ test('#generatePreambleAndBeacons empty keys to notify', function (t) {
   );
 
   var pubKe = results.slice(0, 65);
-  var expirationBuffer = results.slice(65, 8);
+  var expirationBuffer = results.slice(65, 65 + 8);
 
   t.equal(pubKe.length, 65);
-  t.equal(expirationBuffer, 8);
-  t.equal(Long.fromBits(expirationBuffer.slice(4, 4), expirationBuffer.slice(0, 4)).toNumber(), expiration);
-
+  t.equal(expirationBuffer.length, 8);
+  t.equal(Long.fromBits(expirationBuffer.readInt32BE(0) << 8, expirationBuffer.readInt32BE(4)).toNumber(), expiration);
+  t.equal(results.length, 65 + 8);
   t.end();
 });
 
 test('#generatePreambleAndBeacons multiple keys to notify', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(SECP256K1);
+  localDevice.generateKeys();
   var expiration = 9000;
 
   var device1 = crypto.createECDH(SECP256K1).generateKeys();

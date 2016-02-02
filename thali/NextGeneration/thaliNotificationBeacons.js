@@ -39,11 +39,11 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
     // Generate preamble
     var pubKe = ke.generateKeys();
     var expirationLong = Long.fromNumber(secondsUntilExpiration);
-    var expiration = new Buffer(8);
+    var expiration = new Buffer(8).fill(0);
     expiration.writeInt32BE(expirationLong.high, 0);
     expiration.writeInt32BE(expirationLong.low, 4);
 
-    beacons.push(Buffer.concat(pubKe, expiration));
+    beacons.push(Buffer.concat([pubKe, expiration]));
 
     // UnencryptedKeyId = SHA256(Kx.public().encode()).first(16)
     var unencryptedKeyId = crypto.createHash(SHA256);
@@ -78,13 +78,13 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 
       // beacons.append(AESEncrypt(GCM, HKey, IV, 128, UnencryptedKeyId) + BeaconHmac)
       var aes = crypto.createCipheriv(GCM, hkey, iv);
-      aes.udpate(unencryptedKeyId);
-      aes = aes.digest();
+      aes.update(unencryptedKeyId);
+      aes = aes.final();
 
-      beacons.push(Buffer.concat(aes, beaconHmac));
+      beacons.push(Buffer.concat([aes, beaconHmac]));
     }
 
-    return new Buffer(beacons);
+    return Buffer.concat(beacons);
 };
 
 /**
