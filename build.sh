@@ -52,6 +52,12 @@ jx npm run test-meta;ERROR_ABORT
 # Disabled coordinated tests since there was some
 # issue with them in the CI.
 #jx npm run test-coordinated;ERROR_ABORT
+
+# Verify that docs can be generated
+cd $PROJECT_ROOT/thali/;ERROR_ABORT
+jx npm run createPublicDocs
+jx npm run createInternalDocs
+
 # Make sure we are back in the project root folder
 # after the test execution
 cd $PROJECT_ROOT;ERROR_ABORT
