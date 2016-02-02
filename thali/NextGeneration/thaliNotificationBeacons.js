@@ -112,7 +112,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 NotificationBeacons.prototype.parseBeacons =
   function(beaconStreamWithPreAmble, ecdhForLocalDevice, addressBookCallback) {
 
-    var chunkSize = 48, len = beaconStreamWithPreAmble.length;
+    var chunkSize = 32, len = beaconStreamWithPreAmble.length;
 
     // Ensure that is an ECDH secp256k1 public key
     var pubKe = beaconStreamWithPreAmble.slice(0, 65);
@@ -121,15 +121,15 @@ NotificationBeacons.prototype.parseBeacons =
     }
 
     // Ensure that expiration is 64-bit integer
-    var expiration = beaconStreamWithPreAmble.slice(65, 8);
-    if (expiration !== 8) {
+    var expiration = beaconStreamWithPreAmble.slice(65, 65 + 8);
+    if (expiration.length !== 8) {
       throw new Error('Preamble expiration must be a 64 bit integer');
     }
 
     for (var i = 73; i < len; i += chunkSize) {
-      // encryptedBeaconKeyId = beaconStream.read(48)
+      // encryptedBeaconKeyId = beaconStream.read(32)
       var encryptedBeaconKeyId = beaconStreamWithPreAmble.slice(i, i + chunkSize);
-      if (encryptedBeaconKeyId.length !== 48) {
+      if (encryptedBeaconKeyId.length !== chunkSize) {
         throw new Error('Malformed encyrpted beacon key ID');
       }
 
@@ -149,8 +149,8 @@ NotificationBeacons.prototype.parseBeacons =
       var unencryptedKeyId;
       try {
         unencryptedKeyId = crypto.createDecipheriv(GCM, hkey, iv);
-        unencryptedKeyId.udpate(encryptedBeaconKeyId.slice(0, 32));
-        unencryptedKeyId = unencryptedKeyId.digest();
+        unencryptedKeyId.udpate(encryptedBeaconKeyId);
+        unencryptedKeyId = unencryptedKeyId.final();
       } catch (e) {
         // GCM mac check failed
         continue;
@@ -165,7 +165,7 @@ NotificationBeacons.prototype.parseBeacons =
       }
 
       // BeaconHmac = encryptedBeaconKeyId.slice(32, 48)
-      var beaconHmac = encryptedBeaconKeyId.slice(32, 48);
+      var beaconHmac = encryptedBeaconKeyId.slice(16, 32);
 
       // Sxy = ECDH(Ky.private(), PubKx)
       var sxy = ecdhForLocalDevice.computeSecret(pubKx);
