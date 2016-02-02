@@ -20,9 +20,9 @@
     "jsdoc": "^3.3.3"
   },
   "scripts": {
-    "prepublish": "jx install/prePublishThaliCordovaPlugin.js",
-    "postpublish": "jx install/postPublishThaliCordovaPlugin.js",
-    "postinstall": "jx installCordovaPlugin.js",
+    "prepublish": "jx npm install/prePublishThaliCordovaPlugin.js",
+    "postpublish": "jx npm install/postPublishThaliCordovaPlugin.js",
+    "postinstall": "jx npm installCordovaPlugin.js",
     "createPublicDocs": "./node_modules/.bin/jsdoc -c conf.json .",
     "createInternalDocs": "./node_modules/.bin/jsdoc -c conf.json -p ."
   },

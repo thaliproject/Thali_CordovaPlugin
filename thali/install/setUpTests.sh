@@ -19,7 +19,7 @@ cd `dirname $0`
 cd ../..
 repositoryRoot=$(pwd)
 cd test/TestServer
-jx install
+jx npm install
 jx generateServerAddress.js $2
 cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest
@@ -39,7 +39,7 @@ cd ThaliTest
 cordova platform add ios
 cordova platform add android
 cd www/jxcore
-jx install $repositoryRoot/thali --save --autoremove "*.gz"
+jx npm install $repositoryRoot/thali --save --autoremove "*.gz"
 
 if [ $runningInMinGw == true ]; then
     # On Windows the package.json file will contain a local file URI for Thali,
@@ -53,7 +53,7 @@ fi
 # SuperTest which is used by some of the BVTs include a PEM file (for private
 # keys) that makes Android unhappy so we remove it below in addition to the gz
 # files.
-jx install --no-optional --autoremove "*.gz,*.pem"
+jx npm install --no-optional --autoremove "*.gz,*.pem"
 
 # In case autoremove fails to delete the files, delete them explicitly.
 find . -name "*.gz" -delete

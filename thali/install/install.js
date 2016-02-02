@@ -330,8 +330,8 @@ module.exports = function (callback, appRootDirectory) {
             // The step below is required, because the Android after prepare
             // Cordova hook depends on external node modules that need to be
             // installed.
-            console.log('Running jx install in: ' + appScriptsFolder);
-            return childProcessExecPromise('jx install --autoremove "*.gz"',
+            console.log('Running jx npm install in: ' + appScriptsFolder);
+            return childProcessExecPromise('jx npm install --autoremove "*.gz"',
                                            appScriptsFolder);
           }).then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
