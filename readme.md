@@ -40,7 +40,7 @@ Download [Xcode 6](https://developer.apple.com/xcode/), or later.
 
 ### Install latest JXCore
 
-Follow the instructions at [http://jxcore.com/downloads/](http://jxcore.com/downloads/). When you're done, check that the
+Follow the instructions at [http://jxcore.com/downloads/](http://jxcore.com/downloads/). Please make sure you are using the default install which uses v8. There are known issues with JXcore when it comes to packaging (something only done on the desktop) with Spider Monkey. When you're done, check that the
 installation worked:
 ```
 $ jx -jxv

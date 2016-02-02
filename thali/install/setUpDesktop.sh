@@ -9,9 +9,9 @@ jx install
 jx generateServerAddress.js
 cd ../../thali
 jx install
-jx link
+jx npm link
 cd install
 jx install
 cd ../../test/www/jxcore
-jx link thali
+jx npm link thali
 jx install --no-optional
