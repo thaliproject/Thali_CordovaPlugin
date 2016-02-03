@@ -103,9 +103,10 @@ public class ConnectionHelper
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
         mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance(mContext);
 
-        if (mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
-            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
-            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
+        if (mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE)) {
+            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+            mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
+            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
         } else {
             mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
         }
@@ -138,11 +139,13 @@ public class ConnectionHelper
         if (mConnectionManager != null) {
             Log.i(TAG, "stop");
             mConnectionManager.stop();
+            mConnectionManager.dispose();
             mConnectionManager = null;
         }
 
         if (mDiscoveryManager != null) {
             mDiscoveryManager.stop();
+            mDiscoveryManager.dispose();
             mDiscoveryManager = null;
         }
 
@@ -176,6 +179,7 @@ public class ConnectionHelper
             isSupported = discoveryManager.isBleMultipleAdvertisementSupported();
         }
 
+        Log.v(TAG, "isBleMultipleAdvertisementSupported: " + isSupported);
         return isSupported;
     }
 
@@ -653,13 +657,15 @@ public class ConnectionHelper
                     public void onFinish() {
                         this.cancel();
                         Log.i(TAG, "Powering the BLE discovery back up");
-                        mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
-                        mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
+                        mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+                        mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
+                        mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
                         mPowerUpBleDiscoveryTimer = null;
                     }
                 };
 
                 mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER);
+                mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_LOW);
                 mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
 
                 mPowerUpBleDiscoveryTimer.start();
