@@ -181,7 +181,7 @@ module.exports.stopAdvertisingAndListening = function () {
  * won't return until we have a value.
  *
  * @public
- * @returns {Promise<module:thaliMobileNative~networkChanged}
+ * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
 module.exports.getNetworkStatus = function() {
   return new Promise();
