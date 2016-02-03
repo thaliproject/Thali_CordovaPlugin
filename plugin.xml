@@ -10,7 +10,7 @@
     <engines>
         <engine name="cordova-android" version=">=4.1.0" />
         <engine name="cordova-ios" version=">=3.9.0" />
-        <engine name="android-sdk" version=">=19" />
+        <engine name="android-sdk" version=">=21" />
     </engines>
 
     <!-- Android -->
@@ -28,6 +28,7 @@
         <source-file src="src/android/java/io/jxcore/node/IncomingSocketThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/OutgoingSocketThread.java" target-dir="src/io/jxcore/node/" />
+	<source-file src="src/android/java/io/jxcore/node/PeerAndConnectionModel.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/SocketThreadBase.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
         <hook type="before_compile" src="scripts/androidBeforeCompile.js" />
