@@ -53,8 +53,23 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
     logger.info("Running on %s test: %s", platform, test);
 
-    // Perform a single test
+    function emit(socket, msg, data) {
+      // Emit message every second until acknowledged
+      var acknowledged = false;
+      function _emit() {
+        if (!acknowledged) {
+          socket.emit(msg, data, function(ack) {
+            if (ack == util.format("%s_%s_ok", msg, data)) {
+              acknowledged = true;
+            }
+          });
+          setTimeout(_emit, 1000);
+        }
+      }
+      setTimeout(_emit, 0);
+    };
 
+    // Convenience: Move to next stage in test
     function doNext(stage) {
       // We need to have seen all devices report in before we
       // can proceed to the next stage
@@ -62,7 +77,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         toComplete = devices.length;
         devices.forEach(function(device) {
           // Tell each device to proceed to the next stage
-          device.socket.emit(stage, test);
+          emit(device.socket, stage, test);
         });
       }
     }
@@ -94,17 +109,8 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         }
       });
 
-      if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
-        // The timeout is added as a workaround for an issue
-        // where the client hasn't necessarily had time
-        // to add correct listeners on the socket
-        setTimeout(function() {
-          // Start setup for this test
-          device.socket.emit("setup", test);
-        }, 1000);
-      } else {
-        device.socket.emit("setup", test);
-      }
+      // All server-side handlers for this test are now installed, let's go.. 
+      emit(device.socket, "setup", test);
     });
   }
 
