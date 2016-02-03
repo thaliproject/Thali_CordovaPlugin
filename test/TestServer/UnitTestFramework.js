@@ -78,11 +78,11 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
     logger.info("Running on %s test: %s", platform, test);
 
-    function emit(socket, msg) {
+    function emit(device, msg) {
       var retries = 10;
 
       var acknowledged = false;
-      socket.once(util.format("%s_ok", msg), function() {
+      device.socket.once(util.format("%s_ok", msg), function() {
         acknowledged = true;      
       });
 
@@ -90,11 +90,11 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       function _emit() {
         if (!acknowledged) {
           console.log("emit: %s", msg);
-          socket.emit(msg);          
+          device.socket.emit(msg);          
           if (--retries > 0) {
             setTimeout(_emit, 1000);
           } else {
-            throw new Error("Unrecoverable error - Device not responding");
+            logger.error("test server: Device %s", device);
           }
         }
       }
@@ -109,7 +109,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         toComplete = devices.length;
         devices.forEach(function(device) {
           // Tell each device to proceed to the next stage
-          emit(device.socket, stage + "_" + test);
+          emit(device, stage + "_" + test);
         });
       }
     }
@@ -142,7 +142,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       });
 
       // All server-side handlers for this test are now installed, let's go.. 
-      emit(device.socket, "setup_" + test);
+      emit(device, "setup_" + test);
     });
   }
 
