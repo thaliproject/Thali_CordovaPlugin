@@ -18,7 +18,9 @@ var promiseResultSuccessOrFailure = function (promise) {
 };
 
 var thaliMobileStates = {
-  started: false
+  started: false,
+  listening: false,
+  advertising: false
 };
 
 /** @module thaliMobile */
@@ -151,7 +153,25 @@ module.exports.stop = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.startListeningForAdvertisements = function () {
-  return new Promise();
+  if (thaliMobileStates.started === false) {
+    return Promise.reject(new Error('Call Start!'));
+  }
+  thaliMobileStates.listening = true;
+  var resultObject = {};
+  var promiseList = [];
+  if (thaliWifiInfrastructure.started) {
+    promiseList.push(promiseResultSuccessOrFailure(
+      thaliWifiInfrastructure.startListeningForAdvertisements()));
+  } else {
+    resultObject.wifiResult = new Error('Not Active');
+  }
+  // TODO: Add native call
+  return Promise.all(promiseList).then(function (results) {
+    return {
+      wifiResult: resultObject.wifiResult || results[0] || null
+      //nativeResult: results[1] || null
+    };
+  });
 };
 
 /**
@@ -194,9 +214,26 @@ module.exports.stopListeningForAdvertisements = function () {
  * @public
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
-module.exports.startUpdateAdvertisingAndListening =
-    function () {
-  return new Promise();
+module.exports.startUpdateAdvertisingAndListening = function () {
+  if (thaliMobileStates.started === false) {
+    return Promise.reject(new Error('Call Start!'));
+  }
+  thaliMobileStates.advertising = true;
+  var resultObject = {};
+  var promiseList = [];
+  if (thaliWifiInfrastructure.started) {
+    promiseList.push(promiseResultSuccessOrFailure(
+      thaliWifiInfrastructure.startUpdateAdvertisingAndListening()));
+  } else {
+    resultObject.wifiResult = new Error('Not Active');
+  }
+  // TODO: Add native call
+  return Promise.all(promiseList).then(function (results) {
+    return {
+      wifiResult: resultObject.wifiResult || results[0] || null
+      //nativeResult: results[1] || null
+    };
+  });
 };
 
 /**
