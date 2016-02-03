@@ -17,6 +17,10 @@ var promiseResultSuccessOrFailure = function (promise) {
   });
 };
 
+var thaliMobileStates = {
+  started: false
+};
+
 /** @module thaliMobile */
 
 /**
@@ -78,7 +82,19 @@ var promiseResultSuccessOrFailure = function (promise) {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.start = function (router) {
-  return new Promise();
+  if (thaliMobileStates.started === true) {
+    return Promise.reject(new Error('Call Stop!'));
+  }
+  thaliMobileStates.started = true;
+  return Promise.all([
+    promiseResultSuccessOrFailure(
+      thaliWifiInfrastructure.start(router))
+  ]).then(function (results) {
+    return {
+      wifiResult: results[0] || null
+      //nativeResult: results[1] || null
+    };
+  });
 };
 
 /**
@@ -93,7 +109,16 @@ module.exports.start = function (router) {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stop = function () {
-  return new Promise();
+  thaliMobileStates.started = false;
+  return Promise.all([
+    promiseResultSuccessOrFailure(
+      thaliWifiInfrastructure.stop())
+  ]).then(function (results) {
+    return {
+      wifiResult: results[0] || null
+      //nativeResult: results[1] || null
+    };
+  });
 };
 
 /**
