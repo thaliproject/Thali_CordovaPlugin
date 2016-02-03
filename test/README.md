@@ -70,7 +70,7 @@ one can develop and debug directly in the Thali_CordovaPlugin directory. There i
 copying and pasting that Cordova development normally requires.
 
 To set up your desktop environment for development go to Thali_CordovaPlugin/thali/install and run 
-`sudo jx npm run setupDesktop`.
+`jx npm run setupDesktop`.
 
 Sudo might be needed because this script installs a symbolic link into your global NPM directory.
 
