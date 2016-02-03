@@ -32,6 +32,31 @@ function UnitTestFramework(testConfig, _logger)
 
 util.inherits(UnitTestFramework, TestFramework);
 
+UnitTestFramework.prototype.finishRun = function(devices, platform, tests, results) {
+
+  // All devices have completed all their tests
+  logger.info("Test run on %s complete", platform);
+
+  // The whole point !! Log test results from the
+  // server
+  this.testReport(platform, tests, results);
+
+  // Signal devices to quit
+  devices.forEach(function(device) {
+    device.socket.emit("complete");
+  });
+
+  // We're done running for this platform..
+  this.runningTests = this.runningTests.filter(function(p) {
+    return (p != platform);
+  });
+
+  // There may be other platforms still running
+  if (this.runningTests.length == 0) {
+    process.exit(0);
+  }
+}
+
 UnitTestFramework.prototype.startTests = function(platform, tests) {
 
   var toComplete;
@@ -53,17 +78,24 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
     logger.info("Running on %s test: %s", platform, test);
 
-    function emit(socket, msg, data) {
-      // Emit message every second until acknowledged
+    function emit(socket, msg) {
+      var retries = 10;
+
       var acknowledged = false;
+      socket.once(util.format("%s_ok", msg), function() {
+        acknowledged = true;      
+      });
+
+      // Emit message every second until acknowledged
       function _emit() {
         if (!acknowledged) {
-          socket.emit(msg, data, function(ack) {
-            if (ack == util.format("%s_%s_ok", msg, data)) {
-              acknowledged = true;
-            }
-          });
-          setTimeout(_emit, 1000);
+          console.log("emit: %s", msg);
+          socket.emit(msg);          
+          if (--retries > 0) {
+            setTimeout(_emit, 1000);
+          } else {
+            throw new Error("Unrecoverable error - Device not responding");
+          }
         }
       }
       setTimeout(_emit, 0);
@@ -77,7 +109,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         toComplete = devices.length;
         devices.forEach(function(device) {
           // Tell each device to proceed to the next stage
-          emit(device.socket, stage, test);
+          emit(device.socket, stage + "_" + test);
         });
       }
     }
@@ -110,7 +142,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       });
 
       // All server-side handlers for this test are now installed, let's go.. 
-      emit(device.socket, "setup", test);
+      emit(device.socket, "setup_" + test);
     });
   }
 
@@ -123,29 +155,8 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
         doTest(tests[0], nextTest);
       });
     } else {
-
       // ALL DONE !!
-      // All devices have completed all their tests
-      logger.info("Test run on %s complete", platform);
-
-      // The whole point !! Log test results from the
-      // server
-      self.testReport(platform, _tests, results);
-
-      // Signal devices to quit
-      devices.forEach(function(device) {
-        device.socket.emit("complete");
-      });
-
-      // We're done running for this platform..
-      self.runningTests = self.runningTests.filter(function(p) {
-        return (p != platform);
-      });
-
-      // There may be other platforms still running
-      if (self.runningTests.length == 0) {
-        process.exit(0);
-      }
+      self.finishRun(devices, platform, _tests, results);
     }
   }
 
@@ -155,8 +166,13 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
     // Wait for devices to signal they've scheduled their
     // test runs and then begin
     device.socket.once("schedule_complete", function() {
-      if (--toComplete == 0) {
-        doTest(tests[0], nextTest);
+      if (tests.length) {
+        if (--toComplete == 0) {
+          doTest(tests[0], nextTest);
+        }
+      } else {
+        logger.warn("Schedule complete with no tests to run");
+        self.finishRun(devices, platform, _tests, results);
       }
     });
 

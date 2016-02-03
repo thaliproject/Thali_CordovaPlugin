@@ -58,8 +58,8 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 
   tape('setup', function(t) {
     // Run setup function when the testServer tells us
-    testServer.once("setup", function(_name, ack) {
-      ack(util.format("setup_%s_ok", _name));
+    testServer.once("setup_" + _name, function(_name) {
+      testServer.emit(util.format("setup_%s_ok", _name));
       t.on('end', function() {
         testServer.emit('setup_complete', JSON.stringify({"test":_name}));
       });
@@ -81,16 +81,16 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     });
 
     // Run the test (cb) when the server tells us to    
-    testServer.once("start_test", function(_name, ack) {
-      ack(util.format("start_%s_ok", _name));
+    testServer.once("start_test_" + _name, function(_name) {
+      testServer.emit(util.format("start_%s_ok", _name));
       cb(t);
     });
   });
 
   tape("teardown", function(t) {
     // Run teardown function when the server tells us
-    testServer.once("teardown", function(_name, ack) {
-      ack(util.format("teardown_%s_ok", _name));
+    testServer.once("teardown_" + _name, function(_name) {
+      testServer.emit(util.format("teardown_%s_ok", _name));
       t.on('end', function() {
         testServer.emit('teardown_complete', JSON.stringify({"test":_name}));
       });
@@ -219,9 +219,8 @@ thaliTape.begin = function() {
           tests[test].fn
         );
       });
-      console.log("schedule_complete");
-      testServer.emit('schedule_complete');
       createStream(testServer);
+      testServer.emit('schedule_complete');
     });
 
     var platform;
