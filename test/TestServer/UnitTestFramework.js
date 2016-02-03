@@ -94,7 +94,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
           if (--retries > 0) {
             setTimeout(_emit, 1000);
           } else {
-            logger.error("test server: Device %s", device);
+            logger.error("test server: Device %s", device.name);
           }
         }
       }
