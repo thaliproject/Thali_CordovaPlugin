@@ -62,7 +62,7 @@
 
 - (void)updateLocalPeerIdentifier:(NSString *)localPeerIdentifier;
 
-// The server component is telling us it just completed a connectio, it may be on
+// The server component is telling us it just completed a connection, it may be one
 // we initiated.
 - (void)didCompleteReverseConnection:(NSString *)peerIdentifier
                       withClientPort:(unsigned short)clientPort

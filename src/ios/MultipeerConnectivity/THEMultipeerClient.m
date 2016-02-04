@@ -62,6 +62,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   NSMutableDictionary *_pendingReverseConnections;
 }
 
+static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
+
 - (id)initWithPeerId:(MCPeerID *)peerId
                         withServiceType:(NSString *)serviceType
                      withPeerIdentifier:(NSString *)peerIdentifier
@@ -176,10 +178,18 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       NSLog(@"client: server already connecting");
       @synchronized(_pendingReverseConnections)
       {
-        _pendingReverseConnections[peerIdentifier] = connectCallback;
+        if ([_pendingReverseConnections count] < MAX_PENDING_REVERSE_CONNECTIONS)
+        {
+          _pendingReverseConnections[peerIdentifier] = connectCallback;
+          return YES;
+        }
+        else
+        {
+          NSLog( @"client: connect: too many pending reverse connections");
+          connectCallback(@"Too many pending reverse connections", 0);
+          return NO;
+        }
       }
-
-      return YES;
     }
   }
   
