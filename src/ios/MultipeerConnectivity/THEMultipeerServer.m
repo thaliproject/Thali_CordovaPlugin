@@ -173,7 +173,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   if (_timerCallback)
     _timerCallback();
 
-  // Crack the context into it's constiuent parts..
+  // Crack the context into it's constituent parts..
   NSString *stringContext = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
   NSArray<NSString *> *contextParts = [stringContext componentsSeparatedByString:@"+"];
   if ([contextParts count] != 2)
