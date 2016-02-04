@@ -70,7 +70,7 @@
   {
     if (!_connectCallback)
     {
-      NSLog(@"client session: no connect callabck (server initiated)");
+      NSLog(@"client session: no connect callback (server initiated)");
       return;
     }
     
