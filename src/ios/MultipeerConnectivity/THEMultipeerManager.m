@@ -165,7 +165,9 @@
   @synchronized(self)
   {
     if (_isListening)
+    {
       return false;
+    }
     
     [self stopClient];
     _isListening = true;
