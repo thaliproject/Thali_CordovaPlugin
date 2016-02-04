@@ -364,8 +364,7 @@
 - (BOOL)killConnection:(NSString *)peerIdentifier
 {
   // Cause trouble for testing purposes
-  //return [_client killConnection:peerIdentifier];
-  return false;
+  return [_client killConnection:peerIdentifier];
 }
 
 @end
