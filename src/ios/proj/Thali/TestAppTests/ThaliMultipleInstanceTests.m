@@ -53,6 +53,7 @@
 }
 
 static double _baseUUID = 0;
+static const int DEFAULT_EXPECT_TIMEOUT = 30.0;
 
 - (void)setUp
 {
@@ -107,7 +108,7 @@ static double _baseUUID = 0;
     }
   };
   
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -151,7 +152,7 @@ static double _baseUUID = 0;
     }
   };
   
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -172,7 +173,7 @@ static double _baseUUID = 0;
   }];
   
 
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -228,7 +229,7 @@ static double _baseUUID = 0;
     }
   };
   
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -286,7 +287,7 @@ static double _baseUUID = 0;
   }];
   
 
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -345,7 +346,7 @@ static double _baseUUID = 0;
   // Straightforward case of app2 connecting to app1
 
   
-  [self waitForExpectationsWithTimeout:60.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -371,7 +372,7 @@ static double _baseUUID = 0;
   [_app1 startServerWithServerPort:4242];
 
 
-  [self waitForExpectationsWithTimeout:60.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -393,7 +394,7 @@ static double _baseUUID = 0;
   }];
   
 
-  [self waitForExpectationsWithTimeout:60.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -413,6 +414,79 @@ static double _baseUUID = 0;
   XCTAssertTrue([clientConnectDetails[@"serverPort"] isKindOfClass:[NSNumber class]]);
   XCTAssertTrue([clientConnectDetails[@"serverPort"] intValue] == 0);
   
+  [echoServer2 stop];
+  [echoServer1 stop];
+}
+
+- (void)testConnectToOldBeaconFails
+{
+  // Check we can make connections when the server is changing it's id
+
+  TestEchoServer *echoServer1 = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer1 start:4141]);
+
+  TestEchoServer *echoServer2 = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer2 start:4242]);
+  
+  // app2 > app1 therefore app2 can only connect to app1 via a forward connection
+
+  // First wait for app2 to discover app1
+  
+  __block NSDictionary *clientPeer = nil;
+  __weak THEMultipeerManager *weakApp1 = _app1;
+  XCTestExpectation *clientExpectation = [self expectationWithDescription:@"client peerAvailabilityHandler is called"];
+  _app2Handler->_didFindPeerHandler = ^void(NSDictionary *p)
+  {
+    if ([p[@"peerIdentifier"] isEqual: [weakApp1 localPeerIdentifier]])
+    {
+      clientPeer = p;
+      [clientExpectation fulfill];
+    }
+  };
+  
+  [_app1 startListening];
+  [_app1 startServerWithServerPort:4141];
+  
+  [_app2 startListening];
+  [_app2 startServerWithServerPort:4242];
+
+  // Straightforward case of app2 connecting to app1
+
+  
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+
+  // app1 changes it's id
+  [_app1 startServerWithServerPort:4242];
+
+
+  // Now start the connection to old identifier..
+  __block NSString *clientConnectError;
+  __block NSDictionary *clientConnectDetails;
+  XCTestExpectation *connectExpectation = [self expectationWithDescription:@"connect should succeed"];
+  [_app2 connectToPeerWithPeerIdentifier:clientPeer[@"peerIdentifier"]
+                    withConnectCallback:^void(NSString *error, NSDictionary *connection)
+    {
+      // We expect this connection to fail !!
+      
+      clientConnectError = error;
+      clientConnectDetails = connection;
+      if (clientConnectError) {
+        [connectExpectation fulfill];
+    }
+  }];
+  
+  // The expectation shouldn't fail (since it depends on receiving a connect error)
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
   [echoServer2 stop];
   [echoServer1 stop];
 }
@@ -449,7 +523,7 @@ static double _baseUUID = 0;
     }
   };
   
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -470,7 +544,7 @@ static double _baseUUID = 0;
   }];
   
 
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -487,7 +561,7 @@ static double _baseUUID = 0;
       [clientConnectExpectation fulfill];
   }];
   
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -506,7 +580,7 @@ static double _baseUUID = 0;
   
   [client write:toSend];
 
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -549,7 +623,7 @@ static double _baseUUID = 0;
     }
   };
   
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -607,7 +681,7 @@ static double _baseUUID = 0;
   }];
   
 
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -623,7 +697,7 @@ static double _baseUUID = 0;
       [serverConnectExpectation fulfill];
   }];
   
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -642,7 +716,7 @@ static double _baseUUID = 0;
   
   [client write:toSend];
 
-  [self waitForExpectationsWithTimeout:5.0 handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }

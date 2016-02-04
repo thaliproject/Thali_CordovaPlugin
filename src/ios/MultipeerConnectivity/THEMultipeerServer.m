@@ -178,7 +178,7 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   // If context doesn't look right just ignore the invitation.. don't get
   // into an argument with a malfunctioning/hostile peer
   
-  if ([context length] != 115)
+  if ([context length] > 115)
   {
     NSLog(@"server: rejecting invitation: malformed context");
     return;
