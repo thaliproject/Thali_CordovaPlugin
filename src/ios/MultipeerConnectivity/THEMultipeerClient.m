@@ -158,7 +158,7 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
   const THEMultipeerServerSession *serverSession = 
     [_sessionStateDelegate serverSession:peerIdentifier];
   
-  if (serverSession && [serverSession connectionState] != THEPeerSessionStateConnected)
+  if (serverSession && [serverSession connectionState] != THEPeerSessionStateNotConnected)
   {
     if ([serverSession connectionState] == THEPeerSessionStateConnected)
     {
