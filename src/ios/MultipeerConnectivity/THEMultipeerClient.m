@@ -232,13 +232,24 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
           
           NSString *context = [NSString stringWithFormat:@"%@+%@", 
                                   _localPeerIdentifier, peerIdentifier];
+          NSData *contextData = [context dataUsingEncoding:NSUTF8StringEncoding];
+          assert([contextData length] <= 115);
+          
+          if (contextData)
+          {
+            [_nearbyServiceBrowser invitePeer:[clientSession remotePeerID]
+                                    toSession:[clientSession session]
+                                  withContext:contextData
+                                      timeout:30];
 
-          [_nearbyServiceBrowser invitePeer:[clientSession remotePeerID]
-                                  toSession:[clientSession session]
-                                withContext:[context dataUsingEncoding:NSUTF8StringEncoding]
-                                    timeout:30];
-
-          success = YES;
+            success = YES;
+          }
+          else
+          {
+            NSLog(@"client: peerIdentifier too long %@", peerIdentifier);
+            connectCallback(@"peerIdentifier too long", 0);
+            success = NO;
+          }
         }
         else
         {

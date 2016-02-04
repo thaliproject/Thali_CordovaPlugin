@@ -54,5 +54,13 @@
   XCTAssertTrue([_app startUpdateAdvertisingAndListening:4242]);
 }
 
+- (void)testInviteContextLength {
+  NSString *uuid = [NSString stringWithFormat:@"%@:%llu", [[[NSUUID alloc] init] UUIDString], ULLONG_MAX];
+
+  NSString *contextString = [NSString stringWithFormat:@"%@+%@", uuid, uuid];
+  NSData *contextData = [contextString dataUsingEncoding:NSUTF8StringEncoding];
+  XCTAssertTrue([contextData length] == 115);
+}
+
 
 @end

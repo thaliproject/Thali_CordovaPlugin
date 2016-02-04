@@ -171,8 +171,19 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   // Any invite at all will reset the timer (since an invite implies we're advertsing
   // correctly).
   if (_timerCallback)
+  {
     _timerCallback();
-
+  }
+  
+  // If context doesn't look right just ignore the invitation.. don't get
+  // into an argument with a malfunctioning/hostile peer
+  
+  if ([context length] != 115)
+  {
+    NSLog(@"server: rejecting invitation: malformed context");
+    return;
+  }
+  
   // Crack the context into it's constituent parts..
   NSString *stringContext = [[NSString alloc] initWithData:context encoding:NSUTF8StringEncoding];
   NSArray<NSString *> *contextParts = [stringContext componentsSeparatedByString:@"+"];
