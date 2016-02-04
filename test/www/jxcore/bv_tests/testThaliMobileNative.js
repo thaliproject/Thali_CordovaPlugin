@@ -1,5 +1,7 @@
 "use strict";
 
+var net = require('net');
+
 if (jxcore.utils.OSInfo().isAndroid) {
   // REMOVE ME WHEN READY TO TEST ANDROID !!!
   return;
