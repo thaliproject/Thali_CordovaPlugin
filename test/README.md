@@ -51,8 +51,9 @@ To run the mobile tests:
 1. If you have a sibling directory to Thali_CordovaPlugin called ThaliTest, now would be a good time to delete it.
 1. Go to Thali_CordovaPlugin/thali/install
 2. Run either `jx npm run setupUnit` or `jx npm run setupPerf` depending on what type of test project you want to
-create. 
- 1. The script will create a sibling directory to Thali_CordovaPlugin called ThaliTest and will compile it for both
+create. On Windows, run `./setUpTests.sh UnitTest_app.js` or `./setupTests.sh PerfTest_app.js` on the latest
+Git Bash.
+2.1 The script will create a sibling directory to Thali_CordovaPlugin called ThaliTest and will compile it for both
 Android and iOS. This assumes you are running on a Mac with all the right tools.
 3. Go to Thali_CordovaPlugin/test/TestServer
 4. Examine Config_PerfTest.json or Config_UnitTest.json (depending on the test type you are running) and make sure it
@@ -70,7 +71,7 @@ one can develop and debug directly in the Thali_CordovaPlugin directory. There i
 copying and pasting that Cordova development normally requires.
 
 To set up your desktop environment for development go to Thali_CordovaPlugin/thali/install and run 
-`jx npm run setupDesktop`.
+`sudo jx npm run setupDesktop`.
 
 Sudo might be needed because this script installs a symbolic link into your global NPM directory.
 
