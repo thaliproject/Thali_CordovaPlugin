@@ -232,26 +232,25 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
       remotePeerUUID, _localPeerIdentifier, localPeerIdentifier
     );
     invitationHandler(NO, [_serverSession session]);
+    return;
   }
-  else
+
+  if ([localPeerUUID compare:remotePeerUUID] == NSOrderedDescending)
   {
-    if ([localPeerUUID compare:remotePeerUUID] == NSOrderedDescending)
-    {
-      NSLog(@"server: rejecting invitation for lexical ordering %@", remotePeerUUID);
-      invitationHandler(NO, [_serverSession session]);
-      [_multipeerDiscoveryDelegate didFindPeerIdentifier:remotePeerIdentifier pleaseConnect:true];
-      return;
-    }
-
-    [_serverSession connectWithConnectCallback:^void(NSString *p, unsigned short c, unsigned short s) {
-      [_multipeerServerConnectionDelegate didCompleteReverseConnection:p
-                                                        withClientPort:c
-                                                        withServerPort:s];
-    }];
-
-    NSLog(@"server: accepting invitation %@", remotePeerUUID);
-    invitationHandler(YES, [_serverSession session]);
+    NSLog(@"server: rejecting invitation for lexical ordering %@", remotePeerUUID);
+    invitationHandler(NO, [_serverSession session]);
+    [_multipeerDiscoveryDelegate didFindPeerIdentifier:remotePeerIdentifier pleaseConnect:true];
+    return;
   }
+
+  [_serverSession connectWithConnectCallback:^void(NSString *p, unsigned short c, unsigned short s) {
+    [_multipeerServerConnectionDelegate didCompleteReverseConnection:p
+                                                      withClientPort:c
+                                                      withServerPort:s];
+  }];
+
+  NSLog(@"server: accepting invitation %@", remotePeerUUID);
+  invitationHandler(YES, [_serverSession session]);
 }
 
 - (void)advertiser:(MCNearbyServiceAdvertiser *)advertiser didNotStartAdvertisingPeer:(NSError *)error
