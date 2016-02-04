@@ -63,11 +63,13 @@
   NSTimer *_clientRestartTimer;
 
   __weak id<THEPeerDiscoveryDelegate> _peerDiscoveryDelegate;
+  __weak id<THERemoteConnectionDelegate> _remoteConnectionDelegate;
 }
 
 - (instancetype)initWithServiceType:(NSString *)serviceType
                      withPeerIdentifier:(NSString *)peerIdentifier
-          withPeerDiscoveryDelegate:(id<THEPeerDiscoveryDelegate>)delegate;
+          withPeerDiscoveryDelegate:(id<THEPeerDiscoveryDelegate>)discoveryDelegate
+       withRemoteConnectionDelegate:(id<THERemoteConnectionDelegate>)remoteConnectionDelegate
 {
   self = [super init];
     
@@ -76,7 +78,9 @@
       return nil;
   }
   
-  _peerDiscoveryDelegate = delegate;
+  _peerDiscoveryDelegate = discoveryDelegate;
+  _remoteConnectionDelegate = remoteConnectionDelegate;
+  
   _serviceType = serviceType;
 
   _peerID = [[MCPeerID alloc] initWithDisplayName: [[UIDevice currentDevice] name]];
@@ -92,6 +96,16 @@
 - (NSString *)localPeerIdentifier
 {
   return _peerIdentifier;
+}
+
+- (BOOL)isListening
+{
+  return _isListening;
+}
+
+- (BOOL)isAdvertising
+{
+  return (_server != nil);
 }
 
 // Starts peer networking.
@@ -279,7 +293,18 @@
                       withServerPort:(unsigned short)serverPort
 {
   // The server's just completed a connection, it may be a reverse connection initiated by the
-  // client so let the client have a look..
+  // client
+  
+  // It may also be a standard remote initiated connection which, if it's failed, we need
+  // to tell someone about
+  if (_remoteConnectionDelegate)
+  {
+    if (clientPort == 0)
+    {
+      [_remoteConnectionDelegate didNotAcceptConnectionWithServerPort:serverPort];
+    }
+  }
+  
   if (_client)
   {
     [_client didCompleteReverseConnection:peerIdentifier

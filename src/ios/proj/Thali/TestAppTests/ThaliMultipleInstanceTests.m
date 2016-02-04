@@ -37,6 +37,28 @@
 
 @end
 
+@interface THETestRemoteConnectionEventHandler : NSObject <THERemoteConnectionDelegate>
+{
+  // Implement the THEPeerDiscoverDelegate in a way that makes it easy for tests
+  // to supply blocks as event handlers.
+
+@public
+  void (^_onConnectionFailed)(unsigned short);
+}
+@end
+
+@implementation THETestRemoteConnectionEventHandler
+
+- (void)didNotAcceptConnectionWithServerPort:(unsigned short)serverPort
+{
+  if (_onConnectionFailed)
+  {
+    _onConnectionFailed(serverPort);
+  }
+}
+
+@end
+
 // The Tests
 /////////////
 
@@ -50,6 +72,9 @@
   
   THETestDiscoveryEventHandler *_app1Handler;
   THETestDiscoveryEventHandler *_app2Handler;
+  
+  THETestRemoteConnectionEventHandler *_app1ConnectionHandler;
+  THETestRemoteConnectionEventHandler *_app2ConnectionHandler;
 }
 
 static double _baseUUID = 0;
@@ -69,14 +94,20 @@ static const int DEFAULT_EXPECT_TIMEOUT = 30.0;
   NSString *uuid2 = [[[NSNumber alloc] initWithDouble:++_baseUUID] stringValue];
   
   _app1Handler = [[THETestDiscoveryEventHandler alloc] init];
+  _app1ConnectionHandler = [[THETestRemoteConnectionEventHandler alloc] init];
+  
   _app1 = [[THEMultipeerManager alloc] initWithServiceType:@"THALITEST"
                                         withPeerIdentifier:uuid1
-                                 withPeerDiscoveryDelegate:_app1Handler];
+                                 withPeerDiscoveryDelegate:_app1Handler
+                              withRemoteConnectionDelegate:_app1ConnectionHandler];
 
   _app2Handler = [[THETestDiscoveryEventHandler alloc] init];
+  _app2ConnectionHandler = [[THETestRemoteConnectionEventHandler alloc] init];
+
   _app2 = [[THEMultipeerManager alloc] initWithServiceType:@"THALITEST"
                                         withPeerIdentifier:uuid2
-                                 withPeerDiscoveryDelegate:_app2Handler];
+                                 withPeerDiscoveryDelegate:_app2Handler
+                              withRemoteConnectionDelegate:_app2ConnectionHandler];
 }
 
 - (void)tearDown {
@@ -727,6 +758,68 @@ static const int DEFAULT_EXPECT_TIMEOUT = 30.0;
   
   [echoServer2 stop];
   [echoServer1 stop];
+}
+
+- (void)testFailedServerConnection
+{
+  // app2 > app1 therefore app1 can only connect to app2 via a reverse connection
+  
+  [_app1 startListening];
+  [_app1 startServerWithServerPort:4141];
+  
+  [_app2 startListening];
+  [_app2 startServerWithServerPort:4242];
+
+  // First, we wait for app2 to discover app1
+  
+  __block NSDictionary *clientPeer = nil;
+  XCTestExpectation *clientExpectation = [self expectationWithDescription:@"client peerAvailabilityHandler is called"];
+  
+  __weak THEMultipeerManager *weakApp1 = _app1;
+  _app2Handler->_didFindPeerHandler = ^void(NSDictionary *p)
+  {
+    // Screen out the ghosts (dead sessions still floating around the ether)
+    if ([p[@"peerIdentifier"] isEqual: [weakApp1 localPeerIdentifier]])
+    {
+      clientPeer = p;
+      [clientExpectation fulfill];
+    }
+  };
+  
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+  XCTestExpectation *callbackExpectation = [self expectationWithDescription:@"server should get failed connect callback"];
+  _app1ConnectionHandler->_onConnectionFailed = ^(unsigned short serverPort)
+  {
+    [callbackExpectation fulfill];
+  };
+  
+  // Now start the connection, it will succeed (but will fail quickly)
+  // and app1 (the server) will get a callback
+  
+  __block NSString *clientConnectError;
+  __block NSDictionary *clientConnectDetails;
+  XCTestExpectation *connectExpectation = [self expectationWithDescription:@"connect should succeed"];
+  [_app2 connectToPeerWithPeerIdentifier:clientPeer[@"peerIdentifier"]
+                    withConnectCallback:^void(NSString *error, NSDictionary *connection)
+    {
+      clientConnectError = error;
+      clientConnectDetails = connection;
+      if (clientConnectDetails) {
+        [connectExpectation fulfill];
+    }
+  }];
+  
+
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
 }
 
 @end

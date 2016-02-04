@@ -26,6 +26,7 @@
 //
 
 #import <UIKit/UIKit.h>
+#import <SystemConfiguration/CaptiveNetwork.h>
 
 #import "THEAppContext.h"
 #import "NPReachability.h"
@@ -44,6 +45,10 @@
 
 // Fire peerAvailabilityChanged event
 - (void)firePeerAvailabilityChangedEvent:(NSDictionary *)peer;
+
+- (void)fireDiscoveryAdvertisingStateUpdate;
+
+- (void)fireIncomingConnectionToPortNumberFailed:(unsigned short)serverPort;
 
 // UIApplicationWillResignActiveNotification callback.
 - (void)applicationWillResignActiveNotification:(NSNotification *)notification;
@@ -95,13 +100,17 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 // Starts up the client components
 - (BOOL)startListeningForAdvertisements
 {
-  return [_multipeerManager startListening];
+  BOOL result = [_multipeerManager startListening];
+  [self fireDiscoveryAdvertisingStateUpdate];
+  return result;
 }
 
 // Stops client components 
 - (BOOL)stopListeningForAdvertisements
 {
-  return [_multipeerManager stopListening];
+  BOOL result = [_multipeerManager stopListening];
+  [self fireDiscoveryAdvertisingStateUpdate];
+  return result;
 }
 
 // Starts up the server components
@@ -218,6 +227,11 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 }
 #endif
 
+- (void)didNotAcceptConnectionWithServerPort:(unsigned short)serverPort
+{
+  [self fireIncomingConnectionToPortNumberFailed:serverPort];
+}
+
 ///////////////////////////////////////////////////////////
 // THEAppContext (THEPeerBluetoothDelegate) implementation.
 ///////////////////////////////////////////////////////////
@@ -294,7 +308,8 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   
   _multipeerManager = [[THEMultipeerManager alloc] initWithServiceType:THALI_SERVICE_TYPE
                                                     withPeerIdentifier:_peerIdentifier
-                                             withPeerDiscoveryDelegate:self];
+                                             withPeerDiscoveryDelegate:self
+                                          withRemoteConnectionDelegate:self];
   // Get the default notification center.
   NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];
     
@@ -311,6 +326,21 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
 
     // Done.
   return self;
+}
+
+- (void)fireIncomingConnectionToPortNumberFailed:(unsigned short)serverPort
+{
+  [_eventDelegate incomingConnectionToPortNumberFailed:serverPort];
+}
+
+- (void)fireDiscoveryAdvertisingStateUpdate
+{
+  NSDictionary *stateUpdate = @{
+    @"discoveryActive" : [[NSNumber alloc] initWithBool:[_multipeerManager isListening]],
+    @"advertisingActive" : [[NSNumber alloc] initWithBool:[_multipeerManager isAdvertising]]
+  };
+  
+  [_eventDelegate discoveryAdvertisingStateUpdate:stateUpdate];
 }
 
 - (void)firePeerAvailabilityChangedEvent:(NSDictionary *)peer
@@ -331,23 +361,27 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   // NPReachability only tells us what kind of IP connection we're capable
   // of. Need to take bluetooth into account also
 
+  /* This stuff is being deprecated. Hmm !!!
+  NSArray *ifs = (__bridge_transfer id)CNCopySupportedInterfaces();
+  if ([ifs count] > 0)
+  {
+    for (NSString *ifname in ifs)
+    {
+      NSDictionary *info = (__bridge_transfer id)CNCopyCurrentNetworkInfo((__bridge CFStringRef)ifname);
+
+    }
+  }*/
+  
   BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
+  BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
 
-  if (reachable)
-  {
-    BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
-
-    networkStatus = @{
-      @"isAvailable" : [[NSNumber alloc] initWithBool:true],
-      @"isWifi" : [[NSNumber alloc] initWithBool:isWifi]
-    };
-  }
-  else
-  {
-    networkStatus = @{
-      @"isAvailable": [[NSNumber alloc] initWithBool:false]
-    };
-  }
+  networkStatus = @{
+    @"blueToothLowEnergy" : [[NSNumber alloc] initWithBool:true],
+    @"blueTooth" : [[NSNumber alloc] initWithBool:true],
+    @"cellular" : [[NSNumber alloc] initWithBool:reachable],
+    @"wifi" : [[NSNumber alloc] initWithBool:isWifi],
+    @"bssidName" : [[NSNull alloc] init]
+  };
 
   if (_eventDelegate)
   {
@@ -358,19 +392,19 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
 // UIApplicationWillResignActiveNotification callback.
 - (void)applicationWillResignActiveNotification:(NSNotification *)notification
 {
-    if (_eventDelegate)
-    {
-      [_eventDelegate appEnteringBackground];
-    }
+  if (_eventDelegate)
+  {
+    [_eventDelegate appEnteringBackground];
+  }
 }
 
 // UIApplicationDidBecomeActiveNotification callback.
 - (void)applicationDidBecomeActiveNotification:(NSNotification *)notification
 {
-    if (_eventDelegate)
-    {
-      [_eventDelegate appEnteredForeground];
-    }
+  if (_eventDelegate)
+  {
+    [_eventDelegate appEnteredForeground];
+  }
 }
 
 @end

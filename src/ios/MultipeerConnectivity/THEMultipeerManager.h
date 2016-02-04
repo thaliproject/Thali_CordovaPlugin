@@ -29,6 +29,7 @@
 
 #import "THEAppContext.h"
 #import "THEPeerDiscoveryDelegate.h"
+#import "THERemoteConnectionDelegate.h"
 #import "THEMultipeerDiscoveryDelegate.h"
 #import "THEMultipeerSessionStateDelegate.h"
 #import "THEMultipeerServerConnectionDelegate.h"
@@ -40,7 +41,8 @@
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType
                  withPeerIdentifier:(NSString *)peerIdentifier
-          withPeerDiscoveryDelegate:(id<THEPeerDiscoveryDelegate>)delegate;
+          withPeerDiscoveryDelegate:(id<THEPeerDiscoveryDelegate>)peerDiscoveryDelegate
+       withRemoteConnectionDelegate:(id<THERemoteConnectionDelegate>)remoteConnectionDelegate;
 
 // Starts multipeer session both discovering and advertising
 - (BOOL)startServerWithServerPort:(unsigned short)serverPort;
@@ -60,5 +62,8 @@
 
 // Allow external components to see our current id
 - (NSString *)localPeerIdentifier;
+
+- (BOOL)isListening;
+- (BOOL)isAdvertising;
 
 @end

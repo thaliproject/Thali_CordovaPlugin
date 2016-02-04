@@ -29,13 +29,14 @@
 
 #import "THEThaliEventDelegate.h"
 #import "THEPeerDiscoveryDelegate.h"
+#import "THERemoteConnectionDelegate.h"
 
 // Callback that will be called when the lower levels have established
 // a client relay in response to a connect
 typedef void(^ClientConnectCallback)(NSString *error, NSDictionary *connection);
 
 // THEAppContext interface.
-@interface THEAppContext : NSObject <THEPeerDiscoveryDelegate>
+@interface THEAppContext : NSObject <THEPeerDiscoveryDelegate, THERemoteConnectionDelegate>
 
 // Set the event delegate
 - (void)setThaliEventDelegate:(id<THEThaliEventDelegate>) eventDelegate;

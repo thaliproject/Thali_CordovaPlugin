@@ -22,18 +22,18 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEMultipeerServerConnectionDelegate.h
+//  THERemoteConnectionDelegate.h
 //
 
-// Defines the interface through which the multipeer session will 
-// inform it's delegate connections from remote peers
-@protocol THEMultipeerServerConnectionDelegate <NSObject>
+// Informs interested parties about the accepting or otherwise
+// of connections from remote peers
+@protocol THERemoteConnectionDelegate
 
-// Notifies delegate a connection was made or, if clientPort == 0, failed
-- (void)didCompleteReverseConnection:(NSString *)peerIdentifier
-                      withClientPort:(unsigned short)clientPort
-                      withServerPort:(unsigned short)serverPort;
+// @optional
+// Fired when a new connection is accepted that was *not* initiated by the local peer
+//- (void)didAcceptConnectionWithClientPort:(unsigned short)clientPort withServerPort:(unsigned short)serverPort;
 
+// Fired when we fail to connect to the local app server port
+- (void)didNotAcceptConnectionWithServerPort:(unsigned short)serverPort;
 
 @end
-

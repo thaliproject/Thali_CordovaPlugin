@@ -50,14 +50,25 @@
   }
 }
 
-#pragma mark - GCDAsyncSocketDelegate2
+#pragma mark - GCDAsyncSocketDelegate
 
--(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
+- (void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
 {
   NSLog(@"server relay: connected (to port: %d)", port);
   [self didCreateSocket:sock];
   [_delegate didConnectWithClientPort:[sock localPort] withServerPort:port];
   _connectingSocket = nil;
+}
+
+- (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
+{
+  if (_connectingSocket)
+  {
+    // Connection attempt has failed
+    [_delegate didNotConnectWithServerPort:_serverPort];
+  }
+  
+  [super socketDidDisconnect:sock withError:err];
 }
 
 @end

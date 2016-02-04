@@ -33,6 +33,9 @@
 
 - (void)peerAvailabilityChanged:(NSArray<NSDictionary *>*)peers;
 - (void)networkChanged:(NSDictionary *)networkStatus;
+- (void)discoveryAdvertisingStateUpdate:(NSDictionary *)discoveryAdvertisingState;
+- (void)incomingConnectionToPortNumberFailed:(unsigned short)serverPort;
+
 - (void)appEnteringBackground;
 - (void)appEnteredForeground;
 

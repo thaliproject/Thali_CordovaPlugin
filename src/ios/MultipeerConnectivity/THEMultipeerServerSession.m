@@ -96,7 +96,7 @@
   }
 }
 
-- (void)didFailToConnectWithServerPort:(unsigned short)serverPort
+- (void)didNotConnectWithServerPort:(unsigned short)serverPort
 {
   @synchronized(self)
   {

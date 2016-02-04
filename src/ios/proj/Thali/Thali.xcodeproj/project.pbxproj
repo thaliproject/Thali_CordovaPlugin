@@ -81,6 +81,7 @@
 		D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEProtectedMutableDictionary.m; path = ../../Utility/THEProtectedMutableDictionary.m; sourceTree = "<group>"; };
 		D4B4605A1C51154000940B96 /* THESessionDictionary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THESessionDictionary.m; path = ../../Utility/THESessionDictionary.m; sourceTree = "<group>"; };
 		D4C650DC1C52FD8E005F9613 /* ThaliMultipleInstanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThaliMultipleInstanceTests.m; sourceTree = "<group>"; };
+		D4D7E12D1C63C7A000298509 /* THERemoteConnectionDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THERemoteConnectionDelegate.h; path = ../../THERemoteConnectionDelegate.h; sourceTree = "<group>"; };
 		D4F8E54C1C5A777D00349C01 /* TestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4F8E54D1C5A777D00349C01 /* TestAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4F8E54E1C5A7A0D00349C01 /* TestEchoClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestEchoClient.h; sourceTree = "<group>"; };
@@ -159,6 +160,7 @@
 				D401729C1C5114840072022A /* THEAppContext.h */,
 				D401729D1C5114840072022A /* THEPeerBluetooth.h */,
 				D401729E1C5114840072022A /* THEPeerBluetoothDelegate.h */,
+				D4D7E12D1C63C7A000298509 /* THERemoteConnectionDelegate.h */,
 				D401729F1C5114840072022A /* THEPeerDiscoveryDelegate.h */,
 				D40172A01C5114840072022A /* THEThaliEventDelegate.h */,
 				D401728A1C5114410072022A /* THEMultipeerClient.m */,

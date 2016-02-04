@@ -35,6 +35,7 @@
 
 @interface JXcoreExtension (Internal) <THEThaliEventDelegate>
 
+- (void)discoveryAdvertisingStateUpdate:(NSDictionary *)discoveryAdvertisingState;
 - (void)peerAvailabilityChanged:(NSString *)peerJSON;
 - (void)networkChanged:(NSString *)json;
 - (void)appEnteringBackground;
@@ -47,6 +48,7 @@ NSString * const kNetworkChanged = @"networkChanged";
 NSString * const kPeerAvailabilityChanged = @"peerAvailabilityChanged";
 NSString * const kAppEnteringBackground = @"appEnteringBackground";
 NSString * const kAppEnteredForeground = @"appEnteredForeground";
+NSString * const kDiscoveryAdvertisingStateUpdate = @"discoveryAdvertisingStateUpdate";
 
 @implementation JXcoreExtension
 
@@ -65,6 +67,14 @@ NSString * const kAppEnteredForeground = @"appEnteredForeground";
   OnMainThread(^{
       [JXcore callEventCallback:kNetworkChanged
                        withJSON:[JXcoreExtension objectToJSON:networkStatus]];
+  });
+}
+
+- (void)discoveryAdvertisingStateUpdate:(NSDictionary *)stateUpdate
+{
+  OnMainThread(^{
+      [JXcore callEventCallback:kDiscoveryAdvertisingStateUpdate
+                       withJSON:[JXcoreExtension objectToJSON:stateUpdate]];
   });
 }
 

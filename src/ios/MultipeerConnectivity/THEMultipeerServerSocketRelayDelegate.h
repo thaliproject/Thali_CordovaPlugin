@@ -32,6 +32,6 @@
 - (void)didConnectWithClientPort:(unsigned short)clientPort withServerPort:(unsigned short)serverPort;
 
 // Called when the server socket fails to connect
-- (void)didFailToConnectWithServerPort:(unsigned short)serverPort;
+- (void)didNotConnectWithServerPort:(unsigned short)serverPort;
 
 @end
