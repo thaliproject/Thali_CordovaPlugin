@@ -127,7 +127,7 @@ static double _baseUUID = 0;
   TestEchoServer *echoServer2 = [[TestEchoServer alloc] init];
   XCTAssertTrue([echoServer2 start:4242]);
   
-  // app2 > app1 therefore app2 can only connect to app2 via a forward connection
+  // app2 > app1 therefore app2 can only connect to app1 via a forward connection
   
   [_app1 startListening];
   [_app1 startServerWithServerPort:4141];
