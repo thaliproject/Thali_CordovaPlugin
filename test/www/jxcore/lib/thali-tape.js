@@ -58,10 +58,12 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 
   tape('setup', function(t) {
     // Run setup function when the testServer tells us
-    testServer.once("setup_" + name, function(_name) {
-      testServer.emit(util.format("setup_%s_ok", _name));
+    testServer.once("setup_" + name, function() {
+      console.log("got: %s", "setup_" + name);
+      console.log("ack: %s", util.format("setup_%s_ok", name));
+      testServer.emit(util.format("setup_%s_ok", name));
       t.on('end', function() {
-        testServer.emit('setup_complete', JSON.stringify({"test":_name}));
+        testServer.emit('setup_complete', JSON.stringify({"test":name}));
       });
       setup(t);
     });
@@ -81,18 +83,18 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     });
 
     // Run the test (cb) when the server tells us to    
-    testServer.once("start_test_" + name, function(_name) {
-      testServer.emit(util.format("start_%s_ok", _name));
+    testServer.once("start_test_" + name, function() {
+      testServer.emit(util.format("start_test_%s_ok", name));
       cb(t);
     });
   });
 
   tape("teardown", function(t) {
     // Run teardown function when the server tells us
-    testServer.once("teardown_" + name, function(_name) {
-      testServer.emit(util.format("teardown_%s_ok", _name));
+    testServer.once("teardown_" + name, function() {
+      testServer.emit(util.format("teardown_%s_ok", name));
       t.on('end', function() {
-        testServer.emit('teardown_complete', JSON.stringify({"test":_name}));
+        testServer.emit('teardown_complete', JSON.stringify({"test":name}));
       });
       teardown(t);
     }); 
