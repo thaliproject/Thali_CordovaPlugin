@@ -28,9 +28,22 @@
         <source-file src="src/android/java/io/jxcore/node/IncomingSocketThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/OutgoingSocketThread.java" target-dir="src/io/jxcore/node/" />
-	<source-file src="src/android/java/io/jxcore/node/PeerAndConnectionModel.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/PeerAndConnectionModel.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/SocketThreadBase.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
+        
+        <!-- ThaliPermissions -->
+    		<config-file target="config.xml" parent="/*">
+          <feature name="ThaliPermissions" >
+            <param name="android-package" value="org.thaliproject.p2p.ThaliPermissions"/>
+          </feature>
+        </config-file>
+    
+        <js-module src="www/android/thaliPermissions.js" name="ThaliPermissions">
+            <clobbers target="window.ThaliPermissions" />
+        </js-module>
+        <source-file src="src/android/java/org/thaliproject/p2p/ThaliPermissions.java" target-dir="src/android/java/org/thaliproject/p2p/" />
+
         <hook type="before_compile" src="scripts/androidBeforeCompile.js" />
     </platform>
 
