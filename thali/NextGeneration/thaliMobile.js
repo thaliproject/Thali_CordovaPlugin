@@ -3,6 +3,9 @@
 var Promise = require('lie');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
+
+var ThaliConfig = require('./thaliConfig');
+
 //var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 var thaliMobileNativeWrapper = new EventEmitter(); // TODO: Use real class once implemented
 
@@ -286,6 +289,7 @@ module.exports.connectionTypes = {
   TCP_NATIVE: 'tcp'
 };
 
+var thaliMobileEmitter = new EventEmitter();
 
 /**
  * It is the job of this module to provide the most reliable guesses (and that
@@ -491,9 +495,25 @@ thaliMobileNativeWrapper.on('nonTCPPeerAvailabilityChangedEvent',
       // Do stuff
     });
 
-thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged',
-    function (hostAddress, portNumber) {
-  // Do stuff
+thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
+  var peers = [];
+  wifiPeers.forEach(function (wifiPeer) {
+    var peer = {
+      peerIdentifier: wifiPeer.peerIdentifier
+    };
+    if (wifiPeer.peerAvailable === true) {
+      peer.hostAddress = wifiPeer.hostAddress;
+      peer.portNumber = wifiPeer.portNumber;
+    } else {
+      // TODO: Handle peer becoming unavailable
+    }
+    peer.connectionTypes = [
+      module.exports.connectionTypes.TCP_NATIVE
+    ];
+    peer.suggestedTCPTimeout = ThaliConfig.TCP_TIMEOUT_WIFI;
+    peers.push(peer);
+  });
+  thaliMobileEmitter.emit('peerAvailabilityChanged', peers);
 });
 
 /**
@@ -601,4 +621,4 @@ thaliMobileNativeWrapper.on('incomingConnectionToPortNumberFailed',
  * @fires module:thaliMobile.event:discoveryAdvertisingStateUpdate
  * @fires module:thaliMobile.event:networkChanged
  */
-module.exports.emitter = new EventEmitter();
+module.exports.emitter = thaliMobileEmitter;
