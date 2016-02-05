@@ -9,6 +9,7 @@ if (typeof Mobile !== 'undefined' && Mobile.iAmAMock) {
 }
 
 var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
+var ThaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thali-tape');
 var nodessdp = require('node-ssdp');
 var express = require('express');
@@ -16,8 +17,6 @@ var http = require('http');
 var net = require('net');
 var uuid = require('node-uuid');
 var sinon = require('sinon');
-
-var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
 var wifiInfrastructure = new ThaliWifiInfrastructure();
 
@@ -42,7 +41,7 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
   var testLocation = 'http://' + testHostAddress + ':' + testPort;
   var testServer = new nodessdp.Server({
     location: testLocation,
-    udn: THALI_NT
+    udn: ThaliConfig.SSDP_NT
   });
   testServer.setUSN('urn:uuid:' + uuid.v4());
   var peerAvailableListener = function (data) {
@@ -78,7 +77,7 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
   testClient.on('advertise-alive', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
-    if (data.NT !== THALI_NT) {
+    if (data.NT !== ThaliConfig.SSDP_NT) {
       return;
     }
     if (firstUSN !== null) {
@@ -95,7 +94,7 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
   testClient.on('advertise-bye', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
-    if (data.NT !== THALI_NT) {
+    if (data.NT !== ThaliConfig.SSDP_NT) {
       return;
     }
     if (data.USN === firstUSN) {
@@ -118,7 +117,7 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
 
 test('messages with invalid location or USN should be ignored', function (t) {
   var testMessage = {
-    NT: THALI_NT,
+    NT: ThaliConfig.SSDP_NT,
     USN: uuid.v4(),
     LOCATION: 'http://foo.bar:90000'
   };
@@ -137,12 +136,12 @@ test('verify that Thali-specific messages are filtered correctly', function (t) 
   };
   t.equal(true, wifiInfrastructure._shouldBeIgnored(irrelevantMessage), 'irrelevant messages should be ignored');
   var relevantMessage = {
-    NT: THALI_NT,
+    NT: ThaliConfig.SSDP_NT,
     USN: uuid.v4()
   };
   t.equal(false, wifiInfrastructure._shouldBeIgnored(relevantMessage), 'relevant messages should not be ignored');
   var messageFromSelf = {
-    NT: THALI_NT,
+    NT: ThaliConfig.SSDP_NT,
     USN: wifiInfrastructure.usn
   };
   t.equal(true, wifiInfrastructure._shouldBeIgnored(messageFromSelf), 'messages from this device should be ignored');

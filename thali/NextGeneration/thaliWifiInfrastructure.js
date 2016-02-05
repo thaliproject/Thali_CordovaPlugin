@@ -8,13 +8,12 @@ var uuid = require('node-uuid');
 var url = require('url');
 var express = require('express');
 var validations = require('../validations');
+var ThaliConfig = require('./thaliConfig');
 var logger = require('../thalilogger')('thaliWifiInfrastructure');
 
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
-
-var THALI_NT = 'http://www.thaliproject.org/ssdp';
 
 /** @module ThaliWifiInfrastructure */
 
@@ -74,8 +73,8 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 
 ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
-    adInterval: 500,
-    udn: THALI_NT
+    adInterval: ThaliConfig.SSDP_ADVERTISEMENT_INTERVAL,
+    udn: ThaliConfig.SSDP_NT
   };
   this._server = new nodessdp.Server(serverOptions);
   this._setLocation();
@@ -141,7 +140,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 // relevant for Thali.
 ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
   // First check if the data contains the Thali-specific NT.
-  if (data.NT === THALI_NT) {
+  if (data.NT === ThaliConfig.SSDP_NT) {
     // Filtering out messages from ourselves.
     if (data.USN === this.usn) {
       return true;
