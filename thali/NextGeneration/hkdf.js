@@ -28,7 +28,7 @@ function zeros(length) {
   return buf.toString();
 }
 
-// imk is initial keying material
+// ikm is initial keying material
 function HKDF(hashAlg, salt, ikm) {
   if (!(this instanceof HKDF)) { return new HKDF(hashAlg, salt, ikm); }
 
@@ -47,15 +47,15 @@ function HKDF(hashAlg, salt, ikm) {
   this.prk = hmac.digest();
 }
 
-HKDF.prototype.derive = function(info, size) {
+HKDF.prototype.derive = function (info, size) {
   var prev = new Buffer(0);
 
   var buffers = [];
-  var num_blocks = Math.ceil(size / this.hashLength);
+  var numBlocks = Math.ceil(size / this.hashLength);
 
   info = new Buffer(info);
 
-  for (var i=0; i<num_blocks; i++) {
+  for (var i=0; i < numBlocks; i++) {
     var hmac = crypto.createHmac(this.hashAlg, this.prk);
     // XXX is there a more optimal way to build up buffers?
     var input = Buffer.concat([
