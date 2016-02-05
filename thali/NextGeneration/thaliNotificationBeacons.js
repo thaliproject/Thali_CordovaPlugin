@@ -39,7 +39,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
     // Generate preamble
     var pubKe = ke.generateKeys();
     var expirationLong = Long.fromNumber(secondsUntilExpiration);
-    var expiration = new Buffer(8).fill(0);
+    var expiration = new Buffer(8);
     expiration.writeInt32BE(expirationLong.high, 0);
     expiration.writeInt32BE(expirationLong.low, 4);
 
