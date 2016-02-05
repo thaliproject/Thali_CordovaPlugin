@@ -35,9 +35,11 @@
 
 @interface JXcoreExtension (Internal) <THEThaliEventDelegate>
 
-- (void)discoveryAdvertisingStateUpdate:(NSDictionary *)discoveryAdvertisingState;
-- (void)peerAvailabilityChanged:(NSString *)peerJSON;
 - (void)networkChanged:(NSString *)json;
+- (void)peerAvailabilityChanged:(NSString *)peerJSON;
+- (void)discoveryAdvertisingStateUpdate:(NSDictionary *)discoveryAdvertisingState;
+- (void)incomingConnectionToPortNumberFailed:(unsigned short)serverPort;
+
 - (void)appEnteringBackground;
 - (void)appEnteredForeground;
 
@@ -49,17 +51,9 @@ NSString * const kPeerAvailabilityChanged = @"peerAvailabilityChanged";
 NSString * const kAppEnteringBackground = @"appEnteringBackground";
 NSString * const kAppEnteredForeground = @"appEnteredForeground";
 NSString * const kDiscoveryAdvertisingStateUpdate = @"discoveryAdvertisingStateUpdate";
+NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToPortNumberFailed";
 
 @implementation JXcoreExtension
-
-- (void)peerAvailabilityChanged:(NSArray<NSDictionary *> *)peers
-{
-  // Fire the peerAvailabilityChanged event.
-  OnMainThread(^{
-    [JXcore callEventCallback:kPeerAvailabilityChanged
-                     withJSON:[JXcoreExtension objectToJSON:peers]];
-  });
-}
 
 - (void)networkChanged:(NSDictionary *)networkStatus
 {
@@ -70,11 +64,27 @@ NSString * const kDiscoveryAdvertisingStateUpdate = @"discoveryAdvertisingStateU
   });
 }
 
+- (void)peerAvailabilityChanged:(NSArray<NSDictionary *> *)peers
+{
+  // Fire the peerAvailabilityChanged event.
+  OnMainThread(^{
+    [JXcore callEventCallback:kPeerAvailabilityChanged
+                     withJSON:[JXcoreExtension objectToJSON:peers]];
+  });
+}
+
 - (void)discoveryAdvertisingStateUpdate:(NSDictionary *)stateUpdate
 {
   OnMainThread(^{
       [JXcore callEventCallback:kDiscoveryAdvertisingStateUpdate
                        withJSON:[JXcoreExtension objectToJSON:stateUpdate]];
+  });
+}
+
+- (void)incomingConnectionToPortNumberFailed:(unsigned short)serverPort
+{
+  OnMainThread(^{
+      [JXcore callEventCallback:kIncomingConnectionToPortNumberFailed withParams:@[@(serverPort)]];
   });
 }
 
@@ -182,7 +192,7 @@ NSString * const kDiscoveryAdvertisingStateUpdate = @"discoveryAdvertisingStateU
     }
     else 
     {
-      if ([theApp startUpdateAdvertisingAndListening:(unsigned short)params[0]])
+      if ([theApp startUpdateAdvertisingAndListening:(unsigned short)[params[0] intValue]])
       {
         NSLog(@"jxcore: startUpdateAdvertisingAndListening: success");
         [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];

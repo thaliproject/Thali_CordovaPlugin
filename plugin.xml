@@ -43,6 +43,8 @@
         <framework src="SystemConfiguration.framework" />
         <header-file src="src/ios/THEThaliEventDelegate.h"
           compiler-flags="-Werror"/>
+        <header-file src="src/ios/THERemoteConnectionDelegate.h"
+          compiler-flags="-Werror"/>
         <source-file src="src/ios/JXcoreExtension.m"
           compiler-flags="-Werror"/>
         <header-file src="src/ios/Utility/THEThreading.h"
