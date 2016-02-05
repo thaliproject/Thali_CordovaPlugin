@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('wrapping-tape');
+var tape = require('../lib/thali-tape');//var tape = require('wrapping-tape');
 var NotificationBeacons = require('thali/NextGeneration/thaliNotificationBeacons');
 var crypto = require('crypto');
 var Long = require('long');
@@ -118,7 +118,7 @@ test('#parseBeacons no beacons returns null', function (t) {
     expiration
   );
 
-  var addressBookCallback = function () {
+  var addressBookCallback = function (unencryptedKeyId) {
     return null;
   };
 
@@ -134,7 +134,7 @@ test('#parseBeacons invalid size for encryptedBeaconKeyId in beaconStreamWithPre
 
   var beaconStreamWithPreAmble = new Buffer(104);
 
-  var addressBookCallback = function () {
+  var addressBookCallback = function (unencryptedKeyId) {
     return null;
   };
 
@@ -142,6 +142,40 @@ test('#parseBeacons invalid size for encryptedBeaconKeyId in beaconStreamWithPre
     notificationBecons.parseBeacons(beaconStreamWithPreAmble, localDevice, addressBookCallback);
   });
 
+  t.end();
+});
+
+test('#parseBeacons addressBookCallback fails decrypt', function (t) {
+  var publicKeys = [];
+  var localDevice = crypto.createECDH(SECP256K1);
+  var localDeviceKey = localDevice.generateKeys();
+  var expiration = 9000;
+
+  var device1 = crypto.createECDH(SECP256K1);
+  var device1Key = device1.generateKeys();
+  var device2 = crypto.createECDH(SECP256K1);
+  var device2Key = device2.generateKeys();
+  var device3 = crypto.createECDH(SECP256K1);
+  var device3Key = device3.generateKeys();
+
+  publicKeys.push(device1Key, device2Key, device3Key);
+
+  var beaconStreamWithPreAmble = notificationBecons.generatePreambleAndBeacons(
+    publicKeys,
+    localDevice,
+    expiration
+  );
+
+  var addressBookCallback = function (unencryptedKeyId) {
+    t.fail();
+    return null;
+  };
+
+  var badDevice = crypto.createECDH(SECP256K1);
+  badDevice.generateKeys();
+  var results = notificationBecons.parseBeacons(beaconStreamWithPreAmble, badDevice, addressBookCallback);
+
+  t.equal(results, null);
   t.end();
 });
 
@@ -166,7 +200,8 @@ test('#parseBeacons addressBookCallback returns null for all', function (t) {
     expiration
   );
 
-  var addressBookCallback = function (unencryptedId) {
+  var addressBookCallback = function (unencryptedKeyId) {
+    t.ok(unencryptedKeyId);
     return null;
   };
 
@@ -197,7 +232,8 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
     expiration
   );
 
-  var addressBookCallback = function (unencryptedId) {
+  var addressBookCallback = function (unencryptedKeyId) {
+    t.ok(unencryptedKeyId);
     return localDeviceKey;
   };
 
