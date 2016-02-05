@@ -193,25 +193,3 @@ test('mix enqueue and enqueueAtTop', function (t) {
     fourthPromise = true;
   });
 });
-
-test('Not using resolve or reject works', function (t) {
-  var promiseQueue = new PromiseQueue();
-  promiseQueue.enqueue(function () {
-    return Promise.resolve(24);
-  }).then(function (value) {
-    t.equal(value, 24, 'first');
-    return promiseQueue.enqueue(function () {
-      return Promise.reject(25);
-    });
-  }).then(function () {
-    t.fail('Should have been rejected');
-  }).catch(function (value) {
-    t.equal(value, 25, 'second');
-    return promiseQueue.enqueueAtTop(function () {
-      return 26;
-    });
-  }).then(function (value) {
-    t.equal(value, 26, 'third');
-    t.end();
-  });
-});

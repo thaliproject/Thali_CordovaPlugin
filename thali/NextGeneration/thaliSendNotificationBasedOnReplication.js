@@ -2,8 +2,10 @@
 
 var Promise = require('lie');
 var ThaliNotificationServer =
-  require('thali/NextGeneration/thaliNotificationServer');
-var PromiseQueue = require('thali/NextGeneration/promiseQueue');
+  require('./thaliNotificationServer');
+var PromiseQueue = require('./promiseQueue');
+var logger =
+  require('../thalilogger')('thaliSendNotificationBasedOnReplication');
 
 /** @module thaliSendNotificationBasedOnReplication */
 
@@ -90,18 +92,18 @@ _RefreshTimerManager.prototype.stop = function () {
  * HTTP since it doesn't make sense to host a beacon server over HTTPS.
  * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
  * local device's public and private keys
- * @param {number} secondsUntilExpiration - The number of seconds into the
- * future after which the beacons should expire.
+ * @param {number} millisecondsUntilExpiration - The number of milliseconds into
+ * the future after which the beacons should expire.
  * @param {PouchDB} pouchDB database we are tracking changes on.
  * @constructor
  */
 function ThaliSendNotificationBasedOnReplication(router,
                                                  ecdhForLocalDevice,
-                                                 secondsUntilExpiration,
+                                                 millisecondsUntilExpiration,
                                                  pouchDB) {
   this._router = router;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
-  this._secondsUntilExpiration = secondsUntilExpiration;
+  this._millisecondsUntilExpiration = millisecondsUntilExpiration;
   this._pouchDB = pouchDB;
   this._promiseQueue = new PromiseQueue();
 }
@@ -145,7 +147,7 @@ ThaliSendNotificationBasedOnReplication.NOTIFICATION_BEACON_PATH =
 
 ThaliSendNotificationBasedOnReplication.prototype._router = null;
 ThaliSendNotificationBasedOnReplication.prototype._ecdhForLocalDevice = null;
-ThaliSendNotificationBasedOnReplication.prototype._secondsUntilExpiration =
+ThaliSendNotificationBasedOnReplication.prototype._millisecondsUntilExpiration =
   null;
 ThaliSendNotificationBasedOnReplication.prototype._pouchDB = null;
 ThaliSendNotificationBasedOnReplication.prototype._pouchDBChangesCancelObject =
@@ -282,15 +284,18 @@ ThaliSendNotificationBasedOnReplication.prototype._commonStart =
       if (!self._thaliNotificationServer) {
         self._thaliNotificationServer =
           new ThaliNotificationServer(self._router, self._ecdhForLocalDevice,
-            self._secondsUntilExpiration);
+            self._millisecondsUntilExpiration);
       } else {
         if (prioritizedPeersToNotifyOfChanges ===
-          self._prioritizedPeersToNotifyOfChanges) {
-          return resolve();
+          self._prioritizedPeersToNotifyOfChanges ||
+          prioritizedPeersToNotifyOfChanges === null ||
+          prioritizedPeersToNotifyOfChanges === []) {
+          resolve();
+          return;
         }
       }
 
-      return self._updateBeacons(prioritizedPeersToNotifyOfChanges)
+      self._updateBeacons(prioritizedPeersToNotifyOfChanges)
         .then(function () {
           self._pouchDBChangesCancelObject = self._pouchDB.changes({
             live: true,
@@ -308,11 +313,17 @@ ThaliSendNotificationBasedOnReplication.prototype._commonStart =
               self._updateOnExpiration(milliSecondsUntilNextRefresh);
             }
           }).on('complete', function (info) {
-
+            logger.debug('We must have stopped because we are complete -' +
+                          JSON.stringify(info));
           }).on('error', function (err) {
-
+            logger.error('Got an error on the replication change listener - ' +
+                         JSON.stringify(err));
+            throw new Error(err);
           });
-        });
+          resolve();
+        }).catch(function (err) {
+          reject(err);
+      });
     };
   };
 
@@ -323,7 +334,8 @@ ThaliSendNotificationBasedOnReplication.prototype._calculatePeersToNotify =
     // Then read in the current sequence number and see whose number is less
     // than that.
     // Return that list.
-    return new Promise();
+    throw new Error('Not Implemented!');
+    return Promise.resolve(prioritizedPeersToNotifyOfChanges);
   };
 
 ThaliSendNotificationBasedOnReplication.prototype._updateOnExpiration =
@@ -357,7 +369,7 @@ ThaliSendNotificationBasedOnReplication.prototype._updateBeacons =
         }
         return self._thaliNotificationServer.start(peersArray);
       }).then(function() {
-        self._updateOnExpiration(this._secondsUntilExpiration);
+        self._updateOnExpiration(this._millisecondsUntilExpiration);
       });
   };
 

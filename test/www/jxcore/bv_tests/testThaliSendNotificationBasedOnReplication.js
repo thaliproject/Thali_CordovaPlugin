@@ -3,10 +3,12 @@
 var PouchDB = require('PouchDB');
 var tape = require('../lib/thali-tape');
 var testUtils = require('../lib/testUtils.js');
-var ThaliSendNotificationBasedOnReplication =
-  require('thali/NextGeneration/thaliSendNotificationBasedOnReplication');
+var ThaliNotificationServer =
+  require('thali/NextGeneration/thaliNotificationServer');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
+var express = require('express');
+var crypto = require('crypto');
 
 var test = tape({
   setup: function (t) {
@@ -21,27 +23,7 @@ test('ChangesFilter Handler', function () {
 
 });
 
-function FakeThaliNotificationServer(t) {
-  this.t = t;
-}
-
-FakeThaliNotificationServer.prototype.t = null;
-
-FakeThaliNotificationServer.prototype.checkNextPublicKeysToNotify = [];
-
-FakeThaliNotificationServer.prototype.timeOfLastCallToSetBeacons = null;
-
-FakeThaliNotificationServer.prototype.setBeacons =
-  function (publicKeysToNotify) {
-    this.timeOfLastCallToSetBeacons = (new Date()).getTime();
-    this.t.equals(publicKeysToNotify.toString(),
-                  this.checkNextPublicKeysToNotify.toString());
-  };
-
-test('End to end with empty database and empty notification db', function (t) {
-
-  var fakeThaliNotificationServer = new FakeThaliNotificationServer(t);
-
+function getTestPouchDBInstance(name) {
   // Use a folder specific to this test so that the database content
   // will not interfere with any other databases that might be created
   // during other tests.
@@ -49,30 +31,45 @@ test('End to end with empty database and empty notification db', function (t) {
     'pouch-for-testThaliSendNotificationBasedOnReplication-test');
   var LevelDownPouchDB =
     PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath});
-  var pouchDB = new LevelDownPouchDB('EndToEnd');
+  return new LevelDownPouchDB(name);
+}
 
-  var changesFilterObject = new ChangeFilterGenerator(t);
-  var changesFilter = changesFilterObject.changesFilter;
+/*
+start with no peers then stop
+ */
 
-  var callbackTestRig = new CallBackTestRig(t);
+test('No peers', function (t) {
+  var router = express.Router();
+  var ecdhForLocalDevice = crypto.createECDH('secp521r1').generateKeys();
+  var millisecondsUntilExpiration = 100;
+  var pouchDB = getTestPouchDBInstance('nopeers');
 
-  // noinspection JSCheckFunctionSignatures
-  ThaliSendNotificationBasedOnReplication =
-    new ThaliSendNotificationBasedOnReplication(
-      fakeThaliNotificationServer,
-      pouchDB,
-      callbackTestRig.localEventHandler);
+  var mockedNotificationServer = sinon.mock(ThaliNotificationServer);
+  mockedNotificationServer.expects('start').never();
+  mockedNotificationServer.expects('stop').once();
+  var spyMockedNotificationServer= sinon.spy(mockedNotificationServer);
 
+  var ThaliSendNotificationBasedOnReplicationMocked =
+    proxyquire('thali/NextGeneration/thaliSendNotificationBasedOnReplication',
+      { 'thali/NextGeneration/taliNotificationServer':
+        spyMockedNotificationServer});
 
-  var startTime = (new Date()).getTime();
-  callbackTestRig.nextEvent();
-  // Record current time
-  // Set changesFilter to return a known set of names
-  // Add a doc
-  // Check that setBeacons returned the known set of names
-  // Set changesFilter to return a new set of names
-  //
-  //
+  var thaliSendNotificationBasedOnReplication =
+    new ThaliSendNotificationBasedOnReplicationMocked(router,
+                      ecdhForLocalDevice, millisecondsUntilExpiration, pouchDB);
+
+  thaliSendNotificationBasedOnReplication.start(null)
+    .then(function () {
+      return thaliSendNotificationBasedOnReplication.stop();
+    }).then(function () {
+      mockedNotificationServer.verify();
+      t.ok(spyMockedNotificationServer.calledOnce().
+      withArgs(router, ecdhForLocalDevice, millisecondsUntilExpiration));
+      t.end();
+  });
+});
+
+test('End to end with empty database and empty notification db', function (t) {
 
 });
 

@@ -95,7 +95,7 @@ PromiseQueue.prototype._changeQueue = function(fn, unshiftOrPushFn) {
     self.globalPromise = self.globalPromise.then(function () {
       return new Promise(function (globalResolve) {
         var nextPromise = self._promiseFunctionArray.shift();
-        return nextPromise.fn(
+        nextPromise.fn(
           _finishPromise(nextPromise.localResolve, globalResolve),
           _finishPromise(nextPromise.localReject, globalResolve));
       });
