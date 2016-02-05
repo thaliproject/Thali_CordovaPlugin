@@ -10,8 +10,6 @@ var Promise = require('lie');
  * our promise queue to simplify dealing with concurrency so all calls will
  * automatically be serialized.
  *
- * The constructor MUST NOT take any action. It can only record values.
- *
  * @param {Object} router An express router object that the class will use
  * to register its path.
  * @param {ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized with the
@@ -19,6 +17,7 @@ var Promise = require('lie');
  * @param {number} secondsUntilExpiration The number of seconds into the
  * future after which the beacons should expire.
  * @constructor
+ * The constructor MUST NOT take any action. It can only record values.
  */
 function ThaliNotificationServer(router, ecdhForLocalDevice,
                                  secondsUntilExpiration) {

@@ -85,3 +85,8 @@ test('End to end with database with content and existing notification db',
   function () {
 
   });
+
+test('Make sure start is idempotent if called with the same arguments',
+  function() {
+
+  });
