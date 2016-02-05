@@ -46,23 +46,27 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
     beacons.push(Buffer.concat([pubKe, expiration]));
 
     // UnencryptedKeyId = SHA256(Kx.public().encode()).first(16)
-    var unencryptedKeyId = crypto.createHash(SHA256);
-    unencryptedKeyId.update(ecdhForLocalDevice.getPublicKey());
-    unencryptedKeyId = unencryptedKeyId.digest().slice(0, 16);
+    var unencryptedKeyId = crypto.createHash(SHA256)
+      .update(ecdhForLocalDevice.getPublicKey())
+      .digest()
+      .slice(0, 16);
 
     for (var i = 0, len = publicKeysToNotify.length; i < len; i++) {
       var pubKy = publicKeysToNotify[i];
 
       // Sxy = ECDH(Kx.private(), PubKy)
-      var sxy = ecdhForLocalDevice.computeSecret(pubKy);
+      var sxy = crypto.createECDH(SECP256K1)
+        .setPrivateKey(ecdhForLocalDevice.getPrivateKey())
+        .computeSecret(pubKy);
 
       // HKxy = HKDF(SHA256, Sxy, Expiration, 32)
       var hkxy = HKDF(SHA256, sxy, expiration).derive('', 32);
 
       // BeaconHmac = HMAC(SHA256, HKxy, Expiration).first(16)
-      var beaconHmac = crypto.createHmac('sha256', hkxy);
-      beaconHmac.update(expiration);
-      beaconHmac = beaconHmac.digest().slice(0, 16);
+      var beaconHmac = crypto.createHmac(SHA256, hkxy)
+        .update(expiration)
+        .digest()
+        .slice(0, 16);
 
       // Sey = ECDH(Ke.private(), PubKy)
       var sey = ke.computeSecret(pubKy);
@@ -78,8 +82,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 
       // beacons.append(AESEncrypt(GCM, HKey, IV, 128, UnencryptedKeyId) + BeaconHmac)
       var aes = crypto.createCipheriv(GCM, hkey, iv);
-      aes.update(unencryptedKeyId);
-      aes = aes.final();
+      aes = Buffer.concat([aes.update(unencryptedKeyId), aes.final()]);
 
       beacons.push(Buffer.concat([aes, beaconHmac]));
     }
@@ -112,7 +115,7 @@ NotificationBeacons.prototype.generatePreambleAndBeacons =
 NotificationBeacons.prototype.parseBeacons =
   function(beaconStreamWithPreAmble, ecdhForLocalDevice, addressBookCallback) {
 
-    var chunkSize = 32, len = beaconStreamWithPreAmble.length;
+    var chunkSize = 48, len = beaconStreamWithPreAmble.length;
 
     // Ensure that is an ECDH secp256k1 public key
     var pubKe = beaconStreamWithPreAmble.slice(0, 65);
@@ -127,14 +130,16 @@ NotificationBeacons.prototype.parseBeacons =
     }
 
     for (var i = 73; i < len; i += chunkSize) {
-      // encryptedBeaconKeyId = beaconStream.read(32)
+      // encryptedBeaconKeyId = beaconStream.read(48)
       var encryptedBeaconKeyId = beaconStreamWithPreAmble.slice(i, i + chunkSize);
       if (encryptedBeaconKeyId.length !== chunkSize) {
         throw new Error('Malformed encyrpted beacon key ID');
       }
 
       // Sey = ECDH(Ky.private, PubKe)
-      var sey = ecdhForLocalDevice.computeSecret(pubKe);
+      var sey = crypto.createECDH(SECP256K1)
+        .setPrivateKey(ecdhForLocalDevice.getPrivateKey())
+        .computeSecret(pubKe);
 
       // KeyingMaterial = HKDF(SHA256, Sey, Expiration, 32)
       var keyingMaterial = HKDF(SHA256, sey, expiration).derive('', 32);
@@ -149,8 +154,7 @@ NotificationBeacons.prototype.parseBeacons =
       var unencryptedKeyId;
       try {
         unencryptedKeyId = crypto.createDecipheriv(GCM, hkey, iv);
-        unencryptedKeyId.udpate(encryptedBeaconKeyId);
-        unencryptedKeyId = unencryptedKeyId.final();
+        unencryptedKeyId = Buffer.concat([unencryptedKeyId.update(encryptedBeaconKeyId.slice(0, 32)), unencryptedKeyId.final()]);
       } catch (e) {
         // GCM mac check failed
         continue;
@@ -165,7 +169,7 @@ NotificationBeacons.prototype.parseBeacons =
       }
 
       // BeaconHmac = encryptedBeaconKeyId.slice(32, 48)
-      var beaconHmac = encryptedBeaconKeyId.slice(16, 32);
+      var beaconHmac = encryptedBeaconKeyId.slice(32, 48);
 
       // Sxy = ECDH(Ky.private(), PubKx)
       var sxy = ecdhForLocalDevice.computeSecret(pubKx);
@@ -174,9 +178,10 @@ NotificationBeacons.prototype.parseBeacons =
       var hkxy = HKDF(SHA256, sxy, expiration).derive('', 32);
 
       // BeaconHmac.equals(HMAC(SHA256, HKxy, Expiration).first(16)
-      var otherBeaconHmac = crypto.createHmac('sha256', hkxy);
-      otherBeaconHmac.update(expiration);
-      otherBeaconHmac = otherBeaconHmac.digest().slice(0, 16);
+      var otherBeaconHmac = crypto.createHmac('sha256', hkxy)
+        .update(expiration)
+        .digest()
+        .slice(0, 16);
       if (beaconHmac.equals(otherBeaconHmac)) {
         return unencryptedKeyId;
       }

@@ -67,7 +67,7 @@ test('#generatePreambleAndBeacons multiple keys to notify', function (t) {
   t.equal(pubKe.length, 65);
   t.equal(expirationBuffer.length, 8);
   t.equal(Long.fromBits(expirationBuffer.readInt32BE(4), expirationBuffer.readInt32BE(0) << 8).toNumber(), expiration);
-  t.equal(results.length, 65 + 8 + 32 + 32 + 32);
+  t.equal(results.length, 65 + 8 + 48 + 48 + 48);
 
   t.end();
 });
@@ -148,14 +148,17 @@ test('#parseBeacons invalid size for encryptedBeaconKeyId in beaconStreamWithPre
 test('#parseBeacons addressBookCallback returns null for all', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(SECP256K1);
-  localDevice.generateKeys();
+  var localDeviceKey = localDevice.generateKeys();
   var expiration = 9000;
 
-  var device1 = crypto.createECDH(SECP256K1).generateKeys();
-  var device2 = crypto.createECDH(SECP256K1).generateKeys();
-  var device3 = crypto.createECDH(SECP256K1).generateKeys();
+  var device1 = crypto.createECDH(SECP256K1);
+  var device1Key = device1.generateKeys();
+  var device2 = crypto.createECDH(SECP256K1);
+  var device2Key = device2.generateKeys();
+  var device3 = crypto.createECDH(SECP256K1);
+  var device3Key = device3.generateKeys();
 
-  publicKeys.push(device1, device2, device3);
+  publicKeys.push(device1Key, device2Key, device3Key);
 
   var beaconStreamWithPreAmble = notificationBecons.generatePreambleAndBeacons(
     publicKeys,
@@ -163,11 +166,11 @@ test('#parseBeacons addressBookCallback returns null for all', function (t) {
     expiration
   );
 
-  var addressBookCallback = function () {
+  var addressBookCallback = function (unencryptedId) {
     return null;
   };
 
-  var results = notificationBecons.parseBeacons(beaconStreamWithPreAmble, localDevice, addressBookCallback);
+  var results = notificationBecons.parseBeacons(beaconStreamWithPreAmble, device1, addressBookCallback);
 
   t.equal(results, null);
   t.end();
@@ -176,14 +179,17 @@ test('#parseBeacons addressBookCallback returns null for all', function (t) {
 test('#parseBeacons addressBookCallback returns public key', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(SECP256K1);
-  localDevice.generateKeys();
+  var localDeviceKey = localDevice.generateKeys();
   var expiration = 9000;
 
-  var device1 = crypto.createECDH(SECP256K1).generateKeys();
-  var device2 = crypto.createECDH(SECP256K1).generateKeys();
-  var device3 = crypto.createECDH(SECP256K1).generateKeys();
+  var device1 = crypto.createECDH(SECP256K1);
+  var device1Key = device1.generateKeys();
+  var device2 = crypto.createECDH(SECP256K1);
+  var device2Key = device2.generateKeys();
+  var device3 = crypto.createECDH(SECP256K1);
+  var device3Key = device3.generateKeys();
 
-  publicKeys.push(device1, device2, device3);
+  publicKeys.push(device1Key, device2Key, device3Key);
 
   var beaconStreamWithPreAmble = notificationBecons.generatePreambleAndBeacons(
     publicKeys,
@@ -191,13 +197,12 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
     expiration
   );
 
-  var addressBookCallback = function () {
-    // TODO: Figure out what this should be to pass
-    return null;
+  var addressBookCallback = function (unencryptedId) {
+    return localDeviceKey;
   };
 
-  var results = notificationBecons.parseBeacons(beaconStreamWithPreAmble, localDevice, addressBookCallback);
+  var results = notificationBecons.parseBeacons(beaconStreamWithPreAmble, device1, addressBookCallback);
 
-  t.equal(results, null);
+  t.ok(results);
   t.end();
 });
