@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('../lib/thali-tape');//var tape = require('wrapping-tape');
+var tape = require('wrapping-tape');//var tape = require('../lib/thali-tape');
 var NotificationBeacons = require('thali/NextGeneration/thaliNotificationBeacons');
 var crypto = require('crypto');
 var Long = require('long');

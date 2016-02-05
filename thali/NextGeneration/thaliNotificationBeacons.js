@@ -182,7 +182,10 @@ NotificationBeacons.prototype.parseBeacons =
         .update(expiration)
         .digest()
         .slice(0, 16);
-      if (beaconHmac.equals(otherBeaconHmac)) {
+
+      // Since JXcore does not support equals
+      // if (beaconHmac.equals(otherBeaconHmac)) {
+      if (beaconHmac.toString('binary') === otherBeaconHmac.toString('binary')) {
         return unencryptedKeyId;
       }
     }
