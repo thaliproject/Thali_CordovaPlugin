@@ -44,6 +44,7 @@
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
   [sock writeData:data withTimeout:-1 tag:0];
+  [sock readDataWithTimeout:-1 tag:0];
 }
 
 @end

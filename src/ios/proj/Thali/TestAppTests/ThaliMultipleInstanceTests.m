@@ -119,6 +119,42 @@ static const int DEFAULT_EXPECT_TIMEOUT = 30.0;
   [super tearDown];
 }
 
+- (void)testEchoClient
+{
+  TestEchoServer *echoServer = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer start:4040]);
+
+  XCTestExpectation *connectExpectation = [self expectationWithDescription:@"connected to echo server"];
+  TestEchoClient *echoClient = [[TestEchoClient alloc] initWithPort:4040 withConnectHandler: ^void(void) {
+      [connectExpectation fulfill];
+  }];
+  
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+  if (error) {
+    XCTFail(@"Expectation Failed with error: %@", error);
+  }
+  }];
+  
+  NSMutableData *toSend = [[NSMutableData alloc] initWithLength:10 * 1024 * 1024];
+  NSMutableData *receiveBuffer = [[NSMutableData alloc] init];
+  XCTestExpectation *receiveExpectation = [self expectationWithDescription:@"connected to echo server"];
+  
+  [echoClient setReadHandler: ^void(NSData *data) {
+    [receiveBuffer appendBytes:data.bytes length:data.length];
+    if ([receiveBuffer length] == [toSend length]) {
+      [receiveExpectation fulfill];
+    }
+  }];
+
+  [echoClient write:toSend];
+  
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+}
+
 - (void)testPeerAvailabilityChangedIsCalled
 {
   [_app1 startListening];
@@ -597,10 +633,16 @@ static const int DEFAULT_EXPECT_TIMEOUT = 30.0;
       XCTFail(@"Expectation Failed with error: %@", error);
     }
   }];
+
+  // Send 10 MB
+  const int BUF_SIZE = 10 * 1024 * 1024;
+  NSMutableData *toSend = [[NSMutableData alloc] initWithCapacity:BUF_SIZE];
+  while ([toSend length] < BUF_SIZE) {
+    [toSend appendData:[[[[NSUUID alloc] init] UUIDString] dataUsingEncoding:NSUTF8StringEncoding]];
+  }
   
   // Expect to have data written echoed back
   NSMutableData *receiveBuffer = [[NSMutableData alloc] init];
-  NSData *toSend = [[[[NSUUID alloc]init] UUIDString] dataUsingEncoding:NSUTF8StringEncoding];
   XCTestExpectation *receiveExpectation = [self expectationWithDescription:@"client receives it's data"];
   [client setReadHandler: ^void(NSData *data) {
       [receiveBuffer appendBytes:[data bytes] length:[data length]];
@@ -611,7 +653,7 @@ static const int DEFAULT_EXPECT_TIMEOUT = 30.0;
   
   [client write:toSend];
 
-  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+  [self waitForExpectationsWithTimeout:600 handler:^(NSError *error) {
     if (error) {
       XCTFail(@"Expectation Failed with error: %@", error);
     }
@@ -734,9 +776,15 @@ static const int DEFAULT_EXPECT_TIMEOUT = 30.0;
     }
   }];
   
+  // Send 10 MB
+  const int BUF_SIZE = 10 * 1024 * 1024;
+  NSMutableData *toSend = [[NSMutableData alloc] initWithCapacity:BUF_SIZE];
+  while ([toSend length] < BUF_SIZE) {
+    [toSend appendData:[[[[NSUUID alloc] init] UUIDString] dataUsingEncoding:NSUTF8StringEncoding]];
+  }
+
   // Expect to have data written echoed back
   NSMutableData *receiveBuffer = [[NSMutableData alloc] init];
-  NSData *toSend = [[[[NSUUID alloc]init] UUIDString] dataUsingEncoding:NSUTF8StringEncoding];
   XCTestExpectation *receiveExpectation = [self expectationWithDescription:@"client receives it's data"];
   [client setReadHandler: ^void(NSData *data) {
       [receiveBuffer appendBytes:[data bytes] length:[data length]];
