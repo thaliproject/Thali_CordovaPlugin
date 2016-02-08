@@ -31,10 +31,6 @@ ERROR_ABORT() {
 # that issue.
 ulimit -n 512;ERROR_ABORT
 
-# Make sure build works with the latest cordova release
-npm update -g cordova
-
-
 PROJECT_ROOT=$(pwd)
 
 # A hack to workaround an issue where the install scripts assume that the
@@ -47,6 +43,19 @@ then
   cp -R . $THALI_DIRECTORY;ERROR_ABORT
   cd $THALI_DIRECTORY;ERROR_ABORT
 fi
+
+# Check the existence of the script that in CI gives the right test server
+# IP address.
+hash CIGIVEMEMYIP.sh 2>/dev/null
+RUN_IN_CI=$?
+
+if [ $RUN_IN_CI == 0 ]
+then
+  # Make sure build works with the latest cordova release
+  jx npm update -g cordova;ERROR_ABORT
+fi
+# Print the Cordova version for debugging purposes
+cordova -v;ERROR_ABORT
 
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
@@ -65,11 +74,6 @@ jx npm run createInternalDocs
 # Make sure we are back in the project root folder
 # after the test execution
 cd $PROJECT_ROOT;ERROR_ABORT
-
-# Check the existence of the script that in CI gives the right test server
-# IP address.
-hash CIGIVEMEMYIP.sh 2>/dev/null
-RUN_IN_CI=$?
 
 if [ $RUN_IN_CI == 0 ]
 then
