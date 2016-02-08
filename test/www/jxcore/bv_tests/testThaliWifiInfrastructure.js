@@ -1,13 +1,5 @@
 'use strict';
 
-// Does not currently work on desktop with the mocked up
-// Mobile (where we run multiple instances at the same time),
-// because SSDP messages from multiple concurrent test
-// instances may sometimes result into test failures.
-if (typeof Mobile !== 'undefined' && Mobile.iAmAMock) {
-  return;
-}
-
 var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
 var ThaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thali-tape');
@@ -17,6 +9,7 @@ var http = require('http');
 var net = require('net');
 var uuid = require('node-uuid');
 var sinon = require('sinon');
+var randomstring = require('randomstring');
 
 var wifiInfrastructure = new ThaliWifiInfrastructure();
 
@@ -35,24 +28,45 @@ var test = tape({
   }
 });
 
+var findPeerPerProperty = function (peers, property, value) {
+  var foundPeer = null;
+  peers.forEach(function (peer) {
+    if (peer[property] === value) {
+      foundPeer = peer;
+    }
+  });
+  return foundPeer;
+};
+
 test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged events should be emitted', function (t) {
-  var testHostAddress = 'foo.bar';
+  var testHostAddress = randomstring.generate({
+    charset: 'hex', // to get lowercase chars for the host address
+    length: 8
+  });
   var testPort = 8080;
   var testLocation = 'http://' + testHostAddress + ':' + testPort;
   var testServer = new nodessdp.Server({
     location: testLocation,
     udn: ThaliConfig.SSDP_NT
   });
-  testServer.setUSN('urn:uuid:' + uuid.v4());
-  var peerAvailableListener = function (data) {
-    var peer = data[0];
+  var peerIdentifier = 'urn:uuid:' + uuid.v4();
+  testServer.setUSN(peerIdentifier);
+  var peerAvailableListener = function (peers) {
+    var peer = findPeerPerProperty(peers, 'hostAddress', testHostAddress);
+    if (peer === null) {
+      return;
+    }
+    t.equal(peer.peerIdentifier, peerIdentifier, 'peer identifier should match');
     t.equal(peer.hostAddress, testHostAddress, 'host address should match');
     t.equal(peer.portNumber, testPort, 'port should match');
     t.equal(peer.peerAvailable, true, 'peer should be available');
     wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
 
-    var peerUnavailableListener = function (data) {
-      var peer = data[0];
+    var peerUnavailableListener = function (peers) {
+      var peer = findPeerPerProperty(peers, 'peerIdentifier', peerIdentifier);
+      if (peer === null) {
+        return;
+      }
       t.equal(peer.peerAvailable, false, 'peer should be unavailable');
       wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerUnavailableListener);
       t.end();
@@ -77,7 +91,7 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
   testClient.on('advertise-alive', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
-    if (data.NT !== ThaliConfig.SSDP_NT) {
+    if (data.NT !== ThaliConfig.SSDP_NT || data.USN !== wifiInfrastructure.usn) {
       return;
     }
     if (firstUSN !== null) {
@@ -94,7 +108,7 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
   testClient.on('advertise-bye', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
-    if (data.NT !== ThaliConfig.SSDP_NT) {
+    if (data.NT !== ThaliConfig.SSDP_NT || data.USN !== wifiInfrastructure.usn) {
       return;
     }
     if (data.USN === firstUSN) {
@@ -291,4 +305,31 @@ test('functions are run from a queue in the right order', function (t) {
          'call order must match');
     t.end();
   });
+});
+
+// From here onwards, tests only work on mocked up desktop
+// environment where network changes are simulated. To make
+// runnable on iOS and Android, there should be a way to fire
+// network changed events programmatically and they should be
+// emitted via the native layer.
+if (typeof Mobile !== 'undefined' && !Mobile.iAmAMock) {
+  return;
+}
+
+test('network changes emitted correctly', function (t) {
+  var networkOnHandler = function (networkChangedValue) {
+    t.equals(networkChangedValue.wifi, 'on', 'wifi should be on');
+    wifiInfrastructure.removeListener('networkChangedWifi', networkOnHandler);
+    t.end();
+  };
+
+  var networkOffHandler = function (networkChangedValue) {
+    t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
+    wifiInfrastructure.removeListener('networkChangedWifi', networkOffHandler);
+    wifiInfrastructure.on('networkChangedWifi', networkOnHandler);
+    process.emit('connectionStatusChanged', 'WiFi');
+  };
+
+  wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
+  process.emit('connectionStatusChanged', 'NotConnected');
 });

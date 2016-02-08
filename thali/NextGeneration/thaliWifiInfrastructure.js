@@ -88,6 +88,23 @@ ThaliWifiInfrastructure.prototype._init = function () {
   this._client.on('advertise-bye', function (data) {
     this._handleMessage(data, false);
   }.bind(this));
+
+  process.on('connectionStatusChanged', function (status) {
+    // When running within JXcore Cordova Mobile environment,
+    // ignore this event, because there, the network events
+    // are bubbled up via the native layer.
+    if (typeof Mobile !== 'undefined' && !Mobile.iAmAMock) {
+      return;
+    }
+    // Currently used only when testing on desktop in a mocked
+    // up environment, because JXcore does not fire these
+    // events on desktops. In the tests, this event can be fired
+    // from anywhere by emitting the right event on the global
+    // process object.
+    this.emit('networkChangedWifi', {
+      wifi: status === 'WiFi' ? 'on' : 'off'
+    });
+  }.bind(this));
 };
 
 ThaliWifiInfrastructure.prototype._setLocation = function (address, port) {
