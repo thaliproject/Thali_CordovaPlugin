@@ -90,7 +90,6 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       // Emit message every second until acknowledged
       function _emit() {
         if (!acknowledged) {
-          logger.info("emit: %s %s", device.deviceName, msg);
           device.socket.emit(msg);          
           if (--retries > 0) {
             setTimeout(_emit, 1000);
