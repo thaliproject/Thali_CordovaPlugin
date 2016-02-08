@@ -1,6 +1,7 @@
 "use strict";
 
 var net = require('net');
+var randomstring = require('randomstring');
 
 if (jxcore.utils.OSInfo().isAndroid) {
   // REMOVE ME WHEN READY TO TEST ANDROID !!!
@@ -131,12 +132,27 @@ test('Can connect to a remote peer', function (t) {
             connection = JSON.parse(connection);
             if (!complete) {
               console.log(connection);
-              t.ok(connection.listeningPort, "Connection must have listeningPort");
+
+              t.ok(connection.hasOwnProperty("listeningPort"), "Must have listeningPort");
               t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
               t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
-              t.ok(!connection.clientPort, "clientPort must be null");
+              t.ok(typeof connection.clientPort === 'number', "clientPort must be a number");
               t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
-              t.ok(!connection.serverPort, "serverPort must be null");
+              t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
+
+              if (connection.listeningPort != 0)
+              {
+                // Forward connection
+                t.ok(connection.clientPort == 0);
+                t.ok(connection.serverPort == 0);
+              }
+              else
+              {
+                // Reverse connection
+                t.ok(connection.clientPort != 0);
+                t.ok(connection.serverPort != 0);
+              }
+ 
               t.end();
             }
           }
@@ -153,3 +169,67 @@ test('Can connect to a remote peer', function (t) {
     });
   });
 });
+
+test('Can shift large amounts of data', function (t) {
+
+  var complete = false;
+  var applicationPort = 4242;
+
+  var sockets = {};
+  var echoServer = net.createServer(function(socket) {
+    socket.pipe(socket);
+    sockets[socket.localPort] = socket;
+  });
+
+  function shiftData(sock) {
+    // Throw lots of data down this pipe, read back the echos and check
+    // all is as it should be
+    var sendCount = 10 * 1024 * 1024;
+    var toSend = randomstring(sendCount);
+    
+    var toRecv = '';
+    sock.on('data', (data) => {
+      toRecv += data.toString();
+      console.log("data in:", toRecv.length);
+      if (toRecv.length == sendCount) {
+        t.ok(toRecv == toSend, "Buffers should match");
+        t.end();
+      }
+    });
+
+    sock.write(toSend);
+  }
+
+  echoServer.listen(applicationPort, '127.0.0.1');
+
+  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+    peers.forEach(function(peer) {
+      if (peer.peerAvailable) {
+        Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
+          // We're happy here if we make a connection to anyone
+          if (err == null) {
+            if (connection.listeningPort) {
+              // We made a forward connection
+              var client = net.connect(connection.localPort, "127.0.0.1", function() {
+                shiftData(client);
+              });
+            } else {
+              // We made a reverse connection
+              client = sockets[connection.clientPort];
+              shiftData(client);
+            }
+          }
+        });
+      }
+    });
+  });
+
+  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
+  function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    });
+  });
+});
+

@@ -24,7 +24,7 @@ typedef enum relayStates {
   NSOutputStream *_outputStream;
 
   // Output buffer
-  NSMutableArray *_outputBuffer;
+  NSMutableArray<NSMutableData *> *_outputBuffer;
   BOOL _outputBufferHasSpaceAvailable;
 
   // Track our current state
@@ -165,13 +165,26 @@ typedef enum relayStates {
 {
   @synchronized(self)
   {
+    const unsigned int BUFFER_LEN = 1024;
+
+    if (_outputStream == nil)
+    {
+      // Stream has been closed whilst a message was in flight
+      return NO;
+    }
+    
     if (_outputBuffer.count > 0)
     {
-      assert(_outputStream != nil);
       assert([_outputStream hasSpaceAvailable] == YES);
 
-      NSData *data = [_outputBuffer objectAtIndex:0];
-      if ([_outputStream write:data.bytes maxLength:data.length] != data.length)
+      NSData *toWrite = [_outputBuffer objectAtIndex:0];
+      if (toWrite.length > BUFFER_LEN)
+      {
+        toWrite = [toWrite subdataWithRange:NSMakeRange(0, BUFFER_LEN)];
+      }
+    
+      assert([toWrite length] > 0);
+      if ([_outputStream write:toWrite.bytes maxLength:toWrite.length] != toWrite.length)
       {
         NSLog(@"ERROR: Writing to output stream");
         NSException *e = [NSException 
@@ -182,7 +195,17 @@ typedef enum relayStates {
 
         @throw e;        
       }
-      [_outputBuffer removeObjectAtIndex:0];
+      
+      if (toWrite.length < BUFFER_LEN || ([toWrite length] == [_outputBuffer[0] length]))
+      {
+        [_outputBuffer removeObjectAtIndex:0];
+      }
+      else
+      {
+        // Shuffle data down..
+        [_outputBuffer[0] replaceBytesInRange:NSMakeRange(0, BUFFER_LEN) withBytes:NULL length:0];
+      }
+      
       return YES;
     }
     else
@@ -204,7 +227,7 @@ typedef enum relayStates {
     }
  
     // Enqueue, send directly if we're pending
-    [_outputBuffer addObject:data];
+    [_outputBuffer addObject:[[NSMutableData alloc] initWithData:data]];
     if (_outputBufferHasSpaceAvailable)
     {
       @try
