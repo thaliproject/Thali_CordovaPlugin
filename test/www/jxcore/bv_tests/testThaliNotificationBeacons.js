@@ -191,7 +191,7 @@ test('#parseBeacons addressBookCallback fails decrypt', function (t) {
   t.end();
 });
 
-test('#parseBeacons addressBookCallback returns null for all', function (t) {
+test('#parseBeacons addressBookCallback returns no matches', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(SECP256K1);
   localDevice.generateKeys();
@@ -212,15 +212,26 @@ test('#parseBeacons addressBookCallback returns null for all', function (t) {
     expiration
   );
 
+  var called = 0;
+  var newECDH = crypto.createECDH(SECP256K1);
+  var newECDHKey = newECDH.generateKeys();
+  var newECDHKeyHash = NotificationBeacons.createPublicKeyHash(newECDHKey);
   var addressBookCallback = function (unencryptedKeyId) {
-    t.ok(unencryptedKeyId);
+    called++;
+    if (unencryptedKeyId.compare(newECDHKeyHash) === 0) {
+      return newECDHKey;
+    }
     return null;
   };
 
-  var results = NotificationBeacons.parseBeacons(beaconStreamWithPreAmble,
-                                                device1, addressBookCallback);
+  var results = NotificationBeacons.parseBeacons(
+    beaconStreamWithPreAmble,
+    device1,
+    addressBookCallback
+  );
 
   t.equal(results, null);
+  t.equal(called, 1);
   t.end();
 });
 
@@ -228,6 +239,7 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(SECP256K1);
   var localDeviceKey = localDevice.generateKeys();
+  var localDeviceKeyHash = NotificationBeacons.createPublicKeyHash(localDeviceKey);
   var expiration = 9000;
 
   var device1 = crypto.createECDH(SECP256K1);
@@ -245,14 +257,23 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
     expiration
   );
 
+  var called = 0;
+
   var addressBookCallback = function (unencryptedKeyId) {
-    t.ok(unencryptedKeyId);
-    return localDeviceKey;
+    called++;
+    if (unencryptedKeyId.compare(localDeviceKeyHash) === 0) {
+      return localDeviceKey;
+    }
+    return null;
   };
 
-  var results = NotificationBeacons.parseBeacons(beaconStreamWithPreAmble,
-                                                device1, addressBookCallback);
+  var results = NotificationBeacons.parseBeacons(
+    beaconStreamWithPreAmble,
+    device2,
+    addressBookCallback
+  );
 
+  t.equal(called, 1);
   t.ok(results);
   t.end();
 });
