@@ -31,6 +31,10 @@ ERROR_ABORT() {
 # that issue.
 ulimit -n 512;ERROR_ABORT
 
+# Make sure build works with the latest cordova release
+npm update -g cordova
+
+
 PROJECT_ROOT=$(pwd)
 
 # A hack to workaround an issue where the install scripts assume that the
