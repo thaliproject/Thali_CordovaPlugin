@@ -35,23 +35,14 @@ var ThaliPermissions = (function(){
 var ThaliPermissions = {};
 
   /*
-  * List of the supported permissions 
-  */
-	ThaliPermissions.permissionList = {
-		"ACCESS_COARSE_LOCATION": "ACCESS_COARSE_LOCATION"
-	};
-
-  /*
   * Response codes for the permission request
   * PERMISSION_GRANTED: Success: User has authorized requested permission. 
   * PERMISSION_DENIED: Error: User has denied access to requested permission
-  * RESPONSE_REQUESTED_PERMISSION_NOT_SUPPORTED: Error: Requested permission is not supported 
   * RESPONSE_CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED: Error: Concurrent request are not supported
   */
   ThaliPermissions.responseCodes = {
 		"PERMISSION_GRANTED": "PERMISSION_GRANTED", 
 		"PERMISSION_DENIED": "PERMISSION_DENIED", 
-		"RESPONSE_REQUESTED_PERMISSION_NOT_SUPPORTED": "RESPONSE_REQUESTED_PERMISSION_NOT_SUPPORTED", // 
     "RESPONSE_CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED": "RESPONSE_CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED" 
 	};
  
@@ -63,7 +54,7 @@ var ThaliPermissions = {};
  * @param {function} errorCallback - This function is called when the location permission is not granted. 
  */
   ThaliPermissions.requestLocationPermission = function (successCallback, errorCallback) {
-    cordova.exec(successCallback, errorCallback, "ThaliPermissions", "requestPermission",[ThaliPermissions.permissionList.ACCESS_COARSE_LOCATION]);
+    cordova.exec(successCallback, errorCallback, "ThaliPermissions", "REQUEST_ACCESS_COARSE_LOCATION",[]);
   };
   
   return ThaliPermissions;

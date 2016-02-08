@@ -35,7 +35,6 @@ public class ThaliPermissions extends CordovaPlugin {
      */
     private static final String RESPONSE_PERMISSION_GRANTED = "PERMISSION_GRANTED";
     private static final String RESPONSE_PERMISSION_DENIED = "PERMISSION_DENIED";
-    private static final String RESPONSE_REQUESTED_PERMISSION_NOT_SUPPORTED = "RESPONSE_REQUESTED_PERMISSION_NOT_SUPPORTED";
     private static final String RESPONSE_CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED = "CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED";
 
     private static final String TAG = ThaliPermissions.class.getName();
@@ -48,28 +47,18 @@ public class ThaliPermissions extends CordovaPlugin {
     }
 
     /**
-     * Constuctor
-     * @param cordova The Activity interface
-     * @param webView The main interface for interacting with a Cordova webview
-     */
-    @Override
-    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
-        super.initialize(cordova, webView);
-        // your init code here
-    }
-
-    /**
      * Executes the request.
      * @param action The action to execute.
-     * @param args arguments for the plugin.
+     * @param data The arguments for the plugin.
      * @param callbackContext The callback context used when calling back into JavaScript.
      * @return True if the method was found, false if not.
      */
+    @Override
     public boolean execute(String action, JSONArray data, CallbackContext callbackContext) throws JSONException {
         Log.i(TAG, "execute:" + action);
         boolean methodFound = false;
 
-        if (action.equals("requestPermission")) {
+        if (action.equals("REQUEST_ACCESS_COARSE_LOCATION")) {
             methodFound = true;
 
             if(mCurrentContext != null && !mCurrentContext.isFinished()) {
@@ -77,8 +66,7 @@ public class ThaliPermissions extends CordovaPlugin {
                 callbackContext.error(RESPONSE_CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED);
             } else {
                 mCurrentContext = callbackContext;
-                String permissionName = data.getString(0);
-                checkPermissionStatus(permissionName);
+                checkPermissionStatus("ACCESS_COARSE_LOCATION");
             }
         }
         else {
@@ -94,22 +82,11 @@ public class ThaliPermissions extends CordovaPlugin {
      */
     private void checkPermissionStatus(String permission) {
 
-        if(!Permissions.containsKey(permission)) {
-            mCurrentContext.error(RESPONSE_REQUESTED_PERMISSION_NOT_SUPPORTED);
-        } else if(cordova.hasPermission(permission)) {
+        if(cordova.hasPermission(Permissions.get(permission))) {
             mCurrentContext.success(RESPONSE_PERMISSION_GRANTED);
         } else {
-            getPermission(Permissions.get(permission));
+        cordova.requestPermission(this, REQUEST_CODE , Permissions.get(permission));
         }
-    }
-
-    /**
-     * Requests the user to authorize a permission.
-     * @param permission The name of the permission
-     */
-    protected void getPermission(String permission) {
-        Log.i(TAG, "getPermission:" + permission);
-        cordova.requestPermission(this, REQUEST_CODE , permission);
     }
 
     /**
@@ -119,6 +96,7 @@ public class ThaliPermissions extends CordovaPlugin {
      * @param permissions List of permissions
      * @param grantResults List of permission request results
      */
+    @Override
     public void onRequestPermissionResult(int requestCode, String[] permissions,
             int[] grantResults)
             throws JSONException {
