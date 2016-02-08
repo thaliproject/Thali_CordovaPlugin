@@ -169,6 +169,24 @@ module.exports.stopAdvertisingAndListening = function () {
   return new Promise();
 };
 
+/**
+ * This method returns the last value sent by
+ * {@link module:thaliMobile.event:networkChanged} event.
+ *
+ * The reason we use a promise is that there is a race condition where someone
+ * could call this before we have gotten the first network status event. Rather
+ * than force everyone to play the game where they have to subscribe to the
+ * event and call this method just to figure out the status for things like UX
+ * that says "Hey you don't have the right radio!" we just use a promise that
+ * won't return until we have a value.
+ *
+ * @public
+ * @returns {Promise<module:thaliMobileNative~networkChanged>}
+ */
+module.exports.getNetworkStatus = function() {
+  return new Promise();
+};
+
 /*
         EVENTS
  */
@@ -228,7 +246,7 @@ module.exports.connectionTypes = {
  * a peer being available over Android before we declare them gone?
  *
  * __Open Issue:__ A really obvious optimization would be to hook this code
- * into the {@link module:TCPServersManager} so it could see if we have a
+ * into the {@link module:tcpServersManager} so it could see if we have a
  * Bluetooth or MPCF connection running with a particular peer. If we do then
  * obviously we wouldn't want to declare them gone even if we don't see them on
  * BLE or if MPCF told us they were gone.

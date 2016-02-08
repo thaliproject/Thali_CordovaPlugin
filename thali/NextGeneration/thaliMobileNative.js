@@ -112,8 +112,8 @@
  *
  * @public
  * @function external:"Mobile('startUpdateAdvertisingAndListening')".callNative
- * @param {number} portNumber The port on 127.0.0.1 that any incoming connections over the native non-TCP/IP transport
- * should be bridged to.
+ * @param {number} portNumber The port on 127.0.0.1 that any incoming
+ * connections over the native non-TCP/IP transport should be bridged to.
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 
@@ -221,8 +221,8 @@
  * If this method is called consecutively with the same peerIdentifier and a
  * connection is either in progress or already exists then an error MUST
  * be returned. Otherwise a new
- * connection MUST be created. 
- * 
+ * connection MUST be created.
+ *
  * In the case of Android there MUST be at most one
  * Bluetooth client connection between this peer and the identified remote peer.
  * In the case of iOS there MUST be at most one MCSession between this peer and
@@ -417,11 +417,14 @@ var radioState = {
   ON: 'on',
   /** The radio exists on the device but is turned off. */
   OFF: 'off',
-  /** The radio exists on the device and is on but for some reason the system won't let us use it. */
+  /** The radio exists on the device and is on but for some reason the system
+   * won't let us use it. */
   UNAVAILABLE: 'unavailable',
-  /** We depend on this radio type for this platform type but it doesn't appear to exist on this device. */
+  /** We depend on this radio type for this platform type but it doesn't appear
+   * to exist on this device. */
   NOT_HERE: 'notHere',
-  /** Thali doesn't use this radio type on this platform and so makes no effort to determine its state. */
+  /** Thali doesn't use this radio type on this platform and so makes no effort
+   * to determine its state. */
   DO_NOT_CARE: 'doNotCare'
 };
 
@@ -433,6 +436,7 @@ var radioState = {
  * @property {module:thaliMobileNative~radioState} blueToothLowEnergy
  * @property {module:thaliMobileNative~radioState} blueTooth
  * @property {module:thaliMobileNative~radioState} wifi
+ * @property {module:thaliMobileNative~radioState} cellular
  * @property {string} bssidName If null this value indicates that either
  * wifiRadioOn is not 'on' or that the Wi-Fi isn't currently connected to an
  * access point. If non-null then this is the BSSID of the access point that
@@ -457,9 +461,9 @@ var radioState = {
  * {@link module:thaliMobileNative~networkChanged} object are altered) any
  * callbacks registered with this method will be called. The native layer is
  * obligated to send an instance of this callback in response to the first
- * subscription it gets to this event. This will be used by the 
+ * subscription it gets to this event. This will be used by the
  * {@link module:thaliMobileNativeWrapper} to initialize its tracking of
- * the network's state for 
+ * the network's state for
  * {@link module:thaliMobileNativeWrapper~getNonTCPNetworkStatus}.
  *
  * The callbacks MUST NOT be sent more frequently than every 100 ms. If
@@ -483,7 +487,8 @@ var radioState = {
  *
  * @public
  * @callback incomingConnectionToPortNumberFailedCallback
- * @property {number} portNumber The 127.0.0.1 port that the TCP/IP bridge tried to connect to.
+ * @property {number} portNumber The 127.0.0.1 port that the TCP/IP bridge tried
+ * to connect to.
  */
 
 /**

@@ -26,9 +26,13 @@ cordova create ThaliTest com.test.thalitest ThaliTest
 mkdir -p ThaliTest/thaliDontCheckIn/localdev
 
 if [ $runningInMinGw == true ]; then
+    # The thali package might be installed as link and there will
+    # be troubles later on if this link is tried to be copied so
+    # remove it here.
+    rm -rf $repositoryRoot/test/www/jxcore/node_modules/thali
     cp -R $repositoryRoot/test/www/ ThaliTest/
 else
-    cp -R $repositoryRoot/test/www/ ThaliTest/www
+    rsync -a --no-links $repositoryRoot/test/www/ ThaliTest/www
 fi
 
 cd ThaliTest
@@ -42,26 +46,21 @@ if [ $runningInMinGw == true ]; then
     # which needs to be replaced with a valid value. Otherwise the build process
     # will be aborted. Restore write permission after running sed in case
     # Windows security settings removed it.
-    sed -i 's/"thali": ".*"/"thali": "^2.0.2"/g' package.json
+    sed -i 's/"thali": "*"/"thali": "*"/g' package.json
     chmod 644 package.json
 fi
 
 # SuperTest which is used by some of the BVTs include a PEM file (for private
 # keys) that makes Android unhappy so we remove it below in addition to the gz
 # files.
-jx npm install --autoremove "*.gz,*.pem"
+jx npm install --no-optional --autoremove "*.gz,*.pem"
 
 # In case autoremove fails to delete the files, delete them explicitly.
-# However, 'find' command on MinGW is likely to consider the predicate '-delete'
-# invalid. In addition, in Windows file system the ThaliTest paths are usually
-# too long and if rm fails, it will abort the script. Thus, on Windows we have
-# to rely on autoremove to work. 
-if [ $runningInMinGw == false ]; then
-    find . -name "*.gz" -delete
-    find . -name "*.pem" -delete
-fi
+find . -name "*.gz" -delete
+find . -name "*.pem" -delete
 
 cp -v $1 app.js
+
 cordova build android --release --device
 
 if [ $runningInMinGw == false ]; then
