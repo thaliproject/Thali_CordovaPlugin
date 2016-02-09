@@ -57,45 +57,53 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 
 - (void)networkChanged:(NSDictionary *)networkStatus
 {
-  // Fire the networkChanged event.
-  OnMainThread(^{
-      [JXcore callEventCallback:kNetworkChanged
-                       withJSON:[JXcoreExtension objectToJSON:networkStatus]];
-  });
+  @synchronized(self)
+  {
+    [JXcore callEventCallback:kNetworkChanged
+                     withJSON:[JXcoreExtension objectToJSON:networkStatus]];
+  }
 }
 
 - (void)peerAvailabilityChanged:(NSArray<NSDictionary *> *)peers
 {
-  // Fire the peerAvailabilityChanged event.
-  OnMainThread(^{
+  @synchronized(self)
+  {
     [JXcore callEventCallback:kPeerAvailabilityChanged
                      withJSON:[JXcoreExtension objectToJSON:peers]];
-  });
+  }
 }
 
 - (void)discoveryAdvertisingStateUpdate:(NSDictionary *)stateUpdate
 {
-  OnMainThread(^{
+  @synchronized(self)
+  {
       [JXcore callEventCallback:kDiscoveryAdvertisingStateUpdate
                        withJSON:[JXcoreExtension objectToJSON:stateUpdate]];
-  });
+  }
 }
 
 - (void)incomingConnectionToPortNumberFailed:(unsigned short)serverPort
 {
-  OnMainThread(^{
+  @synchronized(self)
+  {
       [JXcore callEventCallback:kIncomingConnectionToPortNumberFailed withParams:@[@(serverPort)]];
-  });
+  }
 }
 
 - (void)appEnteringBackground
 {
-  [JXcore callEventCallback:kAppEnteringBackground withParams:@[]];
+  @synchronized(self)
+  {
+    [JXcore callEventCallback:kAppEnteringBackground withParams:@[]];
+  }
 }
 
 - (void)appEnteredForeground
 {
-  [JXcore callEventCallback:kAppEnteredForeground withParams:@[]];
+  @synchronized(self)
+  {
+    [JXcore callEventCallback:kAppEnteredForeground withParams:@[]];
+  }
 }
 
 + (THEAppContext *)theAppContext
@@ -153,12 +161,20 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     if ([theApp startListeningForAdvertisements])
     {
       NSLog(@"jxcore: startListeningForAdvertisements: success");
-      [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+      }
     }
     else
     {
       NSLog(@"jxcore: startListeningForAdvertisements: failure");
-      [JXcore callEventCallback:callbackId withParams:@[@"Call Stop!"]];
+  
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[@"Call Stop!"]];
+      }
     }
   } withName:@"startListeningForAdvertisements"];
 
@@ -170,12 +186,20 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     if ([theApp stopListeningForAdvertisements])
     {
       NSLog(@"jxcore: stopListeningForAdvertisements: success");
-      [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+      }
     }
     else
     {
       NSLog(@"jxcore: stopListeningForAdvertisements: failure");
-      [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+  
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+      }
     }
   } withName:@"stopListeningForAdvertisements"];
 
@@ -188,19 +212,31 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     if ([params count] != 2 || ![params[0] isKindOfClass:[NSNumber class]])
     {
       NSLog(@"jxcore: startUpdateAdvertisingAndListening: bad arg");
-      [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+      }
     }
     else 
     {
       if ([theApp startUpdateAdvertisingAndListening:(unsigned short)[params[0] intValue]])
       {
         NSLog(@"jxcore: startUpdateAdvertisingAndListening: success");
-        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+
+        @synchronized(self)
+        {
+          [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+        }
       }
       else
       {
         NSLog(@"jxcore: startUpdateAdvertisingAndListening: failure");
-        [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+
+        @synchronized(self)
+        {
+          [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+        }
       }
     }
   } withName:@"startUpdateAdvertisingAndListening"];
@@ -213,12 +249,20 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     if ([theApp stopAdvertisingAndListening])
     {
       NSLog(@"jxcore: stopAdvertisingAndListening: success");
-      [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+      }
     }
     else
     {
       NSLog(@"jxcore: stopAdvertisingAndListening: failure");
-      [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+      }
     }
   } withName:@"stopAdvertisingAndListening"];
  
@@ -228,7 +272,11 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
     {
       NSLog(@"jxcore: connect: badParam");
-      [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+    
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+      }
     }
     else
     {
@@ -238,13 +286,21 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
         if (errorMsg == nil)
         {
           NSLog(@"jxcore: connect: success");
-          [JXcore callEventCallback:callbackId withParams:
-            @[[NSNull null], [JXcoreExtension objectToJSON:connection]]];
+
+          @synchronized(self)
+          {
+            [JXcore callEventCallback:callbackId withParams:
+              @[[NSNull null], [JXcoreExtension objectToJSON:connection]]];
+          }
         }
         else
         {
           NSLog(@"jxcore: connect: fail: %@", errorMsg);
-          [JXcore callEventCallback:callbackId withParams:@[errorMsg, [NSNull null]]];
+
+          @synchronized(self)
+          {
+            [JXcore callEventCallback:callbackId withParams:@[errorMsg, [NSNull null]]];
+          }
         }
       };
 
@@ -260,24 +316,34 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
     {
       NSLog(@"jxcore: killConnection: badParam");
-      [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+      }
     }
     else
     {
       if ([theApp killConnection: params[0]])
       {
         NSLog(@"jxcore: killConnection: success");
-        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+
+        @synchronized(self)
+        {
+          [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+        }
       }
       else
       {
         NSLog(@"jxcore: killConnection: fail");
-        [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
+
+        @synchronized(self)
+        {
+          [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
+        }
       }
     }
-
   } withName:@"killConnection"];
-
 }
 
 @end
