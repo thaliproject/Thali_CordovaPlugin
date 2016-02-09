@@ -1,6 +1,8 @@
 'use strict';
 
 var Promise = require('lie');
+var PromiseQueue = require('./promiseQueue');
+var promiseQueue = new PromiseQueue();
 var EventEmitter = require('events').EventEmitter;
 
 /** @module thaliMobileNativeWrapper */
@@ -237,8 +239,20 @@ module.exports.stopAdvertisingAndListening = function () {
  * @public
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
-module.exports.getNonTCPNetworkStatus = function() {
-  return new Promise();
+var nonTCPNetworkStatus = null;
+
+module.exports.getNonTCPNetworkStatus = function () {
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (nonTCPNetworkStatus === null) {
+      module.exports.emitter.once('networkChangedNonTCP',
+      function (networkChangedValue) {
+        nonTCPNetworkStatus = networkChangedValue;
+        return resolve(nonTCPNetworkStatus);
+      });
+    } else {
+      return resolve(nonTCPNetworkStatus);
+    }
+  });
 };
 
 /**
@@ -416,11 +430,32 @@ if (typeof Mobile !== 'undefined') {
     });
 
   Mobile('networkChanged').registerToNative(function (networkChanged) {
-    // do stuff!
+    // The value needs to be assigned here to nonTCPNetworkStatus
+    // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
+    // can return it.
+    nonTCPNetworkStatus = networkChanged;
+    module.exports.emitter.emit('networkChangedNonTCP', nonTCPNetworkStatus);
   });
 
   Mobile('incomingConnectionToPortNumberFailed').registerToNative(
     function (portNumber) {
       // do stuff!
     });
+} else {
+  var newListenerHandler = function (event, listener) {
+    if (event !== 'networkChangedNonTCP') {
+      return;
+    }
+    module.exports.emitter.removeListener('newListener', newListenerHandler);
+    setImmediate(function () {
+      nonTCPNetworkStatus = {
+        wifi: 'on',
+        bluetooth: 'doNotCare',
+        bluetoothLowEnergy: 'doNotCare',
+        cellular: 'doNotCare'
+      };
+      module.exports.emitter.emit('networkChangedNonTCP', nonTCPNetworkStatus);
+    });
+  };
+  module.exports.emitter.on('newListener', newListenerHandler);
 }
