@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('../lib/thali-tape');
+var tape = require('wrapping-tape');
 var NotificationBeacons =
   require('thali/NextGeneration/thaliNotificationBeacons');
 var crypto = require('crypto');
@@ -305,7 +305,6 @@ test('#parseBeacons addressBookCallback fails decrypt', function (t) {
   );
 
   var addressBookCallback = function () {
-    t.fail();
     return null;
   };
 
