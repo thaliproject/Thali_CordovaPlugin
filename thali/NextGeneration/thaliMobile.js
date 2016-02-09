@@ -507,9 +507,7 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
     } else {
       // TODO: Handle peer becoming unavailable
     }
-    peer.connectionTypes = [
-      module.exports.connectionTypes.TCP_NATIVE
-    ];
+    peer.connectionType = module.exports.connectionTypes.TCP_NATIVE;
     peer.suggestedTCPTimeout = ThaliConfig.TCP_TIMEOUT_WIFI;
     peers.push(peer);
   });

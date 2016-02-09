@@ -102,7 +102,15 @@ test('a peer should be found after #startListeningForAdvertisements is called', 
     }, 'peer should have a non-empty host address');
     t.equals(typeof peer.suggestedTCPTimeout, 'number', 'peer should have suggested timeout');
     t.equals(typeof peer.portNumber, 'number', 'peer should have port number');
-    t.ok(peer.connectionTypes.length > 0, 'peer should have more than one connection type');
+    t.ok(peer.connectionType, 'peer should have a connection type');
+    var connectionTypeKey;
+    for (var key in ThaliMobile.connectionTypes) {
+      if (peer.connectionType === ThaliMobile.connectionTypes[key]) {
+        connectionTypeKey = key;
+      }
+    }
+    t.equals(peer.connectionType, ThaliMobile.connectionTypes[connectionTypeKey],
+             'connection type should match one of the pre-defined types');
 
     ThaliMobile.emitter.removeListener('peerAvailabilityChanged', peerAvailabilityChangedHandler);
     ThaliMobile.stopListeningForAdvertisements()
