@@ -1,5 +1,13 @@
 'use strict';
 
+// Does not currently work on desktop with the mocked up
+// Mobile (where we run multiple instances at the same time),
+// because SSDP messages from multiple concurrent test
+// instances may sometimes result into test failures.
+if (typeof Mobile !== 'undefined' && Mobile.iAmAMock) {
+  return;
+}
+
 var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
 var ThaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thali-tape');
