@@ -84,7 +84,6 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       var acknowledged = false;
       device.socket.once(util.format("%s_ok", msg), function() {
         acknowledged = true;      
-        logger.info("ack: %s", device.deviceName, msg);
       });
 
       // Emit message every second until acknowledged
