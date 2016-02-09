@@ -312,7 +312,7 @@ test('functions are run from a queue in the right order', function (t) {
 // runnable on iOS and Android, there should be a way to fire
 // network changed events programmatically and they should be
 // emitted via the native layer.
-if (typeof Mobile !== 'undefined' && !Mobile.iAmAMock) {
+if (typeof Mobile !== 'undefined') {
   return;
 }
 
@@ -327,9 +327,13 @@ test('network changes emitted correctly', function (t) {
     t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
     wifiInfrastructure.removeListener('networkChangedWifi', networkOffHandler);
     wifiInfrastructure.on('networkChangedWifi', networkOnHandler);
-    process.emit('connectionStatusChanged', 'WiFi');
+    wifiInfrastructure.ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
+      wifi: 'on'
+    });
   };
 
   wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
-  process.emit('connectionStatusChanged', 'NotConnected');
+  wifiInfrastructure.ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
+    wifi: 'off'
+  });
 });
