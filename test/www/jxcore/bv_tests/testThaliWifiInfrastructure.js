@@ -15,12 +15,12 @@ var randomstring = require('randomstring');
 var wifiInfrastructure = new ThaliWifiInfrastructure();
 
 var test = tape({
-  setup: function(t) {
+  setup: function (t) {
     wifiInfrastructure.start(express.Router()).then(function () {
       t.end();
     });
   },
-  teardown: function(t) {
+  teardown: function (t) {
     // Stop everything at the end of tests to make sure
     // the next test starts from clean state
     wifiInfrastructure.stop().then(function () {
@@ -336,5 +336,26 @@ test('network changes emitted correctly', function (t) {
   wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
   ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
     wifi: 'off'
+  });
+});
+
+test('#startListeningForAdvertisements returns an error if wifi is off', function (t) {
+  wifiInfrastructure.stop()
+  .then(function () {
+    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
+      wifi: 'off'
+    });
+    return wifiInfrastructure.start(express.Router());
+  })
+  .then(function () {
+    return wifiInfrastructure.startListeningForAdvertisements()
+  })
+  .then(function () {
+    t.fail('the call should not succeed');
+    t.end();
+  })
+  .catch(function (error) {
+    t.equals(error.message, 'Radio Turned Off', 'specific error expected');
+    t.end();
   });
 });

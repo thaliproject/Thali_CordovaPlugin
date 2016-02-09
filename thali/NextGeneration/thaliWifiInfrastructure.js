@@ -63,6 +63,7 @@ function ThaliWifiInfrastructure () {
   this.started = null;
   this.listening = null;
   this.advertising = null;
+  this.networkState = null;
   // A variable to hold information about known peer availability states
   // and used to avoid emitting peer availability changes in case the
   // availability hasn't changed from the previous known value.
@@ -91,14 +92,21 @@ ThaliWifiInfrastructure.prototype._init = function () {
   }.bind(this));
 
   ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', function (networkChangedValue) {
+    this.networkState = networkChangedValue;
+    this._handleNetworkChanges();
+
     // When running within JXcore Cordova Mobile environment,
-    // ignore this event, because there, the network events
-    // are bubbled up via the native layer.
+    // don't pass this event onwards, because there, the network
+    // events are bubbled up via the native layer.
     if (typeof Mobile !== 'undefined') {
       return;
     }
     this.emit('networkChangedWifi', networkChangedValue);
   }.bind(this));
+};
+
+ThaliWifiInfrastructure.prototype._handleNetworkChanges = function () {
+  // TODO: Check state and act
 };
 
 ThaliWifiInfrastructure.prototype._setLocation = function (address, port) {
@@ -188,9 +196,13 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
     if (self.started === true) {
       return reject(new Error('Call Stop!'));
     }
-    self.started = true;
-    self.router = router;
-    return resolve();
+    ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
+    .then(function (networkStatus) {
+      self.networkStatus = networkStatus;
+      self.started = true;
+      self.router = router;
+      return resolve();
+    });
   });
 };
 
@@ -246,14 +258,32 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  */
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
   var self = this;
-  return promiseQueue.enqueue(function(resolve, reject) {
+  return promiseQueue.enqueue(function (resolve, reject) {
     if (self.listening) {
       return resolve();
     }
-    self._client.start(function () {
-      self.listening = true;
-      return resolve();
-    });
+    self.listening = true;
+    if (self.networkStatus.wifi === 'on') {
+      self._client.start(function () {
+        return resolve();
+      });
+    } else {
+      var errorMessage;
+      switch (self.networkStatus.wifi) {
+        case 'off': {
+          errorMessage = 'Radio Turned Off';
+          break;
+        }
+        case 'notHere': {
+          errorMessage = 'No Wifi radio';
+          break;
+        }
+        default: {
+          errorMessage = 'Unspecified Error with Radio infrastructure';
+        }
+      }
+      return reject(new Error(errorMessage));
+    }
   });
 };
 

@@ -442,6 +442,14 @@ if (typeof Mobile !== 'undefined') {
       // do stuff!
     });
 } else {
+  module.exports.emitter.on('networkChangedNonTCP', function (networkChangedValue) {
+    // The value needs to be assigned here to nonTCPNetworkStatus
+    // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
+    // can return it.
+    nonTCPNetworkStatus = networkChangedValue;
+  });
+  // Implement the logic to emit networkChangedNonTCP in non-mobile environment
+  // when the first listener is registered.
   var newListenerHandler = function (event, listener) {
     if (event !== 'networkChangedNonTCP') {
       return;
