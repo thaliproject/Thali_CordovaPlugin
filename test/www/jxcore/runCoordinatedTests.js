@@ -19,7 +19,7 @@ var instanceLogs = {};
 var logInstanceOutput = function (data, instanceId) {
   instanceLogs[instanceId] += data;
 
-  if (argv.serverLogs && instanceId === null) {
+  if (argv.serverLogs && instanceId === 0) {
     console.log(data + '\n');
   } else if (argv.instanceLogs) {
     console.log('Instance ' + instanceId + ':');
@@ -39,7 +39,12 @@ var setListeners = function (instance, instanceId) {
       }
       shutdown(1);
     } else if (data.indexOf('-== END ==-') >= 0) {
-      shutdown(0);
+      if (instanceLogs[0].indexOf('RESULT: FAIL') >= 0) {
+        console.log('TEST FAILED - SEE ABOVE FOR MORE DETAILS');
+        shutdown(1);
+      } else {
+        shutdown(0);
+      }
     }
   });
   instance.stderr.on('data', function (data) {
@@ -58,7 +63,7 @@ var testServerConfiguration = {
   'honorCount': true
 };
 var testServerInstance = spawn('jx', ['../../TestServer/index.js', JSON.stringify(testServerConfiguration)]);
-setListeners(testServerInstance, null);
+setListeners(testServerInstance, 0);
 
 var testInstances = {};
 var spawnTestInstance = function (instanceId) {
@@ -67,7 +72,7 @@ var spawnTestInstance = function (instanceId) {
   testInstances[instanceId] = testInstance;
 };
 
-for (var i = 0; i < argv.instanceCount; i++) {
+for (var i = 1; i <= argv.instanceCount; i++) {
   spawnTestInstance(i);
 }
 

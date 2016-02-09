@@ -1,7 +1,7 @@
 'use strict';
 
 var Promise = require('lie');
-var EventEmitter = require('events');
+var EventEmitter = require('events').EventEmitter;
 
 /** @module thaliMobileNativeWrapper */
 
