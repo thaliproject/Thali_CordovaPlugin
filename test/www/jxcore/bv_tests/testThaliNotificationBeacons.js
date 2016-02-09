@@ -8,6 +8,7 @@ var Long = require('long');
 
 // Constants
 var SECP256K1 = 'secp256k1';
+var ONE_DAY = 86400000;
 
 var NotificationBeacons;
 
@@ -53,11 +54,28 @@ test('#generatePreambleAndBeacons null ECDH for local device', function (t) {
   t.end();
 });
 
-test('#generatePreambleAndBeacons expiration out of range', function (t) {
+test('#generatePreambleAndBeacons expiration out of range lower', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(SECP256K1);
   localDevice.generateKeys();
   var expiration = -1;
+
+  t.throws(function () {
+    NotificationBeacons.generatePreambleAndBeacons(
+      publicKeys,
+      localDevice,
+      expiration
+    );
+  }, 'secondsUntilExpiration out of range.');
+
+  t.end();
+});
+
+test('#generatePreambleAndBeacons expiration out of range upper', function (t) {
+  var publicKeys = [];
+  var localDevice = crypto.createECDH(SECP256K1);
+  localDevice.generateKeys();
+  var expiration = ONE_DAY + 1000;
 
   t.throws(function () {
     NotificationBeacons.generatePreambleAndBeacons(
@@ -161,12 +179,39 @@ test('#parseBeacons invalid expiration in beaconStreamWithPreAmble',
     t.end();
 });
 
-test('#parseBeacons expiration out of range', function (t) {
+test('#parseBeacons expiration out of range lower', function (t) {
   var localDevice = crypto.createECDH(SECP256K1);
   localDevice.generateKeys();
 
   var pubKe = crypto.createECDH(SECP256K1).generateKeys();
   var expiration = Long.fromNumber(-1);
+  var expirationBuffer = new Buffer(8);
+  expirationBuffer.writeInt32BE(expiration.high, 0);
+  expirationBuffer.writeInt32BE(expiration.low, 4);
+  var beaconStreamWithPreAmble = Buffer.concat([pubKe, expirationBuffer]);
+
+  var addressBookCallback = function () {
+    t.fail();
+    return null;
+  };
+
+  t.throws(function () {
+    NotificationBeacons.parseBeacons(
+      beaconStreamWithPreAmble,
+      localDevice,
+      addressBookCallback
+    );
+  }, 'Expiration out of range');
+
+  t.end();
+});
+
+test('#parseBeacons expiration out of range lower', function (t) {
+  var localDevice = crypto.createECDH(SECP256K1);
+  localDevice.generateKeys();
+
+  var pubKe = crypto.createECDH(SECP256K1).generateKeys();
+  var expiration = Long.fromNumber(ONE_DAY + 1000);
   var expirationBuffer = new Buffer(8);
   expirationBuffer.writeInt32BE(expiration.high, 0);
   expirationBuffer.writeInt32BE(expiration.low, 4);
