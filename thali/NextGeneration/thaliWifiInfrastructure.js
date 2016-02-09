@@ -9,6 +9,7 @@ var url = require('url');
 var express = require('express');
 var validations = require('../validations');
 var ThaliConfig = require('./thaliConfig');
+var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 var logger = require('../thalilogger')('thaliWifiInfrastructure');
 
 var Promise = require('lie');
@@ -66,18 +67,6 @@ function ThaliWifiInfrastructure () {
   // and used to avoid emitting peer availability changes in case the
   // availability hasn't changed from the previous known value.
   this.peerAvailabilities = {};
-
-  // Require the thaliMobileNativeWrapper only in mobile
-  // environments and otherwise, use a mock that can be
-  // accessed from test code.
-  if (typeof Mobile !== 'undefined') {
-    this.ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-  } else {
-    this.ThaliMobileNativeWrapper = {
-      emitter: new EventEmitter()
-    }
-  }
-
   this._init();
 }
 
@@ -101,7 +90,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
     this._handleMessage(data, false);
   }.bind(this));
 
-  this.ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', function (networkChangedValue) {
+  ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', function (networkChangedValue) {
     // When running within JXcore Cordova Mobile environment,
     // ignore this event, because there, the network events
     // are bubbled up via the native layer.

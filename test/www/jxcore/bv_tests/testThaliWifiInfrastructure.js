@@ -1,6 +1,7 @@
 'use strict';
 
 var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
+var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var ThaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thali-tape');
 var nodessdp = require('node-ssdp');
@@ -327,13 +328,13 @@ test('network changes emitted correctly', function (t) {
     t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
     wifiInfrastructure.removeListener('networkChangedWifi', networkOffHandler);
     wifiInfrastructure.on('networkChangedWifi', networkOnHandler);
-    wifiInfrastructure.ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
+    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
       wifi: 'on'
     });
   };
 
   wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
-  wifiInfrastructure.ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
+  ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
     wifi: 'off'
   });
 });

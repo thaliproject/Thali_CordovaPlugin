@@ -405,20 +405,22 @@ module.exports.killConnections = function () {
  */
 module.exports.emitter = new EventEmitter();
 
-Mobile('PeerAvailabilityChange').registerToNative(function (peers) {
-  // do stuff!
-});
-
-Mobile('discoveryAdvertisingStateUpdateNonTCP').registerToNative(
-  function (discoveryAdvertisingStateUpdateValue) {
+if (typeof Mobile !== 'undefined') {
+  Mobile('PeerAvailabilityChange').registerToNative(function (peers) {
     // do stuff!
   });
 
-Mobile('networkChanged').registerToNative(function (networkChanged) {
-  // do stuff!
-});
+  Mobile('discoveryAdvertisingStateUpdateNonTCP').registerToNative(
+    function (discoveryAdvertisingStateUpdateValue) {
+      // do stuff!
+    });
 
-Mobile('incomingConnectionToPortNumberFailed').registerToNative(
-  function (portNumber) {
+  Mobile('networkChanged').registerToNative(function (networkChanged) {
     // do stuff!
   });
+
+  Mobile('incomingConnectionToPortNumberFailed').registerToNative(
+    function (portNumber) {
+      // do stuff!
+    });
+}
