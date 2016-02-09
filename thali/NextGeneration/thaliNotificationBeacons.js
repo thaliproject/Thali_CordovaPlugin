@@ -50,8 +50,9 @@ function generatePreambleAndBeacons (
     if (ecdhForLocalDevice == null) {
       throw new Error('ecdhForLocalDevice cannot be null');
     }
-    if (secondsUntilExpiration < 0 ||
-        secondsUntilExpiration > ONE_DAY) {
+    var now = Date.now();
+    if (secondsUntilExpiration < now ||
+        secondsUntilExpiration > now + ONE_DAY) {
       throw new Error('secondsUntilExpiration out of range.');
     }
 
@@ -172,7 +173,8 @@ function parseBeacons (
     var expirationLong = Long.fromBits(
       expiration.readInt32BE(4),
       expiration.readInt32BE(0)).toNumber();
-    if (expirationLong < 0 || expirationLong > ONE_DAY) {
+    var now = Date.now();
+    if (expirationLong < now || expirationLong > now + ONE_DAY) {
       throw new Error('Expiration out of range');
     }
 
