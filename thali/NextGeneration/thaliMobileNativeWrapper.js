@@ -420,6 +420,7 @@ module.exports.killConnections = function () {
 module.exports.emitter = new EventEmitter();
 
 if (typeof Mobile !== 'undefined' && !Mobile.iAmAMock) {
+/*
   Mobile('PeerAvailabilityChange').registerToNative(function (peers) {
     // do stuff!
   });
@@ -441,6 +442,7 @@ if (typeof Mobile !== 'undefined' && !Mobile.iAmAMock) {
     function (portNumber) {
       // do stuff!
     });
+*/
 } else {
   module.exports.emitter.on('networkChangedNonTCP', function (networkChangedValue) {
     // The value needs to be assigned here to nonTCPNetworkStatus
