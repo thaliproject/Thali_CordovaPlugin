@@ -59,8 +59,6 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
   tape('setup', function(t) {
     // Run setup function when the testServer tells us
     testServer.once("setup_" + name, function() {
-      console.log("got: %s", "setup_" + name);
-      console.log("ack: %s", util.format("setup_%s_ok", name));
       testServer.emit(util.format("setup_%s_ok", name));
       t.on('end', function() {
         testServer.emit('setup_complete', JSON.stringify({"test":name}));

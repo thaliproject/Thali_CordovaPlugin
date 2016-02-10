@@ -75,7 +75,10 @@ To use Thali in a Cordova project one must do the following:
 6. Make sure to run `cordova build` as this is critical to moving key files into place
 
 Now you can run your app. The Android devices need to have OS version Lollipop or later for things to work properly
-(Thali uses class `BluetoothLeAdvertiser`, which was added in API level 21).
+(Thali uses class `BluetoothLeAdvertiser`, which was added in API level 21). Android 6.0 "Marshmallow" introduced 
+a new permissions model where the user has to approve use of dangerous permission while the app is running. 
+Thali Cordova Plugin requires ACCESS_COARSE_LOCATION which needs user approval. This approval can be requested calling 
+window.ThaliPermissions.requestLocationPermission() function. ThaliPermissions API locates at www/android/thaliPermissions.js.
 
 Note that Thali uses a subdirectory in your project called thaliDontCheckin to manage certain downloads. Per the name of the directory, please don't check it in to your repro.
 
