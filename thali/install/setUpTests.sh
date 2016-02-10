@@ -39,14 +39,14 @@ cd ThaliTest
 cordova platform add ios
 cordova platform add android
 cd www/jxcore
-jx npm install $repositoryRoot/thali --save --autoremove "*.gz"
+jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
 
 if [ $runningInMinGw == true ]; then
-    # On Windows the package.json file will contain a local file URI for Thali,
+    # On Windows the package.json file will contain an invalid local file URI for Thali,
     # which needs to be replaced with a valid value. Otherwise the build process
     # will be aborted. Restore write permission after running sed in case
     # Windows security settings removed it.
-    sed -i 's/"thali": "*"/"thali": "*"/g' package.json
+    sed -i 's/"thali": ".*"/"thali": "*"/g' package.json
     chmod 644 package.json
 fi
 
