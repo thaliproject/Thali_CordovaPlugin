@@ -40,27 +40,32 @@ var findPeerPerProperty = function (peers, property, value) {
   return foundPeer;
 };
 
-test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged events should be emitted', function (t) {
-  var testHostAddress = randomstring.generate({
-    charset: 'hex', // to get lowercase chars for the host address
-    length: 8
-  });
-  var testPort = 8080;
-  var testLocation = 'http://' + testHostAddress + ':' + testPort;
+var testSeverHostAddress = randomstring.generate({
+  charset: 'hex', // to get lowercase chars for the host address
+  length: 8
+});
+var testServerPort = 8080;
+var createTestServer = function (peerIdentifier) {
+  var testLocation = 'http://' + testSeverHostAddress + ':' + testServerPort;
   var testServer = new nodessdp.Server({
     location: testLocation,
     udn: ThaliConfig.SSDP_NT
   });
-  var peerIdentifier = 'urn:uuid:' + uuid.v4();
   testServer.setUSN(peerIdentifier);
+  return testServer;
+};
+
+test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged events should be emitted', function (t) {
+  var peerIdentifier = 'urn:uuid:' + uuid.v4();
+  var testServer = createTestServer(peerIdentifier);
   var peerAvailableListener = function (peers) {
-    var peer = findPeerPerProperty(peers, 'hostAddress', testHostAddress);
+    var peer = findPeerPerProperty(peers, 'hostAddress', testSeverHostAddress);
     if (peer === null) {
       return;
     }
     t.equal(peer.peerIdentifier, peerIdentifier, 'peer identifier should match');
-    t.equal(peer.hostAddress, testHostAddress, 'host address should match');
-    t.equal(peer.portNumber, testPort, 'port should match');
+    t.equal(peer.hostAddress, testSeverHostAddress, 'host address should match');
+    t.equal(peer.portNumber, testServerPort, 'port should match');
     wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
 
     var peerUnavailableListener = function (peers) {
@@ -89,7 +94,7 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
   var testClient = new nodessdp.Client();
 
   var firstUSN = null;
-  var secondUSN = null
+  var secondUSN = null;
   testClient.on('advertise-alive', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
@@ -340,7 +345,7 @@ test('network changes emitted correctly', function (t) {
   );
 });
 
-test('#startListeningForAdvertisements returns error if wifi is off and emits event when wifi back on', function (t) {
+var tryStartingFunctionWhileWifiOff = function (t, functionName) {
   wifiInfrastructure.stop()
   .then(function () {
     ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
@@ -349,7 +354,7 @@ test('#startListeningForAdvertisements returns error if wifi is off and emits ev
     return wifiInfrastructure.start(express.Router());
   })
   .then(function () {
-    return wifiInfrastructure.startListeningForAdvertisements();
+    return wifiInfrastructure[functionName]();
   })
   .then(function () {
     t.fail('the call should not succeed');
@@ -368,4 +373,51 @@ test('#startListeningForAdvertisements returns error if wifi is off and emits ev
       testUtils.getMockNetworkStatus(true)
     );
   });
+};
+
+test('#startListeningForAdvertisements returns error if wifi is off and event emitted when wifi back on', function (t) {
+  tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements');
+});
+
+test('#startUpdateAdvertisingAndListening returns error if wifi is off and event emitted when wifi back on', function (t) {
+  tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening');
+});
+
+test('after wifi is re-enabled discovery is activated and peers become available', function (t) {
+  wifiInfrastructure.once('networkChangedWifi', function (networkChangedValue) {
+    t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
+    var peerIdentifier = 'urn:uuid:' + uuid.v4();
+    var testServer = createTestServer(peerIdentifier);
+    testServer.start(function () {
+      wifiInfrastructure.startListeningForAdvertisements()
+      .catch(function (error) {
+        t.equals(error.message, 'Radio Turned Off', 'specific error expected');
+
+        var peerAvailableListener = function (peers) {
+          var peer = findPeerPerProperty(peers, 'peerIdentifier', peerIdentifier);
+          if (peer === null) {
+            return;
+          }
+
+          t.equal(peer.peerIdentifier, peerIdentifier, 'peer identifier should match');
+          t.equal(peer.hostAddress, testSeverHostAddress, 'host address should match');
+          t.equal(peer.portNumber, testServerPort, 'port should match');
+
+          wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
+          testServer.stop(function () {
+            t.end();
+          });
+        };
+
+        wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerAvailableListener);
+
+        ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
+          testUtils.getMockNetworkStatus(true)
+        );
+      });
+    });
+  });
+  ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
+    testUtils.getMockNetworkStatus(false)
+  );
 });

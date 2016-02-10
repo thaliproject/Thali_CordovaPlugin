@@ -245,6 +245,24 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
   return true;
 };
 
+ThaliWifiInfrastructure.prototype._rejectPerWifiState = function (reject) {
+  var errorMessage;
+  switch (this.states.networkState.wifi) {
+    case 'off': {
+      errorMessage = 'Radio Turned Off';
+      break;
+    }
+    case 'notHere': {
+      errorMessage = 'No Wifi radio';
+      break;
+    }
+    default: {
+      errorMessage = 'Unspecified Error with Radio infrastructure';
+    }
+  }
+  return reject(new Error(errorMessage));
+};
+
 /**
  * This method MUST be called before any other method here other than
  * registering for events on the emitter. This method only registers the router
@@ -345,21 +363,7 @@ function () {
         return resolve();
       });
     } else {
-      var errorMessage;
-      switch (self.states.networkState.wifi) {
-        case 'off': {
-          errorMessage = 'Radio Turned Off';
-          break;
-        }
-        case 'notHere': {
-          errorMessage = 'No Wifi radio';
-          break;
-        }
-        default: {
-          errorMessage = 'Unspecified Error with Radio infrastructure';
-        }
-      }
-      return reject(new Error(errorMessage));
+      return self._rejectPerWifiState(reject);
     }
   });
 };
@@ -473,6 +477,10 @@ function () {
     // Generate a new USN value to flag that something has changed
     // in this peer.
     self.usn = 'urn:uuid:' + uuid.v4();
+
+    if (self.states.networkState.wifi !== 'on') {
+      return self._rejectPerWifiState(reject);
+    }
 
     if (self.states.advertising.current) {
       // If we were already advertising, we need to restart the server
