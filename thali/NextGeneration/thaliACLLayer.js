@@ -262,8 +262,8 @@ ThaliACLLayer.prototype.getAdminSecret = function() {
  * Note that the magic beacon value will never be submitted via this API.
  *
  * @public
- * @param {Object.<string, buffer>} pskMap The string is a client PSK identity
- * and the buffer is the associated secret.
+ * @param {module:thaliNotificationBeacons~pskMap} pskMap The string is a client
+ * PSK identity and the buffer is the associated secret.
  */
 ThaliACLLayer.prototype.updatePskMap = function(pskMap) {
 
