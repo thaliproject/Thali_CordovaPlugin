@@ -14,13 +14,13 @@ var Promise = require('lie');
  * to register its path.
  * @param {ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized with the
  * local device's public and private keys
- * @param {number} secondsUntilExpiration The number of seconds into the
- * future after which the beacons should expire.
+ * @param {number} millisecondsUntilExpiration The number of milliseconds into
+ * the future after which the beacons should expire.
  * @constructor
  * The constructor MUST NOT take any action. It can only record values.
  */
 function ThaliNotificationServer(router, ecdhForLocalDevice,
-                                 secondsUntilExpiration) {
+                                 millisecondsUntilExpiration) {
 
 }
 
@@ -88,4 +88,4 @@ ThaliNotificationServer.prototype.stop = function () {
   return this.start();
 };
 
-module.exports.ThaliNotificationServer = ThaliNotificationServer;
+module.exports = ThaliNotificationServer;

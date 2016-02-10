@@ -6,6 +6,7 @@ var ThaliNotificationServer =
 var PromiseQueue = require('./promiseQueue');
 var logger =
   require('../thalilogger')('thaliSendNotificationBasedOnReplication');
+var urlsafeBase64 = require('urlsafe-base64');
 
 /** @module thaliSendNotificationBasedOnReplication */
 
@@ -41,7 +42,7 @@ _RefreshTimerManager.prototype._cancelObject = null;
 _RefreshTimerManager.prototype._timeWhenRun = null;
 
 _RefreshTimerManager.prototype.start = function () {
-  var currentTime = (new Date()).getTime();
+  var currentTime = Date.now();
   this._cancelObject = setTimeout(this._fn, this._millisecondsUntilRun);
   this._timeWhenRun = currentTime + this._millisecondsUntilRun;
 };
@@ -144,6 +145,31 @@ ThaliSendNotificationBasedOnReplication.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 10;
  */
 ThaliSendNotificationBasedOnReplication.NOTIFICATION_BEACON_PATH =
   '/NotificationBeacons';
+
+/**
+ * Takes an ecdh public key value as a buffer and creates the doc ID to find
+ * the seq number in _Local.
+ *
+ * @public
+ * @param {buffer} ecdhPublicKey
+ * @returns {string}
+ */
+ThaliSendNotificationBasedOnReplication.calculateSeqPointKeyId =
+  function(ecdhPublicKey) {
+    return ThaliSendNotificationBasedOnReplication.LOCAL_SEQ_POINT_PREFIX +
+      urlsafeBase64.encode(ecdhPublicKey);
+  };
+
+
+/**
+ * Defines the prefix used for IDs in _Local to record seq point records in the
+ * Thali protocol.
+ *
+ * @public
+ * @readonly
+ * @type {string}
+ */
+ThaliSendNotificationBasedOnReplication.LOCAL_SEQ_POINT_PREFIX = 'thali';
 
 ThaliSendNotificationBasedOnReplication.prototype._router = null;
 ThaliSendNotificationBasedOnReplication.prototype._ecdhForLocalDevice = null;
@@ -267,18 +293,18 @@ ThaliSendNotificationBasedOnReplication.prototype.
  */
 ThaliSendNotificationBasedOnReplication.prototype.start =
   function (prioritizedPeersToNotifyOfChanges) {
-    this._promiseQueue.enqueue(
+    return this._promiseQueue.enqueue(
       this._commonStart(prioritizedPeersToNotifyOfChanges));
   };
 
 ThaliSendNotificationBasedOnReplication.prototype._startFirst =
   function (prioritizedPeersToNotifyOfChanges) {
-    this._promiseQueue.enqueueAtTop(
+    return this._promiseQueue.enqueueAtTop(
       this._commonStart(prioritizedPeersToNotifyOfChanges));
   };
 
 ThaliSendNotificationBasedOnReplication.prototype._commonStart =
-  function(prioritizedPeersToNotifyOfChanges) {
+  function (prioritizedPeersToNotifyOfChanges) {
     var self = this;
     return function (resolve, reject) {
       if (!self._thaliNotificationServer) {
@@ -306,7 +332,7 @@ ThaliSendNotificationBasedOnReplication.prototype._commonStart =
               ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_BACKGROUND;
 
             var milliSecondsUntilNextRefresh =
-              timeForNextRefresh - (new Date()).getTime();
+              timeForNextRefresh - Date.now();
 
             if (self._beaconRefreshTimerManager.getTimeWhenRun() >
               timeForNextRefresh) {
@@ -323,26 +349,76 @@ ThaliSendNotificationBasedOnReplication.prototype._commonStart =
           resolve();
         }).catch(function (err) {
           reject(err);
-      });
+        });
     };
   };
 
+/**
+ * Calculates which peers need to be notified of changes by looking each peer's
+ * last sync point up in the local DB. Any peer whose sync point isn't equal to
+ * or greater than (gotta love race conditions) the sync point we are looking
+ * for will be returned as someone to notify of a change.
+ *
+ * Per our protocol each peer that has previously synch'd with this device will
+ * have left a record with the key _local/thali[publickeyhash] where
+ * [publickeyhash]
+ *
+ * @private
+ * @param {Buffer[]} prioritizedPeersToNotifyOfChanges Buffer array containing
+ * the ECDH public keys of the peers who we want to notify if there are any
+ * changes they have not seen yet.
+ * @returns {Promise<Buffer[]|Error>} If successful an array of buffers
+ * containing the public keys of the peers that need notification.
+ */
 ThaliSendNotificationBasedOnReplication.prototype._calculatePeersToNotify =
   function (prioritizedPeersToNotifyOfChanges) {
-    // We need to read _local/<PeerID> entries for each peer out of the DB. If
-    // there isn't an entry then default to zero.
-    // Then read in the current sequence number and see whose number is less
-    // than that.
-    // Return that list.
-    throw new Error('Not Implemented!');
-    return Promise.resolve(prioritizedPeersToNotifyOfChanges);
+    var seqValue = 0;
+    var self = this;
+    if (!prioritizedPeersToNotifyOfChanges) {
+      return Promise.resolve([]);
+    }
+    return self._pouchDB.info()
+      .then(function (result) {
+        // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+        seqValue = result.update_seq;
+        // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+        var promiseArray = [];
+        prioritizedPeersToNotifyOfChanges.forEach(function (ecdhPublicKey) {
+          var seqId =
+            ThaliSendNotificationBasedOnReplication
+              .calculateSeqPointKeyId(ecdhPublicKey);
+          promiseArray.push(this._pouchDB.get(seqId)
+            .then(function (doc) {
+              var peerSeqId = doc.lastSyncedSequenceNumber;
+              if (peerSeqId && peerSeqId < seqValue) {
+                return ecdhPublicKey;
+              }
+              return null;
+            }).catch(function (err) {
+              throw new Error(err);
+            }));
+        });
+        return Promise.all(promiseArray).then(function (resultsArray) {
+          return resultsArray.filter(Boolean);
+        });
+      });
   };
 
+/**
+ * Sets a timer to refresh the beacons before they expire. If the expiration
+ * value is <= 0 then we clear the existing refresh timer if any but otherwise
+ * do nothing since there are no beacons to refresh.
+ * @param {number} millisecondsUntilRun
+ * @private
+ */
 ThaliSendNotificationBasedOnReplication.prototype._updateOnExpiration =
   function (millisecondsUntilRun) {
     var self = this;
     if (self._beaconRefreshTimerManager) {
       self._beaconRefreshTimerManager.stop();
+    }
+    if (millisecondsUntilRun <= 0) {
+      return;
     }
     self._beaconRefreshTimerManager = new _RefreshTimerManager(
       millisecondsUntilRun, function () {
@@ -361,15 +437,19 @@ ThaliSendNotificationBasedOnReplication.prototype._updateOnExpiration =
 ThaliSendNotificationBasedOnReplication.prototype._updateBeacons =
   function (prioritizedPeersToNotifyOfChanges) {
     var self = this;
-    self._lastTimeBeaconsWereUpdated = (new Date()).getTime();
+    var peersArrayIsEmpty = false;
+    self._lastTimeBeaconsWereUpdated = Date.now();
     return self._calculatePeersToNotify(prioritizedPeersToNotifyOfChanges)
       .then(function (peersArray) {
         if (!self._thaliNotificationServer) {
           return Promise.Reject(new Error('There is no notification server'));
         }
+        peersArrayIsEmpty = !peersArray || peersArray.length === 0;
         return self._thaliNotificationServer.start(peersArray);
-      }).then(function() {
-        self._updateOnExpiration(this._millisecondsUntilExpiration);
+      }).then(function () {
+        var millisecondsUntilExpiration = peersArrayIsEmpty ?
+          0 : self._millisecondsUntilExpiration;
+        self._updateOnExpiration(millisecondsUntilExpiration);
       });
   };
 
@@ -378,6 +458,7 @@ ThaliSendNotificationBasedOnReplication.prototype._updateBeacons =
  * with an empty peers list of folks to notify of changes.
  *
  * @public
+ * @returns {Promise<?Error>}
  */
 ThaliSendNotificationBasedOnReplication.prototype.stop = function () {
   if (this._beaconRefreshTimerManager) {
@@ -391,9 +472,12 @@ ThaliSendNotificationBasedOnReplication.prototype.stop = function () {
   }
 
   if (this._thaliNotificationServer) {
-    this._thaliNotificationServer.stop();
+    var thaliNotificationServer = this._thaliNotificationServer;
     this._thaliNotificationServer = null;
+    return thaliNotificationServer.stop();
   }
+
+  return Promise.resolve();
 };
 
 module.exports = ThaliSendNotificationBasedOnReplication;
