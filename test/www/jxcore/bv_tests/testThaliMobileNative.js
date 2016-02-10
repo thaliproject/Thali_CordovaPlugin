@@ -173,31 +173,92 @@ test('Can connect to a remote peer', function (t) {
 test('Can shift large amounts of data', function (t) {
 
   var complete = false;
-  var applicationPort = 4242;
+  var applicationPort = 4243;
 
   var sockets = {};
   var echoServer = net.createServer(function(socket) {
     socket.pipe(socket);
-    sockets[socket.localPort] = socket;
+    socket.on('error', function (exc) {
+      console.log("Error on incoming socket");
+      t.fail();
+    });
+    sockets[socket.remotePort] = socket;
   });
 
-  function shiftData(sock) {
-    // Throw lots of data down this pipe, read back the echos and check
-    // all is as it should be
-    var sendCount = 10 * 1024 * 1024;
-    var toSend = randomstring(sendCount);
-    
-    var toRecv = '';
-    sock.on('data', (data) => {
-      toRecv += data.toString();
-      console.log("data in:", toRecv.length);
-      if (toRecv.length == sendCount) {
-        t.ok(toRecv == toSend, "Buffers should match");
-        t.end();
-      }
+  var dataSize = 4096;
+  var toSend = randomstring.generate(dataSize);
+
+  function shiftData(sock, reverseConnection) {
+
+    sock.on('error', function (exc) {
+      console.log("Error on client socket");
+      t.fail();
     });
 
-    sock.write(toSend);
+    if (reverseConnection) {
+
+      // Since this is a reverse connection, the socket we've been handed has already
+      // been accepted by our server and there's a client on the other end already
+      // sending data. Without multiplex support we can't both talk at the same time so
+      // wait for the other side to finish before sending our data.
+
+      var toRecv = '';
+      var totalRecvd = 0;
+      sock.on('data', (data) => {
+
+        totalRecvd += data.length;
+
+        if (totalRecvd == dataSize) {
+          // We've seen all the remote's data, send our own
+          sock.write(toSend);
+        }
+
+        if (totalRecvd > dataSize) {
+          // This should now be our own data echoing back 
+          toRecv += data.toString(); 
+        } 
+
+        if (toRecv.length == dataSize) {
+          // Should have an exact copy of what we sent
+          t.ok(toRecv == toSend, "received should match sent");
+          t.end();
+        }
+      });
+    }
+    else {
+    
+      // This one's more straightforward.. we're going to send first, read back our echo and then
+      // echo out any extra data
+    
+      var toRecv = '';
+      var done = false;
+      sock.on('data', (data) => {
+
+        var remaining = dataSize - toRecv.length;
+
+        if (remaining >= data.length) {
+          toRecv += data.toString();
+          data = data.slice(0, 0);
+        }
+        else {
+          toRecv += data.toString('utf8', 0, remaining);
+          data = data.slice(remaining);  
+        }
+
+        if (toRecv.length == dataSize) {
+          if (!done) {
+            done = true;
+            t.ok(toSend == toRecv, "received should match sent");
+            t.end();
+          }
+          if (data.length) {
+            sock.write(data);
+          }
+        }
+      });
+
+      sock.write(toSend);
+    }
   }
 
   echoServer.listen(applicationPort, '127.0.0.1');
@@ -208,15 +269,19 @@ test('Can shift large amounts of data', function (t) {
         Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
           // We're happy here if we make a connection to anyone
           if (err == null) {
+            connection = JSON.parse(connection);
+            console.log(connection);
             if (connection.listeningPort) {
+              console.log("Forward connection");
               // We made a forward connection
-              var client = net.connect(connection.localPort, "127.0.0.1", function() {
-                shiftData(client);
+              var client = net.connect(connection.listeningPort, "127.0.0.1", function() {
+                shiftData(client, false);
               });
             } else {
+              console.log("Reverse connection");
               // We made a reverse connection
               client = sockets[connection.clientPort];
-              shiftData(client);
+              shiftData(client, true);
             }
           }
         });
