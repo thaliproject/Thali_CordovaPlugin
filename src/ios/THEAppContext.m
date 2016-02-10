@@ -26,6 +26,7 @@
 //
 
 #import <UIKit/UIKit.h>
+#import <CoreBluetooth/CoreBluetooth.h>
 #import <SystemConfiguration/CaptiveNetwork.h>
 
 #import "THEAppContext.h"
@@ -35,7 +36,7 @@
 #import "THEThaliEventDelegate.h"
 
 // THEAppContext (Internal) interface.
-@interface THEAppContext (Internal)
+@interface THEAppContext (Internal) <CBPeripheralManagerDelegate, CBCentralManagerDelegate>
 
 // ctor
 - (id)init;
@@ -69,6 +70,7 @@
   id reachabilityHandlerReference;
 
   // Bluetooth enabled state
+  bool _bleEnabled;
   bool _bluetoothEnabled;
 
   // Our current app level id
@@ -77,6 +79,10 @@
   // Peer Bluetooth.
   THEPeerBluetooth * _peerBluetooth;
  
+  // Let's us know the BT radio states
+  CBPeripheralManager *_btPeripheralManager;
+  CBCentralManager *_bleManager;
+  
   // The multipeer manager, co-ordinates client and server
   THEMultipeerManager *_multipeerManager;
 
@@ -125,78 +131,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   return [_multipeerManager stopServer];
 }
 
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort
-{
-  //if ([_atomicFlagCommunicationsEnabled trySet])
-  //{
-  //  _peerIdentifier = [[NSString alloc] initWithString:peerIdentifier];
-
-    // Somewhere to put our peers
-    //_peers = [[NSMutableDictionary alloc] init];
-
-    /*
-      Temporarily disable the BLE stack since it's not required for 
-      our immediate releases so let's just keep things as simple as they 
-      can possibly be - tobe
-    */
-
-    // Initialise the BLE stack..
-    //NSUUID * btServiceType = [[NSUUID alloc] initWithUUIDString:BLE_SERVICE_TYPE];
-
-    // Bluetooth will start on initialisation
-    //_peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:btServiceType
-    //                                                peerIdentifier:peerIdentifier
-    //                                                      peerName:[serverPort stringValue]
-    //                                             bluetoothDelegate:self];
-       
-
-    // Intitialise the multipeer connectivity stack..
-    /*_multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
-                                                          peerIdentifier:peerIdentifier
-                                                                peerName:[serverPort stringValue]
-                                                       discoveryDelegate:self];
-    // Start networking..
-    [_multipeerSession start];
-
-    // Hook reachability to network changed event (when user
-    // toggles Wifi)       
-    reachabilityHandlerReference = [[NPReachability sharedInstance] 
-      addHandler:^(NPReachability *reachability) {
-        [self fireNetworkChangedEvent];
-    }];
-
-    return true;
-  }
-  */
-  return false;
-}
-
-// Stops communications.
-- (BOOL)stopBroadcasting
-{
-/*  if ([_atomicFlagCommunicationsEnabled tryClear])
-  {
-    //[_peerBluetooth stop];
-    [_multipeerSession stop];
-
-    _peerBluetooth = nil;
-    _multipeerSession = nil;
-
-    if (reachabilityHandlerReference != nil) // network changed event may not have fired yet
-    {
-      [[NPReachability sharedInstance] removeHandler:reachabilityHandlerReference];
-      reachabilityHandlerReference = nil;
-    }
-
-    _peers = nil;
-    return YES;
-  }
-  */
-  NSLog(@"app: didn't stop broadcasting");
-  return NO;
-}
-
 // Connects to the peer server with the specified peer identifier.
 - (BOOL)connectToPeer:(NSString *)peerIdentifier 
       connectCallback:(ClientConnectCallback)connectCallback
@@ -239,12 +173,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 // Receive notifications from the bluetooth stack about radio state
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth didUpdateState:(BOOL)bluetoothEnabled
 {
-  @synchronized(self)
-  {
-    // This will always be called regardless of BT state
-    _bluetoothEnabled = bluetoothEnabled;
-    [self fireNetworkChangedEvent];
-  }
+  // NOOP for now  - We're doing this ourselves.
 }
 
 // Notifies the delegate that a peer was connected.
@@ -252,28 +181,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 didConnectPeerIdentifier:(NSString *)peerIdentifier
                 peerName:(NSString *)peerName
 {
-  @synchronized(self)
-  {
-  // Find the peer. If we found it, simply return.
-/*  THEPeer * peer = [_peers objectForKey:peerIdentifier];
-  if (peer)
-  {
-      pthread_mutex_unlock(&_mutex);
-      return;
-  }
-
-  // Allocate and initialize the peer.
-  peer = [[THEPeer alloc] initWithIdentifier:peerIdentifier
-                                          name:peerName];
-  [_peers setObject:peer
-             forKey:peerIdentifier];
-*/
-  }
-
-  //if (_eventDelegate)
-  //{
-  //  [_eventDelegate peerAvailabilityChanged:[peer JSON]];
-  //}
+  // NOOP for now
 }
 
 // Notifies the delegate that a peer was disconnected.
@@ -302,9 +210,14 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     
   _peerIdentifier = [[[NSUUID alloc] init] UUIDString];
 
-  // We don't really know yet, assum the worst, we'll get an update
+  // We don't really know yet, assume the worst, we'll get an update
   // when we initialise the BT stack 
   _bluetoothEnabled = false;
+  
+  NSDictionary<NSString *, id> *options = @{CBCentralManagerOptionShowPowerAlertKey:@0};
+  _btPeripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:nil options:options];
+  
+  _bleManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil];
   
   _multipeerManager = [[THEMultipeerManager alloc] initWithServiceType:THALI_SERVICE_TYPE
                                                     withPeerIdentifier:_peerIdentifier
@@ -376,8 +289,8 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
 
   networkStatus = @{
-    @"blueToothLowEnergy" : [[NSNumber alloc] initWithBool:true],
-    @"blueTooth" : [[NSNumber alloc] initWithBool:true],
+    @"blueToothLowEnergy" : [[NSNumber alloc] initWithBool:_bleEnabled],
+    @"blueTooth" : [[NSNumber alloc] initWithBool:_bluetoothEnabled],
     @"cellular" : [[NSNumber alloc] initWithBool:reachable],
     @"wifi" : [[NSNumber alloc] initWithBool:isWifi],
     @"bssidName" : [[NSNull alloc] init]
@@ -405,6 +318,40 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   {
     [_eventDelegate appEnteredForeground];
   }
+}
+
+- (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheral
+{
+  switch (peripheral.state)
+  {
+    case CBPeripheralManagerStatePoweredOn:
+    {
+      _bluetoothEnabled = true;
+    }
+    break;
+      
+    default:
+    {
+      _bluetoothEnabled = false;
+    }
+    break;
+  }
+  
+  [self fireNetworkChangedEvent];
+}
+
+- (void)centralManagerDidUpdateState:(CBCentralManager *)central
+{
+  switch (central.state)
+  {
+    case CBCentralManagerStatePoweredOn:
+      _bleEnabled = true;
+      
+    default:
+      _bleEnabled = false;
+  }
+  
+  [self fireNetworkChangedEvent];
 }
 
 @end
