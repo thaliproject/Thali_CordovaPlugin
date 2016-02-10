@@ -9,6 +9,7 @@
     "ip": "^1.0.1",
     "javascript-state-machine": "^2.3.5",
     "lie": "^3.0.2",
+    "long": "^3.0.3",
     "multiplex": "^6.2.2",
     "node-ssdp": "thaliproject/node-ssdp#thali-vnext-changes",
     "node-uuid": "^1.4.7",
