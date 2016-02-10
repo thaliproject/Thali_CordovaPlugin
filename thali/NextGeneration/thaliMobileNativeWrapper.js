@@ -419,7 +419,7 @@ module.exports.killConnections = function () {
  */
 module.exports.emitter = new EventEmitter();
 
-if (typeof Mobile !== 'undefined') {
+if (typeof Mobile !== 'undefined' && !Mobile.iAmAMock) {
   Mobile('PeerAvailabilityChange').registerToNative(function (peers) {
     // do stuff!
   });
@@ -456,13 +456,13 @@ if (typeof Mobile !== 'undefined') {
     }
     module.exports.emitter.removeListener('newListener', newListenerHandler);
     setImmediate(function () {
-      nonTCPNetworkStatus = {
+      var mockNetworkStatus = {
         wifi: 'on',
         bluetooth: 'doNotCare',
         bluetoothLowEnergy: 'doNotCare',
         cellular: 'doNotCare'
       };
-      module.exports.emitter.emit('networkChangedNonTCP', nonTCPNetworkStatus);
+      module.exports.emitter.emit('networkChangedNonTCP', mockNetworkStatus);
     });
   };
   module.exports.emitter.on('newListener', newListenerHandler);

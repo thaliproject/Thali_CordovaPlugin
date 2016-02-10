@@ -4,6 +4,7 @@ var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastruct
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var ThaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thali-tape');
+var testUtils = require('../lib/testUtils.js');
 var nodessdp = require('node-ssdp');
 var express = require('express');
 var http = require('http');
@@ -60,7 +61,6 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
     t.equal(peer.peerIdentifier, peerIdentifier, 'peer identifier should match');
     t.equal(peer.hostAddress, testHostAddress, 'host address should match');
     t.equal(peer.portNumber, testPort, 'port should match');
-    t.equal(peer.peerAvailable, true, 'peer should be available');
     wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
 
     var peerUnavailableListener = function (peers) {
@@ -68,7 +68,8 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
       if (peer === null) {
         return;
       }
-      t.equal(peer.peerAvailable, false, 'peer should be unavailable');
+      t.equal(peer.hostAddress, null, 'host address should be null');
+      t.equal(peer.portNumber, null, 'port should should be null');
       wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerUnavailableListener);
       t.end();
     };
@@ -241,11 +242,11 @@ test('#startUpdateAdvertisingAndListening should start hosting given router obje
 test('#stop can be called multiple times in a row', function (t) {
   wifiInfrastructure.stop()
   .then(function () {
-    t.equal(wifiInfrastructure.started, false, 'should be in stopped state');
+    t.equal(wifiInfrastructure.states.started, false, 'should be in stopped state');
     return wifiInfrastructure.stop();
   })
   .then(function () {
-    t.equal(wifiInfrastructure.started, false, 'should still be in stopped state');
+    t.equal(wifiInfrastructure.states.started, false, 'should still be in stopped state');
     t.end();
   });
 });
@@ -253,11 +254,11 @@ test('#stop can be called multiple times in a row', function (t) {
 test('#startListeningForAdvertisements can be called multiple times in a row', function (t) {
   wifiInfrastructure.startListeningForAdvertisements()
   .then(function () {
-    t.equal(wifiInfrastructure.listening, true, 'should be in listening state');
+    t.equal(wifiInfrastructure.states.listening.current, true, 'should be in listening state');
     return wifiInfrastructure.startListeningForAdvertisements();
   })
   .then(function () {
-    t.equal(wifiInfrastructure.listening, true, 'should still be in listening state');
+    t.equal(wifiInfrastructure.states.listening.current, true, 'should still be in listening state');
     t.end();
   });
 });
@@ -265,11 +266,11 @@ test('#startListeningForAdvertisements can be called multiple times in a row', f
 test('#stopListeningForAdvertisements can be called multiple times in a row', function (t) {
   wifiInfrastructure.stopListeningForAdvertisements()
   .then(function () {
-    t.equal(wifiInfrastructure.listening, false, 'should not be in listening state');
+    t.equal(wifiInfrastructure.states.listening.current, false, 'should not be in listening state');
     return wifiInfrastructure.stopListeningForAdvertisements();
   })
   .then(function () {
-    t.equal(wifiInfrastructure.listening, false, 'should still not be in listening state');
+    t.equal(wifiInfrastructure.states.listening.current, false, 'should still not be in listening state');
     t.end();
   });
 });
@@ -277,11 +278,11 @@ test('#stopListeningForAdvertisements can be called multiple times in a row', fu
 test('#stopAdvertisingAndListening can be called multiple times in a row', function (t) {
   wifiInfrastructure.stopAdvertisingAndListening()
   .then(function () {
-    t.equal(wifiInfrastructure.advertising, false, 'should not be in advertising state');
+    t.equal(wifiInfrastructure.states.advertising.current, false, 'should not be in advertising state');
     return wifiInfrastructure.stopAdvertisingAndListening();
   })
   .then(function () {
-    t.equal(wifiInfrastructure.advertising, false, 'should still not be in advertising state');
+    t.equal(wifiInfrastructure.states.advertising.current, false, 'should still not be in advertising state');
     t.end();
   });
 });
@@ -328,27 +329,27 @@ test('network changes emitted correctly', function (t) {
     t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
     wifiInfrastructure.removeListener('networkChangedWifi', networkOffHandler);
     wifiInfrastructure.on('networkChangedWifi', networkOnHandler);
-    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
-      wifi: 'on'
-    });
+    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
+      testUtils.getMockNetworkStatus(true)
+    );
   };
 
   wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
-  ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
-    wifi: 'off'
-  });
+  ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
+    testUtils.getMockNetworkStatus(false)
+  );
 });
 
-test('#startListeningForAdvertisements returns an error if wifi is off', function (t) {
+test('#startListeningForAdvertisements returns error if wifi is off and emits event when wifi back on', function (t) {
   wifiInfrastructure.stop()
   .then(function () {
-    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
-      wifi: 'off'
-    });
+    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
+      testUtils.getMockNetworkStatus(false)
+    );
     return wifiInfrastructure.start(express.Router());
   })
   .then(function () {
-    return wifiInfrastructure.startListeningForAdvertisements()
+    return wifiInfrastructure.startListeningForAdvertisements();
   })
   .then(function () {
     t.fail('the call should not succeed');
@@ -356,6 +357,15 @@ test('#startListeningForAdvertisements returns an error if wifi is off', functio
   })
   .catch(function (error) {
     t.equals(error.message, 'Radio Turned Off', 'specific error expected');
-    t.end();
+  })
+  .then(function () {
+    wifiInfrastructure.once('networkChangedWifi',
+    function (networkChangedValue) {
+      t.equals(networkChangedValue.wifi, 'on', 'wifi should be on');
+      t.end();
+    });
+    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
+      testUtils.getMockNetworkStatus(true)
+    );
   });
 });
