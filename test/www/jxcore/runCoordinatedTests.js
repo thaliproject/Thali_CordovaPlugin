@@ -10,7 +10,7 @@ var argv = parseargv(process.argv.slice(2), {
     test: 'UnitTest_app.js',
     instanceCount: 2,
     serverLogs: true,
-    instanceLogs: false
+    instanceLogs: true
   }
 });
 
