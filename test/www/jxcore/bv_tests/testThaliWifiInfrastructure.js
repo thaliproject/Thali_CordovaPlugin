@@ -344,13 +344,13 @@ test('network changes emitted correctly', function (t) {
     wifiInfrastructure.removeListener('networkChangedWifi', networkOffHandler);
     wifiInfrastructure.on('networkChangedWifi', networkOnHandler);
     ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-      testUtils.getMockNetworkStatus(true)
+      testUtils.getMockWifiNetworkStatus(true)
     );
   };
 
   wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
   ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-    testUtils.getMockNetworkStatus(false)
+    testUtils.getMockWifiNetworkStatus(false)
   );
 });
 
@@ -358,7 +358,7 @@ var tryStartingFunctionWhileWifiOff = function (t, functionName) {
   wifiInfrastructure.stop()
   .then(function () {
     ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-      testUtils.getMockNetworkStatus(false)
+      testUtils.getMockWifiNetworkStatus(false)
     );
     return wifiInfrastructure.start(express.Router());
   })
@@ -379,7 +379,7 @@ var tryStartingFunctionWhileWifiOff = function (t, functionName) {
       t.end();
     });
     ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-      testUtils.getMockNetworkStatus(true)
+      testUtils.getMockWifiNetworkStatus(true)
     );
   });
 };
@@ -421,12 +421,12 @@ test('after wifi is re-enabled discovery is activated and peers become available
         wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerAvailableListener);
 
         ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-          testUtils.getMockNetworkStatus(true)
+          testUtils.getMockWifiNetworkStatus(true)
         );
       });
     });
   });
   ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-    testUtils.getMockNetworkStatus(false)
+    testUtils.getMockWifiNetworkStatus(false)
   );
 });

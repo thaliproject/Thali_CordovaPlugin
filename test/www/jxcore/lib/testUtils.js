@@ -137,7 +137,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
   }, 5000);
 }
 
-module.exports.getMockNetworkStatus = function (wifiEnabled) {
+module.exports.getMockWifiNetworkStatus = function (wifiEnabled) {
   return {
     wifi: wifiEnabled ? 'on' : 'off',
     bluetooth: 'doNotCare',

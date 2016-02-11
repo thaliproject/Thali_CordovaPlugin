@@ -161,7 +161,7 @@ test('when network connection is lost a peer should be marked unavailable', func
       t.equals(matchingPeer.hostAddress, null, 'host address should be null');
       t.equals(matchingPeer.portNumber, null, 'port number should be null');
       ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-        testUtils.getMockNetworkStatus(true)
+        testUtils.getMockWifiNetworkStatus(true)
       );
       setTimeout(function () {
         done();
@@ -170,7 +170,7 @@ test('when network connection is lost a peer should be marked unavailable', func
     ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityChangedHandler);
     setTimeout(function () {
       ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-        testUtils.getMockNetworkStatus(false)
+        testUtils.getMockWifiNetworkStatus(false)
       );
     }, 500);
   });
