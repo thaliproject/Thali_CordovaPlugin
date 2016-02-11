@@ -69,18 +69,7 @@ function ThaliWifiInfrastructure () {
   this.routerServer = null;
   this.routerServerErrorListener = null;
 
-  this.states = {
-    started: false,
-    listening: {
-      target: false,
-      current: false
-    },
-    advertising: {
-      target: false,
-      current: false
-    },
-    networkState: {}
-  };
+  this.states = this._getInitialStates();
 
   // A variable to hold information about known peer availability states
   // and used to avoid emitting peer availability changes in case the
@@ -109,8 +98,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
     this._handleMessage(data, false);
   }.bind(this));
 
-  ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
-  function (networkChangedValue) {
+  this._networkChangedHandler = function (networkChangedValue) {
     this._handleNetworkChanges(networkChangedValue);
 
     // When running within JXcore Cordova Mobile environment,
@@ -120,7 +108,22 @@ ThaliWifiInfrastructure.prototype._init = function () {
       return;
     }
     this.emit('networkChangedWifi', networkChangedValue);
-  }.bind(this));
+  }.bind(this);
+};
+
+ThaliWifiInfrastructure.prototype._getInitialStates = function () {
+  return {
+    started: false,
+    listening: {
+      target: false,
+      current: false
+    },
+    advertising: {
+      target: false,
+      current: false
+    },
+    networkState: {}
+  };
 };
 
 ThaliWifiInfrastructure.prototype._handleNetworkChanges =
@@ -306,6 +309,8 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
       self.states.networkState = networkStatus;
       self.states.started = true;
       self.router = router;
+      ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+                                           self._networkChangedHandler);
       return resolve();
     });
   });
@@ -336,7 +341,9 @@ ThaliWifiInfrastructure.prototype.stop = function () {
       return self.stopListeningForAdvertisements(true);
     })
     .then(function () {
-      self.states.started = false;
+      self.states = self._getInitialStates();
+      ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
+                                                       self._networkChangedHandler);
       return resolve();
     })
     .catch(function (error) {

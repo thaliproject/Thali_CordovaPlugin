@@ -187,7 +187,11 @@ test('#start should fail if called twice in a row', function (t) {
 
 test('should not be started after stop is called', function (t) {
   wifiInfrastructure.stop().then(function () {
-    t.equals(wifiInfrastructure.states.started, false, 'should not be in started state');
+    t.notOk(wifiInfrastructure.states.started, 'should not be started');
+    t.notOk(wifiInfrastructure.states.listening.current, 'should not be listening');
+    t.notOk(wifiInfrastructure.states.listening.target, 'should not target listening');
+    t.notOk(wifiInfrastructure.states.advertising.current, 'should not be advertising');
+    t.notOk(wifiInfrastructure.states.advertising.target, 'should not target advertising');
     t.end();
   });
 });
@@ -356,6 +360,26 @@ test('network changes emitted correctly', function (t) {
   ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
     testUtils.getMockWifiNetworkStatus(false)
   );
+});
+
+test('network changes not emitted in stopped state', function (t) {
+  wifiInfrastructure.stop()
+  .then(function () {
+    var networkChangedHandler = function () {
+      t.fail('network change should not be emitted');
+      wifiInfrastructure.removeListener('networkChangedWifi', networkChangedHandler);
+      t.end();
+    };
+    wifiInfrastructure.on('networkChangedWifi', networkChangedHandler);
+    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
+      testUtils.getMockWifiNetworkStatus(false)
+    );
+    setImmediate(function () {
+      t.ok(true, 'event was not emitted');
+      wifiInfrastructure.removeListener('networkChangedWifi', networkChangedHandler);
+      t.end();
+    });
+  });
 });
 
 var tryStartingFunctionWhileWifiOff = function (t, functionName) {
