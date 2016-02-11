@@ -100,7 +100,11 @@ public class ConnectionHelper
         mServerPort = port;
 
         mConnectionManager = new ConnectionManager(mContext, this, SERVICE_UUID, BLUETOOTH_NAME);
+        mConnectionManager.setPeerName(peerName);
+
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
+        mDiscoveryManager.setPeerName(peerName);
+
         mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance(mContext);
 
         if (mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE)) {
@@ -111,12 +115,12 @@ public class ConnectionHelper
             mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
         }
 
-        boolean connectionManagerStarted = mConnectionManager.start(peerName);
+        boolean connectionManagerStarted = mConnectionManager.start();
         boolean discoveryManagerStarted = false;
 
         if (connectionManagerStarted) {
             Log.i(TAG, "start: Using peer discovery mode: " + mDiscoveryManagerSettings.getDiscoveryMode());
-            discoveryManagerStarted = mDiscoveryManager.start(peerName);
+            discoveryManagerStarted = mDiscoveryManager.start(true, true);
 
             if (discoveryManagerStarted) {
                 Log.i(TAG, "start: OK");
@@ -261,11 +265,10 @@ public class ConnectionHelper
 
                     if (selectedDevice == null) {
                         Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
-                        selectedDevice = new PeerProperties(
-                                peerIdToConnectTo, peerIdToConnectTo, peerIdToConnectTo, "", "", "");
+                        selectedDevice = new PeerProperties(peerIdToConnectTo, peerIdToConnectTo, "", "", "");
                     }
 
-                    if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothAddress())) {
+                    if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothMacAddress())) {
                         if (mConnectionManager.connect(selectedDevice)) {
                             Log.i(TAG, "connect: Connection process successfully started (peer ID: " + peerIdToConnectTo + ")");
                             mOutgoingConnectionListeners.put(peerIdToConnectTo, listener);
@@ -274,9 +277,9 @@ public class ConnectionHelper
                             listener.onConnectionStatusChanged("Failed to start connecting", PORT_NUMBER_IN_ERROR_CASES);
                         }
                     } else {
-                        Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress());
+                        Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.getBluetoothMacAddress());
                         listener.onConnectionStatusChanged(
-                                "Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress(), PORT_NUMBER_IN_ERROR_CASES);
+                                "Invalid Bluetooth address: " + selectedDevice.getBluetoothMacAddress(), PORT_NUMBER_IN_ERROR_CASES);
                     }
                 } else {
                     Log.e(TAG, "connect: Maximum number of peer connections ("
@@ -555,7 +558,7 @@ public class ConnectionHelper
     @Override
     public void onPeerDiscovered(PeerProperties peerProperties) {
         Log.i(TAG, "onPeerDiscovered: " + peerProperties.toString()
-                + ", Bluetooth address: " + peerProperties.getBluetoothAddress()
+                + ", Bluetooth address: " + peerProperties.getBluetoothMacAddress()
                 + ", device name: " + peerProperties.getDeviceName()
                 + ", device address: " + peerProperties.getDeviceAddress());
 
@@ -571,7 +574,7 @@ public class ConnectionHelper
     @Override
     public void onPeerUpdated(PeerProperties peerProperties) {
         Log.i(TAG, "onPeerUpdated: " + peerProperties.toString()
-                + ", Bluetooth address: " + peerProperties.getBluetoothAddress()
+                + ", Bluetooth address: " + peerProperties.getBluetoothMacAddress()
                 + ", device name: " + peerProperties.getDeviceName()
                 + ", device address: " + peerProperties.getDeviceAddress());
     }
