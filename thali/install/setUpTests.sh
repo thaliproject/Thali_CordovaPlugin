@@ -46,7 +46,7 @@ if [ $runningInMinGw == true ]; then
     # which needs to be replaced with a valid value. Otherwise the build process
     # will be aborted. Restore write permission after running sed in case
     # Windows security settings removed it.
-    sed -i 's/"thali": "*"/"thali": "*"/g' package.json
+    sed -i 's/"thali": ".*"/"thali": "*"/g' package.json
     chmod 644 package.json
 fi
 
