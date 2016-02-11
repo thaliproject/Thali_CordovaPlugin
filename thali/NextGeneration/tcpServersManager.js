@@ -1,6 +1,8 @@
 'use strict';
 
+var net = require('net');
 var Promise = require('lie');
+var CloseAllServer = require("./makeIntoCloseAllServer");
 
 /** @module TCPServersManager */
 
@@ -121,7 +123,8 @@ var maxPeersToAdvertise = 20;
  * @fires event:incomingConnectionState
  */
 function TCPServersManager(routerPort) {
-
+  this._state = 'initialized';
+  this._routerPort = routerPort;
 }
 
 /**
@@ -144,7 +147,21 @@ function TCPServersManager(routerPort) {
  * llNative} when the system is ready to receive external incoming connections.
  */
 TCPServersManager.prototype.start = function() {
-  return new Promise();
+  var self = this;
+  function _do(resolve, reject) {
+    if (self._state == 'stopped') {
+      reject("We are stopped!");
+      return;
+    }
+    self._state = 'started';
+    self.createNativeListener(self._routerPort)
+    .then(function(localPort) {
+      return resolve(localPort);
+    })
+    .catch(function(err) {
+    });
+  }
+  return new Promise(_do);
 };
 
 /**
@@ -166,7 +183,13 @@ TCPServersManager.prototype.start = function() {
  * @returns {?Error}
  */
 TCPServersManager.prototype.stop = function() {
-  return null;
+  if (this._state != 'started') {
+    throw new Error("Call Start!");
+  }
+  if (this._server) {
+    this._server.closeAll();
+    this._server = null;
+  }
 };
 
 /**
@@ -284,7 +307,21 @@ TCPServersManager.prototype.stop = function() {
  * connections from the native layer or an Error object.
  */
 TCPServersManager.prototype.createNativeListener = function(routerPort) {
-  return new Promise();
+  if (this._state != 'started') {
+    throw new Error("Call Start!");
+  }
+  var self = this;
+  function _do(resolve, reject) {
+    self._server = CloseAllServer(net.createServer(function(socket) {
+    }));
+    self._server.listen(0, function(err) {
+      if (err) {
+      }
+      console.log("listening", self._server.address().port);
+      return resolve(self._server.address().port);
+    });
+  }
+  return new Promise(_do);
 };
 
 /**
