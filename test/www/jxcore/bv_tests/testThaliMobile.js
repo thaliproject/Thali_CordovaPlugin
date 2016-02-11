@@ -42,6 +42,10 @@ var testIdempotentFunction = function (t, functionName) {
 
 var testFunctionBeforeStart = function (t, functionName) {
   ThaliMobile[functionName]()
+  .then(function () {
+    t.fail('call should not succeed');
+    t.end();
+  })
   .catch(function (error) {
     t.equal(error.message, 'Call Start!', 'specific error should be returned');
     t.end();
