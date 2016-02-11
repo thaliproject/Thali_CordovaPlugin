@@ -174,12 +174,12 @@ function (networkChangedValue) {
     ];
   }
   Promise.all(actionList).then(function (results) {
-    for (var index in results) {
-      if (results[index]) {
+    results.forEach(function (result) {
+      if (result) {
         logger.warn('Error when reacting to wifi state changes: %s',
-                    results[index].toString());
+                    result.toString());
       }
-    }
+    });
   });
 };
 
