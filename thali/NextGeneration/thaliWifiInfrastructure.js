@@ -149,8 +149,8 @@ function (networkChangedValue) {
     var changedPeers = [];
     for (var key in self.peerAvailabilities) {
       if (self.peerAvailabilities[key]) {
-        // Mark peer unavailable in the local list
-        self.peerAvailabilities[key] = false;
+        // Mark change in peer availability list
+        delete self.peerAvailabilities[key];
         // Add peer to the list of changes to emit
         changedPeers.push({
           peerIdentifier: key,
@@ -222,10 +222,19 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     peer.hostAddress = peer.portNumber = null;
   }
 
-  if (this.peerAvailabilities[peer.peerIdentifier] === available) {
+  // If there are no changes, no need to do anything
+  if (available && this.peerAvailabilities[peer.peerIdentifier] ||
+      !available && !(peer.peerIdentifier in this.peerAvailabilities)) {
     return false;
   }
-  this.peerAvailabilities[peer.peerIdentifier] = available;
+
+  // Mark changes to the peer availabilities list
+  if (available) {
+    this.peerAvailabilities[peer.peerIdentifier] = true;
+  } else {
+    delete this.peerAvailabilities[peer.peerIdentifier];
+  }
+
   this.emit('wifiPeerAvailabilityChanged', [peer]);
   return true;
 };

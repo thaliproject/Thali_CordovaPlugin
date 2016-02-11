@@ -68,6 +68,8 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
     t.equal(peer.peerIdentifier, peerIdentifier, 'peer identifier should match');
     t.equal(peer.hostAddress, testSeverHostAddress, 'host address should match');
     t.equal(peer.portNumber, testServerPort, 'port should match');
+    t.equal(wifiInfrastructure.peerAvailabilities[peerIdentifier], true,
+            'peer should be found from the list');
     wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
 
     var peerUnavailableListener = function (peers) {
@@ -77,6 +79,8 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
       }
       t.equal(peer.hostAddress, null, 'host address should be null');
       t.equal(peer.portNumber, null, 'port should should be null');
+      t.equal(wifiInfrastructure.peerAvailabilities[peerIdentifier], undefined,
+              'peer should be removed from the list');
       wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerUnavailableListener);
       t.end();
     };
