@@ -10,7 +10,7 @@ var config = {
     numDevices:2
   },
   android: {
-    numDevices:0
+    numDevices:2
   }
 }
 
