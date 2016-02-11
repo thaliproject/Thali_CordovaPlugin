@@ -29,15 +29,11 @@
 #import "THEMultipeerClientSession.h"
 #import "THEMultipeerClientSocketRelay.h"
 
-#include "jx.h"
-#import "JXcore.h"
-#import "THEThreading.h"
-
 @implementation THEMultipeerClientSession
 {
   // Callback to fire when a connection completes (in fact when the relay
   // has established it's listening socket)
-  ConnectCallback _connectCallback;
+  ClientConnectCallback _connectCallback;
 }
 
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID
@@ -56,30 +52,49 @@
   return self;
 }
 
-- (void)connectWithConnectCallback:(ConnectCallback)connectCallback
+- (void)connectWithConnectCallback:(ClientConnectCallback)connectCallback
 {
   @synchronized(self)
   {
     assert(_connectCallback == nil);
 
-    [super connect];
     _connectCallback = connectCallback;
+    [super connect];
   }
 }
+
 
 - (void)fireConnectCallback:(NSString *)error withPort:(uint)port
 {
   @synchronized(self)
   {
-    NSLog(@"client session: fireConnectCallback: %@", [self remotePeerIdentifier]);
+    if (!_connectCallback)
+    {
+      NSLog(@"client session: no connect callback (server initiated)");
+      return;
+    }
+    
+    NSLog(@"client session: fireConnectCallback: %@", [self remotePeerUUID]);
 
     assert(_connectCallback != nil);
 
-    _connectCallback(error, port);
+    NSMutableDictionary *connection = nil;
+    if (!error)
+    {
+      connection = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
+        [NSNumber numberWithInteger:port], @"listeningPort",
+        [NSNumber numberWithInteger:0], @"clientPort",
+        [NSNumber numberWithInteger:0], @"serverPort",
+        nil
+      ];
+    }
+
+    _connectCallback(error, connection);
     _connectCallback = nil;
   }
 }
 
+/*
 - (void)fireConnectionErrorEvent
 {
   NSLog(@"client session: fireConnectionErrorEvent: %@", [self remotePeerIdentifier]);
@@ -107,10 +122,11 @@
     [JXcore callEventCallback:kPeerConnectionError withJSON:jsonString];
   });
 }
+*/
 
 - (THEMultipeerSocketRelay *)newSocketRelay
 {
-  return [[THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self remotePeerIdentifier] 
+  return [[THEMultipeerClientSocketRelay alloc] initWithPeerIdentifier:[self remotePeerUUID]
                                                     withDelegate:self];
 }
 
@@ -119,7 +135,7 @@
 {
   @synchronized(self)
   {
-    NSLog(@"client session: onLinkFailure: %@", [self remotePeerIdentifier]);
+    NSLog(@"client session: onLinkFailure: %@", [self remotePeerUUID]);
 
     assert([self connectionState] != THEPeerSessionStateNotConnected);
 
@@ -128,14 +144,14 @@
 
     if (prevState == THEPeerSessionStateConnecting)
       [self fireConnectCallback:@"Peer disconnected" withPort:0];
+    /*
     else if (prevState == THEPeerSessionStateConnected)
       [self fireConnectionErrorEvent];
-    else
     {
       NSLog(@"client session: Unexpected state (disconnected) in onLinkFailure");
       [NSException raise:@"Unexpected state" 
         format:@"state %lu was unexpected in onLinkFailure", (unsigned long)[self connectionState]];
-    }
+    }*/
   }
 }
 
@@ -144,7 +160,7 @@
 {
   @synchronized(self)
   {
-    NSLog(@"client session: onPeerLost: %@", [self remotePeerIdentifier]);
+    NSLog(@"client session: onPeerLost: %@", [self remotePeerUUID]);
     // Losing peers is independent of losing the link so
     // we may already be disconnected
     if ([self connectionState] != THEPeerSessionStateNotConnected)
@@ -154,7 +170,7 @@
 }
 
 // User-initiated disconnect
-- (void)disconnectFromPeer
+/*- (void)disconnectFromPeer
 {
   @synchronized(self)
   {
@@ -168,7 +184,7 @@
     if (prevState == THEPeerSessionStateConnecting && _connectCallback != nil)
       [self fireConnectCallback:@"Peer disconnected" withPort:0];
   }
-}
+}*/
 
 
 // ClientSocketRelayDelegate methods
@@ -201,7 +217,7 @@
 - (void)didDisconnectFromPeer
 {
   // The p2p socket has been closed
-  NSLog(@"client session: socket closed: %@", [self remotePeerIdentifier]);
+  NSLog(@"client session: socket closed: %@", [self remotePeerUUID]);
   [self onLinkFailure];
 }
 

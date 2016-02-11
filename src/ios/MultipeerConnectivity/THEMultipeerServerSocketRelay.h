@@ -29,9 +29,10 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
 #import "THEMultipeerSocketRelay.h"
+#import "THEMultipeerServerSocketRelayDelegate.h"
 
 @interface THEMultipeerServerSocketRelay : THEMultipeerSocketRelay
 
--(instancetype)initWithServerPort:(uint)port;
+-(instancetype)initWithServerPort:(unsigned short)serverPort withDelegate:(id<THEMultipeerServerSocketRelayDelegate>)delegate;
 
 @end

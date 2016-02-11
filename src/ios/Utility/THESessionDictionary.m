@@ -43,8 +43,8 @@
 
 - (void)dealloc
 {
-  for (id peerIdentifier in _peerIdentifiers) {
-    [self updateForPeerIdentifier:peerIdentifier 
+  for (id peerUUID in _peerIdentifiers) {
+    [self updateForPeerUUID:peerUUID
                       updateBlock:^THEMultipeerPeerSession *(THEMultipeerPeerSession *p) {
       if (p.connectionState != THEPeerSessionStateNotConnected)
       {
@@ -70,20 +70,33 @@
     // of storing duplicate peerIdentifers (which we couldn't do by simply making them the key
     // since the framework doesn't talk to us in those terms)
 
+    // Cache the current peerIdentifier for this session
+    NSString *prevPeerUUID = [v remotePeerUUID];
+    
+    // Carry out the update.. the returned session may be an entirely different
+    // one with a different remotePeerIdentifer
     THEMultipeerPeerSession *session = updateBlock(v);
 
     if (session == nil)
     {
-      // session object is about to be removed from the base dict, remove the 
-      // corresponding mapping from it's peerIdentifier
-      [_peerIdentifiers removeObjectForKey:[v remotePeerIdentifier]];
+      // session object is being deleted, remove the
+      // corresponding mapping for it's peerIdentifier
+      [_peerIdentifiers removeObjectForKey:prevPeerUUID];
     }
     else
     {
-      // update our mapping, usual case is no change
+      // Session object has been updated, it may have been completely replaced
       if (session != v)
       {
-        _peerIdentifiers[[session remotePeerIdentifier]] = peerID;
+        // New session object..
+        if ([prevPeerUUID compare:[session remotePeerUUID]] != NSOrderedSame)
+        {
+          // remove peerIdentifier mapping if it's changed
+          [_peerIdentifiers removeObjectForKey:prevPeerUUID];
+        }
+        
+        // Add the new peerIdentifier mapping
+        _peerIdentifiers[[session remotePeerUUID]] = peerID;
       }
     }
 
@@ -93,10 +106,10 @@
   [super updateForKey:peerID updateBlock:(NSObject *(^)(NSObject *))updateWrapper];  
 }
 
--(void)updateForPeerIdentifier:(NSString *)peerIdentifier
+-(void)updateForPeerUUID:(NSString *)peerUUID
                    updateBlock:(THEMultipeerPeerSession *(^)(THEMultipeerPeerSession *))updateBlock;
 {
-  [self updateForPeerID:_peerIdentifiers[peerIdentifier] updateBlock:updateBlock];
+  [self updateForPeerID:_peerIdentifiers[peerUUID] updateBlock:updateBlock];
 }
 
 @end

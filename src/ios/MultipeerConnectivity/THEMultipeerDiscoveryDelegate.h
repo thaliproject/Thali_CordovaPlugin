@@ -25,12 +25,15 @@
 //  THEMultipeerDiscoveryDelegate.h
 //
 
-// Defines the interface through which the multipeer session will 
+#import <MultipeerConnectivity/MultipeerConnectivity.h>
+
+// Defines the interface through which the multipeer session will
 // inform it's delegate about the visibility of peers
 @protocol THEMultipeerDiscoveryDelegate <NSObject>
 
-// Notifies the delegate that a peer was found.
-- (void)didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName;
+// Notifies the delegate that a peer was found and whether a
+// reverse connection is being requested
+- (void)didFindPeerIdentifier:(NSString *)peer pleaseConnect:(BOOL)pleaseConnect;
 
 // Notifies the delegate that a peer was lost.
 - (void)didLosePeerIdentifier:(NSString *)peerIdentifier;
