@@ -22,36 +22,18 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeer.h
+//  THERemoteConnectionDelegate.h
 //
 
-#import <Foundation/Foundation.h>
-#import <CoreLocation/CoreLocation.h>
+// Informs interested parties about the accepting or otherwise
+// of connections from remote peers
+@protocol THERemoteConnectionDelegate
 
-// THEPeerState enumeration.
-typedef NS_ENUM(NSUInteger, THEPeerState)
-{
-    THEPeerStateUnavailable     = 0,
-    THEPeerStateAvailable       = 1,
-    THEPeerStateConnecting      = 2,
-    THEPeerStateConnectFailed   = 3,
-    THEPeerStateConnected       = 4,
-    THEPeerStateDisconnected    = 5,
-};
+// @optional
+// Fired when a new connection is accepted that was *not* initiated by the local peer
+//- (void)didAcceptConnectionWithClientPort:(unsigned short)clientPort withServerPort:(unsigned short)serverPort;
 
-// THEPeer interface.
-@interface THEPeer : NSObject
-
-// Properties.
-@property (nonatomic, readonly) NSString * identifier;
-@property (nonatomic, readonly) NSString * name;
-@property (nonatomic) BOOL available;
-
-// Class initializer.
-- (instancetype)initWithIdentifier:(NSString *)peerIdentifier
-                              name:(NSString *)name;
-
-// Converts THEPeer to JSON.
-- (NSString *)JSON;
+// Fired when we fail to connect to the local app server port
+- (void)didNotAcceptConnectionWithServerPort:(unsigned short)serverPort;
 
 @end

@@ -25,28 +25,31 @@
 //  THEAppContext.m
 //
 
-#import <pthread.h>
-#include "jx.h"
-#import "JXcore.h"
-#import "THEAtomicFlag.h"
-#import "THEThreading.h"
+#import <UIKit/UIKit.h>
+#import <CoreBluetooth/CoreBluetooth.h>
+#import <SystemConfiguration/CaptiveNetwork.h>
+
+#import "THEAppContext.h"
 #import "NPReachability.h"
 #import "THEPeerBluetooth.h"
-#import "THEMultipeerSession.h"
-#import "THEAppContext.h"
-#import "THEPeer.h"
-
-// JavaScript callbacks.
-NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
+#import "THEMultipeerManager.h"
+#import "THEThaliEventDelegate.h"
 
 // THEAppContext (Internal) interface.
-@interface THEAppContext (Internal)
+@interface THEAppContext (Internal) <CBPeripheralManagerDelegate, CBCentralManagerDelegate>
 
-// Class initializer.
-- (instancetype)init;
+// ctor
+- (id)init;
 
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent;
+
+// Fire peerAvailabilityChanged event
+- (void)firePeerAvailabilityChangedEvent:(NSDictionary *)peer;
+
+- (void)fireDiscoveryAdvertisingStateUpdate;
+
+- (void)fireIncomingConnectionToPortNumberFailed:(unsigned short)serverPort;
 
 // UIApplicationWillResignActiveNotification callback.
 - (void)applicationWillResignActiveNotification:(NSNotification *)notification;
@@ -60,24 +63,29 @@ NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
 @implementation THEAppContext
 {
 @private
-  // The communications enabled atomic flag.
-  THEAtomicFlag * _atomicFlagCommunicationsEnabled;
-    
+  // the event delegate to which we'll deliver key events
+  id<THEThaliEventDelegate> _eventDelegate;
+ 
   // The reachability handler reference.
   id reachabilityHandlerReference;
 
   // Bluetooth enabled state
+  bool _bleEnabled;
   bool _bluetoothEnabled;
 
   // Our current app level id
-  NSString *_peerIdentifier;
+  NSString * _peerIdentifier;
     
   // Peer Bluetooth.
   THEPeerBluetooth * _peerBluetooth;
-    
-  // Peer Networking.
-  THEMultipeerSession * _multipeerSession;
-    
+ 
+  // Let's us know the BT radio states
+  CBPeripheralManager *_btPeripheralManager;
+  CBCentralManager *_bleManager;
+  
+  // The multipeer manager, co-ordinates client and server
+  THEMultipeerManager *_multipeerManager;
+
   // The mutex used to protect access to things below.
   pthread_mutex_t _mutex;
     
@@ -86,203 +94,76 @@ NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
 }
 
 // CONSTANTS
+static NSString *const THALI_SERVICE_TYPE = @"thaliproject";
 static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B";
 
 // Singleton.
-+ (instancetype)singleton
+- (void)setThaliEventDelegate:(id)eventDelegate
 {
-  // Singleton instance.
-  static THEAppContext * appContext = nil;
-    
-  // If unallocated, allocate.
-  if (!appContext)
-  {
-    // Allocator.
-    void (^allocator)() = ^
-    {
-      appContext = [[THEAppContext alloc] init];
-    };
-        
-    // Dispatch allocator once.
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, allocator);
-  }
-    
-  // Done.
-  return appContext;
+  _eventDelegate = eventDelegate;
 }
 
-
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort
+// Starts up the client components
+- (BOOL)startListeningForAdvertisements
 {
-  if ([_atomicFlagCommunicationsEnabled trySet])
-  {
-    _peerIdentifier = [[NSString alloc] initWithString:peerIdentifier];
-
-    // Somewhere to put our peers
-    _peers = [[NSMutableDictionary alloc] init];
-
-    /*
-      Temporarily disable the BLE stack since it's not required for 
-      our immediate releases so let's just keep things as simple as they 
-      can possibly be - tobe
-    */
-
-    // Initialise the BLE stack..
-    //NSUUID * btServiceType = [[NSUUID alloc] initWithUUIDString:BLE_SERVICE_TYPE];
-
-    // Bluetooth will start on initialisation
-    //_peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:btServiceType
-    //                                                peerIdentifier:peerIdentifier
-    //                                                      peerName:[serverPort stringValue]
-    //                                             bluetoothDelegate:self];
-       
-
-    // Intitialise the multipeer connectivity stack..
-    _multipeerSession = [[THEMultipeerSession alloc] initWithServiceType:@"Thali"
-                                                          peerIdentifier:peerIdentifier
-                                                                peerName:[serverPort stringValue]
-                                                       discoveryDelegate:self];
-    // Start networking..
-    [_multipeerSession start];
-
-    // Hook reachability to network changed event (when user
-    // toggles Wifi)       
-    reachabilityHandlerReference = [[NPReachability sharedInstance] 
-      addHandler:^(NPReachability *reachability) {
-        [self fireNetworkChangedEvent];
-    }];
-
-    return true;
-  }
-
-  return false;
+  BOOL result = [_multipeerManager startListening];
+  [self fireDiscoveryAdvertisingStateUpdate];
+  return result;
 }
 
-// Stops communications.
-- (BOOL)stopBroadcasting
+// Stops client components 
+- (BOOL)stopListeningForAdvertisements
 {
-  if ([_atomicFlagCommunicationsEnabled tryClear])
-  {
-    //[_peerBluetooth stop];
-    [_multipeerSession stop];
+  BOOL result = [_multipeerManager stopListening];
+  [self fireDiscoveryAdvertisingStateUpdate];
+  return result;
+}
 
-    _peerBluetooth = nil;
-    _multipeerSession = nil;
+// Starts up the server components
+- (BOOL)startUpdateAdvertisingAndListening:(unsigned short)serverPort
+{
+  return [_multipeerManager startServerWithServerPort:serverPort];
+}
 
-    if (reachabilityHandlerReference != nil) // network changed event may not have fired yet
-    {
-      [[NPReachability sharedInstance] removeHandler:reachabilityHandlerReference];
-      reachabilityHandlerReference = nil;
-    }
-
-    _peers = nil;
-    return YES;
-  }
-    
-  NSLog(@"app: didn't stop broadcasting");
-  return NO;
+// Stops server components
+- (BOOL)stopAdvertisingAndListening
+{
+  return [_multipeerManager stopServer];
 }
 
 // Connects to the peer server with the specified peer identifier.
 - (BOOL)connectToPeer:(NSString *)peerIdentifier 
-      connectCallback:(void(^)(NSString *, uint))connectCallback
+      connectCallback:(ClientConnectCallback)connectCallback
 {
-  if ([_atomicFlagCommunicationsEnabled isClear])
-  {
-      NSLog(@"Communications not enabled");
-      connectCallback(@"app: Not initialised", 0);
-      return NO;
-  }
-    
-  return [_multipeerSession connectToPeerServerWithPeerIdentifier:peerIdentifier 
+  return [_multipeerManager connectToPeerWithPeerIdentifier:peerIdentifier
                                               withConnectCallback:connectCallback];
-}
-
-// Disconnects from the peer server with the specified peer identifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier
-{
-  // If communications are not enabled, return NO.
-  if ([_atomicFlagCommunicationsEnabled isClear])
-  {
-    NSLog(@"Communications not enabled");
-    return NO;
-  }
-    
-  return [_multipeerSession disconnectFromPeerServerWithPeerIdentifier:peerIdentifier];
 }
 
 // Kill connection with extreme prejudice, no clean-up, testing only
 - (BOOL)killConnection:(NSString *)peerIdentifier
 {
-  if ([_atomicFlagCommunicationsEnabled isClear])
-  {
-    NSLog(@"Communications not enabled");
-    return NO;
-  }
-
-  return [_multipeerSession killConnection:peerIdentifier];
+  return false;
 }
 
-////////////////////////////////////////////////////////////
-// THEAppContext <THEMultipeerDiscoveryDelegate> implementation.
-////////////////////////////////////////////////////////////
-
-- (void)didFindPeerIdentifier:(NSString *)peerIdentifier peerName:(NSString *)peerName
+- (void)didFindPeer:(NSDictionary *)peer
 {
-  // Lock.
-  pthread_mutex_lock(&_mutex);
-  
-  // Find the peer.
-  THEPeer * peer = _peers[peerIdentifier];
-  
-  // If this is a new peer, add it.
-  if (!peer)
-  {
-    // Allocate and initialize the peer, add it to the peers dictionary.
-    peer = [[THEPeer alloc] initWithIdentifier:peerIdentifier
-                                          name:peerName];
-    [_peers setObject:peer
-               forKey:peerIdentifier];
-  }
-    
-  // Update the peer state.
-  [peer setAvailable:YES];
-    
-  // Unlock.
-  pthread_mutex_unlock(&_mutex);
-
-  // Fire the peerAvailabilityChanged event.
-  OnMainThread(^{
-    [JXcore callEventCallback:kPeerAvailabilityChanged
-                     withJSON:[peer JSON]];
-  });
+  [self firePeerAvailabilityChangedEvent:peer];
 }
 
-- (void)didLosePeerIdentifier:(NSString *)peerIdentifier
+- (void)didLosePeer:(NSString *)peerIdentifier
 {
-  // Lock.
-  pthread_mutex_lock(&_mutex);
-    
-  // Find the peer.
-  THEPeer * peer = _peers[peerIdentifier];
-  if (peer)
-  {
-    [peer setAvailable:NO];
-  }
+}
 
-  // Unlock.
-  pthread_mutex_unlock(&_mutex);
-    
-  // Fire the peerAvailabilityChanged event.
-  if (peer)
-  {
-    OnMainThread(^{
-        [JXcore callEventCallback:kPeerAvailabilityChanged
-                         withJSON:[peer JSON]];
-    });
-  }
+#ifdef DEBUG
+- (void)setPeerIdentifier:(NSString *)peerIdentifier
+{
+  _peerIdentifier = peerIdentifier;
+}
+#endif
+
+- (void)didNotAcceptConnectionWithServerPort:(unsigned short)serverPort
+{
+  [self fireIncomingConnectionToPortNumberFailed:serverPort];
 }
 
 ///////////////////////////////////////////////////////////
@@ -292,13 +173,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 // Receive notifications from the bluetooth stack about radio state
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth didUpdateState:(BOOL)bluetoothEnabled
 {
-  pthread_mutex_lock(&_mutex);
-
-  // This will always be called regardless of BT state
-  _bluetoothEnabled = bluetoothEnabled;
-  [self fireNetworkChangedEvent];
-
-  pthread_mutex_unlock(&_mutex);
+  // NOOP for now  - We're doing this ourselves.
 }
 
 // Notifies the delegate that a peer was connected.
@@ -306,31 +181,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 didConnectPeerIdentifier:(NSString *)peerIdentifier
                 peerName:(NSString *)peerName
 {
-  // Lock.
-  pthread_mutex_lock(&_mutex);
-
-  // Find the peer. If we found it, simply return.
-  THEPeer * peer = [_peers objectForKey:peerIdentifier];
-  if (peer)
-  {
-      pthread_mutex_unlock(&_mutex);
-      return;
-  }
-
-  // Allocate and initialize the peer.
-  peer = [[THEPeer alloc] initWithIdentifier:peerIdentifier
-                                          name:peerName];
-  [_peers setObject:peer
-             forKey:peerIdentifier];
-
-  // Unlock.
-  pthread_mutex_unlock(&_mutex);
-
-  // Fire the peerAvailabilityChanged event.
-  OnMainThread(^{
-      [JXcore callEventCallback:kPeerAvailabilityChanged
-                       withJSON:[peer JSON]];
-  });
+  // NOOP for now
 }
 
 // Notifies the delegate that a peer was disconnected.
@@ -357,16 +208,21 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     return nil;
   }
     
-  // Intialize.
-  _atomicFlagCommunicationsEnabled = [[THEAtomicFlag alloc] init];
- 
-  // We don't really know yet, assum the worst, we'll get an update
+  _peerIdentifier = [[[NSUUID alloc] init] UUIDString];
+
+  // We don't really know yet, assume the worst, we'll get an update
   // when we initialise the BT stack 
   _bluetoothEnabled = false;
   
-  // Initialize the the mutex 
-  pthread_mutex_init(&_mutex, NULL);
-
+  NSDictionary<NSString *, id> *options = @{CBCentralManagerOptionShowPowerAlertKey:@0};
+  _btPeripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:nil options:options];
+  
+  _bleManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil];
+  
+  _multipeerManager = [[THEMultipeerManager alloc] initWithServiceType:THALI_SERVICE_TYPE
+                                                    withPeerIdentifier:_peerIdentifier
+                                             withPeerDiscoveryDelegate:self
+                                          withRemoteConnectionDelegate:self];
   // Get the default notification center.
   NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];
     
@@ -385,46 +241,117 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   return self;
 }
 
+- (void)fireIncomingConnectionToPortNumberFailed:(unsigned short)serverPort
+{
+  [_eventDelegate incomingConnectionToPortNumberFailed:serverPort];
+}
+
+- (void)fireDiscoveryAdvertisingStateUpdate
+{
+  NSDictionary *stateUpdate = @{
+    @"discoveryActive" : [[NSNumber alloc] initWithBool:[_multipeerManager isListening]],
+    @"advertisingActive" : [[NSNumber alloc] initWithBool:[_multipeerManager isAdvertising]]
+  };
+  
+  [_eventDelegate discoveryAdvertisingStateUpdate:stateUpdate];
+}
+
+- (void)firePeerAvailabilityChangedEvent:(NSDictionary *)peer
+{
+  if (_eventDelegate)
+  {
+    // delegate expects an array of peers
+    NSArray *peerArray = [[NSArray alloc] initWithObjects:peer, nil];
+    [_eventDelegate peerAvailabilityChanged:peerArray];
+  }
+}
+
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent
 {
-    NSString * json;
+  NSDictionary *networkStatus;
 
-    // NPReachability only tells us what kind of IP connection we're capable
-    // of. Need to take bluetooth into account also
+  // NPReachability only tells us what kind of IP connection we're capable
+  // of. Need to take bluetooth into account also
 
-    BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
-
-    if (reachable)
+  /* This stuff is being deprecated. Hmm !!!
+  NSArray *ifs = (__bridge_transfer id)CNCopySupportedInterfaces();
+  if ([ifs count] > 0)
+  {
+    for (NSString *ifname in ifs)
     {
-        json = [NSString stringWithFormat:@"{ \"isAvailable\": %@, \"isWiFi\": %@ }",
-                @"true", ([[NPReachability sharedInstance] currentReachabilityFlags] & 
-                  kSCNetworkReachabilityFlagsIsWWAN) == 0 ? @"true" : @"false"];
-    }
-    else
-    {
-        json = @"{ \"isAvailable\": false }";
-    }
+      NSDictionary *info = (__bridge_transfer id)CNCopyCurrentNetworkInfo((__bridge CFStringRef)ifname);
 
-    // Fire the networkChanged event.
-    OnMainThread(^{
-        [JXcore callEventCallback:@"networkChanged"
-                         withJSON:json];
-    });
+    }
+  }*/
+  
+  BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
+  BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
+
+  networkStatus = @{
+    @"blueToothLowEnergy" : [[NSNumber alloc] initWithBool:_bleEnabled],
+    @"blueTooth" : [[NSNumber alloc] initWithBool:_bluetoothEnabled],
+    @"cellular" : [[NSNumber alloc] initWithBool:reachable],
+    @"wifi" : [[NSNumber alloc] initWithBool:isWifi],
+    @"bssidName" : [[NSNull alloc] init]
+  };
+
+  if (_eventDelegate)
+  {
+    [_eventDelegate networkChanged: networkStatus];
+  }
 }
 
 // UIApplicationWillResignActiveNotification callback.
 - (void)applicationWillResignActiveNotification:(NSNotification *)notification
 {
-    [JXcore callEventCallback:@"appEnteringBackground"
-                   withParams:@[]];
+  if (_eventDelegate)
+  {
+    [_eventDelegate appEnteringBackground];
+  }
 }
 
 // UIApplicationDidBecomeActiveNotification callback.
 - (void)applicationDidBecomeActiveNotification:(NSNotification *)notification
 {
-    [JXcore callEventCallback:@"appEnteredForeground"
-                   withParams:@[]];
+  if (_eventDelegate)
+  {
+    [_eventDelegate appEnteredForeground];
+  }
+}
+
+- (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheral
+{
+  switch (peripheral.state)
+  {
+    case CBPeripheralManagerStatePoweredOn:
+    {
+      _bluetoothEnabled = true;
+    }
+    break;
+      
+    default:
+    {
+      _bluetoothEnabled = false;
+    }
+    break;
+  }
+  
+  [self fireNetworkChangedEvent];
+}
+
+- (void)centralManagerDidUpdateState:(CBCentralManager *)central
+{
+  switch (central.state)
+  {
+    case CBCentralManagerStatePoweredOn:
+      _bleEnabled = true;
+      
+    default:
+      _bleEnabled = false;
+  }
+  
+  [self fireNetworkChangedEvent];
 }
 
 @end

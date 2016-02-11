@@ -22,65 +22,18 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAtomicFlag.m
+//  THEMultipeerServerConnectionDelegate.h
 //
 
-#import "THEAtomicFlag.h"
+// Defines the interface through which the multipeer session will 
+// inform it's delegate connections from remote peers
+@protocol THEMultipeerServerConnectionDelegate <NSObject>
 
-// THEAtomicFlag (Internal) interface.
-@interface THEAtomicFlag (Internal)
-@end
+// Notifies delegate a connection was made or, if clientPort == 0, failed
+- (void)didCompleteReverseConnection:(NSString *)peerIdentifier
+                      withClientPort:(unsigned short)clientPort
+                      withServerPort:(unsigned short)serverPort;
 
-// THEAtomicFlag implementation.
-@implementation THEAtomicFlag
-{
-@private
-    // The flag.
-    volatile int32_t _flag;
-}
-
-// Class initializer.
-- (instancetype)init
-{
-    // Initialize superclass.
-    self = [super init];
-    
-    // Handle errors.
-    if (!self)
-    {
-        return nil;
-    }
-    
-    // Done.
-    return self;
-}
-
-// Returns YES, if the flag is clear; otherwise, NO.
-- (BOOL)isClear
-{
-    return OSAtomicCompareAndSwap32Barrier(0, 0, &_flag);
-}
-
-// Returns YES, if the flag is set; otherwise, NO.
-- (BOOL)isSet
-{
-    return OSAtomicCompareAndSwap32Barrier(1, 1, &_flag);
-}
-
-// Tries to set the flag. Returns YES, if the flag was successfully set; otherwise, NO.
-- (BOOL)trySet
-{
-    return OSAtomicCompareAndSwap32Barrier(0, 1, &_flag);
-}
-
-// Tries to clear the flag. Returns YES, if the flag was successfully cleared; otherwise, NO.
-- (BOOL)tryClear
-{
-    return OSAtomicCompareAndSwap32Barrier(1, 0, &_flag);
-}
 
 @end
 
-// THEAtomicFlag (Internal) implementation.
-@implementation THEAtomicFlag (Internal)
-@end

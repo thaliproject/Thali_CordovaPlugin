@@ -26,32 +26,45 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "THEMultipeerDiscoveryDelegate.h"
-#import "THEPeerBluetoothDelegate.h"
+
+#import "THEThaliEventDelegate.h"
+#import "THEPeerDiscoveryDelegate.h"
+#import "THERemoteConnectionDelegate.h"
 
 // Callback that will be called when the lower levels have established
 // a client relay in response to a connect
-typedef void(^ConnectCallback)(NSString *error, uint port);
+typedef void(^ClientConnectCallback)(NSString *error, NSDictionary *connection);
 
 // THEAppContext interface.
-@interface THEAppContext : NSObject <THEMultipeerDiscoveryDelegate, THEPeerBluetoothDelegate>
+@interface THEAppContext : NSObject <THEPeerDiscoveryDelegate, THERemoteConnectionDelegate>
 
-// Class singleton.
-+ (instancetype)singleton;
+// Set the event delegate
+- (void)setThaliEventDelegate:(id<THEThaliEventDelegate>) eventDelegate;
 
-// Starts communications.
-- (BOOL)startBroadcasting:(NSString *)peerIdentifier serverPort:(NSNumber *)serverPort;
+// Start the client components
+- (BOOL)startListeningForAdvertisements;
 
-// Stops communications.
-- (BOOL)stopBroadcasting;
+// Stop the client components
+- (BOOL)stopListeningForAdvertisements;
+
+// Start the server components
+- (BOOL)startUpdateAdvertisingAndListening:(unsigned short)serverPort;
+
+// Stop the server components
+- (BOOL)stopAdvertisingAndListening;
 
 // Connects to the peer with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ConnectCallback)connectCallback;
-
-// Disconnects from the peer with the specified peer idetifier.
-- (BOOL)disconnectFromPeer:(NSString *)peerIdentifier;
+- (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ClientConnectCallback)connectCallback;
 
 // Kill connection without cleanup - Testing only !!
 - (BOOL)killConnection:(NSString *)peerIdentifier;
+
+- (void)didFindPeer:(NSDictionary *)peer;
+- (void)didLosePeer:(NSString *)peerIdentifier;
+
+#ifdef DEBUG
+// A set of functions which make testing a lot easier
+- (void)setPeerIdentifier:(NSString *)peerIdentifier;
+#endif
 
 @end

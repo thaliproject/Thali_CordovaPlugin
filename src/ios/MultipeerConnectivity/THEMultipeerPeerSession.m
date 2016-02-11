@@ -29,7 +29,6 @@
 #import "THEMultipeerPeerSession.h"
 #import "THEMultipeerSocketRelay.h"
 
-
 static NSString * const THALI_STREAM = @"ThaliStream";
 
 @interface THEMultipeerPeerSession()
@@ -44,6 +43,8 @@ static NSString * const THALI_STREAM = @"ThaliStream";
   MCPeerID * _localPeerID;
   MCPeerID * _remotePeerID;
   NSString * _remotePeerIdentifier;
+
+  THEPeerSessionState _connectionState;
 
   // Debugging purposes only
   NSString * _sessionType;
@@ -107,18 +108,41 @@ static NSDictionary *stateChanges = nil;
   return _remotePeerID;
 }
 
--(NSString *)remotePeerIdentifier
+- (NSString *)remotePeerIdentifier
 {
   return _remotePeerIdentifier;
 }
 
+- (void)updateRemotePeerIdentifier:(NSString *)remotePeerIdentifier
+{
+  _remotePeerIdentifier = remotePeerIdentifier;
+}
+
+- (NSString *)remotePeerUUID
+{
+  return [THEMultipeerPeerSession peerUUIDFromPeerIdentifier:_remotePeerIdentifier];
+}
+
++ (NSString *)peerUUIDFromPeerIdentifier:(NSString *)peerIdentifier
+{
+  NSString *uuid = [peerIdentifier componentsSeparatedByString:@":"][0];
+  return uuid;
+}
+
+- (THEPeerSessionState)connectionState
+{
+  return _connectionState;
+}
+
 -(void)setInputStream:(NSInputStream *)inputStream
 {
+  assert(_relay);
   [_relay setInputStream:inputStream];
 }
 
 -(void)setOutputStream:(NSOutputStream *)outputStream
 {
+  assert(_relay);
   [_relay setOutputStream:outputStream];
 }
 
@@ -141,6 +165,25 @@ static NSDictionary *stateChanges = nil;
     _relay = [self newSocketRelay];
 
     _session = [[MCSession alloc] initWithPeer:_localPeerID 
+                              securityIdentity:nil 
+                          encryptionPreference:MCEncryptionNone];
+    _session.delegate = self;
+  }
+}
+
+-(void)reverseConnect
+{
+  @synchronized(self)
+  {
+    // Create the transport session, not the relay.
+    // We don't expect this session to ever complete
+
+    assert(_relay == nil && _session == nil);
+
+    NSLog(@"%@ session: reverseConnect", _sessionType);
+    [self changeState:THEPeerSessionStateConnecting];
+
+    _session = [[MCSession alloc] initWithPeer:_localPeerID
                               securityIdentity:nil 
                           encryptionPreference:MCEncryptionNone];
     _session.delegate = self;
@@ -191,6 +234,11 @@ static NSDictionary *stateChanges = nil;
 - (void)onLinkFailure
 {
   // Nothing for base/server class to do here
+}
+
+- (const THEMultipeerSocketRelay *)relay
+{
+  return _relay;
 }
 
 // MCSessionDelegate
