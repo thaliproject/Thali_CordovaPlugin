@@ -204,7 +204,7 @@ test('Can shift large amounts of data', function (t) {
 
       var toRecv = '';
       var totalRecvd = 0;
-      sock.on('data', (data) => {
+      sock.on('data', function(data) {
 
         totalRecvd += data.length;
 
@@ -232,7 +232,7 @@ test('Can shift large amounts of data', function (t) {
     
       var toRecv = '';
       var done = false;
-      sock.on('data', (data) => {
+      sock.on('data', function(data) {
 
         var remaining = dataSize - toRecv.length;
 
