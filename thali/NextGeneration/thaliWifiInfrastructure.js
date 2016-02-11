@@ -169,10 +169,10 @@ function (networkChangedValue) {
     // to stop our actions
     actionList = [
       promiseResultSuccessOrFailure(
-        self.stopAdvertisingAndListening(false, true)
+        self._stopAdvertisingAndListening(false, false)
       ),
       promiseResultSuccessOrFailure(
-        self.stopListeningForAdvertisements(false, true)
+        self._stopListeningForAdvertisements(false, false)
       )
     ];
   }
@@ -335,10 +335,10 @@ ThaliWifiInfrastructure.prototype.stop = function () {
     }
     ThaliMobileNativeWrapper.stop()
     .then(function () {
-      return self.stopAdvertisingAndListening(true)
+      return self._stopAdvertisingAndListening(true, true);
     })
     .then(function () {
-      return self.stopListeningForAdvertisements(true);
+      return self._stopListeningForAdvertisements(true, true);
     })
     .then(function () {
       self.states = self._getInitialStates();
@@ -408,9 +408,14 @@ function () {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements =
-function (skipPromiseQueue, noTargetChange) {
+function () {
+  return this._stopListeningForAdvertisements(false, true);
+};
+
+ThaliWifiInfrastructure.prototype._stopListeningForAdvertisements =
+function (skipPromiseQueue, changeTarget) {
   var self = this;
-  if (!noTargetChange) {
+  if (changeTarget) {
     self.states.listening.target = false;
   }
   var action = function (resolve, reject) {
@@ -573,9 +578,14 @@ function () {
  * @returns {Promise<?Error>}
  */
 ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening =
-function (skipPromiseQueue, noTargetChange) {
+function () {
+  return this._stopAdvertisingAndListening(false, true);
+};
+
+ThaliWifiInfrastructure.prototype._stopAdvertisingAndListening =
+function (skipPromiseQueue, changeTarget) {
   var self = this;
-  if (!noTargetChange) {
+  if (changeTarget) {
     self.states.advertising.target = false;
   }
   var action = function (resolve, reject) {
