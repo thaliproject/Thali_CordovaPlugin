@@ -9,7 +9,7 @@ We are trying to version, as one, what are actually two different systems. One s
 the Cordova plugin.
 
 We have made the decision to drive the management process from NPM in the JXCore folder. This means that to install Thali
-both into JXCore and into Cordova one must go to www/jxcore in the app project and do a `jx install`. This will install Thali's
+both into JXCore and into Cordova one must go to www/jxcore in the app project and do a `jx npm install`. This will install Thali's
 Javascript files from NPM but it will also run a post install script that will then install Thali's Cordova plugin.
 
 Normally to update a NPM one issues `jx npm install` or `jx npm update` and that will update the Javascript files.

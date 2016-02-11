@@ -22,25 +22,18 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEAtomicFlag.h
+//  THEMultipeerSessionStateDelegate.h
 //
 
-#import <Foundation/Foundation.h>
-#import "libkern/OSAtomic.h"
+#import "THEMultipeerClientSession.h"
+#import "THEMultipeerServerSession.h"
 
-// THEAtomicFlag interface.
-@interface THEAtomicFlag : NSObject
+// Protocol implemented by classes wishing to know global session state
+@protocol THEMultipeerSessionStateDelegate <NSObject>
 
-// Returns YES, if the flag is clear; otherwise, NO.
-- (BOOL)isClear;
-
-// Returns YES, if the flag is set; otherwise, NO.
-- (BOOL)isSet;
-
-// Tries to set the flag. Returns YES, if the flag was successfully set; otherwise, NO.
-- (BOOL)trySet;
-
-// Tries to clear the flag. Returns YES, if the flag was successfully cleared; otherwise, NO.
-- (BOOL)tryClear;
+- (const THEMultipeerClientSession *)clientSession:(NSString *)peerIdentifier;
+- (const THEMultipeerServerSession *)serverSession:(NSString *)peerIdentifier;
 
 @end
+
+

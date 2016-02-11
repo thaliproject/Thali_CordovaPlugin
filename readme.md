@@ -40,7 +40,7 @@ Download [Xcode 6](https://developer.apple.com/xcode/), or later.
 
 ### Install latest JXCore
 
-Follow the instructions at [http://jxcore.com/downloads/](http://jxcore.com/downloads/). When you're done, check that the
+Follow the instructions at [http://jxcore.com/downloads/](http://jxcore.com/downloads/). Please make sure you are using the default install which uses v8. There are [known issues](https://github.com/jxcore/jxcore/issues/822) with JXcore when it comes to packaging (something only done on the desktop) with Spider Monkey. When you're done, check that the
 installation worked:
 ```
 $ jx -jxv
@@ -53,7 +53,7 @@ v 0.3.1.0
 and [iOS Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_ios_index.md.html#iOS%20Platform%20Guide) for detailed instructions.)
 
 ```
-$ sudo jx install -g cordova
+$ sudo jx npm install -g cordova
 ```
 
 ### Create a Cordova project
@@ -71,16 +71,19 @@ To use Thali in a Cordova project one must do the following:
 3. Inside the jxcore folder create the app.js for your application
 4. Inside the jxcore folder create the package.json for your application
  * `jx npm init` provides an easy to use wizard that will create a basic package.json file
-5. Inside the jxcore folder run the command `jx install thali --autoremove "*.gz" --save`
+5. Inside the jxcore folder run the command `jx npm install thali --autoremove "*.gz" --save`
 6. Make sure to run `cordova build` as this is critical to moving key files into place
 
 Now you can run your app. The Android devices need to have OS version Lollipop or later for things to work properly
-(Thali uses class `BluetoothLeAdvertiser`, which was added in API level 21).
+(Thali uses class `BluetoothLeAdvertiser`, which was added in API level 21). Android 6.0 "Marshmallow" introduced 
+a new permissions model where the user has to approve use of dangerous permission while the app is running. 
+Thali Cordova Plugin requires ACCESS_COARSE_LOCATION which needs user approval. This approval can be requested calling 
+window.ThaliPermissions.requestLocationPermission() function. ThaliPermissions API locates at www/android/thaliPermissions.js.
 
 Note that Thali uses a subdirectory in your project called thaliDontCheckin to manage certain downloads. Per the name of the directory, please don't check it in to your repro.
 
 If you want to upgrade to a newer version of Thali_CordovaPlugin all you have to do is just edit your package.json 
-with the version you want and then run 'jx install'. This will automatically update the Javascript files as well 
+with the version you want and then run 'jx npm install'. This will automatically update the Javascript files as well 
 as uninstall the old plugin and install the new plugin.
 
 ### Documentation

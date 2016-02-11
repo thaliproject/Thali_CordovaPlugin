@@ -22,53 +22,16 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEPeer.m
+//  THEMultipeerServerSocketRelayDelegate.h
 //
 
-#import "THEPeer.h"
+// Protocol implemented by classes wishing to know about socket related events
+@protocol THEMultipeerServerSocketRelayDelegate <NSObject>
 
-// THEPeer (Internal) interface.
-@interface THEPeer (Internal)
-@end
+// Called when the server socket succesfully connects to the app's listening socket
+- (void)didConnectWithClientPort:(unsigned short)clientPort withServerPort:(unsigned short)serverPort;
 
-// THEPeer implementation.
-@implementation THEPeer
-{
-@private
-}
+// Called when the server socket fails to connect
+- (void)didNotConnectWithServerPort:(unsigned short)serverPort;
 
-// Class initializer.
-- (instancetype)initWithIdentifier:(NSString *)identifier
-                              name:(NSString *)name
-{
-    // Initialize superclass.
-    self = [super init];
-    
-    // Handle errors.
-    if (!self)
-    {
-        return nil;
-    }
-    
-    // Initialize.
-    _identifier = identifier;
-    _name = name;
-    
-    // Done.
-    return self;
-}
-
-// Converts THEPeer to JSON.
-- (NSString *)JSON
-{
-    return [NSString stringWithFormat:@"[ { \"peerIdentifier\": \"%@\", \"peerName\": \"%@\", \"peerAvailable\": %@ } ]",
-            [self identifier],
-            [self name],
-            [self available] ? @"true" : @"false"];
-}
-
-@end
-
-// THEPeer (Internal) implementation.
-@implementation THEPeer (Internal)
 @end

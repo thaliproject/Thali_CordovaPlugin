@@ -8,9 +8,9 @@
     <license>MIT</license>
     <keywords>cordova,jxcore,node.js,thali</keywords>
     <engines>
-        <engine name="cordova-android" version=">=4.1.0" />
+        <engine name="cordova-android" version=">=5.0.0" />
         <engine name="cordova-ios" version=">=3.9.0" />
-        <engine name="android-sdk" version=">=21" />
+        <engine name="android-sdk" version=">=23" />
     </engines>
 
     <!-- Android -->
@@ -31,6 +31,19 @@
         <source-file src="src/android/java/io/jxcore/node/PeerAndConnectionModel.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/SocketThreadBase.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
+        
+        <!-- ThaliPermissions -->
+    		<config-file target="config.xml" parent="/*">
+          <feature name="ThaliPermissions" >
+            <param name="android-package" value="org.thaliproject.p2p.ThaliPermissions"/>
+          </feature>
+        </config-file>
+    
+        <js-module src="www/android/thaliPermissions.js" name="ThaliPermissions">
+            <clobbers target="window.ThaliPermissions" />
+        </js-module>
+        <source-file src="src/android/java/org/thaliproject/p2p/ThaliPermissions.java" target-dir="src/android/java/org/thaliproject/p2p/" />
+
         <hook type="before_compile" src="scripts/androidBeforeCompile.js" />
     </platform>
 
@@ -41,14 +54,14 @@
         <framework src="MultipeerConnectivity.framework" />
         <framework src="CoreBluetooth.framework" />
         <framework src="SystemConfiguration.framework" />
+        <header-file src="src/ios/THEThaliEventDelegate.h"
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/THERemoteConnectionDelegate.h"
+          compiler-flags="-Werror"/>
         <source-file src="src/ios/JXcoreExtension.m"
           compiler-flags="-Werror"/>
         <header-file src="src/ios/Utility/THEThreading.h"
           compiler-flags="-Werror" />
-        <header-file src="src/ios/Utility/THEAtomicFlag.h"
-          compiler-flags="-Werror" />
-        <source-file src="src/ios/Utility/THEAtomicFlag.m" 
-          compiler-flags="-Werror"/>
         <header-file src="src/ios/NPReachability/NPReachability.h" 
           compiler-flags="-Werror"/>
         <source-file src="src/ios/NPReachability/NPReachability.m" 
@@ -57,21 +70,23 @@
           compiler-flags="-Werror"/>
         <source-file src="src/ios/THEAppContext.m" 
           compiler-flags="-Werror"/>
-        <header-file src="src/ios/THEPeer.h" 
-          compiler-flags="-Werror"/>
-        <source-file src="src/ios/THEPeer.m" 
-          compiler-flags="-Werror"/>
         <header-file src="src/ios/THEPeerBluetoothDelegate.h" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/THEPeerBluetooth.h" 
           compiler-flags="-Werror"/>
         <source-file src="src/ios/THEPeerBluetooth.m" 
           compiler-flags="-Werror"/>
-        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSession.h" 
+        <header-file src="src/ios/THEPeerDiscoveryDelegate.h" 
           compiler-flags="-Werror"/>
-        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerSession.m" 
-          compiler-flags="-Werror -std=gnu99"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerConnectionDelegate.h" 
+          compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerDiscoveryDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSessionStateDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerManager.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerManager.m" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClient.h" 
           compiler-flags="-Werror"/>
@@ -102,6 +117,8 @@
         <source-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSocketRelay.m" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSocketRelayDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSocketRelayDelegate.h" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSocketRelay.h" 
           compiler-flags="-Werror"/>
