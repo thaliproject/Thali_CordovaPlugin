@@ -374,8 +374,13 @@ ThaliWifiInfrastructure.prototype.stop = function () {
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
 function () {
   var self = this;
-  self.states.listening.target = true;
   return promiseQueue.enqueue(function (resolve, reject) {
+    if (!self.states.started) {
+      return reject(new Error('Call Start!'));
+    }
+
+    self.states.listening.target = true;
+
     if (self.states.listening.current) {
       return resolve();
     }
@@ -492,7 +497,6 @@ function (skipPromiseQueue, changeTarget) {
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening =
 function () {
   var self = this;
-  self.states.advertising.target = true;
   return promiseQueue.enqueue(function (resolve, reject) {
     if (!self.states.started) {
       return reject(new Error('Call Start!'));
@@ -500,6 +504,8 @@ function () {
     if (!self.router) {
       return reject(new Error('Bad Router'));
     }
+
+    self.states.advertising.target = true;
 
     // Generate a new USN value to flag that something has changed
     // in this peer.

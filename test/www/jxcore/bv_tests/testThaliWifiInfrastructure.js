@@ -175,6 +175,25 @@ test('verify that Thali-specific messages are filtered correctly', function (t) 
   t.end();
 });
 
+var testFunctionBeforeStart = function (t, functionName) {
+  wifiInfrastructure.stop()
+  .then(function () {
+    return wifiInfrastructure[functionName]();
+  })
+  .catch(function (error) {
+    t.equal(error.message, 'Call Start!', 'specific error should be returned');
+    t.end();
+  });
+};
+
+test('#startListeningForAdvertisements should fail if start not called', function (t) {
+  testFunctionBeforeStart(t, 'startListeningForAdvertisements');
+});
+
+test('#startUpdateAdvertisingAndListening should fail if start not called', function (t) {
+  testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
+});
+
 test('#start should fail if called twice in a row', function (t) {
   // The start here is already the second since it is being
   // done once in the setup phase

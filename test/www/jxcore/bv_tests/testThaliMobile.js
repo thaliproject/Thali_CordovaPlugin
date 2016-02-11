@@ -40,24 +40,20 @@ var testIdempotentFunction = function (t, functionName) {
   });
 };
 
-test('#start should fail if called twice in a row', function (t) {
-  ThaliMobile.start(express.Router())
-  .then(function (combinedResult) {
-    verifyCombinedResultSuccess(t, combinedResult, 'first call should succeed');
-    return ThaliMobile.start(express.Router());
-  })
-  .catch(function (error) {
-    t.equal(error.message, 'Call Stop!', 'specific error should be returned');
-    t.end();
-  });
-});
-
-test('#startListeningForAdvertisements should fail if start not called', function (t) {
-  ThaliMobile.startListeningForAdvertisements()
+var testFunctionBeforeStart = function (t, functionName) {
+  ThaliMobile[functionName]()
   .catch(function (error) {
     t.equal(error.message, 'Call Start!', 'specific error should be returned');
     t.end();
   });
+};
+
+test('#startListeningForAdvertisements should fail if start not called', function (t) {
+  testFunctionBeforeStart(t, 'startListeningForAdvertisements');
+});
+
+test('#startUpdateAdvertisingAndListening should fail if start not called', function (t) {
+  testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
 });
 
 test('should be able to call #stopListeningForAdvertisements many times', function (t) {
@@ -72,10 +68,14 @@ test('should be able to call #startUpdateAdvertisingAndListening many times', fu
   testIdempotentFunction(t, 'startUpdateAdvertisingAndListening');
 });
 
-test('#startUpdateAdvertisingAndListening should fail if start not called', function (t) {
-  ThaliMobile.startUpdateAdvertisingAndListening()
+test('#start should fail if called twice in a row', function (t) {
+  ThaliMobile.start(express.Router())
+  .then(function (combinedResult) {
+    verifyCombinedResultSuccess(t, combinedResult, 'first call should succeed');
+    return ThaliMobile.start(express.Router());
+  })
   .catch(function (error) {
-    t.equal(error.message, 'Call Start!', 'specific error should be returned');
+    t.equal(error.message, 'Call Stop!', 'specific error should be returned');
     t.end();
   });
 });
