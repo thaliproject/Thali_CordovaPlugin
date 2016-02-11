@@ -227,7 +227,7 @@ function ThaliACLLayer(router, dbName) {
 }
 
 /**
- * There are plenty of fun face conditions where we think a remote peer is
+ * There are plenty of fun race conditions where we think a remote peer is
  * fully sync'd and so we remove them from our beacon list only to find out
  * they aren't. To make the system a bit more robust once a beacon is advertised
  * we will continue to allow requests from it up to X minutes after it is
