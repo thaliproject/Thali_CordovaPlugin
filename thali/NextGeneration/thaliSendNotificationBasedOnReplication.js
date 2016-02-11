@@ -155,7 +155,7 @@ ThaliSendNotificationBasedOnReplication.NOTIFICATION_BEACON_PATH =
  * @returns {string}
  */
 ThaliSendNotificationBasedOnReplication.calculateSeqPointKeyId =
-  function(ecdhPublicKey) {
+  function (ecdhPublicKey) {
     return ThaliSendNotificationBasedOnReplication.LOCAL_SEQ_POINT_PREFIX +
       urlsafeBase64.encode(ecdhPublicKey);
   };
@@ -387,15 +387,18 @@ ThaliSendNotificationBasedOnReplication.prototype._calculatePeersToNotify =
           var seqId =
             ThaliSendNotificationBasedOnReplication
               .calculateSeqPointKeyId(ecdhPublicKey);
-          promiseArray.push(this._pouchDB.get(seqId)
+          promiseArray.push(self._pouchDB.get(seqId)
             .then(function (doc) {
               var peerSeqId = doc.lastSyncedSequenceNumber;
-              if (peerSeqId && peerSeqId < seqValue) {
+              if (peerSeqId !== undefined && peerSeqId < seqValue) {
                 return ecdhPublicKey;
               }
               return null;
             }).catch(function (err) {
-              throw new Error(err);
+              if (err.status === 404) { // Not Found
+                return ecdhPublicKey;
+              }
+              return Promise.reject(err);
             }));
         });
         return Promise.all(promiseArray).then(function (resultsArray) {

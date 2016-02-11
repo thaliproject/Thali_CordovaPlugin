@@ -1,16 +1,18 @@
-var LogCallback;
+'use strict';
+
+var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 
 /**
- * Turn Bluetooth and WiFi either on or off
- * This is a NOOP on iOS and the desktop
+ * Turn Bluetooth and WiFi either on or off.
+ * This is a NOOP on iOS and the desktop.
  * @param {boolean} on - true to turn radios on and false to turn them off
  */
-exports.toggleRadios = function(on) {
+exports.toggleRadios = function (on) {
 
-  if (typeof jxcore == 'undefined' || !jxcore.utils.OSInfo().isMobile || 
-      !jxcore.utils.OSInfo().isAndroid) 
+  if (typeof jxcore === 'undefined' || !jxcore.utils.OSInfo().isMobile ||
+      !jxcore.utils.OSInfo().isAndroid)
   {
     return;
   }
@@ -23,13 +25,13 @@ exports.toggleRadios = function(on) {
       });
     });
   } else {
-    console.log("ERROR: toggleRadios called on unsupported platform");
+    console.log('ERROR: toggleRadios called on unsupported platform');
   }
 };
 
 exports.toggleWifi = function (on, callback) {
 
-  if (typeof jxcore == 'undefined') {
+  if (typeof jxcore === 'undefined') {
     callback();
     return;
   }
@@ -53,19 +55,21 @@ exports.toggleBluetooth = function (on, callback) {
 
 function isFunction(functionToCheck) {
   var getType = {};
-  return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+  return functionToCheck && getType.toString.call(functionToCheck) ===
+    '[object Function]';
 }
 
 /**
- * Log a message to the screen - only applies when running on Mobile. It assumes we are using our test framework
- * with our Cordova WebView who is setup to receive logging messages and display them.
+ * Log a message to the screen - only applies when running on Mobile. It assumes
+ * we are using our test framework with our Cordova WebView who is setup to
+ * receive logging messages and display them.
  * @param {string} message
  */
-exports.logMessageToScreen = function(message) {
-  if (isFunction(LogCallback)) {
-    LogCallback(message);
+module.exports.logMessageToScreen = function (message) {
+  if (isFunction(logCallback)) {
+    logCallback(message);
   } else {
-    console.log("LogCallback not set !!!!");
+    console.log('logCallback not set !!!!');
   }
 };
 
@@ -74,31 +78,31 @@ var myName;
 /**
  * Set the name given used by this device. The name is
  * retrievable via a function exposed to the Cordova side.
- * @param name
+ * @param {string} name
  */
-exports.setName = function (name) {
+module.exports.setName = function (name) {
   myName = name;
 };
 
 /**
  * Get the name of this device.
  */
-exports.getName = function () {
+module.exports.getName = function () {
   return myName;
 };
 
 if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
   Mobile('setLogCallback').registerAsync(function (callback) {
-    LogCallback = callback;
+    logCallback = callback;
   });
 
   Mobile('getMyName').registerAsync(function (callback) {
     callback(myName);
   });
 } else {
-  LogCallback = function(message) {
+  logCallback = function (message) {
     console.log(message);
-  }
+  };
 }
 
 /**
@@ -108,7 +112,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  * and is removed when the process exits.
  */
 var tmpObject = null;
-exports.tmpDirectory = function () {
+module.exports.tmpDirectory = function () {
   if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
     return os.tmpdir();
   }
@@ -132,7 +136,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
         console.log('BLE advertisement is not supported: ' + err );
         return;
       }
-      console.log("BLE advertisement is supported");
+      console.log('BLE advertisement is supported');
     });
   }, 5000);
 }
