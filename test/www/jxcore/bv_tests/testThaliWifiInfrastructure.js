@@ -198,6 +198,10 @@ test('#start should fail if called twice in a row', function (t) {
   // The start here is already the second since it is being
   // done once in the setup phase
   wifiInfrastructure.start(express.Router())
+  .then(function () {
+    t.fail('call should not succeed');
+    t.end();
+  })
   .catch(function (error) {
     t.equal(error.message, 'Call Stop!', 'specific error should be received');
     t.end();
