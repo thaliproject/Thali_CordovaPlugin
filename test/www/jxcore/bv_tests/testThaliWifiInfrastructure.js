@@ -18,6 +18,7 @@ var wifiInfrastructure = new ThaliWifiInfrastructure();
 var test = tape({
   setup: function (t) {
     wifiInfrastructure.start(express.Router()).then(function () {
+      t.equals(wifiInfrastructure.states.started, true, 'should be in started state');
       t.end();
     });
   },
@@ -25,6 +26,7 @@ var test = tape({
     // Stop everything at the end of tests to make sure
     // the next test starts from clean state
     wifiInfrastructure.stop().then(function () {
+      t.equals(wifiInfrastructure.states.started, false, 'should not be in started state');
       t.end();
     });
   }
@@ -175,6 +177,13 @@ test('#start should fail if called twice in a row', function (t) {
   wifiInfrastructure.start(express.Router())
   .catch(function (error) {
     t.equal(error.message, 'Call Stop!', 'specific error should be received');
+    t.end();
+  });
+});
+
+test('should not be started after stop is called', function (t) {
+  wifiInfrastructure.stop().then(function () {
+    t.equals(wifiInfrastructure.states.started, false, 'should not be in started state');
     t.end();
   });
 });
