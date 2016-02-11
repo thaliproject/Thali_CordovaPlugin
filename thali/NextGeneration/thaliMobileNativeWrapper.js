@@ -5,6 +5,10 @@ var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
 var EventEmitter = require('events').EventEmitter;
 
+var states = {
+  started: false
+};
+
 /** @module thaliMobileNativeWrapper */
 
 /**
@@ -69,7 +73,11 @@ var EventEmitter = require('events').EventEmitter;
  * @returns {Promise<?Error>}
  */
 module.exports.start = function (router) {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    states.started = true;
+    resolve();
+  });
 };
 
 /**
@@ -84,7 +92,11 @@ module.exports.start = function (router) {
  * @returns {Promise<?Error>}
  */
 module.exports.stop = function () {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    states.started = false;
+    resolve();
+  });
 };
 
 /**
@@ -243,6 +255,9 @@ var nonTCPNetworkStatus = null;
 
 module.exports.getNonTCPNetworkStatus = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
+    if (!states.started) {
+      return reject(new Error('Call Start!'));
+    }
     if (nonTCPNetworkStatus === null) {
       module.exports.emitter.once('networkChangedNonTCP',
       function (networkChangedValue) {

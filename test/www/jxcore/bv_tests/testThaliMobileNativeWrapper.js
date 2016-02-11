@@ -9,12 +9,29 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    t.end();
+    ThaliMobileNativeWrapper.stop().then(function () {
+      t.end();
+    });
   }
 });
 
-test('can get the network status', function (t) {
+test('error returned if network status called before starting', function (t) {
   ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
+  .then(function () {
+    t.fail('call should not succeed');
+    t.end();
+  })
+  .catch(function (error) {
+    t.equal(error.message, 'Call Start!', 'specific error should be received');
+    t.end();
+  });
+});;
+
+test('can get the network status after started', function (t) {
+  ThaliMobileNativeWrapper.start()
+  .then(function () {
+    return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
+  })
   .then(function (networkChangedValue) {
     t.doesNotThrow(function () {
       var requiredProperties = [
