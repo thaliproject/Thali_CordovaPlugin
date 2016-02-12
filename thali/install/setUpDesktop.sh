@@ -8,7 +8,7 @@ cd ../../test/TestServer
 jx npm install
 jx generateServerAddress.js
 cd ../../thali
-jx npm install
+jx npm install --no-optional
 jx npm link
 cd install
 jx npm install

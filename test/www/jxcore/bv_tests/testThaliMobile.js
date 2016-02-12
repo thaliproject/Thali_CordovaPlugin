@@ -1,26 +1,29 @@
 'use strict';
 
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var tape = require('../lib/thali-tape');
+var testUtils = require('../lib/testUtils.js');
 var express = require('express');
 var validations = require('thali/validations');
-
-var test = tape({
-  setup: function(t) {
-    t.end();
-  },
-  teardown: function(t) {
-    ThaliMobile.stop()
-    .then(function (combinedResult) {
-      t.end();
-    });
-  }
-});
 
 var verifyCombinedResultSuccess = function (t, combinedResult, message) {
   t.equal(combinedResult.wifiResult, null, message || 'error should be null');
   // TODO: Add nativeResult check once it is returned
 };
+
+var test = tape({
+  setup: function (t) {
+    t.end();
+  },
+  teardown: function (t) {
+    ThaliMobile.stop()
+    .then(function (combinedResult) {
+      verifyCombinedResultSuccess(t, combinedResult);
+      t.end();
+    });
+  }
+});
 
 var testIdempotentFunction = function (t, functionName) {
   ThaliMobile.start(express.Router())
@@ -37,24 +40,24 @@ var testIdempotentFunction = function (t, functionName) {
   });
 };
 
-test('#start should fail if called twice in a row', function (t) {
-  ThaliMobile.start(express.Router())
-  .then(function (combinedResult) {
-    verifyCombinedResultSuccess(t, combinedResult, 'first call should succeed');
-    return ThaliMobile.start(express.Router());
-  })
-  .catch(function (error) {
-    t.equal(error.message, 'Call Stop!', 'specific error should be returned');
+var testFunctionBeforeStart = function (t, functionName) {
+  ThaliMobile[functionName]()
+  .then(function () {
+    t.fail('call should not succeed');
     t.end();
-  });
-});
-
-test('#startListeningForAdvertisements should fail if start not called', function (t) {
-  ThaliMobile.startListeningForAdvertisements()
+  })
   .catch(function (error) {
     t.equal(error.message, 'Call Start!', 'specific error should be returned');
     t.end();
   });
+};
+
+test('#startListeningForAdvertisements should fail if start not called', function (t) {
+  testFunctionBeforeStart(t, 'startListeningForAdvertisements');
+});
+
+test('#startUpdateAdvertisingAndListening should fail if start not called', function (t) {
+  testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
 });
 
 test('should be able to call #stopListeningForAdvertisements many times', function (t) {
@@ -69,10 +72,14 @@ test('should be able to call #startUpdateAdvertisingAndListening many times', fu
   testIdempotentFunction(t, 'startUpdateAdvertisingAndListening');
 });
 
-test('#startUpdateAdvertisingAndListening should fail if start not called', function (t) {
-  ThaliMobile.startUpdateAdvertisingAndListening()
+test('#start should fail if called twice in a row', function (t) {
+  ThaliMobile.start(express.Router())
+  .then(function (combinedResult) {
+    verifyCombinedResultSuccess(t, combinedResult, 'first call should succeed');
+    return ThaliMobile.start(express.Router());
+  })
   .catch(function (error) {
-    t.equal(error.message, 'Call Start!', 'specific error should be returned');
+    t.equal(error.message, 'Call Stop!', 'specific error should be returned');
     t.end();
   });
 });
@@ -85,37 +92,26 @@ if (!(typeof Mobile !== 'undefined' && Mobile.iAmAMock)) {
   return;
 }
 
-test('a peer should be found after #startListeningForAdvertisements is called', function (t) {
-  var peerAvailabilityChangedHandler = function (peers) {
+var setupDiscoveryAndFindPeer = function (t, callback) {
+  ThaliMobile.emitter.once('peerAvailabilityChanged', function (peers) {
     // Just pick the first peer from the list. In reality, it is possible that
     // if this test is run in environment with multiple Thali apps running, the
     // peer we get here isn't exactly the one with whom we are running these
-    // tests with. However, even with any peer, this test vefifies that we do get
-    // correctly formatted advertisements.
+    // tests with. However, even with any peer, this test vefifies that we do
+    // get correctly formatted advertisements.
     var peer = peers[0];
-
-    t.doesNotThrow(function () {
-      validations.ensureNonNullOrEmptyString(peer.peerIdentifier);
-    }, 'peer should have a non-empty identifier');
-    t.doesNotThrow(function () {
-      validations.ensureNonNullOrEmptyString(peer.hostAddress);
-    }, 'peer should have a non-empty host address');
-    t.equals(typeof peer.suggestedTCPTimeout, 'number', 'peer should have suggested timeout');
-    t.equals(typeof peer.portNumber, 'number', 'peer should have port number');
-    t.ok(peer.connectionTypes.length > 0, 'peer should have more than one connection type');
-
-    ThaliMobile.emitter.removeListener('peerAvailabilityChanged', peerAvailabilityChangedHandler);
-    ThaliMobile.stopListeningForAdvertisements()
-    .then(function (combinedResult) {
-      verifyCombinedResultSuccess(t, combinedResult);
-      // On purpose not stopping advertising within the test
-      // because another device might still be running the test
-      // and waiting for advertisements. The stop happens in the
-      // test teardown phase.
-      t.end();
+    callback(peer, function () {
+      ThaliMobile.stopListeningForAdvertisements()
+      .then(function (combinedResult) {
+        verifyCombinedResultSuccess(t, combinedResult);
+        // On purpose not stopping advertising within the test
+        // because another device might still be running the test
+        // and waiting for advertisements. The stop happens in the
+        // test teardown phase.
+        t.end();
+      });
     });
-  };
-  ThaliMobile.emitter.on('peerAvailabilityChanged', peerAvailabilityChangedHandler);
+  });
   ThaliMobile.start(express.Router())
   .then(function (combinedResult) {
     verifyCombinedResultSuccess(t, combinedResult);
@@ -128,4 +124,59 @@ test('a peer should be found after #startListeningForAdvertisements is called', 
   .then(function (combinedResult) {
     verifyCombinedResultSuccess(t, combinedResult);
   });
+};
+
+test('a peer should be found after #startListeningForAdvertisements is called', function (t) {
+  setupDiscoveryAndFindPeer(t, function (peer, done) {
+    t.doesNotThrow(function () {
+      validations.ensureNonNullOrEmptyString(peer.peerIdentifier);
+    }, 'peer should have a non-empty identifier');
+    t.doesNotThrow(function () {
+      validations.ensureNonNullOrEmptyString(peer.hostAddress);
+    }, 'peer should have a non-empty host address');
+    t.equals(typeof peer.suggestedTCPTimeout, 'number', 'peer should have suggested timeout');
+    t.equals(typeof peer.portNumber, 'number', 'peer should have port number');
+    t.ok(peer.connectionType, 'peer should have a connection type');
+    var connectionTypeKey;
+    for (var key in ThaliMobile.connectionTypes) {
+      if (peer.connectionType === ThaliMobile.connectionTypes[key]) {
+        connectionTypeKey = key;
+      }
+    }
+    t.equals(peer.connectionType, ThaliMobile.connectionTypes[connectionTypeKey],
+             'connection type should match one of the pre-defined types');
+    done();
+  });
 });
+
+/* This is commented out since there are timing issue why this doesn't always pass
+test('when network connection is lost a peer should be marked unavailable', function (t) {
+  setupDiscoveryAndFindPeer(t, function (peer, done) {
+    var availabilityChangedHandler = function (peers) {
+      var matchingPeer = null;
+      peers.forEach(function (peerCandidate) {
+        if (peerCandidate.peerIdentifier === peer.peerIdentifier) {
+          matchingPeer = peerCandidate;
+        }
+      });
+      if (!matchingPeer) {
+        return;
+      }
+      t.equals(matchingPeer.hostAddress, null, 'host address should be null');
+      t.equals(matchingPeer.portNumber, null, 'port number should be null');
+      ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
+        testUtils.getMockWifiNetworkStatus(true)
+      );
+      setTimeout(function () {
+        done();
+      }, 500);
+    };
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityChangedHandler);
+    setTimeout(function () {
+      ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
+        testUtils.getMockWifiNetworkStatus(false)
+      );
+    }, 500);
+  });
+});
+*/

@@ -133,3 +133,12 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
     }
   });
 }
+
+module.exports.getMockWifiNetworkStatus = function (wifiEnabled) {
+  return {
+    wifi: wifiEnabled ? 'on' : 'off',
+    bluetooth: 'doNotCare',
+    bluetoothLowEnergy: 'doNotCare',
+    cellular: 'doNotCare'
+  };
+};
