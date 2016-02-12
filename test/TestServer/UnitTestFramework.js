@@ -80,20 +80,24 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
     function emit(device, msg) {
       var retries = 10;
+      var emitTimeout = null;
 
       var acknowledged = false;
       device.socket.once(util.format("%s_ok", msg), function() {
-        acknowledged = true;      
+        acknowledged = true;
+        if (emitTimeout !== null) {
+          clearTimeout(emitTimeout);
+        }
       });
 
       // Emit message every second until acknowledged
       function _emit() {
         if (!acknowledged) {
-          device.socket.emit(msg);          
+          device.socket.emit(msg);
           if (--retries > 0) {
-            setTimeout(_emit, 1000);
+            emitTimeout = setTimeout(_emit, 1000);
           } else {
-            logger.error("test server: Device %s", device.name);
+            logger.error("test server: Device %s", device.deviceName);
           }
         }
       }

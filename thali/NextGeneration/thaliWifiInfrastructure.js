@@ -9,11 +9,20 @@ var url = require('url');
 var express = require('express');
 var validations = require('../validations');
 var ThaliConfig = require('./thaliConfig');
+var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 var logger = require('../thalilogger')('thaliWifiInfrastructure');
 
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
+
+var promiseResultSuccessOrFailure = function (promise) {
+  return promise.then(function (success) {
+    return success;
+  }).catch(function (failure) {
+    return failure;
+  });
+};
 
 /** @module ThaliWifiInfrastructure */
 
@@ -59,9 +68,9 @@ function ThaliWifiInfrastructure () {
   this.router = null;
   this.routerServer = null;
   this.routerServerErrorListener = null;
-  this.started = null;
-  this.listening = null;
-  this.advertising = null;
+
+  this.states = this._getInitialStates();
+
   // A variable to hold information about known peer availability states
   // and used to avoid emitting peer availability changes in case the
   // availability hasn't changed from the previous known value.
@@ -89,22 +98,92 @@ ThaliWifiInfrastructure.prototype._init = function () {
     this._handleMessage(data, false);
   }.bind(this));
 
-  process.on('connectionStatusChanged', function (status) {
+  this._networkChangedHandler = function (networkChangedValue) {
+    this._handleNetworkChanges(networkChangedValue);
+
     // When running within JXcore Cordova Mobile environment,
-    // ignore this event, because there, the network events
-    // are bubbled up via the native layer.
-    if (typeof Mobile !== 'undefined' && !Mobile.iAmAMock) {
+    // don't pass this event onwards, because there, the network
+    // events are bubbled up via the native layer.
+    if (typeof Mobile !== 'undefined') {
       return;
     }
-    // Currently used only when testing on desktop in a mocked
-    // up environment, because JXcore does not fire these
-    // events on desktops. In the tests, this event can be fired
-    // from anywhere by emitting the right event on the global
-    // process object.
-    this.emit('networkChangedWifi', {
-      wifi: status === 'WiFi' ? 'on' : 'off'
+    this.emit('networkChangedWifi', networkChangedValue);
+  }.bind(this);
+};
+
+ThaliWifiInfrastructure.prototype._getInitialStates = function () {
+  return {
+    started: false,
+    listening: {
+      target: false,
+      current: false
+    },
+    advertising: {
+      target: false,
+      current: false
+    },
+    networkState: {}
+  };
+};
+
+ThaliWifiInfrastructure.prototype._handleNetworkChanges =
+function (networkChangedValue) {
+  var self = this;
+  var previousNetworkState = self.states.networkState;
+  self.states.networkState = networkChangedValue;
+  // If the wifi state hasn't changed, we are not really interested
+  if (previousNetworkState.wifi === self.states.networkState.wifi) {
+    return;
+  }
+  var actionList = [];
+  if (self.states.networkState.wifi === 'on') {
+    // If the wifi state turned on, try to get into the target states
+    if (self.states.listening.target) {
+      actionList.push(promiseResultSuccessOrFailure(
+        self.startListeningForAdvertisements())
+      );
+    }
+    if (self.states.advertising.target) {
+      actionList.push(promiseResultSuccessOrFailure(
+        self.startUpdateAdvertisingAndListening())
+      );
+    }
+  } else {
+    var changedPeers = [];
+    for (var key in self.peerAvailabilities) {
+      if (self.peerAvailabilities[key]) {
+        // Mark change in peer availability list
+        delete self.peerAvailabilities[key];
+        // Add peer to the list of changes to emit
+        changedPeers.push({
+          peerIdentifier: key,
+          hostAddress: null,
+          portNumber: null
+        });
+      }
+    }
+    if (changedPeers.length > 0) {
+      self.emit('wifiPeerAvailabilityChanged', changedPeers);
+    }
+    // If wifi didn't turn on, it was turned into a state where we want
+    // to stop our actions
+    actionList = [
+      promiseResultSuccessOrFailure(
+        self._stopAdvertisingAndListening(false, false)
+      ),
+      promiseResultSuccessOrFailure(
+        self._stopListeningForAdvertisements(false, false)
+      )
+    ];
+  }
+  Promise.all(actionList).then(function (results) {
+    results.forEach(function (result) {
+      if (result) {
+        logger.warn('Error when reacting to wifi state changes: %s',
+                    result.toString());
+      }
     });
-  }.bind(this));
+  });
 };
 
 ThaliWifiInfrastructure.prototype._setLocation = function (address, port) {
@@ -118,7 +197,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     return false;
   }
 
-  var usn = data.USN
+  var usn = data.USN;
   try {
     validations.ensureNonNullOrEmptyString(usn);
   } catch (error) {
@@ -127,8 +206,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
   }
 
   var peer = {
-    peerIdentifier: usn,
-    peerAvailable: available
+    peerIdentifier: usn
   };
 
   // We expect location only in alive messages.
@@ -143,12 +221,23 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     }
     peer.hostAddress = parsedLocation.hostname;
     peer.portNumber = portNumber;
+  } else {
+    peer.hostAddress = peer.portNumber = null;
   }
 
-  if (this.peerAvailabilities[peer.peerIdentifier] === available) {
+  // If there are no changes, no need to do anything
+  if (available && this.peerAvailabilities[peer.peerIdentifier] ||
+      !available && !(peer.peerIdentifier in this.peerAvailabilities)) {
     return false;
   }
-  this.peerAvailabilities[peer.peerIdentifier] = available;
+
+  // Mark changes to the peer availabilities list
+  if (available) {
+    this.peerAvailabilities[peer.peerIdentifier] = true;
+  } else {
+    delete this.peerAvailabilities[peer.peerIdentifier];
+  }
+
   this.emit('wifiPeerAvailabilityChanged', [peer]);
   return true;
 };
@@ -166,6 +255,24 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
     }
   }
   return true;
+};
+
+ThaliWifiInfrastructure.prototype._rejectPerWifiState = function (reject) {
+  var errorMessage;
+  switch (this.states.networkState.wifi) {
+    case 'off': {
+      errorMessage = 'Radio Turned Off';
+      break;
+    }
+    case 'notHere': {
+      errorMessage = 'No Wifi radio';
+      break;
+    }
+    default: {
+      errorMessage = 'Unspecified Error with Radio infrastructure';
+    }
+  }
+  return reject(new Error(errorMessage));
 };
 
 /**
@@ -190,13 +297,19 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
  */
 ThaliWifiInfrastructure.prototype.start = function (router) {
   var self = this;
-  return promiseQueue.enqueue(function(resolve, reject) {
-    if (self.started === true) {
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (self.states.started === true) {
       return reject(new Error('Call Stop!'));
     }
-    self.started = true;
-    self.router = router;
-    return resolve();
+    ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
+    .then(function (networkStatus) {
+      self.states.networkState = networkStatus;
+      self.states.started = true;
+      self.router = router;
+      ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+                                           self._networkChangedHandler);
+      return resolve();
+    });
   });
 };
 
@@ -213,16 +326,18 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
  */
 ThaliWifiInfrastructure.prototype.stop = function () {
   var self = this;
-  return promiseQueue.enqueue(function(resolve, reject) {
-    if (self.started === false) {
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (self.states.started === false) {
       return resolve();
     }
-    self.stopAdvertisingAndListening(true)
+    self._stopAdvertisingAndListening(true, true)
     .then(function () {
-      return self.stopListeningForAdvertisements(true);
+      return self._stopListeningForAdvertisements(true, true);
     })
     .then(function () {
-      self.started = false;
+      self.states = self._getInitialStates();
+      ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
+                                                       self._networkChangedHandler);
       return resolve();
     })
     .catch(function (error) {
@@ -250,16 +365,27 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () {
+ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
+function () {
   var self = this;
-  return promiseQueue.enqueue(function(resolve, reject) {
-    if (self.listening) {
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (!self.states.started) {
+      return reject(new Error('Call Start!'));
+    }
+
+    self.states.listening.target = true;
+
+    if (self.states.listening.current) {
       return resolve();
     }
-    self._client.start(function () {
-      self.listening = true;
-      return resolve();
-    });
+    if (self.states.networkState.wifi === 'on') {
+      self._client.start(function () {
+        self.states.listening.current = true;
+        return resolve();
+      });
+    } else {
+      return self._rejectPerWifiState(reject);
+    }
   });
 };
 
@@ -280,14 +406,23 @@ ThaliWifiInfrastructure.prototype.startListeningForAdvertisements = function () 
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function (skipPromiseQueue) {
+ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements =
+function () {
+  return this._stopListeningForAdvertisements(false, true);
+};
+
+ThaliWifiInfrastructure.prototype._stopListeningForAdvertisements =
+function (skipPromiseQueue, changeTarget) {
   var self = this;
+  if (changeTarget) {
+    self.states.listening.target = false;
+  }
   var action = function (resolve, reject) {
-    if (!self.listening) {
+    if (!self.states.listening.current) {
       return resolve();
     }
     self._client.stop(function () {
-      self.listening = false;
+      self.states.listening.current = false;
       return resolve();
     });
   };
@@ -353,21 +488,28 @@ ThaliWifiInfrastructure.prototype.stopListeningForAdvertisements = function (ski
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function () {
+ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening =
+function () {
   var self = this;
-  return promiseQueue.enqueue(function(resolve, reject) {
-    if (self.started === false) {
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (!self.states.started) {
       return reject(new Error('Call Start!'));
     }
     if (!self.router) {
       return reject(new Error('Bad Router'));
     }
 
+    self.states.advertising.target = true;
+
     // Generate a new USN value to flag that something has changed
     // in this peer.
     self.usn = 'urn:uuid:' + uuid.v4();
 
-    if (self.advertising === true) {
+    if (self.states.networkState.wifi !== 'on') {
+      return self._rejectPerWifiState(reject);
+    }
+
+    if (self.states.advertising.current) {
       // If we were already advertising, we need to restart the server
       // so that a byebye is issued for the old USN and and alive
       // message for the new one.
@@ -388,7 +530,7 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
       var startErrorListener = function (error) {
         logger.error('Router server emitted an error: %s', error.toString());
         self.routerServer.removeListener('error', startErrorListener);
-        self.routerServer = null
+        self.routerServer = null;
         reject(new Error('Unspecified Error with Radio infrastructure'));
       };
       self.routerServerErrorListener = function (error) {
@@ -411,7 +553,7 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
           // occur any time.
           self.routerServer.removeListener('error', startErrorListener);
           self.routerServer.on('error', self.routerServerErrorListener);
-          self.advertising = true;
+          self.states.advertising.current = true;
           return resolve();
         });
       };
@@ -435,10 +577,19 @@ ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening = function 
  *
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function (skipPromiseQueue) {
+ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening =
+function () {
+  return this._stopAdvertisingAndListening(false, true);
+};
+
+ThaliWifiInfrastructure.prototype._stopAdvertisingAndListening =
+function (skipPromiseQueue, changeTarget) {
   var self = this;
+  if (changeTarget) {
+    self.states.advertising.target = false;
+  }
   var action = function (resolve, reject) {
-    if (!self.advertising) {
+    if (!self.states.advertising.current) {
       return resolve();
     }
     self._server.stop(function () {
@@ -450,7 +601,7 @@ ThaliWifiInfrastructure.prototype.stopAdvertisingAndListening = function (skipPr
         self.port = 0;
         self.routerServer.removeListener('error', self.routerServerErrorListener);
         self.routerServer = null;
-        self.advertising = false;
+        self.states.advertising.current = false;
         return resolve();
       });
     });
