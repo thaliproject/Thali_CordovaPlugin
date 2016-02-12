@@ -136,13 +136,18 @@ function testStartAndStop(t, startArg, pouchDbInitFunction, mockInitFunction,
         }).then(function () {
           return thaliSendNotificationBasedOnReplication.stop();
         }).then(function () {
-        mockThaliNotificationServer.verify();
-        t.ok(SpyOnThaliNotificationServerConstructor.calledOnce);
-        t.ok(SpyOnThaliNotificationServerConstructor
-          .calledWithExactly(router, ecdhForLocalDevice,
-                             millisecondsUntilExpiration));
-        t.end();
-      });
+          return thaliSendNotificationBasedOnReplication._findSequenceNumber()
+          .then(function (seq) {
+            console.log("My sequence number is " + seq);
+          });
+        }).then(function () {
+          mockThaliNotificationServer.verify();
+          t.ok(SpyOnThaliNotificationServerConstructor.calledOnce);
+          t.ok(SpyOnThaliNotificationServerConstructor
+            .calledWithExactly(router, ecdhForLocalDevice,
+                               millisecondsUntilExpiration));
+          t.end();
+        });
     });
 }
 
@@ -158,144 +163,145 @@ function mockStartAndStop(mockThaliNotificationServer, startArg) {
     .returns(Promise.resolve());
 }
 
-test('No peers and empty database', function (t) {
-  var startArg = [];
-  testStartAndStop(t,
-    startArg,
-    function () { return Promise.resolve(); },
-    function (mockThaliNotificationServer) {
-      mockStartAndStop(mockThaliNotificationServer, startArg);
-    });
-});
-
-test('One peer and empty DB', function (t) {
-  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var startArg = [ partnerPublicKey ];
-  testStartAndStop(t,
-    startArg,
-    function () { return Promise.resolve(); },
-    function (mockThaliNotificationServer) {
-      mockStartAndStop(mockThaliNotificationServer, startArg);
-    });
-});
-
-test('One peer with _Local set behind current seq', function (t) {
-  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var startArg = [ partnerPublicKey ];
-  testStartAndStop(t,
-    startArg,
-    function (pouchDB) {
-      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
-        .then(function () {
-          return pouchDB.put(
-            {_id: ThaliSendNotificationBasedOnReplication
-                   .calculateSeqPointKeyId(partnerPublicKey),
-             lastSyncedSequenceNumber: 0});
-        });
-    },
-    function (mockThaliNotificationServer) {
-      mockStartAndStop(mockThaliNotificationServer, startArg);
-    });
-});
-
-test('One peer with _Local set equal to current seq', function (t) {
-  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var startArg = [ partnerPublicKey ];
-  testStartAndStop(t,
-    startArg,
-    function (pouchDB) {
-      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
-        .then(function () {
-          return pouchDB.put(
-            {_id: ThaliSendNotificationBasedOnReplication
-              .calculateSeqPointKeyId(partnerPublicKey),
-              lastSyncedSequenceNumber: 2});
-        });
-    },
-    function (mockThaliNotificationServer) {
-      mockStartAndStop(mockThaliNotificationServer, []);
-    });
-});
-
-test('One peer with _Local set ahead of current seq (and no this should ' +
-     'not happen)', function (t) {
-  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var startArg = [ partnerPublicKey ];
-  testStartAndStop(t,
-    startArg,
-    function (pouchDB) {
-      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
-        .then(function () {
-          return pouchDB.put(
-            {_id: ThaliSendNotificationBasedOnReplication
-              .calculateSeqPointKeyId(partnerPublicKey),
-              lastSyncedSequenceNumber: 50});
-        });
-    },
-    function (mockThaliNotificationServer) {
-      mockStartAndStop(mockThaliNotificationServer, []);
-    });
-});
-
-test('Three peers, one not in DB, one behind and one ahead', function (t) {
-  var partnerNotInDbPublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var partnerBehindInDbPublicKey =
-    crypto.createECDH('secp521r1').generateKeys();
-  var partnerAheadInDbPublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var startArg = [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey,
-                  partnerAheadInDbPublicKey];
-  testStartAndStop(t,
-    startArg,
-    function (pouchDB) {
-      return pouchDB.put({_id: 'id', stuff: 'whatever'})
-        .then(function () {
-          return pouchDB.put(
-            {
-              _id: ThaliSendNotificationBasedOnReplication
-                .calculateSeqPointKeyId(partnerBehindInDbPublicKey),
-              lastSyncedSequenceNumber: 1
-            }
-        );})
-        .then(function () {
-          return pouchDB.put(
-            {_id: ThaliSendNotificationBasedOnReplication
-              .calculateSeqPointKeyId(partnerAheadInDbPublicKey),
-            lastSyncedSequenceNumber: 500}
-          );
-        });
-    },
-    function (mockThaliNotificationServer) {
-      mockStartAndStop(mockThaliNotificationServer,
-                       [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey]);
-    });
-});
-
-// Run a test where we change a document and make sure beacons are updated
+//test('No peers and empty database', function (t) {
+//  var startArg = [];
+//  testStartAndStop(t,
+//    startArg,
+//    function () { return Promise.resolve(); },
+//    function (mockThaliNotificationServer) {
+//      mockStartAndStop(mockThaliNotificationServer, startArg);
+//    });
+//});
+//
+//test('One peer and empty DB', function (t) {
+//  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+//  var startArg = [ partnerPublicKey ];
+//  testStartAndStop(t,
+//    startArg,
+//    function () { return Promise.resolve(); },
+//    function (mockThaliNotificationServer) {
+//      mockStartAndStop(mockThaliNotificationServer, startArg);
+//    });
+//});
+//
+//test('One peer with _Local set behind current seq', function (t) {
+//  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+//  var startArg = [ partnerPublicKey ];
+//  testStartAndStop(t,
+//    startArg,
+//    function (pouchDB) {
+//      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
+//        .then(function () {
+//          return pouchDB.put(
+//            {_id: ThaliSendNotificationBasedOnReplication
+//                   .calculateSeqPointKeyId(partnerPublicKey),
+//             lastSyncedSequenceNumber: 0});
+//        });
+//    },
+//    function (mockThaliNotificationServer) {
+//      mockStartAndStop(mockThaliNotificationServer, startArg);
+//    });
+//});
+//
+//test('One peer with _Local set equal to current seq', function (t) {
+//  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+//  var startArg = [ partnerPublicKey ];
+//  testStartAndStop(t,
+//    startArg,
+//    function (pouchDB) {
+//      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
+//        .then(function () {
+//          return pouchDB.put(
+//            {_id: ThaliSendNotificationBasedOnReplication
+//              .calculateSeqPointKeyId(partnerPublicKey),
+//              lastSyncedSequenceNumber: 2});
+//        });
+//    },
+//    function (mockThaliNotificationServer) {
+//      mockStartAndStop(mockThaliNotificationServer, []);
+//    });
+//});
+//
+//test('One peer with _Local set ahead of current seq (and no this should ' +
+//     'not happen)', function (t) {
+//  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+//  var startArg = [ partnerPublicKey ];
+//  testStartAndStop(t,
+//    startArg,
+//    function (pouchDB) {
+//      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
+//        .then(function () {
+//          return pouchDB.put(
+//            {_id: ThaliSendNotificationBasedOnReplication
+//              .calculateSeqPointKeyId(partnerPublicKey),
+//              lastSyncedSequenceNumber: 50});
+//        });
+//    },
+//    function (mockThaliNotificationServer) {
+//      mockStartAndStop(mockThaliNotificationServer, []);
+//    });
+//});
+//
+//test('Three peers, one not in DB, one behind and one ahead', function (t) {
+//  var partnerNotInDbPublicKey = crypto.createECDH('secp521r1').generateKeys();
+//  var partnerBehindInDbPublicKey =
+//    crypto.createECDH('secp521r1').generateKeys();
+//  var partnerAheadInDbPublicKey = crypto.createECDH('secp521r1').generateKeys();
+//  var startArg = [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey,
+//                  partnerAheadInDbPublicKey];
+//  testStartAndStop(t,
+//    startArg,
+//    function (pouchDB) {
+//      return pouchDB.put({_id: 'id', stuff: 'whatever'})
+//        .then(function () {
+//          return pouchDB.put(
+//            {
+//              _id: ThaliSendNotificationBasedOnReplication
+//                .calculateSeqPointKeyId(partnerBehindInDbPublicKey),
+//              lastSyncedSequenceNumber: 1
+//            }
+//        );})
+//        .then(function () {
+//          return pouchDB.put(
+//            {_id: ThaliSendNotificationBasedOnReplication
+//              .calculateSeqPointKeyId(partnerAheadInDbPublicKey),
+//            lastSyncedSequenceNumber: 500}
+//          );
+//        });
+//    },
+//    function (mockThaliNotificationServer) {
+//      mockStartAndStop(mockThaliNotificationServer,
+//                       [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey]);
+//    });
+//});
 
 test('two peers with empty DB, update the doc', function (t) {
   var partnerOnePublicKey = crypto.createECDH('secp521r1').generateKeys();
   var partnerTwoPublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var startArg = [ partnerOnePublicKey, partnerTwoPublicKey];
-  var clock = sinon.useFakeTimers(Date.now());
+  var startArg = [ partnerOnePublicKey, partnerTwoPublicKey];;
   testStartAndStop(t,
     startArg,
     function () { return Promise.resolve(); },
     function (mockThaliNotificationServer) {
       mockThaliNotificationServer.expects('start')
-        .once().withExactArgs([]).returns(Promise.resolve())
+        .once().withExactArgs([]).returns(Promise.resolve());
+      mockThaliNotificationServer.expects('start')
         .once().withExactArgs(startArg).returns(Promise.resolve());
 
       mockThaliNotificationServer.expects('stop')
         .once().withExactArgs().returns(Promise.resolve());
     },
     function (pouchDB) {
-      clock.tick(1000);
-      return pouchDB.put({_id: '33', stuff: 'uhuh'})
-        .then(function () {
-          clock.tick(
-            ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_FOREGROUND +
-            10);
+      return new Promise(function (resolve, reject) {
+        pouchDB.put({_id: '33', stuff: 'uhuh'})
+          .then(function () {
+            setTimeout(function () {
+              resolve();
+            }, 10000);
+          }).catch(function (err) {
+            reject(err);
         });
+      });
     });
 });
 
@@ -344,6 +350,23 @@ test('delme', function (t) {
         });
     }).then(function () {
       return pouchDB.put({_id: '4', stuff: 'ack'});
+    });
+});
+
+test('sdfsdf', function (t) {
+  var pouchDB = getRandomlyNamedTestPouchDBInstance();
+  pouchDB.changes({live: true, since: 0, timeout: false})
+    .on('change', function (value) {
+      console.log(JSON.stringify(value));
+      t.end();
+    }).on('complete', function (value) {
+      console.log(JSON.stringify(value));
+    }).on('error', function (err) {
+      console.log(JSON.stringify(err));
+    });
+  pouchDB.put({_id: '33', stuff: 'uhuh'})
+    .then(function () {
+      console.log('We put');
     });
 });
 
