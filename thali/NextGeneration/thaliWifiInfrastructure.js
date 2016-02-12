@@ -301,10 +301,7 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
     if (self.states.started === true) {
       return reject(new Error('Call Stop!'));
     }
-    ThaliMobileNativeWrapper.start()
-    .then(function () {
-      return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
-    })
+    ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
     .then(function (networkStatus) {
       self.states.networkState = networkStatus;
       self.states.started = true;
@@ -333,10 +330,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
     if (self.states.started === false) {
       return resolve();
     }
-    ThaliMobileNativeWrapper.stop()
-    .then(function () {
-      return self._stopAdvertisingAndListening(true, true);
-    })
+    self._stopAdvertisingAndListening(true, true)
     .then(function () {
       return self._stopListeningForAdvertisements(true, true);
     })

@@ -43,7 +43,9 @@ var states = {
 
 /**
  * This method MUST be called before any other method here other than
- * registering for events on the emitter. This method will cause us to:
+ * registering for events on the emitter or calling
+ * {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}.
+ * This method will cause us to:
  * - create a TCP server (which MUST use {@link
  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) on a random port and
  * host the router on that server.
@@ -236,6 +238,7 @@ module.exports.stopAdvertisingAndListening = function () {
   return new Promise();
 };
 
+var nonTCPNetworkStatus = null;
 /**
  * This method returns the last value sent by the
  * {@link module:thaliMobileNativeWrapper.event:networkChangedNonTCP}
@@ -248,16 +251,13 @@ module.exports.stopAdvertisingAndListening = function () {
  * that says "Hey you don't have the right radio!" we just use a promise that
  * won't return until we have a value.
  *
+ * Unlike other methods, this can be called also before calling start.
+ *
  * @public
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
-var nonTCPNetworkStatus = null;
-
 module.exports.getNonTCPNetworkStatus = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    if (!states.started) {
-      return reject(new Error('Call Start!'));
-    }
     if (nonTCPNetworkStatus === null) {
       module.exports.emitter.once('networkChangedNonTCP',
       function (networkChangedValue) {
