@@ -32,22 +32,37 @@
     clearInterval(inter);
 
     jxcore.isReady(function() {
-      jxcore('app.js').loadMainFile(function(ret, err) {
-        if (err) {
-          console.log("App.js file failed to load : " + JSON.stringify(err));
+      if (window.ThaliPermissions) {
+        //requestLocationPermission ensures that the application has 
+        //the required ACCESS_COARSE_LOCATION permission in Android.
+        window.ThaliPermissions.requestLocationPermission(function(status) {
+          //Application has the required permission.
+          loadMainFile();
+        }, function (error) {
+          console.log("Location permission not granted.");
           navigator.app.exitApp();
-        }else{
-          jxcore_ready();
-        }
-      });
+        });
+      } else {
+        loadMainFile();
+      }
     });
   }, 5);
+
+  function loadMainFile() {
+    jxcore('app.js').loadMainFile(function (ret, err) {
+      if (err) {
+        console.log("App.js file failed to load : " + JSON.stringify(err));
+        navigator.app.exitApp();
+      } else {
+        jxcore_ready();
+      }
+    });
+  }
 
   function jxcore_ready() {
     jxcore('getMyName').call(setNameToUI);
     jxcore('setLogCallback').call(logCallback);
     document.getElementById("ClearLogButton").addEventListener("click", ClearLog);
-
     console.log("UIApp is all set and ready!");
   }
 
