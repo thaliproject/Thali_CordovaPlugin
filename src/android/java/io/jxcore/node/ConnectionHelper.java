@@ -229,12 +229,21 @@ public class ConnectionHelper
     }
 
     /**
+     * @return True, if the maximum number of simultaneous connections has been reached (or exceeded).
+     */
+    public synchronized boolean hasMaximumNumberOfConnections() {
+        return (mConnectionModel.getNumberOfCurrentOutgoingConnections() >= MAXIMUM_NUMBER_OF_CONNECTIONS);
+    }
+
+    /**
      * Starts the connection process to a peer with the given ID.
      * @param bluetoothMacAddress The Bluetooth MAC address of the peer to connect to.
      * @param listener The listener.
+     * @return True, if the connection attempt was initiated successfully. False otherwise.
      */
-    public synchronized void connect(final String bluetoothMacAddress, JxCoreExtensionListener listener) {
+    public synchronized boolean connect(final String bluetoothMacAddress, JxCoreExtensionListener listener) {
         Log.i(TAG, "connect: Trying to connect to peer with ID " + bluetoothMacAddress);
+        boolean success = false;
 
         if (listener == null) {
             Log.e(TAG, "connect: Listener is null");
@@ -248,7 +257,7 @@ public class ConnectionHelper
                             + bluetoothMacAddress + ", but will connect anyway...");
                 }
 
-                if (mConnectionModel.getNumberOfCurrentOutgoingConnections() < MAXIMUM_NUMBER_OF_CONNECTIONS) {
+                if (!hasMaximumNumberOfConnections()) {
                     PeerProperties selectedDevice =
                             mDiscoveryManager.getPeerModel().getDiscoveredPeerByBluetoothMacAddress(
                                     bluetoothMacAddress);
@@ -262,22 +271,17 @@ public class ConnectionHelper
                         if (mConnectionManager.connect(selectedDevice)) {
                             Log.i(TAG, "connect: Connection process successfully started (peer ID: " + bluetoothMacAddress + ")");
                             mConnectionModel.addOutgoingConnectionListener(bluetoothMacAddress, listener);
+                            success = true;
                         } else {
                             Log.e(TAG, "connect: Failed to start connecting");
-                            listener.onConnectionStatusChanged("Failed to start connecting", PORT_NUMBER_IN_ERROR_CASES);
                         }
                     } else {
-                        Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.getBluetoothMacAddress());
-                        listener.onConnectionStatusChanged(
-                                "Invalid Bluetooth address: " + selectedDevice.getBluetoothMacAddress(), PORT_NUMBER_IN_ERROR_CASES);
+                        Log.e(TAG, "connect: Invalid Bluetooth MAC address: " + selectedDevice.getBluetoothMacAddress());
                     }
                 } else {
                     Log.e(TAG, "connect: Maximum number of peer connections ("
                             + mConnectionModel.getNumberOfCurrentOutgoingConnections()
                             + ") reached, please try again after disconnecting a peer");
-                    listener.onConnectionStatusChanged("Maximum number of peer connections ("
-                            + mConnectionModel.getNumberOfCurrentOutgoingConnections()
-                            + ") reached, please try again after disconnecting a peer", PORT_NUMBER_IN_ERROR_CASES);
                 }
             } else {
                 Log.w(TAG, "connect: We already have an outgoing connection to peer with ID "
@@ -286,8 +290,9 @@ public class ConnectionHelper
             }
         } else {
             Log.e(TAG, "connect: Not running, please call start() first");
-            listener.onConnectionStatusChanged("Not running, please call start() first", PORT_NUMBER_IN_ERROR_CASES);
         }
+
+        return success;
     }
 
     /**

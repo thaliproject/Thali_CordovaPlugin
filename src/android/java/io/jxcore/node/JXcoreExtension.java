@@ -13,7 +13,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
+import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothUtils;
 
 public class JXcoreExtension {
     // Common Thali methods and events
@@ -54,9 +56,10 @@ public class JXcoreExtension {
     }
 
     private final static String TAG = JXcoreExtension.class.getName();
+    private static ConnectionHelper mConnectionHelper = null;
 
     public static void LoadExtensions() {
-        final ConnectionHelper mConnectionHelper = new ConnectionHelper();
+        mConnectionHelper = new ConnectionHelper();
 
         /**
          * This method instructs the native layer to discover what other devices are
@@ -85,7 +88,7 @@ public class JXcoreExtension {
 
                 final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
 
-                if (discoveryManager.isBleMultipleAdvertisementSupported()) {
+                if (areRadiosSupported()) {
                     boolean succeededToStartOrWasAlreadyRunning =
                             mConnectionHelper.start(ConnectionHelper.NO_PORT_NUMBER, false);
 
@@ -205,7 +208,7 @@ public class JXcoreExtension {
                     final int portNumber = (Integer) params.get(0);
                     final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
 
-                    if (discoveryManager.isBleMultipleAdvertisementSupported()) {
+                    if (areRadiosSupported()) {
                         boolean succeededToStartOrWasAlreadyRunning =
                                 mConnectionHelper.start(portNumber, true);
 
@@ -319,7 +322,7 @@ public class JXcoreExtension {
          * |--------------|-------------|
          * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
          * | startListeningForAdvertisements is not active | Go start it! |
-         * | Alreading connect(ing/ed) | There already is a connection or a request to create one is already in process |
+         * | Already connect(ing/ed) | There already is a connection or a request to create one is already in process |
          * | Connection could not be established | The attempt to connect to the peerID failed. This could be because
          * the peer is gone, no longer accepting connections or the radio stack is just horked. |
          * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically
@@ -338,33 +341,83 @@ public class JXcoreExtension {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("Required parameter, {string} peerIdentifier, missing");
                     jxcore.CallJSMethod(callbackId, args.toArray());
-                } else {
-                    String bluetoothMacAddress = params.get(0).toString();
+                    return;
+                }
 
-                    mConnectionHelper.connect(bluetoothMacAddress, new JxCoreExtensionListener() {
-                        @Override
-                        public void onConnectionStatusChanged(String message, int port) {
-                            ArrayList<Object> args = new ArrayList<Object>();
-                            args.add(message);
-                            args.add(port);
-                            jxcore.CallJSMethod(callbackId, args.toArray());
-                        }
-                    });
+                if (!areRadiosSupported()) {
+                    ArrayList<Object> args = new ArrayList<Object>();
+                    args.add("No Native Non-TCP Support");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
+                }
+
+                if (mConnectionHelper.getDiscoveryManager().getState() ==
+                        DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
+                    ArrayList<Object> args = new ArrayList<Object>();
+                    args.add("Radio Turned Off");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
+                }
+
+                final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
+                final DiscoveryManager.DiscoveryManagerState discoveryManagerState = discoveryManager.getState();
+
+                if (!(discoveryManagerState == DiscoveryManager.DiscoveryManagerState.RUNNING_BLE
+                        || discoveryManagerState == DiscoveryManager.DiscoveryManagerState.RUNNING_WIFI
+                        || discoveryManagerState == DiscoveryManager.DiscoveryManagerState.RUNNING_BLE_AND_WIFI)) {
+                    ArrayList<Object> args = new ArrayList<Object>();
+                    args.add("startListeningForAdvertisements is not active");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
+                }
+
+                String bluetoothMacAddress = params.get(0).toString();
+
+                if (!BluetoothUtils.isValidBluetoothMacAddress(bluetoothMacAddress)) {
+                    ArrayList<Object> args = new ArrayList<Object>();
+                    args.add("Illegal peerID");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
+                }
+
+                if (mConnectionHelper.getConnectionModel().getOutgoingConnectionListener(bluetoothMacAddress) != null) {
+                    ArrayList<Object> args = new ArrayList<Object>();
+
+                    if (mConnectionHelper.getConnectionModel().hasOutgoingConnection(bluetoothMacAddress)) {
+                        args.add("Already connected");
+                    } else {
+                        args.add("Already connecting");
+                    }
+
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
+                }
+
+                if (mConnectionHelper.hasMaximumNumberOfConnections()) {
+                    ArrayList<Object> args = new ArrayList<Object>();
+                    args.add("Max connections reached");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
+                }
+
+                if (!mConnectionHelper.connect(bluetoothMacAddress, new JxCoreExtensionListener() {
+                    @Override
+                    public void onConnectionStatusChanged(String message, int port) {
+                        ArrayList<Object> args = new ArrayList<Object>();
+                        args.add(message);
+                        args.add(port);
+                        jxcore.CallJSMethod(callbackId, args.toArray());
+                    }
+                })) {
+                    ArrayList<Object> args = new ArrayList<Object>();
+                    args.add("Connection could not be established");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    return;
                 }
             }
         });
 
         /**
-         * Please see the definition of
-         * {@link module:thaliMobileNativeWrapper.killConnections}.
-         *
-         * @private
-         * @function external:"Mobile('killConnections')".callNative
-         * @param {module:thaliMobileNative~ThaliMobileCallback} callback
-         */
-
-        /**
-         * thaliMobileNativeWrapper.killConnections
          * # WARNING: This method is intended for internal Thali testing only. DO NOT
          * USE!
          *
@@ -385,7 +438,6 @@ public class JXcoreExtension {
          * | Not Supported | This method is not support on this platform. |
          *
          */
-
         jxcore.RegisterMethod(METHOD_NAME_KILL_CONNECTIONS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
@@ -584,5 +636,21 @@ public class JXcoreExtension {
         }
 
         jxcore.CallJSMethod(EVENT_NAME_CONNECTION_ERROR, jsonObject.toString());
+    }
+
+    /**
+     * Checks if the radios for the current discovery mode are supported by the device.
+     * Note that the connection helper instance has to be constructed before calling this method.
+     * @return True, if the radios are supported. False otherwise.
+     */
+    private static boolean areRadiosSupported() {
+        final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
+        boolean isWifiDirectSupported = discoveryManager.isWifiDirectSupported();
+        boolean isBleMultipleAdvertisementSupported = discoveryManager.isBleMultipleAdvertisementSupported();
+        DiscoveryManager.DiscoveryMode discoveryMode = DiscoveryManagerSettings.getInstance(null).getDiscoveryMode();
+
+        return ((discoveryMode == DiscoveryManager.DiscoveryMode.WIFI && isWifiDirectSupported)
+                || (discoveryMode == DiscoveryManager.DiscoveryMode.BLE && isBleMultipleAdvertisementSupported)
+                || (discoveryMode == DiscoveryManager.DiscoveryMode.BLE_AND_WIFI && isWifiDirectSupported && isBleMultipleAdvertisementSupported));
     }
 }
