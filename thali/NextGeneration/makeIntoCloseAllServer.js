@@ -14,18 +14,28 @@
  * @returns {Object}
  */
 function makeIntoCloseAllServer(server) {
+
   var connections = [];
 
   server.on('connection', function (socket) {
     socket.on('close', function () {
-      var index = connections.findIndex(function (socket) {
-        return socket === socket;
-      });
-      if (index === -1) {
-        // Log this, it shouldn't have happened.
+      if (connections) {
+        var index = connections.indexOf(socket);
+        if (index === -1) {
+          // Log this, it shouldn't have happened.
+        }
+        connections.splice(index, 1);
       }
-      connections = connections.splice(index, 1);
     });
+
+    // It's possible that closeAll has already been called,
+    // (connectons == null). If so, close the incoming socket
+
+    if (connections) {
+      connections.push(socket);
+    } else {
+      socket.end();
+    }
   });
 
   /**
@@ -38,9 +48,10 @@ function makeIntoCloseAllServer(server) {
     // to the server.
     // Also note that the callback won't be called until all the connections
     // are destroyed because the destroy calls are synchronous.
-    this.close(callback);
+    server.close(callback);
     connections.forEach(function (connection) {
-      connection.destroy();
+      console.log("closing");
+      connection.end();
     });
     connections = null;
   };
