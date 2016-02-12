@@ -434,10 +434,10 @@ module.exports.killConnections = function () {
  */
 module.exports.emitter = new EventEmitter();
 
-// Currently skipping the Mobile calls since they are not
-// implemented yet
-if (false) {
-  Mobile('PeerAvailabilityChange').registerToNative(function (peers) {
+// Currently skipping the Mobile calls on the real mobile environment
+// since they are not implemented yet
+if (!jxcore.utils.OSInfo().isMobile) {
+  Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
     // do stuff!
   });
 

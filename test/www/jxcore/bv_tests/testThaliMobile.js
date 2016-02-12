@@ -1,7 +1,6 @@
 'use strict';
 
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var tape = require('../lib/thali-tape');
 var testUtils = require('../lib/testUtils.js');
 var express = require('express');
@@ -109,6 +108,11 @@ test('can get the network status', function (t) {
     }, 'network status should have certain non-empty properties');
     t.end();
   });
+});
+
+test('network changes emitted', function (t) {
+  // TODO
+  t.end();
 });
 
 var setupDiscoveryAndFindPeer = function (t, callback) {

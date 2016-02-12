@@ -250,19 +250,17 @@ thaliTape.begin = function() {
 }
 
 if (typeof jxcore === 'undefined' ||
-    jxcore.utils.OSInfo().isMobile ||
-    (typeof Mobile !== 'undefined' && Mobile.iAmAMock))
-{
-  // On mobile, or outside of jxcore (some dev scenarios) we use server-coordinated thaliTape
+    typeof Mobile !== 'undefined') {
+  // On mobile, or outside of jxcore (some dev scenarios) we use
+  // the server-coordinated thaliTape
   exports = thaliTape;
-}
-else
-{
+} else {
   // On desktop we just use wrapping-tape
-  exports = require("wrapping-tape");
+  exports = require('wrapping-tape');
 
-  // thaliTape has a begin function that we patch in here to make the api identical
-  exports.begin = function() {
+  // thaliTape has a begin function that we patch in here to make
+  // the api identical
+  exports.begin = function () {
   };
 }
 

@@ -104,7 +104,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
     // When running within JXcore Cordova Mobile environment,
     // don't pass this event onwards, because there, the network
     // events are bubbled up via the native layer.
-    if (typeof Mobile !== 'undefined') {
+    if (jxcore.utils.OSInfo().isMobile) {
       return;
     }
     this.emit('networkChangedWifi', networkChangedValue);

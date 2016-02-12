@@ -573,6 +573,11 @@ thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
   // Do stuff
 });
 
+var emitNetworkChanged = function (networkChangedValue) {
+  ThaliMobileNativeWrapper.emitter.emit('networkChanged',
+                                        networkChangedValue);
+};
+
 /**
  * Unless something went horribly wrong only one of thaliMobileNativeWrapper
  * or ThaliWifiInfrastructure should be enabled for this event at a time. We can
@@ -584,15 +589,9 @@ thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
  * @property {module:thaliMobileNative~networkChanged} networkChangedValue
  */
 
-ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
-    function (networkChangedValue) {
-  // Do stuff
-});
+ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', emitNetworkChanged);
 
-thaliWifiInfrastructure.on('networkChangedWifi',
-    function (networkChangedValue) {
-  // Do stuff
-});
+thaliWifiInfrastructure.on('networkChangedWifi', emitNetworkChanged);
 
 /**
  * If we receive a {@link

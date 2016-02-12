@@ -1,8 +1,23 @@
 'use strict';
 
 var Promise = require('lie');
-var ThaliWifiInfrastructure = require('ThaliWifiInfrastructure');
+var EventEmitter = require('events').EventEmitter;
+var uuid = require('node-uuid');
+var testUtils = require('./testUtils.js');
 
+var proxyquire = require('proxyquire');
+proxyquire.noCallThru();
+proxyquire.noPreserveCache();
+
+var mockEmitter = new EventEmitter();
+
+var ThaliWifiInfrastructure = proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
+  {
+    './thaliMobileNativeWrapper': {
+      emitter: mockEmitter
+    }
+  }
+);
 
 /** @module WifiBasedNativeMock */
 
@@ -281,6 +296,17 @@ MobileCallInstance.prototype.killConnections = function (callback) {
 };
 
 
+/**
+ * Generates a UUID that will be used as the name of the current device.
+ *
+ * @public
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback
+ */
+MobileCallInstance.prototype.getDeviceName = function (callback) {
+  setImmediate(function () {
+    callback(uuid.v4());
+  });
+};
 
 /**
  * Handles processing callNative requests. The actual params differ based on
@@ -313,6 +339,10 @@ MobileCallInstance.prototype.callNative = function () {
     case 'killConnections':
     {
       return this.killConnections(arguments[0]);
+    }
+    case 'GetDeviceName':
+    {
+      return this.getDeviceName(arguments[0]);
     }
     default:
     {
@@ -348,6 +378,7 @@ MobileCallInstance.prototype.discoveryAdvertisingStateUpdateNonTCP =
     function (callback) {
     };
 
+var networkChangedCallback = null;
 /**
  * At this point this event would only fire because we called toggleBluetooth
  * or toggleWifi. For the moment we will treat toggleBluetooth and turning
@@ -363,6 +394,12 @@ MobileCallInstance.prototype.discoveryAdvertisingStateUpdateNonTCP =
  * @param {module:thaliMobileNative~networkChangedCallback} callback
  */
 MobileCallInstance.prototype.networkChanged = function (callback) {
+  networkChangedCallback = callback;
+  // Implement the logic to emit networkChangedNonTCP
+  // when the first listener is registered.
+  setImmediate(function () {
+    networkChangedCallback(testUtils.getMockWifiNetworkStatus(true));
+  });
 };
 
 /**
@@ -449,7 +486,8 @@ function toggleBluetooth (platform, wifiBasedNativeMock) {
  */
 function toggleWiFi(platform, wifiBasedNativeMock) {
   return function (setting, callback) {
-    return null;
+    networkChangedCallback(testUtils.getMockWifiNetworkStatus(setting));
+    setImmediate(callback);
   };
 }
 
@@ -472,7 +510,7 @@ function WifiBasedNativeMock(platform, router) {
   var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
   var mobileHandler = function (mobileMethodName) {
     return new MobileCallInstance(mobileMethodName, platform, router,
-                                    thaliWifiInfrastructure);
+                                  thaliWifiInfrastructure);
   };
 
   mobileHandler.toggleBluetooth = toggleBluetooth(thaliWifiInfrastructure);

@@ -9,7 +9,7 @@
 var testUtils = require('./lib/testUtils');
 
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/MobileUsingWifi.js');
+  global.Mobile = require('./lib/wifiBasedNativeMock.js')('iOS', null);
 }
 
 testUtils.toggleRadios(true);
