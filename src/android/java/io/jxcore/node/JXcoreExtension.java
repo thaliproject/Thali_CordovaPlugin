@@ -9,32 +9,14 @@ import android.util.Log;
 import io.jxcore.node.jxcore.JXcoreCallback;
 import java.util.ArrayList;
 import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
+import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 public class JXcoreExtension {
-    public final static String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
-    public final static String EVENT_VALUE_PEER_ID = "peerIdentifier";
-    public final static String EVENT_VALUE_PEER_NAME = "peerName";
-    public final static String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
-
-    public final static String EVENT_NAME_CONNECTION_ERROR = "connectionError";
-
-    public final static String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
-    public final static String EVENT_VALUE_IS_REACHABLE = "isReachable";
-    public final static String EVENT_VALUE_IS_WIFI = "isWiFi";
-
-    public final static String METHOD_NAME_SHOW_TOAST = "ShowToast";
-    public final static String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "GetBluetoothAddress";
-    public final static String METHOD_NAME_GET_BLUETOOTH_NAME = "GetBluetoothName";
-    public final static String METHOD_NAME_RECONNECT_WIFI_AP = "ReconnectWifiAP";
-    public final static String METHOD_NAME_IS_BLE_SUPPORTED = "IsBLESupported";
-
-    public final static String METHOD_NAME_START_BROADCASTING = "StartBroadcasting";
-    public final static String METHOD_NAME_STOP_BROADCASTING = "StopBroadcasting";
-
-    //public final static String METHOD_NAME_CONNECT = "Connect";
-    public final static String METHOD_NAME_DISCONNECT = "Disconnect";
-
-
+    // Common Thali methods and events
     public final static String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
     public final static String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
     public final static String METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
@@ -42,10 +24,34 @@ public class JXcoreExtension {
     public final static String METHOD_NAME_CONNECT = "connect";
     public final static String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
 
-    public final static String EVENT_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
-    public final static String EVENT_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
-    public final static String EVENT_NETWORK_CHANGED = "networkChanged";
-    public final static String EVENT_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
+    public final static String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
+    public final static String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
+    public final static String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
+    public final static String EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
+
+    public final static String EVENT_VALUE_PEER_ID = "peerIdentifier";
+    public final static String EVENT_VALUE_PEER_NAME = "peerName";
+    public final static String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
+
+    // Android specific methods and events
+    public final static String METHOD_NAME_DISCONNECT = "disconnect";
+    public final static String METHOD_NAME_IS_BLE_ADVERTISING_SUPPORTED = "isBleAdvertisingSupported";
+    public final static String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
+    public final static String METHOD_NAME_GET_BLUETOOTH_NAME = "getBluetoothName";
+    public final static String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
+    public final static String METHOD_NAME_SHOW_TOAST = "showToast";
+
+    public final static String EVENT_NAME_CONNECTION_ERROR = "connectionError";
+
+    public final static String EVENT_VALUE_IS_REACHABLE = "isReachable";
+    public final static String EVENT_VALUE_IS_WIFI = "isWiFi";
+
+    /**
+     * A listener interface for JXcore callbacks.
+     */
+    public interface JxCoreExtensionListener {
+        void onConnectionStatusChanged(String message, int portNumber);
+    }
 
     private final static String TAG = JXcoreExtension.class.getName();
 
@@ -53,16 +59,6 @@ public class JXcoreExtension {
         final ConnectionHelper mConnectionHelper = new ConnectionHelper();
 
         /**
-         * Please see the definition of
-         * {@link module:thaliMobileNativeWrapper.startListeningForAdvertisements}.
-         *
-         * @public
-         * @function external:"Mobile('startListeningForAdvertisements')".callNative
-         * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
-         */
-
-        /**
-         * thaliMobileNativeWrapper.startListeningForAdvertisements:
          * This method instructs the native layer to discover what other devices are
          * within range using the platform's non-TCP P2P capabilities. When a device is
          * discovered its information will be published via {@link
@@ -80,63 +76,40 @@ public class JXcoreExtension {
          * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
          * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
          * | Call Start! | The object is not in start state. |
-         *
          */
-
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-
                 ArrayList<Object> args = new ArrayList<Object>();
+                String errorString = null;
 
-                //all is well, so lets return null as first argument
-                args.add(null);
+                final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
+
+                if (discoveryManager.isBleMultipleAdvertisementSupported()) {
+                    boolean succeededToStartOrWasAlreadyRunning =
+                            mConnectionHelper.start(ConnectionHelper.NO_PORT_NUMBER, false);
+
+                    if (succeededToStartOrWasAlreadyRunning) {
+                        if (discoveryManager.getState() ==
+                                DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
+                            errorString = "Radio Turned Off";
+
+                            // If/when radios are turned on, the discovery is started automatically
+                            // unless stop is called
+                        }
+                    } else {
+                        errorString = "Unspecified Error with Radio infrastructure";
+                    }
+                } else {
+                    errorString = "No Native Non-TCP Support";
+                }
+
+                args.add(errorString); // Null errorString indicates success
                 jxcore.CallJSMethod(callbackId, args.toArray());
-
-
-
-                ArrayList<Object> arguments = new ArrayList<Object>();
-
-                if (params.size() <= 0) {
-                    arguments.add("Required parameters missing.");
-                    jxcore.CallJSMethod(callbackId, arguments.toArray());
-                    return;
-                }
-
-                if (mConnectionHelper.isRunning()) {
-                    arguments.add("Already running, not re-starting.");
-                    jxcore.CallJSMethod(callbackId, arguments.toArray());
-                    return;
-                }
-
-                String peerName = params.get(0).toString();
-                int port = (Integer) params.get(1);
-
-                boolean retVal = mConnectionHelper.start(port);
-
-                String errString = null;
-
-                if (!retVal) {
-                    errString = "Either Bluetooth or Wi-Fi Direct not supported on this device";
-                }
-
-                //if all is well, the errString is still null in here..
-                arguments.add(errString);
-                jxcore.CallJSMethod(callbackId, arguments.toArray());
             }
         });
 
         /**
-         * Please see the definition of
-         * {@link module:thaliMobileNativeWrapper.stopAdvertisingAndListening}.
-         *
-         * @public
-         * @function external:"Mobile('stopAdvertisingAndListening')".callNative
-         * @param {module:thaliMobileNative~ThaliMobileCallback} callback
-         */
-
-        /**
-         * module:thaliMobileNativeWrapper.stopAdvertisingAndListening:
          * This method instructs the native layer to stop listening for discovery
          * advertisements. Note that so long as discovery isn't occurring (because, for
          * example, the radio needed isn't on) this method will return success.
@@ -150,41 +123,18 @@ public class JXcoreExtension {
          * | Error String | Description |
          * |--------------|-------------|
          * | Failed | Somehow the stop method couldn't do its job. Check the logs. |
-         *
          */
-
         jxcore.RegisterMethod(METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-
+                mConnectionHelper.stopListeningForAdvertisements();
                 ArrayList<Object> args = new ArrayList<Object>();
-
-                //all is well, so lets return null as first argument
                 args.add(null);
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
-        /**
-         * Please see the definition of
-         * {@link module:thaliMobileNativeWrapper.startUpdateAdvertisingAndListening}.
-         *
-         * However, in addition to what is written there, when the system receives an
-         * incoming connection it will do so by initiating a single TCP/IP connection to
-         * the port given below in `portNumber`. If the non-TCP connection from which
-         * the content in the TCP/IP connection is sourced should terminate for any
-         * reason then the TCP/IP connection MUST also be terminated. If the TCP
-         * connection to `portNumber` is terminated for any reason then the associated
-         * non-TCP connection MUST be terminated.
-         *
-         * @public
-         * @function external:"Mobile('startUpdateAdvertisingAndListening')".callNative
-         * @param {number} portNumber The port on 127.0.0.1 that any incoming
-         * connections over the native non-TCP/IP transport should be bridged to.
-         * @param {module:thaliMobileNative~ThaliMobileCallback} callback
-         */
 
         /**
-         * thaliMobileNativeWrapper.startUpdateAdvertisingAndListening:
          * This method has two separate but related functions. It's first function is to
          * begin advertising the Thali peer's presence to other peers. The second
          * purpose is to accept incoming non-TCP/IP connections (that will then be
@@ -242,46 +192,45 @@ public class JXcoreExtension {
          * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
          * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
          * | Call Start! | The object is not in start state. |
-         *
-         * @public
-         * @returns {Promise<?Error>}
          */
-
-
-
         jxcore.RegisterMethod(METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-
                 ArrayList<Object> args = new ArrayList<Object>();
+                String errorString = null;
 
-                //all is well, so lets return null as first argument
-                args.add(null);
+                if (params == null || params.size() == 0) {
+                    errorString = "Required parameter(s), {number} portNumber, missing";
+                } else {
+                    final int portNumber = (Integer) params.get(0);
+                    final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
+
+                    if (discoveryManager.isBleMultipleAdvertisementSupported()) {
+                        boolean succeededToStartOrWasAlreadyRunning =
+                                mConnectionHelper.start(portNumber, true);
+
+                        if (succeededToStartOrWasAlreadyRunning) {
+                            if (discoveryManager.getState() ==
+                                    DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
+                                errorString = "Radio Turned Off";
+
+                                // If/when radios are turned on, the discovery is started automatically
+                                // unless stop is called
+                            }
+                        } else {
+                            errorString = "Unspecified Error with Radio infrastructure";
+                        }
+                    } else {
+                        errorString = "No Native Non-TCP Support";
+                    }
+                }
+
+                args.add(errorString); // Null errorString indicates success
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
 
         /**
-         * Please see the definition of
-         * {@link module:thaliMobileNativeWrapper.startUpdateAdvertisingAndListening}.
-         *
-         * However, in addition to what is written there, when the system receives an
-         * incoming connection it will do so by initiating a single TCP/IP connection to
-         * the port given below in `portNumber`. If the non-TCP connection from which
-         * the content in the TCP/IP connection is sourced should terminate for any
-         * reason then the TCP/IP connection MUST also be terminated. If the TCP
-         * connection to `portNumber` is terminated for any reason then the associated
-         * non-TCP connection MUST be terminated.
-         *
-         * @public
-         * @function external:"Mobile('startUpdateAdvertisingAndListening')".callNative
-         * @param {number} portNumber The port on 127.0.0.1 that any incoming
-         * connections over the native non-TCP/IP transport should be bridged to.
-         * @param {module:thaliMobileNative~ThaliMobileCallback} callback
-         */
-
-        /**
-         * thaliMobileNativeWrapper.startUpdateAdvertisingAndListening:
          * This method tells the native layer to stop advertising the presence of the
          * peer, stop accepting incoming connections over the non-TCP/IP transport and
          * to disconnect all existing non-TCP/IP transport incoming connections.
@@ -294,17 +243,12 @@ public class JXcoreExtension {
          * | Error String | Description |
          * |--------------|-------------|
          * | Failed | Somehow the stop method couldn't do its job. Check the logs. |
-         *
-         * @public
-         * @returns {Promise<?Error>}
          */
         jxcore.RegisterMethod(METHOD_NAME_STOP_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-
+                mConnectionHelper.stop();
                 ArrayList<Object> args = new ArrayList<Object>();
-
-                //all is well, so lets return null as first argument
                 args.add(null);
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
@@ -386,15 +330,7 @@ public class JXcoreExtension {
          * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
          * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
          * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
-         *
-         * @public
-         * @function external:"Mobile('connect')".callNative
-         * @param {string} peerIdentifier
-         * @param {module:thaliMobileNative~ConnectCallback} callback Returns an
-         * error or the 127.0.0.1 port to connect to in order to get a connection to the
-         * remote peer
          */
-
         jxcore.RegisterMethod(METHOD_NAME_CONNECT, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
@@ -403,9 +339,9 @@ public class JXcoreExtension {
                     args.add("Required parameter, {string} peerIdentifier, missing");
                     jxcore.CallJSMethod(callbackId, args.toArray());
                 } else {
-                    String address = params.get(0).toString();
+                    String bluetoothMacAddress = params.get(0).toString();
 
-                    mConnectionHelper.connect(address, new ConnectionHelper.JxCoreExtensionListener() {
+                    mConnectionHelper.connect(bluetoothMacAddress, new JxCoreExtensionListener() {
                         @Override
                         public void onConnectionStatusChanged(String message, int port) {
                             ArrayList<Object> args = new ArrayList<Object>();
@@ -465,26 +401,46 @@ public class JXcoreExtension {
             }
         });
 
-        jxcore.RegisterMethod(METHOD_NAME_RECONNECT_WIFI_AP, new JXcoreCallback() {
+
+        /*
+         * Android specific methods start here
+         */
+
+        jxcore.RegisterMethod(METHOD_NAME_DISCONNECT, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                WifiManager wifiManager = (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
+                if (params.size() == 0) {
+                    args.add("Required parameter, peer ID, missing");
+                } else {
+                    String peerId = params.get(0).toString();
 
-                if (wifiManager.reconnect()) {
-                    wifiManager.disconnect();
-
-                    if (!wifiManager.reconnect()) {
-                        args.add("reconnect returned false");
-                        jxcore.CallJSMethod(callbackId, args.toArray());
-                        return;
+                    if (!mConnectionHelper.disconnectOutgoingConnection(peerId)) {
+                        args.add("Failed to disconnect - peer ID: " + peerId);
+                    } else {
+                        args.add(null);
                     }
                 }
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
 
-                //all is well, so lets return null as first argument
-                args.add(null);
+        jxcore.RegisterMethod(METHOD_NAME_IS_BLE_ADVERTISING_SUPPORTED, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
+                boolean isBleMultipleAdvertisementSupported =
+                        mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
+                Log.v(TAG, METHOD_NAME_IS_BLE_ADVERTISING_SUPPORTED + ": " + isBleMultipleAdvertisementSupported);
+
+                if (isBleMultipleAdvertisementSupported) {
+                    args.add(null); // Null as the first argument indicates success
+                    args.add("Bluetooth LE advertising is supported");
+                } else {
+                    args.add("Bluetooth LE advertising is not supported");
+                }
+
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
@@ -493,185 +449,140 @@ public class JXcoreExtension {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ArrayList<Object> args = new ArrayList<Object>();
-
-                String bluetoothMacAddress = mConnectionHelper.getBluetoothMacAddress();
+                String bluetoothMacAddress = mConnectionHelper.getDiscoveryManager().getBluetoothMacAddress();
 
                 if (bluetoothMacAddress == null || bluetoothMacAddress.length() == 0) {
-                    args.add("Bluetooth MAC address not known");
-                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    args.add("Bluetooth MAC address unknown");
                 } else {
                     args.add(null);
                     args.add(bluetoothMacAddress);
-
-                    jxcore.CallJSMethod(callbackId, args.toArray());
                 }
+
+                jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
 
         jxcore.RegisterMethod(METHOD_NAME_GET_BLUETOOTH_NAME, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-
                 ArrayList<Object> args = new ArrayList<Object>();
+                String bluetoothNameString = mConnectionHelper.getBluetoothName();
 
-                String btNameString = mConnectionHelper.getBluetoothName();
-
-                if (btNameString == null) {
+                if (bluetoothNameString == null) {
                     args.add("Unable to get the Bluetooth name");
-                    jxcore.CallJSMethod(callbackId, args.toArray());
-                    return;
+                } else {
+                    args.add(null);
+                    args.add(bluetoothNameString);
                 }
-
-                args.add(null); // All is well
-                args.add(btNameString);
 
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
 
-        jxcore.RegisterMethod(METHOD_NAME_IS_BLE_SUPPORTED, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_RECONNECT_WIFI_AP, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ArrayList<Object> args = new ArrayList<Object>();
+                WifiManager wifiManager =
+                        (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
 
-                boolean isBleMultipleAdvertisementSupported = mConnectionHelper.isBleMultipleAdvertisementSupported();
+                if (wifiManager.reconnect()) {
+                    wifiManager.disconnect();
 
-                if (isBleMultipleAdvertisementSupported) {
-                    args.add(null); // All is well
-                    args.add("Bluetooth LE advertising is supported");
-                    jxcore.CallJSMethod(callbackId, args.toArray());
-                } else {
-                    args.add("Bluetooth LE advertising is not supported");
-                    jxcore.CallJSMethod(callbackId, args.toArray());
+                    if (!wifiManager.reconnect()) {
+                        args.add("WifiManager.reconnect returned false");
+                    }
                 }
+
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
 
         jxcore.RegisterMethod(METHOD_NAME_SHOW_TOAST, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId) {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
 
-              ArrayList<Object> args = new ArrayList<Object>();
+                if (params.size() == 0) {
+                    args.add("Required parameter (toast message) missing");
+                } else {
+                    String message = params.get(0).toString();
+                    int toastDuration = Toast.LENGTH_SHORT;
 
-              if(params.size() <= 0) {
-                  args.add("Required parameters missing.");
-                  jxcore.CallJSMethod(callbackId, args.toArray());
-                  return;
-              }
+                    if (params.size() == 2 && ((Boolean) params.get(1))) {
+                        toastDuration = Toast.LENGTH_LONG;
+                    }
 
-              String message = params.get(0).toString();
-              boolean isLong = true;
-              if (params.size() == 2) {
-                isLong = (Boolean) params.get(1);
-              }
+                    Toast.makeText(jxcore.activity.getApplicationContext(), message, toastDuration).show();
+                    args.add(null);
+                }
 
-              int duration = Toast.LENGTH_SHORT;
-              if (isLong) {
-                duration = Toast.LENGTH_LONG;
-              }
-
-              Toast.makeText(jxcore.activity.getApplicationContext(), message, duration).show();
-              args.add(null);
-              jxcore.CallJSMethod(callbackId, args.toArray());
-          }
-      });
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
 
 
-      jxcore.RegisterMethod(METHOD_NAME_START_BROADCASTING, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId) {
+        final LifeCycleMonitor mLifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.onLCEventCallback() {
+            @Override
+            public void onEvent(String eventString, boolean stopped) {
+                jxcore.activity.runOnUiThread(new Runnable() {
+                    public void run() {
+                        //String reply = "{\"lifecycleevent\":\"" + messageTmp + "\"}";
+                        //jxcore.CallJSMethod("onLifeCycleEvent", reply);
+                    }
+                });
 
-              ArrayList<Object> args = new ArrayList<Object>();
+                // todo if we get Postcard fixed on lifecycle handling we should re-enable this
+                // now we need to just trust that postcard will shutdown correctly
+                //if(stopped) {
+                //    mBtConnectorHelper.close();
+                //}
+            }
+        });
 
-              if (params.size() <= 0) {
-                  args.add("Required parameters missing.");
-                  jxcore.CallJSMethod(callbackId, args.toArray());
-                  return;
-              }
+        mLifeCycleMonitor.Start();
+    }
 
-              if (mConnectionHelper.isRunning()) {
-                  args.add("Already running, not re-starting.");
-                  jxcore.CallJSMethod(callbackId, args.toArray());
-                  return;
-              }
+    /**
+     * Notifies the JXcore layer of a peer availability changed event.
+     * @param peerProperties The peer properties.
+     * @param isAvailable If true, the peer is available. If false, it is not available.
+     */
+    public static void notifyPeerAvailability(PeerProperties peerProperties, boolean isAvailable) {
+        JSONObject jsonObject = new JSONObject();
+        boolean jsonObjectCreated = false;
 
-              String peerName = params.get(0).toString();
-              int port = (Integer) params.get(1);
+        try {
+            jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
+            jsonObject.put(EVENT_VALUE_PEER_NAME, peerProperties.getName());
+            jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
+            jsonObjectCreated = true;
+        } catch (JSONException e) {
+            Log.e(TAG, "notifyPeerAvailability: Failed to create a JSON object: " + e.getMessage(), e);
+        }
 
-              boolean retVal = mConnectionHelper.start(port);
+        if (jsonObjectCreated) {
+            Log.d(TAG, "notifyPeerAvailability: Peer " + peerProperties.toString() + (isAvailable ? " is available" : " not available"));
+            JSONArray jsonArray = new JSONArray();
+            jsonArray.put(jsonObject);
+            jxcore.CallJSMethod(EVENT_NAME_PEER_AVAILABILITY_CHANGED, jsonArray.toString());
+        }
+    }
 
-              String errString = null;
+    /**
+     * Notifies the JXcore layer of a connection error event.
+     * @param peerId The peer ID.
+     */
+    public static void notifyConnectionError(final String peerId) {
+        JSONObject jsonObject = new JSONObject();
 
-              if (!retVal) {
-                  errString = "Either Bluetooth or Wi-Fi Direct not supported on this device";
-              }
+        try {
+            jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
+        } catch (JSONException e) {
+            Log.e(TAG, "notifyConnectionError: Failed to construct a JSON object: " + e.getMessage(), e);
+        }
 
-              //if all is well, the errString is still null in here..
-              args.add(errString);
-              jxcore.CallJSMethod(callbackId, args.toArray());
-          }
-      });
-
-      jxcore.RegisterMethod(METHOD_NAME_STOP_BROADCASTING, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId) {
-
-              ArrayList<Object> args = new ArrayList<Object>();
-              if (!mConnectionHelper.isRunning()) {
-                  args.add("Already stopped.");
-                  jxcore.CallJSMethod(callbackId, args.toArray());
-                  return;
-              }
-
-              mConnectionHelper.stop();
-              args.add(null);
-              jxcore.CallJSMethod(callbackId, args.toArray());
-          }
-      });
-
-      jxcore.RegisterMethod(METHOD_NAME_DISCONNECT, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId) {
-
-              ArrayList<Object> args = new ArrayList<Object>();
-              if(params.size() <= 0) {
-                  args.add("Required parameters missing");
-                  jxcore.CallJSMethod(callbackId, args.toArray());
-                  return;
-              }
-
-              String peerId = params.get(0).toString();
-              if(!mConnectionHelper.disconnectOutgoingConnection(peerId)) {
-                  args.add("Connection for PeerId: " + peerId + " not  found.");
-                  jxcore.CallJSMethod(callbackId, args.toArray());
-                  return;
-              }
-
-              //all is well, so lets return null
-              args.add(null);
-              jxcore.CallJSMethod(callbackId, args.toArray());
-          }
-      });
-
-
-      final LifeCycleMonitor mLifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.onLCEventCallback() {
-
-          @Override
-          public void onEvent(String eventString,boolean stopped) {
-              jxcore.activity.runOnUiThread(new Runnable() {
-                  public void run() {
-              //        String reply = "{\"lifecycleevent\":\"" + messageTmp + "\"}";
-              //        jxcore.CallJSMethod("onLifeCycleEvent",reply);
-                  }
-              });
-
-              // todo if we get Postcard fixed on lifecycle handling we should re-enable this
-              // now we need to just trust that postcard will shutdown correctly
-           /*   if(stopped) {
-                  mBtConnectorHelper.close();
-              }*/
-          }
-      });
-      mLifeCycleMonitor.Start();
-  }
+        jxcore.CallJSMethod(EVENT_NAME_CONNECTION_ERROR, jsonObject.toString());
+    }
 }

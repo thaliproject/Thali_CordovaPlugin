@@ -4,34 +4,30 @@
 package io.jxcore.node;
 
 import android.util.Log;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+import io.jxcore.node.JXcoreExtension.JxCoreExtensionListener;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * A model for keeping track of discovered peers and established connections.
+ * A model for keeping track of the established connections.
  */
-public class PeerAndConnectionModel {
+public class ConnectionModel {
     public interface Listener {
-        /**
-         * Called when a connection to a peer with the provided ID is closed.
-         * @param peerId The ID of the peer.
-         */
-        void onConnectionClosed(String peerId);
+        // TODO
     }
 
-    private static final String TAG = PeerAndConnectionModel.class.getName();
-    private final CopyOnWriteArrayList<PeerProperties> mDiscoveredPeers = new CopyOnWriteArrayList<PeerProperties>();
+    private static final String TAG = ConnectionModel.class.getName();
     private final CopyOnWriteArrayList<IncomingSocketThread> mIncomingSocketThreads = new CopyOnWriteArrayList<IncomingSocketThread>();
     private final CopyOnWriteArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new CopyOnWriteArrayList<OutgoingSocketThread>();
+    private final HashMap<String, JxCoreExtensionListener> mOutgoingConnectionListeners = new HashMap<String, JxCoreExtensionListener>();;
     private final Listener mListener;
 
     /**
      * Constructor.
      * @param listener The listener.
      */
-    public PeerAndConnectionModel(Listener listener) {
+    public ConnectionModel(Listener listener) {
         mListener = listener;
     }
 
@@ -99,27 +95,51 @@ public class PeerAndConnectionModel {
     }
 
     /**
-     * Tries to find a socket thread with the given peer ID.
-     * @param peerId The peer ID associated with the socket thread.
-     * @param isIncoming If true, will search from incoming connections. If false, will search from outgoing connections.
-     * @return The socket thread or null if not found.
+     * @param bluetoothMacAddress The Bluetooth MAC address of an outgoing connection.
+     * @return A listener associated with the given Bluetooth MAC address.
      */
-    private synchronized SocketThreadBase findSocketThread(final String peerId, final boolean isIncoming) {
-        if (isIncoming) {
-            for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
-                if (incomingSocketThread != null && incomingSocketThread.getPeerProperties().getId().equalsIgnoreCase(peerId)) {
-                    return incomingSocketThread;
+    public synchronized JxCoreExtensionListener getOutgoingConnectionListener(String bluetoothMacAddress) {
+        return mOutgoingConnectionListeners.get(bluetoothMacAddress);
+    }
+
+    /**
+     * Adds the given listener for a connection with the given Bluetooth MAC address.
+     * @param bluetoothMacAddress The Bluetooth MAC address.
+     * @param listener The listener to add.
+     * @return True, if added. False otherwise (e.g. already added).
+     */
+    public synchronized boolean addOutgoingConnectionListener(
+            String bluetoothMacAddress, JxCoreExtensionListener listener) {
+        boolean wasAdded = false;
+
+        if (bluetoothMacAddress != null && listener != null) {
+            boolean alreadyExists = false;
+            Iterator<HashMap.Entry<String, JxCoreExtensionListener>> iterator =
+                    mOutgoingConnectionListeners.entrySet().iterator();
+
+            while (iterator.hasNext()) {
+                HashMap.Entry<String, JxCoreExtensionListener> entry = iterator.next();
+
+                if (entry.getKey().equals(bluetoothMacAddress)) {
+                    alreadyExists = true;
+                    break;
                 }
             }
-        } else {
-            for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
-                if (outgoingSocketThread != null && outgoingSocketThread.getPeerProperties().getId().equalsIgnoreCase(peerId)) {
-                    return outgoingSocketThread;
-                }
+
+            if (!alreadyExists) {
+                mOutgoingConnectionListeners.put(bluetoothMacAddress, listener);
             }
         }
 
-        return null;
+        return wasAdded;
+    }
+
+    /**
+     * Removes the listener associated with the given Bluetooth MAC address.
+     * @param bluetoothMacAddress The Bluetooth MAC address of an outgoing connection.
+     */
+    public synchronized void removeOutgoingConnectionListener(String bluetoothMacAddress) {
+        mOutgoingConnectionListeners.remove(bluetoothMacAddress);
     }
 
     /**
@@ -173,25 +193,13 @@ public class PeerAndConnectionModel {
 
         if (socketThread != null) {
             Log.i(TAG, "closeAndRemoveOutgoingConnectionThread: Closing connection, peer ID: " + peerId);
-
-            if (mListener != null) {
-                mListener.onConnectionClosed(peerId);
-            }
-
+            mOutgoingConnectionListeners.remove(peerId);
             mOutgoingSocketThreads.remove(socketThread);
             socketThread.close();
             wasFoundAndDisconnected = true;
 
             if (notifyError) {
-                JSONObject jsonObject = new JSONObject();
-
-                try {
-                    jsonObject.put(JXcoreExtension.EVENT_VALUE_PEER_ID, peerId);
-                } catch (JSONException e) {
-                    Log.e(TAG, "closeAndRemoveOutgoingConnectionThread: Failed to construct a JSON object: " + e.getMessage(), e);
-                }
-
-                jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_CONNECTION_ERROR, jsonObject.toString());
+                JXcoreExtension.notifyConnectionError(peerId);
             }
         }
 
@@ -215,6 +223,7 @@ public class PeerAndConnectionModel {
         }
 
         mOutgoingSocketThreads.clear();
+        mOutgoingConnectionListeners.clear();
     }
 
     /**
@@ -239,50 +248,26 @@ public class PeerAndConnectionModel {
     }
 
     /**
-     * Tries to find a peer with the given ID.
-     * @param peerId The ID of the peer to find.
-     * @return The properties of the found peer or null, if not found.
+     * Tries to find a socket thread with the given peer ID.
+     * @param peerId The peer ID associated with the socket thread.
+     * @param isIncoming If true, will search from incoming connections. If false, will search from outgoing connections.
+     * @return The socket thread or null if not found.
      */
-    public synchronized PeerProperties findDiscoveredPeer(final String peerId) {
-        PeerProperties peerProperties = null;
-
-        for (PeerProperties existingPeerProperties : mDiscoveredPeers) {
-            if (existingPeerProperties != null && existingPeerProperties.getId().contentEquals(peerId)) {
-                peerProperties = existingPeerProperties;
-                break;
-            }
-        }
-
-        return peerProperties;
-    }
-
-    /**
-     * Adds/removes the given peer to/from the list of discovered peers.
-     * @param peerProperties The peer properties.
-     * @param add If true, will try to add. If false, will try to remove.
-     * @return True, if successfully added/removed.
-     */
-    public synchronized boolean modifyListOfDiscoveredPeers(PeerProperties peerProperties, boolean add) {
-        boolean success = false;
-
-        if (add) {
-            if (findDiscoveredPeer(peerProperties.getId()) != null) {
-                Log.w(TAG, "modifyListOfDiscoveredPeers: Peer " + peerProperties.toString()
-                        + " already in the list, will not add again");
-            } else {
-                mDiscoveredPeers.add(peerProperties);
-                success = true;
+    private synchronized SocketThreadBase findSocketThread(final String peerId, final boolean isIncoming) {
+        if (isIncoming) {
+            for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
+                if (incomingSocketThread != null && incomingSocketThread.getPeerProperties().getId().equalsIgnoreCase(peerId)) {
+                    return incomingSocketThread;
+                }
             }
         } else {
-            // Remove
-            PeerProperties peerPropertiesToRemove = findDiscoveredPeer(peerProperties.getId());
-
-            if (peerPropertiesToRemove != null && mDiscoveredPeers.remove(peerPropertiesToRemove)) {
-                Log.d(TAG, "modifyListOfDiscoveredPeers: Peer " + peerProperties.toString() + " removed");
-                success = true;
+            for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
+                if (outgoingSocketThread != null && outgoingSocketThread.getPeerProperties().getId().equalsIgnoreCase(peerId)) {
+                    return outgoingSocketThread;
+                }
             }
         }
 
-        return success;
+        return null;
     }
 }
