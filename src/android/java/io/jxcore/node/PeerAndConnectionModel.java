@@ -285,6 +285,4 @@ public class PeerAndConnectionModel {
 
         return success;
     }
-
-
 }
