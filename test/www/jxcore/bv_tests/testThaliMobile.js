@@ -92,6 +92,25 @@ if (!(typeof Mobile !== 'undefined' && Mobile.iAmAMock)) {
   return;
 }
 
+test('can get the network status', function (t) {
+  ThaliMobile.getNetworkStatus()
+  .then(function (networkChangedValue) {
+    t.doesNotThrow(function () {
+      var requiredProperties = [
+        'wifi',
+        'bluetooth',
+        'bluetoothLowEnergy',
+        'cellular'
+      ];
+      for (var index in requiredProperties) {
+        validations.ensureNonNullOrEmptyString(
+          networkChangedValue[requiredProperties[index]]);
+      }
+    }, 'network status should have certain non-empty properties');
+    t.end();
+  });
+});
+
 var setupDiscoveryAndFindPeer = function (t, callback) {
   ThaliMobile.emitter.once('peerAvailabilityChanged', function (peers) {
     // Just pick the first peer from the list. In reality, it is possible that

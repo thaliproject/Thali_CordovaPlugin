@@ -269,8 +269,8 @@ module.exports.stopAdvertisingAndListening = function () {
  * @public
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
-module.exports.getNetworkStatus = function() {
-  return new Promise();
+module.exports.getNetworkStatus = function () {
+  return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
 };
 
 /*
