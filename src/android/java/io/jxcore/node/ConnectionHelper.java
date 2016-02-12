@@ -100,22 +100,27 @@ public class ConnectionHelper
         mServerPort = port;
 
         mConnectionManager = new ConnectionManager(mContext, this, SERVICE_UUID, BLUETOOTH_NAME);
+        mConnectionManager.setPeerName(peerName);
+
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
+        mDiscoveryManager.setPeerName(peerName);
+
         mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance(mContext);
 
-        if (mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE_AND_WIFI)) {
-            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
-            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
+        if (mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE)) {
+            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+            mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
+            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
         } else {
             mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
         }
 
-        boolean connectionManagerStarted = mConnectionManager.start(peerName);
+        boolean connectionManagerStarted = mConnectionManager.start();
         boolean discoveryManagerStarted = false;
 
         if (connectionManagerStarted) {
             Log.i(TAG, "start: Using peer discovery mode: " + mDiscoveryManagerSettings.getDiscoveryMode());
-            discoveryManagerStarted = mDiscoveryManager.start(peerName);
+            discoveryManagerStarted = mDiscoveryManager.start(true, true);
 
             if (discoveryManagerStarted) {
                 Log.i(TAG, "start: OK");
@@ -138,11 +143,13 @@ public class ConnectionHelper
         if (mConnectionManager != null) {
             Log.i(TAG, "stop");
             mConnectionManager.stop();
+            mConnectionManager.dispose();
             mConnectionManager = null;
         }
 
         if (mDiscoveryManager != null) {
             mDiscoveryManager.stop();
+            mDiscoveryManager.dispose();
             mDiscoveryManager = null;
         }
 
@@ -176,6 +183,7 @@ public class ConnectionHelper
             isSupported = discoveryManager.isBleMultipleAdvertisementSupported();
         }
 
+        Log.v(TAG, "isBleMultipleAdvertisementSupported: " + isSupported);
         return isSupported;
     }
 
@@ -257,11 +265,10 @@ public class ConnectionHelper
 
                     if (selectedDevice == null) {
                         Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
-                        selectedDevice = new PeerProperties(
-                                peerIdToConnectTo, peerIdToConnectTo, peerIdToConnectTo, "", "", "");
+                        selectedDevice = new PeerProperties(peerIdToConnectTo, peerIdToConnectTo, "", "", "");
                     }
 
-                    if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothAddress())) {
+                    if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothMacAddress())) {
                         if (mConnectionManager.connect(selectedDevice)) {
                             Log.i(TAG, "connect: Connection process successfully started (peer ID: " + peerIdToConnectTo + ")");
                             mOutgoingConnectionListeners.put(peerIdToConnectTo, listener);
@@ -270,9 +277,9 @@ public class ConnectionHelper
                             listener.onConnectionStatusChanged("Failed to start connecting", PORT_NUMBER_IN_ERROR_CASES);
                         }
                     } else {
-                        Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress());
+                        Log.e(TAG, "connect: Invalid Bluetooth address: " + selectedDevice.getBluetoothMacAddress());
                         listener.onConnectionStatusChanged(
-                                "Invalid Bluetooth address: " + selectedDevice.getBluetoothAddress(), PORT_NUMBER_IN_ERROR_CASES);
+                                "Invalid Bluetooth address: " + selectedDevice.getBluetoothMacAddress(), PORT_NUMBER_IN_ERROR_CASES);
                     }
                 } else {
                     Log.e(TAG, "connect: Maximum number of peer connections ("
@@ -551,7 +558,7 @@ public class ConnectionHelper
     @Override
     public void onPeerDiscovered(PeerProperties peerProperties) {
         Log.i(TAG, "onPeerDiscovered: " + peerProperties.toString()
-                + ", Bluetooth address: " + peerProperties.getBluetoothAddress()
+                + ", Bluetooth address: " + peerProperties.getBluetoothMacAddress()
                 + ", device name: " + peerProperties.getDeviceName()
                 + ", device address: " + peerProperties.getDeviceAddress());
 
@@ -567,7 +574,7 @@ public class ConnectionHelper
     @Override
     public void onPeerUpdated(PeerProperties peerProperties) {
         Log.i(TAG, "onPeerUpdated: " + peerProperties.toString()
-                + ", Bluetooth address: " + peerProperties.getBluetoothAddress()
+                + ", Bluetooth address: " + peerProperties.getBluetoothMacAddress()
                 + ", device name: " + peerProperties.getDeviceName()
                 + ", device address: " + peerProperties.getDeviceAddress());
     }
@@ -653,13 +660,15 @@ public class ConnectionHelper
                     public void onFinish() {
                         this.cancel();
                         Log.i(TAG, "Powering the BLE discovery back up");
-                        mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
-                        mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_BALANCED);
+                        mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+                        mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
+                        mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
                         mPowerUpBleDiscoveryTimer = null;
                     }
                 };
 
                 mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER);
+                mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_LOW);
                 mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
 
                 mPowerUpBleDiscoveryTimer.start();

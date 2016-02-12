@@ -440,7 +440,8 @@ var radioState = {
  * @property {string} bssidName If null this value indicates that either
  * wifiRadioOn is not 'on' or that the Wi-Fi isn't currently connected to an
  * access point. If non-null then this is the BSSID of the access point that
- * Wi-Fi is connected to.
+ * Wi-Fi is connected to. If missing, means that it was not possible to get
+ * the BSSID (for example, this platform doesn't provide an API for it).
  */
 
 /**
