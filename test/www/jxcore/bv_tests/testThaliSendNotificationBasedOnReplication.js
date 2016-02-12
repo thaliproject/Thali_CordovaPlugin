@@ -11,8 +11,8 @@ var express = require('express');
 var crypto = require('crypto');
 var path = require('path');
 var Promise = require('lie');
-var ThaliSendNotificationBasedOnReplication =
-  require('thali/NextGeneration/thaliSEndNotificationBasedOnReplication');
+//var ThaliSendNotificationBasedOnReplication =
+//  require('thali/NextGeneration/thaliSEndNotificationBasedOnReplication');
 var randomstring = require('randomstring');
 
 var test = tape({
@@ -275,35 +275,35 @@ function mockStartAndStop(mockThaliNotificationServer, startArg) {
 //    });
 //});
 
-test('two peers with empty DB, update the doc', function (t) {
-  var partnerOnePublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var partnerTwoPublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var startArg = [ partnerOnePublicKey, partnerTwoPublicKey];;
-  testStartAndStop(t,
-    startArg,
-    function () { return Promise.resolve(); },
-    function (mockThaliNotificationServer) {
-      mockThaliNotificationServer.expects('start')
-        .once().withExactArgs([]).returns(Promise.resolve());
-      mockThaliNotificationServer.expects('start')
-        .once().withExactArgs(startArg).returns(Promise.resolve());
-
-      mockThaliNotificationServer.expects('stop')
-        .once().withExactArgs().returns(Promise.resolve());
-    },
-    function (pouchDB) {
-      return new Promise(function (resolve, reject) {
-        pouchDB.put({_id: '33', stuff: 'uhuh'})
-          .then(function () {
-            setTimeout(function () {
-              resolve();
-            }, 10000);
-          }).catch(function (err) {
-            reject(err);
-        });
-      });
-    });
-});
+//test('two peers with empty DB, update the doc', function (t) {
+//  var partnerOnePublicKey = crypto.createECDH('secp521r1').generateKeys();
+//  var partnerTwoPublicKey = crypto.createECDH('secp521r1').generateKeys();
+//  var startArg = [ partnerOnePublicKey, partnerTwoPublicKey];;
+//  testStartAndStop(t,
+//    startArg,
+//    function () { return Promise.resolve(); },
+//    function (mockThaliNotificationServer) {
+//      mockThaliNotificationServer.expects('start')
+//        .once().withExactArgs([]).returns(Promise.resolve());
+//      mockThaliNotificationServer.expects('start')
+//        .once().withExactArgs(startArg).returns(Promise.resolve());
+//
+//      mockThaliNotificationServer.expects('stop')
+//        .once().withExactArgs().returns(Promise.resolve());
+//    },
+//    function (pouchDB) {
+//      return new Promise(function (resolve, reject) {
+//        pouchDB.put({_id: '33', stuff: 'uhuh'})
+//          .then(function () {
+//            setTimeout(function () {
+//              resolve();
+//            }, 10000);
+//          }).catch(function (err) {
+//            reject(err);
+//        });
+//      });
+//    });
+//});
 
 // Make sure we will refresh tokens when they expire
 
@@ -381,5 +381,20 @@ test('dleme', function (t) {
   console.log(foo.m(45));
   console.log(foo.m(23));
   mock.verify();
+  t.end();
+});
+
+test('time out', function (t) {
+  var cancel = setTimeout(function () {
+    console.log(clearTimeout(cancel));
+    t.end();
+  }, 1);
+});
+
+test('buff copare', function (t) {
+  var buff1 = new Buffer(10);
+  var foo = true;
+  console.log(Buffer.isBuffer(buff1));
+  console.log(Buffer.isBuffer(foo));
   t.end();
 });

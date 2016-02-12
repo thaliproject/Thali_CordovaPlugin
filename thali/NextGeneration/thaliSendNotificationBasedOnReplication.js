@@ -7,6 +7,7 @@ var PromiseQueue = require('./promiseQueue');
 var logger =
   require('../thalilogger')('thaliSendNotificationBasedOnReplication');
 var urlsafeBase64 = require('urlsafe-base64');
+var assert = require('assert');
 
 /** @module thaliSendNotificationBasedOnReplication */
 
@@ -107,6 +108,9 @@ function ThaliSendNotificationBasedOnReplication(router,
   this._millisecondsUntilExpiration = millisecondsUntilExpiration;
   this._pouchDB = pouchDB;
   this._promiseQueue = new PromiseQueue();
+  this._thaliNotificationServer =
+    new ThaliNotificationServer(router, ecdhForLocalDevice,
+                                millisecondsUntilExpiration);
 }
 
 /**
@@ -151,7 +155,7 @@ ThaliSendNotificationBasedOnReplication.NOTIFICATION_BEACON_PATH =
  * the seq number in _Local.
  *
  * @public
- * @param {buffer} ecdhPublicKey
+ * @param {Buffer} ecdhPublicKey
  * @returns {string}
  */
 ThaliSendNotificationBasedOnReplication.calculateSeqPointKeyId =
@@ -171,22 +175,71 @@ ThaliSendNotificationBasedOnReplication.calculateSeqPointKeyId =
  */
 ThaliSendNotificationBasedOnReplication.LOCAL_SEQ_POINT_PREFIX = 'thali';
 
+// Values created by the constructor and invariant for the life of the object,
+// including across starts and stops.
 ThaliSendNotificationBasedOnReplication.prototype._router = null;
 ThaliSendNotificationBasedOnReplication.prototype._ecdhForLocalDevice = null;
 ThaliSendNotificationBasedOnReplication.prototype._millisecondsUntilExpiration =
   null;
 ThaliSendNotificationBasedOnReplication.prototype._pouchDB = null;
-ThaliSendNotificationBasedOnReplication.prototype._pouchDBChangesCancelObject =
-  null;
+ThaliSendNotificationBasedOnReplication.prototype._promiseQueue = null;
 ThaliSendNotificationBasedOnReplication.prototype._thaliNotificationServer =
   null;
-ThaliSendNotificationBasedOnReplication.prototype.
-  _prioritizedPeersToNotifyOfChanges = null;
-ThaliSendNotificationBasedOnReplication.prototype._promiseQueue = null;
-ThaliSendNotificationBasedOnReplication.prototype.
-  _beaconRefreshTimerManager = null;
-ThaliSendNotificationBasedOnReplication.prototype._lastTimeBeaconsWereUpdated =
-  0;
+
+
+/**
+ * State that object is in
+ *
+ * @private
+ * @readonly
+ * @enum {string}
+ */
+var stateEnum = {
+  STARTING: 'starting',
+  STARTED: 'started',
+  STOPPED: 'stopped'
+};
+
+ThaliSendNotificationBasedOnReplication.prototype._state = stateEnum.STOPPED;
+
+/**
+ *
+ * @typedef {Object} _transientState
+ * @private
+ * @property {Buffer[]} prioritizedPeersToNotifyOfChanges
+ * @property {?Object} pouchDBChangesCancelObject
+ * @property {?_RefreshTimerManager} beaconRefreshTimerManager
+ * @property {number} lastTimeBeaconsWereUpdated This is milliseconds since the
+ * epoch
+ */
+
+
+/**
+ *
+ * @type {_transientState}
+ * @private
+ */
+ThaliSendNotificationBasedOnReplication.prototype._transientState = {};
+
+ThaliSendNotificationBasedOnReplication.prototype._resetTransientState =
+  function (prioritizedPeersToNotifyOfChanges) {
+    assert.notEqual(prioritizedPeersToNotifyOfChanges, null, 'This value ' +
+    'should always be an array, even if an empty one.');
+    this._transientState.prioritizedPeersToNotifyOfChanges =
+      prioritizedPeersToNotifyOfChanges;
+
+    if (this._transientState.pouchDBChangesCancelObject) {
+      this._transientState.pouchDBChangesCancelObject.cancel();
+      this._transientState.pouchDBChangesCancelObject = null;
+    }
+
+    if (this._transientState.beaconRefreshTimerManager) {
+      this._transientState.beaconRefreshTimerManager.stop();
+      this._transientState.beaconRefreshTimerManager = null;
+    }
+
+    this._transientState.lastTimeBeaconsWereUpdated = 0;
+  };
 
 /**
  * Will start monitoring the submitted pouchDB and updating the notification
@@ -296,51 +349,56 @@ ThaliSendNotificationBasedOnReplication.prototype._lastTimeBeaconsWereUpdated =
 ThaliSendNotificationBasedOnReplication.prototype.start =
   function (prioritizedPeersToNotifyOfChanges) {
     return this._promiseQueue.enqueue(
-      this._commonStart(prioritizedPeersToNotifyOfChanges, false));
+      this._commonStart(prioritizedPeersToNotifyOfChanges));
   };
 
 ThaliSendNotificationBasedOnReplication.prototype._startFirst =
-  function (prioritizedPeersToNotifyOfChanges) {
+  function (prioritizedPeersToNotifyOfChanges, checkFn) {
     return this._promiseQueue.enqueueAtTop(
-      this._commonStart(prioritizedPeersToNotifyOfChanges, true));
+      this._commonStart(prioritizedPeersToNotifyOfChanges, checkFn));
   };
+
+/**
+ * @callback checkCallback
+ * @returns {boolean}
+ */
 
 /**
  *
  * @param {Buffer[]} prioritizedPeersToNotifyOfChanges
- * @param {boolean} forceReEval Forces us to run a fresh updateBeacons check
  * even if the prioritiedPeersToNotifyOfChanges hasn't changed since the last
  * call to _commonStart. This is needed in cases where the database has updated.
+ * @param {checkCallback} [checkFn] Lets us run checks to determine if we need
+ * to run. If false then don't run. If true, then do run.
  * @returns {module:promiseQueue~promiseFunction}
  * @private
  */
 ThaliSendNotificationBasedOnReplication.prototype._commonStart =
-  function (prioritizedPeersToNotifyOfChanges, forceReEval) {
+  function (prioritizedPeersToNotifyOfChanges, checkFn) {
+    assert(prioritizedPeersToNotifyOfChanges !== null, 'No null arg');
     var self = this;
     return function (resolve, reject) {
-      if (!self._thaliNotificationServer) {
-        self._thaliNotificationServer =
-          new ThaliNotificationServer(self._router, self._ecdhForLocalDevice,
-            self._millisecondsUntilExpiration);
-      } else {
-        if (!forceReEval && prioritizedPeersToNotifyOfChanges ===
-          self._prioritizedPeersToNotifyOfChanges) {
-          return resolve();
-        }
-      }
-
-      self._prioritizedPeersToNotifyOfChanges =
-        prioritizedPeersToNotifyOfChanges;
-
-      if (self._prioritizedPeersToNotifyOfChanges === null ||
-          self._prioritizedPeersToNotifyOfChanges.length === 0) {
+      if (checkFn && !checkFn()) {
         return resolve();
       }
 
+      if (self._state === stateEnum.STARTED &&
+          compareBufferArrays(
+            self._transientState.prioritizedPeersToNotifyOfChanges,
+            prioritizedPeersToNotifyOfChanges)) {
+        return resolve();
+      }
+
+      self._state = stateEnum.STARTING;
+
+      self._resetTransientState(prioritizedPeersToNotifyOfChanges);
+
       self._updateBeacons(prioritizedPeersToNotifyOfChanges)
         .then(function () {
+          self._state = stateEnum.STARTED;
           resolve();
         }).catch(function (err) {
+          self._state = stateEnum.STOPPED;
           reject(err);
         });
     };
@@ -349,9 +407,8 @@ ThaliSendNotificationBasedOnReplication.prototype._commonStart =
 ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
   function (seqValue) {
     var self = this;
-    if (self._pouchDBChangesCancelObject) {
-      return;
-    }
+    assert.equal(self._transientState.pouchDBChangesCancelObject, null,
+      'Something went wrong in initialization');
     self._pouchDBChangesCancelObject = self._pouchDB.changes({
       live: true,
       since: seqValue,
@@ -446,6 +503,30 @@ ThaliSendNotificationBasedOnReplication.prototype._calculatePeersToNotify =
   };
 
 /**
+ * Compares if two buffer arrays contain the same buffers in the same order.
+ * @param {Buffer[]} buffArray1
+ * @param {Buffer[]} buffArray2
+ * @returns {boolean}
+ */
+function compareBufferArrays(buffArray1, buffArray2) {
+  assert(Array.isArray(buffArray1), 'We only accept arrays.');
+  assert(Array.isArray(buffArray2), 'We only accept arrays.');
+  if (buffArray1.length !== buffArray2.length) {
+    return false;
+  }
+  for(var i = 0; i < buffArray1.length; ++i) {
+    var buff1 = buffArray1[i];
+    assert(Buffer.isBuffer(buff1), 'Only buffers allowed in 1');
+    var buff2 = buffArray2[i];
+    assert(Buffer.isBuffer[buff2], 'Only buffers allowed in 2');
+    if (Buffer.compare(buff1, buff2) !== 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Sets a timer to refresh the beacons before they expire. If the expiration
  * value is <= 0 then we clear the existing refresh timer if any but otherwise
  * do nothing since there are no beacons to refresh.
@@ -456,34 +537,49 @@ ThaliSendNotificationBasedOnReplication.prototype._calculatePeersToNotify =
 ThaliSendNotificationBasedOnReplication.prototype._updateOnExpiration =
   function (millisecondsUntilRun) {
     var self = this;
-    if (self._beaconRefreshTimerManager) {
-      self._beaconRefreshTimerManager.stop();
-      self._beaconRefreshTimerManager = null;
+    if (self._transientState.beaconRefreshTimerManager) {
+      self._transientState.beaconRefreshTimerManager.stop();
+      self._transientState.beaconRefreshTimerManager = null;
     }
 
     if (millisecondsUntilRun <= 0) {
       return;
     }
 
-    self._beaconRefreshTimerManager = new _RefreshTimerManager(
+    assert.notEqual(self._transientState.lastTimeBeaconsWereUpdated, 0,
+      'There should not be a path that lets us get to _updateOnExpiration' +
+      'without the last beacon value being initialized to something other' +
+      'than 0.');
+
+    var lastTimeBeaconsWereUpdatedWhenWeWereCreated =
+      self._transientState.lastTimeBeaconsWereUpdated;
+
+    var prioritizedPeersWhenCreated =
+      self._transientState.prioritizedPeersToNotifyOfChanges;
+
+    self._transientState.beaconRefreshTimerManager = new _RefreshTimerManager(
       millisecondsUntilRun, function () {
-      // We check if there is a notification server (if there isn't then
-      // we don't need to update the beacons) and if there is then we
-      // schedule the beacon refresh first. That way we sneak in before
-      // any user commands and so don't make a mess of the state by
-      // changing the list of users to be notified or starting
-      // this class after it had been stopped.
-      if (self._thaliNotificationServer) {
-        self._startFirst(self._prioritizedPeersToNotifyOfChanges);
-      }
+        self._startFirst(prioritizedPeersWhenCreated,
+          function () {
+            if (self._state !== stateEnum.STARTED) {
+              return false;
+            }
+
+            if (self._transientState.lastTimeBeaconsWereUpdated !==
+              lastTimeBeaconsWereUpdatedWhenWeWereCreated) {
+              return false;
+            }
+
+            return compareBufferArrays(prioritizedPeersWhenCreated,
+              self._transientState.prioritizedPeersToNotifyOfChanges);
+          });
     });
-    self._beaconRefreshTimerManager.start();
+    self._transientState.beaconRefreshTimerManager.start();
   };
 
 ThaliSendNotificationBasedOnReplication.prototype._updateBeacons =
   function (prioritizedPeersToNotifyOfChanges) {
     var self = this;
-    var retrievedPeersArray = null;
     var retrievedSeqValue = null;
     return self._findSequenceNumber()
       .then(function (seqValue) {
@@ -491,12 +587,8 @@ ThaliSendNotificationBasedOnReplication.prototype._updateBeacons =
         return self._calculatePeersToNotify(seqValue,
                                             prioritizedPeersToNotifyOfChanges);
       }).then(function (peersArray) {
-        retrievedPeersArray = peersArray;
-        if (!self._thaliNotificationServer) {
-          return Promise.reject(new Error('There is no notification server'));
-        }
-        self._lastTimeBeaconsWereUpdated = Date.now();
-        if (retrievedPeersArray.length > 0) {
+        if (peersArray.length > 0) {
+          self._transientState.lastTimeBeaconsWereUpdated = Date.now();
           self._updateOnExpiration(self._millisecondsUntilExpiration);
         }
         self._setUpChangeListener(retrievedSeqValue);
@@ -512,23 +604,20 @@ ThaliSendNotificationBasedOnReplication.prototype._updateBeacons =
  * @returns {Promise<?Error>}
  */
 ThaliSendNotificationBasedOnReplication.prototype.stop = function () {
-  if (this._beaconRefreshTimerManager) {
-    this._beaconRefreshTimerManager.stop();
-    this._beaconRefreshTimerManager = null;
-  }
+  var self = this;
+  return self._promiseQueue.enqueue(
+    function(resolve, reject) {
+      self._state = stateEnum.STOPPED;
 
-  if (this._pouchDBChangesCancelObject) {
-    this._pouchDBChangesCancelObject.cancel();
-    this._pouchDBChangesCancelObject = null;
-  }
+      self._resetTransientState([]);
 
-  if (this._thaliNotificationServer) {
-    var thaliNotificationServer = this._thaliNotificationServer;
-    this._thaliNotificationServer = null;
-    return thaliNotificationServer.stop();
-  }
-
-  return Promise.resolve();
+      self._thaliNotificationServer.stop()
+        .then(function () {
+          resolve();
+        }).catch(function (err) {
+          reject(err);
+        });
+    });
 };
 
 module.exports = ThaliSendNotificationBasedOnReplication;
