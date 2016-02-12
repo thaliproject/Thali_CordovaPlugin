@@ -5,6 +5,7 @@ package io.jxcore.node;
 
 import android.content.Context;
 import android.net.wifi.WifiManager;
+import android.util.Log;
 import io.jxcore.node.jxcore.JXcoreCallback;
 import java.util.ArrayList;
 import android.widget.Toast;
@@ -30,23 +31,23 @@ public class JXcoreExtension {
     public final static String METHOD_NAME_START_BROADCASTING = "StartBroadcasting";
     public final static String METHOD_NAME_STOP_BROADCASTING = "StopBroadcasting";
 
-    public final static String METHOD_NAME_CONNECT = "Connect";
+    //public final static String METHOD_NAME_CONNECT = "Connect";
     public final static String METHOD_NAME_DISCONNECT = "Disconnect";
-    public final static String METHOD_NAME_KILL_ALL_CONNECTIONS = "KillConnection";
 
 
-    public final static String METHOD_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
-    public final static String METHOD_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
-    public final static String METHOD_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
-    public final static String METHOD_STOP_ADVERTISING_AND_LISTENING = "stopAdvertisingAndListening";
-    public final static String METHOD_CONNECT = "connect";
-    public final static String METHOD_KILL_CONNECTIONS = "killConnections";
+    public final static String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
+    public final static String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
+    public final static String METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
+    public final static String METHOD_NAME_STOP_ADVERTISING_AND_LISTENING = "stopAdvertisingAndListening";
+    public final static String METHOD_NAME_CONNECT = "connect";
+    public final static String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
 
     public final static String EVENT_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     public final static String EVENT_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
     public final static String EVENT_NETWORK_CHANGED = "networkChanged";
     public final static String EVENT_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
 
+    private final static String TAG = JXcoreExtension.class.getName();
 
     public static void LoadExtensions() {
         final ConnectionHelper mConnectionHelper = new ConnectionHelper();
@@ -82,7 +83,7 @@ public class JXcoreExtension {
          *
          */
 
-        jxcore.RegisterMethod(METHOD_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -91,6 +92,37 @@ public class JXcoreExtension {
                 //all is well, so lets return null as first argument
                 args.add(null);
                 jxcore.CallJSMethod(callbackId, args.toArray());
+
+
+
+                ArrayList<Object> arguments = new ArrayList<Object>();
+
+                if (params.size() <= 0) {
+                    arguments.add("Required parameters missing.");
+                    jxcore.CallJSMethod(callbackId, arguments.toArray());
+                    return;
+                }
+
+                if (mConnectionHelper.isRunning()) {
+                    arguments.add("Already running, not re-starting.");
+                    jxcore.CallJSMethod(callbackId, arguments.toArray());
+                    return;
+                }
+
+                String peerName = params.get(0).toString();
+                int port = (Integer) params.get(1);
+
+                boolean retVal = mConnectionHelper.start(port);
+
+                String errString = null;
+
+                if (!retVal) {
+                    errString = "Either Bluetooth or Wi-Fi Direct not supported on this device";
+                }
+
+                //if all is well, the errString is still null in here..
+                arguments.add(errString);
+                jxcore.CallJSMethod(callbackId, arguments.toArray());
             }
         });
 
@@ -121,7 +153,7 @@ public class JXcoreExtension {
          *
          */
 
-        jxcore.RegisterMethod(METHOD_STOP_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -217,7 +249,7 @@ public class JXcoreExtension {
 
 
 
-        jxcore.RegisterMethod(METHOD_START_UPDATE_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -266,7 +298,7 @@ public class JXcoreExtension {
          * @public
          * @returns {Promise<?Error>}
          */
-        jxcore.RegisterMethod(METHOD_STOP_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_STOP_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
 
@@ -341,9 +373,9 @@ public class JXcoreExtension {
          *
          * | Error String | Description |
          * |--------------|-------------|
-         * | Illegal peerID | The peerID has a format that could not have been returned by the local platform|
+         * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
          * | startListeningForAdvertisements is not active | Go start it! |
-         * | Alreading connect(ing/ed) | There already is a connection or a request to createone is already in process |
+         * | Alreading connect(ing/ed) | There already is a connection or a request to create one is already in process |
          * | Connection could not be established | The attempt to connect to the peerID failed. This could be because
          * the peer is gone, no longer accepting connections or the radio stack is just horked. |
          * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically
@@ -363,15 +395,26 @@ public class JXcoreExtension {
          * remote peer
          */
 
-        jxcore.RegisterMethod(METHOD_CONNECT, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_CONNECT, new JXcoreCallback() {
             @Override
-            public void Receiver(ArrayList<Object> params, String callbackId) {
+            public void Receiver(ArrayList<Object> params, final String callbackId) {
+                if (params.size() == 0) {
+                    ArrayList<Object> args = new ArrayList<Object>();
+                    args.add("Required parameter, {string} peerIdentifier, missing");
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                } else {
+                    String address = params.get(0).toString();
 
-                ArrayList<Object> args = new ArrayList<Object>();
-
-                //all is well, so lets return null as first argument
-                args.add(null);
-                jxcore.CallJSMethod(callbackId, args.toArray());
+                    mConnectionHelper.connect(address, new ConnectionHelper.JxCoreExtensionListener() {
+                        @Override
+                        public void onConnectionStatusChanged(String message, int port) {
+                            ArrayList<Object> args = new ArrayList<Object>();
+                            args.add(message);
+                            args.add(port);
+                            jxcore.CallJSMethod(callbackId, args.toArray());
+                        }
+                    });
+                }
             }
         });
 
@@ -407,18 +450,20 @@ public class JXcoreExtension {
          *
          */
 
-        jxcore.RegisterMethod(METHOD_KILL_CONNECTIONS, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_KILL_CONNECTIONS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> arguments = new ArrayList<Object>();
 
-                ArrayList<Object> args = new ArrayList<Object>();
+                if (mConnectionHelper.killAllConnections() == 0) {
+                    // We had no connections to kill, but this is not an error
+                    Log.d(TAG, METHOD_NAME_KILL_CONNECTIONS + ": No connections to kill");
+                }
 
-                //all is well, so lets return null as first argument
-                args.add(null);
-                jxcore.CallJSMethod(callbackId, args.toArray());
+                arguments.add(null);
+                jxcore.CallJSMethod(callbackId, arguments.toArray());
             }
         });
-
 
         jxcore.RegisterMethod(METHOD_NAME_RECONNECT_WIFI_AP, new JXcoreCallback() {
             @Override
@@ -553,7 +598,7 @@ public class JXcoreExtension {
               String peerName = params.get(0).toString();
               int port = (Integer) params.get(1);
 
-              boolean retVal = mConnectionHelper.start(peerName, port);
+              boolean retVal = mConnectionHelper.start(port);
 
               String errString = null;
 
@@ -605,51 +650,6 @@ public class JXcoreExtension {
               //all is well, so lets return null
               args.add(null);
               jxcore.CallJSMethod(callbackId, args.toArray());
-          }
-      });
-
-        jxcore.RegisterMethod(METHOD_NAME_KILL_ALL_CONNECTIONS, new JXcoreCallback() {
-            @Override
-            public void Receiver(ArrayList<Object> params, String callbackId) {
-
-                ArrayList<Object> args = new ArrayList<Object>();
-                if (mConnectionHelper.killAllConnections() == 0) {
-                    args.add("No incoming connection to disconnect");
-                    jxcore.CallJSMethod(callbackId, args.toArray());
-                    return;
-                }
-
-                //all is well, so lets return null
-                args.add(null);
-                jxcore.CallJSMethod(callbackId, args.toArray());
-            }
-        });
-
-
-
-      jxcore.RegisterMethod(METHOD_NAME_CONNECT, new JXcoreCallback() {
-          @Override
-          public void Receiver(ArrayList<Object> params, String callbackId) {
-
-              final String callbackIdTmp = callbackId;
-
-              ArrayList<Object> args = new ArrayList<Object>();
-              if (params.size() <= 0) {
-                  args.add("Required parameters missing");
-                  jxcore.CallJSMethod(callbackIdTmp, args.toArray());
-                  return;
-              }
-
-              String address = params.get(0).toString();
-              mConnectionHelper.connect(address, new ConnectionHelper.JxCoreExtensionListener() {
-                  @Override
-                  public void onConnectionStatusChanged(String message, int port) {
-                      ArrayList<Object> args = new ArrayList<Object>();
-                      args.add(message);
-                      args.add(port);
-                      jxcore.CallJSMethod(callbackIdTmp, args.toArray());
-                  }
-              });
           }
       });
 

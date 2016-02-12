@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothSocket;
 import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
+import android.os.Build;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.util.Log;
@@ -48,6 +49,7 @@ public class ConnectionHelper
     private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
     private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
     private static final String BLUETOOTH_NAME = "Thali_Bluetooth";
+    private static final String PEER_NAME = Build.MANUFACTURER + "_" + Build.MODEL; // Use manufacturer and device model name as the peer name
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
     private static final UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
     private static final long POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS = 15000;
@@ -87,23 +89,12 @@ public class ConnectionHelper
 
         mPeerAndConnectionModel = new PeerAndConnectionModel(this);
         mOutgoingConnectionListeners = new HashMap<String, JxCoreExtensionListener>();
-    }
-
-    /**
-     * Tries to start the connection manager and peer discovery.
-     * @param peerName Our peer name.
-     * @param port The local server port to use.
-     * @return True, if started successfully. False otherwise.
-     */
-    public synchronized boolean start(String peerName, int port) {
-        stop();
-        mServerPort = port;
 
         mConnectionManager = new ConnectionManager(mContext, this, SERVICE_UUID, BLUETOOTH_NAME);
-        mConnectionManager.setPeerName(peerName);
+        mConnectionManager.setPeerName(PEER_NAME);
 
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
-        mDiscoveryManager.setPeerName(peerName);
+        mDiscoveryManager.setPeerName(PEER_NAME);
 
         mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance(mContext);
 
@@ -114,12 +105,28 @@ public class ConnectionHelper
         } else {
             mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
         }
+    }
 
+    /**
+     * Should be called when this class instance is no longer needed.
+     * Note that after calling this method, this instance cannot be used anymore.
+     */
+    public void dispose() {
+        mConnectionManager.dispose();
+        mDiscoveryManager.dispose();
+    }
+
+    /**
+     * Tries to start the connection manager and the peer discovery (scanning mode only).
+     * @param port The local server port to use.
+     * @return True, if started successfully (or was already started). False otherwise.
+     */
+    public synchronized boolean start(int port) {
+        mServerPort = port;
         boolean connectionManagerStarted = mConnectionManager.start();
         boolean discoveryManagerStarted = false;
 
         if (connectionManagerStarted) {
-            Log.i(TAG, "start: Using peer discovery mode: " + mDiscoveryManagerSettings.getDiscoveryMode());
             discoveryManagerStarted = mDiscoveryManager.start(true, true);
 
             if (discoveryManagerStarted) {
@@ -131,28 +138,25 @@ public class ConnectionHelper
             Log.e(TAG, "start: Failed: Connection manager started: " + connectionManagerStarted
                     + ", Discovery manager started: " + discoveryManagerStarted);
             stop();
+        } else {
+            Log.i(TAG, "start: OK");
         }
 
         return (connectionManagerStarted && discoveryManagerStarted);
+    }
+
+    public synchronized boolean startAdvertising() {
+        // TODO
+        return false;
     }
 
     /**
      * Stops all activities and disconnects all active connections.
      */
     public synchronized void stop() {
-        if (mConnectionManager != null) {
-            Log.i(TAG, "stop");
-            mConnectionManager.stop();
-            mConnectionManager.dispose();
-            mConnectionManager = null;
-        }
-
-        if (mDiscoveryManager != null) {
-            mDiscoveryManager.stop();
-            mDiscoveryManager.dispose();
-            mDiscoveryManager = null;
-        }
-
+        Log.i(TAG, "stop: Stopping all activities and killing all connections...");
+        mConnectionManager.stop();
+        mDiscoveryManager.stop();
         killAllConnections();
     }
 
