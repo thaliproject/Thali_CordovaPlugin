@@ -2,15 +2,13 @@
 
 var tape = require('../lib/thali-tape');
 var NotificationBeacons =
-  require('thali/NextGeneration/thaliNotificationBeacons');
+  require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var crypto = require('crypto');
 var Long = require('long');
 
 // Constants
 var SECP256K1 = 'secp256k1';
 var ONE_DAY = 86400000;
-
-var NotificationBeacons;
 
 var test = tape({
   setup: function (t) {
@@ -177,7 +175,7 @@ test('#parseBeacons invalid expiration in beaconStreamWithPreAmble',
     }, 'Preamble expiration must be a 64 bit integer');
 
     t.end();
-});
+  });
 
 test('#parseBeacons expiration out of range lower', function (t) {
   var localDevice = crypto.createECDH(SECP256K1);
@@ -368,7 +366,8 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(SECP256K1);
   var localDeviceKey = localDevice.generateKeys();
-  var localDeviceKeyHash = NotificationBeacons.createPublicKeyHash(localDeviceKey);
+  var localDeviceKeyHash =
+    NotificationBeacons.createPublicKeyHash(localDeviceKey);
   var expiration = Date.now() + 9000;
 
   var device1 = crypto.createECDH(SECP256K1);

@@ -7,7 +7,7 @@ Latest version of spec https://github.com/thaliproject/thali/blob/gh-pages/pages
 */
 var crypto = require('crypto');
 var Long = require('long');
-var HKDF = require('./hkdf');
+var HKDF = require('./../security/hkdf');
 var Promise = require('lie');
 
 // Constants
