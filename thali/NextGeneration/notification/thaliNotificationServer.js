@@ -25,6 +25,18 @@ function ThaliNotificationServer(router, ecdhForLocalDevice,
 }
 
 /**
+ * Defines the HTTP path that beacons are supposed to be requested on when using
+ * a HTTP server to distribute beacons.
+ *
+ * @public
+ * @readonly
+ * @type {string}
+ */
+ThaliNotificationServer.NOTIFICATION_BEACON_PATH =
+  '/NotificationBeacons';
+
+
+/**
  * When called for the first time on an instance of ThaliNotificationServer
  * the route "/NotificationBeacons" MUST be registered on the submitted
  * router object with a GET handler. Registration of the path on the router
