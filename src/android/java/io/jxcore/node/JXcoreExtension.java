@@ -18,42 +18,44 @@ import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothUtils;
 
 public class JXcoreExtension {
-    // Common Thali methods and events
-    public final static String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
-    public final static String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
-    public final static String METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
-    public final static String METHOD_NAME_STOP_ADVERTISING_AND_LISTENING = "stopAdvertisingAndListening";
-    public final static String METHOD_NAME_CONNECT = "connect";
-    public final static String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
-
-    public final static String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
-    public final static String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
-    public final static String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
-    public final static String EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
-
-    public final static String EVENT_VALUE_PEER_ID = "peerIdentifier";
-    public final static String EVENT_VALUE_PEER_NAME = "peerName";
-    public final static String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
-
-    // Android specific methods and events
-    public final static String METHOD_NAME_DISCONNECT = "disconnect";
-    public final static String METHOD_NAME_IS_BLE_ADVERTISING_SUPPORTED = "isBleAdvertisingSupported";
-    public final static String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
-    public final static String METHOD_NAME_GET_BLUETOOTH_NAME = "getBluetoothName";
-    public final static String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
-    public final static String METHOD_NAME_SHOW_TOAST = "showToast";
-
-    public final static String EVENT_NAME_CONNECTION_ERROR = "connectionError";
-
-    public final static String EVENT_VALUE_IS_REACHABLE = "isReachable";
-    public final static String EVENT_VALUE_IS_WIFI = "isWiFi";
-
     /**
      * A listener interface for JXcore callbacks.
      */
     public interface JxCoreExtensionListener {
         void onConnectionStatusChanged(String message, int portNumber);
     }
+
+    // Common Thali methods and events
+    private final static String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
+    private final static String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
+    private final static String METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
+    private final static String METHOD_NAME_STOP_ADVERTISING_AND_LISTENING = "stopAdvertisingAndListening";
+    private final static String METHOD_NAME_CONNECT = "connect";
+    private final static String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
+
+    private final static String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
+    private final static String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
+    private final static String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
+    private final static String EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
+
+    private final static String EVENT_VALUE_PEER_ID = "peerIdentifier";
+    private final static String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
+    private final static String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
+    private final static String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
+    private final static String EVENT_VALUE_ADVERTISING_ACTIVE = "advertisingActive";
+    private final static String EVENT_VALUE_IS_REACHABLE = "isReachable";
+    private final static String EVENT_VALUE_IS_WIFI = "isWiFi";
+    private final static String EVENT_VALUE_PORT_NUMBER = "portNumber";
+
+    // Android specific methods and events
+    private final static String METHOD_NAME_DISCONNECT = "disconnect";
+    private final static String METHOD_NAME_IS_BLE_ADVERTISING_SUPPORTED = "isBleAdvertisingSupported";
+    private final static String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
+    private final static String METHOD_NAME_GET_BLUETOOTH_NAME = "getBluetoothName";
+    private final static String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
+    private final static String METHOD_NAME_SHOW_TOAST = "showToast";
+
+    private final static String EVENT_NAME_CONNECTION_ERROR = "connectionError";
 
     private final static String TAG = JXcoreExtension.class.getName();
     private static ConnectionHelper mConnectionHelper = null;
@@ -597,25 +599,49 @@ public class JXcoreExtension {
     }
 
     /**
-     * Notifies the JXcore layer of a peer availability changed event.
+     * @property {string} peerIdentifier An opaque value that identifies a
+     * non-TCP/IP transport handle for the discovered peer. Because of how
+     * non-TCP/IP transports work it is completely possible for the same remote peer
+     * to have many different peerIdentifiers assigned to them. So the only purpose
+     * of this value is to use it in a connect call not to uniquely identify a peer.
+     *
+     * @property {boolean} peerAvailable If true this indicates that the peer is
+     * available for connectivity. If false it means that the peer can no longer be
+     * connected to. For too many reasons to count it's perfectly possible to never
+     * get a false for peerAvailable. It is also possible to get a false when the
+     * peer is still reachable. A classic example is on Android where the app can go
+     * into the background reducing the power to the BLE radio which can make the
+     * peer seem to disappear. But Bluetooth would still be on full power so a
+     * connect could still work. So this value can at best be treated as a hint.
+     *
+     * @property {boolean} pleaseConnect If true then this means that a lexically
+     * smaller peer wishes to establish a connection to this peer but requires this
+     * peer to initiate the connection per the binding spec. If this peer already
+     * has called {@link external:"Mobile('connect')".callNative} for the identified
+     * peer then no action MUST be taken. Similarly if this peer already has a
+     * connection to the remote peer then no action MUST be taken. Yes, there are
+     * many race conditions here but the binding protocol calls for the other peer
+     * to repeat its request a number of times so it should be o.k. If this value is
+     * false then it either means that this isn't iOS or it means that the remote
+     * peer is either lexically larger or not currently interested in connecting.
+     *
      * @param peerProperties The peer properties.
      * @param isAvailable If true, the peer is available. If false, it is not available.
      */
-    public static void notifyPeerAvailability(PeerProperties peerProperties, boolean isAvailable) {
+    public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
         try {
             jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
-            jsonObject.put(EVENT_VALUE_PEER_NAME, peerProperties.getName());
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
+            jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false); // TODO: Resolve proper value for this property
             jsonObjectCreated = true;
         } catch (JSONException e) {
-            Log.e(TAG, "notifyPeerAvailability: Failed to create a JSON object: " + e.getMessage(), e);
+            Log.e(TAG, "notifyPeerAvailabilityChanged: Failed to populate the JSON object: " + e.getMessage(), e);
         }
 
         if (jsonObjectCreated) {
-            Log.d(TAG, "notifyPeerAvailability: Peer " + peerProperties.toString() + (isAvailable ? " is available" : " not available"));
             JSONArray jsonArray = new JSONArray();
             jsonArray.put(jsonObject);
             jxcore.CallJSMethod(EVENT_NAME_PEER_AVAILABILITY_CHANGED, jsonArray.toString());
@@ -623,7 +649,109 @@ public class JXcoreExtension {
     }
 
     /**
-     * Notifies the JXcore layer of a connection error event.
+     * @property {boolean} discoveryActive True if discovery is running otherwise
+     * false. Note that this value can change as a result of calling start and stop
+     * on discovery but also due to the user or other apps altering the system's
+     * radio state.
+     *
+     * @property {boolean} advertisingActive True if advertising is running
+     * otherwise false. Note that this value can change as a result of calling start
+     * and stop on advertising but also due to the user or other apps altering the
+     * system's radio state.
+     *
+     * @param isDiscoveryActive Should be true if discovery is running, otherwise false.
+     * @param isAdvertisingActive Should be true if advertising is running, otherwise false.
+     */
+    public static void notifyDiscoveryAdvertisingStateUpdateNonTcp(
+            boolean isDiscoveryActive, boolean isAdvertisingActive) {
+        JSONObject jsonObject = new JSONObject();
+        boolean jsonObjectCreated = false;
+
+        try {
+            jsonObject.put(JXcoreExtension.EVENT_VALUE_DISCOVERY_ACTIVE, isDiscoveryActive);
+            jsonObject.put(JXcoreExtension.EVENT_VALUE_ADVERTISING_ACTIVE, isAdvertisingActive);
+            jsonObjectCreated = true;
+        } catch (JSONException e) {
+            Log.e(TAG, "notifyDiscoveryAdvertisingStateUpdateNonTcp: Failed to populate the JSON object: " + e.getMessage(), e);
+        }
+
+        if (jsonObjectCreated) {
+            jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE, jsonObject.toString());
+        }
+    }
+
+    /**
+     * @property {module:thaliMobileNative~radioState} blueToothLowEnergy
+     *
+     * @property {module:thaliMobileNative~radioState} blueTooth
+     *
+     * @property {module:thaliMobileNative~radioState} wifi
+     *
+     * @property {module:thaliMobileNative~radioState} cellular
+     *
+     * @property {string} bssidName If null this value indicates that either
+     * wifiRadioOn is not 'on' or that the Wi-Fi isn't currently connected to an
+     * access point. If non-null then this is the BSSID of the access point that
+     * Wi-Fi is connected to. If missing, means that it was not possible to get
+     * the BSSID (for example, this platform doesn't provide an API for it).
+     *
+     * @param isConnected
+     * @param isWifi
+     */
+    public static void notifyNetworkChanged(boolean isConnected, boolean isWifi) {
+        JSONObject jsonObject = new JSONObject();
+        boolean jsonObjectCreated = false;
+
+        try {
+            jsonObject.put(JXcoreExtension.EVENT_VALUE_IS_REACHABLE, isConnected);
+
+            if (isConnected) {
+                jsonObject.put(JXcoreExtension.EVENT_VALUE_IS_WIFI, isWifi);
+            }
+
+            jsonObjectCreated = true;
+        } catch (JSONException e) {
+            Log.e(TAG, "notifyNetworkChanged: Failed to populate the JSON object: " + e.getMessage(), e);
+        }
+
+        if (jsonObjectCreated) {
+            jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_NETWORK_CHANGED, jsonObject.toString());
+        }
+    }
+
+    /**
+     * This event MUST NOT be sent more often than every 100 ms. This means that
+     * one cannot count the number of instances of this event in order to count how
+     * many connections were missed. This also means that the native layer is only
+     * required to track exactly one instance of this event for any given port within
+     * the 100 ms window. In other words if the system is listening on port X and
+     * 10,000 incoming requests come for port X within 100 ms (that would be impressive)
+     * then the native layer is only obligated to send up exactly one notification of
+     * the problem. This is because the native app only needs to know that its port is
+     * either overloaded or down as a general notification.
+     *
+     * @property {number} portNumber The 127.0.0.1 port that the TCP/IP bridge tried
+     * to connect to.
+     *
+     * @param portNumber The 127.0.0.1 port that the TCP/IP bridge tried to connect to.
+     */
+    public static void notifyIncomingConnectionToPortNumberFailed(int portNumber) {
+        JSONObject jsonObject = new JSONObject();
+        boolean jsonObjectCreated = false;
+
+        try {
+            jsonObject.put(JXcoreExtension.EVENT_VALUE_PORT_NUMBER, portNumber);
+            jsonObjectCreated = true;
+        } catch (JSONException e) {
+            Log.e(TAG, "notifyIncomingConnectionToPortNumberFailed: Failed to populate the JSON object: " + e.getMessage(), e);
+        }
+
+        if (jsonObjectCreated) {
+            jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED, jsonObject.toString());
+        }
+    }
+
+    /**
      * @param peerId The peer ID.
      */
     public static void notifyConnectionError(final String peerId) {
@@ -632,7 +760,7 @@ public class JXcoreExtension {
         try {
             jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
         } catch (JSONException e) {
-            Log.e(TAG, "notifyConnectionError: Failed to construct a JSON object: " + e.getMessage(), e);
+            Log.e(TAG, "notifyConnectionError: Failed to populate the JSON object: " + e.getMessage(), e);
         }
 
         jxcore.CallJSMethod(EVENT_NAME_CONNECTION_ERROR, jsonObject.toString());

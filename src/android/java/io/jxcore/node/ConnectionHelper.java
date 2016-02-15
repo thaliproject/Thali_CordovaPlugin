@@ -53,6 +53,8 @@ public class ConnectionHelper
     private DiscoveryManagerSettings mDiscoveryManagerSettings = null;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = 0;
+    private boolean mIsDiscoveryActive = false;
+    private boolean mIsAdvertisingActive = false;
 
     /**
      * Constructor.
@@ -128,6 +130,8 @@ public class ConnectionHelper
             discoveryManagerStarted = mDiscoveryManager.start(true, startAdvertisements);
 
             if (discoveryManagerStarted) {
+                mIsDiscoveryActive = true;
+                mIsAdvertisingActive = startAdvertisements;
                 Log.i(TAG, "start: OK");
             } else {
                 Log.e(TAG, "start: Failed to start the discovery manager");
@@ -146,6 +150,8 @@ public class ConnectionHelper
         Log.i(TAG, "stop: Stopping all activities and killing all connections...");
         mConnectionManager.stop();
         mDiscoveryManager.stop();
+        mIsDiscoveryActive = false;
+        mIsAdvertisingActive = false;
         killAllConnections();
     }
 
@@ -155,6 +161,7 @@ public class ConnectionHelper
     public synchronized void stopListeningForAdvertisements() {
         Log.i(TAG, "stopListeningForAdvertisements");
         mDiscoveryManager.stopDiscovery();
+        mIsDiscoveryActive = false;
     }
 
     /**
@@ -557,7 +564,7 @@ public class ConnectionHelper
                 + ", device name: " + peerProperties.getDeviceName()
                 + ", device address: " + peerProperties.getDeviceAddress());
 
-        JXcoreExtension.notifyPeerAvailability(peerProperties, true);
+        JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, true);
     }
 
     /**
@@ -583,7 +590,7 @@ public class ConnectionHelper
             // If we are still connected, the peer can't certainly be lost, add it back
             mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
         } else {
-            JXcoreExtension.notifyPeerAvailability(peerProperties, false);
+            JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, false);
         }
     }
 

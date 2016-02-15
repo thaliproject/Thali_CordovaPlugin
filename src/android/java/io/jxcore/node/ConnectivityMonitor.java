@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+/* Copyright (c) 2015-2016 Microsoft Corporation. This software is licensed under the MIT License.
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
@@ -11,11 +11,10 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
- *
+ * Monitors the connectivity status and provides notifications on connectivity state changes for
+ * the node layer.
  */
 class ConnectivityMonitor {
     private static final String TAG = ConnectivityMonitor.class.getName();
@@ -68,25 +67,13 @@ class ConnectivityMonitor {
         NetworkInfo activeNetwork = connectivity.getActiveNetworkInfo();
 
         final boolean isConnected = (activeNetwork != null && activeNetwork.isConnectedOrConnecting());
-        final boolean isWiFi = (activeNetwork != null && activeNetwork.getType() == ConnectivityManager.TYPE_WIFI);
+        final boolean isWifi = (activeNetwork != null && activeNetwork.getType() == ConnectivityManager.TYPE_WIFI);
 
-        Log.i(TAG, "sendConnectivityInfo: isConnected: " + isConnected + ", isWiFi: " + isWiFi);
+        Log.i(TAG, "sendConnectivityInfo: isConnected: " + isConnected + ", isWifi: " + isWifi);
 
         mActivity.runOnUiThread(new Runnable() {
-                public void run() {
-                JSONObject jsonObject = new JSONObject();
-
-                try {
-                    jsonObject.put(JXcoreExtension.EVENT_VALUE_IS_REACHABLE, isConnected);
-
-                    if (isConnected) {
-                        jsonObject.put(JXcoreExtension.EVENT_VALUE_IS_WIFI, isWiFi);
-                    }
-                } catch (JSONException e) {
-                    Log.e(TAG, "Failed to create a JSON object: " + e.getMessage(), e);
-                }
-
-                jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_NETWORK_CHANGED, jsonObject.toString());
+            public void run() {
+                JXcoreExtension.notifyNetworkChanged(isConnected, isWifi);
             }
         });
     }
