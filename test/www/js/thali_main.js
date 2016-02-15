@@ -39,7 +39,7 @@
           //Application has the required permission.
           loadMainFile();
         }, function (error) {
-          console.log("Location permission not granted.");
+          console.log("Location permission not granted. Error: " + error);
           navigator.app.exitApp();
         });
       } else {
