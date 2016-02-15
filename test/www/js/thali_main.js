@@ -35,7 +35,7 @@
       if (window.ThaliPermissions) {
         //requestLocationPermission ensures that the application has 
         //the required ACCESS_COARSE_LOCATION permission in Android.
-        window.ThaliPermissions.requestLocationPermission(function(status) {
+        window.ThaliPermissions.requestLocationPermission(function() {
           //Application has the required permission.
           loadMainFile();
         }, function (error) {
