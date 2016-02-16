@@ -122,14 +122,14 @@ exports.tmpDirectory = function () {
 };
 
 /**
- * Logs the result of BLE advertisement support check on Android.
+ * Logs the result of BLE multiple advertisement feature support check on Android.
  */
 if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
-  Mobile('isBleAdvertisingSupported').callNative(function (err) {
+  Mobile('isBleMultipleAdvertisementSupported').callNative(function (err) {
     if (err) {
-      console.log('BLE advertisements not supported: ' + err);
+      console.log('BLE multiple advertisement not supported: ' + err);
     } else {
-      console.log("BLE advertisements supported");
+      console.log("BLE multiple advertisement supported");
     }
   });
 }
