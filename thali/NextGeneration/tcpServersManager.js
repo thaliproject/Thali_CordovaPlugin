@@ -8,6 +8,12 @@ var multiplex = require('multiplex');
 var EventEmitter = require('events').EventEmitter;
 var CloseAllServer = require('./makeIntoCloseAllServer');
 
+var log = new (winston.Logger)({
+  transports: [
+    new (winston.transports.Console)(),
+  ]
+});
+ 
 /** @module TCPServersManager */
 
 /**
@@ -327,7 +333,7 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
     self._server = CloseAllServer(net.createServer());
 
     self._server.on("error", function(err) {
-      console.warn("ERROR on listening socket:" + err);
+      log.warn(err);
     });
 
     self._server.on('close', function() {
@@ -343,7 +349,7 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
       // side and should be connected to the application server port.
 
       socket.on("error", function(err) {
-        console.warn("ERROR on client socket:" + err);
+        log.warn(err);
       });
 
       socket.on("timeout", function() {
@@ -353,7 +359,7 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
       socket.on("close", function() {
         // The link to a peer has most likely failed, tidy up the
         // associated socket/mux
-        delete self._muxes[socket.localPort];
+        delete self._muxes[socket.remotePort];
         self.emit("incomingConnectionState", "DISCONNECTED");
       });
 
@@ -362,20 +368,58 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
         // Remote side is trying to connect a new client
         // socket into their mux, connect this new stream
         // to the application server
-       
+      
+        stream.on("error", function(err) {
+          log.warn(err);
+        });
+ 
+        stream.on("close", function() {
+          log.debug("stream close");
+          for (var sock in self._streams) {
+            if (self._streams.hasOwnProperty(sock)) {
+              if (self._streams[sock] == stream) {
+                sock.end();
+              }
+            }
+          }
+        });
+
         var sock = net.createConnection(routerPort, function() {
           stream.pipe(sock).pipe(stream);
         });
-        self._streams[sock] = stream;
+
+        sock.on('close', function(err) {
+          log.debug("sock close");
+          self._streams[sock].end();
+          delete self._streams[sock];
+        });
 
         sock.on('error', function(err) {
-          console.warn(err);
+          log.warn(err);
           self._streams[sock].end();
           delete self._streams[sock];
           self.emit("routerPortConnectionFailed"); 
         });
+
+        self._streams[sock] = stream;
       });
-      self._muxes[socket.localPort] = mux;
+
+      mux.on("error", function(err) {
+        log.warn(err);
+      });
+  
+      mux.on("close", function() {
+        log.debug("close");
+        for (var s in self._streams) {
+          if (self._streams.hasOwnProperty(s)) {
+            s.destroy();
+          }
+        }
+        delete self._muxes[socket.remotePort];
+        socket.destroy();
+      });
+
+      self._muxes[socket.remotePort] = mux;
 
       socket.pipe(mux).pipe(socket);
       self.emit("incomingConnectionState", "CONNECTED");
@@ -383,13 +427,14 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
 
     self._server.listen(0, function(err) {
       if (err) {
-        console.warn("ERROR listening: " + err);
+        log.warn(err);
         return;
       }
-      console.log("listening", self._server.address().port);
+      log.debug("listening", self._server.address().port);
       return resolve(self._server.address().port);
     });
   }
+
   return new Promise(_do);
 };
 
