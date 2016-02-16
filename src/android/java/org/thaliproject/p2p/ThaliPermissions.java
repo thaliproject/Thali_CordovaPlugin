@@ -28,12 +28,10 @@ public class ThaliPermissions extends CordovaPlugin {
 
     /**
      * Responses
-     * PERMISSION_GRANTED: User has authorised permission
      * PERMISSION_DENIED: User rejected permission
      * RESPONSE_REQUESTED_PERMISSION_NOT_SUPPORTED: The library doesn't support requested permission
      * CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED: The Library doesn't support concurrent requests
      */
-    private static final String RESPONSE_PERMISSION_GRANTED = "PERMISSION_GRANTED";
     private static final String RESPONSE_PERMISSION_DENIED = "PERMISSION_DENIED";
     private static final String RESPONSE_CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED = "CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED";
 
@@ -83,7 +81,7 @@ public class ThaliPermissions extends CordovaPlugin {
     private void checkPermissionStatus(String permission) {
 
         if(cordova.hasPermission(Permissions.get(permission))) {
-            mCurrentContext.success(RESPONSE_PERMISSION_GRANTED);
+            mCurrentContext.success();
         } else {
         cordova.requestPermission(this, REQUEST_CODE , Permissions.get(permission));
         }
@@ -108,6 +106,6 @@ public class ThaliPermissions extends CordovaPlugin {
             }
         }
 
-        mCurrentContext.success(RESPONSE_PERMISSION_GRANTED);
+        mCurrentContext.success();
     }
 }
