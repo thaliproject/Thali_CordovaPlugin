@@ -129,12 +129,11 @@ ThaliWifiInfrastructure.prototype._getInitialStates = function () {
 ThaliWifiInfrastructure.prototype._handleNetworkChanges =
 function (networkChangedValue) {
   var self = this;
-  var previousNetworkState = self.states.networkState;
-  self.states.networkState = networkChangedValue;
   // If the wifi state hasn't changed, we are not really interested
-  if (previousNetworkState.wifi === self.states.networkState.wifi) {
+  if (networkChangedValue.wifi === self.states.networkState.wifi) {
     return;
   }
+  self.states.networkState = networkChangedValue;
   var actionList = [];
   if (self.states.networkState.wifi === 'on') {
     // If the wifi state turned on, try to get into the target states

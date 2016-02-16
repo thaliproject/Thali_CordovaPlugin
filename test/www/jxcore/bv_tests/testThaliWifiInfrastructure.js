@@ -51,7 +51,8 @@ var createTestServer = function (peerIdentifier) {
   var testLocation = 'http://' + testSeverHostAddress + ':' + testServerPort;
   var testServer = new nodessdp.Server({
     location: testLocation,
-    udn: ThaliConfig.SSDP_NT
+    udn: ThaliConfig.SSDP_NT,
+    adInterval: ThaliConfig.SSDP_ADVERTISEMENT_INTERVAL
   });
   testServer.setUSN(peerIdentifier);
   return testServer;
@@ -371,15 +372,11 @@ test('network changes emitted correctly', function (t) {
     t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
     wifiInfrastructure.removeListener('networkChangedWifi', networkOffHandler);
     wifiInfrastructure.on('networkChangedWifi', networkOnHandler);
-    Mobile.toggleWiFi(true, function () {
-      // Handlers above should get called next
-    });
+    testUtils.toggleWifi(true);
   };
 
   wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
-  Mobile.toggleWiFi(false, function () {
-    // Handlers above should get called next
-  });
+  testUtils.toggleWifi(false);
 });
 
 test('network changes not emitted in stopped state', function (t) {
@@ -391,13 +388,14 @@ test('network changes not emitted in stopped state', function (t) {
       t.end();
     };
     wifiInfrastructure.on('networkChangedWifi', networkChangedHandler);
-    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-      testUtils.getMockWifiNetworkStatus(false)
-    );
+    testUtils.toggleWifi(false);
     setImmediate(function () {
       t.ok(true, 'event was not emitted');
       wifiInfrastructure.removeListener('networkChangedWifi', networkChangedHandler);
-      t.end();
+      testUtils.toggleWifi(true)
+      .then(function () {
+        t.end();
+      });
     });
   });
 });
@@ -405,24 +403,27 @@ test('network changes not emitted in stopped state', function (t) {
 var tryStartingFunctionWhileWifiOff = function (t, functionName) {
   wifiInfrastructure.stop()
   .then(function () {
-    Mobile.toggleWiFi(false, function () {
-      wifiInfrastructure.start(express.Router())
-      .then(function () {
-        return wifiInfrastructure[functionName]();
-      })
-      .then(function () {
-        t.fail('the call should not succeed');
-        t.end();
-      })
-      .catch(function (error) {
-        t.equals(error.message, 'Radio Turned Off', 'specific error expected');
-      })
-      .then(function () {
-        Mobile.toggleWiFi(true, function () {
-          t.end();
-        });
-      });
+    return testUtils.toggleWifi(false);
+  })
+  .then(function () {
+    return wifiInfrastructure.start(express.Router());
+  })
+  .then(function () {
+    return wifiInfrastructure[functionName]();
+  })
+  .then(function () {
+    t.fail('the call should not succeed');
+    t.end();
+  })
+  .catch(function (error) {
+    t.equals(error.message, 'Radio Turned Off', 'specific error expected');
+  })
+  .then(function () {
+    wifiInfrastructure.once('networkChangedWifi', function (networkChangedValue) {
+      t.equals(networkChangedValue.wifi, 'on', 'wifi should be on');
+      t.end();
     });
+    testUtils.toggleWifi(true);
   });
 };
 
@@ -433,7 +434,6 @@ test('#startListeningForAdvertisements returns error if wifi is off and event em
 test('#startUpdateAdvertisingAndListening returns error if wifi is off and event emitted when wifi back on', function (t) {
   tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening');
 });
-
 
 test('after wifi is re-enabled discovery is activated and peers become available', function (t) {
   wifiInfrastructure.once('networkChangedWifi', function (networkChangedValue) {
@@ -468,14 +468,9 @@ test('after wifi is re-enabled discovery is activated and peers become available
 
         wifiInfrastructure.on('wifiPeerAvailabilityChanged',
                               peerAvailableListener);
-
-        Mobile.toggleWiFi(true, function () {
-          // Peer availability listener above should get called next
-        });
+        testUtils.toggleWifi(true);
       });
     });
   });
-  Mobile.toggleWiFi(false, function () {
-    // Network changed listener above should get called next
-  });
+  testUtils.toggleWifi(false);
 });

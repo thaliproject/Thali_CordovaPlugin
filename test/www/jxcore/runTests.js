@@ -9,7 +9,7 @@ var logger = require('thali/thalilogger')('runTests');
 // has been required so that thali-tape can pick up the right
 // test framework to be used.
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')('iOS', null);
+  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 
 var hasJavaScriptSuffix = function (path) {

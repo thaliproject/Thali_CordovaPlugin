@@ -574,8 +574,7 @@ thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
 });
 
 var emitNetworkChanged = function (networkChangedValue) {
-  ThaliMobileNativeWrapper.emitter.emit('networkChanged',
-                                        networkChangedValue);
+  thaliMobileEmitter.emit('networkChanged', networkChangedValue);
 };
 
 /**

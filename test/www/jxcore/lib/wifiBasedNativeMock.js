@@ -4,17 +4,26 @@ var Promise = require('lie');
 var EventEmitter = require('events').EventEmitter;
 var uuid = require('node-uuid');
 var testUtils = require('./testUtils.js');
+var express = require('express');
+var assert = require('assert');
 
 var proxyquire = require('proxyquire');
 proxyquire.noCallThru();
 proxyquire.noPreserveCache();
 
 var mockEmitter = new EventEmitter();
+var networkStatusCalled = false;
 
-var ThaliWifiInfrastructure = proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
+var ThaliWifiInfrastructure =
+proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
   {
     './thaliMobileNativeWrapper': {
-      emitter: mockEmitter
+      emitter: mockEmitter,
+      getNonTCPNetworkStatus: function () {
+        assert(!false, 'the mock network status should not be called twice');
+        networkStatusCalled = true;
+        return Promise.resolve((getCurrentNetworkStatus()));
+      }
     }
   }
 );
@@ -46,18 +55,18 @@ var ThaliWifiInfrastructure = proxyquire('thali/NextGeneration/thaliWifiInfrastr
  * passed in on the mobile object
  * @param {platformChoice} platform
  * @param {Object} router
- * @param {WifiBasedNativeMock} wifiBasedNativeMock
+ * @param {thaliWifiInfrastructure} thaliWifiInfrastructure
  * @constructor
  */
 function MobileCallInstance(mobileMethodName, platform, router,
-                            wifiBasedNativeMock) {
+                            thaliWifiInfrastructure) {
   this.mobileMethodName = mobileMethodName;
   this.platform = platform;
   this.router = router;
-  this.wifiBasedNativeMock = wifiBasedNativeMock;
+  this.thaliWifiInfrastructure = thaliWifiInfrastructure;
 }
 
-MobileCallInstance.prototype.wifiBasedNativeMock = null;
+MobileCallInstance.prototype.thaliWifiInfrastructure = null;
 MobileCallInstance.prototype.mobileMethodName = null;
 MobileCallInstance.prototype.platform = null;
 MobileCallInstance.prototype.router = null;
@@ -75,11 +84,22 @@ MobileCallInstance.prototype.router = null;
  * emulating Bluetooth as being off.
  *
  * @public
- * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.startListeningForAdvertisements =
-  function(callBack) {
-  };
+function (callback) {
+  if (this.thaliWifiInfrastructure.states.listening.current) {
+    callback('Call Stop!');
+    return;
+  }
+  this.thaliWifiInfrastructure.startListeningForAdvertisements()
+  .then(function () {
+    callback();
+  })
+  .catch(function (error) {
+    callback(error.message);
+  });
+};
 
 /**
  * This shuts down the SSDP listener/query code. It MUST otherwise behave as
@@ -90,8 +110,12 @@ MobileCallInstance.prototype.startListeningForAdvertisements =
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopListeningForAdvertisements =
-  function(callBack) {
-  };
+function (callback) {
+  this.thaliWifiInfrastructure.stopListeningForAdvertisements()
+  .then(function () {
+    callback();
+  });
+};
 
 /**
  * This method tells the system to both start advertising and to accept
@@ -133,11 +157,15 @@ MobileCallInstance.prototype.stopListeningForAdvertisements =
  * off.
  *
  * @param {number} portNumber
- * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
-  function(portNumber, callBack) {
-  };
+function (portNumber, callback) {
+  this.thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
+  .then(function () {
+    callback();
+  });
+};
 
 /**
  * This function MUST behave like {@link module:ThaliWifiInfrastructure} and
@@ -150,8 +178,12 @@ MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopAdvertisingAndListening =
-  function (callBack) {
-  };
+function (callback) {
+  this.thaliWifiInfrastructure.stopAdvertisingAndListening()
+  .then(function () {
+    callback();
+  });
+};
 
 /**
  * All the usual restrictions on connect apply including throwing errors if
@@ -280,7 +312,10 @@ MobileCallInstance.prototype.stopAdvertisingAndListening =
  * @param {string} peerIdentifier
  * @param {module:thaliMobileNative~ConnectCallback} callback
  */
-MobileCallInstance.prototype.connect = function(peerIdentifier, callback) {
+MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
+  setImmediate(function () {
+    callback('Error');
+  });
 };
 
 /**
@@ -352,6 +387,24 @@ MobileCallInstance.prototype.callNative = function () {
   }
 };
 
+var peerAvailabilityChangedCallback = null;
+var setupPeerAvailabilityChangedListener = function (thaliWifiInfrastructure) {
+  thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
+    if (peerAvailabilityChangedCallback === null) {
+      return;
+    }
+    var nativePeers = [];
+    wifiPeers.forEach(function (wifiPeer) {
+      nativePeers.push({
+        peerIdentifier: wifiPeer.peerIdentifier,
+        peerAvailable: !!wifiPeer.hostAddress,
+        pleaseConnect: false
+      });
+    });
+    peerAvailabilityChangedCallback(nativePeers);
+  });
+};
+
 /**
  * Anytime we are looking for advertising and we receive a SSDP:alive,
  * SSDP:byebye or a response to one of our periodic queries we should use it to
@@ -364,6 +417,7 @@ MobileCallInstance.prototype.callNative = function () {
  * @param {module:thaliMobileNative~peerAvailabilityChangedCallback} callback
  */
 MobileCallInstance.prototype.peerAvailabilityChanged = function (callback) {
+  peerAvailabilityChangedCallback = callback;
 };
 
 /**
@@ -398,7 +452,7 @@ MobileCallInstance.prototype.networkChanged = function (callback) {
   // Implement the logic to emit networkChangedNonTCP
   // when the first listener is registered.
   setImmediate(function () {
-    networkChangedCallback(testUtils.getMockWifiNetworkStatus(true));
+    networkChangedCallback(getCurrentNetworkStatus());
   });
 };
 
@@ -453,6 +507,17 @@ var platformChoice = {
   IOS: 'iOS'
 };
 
+var currentNetworkStatus = {
+  wifi: 'on',
+  bluetooth: 'doNotCare',
+  bluetoothLowEnergy: 'doNotCare',
+  cellular: 'doNotCare'
+};
+
+var getCurrentNetworkStatus = function () {
+  return JSON.parse(JSON.stringify(currentNetworkStatus));
+};
+
 /**
  * This simulates turning Bluetooth on and off.
  *
@@ -463,12 +528,14 @@ var platformChoice = {
  * on iOS. We need to check and emulate their behavior.
  *
  * @param {platformChoice} platform
- * @param {ThaliWifiInfrastructure} wifiBasedNativeMock
+ * @param {ThaliWifiInfrastructure} thaliWifiInfrastructure
  * @returns {Function}
  */
-function toggleBluetooth (platform, wifiBasedNativeMock) {
+function toggleBluetooth (platform, thaliWifiInfrastructure) {
   return function (setting, callback) {
-    return null;
+    // We don't yet have desktop-runnable tests that depend
+    // on Bluetooth state so for now, this one is doing nothing
+    setImmediate(callback);
   };
 }
 
@@ -481,12 +548,21 @@ function toggleBluetooth (platform, wifiBasedNativeMock) {
  * on iOS. We need to check and emulate their behavior.
  *
  * @param {platformChoice} platform
- * @param {ThaliWifiInfrastructure} wifiBasedNativeMock
+ * @param {ThaliWifiInfrastructure} thaliWifiInfrastructure
  * @returns {Function}
  */
-function toggleWiFi(platform, wifiBasedNativeMock) {
+function toggleWiFi(platform, thaliWifiInfrastructure) {
   return function (setting, callback) {
-    networkChangedCallback(testUtils.getMockWifiNetworkStatus(setting));
+    if (networkChangedCallback !== null) {
+      var newWifiStatus = setting ? 'on' : 'off';
+      if (newWifiStatus === currentNetworkStatus.wifi) {
+        return;
+      }
+      currentNetworkStatus.wifi = newWifiStatus;
+      setImmediate(function () {
+        networkChangedCallback(getCurrentNetworkStatus());
+      });
+    }
     setImmediate(callback);
   };
 }
@@ -507,7 +583,20 @@ function toggleWiFi(platform, wifiBasedNativeMock) {
  * we need to let the other peer know we want a connection.
  */
 function WifiBasedNativeMock(platform, router) {
+  if (!platform) {
+    platform = platformChoice.IOS;
+  }
+  if (!router) {
+    router = express.Router();
+  }
   var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
+  // In the native side, there is no equivalent for the start call,
+  // but it needs to be done once somewhere before calling other functions.
+  // In practice, the stop function never gets called, but that is okay
+  // for the purpose of this mock Mobile object.
+  thaliWifiInfrastructure.start(router);
+  setupPeerAvailabilityChangedListener(thaliWifiInfrastructure);
+
   var mobileHandler = function (mobileMethodName) {
     return new MobileCallInstance(mobileMethodName, platform, router,
                                   thaliWifiInfrastructure);

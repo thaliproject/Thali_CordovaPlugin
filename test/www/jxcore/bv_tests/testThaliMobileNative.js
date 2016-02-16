@@ -8,10 +8,6 @@ if (jxcore.utils.OSInfo().isAndroid) {
   return;
 }
 
-if (!jxcore.utils.OSInfo().isMobile) {
-  return;
-}
-
 var tape = require('../lib/thali-tape');
 
 var test = tape({
@@ -82,6 +78,10 @@ function (t) {
   });
 });
 
+if (!tape.coordinated) {
+  return;
+}
+
 test('peerAvailabilityChange is called', function (t) {
 
   var complete = false;
@@ -112,60 +112,68 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
+if (!jxcore.utils.OSInfo().isMobile) {
+  return;
+}
+
 test('Can connect to a remote peer', function (t) {
 
   var complete = false;
-  var applicationPort = 4242;
 
-  var echoServer = net.createServer(function(socket) {
+  var echoServer = net.createServer(function (socket) {
     socket.pipe(socket);
   });
 
-  echoServer.listen(applicationPort, '127.0.0.1');
+  echoServer.listen(0, function () {
+    var applicationPort = echoServer.address().port;
 
-  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
-    peers.forEach(function(peer) {
-      if (peer.peerAvailable) {
-        Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
-          // We're happy here if we make a connection to anyone
-          if (err == null) {
-            connection = JSON.parse(connection);
-            if (!complete) {
-              console.log(connection);
+    Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+      peers.forEach(function(peer) {
+        if (peer.peerAvailable) {
+          Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
+            // We're happy here if we make a connection to anyone
+            if (err == null) {
+              connection = JSON.parse(connection);
+              if (!complete) {
+                console.log(connection);
 
-              t.ok(connection.hasOwnProperty("listeningPort"), "Must have listeningPort");
-              t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
-              t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
-              t.ok(typeof connection.clientPort === 'number', "clientPort must be a number");
-              t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
-              t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
+                t.ok(connection.hasOwnProperty("listeningPort"), "Must have listeningPort");
+                t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
+                t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
+                t.ok(typeof connection.clientPort === 'number', "clientPort must be a number");
+                t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
+                t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
 
-              if (connection.listeningPort != 0)
-              {
-                // Forward connection
-                t.ok(connection.clientPort == 0);
-                t.ok(connection.serverPort == 0);
+                if (connection.listeningPort != 0)
+                {
+                  // Forward connection
+                  t.ok(connection.clientPort == 0);
+                  t.ok(connection.serverPort == 0);
+                }
+                else
+                {
+                  // Reverse connection
+                  t.ok(connection.clientPort != 0);
+                  t.ok(connection.serverPort != 0);
+                }
+
+                t.end();
               }
-              else
-              {
-                // Reverse connection
-                t.ok(connection.clientPort != 0);
-                t.ok(connection.serverPort != 0);
-              }
- 
+            } else {
+              t.fail('Error from connect: ' + err);
               t.end();
             }
-          }
-        });
-      }
+          });
+        }
+      });
     });
-  });
 
-  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
-  function (err) {
-    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-    Mobile('startListeningForAdvertisements').callNative(function (err) {
-      t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
+    function (err) {
+      t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+      Mobile('startListeningForAdvertisements').callNative(function (err) {
+        t.notOk(err, 'Can call startListeningForAdvertisements without error');
+      });
     });
   });
 });
@@ -297,4 +305,3 @@ test('Can shift large amounts of data', function (t) {
     });
   });
 });
-

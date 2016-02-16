@@ -87,7 +87,7 @@ test('#start should fail if called twice in a row', function (t) {
 // up Mobile, because with real devices in CI, the Wifi
 // network is configured in a way that it doesn't allow
 // routing between peers.
-if (!(typeof Mobile !== 'undefined' && Mobile.iAmAMock)) {
+if (jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
@@ -111,9 +111,20 @@ test('can get the network status', function (t) {
 });
 
 test('network changes emitted', function (t) {
-  // TODO
-  t.end();
+  ThaliMobile.emitter.once('networkChanged', function (networkChangedValue) {
+    t.equals(networkChangedValue.wifi, 'off', 'wifi is off');
+    ThaliMobile.emitter.once('networkChanged', function (networkChangedValue) {
+      t.equals(networkChangedValue.wifi, 'on', 'wifi is on');
+      t.end();
+    });
+    testUtils.toggleWifi(true);
+  });
+  testUtils.toggleWifi(false);
 });
+
+if (!tape.coordinated) {
+  return;
+}
 
 var setupDiscoveryAndFindPeer = function (t, callback) {
   ThaliMobile.emitter.once('peerAvailabilityChanged', function (peers) {
@@ -187,18 +198,14 @@ test('when network connection is lost a peer should be marked unavailable', func
       }
       t.equals(matchingPeer.hostAddress, null, 'host address should be null');
       t.equals(matchingPeer.portNumber, null, 'port number should be null');
-      ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-        testUtils.getMockWifiNetworkStatus(true)
-      );
+      testUtils.toggleWifi(true);
       setTimeout(function () {
         done();
       }, 500);
     };
     ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityChangedHandler);
     setTimeout(function () {
-      ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-        testUtils.getMockWifiNetworkStatus(false)
-      );
+      testUtils.toggleWifi(false);
     }, 500);
   });
 });

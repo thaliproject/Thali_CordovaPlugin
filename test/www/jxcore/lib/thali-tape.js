@@ -254,9 +254,11 @@ if (typeof jxcore === 'undefined' ||
   // On mobile, or outside of jxcore (some dev scenarios) we use
   // the server-coordinated thaliTape
   exports = thaliTape;
+  exports.coordinated = true;
 } else {
   // On desktop we just use wrapping-tape
   exports = require('wrapping-tape');
+  exports.coordinated = false;
 
   // thaliTape has a begin function that we patch in here to make
   // the api identical

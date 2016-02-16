@@ -11,7 +11,8 @@ var argv = parseargv(process.argv.slice(2), {
     instanceCount: 2,
     serverLogs: true,
     instanceLogs: true
-  }
+  },
+  boolean: true
 });
 
 var instanceLogs = {};
