@@ -50,7 +50,6 @@ function makeIntoCloseAllServer(server) {
     // are destroyed because the destroy calls are synchronous.
     server.close(callback);
     connections.forEach(function (connection) {
-      console.log("closing");
       connection.end();
     });
     connections = null;

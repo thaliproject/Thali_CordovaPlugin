@@ -13,7 +13,7 @@ var test = tape({
     t.end();
   }
 });
-
+/*
 test("can create servers manager", function(t) {
   var manager = new ThaliTCPServersManager(4242);
   t.ok(manager != null, "manager must not be null");
@@ -36,9 +36,15 @@ test("can start/stop servers manager", function(t) {
 });
 
 test("emits incomingConnectionState", function(t) {
+
+  // Ensure that dis/connecting to the the localPort of a servers manager
+  // emits incomingConnectionState events
+
   var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function(localPort) {
+
+    // Expect CONNECTED the DISCONNECTED
     serversManager.once("incomingConnectionState", function(state) {
       t.ok(state == "CONNECTED", "initial connection state should be CONNECTED");
       serversManager.once("incomingConnectionState", function(state) {
@@ -46,10 +52,14 @@ test("emits incomingConnectionState", function(t) {
         serversManager.stop();
         t.end();
       });
+
+      // We've had CONNECTED, trigger DISCONNECTED
       client.end();
     });
+
     var client = net.createConnection(localPort, function() {
     });
+
   })
   .catch(function(err) {
     t.fail("should not get error - " + err);
@@ -72,13 +82,7 @@ test("emits routerPortConnectionFailed", function(t) {
       t.end();
     });
 
-    // Connect to the local server, this is what happens when a new
-    // p2p link is established. 
     var client = net.createConnection(localPort, function() {
-      // We're now pretending to be the other side of a p2p link.
-      // Add a mux to our socket and create a stream. The other
-      // side should then try to connect to the application, 
-      // fail, and emit the routerPortConnectionFailed event
       var mux = multiplex();
       client.pipe(mux).pipe(client);
       mux.createStream();
@@ -89,5 +93,79 @@ test("emits routerPortConnectionFailed", function(t) {
     serversManager.stop();
   });
 });
+*/
+test("client side connections all up", function(t) {
 
+  var clientSockets = 0;
+  var applicationServer = net.createServer(function(client) {
+    clientSockets += 1;
+    client.pipe(client);
+  });
+  applicationServer.listen(4242);
 
+  var serversManager = new ThaliTCPServersManager(4242);
+  serversManager.start()
+  .then(function(localPort) {
+
+    var client = net.createConnection(localPort, function() {
+
+      var mux = multiplex();
+      client.pipe(mux).pipe(client);
+      var stream1 = mux.createStream();
+      var stream2 = mux.createStream();
+
+      var toSend = 4096;
+      var toSend1 = new Array(toSend + 1).join('1');;
+      var toSend2 = new Array(toSend + 1).join('2');;
+
+      var recvStream1 = "";
+      var recvStream2 = "";
+
+      var doneStream1 = false;
+      var doneStream2 = false;
+
+      stream1.on("data", function(data) {
+        recvStream1 += data.toString();
+        if (recvStream1.length >= toSend) {
+
+          doneStream1 = true;
+          t.ok(recvStream1.length == toSend, "Send/recvd #1 should be equal length");
+          t.ok(recvStream1 == toSend1, "Send/recvd #1 should be same");
+
+          if (doneStream2) {
+            t.ok(clientSockets == 2, "Should be exactly 2 client sockets");
+            applicationServer.close();
+            serversManager.stop();
+            console.log("end");
+            t.end();
+          }
+        }
+      });
+
+      stream2.on("data", function(data) {
+        recvStream2 += data.toString();
+        if (recvStream2.length >= toSend) {
+
+          doneStream2 = true;
+          t.ok(recvStream2.length == toSend, "Send/recvd #2 should be equal length");
+          t.ok(recvStream2 == toSend2, "Send/recvd #2 should be same");
+
+          if (doneStream1) {
+            t.ok(clientSockets == 2, "Should be exactly 2 client sockets");
+            applicationServer.close();
+            serversManager.stop();
+            t.end();
+          }
+        }
+      });
+
+      stream1.write(toSend1);
+      stream2.write(toSend2);
+    });
+  })
+  .catch(function(err) {
+    t.fail("should not get error - " + err);
+    serversManager.stop();
+  });
+
+});

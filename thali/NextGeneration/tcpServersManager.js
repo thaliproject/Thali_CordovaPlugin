@@ -9,6 +9,7 @@ var EventEmitter = require('events').EventEmitter;
 var CloseAllServer = require('./makeIntoCloseAllServer');
 
 var log = new (winston.Logger)({
+  level: "debug",
   transports: [
     new (winston.transports.Console)(),
   ]
@@ -135,12 +136,51 @@ var maxPeersToAdvertise = 20;
 function TCPServersManager(routerPort) {
   this._state = 'initialized';
 
-  this._muxes = {};
+  // Streams
   this._streams = {};
+
+  // Sockets (incoming)
+  this._incoming = {};
+
+  // Sockets (outgoing)
+  this._outgoing = {};
+
+  // Map incoming sockets to muxes
+  this._incomingToMuxes = {};
+
+  // Map streams->sockets (1-1)
+  this._streamsToOutgoing = {}
+
+  // Map muxes->streams (1->M)
+  this._muxesToStreams = {};
+
+  // The port on which we expect the application to be
+  // listening
   this._routerPort = routerPort;
 }
 
 util.inherits(TCPServersManager, EventEmitter);
+
+var object_id = 0;
+// Use this to uniquely id objects as they're created
+// (JS can only index on strings and many objects hash to the string ['Object'])
+function next_id() {
+  return object_id++;
+}
+
+/**
+ *
+ * Debugging only - Log the state of the object
+ * @public
+ */
+TCPServersManager.prototype.logState = function() {
+  log.debug("incomingToMuxes: ", Object.keys(this._incomingToMuxes));
+  log.debug("streams: ", Object.keys(this._streams));
+  log.debug("incoming: ", Object.keys(this._incoming));
+  log.debug("outgoing: ", Object.keys(this._outgoing));
+  log.debug("streamsToOutgoing: ", Object.keys(this._streamsToOutgoing));
+  log.debug("muxesToStreams: ", Object.keys(this._muxesToStreams));
+}
 
 /**
  * This method will call
@@ -337,33 +377,51 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
     });
 
     self._server.on('close', function() {
+      log.debug("server close");
       self.emit("incomingConnectionState", "DISCONNECTED");
-      self._muxes = {};
+      for (var incomingId in self._incoming) {
+        if (self._incoming.hasOwnProperty(incomingId)) {
+          self._incoming[incomingId].end();
+        }
+      }
+      self._incomingToMuxes = {};
     });
 
-    self._server.on("connection", function(socket) {
+    self._server.on("connection", function(incoming) {
+      
+      incoming.__id = next_id();
+      self._incoming[incoming.__id] = incoming;
+      log.debug("new incoming socket:", incoming.__id);
 
       // We've received a new incoming connection from the P2P layer
       // Wrap this new socket in a multiplex. New streams appearing
       // from the mux are client sockets being created on the remote
       // side and should be connected to the application server port.
 
-      socket.on("error", function(err) {
+      incoming.on("error", function(err) {
         log.warn(err);
       });
 
-      socket.on("timeout", function() {
-        delete self._muxes[socket.localPort];
+      incoming.on("timeout", function() {
+        log.debug("incoming socket timeout");
+        delete self._incomingToMuxes[incoming.__id];
+        delete self._incoming[incoming.__id];
       });
 
-      socket.on("close", function() {
+      incoming.on("close", function() {
+        log.debug("incoming socket close", incoming.__id);
         // The link to a peer has most likely failed, tidy up the
         // associated socket/mux
-        delete self._muxes[socket.remotePort];
+        delete self._incomingToMuxes[incoming.__id];
+        delete self._incoming[incoming.__id];
         self.emit("incomingConnectionState", "DISCONNECTED");
       });
 
       var mux = multiplex(function onStream(stream, id) {
+
+        stream.__id = next_id();
+        log.debug("new stream: ", stream.__id);
+        self._muxesToStreams[mux.__id].push(stream.__id);
 
         // Remote side is trying to connect a new client
         // socket into their mux, connect this new stream
@@ -374,54 +432,79 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
         });
  
         stream.on("close", function() {
-          log.debug("stream close");
-          for (var sock in self._streams) {
-            if (self._streams.hasOwnProperty(sock)) {
-              if (self._streams[sock] == stream) {
-                sock.end();
+          log.debug("stream close:", stream.__id);
+          if (self._streamsToOutgoing[stream.__id]) {    
+            // Close the outgoing socket associated with this stream
+            self._outgoing[self._streamsToOutgoing[stream.__id]].end();
+            delete self._streamsToOutgoing[stream.__id];
+            delete self._streams[stream.__id];
+            return;
+          }
+          log.debug("no outgoing socket associated with stream");
+        });
+
+        var outgoing = net.createConnection(routerPort, function() {
+          stream.pipe(outgoing).pipe(stream);
+        });
+        outgoing.__id = next_id();
+
+        self._streams[stream.__id] = stream;
+        self._outgoing[outgoing.__id] = outgoing;
+        self._streamsToOutgoing[stream.__id] = outgoing.__id;
+
+        function closeStreamForOutgoing(outgoingId) {
+          for (var streamId in self._streamsToOutgoing) {
+            if (self._streamsToOutgoing.hasOwnProperty(streamId)) {
+              if (self._streamsToOutgoing[streamId] == outgoingId) {
+                self._streams[streamId].end();
+                delete self._streams[streamId];
+                delete self._streamsToOutgoing[streamId];
+                return true;
               }
             }
           }
+          return false;
+        }
+
+        outgoing.on('close', function(err) {
+          log.debug("outgoing close: ", outgoing.__id);
+          closeStreamForOutgoing(outgoing.__id);
+          delete self._outgoing[outgoing.__id];
         });
 
-        var sock = net.createConnection(routerPort, function() {
-          stream.pipe(sock).pipe(stream);
-        });
-
-        sock.on('close', function(err) {
-          log.debug("sock close");
-          self._streams[sock].end();
-          delete self._streams[sock];
-        });
-
-        sock.on('error', function(err) {
-          log.warn(err);
-          self._streams[sock].end();
-          delete self._streams[sock];
+        outgoing.on('error', function(err) {
+          log.warn(err, outgoing.__id);
+          closeStreamForOutgoing(outgoing.__id);
           self.emit("routerPortConnectionFailed"); 
         });
 
-        self._streams[sock] = stream;
+        log.debug("new outgoing socket:", outgoing.__id);
       });
+
+      self._muxesToStreams[mux.__id] = [];
 
       mux.on("error", function(err) {
         log.warn(err);
       });
   
       mux.on("close", function() {
-        log.debug("close");
-        for (var s in self._streams) {
-          if (self._streams.hasOwnProperty(s)) {
-            s.destroy();
+        log.debug("mux close");
+        // Dispose of the outgoing sockets/streams
+        self._muxesToStreams[mux._id].forEach(function (streamId) {
+          self._streams[streamId].close();
+          delete self._streams[streamId];
+          var outgoing = self._streamsToOutgoing[streamId];
+          if (outgoing) {
+            outgoing.end();
+            delete self._outgoing[outgoing.__id]
+            delete self._streamsToOutgoing[streamId];
           }
-        }
-        delete self._muxes[socket.remotePort];
-        socket.destroy();
+        });
+        delete self._muxesToStreams[mux._id];
       });
 
-      self._muxes[socket.remotePort] = mux;
-
-      socket.pipe(mux).pipe(socket);
+      self._incomingToMuxes[incoming.__id] = mux;
+      incoming.pipe(mux).pipe(incoming);
       self.emit("incomingConnectionState", "CONNECTED");
     });
 
