@@ -1,8 +1,12 @@
 'use strict';
 
 var net = require('net');
+var util = require('util');
 var Promise = require('lie');
-var CloseAllServer = require("./makeIntoCloseAllServer");
+var winston= require('winston');
+var multiplex = require('multiplex');
+var EventEmitter = require('events').EventEmitter;
+var CloseAllServer = require('./makeIntoCloseAllServer');
 
 /** @module TCPServersManager */
 
@@ -124,8 +128,13 @@ var maxPeersToAdvertise = 20;
  */
 function TCPServersManager(routerPort) {
   this._state = 'initialized';
+
+  this._muxes = {};
+  this._streams = {};
   this._routerPort = routerPort;
 }
+
+util.inherits(TCPServersManager, EventEmitter);
 
 /**
  * This method will call
@@ -307,15 +316,75 @@ TCPServersManager.prototype.stop = function() {
  * connections from the native layer or an Error object.
  */
 TCPServersManager.prototype.createNativeListener = function(routerPort) {
+
   if (this._state != 'started') {
     throw new Error("Call Start!");
   }
+
   var self = this;
   function _do(resolve, reject) {
-    self._server = CloseAllServer(net.createServer(function(socket) {
-    }));
+
+    self._server = CloseAllServer(net.createServer());
+
+    self._server.on("error", function(err) {
+      console.warn("ERROR on listening socket:" + err);
+    });
+
+    self._server.on('close', function() {
+      self.emit("incomingConnectionState", "DISCONNECTED");
+      self._muxes = {};
+    });
+
+    self._server.on("connection", function(socket) {
+
+      // We've received a new incoming connection from the P2P layer
+      // Wrap this new socket in a multiplex. New streams appearing
+      // from the mux are client sockets being created on the remote
+      // side and should be connected to the application server port.
+
+      socket.on("error", function(err) {
+        console.warn("ERROR on client socket:" + err);
+      });
+
+      socket.on("timeout", function() {
+        delete self._muxes[socket.localPort];
+      });
+
+      socket.on("close", function() {
+        // The link to a peer has most likely failed, tidy up the
+        // associated socket/mux
+        delete self._muxes[socket.localPort];
+        self.emit("incomingConnectionState", "DISCONNECTED");
+      });
+
+      var mux = multiplex(function onStream(stream, id) {
+
+        // Remote side is trying to connect a new client
+        // socket into their mux, connect this new stream
+        // to the application server
+       
+        var sock = net.createConnection(routerPort, function() {
+          stream.pipe(sock).pipe(stream);
+        });
+        self._streams[sock] = stream;
+
+        sock.on('error', function(err) {
+          console.warn(err);
+          self._streams[sock].end();
+          delete self._streams[sock];
+          self.emit("routerPortConnectionFailed"); 
+        });
+      });
+      self._muxes[socket.localPort] = mux;
+
+      socket.pipe(mux).pipe(socket);
+      self.emit("incomingConnectionState", "CONNECTED");
+    });
+
     self._server.listen(0, function(err) {
       if (err) {
+        console.warn("ERROR listening: " + err);
+        return;
       }
       console.log("listening", self._server.address().port);
       return resolve(self._server.address().port);
