@@ -367,6 +367,11 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
     throw new Error("Call Start!");
   }
 
+  if (this._server) {
+    // Must have been called twice
+    throw new Error("Don't call directly!");
+  }
+
   var self = this;
   function _do(resolve, reject) {
 
@@ -513,8 +518,10 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
         log.warn(err);
         return;
       }
-      log.debug("listening", self._server.address().port);
-      return resolve(self._server.address().port);
+      if (self._server) {
+        log.debug("listening", self._server.address().port);
+        return resolve(self._server.address().port);
+      }
     });
   }
 
@@ -709,7 +716,18 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
  */
 TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
                                                            pleaseConnect) {
-  return new Promise();
+  if (this._state != 'started') {
+    throw new Error("Call Start!");
+  }
+
+  var self = this;
+  function _do(resolve, reject) {
+
+    self._server = CloseAllServer(net.createServer());
+
+  }
+
+  return new Promise(_do);
 };
 
 /**

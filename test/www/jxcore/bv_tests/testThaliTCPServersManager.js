@@ -13,7 +13,7 @@ var test = tape({
     t.end();
   }
 });
-/*
+
 test("can create servers manager", function(t) {
   var manager = new ThaliTCPServersManager(4242);
   t.ok(manager != null, "manager must not be null");
@@ -32,6 +32,19 @@ test("can start/stop servers manager", function(t) {
   .catch(function(err) {
     t.fail("should not get error - " + err);
     serversManager.stop();
+  });
+});
+
+test("calling startNativeListener directly throws", function(t) {
+  var serversManager = new ThaliTCPServersManager(4242);
+  serversManager.start()
+  .then(function(localPort) {
+    serversManager.createNativeListener();
+  })
+  .catch(function(err) {
+    t.equal(err.message, "Don't call directly!", "Should throw");
+    serversManager.stop();
+    t.end();
   });
 });
 
@@ -93,7 +106,7 @@ test("emits routerPortConnectionFailed", function(t) {
     serversManager.stop();
   });
 });
-*/
+
 test("client side connections all up", function(t) {
 
   var clientSockets = 0;
