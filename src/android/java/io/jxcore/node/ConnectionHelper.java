@@ -48,13 +48,12 @@ public class ConnectionHelper
     private final Context mContext;
     private final Thread.UncaughtExceptionHandler mThreadUncaughtExceptionHandler;
     private final ConnectionModel mConnectionModel;
-    private ConnectionManager mConnectionManager = null;
-    private DiscoveryManager mDiscoveryManager = null;
-    private DiscoveryManagerSettings mDiscoveryManagerSettings = null;
+    private final ConnectionManager mConnectionManager;
+    private final DiscoveryManager mDiscoveryManager;
+    private final DiscoveryManagerSettings mDiscoveryManagerSettings;
+    private final ConnectivityInfo mConnectivityInfo;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = 0;
-    private boolean mIsDiscoveryActive = false;
-    private boolean mIsAdvertisingActive = false;
 
     /**
      * Constructor.
@@ -94,6 +93,8 @@ public class ConnectionHelper
         } else {
             mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.WIFI);
         }
+
+        mConnectivityInfo = new ConnectivityInfo(mDiscoveryManager);
     }
 
     /**
@@ -123,6 +124,8 @@ public class ConnectionHelper
             mServerPortNumber = portNumber;
         }
 
+        mConnectivityInfo.startMonitoring();
+
         boolean connectionManagerStarted = mConnectionManager.start();
         boolean discoveryManagerStarted = false;
 
@@ -130,8 +133,6 @@ public class ConnectionHelper
             discoveryManagerStarted = mDiscoveryManager.start(true, startAdvertisements);
 
             if (discoveryManagerStarted) {
-                mIsDiscoveryActive = true;
-                mIsAdvertisingActive = startAdvertisements;
                 Log.i(TAG, "start: OK");
             } else {
                 Log.e(TAG, "start: Failed to start the discovery manager");
@@ -150,8 +151,7 @@ public class ConnectionHelper
         Log.i(TAG, "stop: Stopping all activities and killing all connections...");
         mConnectionManager.stop();
         mDiscoveryManager.stop();
-        mIsDiscoveryActive = false;
-        mIsAdvertisingActive = false;
+        mConnectivityInfo.stopMonitoring();
         killAllConnections();
     }
 
@@ -161,7 +161,6 @@ public class ConnectionHelper
     public synchronized void stopListeningForAdvertisements() {
         Log.i(TAG, "stopListeningForAdvertisements");
         mDiscoveryManager.stopDiscovery();
-        mIsDiscoveryActive = false;
     }
 
     /**
@@ -182,10 +181,10 @@ public class ConnectionHelper
     }
 
     /**
-     * @return The connection manager instance.
+     * @return The ConnectivityInfo instance.
      */
-    public final ConnectionManager getConnectionManager() {
-        return mConnectionManager;
+    public final ConnectivityInfo getConnectivityInfo() {
+        return mConnectivityInfo;
     }
 
     /**
@@ -380,6 +379,8 @@ public class ConnectionHelper
                             public void run() {
                                 thisInstance.mConnectionModel
                                     .closeAndRemoveIncomingConnectionThread(threadId);
+
+                                JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(mServerPortNumber);
                             }
                         });
                     }
@@ -530,27 +531,43 @@ public class ConnectionHelper
     }
 
     /**
-     * Does nothing but logs the new state.
-     * @param discoveryManagerState The new state.
+     * Stores the new state in ConnectivityInfo instance, which is then responsible to take any
+     * actions necessary.
+     * @param isEnabled True, if enabled. False, if disabled.
      */
     @Override
-    public void onDiscoveryManagerStateChanged(DiscoveryManager.DiscoveryManagerState discoveryManagerState) {
-        Log.i(TAG, "onDiscoveryManagerStateChanged: " + discoveryManagerState.toString());
+    public void onWifiEnabledChanged(boolean isEnabled) {
+        mConnectivityInfo.setIsWifiEnabled(isEnabled);
     }
 
+    /**
+     * Stores the new state in ConnectivityInfo instance, which is then responsible to take any
+     * actions necessary.
+     * @param isEnabled True, if enabled. False, if disabled.
+     */
     @Override
-    public void onProvideBluetoothMacAddressRequest(String requestId) {
-        Log.d(TAG, "onProvideBluetoothMacAddressRequest: Request ID: " + requestId);
+    public void onBluetoothEnabledChanged(boolean isEnabled) {
+        mConnectivityInfo.setIsBluetoothEnabled(isEnabled);
     }
 
+    /**
+     * Forwards the information to the Node layer via JXcoreExtension class.
+     * @param state The new state.
+     * @param isDiscovering True, if peer discovery is active. False otherwise.
+     * @param isAdvertising True, if advertising is active. False otherwise.
+     */
     @Override
-    public void onPeerReadyToProvideBluetoothMacAddress() {
-        Log.d(TAG, "onPeerReadyToProvideBluetoothMacAddress");
-    }
+    public void onDiscoveryManagerStateChanged(
+            DiscoveryManager.DiscoveryManagerState state, final boolean isDiscovering, final boolean isAdvertising) {
+        Log.i(TAG, "onDiscoveryManagerStateChanged: State: " + state
+                + ", is discovering: " + isDiscovering + ", is advertising: " + isAdvertising);
 
-    @Override
-    public void onBluetoothMacAddressResolved(String bluetoothMacAddress) {
-        Log.d(TAG, "onBluetoothMacAddressResolved: " + bluetoothMacAddress);
+        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
+            }
+        });
     }
 
     /**
@@ -592,6 +609,21 @@ public class ConnectionHelper
         } else {
             JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, false);
         }
+    }
+
+    @Override
+    public void onProvideBluetoothMacAddressRequest(String requestId) {
+        Log.d(TAG, "onProvideBluetoothMacAddressRequest: Request ID: " + requestId);
+    }
+
+    @Override
+    public void onPeerReadyToProvideBluetoothMacAddress() {
+        Log.d(TAG, "onPeerReadyToProvideBluetoothMacAddress");
+    }
+
+    @Override
+    public void onBluetoothMacAddressResolved(String bluetoothMacAddress) {
+        Log.d(TAG, "onBluetoothMacAddressResolved: " + bluetoothMacAddress);
     }
 
     /**

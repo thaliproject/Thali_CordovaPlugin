@@ -25,6 +25,14 @@ public class JXcoreExtension {
         void onConnectionStatusChanged(String message, int portNumber);
     }
 
+    public enum RadioState {
+        ON, // The radio is on and available for use.
+        OFF, // The radio exists on the device but is turned off.
+        UNAVAILABLE, // The radio exists on the device and is on but for some reason the system won't let us use it.
+        NOT_HERE, // We depend on this radio type for this platform type but it doesn't appear to exist on this device.
+        DO_NOT_CARE // Thali doesn't use this radio type on this platform and so makes no effort to determine its state.
+    }
+
     // Common Thali methods and events
     private final static String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
     private final static String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
@@ -43,13 +51,16 @@ public class JXcoreExtension {
     private final static String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
     private final static String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
     private final static String EVENT_VALUE_ADVERTISING_ACTIVE = "advertisingActive";
-    private final static String EVENT_VALUE_IS_REACHABLE = "isReachable";
-    private final static String EVENT_VALUE_IS_WIFI = "isWiFi";
+    private final static String EVENT_VALUE_BLUETOOTH_LOW_ENERGY = "blueToothLowEnergy";
+    private final static String EVENT_VALUE_BLUETOOTH = "blueTooth";
+    private final static String EVENT_VALUE_WIFI = "wifi";
+    private final static String EVENT_VALUE_CELLULAR = "cellular";
+    private final static String EVENT_VALUE_BSSID_NAME = "bssidName";
     private final static String EVENT_VALUE_PORT_NUMBER = "portNumber";
 
     // Android specific methods and events
     private final static String METHOD_NAME_DISCONNECT = "disconnect";
-    private final static String METHOD_NAME_IS_BLE_ADVERTISING_SUPPORTED = "isBleAdvertisingSupported";
+    private final static String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
     private final static String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
     private final static String METHOD_NAME_GET_BLUETOOTH_NAME = "getBluetoothName";
     private final static String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
@@ -480,19 +491,18 @@ public class JXcoreExtension {
             }
         });
 
-        jxcore.RegisterMethod(METHOD_NAME_IS_BLE_ADVERTISING_SUPPORTED, new JXcoreCallback() {
+        jxcore.RegisterMethod(METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ArrayList<Object> args = new ArrayList<Object>();
-                boolean isBleMultipleAdvertisementSupported =
-                        mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
-                Log.v(TAG, METHOD_NAME_IS_BLE_ADVERTISING_SUPPORTED + ": " + isBleMultipleAdvertisementSupported);
+                boolean isBleMultipleAdvertisementSupported = mConnectionHelper.getConnectivityInfo().isBleMultipleAdvertisementSupported();
+                Log.v(TAG, METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED + ": " + isBleMultipleAdvertisementSupported);
 
                 if (isBleMultipleAdvertisementSupported) {
                     args.add(null); // Null as the first argument indicates success
-                    args.add("Bluetooth LE advertising is supported");
+                    args.add("Bluetooth LE multiple advertisement is supported");
                 } else {
-                    args.add("Bluetooth LE advertising is not supported");
+                    args.add("Bluetooth LE multiple advertisement is not supported");
                 }
 
                 jxcore.CallJSMethod(callbackId, args.toArray());
@@ -695,20 +705,72 @@ public class JXcoreExtension {
      * Wi-Fi is connected to. If missing, means that it was not possible to get
      * the BSSID (for example, this platform doesn't provide an API for it).
      *
-     * @param isConnected
-     * @param isWifi
+     * @param isBluetoothEnabled If true, Bluetooth is enabled. False otherwise.
+     * @param isWifiEnabled If true, Wi-Fi is enabled. False otherwise.
+     * @param bssidName If null this value indicates that either wifiRadioOn is not 'on' or that
+     *                  the Wi-Fi isn't currently connected to an access point. If non-null then
+     *                  this is the BSSID of the access point that Wi-Fi is connected to.
      */
-    public static void notifyNetworkChanged(boolean isConnected, boolean isWifi) {
+    public static void notifyNetworkChanged(boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName) {
+        RadioState bluetoothLowEnergyRadioState = RadioState.DO_NOT_CARE;
+        RadioState bluetoothRadioState;
+        RadioState wifiRadioState = RadioState.DO_NOT_CARE;
+        RadioState cellularRadioState = RadioState.DO_NOT_CARE;
+
+        final DiscoveryManager.DiscoveryMode discoveryMode = DiscoveryManagerSettings.getInstance(null).getDiscoveryMode();
+        final ConnectivityInfo connectivityInfo = mConnectionHelper.getConnectivityInfo();
+
+        if (discoveryMode == DiscoveryManager.DiscoveryMode.BLE
+                || discoveryMode == DiscoveryManager.DiscoveryMode.BLE_AND_WIFI) {
+            if (connectivityInfo.isBleMultipleAdvertisementSupported()) {
+                if (isBluetoothEnabled) {
+                    bluetoothLowEnergyRadioState = RadioState.ON;
+                } else {
+                    bluetoothLowEnergyRadioState = RadioState.OFF;
+                }
+            } else {
+                bluetoothLowEnergyRadioState = RadioState.NOT_HERE;
+            }
+        }
+
+        if (connectivityInfo.isBluetoothSupported()) {
+            if (isBluetoothEnabled) {
+                bluetoothRadioState = RadioState.ON;
+            } else {
+                bluetoothRadioState = RadioState.OFF;
+            }
+        } else {
+            bluetoothRadioState = RadioState.NOT_HERE;
+        }
+
+        if (discoveryMode == DiscoveryManager.DiscoveryMode.WIFI
+                || discoveryMode == DiscoveryManager.DiscoveryMode.BLE_AND_WIFI) {
+            if (connectivityInfo.isWifiDirectSupported()) {
+                if (isWifiEnabled) {
+                    wifiRadioState = RadioState.ON;
+                } else {
+                    wifiRadioState = RadioState.OFF;
+                }
+            } else {
+                wifiRadioState = RadioState.NOT_HERE;
+            }
+        }
+
+        Log.d(TAG, "notifyNetworkChanged: BLE: " + bluetoothLowEnergyRadioState
+                + ", Bluetooth: " + bluetoothRadioState
+                + ", Wi-Fi: " + wifiRadioState
+                + ", cellular: " + cellularRadioState
+                + ", BSSID name: " + bssidName);
+
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(JXcoreExtension.EVENT_VALUE_IS_REACHABLE, isConnected);
-
-            if (isConnected) {
-                jsonObject.put(JXcoreExtension.EVENT_VALUE_IS_WIFI, isWifi);
-            }
-
+            jsonObject.put(JXcoreExtension.EVENT_VALUE_BLUETOOTH_LOW_ENERGY, radioStateEnumValueToString(bluetoothLowEnergyRadioState));
+            jsonObject.put(JXcoreExtension.EVENT_VALUE_BLUETOOTH, radioStateEnumValueToString(bluetoothRadioState));
+            jsonObject.put(JXcoreExtension.EVENT_VALUE_WIFI, radioStateEnumValueToString(wifiRadioState));
+            jsonObject.put(JXcoreExtension.EVENT_VALUE_CELLULAR, radioStateEnumValueToString(cellularRadioState));
+            jsonObject.put(JXcoreExtension.EVENT_VALUE_BSSID_NAME, bssidName);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyNetworkChanged: Failed to populate the JSON object: " + e.getMessage(), e);
@@ -772,13 +834,35 @@ public class JXcoreExtension {
      * @return True, if the radios are supported. False otherwise.
      */
     private static boolean areRadiosSupported() {
-        final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
-        boolean isWifiDirectSupported = discoveryManager.isWifiDirectSupported();
-        boolean isBleMultipleAdvertisementSupported = discoveryManager.isBleMultipleAdvertisementSupported();
-        DiscoveryManager.DiscoveryMode discoveryMode = DiscoveryManagerSettings.getInstance(null).getDiscoveryMode();
+        final ConnectivityInfo connectivityInfo = mConnectionHelper.getConnectivityInfo();
+        final boolean isWifiDirectSupported = connectivityInfo.isWifiDirectSupported();
+        final boolean isBleMultipleAdvertisementSupported = connectivityInfo.isBleMultipleAdvertisementSupported();
+        final DiscoveryManager.DiscoveryMode discoveryMode = DiscoveryManagerSettings.getInstance(null).getDiscoveryMode();
 
         return ((discoveryMode == DiscoveryManager.DiscoveryMode.WIFI && isWifiDirectSupported)
                 || (discoveryMode == DiscoveryManager.DiscoveryMode.BLE && isBleMultipleAdvertisementSupported)
                 || (discoveryMode == DiscoveryManager.DiscoveryMode.BLE_AND_WIFI && isWifiDirectSupported && isBleMultipleAdvertisementSupported));
+    }
+
+    /**
+     * Returns a string value matching the given RadioState enum value.
+     * @param radioState The RadioState enum value.
+     * @return A string matching the given RadioState enum value.
+     */
+    private static String radioStateEnumValueToString(RadioState radioState) {
+        switch (radioState) {
+            case ON:
+                return "on";
+            case OFF:
+                return "off";
+            case UNAVAILABLE:
+                return "unavailable";
+            case NOT_HERE:
+                return "notHere";
+            case DO_NOT_CARE:
+                return "doNotCare";
+        }
+
+        return null;
     }
 }

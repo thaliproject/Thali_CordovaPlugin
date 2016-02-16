@@ -25,7 +25,7 @@
         <source-file src="src/android/java/io/jxcore/node/ConnectionHelper.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ConnectionModel.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ConnectionStatusListener.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/ConnectivityMonitor.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/ConnectivityInfo.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/IncomingSocketThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/OutgoingSocketThread.java" target-dir="src/io/jxcore/node/" />
