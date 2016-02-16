@@ -8,7 +8,6 @@ var express = require('express');
 var assert = require('assert');
 
 var proxyquire = require('proxyquire');
-proxyquire.noCallThru();
 proxyquire.noPreserveCache();
 
 var mockEmitter = new EventEmitter();
@@ -23,7 +22,11 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
         assert(!false, 'the mock network status should not be called twice');
         networkStatusCalled = true;
         return Promise.resolve((getCurrentNetworkStatus()));
-      }
+      },
+      '@noCallThru': true
+    },
+    './thaliConfig': {
+      SSDP_NT: 'http://www.thaliproject.org/mock'
     }
   }
 );
