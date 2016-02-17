@@ -1,5 +1,7 @@
 'use strict';
 
+var assert = require('assert');
+
 /** @module makeIntoCloseAllServer */
 
 /**
@@ -17,12 +19,20 @@ function makeIntoCloseAllServer(server) {
   var connections = [];
 
   server.on('connection', function (socket) {
+    // Add to the list of connections.
+    connections.push(socket);
+    // Remove from list of connections in case
+    // socket is closed.
     socket.on('close', function () {
-      var index = connections.findIndex(function (socket) {
-        return socket === socket;
-      });
+      var index = -1;
+      for (var i = 0; i < connections.length; i++) {
+        if (connections[i] === socket) {
+          index = i;
+          break;
+        }
+      }
       if (index === -1) {
-        // Log this, it shouldn't have happened.
+        assert('socket not found from the list of connections');
       }
       connections = connections.splice(index, 1);
     });
@@ -42,7 +52,6 @@ function makeIntoCloseAllServer(server) {
     connections.forEach(function (connection) {
       connection.destroy();
     });
-    connections = null;
   };
 
   return server;
