@@ -260,8 +260,6 @@ public class ConnectionHelper
             }
         };
 
-        resultCallback.getListenerOrIncomingConnection().setServerPortNumber(mServerPortNumber);
-
         if (!isRunning()) {
             resultCallback.setErrorMessage("Not running, please call start() first");
             Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
@@ -439,7 +437,7 @@ public class ConnectionHelper
 
                         if (callback != null) {
                             callback.getListenerOrIncomingConnection().setListeningOnPortNumber(portNumber);
-                            callback.onConnectCallback(null, null);
+                            callback.onConnectCallback(null, callback.getListenerOrIncomingConnection());
                         }
                     }
 
@@ -474,9 +472,7 @@ public class ConnectionHelper
 
                 if (callback != null) {
                     callback.onConnectCallback(
-                            "Failed to create an outgoing connection thread instance: " + e.getMessage(),
-                            new ListenerOrIncomingConnection());
-
+                            "Failed to create an outgoing connection thread instance: " + e.getMessage(), null);
                     mConnectionModel.removeOutgoingConnectionCallback(finalPeerId);
                 }
 
@@ -518,8 +514,7 @@ public class ConnectionHelper
 
             if (callback != null) {
                 callback.onConnectCallback(
-                        "Connection to peer " + peerProperties.toString() + " timed out",
-                        callback.getListenerOrIncomingConnection());
+                        "Connection to peer " + peerProperties.toString() + " timed out", null);
 
                 // Dispose the callback data
                 mConnectionModel.removeOutgoingConnectionCallback(bluetoothMacAddress);
@@ -544,7 +539,7 @@ public class ConnectionHelper
             if (callback != null) {
                 callback.onConnectCallback(
                         "Connection to peer " + peerProperties.toString() + " failed: " + errorMessage,
-                        callback.getListenerOrIncomingConnection());
+                        null);
 
                 // Dispose the callback data
                 mConnectionModel.removeOutgoingConnectionCallback(bluetoothMacAddress);

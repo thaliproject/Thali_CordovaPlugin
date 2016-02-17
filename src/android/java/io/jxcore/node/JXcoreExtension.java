@@ -238,6 +238,7 @@ public class JXcoreExtension {
                     }
                 }
 
+                Log.d(TAG, "METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING" + ": errorString == " + errorString);
                 args.add(errorString); // Null errorString indicates success
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
@@ -350,6 +351,7 @@ public class JXcoreExtension {
                 if (params.size() == 0) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("Required parameter, {string} peerIdentifier, missing");
+                    args.add(null);
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
                 }
@@ -357,6 +359,7 @@ public class JXcoreExtension {
                 if (!areRadiosSupported()) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("No Native Non-TCP Support");
+                    args.add(null);
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
                 }
@@ -365,6 +368,7 @@ public class JXcoreExtension {
                         DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("Radio Turned Off");
+                    args.add(null);
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
                 }
@@ -377,6 +381,7 @@ public class JXcoreExtension {
                         || discoveryManagerState == DiscoveryManager.DiscoveryManagerState.RUNNING_BLE_AND_WIFI)) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("startListeningForAdvertisements is not active");
+                    args.add(null);
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
                 }
@@ -386,6 +391,7 @@ public class JXcoreExtension {
                 if (!BluetoothUtils.isValidBluetoothMacAddress(bluetoothMacAddress)) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("Illegal peerID");
+                    args.add(null);
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
                 }
@@ -399,6 +405,7 @@ public class JXcoreExtension {
                         args.add("Already connecting");
                     }
 
+                    args.add(null);
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
                 }
@@ -406,6 +413,7 @@ public class JXcoreExtension {
                 if (mConnectionHelper.hasMaximumNumberOfConnections()) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("Max connections reached");
+                    args.add(null);
                     jxcore.CallJSMethod(callbackId, args.toArray());
                     return;
                 }
@@ -419,10 +427,13 @@ public class JXcoreExtension {
                                 ArrayList<Object> args = new ArrayList<Object>();
                                 args.add(errorMessage);
 
-                                if (errorMessage != null && listenerOrIncomingConnection != null) {
-                                    args.add(listenerOrIncomingConnection.toString());
-                                } else {
-                                    args.add(null);
+                                if (errorMessage == null) {
+                                    if (listenerOrIncomingConnection != null) {
+                                        args.add(listenerOrIncomingConnection.toString());
+                                    } else {
+                                        throw new NullPointerException(
+                                                "ListenerOrIncomingConnection is null even though there is no error message");
+                                    }
                                 }
 
                                 jxcore.CallJSMethod(callbackId, args.toArray());
@@ -435,7 +446,7 @@ public class JXcoreExtension {
                     String errorMessage = (resultCallback.getErrorMessage() != null)
                             ? resultCallback.getErrorMessage() : "Unknown error";
                     args.add(errorMessage);
-                    args.add(resultCallback.getListenerOrIncomingConnection().toString());
+                    args.add(null);
                     jxcore.CallJSMethod(callbackId, args.toArray());
                 }
             }
