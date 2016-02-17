@@ -11,6 +11,13 @@ var testUtils = require('./lib/testUtils');
 if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/MobileUsingWifi.js');
 }
+else {
+  var oldFn = Mobile.prototype.registerToNative;
+  Mobile.prototype.registerToNative = function(target) {
+    oldFn.call(this, target);
+    Mobile("didRegisterToNative").callNative(this.name);
+  }
+}
 
 testUtils.toggleRadios(true);
 
