@@ -112,10 +112,6 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
-if (!jxcore.utils.OSInfo().isMobile) {
-  return;
-}
-
 test('Can connect to a remote peer', function (t) {
 
   var complete = false;
@@ -181,13 +177,15 @@ test('Can connect to a remote peer', function (t) {
 test('Can shift large amounts of data', function (t) {
 
   var complete = false;
-  var applicationPort = 4243;
 
   var sockets = {};
-  var echoServer = net.createServer(function(socket) {
-    socket.pipe(socket);
-    socket.on('error', function (exc) {
-      console.log("Error on incoming socket");
+  var echoServer = net.createServer(function (socket) {
+    socket.on('data', function (data) {
+      socket.write(data);
+    });
+    socket.on('end', socket.end);
+    socket.on('error', function (error) {
+      console.log('Error on echo server socket: ' + error);
       t.fail();
     });
     sockets[socket.remotePort] = socket;
@@ -198,8 +196,8 @@ test('Can shift large amounts of data', function (t) {
 
   function shiftData(sock, reverseConnection) {
 
-    sock.on('error', function (exc) {
-      console.log("Error on client socket");
+    sock.on('error', function (error) {
+      console.log('Error on client socket: ' + error);
       t.fail();
     });
 
@@ -240,8 +238,7 @@ test('Can shift large amounts of data', function (t) {
     
       var toRecv = '';
       var done = false;
-      sock.on('data', function(data) {
-
+      sock.on('data', function (data) {
         var remaining = dataSize - toRecv.length;
 
         if (remaining >= data.length) {
@@ -269,8 +266,6 @@ test('Can shift large amounts of data', function (t) {
     }
   }
 
-  echoServer.listen(applicationPort, '127.0.0.1');
-
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {
       if (peer.peerAvailable) {
@@ -282,7 +277,7 @@ test('Can shift large amounts of data', function (t) {
             if (connection.listeningPort) {
               console.log("Forward connection");
               // We made a forward connection
-              var client = net.connect(connection.listeningPort, "127.0.0.1", function() {
+              var client = net.connect(connection.listeningPort, function() {
                 shiftData(client, false);
               });
             } else {
@@ -297,11 +292,15 @@ test('Can shift large amounts of data', function (t) {
     });
   });
 
-  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
-  function (err) {
-    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-    Mobile('startListeningForAdvertisements').callNative(function (err) {
-      t.notOk(err, 'Can call startListeningForAdvertisements without error');
+  echoServer.listen(0, function () {
+    var applicationPort = echoServer.address().port;
+
+    Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
+    function (err) {
+      t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+      Mobile('startListeningForAdvertisements').callNative(function (err) {
+        t.notOk(err, 'Can call startListeningForAdvertisements without error');
+      });
     });
   });
 });

@@ -236,7 +236,7 @@ test('#startUpdateAdvertisingAndListening should fail invalid router has been pa
 
 test('#startUpdateAdvertisingAndListening should fail if router server starting fails', function (t) {
   // Save the old port so that it can be reassigned after the test.
-  var oldPort = wifiInfrastructure.port;
+  var oldPort = wifiInfrastructure.routerServerPort;
   // Create a test server that is used to block the port
   // onto which the router server is tried to be started.
   var testServer = net.createServer(function (c) {
@@ -248,13 +248,13 @@ test('#startUpdateAdvertisingAndListening should fail if router server starting 
     // have our test server running. This should
     // create a failure when trying to start the router
     // server on the same port.
-    wifiInfrastructure.port = testServerPort;
+    wifiInfrastructure.routerServerPort = testServerPort;
     wifiInfrastructure.startUpdateAdvertisingAndListening()
     .catch(function (error) {
       t.equals(error.message, 'Unspecified Error with Radio infrastructure', 'specific error expected');
-      wifiInfrastructure.port = oldPort;
+      wifiInfrastructure.routerServerPort = oldPort;
       testServer.close(function () {
-        t.end()
+        t.end();
       });
     });
   });
@@ -276,7 +276,7 @@ test('#startUpdateAdvertisingAndListening should start hosting given router obje
   .then(function () {
     http.get({
       path: testPath,
-      port: wifiInfrastructure.port,
+      port: wifiInfrastructure.routerServerPort,
       agent: false // to prevent connection keep-alive
     }, function (res) {
       t.equal(res.statusCode, 200, 'server should respond with code 200');

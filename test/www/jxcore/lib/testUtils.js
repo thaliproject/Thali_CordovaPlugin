@@ -8,6 +8,9 @@ var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
     return Promise.resolve();
   }
+  if (jxcore.utils.OSInfo().isIOS) {
+    return Promise.resolve();
+  }
   return new Promise(function (resolve, reject) {
     Mobile[toggleFunction](on, function (err) {
       if (err) {
@@ -30,7 +33,8 @@ exports.toggleBluetooth = function (on) {
 /**
  * Turn Bluetooth and Wifi either on or off.
  * This doesn't have any effect on iOS and on mocked up desktop
- * environment, the network changes will be simulated.
+ * environment, the network changes will be simulated (i.e., doesn't affect
+ * the network status of the host machine).
  * @param {boolean} on Pass true to turn radios on and false to turn them off
  * @returns {Promise<?Error>}
  */
