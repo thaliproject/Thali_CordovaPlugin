@@ -5,6 +5,10 @@ var multiplex = require('multiplex');
 var tape = require('../lib/thali-tape');
 var ThaliTCPServersManager = require('thali/NextGeneration/tcpServersManager');
 
+if (typeof Mobile === 'undefined') {
+  global.Mobile = require('../lib/MobileUsingWifi');
+}
+
 var test = tape({
   setup: function(t) {
     t.end();
@@ -200,14 +204,15 @@ test("can call createPeerListener (pleaseConnect == false)", function(t) {
   });
 });
 
-test("can call createPeerListener (pleaseConnect == true)", function(t) {
+test("calling createPeerListener (pleaseConnect == true) with unknown peer is error", function(t) {
   var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function(localPort) {
     serversManager.createPeerListener("peerId", true)
-    .then(function(peerPort) {
-      t.ok(peerPort > 0 && peerPort <= 65535, "port must be in range");
-      serversManager.stop();
+    .catch(function(err) {
+      // Should get an error here, we haven't yet discovered a peer
+      t.ok(err, "should get error");
+      serversManager.stop(); 
       t.end();
     });
   })
@@ -216,3 +221,5 @@ test("can call createPeerListener (pleaseConnect == true)", function(t) {
     serversManager.stop();
   });
 });
+
+

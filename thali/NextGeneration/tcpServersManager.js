@@ -868,7 +868,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
           if (err) {
             log.warn(err);
             incoming.end();
-            self.emit("failedConnection", { "error":err, peerIdentifier:peerIdentifier });
+            self.emit("failedConnection", { "error":err, "peerIdentifier":peerIdentifier });
             return;
           }
           if (connection.listenerPort != 0) {
@@ -889,9 +889,10 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
     }
 
     if (pleaseConnect) {
-      Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
+      Mobile("connect").callNative(peerIdentifier, function(err, connection) {
         if (err) {
           log.warn(err);
+          console.log("reject");
           return reject(err);
         }
         var outgoing = net.createConnection(connection.listeningPort, function() {
@@ -900,10 +901,12 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
           });
           self.clientMuxes[outgoing.localPort] = mux;
         });
+        return resolve(server.address().port);
       });
     }
-
-    return resolve(server.address().port);
+    else {
+      return resolve(server.address().port);
+    }
   }
 
   return new Promise(_do);
