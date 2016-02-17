@@ -107,7 +107,7 @@ test("emits routerPortConnectionFailed", function(t) {
   });
 });
 
-test("client side connections all up", function(t) {
+test("native server connections all up", function(t) {
 
   var clientSockets = 0;
   var applicationServer = net.createServer(function(client) {
@@ -181,4 +181,38 @@ test("client side connections all up", function(t) {
     serversManager.stop();
   });
 
+});
+
+test("can call createPeerListener (pleaseConnect == false)", function(t) {
+  var serversManager = new ThaliTCPServersManager(4242);
+  serversManager.start()
+  .then(function(localPort) {
+    serversManager.createPeerListener("peerId", false)
+    .then(function(peerPort) {
+      t.ok(peerPort > 0 && peerPort <= 65535, "port must be in range");
+      serversManager.stop();
+      t.end();
+    });
+  })
+  .catch(function(err) {
+    t.fail("should not get error - " + err);
+    serversManager.stop();
+  });
+});
+
+test("can call createPeerListener (pleaseConnect == true)", function(t) {
+  var serversManager = new ThaliTCPServersManager(4242);
+  serversManager.start()
+  .then(function(localPort) {
+    serversManager.createPeerListener("peerId", true)
+    .then(function(peerPort) {
+      t.ok(peerPort > 0 && peerPort <= 65535, "port must be in range");
+      serversManager.stop();
+      t.end();
+    });
+  })
+  .catch(function(err) {
+    t.fail("should not get error - " + err);
+    serversManager.stop();
+  });
 });

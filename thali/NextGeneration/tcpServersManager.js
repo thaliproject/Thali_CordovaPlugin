@@ -154,6 +154,15 @@ function TCPServersManager(routerPort) {
   // Map muxes->streams (1->M)
   this._muxesToStreams = {};
 
+  // peerIdentifier->server
+  this._peerServers = {};
+
+  // Local port->server
+  this._allServers = {};
+
+  // client port->mux
+  this._clientMuxes = {};
+
   // The port on which we expect the application to be
   // listening
   this._routerPort = routerPort;
@@ -245,6 +254,12 @@ TCPServersManager.prototype.stop = function() {
     this._server.closeAll();
     this._server = null;
   }
+  for (var port in this._peerServers) {
+    if (this._peerServers.hasOwnProperty(port)) {
+      this._peerServers[port].closeAll();
+    }
+  }
+  this._peerServers = {}
 };
 
 /**
@@ -376,6 +391,7 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
   function _do(resolve, reject) {
 
     self._server = CloseAllServer(net.createServer());
+    self._server.__id = next_id();
 
     self._server.on("error", function(err) {
       log.warn(err);
@@ -519,6 +535,7 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
         return;
       }
       if (self._server) {
+        self._allServers[self._server.__id] = [0, self._server];
         log.debug("listening", self._server.address().port);
         return resolve(self._server.address().port);
       }
@@ -716,6 +733,13 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
  */
 TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
                                                            pleaseConnect) {
+
+  // This section manages a server that accepts incoming connections
+  // from the application. The first connection causes the p2p link to 
+  // be established and connects a mux to the native listener that will
+  // have been set up. Subsequent connections create new streams on that
+  // link.
+
   if (this._state != 'started') {
     throw new Error("Call Start!");
   }
@@ -723,8 +747,163 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
   var self = this;
   function _do(resolve, reject) {
 
-    self._server = CloseAllServer(net.createServer());
+    if (self._peerServers[peerIdentifier]) {
+      return
+    }
 
+    function createServer(onNewConnection) {
+
+      // This is the server that will listen for connection coming from the application
+
+      function closeOldestServer() {
+        var oldestServer = null;
+        for (var serverId in this._allServers) {
+          if (this._allServers.hasOwnProperty(serverId)) {
+            // TBD: Right now I have no idea how to implement 'hasActiveMux'
+            // plus.. what if all servers hasActiveMux == true ??
+            if (oldestServer == null) {
+              oldestServer = this._allServers[serverId];
+            }
+            else {
+              if (this._allServers[serverId][0] < oldestServer[0]) {
+                oldestServer = this._allServers[serverId];
+              }
+            }
+          }
+        }
+        oldestServer = oldestServer[1];
+        oldestServer.stop();
+        delete this.__allServers[oldestServer.__id]; 
+      }
+
+      if (self._allServers.length == maxPeersToAdvertise) {
+        closeOldestServer();
+      }
+
+      var server = CloseAllServer(net.createServer());
+      server.__id = next_id();
+
+      server.on("connection", onNewConnection);
+
+      server.listen(0, function(err) {
+        if (err) {
+          log.warn(err);
+          return null;
+        }
+        log.debug("new peer server: ", peerIdentifier, server.__id);
+      });
+ 
+      self._peerServers[peerIdentifier] = server;
+      self._allServers[server.__id] = [new Date(), server];
+
+      return server;
+    }
+
+    function onNewConnection(incoming) {
+
+      // Handle a new connection from the app to the server
+
+      var firstConnection = true;
+
+      function handleForwardConnection(connection) {
+        // We expect to connect directly to the native listener
+        // Create the 'master' socket over which we'll mux subsequent 
+        // connections
+        var outgoing = net.createConnection(connection.listeningPort, function() {
+          var mux = new multiplex(function onStream(stream, id) {
+            outgoing.pipe(mux).pipe(outgoing);
+          });
+          self.clientMuxes[outgoing.localPort] = mux;
+        });
+
+        outgoing.on("error", function(err) {
+          log.warn(err);
+          server.stop();
+          self.emit("failedConnection", {
+            "error":new Error("Cannot Connect To Peer"), 
+            "peerIdentifier":peerIdentifier 
+          });
+        });
+      }
+
+      function handleReverseConnection(connection) {
+        // We expect to be connected to from the p2p side which
+        // implies by the time we get here there is already
+        // client socket connected to the server set up by
+        // createNativeListener
+
+        if (connection.remotePort != self._server.address().port) {
+          // This isn't the socket you're looking for !!
+          incoming.destroy();
+          self.emit("failedConnection", {
+            "error":new Error("Mismatched Server Port"),
+            "peerIdentifier":peerIdentifier
+          });
+          return;
+        }
+
+        // Find the mux createNativeListener created
+        var mux = self.clientMuxes[connection.remotePort];
+        if (!mux) {
+          connection.destroy();
+          self.emit("failedConnection", {
+            "error":new Error("Incoming connection died"),
+            "peerIdentifier":peerIdentifier
+          });
+          return;
+        }
+
+        // Create a new stream on the existing mux
+        var stream = mux.createStream();
+        stream.__id = next_id();
+        incoming.pipe(stream).pipe(incoming); 
+      }
+
+      if (!pleaseConnect && firstConnection) {
+
+        firstConnection = false;
+
+        // Establish the p2p link..
+        Mobile("connect").callNative(peerIdentifer, function(err, connection) {
+          if (err) {
+            log.warn(err);
+            incoming.end();
+            self.emit("failedConnection", { "error":err, peerIdentifier:peerIdentifier });
+            return;
+          }
+          if (connection.listenerPort != 0) {
+            handleForwardConnection(connection);
+          }
+          else {
+            handleReverseConnection(connection);
+          }
+        });
+      }
+      else {
+      }
+    }
+
+    var server = createServer(onNewConnection);
+    if (server == null) {
+      return reject(null);
+    }
+
+    if (pleaseConnect) {
+      Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
+        if (err) {
+          log.warn(err);
+          return reject(err);
+        }
+        var outgoing = net.createConnection(connection.listeningPort, function() {
+          var mux = new multiplex(function onStream(stream, id) {
+            outgoing.pipe(mux).pipe(outgoing);
+          });
+          self.clientMuxes[outgoing.localPort] = mux;
+        });
+      });
+    }
+
+    return resolve(server.address().port);
   }
 
   return new Promise(_do);
