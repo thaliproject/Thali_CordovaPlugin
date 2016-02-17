@@ -29,6 +29,10 @@ class IncomingSocketThread extends SocketThreadBase {
         TAG = IncomingSocketThread.class.getName();
     }
 
+    public int getHttpPort() {
+        return mHttpPort;
+    }
+
     public void setHttpPort(int httpPort) {
         mHttpPort = httpPort;
     }

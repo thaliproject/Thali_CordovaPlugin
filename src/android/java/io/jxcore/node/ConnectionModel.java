@@ -4,7 +4,6 @@
 package io.jxcore.node;
 
 import android.util.Log;
-import io.jxcore.node.JXcoreExtension.JxCoreExtensionListener;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -20,7 +19,7 @@ public class ConnectionModel {
     private static final String TAG = ConnectionModel.class.getName();
     private final CopyOnWriteArrayList<IncomingSocketThread> mIncomingSocketThreads = new CopyOnWriteArrayList<IncomingSocketThread>();
     private final CopyOnWriteArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new CopyOnWriteArrayList<OutgoingSocketThread>();
-    private final HashMap<String, JxCoreExtensionListener> mOutgoingConnectionListeners = new HashMap<String, JxCoreExtensionListener>();;
+    private final HashMap<String, JXcoreThaliCallback> mOutgoingConnectionCallbacks = new HashMap<String, JXcoreThaliCallback>();;
     private final Listener mListener;
 
     /**
@@ -96,29 +95,29 @@ public class ConnectionModel {
 
     /**
      * @param bluetoothMacAddress The Bluetooth MAC address of an outgoing connection.
-     * @return A listener associated with the given Bluetooth MAC address.
+     * @return A callback instance associated with the given Bluetooth MAC address.
      */
-    public synchronized JxCoreExtensionListener getOutgoingConnectionListener(String bluetoothMacAddress) {
-        return mOutgoingConnectionListeners.get(bluetoothMacAddress);
+    public synchronized JXcoreThaliCallback getOutgoingConnectionCallback(String bluetoothMacAddress) {
+        return mOutgoingConnectionCallbacks.get(bluetoothMacAddress);
     }
 
     /**
-     * Adds the given listener for a connection with the given Bluetooth MAC address.
+     * Adds the given callback for a connection with the given Bluetooth MAC address.
      * @param bluetoothMacAddress The Bluetooth MAC address.
-     * @param listener The listener to add.
+     * @param callback The callback associated with the connection.
      * @return True, if added. False otherwise (e.g. already added).
      */
-    public synchronized boolean addOutgoingConnectionListener(
-            String bluetoothMacAddress, JxCoreExtensionListener listener) {
+    public synchronized boolean addOutgoingConnectionCallback(
+            String bluetoothMacAddress, JXcoreThaliCallback callback) {
         boolean wasAdded = false;
 
-        if (bluetoothMacAddress != null && listener != null) {
+        if (bluetoothMacAddress != null && callback != null) {
             boolean alreadyExists = false;
-            Iterator<HashMap.Entry<String, JxCoreExtensionListener>> iterator =
-                    mOutgoingConnectionListeners.entrySet().iterator();
+            Iterator<HashMap.Entry<String, JXcoreThaliCallback>> iterator =
+                    mOutgoingConnectionCallbacks.entrySet().iterator();
 
             while (iterator.hasNext()) {
-                HashMap.Entry<String, JxCoreExtensionListener> entry = iterator.next();
+                HashMap.Entry<String, JXcoreThaliCallback> entry = iterator.next();
 
                 if (entry.getKey().equals(bluetoothMacAddress)) {
                     alreadyExists = true;
@@ -127,7 +126,7 @@ public class ConnectionModel {
             }
 
             if (!alreadyExists) {
-                mOutgoingConnectionListeners.put(bluetoothMacAddress, listener);
+                mOutgoingConnectionCallbacks.put(bluetoothMacAddress, callback);
             }
         }
 
@@ -135,11 +134,11 @@ public class ConnectionModel {
     }
 
     /**
-     * Removes the listener associated with the given Bluetooth MAC address.
+     * Removes the callback associated with the given Bluetooth MAC address.
      * @param bluetoothMacAddress The Bluetooth MAC address of an outgoing connection.
      */
-    public synchronized void removeOutgoingConnectionListener(String bluetoothMacAddress) {
-        mOutgoingConnectionListeners.remove(bluetoothMacAddress);
+    public synchronized void removeOutgoingConnectionCallback(String bluetoothMacAddress) {
+        mOutgoingConnectionCallbacks.remove(bluetoothMacAddress);
     }
 
     /**
@@ -193,7 +192,7 @@ public class ConnectionModel {
 
         if (socketThread != null) {
             Log.i(TAG, "closeAndRemoveOutgoingConnectionThread: Closing connection, peer ID: " + peerId);
-            mOutgoingConnectionListeners.remove(peerId);
+            mOutgoingConnectionCallbacks.remove(peerId);
             mOutgoingSocketThreads.remove(socketThread);
             socketThread.close();
             wasFoundAndDisconnected = true;
@@ -223,7 +222,7 @@ public class ConnectionModel {
         }
 
         mOutgoingSocketThreads.clear();
-        mOutgoingConnectionListeners.clear();
+        mOutgoingConnectionCallbacks.clear();
     }
 
     /**

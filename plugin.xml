@@ -28,12 +28,13 @@
         <source-file src="src/android/java/io/jxcore/node/ConnectivityInfo.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/IncomingSocketThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/ListenerOrIncomingConnection.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/OutgoingSocketThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/SocketThreadBase.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
         
         <!-- ThaliPermissions -->
-    		<config-file target="config.xml" parent="/*">
+        <config-file target="config.xml" parent="/*">
           <feature name="ThaliPermissions" >
             <param name="android-package" value="org.thaliproject.p2p.ThaliPermissions"/>
           </feature>

@@ -18,7 +18,6 @@ import org.thaliproject.p2p.btconnectorlib.ConnectionManagerSettings;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
-import io.jxcore.node.JXcoreExtension.JxCoreExtensionListener;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -43,7 +42,6 @@ public class ConnectionHelper
     private static final UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
     private static final long POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS = 15000;
     private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 30; // TODO: Determine a way to figure out a proper value here
-    private static final int PORT_NUMBER_IN_ERROR_CASES = -1;
 
     private final Context mContext;
     private final Thread.UncaughtExceptionHandler mThreadUncaughtExceptionHandler;
@@ -108,20 +106,20 @@ public class ConnectionHelper
 
     /**
      * Starts the connection manager and the discovery manager.
-     * @param portNumber The port on 127.0.0.1 that any incoming connections over the native
-     *                   non-TCP/IP transport should be bridged to.
-     *                   Use a negative value, if you don not wish to set the port number.
+     * @param serverPortNumber The port on 127.0.0.1 that any incoming connections over the native
+     *                         non-TCP/IP transport should be bridged to.
+     *                         Use a negative value, if you don not wish to set the port number.
      * @param startAdvertisements If true, will start advertising our presence and scanning for other peers.
      *                            If false, will only scan for other peers.
      * @return True, if started successfully. False otherwise.
      */
-    public synchronized boolean start(int portNumber, boolean startAdvertisements) {
+    public synchronized boolean start(int serverPortNumber, boolean startAdvertisements) {
         Log.i(TAG, "start: "
-                + ((portNumber >= 0) ? "Port number: " + portNumber : "Port number not set")
+                + ((serverPortNumber >= 0) ? "Port number: " + serverPortNumber : "Port number not set")
                 + ", start advertisements: " + startAdvertisements);
 
-        if (portNumber >= 0) {
-            mServerPortNumber = portNumber;
+        if (serverPortNumber >= 0) {
+            mServerPortNumber = serverPortNumber;
         }
 
         mConnectivityInfo.startMonitoring();
@@ -244,61 +242,79 @@ public class ConnectionHelper
     /**
      * Starts the connection process to a peer with the given ID.
      * @param bluetoothMacAddress The Bluetooth MAC address of the peer to connect to.
-     * @param listener The listener.
-     * @return True, if the connection attempt was initiated successfully. False otherwise.
+     * @param callback The callback that will be associated with the connection.
+     * @return Null, if successful. Callback with an error description otherwise.
      */
-    public synchronized boolean connect(final String bluetoothMacAddress, JxCoreExtensionListener listener) {
+    public synchronized JXcoreThaliCallback connect(final String bluetoothMacAddress, JXcoreThaliCallback callback) {
         Log.i(TAG, "connect: Trying to connect to peer with ID " + bluetoothMacAddress);
-        boolean success = false;
 
-        if (listener == null) {
-            Log.e(TAG, "connect: Listener is null");
-            throw new NullPointerException("Listener is null");
+        if (callback == null) {
+            Log.e(TAG, "connect: Callback is null");
+            throw new NullPointerException("Callback is null");
         }
 
-        if (isRunning()) {
-            if (!mConnectionModel.hasOutgoingConnection(bluetoothMacAddress)) {
-                if (mConnectionModel.hasIncomingConnection(bluetoothMacAddress)) {
-                    Log.i(TAG, "connect: We already have an incoming connection to peer with ID "
-                            + bluetoothMacAddress + ", but will connect anyway...");
-                }
-
-                if (!hasMaximumNumberOfConnections()) {
-                    PeerProperties selectedDevice =
-                            mDiscoveryManager.getPeerModel().getDiscoveredPeerByBluetoothMacAddress(
-                                    bluetoothMacAddress);
-
-                    if (selectedDevice == null) {
-                        Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
-                        selectedDevice = new PeerProperties(PeerProperties.NO_PEER_NAME_STRING, bluetoothMacAddress);
-                    }
-
-                    if (BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothMacAddress())) {
-                        if (mConnectionManager.connect(selectedDevice)) {
-                            Log.i(TAG, "connect: Connection process successfully started (peer ID: " + bluetoothMacAddress + ")");
-                            mConnectionModel.addOutgoingConnectionListener(bluetoothMacAddress, listener);
-                            success = true;
-                        } else {
-                            Log.e(TAG, "connect: Failed to start connecting");
-                        }
-                    } else {
-                        Log.e(TAG, "connect: Invalid Bluetooth MAC address: " + selectedDevice.getBluetoothMacAddress());
-                    }
-                } else {
-                    Log.e(TAG, "connect: Maximum number of peer connections ("
-                            + mConnectionModel.getNumberOfCurrentOutgoingConnections()
-                            + ") reached, please try again after disconnecting a peer");
-                }
-            } else {
-                Log.w(TAG, "connect: We already have an outgoing connection to peer with ID "
-                        + bluetoothMacAddress + ", aborting...");
-
+        JXcoreThaliCallback resultCallback = new JXcoreThaliCallback() {
+            @Override
+            void onConnectCallback(String errorMessage, ListenerOrIncomingConnection listenerOrIncomingConnection) {
+                // No implementation required
             }
-        } else {
-            Log.e(TAG, "connect: Not running, please call start() first");
+        };
+
+        resultCallback.getListenerOrIncomingConnection().setServerPortNumber(mServerPortNumber);
+
+        if (!isRunning()) {
+            resultCallback.setErrorMessage("Not running, please call start() first");
+            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
+            return resultCallback;
         }
 
-        return success;
+        if (mConnectionModel.hasOutgoingConnection(bluetoothMacAddress)) {
+            resultCallback.setErrorMessage("We already have an outgoing connection to peer with ID "
+                    + bluetoothMacAddress);
+            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
+            return resultCallback;
+        }
+
+        if (mConnectionModel.hasIncomingConnection(bluetoothMacAddress)) {
+            Log.i(TAG, "connect: We already have an incoming connection to peer with ID "
+                    + bluetoothMacAddress + ", but will connect anyway...");
+        }
+
+        if (hasMaximumNumberOfConnections()) {
+            resultCallback.setErrorMessage("Maximum number of peer connections ("
+                    + mConnectionModel.getNumberOfCurrentOutgoingConnections()
+                    + ") reached, please try again after disconnecting a peer");
+            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
+            return resultCallback;
+        }
+
+        PeerProperties selectedDevice =
+                mDiscoveryManager.getPeerModel()
+                        .getDiscoveredPeerByBluetoothMacAddress(bluetoothMacAddress);
+
+        if (selectedDevice == null) {
+            Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
+            selectedDevice = new PeerProperties(PeerProperties.NO_PEER_NAME_STRING, bluetoothMacAddress);
+        }
+
+        if (!BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothMacAddress())) {
+            resultCallback.setErrorMessage("Invalid Bluetooth MAC address: "
+                    + selectedDevice.getBluetoothMacAddress());
+            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
+            return resultCallback;
+        }
+
+        if (mConnectionManager.connect(selectedDevice)) {
+            Log.i(TAG, "connect: Connection process successfully started (peer ID: " + bluetoothMacAddress + ")");
+            callback.getListenerOrIncomingConnection().setServerPortNumber(mServerPortNumber);
+            mConnectionModel.addOutgoingConnectionCallback(bluetoothMacAddress, callback);
+        } else {
+            resultCallback.setErrorMessage("Failed to start connecting");
+            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
+            return resultCallback;
+        }
+
+        return null;
     }
 
     /**
@@ -373,6 +389,7 @@ public class ConnectionHelper
                                 + who.getPeerProperties().toString()
                                 + " disconnected: " + errorMessage);
                         final long threadId = who.getId();
+                        final IncomingSocketThread incomingSocketThread = (IncomingSocketThread) who;
 
                         new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
                             @Override
@@ -380,7 +397,11 @@ public class ConnectionHelper
                                 thisInstance.mConnectionModel
                                     .closeAndRemoveIncomingConnectionThread(threadId);
 
-                                JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(mServerPortNumber);
+                                if (incomingSocketThread != null) {
+                                    JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(incomingSocketThread.getHttpPort());
+                                } else {
+                                    JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(NO_PORT_NUMBER);
+                                }
                             }
                         });
                     }
@@ -407,17 +428,18 @@ public class ConnectionHelper
             // Is outgoing connection
             OutgoingSocketThread newOutgoingSocketThread = null;
             final String finalPeerId = peerProperties.getId();
-            final JxCoreExtensionListener listener = mConnectionModel.getOutgoingConnectionListener(finalPeerId);
+            final JXcoreThaliCallback callback = mConnectionModel.getOutgoingConnectionCallback(finalPeerId);
 
             try {
                 newOutgoingSocketThread = new OutgoingSocketThread(bluetoothSocket, new ConnectionStatusListener() {
                     @Override
-                    public void onListeningForIncomingConnections(int port) {
+                    public void onListeningForIncomingConnections(int portNumber) {
                         Log.i(TAG, "onListeningForIncomingConnections: Outgoing connection is using port "
-                                + port + " (peer ID: " + finalPeerId + ")");
+                                + portNumber + " (peer ID: " + finalPeerId + ")");
 
-                        if (listener != null) {
-                            listener.onConnectionStatusChanged(null, port);
+                        if (callback != null) {
+                            callback.getListenerOrIncomingConnection().setListeningOnPortNumber(portNumber);
+                            callback.onConnectCallback(null, null);
                         }
                     }
 
@@ -449,12 +471,16 @@ public class ConnectionHelper
                 });
             } catch (IOException e) {
                 Log.e(TAG, "onConnected: Failed to create an outgoing connection thread instance: " + e.getMessage(), e);
-                newOutgoingSocketThread = null;
 
-                if (listener != null) {
-                    listener.onConnectionStatusChanged("Failed to create an outgoing connection thread instance: " + e.getMessage(), PORT_NUMBER_IN_ERROR_CASES);
-                    mConnectionModel.removeOutgoingConnectionListener(finalPeerId);
+                if (callback != null) {
+                    callback.onConnectCallback(
+                            "Failed to create an outgoing connection thread instance: " + e.getMessage(),
+                            new ListenerOrIncomingConnection());
+
+                    mConnectionModel.removeOutgoingConnectionCallback(finalPeerId);
                 }
+
+                newOutgoingSocketThread = null;
             }
 
             if (newOutgoingSocketThread != null) {
@@ -487,11 +513,16 @@ public class ConnectionHelper
     public void onConnectionTimeout(PeerProperties peerProperties) {
         if (peerProperties != null) {
             final String bluetoothMacAddress = peerProperties.getBluetoothMacAddress();
-            final JxCoreExtensionListener listener = mConnectionModel.getOutgoingConnectionListener(bluetoothMacAddress);
+            final JXcoreThaliCallback callback =
+                    mConnectionModel.getOutgoingConnectionCallback(bluetoothMacAddress);
 
-            if (listener != null) {
-                listener.onConnectionStatusChanged("Connection to peer " + peerProperties.toString() + " timed out", PORT_NUMBER_IN_ERROR_CASES);
-                mConnectionModel.removeOutgoingConnectionListener(bluetoothMacAddress); // Dispose the listener
+            if (callback != null) {
+                callback.onConnectCallback(
+                        "Connection to peer " + peerProperties.toString() + " timed out",
+                        callback.getListenerOrIncomingConnection());
+
+                // Dispose the callback data
+                mConnectionModel.removeOutgoingConnectionCallback(bluetoothMacAddress);
             }
 
             toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();
@@ -507,13 +538,16 @@ public class ConnectionHelper
     public void onConnectionFailed(PeerProperties peerProperties, String errorMessage) {
         if (peerProperties != null) {
             final String bluetoothMacAddress = peerProperties.getBluetoothMacAddress();
-            final JxCoreExtensionListener listener = mConnectionModel.getOutgoingConnectionListener(bluetoothMacAddress);
+            final JXcoreThaliCallback callback =
+                    mConnectionModel.getOutgoingConnectionCallback(bluetoothMacAddress);
 
-            if (listener != null) {
-                listener.onConnectionStatusChanged("Connection to peer " + peerProperties.toString()
-                        + " failed: " + errorMessage, PORT_NUMBER_IN_ERROR_CASES);
+            if (callback != null) {
+                callback.onConnectCallback(
+                        "Connection to peer " + peerProperties.toString() + " failed: " + errorMessage,
+                        callback.getListenerOrIncomingConnection());
 
-                mConnectionModel.removeOutgoingConnectionListener(bluetoothMacAddress); // Dispose the listener
+                // Dispose the callback data
+                mConnectionModel.removeOutgoingConnectionCallback(bluetoothMacAddress);
             }
 
             toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();

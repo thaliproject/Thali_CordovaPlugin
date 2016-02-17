@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+/* Copyright (c) 2015-2016 Microsoft Corporation. This software is licensed under the MIT License.
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
@@ -9,9 +9,9 @@ package io.jxcore.node;
 abstract class ConnectionStatusListener {
     /**
      * Called when we have a connection ready.
-     * @param port The port listening to.
+     * @param portNumber The port listening to.
      */
-    void onListeningForIncomingConnections(int port) {
+    void onListeningForIncomingConnections(int portNumber) {
     }
 
     /**

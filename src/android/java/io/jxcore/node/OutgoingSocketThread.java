@@ -19,8 +19,8 @@ class OutgoingSocketThread extends SocketThreadBase {
     // As a precaution we do a delayed notification (ConnectionStatusListener.onListeningForIncomingConnections)
     // to make sure that ServerSocket.accept() is run.
     private static final long LISTENING_FOR_CONNECTIONS_NOTIFICATION_DELAY_IN_MILLISECONDS = 300;
-
     private ServerSocket mServerSocket = null;
+    private int mListeningOnPortNumber = ConnectionHelper.NO_PORT_NUMBER;
 
     /**
      * Constructor.
@@ -32,6 +32,10 @@ class OutgoingSocketThread extends SocketThreadBase {
             throws IOException {
         super(bluetoothSocket, listener);
         TAG = OutgoingSocketThread.class.getName();
+    }
+
+    public int getListeningOnPortNumber() {
+        return mListeningOnPortNumber;
     }
 
     /**
@@ -60,13 +64,13 @@ class OutgoingSocketThread extends SocketThreadBase {
 
                 if (mListener != null) {
                     final ConnectionStatusListener listener = mListener;
-                    final int localPort = mServerSocket.getLocalPort();
+                    mListeningOnPortNumber = mServerSocket.getLocalPort();
                     final Handler handler = new Handler(jxcore.activity.getMainLooper());
 
                     handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            listener.onListeningForIncomingConnections(localPort);
+                            listener.onListeningForIncomingConnections(mListeningOnPortNumber);
                         }
                     }, LISTENING_FOR_CONNECTIONS_NOTIFICATION_DELAY_IN_MILLISECONDS);
                 }

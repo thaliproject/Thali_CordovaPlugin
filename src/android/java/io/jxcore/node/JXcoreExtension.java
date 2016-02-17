@@ -18,13 +18,6 @@ import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothUtils;
 
 public class JXcoreExtension {
-    /**
-     * A listener interface for JXcore callbacks.
-     */
-    public interface JxCoreExtensionListener {
-        void onConnectionStatusChanged(String message, int portNumber);
-    }
-
     public enum RadioState {
         ON, // The radio is on and available for use.
         OFF, // The radio exists on the device but is turned off.
@@ -34,6 +27,10 @@ public class JXcoreExtension {
     }
 
     // Common Thali methods and events
+    public final static String CALLBACK_VALUE_LISTENING_ON_PORT_NUMBER = "listeningPort";
+    public final static String CALLBACK_VALUE_CLIENT_PORT_NUMBER = "clientPort";
+    public final static String CALLBACK_VALUE_SERVER_PORT_NUMBER = "serverPort";
+
     private final static String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
     private final static String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
     private final static String METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
@@ -393,7 +390,7 @@ public class JXcoreExtension {
                     return;
                 }
 
-                if (mConnectionHelper.getConnectionModel().getOutgoingConnectionListener(bluetoothMacAddress) != null) {
+                if (mConnectionHelper.getConnectionModel().getOutgoingConnectionCallback(bluetoothMacAddress) != null) {
                     ArrayList<Object> args = new ArrayList<Object>();
 
                     if (mConnectionHelper.getConnectionModel().hasOutgoingConnection(bluetoothMacAddress)) {
@@ -413,19 +410,33 @@ public class JXcoreExtension {
                     return;
                 }
 
-                if (!mConnectionHelper.connect(bluetoothMacAddress, new JxCoreExtensionListener() {
-                    @Override
-                    public void onConnectionStatusChanged(String message, int port) {
-                        ArrayList<Object> args = new ArrayList<Object>();
-                        args.add(message);
-                        args.add(port);
-                        jxcore.CallJSMethod(callbackId, args.toArray());
-                    }
-                })) {
+                JXcoreThaliCallback resultCallback =
+                        mConnectionHelper.connect(bluetoothMacAddress, new JXcoreThaliCallback() {
+                            @Override
+                            public void onConnectCallback(
+                                    String errorMessage,
+                                    ListenerOrIncomingConnection listenerOrIncomingConnection) {
+                                ArrayList<Object> args = new ArrayList<Object>();
+                                args.add(errorMessage);
+
+                                if (errorMessage != null && listenerOrIncomingConnection != null) {
+                                    args.add(listenerOrIncomingConnection.toString());
+                                } else {
+                                    args.add(null);
+                                }
+
+                                jxcore.CallJSMethod(callbackId, args.toArray());
+                            }
+                        });
+
+                if (resultCallback != null) {
+                    // Failed to start connecting
                     ArrayList<Object> args = new ArrayList<Object>();
-                    args.add("Connection could not be established");
+                    String errorMessage = (resultCallback.getErrorMessage() != null)
+                            ? resultCallback.getErrorMessage() : "Unknown error";
+                    args.add(errorMessage);
+                    args.add(resultCallback.getListenerOrIncomingConnection().toString());
                     jxcore.CallJSMethod(callbackId, args.toArray());
-                    return;
                 }
             }
         });
@@ -678,15 +689,15 @@ public class JXcoreExtension {
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(JXcoreExtension.EVENT_VALUE_DISCOVERY_ACTIVE, isDiscoveryActive);
-            jsonObject.put(JXcoreExtension.EVENT_VALUE_ADVERTISING_ACTIVE, isAdvertisingActive);
+            jsonObject.put(EVENT_VALUE_DISCOVERY_ACTIVE, isDiscoveryActive);
+            jsonObject.put(EVENT_VALUE_ADVERTISING_ACTIVE, isAdvertisingActive);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyDiscoveryAdvertisingStateUpdateNonTcp: Failed to populate the JSON object: " + e.getMessage(), e);
         }
 
         if (jsonObjectCreated) {
-            jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE, jsonObject.toString());
+            jxcore.CallJSMethod(EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE, jsonObject.toString());
         }
     }
 
@@ -766,18 +777,18 @@ public class JXcoreExtension {
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(JXcoreExtension.EVENT_VALUE_BLUETOOTH_LOW_ENERGY, radioStateEnumValueToString(bluetoothLowEnergyRadioState));
-            jsonObject.put(JXcoreExtension.EVENT_VALUE_BLUETOOTH, radioStateEnumValueToString(bluetoothRadioState));
-            jsonObject.put(JXcoreExtension.EVENT_VALUE_WIFI, radioStateEnumValueToString(wifiRadioState));
-            jsonObject.put(JXcoreExtension.EVENT_VALUE_CELLULAR, radioStateEnumValueToString(cellularRadioState));
-            jsonObject.put(JXcoreExtension.EVENT_VALUE_BSSID_NAME, bssidName);
+            jsonObject.put(EVENT_VALUE_BLUETOOTH_LOW_ENERGY, radioStateEnumValueToString(bluetoothLowEnergyRadioState));
+            jsonObject.put(EVENT_VALUE_BLUETOOTH, radioStateEnumValueToString(bluetoothRadioState));
+            jsonObject.put(EVENT_VALUE_WIFI, radioStateEnumValueToString(wifiRadioState));
+            jsonObject.put(EVENT_VALUE_CELLULAR, radioStateEnumValueToString(cellularRadioState));
+            jsonObject.put(EVENT_VALUE_BSSID_NAME, bssidName);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyNetworkChanged: Failed to populate the JSON object: " + e.getMessage(), e);
         }
 
         if (jsonObjectCreated) {
-            jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_NETWORK_CHANGED, jsonObject.toString());
+            jxcore.CallJSMethod(EVENT_NAME_NETWORK_CHANGED, jsonObject.toString());
         }
     }
 
@@ -802,14 +813,14 @@ public class JXcoreExtension {
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(JXcoreExtension.EVENT_VALUE_PORT_NUMBER, portNumber);
+            jsonObject.put(EVENT_VALUE_PORT_NUMBER, portNumber);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyIncomingConnectionToPortNumberFailed: Failed to populate the JSON object: " + e.getMessage(), e);
         }
 
         if (jsonObjectCreated) {
-            jxcore.CallJSMethod(JXcoreExtension.EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED, jsonObject.toString());
+            jxcore.CallJSMethod(EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED, jsonObject.toString());
         }
     }
 
