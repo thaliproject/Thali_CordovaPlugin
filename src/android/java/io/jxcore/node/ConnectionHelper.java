@@ -78,6 +78,8 @@ public class ConnectionHelper
 
         mConnectionManager = new ConnectionManager(mContext, this, SERVICE_UUID, BLUETOOTH_NAME);
         mConnectionManager.setPeerName(PEER_NAME);
+        ConnectionManagerSettings connectionManagerSettings = ConnectionManagerSettings.getInstance(mContext);
+        connectionManagerSettings.setHandshakeRequired(false);
 
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
         mDiscoveryManager.setPeerName(PEER_NAME);

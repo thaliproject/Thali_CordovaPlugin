@@ -48,23 +48,27 @@ class ConnectivityInfo {
     }
 
     public synchronized void startMonitoring() {
-        stopMonitoring();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        if (mConnectivityBroadcastReceiver == null) {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
 
-        try {
-            mConnectivityBroadcastReceiver = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    updateConnectivityInfo(false);
-                }
-            };
+            try {
+                mConnectivityBroadcastReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        updateConnectivityInfo(false);
+                    }
+                };
 
-            mActivity.registerReceiver(mConnectivityBroadcastReceiver, filter);
-            updateConnectivityInfo(true);
-            Log.d(TAG, "startMonitoring: OK");
-        } catch (IllegalArgumentException e) {
-            Log.e(TAG, "startMonitoring: Failed to register the broadcast receiver: " + e.getMessage(), e);
+                mActivity.registerReceiver(mConnectivityBroadcastReceiver, filter);
+                updateConnectivityInfo(true);
+                Log.d(TAG, "startMonitoring: OK");
+            } catch (IllegalArgumentException e) {
+                Log.e(TAG, "startMonitoring: Failed to register the broadcast receiver: " + e.getMessage(), e);
+                mConnectivityBroadcastReceiver = null;
+            }
+        } else {
+            Log.v(TAG, "startMonitoring: Already started");
         }
     }
 
