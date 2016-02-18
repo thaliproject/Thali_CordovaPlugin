@@ -34,7 +34,7 @@
     "node-ssdp": "thaliproject/node-ssdp#thali-vnext-changes",
     "node-uuid": "^1.4.7",
     "pouchdb": "^5.2.1",
-    "proxyquire": "^1.7.3",
+    "proxyquire": "^1.7.4",
     "randomstring": "^1.0.7",
     "request": "^2.64.0",
     "request-promise": "0.4.3",

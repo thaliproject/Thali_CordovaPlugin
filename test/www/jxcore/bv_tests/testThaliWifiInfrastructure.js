@@ -51,7 +51,8 @@ var createTestServer = function (peerIdentifier) {
   var testLocation = 'http://' + testSeverHostAddress + ':' + testServerPort;
   var testServer = new nodessdp.Server({
     location: testLocation,
-    udn: ThaliConfig.SSDP_NT
+    udn: ThaliConfig.SSDP_NT,
+    adInterval: ThaliConfig.SSDP_ADVERTISEMENT_INTERVAL
   });
   testServer.setUSN(peerIdentifier);
   return testServer;
@@ -235,7 +236,7 @@ test('#startUpdateAdvertisingAndListening should fail invalid router has been pa
 
 test('#startUpdateAdvertisingAndListening should fail if router server starting fails', function (t) {
   // Save the old port so that it can be reassigned after the test.
-  var oldPort = wifiInfrastructure.port;
+  var oldPort = wifiInfrastructure.routerServerPort;
   // Create a test server that is used to block the port
   // onto which the router server is tried to be started.
   var testServer = net.createServer(function (c) {
@@ -247,13 +248,13 @@ test('#startUpdateAdvertisingAndListening should fail if router server starting 
     // have our test server running. This should
     // create a failure when trying to start the router
     // server on the same port.
-    wifiInfrastructure.port = testServerPort;
+    wifiInfrastructure.routerServerPort = testServerPort;
     wifiInfrastructure.startUpdateAdvertisingAndListening()
     .catch(function (error) {
       t.equals(error.message, 'Unspecified Error with Radio infrastructure', 'specific error expected');
-      wifiInfrastructure.port = oldPort;
+      wifiInfrastructure.routerServerPort = oldPort;
       testServer.close(function () {
-        t.end()
+        t.end();
       });
     });
   });
@@ -275,7 +276,7 @@ test('#startUpdateAdvertisingAndListening should start hosting given router obje
   .then(function () {
     http.get({
       path: testPath,
-      port: wifiInfrastructure.port,
+      port: wifiInfrastructure.routerServerPort,
       agent: false // to prevent connection keep-alive
     }, function (res) {
       t.equal(res.statusCode, 200, 'server should respond with code 200');
@@ -355,11 +356,8 @@ test('functions are run from a queue in the right order', function (t) {
 });
 
 // From here onwards, tests only work on mocked up desktop
-// environment where network changes are simulated. To make
-// runnable on iOS and Android, there should be a way to fire
-// network changed events programmatically and they should be
-// emitted via the native layer.
-if (typeof Mobile !== 'undefined') {
+// environment where network changes can be simulated.
+if (jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
@@ -374,15 +372,11 @@ test('network changes emitted correctly', function (t) {
     t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
     wifiInfrastructure.removeListener('networkChangedWifi', networkOffHandler);
     wifiInfrastructure.on('networkChangedWifi', networkOnHandler);
-    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-      testUtils.getMockWifiNetworkStatus(true)
-    );
+    testUtils.toggleWifi(true);
   };
 
   wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
-  ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-    testUtils.getMockWifiNetworkStatus(false)
-  );
+  testUtils.toggleWifi(false);
 });
 
 test('network changes not emitted in stopped state', function (t) {
@@ -394,13 +388,14 @@ test('network changes not emitted in stopped state', function (t) {
       t.end();
     };
     wifiInfrastructure.on('networkChangedWifi', networkChangedHandler);
-    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-      testUtils.getMockWifiNetworkStatus(false)
-    );
+    testUtils.toggleWifi(false);
     setImmediate(function () {
       t.ok(true, 'event was not emitted');
       wifiInfrastructure.removeListener('networkChangedWifi', networkChangedHandler);
-      t.end();
+      testUtils.toggleWifi(true)
+      .then(function () {
+        t.end();
+      });
     });
   });
 });
@@ -408,9 +403,9 @@ test('network changes not emitted in stopped state', function (t) {
 var tryStartingFunctionWhileWifiOff = function (t, functionName) {
   wifiInfrastructure.stop()
   .then(function () {
-    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-      testUtils.getMockWifiNetworkStatus(false)
-    );
+    return testUtils.toggleWifi(false);
+  })
+  .then(function () {
     return wifiInfrastructure.start(express.Router());
   })
   .then(function () {
@@ -424,14 +419,11 @@ var tryStartingFunctionWhileWifiOff = function (t, functionName) {
     t.equals(error.message, 'Radio Turned Off', 'specific error expected');
   })
   .then(function () {
-    wifiInfrastructure.once('networkChangedWifi',
-    function (networkChangedValue) {
+    wifiInfrastructure.once('networkChangedWifi', function (networkChangedValue) {
       t.equals(networkChangedValue.wifi, 'on', 'wifi should be on');
       t.end();
     });
-    ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-      testUtils.getMockWifiNetworkStatus(true)
-    );
+    testUtils.toggleWifi(true);
   });
 };
 
@@ -454,30 +446,31 @@ test('after wifi is re-enabled discovery is activated and peers become available
         t.equals(error.message, 'Radio Turned Off', 'specific error expected');
 
         var peerAvailableListener = function (peers) {
-          var peer = findPeerPerProperty(peers, 'peerIdentifier', peerIdentifier);
+          var peer = findPeerPerProperty(peers, 'peerIdentifier',
+                                         peerIdentifier);
           if (peer === null) {
             return;
           }
 
-          t.equal(peer.peerIdentifier, peerIdentifier, 'peer identifier should match');
-          t.equal(peer.hostAddress, testSeverHostAddress, 'host address should match');
-          t.equal(peer.portNumber, testServerPort, 'port should match');
+          t.equal(peer.peerIdentifier, peerIdentifier,
+                  'peer identifier should match');
+          t.equal(peer.hostAddress, testSeverHostAddress,
+                  'host address should match');
+          t.equal(peer.portNumber, testServerPort,
+                  'port should match');
 
-          wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
+          wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+                                            peerAvailableListener);
           testServer.stop(function () {
             t.end();
           });
         };
 
-        wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerAvailableListener);
-
-        ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-          testUtils.getMockWifiNetworkStatus(true)
-        );
+        wifiInfrastructure.on('wifiPeerAvailabilityChanged',
+                              peerAvailableListener);
+        testUtils.toggleWifi(true);
       });
     });
   });
-  ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP',
-    testUtils.getMockWifiNetworkStatus(false)
-  );
+  testUtils.toggleWifi(false);
 });
