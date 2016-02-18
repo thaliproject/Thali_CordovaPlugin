@@ -496,15 +496,15 @@ var radioState = {
  * Please see the definition of
  * {@link module:thaliMobileNativeWrapper.incomingConnectionToPortNumberFailed}.
  *
- * This event MUST NOT be sent more often than every 100 ms. This means that
- * one cannot count the number of instances of this event in order to count how
- * many connections were missed. This also means that the native layer is only
- * required to track exactly one instance of this event for any given port within
- * the 100 ms window. In other words if the systetm is listening on port X and
- * 10,000 incoming requests come for port X within 100 ms (that would be impressive)
- * then the native layer is only obligated to send up exactly one notification of
- * the problem. This is because the native app only needs to know that its port is
- * either overloaded or down as a general notification.
+ * This event MUST NOT be sent more often than every 100 ms. This means that one
+ * cannot count the number of instances of this event in order to count how many
+ * connections were missed. This also means that the native layer is only
+ * required to track exactly one instance of this event for any given port
+ * within the 100 ms window. In other words if the systetm is listening on port
+ * X and 10,000 incoming requests come for port X within 100 ms (that would be
+ * impressive) then the native layer is only obligated to send up exactly one
+ * notification of the problem. This is because the native app only needs to
+ * know that its port is either overloaded or down as a general notification.
  *
  * @public
  * @function external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative
