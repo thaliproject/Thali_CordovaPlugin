@@ -24,21 +24,21 @@ var util = require('util');
 var uuid = require('node-uuid');
 var tape = require('tape-catch');
 var io = require('socket.io-client');
-var testUtils = require('./testUtils');
+var testUtils = require("./testUtils");
 
-process.on('uncaughtException', function (err) {
-  console.log('Uncaught Exception: ' + err);
+process.on('uncaughtException', function(err) {
+  console.log("Uncaught Exception: " + err);
   console.log(err.stack);
-  console.log('****TEST TOOK:  ms ****' );
-  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+  console.log("****TEST TOOK:  ms ****" );
+  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
   process.exit(1);
 });
 
-process.on('unhandledRejection', function (err) {
-  console.log('Uncaught Promise Rejection: ' + JSON.stringify(err));
+process.on('unhandledRejection', function(err) {
+  console.log("Uncaught Promise Rejection: " + JSON.stringify(err));
   console.trace(err);
-  console.log('****TEST TOOK:  ms ****' );
-  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+  console.log("****TEST TOOK:  ms ****" );
+  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
   process.exit(1);
 });
 
@@ -46,59 +46,58 @@ var tests = {};
 
 function declareTest(testServer, name, setup, teardown, opts, cb) {
 
-  // test declaration is postponed until we know the order in which
-  // the server wants to execute them.
+  // test declaration is postponed until we know the order in which 
+  // the server wants to execute them. 
 
-  // Tape executes tests in strict declaration order once the output stream
-  // starts to request results so make sure we declare everything up front
-  // before asking for the first result
+  // Tape executes tests in strict declaration order once the output stream starts to request 
+  // results so make sure we declare everything up front before asking for the first result
 
   // Here we declare setup and teardown functions either side of the actual test
-  // They'll be executed in declaration order and will be coordinated across
-  // devices by the test server emitting events at the appropriate point
-  tape('setup', function (t) {
+  // They'll be executed in declaration order and will be coordinated across devices
+  // by the test server emitting events at the appropriate point
+
+  tape('setup', function(t) {
     // Run setup function when the testServer tells us
-    testServer.once('setup_' + name, function () {
-      testServer.emit(util.format('setup_%s_ok', name));
-      t.on('end', function () {
-        testServer.emit('setup_complete', JSON.stringify({'test':name}));
+    testServer.once("setup_" + name, function() {
+      testServer.emit(util.format("setup_%s_ok", name));
+      t.on('end', function() {
+        testServer.emit('setup_complete', JSON.stringify({"test":name}));
       });
       setup(t);
     });
   });
 
-  tape(name, function (t) {
+  tape(name, function(t) {
     var success = true;
 
     // Listen for the test result
-    t.on('result', function (res) {
+    t.on("result", function(res) {
       success = success && res.ok;
     });
 
-    t.on('end', function () {
+    t.on("end", function() {
       // Tell the server we ran the test and what the result was (true == pass)
-      testServer.emit('test_complete',
-        JSON.stringify({'test':name, 'success':success}));
+      testServer.emit('test_complete', JSON.stringify({"test":name, "success":success}));
     });
 
-    // Run the test (cb) when the server tells us to
-    testServer.once('start_test_' + name, function () {
-      testServer.emit(util.format('start_test_%s_ok', name));
+    // Run the test (cb) when the server tells us to    
+    testServer.once("start_test_" + name, function() {
+      testServer.emit(util.format("start_test_%s_ok", name));
       cb(t);
     });
   });
 
-  tape('teardown', function (t) {
+  tape("teardown", function(t) {
     // Run teardown function when the server tells us
-    testServer.once('teardown_' + name, function () {
-      testServer.emit(util.format('teardown_%s_ok', name));
-      t.on('end', function () {
-        testServer.emit('teardown_complete', JSON.stringify({'test':name}));
+    testServer.once("teardown_" + name, function() {
+      testServer.emit(util.format("teardown_%s_ok", name));
+      t.on('end', function() {
+        testServer.emit('teardown_complete', JSON.stringify({"test":name}));
       });
       teardown(t);
-    });
+    }); 
   });
-}
+};
 
 // The running number of the test that together with the test name guarantees
 // a unique identifier even if there exists multiple tests with same name
@@ -112,8 +111,8 @@ var thaliTape = function (fixture) {
   // test([name], [opts], fn)
   return function (name, opts, fn) {
 
-    // This is the function that declares and performs the test.
-    // cb is the test function. We wrap this in setup and
+    // This is the function that declares and performs the test. 
+    // cb is the test function. We wrap this in setup and 
 
     if (!fn) {
       fn = opts;
@@ -132,7 +131,7 @@ var thaliTape = function (fixture) {
 function createStream(testServer)
 {
   // tape is slightly counter-intuitive in that no tests will
-  // run until the output streams are set up.
+  // run until the output streams are set up. 
 
   // ** Nothing will run until this function is called !! **
 
@@ -141,30 +140,28 @@ function createStream(testServer)
   var failed = 0;
   var failedRows = [];
 
-  testServer.once('complete', function () {
+  testServer.once("complete", function() {
 
     // Log final results once server tells us all is done..
-    testUtils.logMessageToScreen('------ Final results ---- ');
+    testUtils.logMessageToScreen("------ Final results ---- ");
 
     for (var i = 0; i < failedRows.length; i++) {
       testUtils.logMessageToScreen(
-        failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' +
-        failedRows[i].name
+        failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name
       );
     }
 
-    testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed +
-      ', Failed: ' + failed);
+    testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
     console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
     testUtils.toggleRadios(false);
 
-    console.log('****TEST TOOK:  ms ****' );
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    console.log("****TEST TOOK:  ms ****" );
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
   });
 
   tape.createStream({ objectMode: true })
-  .on('data', function (row) {
-
+  .on('data', function(row) {
+    
     // Collate and log results as they come in
 
     console.log(JSON.stringify(row));
@@ -176,34 +173,32 @@ function createStream(testServer)
     }
     rows.push(row);
 
-    testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' +
-      row.name);
+    testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
 
     if (row.ok && row.name) {
-      if (!row.ok) {
+      if(!row.ok) {
         failedRows.push(row);
       }
     }
   })
-  .on('end', function () {
-    console.log('Tests Complete');
+  .on('end', function() {
+    console.log("Tests Complete");
   });
 }
 
-thaliTape.begin = function () {
+thaliTape.begin = function() {
 
-  var serverOptions = {
+  var serverOptions = {  
     transports: ['websocket']
   };
 
-  var testServer = io('http://' + require('../server-address') + ':' + 3000 +
-    '/', serverOptions);
+  var testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
 
-  testServer.once('discard', function () {
+  testServer.once('discard', function() {
     // This device not needed, log appropriately so CI doesn't think we've failed
-    console.log('--= Surplus to requirements =--');
-    console.log('****TEST TOOK:  ms ****');
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    console.log("--= Surplus to requirements =--");
+    console.log("****TEST TOOK:  ms ****");
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
   });
 
   testServer.on('error', function (data) {
@@ -218,17 +213,17 @@ thaliTape.begin = function () {
   });
 
   // Wait until we're connected
-  testServer.once('connect', function () {
+  testServer.once("connect", function() {
 
     // Once connected, let the server know who we are and what we do
-    testServer.once('schedule', function (schedule) {
-      JSON.parse(schedule).forEach(function (test) {
+    testServer.once("schedule", function(schedule) {
+      JSON.parse(schedule).forEach(function(test) {
         declareTest(
           testServer,
-          test,
-          tests[test].fixture.setup,
-          tests[test].fixture.teardown,
-          tests[test].opts,
+          test, 
+          tests[test].fixture.setup, 
+          tests[test].fixture.teardown, 
+          tests[test].opts, 
           tests[test].fn
         );
       });
@@ -245,28 +240,28 @@ thaliTape.begin = function () {
 
     var _uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
-      'os': platform,
-      'name': testUtils.getName(),
-      'uuid': _uuid,
-      'type': 'unittest',
-      'tests': Object.keys(tests)
+      "os": platform, 
+      "name": testUtils.getName(),
+      "uuid": _uuid,
+      "type": 'unittest',
+      "tests": Object.keys(tests)
     }));
   });
-};
+}
 
 if (typeof jxcore === 'undefined' ||
-    jxcore.utils.OSInfo().isMobile ||
-    (typeof Mobile !== 'undefined' && Mobile.iAmAMock))
-{
-  // On mobile, or outside of jxcore (some dev scenarios) we use server-coordinated thaliTape
+    typeof Mobile !== 'undefined') {
+  // On mobile, or outside of jxcore (some dev scenarios) we use
+  // the server-coordinated thaliTape
   exports = thaliTape;
-}
-else
-{
+  exports.coordinated = true;
+} else {
   // On desktop we just use wrapping-tape
   exports = require('wrapping-tape');
+  exports.coordinated = false;
 
-  // thaliTape has a begin function that we patch in here to make the api identical
+  // thaliTape has a begin function that we patch in here to make
+  // the api identical
   exports.begin = function () {
   };
 }

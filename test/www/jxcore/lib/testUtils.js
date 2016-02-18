@@ -1,75 +1,66 @@
-'use strict';
-
-var logCallback;
+var LogCallback;
 var os = require('os');
 var tmp = require('tmp');
+var Promise = require('lie');
+var logger = require('thali/thalilogger')('testUtils');
 
-/**
- * Turn Bluetooth and WiFi either on or off.
- * This is a NOOP on iOS and the desktop.
- * @param {boolean} on - true to turn radios on and false to turn them off
- */
-exports.toggleRadios = function (on) {
-
-  if (typeof jxcore === 'undefined' || !jxcore.utils.OSInfo().isMobile ||
-      !jxcore.utils.OSInfo().isAndroid)
-  {
-    return;
+var doToggle = function (toggleFunction, on) {
+  if (typeof Mobile === 'undefined') {
+    return Promise.resolve();
   }
-
-  if (jxcore.utils.OSInfo().isAndroid) {
-    console.log('Toggling radios to ' + on);
-    exports.toggleBluetooth(on, function () {
-      exports.toggleWifi(on, function () {
-        console.log('Radios toggled');
-      });
+  if (jxcore.utils.OSInfo().isIOS) {
+    return Promise.resolve();
+  }
+  return new Promise(function (resolve, reject) {
+    Mobile[toggleFunction](on, function (err) {
+      if (err) {
+        logger.warn('Mobile.%s returned an error: %s', toggleFunction, err);
+        return reject(new Error(err));
+      }
+      return resolve();
     });
-  } else {
-    console.log('ERROR: toggleRadios called on unsupported platform');
-  }
-};
-
-exports.toggleWifi = function (on, callback) {
-
-  if (typeof jxcore === 'undefined') {
-    callback();
-    return;
-  }
-
-  Mobile.toggleWiFi(on, function (err) {
-    if (err) {
-      console.log('Could not toggle Wifi - ' + err);
-    }
-    callback();
   });
 };
 
-exports.toggleBluetooth = function (on, callback) {
-  Mobile.toggleBluetooth(on, function (err) {
-    if (err) {
-      console.log('Could not toggle Bluetooth - ' + err);
-    }
-    callback();
+module.exports.toggleWifi = function (on) {
+  return doToggle('toggleWiFi', on);
+};
+
+exports.toggleBluetooth = function (on) {
+  return doToggle('toggleBluetooth', on);
+};
+
+/**
+ * Turn Bluetooth and Wifi either on or off.
+ * This doesn't have any effect on iOS and on mocked up desktop
+ * environment, the network changes will be simulated (i.e., doesn't affect
+ * the network status of the host machine).
+ * @param {boolean} on Pass true to turn radios on and false to turn them off
+ * @returns {Promise<?Error>}
+ */
+module.exports.toggleRadios = function (on) {
+  logger.info('Toggling radios to: %s', on);
+  return module.exports.toggleBluetooth(on)
+  .then(function () {
+    return module.exports.toggleWifi(on);
   });
 };
 
 function isFunction(functionToCheck) {
   var getType = {};
-  return functionToCheck && getType.toString.call(functionToCheck) ===
-    '[object Function]';
+  return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
 }
 
 /**
- * Log a message to the screen - only applies when running on Mobile. It assumes
- * we are using our test framework with our Cordova WebView who is setup to
- * receive logging messages and display them.
+ * Log a message to the screen - only applies when running on Mobile. It assumes we are using our test framework
+ * with our Cordova WebView who is setup to receive logging messages and display them.
  * @param {string} message
  */
-module.exports.logMessageToScreen = function (message) {
-  if (isFunction(logCallback)) {
-    logCallback(message);
+exports.logMessageToScreen = function(message) {
+  if (isFunction(LogCallback)) {
+    LogCallback(message);
   } else {
-    console.log('logCallback not set !!!!');
+    console.log("LogCallback not set !!!!");
   }
 };
 
@@ -78,31 +69,31 @@ var myName;
 /**
  * Set the name given used by this device. The name is
  * retrievable via a function exposed to the Cordova side.
- * @param {string} name
+ * @param name
  */
-module.exports.setName = function (name) {
+exports.setName = function (name) {
   myName = name;
 };
 
 /**
  * Get the name of this device.
  */
-module.exports.getName = function () {
+exports.getName = function () {
   return myName;
 };
 
 if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
   Mobile('setLogCallback').registerAsync(function (callback) {
-    logCallback = callback;
+    LogCallback = callback;
   });
 
   Mobile('getMyName').registerAsync(function (callback) {
     callback(myName);
   });
 } else {
-  logCallback = function (message) {
+  LogCallback = function(message) {
     console.log(message);
-  };
+  }
 }
 
 /**
@@ -112,7 +103,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  * and is removed when the process exits.
  */
 var tmpObject = null;
-module.exports.tmpDirectory = function () {
+exports.tmpDirectory = function () {
   if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
     return os.tmpdir();
   }
@@ -136,16 +127,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
         console.log('BLE advertisement is not supported: ' + err );
         return;
       }
-      console.log('BLE advertisement is supported');
+      console.log("BLE advertisement is supported");
     });
   }, 5000);
 }
-
-module.exports.getMockWifiNetworkStatus = function (wifiEnabled) {
-  return {
-    wifi: wifiEnabled ? 'on' : 'off',
-    bluetooth: 'doNotCare',
-    bluetoothLowEnergy: 'doNotCare',
-    cellular: 'doNotCare'
-  };
-};
