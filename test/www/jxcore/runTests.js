@@ -5,20 +5,39 @@ var path = require('path');
 var thaliTape = require('./lib/thali-tape');
 var logger = require('thali/thalilogger')('runTests');
 
+// The global.Mobile object is replaced here after thali-tape
+// has been required so that thali-tape can pick up the right
+// test framework to be used.
+if (typeof Mobile === 'undefined') {
+  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
+}
+
+var hasJavaScriptSuffix = function (path) {
+  return path.indexOf('.js', path.length - 3) !== -1;
+};
+
+var loadFile = function (filePath) {
+  console.info('Test runner loading file: ' + filePath);
+  try {
+    require(filePath);
+  } catch (error) {
+    logger.error(error);
+    throw new Error('Error when loading file ' + filePath + ': ' + error);
+  }
+};
+
 var testsToRun = process.argv.length > 2 ? process.argv[2] : 'bv_tests';
 
-fs.readdirSync(path.join(__dirname, testsToRun)).forEach(function(fileName) {
+if (hasJavaScriptSuffix(testsToRun)) {
+  loadFile(path.join(__dirname, testsToRun));
+} else {
+  fs.readdirSync(path.join(__dirname, testsToRun)).forEach(function (fileName) {
     if ((fileName.indexOf('test') == 0) &&
-         fileName.indexOf('.js', fileName.length - 3) != -1) {
+         hasJavaScriptSuffix(fileName)) {
       var filePath = path.join(__dirname, testsToRun, fileName);
-      console.info('Test runner loading file: ' + filePath);
-      try {
-        require(filePath);
-      } catch (error) {
-        logger.error(error);
-        throw new Error('Error when loading file ' + filePath + ': ' + error);
-      }
+      loadFile(filePath);
     }
-});
+  });
+}
 
 thaliTape.begin();

@@ -1,53 +1,48 @@
 var LogCallback;
 var os = require('os');
 var tmp = require('tmp');
+var Promise = require('lie');
+var logger = require('thali/thalilogger')('testUtils');
 
-/**
- * Turn Bluetooth and WiFi either on or off
- * This is a NOOP on iOS and the desktop
- * @param {boolean} on - true to turn radios on and false to turn them off
- */
-exports.toggleRadios = function(on) {
-
-  if (typeof jxcore == 'undefined' || !jxcore.utils.OSInfo().isMobile || 
-      !jxcore.utils.OSInfo().isAndroid) 
-  {
-    return;
+var doToggle = function (toggleFunction, on) {
+  if (typeof Mobile === 'undefined') {
+    return Promise.resolve();
   }
-
-  if (jxcore.utils.OSInfo().isAndroid) {
-    console.log('Toggling radios to ' + on);
-    exports.toggleBluetooth(on, function () {
-      exports.toggleWifi(on, function () {
-        console.log('Radios toggled');
-      });
+  if (jxcore.utils.OSInfo().isIOS) {
+    return Promise.resolve();
+  }
+  return new Promise(function (resolve, reject) {
+    Mobile[toggleFunction](on, function (err) {
+      if (err) {
+        logger.warn('Mobile.%s returned an error: %s', toggleFunction, err);
+        return reject(new Error(err));
+      }
+      return resolve();
     });
-  } else {
-    console.log("ERROR: toggleRadios called on unsupported platform");
-  }
-};
-
-exports.toggleWifi = function (on, callback) {
-
-  if (typeof jxcore == 'undefined') {
-    callback();
-    return;
-  }
-
-  Mobile.toggleWiFi(on, function (err) {
-    if (err) {
-      console.log('Could not toggle Wifi - ' + err);
-    }
-    callback();
   });
 };
 
-exports.toggleBluetooth = function (on, callback) {
-  Mobile.toggleBluetooth(on, function (err) {
-    if (err) {
-      console.log('Could not toggle Bluetooth - ' + err);
-    }
-    callback();
+module.exports.toggleWifi = function (on) {
+  return doToggle('toggleWiFi', on);
+};
+
+exports.toggleBluetooth = function (on) {
+  return doToggle('toggleBluetooth', on);
+};
+
+/**
+ * Turn Bluetooth and Wifi either on or off.
+ * This doesn't have any effect on iOS and on mocked up desktop
+ * environment, the network changes will be simulated (i.e., doesn't affect
+ * the network status of the host machine).
+ * @param {boolean} on Pass true to turn radios on and false to turn them off
+ * @returns {Promise<?Error>}
+ */
+module.exports.toggleRadios = function (on) {
+  logger.info('Toggling radios to: %s', on);
+  return module.exports.toggleBluetooth(on)
+  .then(function () {
+    return module.exports.toggleWifi(on);
   });
 };
 
@@ -136,12 +131,3 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
     });
   }, 5000);
 }
-
-module.exports.getMockWifiNetworkStatus = function (wifiEnabled) {
-  return {
-    wifi: wifiEnabled ? 'on' : 'off',
-    bluetooth: 'doNotCare',
-    bluetoothLowEnergy: 'doNotCare',
-    cellular: 'doNotCare'
-  };
-};
