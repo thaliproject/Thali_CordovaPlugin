@@ -1,10 +1,12 @@
 'use strict';
 
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var tape = require('../lib/thali-tape');
 var testUtils = require('../lib/testUtils.js');
 var express = require('express');
 var validations = require('thali/validations');
+var sinon = require('sinon');
 
 var verifyCombinedResultSuccess = function (t, combinedResult, message) {
   t.equal(combinedResult.wifiResult, null, message || 'error should be null');
@@ -120,6 +122,26 @@ test('network changes emitted', function (t) {
     testUtils.toggleWifi(true);
   });
   testUtils.toggleWifi(false);
+});
+
+test('does not send duplicate availability changes', function (t) {
+  var dummyPeer = {
+    peerIdentifier: 'dummy',
+    portNumber: 8080
+  };
+  var spy = sinon.spy(ThaliMobile.emitter, 'emit');
+  ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+                                        [dummyPeer]);
+  process.nextTick(function () {
+    t.equals(spy.callCount, 1, 'should be called once');
+    ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+                                          [dummyPeer]);
+    process.nextTick(function () {
+      t.equals(spy.callCount, 1, 'should not have been called more than once');
+      ThaliMobile.emitter.emit.restore();
+      t.end();
+    });
+  });
 });
 
 if (!tape.coordinated) {

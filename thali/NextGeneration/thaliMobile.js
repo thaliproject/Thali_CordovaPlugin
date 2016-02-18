@@ -1,3 +1,4 @@
+/* global hostAddress */
 'use strict';
 
 var Promise = require('lie');
@@ -290,8 +291,6 @@ module.exports.connectionTypes = {
   TCP_NATIVE: 'tcp'
 };
 
-var thaliMobileEmitter = new EventEmitter();
-
 /**
  * It is the job of this module to provide the most reliable guesses (and that
  * is what they are) as to when a peer is and is not available. The module MUST
@@ -490,25 +489,57 @@ var thaliMobileEmitter = new EventEmitter();
  * us.
  */
 
-ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-    function (peer)
-    {
-      // Do stuff
-    });
-
-thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
-  var peers = [];
-  wifiPeers.forEach(function (wifiPeer) {
-    var peer = {
-      peerIdentifier: wifiPeer.peerIdentifier,
-      hostAddress: wifiPeer.hostAddress,
-      portNumber: wifiPeer.portNumber
-    };
-    peer.connectionType = module.exports.connectionTypes.TCP_NATIVE;
-    peer.suggestedTCPTimeout = ThaliConfig.TCP_TIMEOUT_WIFI;
-    peers.push(peer);
+var peerAvailabilities = {};
+var getInternalPeerKey = function (peer) {
+  return peer.connectionType + peer.peerIdentfier;
+};
+var peerHasChanged = function (peer) {
+  var internalPeerKey = getInternalPeerKey(peer);
+  var storedPeer = peerAvailabilities[internalPeerKey];
+  if (!storedPeer) {
+    return true;
+  }
+  if (storedPeer.hostAddress !== peer.hostAddress ||
+      storedPeer.portNumber !== peer.portNumber) {
+    return true;
+  }
+  return false;
+};
+var getExtendedPeer = function (peer, connectionType) {
+  return {
+    peerIdentifier: peer.peerIdentifier,
+    hostAddress: peer.hostAddress,
+    portNumber: peer.portNumber,
+    // TODO: The type should come from native layer
+    connectionType: connectionType,
+    // TODO: Choose the right value based on connection type
+    suggestedTCPTimeout: ThaliConfig.TCP_TIMEOUT_WIFI
+  };
+};
+var handlePeers = function (peers, connectionType) {
+  var changedPeers = [];
+  peers.forEach(function (peer) {
+    peer = getExtendedPeer(peer, connectionType);
+    if (!peerHasChanged(peer)) {
+      return;
+    }
+    changedPeers.push(peer);
+    if (peer.hostAddress === null) {
+      delete peerAvailabilities[getInternalPeerKey(peer)];
+    } else {
+      peerAvailabilities[getInternalPeerKey(peer)] = peer;
+    }
   });
-  thaliMobileEmitter.emit('peerAvailabilityChanged', peers);
+  if (changedPeers.length > 0) {
+    module.exports.emitter.emit('peerAvailabilityChanged', changedPeers);
+  }
+};
+ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peers) {
+  handlePeers(peers, module.exports.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK);
+});
+
+thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peers) {
+  handlePeers(peers, module.exports.connectionTypes.TCP_NATIVE);
 });
 
 /**
@@ -574,7 +605,7 @@ thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
 });
 
 var emitNetworkChanged = function (networkChangedValue) {
-  thaliMobileEmitter.emit('networkChanged', networkChangedValue);
+  module.exports.emitter.emit('networkChanged', networkChangedValue);
 };
 
 /**
@@ -614,4 +645,4 @@ ThaliMobileNativeWrapper.emitter.on('incomingConnectionToPortNumberFailed',
  * @fires module:thaliMobile.event:discoveryAdvertisingStateUpdate
  * @fires module:thaliMobile.event:networkChanged
  */
-module.exports.emitter = thaliMobileEmitter;
+module.exports.emitter = new EventEmitter();
