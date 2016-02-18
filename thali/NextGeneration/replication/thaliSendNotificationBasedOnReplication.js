@@ -15,10 +15,11 @@ var TransientState = require('./utilities').TransientState;
 /** @module thaliSendNotificationBasedOnReplication */
 
 /**
- * @classdesc This class handles determining who to notify about changes to
- * a local database. In the simplest case we just monitor changes to the
- * database we are told to watch and use that to create a list of peers to
- * notify. In practice however, things are a bit more complex.
+ * @classdesc This class handles determining who to notify about changes to a
+ * local database. We are given a list of peers to look for, we wait for changes
+ * in the local DB and then we check to see if any of those peers haven't sync'd
+ * those changes and if so then we raise a notification with the
+ * thaliNotificationServer.
  *
  * When we are told to notify a peer of a change we have to remember the need to
  * notify that peer even across reboots of the app. Otherwise if the app stops
@@ -26,11 +27,12 @@ var TransientState = require('./utilities').TransientState;
  * data coming in that will tell us. For each peer we care about we will track
  * what is the last sequence number they have synch'd up to. We can find this
  * information by retrieving the `_Local/thali<peer ID>` record for that peer.
- * If it doesn't exist then we treat their last sync'd sequence number as 0
- * otherwise we use the value there. We can get the current sequence number for
- * the database from the PouchDB info() function in the update_seq field. Now we
- * just compare the number in the _Local record against the current sequence
- * number and we know who we need to notify.
+ * If it doesn't exist then we treat their last sync'd sequence number as 0. We
+ * can get the current sequence number for the database from the PouchDB info()
+ * function in the update_seq field. Now we just compare the number in the
+ * _Local record against the current sequence number and we know who we need to
+ * notify. See http://thaliproject.org/ReplicationAcrossDiscoveryProtocol/ for
+ * details.
  *
  * BUGBUG: Although this is a 'new' able class in reality it is only intended to
  * be used as a singleton. There must not be more than one instance of this
@@ -38,8 +40,7 @@ var TransientState = require('./utilities').TransientState;
  * someone has a killer scenario they are shipping that needs this fixed.
  *
  * @param {Object} router An express router object that the class will use
- * to register its path to handle beacons. This router MUST only be served over
- * HTTP since it doesn't make sense to host a beacon server over HTTPS.
+ * to register its path to handle beacons.
  * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
  * local device's public and private keys
  * @param {number} millisecondsUntilExpiration - The number of milliseconds into
@@ -52,7 +53,6 @@ function ThaliSendNotificationBasedOnReplication(router,
                                                  millisecondsUntilExpiration,
                                                  pouchDB) {
   this._router = router;
-  this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._millisecondsUntilExpiration = millisecondsUntilExpiration;
   this._pouchDB = pouchDB;
   this._promiseQueue = new PromiseQueue();
@@ -88,17 +88,6 @@ ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_BACKGROUND = 10000;
 ThaliSendNotificationBasedOnReplication.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 10;
 
 /**
- * Defines the HTTP path that beacons are supposed to be requested on when using
- * a HTTP server to distribute beacons.
- *
- * @public
- * @readonly
- * @type {string}
- */
-ThaliSendNotificationBasedOnReplication.NOTIFICATION_BEACON_PATH =
-  '/NotificationBeacons';
-
-/**
  * Takes an ecdh public key value as a buffer and creates the doc ID to find
  * the seq number in _Local.
  *
@@ -126,7 +115,6 @@ ThaliSendNotificationBasedOnReplication.LOCAL_SEQ_POINT_PREFIX = 'thali';
 // Values created by the constructor and invariant for the life of the object,
 // including across starts and stops.
 ThaliSendNotificationBasedOnReplication.prototype._router = null;
-ThaliSendNotificationBasedOnReplication.prototype._ecdhForLocalDevice = null;
 ThaliSendNotificationBasedOnReplication.prototype._millisecondsUntilExpiration =
   null;
 ThaliSendNotificationBasedOnReplication.prototype._pouchDB = null;
@@ -150,18 +138,13 @@ var stateEnum = {
 
 ThaliSendNotificationBasedOnReplication.prototype._state = stateEnum.STOPPED;
 
-/**
- *
- * @type {?_transientState}
- * @private
- */
 ThaliSendNotificationBasedOnReplication.prototype._transientState = null;
 
 /**
  * Will start monitoring the submitted pouchDB and updating the notification
  * layer with peers to notify of changes.
  *
- * This method is idempotent if called with the same argument..
+ * This method is idempotent if called with the same argument.
  *
  * Whenever start is called we have to re-evaluate our situation. If start
  * is called with the same public key list as the previous call then we MUST
@@ -183,7 +166,7 @@ ThaliSendNotificationBasedOnReplication.prototype._transientState = null;
  * beacon string afresh.
  *
  * Beacons have changed - Every time we update our advertising ID we force
- * everyone to come and get the new beacons. This is expensive for folks
+ * everyone to come and get the new beacons. This is expensive for folks'
  * batteries. So ideally we want to change those IDs as infrequently as
  * possible. Let's look at the events that might cause us to need to change our
  * ID and see how we can handle them.
@@ -291,6 +274,7 @@ ThaliSendNotificationBasedOnReplication.prototype._startFirst =
 ThaliSendNotificationBasedOnReplication.prototype._commonStart =
   function (prioritizedPeersToNotifyOfChanges, checkFn) {
     assert(prioritizedPeersToNotifyOfChanges !== null, 'No null arg');
+
     var self = this;
     return function (resolve, reject) {
       if (checkFn && !checkFn()) {
@@ -338,6 +322,7 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
       // This check will guarantee that the object's transient variables
       // are in a trustworthy state
       if (self._state !== stateEnum.STARTED) {
+        logger.debug('Our changes state was not started - ' + self._state);
         return;
       }
 
@@ -345,6 +330,7 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
       // was closed down due to a start or stop but somehow the change
       // event still got queued.
       if (self._transientState !== transientStateWhenCreated) {
+        logger.debug('transient states did not match');
         return;
       }
 
@@ -376,6 +362,7 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
       // listener got run before the scheduled startFirst call from the
       // timer has had a chance to execute.
       if (whenTimerWillRun === -1) {
+        logger.debug('whenTimerWillRun is -1');
         return;
       }
 
@@ -446,7 +433,10 @@ ThaliSendNotificationBasedOnReplication.prototype._calculatePeersToNotify =
         }));
     });
     return Promise.all(promiseArray).then(function (resultsArray) {
-      return resultsArray.filter(Boolean);
+      return resultsArray
+        .filter(Boolean)
+        .slice(0, ThaliSendNotificationBasedOnReplication
+                    .MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY);
     });
   };
 

@@ -1,19 +1,17 @@
 'use strict';
 
-var PouchDB = require('PouchDB');
 var tape = require('../lib/thali-tape');
-var testUtils = require('../lib/testUtils.js');
+var getRandomlyNamedTestPouchDBInstance =
+  require('../lib/testUtils.js').getRandomlyNamedTestPouchDBInstance;
 var ThaliNotificationServer =
   require('thali/NextGeneration/notification/thaliNotificationServer');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 var express = require('express');
 var crypto = require('crypto');
-var path = require('path');
 var Promise = require('lie');
 var ThaliSendNotificationBasedOnReplication =
   require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
-var randomstring = require('randomstring');
 var urlsafeBase64 = require('urlsafe-base64');
 
 var test = tape({
@@ -24,31 +22,6 @@ var test = tape({
     t.end();
   }
 });
-
-function getTestPouchDBInstance(name) {
-  // Use a folder specific to this test so that the database content
-  // will not interfere with any other databases that might be created
-  // during other tests.
-  var dbPath = path.join(testUtils.tmpDirectory(),
-    'pouch-for-testThaliSendNotificationBasedOnReplication-test');
-  var LevelDownPouchDB =
-    PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath});
-  return new LevelDownPouchDB(name);
-}
-
-function getRandomlyNamedTestPouchDBInstance() {
-  var randomPouchDBName = randomstring.generate({
-    length: 40,
-    charset: 'alphabetic'
-  });
-  return getTestPouchDBInstance(randomPouchDBName);
-}
-
-/**
- * @public
- * @typedef {?Buffer[]} startArg This is the value to use in the call to start
- * on the thaliSendNotificationBasedOnReplication object.
- */
 
 /**
  * This function will be passed in the PouchDB object being used in the test
@@ -72,15 +45,6 @@ function getRandomlyNamedTestPouchDBInstance() {
  * @public
  * @callback mockInitFunction
  * @param {Object} mock
- */
-
-/**
- * Lets us do some work after the start and before the stop.
- *
- * @public
- * @callback betweenStartAndStopFunction
- * @param {Object} pouchDB
- * @returns {Promise<?Error>}
  */
 
 var DEFAULT_MILLISECONDS_UNTIL_EXPIRE = 100;
@@ -147,6 +111,20 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
     });
 }
 
+/**
+ * @public
+ * @typedef {?Buffer[]} startArg This is the value to use in the call to start
+ * on the thaliSendNotificationBasedOnReplication object.
+ */
+
+/**
+ * Lets us do some work after the start and before the stop.
+ *
+ * @public
+ * @callback betweenStartAndStopFunction
+ * @param {Object} pouchDB
+ * @returns {Promise<?Error>}
+ */
 
 // jscs:disable jsDoc
 /**
@@ -274,7 +252,8 @@ test('Three peers, one not in DB, one behind and one ahead', function (t) {
   var partnerAheadInDbPublicKey = crypto.createECDH('secp521r1').generateKeys();
   var startArg = [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey,
                   partnerAheadInDbPublicKey];
-  testStartAndStop(t,
+  testStartAndStop(
+    t,
     startArg,
     function (pouchDB) {
       return pouchDB.put({_id: 'id', stuff: 'whatever'})
@@ -299,6 +278,29 @@ test('Three peers, one not in DB, one behind and one ahead', function (t) {
                        [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey]);
     });
 });
+
+test('More than maximum peers, make sure we only send maximum allowed',
+  function (t) {
+    var startArg = [];
+    for (var i = 0;
+        i < ThaliSendNotificationBasedOnReplication
+            .MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY + 10;
+        ++i) {
+      startArg.push(crypto.createECDH('secp521r1').generateKeys());
+    }
+    testStartAndStop(
+      t,
+      startArg,
+    function (pouchDB) {
+      return pouchDB.put({_id: 'ick', stuff: 23});
+    },
+    function (mockThaliNotificationServer) {
+      mockStartAndStop(mockThaliNotificationServer,
+                        startArg.slice(0,
+                          ThaliSendNotificationBasedOnReplication
+                            .MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY));
+    });
+  });
 
 test('two peers with empty DB, update the doc', function (t) {
   var partnerOnePublicKey = crypto.createECDH('secp521r1').generateKeys();
@@ -395,12 +397,6 @@ test('start and stop and start and stop', function (t) {
     });
 });
 
-
-// test('Make sure start is idempotent if called with the same arguments',
-//  function() {
-//
-//  });
-
 test('two identical starts in a row', function (t) {
   var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
   var startArg = [ partnerPublicKey ];
@@ -480,6 +476,32 @@ test('two stops and a start and two stops', function (t) {
     });
 });
 
+test('we properly enqueue requests so no then needed', function (t) {
+  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+  var startArg = [ partnerPublicKey ];
+  testScaffold(t,
+    function (pouchDB) {
+      return pouchDB.put({_id: 'hummm', stuff: 'yeah'});
+    },
+    function (mockThaliNotificationServer) {
+      mockThaliNotificationServer.expects('start')
+        .once().withExactArgs(startArg).returns(Promise.resolve());
+
+      mockThaliNotificationServer.expects('stop')
+        .once().withExactArgs().returns(Promise.resolve());
+    },
+    function (thaliSendNotificationBasedOnReplication) {
+      var promiseArray = [
+       thaliSendNotificationBasedOnReplication.stop(),
+       thaliSendNotificationBasedOnReplication.stop(),
+       thaliSendNotificationBasedOnReplication.start(startArg),
+       thaliSendNotificationBasedOnReplication.stop(),
+       thaliSendNotificationBasedOnReplication.stop()
+        ];
+      return Promise.all(promiseArray);
+    });
+});
+
 test('test calculateSeqPointKeyId', function (t) {
   var publicKey = crypto.createECDH('secp521r1').generateKeys();
   var keyId = ThaliSendNotificationBasedOnReplication
@@ -490,4 +512,3 @@ test('test calculateSeqPointKeyId', function (t) {
     .compare(publicKey), 0);
   t.end();
 });
-

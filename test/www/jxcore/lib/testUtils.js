@@ -1,6 +1,9 @@
 var LogCallback;
 var os = require('os');
 var tmp = require('tmp');
+var PouchDB = require('PouchDB');
+var path = require('path');
+var randomstring = require('randomstring');
 var Promise = require('lie');
 var logger = require('thali/thalilogger')('testUtils');
 
@@ -131,3 +134,23 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
     });
   }, 5000);
 }
+
+
+module.exports.getTestPouchDBInstance = function (name) {
+  // Use a folder specific to this test so that the database content
+  // will not interfere with any other databases that might be created
+  // during other tests.
+  var dbPath = path.join(module.exports.tmpDirectory(),
+    'pouch-for-testThaliSendNotificationBasedOnReplication-test');
+  var LevelDownPouchDB =
+    PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath});
+  return new LevelDownPouchDB(name);
+};
+
+module.exports.getRandomlyNamedTestPouchDBInstance = function () {
+  var randomPouchDBName = randomstring.generate({
+    length: 40,
+    charset: 'alphabetic'
+  });
+  return module.exports.getTestPouchDBInstance(randomPouchDBName);
+};
