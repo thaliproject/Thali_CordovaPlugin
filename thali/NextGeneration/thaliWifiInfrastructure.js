@@ -61,12 +61,14 @@ var promiseResultSuccessOrFailure = function (promise) {
 function ThaliWifiInfrastructure () {
   EventEmitter.call(this);
   this.usn = null;
-  // Use port 0 so that random available port
-  // will get used.
-  this.port = 0;
+  // Can be used in tests to override the port
+  // advertised in SSDP messages.
+  this.advertisedPortOverride = null;
   this.expressApp = null;
   this.router = null;
   this.routerServer = null;
+  this.routerServerPort = 0;
+  this.routerServerAddress = ip.address();
   this.routerServerErrorListener = null;
 
   this.states = this._getInitialStates();
@@ -104,7 +106,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
     // When running within JXcore Cordova Mobile environment,
     // don't pass this event onwards, because there, the network
     // events are bubbled up via the native layer.
-    if (typeof Mobile !== 'undefined') {
+    if (jxcore.utils.OSInfo().isMobile) {
       return;
     }
     this.emit('networkChangedWifi', networkChangedValue);
@@ -129,12 +131,11 @@ ThaliWifiInfrastructure.prototype._getInitialStates = function () {
 ThaliWifiInfrastructure.prototype._handleNetworkChanges =
 function (networkChangedValue) {
   var self = this;
-  var previousNetworkState = self.states.networkState;
-  self.states.networkState = networkChangedValue;
   // If the wifi state hasn't changed, we are not really interested
-  if (previousNetworkState.wifi === self.states.networkState.wifi) {
+  if (networkChangedValue.wifi === self.states.networkState.wifi) {
     return;
   }
+  self.states.networkState = networkChangedValue;
   var actionList = [];
   if (self.states.networkState.wifi === 'on') {
     // If the wifi state turned on, try to get into the target states
@@ -186,9 +187,9 @@ function (networkChangedValue) {
   });
 };
 
-ThaliWifiInfrastructure.prototype._setLocation = function (address, port) {
-  address = address || ip.address();
-  port = port || this.port;
+ThaliWifiInfrastructure.prototype._setLocation = function () {
+  var address = this.routerServerAddress;
+  var port = this.advertisedPortOverride || this.routerServerPort;
   this._server._location = 'http://' + address + ':' + port;
 };
 
@@ -542,7 +543,7 @@ function () {
         logger.error('Router server emitted an error: %s', error.toString());
       };
       var listeningHandler = function () {
-        self.port = self.routerServer.address().port;
+        self.routerServerPort = self.routerServer.address().port;
         self._server.setUSN(self.usn);
         // We need to update the location string, because the port
         // may have changed when we re-start the router server.
@@ -557,7 +558,8 @@ function () {
           return resolve();
         });
       };
-      self.routerServer = self.expressApp.listen(self.port, listeningHandler);
+      self.routerServer = self.expressApp.listen(self.routerServerPort,
+                                                 listeningHandler);
       self.routerServer.on('error', startErrorListener);
     }
   });
@@ -598,8 +600,9 @@ function (skipPromiseQueue, changeTarget) {
         // otherwise there is no guarantee that
         // the same port is available next time
         // we start the router server.
-        self.port = 0;
-        self.routerServer.removeListener('error', self.routerServerErrorListener);
+        self.routerServerPort = 0;
+        self.routerServer.removeListener('error',
+                                         self.routerServerErrorListener);
         self.routerServer = null;
         self.states.advertising.current = false;
         return resolve();

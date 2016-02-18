@@ -1,5 +1,9 @@
 'use strict';
 
+if (typeof Mobile === 'undefined') {
+  return;
+}
+
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var validations = require('thali/validations');
 var tape = require('../lib/thali-tape');
