@@ -21,7 +21,8 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
     './thaliMobileNativeWrapper': {
       emitter: mockEmitter,
       getNonTCPNetworkStatus: function () {
-        assert(!false, 'the mock network status should not be called twice');
+        assert(!networkStatusCalled,
+          'the mock network status should not be called twice');
         networkStatusCalled = true;
         return Promise.resolve((getCurrentNetworkStatus()));
       },
