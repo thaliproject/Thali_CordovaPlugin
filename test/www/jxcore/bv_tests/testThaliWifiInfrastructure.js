@@ -32,16 +32,6 @@ var test = tape({
   }
 });
 
-var findPeerPerProperty = function (peers, property, value) {
-  var foundPeer = null;
-  peers.forEach(function (peer) {
-    if (peer[property] === value) {
-      foundPeer = peer;
-    }
-  });
-  return foundPeer;
-};
-
 var testSeverHostAddress = randomstring.generate({
   charset: 'hex', // to get lowercase chars for the host address
   length: 8
@@ -61,9 +51,8 @@ var createTestServer = function (peerIdentifier) {
 test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged events should be emitted', function (t) {
   var peerIdentifier = 'urn:uuid:' + uuid.v4();
   var testServer = createTestServer(peerIdentifier);
-  var peerAvailableListener = function (peers) {
-    var peer = findPeerPerProperty(peers, 'hostAddress', testSeverHostAddress);
-    if (peer === null) {
+  var peerAvailableListener = function (peer) {
+    if (peer.hostAddress !== testSeverHostAddress) {
       return;
     }
     t.equal(peer.peerIdentifier, peerIdentifier, 'peer identifier should match');
@@ -73,9 +62,8 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
             'peer should be found from the list');
     wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
 
-    var peerUnavailableListener = function (peers) {
-      var peer = findPeerPerProperty(peers, 'peerIdentifier', peerIdentifier);
-      if (peer === null) {
+    var peerUnavailableListener = function (peer) {
+      if (peer.peerIdentifier !== peerIdentifier) {
         return;
       }
       t.equal(peer.hostAddress, null, 'host address should be null');
@@ -445,10 +433,8 @@ test('after wifi is re-enabled discovery is activated and peers become available
       .catch(function (error) {
         t.equals(error.message, 'Radio Turned Off', 'specific error expected');
 
-        var peerAvailableListener = function (peers) {
-          var peer = findPeerPerProperty(peers, 'peerIdentifier',
-                                         peerIdentifier);
-          if (peer === null) {
+        var peerAvailableListener = function (peer) {
+          if (peer.peerIdentifier !== peerIdentifier) {
             return;
           }
 

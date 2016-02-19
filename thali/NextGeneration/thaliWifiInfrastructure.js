@@ -150,22 +150,19 @@ function (networkChangedValue) {
       );
     }
   } else {
-    var changedPeers = [];
     for (var key in self.peerAvailabilities) {
       if (self.peerAvailabilities[key]) {
         // Mark change in peer availability list
         delete self.peerAvailabilities[key];
         // Add peer to the list of changes to emit
-        changedPeers.push({
+        self.emit('wifiPeerAvailabilityChanged', {
           peerIdentifier: key,
           hostAddress: null,
           portNumber: null
         });
       }
     }
-    if (changedPeers.length > 0) {
-      self.emit('wifiPeerAvailabilityChanged', changedPeers);
-    }
+
     // If wifi didn't turn on, it was turned into a state where we want
     // to stop our actions
     actionList = [
@@ -239,7 +236,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     delete this.peerAvailabilities[peer.peerIdentifier];
   }
 
-  this.emit('wifiPeerAvailabilityChanged', [peer]);
+  this.emit('wifiPeerAvailabilityChanged', peer);
   return true;
 };
 
@@ -639,6 +636,7 @@ function (skipPromiseQueue, changeTarget) {
  *
  * @event wifiPeerAvailabilityChanged
  * @public
+ * @type {Object}
  * @property {string} peerIdentifier This is the USN value
  * @property {string} hostAddress This can be either an IP address or a DNS
  * address encoded as a string

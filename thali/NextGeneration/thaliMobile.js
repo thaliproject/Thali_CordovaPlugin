@@ -4,6 +4,7 @@
 var Promise = require('lie');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
+var assert = require('assert');
 
 var ThaliConfig = require('./thaliConfig');
 
@@ -490,9 +491,11 @@ module.exports.connectionTypes = {
  */
 
 var peerAvailabilities = {};
+
 var getInternalPeerKey = function (peer) {
   return peer.connectionType + peer.peerIdentfier;
 };
+
 var peerHasChanged = function (peer) {
   var internalPeerKey = getInternalPeerKey(peer);
   var storedPeer = peerAvailabilities[internalPeerKey];
@@ -505,41 +508,49 @@ var peerHasChanged = function (peer) {
   }
   return false;
 };
+
 var getExtendedPeer = function (peer, connectionType) {
+  var timeout = null;
+  if (connectionType === module.exports.connectionTypes.TCP_NATIVE) {
+    timeout = ThaliConfig.TCP_TIMEOUT_WIFI;
+  } else if (connectionType === module.exports.connectionTypes.BLUE_TOOTH) {
+    timeout = ThaliConfig.TCP_TIMEOUT_BLUETOOTH;
+  } else if (connectionType === module.exports.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK) {
+    timeout = ThaliConfig.TCP_TIMEOUT_MPCF;
+  }
+  assert(timeout !== null, 'timeout value must have been set');
   return {
     peerIdentifier: peer.peerIdentifier,
     hostAddress: peer.hostAddress,
     portNumber: peer.portNumber,
-    // TODO: The type should come from native layer
     connectionType: connectionType,
-    // TODO: Choose the right value based on connection type
-    suggestedTCPTimeout: ThaliConfig.TCP_TIMEOUT_WIFI
+    suggestedTCPTimeout: timeout
   };
 };
-var handlePeers = function (peers, connectionType) {
-  var changedPeers = [];
-  peers.forEach(function (peer) {
-    peer = getExtendedPeer(peer, connectionType);
-    if (!peerHasChanged(peer)) {
-      return;
-    }
-    changedPeers.push(peer);
-    if (peer.hostAddress === null) {
-      delete peerAvailabilities[getInternalPeerKey(peer)];
-    } else {
-      peerAvailabilities[getInternalPeerKey(peer)] = peer;
-    }
-  });
-  if (changedPeers.length > 0) {
-    module.exports.emitter.emit('peerAvailabilityChanged', changedPeers);
+
+var handlePeer = function (peer, connectionType) {
+  peer = getExtendedPeer(peer, connectionType);
+  if (!peerHasChanged(peer)) {
+    return;
   }
+  if (peer.hostAddress === null) {
+    delete peerAvailabilities[getInternalPeerKey(peer)];
+  } else {
+    peerAvailabilities[getInternalPeerKey(peer)] = peer;
+  }
+  module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
-ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peers) {
-  handlePeers(peers, module.exports.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK);
+
+ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peer) {
+  var connectionType =
+    jxcore.utils.OSInfo().isAndroid ?
+    module.exports.connectionTypes.BLUE_TOOTH :
+    module.exports.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
+  handlePeer(peer, connectionType);
 });
 
-thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peers) {
-  handlePeers(peers, module.exports.connectionTypes.TCP_NATIVE);
+thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
+  handlePeer(peer, module.exports.connectionTypes.TCP_NATIVE);
 });
 
 /**

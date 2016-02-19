@@ -485,25 +485,22 @@ MobileCallInstance.prototype.callNative = function () {
 var peerAvailabilityChangedCallback = null;
 var peerAvailabilities = {};
 var setupPeerAvailabilityChangedListener = function (thaliWifiInfrastructure) {
-  thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
+  thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged',
+  function (wifiPeer) {
     if (peerAvailabilityChangedCallback === null) {
       return;
     }
-    var nativePeers = [];
-    wifiPeers.forEach(function (wifiPeer) {
-      var peerAvailable = !!wifiPeer.hostAddress;
-      if (peerAvailable) {
-        peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
-      } else {
-        delete peerAvailabilities[wifiPeer.peerIdentifier];
-      }
-      nativePeers.push({
-        peerIdentifier: wifiPeer.peerIdentifier,
-        peerAvailable: peerAvailable,
-        pleaseConnect: false
-      });
-    });
-    peerAvailabilityChangedCallback(nativePeers);
+    var peerAvailable = !!wifiPeer.hostAddress;
+    if (peerAvailable) {
+      peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
+    } else {
+      delete peerAvailabilities[wifiPeer.peerIdentifier];
+    }
+    peerAvailabilityChangedCallback([{
+      peerIdentifier: wifiPeer.peerIdentifier,
+      peerAvailable: peerAvailable,
+      pleaseConnect: false
+    }]);
   });
 };
 
