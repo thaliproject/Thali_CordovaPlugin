@@ -374,10 +374,7 @@ test("creating a peerListener (pleaseConnect == false) - with native server", fu
   var serversManager = new ThaliTCPServersManager(applicationPort);
   // We expect 'failedConnection' since there's no native listener
   serversManager.on("failedConnection", function(err) {
-    t.ok(firstConnection, "should not get event until connection is made");
-    t.equal(err.error, "Cannot Connect To Peer", "reason should be as expected");
-    serversManager.stop();
-    t.end();
+    t.fail("connection shouldn't fail");
   });
 
   var nativeServer = net.createServer(function(socket) {
