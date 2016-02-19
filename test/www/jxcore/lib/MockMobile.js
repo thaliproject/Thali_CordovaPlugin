@@ -28,19 +28,16 @@ var Mobile = function (key) {
         if (next[key].length == 0) {
           delete next[key];
         }
-        console.log(fn);
-        console.log(fn.prototype);
         fn.apply(this, arguments);
         return;
       }
 
       // .. else call the default
       if (key in mocks) { 
-        console.log("calling native: " + key);
         mocks[key].apply(this, arguments);
       }
       else {
-        throw new Error("Mock does not implement: ", key);
+        throw new Error("Mock does not implement: " + key);
       }
     },
 
@@ -62,9 +59,7 @@ var Mobile = function (key) {
     // Call a registered function
     callRegistered: function() {
       // Call a registered function
-
       if (key in registered) {
-        console.log("calling node: " + key);
         registered[key].apply(this, arguments);
       }
       else {
