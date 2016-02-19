@@ -166,7 +166,8 @@ test('does not send duplicate availability changes', function (t) {
 });
 
 test('calls correct starts when network changes', function (t) {
-  var spy = null;
+  var listeningSpy = null;
+  var advertisingSpy = null;
   testUtils.toggleRadios(false)
   .then(function () {
     return ThaliMobile.start(express.Router());
@@ -177,13 +178,24 @@ test('calls correct starts when network changes', function (t) {
   .then(function (combinedResult) {
     t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
              'specific error expected');
-    spy = sinon.spy(ThaliMobile, 'startListeningForAdvertisements');
+    return ThaliMobile.startListeningForAdvertisements();
+  })
+  .then(function (combinedResult) {
+    t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
+          'specific error expected');
+    listeningSpy = sinon.spy(ThaliMobile,
+      'startListeningForAdvertisements');
+    advertisingSpy = sinon.spy(ThaliMobile,
+      'startUpdateAdvertisingAndListening');
     return testUtils.toggleRadios(true);
   })
   .then(function () {
-    t.equals(spy.callCount, 1,
+    t.equals(listeningSpy.callCount, 1,
       'startListeningForAdvertisements should have been called');
+    t.equals(advertisingSpy.callCount, 1,
+      'startUpdateAdvertisingAndListening should have been called');
     ThaliMobile.startListeningForAdvertisements.restore();
+    ThaliMobile.startUpdateAdvertisingAndListening.restore();
     t.end();
   });
 });

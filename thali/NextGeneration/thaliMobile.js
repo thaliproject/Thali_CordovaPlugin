@@ -38,20 +38,32 @@ var handleNetworkChanged = function (networkChangedValue) {
   if (!radioEnabled) {
     return;
   }
-  if (thaliMobileStates.listening) {
-    module.exports.startListeningForAdvertisements()
-    .then(function (combinedResult) {
-      var logError = function (error) {
-        logger.info('Failed to start listening for advertisements: ' + error);
-      };
-      if (combinedResult.wifiResult !== null) {
-        logError(combinedResult.wifiResult);
-      }
-      if (combinedResult.nativeResult !== null) {
-        logError(combinedResult.nativeResult);
-      }
-    });
-  }
+  // At least some radio was enabled so try to start
+  // whatever can be potentially started.
+  promiseResultSuccessOrFailure(module.exports.start())
+  .then(function () {
+    var checkErrors = function (operation, combinedResult) {
+      Object.keys(combinedResult).forEach(function (resultType) {
+        if (combinedResult[resultType] !== null) {
+          logger.info('Failed operation %s with error: %s',
+                      operation,
+                      combinedResult[resultType]);
+        }
+      });
+    };
+    if (thaliMobileStates.listening) {
+      module.exports.startListeningForAdvertisements()
+      .then(function (combinedResult) {
+        checkErrors('startListeningForAdvertisements', combinedResult);
+      });
+    }
+    if (thaliMobileStates.advertising) {
+      module.exports.startUpdateAdvertisingAndListening()
+      .then(function (combinedResult) {
+        checkErrors('startUpdateAdvertisingAndListening', combinedResult);
+      });
+    }
+  });
 };
 
 /** @module thaliMobile */
