@@ -141,7 +141,7 @@ module.exports.getTestPouchDBInstance = function (name) {
   // will not interfere with any other databases that might be created
   // during other tests.
   var dbPath = path.join(module.exports.tmpDirectory(),
-    'pouch-for-testThaliSendNotificationBasedOnReplication-test');
+    'pouchdb-test-directory');
   var LevelDownPouchDB =
     PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath});
   return new LevelDownPouchDB(name);
