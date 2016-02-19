@@ -525,11 +525,11 @@ function () {
       try {
         self.expressApp.use('/', self.router);
       } catch (error) {
-        logger.error('Unable to use the given router: %s', error.toString());
+        logger.warn('Unable to use the given router: %s', error.toString());
         return reject(new Error('Bad Router'));
       }
       var startErrorListener = function (error) {
-        logger.error('Router server emitted an error: %s', error.toString());
+        logger.warn('Router server emitted an error: %s', error.toString());
         self.routerServer.removeListener('error', startErrorListener);
         self.routerServer = null;
         reject(new Error('Unspecified Error with Radio infrastructure'));
@@ -540,7 +540,7 @@ function () {
         // specify a custom error that the upper layers should listen to.
         // If this error is seen in real scenario, a proper error handling
         // should be specified and implemented.
-        logger.error('Router server emitted an error: %s', error.toString());
+        logger.warn('Router server emitted an error: %s', error.toString());
       };
       var listeningHandler = function () {
         self.routerServerPort = self.routerServer.address().port;
