@@ -22,6 +22,13 @@ var promiseResultSuccessOrFailure = function (promise) {
   });
 };
 
+var getCombinedResult = function (results) {
+  return {
+    wifiResult: results[0] || null,
+    nativeResult: results[1] || null
+  };
+};
+
 var thaliMobileStates = {
   started: false,
   listening: false,
@@ -140,10 +147,7 @@ module.exports.start = function (router) {
       ThaliMobileNativeWrapper.start(router)
     )
   ]).then(function (results) {
-    return {
-      wifiResult: results[0] || null,
-      nativeResult: results[1] || null
-    };
+    return getCombinedResult(results);
   });
 };
 
@@ -163,12 +167,13 @@ module.exports.stop = function () {
   module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
   return Promise.all([
     promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.stop())
+      thaliWifiInfrastructure.stop()
+    ),
+    promiseResultSuccessOrFailure(
+      ThaliMobileNativeWrapper.stop()
+    )
   ]).then(function (results) {
-    return {
-      wifiResult: results[0] || null
-      //nativeResult: results[1] || null
-    };
+    return getCombinedResult(results);
   });
 };
 
