@@ -15,6 +15,21 @@ var test = tape({
   }
 });
 
+/*
+ * Note to programmer: At this time we do not have GCM support in JXcore. This
+ * means that when we decrypt the BeaconFlag (see
+ * http://thaliproject.org/PresenceProtocolForOpportunisticSynching/) we can
+ * get a spurious match. That is, because we don't have the GCM MAC to validate
+ * that the decryption worked properly we can end up in a situation where it
+ * looks like we successfully decrypted the value when, in fact, we did not.
+ * The BeaconHmac will catch this so it's not a security issue per say but it
+ * does complicate testing because we can't just state that the address book
+ * should, for example, never be called if we use a key in the parse function
+ * that doesn't match any of the beacons. A spurious match could cause an
+ * address book call but the value should be garbage. All of this goes away
+ * when we can put in GCM.
+ */
+
 test('#generatePreambleAndBeacons bad args', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
@@ -269,7 +284,7 @@ test('#parseBeacons invalid size for encryptedBeaconKeyId in ' +
 test('#parseBeacons addressBookCallback fails decrypt', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
-  localDevice.generateKeys();
+  var localDeviceKey = localDevice.generateKeys();
   var expiration = 9000;
 
   var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
@@ -287,7 +302,11 @@ test('#parseBeacons addressBookCallback fails decrypt', function (t) {
     expiration
   );
 
-  var addressBookCallback = function () {
+  var localDeviceKeyHash =
+    notificationBeacons.createPublicKeyHash(localDeviceKey);
+  var addressBookCallback = function (unencryptedKeyId) {
+    // We should only have spurious decrypts due to the GCM issue
+    t.ok(unencryptedKeyId.compare(localDeviceKeyHash) !== 0);
     return null;
   };
 
@@ -304,9 +323,11 @@ test('#parseBeacons addressBookCallback fails decrypt', function (t) {
 });
 
 test('#parseBeacons addressBookCallback returns no matches', function (t) {
+  // We recognize the sender but they are not on our approved list so
+  // we return null
   var publicKeys = [];
   var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
-  localDevice.generateKeys();
+  var localDeviceKey = localDevice.generateKeys();
   var expiration = 9000;
 
   var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
@@ -324,14 +345,12 @@ test('#parseBeacons addressBookCallback returns no matches', function (t) {
     expiration
   );
 
-  var called = 0;
-  var newECDH = crypto.createECDH(notificationBeacons.SECP256K1);
-  var newECDHKey = newECDH.generateKeys();
-  var newECDHKeyHash = notificationBeacons.createPublicKeyHash(newECDHKey);
+  var success = 0;
+  var localDeviceKeyHash =
+    notificationBeacons.createPublicKeyHash(localDeviceKey);
   var addressBookCallback = function (unencryptedKeyId) {
-    called++;
-    if (unencryptedKeyId.compare(newECDHKeyHash) === 0) {
-      return newECDHKey;
+    if (unencryptedKeyId.compare(localDeviceKeyHash) === 0) {
+      success++;
     }
     return null;
   };
@@ -343,16 +362,18 @@ test('#parseBeacons addressBookCallback returns no matches', function (t) {
   );
 
   t.equal(results, null);
-  t.equal(called, 1);
+  t.equal(success, 1);
   t.end();
 });
 
-test('#parseBeacons addressBookCallback returns public key', function (t) {
+test('#parseBeacons addressBookCallback returns spurious match', function (t) {
+  // This tests a really evil case where our lack of GCM causes us to
+  // 'successfully' decrypt something we should not have and that value
+  // (with astronomically small odds) happens to match one of the keys in our
+  // list. The HMAC should still cause a failure though.
   var publicKeys = [];
   var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   var localDeviceKey = localDevice.generateKeys();
-  var localDeviceKeyHash =
-    notificationBeacons.createPublicKeyHash(localDeviceKey);
   var expiration = 9000;
 
   var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
@@ -370,11 +391,57 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
     expiration
   );
 
-  var called = 0;
-
+  var success = 0;
+  var localDeviceKeyHash =
+    notificationBeacons.createPublicKeyHash(localDeviceKey);
+  var spuriousECDH = crypto.createECDH(notificationBeacons.SECP256K1);
+  var spuriousECDHKey = spuriousECDH.generateKeys();
   var addressBookCallback = function (unencryptedKeyId) {
-    called++;
     if (unencryptedKeyId.compare(localDeviceKeyHash) === 0) {
+      ++success;
+      return spuriousECDHKey;
+    }
+    return null;
+  };
+
+  var results = notificationBeacons.parseBeacons(
+    beaconStreamWithPreAmble,
+    device3,
+    addressBookCallback
+  );
+
+  t.equal(results, null);
+  t.equal(success, 1);
+  t.end();
+});
+
+test('#parseBeacons addressBookCallback returns public key', function (t) {
+  var publicKeys = [];
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
+  var localDeviceKey = localDevice.generateKeys();
+  var expiration = 9000;
+
+  var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
+  var device1Key = device1.generateKeys();
+  var device2 = crypto.createECDH(notificationBeacons.SECP256K1);
+  var device2Key = device2.generateKeys();
+  var device3 = crypto.createECDH(notificationBeacons.SECP256K1);
+  var device3Key = device3.generateKeys();
+
+  publicKeys.push(device1Key, device2Key, device3Key);
+
+  var beaconStreamWithPreAmble = notificationBeacons.generatePreambleAndBeacons(
+    publicKeys,
+    localDevice,
+    expiration
+  );
+
+  var success = 0;
+  var localDeviceKeyHash =
+    notificationBeacons.createPublicKeyHash(localDeviceKey);
+  var addressBookCallback = function (unencryptedKeyId) {
+    if (unencryptedKeyId.compare(localDeviceKeyHash) === 0) {
+      success++;
       return localDeviceKey;
     }
     return null;
@@ -386,19 +453,14 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
     addressBookCallback
   );
 
-  t.equal(called, 1);
-  t.ok(results);
+  t.equal(success, 1);
+  t.ok(results.compare(localDeviceKeyHash) === 0);
   t.end();
 });
 
 test('#parseBeacons with beacons both for and not for the user', function (t) {
-  var ecdhForDeviceThatGeneratedBeacons =
-    crypto.createECDH(notificationBeacons.SECP256K1);
-  var publicKeyForDeviceThatGeneratedBeacons =
-    ecdhForDeviceThatGeneratedBeacons.generateKeys();
-  var publicKeyHashForDeviceThatGeneratedBeacons =
-    notificationBeacons.
-      createPublicKeyHash(publicKeyForDeviceThatGeneratedBeacons);
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
+  var localDeviceKey = localDevice.generateKeys();
 
   var ecdhForDummyDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   var publicKeyForDummyDevice = ecdhForDummyDevice.generateKeys();
@@ -413,13 +475,17 @@ test('#parseBeacons with beacons both for and not for the user', function (t) {
   var beaconStreamWithPreAmble =
     notificationBeacons.generatePreambleAndBeacons(
       publicKeys,
-      ecdhForDeviceThatGeneratedBeacons,
+      localDevice,
       10 * 60 * 60 * 1000);
 
+  var success = 0;
+  var localDeviceKeyHash =
+    notificationBeacons.
+    createPublicKeyHash(localDeviceKey);
   var addressBookCallback = function (unencryptedKeyId) {
-    if (unencryptedKeyId.compare(publicKeyHashForDeviceThatGeneratedBeacons) ===
-                                 0) {
-      return publicKeyForDeviceThatGeneratedBeacons;
+    if (unencryptedKeyId.compare(localDeviceKeyHash) === 0) {
+      ++success;
+      return localDeviceKey;
     }
     return null;
   };
@@ -430,6 +496,7 @@ test('#parseBeacons with beacons both for and not for the user', function (t) {
     addressBookCallback
   );
 
-  t.ok(results.compare(publicKeyHashForDeviceThatGeneratedBeacons) === 0);
+  t.equal(success, 1);
+  t.ok(results.compare(localDeviceKeyHash) === 0);
   t.end();
 });
