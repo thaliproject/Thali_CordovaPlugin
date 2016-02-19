@@ -6,7 +6,7 @@ var tape = require('../lib/thali-tape');
 var ThaliTCPServersManager = require('thali/NextGeneration/tcpServersManager');
 
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('../lib/MobileUsingWifi');
+  global.Mobile = require('../lib/MockMobile');
 }
 
 var test = tape({
@@ -231,23 +231,22 @@ test("creating a peerListener all up - no app server", function(t) {
   var applicationPort = 4242;
 
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+    console.log(peers);
     peers.forEach(function(peer) {
       if (peer.peerAvailable) {
         serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
         .then(function(peerPort) {
-          //if (peer.pleaseConnect == true) {
-            var client = net.createConnection(peerPort, function() {
-              t.ok(true, "connection completed");
-              client.end();
-              serversManager.stop();
-              t.end();
-            });
-            client.on("error", function(err) {
-              t.fail("should not get error - " + err);
-              serversManager.stop();
-              t.end();
-            });
-          //}
+          var client = net.createConnection(peerPort, function() {
+            t.ok(true, "connection completed");
+            client.end();
+            serversManager.stop();
+            t.end();
+          });
+          client.on("error", function(err) {
+            t.fail("should not get error - " + err);
+            serversManager.stop();
+            t.end();
+          });
         })
         .catch(function(err) {
           t.fail("should not get error - " + err);
@@ -269,6 +268,11 @@ test("creating a peerListener all up - no app server", function(t) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'Can call startListeningForAdvertisements without error');
+      Mobile("peerAvailabilityChanged").call([{ 
+        peerIdentifier : "peer1", 
+        pleaseConnect : true, 
+        peerAvailable: true
+      }]);
     });
   });
 });
