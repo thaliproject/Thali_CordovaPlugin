@@ -112,16 +112,37 @@ test('can get the network status', function (t) {
   });
 });
 
-test('network changes emitted', function (t) {
-  ThaliMobile.emitter.once('networkChanged', function (networkChangedValue) {
-    t.equals(networkChangedValue.wifi, 'off', 'wifi is off');
+test('network changes emitted correctly', function (t) {
+  ThaliMobile.start(express.Router())
+  .then(function () {
     ThaliMobile.emitter.once('networkChanged', function (networkChangedValue) {
-      t.equals(networkChangedValue.wifi, 'on', 'wifi is on');
+      t.equals(networkChangedValue.wifi, 'off', 'wifi is off');
+      ThaliMobile.emitter.once('networkChanged', function (networkChangedValue) {
+        t.equals(networkChangedValue.wifi, 'on', 'wifi is on');
+        t.end();
+      });
+      testUtils.toggleWifi(true);
+    });
+    testUtils.toggleWifi(false);
+  });
+});
+
+test('network changes not emitted in stopped state', function (t) {
+  var networkChangedHandler = function () {
+    t.fail('network change should not be emitted');
+    ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
+    t.end();
+  };
+  ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
+  testUtils.toggleWifi(false);
+  process.nextTick(function () {
+    t.ok(true, 'event was not emitted');
+    ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
+    testUtils.toggleWifi(true)
+    .then(function () {
       t.end();
     });
-    testUtils.toggleWifi(true);
   });
-  testUtils.toggleWifi(false);
 });
 
 test('does not send duplicate availability changes', function (t) {
@@ -141,6 +162,29 @@ test('does not send duplicate availability changes', function (t) {
       ThaliMobile.emitter.emit.restore();
       t.end();
     });
+  });
+});
+
+test('calls correct starts when network changes', function (t) {
+  var spy = null;
+  testUtils.toggleRadios(false)
+  .then(function () {
+    return ThaliMobile.start(express.Router());
+  })
+  .then(function () {
+    return ThaliMobile.startListeningForAdvertisements();
+  })
+  .then(function (combinedResult) {
+    t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
+             'specific error expected');
+    spy = sinon.spy(ThaliMobile, 'startListeningForAdvertisements');
+    return testUtils.toggleRadios(true);
+  })
+  .then(function () {
+    t.equals(spy.callCount, 1,
+      'startListeningForAdvertisements should have been called');
+    ThaliMobile.startListeningForAdvertisements.restore();
+    t.end();
   });
 });
 

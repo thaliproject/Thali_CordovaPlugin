@@ -102,14 +102,6 @@ ThaliWifiInfrastructure.prototype._init = function () {
 
   this._networkChangedHandler = function (networkChangedValue) {
     this._handleNetworkChanges(networkChangedValue);
-
-    // When running within JXcore Cordova Mobile environment,
-    // don't pass this event onwards, because there, the network
-    // events are bubbled up via the native layer.
-    if (jxcore.utils.OSInfo().isMobile) {
-      return;
-    }
-    this.emit('networkChangedWifi', networkChangedValue);
   }.bind(this);
 };
 
@@ -645,6 +637,8 @@ function (skipPromiseQueue, changeTarget) {
  */
 
 /**
+ * [NOT IMPLEMENTED]
+ *
  * For the definition of this event please see {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
  *
@@ -669,8 +663,10 @@ function (skipPromiseQueue, changeTarget) {
  */
 
 /**
+ * [NOT IMPLEMENTED]
+ *
  * For the definition of this event please see {@link
- * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}.
+ * module:thaliMobileNativeWrapper~networkChangedNonTCP}.
  *
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
  * OS/X or Windows. In the case that we are running on those platforms then If

@@ -5,6 +5,7 @@ var Promise = require('lie');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
+var logger = require('../thalilogger')('thaliMobile');
 
 var ThaliConfig = require('./thaliConfig');
 
@@ -25,6 +26,32 @@ var thaliMobileStates = {
   started: false,
   listening: false,
   advertising: false
+};
+
+var handleNetworkChanged = function (networkChangedValue) {
+  var radioEnabled = false;
+  Object.keys(networkChangedValue).forEach(function (key) {
+    if (networkChangedValue[key] === 'on') {
+      radioEnabled = true;
+    }
+  });
+  if (!radioEnabled) {
+    return;
+  }
+  if (thaliMobileStates.listening) {
+    module.exports.startListeningForAdvertisements()
+    .then(function (combinedResult) {
+      var logError = function (error) {
+        logger.info('Failed to start listening for advertisements: ' + error);
+      };
+      if (combinedResult.wifiResult !== null) {
+        logError(combinedResult.wifiResult);
+      }
+      if (combinedResult.nativeResult !== null) {
+        logError(combinedResult.nativeResult);
+      }
+    });
+  }
 };
 
 /** @module thaliMobile */
@@ -92,13 +119,18 @@ module.exports.start = function (router) {
     return Promise.reject(new Error('Call Stop!'));
   }
   thaliMobileStates.started = true;
+  module.exports.emitter.on('networkChanged', handleNetworkChanged);
   return Promise.all([
     promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.start(router))
+      thaliWifiInfrastructure.start(router)
+    ),
+    promiseResultSuccessOrFailure(
+      ThaliMobileNativeWrapper.start(router)
+    )
   ]).then(function (results) {
     return {
-      wifiResult: results[0] || null
-      //nativeResult: results[1] || null
+      wifiResult: results[0] || null,
+      nativeResult: results[1] || null
     };
   });
 };
@@ -116,6 +148,7 @@ module.exports.start = function (router) {
  */
 module.exports.stop = function () {
   thaliMobileStates.started = false;
+  module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
   return Promise.all([
     promiseResultSuccessOrFailure(
       thaliWifiInfrastructure.stop())
@@ -170,11 +203,10 @@ module.exports.startListeningForAdvertisements = function () {
   } else {
     resultObject.wifiResult = new Error('Not Active');
   }
-  // TODO: Add native call
   return Promise.all(promiseList).then(function (results) {
     return {
-      wifiResult: resultObject.wifiResult || results[0] || null
-      //nativeResult: results[1] || null
+      wifiResult: resultObject.wifiResult || results[0] || null,
+      nativeResult: null // results[1] || null
     };
   });
 };
@@ -616,7 +648,9 @@ thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
 });
 
 var emitNetworkChanged = function (networkChangedValue) {
-  module.exports.emitter.emit('networkChanged', networkChangedValue);
+  if (thaliMobileStates.started) {
+    module.exports.emitter.emit('networkChanged', networkChangedValue);
+  }
 };
 
 /**

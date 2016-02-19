@@ -349,45 +349,6 @@ if (jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
-test('network changes emitted correctly', function (t) {
-  var networkOnHandler = function (networkChangedValue) {
-    t.equals(networkChangedValue.wifi, 'on', 'wifi should be on');
-    wifiInfrastructure.removeListener('networkChangedWifi', networkOnHandler);
-    t.end();
-  };
-
-  var networkOffHandler = function (networkChangedValue) {
-    t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
-    wifiInfrastructure.removeListener('networkChangedWifi', networkOffHandler);
-    wifiInfrastructure.on('networkChangedWifi', networkOnHandler);
-    testUtils.toggleWifi(true);
-  };
-
-  wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
-  testUtils.toggleWifi(false);
-});
-
-test('network changes not emitted in stopped state', function (t) {
-  wifiInfrastructure.stop()
-  .then(function () {
-    var networkChangedHandler = function () {
-      t.fail('network change should not be emitted');
-      wifiInfrastructure.removeListener('networkChangedWifi', networkChangedHandler);
-      t.end();
-    };
-    wifiInfrastructure.on('networkChangedWifi', networkChangedHandler);
-    testUtils.toggleWifi(false);
-    setImmediate(function () {
-      t.ok(true, 'event was not emitted');
-      wifiInfrastructure.removeListener('networkChangedWifi', networkChangedHandler);
-      testUtils.toggleWifi(true)
-      .then(function () {
-        t.end();
-      });
-    });
-  });
-});
-
 var tryStartingFunctionWhileWifiOff = function (t, functionName) {
   wifiInfrastructure.stop()
   .then(function () {
@@ -405,26 +366,23 @@ var tryStartingFunctionWhileWifiOff = function (t, functionName) {
   })
   .catch(function (error) {
     t.equals(error.message, 'Radio Turned Off', 'specific error expected');
-  })
-  .then(function () {
-    wifiInfrastructure.once('networkChangedWifi', function (networkChangedValue) {
-      t.equals(networkChangedValue.wifi, 'on', 'wifi should be on');
-      t.end();
-    });
     testUtils.toggleWifi(true);
+    t.end();
   });
 };
 
-test('#startListeningForAdvertisements returns error if wifi is off and event emitted when wifi back on', function (t) {
+test('#startListeningForAdvertisements returns error if wifi is off', function (t) {
   tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements');
 });
 
-test('#startUpdateAdvertisingAndListening returns error if wifi is off and event emitted when wifi back on', function (t) {
+test('#startUpdateAdvertisingAndListening returns error if wifi is off', function (t) {
   tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening');
 });
 
-test('after wifi is re-enabled discovery is activated and peers become available', function (t) {
-  wifiInfrastructure.once('networkChangedWifi', function (networkChangedValue) {
+test('when wifi is enabled discovery is activated and peers become available',
+function (t) {
+  ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
+  function (networkChangedValue) {
     t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
     var peerIdentifier = 'urn:uuid:' + uuid.v4();
     var testServer = createTestServer(peerIdentifier);
