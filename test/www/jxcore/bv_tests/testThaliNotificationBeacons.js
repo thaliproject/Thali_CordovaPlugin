@@ -1,16 +1,10 @@
 'use strict';
 
 var tape = require('../lib/thali-tape');
-var NotificationBeacons =
+var notificationBeacons =
   require('thali/NextGeneration/thaliNotificationBeacons');
 var crypto = require('crypto');
-var Long = require('long');
-
-// Constants
-var SECP256K1 = 'secp256k1';
-var ONE_DAY = 86400000;
-
-var NotificationBeacons;
+var long = require('long');
 
 var test = tape({
   setup: function (t) {
@@ -21,80 +15,62 @@ var test = tape({
   }
 });
 
-test('#generatePreambleAndBeacons null ECDH for local device', function (t) {
-  var publicKeys = null;
-  var localDevice = crypto.createECDH(SECP256K1);
+test('#generatePreambleAndBeacons bad args', function (t) {
+  var publicKeys = [];
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   localDevice.generateKeys();
-  var expiration = Date.now() + 9000;
+  var expiration = 9000;
 
   t.throws(function () {
-    NotificationBeacons.generatePreambleAndBeacons(
-      publicKeys,
+    notificationBeacons.generatePreambleAndBeacons(
+      null,
       localDevice,
       expiration
     );
   }, 'publicKeysToNotify cannot be null');
 
-  t.end();
-});
-
-test('#generatePreambleAndBeacons null ECDH for local device', function (t) {
-  var publicKeys = [];
-  var localDevice = null;
-  var expiration = Date.now() + 9000;
-
   t.throws(function () {
-    NotificationBeacons.generatePreambleAndBeacons(
+    notificationBeacons.generatePreambleAndBeacons(
       publicKeys,
-      localDevice,
+      null,
       expiration
     );
-  }, 'ecdhForLocalDevice cannot be null');
-
-  t.end();
-});
-
-test('#generatePreambleAndBeacons expiration out of range lower', function (t) {
-  var publicKeys = [];
-  var localDevice = crypto.createECDH(SECP256K1);
-  localDevice.generateKeys();
-  var expiration = Date.now() - 1;
+  }, 'ecdh for local device cannot be null');
 
   t.throws(function () {
-    NotificationBeacons.generatePreambleAndBeacons(
-      publicKeys,
+    notificationBeacons.generatePreambleAndBeacons(
+      null,
       localDevice,
-      expiration
+      -1
     );
-  }, 'secondsUntilExpiration out of range.');
-
-  t.end();
-});
-
-test('#generatePreambleAndBeacons expiration out of range upper', function (t) {
-  var publicKeys = [];
-  var localDevice = crypto.createECDH(SECP256K1);
-  localDevice.generateKeys();
-  var expiration = ONE_DAY + 1000;
+  }, 'milliseconds cannot be less than 0');
 
   t.throws(function () {
-    NotificationBeacons.generatePreambleAndBeacons(
-      publicKeys,
+    notificationBeacons.generatePreambleAndBeacons(
+      null,
       localDevice,
-      expiration
+      0
     );
-  }, 'secondsUntilExpiration out of range.');
+  }, 'milliseconds cannot be  0');
+
+  t.throws(function () {
+    notificationBeacons.generatePreambleAndBeacons(
+      null,
+      localDevice,
+      notificationBeacons.ONE_DAY + 1
+    );
+  }, 'milliseconds cannot be greater than one_day');
 
   t.end();
 });
 
 test('#generatePreambleAndBeacons empty keys to notify', function (t) {
   var publicKeys = [];
-  var localDevice = crypto.createECDH(SECP256K1);
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   localDevice.generateKeys();
-  var expiration = Date.now() + 9000;
+  var expiration = 9000;
 
-  var results = NotificationBeacons.generatePreambleAndBeacons(
+  var results = notificationBeacons.generatePreambleAndBeacons(
     publicKeys,
     localDevice,
     expiration
@@ -106,17 +82,18 @@ test('#generatePreambleAndBeacons empty keys to notify', function (t) {
 
 test('#generatePreambleAndBeacons multiple keys to notify', function (t) {
   var publicKeys = [];
-  var localDevice = crypto.createECDH(SECP256K1);
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   localDevice.generateKeys();
-  var expiration = Date.now() + 9000;
+  var expiration = 9000;
 
-  var device1 = crypto.createECDH(SECP256K1).generateKeys();
-  var device2 = crypto.createECDH(SECP256K1).generateKeys();
-  var device3 = crypto.createECDH(SECP256K1).generateKeys();
+  var device1 = crypto.createECDH(notificationBeacons.SECP256K1).generateKeys();
+  var device2 = crypto.createECDH(notificationBeacons.SECP256K1).generateKeys();
+  var device3 = crypto.createECDH(notificationBeacons.SECP256K1).generateKeys();
 
   publicKeys.push(device1, device2, device3);
 
-  var results = NotificationBeacons.generatePreambleAndBeacons(
+  var oldNow = Date.now();
+  var results = notificationBeacons.generatePreambleAndBeacons(
     publicKeys,
     localDevice,
     expiration
@@ -127,9 +104,14 @@ test('#generatePreambleAndBeacons multiple keys to notify', function (t) {
 
   t.equal(pubKe.length, 65);
   t.equal(expirationBuffer.length, 8);
-  t.equal(Long.fromBits(expirationBuffer.readInt32BE(4),
-                        expirationBuffer.readInt32BE(0)).toNumber(),
-                        expiration);
+  var expirationDate =
+    long.fromBits(expirationBuffer.readInt32BE(4),
+                  expirationBuffer.readInt32BE(0))
+      .toNumber();
+  var outputExpiration = expirationDate - oldNow;
+  var errorRange = 250 + 100; // 250 is the maximum fuzz and 100 just incase
+  t.ok(outputExpiration <= expiration + errorRange &&
+       outputExpiration >= expiration - errorRange);
   t.equal(results.length, 65 + 8 + 48 + 48 + 48);
 
   t.end();
@@ -137,7 +119,7 @@ test('#generatePreambleAndBeacons multiple keys to notify', function (t) {
 
 test('#parseBeacons invalid ECDH public key in beaconStreamWithPreAmble',
   function (t) {
-    var localDevice = crypto.createECDH(SECP256K1);
+    var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
     localDevice.generateKeys();
 
     var beaconStreamWithPreAmble = new Buffer(62);
@@ -147,7 +129,7 @@ test('#parseBeacons invalid ECDH public key in beaconStreamWithPreAmble',
     };
 
     t.throws(function () {
-      NotificationBeacons.parseBeacons(
+      notificationBeacons.parseBeacons(
         beaconStreamWithPreAmble,
         localDevice,
         addressBookCallback
@@ -159,7 +141,7 @@ test('#parseBeacons invalid ECDH public key in beaconStreamWithPreAmble',
 
 test('#parseBeacons invalid expiration in beaconStreamWithPreAmble',
   function (t) {
-    var localDevice = crypto.createECDH(SECP256K1);
+    var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
     localDevice.generateKeys();
 
     var beaconStreamWithPreAmble = new Buffer(70);
@@ -169,7 +151,7 @@ test('#parseBeacons invalid expiration in beaconStreamWithPreAmble',
     };
 
     t.throws(function () {
-      NotificationBeacons.parseBeacons(
+      notificationBeacons.parseBeacons(
         beaconStreamWithPreAmble,
         localDevice,
         addressBookCallback
@@ -177,14 +159,14 @@ test('#parseBeacons invalid expiration in beaconStreamWithPreAmble',
     }, 'Preamble expiration must be a 64 bit integer');
 
     t.end();
-});
+  });
 
 test('#parseBeacons expiration out of range lower', function (t) {
-  var localDevice = crypto.createECDH(SECP256K1);
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   localDevice.generateKeys();
 
-  var pubKe = crypto.createECDH(SECP256K1).generateKeys();
-  var expiration = Long.fromNumber(Date.now() - 1);
+  var pubKe = crypto.createECDH(notificationBeacons.SECP256K1).generateKeys();
+  var expiration = long.fromNumber(Date.now() - 1);
   var expirationBuffer = new Buffer(8);
   expirationBuffer.writeInt32BE(expiration.high, 0);
   expirationBuffer.writeInt32BE(expiration.low, 4);
@@ -196,7 +178,7 @@ test('#parseBeacons expiration out of range lower', function (t) {
   };
 
   t.throws(function () {
-    NotificationBeacons.parseBeacons(
+    notificationBeacons.parseBeacons(
       beaconStreamWithPreAmble,
       localDevice,
       addressBookCallback
@@ -207,11 +189,12 @@ test('#parseBeacons expiration out of range lower', function (t) {
 });
 
 test('#parseBeacons expiration out of range lower', function (t) {
-  var localDevice = crypto.createECDH(SECP256K1);
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   localDevice.generateKeys();
 
-  var pubKe = crypto.createECDH(SECP256K1).generateKeys();
-  var expiration = Long.fromNumber(Date.now() + ONE_DAY + 1000);
+  var pubKe = crypto.createECDH(notificationBeacons.SECP256K1).generateKeys();
+  var expiration = long.fromNumber(Date.now() + notificationBeacons.ONE_DAY +
+    1000);
   var expirationBuffer = new Buffer(8);
   expirationBuffer.writeInt32BE(expiration.high, 0);
   expirationBuffer.writeInt32BE(expiration.low, 4);
@@ -223,7 +206,7 @@ test('#parseBeacons expiration out of range lower', function (t) {
   };
 
   t.throws(function () {
-    NotificationBeacons.parseBeacons(
+    notificationBeacons.parseBeacons(
       beaconStreamWithPreAmble,
       localDevice,
       addressBookCallback
@@ -235,11 +218,11 @@ test('#parseBeacons expiration out of range lower', function (t) {
 
 test('#parseBeacons no beacons returns null', function (t) {
   var publicKeys = [];
-  var localDevice = crypto.createECDH(SECP256K1);
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   localDevice.generateKeys();
-  var expiration = Date.now() + 9000;
+  var expiration = 9000;
 
-  var beaconStreamWithPreAmble = NotificationBeacons.generatePreambleAndBeacons(
+  var beaconStreamWithPreAmble = notificationBeacons.generatePreambleAndBeacons(
     publicKeys,
     localDevice,
     expiration
@@ -250,7 +233,7 @@ test('#parseBeacons no beacons returns null', function (t) {
     return null;
   };
 
-  var results = NotificationBeacons.parseBeacons(
+  var results = notificationBeacons.parseBeacons(
     beaconStreamWithPreAmble,
     localDevice,
     addressBookCallback
@@ -263,7 +246,7 @@ test('#parseBeacons no beacons returns null', function (t) {
 test('#parseBeacons invalid size for encryptedBeaconKeyId in ' +
       ' beaconStreamWithPreAmble',
   function (t) {
-    var localDevice = crypto.createECDH(SECP256K1);
+    var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
     localDevice.generateKeys();
 
     var beaconStreamWithPreAmble = new Buffer(104);
@@ -273,7 +256,7 @@ test('#parseBeacons invalid size for encryptedBeaconKeyId in ' +
     };
 
     t.throws(function () {
-      NotificationBeacons.parseBeacons(
+      notificationBeacons.parseBeacons(
         beaconStreamWithPreAmble,
         localDevice,
         addressBookCallback
@@ -285,20 +268,20 @@ test('#parseBeacons invalid size for encryptedBeaconKeyId in ' +
 
 test('#parseBeacons addressBookCallback fails decrypt', function (t) {
   var publicKeys = [];
-  var localDevice = crypto.createECDH(SECP256K1);
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   localDevice.generateKeys();
-  var expiration = Date.now() + 9000;
+  var expiration = 9000;
 
-  var device1 = crypto.createECDH(SECP256K1);
+  var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
   var device1Key = device1.generateKeys();
-  var device2 = crypto.createECDH(SECP256K1);
+  var device2 = crypto.createECDH(notificationBeacons.SECP256K1);
   var device2Key = device2.generateKeys();
-  var device3 = crypto.createECDH(SECP256K1);
+  var device3 = crypto.createECDH(notificationBeacons.SECP256K1);
   var device3Key = device3.generateKeys();
 
   publicKeys.push(device1Key, device2Key, device3Key);
 
-  var beaconStreamWithPreAmble = NotificationBeacons.generatePreambleAndBeacons(
+  var beaconStreamWithPreAmble = notificationBeacons.generatePreambleAndBeacons(
     publicKeys,
     localDevice,
     expiration
@@ -308,9 +291,9 @@ test('#parseBeacons addressBookCallback fails decrypt', function (t) {
     return null;
   };
 
-  var badDevice = crypto.createECDH(SECP256K1);
+  var badDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   badDevice.generateKeys();
-  var results = NotificationBeacons.parseBeacons(
+  var results = notificationBeacons.parseBeacons(
     beaconStreamWithPreAmble,
     badDevice,
     addressBookCallback
@@ -322,29 +305,29 @@ test('#parseBeacons addressBookCallback fails decrypt', function (t) {
 
 test('#parseBeacons addressBookCallback returns no matches', function (t) {
   var publicKeys = [];
-  var localDevice = crypto.createECDH(SECP256K1);
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   localDevice.generateKeys();
-  var expiration = Date.now() + 9000;
+  var expiration = 9000;
 
-  var device1 = crypto.createECDH(SECP256K1);
+  var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
   var device1Key = device1.generateKeys();
-  var device2 = crypto.createECDH(SECP256K1);
+  var device2 = crypto.createECDH(notificationBeacons.SECP256K1);
   var device2Key = device2.generateKeys();
-  var device3 = crypto.createECDH(SECP256K1);
+  var device3 = crypto.createECDH(notificationBeacons.SECP256K1);
   var device3Key = device3.generateKeys();
 
   publicKeys.push(device1Key, device2Key, device3Key);
 
-  var beaconStreamWithPreAmble = NotificationBeacons.generatePreambleAndBeacons(
+  var beaconStreamWithPreAmble = notificationBeacons.generatePreambleAndBeacons(
     publicKeys,
     localDevice,
     expiration
   );
 
   var called = 0;
-  var newECDH = crypto.createECDH(SECP256K1);
+  var newECDH = crypto.createECDH(notificationBeacons.SECP256K1);
   var newECDHKey = newECDH.generateKeys();
-  var newECDHKeyHash = NotificationBeacons.createPublicKeyHash(newECDHKey);
+  var newECDHKeyHash = notificationBeacons.createPublicKeyHash(newECDHKey);
   var addressBookCallback = function (unencryptedKeyId) {
     called++;
     if (unencryptedKeyId.compare(newECDHKeyHash) === 0) {
@@ -353,7 +336,7 @@ test('#parseBeacons addressBookCallback returns no matches', function (t) {
     return null;
   };
 
-  var results = NotificationBeacons.parseBeacons(
+  var results = notificationBeacons.parseBeacons(
     beaconStreamWithPreAmble,
     device3,
     addressBookCallback
@@ -366,21 +349,22 @@ test('#parseBeacons addressBookCallback returns no matches', function (t) {
 
 test('#parseBeacons addressBookCallback returns public key', function (t) {
   var publicKeys = [];
-  var localDevice = crypto.createECDH(SECP256K1);
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   var localDeviceKey = localDevice.generateKeys();
-  var localDeviceKeyHash = NotificationBeacons.createPublicKeyHash(localDeviceKey);
-  var expiration = Date.now() + 9000;
+  var localDeviceKeyHash =
+    notificationBeacons.createPublicKeyHash(localDeviceKey);
+  var expiration = 9000;
 
-  var device1 = crypto.createECDH(SECP256K1);
+  var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
   var device1Key = device1.generateKeys();
-  var device2 = crypto.createECDH(SECP256K1);
+  var device2 = crypto.createECDH(notificationBeacons.SECP256K1);
   var device2Key = device2.generateKeys();
-  var device3 = crypto.createECDH(SECP256K1);
+  var device3 = crypto.createECDH(notificationBeacons.SECP256K1);
   var device3Key = device3.generateKeys();
 
   publicKeys.push(device1Key, device2Key, device3Key);
 
-  var beaconStreamWithPreAmble = NotificationBeacons.generatePreambleAndBeacons(
+  var beaconStreamWithPreAmble = notificationBeacons.generatePreambleAndBeacons(
     publicKeys,
     localDevice,
     expiration
@@ -396,7 +380,7 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
     return null;
   };
 
-  var results = NotificationBeacons.parseBeacons(
+  var results = notificationBeacons.parseBeacons(
     beaconStreamWithPreAmble,
     device2,
     addressBookCallback
@@ -408,17 +392,18 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
 });
 
 test('#parseBeacons with beacons both for and not for the user', function (t) {
-  var ecdhForDeviceThatGeneratedBeacons = crypto.createECDH(SECP256K1);
+  var ecdhForDeviceThatGeneratedBeacons =
+    crypto.createECDH(notificationBeacons.SECP256K1);
   var publicKeyForDeviceThatGeneratedBeacons =
     ecdhForDeviceThatGeneratedBeacons.generateKeys();
   var publicKeyHashForDeviceThatGeneratedBeacons =
-    NotificationBeacons.
+    notificationBeacons.
       createPublicKeyHash(publicKeyForDeviceThatGeneratedBeacons);
 
-  var ecdhForDummyDevice = crypto.createECDH(SECP256K1);
+  var ecdhForDummyDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   var publicKeyForDummyDevice = ecdhForDummyDevice.generateKeys();
 
-  var ecdhForTargetDevice = crypto.createECDH(SECP256K1);
+  var ecdhForTargetDevice = crypto.createECDH(notificationBeacons.SECP256K1);
   var publicKeyForTargetDevice = ecdhForTargetDevice.generateKeys();
 
   var publicKeys = [];
@@ -426,10 +411,10 @@ test('#parseBeacons with beacons both for and not for the user', function (t) {
   publicKeys.push(publicKeyForDummyDevice, publicKeyForTargetDevice);
 
   var beaconStreamWithPreAmble =
-    NotificationBeacons.generatePreambleAndBeacons(
+    notificationBeacons.generatePreambleAndBeacons(
       publicKeys,
       ecdhForDeviceThatGeneratedBeacons,
-      Date.now() + 10 * 60 * 60 * 1000);
+      10 * 60 * 60 * 1000);
 
   var addressBookCallback = function (unencryptedKeyId) {
     if (unencryptedKeyId.compare(publicKeyHashForDeviceThatGeneratedBeacons) ===
@@ -439,7 +424,7 @@ test('#parseBeacons with beacons both for and not for the user', function (t) {
     return null;
   };
 
-  var results = NotificationBeacons.parseBeacons(
+  var results = notificationBeacons.parseBeacons(
     beaconStreamWithPreAmble,
     ecdhForTargetDevice,
     addressBookCallback
