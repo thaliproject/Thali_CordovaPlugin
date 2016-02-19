@@ -761,8 +761,6 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
     function multiplexToNativeListener(connection, server) {
 
-      log.debug("muxtonative");
-
       var outgoing = net.createConnection(connection.listeningPort, function() {
         var mux = new multiplex(function onStream(stream, id) {
           var client = net.createConnection(self._routerPort, function() {
@@ -771,7 +769,6 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
           client.on("error", function(err) {
             log.warn(err);
-            log.warn("1");
             self.emit("routerPortConnectionFailed"); 
           });
 
@@ -789,7 +786,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
         });
 
         outgoing.pipe(mux).pipe(outgoing);
-        self.clientMuxes[outgoing.localPort] = mux;
+        self._clientMuxes[outgoing.localPort] = mux;
       });
 
       return outgoing;
@@ -812,7 +809,6 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
         outgoing.on("error", function(err) {
           log.warn(err);
           closeServer(server);
-          log.debug("failedConnection");
           self.emit("failedConnection", {
             "error":"Cannot Connect To Peer", 
             "peerIdentifier":peerIdentifier 

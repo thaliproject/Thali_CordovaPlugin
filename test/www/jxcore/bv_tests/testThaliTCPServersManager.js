@@ -226,8 +226,33 @@ test("calling createPeerListener (pleaseConnect == true) with unknown peer is er
   });
 });
 
-test("creating a peerListener (pleaseConnect == true) - no app server", function(t) {
+////////////////////////////////////////////////////////////////////////////
+// Now we get to the complex stuff
+////////////////////////////////////////////////////////////////////////////
 
+function waitForPeerAvailabilityChanged(t, serversManager, then) {
+  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+    peers.forEach(function(peer) {
+      if (peer.peerAvailable) {
+        serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
+        .then(function(peerPort) {
+          if (then) {
+            then(peerPort);
+          }
+        })
+        .catch(function(err) {
+          t.fail("should not get error");
+          console.log(err.stack);
+          serversManager.stop(); 
+        });
+      }
+    });
+  });
+}
+
+test("creating a peerListener (pleaseConnect == true) - no native server", function(t) {
+
+  var nativePort = 4040;
   var applicationPort = 4242;
 
   // We expect 'failedConnection' since there's no app listening
@@ -238,19 +263,8 @@ test("creating a peerListener (pleaseConnect == true) - no app server", function
     t.end();
   });
 
-  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
-    peers.forEach(function(peer) {
-      if (peer.peerAvailable) {
-        serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
-        .then(function(peerPort) {
-        })
-        .catch(function(err) {
-          t.fail("should not get error");
-          console.log(err.stack);
-          serversManager.stop(); 
-        });
-      }
-    });
+  waitForPeerAvailabilityChanged(t, serversManager, function(peerPort) {
+    t.notEqual(peerPort, nativePort, "peerPort should not be nativePort");
   });
 
   serversManager.start()
@@ -261,7 +275,7 @@ test("creating a peerListener (pleaseConnect == true) - no app server", function
   });
 
   Mobile("connect").nextNative(function(peerIdentifier, cb) {
-    cb(null, {listeningPort:4242, clientPort:0, serverPort:0});
+    cb(null, {listeningPort:nativePort, clientPort:0, serverPort:0});
   });
 
   Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
@@ -280,6 +294,7 @@ test("creating a peerListener (pleaseConnect == true) - no app server", function
 
 test("creating a peerListener (pleaseConnect == false) - no app server", function(t) {
 
+  var nativePort = 4040;
   var applicationPort = 4242;
   var firstConnection = false;
 
@@ -292,23 +307,10 @@ test("creating a peerListener (pleaseConnect == false) - no app server", functio
     t.end();
   });
 
-  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
-    peers.forEach(function(peer) {
-      if (peer.peerAvailable) {
-        serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
-        .then(function(peerPort) {
-          // To force the error we need to make the initial connection
-          var client = net.createConnection(peerPort, function() {
-          });
-          firstConnection = true;
-        })
-        .catch(function(err) {
-          t.fail("should not get error");
-          console.log(err.stack);
-          serversManager.stop(); 
-        });
-      }
-    });
+  waitForPeerAvailabilityChanged(t, serversManager, function(peerPort) {
+    t.notEqual(peerPort, nativePort, "peerPort should not be nativePort");
+    var client = net.createConnection(peerPort);
+    firstConnection = true;
   });
 
   serversManager.start()
@@ -319,7 +321,7 @@ test("creating a peerListener (pleaseConnect == false) - no app server", functio
   });
 
   Mobile("connect").nextNative(function(peerIdentifier, cb) {
-    cb(null, {listeningPort:4242, clientPort:0, serverPort:0});
+    cb(null, {listeningPort:nativePort, clientPort:0, serverPort:0});
   });
 
   Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
@@ -330,6 +332,126 @@ test("creating a peerListener (pleaseConnect == false) - no app server", functio
       Mobile("peerAvailabilityChanged").callRegistered([{ 
         peerIdentifier : "peer1", 
         pleaseConnect : false, 
+        peerAvailable: true
+      }]);
+    });
+  });
+});
+
+test("creating a peerListener (pleaseConnect == true) - with native server", function(t) {
+
+  var nativePort = 4040;
+  var applicationPort = 4242;
+
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+
+  var nativeServer = net.createServer(function(socket) {
+    t.ok(true, "Should get spontaneous connection");
+    serversManager.stop();
+    nativeServer.close();
+    socket.end();
+    t.end();
+  });
+  nativeServer.listen(nativePort, function(err) {
+    if (err) {
+      t.fail("nativeServer should not fail");
+      t.end();
+    }
+  });
+
+  // We expect 'failedConnection' since there's no app listening
+  serversManager.on("failedConnection", function(err) {
+    t.ok(firstConnection, "should not get event until connection is made");
+    t.equal(err.error, "Cannot Connect To Peer", "reason should be as expected");
+    serversManager.stop();
+    t.end();
+  });
+
+  waitForPeerAvailabilityChanged(t, serversManager, function(peerPort) {
+    t.notEqual(peerPort, nativePort, "peerPort != nativePort");
+  });
+ 
+  serversManager.start()
+  .catch(function(err) {
+    t.fail("should not get error");
+    console.log(err.stack());
+    serversManager.stop();
+  });
+
+  Mobile("connect").nextNative(function(peerIdentifier, cb) {
+    cb(null, {listeningPort:nativePort, clientPort:0, serverPort:0});
+  });
+
+  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
+  function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call startListeningForAdvertisements without error');
+      Mobile("peerAvailabilityChanged").callRegistered([{ 
+        peerIdentifier : "peer1", 
+        pleaseConnect : true, 
+        peerAvailable: true
+      }]);
+    });
+  });
+});
+
+test("creating a peerListener (pleaseConnect == false) - with native server", function(t) {
+
+  var nativePort = 4040;
+  var applicationPort = 4242;
+  var firstConnection = false;
+
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+
+  var nativeServer = net.createServer(function(socket) {
+    t.ok(firstConnection, "Should not get unexpected connection");
+    t.ok(true, "Should get connection");
+    serversManager.stop();
+    nativeServer.close();
+    socket.end();
+    t.end();
+  });
+  nativeServer.listen(nativePort, function(err) {
+    if (err) {
+      t.fail("nativeServer should not fail");
+      t.end();
+    }
+  });
+
+  // We expect 'failedConnection' since there's no app listening
+  serversManager.on("failedConnection", function(err) {
+    t.ok(firstConnection, "should not get event until connection is made");
+    t.equal(err.error, "Cannot Connect To Peer", "reason should be as expected");
+    serversManager.stop();
+    t.end();
+  });
+
+  waitForPeerAvailabilityChanged(t, serversManager, function(peerPort) {
+    t.notEqual(peerPort, nativePort, "peerPort != nativePort");
+    var client = net.createConnection(peerPort);
+    firstConnection = true;
+  });
+
+  serversManager.start()
+  .catch(function(err) {
+    t.fail("should not get error");
+    console.log(err.stack());
+    serversManager.stop();
+  });
+
+  Mobile("connect").nextNative(function(peerIdentifier, cb) {
+    cb(null, {listeningPort:nativePort, clientPort:0, serverPort:0});
+  });
+
+  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
+  function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call startListeningForAdvertisements without error');
+      Mobile("peerAvailabilityChanged").callRegistered([{ 
+        peerIdentifier : "peer1", 
+        pleaseConnect : true, 
         peerAvailable: true
       }]);
     });
