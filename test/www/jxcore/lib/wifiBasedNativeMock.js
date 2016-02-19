@@ -658,8 +658,14 @@ function toggleWiFi(platform, thaliWifiInfrastructure) {
         return;
       }
       currentNetworkStatus.wifi = newWifiStatus;
+      // Record the status on this event loop to make sure
+      // the right values are received.
+      var statusSnapshot = getCurrentNetworkStatus();
       setImmediate(function () {
-        networkChangedCallback(getCurrentNetworkStatus());
+        // Inform the listener asynchronously, because this
+        // is how the callback would get called on iOS and
+        // Android.
+        networkChangedCallback(statusSnapshot);
       });
     }
     setImmediate(callback);

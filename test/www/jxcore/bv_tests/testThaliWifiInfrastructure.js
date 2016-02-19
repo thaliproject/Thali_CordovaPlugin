@@ -81,7 +81,13 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
   };
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerAvailableListener);
   testServer.start(function () {
-    wifiInfrastructure.startListeningForAdvertisements();
+    wifiInfrastructure.startListeningForAdvertisements()
+    .catch(function (error) {
+      t.fail('failed to start listening with error: ' + error);
+      testServer.stop(function () {
+        t.end();
+      });
+    });
   });
 });
 
@@ -349,7 +355,7 @@ if (jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
-var tryStartingFunctionWhileWifiOff = function (t, functionName) {
+var tryStartingFunctionWhileWifiOff = function (t, functionName, keyName) {
   wifiInfrastructure.stop()
   .then(function () {
     return testUtils.toggleWifi(false);
@@ -366,17 +372,22 @@ var tryStartingFunctionWhileWifiOff = function (t, functionName) {
   })
   .catch(function (error) {
     t.equals(error.message, 'Radio Turned Off', 'specific error expected');
+    wifiInfrastructure.once('discoveryAdvertisingStateUpdateWifiEvent',
+    function (discoveryAdvertisingStateUpdateValue) {
+      t.equals(discoveryAdvertisingStateUpdateValue[keyName], true,
+        keyName + ' should be true');
+      t.end();
+    });
     testUtils.toggleWifi(true);
-    t.end();
   });
 };
 
-test('#startListeningForAdvertisements returns error if wifi is off', function (t) {
-  tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements');
+test('#startListeningForAdvertisements returns error if wifi is off and fires event when on', function (t) {
+  tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements', 'discoveryActive');
 });
 
-test('#startUpdateAdvertisingAndListening returns error if wifi is off', function (t) {
-  tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening');
+test('#startUpdateAdvertisingAndListening returns error if wifi is off and fires event when on', function (t) {
+  tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening', 'advertisingActive');
 });
 
 test('when wifi is enabled discovery is activated and peers become available',

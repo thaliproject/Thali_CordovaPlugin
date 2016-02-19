@@ -265,6 +265,13 @@ ThaliWifiInfrastructure.prototype._rejectPerWifiState = function (reject) {
   return reject(new Error(errorMessage));
 };
 
+ThaliWifiInfrastructure.prototype._updateStatus = function () {
+  this.emit('discoveryAdvertisingStateUpdateWifiEvent', {
+    discoveryActive: this.states.listening.current,
+    advertisingActive: this.states.advertising.current
+  });
+};
+
 /**
  * This method MUST be called before any other method here other than
  * registering for events on the emitter. This method only registers the router
@@ -327,7 +334,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
     .then(function () {
       self.states = self._getInitialStates();
       ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
-                                                       self._networkChangedHandler);
+        self._networkChangedHandler);
       return resolve();
     })
     .catch(function (error) {
@@ -371,6 +378,7 @@ function () {
     if (self.states.networkState.wifi === 'on') {
       self._client.start(function () {
         self.states.listening.current = true;
+        self._updateStatus();
         return resolve();
       });
     } else {
@@ -413,6 +421,7 @@ function (skipPromiseQueue, changeTarget) {
     }
     self._client.stop(function () {
       self.states.listening.current = false;
+      self._updateStatus();
       return resolve();
     });
   };
@@ -544,6 +553,7 @@ function () {
           self.routerServer.removeListener('error', startErrorListener);
           self.routerServer.on('error', self.routerServerErrorListener);
           self.states.advertising.current = true;
+          self._updateStatus();
           return resolve();
         });
       };
@@ -594,6 +604,7 @@ function (skipPromiseQueue, changeTarget) {
                                          self.routerServerErrorListener);
         self.routerServer = null;
         self.states.advertising.current = false;
+        self._updateStatus();
         return resolve();
       });
     });
@@ -637,8 +648,6 @@ function (skipPromiseQueue, changeTarget) {
  */
 
 /**
- * [NOT IMPLEMENTED]
- *
  * For the definition of this event please see {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
  *

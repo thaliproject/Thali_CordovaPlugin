@@ -168,36 +168,38 @@ test('does not send duplicate availability changes', function (t) {
 test('calls correct starts when network changes', function (t) {
   var listeningSpy = null;
   var advertisingSpy = null;
-  testUtils.toggleRadios(false)
-  .then(function () {
-    return ThaliMobile.start(express.Router());
-  })
-  .then(function () {
-    return ThaliMobile.startListeningForAdvertisements();
-  })
-  .then(function (combinedResult) {
-    t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
-             'specific error expected');
-    return ThaliMobile.startListeningForAdvertisements();
-  })
-  .then(function (combinedResult) {
-    t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
-          'specific error expected');
-    listeningSpy = sinon.spy(ThaliMobile,
-      'startListeningForAdvertisements');
-    advertisingSpy = sinon.spy(ThaliMobile,
-      'startUpdateAdvertisingAndListening');
-    return testUtils.toggleRadios(true);
-  })
-  .then(function () {
-    t.equals(listeningSpy.callCount, 1,
-      'startListeningForAdvertisements should have been called');
-    t.equals(advertisingSpy.callCount, 1,
-      'startUpdateAdvertisingAndListening should have been called');
-    ThaliMobile.startListeningForAdvertisements.restore();
-    ThaliMobile.startUpdateAdvertisingAndListening.restore();
-    t.end();
+  ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
+  function (networkChangedValue) {
+    t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
+    ThaliMobile.start(express.Router())
+    .then(function () {
+      return ThaliMobile.startListeningForAdvertisements();
+    })
+    .then(function (combinedResult) {
+      t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
+              'specific error expected');
+      return ThaliMobile.startListeningForAdvertisements();
+    })
+    .then(function (combinedResult) {
+      t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
+            'specific error expected');
+      listeningSpy = sinon.spy(ThaliMobile,
+        'startListeningForAdvertisements');
+      advertisingSpy = sinon.spy(ThaliMobile,
+        'startUpdateAdvertisingAndListening');
+      return testUtils.toggleRadios(true);
+    })
+    .then(function () {
+      t.equals(listeningSpy.callCount, 1,
+        'startListeningForAdvertisements should have been called');
+      t.equals(advertisingSpy.callCount, 1,
+        'startUpdateAdvertisingAndListening should have been called');
+      ThaliMobile.startListeningForAdvertisements.restore();
+      ThaliMobile.startUpdateAdvertisingAndListening.restore();
+      t.end();
+    });
   });
+  testUtils.toggleRadios(false);
 });
 
 if (!tape.coordinated) {
@@ -261,7 +263,7 @@ test('a peer should be found after #startListeningForAdvertisements is called', 
     done();
   });
 });
-
+/*
 test('when network connection is lost a peer should be marked unavailable', function (t) {
   setupDiscoveryAndFindPeer(t, function (peer, done) {
     var availabilityChangedHandler = function (matchingPeer) {
@@ -270,14 +272,18 @@ test('when network connection is lost a peer should be marked unavailable', func
       }
       t.equals(matchingPeer.hostAddress, null, 'host address should be null');
       t.equals(matchingPeer.portNumber, null, 'port number should be null');
+      ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+        availabilityChangedHandler);
       testUtils.toggleWifi(true);
       setTimeout(function () {
         done();
       }, 500);
     };
-    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityChangedHandler);
+    ThaliMobile.emitter.on('peerAvailabilityChanged',
+      availabilityChangedHandler);
     setTimeout(function () {
       testUtils.toggleWifi(false);
     }, 500);
   });
 });
+*/
