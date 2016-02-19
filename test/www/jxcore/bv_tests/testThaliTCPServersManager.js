@@ -113,6 +113,9 @@ test("emits routerPortConnectionFailed", function(t) {
 
 test("native server connections all up", function(t) {
 
+  // Start the servers manager and then connect muxed sockets directly
+  // to it (would normally be done by the p2p layer)
+
   var clientSockets = 0;
   var applicationServer = net.createServer(function(client) {
     clientSockets += 1;
@@ -210,7 +213,8 @@ test("calling createPeerListener (pleaseConnect == true) with unknown peer is er
   .then(function(localPort) {
     serversManager.createPeerListener("peerId", true)
     .catch(function(err) {
-      // Should get an error here, we haven't yet discovered a peer
+      // Should get an error here, we haven't yet started browsing or discovered
+      // any peers
       t.ok(err, "should get error");
       serversManager.stop(); 
       t.end();
@@ -222,4 +226,49 @@ test("calling createPeerListener (pleaseConnect == true) with unknown peer is er
   });
 });
 
+test("creating a peerListener all up - no app server", function(t) {
 
+  var applicationPort = 4242;
+
+  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+    peers.forEach(function(peer) {
+      if (peer.peerAvailable) {
+        serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
+        .then(function(peerPort) {
+          //if (peer.pleaseConnect == true) {
+            var client = net.createConnection(peerPort, function() {
+              t.ok(true, "connection completed");
+              client.end();
+              serversManager.stop();
+              t.end();
+            });
+            client.on("error", function(err) {
+              t.fail("should not get error - " + err);
+              serversManager.stop();
+              t.end();
+            });
+          //}
+        })
+        .catch(function(err) {
+          t.fail("should not get error - " + err);
+          serversManager.stop(); 
+        });
+      }
+    });
+  });
+
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+  serversManager.start()
+  .catch(function(err) {
+    t.fail("should not get error - " + err);
+    serversManager.stop();
+  });
+
+  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
+  function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    });
+  });
+});

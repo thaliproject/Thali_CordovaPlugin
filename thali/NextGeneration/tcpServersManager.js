@@ -740,6 +740,13 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
   // have been set up. Subsequent connections create new streams on that
   // link.
 
+  // In general: 
+  // - an incoming socket is one _from_ the application
+  // - an outgoing socket is one to the native listener on the p2p side
+  // - a client socket is one _to_ the application, 1 per remote created stream
+
+  log.debug("createPeerListener");
+
   if (this._state != 'started') {
     throw new Error("Call Start!");
   }
@@ -805,51 +812,90 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
       var firstConnection = true;
 
-      function handleForwardConnection(connection) {
-        // We expect to connect directly to the native listener
-        // Create the 'master' socket over which we'll mux subsequent 
-        // connections
-        var outgoing = net.createConnection(connection.listeningPort, function() {
+      function multiplexToNativeListener(connection) {
+
+        return net.createConnection(connection.listeningPort, function() {
           var mux = new multiplex(function onStream(stream, id) {
-            outgoing.pipe(mux).pipe(outgoing);
+            var client = net.createConnection(self._routerPort, function() {
+              client.pipe(stream).pipe(client);
+            });
+
+            client.on("error", function(err) {
+              log.warn(err);
+              self.emit("routerPortConnectionFailed"); 
+            });
+
+            client.on("close", function() {
+              stream.end();
+            });
           });
+
+          mux.on("error", function(err) {
+            log.warn(err);
+          });
+
+          mux.on("close", function() {
+            server.close();
+          });
+
+          outgoing.pipe(mux).pipe(outgoing);
           self.clientMuxes[outgoing.localPort] = mux;
         });
+      }
+
+      function handleForwardConnection(connection, server) {
+
+        log.debug("forward connection");
+
+        // Connect to the native listener and mux the connection
+        // When the other side creates a stream, send it to the application
+        var outgoing = multiplexToNativeListener();
 
         outgoing.on("error", function(err) {
           log.warn(err);
-          server.stop();
+          server.close();
           self.emit("failedConnection", {
             "error":new Error("Cannot Connect To Peer"), 
             "peerIdentifier":peerIdentifier 
           });
         });
+
+        outgoing.on("timeout", function() {
+          outgoing.destroy();
+        });
       }
 
-      function handleReverseConnection(connection) {
+      function handleReverseConnection(connection, server) {
+
         // We expect to be connected to from the p2p side which
         // implies by the time we get here there is already
         // client socket connected to the server set up by
         // createNativeListener
 
+        log.debug("reverse connection");
+
         if (connection.remotePort != self._server.address().port) {
           // This isn't the socket you're looking for !!
           incoming.destroy();
           self.emit("failedConnection", {
-            "error":new Error("Mismatched Server Port"),
+            "error":new Error("Mismatched serverPort"),
             "peerIdentifier":peerIdentifier
           });
+          firstConnection = true;
           return;
         }
 
         // Find the mux createNativeListener created
+        log.debug("looking up mux for port: ", connection.remotePort);
         var mux = self.clientMuxes[connection.remotePort];
         if (!mux) {
+          log.debug("no mux found");
           connection.destroy();
           self.emit("failedConnection", {
             "error":new Error("Incoming connection died"),
             "peerIdentifier":peerIdentifier
           });
+          firstConnection = true;
           return;
         }
 
@@ -862,24 +908,26 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
       if (!pleaseConnect && firstConnection) {
 
         firstConnection = false;
+        log.debug("first connection");
 
         // Establish the p2p link..
-        Mobile("connect").callNative(peerIdentifer, function(err, connection) {
+        Mobile("connect").callNative(peerIdentifier, function(err, connection) {
+
           if (err) {
             log.warn(err);
             incoming.end();
             self.emit("failedConnection", { "error":err, "peerIdentifier":peerIdentifier });
             return;
           }
+
+          log.debug("connected", connection);
           if (connection.listenerPort != 0) {
-            handleForwardConnection(connection);
+            handleForwardConnection(connection, server);
           }
           else {
-            handleReverseConnection(connection);
+            handleReverseConnection(connection, server);
           }
         });
-      }
-      else {
       }
     }
 
@@ -888,19 +936,45 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
       return reject(null);
     }
 
+    log.debug("pleaseConnect=", pleaseConnect);
+
     if (pleaseConnect) {
+
+      // We're being asked to connect to by a lower sorted peer
       Mobile("connect").callNative(peerIdentifier, function(err, connection) {
+      
+        // This must be a forward connection (connection.listeningPort != 0), 
+        // anything else would be an error
+
         if (err) {
           log.warn(err);
-          console.log("reject");
           return reject(err);
         }
-        var outgoing = net.createConnection(connection.listeningPort, function() {
-          var mux = new multiplex(function onStream(stream, id) {
-            outgoing.pipe(mux).pipe(outgoing);
+
+        if (connection.listeningPort == 0) {
+          log.warn("was expecting a forward connection to be made");
+        }
+
+        log.debug("connected", connection);
+        log.debug("creating new connection");
+
+        // Create a connection to the native listener, mux it and 
+        // connect new streams to the application
+        var outgoing = multiplexToNativeListener();
+
+        outgoing.on("error", function(err) {
+          log.warn(err);
+          server.stop();
+          self.emit("failedConnection", {
+            "error":new Error("Cannot Connect To Peer"), 
+            "peerIdentifier":peerIdentifier 
           });
-          self.clientMuxes[outgoing.localPort] = mux;
         });
+
+        outgoing.on("timeout", function() {
+          outgoing.destroy();
+        });
+
         return resolve(server.address().port);
       });
     }
