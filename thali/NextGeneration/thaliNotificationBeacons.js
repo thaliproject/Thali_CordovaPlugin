@@ -22,7 +22,91 @@ http://code.runnable.com/VGaBmn68rzMa5p9K/aes-256-gcm-nodejs-encryption-for-node
 module.exports.GCM = 'aes128';
 
 /**
- * Creates a hash of a public key.
+ * We fuzz the expiration we output to obscure the exact clock time on the
+ * device. Currently we do this by generating a random value between 0 and
+ * 255 and adding to the expiration. We picked 255 because it was easy to
+ * get a single byte of cryptographically secure output and turn that into
+ * an unsigned int.
+ * @type {number}
+ * @constant
+ */
+module.exports.EXPIRATION_FUZZ_MAX_VALUE = 255;
+
+/**
+ * Size in bytes of an AES 128 key
+ * @type {number}
+ * @constant
+ */
+module.exports.AES_128_KEY_SIZE = 16;
+
+/**
+ * Size in bytes for a SHA256 HMAC
+ * @type {number}
+ * @constant
+ */
+module.exports.SHA256_HMAC_KEY_SIZE = 32;
+
+/**
+ * Size in bytes we use when we truncate SHA 256 Hashes
+ * @type {number}
+ * @constant
+ */
+module.exports.TRUNCATED_HASH_SIZE = 16;
+
+/**
+ * Size of a long integer in bytes
+ * @type {number}
+ * @constant
+ */
+module.exports.LONG_SIZE = 8;
+
+/**
+ * Size in bytes that a ECDH public key using our curve takes up when
+ * outputted in a beacon string.
+ * @type {number}
+ * @constant
+ */
+module.exports.PUBLIC_KEY_SIZE = 65;
+
+/**
+ * Size in bytes that our expiration value (an unsigned long) uses when
+ * outputted in a beacon string.
+ * @type {number}
+ * @constant
+ */
+module.exports.EXPIRATION_SIZE = 8;
+
+/**
+ * Size of the BeaconFlag and BeaconHmac in bytes, together they form a single
+ * beacon value in a beacon string.
+ *
+ * @type {number}
+ * @constant
+ */
+module.exports.BEACON_SIZE = 48;
+
+/**
+ * Size of the BeaconFlag in bytes in a beacon in a beacon string.
+ *
+ * @type {number}
+ * @constant
+ */
+module.exports.ENCRYPTED_KEY_ID_SIZE = 32;
+
+/**
+ * Size of the BeaconHmac in bytes when serialized in a beacon in a beacon
+ * string.
+ * @type {number}
+ * @constant
+ */
+module.exports.BEACON_HMAC_SIZE = 16;
+
+/**
+ * Creates a 16 byte hash of a public key.
+ *
+ * We choose 16 bytes as large enough to prevent accidentally collisions but
+ * small enough not to eat up excess space in a beacon.
+ *
  * @param {buffer} ecdhPublicKey The buffer representing the ECDH's public key.
  * @returns {buffer}
  */
@@ -45,8 +129,7 @@ module.exports.createPublicKeyHash = createPublicKeyHash;
  * local device's public and private keys
  * @param {number} millisecondsUntilExpiration - The number of milliseconds into
  * the future after which the beacons should expire. Note that this value will
- * be fuzzed by 0 to 250 MS to prevent getting an accurate fix on the device's
- * clock.
+ * be fuzzed as previously described.
  * @returns {?Buffer} - A buffer containing the serialized preamble and beacons
  * or null if there are no beacons to generate
  */
@@ -75,10 +158,12 @@ function generatePreambleAndBeacons (publicKeysToNotify,
 
   // Generate preamble
   var pubKe = ke.generateKeys();
+  // We fuzz the expiration by adding on a random number that fits in
+  // an unsigned 8 bit integer.
   var expiration = Date.now() + millisecondsUntilExpiration +
-    crypto.randomBytes(8).readUInt8(0);
+    crypto.randomBytes(1).readUInt8(0);
   var expirationLong = Long.fromNumber(expiration);
-  var expirationBuffer = new Buffer(8);
+  var expirationBuffer = new Buffer(module.exports.LONG_SIZE);
   expirationBuffer.writeInt32BE(expirationLong.high, 0);
   expirationBuffer.writeInt32BE(expirationLong.low, 4);
 
@@ -94,23 +179,20 @@ function generatePreambleAndBeacons (publicKeysToNotify,
 
     // HKxy = HKDF(SHA256, Sxy, Expiration, 32)
     var hkxy = HKDF(module.exports.SHA256, sxy, expirationBuffer)
-      .derive('', 32);
+      .derive('', module.exports.SHA256_HMAC_KEY_SIZE);
 
     // BeaconHmac = HMAC(SHA256, HKxy, Expiration).first(16)
     var beaconHmac = crypto.createHmac(module.exports.SHA256, hkxy)
       .update(expirationBuffer)
       .digest()
-      .slice(0, 16);
+      .slice(0, module.exports.TRUNCATED_HASH_SIZE);
 
     // Sey = ECDH(Ke.private(), PubKy)
     var sey = ke.computeSecret(pubKy);
 
-    // KeyingMaterial = HKDF(SHA256, Sey, Expiration, 16)
-    var keyingMaterial = HKDF(module.exports.SHA256, sey, expirationBuffer)
-      .derive('', 16);
-
-    // HKey = KeyingMaterial.slice(0, 16)
-    var hkey = keyingMaterial.slice(0, 16);
+    // hkey = HKDF(SHA256, Sey, Expiration, 16)
+    var hkey = HKDF(module.exports.SHA256, sey, expirationBuffer)
+      .derive('', module.exports.AES_128_KEY_SIZE);
 
     // beacons.append(AESEncrypt(GCM, HKey, 0, 128, UnencryptedKeyId) +
     // BeaconHmac)
@@ -166,19 +248,21 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
     return null;
   }
 
-  var bufferSize = 48, len = beaconStreamWithPreAmble.length;
+  var len = beaconStreamWithPreAmble.length;
 
   // Ensure that is an ECDH secp256k1 public key
-  var pubKe = beaconStreamWithPreAmble.slice(0, 65);
-  if (pubKe.length !== 65) {
+  var pubKe = beaconStreamWithPreAmble.slice(0, module.exports.PUBLIC_KEY_SIZE);
+  if (pubKe.length !== module.exports.PUBLIC_KEY_SIZE) {
     throw new Error(
       'Preamble public key must be from ECDH secp256k1'
     );
   }
 
   // Ensure that expiration is 64-bit integer
-  var expirationBuffer = beaconStreamWithPreAmble.slice(65, 65 + 8);
-  if (expirationBuffer.length !== 8) {
+  var expirationBuffer = beaconStreamWithPreAmble
+    .slice(module.exports.PUBLIC_KEY_SIZE,
+      module.exports.PUBLIC_KEY_SIZE + module.exports.EXPIRATION_SIZE);
+  if (expirationBuffer.length !== module.exports.EXPIRATION_SIZE) {
     throw new Error('Preamble expiration must be a 64 bit integer');
   }
 
@@ -191,23 +275,21 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
     throw new Error('Expiration out of range');
   }
 
-  for (var i = 73; i < len; i += bufferSize) {
+  // Sey = ECDH(Ky.private, PubKe)
+  var sey = ecdhForLocalDevice.computeSecret(pubKe);
+
+  // hkey = HKDF(SHA256, Sey, Expiration, 16)
+  var hkey = HKDF(module.exports.SHA256, sey, expirationBuffer)
+    .derive('', module.exports.AES_128_KEY_SIZE);
+
+  for (var i = module.exports.PUBLIC_KEY_SIZE + module.exports.EXPIRATION_SIZE;
+       i < len; i += module.exports.BEACON_SIZE) {
     // encryptedBeaconKeyId = beaconStream.read(48)
     var encryptedBeaconKeyId =
-      beaconStreamWithPreAmble.slice(i, i + bufferSize);
-    if (encryptedBeaconKeyId.length !== bufferSize) {
+      beaconStreamWithPreAmble.slice(i, i + module.exports.BEACON_SIZE);
+    if (encryptedBeaconKeyId.length !== module.exports.BEACON_SIZE) {
       throw new Error('Malformed encrypted beacon key ID');
     }
-
-    // Sey = ECDH(Ky.private, PubKe)
-    var sey = ecdhForLocalDevice.computeSecret(pubKe);
-
-    // KeyingMaterial = HKDF(SHA256, Sey, Expiration, 32)
-    var keyingMaterial = HKDF(module.exports.SHA256, sey, expirationBuffer)
-      .derive('', 16);
-
-    // HKey = KeyingMaterial.slice(0, 16)
-    var hkey = keyingMaterial.slice(0, 16);
 
     // UnencryptedKeyId = AESDecrypt(GCM, HKey, 0, 128,
     // encryptedBeaconKeyId.slice(0, 32))
@@ -216,10 +298,11 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
       var aes = crypto.createDecipher(module.exports.GCM, hkey);
       unencryptedKeyId =
         Buffer.concat(
-          [aes.update(encryptedBeaconKeyId.slice(0, 32)),
+          [aes.update(encryptedBeaconKeyId.slice(0,
+                                        module.exports.ENCRYPTED_KEY_ID_SIZE)),
             aes.final()]);
     } catch (e) {
-      // GCM mac check failed
+      // Decryption failed
       continue;
     }
     // PubKx = addressBook.get(UnencryptedKeyId)
@@ -238,25 +321,26 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
     }
 
     // BeaconHmac = encryptedBeaconKeyId.slice(32, 48)
-    var beaconHmac = encryptedBeaconKeyId.slice(32, 48);
+    var beaconHmac =
+      encryptedBeaconKeyId.slice(module.exports.ENCRYPTED_KEY_ID_SIZE,
+                                 module.exports.ENCRYPTED_KEY_ID_SIZE +
+                                  module.exports.BEACON_HMAC_SIZE);
 
     // Sxy = ECDH(Ky.private(), PubKx)
     var sxy = ecdhForLocalDevice.computeSecret(pubKx);
 
     // HKxy = HKDF(SHA256, Sxy, Expiration, 32)
     var hkxy = HKDF(module.exports.SHA256, sxy, expirationBuffer)
-      .derive('', 32);
+      .derive('', module.exports.SHA256_HMAC_KEY_SIZE);
 
     // BeaconHmac.equals(HMAC(SHA256, HKxy, Expiration).first(16)
     var otherBeaconHmac = crypto.createHmac('sha256', hkxy)
       .update(expirationBuffer)
       .digest()
-      .slice(0, 16);
+      .slice(0, module.exports.TRUNCATED_HASH_SIZE);
 
-    // Since JXcore does not support equals
     // if (beaconHmac.equals(otherBeaconHmac)) {
-    if (beaconHmac.toString('binary') ===
-        otherBeaconHmac.toString('binary')) {
+    if (beaconHmac.compare(otherBeaconHmac) === 0) {
       return unencryptedKeyId;
     }
   }

@@ -114,20 +114,24 @@ test('#generatePreambleAndBeacons multiple keys to notify', function (t) {
     expiration
   );
 
-  var pubKe = results.slice(0, 65);
-  var expirationBuffer = results.slice(65, 65 + 8);
+  var pubKe = results.slice(0, notificationBeacons.PUBLIC_KEY_SIZE);
+  var expirationBuffer = results.slice(notificationBeacons.PUBLIC_KEY_SIZE,
+    notificationBeacons.PUBLIC_KEY_SIZE + notificationBeacons.LONG_SIZE);
 
-  t.equal(pubKe.length, 65);
-  t.equal(expirationBuffer.length, 8);
+  t.equal(pubKe.length, notificationBeacons.PUBLIC_KEY_SIZE);
+  t.equal(expirationBuffer.length, notificationBeacons.LONG_SIZE);
   var expirationDate =
     long.fromBits(expirationBuffer.readInt32BE(4),
                   expirationBuffer.readInt32BE(0))
       .toNumber();
   var outputExpiration = expirationDate - oldNow;
-  var errorRange = 250 + 100; // 250 is the maximum fuzz and 100 just incase
+  // The 100 is just a buffer to deal with slow environments, I had to pick
+  // some random value.
+  var errorRange = notificationBeacons.EXPIRATION_FUZZ_MAX_VALUE + 100;
   t.ok(outputExpiration <= expiration + errorRange &&
        outputExpiration >= expiration - errorRange);
-  t.equal(results.length, 65 + 8 + 48 + 48 + 48);
+  t.equal(results.length, notificationBeacons.PUBLIC_KEY_SIZE +
+    notificationBeacons.LONG_SIZE + (notificationBeacons.BEACON_SIZE * 3));
 
   t.end();
 });
@@ -137,7 +141,8 @@ test('#parseBeacons invalid ECDH public key in beaconStreamWithPreAmble',
     var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
     localDevice.generateKeys();
 
-    var beaconStreamWithPreAmble = new Buffer(62);
+    var beaconStreamWithPreAmble =
+      new Buffer(notificationBeacons.PUBLIC_KEY_SIZE - 1);
 
     var addressBookCallback = function () {
       t.fail();
@@ -159,7 +164,9 @@ test('#parseBeacons invalid expiration in beaconStreamWithPreAmble',
     var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
     localDevice.generateKeys();
 
-    var beaconStreamWithPreAmble = new Buffer(70);
+    var beaconStreamWithPreAmble =
+      new Buffer(notificationBeacons.PUBLIC_KEY_SIZE +
+                 notificationBeacons.EXPIRATION_SIZE - 1);
 
     var addressBookCallback = function () {
       t.fail();
@@ -182,7 +189,7 @@ test('#parseBeacons expiration out of range lower', function (t) {
 
   var pubKe = crypto.createECDH(notificationBeacons.SECP256K1).generateKeys();
   var expiration = long.fromNumber(Date.now() - 1);
-  var expirationBuffer = new Buffer(8);
+  var expirationBuffer = new Buffer(notificationBeacons.EXPIRATION_SIZE);
   expirationBuffer.writeInt32BE(expiration.high, 0);
   expirationBuffer.writeInt32BE(expiration.low, 4);
   var beaconStreamWithPreAmble = Buffer.concat([pubKe, expirationBuffer]);
@@ -210,7 +217,7 @@ test('#parseBeacons expiration out of range lower', function (t) {
   var pubKe = crypto.createECDH(notificationBeacons.SECP256K1).generateKeys();
   var expiration = long.fromNumber(Date.now() + notificationBeacons.ONE_DAY +
     1000);
-  var expirationBuffer = new Buffer(8);
+  var expirationBuffer = new Buffer(notificationBeacons.LONG_SIZE);
   expirationBuffer.writeInt32BE(expiration.high, 0);
   expirationBuffer.writeInt32BE(expiration.low, 4);
   var beaconStreamWithPreAmble = Buffer.concat([pubKe, expirationBuffer]);
@@ -264,7 +271,10 @@ test('#parseBeacons invalid size for encryptedBeaconKeyId in ' +
     var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
     localDevice.generateKeys();
 
-    var beaconStreamWithPreAmble = new Buffer(104);
+    var beaconStreamWithPreAmble =
+      new Buffer(notificationBeacons.PUBLIC_KEY_SIZE +
+                 notificationBeacons.EXPIRATION_SIZE +
+                 notificationBeacons.BEACON_SIZE - 1);
 
     var addressBookCallback = function () {
       return null;
@@ -476,7 +486,7 @@ test('#parseBeacons with beacons both for and not for the user', function (t) {
     notificationBeacons.generatePreambleAndBeacons(
       publicKeys,
       localDevice,
-      10 * 60 * 60 * 1000);
+      10 * 60 * 60 * 1000); // 10 hours in the future, just a big value
 
   var success = 0;
   var localDeviceKeyHash =
