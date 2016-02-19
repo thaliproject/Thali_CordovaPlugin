@@ -284,16 +284,16 @@ module.exports.terminateConnection = function (incomingConnectionId) {
  * # WARNING: This method is intended for internal Thali testing only. DO NOT
  * USE!
  *
- * This method is only intended for iOS. It's job is to terminate all incoming
- * and outgoing multipeer connectivity framework browser, advertiser, MCSession
- * and stream connections immediately without using the normal stop and start
- * interfaces or TCP/IP level connections. The goal is to simulate what would
- * happen if we switched the phone to something like airplane mode. This
- * simulates what would happen if peers went out of range.
+ * This method terminates all incoming and outgoing connections including
+ * Bluetooth sockets and Multipeer Connectivity Framework MCSessions, without
+ * using the normal stop and start interfaces or TCP/IP level connections. The
+ * goal is to simulate what would happen if we switched the phone to something
+ * like airplane mode. This simulates what would happen if peers went out of
+ * range.
  *
- * This method MUST return "Not Supported" if called on Android. On Android we
- * can get this functionality by using JXCore's ability to disable the local
- * radios.
+ * This method does work on Android but note that on Android we can also use
+ * JXcore's ability to disable the local radios (something not available on
+ * iOS).
  *
  * | Error String | Description |
  * |--------------|-------------|

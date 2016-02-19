@@ -16,106 +16,104 @@ import java.net.Socket;
  * A thread for outgoing Bluetooth connections.
  */
 class OutgoingSocketThread extends SocketThreadBase {
-    // As a precaution we do a delayed notification (ConnectionStatusListener.onListeningForIncomingConnections)
-    // to make sure that ServerSocket.accept() is run.
-    private static final long LISTENING_FOR_CONNECTIONS_NOTIFICATION_DELAY_IN_MILLISECONDS = 300;
-    private ServerSocket mServerSocket = null;
-    private int mListeningOnPortNumber = ConnectionHelper.NO_PORT_NUMBER;
+  // As a precaution we do a delayed notification (ConnectionStatusListener.onListeningForIncomingConnections)
+  // to make sure that ServerSocket.accept() is run.
+  private static final long LISTENING_FOR_CONNECTIONS_NOTIFICATION_DELAY_IN_MILLISECONDS = 300;
+  private ServerSocket mServerSocket = null;
+  private int mListeningOnPortNumber = ConnectionHelper.NO_PORT_NUMBER;
 
-    /**
-     * Constructor.
-     * @param bluetoothSocket The Bluetooth socket.
-     * @param listener The listener.
-     * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
-     */
-    public OutgoingSocketThread(BluetoothSocket bluetoothSocket, ConnectionStatusListener listener)
-            throws IOException {
-        super(bluetoothSocket, listener);
-        TAG = OutgoingSocketThread.class.getName();
+  /**
+   * Constructor.
+   * @param bluetoothSocket The Bluetooth socket.
+   * @param listener The listener.
+   * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
+   */
+  public OutgoingSocketThread(BluetoothSocket bluetoothSocket, ConnectionStatusListener listener)
+    throws IOException {
+    super(bluetoothSocket, listener);
+    TAG = OutgoingSocketThread.class.getName();
+  }
+
+  public int getListeningOnPortNumber() {
+    return mListeningOnPortNumber;
+  }
+
+  /**
+   * From Thread.
+   */
+  @Override
+  public void run() {
+    Log.d(TAG, "Entering thread (ID: " + getId() + ")");
+
+    try {
+      mServerSocket = new ServerSocket(0);
+      Log.d(TAG, "Server socket local port: " + mServerSocket.getLocalPort());
+    } catch (IOException e) {
+      Log.e(TAG, "Failed to create a server socket instance: " + e.getMessage(), e);
+      mServerSocket = null;
+      mListener.onDisconnected(this, "Failed to create a server socket instance: " + e.getMessage());
     }
 
-    public int getListeningOnPortNumber() {
-        return mListeningOnPortNumber;
-    }
+    if (mServerSocket != null) {
+      InputStream tempInputStream = null;
+      OutputStream tempOutputStream = null;
+      boolean localStreamsCreatedSuccessfully = false;
 
-    /**
-     * From Thread.
-     */
-    @Override
-    public void run() {
-        Log.d(TAG, "Entering thread (ID: " + getId() + ")");
+      try {
+        Log.i(TAG, "Now accepting connections...");
 
-        try {
-            mServerSocket = new ServerSocket(0);
-            Log.d(TAG, "Server socket local port: " + mServerSocket.getLocalPort());
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to create a server socket instance: " + e.getMessage(), e);
-            mServerSocket = null;
-            mListener.onDisconnected(this, "Failed to create a server socket instance: " + e.getMessage());
+        if (mListener != null) {
+          final ConnectionStatusListener listener = mListener;
+          mListeningOnPortNumber = mServerSocket.getLocalPort();
+          final Handler handler = new Handler(jxcore.activity.getMainLooper());
+
+          handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+              listener.onListeningForIncomingConnections(mListeningOnPortNumber);
+            }
+          }, LISTENING_FOR_CONNECTIONS_NOTIFICATION_DELAY_IN_MILLISECONDS);
         }
 
-        if (mServerSocket != null) {
-            InputStream tempInputStream = null;
-            OutputStream tempOutputStream = null;
-            boolean localStreamsCreatedSuccessfully = false;
+        mLocalhostSocket = mServerSocket.accept(); // Blocking call
 
-            try {
-                Log.i(TAG, "Now accepting connections...");
+        Log.i(TAG, "Incoming data from address: " + getLocalHostAddressAsString()
+          + ", port: " + mServerSocket.getLocalPort());
 
-                if (mListener != null) {
-                    final ConnectionStatusListener listener = mListener;
-                    mListeningOnPortNumber = mServerSocket.getLocalPort();
-                    final Handler handler = new Handler(jxcore.activity.getMainLooper());
+        tempInputStream = mLocalhostSocket.getInputStream();
+        tempOutputStream = mLocalhostSocket.getOutputStream();
+        localStreamsCreatedSuccessfully = true;
+      } catch (IOException e) {
+        Log.e(TAG, "Failed to create local streams: " + e.getMessage(), e);
+        mListener.onDisconnected(this, "Failed to create local streams: " + e.getMessage());
+      }
 
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            listener.onListeningForIncomingConnections(mListeningOnPortNumber);
-                        }
-                    }, LISTENING_FOR_CONNECTIONS_NOTIFICATION_DELAY_IN_MILLISECONDS);
-                }
-
-                Socket tempSocket = mServerSocket.accept(); // Blocking call
-
-                mLocalhostSocket = tempSocket;
-
-                Log.i(TAG, "Incoming data from address: " + getLocalHostAddressAsString()
-                        + ", port: " + mServerSocket.getLocalPort());
-
-                tempInputStream = mLocalhostSocket.getInputStream();
-                tempOutputStream = mLocalhostSocket.getOutputStream();
-                localStreamsCreatedSuccessfully = true;
-            } catch (IOException e) {
-                Log.e(TAG, "Failed to create local streams: " + e.getMessage(), e);
-                mListener.onDisconnected(this, "Failed to create local streams: " + e.getMessage());
-            }
-
-            if (localStreamsCreatedSuccessfully) {
-                Log.d(TAG, "Setting local streams and starting stream copying threads...");
-                mLocalInputStream = tempInputStream;
-                mLocalOutputStream = tempOutputStream;
-                startStreamCopyingThreads();
-            }
-        }
-
-        Log.d(TAG, "Exiting thread (ID: " + getId() + ")");
+      if (localStreamsCreatedSuccessfully) {
+        Log.d(TAG, "Setting local streams and starting stream copying threads...");
+        mLocalInputStream = tempInputStream;
+        mLocalOutputStream = tempOutputStream;
+        startStreamCopyingThreads();
+      }
     }
 
-    /**
-     * Closes all the streams and sockets.
-     */
-    public synchronized void close() {
-        Log.i(TAG, "close");
-        super.close();
+    Log.d(TAG, "Exiting thread (ID: " + getId() + ")");
+  }
 
-        if (mServerSocket != null) {
-            try {
-                mServerSocket.close();
-            } catch (IOException e) {
-                Log.e(TAG, "Failed to close the server socket: " + e.getMessage(), e);
-            }
+  /**
+   * Closes all the streams and sockets.
+   */
+  public synchronized void close() {
+    Log.i(TAG, "close");
+    super.close();
 
-            mServerSocket = null;
-        }
+    if (mServerSocket != null) {
+      try {
+        mServerSocket.close();
+      } catch (IOException e) {
+        Log.e(TAG, "Failed to close the server socket: " + e.getMessage(), e);
+      }
+
+      mServerSocket = null;
     }
+  }
 }
