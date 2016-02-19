@@ -302,8 +302,13 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
                                         module.exports.ENCRYPTED_KEY_ID_SIZE)),
             aes.final()]);
     } catch (e) {
-      // Decryption failed
-      continue;
+      // Decryption failed due to bad decrypt, this is expected
+      var BAD_DECRYPT_ERROR = 'error:06065064:digital envelope routines:' +
+        'EVP_DecryptFinal_ex:bad decrypt';
+      if (e.message === BAD_DECRYPT_ERROR) {
+        continue;
+      }
+      throw e;
     }
     // PubKx = addressBook.get(UnencryptedKeyId)
     var pubKx = addressBookCallback(unencryptedKeyId);
