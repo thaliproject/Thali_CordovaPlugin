@@ -73,7 +73,7 @@ copying and pasting that Cordova development normally requires.
 To set up your desktop environment for development go to Thali_CordovaPlugin/thali/install and run 
 `jx npm run setupDesktop`.
 
-Sudo might be needed because this script installs a symbolic link into your global NPM directory.
+Sudo might be needed because this script installs a symbolic link into your global NPM directory. But if you can get away without using it you will be much happier as using sudo for this (especially on OS/X) seems to cause permission nightmares.
 
 You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing one of the following:
 

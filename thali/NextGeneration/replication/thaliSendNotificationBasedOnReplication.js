@@ -461,8 +461,8 @@ ThaliSendNotificationBasedOnReplication.prototype._updateOnExpiration =
     }
 
     assert.notEqual(self._transientState.lastTimeBeaconsWereUpdated, 0,
-      'There should not be a path that lets us get to _updateOnExpiration' +
-      'without the last beacon value being initialized to something other' +
+      'There should not be a path that lets us get to _updateOnExpiration ' +
+      'without the last beacon value being initialized to something other ' +
       'than 0.');
 
     var transientStateWhenWereCreated = self._transientState;

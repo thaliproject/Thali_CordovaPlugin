@@ -136,14 +136,16 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
 }
 
 
+// Use a folder specific to this test so that the database content
+// will not interfere with any other databases that might be created
+// during other tests.
+var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
+var LevelDownPouchDB = PouchDB.defaults({
+  db: require('leveldown-mobile'),
+  prefix: dbPath
+});
+
 module.exports.getTestPouchDBInstance = function (name) {
-  // Use a folder specific to this test so that the database content
-  // will not interfere with any other databases that might be created
-  // during other tests.
-  var dbPath = path.join(module.exports.tmpDirectory(),
-    'pouchdb-test-directory');
-  var LevelDownPouchDB =
-    PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath});
   return new LevelDownPouchDB(name);
 };
 

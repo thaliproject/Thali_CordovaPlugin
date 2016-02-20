@@ -286,7 +286,7 @@ module.exports.getNetworkStatus = function () {
  */
 module.exports.connectionTypes = {
   MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
-  BLUE_TOOTH: 'AndroidBluetooth',
+  BLUETOOTH: 'AndroidBluetooth',
   TCP_NATIVE: 'tcp'
 };
 
