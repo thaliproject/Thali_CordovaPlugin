@@ -34,7 +34,7 @@ test("can start/stop servers manager", function(t) {
     t.end();
   })
   .catch(function(err) {
-    t.fail("should not get error - " + err);
+    t.fail("server should not get error - " + err);
     serversManager.stop();
   });
 });
@@ -79,7 +79,7 @@ test("emits incomingConnectionState", function(t) {
 
   })
   .catch(function(err) {
-    t.fail("should not get error - " + err);
+    t.fail("server should not get error - " + err);
     serversManager.stop();
   });
 });
@@ -106,7 +106,7 @@ test("emits routerPortConnectionFailed", function(t) {
     });
   })
   .catch(function(err) {
-    t.fail("should not get error - " + err);
+    t.fail("server should not get error - " + err);
     serversManager.stop();
   });
 });
@@ -156,7 +156,6 @@ test("native server connections all up", function(t) {
             t.ok(clientSockets == 2, "Should be exactly 2 client sockets");
             applicationServer.close();
             serversManager.stop();
-            console.log("end");
             t.end();
           }
         }
@@ -184,7 +183,7 @@ test("native server connections all up", function(t) {
     });
   })
   .catch(function(err) {
-    t.fail("should not get error - " + err);
+    t.fail("server hould not get error - ");
     serversManager.stop();
   });
 
@@ -202,7 +201,7 @@ test("can call createPeerListener (pleaseConnect == false)", function(t) {
     });
   })
   .catch(function(err) {
-    t.fail("should not get error - " + err);
+    t.fail("server should not get error");
     serversManager.stop();
   });
 });
@@ -221,7 +220,7 @@ test("calling createPeerListener (pleaseConnect == true) with unknown peer is er
     });
   })
   .catch(function(err) {
-    t.fail("should not get error - " + err);
+    t.fail("server should not get error - " + err);
     serversManager.stop();
   });
 });
@@ -233,7 +232,7 @@ test("calling createPeerListener (pleaseConnect == true) with unknown peer is er
 /////////////////////////
 // Some utility functions
 
-function waitForPeerAvailabilityChanged(t, serversManager, then) {
+function waitForPeerAvailabilityChanged(t, serversManager, dontFail, then) {
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {
       if (peer.peerAvailable) {
@@ -244,9 +243,10 @@ function waitForPeerAvailabilityChanged(t, serversManager, then) {
           }
         })
         .catch(function(err) {
-          t.fail("should not get error");
-          console.log(err.stack);
-          serversManager.stop(); 
+          if (!dontFail) { 
+            t.fail("Unexpected rejection creating peer listener");
+            console.warn(err);
+          }
         });
       }
     });
@@ -270,18 +270,18 @@ function startAdvertisingAndListening(t, applicationPort, pleaseConnect) {
 }
 
 function startServersManager(t, serversManager) {
-  serversManager.start()
+  serversManager.start().then(function (localPort) {
+  })
   .catch(function(err) {
-    t.fail("should not get error");
+    t.fail("server should not get error");
     console.log(err.stack());
     serversManager.stop();
   });
 }
 
-function setUp(t, serversManager, applicationPort, forwardConnection, pleaseConnect, then) {
+function setUp(t, serversManager, appPort, forwardConnection, pleaseConnect, dontFail, then) {
 
-  waitForPeerAvailabilityChanged(t, serversManager, then);
-
+  waitForPeerAvailabilityChanged(t, serversManager, dontFail, then);
   startServersManager(t, serversManager);
   
   if (forwardConnection != 0) {
@@ -289,19 +289,24 @@ function setUp(t, serversManager, applicationPort, forwardConnection, pleaseConn
       cb(null, {listeningPort:forwardConnection, clientPort:0, serverPort:0});
     });
   }
+  else {
+    Mobile("connect").nextNative(function(peerIdentifier, cb) {
+      cb(null, {listeningPort:0, clientPort:0, serverPort:serversManager._server.address().port});
+    });
+  }
   
-  startAdvertisingAndListening(t, applicationPort, pleaseConnect);
+  startAdvertisingAndListening(t, appPort, pleaseConnect);
 }
 
 // End of Utility functions
 ///////////////////////////
 
-test("creating a peerListener (pleaseConnect == true) - no native server", function(t) {
+test("peerListener - forwardConnection, pleaseConnect == true - no native server", function(t) {
 
   var nativePort = 4040;
   var applicationPort = 4242;
 
-  // We expect 'failedConnection' since there's no app listening
+  // We expect 'failedConnection' since there's no native listener
   var serversManager = new ThaliTCPServersManager(applicationPort);
   serversManager.on("failedConnection", function(err) {
     t.equal(err.error, "Cannot Connect To Peer", "reason should be as expected");
@@ -309,18 +314,18 @@ test("creating a peerListener (pleaseConnect == true) - no native server", funct
     t.end();
   });
 
-  setUp(t, serversManager, applicationPort, nativePort, true, function(peerPort) {
+  setUp(t, serversManager, applicationPort, nativePort, true, false, function(peerPort) {
     t.notEqual(peerPort, nativePort, "peerPort should not be nativePort");
   });
 });
 
-test("creating a peerListener (pleaseConnect == false) - no app server", function(t) {
+test("peerListener - forwardConnection, pleaseConnect == false - no native server", function(t) {
 
   var nativePort = 4040;
   var applicationPort = 4242;
   var firstConnection = false;
 
-  // We expect 'failedConnection' since there's no app listening
+  // We expect 'failedConnection' since there's no naive listener
   var serversManager = new ThaliTCPServersManager(applicationPort);
   serversManager.on("failedConnection", function(err) {
     t.ok(firstConnection, "should not get event until connection is made");
@@ -329,14 +334,14 @@ test("creating a peerListener (pleaseConnect == false) - no app server", functio
     t.end();
   });
 
-  setUp(t, serversManager, applicationPort, nativePort, false, function(peerPort) {
+  setUp(t, serversManager, applicationPort, nativePort, false, false, function(peerPort) {
     t.notEqual(peerPort, nativePort, "peerPort should not be nativePort");
     var client = net.createConnection(peerPort);
     firstConnection = true;
   });
 });
 
-test("creating a peerListener (pleaseConnect == true) - with native server", function(t) {
+test("peerListener - forwardConnection, pleaseConnect == true - with native server", function(t) {
 
   var nativePort = 4040;
   var applicationPort = 4242;
@@ -360,12 +365,12 @@ test("creating a peerListener (pleaseConnect == true) - with native server", fun
     }
   });
 
-  setUp(t, serversManager, applicationPort, nativePort, true, function(peerPort) {
+  setUp(t, serversManager, applicationPort, nativePort, true, false, function(peerPort) {
     t.notEqual(peerPort, nativePort, "peerPort != nativePort");
   });
 });
 
-test("creating a peerListener (pleaseConnect == false) - with native server", function(t) {
+test("peerListener - forwardConnection, pleaseConnect == false - with native server", function(t) {
 
   var nativePort = 4040;
   var applicationPort = 4242;
@@ -392,10 +397,156 @@ test("creating a peerListener (pleaseConnect == false) - with native server", fu
     }
   });
 
-  setUp(t, serversManager, applicationPort, nativePort, false, function(peerPort) {
+  setUp(t, serversManager, applicationPort, nativePort, false, false, function(peerPort) {
     t.notEqual(peerPort, nativePort, "peerPort != nativePort");
     // Need to connect a socket to force the outgoing 
     var client = net.createConnection(peerPort);
     firstConnection = true;
   });
 });
+
+// reverseConnections
+/////////////////////
+
+test("peerListener - reverseConnection, pleaseConnect == true", function(t) {
+
+  var applicationPort = 4242;
+
+  // We expect 'failedConnection' since pleaseConnect should
+  // never result in a reverseConnection
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+  serversManager.on("failedConnection", function(err) {
+    t.equal(err.error, "Cannot Connect To Peer", "reason should be as expected");
+    serversManager.stop();
+    t.end();
+  });
+
+  // Note: Here we're saying dontFail on createPeerListener rejecting
+  // since we expect to fail because of the unexpected reverse connection
+  setUp(t, serversManager, applicationPort, 0, true, true, function(peerPort) {
+    t.notEqual(peerPort, nativePort, "peerPort should not be nativePort");
+  });
+});
+
+test("peerListener - reverseConnection, pleaseConnect == false - no incoming", function(t) {
+
+  var nativePort = 4040;
+  var applicationPort = 4242;
+  var firstConnection = false;
+
+  // We expect 'Incoming connction died' since we're forcing a reverse connection
+  // but there's been no incoming connection
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+  serversManager.on("failedConnection", function(err) {
+    t.ok(firstConnection, "should not get event until connection is made");
+    t.equal(err.error, "Incoming connection died", "reason should be as expected");
+    serversManager.stop();
+    t.end();
+  });
+
+  setUp(t, serversManager, applicationPort, 0, false, false, function(peerPort) {
+    t.notEqual(peerPort, nativePort, "peerPort should not be nativePort");
+    var client = net.createConnection(peerPort);
+    firstConnection = true;
+  });
+});
+
+test("peerListener - reverseConnection, pleaseConnect == false - with incoming", function(t) {
+
+  var nativePort = 4040;
+  var applicationPort = 4242;
+  var firstConnection = false;
+
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+  serversManager.on("failedConnection", function(err) {
+    t.fail("connection shouldn't fail");
+  });
+
+  // We're going to unroll setUp here 'cause we want to do some
+  // funky stuff
+
+  var toSend = "hello";
+  Mobile("connect").nextNative(function(peerIdentifier, cb) {
+    // Here we're pretending to be the p2p layer connecting to the
+    // servers manager
+    var serverPort = serversManager._server.address().port;
+    var incoming = net.createConnection(serverPort, function() {
+      var mux = multiplex(function onStream(stream, id) {
+        stream.write(toSend);
+      });
+      incoming.pipe(mux).pipe(incoming);
+      process.nextTick(function() { 
+        cb(null, {listeningPort:0, clientPort:incoming.address().port, serverPort:serverPort});
+      });
+    });
+
+  });
+  
+  waitForPeerAvailabilityChanged(t, serversManager, false, function(peerPort) {
+    // Create a client connection to our local server, this'll cause the p2p connection
+    // to be established. We've arranged for this to result in a reverse connection so when
+    // out connection completes we expect there to be a mux available on which we'll create
+    // a new stream which we'll pipe to our client socket
+    var client = net.createConnection(peerPort, function() {
+    });
+    var toRecv = "";
+    client.on("data", function(data) {
+      toRecv += data.toString();
+      if (toRecv.length >= toSend.length) {
+        t.equal(toSend, toRecv, "sent and received should be the same");
+        serversManager.stop();
+        t.end();
+      }
+    });
+  });
+
+  startServersManager(t, serversManager);
+  startAdvertisingAndListening(t, applicationPort, false);
+});
+
+test("peerListener - reverseConnection, pleaseConnect == false - no server", function(t) {
+
+  var nativePort = 4040;
+  var applicationPort = 4242;
+  var firstConnection = false;
+
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+  serversManager.on("failedConnection", function(err) {
+    t.fail("connection shouldn't fail");
+  });
+  
+  // We expect the stream created by the incoming socket to
+  // trigger routerPortConnection failed since there's no app listening
+  serversManager.on("routerPortConnectionFailed", function() {
+    t.ok(true, "should get routerPortConnectionFailed");
+    serversManager.stop();
+    t.end();
+  });
+
+  Mobile("connect").nextNative(function(peerIdentifier, cb) {
+    var serverPort = serversManager._server.address().port;
+    var incoming = net.createConnection(serverPort, function() {
+      var mux = multiplex(function onStream(stream, id) {
+      });
+      incoming.pipe(mux).pipe(incoming);
+      // Force the other side to connect to it's (non-existent in this case)
+      // application server
+      var stream  = mux.createStream();
+      process.nextTick(function() { 
+        cb(null, {listeningPort:0, clientPort:incoming.address().port, serverPort:serverPort});
+      });
+    });
+  });
+  
+  waitForPeerAvailabilityChanged(t, serversManager, false, function(peerPort) {
+    var client = net.createConnection(peerPort, function() {
+    });
+  });
+
+  startServersManager(t, serversManager);
+  startAdvertisingAndListening(t, applicationPort, false);
+});
+
+// Check stream error handling
+//////////////////////////////
+

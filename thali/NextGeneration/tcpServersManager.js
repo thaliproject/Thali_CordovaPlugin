@@ -160,6 +160,9 @@ function TCPServersManager(routerPort) {
   // client port->mux
   this._clientMuxes = {};
 
+  // See note in createPeerListener
+  this._pendingReverseConnections = {};
+
   // The port on which we expect the application to be
   // listening
   this._routerPort = routerPort;
@@ -217,9 +220,10 @@ TCPServersManager.prototype.start = function() {
     self._state = 'started';
     self.createNativeListener(self._routerPort)
     .then(function(localPort) {
-      return resolve(localPort);
+      resolve(localPort);
     })
     .catch(function(err) {
+      reject(err);    
     });
   }
   return new Promise(_do);
@@ -406,7 +410,7 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
     });
 
     self._server.on("connection", function(incoming) {
-      
+     
       incoming.__id = next_id();
       self._incoming[incoming.__id] = incoming;
       log.debug("new incoming socket:", incoming.__id);
@@ -435,6 +439,7 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
         self.emit("incomingConnectionState", "DISCONNECTED");
       });
 
+      log.debug("creating incoming mux");
       var mux = multiplex(function onStream(stream, id) {
 
         stream.__id = next_id();
@@ -494,11 +499,17 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
           log.warn(err, outgoing.__id);
           closeStreamForOutgoing(outgoing.__id);
           self.emit("routerPortConnectionFailed"); 
+          // DISCUSS: I kind of think we should just close the
+          // mux and socket here since the remote side is not getting
+          // any indication anything failed right now. It'll timeout
+          // eventually though.
         });
 
         log.debug("new outgoing socket:", outgoing.__id);
       });
 
+      mux.__id = next_id();
+      log.debug("new mux", mux.__id);
       self._muxesToStreams[mux.__id] = [];
 
       mux.on("error", function(err) {
@@ -522,6 +533,14 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
       });
 
       self._incomingToMuxes[incoming.__id] = mux;
+      self._clientMuxes[incoming.remotePort] = mux;
+
+      // The client connection may have run it's connection
+      // handler before this one.. handle that.
+      if (self._pendingReverseConnections[incoming.remotePort]) {
+        self._pendingReverseConnections[incoming.remotePort][0]();
+      }
+
       incoming.pipe(mux).pipe(incoming);
       self.emit("incomingConnectionState", "CONNECTED");
     });
@@ -533,7 +552,7 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
       }
       if (self._server) {
         log.debug("listening", self._server.address().port);
-        return resolve(self._server.address().port);
+        resolve(self._server.address().port);
       }
     });
   }
@@ -761,6 +780,8 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
     function multiplexToNativeListener(connection, server) {
 
+      log.debug("outgoing to: ", connection.listeningPort);
+
       var outgoing = net.createConnection(connection.listeningPort, function() {
         var mux = new multiplex(function onStream(stream, id) {
           var client = net.createConnection(self._routerPort, function() {
@@ -786,7 +807,6 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
         });
 
         outgoing.pipe(mux).pipe(outgoing);
-        self._clientMuxes[outgoing.localPort] = mux;
       });
 
       return outgoing;
@@ -823,41 +843,57 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
       function handleReverseConnection(connection, server) {
 
         // We expect to be connected to from the p2p side which
-        // implies by the time we get here there is already
+        // implies by the time we get here there is already a 
         // client socket connected to the server set up by
-        // createNativeListener
+        // createNativeListener, find the associated mux
+        // and hook it to our incoming connection
 
         log.debug("reverse connection");
 
-        if (connection.remotePort != self._server.address().port) {
+        if (connection.clientPort in self._pendingReverseConnections) {
+          clearTimeout(self._pendingReverseConnections[connection.clientPort][1]);
+          delete self._pendingReverseConnections[connection.clientPort];
+        }
+
+        if (connection.serverPort != self._server.address().port) {
+          log.warn("failedConnection");
           // This isn't the socket you're looking for !!
           incoming.destroy();
           self.emit("failedConnection", {
-            "error":new Error("Mismatched serverPort"),
+            "error":new "Mismatched serverPort",
             "peerIdentifier":peerIdentifier
           });
           firstConnection = true;
           return;
         }
-
+        
         // Find the mux createNativeListener created
-        log.debug("looking up mux for port: ", connection.remotePort);
-        var mux = self.clientMuxes[connection.remotePort];
+        log.debug("looking up mux for port: ", connection.clientPort);
+        var mux = self._clientMuxes[connection.clientPort];
         if (!mux) {
           log.debug("no mux found");
-          connection.destroy();
+          incoming.destroy();
           self.emit("failedConnection", {
-            "error":new Error("Incoming connection died"),
+            "error":"Incoming connection died",
             "peerIdentifier":peerIdentifier
           });
           firstConnection = true;
-          return;
+          return false;
         }
-
+        
         // Create a new stream on the existing mux
         var stream = mux.createStream();
         stream.__id = next_id();
-        incoming.pipe(stream).pipe(incoming); 
+
+        stream.on("error", function() {
+          log.warn("stream error - reverse connection");
+        });
+
+        stream.on("close", function() {
+          incoming.end();
+        });
+
+        incoming.pipe(stream).pipe(incoming);
       }
 
       if (!pleaseConnect && firstConnection) {
@@ -865,7 +901,6 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
         firstConnection = false;
         log.debug("first connection");
 
-        // Establish the p2p link..
         Mobile("connect").callNative(peerIdentifier, function(err, connection) {
 
           if (err) {
@@ -875,12 +910,30 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
             self.emit("failedConnection", { "error":err, "peerIdentifier":peerIdentifier });
             return;
           }
+ 
+          if (connection.listeningPort == 0) {
 
-          if (connection.listenerPort != 0) {
-            handleForwardConnection(connection, server);
+            // So this is annoying.. there's no guarantee on the order of the server
+            // running it's onConnection handler and us getting here. So we don't always
+            // find a mux when handling a reverse connection. Handle that here.
+            
+            if (connection.clientPort in self._clientMuxes) {
+              handleReverseConnection(connection, server);
+            }
+            else {
+
+              // Record the pending connection, give it a second to turn up 
+              self._pendingReverseConnections[connection.clientPort] = [
+                function() { handleReverseConnection(connection, server); }, 
+                setTimeout(function() {
+                  log.debug("timed out waiting for incoming connection");
+                  handleReverseConnection(connection, server);  
+                }, 1000)
+              ];
+            }
           }
           else {
-            handleReverseConnection(connection, server);
+            handleForwardConnection(connection, server);
           }
         });
       }
@@ -930,7 +983,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
     var server = createServer(onNewConnection);
     if (server == null) {
-      return reject(null);
+      reject(null);
     }
 
     log.debug("pleaseConnect=", pleaseConnect);
@@ -946,12 +999,18 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
         if (err) {
           log.warn(err);
           log.debug("failedConnection");
-          return reject(err);
+          reject(err);
+          return;
         }
 
         if (connection.listeningPort == 0) {
           log.warn("was expecting a forward connection to be made");
-          log.debug("failedConnection");
+          self.emit("failedConnection", {
+            "error":"Cannot Connect To Peer", 
+            "peerIdentifier":peerIdentifier 
+          });
+          reject(new Error("Unexpected Reverse Connection"));
+          return;
         }
 
         // Create a connection to the native listener, mux it and 
@@ -965,17 +1024,18 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
             "error":"Cannot Connect To Peer", 
             "peerIdentifier":peerIdentifier 
           });
+          reject(err);
         });
 
         outgoing.on("timeout", function() {
           outgoing.destroy();
         });
 
-        return resolve(server.address().port);
+        resolve(server.address().port);
       });
     }
     else {
-      return resolve(server.address().port);
+      resolve(server.address().port);
     }
   }
 

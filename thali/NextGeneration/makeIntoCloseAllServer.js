@@ -29,7 +29,7 @@ function makeIntoCloseAllServer(server) {
     });
 
     // It's possible that closeAll has already been called,
-    // (connectons == null). If so, close the incoming socket
+    // (connections == null). If so, close the incoming socket
 
     if (connections) {
       connections.push(socket);
