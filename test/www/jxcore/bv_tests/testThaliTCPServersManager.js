@@ -550,3 +550,79 @@ test("peerListener - reverseConnection, pleaseConnect == false - no server", fun
 // Check stream error handling
 //////////////////////////////
 
+test("native server - closing streams cleans sockets", function(t) {
+
+  var closedStream = false;
+  var applicationServer = net.createServer(function(incoming) {
+    incoming.pipe(incoming);
+    incoming.on("end", function() {
+      t.ok(closedStream, "incoming should be closed after closing stream");
+      t.ok(true, "incoming socket was closed");
+      t.equal(Object.keys(serversManager._incomingToMuxes).length, 0, 
+      "should be no muxes left");
+      t.equal(Object.keys(serversManager._streamsToOutgoing).length, 0, 
+      "should be no streams left");
+      serversManager.stop();
+      applicationServer.close();
+      t.end();
+    });
+  });
+  applicationServer.listen(4242);
+
+  var serversManager = new ThaliTCPServersManager(4242);
+  serversManager.start()
+  .then(function(localPort) {
+    var client = net.createConnection(localPort, function() {
+      var mux = multiplex(function onStream(stream, id) {
+      });
+      client.pipe(mux).pipe(client);
+      var clientStream = mux.createStream();
+      process.nextTick(function() {
+        // Closing this stream should close the application servers
+        // client socket
+        closedStream = true;
+        clientStream.end();
+      });
+    });
+  })
+  .catch(function(err) {
+    t.fail("server hould not get error - ");
+    serversManager.stop();
+  });
+});
+
+test("native server - closing sockets cleans streams", function(t) {
+
+  var applicationServer = net.createServer(function(incoming) {
+    incoming.pipe(incoming);
+    incoming.on("end", function() {
+      t.ok(true, "incoming socket was closed");
+      serversManager.stop();
+      applicationServer.close();
+      t.end();
+    });
+  });
+  applicationServer.listen(4242);
+
+  var serversManager = new ThaliTCPServersManager(4242);
+  serversManager.start()
+  .then(function(localPort) {
+    var client = net.createConnection(localPort, function() {
+      var mux = multiplex(function onStream(stream, id) {
+      });
+      client.pipe(mux).pipe(client);
+      var clientStream = mux.createStream();
+      process.nextTick(function() {
+        // Closing this socket should close the application servers
+        // client socket
+        client.end();
+      });
+    });
+  })
+  .catch(function(err) {
+    t.fail("server hould not get error - ");
+    serversManager.stop();
+  });
+});
+
+
