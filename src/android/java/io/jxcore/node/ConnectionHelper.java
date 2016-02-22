@@ -63,7 +63,6 @@ public class ConnectionHelper
                     @Override
                     public void run() {
                         Log.e(TAG, "Unhandled exception: " + throwable.getMessage(), throwable);
-                        throw new RuntimeException(throwable);
                     }
                 });
             }
@@ -440,7 +439,7 @@ public class ConnectionHelper
         String errorMessage = "Received a request for permission \"" + permission
                 + "\", but we were expecting that all the required permissions were already granted";
         Log.e(TAG, "onPermissionCheckRequired: " + errorMessage);
-        throw new SecurityException(errorMessage);
+        return false;
     }
 
     /**
