@@ -36,13 +36,11 @@ var ThaliPermissions = {};
 
   /*
   * Response codes for the permission request
-  * PERMISSION_GRANTED: Success: User has authorized requested permission. 
   * PERMISSION_DENIED: Error: User has denied access to requested permission
   * RESPONSE_CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED: Error: Concurrent request are not supported
   */
   ThaliPermissions.responseCodes = {
-		"PERMISSION_GRANTED": "PERMISSION_GRANTED", 
-		"PERMISSION_DENIED": "PERMISSION_DENIED", 
+		"PERMISSION_DENIED": "PERMISSION_DENIED",
     "RESPONSE_CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED": "RESPONSE_CONCURRENT_PERMISSION_REQUESTS_NOT_SUPPORTED" 
 	};
  

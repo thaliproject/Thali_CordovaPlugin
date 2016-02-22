@@ -20,47 +20,6 @@ function debug(msg) {
   testUtils.logMessageToScreen(msg);
 };
 
-/*
-  // A flag used to avoid too frequent Wifi toggling
-  var wifiRepairOngoing = false;
-
-  _testServer.on('error', function (data) {
-
-    this.debugCallback = function(data) {
-        self.emit('debug',data);
-    };
-
-    if (wifiRepairOngoing) {
-      return;
-    }
-
-    wifiRepairOngoing = true;
-    // If we have a connection error to the test server, we try to repair
-    // the connection by toggling Wifi off and on. This forces devices
-    // to re-connect to the Wifi access point.
-    if (data.type === 'connect_error') {
-      testUtils.toggleWifi(false, function () {
-        testUtils.toggleWifi(true, function () {
-          console.log('Wifi toggled for connection repair');
-          // This is the time when Wifi toggling is completed, but it
-          // doesn't necessarily mean that the connection to the Wifi
-          // access point is already restored. There is some time
-          // needed from turning Wifi on to the point when the connection
-          // is functional.
-        });
-      });
-    }
-
-    setTimeout(function () {
-      wifiRepairOngoing = false;
-    }, 60 * 1000);
-  });
-
-
-  return _testServer;
-}
-*/
-
 function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
 
   TestFrameworkClient.super_.call(this);

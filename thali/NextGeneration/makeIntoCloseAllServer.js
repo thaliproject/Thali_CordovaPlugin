@@ -1,5 +1,7 @@
 'use strict';
 
+var assert = require('assert');
+
 /** @module makeIntoCloseAllServer */
 
 /**
@@ -14,28 +16,26 @@
  * @returns {Object}
  */
 function makeIntoCloseAllServer(server) {
-
   var connections = [];
 
   server.on('connection', function (socket) {
+    // Add to the list of connections.
+    connections.push(socket);
+    // Remove from list of connections in case
+    // socket is closed.
     socket.on('close', function () {
-      if (connections) {
-        var index = connections.indexOf(socket);
-        if (index === -1) {
-          // Log this, it shouldn't have happened.
+      var index = -1;
+      for (var i = 0; i < connections.length; i++) {
+        if (connections[i] === socket) {
+          index = i;
+          break;
         }
-        connections.splice(index, 1);
       }
+      if (index === -1) {
+        assert('socket not found from the list of connections');
+      }
+      connections = connections.splice(index, 1);
     });
-
-    // It's possible that closeAll has already been called,
-    // (connections == null). If so, close the incoming socket
-
-    if (connections) {
-      connections.push(socket);
-    } else {
-      socket.end();
-    }
   });
 
   /**
@@ -48,11 +48,10 @@ function makeIntoCloseAllServer(server) {
     // to the server.
     // Also note that the callback won't be called until all the connections
     // are destroyed because the destroy calls are synchronous.
-    server.close(callback);
+    this.close(callback);
     connections.forEach(function (connection) {
-      connection.end();
+      connection.destroy();
     });
-    connections = null;
   };
 
   return server;

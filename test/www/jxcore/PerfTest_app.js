@@ -64,5 +64,4 @@ getDeviceCharacteristics(function(deviceName, bluetoothAddress) {
   });
 });
 
-// Log that the app.js file was loaded.
-console.log('Perf Test app loaded loaded');
+console.log('Perf Test app is loaded');
