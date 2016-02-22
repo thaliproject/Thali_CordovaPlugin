@@ -26,8 +26,6 @@ abstract class JXcoreThaliCallback {
     }
 
     /**
-     * This is the callback used by {@link external:"Mobile('connect')".callNative}.
-     * <p/>
      * If err is not NULL then listenerOrIncomingConnection MUST be null and vice
      * versa.
      *

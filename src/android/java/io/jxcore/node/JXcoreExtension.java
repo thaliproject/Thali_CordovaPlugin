@@ -7,16 +7,13 @@ import android.content.Context;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 import io.jxcore.node.jxcore.JXcoreCallback;
-
 import java.util.ArrayList;
 import java.util.Date;
-
 import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
-import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothUtils;
 

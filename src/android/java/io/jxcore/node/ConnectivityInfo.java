@@ -14,7 +14,6 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
-import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
 
 /**
  * Monitors the connectivity status and provides notifications on connectivity state changes for
