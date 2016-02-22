@@ -35,12 +35,12 @@ module.exports.compareBufferArrays = compareBufferArrays;
 
 /**
  * @param {number} millisecondsUntilRun How long to wait before running this
- * timer
+ * timer.
  * @param {thunk} fn The function to call when the timer is up.
  * @constructor
  */
 function RefreshTimerManager(millisecondsUntilRun, fn) {
-  assert(millisecondsUntilRun > 0, 'millisecondsUntilRun has to be > 0');
+  assert(millisecondsUntilRun >= 0, 'millisecondsUntilRun has to be >= 0');
   this._millisecondsUntilRun = millisecondsUntilRun;
   this._fn = fn;
 }
