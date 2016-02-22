@@ -134,31 +134,14 @@ var maxPeersToAdvertise = 20;
  * @fires event:incomingConnectionState
  */
 function TCPServersManager(routerPort) {
+  
   this._state = 'initialized';
 
-  // Streams
-  this._streams = {};
+  // The single native server created by createNativeListener
+  this._nativeServer = null;
 
-  // Sockets (incoming)
-  this._incoming = {};
-
-  // Sockets (outgoing)
-  this._outgoing = {};
-
-  // Map incoming sockets to muxes
-  this._incomingToMuxes = {};
-
-  // Map streams->sockets (1-1)
-  this._streamsToOutgoing = {}
-
-  // Map muxes->streams (1->M)
-  this._muxesToStreams = {};
-
-  // peerIdentifier->server
+  // The set of peer servers created by createPeerListener
   this._peerServers = {};
-
-  // client port->mux
-  this._clientMuxes = {};
 
   // See note in createPeerListener
   this._pendingReverseConnections = {};
@@ -175,20 +158,6 @@ var object_id = 0;
 // (JS can only index on strings and many objects hash to the string ['Object'])
 function next_id() {
   return object_id++;
-}
-
-/**
- *
- * Debugging only - Log the state of the object
- * @public
- */
-TCPServersManager.prototype.logState = function() {
-  log.debug("incomingToMuxes: ", Object.keys(this._incomingToMuxes));
-  log.debug("streams: ", Object.keys(this._streams));
-  log.debug("incoming: ", Object.keys(this._incoming));
-  log.debug("outgoing: ", Object.keys(this._outgoing));
-  log.debug("streamsToOutgoing: ", Object.keys(this._streamsToOutgoing));
-  log.debug("muxesToStreams: ", Object.keys(this._muxesToStreams));
 }
 
 /**
@@ -251,9 +220,9 @@ TCPServersManager.prototype.stop = function() {
   if (this._state != 'started') {
     throw new Error("Call Start!");
   }
-  if (this._server) {
-    this._server.closeAll();
-    this._server = null;
+  if (this._nativeServer) {
+    this._nativeServer.closeAll();
+    this._nativeServer = null;
   }
   for (var peerIdentifier in this._peerServers) {
     if (this._peerServers.hasOwnProperty(peerIdentifier)) {
@@ -383,36 +352,56 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
     throw new Error("Call Start!");
   }
 
-  if (this._server) {
+  if (this._nativeServer) {
     // Must have been called twice
     throw new Error("Don't call directly!");
+  }
+
+  function removeArrayElement(a, e) {
+    // Remove an element from array based on __id comparison
+    function findIndex() {
+      for (var i = 0; i < a.length; i++) {
+        if (a[i].__id == e.__id) {
+          return i;
+        }
+      }
+      return -1;
+    }
+    var idx = findIndex();
+    if (idx != -1) {
+      a.splice(idx, 1);
+      return true;
+    }
+    return false;
   }
 
   var self = this;
   function _do(resolve, reject) {
 
-    self._server = CloseAllServer(net.createServer());
-    self._server.__id = next_id();
+    log.debug("creating native server");
 
-    self._server.on("error", function(err) {
+    self._nativeServer = CloseAllServer(net.createServer());
+    self._nativeServer.__id = next_id();
+    self._nativeServer._incoming = [];
+
+    self._nativeServer.on("error", function(err) {
       log.warn(err);
     });
 
-    self._server.on('close', function() {
-      log.debug("server close");
+    self._nativeServer.on('close', function() {
+      // this == self._nativeServer (which is already null by 
+      // the time this handler is called)
       self.emit("incomingConnectionState", "DISCONNECTED");
-      for (var incomingId in self._incoming) {
-        if (self._incoming.hasOwnProperty(incomingId)) {
-          self._incoming[incomingId].end();
-        }
-      }
-      self._incomingToMuxes = {};
+      this._incoming.forEach(function(i) {
+        i.end();
+      });
+      this._incoming = [];
     });
 
-    self._server.on("connection", function(incoming) {
-     
+    self._nativeServer.on("connection", function(incoming) {
+    
       incoming.__id = next_id();
-      self._incoming[incoming.__id] = incoming;
+      self._nativeServer._incoming.push(incoming);
       log.debug("new incoming socket:", incoming.__id);
 
       // We've received a new incoming connection from the P2P layer
@@ -426,16 +415,16 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
 
       incoming.on("timeout", function() {
         log.debug("incoming socket timeout");
-        delete self._incomingToMuxes[incoming.__id];
-        delete self._incoming[incoming.__id];
+        if (self._nativeServer) {
+          removeArrayElement(self._nativeServer._incoming, incoming);
+        }
       });
 
       incoming.on("close", function() {
         log.debug("incoming socket close", incoming.__id);
-        // The link to a peer has most likely failed, tidy up the
-        // associated socket/mux
-        delete self._incomingToMuxes[incoming.__id];
-        delete self._incoming[incoming.__id];
+        if (self._nativeServer) {
+          removeArrayElement(self._nativeServer._incoming, incoming);
+        }
         self.emit("incomingConnectionState", "DISCONNECTED");
       });
 
@@ -443,8 +432,9 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
       var mux = multiplex(function onStream(stream, id) {
 
         stream.__id = next_id();
+        mux._streams.push(stream);
+
         log.debug("new stream: ", stream.__id);
-        self._muxesToStreams[mux.__id].push(stream.__id);
 
         // Remote side is trying to connect a new client
         // socket into their mux, connect this new stream
@@ -456,14 +446,10 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
  
         stream.on("close", function() {
           log.debug("stream close:", stream.__id);
-          if (self._streamsToOutgoing[stream.__id]) {    
-            // Close the outgoing socket associated with this stream
-            self._outgoing[self._streamsToOutgoing[stream.__id]].end();
-            delete self._streamsToOutgoing[stream.__id];
-            delete self._streams[stream.__id];
-            return;
+          stream._outgoing.end();
+          if (!removeArrayElement(mux._streams, stream)) {
+            log.debug("stream not found in mux");
           }
-          log.debug("no outgoing socket associated with stream");
         });
 
         var outgoing = net.createConnection(routerPort, function() {
@@ -471,46 +457,28 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
         });
         outgoing.__id = next_id();
 
-        self._streams[stream.__id] = stream;
-        self._outgoing[outgoing.__id] = outgoing;
-        self._streamsToOutgoing[stream.__id] = outgoing.__id;
+        stream._outgoing = outgoing;
 
-        function closeStreamForOutgoing(outgoingId) {
-          for (var streamId in self._streamsToOutgoing) {
-            if (self._streamsToOutgoing.hasOwnProperty(streamId)) {
-              if (self._streamsToOutgoing[streamId] == outgoingId) {
-                self._streams[streamId].end();
-                delete self._streams[streamId];
-                delete self._streamsToOutgoing[streamId];
-                return true;
-              }
-            }
-          }
-          return false;
-        }
-
-        outgoing.on('close', function(err) {
+        outgoing.on('end', function(err) {
           log.debug("outgoing close: ", outgoing.__id);
-          closeStreamForOutgoing(outgoing.__id);
-          delete self._outgoing[outgoing.__id];
+          stream.end();
+          removeArrayElement(mux._streams, stream);
         });
 
         outgoing.on('error', function(err) {
           log.warn(err, outgoing.__id);
-          closeStreamForOutgoing(outgoing.__id);
+          removeArrayElement(mux._streams, stream);
           self.emit("routerPortConnectionFailed"); 
-          // DISCUSS: I kind of think we should just close the
-          // mux and socket here since the remote side is not getting
-          // any indication anything failed right now. It'll timeout
-          // eventually though.
         });
 
         log.debug("new outgoing socket:", outgoing.__id);
       });
 
       mux.__id = next_id();
+      incoming._mux = mux;
+      mux._streams = [];
+
       log.debug("new mux", mux.__id);
-      self._muxesToStreams[mux.__id] = [];
 
       mux.on("error", function(err) {
         log.warn(err);
@@ -518,22 +486,9 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
   
       mux.on("close", function() {
         log.debug("mux close");
-        // Dispose of the outgoing sockets/streams
-        self._muxesToStreams[mux._id].forEach(function (streamId) {
-          self._streams[streamId].close();
-          delete self._streams[streamId];
-          var outgoing = self._streamsToOutgoing[streamId];
-          if (outgoing) {
-            outgoing.end();
-            delete self._outgoing[outgoing.__id]
-            delete self._streamsToOutgoing[streamId];
-          }
-        });
-        delete self._muxesToStreams[mux._id];
+        mux._incoming.end();
+        removeArrayElement(self._nativeServer._incoming, _incoming);
       });
-
-      self._incomingToMuxes[incoming.__id] = mux;
-      self._clientMuxes[incoming.remotePort] = mux;
 
       // The client connection may have run it's connection
       // handler before this one.. handle that.
@@ -545,14 +500,14 @@ TCPServersManager.prototype.createNativeListener = function(routerPort) {
       self.emit("incomingConnectionState", "CONNECTED");
     });
 
-    self._server.listen(0, function(err) {
+    self._nativeServer.listen(0, function(err) {
       if (err) {
         log.warn(err);
         return;
       }
-      if (self._server) {
-        log.debug("listening", self._server.address().port);
-        resolve(self._server.address().port);
+      if (self._nativeServer) {
+        log.debug("listening", self._nativeServer.address().port);
+        resolve(self._nativeServer.address().port);
       }
     });
   }
@@ -818,6 +773,19 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
       var firstConnection = true;
 
+      function findMuxForReverseConnection(_port) {
+        // Find the mux for the reverse connection based on
+        // incoming socket's remote port
+        var mux = null;
+        log.debug("looking up mux for port: ", _port);
+        self._nativeServer._incoming.forEach(function(i) {
+          if (i.remotePort == _port) {
+            mux = i._mux;
+          }
+        });
+        return mux;
+      }
+
       function handleForwardConnection(connection, server) {
 
         log.debug("forward connection");
@@ -855,7 +823,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
           delete self._pendingReverseConnections[connection.clientPort];
         }
 
-        if (connection.serverPort != self._server.address().port) {
+        if (connection.serverPort != self._nativeServer.address().port) {
           log.warn("failedConnection");
           // This isn't the socket you're looking for !!
           incoming.destroy();
@@ -867,9 +835,9 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
           return;
         }
         
-        // Find the mux createNativeListener created
-        log.debug("looking up mux for port: ", connection.clientPort);
-        var mux = self._clientMuxes[connection.clientPort];
+        // Find the mux for the incoming socket that should have
+        // been created when the reverse connection completed
+        var mux = findMuxForReverseConnection(connection.clientPort);
         if (!mux) {
           log.debug("no mux found");
           incoming.destroy();
@@ -890,6 +858,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
         });
 
         stream.on("close", function() {
+          console.log("stream close");
           incoming.end();
         });
 
@@ -917,7 +886,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
             // running it's onConnection handler and us getting here. So we don't always
             // find a mux when handling a reverse connection. Handle that here.
             
-            if (connection.clientPort in self._clientMuxes) {
+            if (findMuxForReverseConnection(connection.clientPort)) {
               handleReverseConnection(connection, server);
             }
             else {
@@ -984,6 +953,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
     var server = createServer(onNewConnection);
     if (server == null) {
       reject(null);
+      return;
     }
 
     log.debug("pleaseConnect=", pleaseConnect);

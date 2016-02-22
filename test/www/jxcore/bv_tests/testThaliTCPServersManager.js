@@ -291,7 +291,10 @@ function setUp(t, serversManager, appPort, forwardConnection, pleaseConnect, don
   }
   else {
     Mobile("connect").nextNative(function(peerIdentifier, cb) {
-      cb(null, {listeningPort:0, clientPort:0, serverPort:serversManager._server.address().port});
+      cb(null, {
+        listeningPort:0, 
+        clientPort:0, serverPort:serversManager._nativeServer.address().port
+      });
     });
   }
   
@@ -469,7 +472,7 @@ test("peerListener - reverseConnection, pleaseConnect == false - with incoming",
   Mobile("connect").nextNative(function(peerIdentifier, cb) {
     // Here we're pretending to be the p2p layer connecting to the
     // servers manager
-    var serverPort = serversManager._server.address().port;
+    var serverPort = serversManager._nativeServer.address().port;
     var incoming = net.createConnection(serverPort, function() {
       var mux = multiplex(function onStream(stream, id) {
         stream.write(toSend);
@@ -524,7 +527,7 @@ test("peerListener - reverseConnection, pleaseConnect == false - no server", fun
   });
 
   Mobile("connect").nextNative(function(peerIdentifier, cb) {
-    var serverPort = serversManager._server.address().port;
+    var serverPort = serversManager._nativeServer.address().port;
     var incoming = net.createConnection(serverPort, function() {
       var mux = multiplex(function onStream(stream, id) {
       });
@@ -550,39 +553,39 @@ test("peerListener - reverseConnection, pleaseConnect == false - no server", fun
 // Check stream error handling
 //////////////////////////////
 
-test("native server - closing streams cleans sockets", function(t) {
+test("native server - closing incoming stream cleans outgoing socket", function(t) {
 
-  var closedStream = false;
-  var applicationServer = net.createServer(function(incoming) {
-    incoming.pipe(incoming);
-    incoming.on("end", function() {
-      t.ok(closedStream, "incoming should be closed after closing stream");
-      t.ok(true, "incoming socket was closed");
-      t.equal(Object.keys(serversManager._incomingToMuxes).length, 0, 
-      "should be no muxes left");
-      t.equal(Object.keys(serversManager._streamsToOutgoing).length, 0, 
-      "should be no streams left");
-      serversManager.stop();
+  // An incoming socket to native listener creates a mux, each stream created
+  // on that mux should create a new outgoing socket. When we close the stream
+  // the outgoing socket to the app should get closed.
+
+  var stream = null;
+  var streamClosed = false;
+  var applicationServer = net.createServer(function(socket) {
+    socket.on("data", function() {
+    });
+    socket.on("end", function() {
+      t.ok(streamClosed, "socket shouldn't close until after stream");
+      t.ok(true, "socket gets closed when stream is");
+      t.equal(serversManager._nativeServer._incoming.length, 1, "incoming remains open");
       applicationServer.close();
+      serversManager.stop();
       t.end();
     });
+    streamClosed = true;
+    stream.end();
   });
   applicationServer.listen(4242);
 
   var serversManager = new ThaliTCPServersManager(4242);
+
   serversManager.start()
   .then(function(localPort) {
-    var client = net.createConnection(localPort, function() {
+    var incoming = net.createConnection(localPort, function() {
       var mux = multiplex(function onStream(stream, id) {
       });
-      client.pipe(mux).pipe(client);
-      var clientStream = mux.createStream();
-      process.nextTick(function() {
-        // Closing this stream should close the application servers
-        // client socket
-        closedStream = true;
-        clientStream.end();
-      });
+      incoming.pipe(mux).pipe(incoming);
+      stream = mux.createStream();
     });
   })
   .catch(function(err) {
@@ -591,31 +594,39 @@ test("native server - closing streams cleans sockets", function(t) {
   });
 });
 
-test("native server - closing sockets cleans streams", function(t) {
+test("native server - closing incoming stream cleans outgoing socket", function(t) {
 
-  var applicationServer = net.createServer(function(incoming) {
-    incoming.pipe(incoming);
-    incoming.on("end", function() {
-      t.ok(true, "incoming socket was closed");
-      serversManager.stop();
-      applicationServer.close();
-      t.end();
-    });
+  // An incoming socket to native listener creates a mux, each stream created
+  // on that mux should create a new outgoing socket. When we close the stream
+  // the outgoing socket to the app should get closed.
+
+  var stream = null;
+  var streamClosed = false;
+  var applicationServer = net.createServer(function(socket) {
+    socket.end();  
   });
   applicationServer.listen(4242);
 
   var serversManager = new ThaliTCPServersManager(4242);
+
   serversManager.start()
   .then(function(localPort) {
-    var client = net.createConnection(localPort, function() {
+    var incoming = net.createConnection(localPort, function() {
       var mux = multiplex(function onStream(stream, id) {
       });
-      client.pipe(mux).pipe(client);
-      var clientStream = mux.createStream();
-      process.nextTick(function() {
-        // Closing this socket should close the application servers
-        // client socket
-        client.end();
+      incoming.pipe(mux).pipe(incoming);
+      stream = mux.createStream();
+      stream.on("data", function() {
+        // Need to read data or we never get end
+      });
+      stream.on("end", function() {
+        t.ok(true, "stream was closed");
+        t.equal(serversManager._nativeServer._incoming.length, 1, "incoming should survive");
+        t.equal(serversManager._nativeServer._incoming[0]._mux._streams.length, 0, 
+        "mux should have no streams");
+        applicationServer.close();
+        serversManager.stop();
+        t.end();
       });
     });
   })
@@ -624,5 +635,3 @@ test("native server - closing sockets cleans streams", function(t) {
     serversManager.stop();
   });
 });
-
-
