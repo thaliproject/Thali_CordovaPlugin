@@ -11,15 +11,15 @@ var HKDF = require('./hkdf');
 var Promise = require('lie');
 
 // Constants
-var SHA256 = 'sha256';
-var SECP256K1 = 'secp256k1';
-var ONE_DAY = 86400000;
+module.exports.SHA256 = 'sha256';
+module.exports.SECP256K1 = 'secp256k1';
+module.exports.ONE_DAY = 1000 * 60 * 60 * 24;
 
 /*
-TODO: Revisit GCM when available in JXcore
+TODO: Revisit GCM when available in JXcore - https://github.com/thaliproject/Thali_CordovaPlugin/issues/492
 http://code.runnable.com/VGaBmn68rzMa5p9K/aes-256-gcm-nodejs-encryption-for-node-js-and-hello-world
 */
-var GCM = 'aes128';
+module.exports.GCM = 'aes128';
 
 /**
  * Creates a hash of a public key.
@@ -27,7 +27,7 @@ var GCM = 'aes128';
  * @returns {buffer}
  */
 function createPublicKeyHash (ecdhPublicKey) {
-  return crypto.createHash(SHA256)
+  return crypto.createHash(module.exports.SHA256)
     .update(ecdhPublicKey)
     .digest()
     .slice(0, 16);
@@ -43,14 +43,16 @@ module.exports.createPublicKeyHash = createPublicKeyHash;
  * public keys.
  * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
  * local device's public and private keys
- * @param {number} secondsUntilExpiration - The number of seconds into the
- * future after which the beacons should expire.
+ * @param {number} millisecondsUntilExpiration - The number of milliseconds into
+ * the future after which the beacons should expire. Note that this value will
+ * be fuzzed by 0 to 250 MS to prevent getting an accurate fix on the device's
+ * clock.
  * @returns {?Buffer} - A buffer containing the serialized preamble and beacons
  * or null if there are no beacons to generate
  */
 function generatePreambleAndBeacons (publicKeysToNotify,
                                      ecdhForLocalDevice,
-                                     secondsUntilExpiration) {
+                                     millisecondsUntilExpiration) {
   if (publicKeysToNotify == null) {
     throw new Error('publicKeysToNotify cannot be null');
   }
@@ -59,21 +61,23 @@ function generatePreambleAndBeacons (publicKeysToNotify,
     throw new Error('ecdhForLocalDevice cannot be null');
   }
 
-  var now = Date.now();
-  if (secondsUntilExpiration < now ||
-      secondsUntilExpiration > now + ONE_DAY) {
-    throw new Error('secondsUntilExpiration out of range.');
+  if (millisecondsUntilExpiration <= 0 ||
+      millisecondsUntilExpiration > module.exports.ONE_DAY) {
+    throw new Error('millisecondsUntilExpiration must be > 0 & < ' +
+      module.exports.ONE_DAY);
   }
 
   if (publicKeysToNotify.length === 0) { return null; }
 
   var beacons = [];
 
-  var ke = crypto.createECDH(SECP256K1);
+  var ke = crypto.createECDH(module.exports.SECP256K1);
 
   // Generate preamble
   var pubKe = ke.generateKeys();
-  var expirationLong = Long.fromNumber(secondsUntilExpiration);
+  var expiration = Date.now() + millisecondsUntilExpiration +
+    crypto.randomBytes(8).readUInt8(0);
+  var expirationLong = Long.fromNumber(expiration);
   var expirationBuffer = new Buffer(8);
   expirationBuffer.writeInt32BE(expirationLong.high, 0);
   expirationBuffer.writeInt32BE(expirationLong.low, 4);
@@ -89,10 +93,11 @@ function generatePreambleAndBeacons (publicKeysToNotify,
     var sxy = ecdhForLocalDevice.computeSecret(pubKy);
 
     // HKxy = HKDF(SHA256, Sxy, Expiration, 32)
-    var hkxy = HKDF(SHA256, sxy, expirationBuffer).derive('', 32);
+    var hkxy = HKDF(module.exports.SHA256, sxy, expirationBuffer)
+      .derive('', 32);
 
     // BeaconHmac = HMAC(SHA256, HKxy, Expiration).first(16)
-    var beaconHmac = crypto.createHmac(SHA256, hkxy)
+    var beaconHmac = crypto.createHmac(module.exports.SHA256, hkxy)
       .update(expirationBuffer)
       .digest()
       .slice(0, 16);
@@ -100,18 +105,16 @@ function generatePreambleAndBeacons (publicKeysToNotify,
     // Sey = ECDH(Ke.private(), PubKy)
     var sey = ke.computeSecret(pubKy);
 
-    // KeyingMaterial = HKDF(SHA256, Sey, Expiration, 32)
-    var keyingMaterial = HKDF(SHA256, sey, expirationBuffer).derive('', 32);
+    // KeyingMaterial = HKDF(SHA256, Sey, Expiration, 16)
+    var keyingMaterial = HKDF(module.exports.SHA256, sey, expirationBuffer)
+      .derive('', 16);
 
-    // IV = KeyingMaterial.slice(0,16)
-    var iv = keyingMaterial.slice(0, 16);
+    // HKey = KeyingMaterial.slice(0, 16)
+    var hkey = keyingMaterial.slice(0, 16);
 
-    // HKey = KeyingMaterial.slice(16, 32)
-    var hkey = keyingMaterial.slice(16, 32);
-
-    // beacons.append(AESEncrypt(GCM, HKey, IV, 128, UnencryptedKeyId) +
+    // beacons.append(AESEncrypt(GCM, HKey, 0, 128, UnencryptedKeyId) +
     // BeaconHmac)
-    var aes = crypto.createCipheriv(GCM, hkey, iv);
+    var aes = crypto.createCipher(module.exports.GCM, hkey);
 
     beacons.push(Buffer.concat([
       Buffer.concat([aes.update(unencryptedKeyId), aes.final()]),
@@ -174,17 +177,17 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
   }
 
   // Ensure that expiration is 64-bit integer
-  var expiration = beaconStreamWithPreAmble.slice(65, 65 + 8);
-  if (expiration.length !== 8) {
+  var expirationBuffer = beaconStreamWithPreAmble.slice(65, 65 + 8);
+  if (expirationBuffer.length !== 8) {
     throw new Error('Preamble expiration must be a 64 bit integer');
   }
 
   // Ensure within range
-  var expirationLong = Long.fromBits(
-    expiration.readInt32BE(4),
-    expiration.readInt32BE(0)).toNumber();
+  var expiration = Long.fromBits(
+    expirationBuffer.readInt32BE(4),
+    expirationBuffer.readInt32BE(0)).toNumber();
   var now = Date.now();
-  if (expirationLong < now || expirationLong > now + ONE_DAY) {
+  if (expiration < now || expiration > now + module.exports.ONE_DAY) {
     throw new Error('Expiration out of range');
   }
 
@@ -200,23 +203,21 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
     var sey = ecdhForLocalDevice.computeSecret(pubKe);
 
     // KeyingMaterial = HKDF(SHA256, Sey, Expiration, 32)
-    var keyingMaterial = HKDF(SHA256, sey, expiration).derive('', 32);
+    var keyingMaterial = HKDF(module.exports.SHA256, sey, expirationBuffer)
+      .derive('', 16);
 
-    // IV = KeyingMaterial.slice(0,16)
-    var iv = keyingMaterial.slice(0, 16);
+    // HKey = KeyingMaterial.slice(0, 16)
+    var hkey = keyingMaterial.slice(0, 16);
 
-    // HKey = KeyingMaterial.slice(16, 32)
-    var hkey = keyingMaterial.slice(16, 32);
-
-    // UnencryptedKeyId = AESDecrypt(GCM, HKey, IV, 128,
+    // UnencryptedKeyId = AESDecrypt(GCM, HKey, 0, 128,
     // encryptedBeaconKeyId.slice(0, 32))
     var unencryptedKeyId;
     try {
-      unencryptedKeyId = crypto.createDecipheriv(GCM, hkey, iv);
+      var aes = crypto.createDecipher(module.exports.GCM, hkey);
       unencryptedKeyId =
         Buffer.concat(
-          [unencryptedKeyId.update(encryptedBeaconKeyId.slice(0, 32)),
-            unencryptedKeyId.final()]);
+          [aes.update(encryptedBeaconKeyId.slice(0, 32)),
+            aes.final()]);
     } catch (e) {
       // GCM mac check failed
       continue;
@@ -243,11 +244,12 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
     var sxy = ecdhForLocalDevice.computeSecret(pubKx);
 
     // HKxy = HKDF(SHA256, Sxy, Expiration, 32)
-    var hkxy = HKDF(SHA256, sxy, expiration).derive('', 32);
+    var hkxy = HKDF(module.exports.SHA256, sxy, expirationBuffer)
+      .derive('', 32);
 
     // BeaconHmac.equals(HMAC(SHA256, HKxy, Expiration).first(16)
     var otherBeaconHmac = crypto.createHmac('sha256', hkxy)
-      .update(expiration)
+      .update(expirationBuffer)
       .digest()
       .slice(0, 16);
 
