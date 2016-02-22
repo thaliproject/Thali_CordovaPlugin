@@ -73,10 +73,6 @@ function ThaliWifiInfrastructure () {
 
   this.states = this._getInitialStates();
 
-  // A variable to hold information about known peer availability states
-  // and used to avoid emitting peer availability changes in case the
-  // availability hasn't changed from the previous known value.
-  this.peerAvailabilities = {};
   this._init();
 }
 
@@ -142,19 +138,6 @@ function (networkChangedValue) {
       );
     }
   } else {
-    for (var key in self.peerAvailabilities) {
-      if (self.peerAvailabilities[key]) {
-        // Mark change in peer availability list
-        delete self.peerAvailabilities[key];
-        // Add peer to the list of changes to emit
-        self.emit('wifiPeerAvailabilityChanged', {
-          peerIdentifier: key,
-          hostAddress: null,
-          portNumber: null
-        });
-      }
-    }
-
     // If wifi didn't turn on, it was turned into a state where we want
     // to stop our actions
     actionList = [
@@ -213,19 +196,6 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     peer.portNumber = portNumber;
   } else {
     peer.hostAddress = peer.portNumber = null;
-  }
-
-  // If there are no changes, no need to do anything
-  if (available && this.peerAvailabilities[peer.peerIdentifier] ||
-      !available && !(peer.peerIdentifier in this.peerAvailabilities)) {
-    return false;
-  }
-
-  // Mark changes to the peer availabilities list
-  if (available) {
-    this.peerAvailabilities[peer.peerIdentifier] = true;
-  } else {
-    delete this.peerAvailabilities[peer.peerIdentifier];
   }
 
   this.emit('wifiPeerAvailabilityChanged', peer);

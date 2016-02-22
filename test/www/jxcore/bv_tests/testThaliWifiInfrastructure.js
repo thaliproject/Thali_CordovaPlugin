@@ -55,12 +55,13 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
     if (peer.hostAddress !== testSeverHostAddress) {
       return;
     }
-    t.equal(peer.peerIdentifier, peerIdentifier, 'peer identifier should match');
-    t.equal(peer.hostAddress, testSeverHostAddress, 'host address should match');
+    t.equal(peer.peerIdentifier, peerIdentifier,
+      'peer identifier should match');
+    t.equal(peer.hostAddress, testSeverHostAddress,
+      'host address should match');
     t.equal(peer.portNumber, testServerPort, 'port should match');
-    t.equal(wifiInfrastructure.peerAvailabilities[peerIdentifier], true,
-            'peer should be found from the list');
-    wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
+    wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+      peerAvailableListener);
 
     var peerUnavailableListener = function (peer) {
       if (peer.peerIdentifier !== peerIdentifier) {
@@ -68,15 +69,15 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
       }
       t.equal(peer.hostAddress, null, 'host address should be null');
       t.equal(peer.portNumber, null, 'port should should be null');
-      t.equal(wifiInfrastructure.peerAvailabilities[peerIdentifier], undefined,
-              'peer should be removed from the list');
-      wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerUnavailableListener);
+      wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+        peerUnavailableListener);
       t.end();
     };
-    wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerUnavailableListener);
+    wifiInfrastructure.on('wifiPeerAvailabilityChanged',
+      peerUnavailableListener);
     testServer.stop(function () {
       // When server is stopped, it shold trigger the byebye messages
-      // that emit the wifiPeerAvailabilityChanged to which we listen above.
+      // that emit the wifiPeerAvailabilityChanged that we listen above.
     });
   };
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerAvailableListener);
@@ -358,27 +359,29 @@ if (jxcore.utils.OSInfo().isMobile) {
 var tryStartingFunctionWhileWifiOff = function (t, functionName, keyName) {
   wifiInfrastructure.stop()
   .then(function () {
-    return testUtils.toggleWifi(false);
-  })
-  .then(function () {
-    return wifiInfrastructure.start(express.Router());
-  })
-  .then(function () {
-    return wifiInfrastructure[functionName]();
-  })
-  .then(function () {
-    t.fail('the call should not succeed');
-    t.end();
-  })
-  .catch(function (error) {
-    t.equals(error.message, 'Radio Turned Off', 'specific error expected');
-    wifiInfrastructure.once('discoveryAdvertisingStateUpdateWifiEvent',
-    function (discoveryAdvertisingStateUpdateValue) {
-      t.equals(discoveryAdvertisingStateUpdateValue[keyName], true,
-        keyName + ' should be true');
-      t.end();
+    testUtils.toggleWifi(false);
+    ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
+    function (networkChangedValue) {
+      t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
+      wifiInfrastructure.start(express.Router())
+      .then(function () {
+        return wifiInfrastructure[functionName]();
+      })
+      .then(function () {
+        t.fail('the call should not succeed');
+        t.end();
+      })
+      .catch(function (error) {
+        t.equals(error.message, 'Radio Turned Off', 'specific error expected');
+        wifiInfrastructure.once('discoveryAdvertisingStateUpdateWifiEvent',
+        function (discoveryAdvertisingStateUpdateValue) {
+          t.equals(discoveryAdvertisingStateUpdateValue[keyName], true,
+            keyName + ' should be true');
+          t.end();
+        });
+        testUtils.toggleWifi(true);
+      });
     });
-    testUtils.toggleWifi(true);
   });
 };
 

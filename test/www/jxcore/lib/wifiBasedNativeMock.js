@@ -228,6 +228,9 @@ MobileCallInstance.prototype.stopAdvertisingAndListening =
 function (callback) {
   var self = this;
   var doStop = function () {
+    for (var peerIdentifier in peerAvailabilities) {
+      delete peerAvailabilities[peerIdentifier];
+    }
     for (var peerIdentifier in peerConnections) {
       var peerConnection = peerConnections[peerIdentifier];
       peerConnection.end();
@@ -617,6 +620,30 @@ var getCurrentNetworkStatus = function () {
   return JSON.parse(JSON.stringify(currentNetworkStatus));
 };
 
+var doToggle = function (setting, property, callback) {
+  // Regardless of what happens, call the callback
+  // to let the caller know the call was handled.
+  setImmediate(callback);
+
+  var newStatus = setting ? 'on' : 'off';
+  if (newStatus === currentNetworkStatus[property]) {
+    return;
+  }
+  currentNetworkStatus[property] = newStatus;
+
+  if (networkChangedCallback !== null) {
+    // Record the status on this event loop to make sure
+    // the right values are received.
+    var statusSnapshot = getCurrentNetworkStatus();
+    setImmediate(function () {
+      // Inform the listener asynchronously, because this
+      // is how the callback would get called on iOS and
+      // Android.
+      networkChangedCallback(statusSnapshot);
+    });
+  }
+};
+
 /**
  * This simulates turning Bluetooth on and off.
  *
@@ -632,9 +659,7 @@ var getCurrentNetworkStatus = function () {
  */
 function toggleBluetooth (platform, thaliWifiInfrastructure) {
   return function (setting, callback) {
-    // We don't yet have desktop-runnable tests that depend
-    // on Bluetooth state so for now, this one is doing nothing
-    setImmediate(callback);
+    doToggle(setting, 'bluetooth', callback);
   };
 }
 
@@ -652,23 +677,7 @@ function toggleBluetooth (platform, thaliWifiInfrastructure) {
  */
 function toggleWiFi(platform, thaliWifiInfrastructure) {
   return function (setting, callback) {
-    if (networkChangedCallback !== null) {
-      var newWifiStatus = setting ? 'on' : 'off';
-      if (newWifiStatus === currentNetworkStatus.wifi) {
-        return;
-      }
-      currentNetworkStatus.wifi = newWifiStatus;
-      // Record the status on this event loop to make sure
-      // the right values are received.
-      var statusSnapshot = getCurrentNetworkStatus();
-      setImmediate(function () {
-        // Inform the listener asynchronously, because this
-        // is how the callback would get called on iOS and
-        // Android.
-        networkChangedCallback(statusSnapshot);
-      });
-    }
-    setImmediate(callback);
+    doToggle(setting, 'wifi', callback);
   };
 }
 

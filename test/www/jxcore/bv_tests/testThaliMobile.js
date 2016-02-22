@@ -148,6 +148,7 @@ test('network changes not emitted in stopped state', function (t) {
 test('does not send duplicate availability changes', function (t) {
   var dummyPeer = {
     peerIdentifier: 'dummy',
+    hostAddress: 'dummy',
     portNumber: 8080
   };
   var spy = sinon.spy(ThaliMobile.emitter, 'emit');
@@ -168,9 +169,12 @@ test('does not send duplicate availability changes', function (t) {
 test('calls correct starts when network changes', function (t) {
   var listeningSpy = null;
   var advertisingSpy = null;
-  ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
-  function (networkChangedValue) {
-    t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
+  var networkChangedHandler = function (networkChangedValue) {
+    if (networkChangedValue.wifi !== 'off') {
+      return;
+    }
+    ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
+      networkChangedHandler);
     ThaliMobile.start(express.Router())
     .then(function () {
       return ThaliMobile.startListeningForAdvertisements();
@@ -198,9 +202,48 @@ test('calls correct starts when network changes', function (t) {
       ThaliMobile.startUpdateAdvertisingAndListening.restore();
       t.end();
     });
-  });
+  };
+  ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+    networkChangedHandler);
   testUtils.toggleRadios(false);
 });
+
+test('when network connection is lost a peer should be marked unavailable', function (t) {
+  ThaliMobile.start(express.Router())
+  .then(function () {
+    var dummyPeerIdentifier = 'dummyPeer';
+    var availabilityHandler = function (peer) {
+      if (peer.peerIdentifier !== dummyPeerIdentifier) {
+        return;
+      }
+      ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+        availabilityHandler);
+      var unavailabilityHandler = function (peer) {
+        if (peer.peerIdentifier !== dummyPeerIdentifier) {
+          return;
+        }
+        t.equals(peer.hostAddress, null, 'host address should be null');
+        t.equals(peer.portNumber, null, 'port number should be null');
+        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+          unavailabilityHandler);
+
+        testUtils.toggleRadios(true);
+        t.end();
+      };
+      ThaliMobile.emitter.on('peerAvailabilityChanged',
+        unavailabilityHandler);
+      testUtils.toggleRadios(false);
+    };
+    ThaliMobile.emitter.on('peerAvailabilityChanged',
+      availabilityHandler);
+    ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+      peerIdentifier: dummyPeerIdentifier,
+      hostAddress: 'dummy',
+      portNumber: 8080
+    });
+  });
+});
+
 
 if (!tape.coordinated) {
   return;
@@ -214,15 +257,11 @@ var setupDiscoveryAndFindPeer = function (t, callback) {
     // tests with. However, even with any peer, this test vefifies that we do
     // get correctly formatted advertisements.
     callback(peer, function () {
-      ThaliMobile.stopListeningForAdvertisements()
-      .then(function (combinedResult) {
-        verifyCombinedResultSuccess(t, combinedResult);
-        // On purpose not stopping advertising within the test
-        // because another device might still be running the test
-        // and waiting for advertisements. The stop happens in the
-        // test teardown phase.
-        t.end();
-      });
+      // On purpose not stopping anything within the test
+      // because another device might still be running the test
+      // and waiting for advertisements. The stop happens in the
+      // test teardown phase.
+      t.end();
     });
   });
   ThaliMobile.start(express.Router())
@@ -263,27 +302,3 @@ test('a peer should be found after #startListeningForAdvertisements is called', 
     done();
   });
 });
-/*
-test('when network connection is lost a peer should be marked unavailable', function (t) {
-  setupDiscoveryAndFindPeer(t, function (peer, done) {
-    var availabilityChangedHandler = function (matchingPeer) {
-      if (matchingPeer.peerIdentifier !== peer.peerIdentifier) {
-        return;
-      }
-      t.equals(matchingPeer.hostAddress, null, 'host address should be null');
-      t.equals(matchingPeer.portNumber, null, 'port number should be null');
-      ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-        availabilityChangedHandler);
-      testUtils.toggleWifi(true);
-      setTimeout(function () {
-        done();
-      }, 500);
-    };
-    ThaliMobile.emitter.on('peerAvailabilityChanged',
-      availabilityChangedHandler);
-    setTimeout(function () {
-      testUtils.toggleWifi(false);
-    }, 500);
-  });
-});
-*/
