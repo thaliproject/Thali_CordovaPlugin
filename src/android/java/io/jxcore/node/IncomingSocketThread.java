@@ -5,6 +5,7 @@ package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,64 +16,65 @@ import java.net.Socket;
  * A thread for incoming Bluetooth connections.
  */
 class IncomingSocketThread extends SocketThreadBase {
-  private int mHttpPort = 0;
+    private int mTcpPortNumber = 0;
 
-  /**
-   * Constructor.
-   * @param bluetoothSocket The Bluetooth socket.
-   * @param listener The listener.
-   * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
-   */
-  public IncomingSocketThread(BluetoothSocket bluetoothSocket, ConnectionStatusListener listener)
-    throws IOException{
-    super(bluetoothSocket, listener);
-    TAG = IncomingSocketThread.class.getName();
-  }
-
-  public int getHttpPort() {
-    return mHttpPort;
-  }
-
-  public void setHttpPort(int httpPort) {
-    mHttpPort = httpPort;
-  }
-
-  public int getLocalHostPort() {
-    Socket copyOfmLocalHostSocket = mLocalhostSocket;
-    return copyOfmLocalHostSocket == null ? 0 : copyOfmLocalHostSocket.getPort();
-  }
-
-  /**
-   * From Thread.
-   */
-  @Override
-  public void run() {
-    Log.d(TAG, "Entering thread (ID: " + getId() + ")");
-    InputStream tempInputStream = null;
-    OutputStream tempOutputStream = null;
-    boolean localStreamsCreatedSuccessfully = false;
-
-    try {
-      Inet4Address mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
-      mLocalhostSocket = new Socket(mLocalHostAddress, mHttpPort);
-
-      Log.i(TAG, "Local host address: " + getLocalHostAddressAsString() + ", port: " + getLocalHostPort());
-
-      tempInputStream = mLocalhostSocket.getInputStream();
-      tempOutputStream = mLocalhostSocket.getOutputStream();
-      localStreamsCreatedSuccessfully = true;
-    } catch (IOException e) {
-      Log.e(TAG, "Failed to create the local streams: " + e.getMessage(), e);
-      mListener.onDisconnected(this, "Failed to create the local streams: " + e.getMessage());
+    /**
+     * Constructor.
+     *
+     * @param bluetoothSocket The Bluetooth socket.
+     * @param listener        The listener.
+     * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
+     */
+    public IncomingSocketThread(BluetoothSocket bluetoothSocket, Listener listener)
+            throws IOException {
+        super(bluetoothSocket, listener);
+        TAG = IncomingSocketThread.class.getName();
     }
 
-    if (localStreamsCreatedSuccessfully) {
-      Log.d(TAG, "Setting local streams and starting stream copying threads...");
-      mLocalInputStream = tempInputStream;
-      mLocalOutputStream = tempOutputStream;
-      startStreamCopyingThreads();
+    public int getTcpPortNumber() {
+        return mTcpPortNumber;
     }
 
-    Log.d(TAG, "Exiting thread (ID: " + getId() + ")");
-  }
+    public void setTcpPortNumber(int portNumber) {
+        mTcpPortNumber = portNumber;
+    }
+
+    public int getLocalHostPort() {
+        Socket copyOfLocalHostSocket = mLocalhostSocket;
+        return copyOfLocalHostSocket == null ? ConnectionHelper.NO_PORT_NUMBER : copyOfLocalHostSocket.getPort();
+    }
+
+    /**
+     * From Thread.
+     */
+    @Override
+    public void run() {
+        Log.d(TAG, "Entering thread (ID: " + getId() + ")");
+        InputStream tempInputStream = null;
+        OutputStream tempOutputStream = null;
+        boolean localStreamsCreatedSuccessfully = false;
+
+        try {
+            Inet4Address mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
+            mLocalhostSocket = new Socket(mLocalHostAddress, mTcpPortNumber);
+
+            Log.i(TAG, "Local host address: " + getLocalHostAddressAsString() + ", port: " + getLocalHostPort());
+
+            tempInputStream = mLocalhostSocket.getInputStream();
+            tempOutputStream = mLocalhostSocket.getOutputStream();
+            localStreamsCreatedSuccessfully = true;
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to create the local streams: " + e.getMessage(), e);
+            mListener.onDisconnected(this, "Failed to create the local streams: " + e.getMessage());
+        }
+
+        if (localStreamsCreatedSuccessfully) {
+            Log.d(TAG, "Setting local streams and starting stream copying threads...");
+            mLocalInputStream = tempInputStream;
+            mLocalOutputStream = tempOutputStream;
+            startStreamCopyingThreads();
+        }
+
+        Log.d(TAG, "Exiting thread (ID: " + getId() + ")");
+    }
 }

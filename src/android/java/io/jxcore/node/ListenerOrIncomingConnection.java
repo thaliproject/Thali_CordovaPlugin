@@ -22,15 +22,15 @@ class ListenerOrIncomingConnection {
      * @param listeningOnPortNumber The port on which the native layer is listening on 127.0.0.1 for
      *                              an incoming TCP/IP connection that the native layer will then
      *                              relay to the remote peer.
-     * @param clientPortNumber clientPort The port that the native layer's TCP/IP client uses to
-     *                         connect to the `portNumber` submitted by the Thali application.
-     * @param serverPortNumber The port that the native layer's TCP/IP client connected to. The
-     *                         reason we include it here is because there is a potential race
-     *                         condition where between the time we created the response to the
-     *                         connect request and when it was actually sent to Node.js in theory we
-     *                         could have received a stop and start that switched us to a different
-     *                         `portNumber`. So by including `serverPort` we can catch those race
-     *                         conditions.
+     * @param clientPortNumber      clientPort The port that the native layer's TCP/IP client uses to
+     *                              connect to the `portNumber` submitted by the Thali application.
+     * @param serverPortNumber      The port that the native layer's TCP/IP client connected to. The
+     *                              reason we include it here is because there is a potential race
+     *                              condition where between the time we created the response to the
+     *                              connect request and when it was actually sent to Node.js in theory we
+     *                              could have received a stop and start that switched us to a different
+     *                              `portNumber`. So by including `serverPort` we can catch those race
+     *                              conditions.
      */
     public ListenerOrIncomingConnection(int listeningOnPortNumber, int clientPortNumber, int serverPortNumber) {
         mListeningOnPortNumber = listeningOnPortNumber;
