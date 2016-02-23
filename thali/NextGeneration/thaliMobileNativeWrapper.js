@@ -4,6 +4,7 @@ var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
 var EventEmitter = require('events').EventEmitter;
+var logger = require('../thalilogger')('thaliMobileNativeWrapper');
 
 var states = {
   started: false
@@ -284,16 +285,16 @@ module.exports.terminateConnection = function (incomingConnectionId) {
  * # WARNING: This method is intended for internal Thali testing only. DO NOT
  * USE!
  *
- * This method terminates all incoming and outgoing connections including
- * Bluetooth sockets and Multipeer Connectivity Framework MCSessions, without
- * using the normal stop and start interfaces or TCP/IP level connections. The
- * goal is to simulate what would happen if we switched the phone to something
- * like airplane mode. This simulates what would happen if peers went out of
- * range.
+ * This method is only intended for iOS. It's job is to terminate all incoming
+ * and outgoing multipeer connectivity framework browser, advertiser, MCSession
+ * and stream connections immediately without using the normal stop and start
+ * interfaces or TCP/IP level connections. The goal is to simulate what would
+ * happen if we switched the phone to something like airplane mode. This
+ * simulates what would happen if peers went out of range.
  *
- * This method does work on Android but note that on Android we can also use
- * JXcore's ability to disable the local radios (something not available on
- * iOS).
+ * This method MUST return "Not Supported" if called on Android. On Android we
+ * can get this functionality by using JXCore's ability to disable the local
+ * radios.
  *
  * | Error String | Description |
  * |--------------|-------------|
@@ -434,53 +435,35 @@ module.exports.killConnections = function () {
  */
 module.exports.emitter = new EventEmitter();
 
-// Currently skipping the Mobile calls on the real mobile environment
-// since they are not implemented yet
-if (!jxcore.utils.OSInfo().isMobile) {
-  Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
+// Function to register a method to the native side
+// and inform that the registration was done.
+var registerToNative = function (methodName, callback) {
+  Mobile(methodName).registerToNative(callback);
+  Mobile('didRegisterToNative').callNative(methodName, function () {
+    logger.info('Method %s registered to native', methodName);
+  });
+};
+
+registerToNative('peerAvailabilityChanged', function (peers) {
+  // do stuff!
+});
+
+registerToNative('discoveryAdvertisingStateUpdateNonTCP',
+  function (discoveryAdvertisingStateUpdateValue) {
     // do stuff!
-  });
+  }
+);
 
-  Mobile('discoveryAdvertisingStateUpdateNonTCP').registerToNative(
-    function (discoveryAdvertisingStateUpdateValue) {
-      // do stuff!
-    });
+registerToNative('networkChanged', function (networkChanged) {
+  // The value needs to be assigned here to nonTCPNetworkStatus
+  // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
+  // can return it.
+  nonTCPNetworkStatus = networkChanged;
+  module.exports.emitter.emit('networkChangedNonTCP', nonTCPNetworkStatus);
+});
 
-  Mobile('networkChanged').registerToNative(function (networkChanged) {
-    // The value needs to be assigned here to nonTCPNetworkStatus
-    // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
-    // can return it.
-    nonTCPNetworkStatus = networkChanged;
-    module.exports.emitter.emit('networkChangedNonTCP', nonTCPNetworkStatus);
-  });
-
-  Mobile('incomingConnectionToPortNumberFailed').registerToNative(
-    function (portNumber) {
-      // do stuff!
-    });
-} else {
-  module.exports.emitter.on('networkChangedNonTCP', function (networkChangedValue) {
-    // The value needs to be assigned here to nonTCPNetworkStatus
-    // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
-    // can return it.
-    nonTCPNetworkStatus = networkChangedValue;
-  });
-  // Implement the logic to emit networkChangedNonTCP in non-mobile environment
-  // when the first listener is registered.
-  var newListenerHandler = function (event, listener) {
-    if (event !== 'networkChangedNonTCP') {
-      return;
-    }
-    module.exports.emitter.removeListener('newListener', newListenerHandler);
-    setImmediate(function () {
-      var mockNetworkStatus = {
-        wifi: 'on',
-        bluetooth: 'doNotCare',
-        bluetoothLowEnergy: 'doNotCare',
-        cellular: 'doNotCare'
-      };
-      module.exports.emitter.emit('networkChangedNonTCP', mockNetworkStatus);
-    });
-  };
-  module.exports.emitter.on('newListener', newListenerHandler);
-}
+registerToNative('incomingConnectionToPortNumberFailed',
+  function (portNumber) {
+    // do stuff!
+  }
+);

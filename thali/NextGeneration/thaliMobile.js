@@ -1,8 +1,11 @@
+/* global hostAddress */
 'use strict';
 
 var Promise = require('lie');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
+var assert = require('assert');
+var logger = require('../thalilogger')('thaliMobile');
 
 var ThaliConfig = require('./thaliConfig');
 
@@ -19,10 +22,68 @@ var promiseResultSuccessOrFailure = function (promise) {
   });
 };
 
+var getCombinedResult = function (results) {
+  return {
+    wifiResult: results[0] || null,
+    nativeResult: results[1] || null
+  };
+};
+
 var thaliMobileStates = {
   started: false,
   listening: false,
   advertising: false
+};
+
+var handleNetworkChanged = function (networkChangedValue) {
+  if (networkChangedValue.wifi === 'off') {
+    // If Wifi is off, we mark Wifi peers unavailable.
+    changePeersUnavailable(connectionTypes.TCP_NATIVE);
+    if (networkChangedValue.bluetooth === 'off') {
+      // If Wifi and bluetooth is off, we know we can't talk to peers over
+      // over MPCF so marking them unavailable.
+      changePeersUnavailable(connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK);
+    }
+  }
+  if (networkChangedValue.bluetooth === 'off' ||
+      networkChangedValue.bluetoothLowEnergy === 'off') {
+    // If either Bluetooth or BLE is off, we mark Android peers unavailable.
+    changePeersUnavailable(connectionTypes.BLUETOOTH);
+  }
+  var radioEnabled = false;
+  Object.keys(networkChangedValue).forEach(function (key) {
+    if (networkChangedValue[key] === 'on') {
+      radioEnabled = true;
+    }
+  });
+  if (!radioEnabled) {
+    return;
+  }
+  // At least some radio was enabled so try to start
+  // whatever can be potentially started.
+  promiseResultSuccessOrFailure(module.exports.start())
+  .then(function () {
+    var checkErrors = function (operation, combinedResult) {
+      Object.keys(combinedResult).forEach(function (resultType) {
+        if (combinedResult[resultType] !== null) {
+          logger.info('Failed operation %s with error: ' +
+                      combinedResult[resultType], operation);
+        }
+      });
+    };
+    if (thaliMobileStates.listening) {
+      module.exports.startListeningForAdvertisements()
+      .then(function (combinedResult) {
+        checkErrors('startListeningForAdvertisements', combinedResult);
+      });
+    }
+    if (thaliMobileStates.advertising) {
+      module.exports.startUpdateAdvertisingAndListening()
+      .then(function (combinedResult) {
+        checkErrors('startUpdateAdvertisingAndListening', combinedResult);
+      });
+    }
+  });
 };
 
 /** @module thaliMobile */
@@ -90,14 +151,16 @@ module.exports.start = function (router) {
     return Promise.reject(new Error('Call Stop!'));
   }
   thaliMobileStates.started = true;
+  module.exports.emitter.on('networkChanged', handleNetworkChanged);
   return Promise.all([
     promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.start(router))
+      thaliWifiInfrastructure.start(router)
+    ),
+    promiseResultSuccessOrFailure(
+      ThaliMobileNativeWrapper.start(router)
+    )
   ]).then(function (results) {
-    return {
-      wifiResult: results[0] || null
-      //nativeResult: results[1] || null
-    };
+    return getCombinedResult(results);
   });
 };
 
@@ -114,14 +177,16 @@ module.exports.start = function (router) {
  */
 module.exports.stop = function () {
   thaliMobileStates.started = false;
+  module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
   return Promise.all([
     promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.stop())
+      thaliWifiInfrastructure.stop()
+    ),
+    promiseResultSuccessOrFailure(
+      ThaliMobileNativeWrapper.stop()
+    )
   ]).then(function (results) {
-    return {
-      wifiResult: results[0] || null
-      //nativeResult: results[1] || null
-    };
+    return getCombinedResult(results);
   });
 };
 
@@ -168,11 +233,10 @@ module.exports.startListeningForAdvertisements = function () {
   } else {
     resultObject.wifiResult = new Error('Not Active');
   }
-  // TODO: Add native call
   return Promise.all(promiseList).then(function (results) {
     return {
-      wifiResult: resultObject.wifiResult || results[0] || null
-      //nativeResult: results[1] || null
+      wifiResult: resultObject.wifiResult || results[0] || null,
+      nativeResult: null // results[1] || null
     };
   });
 };
@@ -277,20 +341,18 @@ module.exports.getNetworkStatus = function () {
         EVENTS
  */
 
-
 /**
  * Enum to define the types of connections
  *
  * @readonly
  * @enum {string}
  */
-module.exports.connectionTypes = {
+var connectionTypes = {
   MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
-  BLUE_TOOTH: 'AndroidBlueTooth',
+  BLUETOOTH: 'AndroidBluetooth',
   TCP_NATIVE: 'tcp'
 };
-
-var thaliMobileEmitter = new EventEmitter();
+module.exports.connectionTypes = connectionTypes;
 
 /**
  * It is the job of this module to provide the most reliable guesses (and that
@@ -490,25 +552,85 @@ var thaliMobileEmitter = new EventEmitter();
  * us.
  */
 
-ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-    function (peer)
-    {
-      // Do stuff
-    });
+var peerAvailabilities = {};
+peerAvailabilities[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
+peerAvailabilities[connectionTypes.BLUETOOTH] = {};
+peerAvailabilities[connectionTypes.TCP_NATIVE] = {};
 
-thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
-  var peers = [];
-  wifiPeers.forEach(function (wifiPeer) {
-    var peer = {
-      peerIdentifier: wifiPeer.peerIdentifier,
-      hostAddress: wifiPeer.hostAddress,
-      portNumber: wifiPeer.portNumber
-    };
-    peer.connectionType = module.exports.connectionTypes.TCP_NATIVE;
-    peer.suggestedTCPTimeout = ThaliConfig.TCP_TIMEOUT_WIFI;
-    peers.push(peer);
+var changeCachedPeerUnavailable = function (peer) {
+  delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
+};
+
+var changeCachedPeerAvailable = function (peer) {
+  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = peer;
+};
+
+var changePeersUnavailable = function (connectionType) {
+  Object.keys(peerAvailabilities[connectionType]).forEach(function (peerIdentifier) {
+    changeCachedPeerUnavailable(peerAvailabilities[connectionType]
+      [peerIdentifier]);
+    module.exports.emitter.emit('peerAvailabilityChanged', {
+      peerIdentifier: peerIdentifier,
+      hostAddress: null,
+      portNumber: null
+    });
   });
-  thaliMobileEmitter.emit('peerAvailabilityChanged', peers);
+};
+
+var peerHasChanged = function (peer) {
+  var cachedPeer = peerAvailabilities[peer.connectionType][peer.peerIdentifier];
+  if (!cachedPeer) {
+    return true;
+  }
+  if (cachedPeer.hostAddress !== peer.hostAddress ||
+      cachedPeer.portNumber !== peer.portNumber) {
+    return true;
+  }
+  return false;
+};
+
+var getExtendedPeer = function (peer, connectionType) {
+  var timeout = null;
+  if (connectionType === connectionTypes.TCP_NATIVE) {
+    timeout = ThaliConfig.TCP_TIMEOUT_WIFI;
+  } else if (connectionType === connectionTypes.BLUETOOTH) {
+    timeout = ThaliConfig.TCP_TIMEOUT_BLUETOOTH;
+  } else if (connectionType === connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK) {
+    timeout = ThaliConfig.TCP_TIMEOUT_MPCF;
+  }
+  assert(timeout !== null, 'timeout value must have been set');
+  return {
+    peerIdentifier: peer.peerIdentifier,
+    hostAddress: peer.hostAddress,
+    portNumber: peer.portNumber,
+    connectionType: connectionType,
+    suggestedTCPTimeout: timeout
+  };
+};
+
+var handlePeer = function (peer, connectionType) {
+  peer = getExtendedPeer(peer, connectionType);
+  if (!peerHasChanged(peer)) {
+    return;
+  }
+  if (peer.hostAddress === null) {
+    changeCachedPeerUnavailable(peer);
+  } else {
+    changeCachedPeerAvailable(peer);
+  }
+  module.exports.emitter.emit('peerAvailabilityChanged', peer);
+};
+
+ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peer) {
+  var connectionType =
+    jxcore.utils.OSInfo().isAndroid ?
+    connectionTypes.BLUETOOTH :
+    connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
+  handlePeer(peer, connectionType);
+});
+
+thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
+  handlePeer(peer, connectionTypes.TCP_NATIVE);
 });
 
 /**
@@ -529,6 +651,16 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
  * @property {boolean} wifiAdvertisingActive Indicates if advertising is
  * active on WiFi
  */
+
+var emitDiscoveryAdvertisingStateUpdate =
+function (discoveryAdvertisingStateUpdateValue) {
+  if (!thaliMobileStates.started) {
+    return;
+  }
+  // TODO: Implement to logic to react this event.
+  module.exports.emitter.emit('discoveryAdvertisingStateUpdate',
+    discoveryAdvertisingStateUpdateValue);
+};
 
 /**
  * If we receive a {@link
@@ -563,18 +695,24 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
  */
 
 
-ThaliMobileNativeWrapper.emitter.on('discoveryAdvertisingStateUpdateNonTCPEvent',
-    function (discoveryAdvertisingStateUpdateValue) {
-  // Do stuff
-});
+ThaliMobileNativeWrapper.emitter.on(
+  'discoveryAdvertisingStateUpdateNonTCPEvent',
+  function (discoveryAdvertisingStateUpdateValue) {
+    emitDiscoveryAdvertisingStateUpdate(discoveryAdvertisingStateUpdateValue);
+  }
+);
 
-thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
-    function (discoveryAdvertisingStateUpdateValue) {
-  // Do stuff
-});
+thaliWifiInfrastructure.on(
+  'discoveryAdvertisingStateUpdateWifiEvent',
+  function (discoveryAdvertisingStateUpdateValue) {
+    emitDiscoveryAdvertisingStateUpdate(discoveryAdvertisingStateUpdateValue);
+  }
+);
 
 var emitNetworkChanged = function (networkChangedValue) {
-  thaliMobileEmitter.emit('networkChanged', networkChangedValue);
+  if (thaliMobileStates.started) {
+    module.exports.emitter.emit('networkChanged', networkChangedValue);
+  }
 };
 
 /**
@@ -614,4 +752,4 @@ ThaliMobileNativeWrapper.emitter.on('incomingConnectionToPortNumberFailed',
  * @fires module:thaliMobile.event:discoveryAdvertisingStateUpdate
  * @fires module:thaliMobile.event:networkChanged
  */
-module.exports.emitter = thaliMobileEmitter;
+module.exports.emitter = new EventEmitter();

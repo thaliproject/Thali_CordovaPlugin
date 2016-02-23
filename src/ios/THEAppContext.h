@@ -62,6 +62,9 @@ typedef void(^ClientConnectCallback)(NSString *error, NSDictionary *connection);
 - (void)didFindPeer:(NSDictionary *)peer;
 - (void)didLosePeer:(NSString *)peerIdentifier;
 
+// Allow external component to force us to fire event
+- (void)fireNetworkChangedEvent;
+
 #ifdef DEBUG
 // A set of functions which make testing a lot easier
 - (void)setPeerIdentifier:(NSString *)peerIdentifier;

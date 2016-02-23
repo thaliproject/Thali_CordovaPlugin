@@ -41,9 +41,6 @@
 // ctor
 - (id)init;
 
-// Fires the network changed event.
-- (void)fireNetworkChangedEvent;
-
 // Fire peerAvailabilityChanged event
 - (void)firePeerAvailabilityChangedEvent:(NSDictionary *)peer;
 
@@ -152,6 +149,42 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 
 - (void)didLosePeer:(NSString *)peerIdentifier
 {
+}
+
+// Fires the network changed event.
+- (void)fireNetworkChangedEvent
+{
+  NSDictionary *networkStatus;
+
+  // NPReachability only tells us what kind of IP connection we're capable
+  // of. Need to take bluetooth into account also
+
+  /* This stuff is being deprecated. Hmm !!!
+  NSArray *ifs = (__bridge_transfer id)CNCopySupportedInterfaces();
+  if ([ifs count] > 0)
+  {
+    for (NSString *ifname in ifs)
+    {
+      NSDictionary *info = (__bridge_transfer id)CNCopyCurrentNetworkInfo((__bridge CFStringRef)ifname);
+
+    }
+  }*/
+  
+  BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
+  BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
+
+  networkStatus = @{
+    @"blueToothLowEnergy" : [[NSNumber alloc] initWithBool:_bleEnabled],
+    @"blueTooth" : [[NSNumber alloc] initWithBool:_bluetoothEnabled],
+    @"cellular" : [[NSNumber alloc] initWithBool:reachable],
+    @"wifi" : [[NSNumber alloc] initWithBool:isWifi],
+    @"bssidName" : [[NSNull alloc] init]
+  };
+
+  if (_eventDelegate)
+  {
+    [_eventDelegate networkChanged: networkStatus];
+  }
 }
 
 #ifdef DEBUG
@@ -263,42 +296,6 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     // delegate expects an array of peers
     NSArray *peerArray = [[NSArray alloc] initWithObjects:peer, nil];
     [_eventDelegate peerAvailabilityChanged:peerArray];
-  }
-}
-
-// Fires the network changed event.
-- (void)fireNetworkChangedEvent
-{
-  NSDictionary *networkStatus;
-
-  // NPReachability only tells us what kind of IP connection we're capable
-  // of. Need to take bluetooth into account also
-
-  /* This stuff is being deprecated. Hmm !!!
-  NSArray *ifs = (__bridge_transfer id)CNCopySupportedInterfaces();
-  if ([ifs count] > 0)
-  {
-    for (NSString *ifname in ifs)
-    {
-      NSDictionary *info = (__bridge_transfer id)CNCopyCurrentNetworkInfo((__bridge CFStringRef)ifname);
-
-    }
-  }*/
-  
-  BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
-  BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
-
-  networkStatus = @{
-    @"blueToothLowEnergy" : [[NSNumber alloc] initWithBool:_bleEnabled],
-    @"blueTooth" : [[NSNumber alloc] initWithBool:_bluetoothEnabled],
-    @"cellular" : [[NSNumber alloc] initWithBool:reachable],
-    @"wifi" : [[NSNumber alloc] initWithBool:isWifi],
-    @"bssidName" : [[NSNull alloc] init]
-  };
-
-  if (_eventDelegate)
-  {
-    [_eventDelegate networkChanged: networkStatus];
   }
 }
 
