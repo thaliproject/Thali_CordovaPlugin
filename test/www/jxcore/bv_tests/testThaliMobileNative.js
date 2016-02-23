@@ -2,12 +2,6 @@
 
 var net = require('net');
 var randomstring = require('randomstring');
-
-if (jxcore.utils.OSInfo().isAndroid) {
-  // REMOVE ME WHEN READY TO TEST ANDROID !!!
-  return;
-}
-
 var tape = require('../lib/thali-tape');
 
 var test = tape({

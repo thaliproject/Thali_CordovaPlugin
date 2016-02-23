@@ -1,4 +1,6 @@
-var LogCallback;
+'use strict';
+
+var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 var Promise = require('lie');
@@ -48,19 +50,21 @@ module.exports.toggleRadios = function (on) {
 
 function isFunction(functionToCheck) {
   var getType = {};
-  return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+  return functionToCheck && getType.toString.call(functionToCheck) ===
+    '[object Function]';
 }
 
 /**
- * Log a message to the screen - only applies when running on Mobile. It assumes we are using our test framework
- * with our Cordova WebView who is setup to receive logging messages and display them.
+ * Log a message to the screen - only applies when running on Mobile. It assumes
+ * we are using our test framework with our Cordova WebView who is setup to
+ * receive logging messages and display them.
  * @param {string} message
  */
-exports.logMessageToScreen = function(message) {
-  if (isFunction(LogCallback)) {
-    LogCallback(message);
+exports.logMessageToScreen = function (message) {
+  if (isFunction(logCallback)) {
+    logCallback(message);
   } else {
-    console.log("LogCallback not set !!!!");
+    console.log('logCallback not set !!!!');
   }
 };
 
@@ -69,7 +73,7 @@ var myName;
 /**
  * Set the name given used by this device. The name is
  * retrievable via a function exposed to the Cordova side.
- * @param name
+ * @param {string} name
  */
 exports.setName = function (name) {
   myName = name;
@@ -84,16 +88,16 @@ exports.getName = function () {
 
 if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
   Mobile('setLogCallback').registerAsync(function (callback) {
-    LogCallback = callback;
+    logCallback = callback;
   });
 
   Mobile('getMyName').registerAsync(function (callback) {
     callback(myName);
   });
 } else {
-  LogCallback = function(message) {
+  logCallback = function (message) {
     console.log(message);
-  }
+  };
 }
 
 /**
@@ -116,18 +120,16 @@ exports.tmpDirectory = function () {
   return tmpObject.name;
 };
 
+/**
+ * Logs the result of BLE multiple advertisement feature support check on
+ * Android.
+ */
 if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
-  // Below is only for logging purposes.
-  // Once we have had the BT off and we just turned it on,
-  // we need to wait untill the BLE support is reported rigth way
-  // seen with LG G4, Not seen with Motorola Nexus 6.
-  setTimeout(function () {
-    Mobile('IsBLESupported').callNative(function (err) {
-      if (err) {
-        console.log('BLE advertisement is not supported: ' + err );
-        return;
-      }
-      console.log("BLE advertisement is supported");
-    });
-  }, 5000);
+  Mobile('isBleMultipleAdvertisementSupported').callNative(function (err) {
+    if (err) {
+      console.log('BLE multiple advertisement not supported: ' + err);
+    } else {
+      console.log('BLE multiple advertisement supported');
+    }
+  });
 }
