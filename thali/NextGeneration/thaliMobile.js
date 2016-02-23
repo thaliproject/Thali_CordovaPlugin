@@ -652,6 +652,16 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
  * active on WiFi
  */
 
+var emitDiscoveryAdvertisingStateUpdate =
+function (discoveryAdvertisingStateUpdateValue) {
+  if (!thaliMobileStates.started) {
+    return;
+  }
+  // TODO: Implement to logic to react this event.
+  module.exports.emitter.emit('discoveryAdvertisingStateUpdate',
+    discoveryAdvertisingStateUpdateValue);
+};
+
 /**
  * If we receive a {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateNonTCPEvent}
@@ -685,15 +695,19 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
  */
 
 
-ThaliMobileNativeWrapper.emitter.on('discoveryAdvertisingStateUpdateNonTCPEvent',
-    function (discoveryAdvertisingStateUpdateValue) {
-  // Do stuff
-});
+ThaliMobileNativeWrapper.emitter.on(
+  'discoveryAdvertisingStateUpdateNonTCPEvent',
+  function (discoveryAdvertisingStateUpdateValue) {
+    emitDiscoveryAdvertisingStateUpdate(discoveryAdvertisingStateUpdateValue);
+  }
+);
 
-thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
-    function (discoveryAdvertisingStateUpdateValue) {
-  // Do stuff
-});
+thaliWifiInfrastructure.on(
+  'discoveryAdvertisingStateUpdateWifiEvent',
+  function (discoveryAdvertisingStateUpdateValue) {
+    emitDiscoveryAdvertisingStateUpdate(discoveryAdvertisingStateUpdateValue);
+  }
+);
 
 var emitNetworkChanged = function (networkChangedValue) {
   if (thaliMobileStates.started) {

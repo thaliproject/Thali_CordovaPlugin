@@ -228,9 +228,7 @@ MobileCallInstance.prototype.stopAdvertisingAndListening =
 function (callback) {
   var self = this;
   var doStop = function () {
-    for (var peerIdentifier in peerAvailabilities) {
-      delete peerAvailabilities[peerIdentifier];
-    }
+    peerAvailabilities = {};
     for (var peerIdentifier in peerConnections) {
       var peerConnection = peerConnections[peerIdentifier];
       peerConnection.end();
@@ -611,7 +609,7 @@ var platformChoice = {
 
 var currentNetworkStatus = {
   wifi: 'on',
-  bluetooth: 'doNotCare',
+  bluetooth: 'on',
   bluetoothLowEnergy: 'doNotCare',
   cellular: 'doNotCare'
 };
@@ -621,12 +619,9 @@ var getCurrentNetworkStatus = function () {
 };
 
 var doToggle = function (setting, property, callback) {
-  // Regardless of what happens, call the callback
-  // to let the caller know the call was handled.
-  setImmediate(callback);
-
   var newStatus = setting ? 'on' : 'off';
   if (newStatus === currentNetworkStatus[property]) {
+    setImmediate(callback);
     return;
   }
   currentNetworkStatus[property] = newStatus;
@@ -642,6 +637,7 @@ var doToggle = function (setting, property, callback) {
       networkChangedCallback(statusSnapshot);
     });
   }
+  setImmediate(callback);
 };
 
 /**

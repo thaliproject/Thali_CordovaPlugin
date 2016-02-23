@@ -169,16 +169,14 @@ test('does not send duplicate availability changes', function (t) {
 test('calls correct starts when network changes', function (t) {
   var listeningSpy = null;
   var advertisingSpy = null;
+
   var networkChangedHandler = function (networkChangedValue) {
     if (networkChangedValue.wifi !== 'off') {
       return;
     }
     ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
       networkChangedHandler);
-    ThaliMobile.start(express.Router())
-    .then(function () {
-      return ThaliMobile.startListeningForAdvertisements();
-    })
+    ThaliMobile.startListeningForAdvertisements()
     .then(function (combinedResult) {
       t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
               'specific error expected');
@@ -191,7 +189,7 @@ test('calls correct starts when network changes', function (t) {
         'startListeningForAdvertisements');
       advertisingSpy = sinon.spy(ThaliMobile,
         'startUpdateAdvertisingAndListening');
-      return testUtils.toggleRadios(true);
+      return testUtils.toggleWifi(true);
     })
     .then(function () {
       t.equals(listeningSpy.callCount, 1,
@@ -203,9 +201,12 @@ test('calls correct starts when network changes', function (t) {
       t.end();
     });
   };
-  ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
-    networkChangedHandler);
-  testUtils.toggleRadios(false);
+  ThaliMobile.start(express.Router())
+  .then(function () {
+    ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+      networkChangedHandler);
+    testUtils.toggleWifi(false);
+  });
 });
 
 test('when network connection is lost a peer should be marked unavailable', function (t) {
