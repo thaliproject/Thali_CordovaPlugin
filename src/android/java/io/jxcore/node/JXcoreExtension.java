@@ -111,7 +111,6 @@ public class JXcoreExtension {
                 if (isBleMultipleAdvertisementSupported) {
                     args.add(null); // All is well
                     args.add("Bluetooth LE advertising is supported");
-
                     jxcore.CallJSMethod(callbackId, args.toArray());
                 } else {
                     args.add("Bluetooth LE advertising is not supported");

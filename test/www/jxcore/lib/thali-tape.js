@@ -99,14 +99,17 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
   });
 };
 
-var thaliTape = function(fixture) 
-{
-  // Thali_Tape - Adapt tape such that tests are executed when explicitly triggered
-  // by a co-ordinating server executing (perhaps) remotely.
+// The running number of the test that together with the test name guarantees
+// a unique identifier even if there exists multiple tests with same name
+var testRunningNumber = 0;
+
+var thaliTape = function (fixture) {
+  // Thali_Tape - Adapt tape such that tests are executed when explicitly
+  // triggered by a co-ordinating server executing (perhaps) remotely.
   // This enables us to run tests in lock step across a number of devices
 
   // test([name], [opts], fn)
-  return function(name, opts, fn) {
+  return function (name, opts, fn) {
 
     // This is the function that declares and performs the test. 
     // cb is the test function. We wrap this in setup and 
@@ -116,9 +119,14 @@ var thaliTape = function(fixture)
       opts = null;
     }
 
-    tests[name] = { opts:opts, fn:fn, fixture:fixture };
-  }
-}
+    testRunningNumber++;
+    tests[testRunningNumber + '. ' + name] = {
+      opts: opts,
+      fn: fn,
+      fixture: fixture
+    };
+  };
+};
 
 function createStream(testServer)
 {
@@ -242,19 +250,19 @@ thaliTape.begin = function() {
 }
 
 if (typeof jxcore === 'undefined' ||
-    jxcore.utils.OSInfo().isMobile ||
-    (typeof Mobile !== 'undefined' && Mobile.iAmAMock))
-{
-  // On mobile, or outside of jxcore (some dev scenarios) we use server-coordinated thaliTape
+    typeof Mobile !== 'undefined') {
+  // On mobile, or outside of jxcore (some dev scenarios) we use
+  // the server-coordinated thaliTape
   exports = thaliTape;
-}
-else
-{
+  exports.coordinated = true;
+} else {
   // On desktop we just use wrapping-tape
-  exports = require("wrapping-tape");
+  exports = require('wrapping-tape');
+  exports.coordinated = false;
 
-  // thaliTape has a begin function that we patch in here to make the api identical
-  exports.begin = function() {
+  // thaliTape has a begin function that we patch in here to make
+  // the api identical
+  exports.begin = function () {
   };
 }
 

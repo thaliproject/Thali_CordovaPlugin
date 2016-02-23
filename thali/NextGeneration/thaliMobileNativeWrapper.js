@@ -1,7 +1,13 @@
 'use strict';
 
 var Promise = require('lie');
+var PromiseQueue = require('./promiseQueue');
+var promiseQueue = new PromiseQueue();
 var EventEmitter = require('events').EventEmitter;
+
+var states = {
+  started: false
+};
 
 /** @module thaliMobileNativeWrapper */
 
@@ -37,7 +43,9 @@ var EventEmitter = require('events').EventEmitter;
 
 /**
  * This method MUST be called before any other method here other than
- * registering for events on the emitter. This method will cause us to:
+ * registering for events on the emitter or calling
+ * {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}.
+ * This method will cause us to:
  * - create a TCP server (which MUST use {@link
  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) on a random port and
  * host the router on that server.
@@ -67,7 +75,11 @@ var EventEmitter = require('events').EventEmitter;
  * @returns {Promise<?Error>}
  */
 module.exports.start = function (router) {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    states.started = true;
+    resolve();
+  });
 };
 
 /**
@@ -82,7 +94,11 @@ module.exports.start = function (router) {
  * @returns {Promise<?Error>}
  */
 module.exports.stop = function () {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    states.started = false;
+    resolve();
+  });
 };
 
 /**
@@ -222,6 +238,7 @@ module.exports.stopAdvertisingAndListening = function () {
   return new Promise();
 };
 
+var nonTCPNetworkStatus = null;
 /**
  * This method returns the last value sent by the
  * {@link module:thaliMobileNativeWrapper.event:networkChangedNonTCP}
@@ -234,11 +251,23 @@ module.exports.stopAdvertisingAndListening = function () {
  * that says "Hey you don't have the right radio!" we just use a promise that
  * won't return until we have a value.
  *
+ * Unlike other methods, this can be called also before calling start.
+ *
  * @public
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
-module.exports.getNonTCPNetworkStatus = function() {
-  return new Promise();
+module.exports.getNonTCPNetworkStatus = function () {
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (nonTCPNetworkStatus === null) {
+      module.exports.emitter.once('networkChangedNonTCP',
+      function (networkChangedValue) {
+        nonTCPNetworkStatus = networkChangedValue;
+        return resolve(nonTCPNetworkStatus);
+      });
+    } else {
+      return resolve(nonTCPNetworkStatus);
+    }
+  });
 };
 
 /**
@@ -405,20 +434,53 @@ module.exports.killConnections = function () {
  */
 module.exports.emitter = new EventEmitter();
 
-Mobile('PeerAvailabilityChange').registerToNative(function (peers) {
-  // do stuff!
-});
-
-Mobile('discoveryAdvertisingStateUpdateNonTCP').registerToNative(
-  function (discoveryAdvertisingStateUpdateValue) {
+// Currently skipping the Mobile calls on the real mobile environment
+// since they are not implemented yet
+if (!jxcore.utils.OSInfo().isMobile) {
+  Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
     // do stuff!
   });
 
-Mobile('networkChanged').registerToNative(function (networkChanged) {
-  // do stuff!
-});
+  Mobile('discoveryAdvertisingStateUpdateNonTCP').registerToNative(
+    function (discoveryAdvertisingStateUpdateValue) {
+      // do stuff!
+    });
 
-Mobile('incomingConnectionToPortNumberFailed').registerToNative(
-  function (portNumber) {
-    // do stuff!
+  Mobile('networkChanged').registerToNative(function (networkChanged) {
+    // The value needs to be assigned here to nonTCPNetworkStatus
+    // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
+    // can return it.
+    nonTCPNetworkStatus = networkChanged;
+    module.exports.emitter.emit('networkChangedNonTCP', nonTCPNetworkStatus);
   });
+
+  Mobile('incomingConnectionToPortNumberFailed').registerToNative(
+    function (portNumber) {
+      // do stuff!
+    });
+} else {
+  module.exports.emitter.on('networkChangedNonTCP', function (networkChangedValue) {
+    // The value needs to be assigned here to nonTCPNetworkStatus
+    // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
+    // can return it.
+    nonTCPNetworkStatus = networkChangedValue;
+  });
+  // Implement the logic to emit networkChangedNonTCP in non-mobile environment
+  // when the first listener is registered.
+  var newListenerHandler = function (event, listener) {
+    if (event !== 'networkChangedNonTCP') {
+      return;
+    }
+    module.exports.emitter.removeListener('newListener', newListenerHandler);
+    setImmediate(function () {
+      var mockNetworkStatus = {
+        wifi: 'on',
+        bluetooth: 'doNotCare',
+        bluetoothLowEnergy: 'doNotCare',
+        cellular: 'doNotCare'
+      };
+      module.exports.emitter.emit('networkChangedNonTCP', mockNetworkStatus);
+    });
+  };
+  module.exports.emitter.on('newListener', newListenerHandler);
+}

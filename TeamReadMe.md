@@ -139,3 +139,22 @@ Once built the library should be visible in:
 
 ## Developing node specific code and tests for the Thali Cordova Plugin
 Please see the Thali_CordovaPlugin/test/README.md
+
+## Debugging CI failures locally
+
+If you get a build or test error in CI that you didn't get locally, here
+are suggested steps that might help reproducing the issue:
+
+* To make sure you are testing the same code CI does, you need to first
+checkout the source branch of your PR and then merge the target branch onto it.
+  * If there is a merge conflict, that you need to resolve first and push the
+  resolution onto your source branch, because CI can't handle the conflict
+  by itself.
+* To make sure you don't have excessive or wrong dependency packages, the easiest
+way is to nuke all `node_modules` folders from your local source tree.
+  * If you are sure you have no uncommitted changes, you can do:
+  `git clean -fxd`.
+* To install dependencies and run tests the same way CI does, you should run
+`./build.sh` from the root of the repository.
+  * The script removes the folder `../ThaliTest` (relative to your clones souces)
+  so before running it, make sure you don't have any precious changes there.

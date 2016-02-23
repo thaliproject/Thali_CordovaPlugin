@@ -6,10 +6,8 @@
 
 'use strict';
 
-var testUtils = require('./lib/testUtils');
-
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/MobileUsingWifi.js');
+  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 else {
   var oldFn = Mobile.prototype.registerToNative;
@@ -19,11 +17,18 @@ else {
   }
 }
 
-testUtils.toggleRadios(true);
+var testUtils = require('./lib/testUtils');
 
-Mobile('GetDeviceName').callNative(function (name) {
-  console.log('My device name is: %s', name);
-  testUtils.setName(name);
-  require('./runTests.js');
-  console.log('Test app app.js loaded');
+testUtils.toggleRadios(true)
+.then(function () {
+  Mobile('GetDeviceName').callNative(function (name) {
+    console.log('My device name is: %s', name);
+    testUtils.setName(name);
+    require('./runTests.js');
+  });
+})
+.catch(function (error) {
+  console.log('Something went wrong: ' + error);
 });
+
+console.log('Unit Test app is loaded');

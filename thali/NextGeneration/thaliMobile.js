@@ -6,8 +6,7 @@ var EventEmitter = require('events').EventEmitter;
 
 var ThaliConfig = require('./thaliConfig');
 
-//var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-var thaliMobileNativeWrapper = new EventEmitter(); // TODO: Use real class once implemented
+var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 
 var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
 var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
@@ -162,9 +161,10 @@ module.exports.startListeningForAdvertisements = function () {
   thaliMobileStates.listening = true;
   var resultObject = {};
   var promiseList = [];
-  if (thaliWifiInfrastructure.started) {
+  if (thaliWifiInfrastructure.states.started) {
     promiseList.push(promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.startListeningForAdvertisements()));
+      thaliWifiInfrastructure.startListeningForAdvertisements()
+    ));
   } else {
     resultObject.wifiResult = new Error('Not Active');
   }
@@ -190,7 +190,8 @@ module.exports.startListeningForAdvertisements = function () {
 module.exports.stopListeningForAdvertisements = function () {
   return Promise.all([
     promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.stopListeningForAdvertisements())
+      thaliWifiInfrastructure.stopListeningForAdvertisements()
+    )
   ]).then(function (results) {
     return {
       wifiResult: results[0] || null
@@ -224,7 +225,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
   thaliMobileStates.advertising = true;
   var resultObject = {};
   var promiseList = [];
-  if (thaliWifiInfrastructure.started) {
+  if (thaliWifiInfrastructure.states.started) {
     promiseList.push(promiseResultSuccessOrFailure(
       thaliWifiInfrastructure.startUpdateAdvertisingAndListening()));
   } else {
@@ -268,8 +269,8 @@ module.exports.stopAdvertisingAndListening = function () {
  * @public
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
-module.exports.getNetworkStatus = function() {
-  return new Promise();
+module.exports.getNetworkStatus = function () {
+  return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
 };
 
 /*
@@ -489,7 +490,7 @@ var thaliMobileEmitter = new EventEmitter();
  * us.
  */
 
-thaliMobileNativeWrapper.on('nonTCPPeerAvailabilityChangedEvent',
+ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
     function (peer)
     {
       // Do stuff
@@ -499,17 +500,11 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
   var peers = [];
   wifiPeers.forEach(function (wifiPeer) {
     var peer = {
-      peerIdentifier: wifiPeer.peerIdentifier
+      peerIdentifier: wifiPeer.peerIdentifier,
+      hostAddress: wifiPeer.hostAddress,
+      portNumber: wifiPeer.portNumber
     };
-    if (wifiPeer.peerAvailable === true) {
-      peer.hostAddress = wifiPeer.hostAddress;
-      peer.portNumber = wifiPeer.portNumber;
-    } else {
-      // TODO: Handle peer becoming unavailable
-    }
-    peer.connectionTypes = [
-      module.exports.connectionTypes.TCP_NATIVE
-    ];
+    peer.connectionType = module.exports.connectionTypes.TCP_NATIVE;
     peer.suggestedTCPTimeout = ThaliConfig.TCP_TIMEOUT_WIFI;
     peers.push(peer);
   });
@@ -568,7 +563,7 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
  */
 
 
-thaliMobileNativeWrapper.on('discoveryAdvertisingStateUpdateNonTCPEvent',
+ThaliMobileNativeWrapper.emitter.on('discoveryAdvertisingStateUpdateNonTCPEvent',
     function (discoveryAdvertisingStateUpdateValue) {
   // Do stuff
 });
@@ -577,6 +572,10 @@ thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
     function (discoveryAdvertisingStateUpdateValue) {
   // Do stuff
 });
+
+var emitNetworkChanged = function (networkChangedValue) {
+  thaliMobileEmitter.emit('networkChanged', networkChangedValue);
+};
 
 /**
  * Unless something went horribly wrong only one of thaliMobileNativeWrapper
@@ -589,15 +588,9 @@ thaliWifiInfrastructure.on('discoveryAdvertisingStateUpdateWifiEvent',
  * @property {module:thaliMobileNative~networkChanged} networkChangedValue
  */
 
-thaliMobileNativeWrapper.on('networkChangedNonTCP',
-    function (networkChangedValue) {
-  // Do stuff
-});
+ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', emitNetworkChanged);
 
-thaliWifiInfrastructure.on('networkChangedWifi',
-    function (networkChangedValue) {
-  // Do stuff
-});
+thaliWifiInfrastructure.on('networkChangedWifi', emitNetworkChanged);
 
 /**
  * If we receive a {@link
@@ -608,7 +601,7 @@ thaliWifiInfrastructure.on('networkChangedWifi',
  * server has failed. The best we can do is try to close the server and open it
  * again.
  */
-thaliMobileNativeWrapper.on('incomingConnectionToPortNumberFailed',
+ThaliMobileNativeWrapper.emitter.on('incomingConnectionToPortNumberFailed',
     function (portNumber) {
   // Do stuff
 });

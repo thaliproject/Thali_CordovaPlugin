@@ -11,7 +11,8 @@ var argv = parseargv(process.argv.slice(2), {
     instanceCount: 2,
     serverLogs: true,
     instanceLogs: true
-  }
+  },
+  boolean: true
 });
 
 var instanceLogs = {};
@@ -36,8 +37,8 @@ var setListeners = function (instance, instanceId) {
     if (data.indexOf('PROCESS_ON_EXIT_') >= 0) {
       if (data.indexOf('PROCESS_ON_EXIT_FAILED') >= 0) {
         console.log(instanceLogs[instanceId]);
+        shutdown(1);
       }
-      shutdown(1);
     } else if (data.indexOf('-== END ==-') >= 0) {
       if (instanceLogs[0].indexOf('RESULT: FAIL') >= 0) {
         console.log('TEST FAILED - SEE ABOVE FOR MORE DETAILS');
