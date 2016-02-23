@@ -43,7 +43,7 @@ test("calling startNativeListener directly throws", function(t) {
   var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function(localPort) {
-    serversManager.createNativeListener();
+    serversManager._createNativeListener();
   })
   .catch(function(err) {
     t.equal(err.message, "Don't call directly!", "Should throw");
@@ -215,7 +215,7 @@ test("calling createPeerListener (pleaseConnect == true) with unknown peer is er
       // Should get an error here, we haven't yet started browsing or discovered
       // any peers
       t.ok(err, "should get error");
-      serversManager.stop(); 
+      serversManager.stop();
       t.end();
     });
   })
@@ -243,7 +243,7 @@ function waitForPeerAvailabilityChanged(t, serversManager, dontFail, then) {
           }
         })
         .catch(function(err) {
-          if (!dontFail) { 
+          if (!dontFail) {
             t.fail("Unexpected rejection creating peer listener");
             console.warn(err);
           }
@@ -255,13 +255,13 @@ function waitForPeerAvailabilityChanged(t, serversManager, dontFail, then) {
 
 function startAdvertisingAndListening(t, applicationPort, pleaseConnect) {
 
-  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort, 
+  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
   function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'Can call startListeningForAdvertisements without error');
-      Mobile("peerAvailabilityChanged").callRegistered([{ 
-        peerIdentifier : "peer1", 
+      Mobile("peerAvailabilityChanged").callRegistered([{
+        peerIdentifier : "peer1",
         pleaseConnect : pleaseConnect,
         peerAvailable: true
       }]);
@@ -283,7 +283,7 @@ function setUp(t, serversManager, appPort, forwardConnection, pleaseConnect, don
 
   waitForPeerAvailabilityChanged(t, serversManager, dontFail, then);
   startServersManager(t, serversManager);
-  
+
   if (forwardConnection != 0) {
     Mobile("connect").nextNative(function(peerIdentifier, cb) {
       cb(null, {listeningPort:forwardConnection, clientPort:0, serverPort:0});
@@ -292,12 +292,12 @@ function setUp(t, serversManager, appPort, forwardConnection, pleaseConnect, don
   else {
     Mobile("connect").nextNative(function(peerIdentifier, cb) {
       cb(null, {
-        listeningPort:0, 
+        listeningPort:0,
         clientPort:0, serverPort:serversManager._nativeServer.address().port
       });
     });
   }
-  
+
   startAdvertisingAndListening(t, appPort, pleaseConnect);
 }
 
@@ -402,7 +402,7 @@ test("peerListener - forwardConnection, pleaseConnect == false - with native ser
 
   setUp(t, serversManager, applicationPort, nativePort, false, false, function(peerPort) {
     t.notEqual(peerPort, nativePort, "peerPort != nativePort");
-    // Need to connect a socket to force the outgoing 
+    // Need to connect a socket to force the outgoing
     var client = net.createConnection(peerPort);
     firstConnection = true;
   });
@@ -478,13 +478,13 @@ test("peerListener - reverseConnection, pleaseConnect == false - with incoming",
         stream.write(toSend);
       });
       incoming.pipe(mux).pipe(incoming);
-      process.nextTick(function() { 
+      process.nextTick(function() {
         cb(null, {listeningPort:0, clientPort:incoming.address().port, serverPort:serverPort});
       });
     });
 
   });
-  
+
   waitForPeerAvailabilityChanged(t, serversManager, false, function(peerPort) {
     // Create a client connection to our local server, this'll cause the p2p connection
     // to be established. We've arranged for this to result in a reverse connection so when
@@ -517,7 +517,7 @@ test("peerListener - reverseConnection, pleaseConnect == false - no server", fun
   serversManager.on("failedConnection", function(err) {
     t.fail("connection shouldn't fail");
   });
-  
+
   // We expect the stream created by the incoming socket to
   // trigger routerPortConnection failed since there's no app listening
   serversManager.on("routerPortConnectionFailed", function() {
@@ -535,12 +535,12 @@ test("peerListener - reverseConnection, pleaseConnect == false - no server", fun
       // Force the other side to connect to it's (non-existent in this case)
       // application server
       var stream  = mux.createStream();
-      process.nextTick(function() { 
+      process.nextTick(function() {
         cb(null, {listeningPort:0, clientPort:incoming.address().port, serverPort:serverPort});
       });
     });
   });
-  
+
   waitForPeerAvailabilityChanged(t, serversManager, false, function(peerPort) {
     var client = net.createConnection(peerPort, function() {
     });
@@ -603,7 +603,7 @@ test("native server - closing incoming stream cleans outgoing socket", function(
   var stream = null;
   var streamClosed = false;
   var applicationServer = net.createServer(function(socket) {
-    socket.end();  
+    socket.end();
   });
   applicationServer.listen(4242);
 
@@ -622,7 +622,7 @@ test("native server - closing incoming stream cleans outgoing socket", function(
       stream.on("end", function() {
         t.ok(true, "stream was closed");
         t.equal(serversManager._nativeServer._incoming.length, 1, "incoming should survive");
-        t.equal(serversManager._nativeServer._incoming[0]._mux._streams.length, 0, 
+        t.equal(serversManager._nativeServer._incoming[0]._mux._streams.length, 0,
         "mux should have no streams");
         applicationServer.close();
         serversManager.stop();
