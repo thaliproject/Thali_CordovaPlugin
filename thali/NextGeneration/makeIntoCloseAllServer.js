@@ -53,11 +53,9 @@ function makeIntoCloseAllServer(server) {
     // to the server.
     // Also note that the callback won't be called until all the connections
     // are destroyed because the destroy calls are synchronous.
-    this.close(function (err) {
-      connections.forEach(function (connection) {
-        connection.destroy();
-      });
-      callback(err);
+    server.close(callback);
+    connections.forEach(function (connection) {
+      connection.destroy();
     });
   };
 
