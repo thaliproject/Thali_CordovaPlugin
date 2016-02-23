@@ -99,6 +99,35 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     }
 
     /**
+     * Compares this SocketThreadBase instead to the given one. Two SocketThreadBase instances are
+     * considered equal when the peers associated with them share the same ID
+     * i.e. PeerProperties.equals returns true.
+     *
+     * @param other The other SocketThreadBase to compare this to.
+     * @return True, if the instances match. False otherwise.
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (other instanceof SocketThreadBase) {
+            SocketThreadBase otherSocketThreadBase = (SocketThreadBase) other;
+
+            if (otherSocketThreadBase.getPeerProperties() != null
+                    && mPeerProperties != null) {
+                Log.v(TAG, "equals: " + mPeerProperties.getId() + " == "
+                        + otherSocketThreadBase.getPeerProperties().getId() + " ?");
+            } else {
+                Log.v(TAG, "equals: At least one of the other instances is missing its peer properties");
+            }
+
+            return (otherSocketThreadBase.getPeerProperties() != null
+                    && mPeerProperties != null
+                    && otherSocketThreadBase.getPeerProperties().equals(mPeerProperties));
+        }
+
+        return false;
+    }
+
+    /**
      * Logs the error and notifies the listener that we got disconnected.
      *
      * @param who          The thread, which failed.

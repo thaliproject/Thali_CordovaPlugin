@@ -59,12 +59,11 @@ public class ConnectionHelper
         mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread thread, final Throwable throwable) {
-                new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.e(TAG, "Unhandled exception: " + throwable.getMessage(), throwable);
-                    }
-                });
+                Log.e(TAG, "Uncaught exception: " + throwable.getMessage(), throwable);
+                // Forwarding the exception from here is impossible:
+                // "Further exceptions thrown in this method prevent the remainder of the method
+                // from executing, but are otherwise ignored."
+                // See http://developer.android.com/reference/java/lang/Thread.UncaughtExceptionHandler.html
             }
         };
 

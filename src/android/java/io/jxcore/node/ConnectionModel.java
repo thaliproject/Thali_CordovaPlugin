@@ -141,12 +141,8 @@ public class ConnectionModel {
      * @param incomingSocketThread An incoming (connection) socket thread instance to add.
      */
     public synchronized void addConnectionThread(IncomingSocketThread incomingSocketThread) {
-        if (incomingSocketThread != null) {
-            if (!hasIncomingConnection(incomingSocketThread.getPeerProperties().getId())) {
-                mIncomingSocketThreads.add(incomingSocketThread);
-            } else {
-                Log.e(TAG, "addConnectionThread: A matching thread for incoming connection already exists");
-            }
+        if (!mIncomingSocketThreads.addIfAbsent(incomingSocketThread)) {
+            Log.e(TAG, "addConnectionThread: A matching thread for incoming connection already exists");
         }
     }
 
@@ -156,12 +152,8 @@ public class ConnectionModel {
      * @param outgoingSocketThread An outgoing (connection) socket thread instance to add.
      */
     public synchronized void addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
-        if (outgoingSocketThread != null) {
-            if (!hasOutgoingConnection(outgoingSocketThread.getPeerProperties().getId())) {
-                mOutgoingSocketThreads.add(outgoingSocketThread);
-            } else {
-                Log.e(TAG, "addConnectionThread: A matching thread for outgoing connection already exists");
-            }
+        if (!mOutgoingSocketThreads.addIfAbsent(outgoingSocketThread)) {
+            Log.e(TAG, "addConnectionThread: A matching thread for outgoing connection already exists");
         }
     }
 
