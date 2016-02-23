@@ -17,7 +17,7 @@ var TESTURL = 'http://localhost:' + PORT +
 var globalVariables = {};
 
 /**
- * Initializes globalVariables before each new test run.
+ * Initializes globalVariables before the each test run.
  */
 function initializeGlobalVariables() {
   globalVariables = {
@@ -33,7 +33,7 @@ function initializeGlobalVariables() {
 }
 
 /**
- * Frees reserved resources from globalVariables after each test run.
+ * Frees reserved resources from globalVariables after the each test run.
  */
 function destructGlobalVariables() {
   if (globalVariables) {
@@ -44,7 +44,7 @@ function destructGlobalVariables() {
 }
 
 /**
- * Mocks the ThaliMobile from ThaliNotificationServer class.
+ * Creates a proxyquired ThaliNotificationServer class. 
  */
 function proxyquireThaliNotificationServer() {
   var MockThaliMobile = { };
@@ -74,6 +74,10 @@ var test = tape({
   }
 });
 
+/**
+ * Initializes ThaliNotificationServer from proxyquired 
+ * ThaliNotificationServerProxyquired class.
+ */
 function initializeThaliNotificationServer() {
   var expressRouter = express.Router();
   var myPublicKey = crypto.createECDH(SECP256K1);
@@ -82,23 +86,24 @@ function initializeThaliNotificationServer() {
     expressRouter, myPublicKey, 90000);
 }
 
-function startNotificationServer(thaliNotificationServer) {
+/**
+ * Generates two public keys for the test. 
+ */
+function generatePublicKeys() {
   var publicKeys = [];
   var device1 = crypto.createECDH(SECP256K1);
   var device1Key = device1.generateKeys();
   var device2 = crypto.createECDH(SECP256K1);
   var device2Key = device2.generateKeys();
-  
   publicKeys.push(device1Key, device2Key);
-  
-  return thaliNotificationServer.start(publicKeys);
+  return publicKeys;
 }
 
 test('Start and stop ThaliNotificationServer', function (t) {
 
   var thaliNotificationServerProxyquired = initializeThaliNotificationServer();
   
-  startNotificationServer(thaliNotificationServerProxyquired).then(function () {
+  thaliNotificationServerProxyquired.start(generatePublicKeys()).then(function () {
     t.ok(true, 'Starting works');
     thaliNotificationServerProxyquired.stop().then(function () {
       thaliNotificationServerProxyquired;
@@ -126,7 +131,6 @@ test('Makes an HTTP request to /NotificationBeacons', function (t) {
     if (error == null && response.statusCode == 200) {
       t.equal(response.headers['cache-control'], 'no-cache');
       t.equal(response.headers['content-type'], 'application/octet-stream');
-      t.pass('Test passed');
     } else {
       t.fail('Test failed. Response code is not 200');
     }
@@ -137,7 +141,34 @@ test('Makes an HTTP request to /NotificationBeacons', function (t) {
     { url:TESTURL, delay:0, handler: httpResponseHandler}
   ];
 
-  startNotificationServer(thaliNotificationServerProxyquired).then(function () {
+  thaliNotificationServerProxyquired.start(generatePublicKeys()).then(function () {
+    globalVariables.expressApp.use('/', 
+      thaliNotificationServerProxyquired._router);
+    globalVariables.expressServer = globalVariables.expressApp.listen(PORT, 
+      function () {
+      thaliHttpTester.runTest(testArray);
+    });
+  });
+});
+
+test('Makes an HTTP request to /NotificationBeacons (no public keys)', function (t) {
+  
+  var thaliNotificationServerProxyquired = initializeThaliNotificationServer();
+
+  var httpResponseHandler = function (error, response) { 
+    if (error == null && response.statusCode == 204) {
+      t.pass('Response code is 204 as expected');
+    } else {
+      t.fail('Test failed. Response code is not 204');
+    }
+    t.end();
+  };
+  
+  var testArray = [
+    { url:TESTURL, delay:0, handler: httpResponseHandler}
+  ];
+
+  thaliNotificationServerProxyquired.start(null).then(function () {
     globalVariables.expressApp.use('/', 
       thaliNotificationServerProxyquired._router);
     globalVariables.expressServer = globalVariables.expressApp.listen(PORT, 
@@ -155,7 +186,7 @@ test('Test to exceed the rate limit of /NotificationBeacons', function (t) {
     responseCounter++;
     if (responseCounter >= ThaliNotificationServer.WINDOW_SIZE + 1){
       if (response.statusCode == 503) {
-        t.pass('Test passed');
+        t.pass('Response is 503 as expected when the rate is exceeded');
       } else {
         t.fail('Server should return 503 when the rate is exceeded');
       }
@@ -176,7 +207,7 @@ test('Test to exceed the rate limit of /NotificationBeacons', function (t) {
                       handler: httpResponseHandler});
   }
 
-  startNotificationServer(thaliNotificationServerProxyquired).then(function () {
+  thaliNotificationServerProxyquired.start(generatePublicKeys()).then(function () {
     globalVariables.expressApp.use('/', 
       thaliNotificationServerProxyquired._router);
     globalVariables.expressServer = globalVariables.expressApp.listen(PORT, 

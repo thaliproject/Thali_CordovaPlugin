@@ -1,27 +1,32 @@
 var request = require('request');
 var PromiseQueue = require('thali/NextGeneration/promiseQueue');
 var promiseQueue = new PromiseQueue();
-  
-var requestSettings = {
-  method: 'GET',
-  url: '',
-  encoding: null
-};
+
+/**
+ * @public
+ * @typedef HTTPRequest
+ * @type {Object}
+ * @property {string} url The request URL.
+ * @property {number} delay The delay before request.
+ * @property {callback} handler The callback function that handles the response
+*/
+
 /**
  * This function will generate HTTP requests to selected endpoint with 
- * a delay. 
- * @param {object[]} testArray - An array of HTTP requests, delay and handler
- * testArray example:
- * [
- *   { url:'http://localhost:3000/NotificationBeacons', delay:0, handler:function (){}},
- *   { url:'http://localhost:3000/NotificationBeacons', delay:100, handler:function (){}}
- * ];
-**/
-module.exports.runTest = function (testArray) {
+ * a delay.
+ * @param {HTTPRequest[]} testArray - An array of HTTP requests.
+*/
+module.exports.runTest = function (httpRequestArray) {
   var delay = 0;
-  testArray.forEach(function (test) {
+  httpRequestArray.forEach(function (test) {
     delay += test.delay;
     setTimeout( function () {
+      var requestSettings = {
+        method: 'GET',
+        url: '',
+        encoding: null 
+      };
+      
       requestSettings.url = test.url;
       request(requestSettings, function (error, response, body) {
         if (test.handler) {

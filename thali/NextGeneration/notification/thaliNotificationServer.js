@@ -101,6 +101,7 @@ ThaliNotificationServer.NOTIFICATION_BEACON_PATH =
  */
 ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
   var self = this;
+  
   return this._promiseQueue.enqueue(function (resolve, reject) {
 
     // Validates publicKeysToNotify parameter
@@ -115,11 +116,12 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
           }
         });
       }
-      self._publicKeysToNotify = publicKeysToNotify;
     } else {
-      self._publicKeysToNotify = null;
+      publicKeysToNotify = null;
     }
-
+    
+    self._publicKeysToNotify = publicKeysToNotify;
+    
     ThaliMobile.startUpdateAdvertisingAndListening()
     .then(function () {
       if (!self._pathRegistered) {
@@ -203,7 +205,7 @@ ThaliNotificationServer.RATE = 10;
 /**
  * This method makes sure that requests/second rate doesn't exceed
  * a set threshold.
- * @returns {boolean} True if the rate is not passed
+ * @returns {boolean} True if the rate is not exceeded
  * @private
  */
 ThaliNotificationServer.prototype._rateLimitCheck = function () {
@@ -212,7 +214,7 @@ ThaliNotificationServer.prototype._rateLimitCheck = function () {
   
   /**
    * When the queue is full (length == WINDOW_SIZE) we take the oldest 
-   * timestamp from it and calculate the difference between
+   * timestamp from it and calculate the difference between the
    * current timestamp (now) and the oldest timestamp. Example:
    * _getEventsQueue: [t1][t2][t3][t4]
    * avgInterval = ( now - [t4] ) / WINDOW_SIZE / 1000 
