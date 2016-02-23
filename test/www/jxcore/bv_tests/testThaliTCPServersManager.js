@@ -272,9 +272,8 @@ function startAdvertisingAndListening(t, applicationPort, pleaseConnect) {
 function startServersManager(t, serversManager) {
   serversManager.start().then(function (localPort) {
   })
-  .catch(function(err) {
-    t.fail("server should not get error");
-    console.log(err.stack());
+  .catch(function (err) {
+    t.fail('server should not get error: ' + err);
     serversManager.stop();
   });
 }
