@@ -12,8 +12,6 @@ if (typeof Mobile === 'undefined') {
 
 var testUtils = require('./lib/testUtils');
 
-testUtils.toggleRadios(true);
-
 Mobile('GetDeviceName').callNative(function (name) {
   console.log('My device name is: %s', name);
   testUtils.setName(name);
