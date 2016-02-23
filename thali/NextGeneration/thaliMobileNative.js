@@ -289,6 +289,21 @@
  */
 
 /**
+ * @external "Mobile('didRegisterToNative')"
+ * @public
+ */
+
+/**
+ * Informs the native side that a handler was registered for
+ * the given method name.
+ *
+ * @public
+ * @function external:"Mobile('didRegisterToNative')".callNative
+ * @param {string} methodName
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback
+ */
+
+/**
  * @external "Mobile('killConnections')"
  * @private
  */
@@ -462,7 +477,9 @@ var radioState = {
  * {@link module:thaliMobileNative~networkChanged} object are altered) any
  * callbacks registered with this method will be called. The native layer is
  * obligated to send an instance of this callback in response to the first
- * subscription it gets to this event. This will be used by the
+ * subscription it gets to this event which can be done by handling
+ * {@link external:"Mobile('didRegisterToNative').callNative"}.
+ * This will be used by the
  * {@link module:thaliMobileNativeWrapper} to initialize its tracking of
  * the network's state for
  * {@link module:thaliMobileNativeWrapper~getNonTCPNetworkStatus}.
