@@ -22,6 +22,7 @@ import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 class ConnectivityInfo {
     private static final String TAG = ConnectivityInfo.class.getName();
     private final Activity mActivity = jxcore.activity;
+    private final DiscoveryManager mDiscoveryManager;
     private final boolean mIsBluetoothSupported;
     private final boolean mIsWifiDirectSupported;
     private final boolean mIsBleMultipleAdvertisementSupported;
@@ -40,11 +41,12 @@ class ConnectivityInfo {
             throw new IllegalArgumentException("Discovery manager is null");
         }
 
-        mIsBluetoothSupported = discoveryManager.getBluetoothManager().isBluetoothSupported();
-        mIsWifiDirectSupported = discoveryManager.isWifiDirectSupported();
-        mIsBleMultipleAdvertisementSupported = discoveryManager.isBleMultipleAdvertisementSupported();
-        mIsWifiEnabled = discoveryManager.getWifiDirectManager().isWifiEnabled();
-        mIsBluetoothEnabled = discoveryManager.getBluetoothManager().isBluetoothEnabled();
+        mDiscoveryManager = discoveryManager;
+        mIsBluetoothSupported = mDiscoveryManager.getBluetoothManager().isBluetoothSupported();
+        mIsWifiDirectSupported = mDiscoveryManager.isWifiDirectSupported();
+        mIsBleMultipleAdvertisementSupported = mDiscoveryManager.isBleMultipleAdvertisementSupported();
+        mIsWifiEnabled = mDiscoveryManager.getWifiDirectManager().isWifiEnabled();
+        mIsBluetoothEnabled = mDiscoveryManager.getBluetoothManager().isBluetoothEnabled();
     }
 
     /**
@@ -111,6 +113,7 @@ class ConnectivityInfo {
     public void setIsWifiEnabled(boolean isEnabled) {
         if (mIsWifiEnabled != isEnabled) {
             mIsWifiEnabled = isEnabled;
+            mIsBluetoothEnabled = mDiscoveryManager.getBluetoothManager().isBluetoothEnabled();
             updateConnectivityInfo(true);
         }
     }
@@ -121,6 +124,7 @@ class ConnectivityInfo {
 
     public void setIsBluetoothEnabled(boolean isEnabled) {
         if (mIsBluetoothEnabled != isEnabled) {
+            mIsWifiEnabled = mDiscoveryManager.getWifiDirectManager().isWifiEnabled();
             mIsBluetoothEnabled = isEnabled;
             updateConnectivityInfo(true);
         }
