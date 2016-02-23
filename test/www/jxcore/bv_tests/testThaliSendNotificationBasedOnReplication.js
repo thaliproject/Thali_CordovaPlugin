@@ -389,7 +389,7 @@ test('add doc and make sure tokens refresh when they expire', function (t) {
         t.ok(startSpy.calledBefore(stopSpy), 'start before stop');
       };
     },
-    function (mockThaliNotificationServer) {
+    function () {
       return new Promise(function (resolve) {
         setTimeout(function () {
           resolve();
@@ -426,7 +426,7 @@ test('start and stop and start and stop', function (t) {
              'first stop before second start');
 
         t.ok(secondStartSpy.calledBefore(secondStopSpy),
-             'second start before second stop')
+             'second start before second stop');
       };
     },
     function (thaliSendNotificationBasedOnReplication) {
@@ -463,7 +463,7 @@ test('two identical starts in a row', function (t) {
         .once().withExactArgs().returns(Promise.resolve());
 
       return function () {
-        startSpy.calledBefore(stopSpy, 'start before stop');
+        t.ok(startSpy.calledBefore(stopSpy, 'start before stop'));
       };
     },
     function (thaliSendNotificationBasedOnReplication) {
