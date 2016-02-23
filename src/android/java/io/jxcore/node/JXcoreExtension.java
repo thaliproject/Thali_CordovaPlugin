@@ -15,7 +15,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothUtils;
+import org.thaliproject.p2p.btconnectorlib.utils.CommonUtils;
 
 /**
  * Implements Thali native interface.
@@ -33,46 +35,50 @@ public class JXcoreExtension {
     }
 
     // Common Thali methods and events
-    public final static String CALLBACK_VALUE_LISTENING_ON_PORT_NUMBER = "listeningPort";
-    public final static String CALLBACK_VALUE_CLIENT_PORT_NUMBER = "clientPort";
-    public final static String CALLBACK_VALUE_SERVER_PORT_NUMBER = "serverPort";
+    public static final String CALLBACK_VALUE_LISTENING_ON_PORT_NUMBER = "listeningPort";
+    public static final String CALLBACK_VALUE_CLIENT_PORT_NUMBER = "clientPort";
+    public static final String CALLBACK_VALUE_SERVER_PORT_NUMBER = "serverPort";
 
-    private final static String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
-    private final static String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
-    private final static String METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
-    private final static String METHOD_NAME_STOP_ADVERTISING_AND_LISTENING = "stopAdvertisingAndListening";
-    private final static String METHOD_NAME_CONNECT = "connect";
-    private final static String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
+    private static final String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
+    private static final String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
+    private static final String METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
+    private static final String METHOD_NAME_STOP_ADVERTISING_AND_LISTENING = "stopAdvertisingAndListening";
+    private static final String METHOD_NAME_CONNECT = "connect";
+    private static final String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
+    private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
+    
+    private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
+    private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
+    private static final String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
+    private static final String EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
 
-    private final static String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
-    private final static String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
-    private final static String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
-    private final static String EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
+    private static final String METHOD_ARGUMENT_NETWORK_CHANGED = EVENT_NAME_NETWORK_CHANGED;
 
-    private final static String EVENT_VALUE_PEER_ID = "peerIdentifier";
-    private final static String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
-    private final static String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
-    private final static String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
-    private final static String EVENT_VALUE_ADVERTISING_ACTIVE = "advertisingActive";
-    private final static String EVENT_VALUE_BLUETOOTH_LOW_ENERGY = "blueToothLowEnergy";
-    private final static String EVENT_VALUE_BLUETOOTH = "blueTooth";
-    private final static String EVENT_VALUE_WIFI = "wifi";
-    private final static String EVENT_VALUE_CELLULAR = "cellular";
-    private final static String EVENT_VALUE_BSSID_NAME = "bssidName";
-    private final static String EVENT_VALUE_PORT_NUMBER = "portNumber";
+    private static final String EVENT_VALUE_PEER_ID = "peerIdentifier";
+    private static final String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
+    private static final String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
+    private static final String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
+    private static final String EVENT_VALUE_ADVERTISING_ACTIVE = "advertisingActive";
+    private static final String EVENT_VALUE_BLUETOOTH_LOW_ENERGY = "blueToothLowEnergy";
+    private static final String EVENT_VALUE_BLUETOOTH = "blueTooth";
+    private static final String EVENT_VALUE_WIFI = "wifi";
+    private static final String EVENT_VALUE_CELLULAR = "cellular";
+    private static final String EVENT_VALUE_BSSID_NAME = "bssidName";
+    private static final String EVENT_VALUE_PORT_NUMBER = "portNumber";
 
     // Android specific methods and events
-    private final static String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
-    private final static String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
-    private final static String METHOD_NAME_GET_BLUETOOTH_NAME = "getBluetoothName";
-    private final static String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
-    private final static String METHOD_NAME_SHOW_TOAST = "showToast";
+    private static final String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
+    private static final String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
+    private static final String METHOD_NAME_GET_BLUETOOTH_NAME = "getBluetoothName";
+    private static final String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
+    private static final String METHOD_NAME_SHOW_TOAST = "showToast";
 
-    private final static String TAG = JXcoreExtension.class.getName();
-    private final static long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
+    private static final String TAG = JXcoreExtension.class.getName();
+    private static final long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
 
     private static ConnectionHelper mConnectionHelper = null;
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
+    private static boolean mNetworkChangedRegistered = false;
 
     public static void LoadExtensions() {
         mConnectionHelper = new ConnectionHelper();
@@ -247,23 +253,85 @@ public class JXcoreExtension {
             }
         });
 
+        jxcore.RegisterMethod(METHOD_NAME_DID_REGISTER_TO_NATIVE, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
+                String errorString = null;
+
+                if (params != null && params.size() > 0) {
+                    Object parameterObject = params.get(0);
+
+                    if (parameterObject instanceof String
+                            && CommonUtils.isNonEmptyString((String) parameterObject)) {
+                        String methodName = (String) parameterObject;
+                        
+                        if (methodName.equals(METHOD_ARGUMENT_NETWORK_CHANGED)) {
+                            mNetworkChangedRegistered = true;
+                            mConnectionHelper.getConnectivityInfo().updateConnectivityInfo(true); // Will call notifyNetworkChanged
+                        } else {
+                            errorString = "Unrecognized method name: " + methodName;
+                        }
+                    } else {
+                        errorString = "Required parameter, {string} methodName, is invalid - must be a non-null and non-empty string";
+                    }
+                } else {
+                    errorString = "Required parameter, {string} methodName, missing";
+                }
+
+                args.add(errorString);
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
 
         /*
          * Android specific methods start here
          */
 
+        /**
+         * Method for checking whether or not the device supports Bluetooth LE multi advertisement.
+         *
+         * When successful, the method will return two arguments: The first will have null value and
+         * the second will contain a string value:
+         *
+         *  - "Not resolved" if not resolved (can happen when Bluetooth is disabled)
+         *  - "Not supported" if not supported
+         *  - "Supported" if supported
+         *
+         * In case of an error the first argument will contain an error message followed by a null
+         * argument. More specifically the error message will be a string starting with
+         * "Unrecognized status: " followed by the unrecognized status.
+         */
         jxcore.RegisterMethod(METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ArrayList<Object> args = new ArrayList<Object>();
-                boolean isBleMultipleAdvertisementSupported = mConnectionHelper.getConnectivityInfo().isBleMultipleAdvertisementSupported();
-                Log.v(TAG, METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED + ": " + isBleMultipleAdvertisementSupported);
+                BluetoothManager bluetoothManager = mConnectionHelper.getDiscoveryManager().getBluetoothManager();
+                BluetoothManager.FeatureSupportedStatus featureSupportedStatus = bluetoothManager.isBleMultipleAdvertisementSupported();
+                Log.v(TAG, METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED + ": " + featureSupportedStatus);
 
-                if (isBleMultipleAdvertisementSupported) {
-                    args.add(null); // Null as the first argument indicates success
-                    args.add("Bluetooth LE multiple advertisement is supported");
-                } else {
-                    args.add("Bluetooth LE multiple advertisement is not supported");
+                switch (featureSupportedStatus) {
+                    case NOT_RESOLVED:
+                        args.add(null);
+                        args.add("Not resolved");
+                        break;
+                    case NOT_SUPPORTED:
+                        args.add(null);
+                        args.add("Not supported");
+                        break;
+                    case SUPPORTED:
+                        args.add(null);
+                        args.add("Supported");
+                        break;
+                    default:
+                        String errorMessage = "Unrecognized status: " + featureSupportedStatus;
+                        Log.e(TAG, METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED
+                                + ": " + errorMessage);
+                        args.add(errorMessage);
+                        args.add(null);
+                        break;
                 }
 
                 jxcore.CallJSMethod(callbackId, args.toArray());
@@ -415,7 +483,16 @@ public class JXcoreExtension {
      *                           If non-null then this is the BSSID of the access point that Wi-Fi
      *                           is connected to.
      */
-    public static void notifyNetworkChanged(boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName) {
+    public static synchronized void notifyNetworkChanged(
+            boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName) {
+        if (!mNetworkChangedRegistered) {
+            Log.d(TAG, "notifyNetworkChanged: Not registered for event \""
+                    + EVENT_NAME_NETWORK_CHANGED + "\" and will not notify, in JS call method \""
+                    + METHOD_NAME_DID_REGISTER_TO_NATIVE + "\" with argument \""
+                    + METHOD_ARGUMENT_NETWORK_CHANGED + "\" to register");
+            return;
+        }
+
         RadioState bluetoothLowEnergyRadioState;
         RadioState bluetoothRadioState;
         RadioState wifiRadioState;

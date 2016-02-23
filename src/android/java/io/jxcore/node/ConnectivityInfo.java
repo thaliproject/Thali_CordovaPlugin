@@ -131,7 +131,7 @@ class ConnectivityInfo {
      *
      * @param forceNotify If true, will notify even if nothing has changed.
      */
-    private void updateConnectivityInfo(boolean forceNotify) {
+    public void updateConnectivityInfo(boolean forceNotify) {
         ConnectivityManager connectivityManager =
                 (ConnectivityManager) mActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
