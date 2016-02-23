@@ -32,16 +32,6 @@ var test = tape({
   }
 });
 
-var findPeerPerProperty = function (peers, property, value) {
-  var foundPeer = null;
-  peers.forEach(function (peer) {
-    if (peer[property] === value) {
-      foundPeer = peer;
-    }
-  });
-  return foundPeer;
-};
-
 var testSeverHostAddress = randomstring.generate({
   charset: 'hex', // to get lowercase chars for the host address
   length: 8
@@ -61,39 +51,44 @@ var createTestServer = function (peerIdentifier) {
 test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged events should be emitted', function (t) {
   var peerIdentifier = 'urn:uuid:' + uuid.v4();
   var testServer = createTestServer(peerIdentifier);
-  var peerAvailableListener = function (peers) {
-    var peer = findPeerPerProperty(peers, 'hostAddress', testSeverHostAddress);
-    if (peer === null) {
+  var peerAvailableListener = function (peer) {
+    if (peer.hostAddress !== testSeverHostAddress) {
       return;
     }
-    t.equal(peer.peerIdentifier, peerIdentifier, 'peer identifier should match');
-    t.equal(peer.hostAddress, testSeverHostAddress, 'host address should match');
+    t.equal(peer.peerIdentifier, peerIdentifier,
+      'peer identifier should match');
+    t.equal(peer.hostAddress, testSeverHostAddress,
+      'host address should match');
     t.equal(peer.portNumber, testServerPort, 'port should match');
-    t.equal(wifiInfrastructure.peerAvailabilities[peerIdentifier], true,
-            'peer should be found from the list');
-    wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerAvailableListener);
+    wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+      peerAvailableListener);
 
-    var peerUnavailableListener = function (peers) {
-      var peer = findPeerPerProperty(peers, 'peerIdentifier', peerIdentifier);
-      if (peer === null) {
+    var peerUnavailableListener = function (peer) {
+      if (peer.peerIdentifier !== peerIdentifier) {
         return;
       }
       t.equal(peer.hostAddress, null, 'host address should be null');
       t.equal(peer.portNumber, null, 'port should should be null');
-      t.equal(wifiInfrastructure.peerAvailabilities[peerIdentifier], undefined,
-              'peer should be removed from the list');
-      wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged', peerUnavailableListener);
+      wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+        peerUnavailableListener);
       t.end();
     };
-    wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerUnavailableListener);
+    wifiInfrastructure.on('wifiPeerAvailabilityChanged',
+      peerUnavailableListener);
     testServer.stop(function () {
       // When server is stopped, it shold trigger the byebye messages
-      // that emit the wifiPeerAvailabilityChanged to which we listen above.
+      // that emit the wifiPeerAvailabilityChanged that we listen above.
     });
   };
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerAvailableListener);
   testServer.start(function () {
-    wifiInfrastructure.startListeningForAdvertisements();
+    wifiInfrastructure.startListeningForAdvertisements()
+    .catch(function (error) {
+      t.fail('failed to start listening with error: ' + error);
+      testServer.stop(function () {
+        t.end();
+      });
+    });
   });
 });
 
@@ -361,82 +356,47 @@ if (jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
-test('network changes emitted correctly', function (t) {
-  var networkOnHandler = function (networkChangedValue) {
-    t.equals(networkChangedValue.wifi, 'on', 'wifi should be on');
-    wifiInfrastructure.removeListener('networkChangedWifi', networkOnHandler);
-    t.end();
-  };
-
-  var networkOffHandler = function (networkChangedValue) {
-    t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
-    wifiInfrastructure.removeListener('networkChangedWifi', networkOffHandler);
-    wifiInfrastructure.on('networkChangedWifi', networkOnHandler);
-    testUtils.toggleWifi(true);
-  };
-
-  wifiInfrastructure.on('networkChangedWifi', networkOffHandler);
-  testUtils.toggleWifi(false);
-});
-
-test('network changes not emitted in stopped state', function (t) {
+var tryStartingFunctionWhileWifiOff = function (t, functionName, keyName) {
   wifiInfrastructure.stop()
   .then(function () {
-    var networkChangedHandler = function () {
-      t.fail('network change should not be emitted');
-      wifiInfrastructure.removeListener('networkChangedWifi', networkChangedHandler);
-      t.end();
-    };
-    wifiInfrastructure.on('networkChangedWifi', networkChangedHandler);
     testUtils.toggleWifi(false);
-    setImmediate(function () {
-      t.ok(true, 'event was not emitted');
-      wifiInfrastructure.removeListener('networkChangedWifi', networkChangedHandler);
-      testUtils.toggleWifi(true)
+    ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
+    function (networkChangedValue) {
+      t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
+      wifiInfrastructure.start(express.Router())
       .then(function () {
+        return wifiInfrastructure[functionName]();
+      })
+      .then(function () {
+        t.fail('the call should not succeed');
         t.end();
+      })
+      .catch(function (error) {
+        t.equals(error.message, 'Radio Turned Off', 'specific error expected');
+        wifiInfrastructure.once('discoveryAdvertisingStateUpdateWifiEvent',
+        function (discoveryAdvertisingStateUpdateValue) {
+          t.equals(discoveryAdvertisingStateUpdateValue[keyName], true,
+            keyName + ' should be true');
+          t.end();
+        });
+        testUtils.toggleWifi(true);
       });
     });
   });
-});
-
-var tryStartingFunctionWhileWifiOff = function (t, functionName) {
-  wifiInfrastructure.stop()
-  .then(function () {
-    return testUtils.toggleWifi(false);
-  })
-  .then(function () {
-    return wifiInfrastructure.start(express.Router());
-  })
-  .then(function () {
-    return wifiInfrastructure[functionName]();
-  })
-  .then(function () {
-    t.fail('the call should not succeed');
-    t.end();
-  })
-  .catch(function (error) {
-    t.equals(error.message, 'Radio Turned Off', 'specific error expected');
-  })
-  .then(function () {
-    wifiInfrastructure.once('networkChangedWifi', function (networkChangedValue) {
-      t.equals(networkChangedValue.wifi, 'on', 'wifi should be on');
-      t.end();
-    });
-    testUtils.toggleWifi(true);
-  });
 };
 
-test('#startListeningForAdvertisements returns error if wifi is off and event emitted when wifi back on', function (t) {
-  tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements');
+test('#startListeningForAdvertisements returns error if wifi is off and fires event when on', function (t) {
+  tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements', 'discoveryActive');
 });
 
-test('#startUpdateAdvertisingAndListening returns error if wifi is off and event emitted when wifi back on', function (t) {
-  tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening');
+test('#startUpdateAdvertisingAndListening returns error if wifi is off and fires event when on', function (t) {
+  tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening', 'advertisingActive');
 });
 
-test('after wifi is re-enabled discovery is activated and peers become available', function (t) {
-  wifiInfrastructure.once('networkChangedWifi', function (networkChangedValue) {
+test('when wifi is enabled discovery is activated and peers become available',
+function (t) {
+  ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
+  function (networkChangedValue) {
     t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
     var peerIdentifier = 'urn:uuid:' + uuid.v4();
     var testServer = createTestServer(peerIdentifier);
@@ -445,10 +405,8 @@ test('after wifi is re-enabled discovery is activated and peers become available
       .catch(function (error) {
         t.equals(error.message, 'Radio Turned Off', 'specific error expected');
 
-        var peerAvailableListener = function (peers) {
-          var peer = findPeerPerProperty(peers, 'peerIdentifier',
-                                         peerIdentifier);
-          if (peer === null) {
+        var peerAvailableListener = function (peer) {
+          if (peer.peerIdentifier !== peerIdentifier) {
             return;
           }
 

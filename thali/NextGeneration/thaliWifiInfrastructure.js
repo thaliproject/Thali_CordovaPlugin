@@ -73,10 +73,6 @@ function ThaliWifiInfrastructure () {
 
   this.states = this._getInitialStates();
 
-  // A variable to hold information about known peer availability states
-  // and used to avoid emitting peer availability changes in case the
-  // availability hasn't changed from the previous known value.
-  this.peerAvailabilities = {};
   this._init();
 }
 
@@ -102,14 +98,6 @@ ThaliWifiInfrastructure.prototype._init = function () {
 
   this._networkChangedHandler = function (networkChangedValue) {
     this._handleNetworkChanges(networkChangedValue);
-
-    // When running within JXcore Cordova Mobile environment,
-    // don't pass this event onwards, because there, the network
-    // events are bubbled up via the native layer.
-    if (jxcore.utils.OSInfo().isMobile) {
-      return;
-    }
-    this.emit('networkChangedWifi', networkChangedValue);
   }.bind(this);
 };
 
@@ -150,22 +138,6 @@ function (networkChangedValue) {
       );
     }
   } else {
-    var changedPeers = [];
-    for (var key in self.peerAvailabilities) {
-      if (self.peerAvailabilities[key]) {
-        // Mark change in peer availability list
-        delete self.peerAvailabilities[key];
-        // Add peer to the list of changes to emit
-        changedPeers.push({
-          peerIdentifier: key,
-          hostAddress: null,
-          portNumber: null
-        });
-      }
-    }
-    if (changedPeers.length > 0) {
-      self.emit('wifiPeerAvailabilityChanged', changedPeers);
-    }
     // If wifi didn't turn on, it was turned into a state where we want
     // to stop our actions
     actionList = [
@@ -226,20 +198,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     peer.hostAddress = peer.portNumber = null;
   }
 
-  // If there are no changes, no need to do anything
-  if (available && this.peerAvailabilities[peer.peerIdentifier] ||
-      !available && !(peer.peerIdentifier in this.peerAvailabilities)) {
-    return false;
-  }
-
-  // Mark changes to the peer availabilities list
-  if (available) {
-    this.peerAvailabilities[peer.peerIdentifier] = true;
-  } else {
-    delete this.peerAvailabilities[peer.peerIdentifier];
-  }
-
-  this.emit('wifiPeerAvailabilityChanged', [peer]);
+  this.emit('wifiPeerAvailabilityChanged', peer);
   return true;
 };
 
@@ -276,6 +235,13 @@ ThaliWifiInfrastructure.prototype._rejectPerWifiState = function (reject) {
     }
   }
   return reject(new Error(errorMessage));
+};
+
+ThaliWifiInfrastructure.prototype._updateStatus = function () {
+  this.emit('discoveryAdvertisingStateUpdateWifiEvent', {
+    discoveryActive: this.states.listening.current,
+    advertisingActive: this.states.advertising.current
+  });
 };
 
 /**
@@ -340,7 +306,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
     .then(function () {
       self.states = self._getInitialStates();
       ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
-                                                       self._networkChangedHandler);
+        self._networkChangedHandler);
       return resolve();
     })
     .catch(function (error) {
@@ -384,6 +350,7 @@ function () {
     if (self.states.networkState.wifi === 'on') {
       self._client.start(function () {
         self.states.listening.current = true;
+        self._updateStatus();
         return resolve();
       });
     } else {
@@ -426,6 +393,7 @@ function (skipPromiseQueue, changeTarget) {
     }
     self._client.stop(function () {
       self.states.listening.current = false;
+      self._updateStatus();
       return resolve();
     });
   };
@@ -557,6 +525,7 @@ function () {
           self.routerServer.removeListener('error', startErrorListener);
           self.routerServer.on('error', self.routerServerErrorListener);
           self.states.advertising.current = true;
+          self._updateStatus();
           return resolve();
         });
       };
@@ -607,6 +576,7 @@ function (skipPromiseQueue, changeTarget) {
                                          self.routerServerErrorListener);
         self.routerServer = null;
         self.states.advertising.current = false;
+        self._updateStatus();
         return resolve();
       });
     });
@@ -641,6 +611,7 @@ function (skipPromiseQueue, changeTarget) {
  *
  * @event wifiPeerAvailabilityChanged
  * @public
+ * @type {Object}
  * @property {string} peerIdentifier This is the USN value
  * @property {string} hostAddress This can be either an IP address or a DNS
  * address encoded as a string
@@ -673,8 +644,10 @@ function (skipPromiseQueue, changeTarget) {
  */
 
 /**
+ * [NOT IMPLEMENTED]
+ *
  * For the definition of this event please see {@link
- * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}.
+ * module:thaliMobileNativeWrapper~networkChangedNonTCP}.
  *
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
  * OS/X or Windows. In the case that we are running on those platforms then If

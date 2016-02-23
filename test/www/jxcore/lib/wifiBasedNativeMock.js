@@ -228,6 +228,7 @@ MobileCallInstance.prototype.stopAdvertisingAndListening =
 function (callback) {
   var self = this;
   var doStop = function () {
+    peerAvailabilities = {};
     for (var peerIdentifier in peerConnections) {
       var peerConnection = peerConnections[peerIdentifier];
       peerConnection.end();
@@ -496,25 +497,22 @@ MobileCallInstance.prototype.callNative = function () {
 var peerAvailabilityChangedCallback = null;
 var peerAvailabilities = {};
 var setupPeerAvailabilityChangedListener = function (thaliWifiInfrastructure) {
-  thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeers) {
+  thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged',
+  function (wifiPeer) {
     if (peerAvailabilityChangedCallback === null) {
       return;
     }
-    var nativePeers = [];
-    wifiPeers.forEach(function (wifiPeer) {
-      var peerAvailable = !!wifiPeer.hostAddress;
-      if (peerAvailable) {
-        peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
-      } else {
-        delete peerAvailabilities[wifiPeer.peerIdentifier];
-      }
-      nativePeers.push({
-        peerIdentifier: wifiPeer.peerIdentifier,
-        peerAvailable: peerAvailable,
-        pleaseConnect: false
-      });
-    });
-    peerAvailabilityChangedCallback(nativePeers);
+    var peerAvailable = !!wifiPeer.hostAddress;
+    if (peerAvailable) {
+      peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
+    } else {
+      delete peerAvailabilities[wifiPeer.peerIdentifier];
+    }
+    peerAvailabilityChangedCallback([{
+      peerIdentifier: wifiPeer.peerIdentifier,
+      peerAvailable: peerAvailable,
+      pleaseConnect: false
+    }]);
   });
 };
 
@@ -622,13 +620,35 @@ var platformChoice = {
 
 var currentNetworkStatus = {
   wifi: 'on',
-  bluetooth: 'doNotCare',
+  bluetooth: 'on',
   bluetoothLowEnergy: 'doNotCare',
   cellular: 'doNotCare'
 };
 
 var getCurrentNetworkStatus = function () {
   return JSON.parse(JSON.stringify(currentNetworkStatus));
+};
+
+var doToggle = function (setting, property, callback) {
+  var newStatus = setting ? 'on' : 'off';
+  if (newStatus === currentNetworkStatus[property]) {
+    setImmediate(callback);
+    return;
+  }
+  currentNetworkStatus[property] = newStatus;
+
+  if (networkChangedCallback !== null) {
+    // Record the status on this event loop to make sure
+    // the right values are received.
+    var statusSnapshot = getCurrentNetworkStatus();
+    setImmediate(function () {
+      // Inform the listener asynchronously, because this
+      // is how the callback would get called on iOS and
+      // Android.
+      networkChangedCallback(statusSnapshot);
+    });
+  }
+  setImmediate(callback);
 };
 
 /**
@@ -646,9 +666,7 @@ var getCurrentNetworkStatus = function () {
  */
 function toggleBluetooth (platform, thaliWifiInfrastructure) {
   return function (setting, callback) {
-    // We don't yet have desktop-runnable tests that depend
-    // on Bluetooth state so for now, this one is doing nothing
-    setImmediate(callback);
+    doToggle(setting, 'bluetooth', callback);
   };
 }
 
@@ -666,17 +684,7 @@ function toggleBluetooth (platform, thaliWifiInfrastructure) {
  */
 function toggleWiFi(platform, thaliWifiInfrastructure) {
   return function (setting, callback) {
-    if (networkChangedCallback !== null) {
-      var newWifiStatus = setting ? 'on' : 'off';
-      if (newWifiStatus === currentNetworkStatus.wifi) {
-        return;
-      }
-      currentNetworkStatus.wifi = newWifiStatus;
-      setImmediate(function () {
-        networkChangedCallback(getCurrentNetworkStatus());
-      });
-    }
-    setImmediate(callback);
+    doToggle(setting, 'wifi', callback);
   };
 }
 
