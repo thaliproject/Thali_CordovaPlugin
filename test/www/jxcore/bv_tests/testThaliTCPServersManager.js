@@ -1,19 +1,26 @@
 'use strict';
 
+var originalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
+var mockMobile = require('../lib/MockMobile');
 var net = require('net');
 var multiplex = require('multiplex');
 var tape = require('../lib/thali-tape');
 var ThaliTCPServersManager = require('thali/NextGeneration/tcpServersManager');
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
-if (typeof Mobile === 'undefined') {
-  global.Mobile = require('../lib/MockMobile');
+// Does not currently work in coordinated
+// environment, because uses fixed port numbers.
+if (tape.coordinated) {
+  return;
 }
 
 var test = tape({
-  setup: function(t) {
+  setup: function (t) {
+    global.Mobile = mockMobile;
     t.end();
   },
-  teardown: function(t) {
+  teardown: function (t) {
+    global.Mobile = originalMobile;
     t.end();
   }
 });
@@ -111,23 +118,24 @@ test("emits routerPortConnectionFailed", function(t) {
   });
 });
 
-test("native server connections all up", function(t) {
+test('native server connections all up', function (t) {
 
   // Start the servers manager and then connect muxed sockets directly
   // to it (would normally be done by the p2p layer)
 
   var clientSockets = 0;
-  var applicationServer = net.createServer(function(client) {
+  var applicationServer = net.createServer(function (client) {
     clientSockets += 1;
     client.pipe(client);
   });
+  applicationServer = makeIntoCloseAllServer(applicationServer);
   applicationServer.listen(4242);
 
   var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
-  .then(function(localPort) {
+  .then(function (localPort) {
 
-    var client = net.createConnection(localPort, function() {
+    var client = net.createConnection(localPort, function () {
 
       var mux = multiplex();
       client.pipe(mux).pipe(client);
@@ -138,42 +146,46 @@ test("native server connections all up", function(t) {
       var toSend1 = new Array(toSend + 1).join('1');;
       var toSend2 = new Array(toSend + 1).join('2');;
 
-      var recvStream1 = "";
-      var recvStream2 = "";
+      var recvStream1 = '';
+      var recvStream2 = '';
 
       var doneStream1 = false;
       var doneStream2 = false;
 
-      stream1.on("data", function(data) {
+      stream1.on('data', function (data) {
         recvStream1 += data.toString();
         if (recvStream1.length >= toSend) {
 
           doneStream1 = true;
-          t.ok(recvStream1.length == toSend, "Send/recvd #1 should be equal length");
-          t.ok(recvStream1 == toSend1, "Send/recvd #1 should be same");
+          t.ok(recvStream1.length == toSend,
+            'Send/recvd #1 should be equal length');
+          t.ok(recvStream1 == toSend1, 'Send/recvd #1 should be same');
 
           if (doneStream2) {
-            t.ok(clientSockets == 2, "Should be exactly 2 client sockets");
-            applicationServer.close();
-            serversManager.stop();
-            t.end();
+            t.ok(clientSockets == 2, 'Should be exactly 2 client sockets');
+            applicationServer.closeAll(function () {
+              serversManager.stop();
+              t.end();
+            });
           }
         }
       });
 
-      stream2.on("data", function(data) {
+      stream2.on('data', function (data) {
         recvStream2 += data.toString();
         if (recvStream2.length >= toSend) {
 
           doneStream2 = true;
-          t.ok(recvStream2.length == toSend, "Send/recvd #2 should be equal length");
-          t.ok(recvStream2 == toSend2, "Send/recvd #2 should be same");
+          t.ok(recvStream2.length == toSend,
+            'Send/recvd #2 should be equal length');
+          t.ok(recvStream2 == toSend2, 'Send/recvd #2 should be same');
 
           if (doneStream1) {
-            t.ok(clientSockets == 2, "Should be exactly 2 client sockets");
-            applicationServer.close();
-            serversManager.stop();
-            t.end();
+            t.ok(clientSockets == 2, 'Should be exactly 2 client sockets');
+            applicationServer.closeAll(function () {
+              serversManager.stop();
+              t.end();
+            });
           }
         }
       });
@@ -182,11 +194,10 @@ test("native server connections all up", function(t) {
       stream2.write(toSend2);
     });
   })
-  .catch(function(err) {
-    t.fail("server hould not get error - ");
+  .catch(function (err) {
+    t.fail('server should not get error: ', err);
     serversManager.stop();
   });
-
 });
 
 test("can call createPeerListener (pleaseConnect == false)", function(t) {

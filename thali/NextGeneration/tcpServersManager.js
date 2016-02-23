@@ -5,7 +5,7 @@ var util = require('util');
 var Promise = require('lie');
 var Multiplex = require('multiplex');
 var EventEmitter = require('events').EventEmitter;
-var closeAllServer = require('./makeIntoCloseAllServer');
+var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var logger = require('../thalilogger')('tcpServersManager');
 
 /** @module TCPServersManager */
@@ -380,7 +380,7 @@ TCPServersManager.prototype._createNativeListener = function (routerPort) {
 
     logger.debug('creating native server');
 
-    self._nativeServer = closeAllServer(net.createServer());
+    self._nativeServer = makeIntoCloseAllServer(net.createServer());
     self._nativeServer.__id = nextId();
     self._nativeServer._incoming = [];
 
@@ -935,7 +935,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
         closeOldestServer();
       }
 
-      var server = closeAllServer(net.createServer());
+      var server = makeIntoCloseAllServer(net.createServer());
       server.__peerIdentifier = peerIdentifier;
 
       server.on('connection', onNewConnection);
