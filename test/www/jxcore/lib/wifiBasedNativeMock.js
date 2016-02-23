@@ -438,6 +438,13 @@ MobileCallInstance.prototype.getDeviceName = function (callback) {
   });
 };
 
+MobileCallInstance.prototype.didRegisterToNative = function (method, callback) {
+  // No need to do anything, because the mock gets to handle the
+  // registerToNative calls directly and thus doesn't need to
+  // to handle this additional step.
+  setImmediate(callback);
+};
+
 /**
  * Handles processing callNative requests. The actual params differ based on
  * the particular Mobile method that is being called.
@@ -473,6 +480,10 @@ MobileCallInstance.prototype.callNative = function () {
     case 'GetDeviceName':
     {
       return this.getDeviceName(arguments[0]);
+    }
+    case 'didRegisterToNative':
+    {
+      return this.didRegisterToNative(arguments[0], arguments[1]);
     }
     default:
     {

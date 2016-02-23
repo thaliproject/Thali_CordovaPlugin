@@ -270,6 +270,8 @@ ThaliWifiInfrastructure.prototype._rejectPerWifiState = function (reject) {
       break;
     }
     default: {
+      logger.warn('Got unexpected Wifi state: %s',
+        this.states.networkState.wifi);
       errorMessage = 'Unspecified Error with Radio infrastructure';
     }
   }
