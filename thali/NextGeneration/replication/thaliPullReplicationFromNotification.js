@@ -10,7 +10,7 @@
  * If we receive a notification for a peer that is on our list then we will
  * check to see if we have already enqueued a job for them. If we have then we
  * will have to dequeue it and create a new job since a second notification
- * should really only have happened if some the values for the peer have
+ * should really only have happened if some of the values for the peer have
  * changed. If there is no enqueued job or if there is a running job then we
  * must enqueue a replication work item.
  *
