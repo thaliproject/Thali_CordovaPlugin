@@ -2,12 +2,6 @@
 
 var net = require('net');
 var randomstring = require('randomstring');
-
-if (jxcore.utils.OSInfo().isAndroid) {
-  // REMOVE ME WHEN READY TO TEST ANDROID !!!
-  return;
-}
-
 var tape = require('../lib/thali-tape');
 
 var test = tape({
@@ -114,7 +108,7 @@ test('peerAvailabilityChange is called', function (t) {
 
 test('Can connect to a remote peer', function (t) {
 
-  var complete = false;
+  var connected = false;
 
   var echoServer = net.createServer(function (socket) {
     socket.pipe(socket);
@@ -125,36 +119,35 @@ test('Can connect to a remote peer', function (t) {
 
     Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
       peers.forEach(function(peer) {
-        if (peer.peerAvailable) {
+        if (peer.peerAvailable && !connected) {
+          connected = true;
           Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
             // We're happy here if we make a connection to anyone
             if (err == null) {
               connection = JSON.parse(connection);
-              if (!complete) {
-                console.log(connection);
+              console.log(connection);
 
-                t.ok(connection.hasOwnProperty("listeningPort"), "Must have listeningPort");
-                t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
-                t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
-                t.ok(typeof connection.clientPort === 'number', "clientPort must be a number");
-                t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
-                t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
+              t.ok(connection.hasOwnProperty("listeningPort"), "Must have listeningPort");
+              t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
+              t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
+              t.ok(typeof connection.clientPort === 'number', "clientPort must be a number");
+              t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
+              t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
 
-                if (connection.listeningPort != 0)
-                {
-                  // Forward connection
-                  t.ok(connection.clientPort == 0);
-                  t.ok(connection.serverPort == 0);
-                }
-                else
-                {
-                  // Reverse connection
-                  t.ok(connection.clientPort != 0);
-                  t.ok(connection.serverPort != 0);
-                }
-
-                t.end();
+              if (connection.listeningPort != 0)
+              {
+                // Forward connection
+                t.ok(connection.clientPort == 0);
+                t.ok(connection.serverPort == 0);
               }
+              else
+              {
+                // Reverse connection
+                t.ok(connection.clientPort != 0);
+                t.ok(connection.serverPort != 0);
+              }
+
+              t.end();
             } else {
               t.fail('Error from connect: ' + err);
               t.end();
