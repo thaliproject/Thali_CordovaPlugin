@@ -116,8 +116,6 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
 
       runTestFunction(thaliSendNotificationBasedOnReplication, pouchDB)
         .then(function () {
-          console.log('queue length ' +
-          thaliSendNotificationBasedOnReplication._promiseQueue._promiseFunctionArray.length);
           mockThaliNotificationServer.verify();
           t.ok(SpyOnThaliNotificationServerConstructor.calledOnce);
           t.ok(SpyOnThaliNotificationServerConstructor
@@ -164,167 +162,165 @@ function testStartAndStop(t, startArg, pouchDbInitFunction, mockInitFunction,
       return thaliSendNotificationBasedOnReplication.start(startArg)
         .then(function () {
           if (betweenStartAndStopFunction) {
-            console.log("About to run betweenStartAndStopFunction");
-            return betweenStartAndStopFunction(pouchDB)
-              .then(function() {
-                console.log("It did return!");
-                return Promise.resolve();
-              });
+            return betweenStartAndStopFunction(pouchDB);
           }
         }).then(function () {
-          console.log("In testStartAndStop before stop");
           return thaliSendNotificationBasedOnReplication.stop();
         });
     });
 }
 
-function mockStartAndStop(mockThaliNotificationServer, startArg) {
-  mockThaliNotificationServer.expects('start')
-    .once()
-    .withExactArgs(startArg)
+function mockStartAndStop(mockThaliNotificationServer, t, startArg) {
+  var startSpy =
+    mockThaliNotificationServer.expects('start')
+      .returns(Promise.resolve());
+
+  var stopSpy = mockThaliNotificationServer.expects('stop')
     .returns(Promise.resolve());
 
-  mockThaliNotificationServer.expects('stop')
-    .once()
-    .withExactArgs()
-    .returns(Promise.resolve());
+  return function () {
+    t.ok(startSpy.alwaysCalledWithExactly(startArg), 'match start arg');
+    t.ok(startSpy.calledOnce, 'start called once');
+    t.ok(stopSpy.calledOnce, 'stop called once');
+    t.ok(stopSpy.calledAfter(startSpy), 'stop after start');
+  };
 }
 
-//test('No peers and empty database', function (t) {
-//  var startArg = [];
-//  testStartAndStop(t,
-//    startArg,
-//    function () { return Promise.resolve(); },
-//    function (mockThaliNotificationServer) {
-//      mockStartAndStop(mockThaliNotificationServer, []);
-//    });
-//});
-//
-//test('One peer and empty DB', function (t) {
-//  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
-//  var startArg = [ partnerPublicKey ];
-//  testStartAndStop(t,
-//    startArg,
-//    function () { return Promise.resolve(); },
-//    function (mockThaliNotificationServer) {
-//      mockStartAndStop(mockThaliNotificationServer, []);
-//    });
-//});
-//
-//test('One peer with _Local set behind current seq', function (t) {
-//  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
-//  var startArg = [ partnerPublicKey ];
-//  testStartAndStop(t,
-//    startArg,
-//    function (pouchDB) {
-//      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
-//        .then(function () {
-//          return pouchDB.put(
-//            {_id: ThaliSendNotificationBasedOnReplication
-//                   .calculateSeqPointKeyId(partnerPublicKey),
-//             lastSyncedSequenceNumber: 0});
-//        });
-//    },
-//    function (mockThaliNotificationServer) {
-//      mockStartAndStop(mockThaliNotificationServer, startArg);
-//    });
-//});
-//
-//test('One peer with _Local set equal to current seq', function (t) {
-//  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
-//  var startArg = [ partnerPublicKey ];
-//  testStartAndStop(t,
-//    startArg,
-//    function (pouchDB) {
-//      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
-//        .then(function () {
-//          return pouchDB.put(
-//            {_id: ThaliSendNotificationBasedOnReplication
-//              .calculateSeqPointKeyId(partnerPublicKey),
-//              lastSyncedSequenceNumber: 2});
-//        });
-//    },
-//    function (mockThaliNotificationServer) {
-//      mockStartAndStop(mockThaliNotificationServer, []);
-//    });
-//});
-//
-//test('One peer with _Local set ahead of current seq (and no this should ' +
-//     'not happen)', function (t) {
-//  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
-//  var startArg = [ partnerPublicKey ];
-//  testStartAndStop(t,
-//    startArg,
-//    function (pouchDB) {
-//      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
-//        .then(function () {
-//          return pouchDB.put(
-//            {_id: ThaliSendNotificationBasedOnReplication
-//              .calculateSeqPointKeyId(partnerPublicKey),
-//              lastSyncedSequenceNumber: 50});
-//        });
-//    },
-//    function (mockThaliNotificationServer) {
-//      mockStartAndStop(mockThaliNotificationServer, []);
-//    });
-//});
-//
-//test('Three peers, one not in DB, one behind and one ahead', function (t) {
-//  var partnerNotInDbPublicKey = crypto.createECDH('secp521r1').generateKeys();
-//  var partnerBehindInDbPublicKey =
-//    crypto.createECDH('secp521r1').generateKeys();
-//  var partnerAheadInDbPublicKey = crypto.createECDH('secp521r1').generateKeys();
-//  var startArg = [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey,
-//                  partnerAheadInDbPublicKey];
-//  testStartAndStop(
-//    t,
-//    startArg,
-//    function (pouchDB) {
-//      return pouchDB.put({_id: 'id', stuff: 'whatever'})
-//        .then(function () {
-//          return pouchDB.put(
-//            {
-//              _id: ThaliSendNotificationBasedOnReplication
-//                .calculateSeqPointKeyId(partnerBehindInDbPublicKey),
-//              lastSyncedSequenceNumber: 1
-//            }
-//        );})
-//        .then(function () {
-//          return pouchDB.put(
-//            {_id: ThaliSendNotificationBasedOnReplication
-//              .calculateSeqPointKeyId(partnerAheadInDbPublicKey),
-//            lastSyncedSequenceNumber: 500}
-//          );
-//        });
-//    },
-//    function (mockThaliNotificationServer) {
-//      mockStartAndStop(mockThaliNotificationServer,
-//                       [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey]);
-//    });
-//});
-//
-//test('More than maximum peers, make sure we only send maximum allowed',
-//  function (t) {
-//    var startArg = [];
-//    for (var i = 0;
-//        i < ThaliSendNotificationBasedOnReplication
-//            .MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY + 10;
-//        ++i) {
-//      startArg.push(crypto.createECDH('secp521r1').generateKeys());
-//    }
-//    testStartAndStop(
-//      t,
-//      startArg,
-//    function (pouchDB) {
-//      return pouchDB.put({_id: 'ick', stuff: 23});
-//    },
-//    function (mockThaliNotificationServer) {
-//      mockStartAndStop(mockThaliNotificationServer,
-//                        startArg.slice(0,
-//                          ThaliSendNotificationBasedOnReplication
-//                            .MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY));
-//    });
-//  });
+test('No peers and empty database', function (t) {
+  var startArg = [];
+  testStartAndStop(t,
+    startArg,
+    function () { return Promise.resolve(); },
+    function (mockThaliNotificationServer) {
+      return mockStartAndStop(mockThaliNotificationServer, t, []);
+    });
+});
+
+test('One peer and empty DB', function (t) {
+  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+  var startArg = [ partnerPublicKey ];
+  testStartAndStop(t,
+    startArg,
+    function () { return Promise.resolve(); },
+    function (mockThaliNotificationServer) {
+      return mockStartAndStop(mockThaliNotificationServer, t, []);
+    });
+});
+
+test('One peer with _Local set behind current seq', function (t) {
+  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+  var startArg = [ partnerPublicKey ];
+  testStartAndStop(t,
+    startArg,
+    function (pouchDB) {
+      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
+        .then(function () {
+          return pouchDB.put(
+            {_id: ThaliSendNotificationBasedOnReplication
+                   .calculateSeqPointKeyId(partnerPublicKey),
+             lastSyncedSequenceNumber: 0});
+        });
+    },
+    function (mockThaliNotificationServer) {
+      return mockStartAndStop(mockThaliNotificationServer, t, startArg);
+    });
+});
+
+test('One peer with _Local set equal to current seq', function (t) {
+  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+  var startArg = [ partnerPublicKey ];
+  testStartAndStop(t,
+    startArg,
+    function (pouchDB) {
+      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
+        .then(function () {
+          return pouchDB.put(
+            {_id: ThaliSendNotificationBasedOnReplication
+              .calculateSeqPointKeyId(partnerPublicKey),
+              lastSyncedSequenceNumber: 2});
+        });
+    },
+    function (mockThaliNotificationServer) {
+      return mockStartAndStop(mockThaliNotificationServer, t, []);
+    });
+});
+
+test('One peer with _Local set ahead of current seq (and no this should ' +
+     'not happen)', function (t) {
+  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+  var startArg = [ partnerPublicKey ];
+  testStartAndStop(t,
+    startArg,
+    function (pouchDB) {
+      return pouchDB.put({ _id: 'id', stuff: 'whatever'})
+        .then(function () {
+          return pouchDB.put(
+            {_id: ThaliSendNotificationBasedOnReplication
+              .calculateSeqPointKeyId(partnerPublicKey),
+              lastSyncedSequenceNumber: 50});
+        });
+    },
+    function (mockThaliNotificationServer) {
+      return mockStartAndStop(mockThaliNotificationServer, t, []);
+    });
+});
+
+test('Three peers, one not in DB, one behind and one ahead', function (t) {
+  var partnerNotInDbPublicKey = crypto.createECDH('secp521r1').generateKeys();
+  var partnerBehindInDbPublicKey =
+    crypto.createECDH('secp521r1').generateKeys();
+  var partnerAheadInDbPublicKey = crypto.createECDH('secp521r1').generateKeys();
+  var startArg = [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey,
+                  partnerAheadInDbPublicKey];
+  testStartAndStop(
+    t,
+    startArg,
+    function (pouchDB) {
+      return pouchDB.put({_id: 'id', stuff: 'whatever'})
+        .then(function () {
+          return pouchDB.put(
+            {
+              _id: ThaliSendNotificationBasedOnReplication
+                .calculateSeqPointKeyId(partnerBehindInDbPublicKey),
+              lastSyncedSequenceNumber: 1
+            }
+        );})
+        .then(function () {
+          return pouchDB.put(
+            {_id: ThaliSendNotificationBasedOnReplication
+              .calculateSeqPointKeyId(partnerAheadInDbPublicKey),
+            lastSyncedSequenceNumber: 500}
+          );
+        });
+    },
+    function (mockThaliNotificationServer) {
+      return mockStartAndStop(mockThaliNotificationServer, t,
+                       [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey]);
+    });
+});
+
+test('More than maximum peers, make sure we only send maximum allowed',
+  function (t) {
+    var startArg = [];
+    for (var i = 0;
+        i < ThaliSendNotificationBasedOnReplication
+            .MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY + 10;
+        ++i) {
+      startArg.push(crypto.createECDH('secp521r1').generateKeys());
+    }
+    testStartAndStop(
+      t,
+      startArg,
+    function (pouchDB) {
+      return pouchDB.put({_id: 'ick', stuff: 23});
+    },
+    function (mockThaliNotificationServer) {
+      return mockStartAndStop(mockThaliNotificationServer, t,
+                        startArg.slice(0,
+                          ThaliSendNotificationBasedOnReplication
+                            .MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY));
+    });
+  });
 
 test('two peers with empty DB, update the doc', function (t) {
   var partnerOnePublicKey = crypto.createECDH('secp521r1').generateKeys();
@@ -333,32 +329,33 @@ test('two peers with empty DB, update the doc', function (t) {
   testStartAndStop(t,
     startArg,
     function () { return Promise.resolve(); },
-    function (mockThaliNotificationServer) {
-      mockThaliNotificationServer.expects('start')
-        .once().withExactArgs([]).returns(Promise.resolve());
-      mockThaliNotificationServer.expects('start')
-        .once().withExactArgs(startArg).returns(Promise.resolve());
+    function (mockThaliNotificationServer, t) {
+      var startSpy = mockThaliNotificationServer.expects('start')
+        .twice().returns(Promise.resolve());
 
-      mockThaliNotificationServer.expects('stop')
+      var stopSpy = mockThaliNotificationServer.expects('stop')
         .once().withExactArgs().returns(Promise.resolve());
+
+      return function () {
+        t.ok(startSpy.calledBefore(stopSpy), 'last start before stop');
+
+        t.ok(startSpy.firstCall.calledWithExactly([]), 'empty first start');
+        t.ok(startSpy.secondCall.calledWithExactly(startArg),
+          'full second start');
+      };
     },
     function (pouchDB) {
       return new Promise(function (resolve, reject) {
-        console.log("Inside of the inbetween promise function");
         pouchDB.changes({ since: 'now', limit: 1, live: true})
           .on('change', function () {
-            console.log("In test pouchDB change handler");
-            //setTimeout(function () {
+            // Allow the RefreshTimerManager set as a consequence of start call
+            // triggered by this change to fire
+            setTimeout(function () {
               resolve();
-            //}, 2);
+            }, 1);
           });
         pouchDB.put({_id: '33', stuff: 'uhuh'})
-          .then(function () {
-            console.log("POuchDB put is done.");
-            //setTimeout(function () {
-            //  resolve();
-            //}, 20);
-          }).catch(function (err) {
+          .catch(function (err) {
             reject(err);
           });
       });
@@ -381,14 +378,18 @@ test('add doc and make sure tokens refresh when they expire', function (t) {
             lastSyncedSequenceNumber: 1});
         });
     },
-    function (mockThaliNotificationServer) {
-      mockThaliNotificationServer.expects('start')
+    function (mockThaliNotificationServer, t) {
+      var startSpy = mockThaliNotificationServer.expects('start')
         .thrice().withExactArgs(startArg).returns(Promise.resolve());
 
-      mockThaliNotificationServer.expects('stop')
+      var stopSpy = mockThaliNotificationServer.expects('stop')
         .once().withExactArgs().returns(Promise.resolve());
+
+      return function () {
+        t.ok(startSpy.calledBefore(stopSpy), 'start before stop');
+      };
     },
-    function () {
+    function (mockThaliNotificationServer) {
       return new Promise(function (resolve) {
         setTimeout(function () {
           resolve();
@@ -404,12 +405,29 @@ test('start and stop and start and stop', function (t) {
     function (pouchDB) {
       return pouchDB.put({_id: 'yikes!', stuff: 'huh'});
     },
-    function (mockThaliNotificationServer) {
-      mockThaliNotificationServer.expects('start')
-        .twice().withExactArgs(startArg).returns(Promise.resolve());
+    function (mockThaliNotificationServer, t) {
+      var firstStartSpy = mockThaliNotificationServer.expects('start')
+        .once().withExactArgs(startArg).returns(Promise.resolve());
 
-      mockThaliNotificationServer.expects('stop')
-        .twice().withExactArgs().returns(Promise.resolve());
+      var secondStartSpy = mockThaliNotificationServer.expects('start')
+        .once().withExactArgs(startArg).returns(Promise.resolve());
+
+      var firstStopSpy = mockThaliNotificationServer.expects('stop')
+        .once().withExactArgs().returns(Promise.resolve());
+
+      var secondStopSpy = mockThaliNotificationServer.expects('stop')
+        .once().withExactArgs().returns(Promise.resolve());
+
+      return function () {
+        t.ok(firstStartSpy.calledBefore(firstStopSpy),
+            'first start before first stop');
+
+        t.ok(firstStopSpy.calledBefore(secondStartSpy),
+             'first stop before second start');
+
+        t.ok(secondStartSpy.calledBefore(secondStopSpy),
+             'second start before second stop')
+      };
     },
     function (thaliSendNotificationBasedOnReplication) {
       t.equal(thaliSendNotificationBasedOnReplication._transientState, null,
@@ -437,12 +455,16 @@ test('two identical starts in a row', function (t) {
     function (pouchDB) {
       return pouchDB.put({_id: 'hummm', stuff: 'yeah'});
     },
-    function (mockThaliNotificationServer) {
-      mockThaliNotificationServer.expects('start')
+    function (mockThaliNotificationServer, t) {
+      var startSpy = mockThaliNotificationServer.expects('start')
         .once().withExactArgs(startArg).returns(Promise.resolve());
 
-      mockThaliNotificationServer.expects('stop')
+      var stopSpy = mockThaliNotificationServer.expects('stop')
         .once().withExactArgs().returns(Promise.resolve());
+
+      return function () {
+        startSpy.calledBefore(stopSpy, 'start before stop');
+      };
     },
     function (thaliSendNotificationBasedOnReplication) {
       return thaliSendNotificationBasedOnReplication.start(startArg)
@@ -461,15 +483,22 @@ test('two different starts in a row', function (t) {
     function (pouchDB) {
       return pouchDB.put({_id: 'hummm', stuff: 'yeah'});
     },
-    function (mockThaliNotificationServer) {
-      mockThaliNotificationServer.expects('start')
+    function (mockThaliNotificationServer, t) {
+      var firstStartSpy = mockThaliNotificationServer.expects('start')
         .once().withExactArgs(startArg).returns(Promise.resolve());
-      mockThaliNotificationServer.expects('start')
+      var secondStartSpy = mockThaliNotificationServer.expects('start')
         .once().withExactArgs([]).returns(Promise.resolve());
 
 
-      mockThaliNotificationServer.expects('stop')
+      var stopSpy = mockThaliNotificationServer.expects('stop')
         .once().withExactArgs().returns(Promise.resolve());
+
+      return function () {
+        t.ok(firstStartSpy.calledBefore(secondStartSpy,
+          'first start before second start'));
+
+        t.ok(secondStartSpy.calledBefore(stopSpy, 'second start before stop'));
+      };
     },
     function (thaliSendNotificationBasedOnReplication) {
       return thaliSendNotificationBasedOnReplication.start(startArg)
@@ -488,12 +517,16 @@ test('two stops and a start and two stops', function (t) {
     function (pouchDB) {
       return pouchDB.put({_id: 'hummm', stuff: 'yeah'});
     },
-    function (mockThaliNotificationServer) {
-      mockThaliNotificationServer.expects('start')
+    function (mockThaliNotificationServer, t) {
+      var startSpy = mockThaliNotificationServer.expects('start')
         .once().withExactArgs(startArg).returns(Promise.resolve());
 
-      mockThaliNotificationServer.expects('stop')
+      var stopSpy = mockThaliNotificationServer.expects('stop')
         .once().withExactArgs().returns(Promise.resolve());
+
+      return function () {
+        t.ok(startSpy.calledBefore(stopSpy), 'start before stop');
+      };
     },
     function (thaliSendNotificationBasedOnReplication) {
       return thaliSendNotificationBasedOnReplication.stop()
@@ -516,12 +549,16 @@ test('we properly enqueue requests so no then needed', function (t) {
     function (pouchDB) {
       return pouchDB.put({_id: 'hummm', stuff: 'yeah'});
     },
-    function (mockThaliNotificationServer) {
-      mockThaliNotificationServer.expects('start')
+    function (mockThaliNotificationServer, t) {
+      var startSpy = mockThaliNotificationServer.expects('start')
         .once().withExactArgs(startArg).returns(Promise.resolve());
 
-      mockThaliNotificationServer.expects('stop')
+      var stopSpy = mockThaliNotificationServer.expects('stop')
         .once().withExactArgs().returns(Promise.resolve());
+
+      return function () {
+        t.ok(startSpy.calledBefore(stopSpy), 'start before stop');
+      };
     },
     function (thaliSendNotificationBasedOnReplication) {
       var promiseArray = [
