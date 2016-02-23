@@ -9,13 +9,6 @@
 if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
-else {
-  var oldFn = Mobile.prototype.registerToNative;
-  Mobile.prototype.registerToNative = function(target) {
-    oldFn.call(this, target);
-    Mobile("didRegisterToNative").callNative(this.name);
-  }
-}
 
 var testUtils = require('./lib/testUtils');
 
