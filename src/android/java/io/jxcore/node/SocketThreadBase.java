@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+/* Copyright (c) 2015-2016 Microsoft Corporation. This software is licensed under the MIT License.
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
@@ -15,13 +15,21 @@ import java.net.Socket;
  * The base (thread) class for outgoing and incoming socket threads.
  */
 abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Listener {
+    public interface Listener {
+        void onListeningForIncomingConnections(int portNumber);
+
+        void onDataTransferred(int numberOfBytes);
+
+        void onDisconnected(SocketThreadBase who, String errorMessage);
+    }
+
     private static final String SENDING_THREAD_NAME = "Sender";
     private static final String RECEIVING_THREAD_NAME = "Receiver";
 
     protected static String TAG = SocketThreadBase.class.getName();
 
     protected final BluetoothSocket mBluetoothSocket;
-    protected final ConnectionStatusListener mListener;
+    protected final Listener mListener;
     protected final InputStream mBluetoothInputStream;
     protected final OutputStream mBluetoothOutputStream;
     protected Socket mLocalhostSocket = null;
@@ -33,11 +41,12 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
     /**
      * Constructor.
+     *
      * @param bluetoothSocket The Bluetooth socket.
-     * @param listener The listener.
+     * @param listener        The listener.
      * @throws IOException Thrown, if either BluetoothSocket.getInputStream or BluetoothSocket.getOutputStream fails.
      */
-    public SocketThreadBase(BluetoothSocket bluetoothSocket, ConnectionStatusListener listener)
+    public SocketThreadBase(BluetoothSocket bluetoothSocket, Listener listener)
             throws IOException {
         mBluetoothSocket = bluetoothSocket;
         mListener = listener;
@@ -45,7 +54,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         mBluetoothOutputStream = mBluetoothSocket.getOutputStream();
     }
 
-    public ConnectionStatusListener getListener() {
+    public Listener getListener() {
         return mListener;
     }
 
@@ -59,12 +68,14 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
     /**
      * Resolves the address of the local host.
+     *
      * @return The local host address as a string or null in case of a failure.
      */
     public String getLocalHostAddressAsString() {
-        return mLocalhostSocket == null
-                || mLocalhostSocket.getInetAddress() == null
-                    ? null : mLocalhostSocket.getInetAddress().toString();
+        Socket localCopyOfmLocalHostSocket = mLocalhostSocket;
+        return localCopyOfmLocalHostSocket == null
+                || localCopyOfmLocalHostSocket.getInetAddress() == null
+                ? null : localCopyOfmLocalHostSocket.getInetAddress().toString();
     }
 
     /**
@@ -88,8 +99,38 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     }
 
     /**
+     * Compares this SocketThreadBase instead to the given one. Two SocketThreadBase instances are
+     * considered equal when the peers associated with them share the same ID
+     * i.e. PeerProperties.equals returns true.
+     *
+     * @param other The other SocketThreadBase to compare this to.
+     * @return True, if the instances match. False otherwise.
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (other instanceof SocketThreadBase) {
+            SocketThreadBase otherSocketThreadBase = (SocketThreadBase) other;
+
+            if (otherSocketThreadBase.getPeerProperties() != null
+                    && mPeerProperties != null) {
+                Log.v(TAG, "equals: " + mPeerProperties.getId() + " == "
+                        + otherSocketThreadBase.getPeerProperties().getId() + " ?");
+            } else {
+                Log.v(TAG, "equals: At least one of the other instances is missing its peer properties");
+            }
+
+            return (otherSocketThreadBase.getPeerProperties() != null
+                    && mPeerProperties != null
+                    && otherSocketThreadBase.getPeerProperties().equals(mPeerProperties));
+        }
+
+        return false;
+    }
+
+    /**
      * Logs the error and notifies the listener that we got disconnected.
-     * @param who The thread, which failed.
+     *
+     * @param who          The thread, which failed.
      * @param errorMessage The error message.
      */
     @Override
@@ -112,7 +153,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
     /**
      * Logs the event and notifies the listener.
-     * @param who The thread, which succeeded in reading and writing.
+     *
+     * @param who           The thread, which succeeded in reading and writing.
      * @param numberOfBytes The number of bytes read and written.
      */
     @Override
@@ -137,18 +179,19 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 || mLocalInputStream == null
                 || mBluetoothOutputStream == null
                 || mLocalOutputStream == null
-                || mLocalhostSocket == null) {
+                || mLocalhostSocket == null
+                || mBluetoothSocket == null) {
             Log.e(TAG, "startStreamCopyingThreads: Cannot start since at least one of the streams is null");
             mListener.onDisconnected(this, "Cannot start stream copying threads since at least one of the streams is null");
         } else {
             mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, SENDING_THREAD_NAME);
-            mSendingThread.setDefaultUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
+            mSendingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mSendingThread.setBufferSize(1024 * 8);
             mSendingThread.setNotifyStreamCopyingProgress(true);
             mSendingThread.start();
 
             mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, RECEIVING_THREAD_NAME);
-            mReceivingThread.setDefaultUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
+            mReceivingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mReceivingThread.setBufferSize(1024 * 8);
             mReceivingThread.setNotifyStreamCopyingProgress(true);
             mReceivingThread.start();

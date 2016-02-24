@@ -1,37 +1,37 @@
-/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+/* Copyright (c) 2015-2016 Microsoft Corporation. This software is licensed under the MIT License.
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
-import android.os.Handler;
 import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
-import java.net.Socket;
 
 /**
  * A thread for outgoing Bluetooth connections.
  */
 class OutgoingSocketThread extends SocketThreadBase {
-    // As a precaution we do a delayed notification (ConnectionStatusListener.onListeningForIncomingConnections)
-    // to make sure that ServerSocket.accept() is run.
-    private static final long LISTENING_FOR_CONNECTIONS_NOTIFICATION_DELAY_IN_MILLISECONDS = 300;
-
     private ServerSocket mServerSocket = null;
+    private int mListeningOnPortNumber = ConnectionHelper.NO_PORT_NUMBER;
 
     /**
      * Constructor.
+     *
      * @param bluetoothSocket The Bluetooth socket.
-     * @param listener The listener.
+     * @param listener        The listener.
      * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
      */
-    public OutgoingSocketThread(BluetoothSocket bluetoothSocket, ConnectionStatusListener listener)
+    public OutgoingSocketThread(BluetoothSocket bluetoothSocket, Listener listener)
             throws IOException {
         super(bluetoothSocket, listener);
         TAG = OutgoingSocketThread.class.getName();
+    }
+
+    public int getListeningOnPortNumber() {
+        return mListeningOnPortNumber;
     }
 
     /**
@@ -59,21 +59,11 @@ class OutgoingSocketThread extends SocketThreadBase {
                 Log.i(TAG, "Now accepting connections...");
 
                 if (mListener != null) {
-                    final ConnectionStatusListener listener = mListener;
-                    final int localPort = mServerSocket.getLocalPort();
-                    final Handler handler = new Handler(jxcore.activity.getMainLooper());
-
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            listener.onListeningForIncomingConnections(localPort);
-                        }
-                    }, LISTENING_FOR_CONNECTIONS_NOTIFICATION_DELAY_IN_MILLISECONDS);
+                    mListeningOnPortNumber = mServerSocket.getLocalPort();
+                    mListener.onListeningForIncomingConnections(mListeningOnPortNumber);
                 }
 
-                Socket tempSocket = mServerSocket.accept(); // Blocking call
-
-                mLocalhostSocket = tempSocket;
+                mLocalhostSocket = mServerSocket.accept(); // Blocking call
 
                 Log.i(TAG, "Incoming data from address: " + getLocalHostAddressAsString()
                         + ", port: " + mServerSocket.getLocalPort());

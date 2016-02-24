@@ -43,6 +43,8 @@
 - (void)appEnteringBackground;
 - (void)appEnteredForeground;
 
+- (void)didRegisterToNative:(NSString *)name;
+
 @end
 
 // JavaScript callbacks.
@@ -54,13 +56,28 @@ NSString * const kDiscoveryAdvertisingStateUpdate = @"discoveryAdvertisingStateU
 NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToPortNumberFailed";
 
 @implementation JXcoreExtension
+{
+  BOOL _networkChangedRegistered;
+}
+
+- (instancetype)init
+{
+  if (self = [super init])
+  {
+    _networkChangedRegistered = NO;
+    return self;
+  }
+  return nil;
+}
 
 - (void)networkChanged:(NSDictionary *)networkStatus
 {
   @synchronized(self)
   {
-    [JXcore callEventCallback:kNetworkChanged
-                     withJSON:[JXcoreExtension objectToJSON:networkStatus]];
+    if (_networkChangedRegistered) {
+      [JXcore callEventCallback:kNetworkChanged
+                       withJSON:[JXcoreExtension objectToJSON:networkStatus]];
+    }
   }
 }
 
@@ -143,6 +160,14 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   }
 
   return json;
+}
+
+- (void)didRegisterToNative:(NSString *)name
+{
+  if ([name isEqualToString:kNetworkChanged]) {
+    _networkChangedRegistered = YES;
+    [[JXcoreExtension theAppContext] fireNetworkChangedEvent];
+  }
 }
 
 // Defines methods.
@@ -344,6 +369,21 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       }
     }
   } withName:@"killConnection"];
+
+  // didRegisterToNative - Allow JXCore to inform us that someone registered
+  // a JS function to native
+  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+  {
+    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
+    {
+      NSLog(@"jxcore: didRegisterToNative: badParam");
+    }
+    else
+    {
+      NSLog(@"jxcore: didRegisterToNative %@", params[0]);
+      [self didRegisterToNative: params[0]];
+    }
+  } withName:@"didRegisterToNative"];
 }
 
 @end

@@ -123,20 +123,18 @@ module.exports.tmpDirectory = function () {
   return tmpObject.name;
 };
 
+/**
+ * Logs the result of BLE multiple advertisement feature support check on
+ * Android.
+ */
 if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
-  // Below is only for logging purposes.
-  // Once we have had the BT off and we just turned it on,
-  // we need to wait untill the BLE support is reported rigth way
-  // seen with LG G4, Not seen with Motorola Nexus 6.
-  setTimeout(function () {
-    Mobile('IsBLESupported').callNative(function (err) {
-      if (err) {
-        console.log('BLE advertisement is not supported: ' + err );
-        return;
-      }
-      console.log('BLE advertisement is supported');
-    });
-  }, 5000);
+  Mobile('isBleMultipleAdvertisementSupported').callNative(function (err) {
+    if (err) {
+      console.log('BLE multiple advertisement not supported: ' + err);
+    } else {
+      console.log('BLE multiple advertisement supported');
+    }
+  });
 }
 
 

@@ -342,7 +342,7 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
           'If the tokens were never updated then there should not be a' +
           'beacon timer');
         self._transientState.lastTimeBeaconsWereUpdated = Date.now();
-        return self._updateOnExpiration(1);
+        return self._updateOnExpiration(0);
       }
 
       assert(self._transientState.beaconRefreshTimerManager, 'If beacons were' +
@@ -456,7 +456,7 @@ ThaliSendNotificationBasedOnReplication.prototype._updateOnExpiration =
       self._transientState.beaconRefreshTimerManager = null;
     }
 
-    if (millisecondsUntilRun <= 0) {
+    if (millisecondsUntilRun < 0) {
       return;
     }
 

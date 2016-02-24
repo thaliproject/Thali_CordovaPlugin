@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 Microsoft Corporation. This software is licensed under the MIT License.
+/* Copyright (c) 2015-2016 Microsoft Corporation. This software is licensed under the MIT License.
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
@@ -15,26 +15,32 @@ import java.net.Socket;
  * A thread for incoming Bluetooth connections.
  */
 class IncomingSocketThread extends SocketThreadBase {
-    private int mHttpPort = 0;
+    private int mTcpPortNumber = 0;
 
     /**
      * Constructor.
+     *
      * @param bluetoothSocket The Bluetooth socket.
-     * @param listener The listener.
+     * @param listener        The listener.
      * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
      */
-    public IncomingSocketThread(BluetoothSocket bluetoothSocket, ConnectionStatusListener listener)
-            throws IOException{
+    public IncomingSocketThread(BluetoothSocket bluetoothSocket, Listener listener)
+            throws IOException {
         super(bluetoothSocket, listener);
         TAG = IncomingSocketThread.class.getName();
     }
 
-    public void setHttpPort(int httpPort) {
-        mHttpPort = httpPort;
+    public int getTcpPortNumber() {
+        return mTcpPortNumber;
+    }
+
+    public void setTcpPortNumber(int portNumber) {
+        mTcpPortNumber = portNumber;
     }
 
     public int getLocalHostPort() {
-        return mLocalhostSocket == null ? 0 : mLocalhostSocket.getPort();
+        Socket copyOfLocalHostSocket = mLocalhostSocket;
+        return copyOfLocalHostSocket == null ? ConnectionHelper.NO_PORT_NUMBER : copyOfLocalHostSocket.getPort();
     }
 
     /**
@@ -49,7 +55,7 @@ class IncomingSocketThread extends SocketThreadBase {
 
         try {
             Inet4Address mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
-            mLocalhostSocket = new Socket(mLocalHostAddress, mHttpPort);
+            mLocalhostSocket = new Socket(mLocalHostAddress, mTcpPortNumber);
 
             Log.i(TAG, "Local host address: " + getLocalHostAddressAsString() + ", port: " + getLocalHostPort());
 
