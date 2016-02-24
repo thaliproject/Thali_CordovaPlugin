@@ -12,12 +12,16 @@ if (typeof Mobile === 'undefined') {
 
 var testUtils = require('./lib/testUtils');
 
-testUtils.toggleRadios(true);
-
-Mobile('GetDeviceName').callNative(function (name) {
-  console.log('My device name is: %s', name);
-  testUtils.setName(name);
-  require('./runTests.js');
+testUtils.toggleRadios(true)
+.then(function () {
+  Mobile('GetDeviceName').callNative(function (name) {
+    console.log('My device name is: %s', name);
+    testUtils.setName(name);
+    require('./runTests.js');
+  });
+})
+.catch(function (error) {
+  console.log('Something went wrong: ' + error);
 });
 
 console.log('Unit Test app is loaded');
