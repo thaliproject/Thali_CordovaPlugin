@@ -123,6 +123,34 @@ test('Start and stop ThaliNotificationServer', function (t) {
   });
 });
 
+test('ThaliNotificationServer.start with wrong parameters', function (t) {
+
+  var thaliNotificationServerProxyquired = initializeThaliNotificationServer();
+  
+  thaliNotificationServerProxyquired.start('wrong key').then(function () {
+      t.fail('start should have failed.');
+      t.end();
+
+    }).catch(function () {
+      t.pass('Expected result.');
+      t.end();
+    });
+});
+
+test('ThaliNotificationServer.start with empty array', function (t) {
+
+  var thaliNotificationServerProxyquired = initializeThaliNotificationServer();
+  
+  thaliNotificationServerProxyquired.start([]).then(function () {
+      t.pass('Expected result.');
+      t.end();
+    }).catch(function () {
+      t.fail('start should have failed.');
+      t.end();
+    });
+});
+
+
 test('Makes an HTTP request to /NotificationBeacons', function (t) {
   
   var thaliNotificationServerProxyquired = initializeThaliNotificationServer();
