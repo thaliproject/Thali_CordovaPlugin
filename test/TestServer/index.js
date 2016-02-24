@@ -10,7 +10,7 @@ var options = {
 };
 
 var app = require('express')();
-var http = require('http').Server(app)
+var http = require('http').Server(app);
 
 var io = require('socket.io')(http, options);
 
@@ -21,17 +21,17 @@ var UnitTestFramework = require('./UnitTestFramework');
 // Create a logger
 var winston = require('winston');
 var logger = new (winston.Logger)({
-    level : 'debug',
-    transports: [
-      new (winston.transports.Console)({'timestamp':true, 'debugStdout':true})
-    ]
+  level : 'debug',
+  transports: [
+    new (winston.transports.Console)({'timestamp':true, 'debugStdout':true})
+  ]
 });
 
 var testConfig = JSON.parse(process.argv[2]);
 var unitTestManager = new UnitTestFramework(testConfig, logger);
 var perfTestManager = new PerfTestFramework(testConfig, logger);
 
-process.on('SIGINT', function() {
+process.on('SIGINT', function () {
   logger.debug('Got SIGINT.  Terminating.');
   io.close();
   process.exit(130); // Ctrl-C std exit code
@@ -39,33 +39,35 @@ process.on('SIGINT', function() {
 
 var socketId = 0;
 
-io.on('connection', function(socket) {
+io.on('connection', function (socket) {
 
   // A new device has connected to us.. we expect the next thing to happen to be
   // a 'present' message
 
   socket.id = socketId++;
-  socket.deviceName = "NOT YET SET";
+  socket.deviceName = 'NOT YET SET';
 
   socket.on('disconnect', function (reason) {
-    logger.debug("Socket disconnected: %s %s (%s)", reason, this.id, socket.deviceName);
+    logger.debug('Socket disconnected: %s %s (%s)', reason,
+      this.id, socket.deviceName);
     socket.emit(
-      'test_error', 
-      JSON.stringify({"timeout ": "message not acceptable in current Test Server state"})
+      'test_error',
+      JSON.stringify({'timeout ':
+        'message not acceptable in current Test Server state'})
     );
   });
 
-  socket.on('present', function(msg) {
- 
-    // present - The device is announcing it's presence and telling us 
+  socket.on('present', function (msg) {
+
+    // present - The device is announcing it's presence and telling us
     // whether it's running perf or unit tests
- 
+
     var _device = JSON.parse(msg);
     if (!_device.os || !_device.name || !_device.type) {
-      logger.error("malformed message");
+      logger.error('malformed message');
       socket.emit('error', JSON.stringify({
-        "errorDescription ": "malformed message",
-        "message" : msg
+        'errorDescription ': 'malformed message',
+        'message' : msg
       }));
       return;
     }
@@ -74,40 +76,39 @@ io.on('connection', function(socket) {
 
     // Add the new device to the test type/os it reports as belonging to
     var device = new TestDevice(
-      socket, _device.name, _device.uuid, _device.os, _device.type, _device.tests, _device.btaddress
+      socket, _device.name, _device.uuid, _device.os, _device.type,
+      _device.tests, _device.btaddress
     );
 
     logger.debug(
-      "Device presented: %s (%s) %s socket:%d", 
+      'Device presented: %s (%s) %s socket:%d',
       _device.name, _device.os, _device.type, this.id
     );
 
     switch (device.type)
     {
-      case 'unittest' : 
-      {
+      case 'unittest' : {
         unitTestManager.addDevice(device);
+        break;
       }
-      break;
-
-      case 'perftest' : 
-      {
+      case 'perftest' : {
         perfTestManager.addDevice(device);
+        break;
       }
-      break;
-
-      default : logger.error('unrecognised test type: ' + device.type);
+      default : {
+        logger.error('unrecognised test type: ' + device.type);
+      }
     }
   });
 
 });
 
-app.get('/', function(req, res){
-  logger.info("HTTP get called");
+app.get('/', function (req, res){
+  logger.info('HTTP get called');
   res.sendfile('index.html');
 });
 
-http.listen(3000, function(){
+http.listen(3000, function (){
   logger.info('listening on *:3000');
 });
 
