@@ -116,11 +116,15 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
 
       runTestFunction(thaliSendNotificationBasedOnReplication, pouchDB)
         .then(function () {
-          mockThaliNotificationServer.verify();
-          t.ok(SpyOnThaliNotificationServerConstructor.calledOnce);
+          t.doesNotThrow(function () {
+            mockThaliNotificationServer.verify();
+          }, 'verify failed');
+          t.ok(SpyOnThaliNotificationServerConstructor.calledOnce,
+          'constructor called once');
           t.ok(SpyOnThaliNotificationServerConstructor
             .calledWithExactly(router, ecdhForLocalDevice,
-              millisecondsUntilExpiration));
+              millisecondsUntilExpiration),
+          'constructor called with right args');
           mockInitValidationFunction && mockInitValidationFunction();
           t.end();
         });
@@ -379,8 +383,13 @@ test('add doc and make sure tokens refresh when they expire', function (t) {
         });
     },
     function (mockThaliNotificationServer, t) {
+      // In extremely constrained environments like appveyor it can take
+      // 2000 ms for a timer set to run in 100 ms to actually get scheduled
+      // to run. So in those cases we might only get 2 runs of start rather
+      // than 3. Hence the atLeast/atMost below.
       var startSpy = mockThaliNotificationServer.expects('start')
-        .thrice().withExactArgs(startArg).returns(Promise.resolve());
+        .atLeast(2).atMost(3).withExactArgs(startArg)
+        .returns(Promise.resolve());
 
       var stopSpy = mockThaliNotificationServer.expects('stop')
         .once().withExactArgs().returns(Promise.resolve());
@@ -393,7 +402,7 @@ test('add doc and make sure tokens refresh when they expire', function (t) {
       return new Promise(function (resolve) {
         setTimeout(function () {
           resolve();
-        }, DEFAULT_MILLISECONDS_UNTIL_EXPIRE * 2 + 10);
+        }, DEFAULT_MILLISECONDS_UNTIL_EXPIRE * 2.5);
       });
     });
 });
