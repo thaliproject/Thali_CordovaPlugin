@@ -1,7 +1,6 @@
 /* global hostAddress */
 'use strict';
 
-var Promise = require('lie');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
@@ -13,6 +12,10 @@ var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 
 var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
 var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
+
+var Promise = require('lie');
+var PromiseQueue = require('./promiseQueue');
+var promiseQueue = new PromiseQueue();
 
 var promiseResultSuccessOrFailure = function (promise) {
   return promise.then(function (success) {
@@ -147,20 +150,22 @@ var handleNetworkChanged = function (networkChangedValue) {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.start = function (router) {
-  if (thaliMobileStates.started === true) {
-    return Promise.reject(new Error('Call Stop!'));
-  }
-  thaliMobileStates.started = true;
-  module.exports.emitter.on('networkChanged', handleNetworkChanged);
-  return Promise.all([
-    promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.start(router)
-    ),
-    promiseResultSuccessOrFailure(
-      ThaliMobileNativeWrapper.start(router)
-    )
-  ]).then(function (results) {
-    return getCombinedResult(results);
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (thaliMobileStates.started === true) {
+      return reject(new Error('Call Stop!'));
+    }
+    thaliMobileStates.started = true;
+    module.exports.emitter.on('networkChanged', handleNetworkChanged);
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.start(router)
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.start(router)
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
+    });
   });
 };
 
@@ -176,17 +181,19 @@ module.exports.start = function (router) {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stop = function () {
-  thaliMobileStates.started = false;
-  module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
-  return Promise.all([
-    promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.stop()
-    ),
-    promiseResultSuccessOrFailure(
-      ThaliMobileNativeWrapper.stop()
-    )
-  ]).then(function (results) {
-    return getCombinedResult(results);
+  return promiseQueue.enqueue(function (resolve, reject) {
+    thaliMobileStates.started = false;
+    module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.stop()
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.stop()
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
+    });
   });
 };
 
@@ -220,24 +227,26 @@ module.exports.stop = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.startListeningForAdvertisements = function () {
-  if (thaliMobileStates.started === false) {
-    return Promise.reject(new Error('Call Start!'));
-  }
-  thaliMobileStates.listening = true;
-  var resultObject = {};
-  var promiseList = [];
-  if (thaliWifiInfrastructure.states.started) {
-    promiseList.push(promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.startListeningForAdvertisements()
-    ));
-  } else {
-    resultObject.wifiResult = new Error('Not Active');
-  }
-  return Promise.all(promiseList).then(function (results) {
-    return {
-      wifiResult: resultObject.wifiResult || results[0] || null,
-      nativeResult: null // results[1] || null
-    };
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (thaliMobileStates.started === false) {
+      return reject(new Error('Call Start!'));
+    }
+    thaliMobileStates.listening = true;
+    var resultObject = {};
+    var promiseList = [];
+    if (thaliWifiInfrastructure.states.started) {
+      promiseList.push(promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.startListeningForAdvertisements()
+      ));
+    } else {
+      resultObject.wifiResult = new Error('Not Active');
+    }
+    Promise.all(promiseList).then(function (results) {
+      return resolve({
+        wifiResult: resultObject.wifiResult || results[0] || null,
+        nativeResult: null // results[1] || null
+      });
+    });
   });
 };
 
@@ -252,15 +261,17 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopListeningForAdvertisements = function () {
-  return Promise.all([
-    promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.stopListeningForAdvertisements()
-    )
-  ]).then(function (results) {
-    return {
-      wifiResult: results[0] || null
-      //nativeResult: results[1] || null
-    };
+  return promiseQueue.enqueue(function (resolve, reject) {
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.stopListeningForAdvertisements()
+      )
+    ]).then(function (results) {
+      return resolve({
+        wifiResult: results[0] || null
+        //nativeResult: results[1] || null
+      });
+    });
   });
 };
 
@@ -283,24 +294,26 @@ module.exports.stopListeningForAdvertisements = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.startUpdateAdvertisingAndListening = function () {
-  if (thaliMobileStates.started === false) {
-    return Promise.reject(new Error('Call Start!'));
-  }
-  thaliMobileStates.advertising = true;
-  var resultObject = {};
-  var promiseList = [];
-  if (thaliWifiInfrastructure.states.started) {
-    promiseList.push(promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.startUpdateAdvertisingAndListening()));
-  } else {
-    resultObject.wifiResult = new Error('Not Active');
-  }
-  // TODO: Add native call
-  return Promise.all(promiseList).then(function (results) {
-    return {
-      wifiResult: resultObject.wifiResult || results[0] || null
-      //nativeResult: results[1] || null
-    };
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (thaliMobileStates.started === false) {
+      return reject(new Error('Call Start!'));
+    }
+    thaliMobileStates.advertising = true;
+    var resultObject = {};
+    var promiseList = [];
+    if (thaliWifiInfrastructure.states.started) {
+      promiseList.push(promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.startUpdateAdvertisingAndListening()));
+    } else {
+      resultObject.wifiResult = new Error('Not Active');
+    }
+    // TODO: Add native call
+    Promise.all(promiseList).then(function (results) {
+      return resolve({
+        wifiResult: resultObject.wifiResult || results[0] || null
+        //nativeResult: results[1] || null
+      });
+    });
   });
 };
 
@@ -316,7 +329,9 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopAdvertisingAndListening = function () {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    return resolve();
+  });
 };
 
 /**
@@ -334,7 +349,12 @@ module.exports.stopAdvertisingAndListening = function () {
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
 module.exports.getNetworkStatus = function () {
-  return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
+    .then(function (nonTCPNetworkStatus) {
+      resolve(nonTCPNetworkStatus);
+    });
+  });
 };
 
 /*
