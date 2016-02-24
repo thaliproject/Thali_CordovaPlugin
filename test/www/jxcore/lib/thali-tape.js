@@ -154,7 +154,6 @@ function createStream(testServer)
 
     testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
     console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
-    testUtils.toggleRadios(false);
 
     console.log('****TEST TOOK:  ms ****' );
     console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
@@ -208,9 +207,13 @@ thaliTape.begin = function () {
   });
 
   testServer.on('disconnect', function () {
-    // We've become disconnected from the test server
-    // Shut down the Wifi & Bluetooth here
-    testUtils.toggleRadios(false);
+    // Just log the error since socket.io will try
+    // to reconnect.
+    console.log('Disconnected from the test server');
+  });
+
+  testServer.on('reconnect', function () {
+    console.log('Reconnected to the test server');
   });
 
   // Wait until we're connected
