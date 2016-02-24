@@ -476,12 +476,7 @@ public class ConnectionHelper
         Log.i(TAG, "onDiscoveryManagerStateChanged: State: " + state
                 + ", is discovering: " + isDiscovering + ", is advertising: " + isAdvertising);
 
-        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
-            }
-        });
+        JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
     }
 
     /**
