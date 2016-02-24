@@ -414,27 +414,6 @@ public class JXcoreExtension {
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
-
-
-        final LifeCycleMonitor mLifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.onLCEventCallback() {
-            @Override
-            public void onEvent(String eventString, boolean stopped) {
-                //jxcore.activity.runOnUiThread(new Runnable() {
-                    //public void run() {
-                        //String reply = "{\"lifecycleevent\":\"" + messageTmp + "\"}";
-                        //jxcore.CallJSMethod("onLifeCycleEvent", reply);
-                    //}
-                //});
-
-                // todo if we get Postcard fixed on lifecycle handling we should re-enable this
-                // now we need to just trust that postcard will shutdown correctly
-                //if(stopped) {
-                //    mBtConnectorHelper.close();
-                //}
-            }
-        });
-
-        mLifeCycleMonitor.Start();
     }
 
     public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
