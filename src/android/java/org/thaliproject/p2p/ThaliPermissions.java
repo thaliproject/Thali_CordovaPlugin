@@ -84,7 +84,11 @@ public class ThaliPermissions extends CordovaPlugin {
     private void checkPermissionStatus(String permission) {
 
         if (cordova.hasPermission(Permissions.get(permission))) {
-            mCurrentContext.success();
+            cordova.getActivity().runOnUiThread(new Runnable() {
+                public void run() {
+                    mCurrentContext.success();
+                }
+            });
         } else {
             cordova.requestPermission(this, REQUEST_CODE, Permissions.get(permission));
         }
@@ -105,11 +109,18 @@ public class ThaliPermissions extends CordovaPlugin {
 
         for (int result : grantResults) {
             if (result == PackageManager.PERMISSION_DENIED) {
-                mCurrentContext.error(RESPONSE_PERMISSION_DENIED);
+                cordova.getActivity().runOnUiThread(new Runnable() {
+                    public void run() {
+                        mCurrentContext.error(RESPONSE_PERMISSION_DENIED);
+                    }
+                });
                 return;
             }
         }
-
-        mCurrentContext.success();
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            public void run() {
+                mCurrentContext.success();
+            }
+        });
     }
 }
