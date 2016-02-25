@@ -46,10 +46,10 @@ var tests = {};
 
 function declareTest(testServer, name, setup, teardown, opts, cb) {
 
-  // test declaration is postponed until we know the order in which 
-  // the server wants to execute them. 
+  // test declaration is postponed until we know the order in which
+  // the server wants to execute them.
 
-  // Tape executes tests in strict declaration order once the output stream starts to request 
+  // Tape executes tests in strict declaration order once the output stream starts to request
   // results so make sure we declare everything up front before asking for the first result
 
   // Here we declare setup and teardown functions either side of the actual test
@@ -58,10 +58,14 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 
   tape('setup', function(t) {
     // Run setup function when the testServer tells us
+    var success = true;
     testServer.once("setup_" + name, function() {
       testServer.emit(util.format("setup_%s_ok", name));
-      t.on('end', function() {
-        testServer.emit('setup_complete', JSON.stringify({"test":name}));
+      t.on('result', function (res) {
+        success = success && res.ok;
+      });
+      t.once('end', function () {
+        testServer.emit('setup_complete', JSON.stringify({"test":name, "success": success}));
       });
       setup(t);
     });
@@ -75,12 +79,12 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
       success = success && res.ok;
     });
 
-    t.on("end", function() {
+    t.once("end", function() {
       // Tell the server we ran the test and what the result was (true == pass)
       testServer.emit('test_complete', JSON.stringify({"test":name, "success":success}));
     });
 
-    // Run the test (cb) when the server tells us to    
+    // Run the test (cb) when the server tells us to
     testServer.once("start_test_" + name, function() {
       testServer.emit(util.format("start_test_%s_ok", name));
       cb(t);
@@ -89,13 +93,17 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 
   tape("teardown", function(t) {
     // Run teardown function when the server tells us
+    var success = true;
     testServer.once("teardown_" + name, function() {
       testServer.emit(util.format("teardown_%s_ok", name));
-      t.on('end', function() {
-        testServer.emit('teardown_complete', JSON.stringify({"test":name}));
+      t.on('result', function (res) {
+        success = success && res.ok;
+      });
+      t.once('end', function () {
+        testServer.emit('teardown_complete', JSON.stringify({"test":name, "success":success}));
       });
       teardown(t);
-    }); 
+    });
   });
 };
 
@@ -111,8 +119,8 @@ var thaliTape = function (fixture) {
   // test([name], [opts], fn)
   return function (name, opts, fn) {
 
-    // This is the function that declares and performs the test. 
-    // cb is the test function. We wrap this in setup and 
+    // This is the function that declares and performs the test.
+    // cb is the test function. We wrap this in setup and
 
     if (!fn) {
       fn = opts;
@@ -131,7 +139,7 @@ var thaliTape = function (fixture) {
 function createStream(testServer)
 {
   // tape is slightly counter-intuitive in that no tests will
-  // run until the output streams are set up. 
+  // run until the output streams are set up.
 
   // ** Nothing will run until this function is called !! **
 
@@ -160,7 +168,7 @@ function createStream(testServer)
 
   tape.createStream({ objectMode: true })
   .on('data', function(row) {
-    
+
     // Collate and log results as they come in
 
     console.log(JSON.stringify(row));
@@ -187,7 +195,7 @@ function createStream(testServer)
 
 thaliTape.begin = function() {
 
-  var serverOptions = {  
+  var serverOptions = {
     transports: ['websocket']
   };
 
@@ -223,10 +231,10 @@ thaliTape.begin = function() {
       JSON.parse(schedule).forEach(function(test) {
         declareTest(
           testServer,
-          test, 
-          tests[test].fixture.setup, 
-          tests[test].fixture.teardown, 
-          tests[test].opts, 
+          test,
+          tests[test].fixture.setup,
+          tests[test].fixture.teardown,
+          tests[test].opts,
           tests[test].fn
         );
       });
@@ -243,7 +251,7 @@ thaliTape.begin = function() {
 
     var _uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
-      "os": platform, 
+      "os": platform,
       "name": testUtils.getName(),
       "uuid": _uuid,
       "type": 'unittest',
