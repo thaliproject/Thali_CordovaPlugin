@@ -186,7 +186,7 @@ module.exports.start = function (router) {
  */
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    thaliMobileStates.started = false;
+    thaliMobileStates = getInitialStates();
     module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
     Promise.all([
       promiseResultSuccessOrFailure(
@@ -196,7 +196,6 @@ module.exports.stop = function () {
         ThaliMobileNativeWrapper.stop()
       )
     ]).then(function (results) {
-      thaliMobileStates = getInitialStates();
       resolve(getCombinedResult(results));
     });
   });
@@ -676,17 +675,36 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
  * active on WiFi
  */
 
-var discoveryAdvertisingState = {};
+var discoveryAdvertisingState = {
+  nonTCPDiscoveryActive: false,
+  nonTCPAdvertisingActive: false,
+  wifiDiscoveryActive: false,
+  wifiAdvertisingActive: false
+};
 var getDiscoveryAdvertisingState = function () {
   var state = JSON.parse(JSON.stringify(discoveryAdvertisingState));
   state.discoveryActive = thaliMobileStates.listening;
   state.advertisingActive = thaliMobileStates.advertising;
   return state;
 };
+var verifyDiscoveryAdvertisingState = function (state) {
+  var listening = thaliMobileStates.listening;
+  var advertising = thaliMobileStates.advertising;
+  if (listening !== state.discoveryActive ||
+      advertising !== state.advertisingActive) {
+    logger.warn('Unexpected state: %s',
+      JSON.stringify(getDiscoveryAdvertisingState())
+    );
+  }
+};
+
 var emittedDiscoveryAdvertisingStateUpdate = {};
 
 var emitDiscoveryAdvertisingStateUpdate = function () {
   if (!thaliMobileStates.started) {
+    logger.info(
+      'Filtered out discoveryAdvertisingStateUpdate (was in stopped state).'
+    );
     return;
   }
   var equalsWithCurrentState = function (state) {
@@ -743,6 +761,7 @@ ThaliMobileNativeWrapper.emitter.on(
       discoveryAdvertisingStateUpdateValue.discoveryActive;
     discoveryAdvertisingState.nonTCPAdvertisingActive =
       discoveryAdvertisingStateUpdateValue.advertisingActive;
+    verifyDiscoveryAdvertisingState(discoveryAdvertisingStateUpdateValue);
     emitDiscoveryAdvertisingStateUpdate();
   }
 );
@@ -754,6 +773,7 @@ thaliWifiInfrastructure.on(
       discoveryAdvertisingStateUpdateValue.discoveryActive;
     discoveryAdvertisingState.wifiAdvertisingActive =
       discoveryAdvertisingStateUpdateValue.advertisingActive;
+    verifyDiscoveryAdvertisingState(discoveryAdvertisingStateUpdateValue);
     emitDiscoveryAdvertisingStateUpdate();
   }
 );
