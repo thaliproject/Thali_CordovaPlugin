@@ -13,6 +13,8 @@ var Promise = require('lie');
 var ThaliSendNotificationBasedOnReplication =
   require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
 var urlsafeBase64 = require('urlsafe-base64');
+var RefreshTimerManager =
+  require('thali/NextGeneration/replication/utilities').RefreshTimerManager;
 
 var test = tape({
   setup: function (t) {
@@ -55,11 +57,18 @@ var test = tape({
  * @callback mockInitFunction
  * @param {Object} mock The mockThaliNotificationServer
  * @param {Object} t This is the test object
+ * @param {Object} spyTimers The array of data we have for all the timers
+ * in the replication object
  * @returns {?mockInitFunctionCallback} A function we can optionally output to
  * allow us to check spies at the end of the test.
  */
 
-var DEFAULT_MILLISECONDS_UNTIL_EXPIRE = 100;
+/**
+ * This expiration for our tokens is intended to be long enough to not occur
+ * during a test.
+ * @type {number}
+ */
+var DEFAULT_MILLISECONDS_UNTIL_EXPIRE = 1000 * 60 * 60 * 24;
 
 /**
  *
@@ -76,12 +85,16 @@ var DEFAULT_MILLISECONDS_UNTIL_EXPIRE = 100;
  * @param {pouchDbInitFunction} pouchDbInitFunction
  * @param {mockInitFunction} mockInitFunction
  * @param {runTestFunction} runTestFunction
+ * @param {number} [millisecondsUntilExpiration] Optionally specify
+ * instead of using the default
  */
 function testScaffold(t, pouchDbInitFunction, mockInitFunction,
-                      runTestFunction) {
+                      runTestFunction, millisecondsUntilExpiration) {
   var router = express.Router();
   var ecdhForLocalDevice = crypto.createECDH('secp521r1').generateKeys();
-  var millisecondsUntilExpiration = DEFAULT_MILLISECONDS_UNTIL_EXPIRE;
+  if (!millisecondsUntilExpiration) {
+    millisecondsUntilExpiration = DEFAULT_MILLISECONDS_UNTIL_EXPIRE;
+  }
   var pouchDB = getRandomlyNamedTestPouchDBInstance();
 
   var SpyOnThaliNotificationServerConstructor =
@@ -91,6 +104,8 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
 
   var mockInitValidationFunction = null;
 
+  var spyTimers = [];
+
   pouchDbInitFunction(pouchDB)
     .then(function () {
       var MockThaliNotificationServer =
@@ -99,8 +114,22 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
             ecdhForLocalDevice, millisecondsUntilExpiration);
           mockThaliNotificationServer = sinon.mock(spyServer);
           mockInitValidationFunction =
-            mockInitFunction(mockThaliNotificationServer, t);
+            mockInitFunction(mockThaliNotificationServer, t, spyTimers);
           return spyServer;
+        };
+
+      var MockRefreshTimerManager =
+        function (millisecondsUntilRun, fn) {
+          var timer = new RefreshTimerManager(millisecondsUntilRun, fn);
+          var spyOnStart = sinon.spy(timer, 'start');
+          var spyOnStop = sinon.spy(timer, 'stop');
+          spyTimers.push({
+            millisecondsUntilRun: millisecondsUntilRun,
+            timer: timer,
+            spyOnStart: spyOnStart,
+            spyOnStop: spyOnStop
+          });
+          return timer;
         };
 
       var ThaliSendNotificationBasedOnReplicationProxyquired =
@@ -108,7 +137,10 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
           'thali/NextGeneration/replication/' +
           'thaliSendNotificationBasedOnReplication',
           { '../notification/thaliNotificationServer':
-          MockThaliNotificationServer});
+            MockThaliNotificationServer,
+            './utilities': {
+              RefreshTimerManager: MockRefreshTimerManager
+            }});
 
       var thaliSendNotificationBasedOnReplication =
         new ThaliSendNotificationBasedOnReplicationProxyquired(router,
@@ -157,10 +189,12 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
  * @param {pouchDbInitFunction} pouchDbInitFunction
  * @param {mockInitFunction} mockInitFunction
  * @param {betweenStartAndStopFunction} [betweenStartAndStopFunction]
+ * @param {number} [millisecondsUntilExpiration] Optionally override default
  */
 // jscs:enable jsDoc
 function testStartAndStop(t, startArg, pouchDbInitFunction, mockInitFunction,
-                          betweenStartAndStopFunction) {
+                          betweenStartAndStopFunction,
+                          millisecondsUntilExpiration) {
   testScaffold(t, pouchDbInitFunction, mockInitFunction,
     function (thaliSendNotificationBasedOnReplication, pouchDB) {
       return thaliSendNotificationBasedOnReplication.start(startArg)
@@ -171,7 +205,7 @@ function testStartAndStop(t, startArg, pouchDbInitFunction, mockInitFunction,
         }).then(function () {
           return thaliSendNotificationBasedOnReplication.stop();
         });
-    });
+    }, millisecondsUntilExpiration);
 }
 
 function mockStartAndStop(mockThaliNotificationServer, t, startArg) {
@@ -326,15 +360,30 @@ test('More than maximum peers, make sure we only send maximum allowed',
     });
   });
 
+function lengthCheck (desiredMinimumLength, spyTimersArray, resolve) {
+  function areWeDoneYet () {
+    setTimeout(function () {
+      if (spyTimersArray.length <  desiredMinimumLength) {
+        return areWeDoneYet();
+      }
+      resolve();
+    }, 50);
+  }
+  areWeDoneYet();
+}
+
 test('two peers with empty DB, update the doc', function (t) {
   var partnerOnePublicKey = crypto.createECDH('secp521r1').generateKeys();
   var partnerTwoPublicKey = crypto.createECDH('secp521r1').generateKeys();
   var startArg = [ partnerOnePublicKey, partnerTwoPublicKey];
+  var startSpy = null;
+  var spyTimersArray = null;
   testStartAndStop(t,
     startArg,
     function () { return Promise.resolve(); },
-    function (mockThaliNotificationServer, t) {
-      var startSpy = mockThaliNotificationServer.expects('start')
+    function (mockThaliNotificationServer, t, spyTimers) {
+      spyTimersArray = spyTimers;
+      startSpy = mockThaliNotificationServer.expects('start')
         .twice().returns(Promise.resolve());
 
       var stopSpy = mockThaliNotificationServer.expects('stop')
@@ -346,20 +395,24 @@ test('two peers with empty DB, update the doc', function (t) {
         t.ok(startSpy.firstCall.calledWithExactly([]), 'empty first start');
         t.ok(startSpy.secondCall.calledWithExactly(startArg),
           'full second start');
+
+        t.equal(spyTimersArray.length, 2, 'only 2 timers');
       };
     },
     function (pouchDB) {
       return new Promise(function (resolve, reject) {
-        pouchDB.changes({ since: 'now', limit: 1, live: true})
-          .on('change', function () {
-            // Allow the RefreshTimerManager set as a consequence of start call
-            // triggered by this change to fire
-            setTimeout(function () {
-              resolve();
-            }, 1);
-          });
         pouchDB.put({_id: '33', stuff: 'uhuh'})
-          .catch(function (err) {
+          .then(function () {
+            // The first call to start on the notifications server is
+            // empty because there is nothing to say (null DB to start,
+            // remember?) so there is no timer. So the first timer will
+            // be set when we get the first doc, this will be a
+            // timeout = 0 timer, that is, it will fire immediately and
+            // as part of that will start a second, default duration timer
+            // to track the expiration of the beacon. Hence why at
+            // least 2 timers are needed.
+            lengthCheck(2, spyTimersArray, resolve);
+          }).catch(function (err) {
             reject(err);
           });
       });
@@ -369,6 +422,8 @@ test('two peers with empty DB, update the doc', function (t) {
 test('add doc and make sure tokens refresh when they expire', function (t) {
   var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
   var startArg = [ partnerPublicKey ];
+  var spyTimersArray = null;
+  var millisecondsUntilExpiration = 100;
   testStartAndStop(t,
     startArg,
     function (pouchDB) {
@@ -382,13 +437,13 @@ test('add doc and make sure tokens refresh when they expire', function (t) {
             lastSyncedSequenceNumber: 1});
         });
     },
-    function (mockThaliNotificationServer, t) {
-      // In extremely constrained environments like appveyor it can take
-      // 2000 ms for a timer set to run in 100 ms to actually get scheduled
-      // to run. So in those cases we might only get 2 runs of start rather
-      // than 3. Hence the atLeast/atMost below.
+    function (mockThaliNotificationServer, t, spyTimers) {
+      spyTimersArray = spyTimers;
+      // The atMost is a bit of an exaggeration, I hope. But we can't be sure
+      // how many expiration cycles we will get depending on how long it
+      // takes the test environment to run things.
       var startSpy = mockThaliNotificationServer.expects('start')
-        .atLeast(2).atMost(3).withExactArgs(startArg)
+        .atLeast(3).atMost(30000).withExactArgs(startArg)
         .returns(Promise.resolve());
 
       var stopSpy = mockThaliNotificationServer.expects('stop')
@@ -396,15 +451,32 @@ test('add doc and make sure tokens refresh when they expire', function (t) {
 
       return function () {
         t.ok(startSpy.calledBefore(stopSpy), 'start before stop');
+        // It could be more than 3 due to timer issues, specifically, we can
+        // say wait 'x' milliseconds and they wait say x*10 and so we get
+        // an expiration in the middle. Sigh.
+        t.ok(startSpy.callCount >= 3, 'We got at least 3 calls to start');
+        // It should really only be 3, 2 that expired and one that has not
+        // but unfortunately timing is such a mess in reality that we can't
+        // be sure
+        t.ok(spyTimersArray.length >= 3, 'at least 3');
+        t.equal(spyTimersArray[0].millisecondsUntilRun,
+          millisecondsUntilExpiration, 'default 1');
+        t.equal(spyTimersArray[0].timer.getTimeWhenRun(), -1, '1 run');
+        t.equal(spyTimersArray[1].millisecondsUntilRun,
+          millisecondsUntilExpiration, 'default 2');
+        t.equal(spyTimersArray[1].timer.getTimeWhenRun(), -1, '2 run');
+        t.equal(spyTimersArray[2].millisecondsUntilRun,
+          millisecondsUntilExpiration, 'default 3');
       };
     },
     function () {
       return new Promise(function (resolve) {
         setTimeout(function () {
-          resolve();
-        }, DEFAULT_MILLISECONDS_UNTIL_EXPIRE * 2.5);
+          lengthCheck(3, spyTimersArray, resolve);
+        }, millisecondsUntilExpiration * 2.5);
       });
-    });
+    },
+    millisecondsUntilExpiration);
 });
 
 test('start and stop and start and stop', function (t) {

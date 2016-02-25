@@ -445,25 +445,30 @@ var registerToNative = function (methodName, callback) {
 };
 
 registerToNative('peerAvailabilityChanged', function (peers) {
+  logger.info('peerAvailabilityChanged: %s', JSON.stringify(peers));
   // do stuff!
 });
 
 registerToNative('discoveryAdvertisingStateUpdateNonTCP',
   function (discoveryAdvertisingStateUpdateValue) {
+    logger.info('discoveryAdvertisingStateUpdateNonTCP: %s',
+      JSON.stringify(discoveryAdvertisingStateUpdateValue));
     // do stuff!
   }
 );
 
-registerToNative('networkChanged', function (networkChanged) {
+registerToNative('networkChanged', function (networkChangedValue) {
+  logger.info('networkChanged: %s', JSON.stringify(networkChangedValue));
   // The value needs to be assigned here to nonTCPNetworkStatus
   // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
   // can return it.
-  nonTCPNetworkStatus = networkChanged;
+  nonTCPNetworkStatus = networkChangedValue;
   module.exports.emitter.emit('networkChangedNonTCP', nonTCPNetworkStatus);
 });
 
 registerToNative('incomingConnectionToPortNumberFailed',
   function (portNumber) {
+    logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
     // do stuff!
   }
 );

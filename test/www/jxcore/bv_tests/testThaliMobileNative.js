@@ -169,7 +169,7 @@ test('Can connect to a remote peer', function (t) {
 
 test('Can shift large amounts of data', function (t) {
 
-  var complete = false;
+  var connected = false;
 
   var sockets = {};
   var echoServer = net.createServer(function (socket) {
@@ -261,7 +261,8 @@ test('Can shift large amounts of data', function (t) {
 
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {
-      if (peer.peerAvailable) {
+      if (peer.peerAvailable && !connected) {
+        connected = true;
         Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
           // We're happy here if we make a connection to anyone
           if (err == null) {

@@ -156,8 +156,6 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
     }
 
     testUtils.logMessageToScreen('fully-closed');
-    console.log('turning Radios off');
-    testUtils.toggleRadios(false);
   });
 }
 
