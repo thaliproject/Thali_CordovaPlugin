@@ -104,6 +104,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
 
                         if (mCheckForTimeoutsTimer == null) {
                             constructTimeoutCheckTimer();
+                            mCheckForTimeoutsTimer.start();
                         }
 
                         Log.i(TAG, "initiateHandshake: OK (thread ID: " + bluetoothSocketIoThread.getId() + ")");
