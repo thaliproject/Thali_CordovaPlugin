@@ -209,40 +209,43 @@ test('calls correct starts when network changes', function (t) {
   });
 });
 
-test('when network connection is lost a peer should be marked unavailable', function (t) {
-  ThaliMobile.start(express.Router())
-  .then(function () {
-    var dummyPeerIdentifier = 'dummyPeer';
-    var availabilityHandler = function (peer) {
-      if (peer.peerIdentifier !== dummyPeerIdentifier) {
-        return;
-      }
-      ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-        availabilityHandler);
-      var unavailabilityHandler = function (peer) {
+test('when network connection is lost a peer should be marked unavailable',
+  function (t) {
+    ThaliMobile.start(express.Router())
+    .then(function () {
+      var dummyPeerIdentifier = 'dummyPeer';
+      var availabilityHandler = function (peer) {
         if (peer.peerIdentifier !== dummyPeerIdentifier) {
           return;
         }
-        t.equals(peer.hostAddress, null, 'host address should be null');
-        t.equals(peer.portNumber, null, 'port number should be null');
         ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-          unavailabilityHandler);
+          availabilityHandler);
+        var unavailabilityHandler = function (peer) {
+          if (peer.peerIdentifier !== dummyPeerIdentifier) {
+            return;
+          }
+          t.equals(peer.hostAddress, null, 'host address should be null');
+          t.equals(peer.portNumber, null, 'port number should be null');
+          ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+            unavailabilityHandler);
 
-        testUtils.toggleRadios(true);
-        t.end();
+          testUtils.toggleRadios(true);
+          t.end();
+        };
+        ThaliMobile.emitter.on('peerAvailabilityChanged',
+          unavailabilityHandler);
+        testUtils.toggleRadios(false);
       };
       ThaliMobile.emitter.on('peerAvailabilityChanged',
-        unavailabilityHandler);
-      testUtils.toggleRadios(false);
-    };
-    ThaliMobile.emitter.on('peerAvailabilityChanged',
-      availabilityHandler);
-    ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
-      peerIdentifier: dummyPeerIdentifier,
-      hostAddress: 'dummy',
-      portNumber: 8080
+        availabilityHandler);
+      ThaliMobileNativeWrapper
+        .emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+        {
+          peerIdentifier: dummyPeerIdentifier,
+          hostAddress: 'dummy',
+          portNumber: 8080
+        });
     });
-  });
 });
 
 
