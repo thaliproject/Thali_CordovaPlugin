@@ -1,8 +1,6 @@
 'use strict';
 
 var spawn = require('child_process').spawn;
-var path = require('path');
-var thaliTape = require('./lib/thali-tape.js');
 
 var parseargv = require('minimist');
 var argv = parseargv(process.argv.slice(2), {
@@ -63,7 +61,8 @@ var testServerConfiguration = {
   },
   'honorCount': true
 };
-var testServerInstance = spawn('jx', ['../../TestServer/index.js', JSON.stringify(testServerConfiguration)]);
+var testServerInstance = spawn('jx', ['../../TestServer/index.js',
+  JSON.stringify(testServerConfiguration)]);
 setListeners(testServerInstance, 0);
 
 var testInstances = {};
