@@ -9,7 +9,6 @@ import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.os.CountDownTimer;
-import android.os.Handler;
 import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager.ConnectionManagerState;
@@ -26,8 +25,9 @@ import java.util.UUID;
  */
 public class ConnectionHelper
         implements
-        ConnectionManager.ConnectionManagerListener,
-        DiscoveryManager.DiscoveryManagerListener {
+            ConnectionManager.ConnectionManagerListener,
+            DiscoveryManager.DiscoveryManagerListener,
+            HandshakeHelper.Listener {
     private static final String TAG = ConnectionHelper.class.getName();
 
     public static final int NO_PORT_NUMBER = -1;
@@ -47,6 +47,7 @@ public class ConnectionHelper
     private final DiscoveryManager mDiscoveryManager;
     private final DiscoveryManagerSettings mDiscoveryManagerSettings;
     private final ConnectivityInfo mConnectivityInfo;
+    private final HandshakeHelper mHandshakeHelper;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = NO_PORT_NUMBER;
 
@@ -85,6 +86,7 @@ public class ConnectionHelper
         }
 
         mConnectivityInfo = new ConnectivityInfo(mDiscoveryManager);
+        mHandshakeHelper = new HandshakeHelper(this);
     }
 
     /**
@@ -113,6 +115,8 @@ public class ConnectionHelper
         if (serverPortNumber > 0) {
             mServerPortNumber = serverPortNumber;
         }
+
+        mHandshakeHelper.reinitiate();
 
         if (!mConnectivityInfo.startMonitoring()) {
             Log.e(TAG, "start: Failed to start monitoring the connectivity");
@@ -143,6 +147,7 @@ public class ConnectionHelper
      */
     public synchronized void stop() {
         Log.i(TAG, "stop: Stopping all activities and killing all connections...");
+        mHandshakeHelper.shutdown();
         mConnectionManager.stop();
         mDiscoveryManager.stop();
         mConnectivityInfo.stopMonitoring();
@@ -347,8 +352,7 @@ public class ConnectionHelper
     }
 
     /**
-     * Takes ownership of the given Bluetooth socket, initializes the connection and adds it to the
-     * list of incoming/outgoing connections.
+     * Takes ownership of the given Bluetooth socket and initiates a handshake for the connection.
      *
      * @param bluetoothSocket The Bluetooth socket.
      * @param isIncoming      True, if the connection is incoming. False, if it is outgoing.
@@ -371,15 +375,13 @@ public class ConnectionHelper
         // Add the peer to the list, if was not discovered before
         mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
 
-        if (isIncoming) {
-            handleIncomingConnection(bluetoothSocket, peerProperties);
-        } else {
-            handleOutgoingConnection(bluetoothSocket, peerProperties);
-
+        if (!mHandshakeHelper.initiateHandshake(bluetoothSocket, peerProperties, isIncoming)) {
+            try {
+                bluetoothSocket.close();
+            } catch (IOException e) {
+                Log.d(TAG, "onConnected: Failed to close the socket after handshake initiation failed: " + e.getMessage(), e);
+            }
         }
-
-        Log.d(TAG, "onConnected: The total number of connections is now "
-                + mConnectionModel.getNumberOfCurrentConnections());
     }
 
     /**
@@ -547,6 +549,36 @@ public class ConnectionHelper
     }
 
     /**
+     * Handles the new connection with validated handshake.
+     *
+     * @param bluetoothSocket The Bluetooth socket.
+     * @param peerProperties The properties of the peer.
+     * @param isIncoming True, if the connection is incoming. False if outgoing.
+     */
+    @Override
+    public void onHandshakeSucceeded(BluetoothSocket bluetoothSocket, PeerProperties peerProperties, boolean isIncoming) {
+        Log.d(TAG, "onHandshakeSucceeded: Handshake with peer " + peerProperties
+                + " succeeded, the connection is "
+                + (isIncoming ? "incoming" : "outgoing"));
+
+        if (isIncoming) {
+            handleIncomingConnection(bluetoothSocket, peerProperties);
+        } else {
+            handleOutgoingConnection(bluetoothSocket, peerProperties);
+
+        }
+
+        Log.d(TAG, "onHandshakeSucceeded: The total number of connections is now "
+                + mConnectionModel.getNumberOfCurrentConnections());
+    }
+
+    @Override
+    public void onHandshakeFailed(BluetoothSocket bluetoothSocket, PeerProperties peerProperties, String reason) {
+        Log.e(TAG, "onHandshakeFailed: Handshake with peer " + peerProperties + " failed: " + reason);
+        // No need to close the socket - it is already closed (by HandshakeHelper)
+    }
+
+    /**
      * Constructs the thread around the new outgoing connection and sets the callbacks.
      *
      * @param bluetoothSocket The Bluetooth socket of the new connection.
@@ -572,7 +604,7 @@ public class ConnectionHelper
 
                 @Override
                 public void onDataTransferred(int numberOfBytes) {
-                    new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                    jxcore.activity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             lowerBleDiscoveryPowerAndStartResetTimer();
@@ -637,7 +669,7 @@ public class ConnectionHelper
 
                 @Override
                 public void onDataTransferred(int numberOfBytes) {
-                    new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
+                    jxcore.activity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             lowerBleDiscoveryPowerAndStartResetTimer();
