@@ -32,11 +32,21 @@ var getCombinedResult = function (results) {
   };
 };
 
-var thaliMobileStates = {
-  started: false,
-  listening: false,
-  advertising: false
+var getInitialStates = function () {
+  return {
+    started: false,
+    listening: {
+      target: false,
+      current: false
+    },
+    advertising: {
+      target: false,
+      current: false
+    }
+  };
 };
+
+var thaliMobileStates = getInitialStates();
 
 var handleNetworkChanged = function (networkChangedValue) {
   if (networkChangedValue.wifi === 'off') {
@@ -74,13 +84,13 @@ var handleNetworkChanged = function (networkChangedValue) {
         }
       });
     };
-    if (thaliMobileStates.listening) {
+    if (thaliMobileStates.listening.current) {
       module.exports.startListeningForAdvertisements()
       .then(function (combinedResult) {
         checkErrors('startListeningForAdvertisements', combinedResult);
       });
     }
-    if (thaliMobileStates.advertising) {
+    if (thaliMobileStates.advertising.current) {
       module.exports.startUpdateAdvertisingAndListening()
       .then(function (combinedResult) {
         checkErrors('startUpdateAdvertisingAndListening', combinedResult);
@@ -192,15 +202,18 @@ module.exports.stop = function () {
         ThaliMobileNativeWrapper.stop()
       )
     ]).then(function (results) {
+      thaliMobileStates = getInitialStates();
       resolve(getCombinedResult(results));
     });
   });
 };
 
 /**
- * This method calls the underlying startListeningForAdvertisements on
- * whichever radio stack is currently in start state. Note that once this method
- * is called it is giving explicit permission to this code to call this method
+ * This method calls the underlying startListeningForAdvertisements
+ * functions.
+ * 
+ * Note that once this method is called
+ * it is giving explicit permission to this code to call this method
  * on a radio stack that is currently disabled when the method is called but is
  * later re-enabled due to a network changed event. In other words if {@link
  * module:thaliMobile.start} is called and say WiFi doesn't work. Then this
@@ -220,9 +233,6 @@ module.exports.stop = function () {
  * This method MUST NOT be called if the object is not in start state or a
  * "Call Start!" error MUST be returned.
  *
- * The combinedResult MUST return an error of "Not Active" for any radio type
- * that we did not call startListeningForAdvertisements on.
- *
  * @public
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
@@ -231,21 +241,16 @@ module.exports.startListeningForAdvertisements = function () {
     if (thaliMobileStates.started === false) {
       return reject(new Error('Call Start!'));
     }
-    thaliMobileStates.listening = true;
-    var resultObject = {};
-    var promiseList = [];
-    if (thaliWifiInfrastructure.states.started) {
-      promiseList.push(promiseResultSuccessOrFailure(
+    thaliMobileStates.listening.current = true;
+    Promise.all([
+      promiseResultSuccessOrFailure(
         thaliWifiInfrastructure.startListeningForAdvertisements()
-      ));
-    } else {
-      resultObject.wifiResult = new Error('Not Active');
-    }
-    Promise.all(promiseList).then(function (results) {
-      return resolve({
-        wifiResult: resultObject.wifiResult || results[0] || null,
-        nativeResult: null // results[1] || null
-      });
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.startListeningForAdvertisements()
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
     });
   });
 };
@@ -262,23 +267,23 @@ module.exports.startListeningForAdvertisements = function () {
  */
 module.exports.stopListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
+    thaliMobileStates.listening.current = false;
     Promise.all([
       promiseResultSuccessOrFailure(
         thaliWifiInfrastructure.stopListeningForAdvertisements()
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.stopListeningForAdvertisements()
       )
     ]).then(function (results) {
-      return resolve({
-        wifiResult: results[0] || null
-        //nativeResult: results[1] || null
-      });
+      resolve(getCombinedResult(results));
     });
   });
 };
 
 /**
- * This method calls the underlying
- * startUpdateAdvertisingAndListening on whichever radio
- * stack is currently in start state. This method has the same behavior as
+ * This method calls the underlying startUpdateAdvertisingAndListening
+ * functions. This method has the same behavior as
  * {@link module:thaliMobile.startListeningForAdvertisements} in that if a radio
  * type that was inactive should later become available and we are in start
  * state then we will try to call start and if that works and
@@ -298,21 +303,16 @@ module.exports.startUpdateAdvertisingAndListening = function () {
     if (thaliMobileStates.started === false) {
       return reject(new Error('Call Start!'));
     }
-    thaliMobileStates.advertising = true;
-    var resultObject = {};
-    var promiseList = [];
-    if (thaliWifiInfrastructure.states.started) {
-      promiseList.push(promiseResultSuccessOrFailure(
-        thaliWifiInfrastructure.startUpdateAdvertisingAndListening()));
-    } else {
-      resultObject.wifiResult = new Error('Not Active');
-    }
-    // TODO: Add native call
-    Promise.all(promiseList).then(function (results) {
-      return resolve({
-        wifiResult: resultObject.wifiResult || results[0] || null
-        //nativeResult: results[1] || null
-      });
+    thaliMobileStates.advertising.current = true;
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.startUpdateAdvertisingAndListening()
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
     });
   });
 };
@@ -330,7 +330,17 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  */
 module.exports.stopAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    return resolve();
+    thaliMobileStates.advertising.current = false;
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.startUpdateAdvertisingAndListening()
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
+    });
   });
 };
 

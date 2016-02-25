@@ -53,25 +53,41 @@ var testFunctionBeforeStart = function (t, functionName) {
   });
 };
 
-test('#startListeningForAdvertisements should fail if start not called', function (t) {
-  testFunctionBeforeStart(t, 'startListeningForAdvertisements');
-});
+test('#startListeningForAdvertisements should fail if start not called',
+  function (t) {
+    testFunctionBeforeStart(t, 'startListeningForAdvertisements');
+  }
+);
 
-test('#startUpdateAdvertisingAndListening should fail if start not called', function (t) {
-  testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
-});
+test('#startUpdateAdvertisingAndListening should fail if start not called',
+  function (t) {
+    testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
+  }
+);
 
-test('should be able to call #stopListeningForAdvertisements many times', function (t) {
-  testIdempotentFunction(t, 'stopListeningForAdvertisements');
-});
+test('should be able to call #stopListeningForAdvertisements many times',
+  function (t) {
+    testIdempotentFunction(t, 'stopListeningForAdvertisements');
+  }
+);
 
-test('should be able to call #startListeningForAdvertisements many times', function (t) {
-  testIdempotentFunction(t, 'startListeningForAdvertisements');
-});
+test('should be able to call #startListeningForAdvertisements many times',
+  function (t) {
+    testIdempotentFunction(t, 'startListeningForAdvertisements');
+  }
+);
 
-test('should be able to call #startUpdateAdvertisingAndListening many times', function (t) {
-  testIdempotentFunction(t, 'startUpdateAdvertisingAndListening');
-});
+test('should be able to call #startUpdateAdvertisingAndListening many times',
+  function (t) {
+    testIdempotentFunction(t, 'startUpdateAdvertisingAndListening');
+  }
+);
+
+test('should be able to call #stopAdvertisingAndListening many times',
+  function (t) {
+    testIdempotentFunction(t, 'stopAdvertisingAndListening');
+  }
+);
 
 test('#start should fail if called twice in a row', function (t) {
   ThaliMobile.start(express.Router())
@@ -117,7 +133,8 @@ test('network changes emitted correctly', function (t) {
   .then(function () {
     ThaliMobile.emitter.once('networkChanged', function (networkChangedValue) {
       t.equals(networkChangedValue.wifi, 'off', 'wifi is off');
-      ThaliMobile.emitter.once('networkChanged', function (networkChangedValue) {
+      ThaliMobile.emitter.once('networkChanged',
+      function (networkChangedValue) {
         t.equals(networkChangedValue.wifi, 'on', 'wifi is on');
         t.end();
       });
@@ -180,7 +197,7 @@ test('calls correct starts when network changes', function (t) {
     .then(function (combinedResult) {
       t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
               'specific error expected');
-      return ThaliMobile.startListeningForAdvertisements();
+      return ThaliMobile.startUpdateAdvertisingAndListening();
     })
     .then(function (combinedResult) {
       t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
@@ -209,7 +226,8 @@ test('calls correct starts when network changes', function (t) {
   });
 });
 
-test('when network connection is lost a peer should be marked unavailable', function (t) {
+test('when network connection is lost a peer should be marked unavailable',
+function (t) {
   ThaliMobile.start(express.Router())
   .then(function () {
     var dummyPeerIdentifier = 'dummyPeer';
@@ -237,11 +255,13 @@ test('when network connection is lost a peer should be marked unavailable', func
     };
     ThaliMobile.emitter.on('peerAvailabilityChanged',
       availabilityHandler);
-    ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
-      peerIdentifier: dummyPeerIdentifier,
-      hostAddress: 'dummy',
-      portNumber: 8080
-    });
+    ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+      {
+        peerIdentifier: dummyPeerIdentifier,
+        hostAddress: 'dummy',
+        portNumber: 8080
+      }
+    );
   });
 });
 
@@ -279,7 +299,8 @@ var setupDiscoveryAndFindPeer = function (t, callback) {
   });
 };
 
-test('a peer should be found after #startListeningForAdvertisements is called', function (t) {
+test('a peer should be found after #startListeningForAdvertisements is called',
+function (t) {
   setupDiscoveryAndFindPeer(t, function (peer, done) {
     t.doesNotThrow(function () {
       validations.ensureNonNullOrEmptyString(peer.peerIdentifier);
