@@ -692,7 +692,7 @@ var verifyDiscoveryAdvertisingState = function (state) {
   var advertising = thaliMobileStates.advertising;
   if (listening !== state.discoveryActive ||
       advertising !== state.advertisingActive) {
-    logger.warn('Unexpected state: %s',
+    logger.info('Received state did not match with target: %s',
       JSON.stringify(getDiscoveryAdvertisingState())
     );
   }
