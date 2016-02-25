@@ -35,14 +35,8 @@ var getCombinedResult = function (results) {
 var getInitialStates = function () {
   return {
     started: false,
-    listening: {
-      target: false,
-      current: false
-    },
-    advertising: {
-      target: false,
-      current: false
-    }
+    listening: false,
+    advertising: false
   };
 };
 
@@ -84,13 +78,13 @@ var handleNetworkChanged = function (networkChangedValue) {
         }
       });
     };
-    if (thaliMobileStates.listening.current) {
+    if (thaliMobileStates.listening) {
       module.exports.startListeningForAdvertisements()
       .then(function (combinedResult) {
         checkErrors('startListeningForAdvertisements', combinedResult);
       });
     }
-    if (thaliMobileStates.advertising.current) {
+    if (thaliMobileStates.advertising) {
       module.exports.startUpdateAdvertisingAndListening()
       .then(function (combinedResult) {
         checkErrors('startUpdateAdvertisingAndListening', combinedResult);
@@ -241,7 +235,7 @@ module.exports.startListeningForAdvertisements = function () {
     if (thaliMobileStates.started === false) {
       return reject(new Error('Call Start!'));
     }
-    thaliMobileStates.listening.current = true;
+    thaliMobileStates.listening = true;
     Promise.all([
       promiseResultSuccessOrFailure(
         thaliWifiInfrastructure.startListeningForAdvertisements()
@@ -267,7 +261,7 @@ module.exports.startListeningForAdvertisements = function () {
  */
 module.exports.stopListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    thaliMobileStates.listening.current = false;
+    thaliMobileStates.listening = false;
     Promise.all([
       promiseResultSuccessOrFailure(
         thaliWifiInfrastructure.stopListeningForAdvertisements()
@@ -303,7 +297,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
     if (thaliMobileStates.started === false) {
       return reject(new Error('Call Start!'));
     }
-    thaliMobileStates.advertising.current = true;
+    thaliMobileStates.advertising = true;
     Promise.all([
       promiseResultSuccessOrFailure(
         thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
@@ -330,7 +324,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  */
 module.exports.stopAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    thaliMobileStates.advertising.current = false;
+    thaliMobileStates.advertising = false;
     Promise.all([
       promiseResultSuccessOrFailure(
         thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
@@ -682,14 +676,33 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
  * active on WiFi
  */
 
-var emitDiscoveryAdvertisingStateUpdate =
-function (discoveryAdvertisingStateUpdateValue) {
+var discoveryAdvertisingState = {};
+var getDiscoveryAdvertisingState = function () {
+  var state = JSON.parse(JSON.stringify(discoveryAdvertisingState));
+  state.discoveryActive = thaliMobileStates.listening;
+  state.advertisingActive = thaliMobileStates.advertising;
+  return state;
+};
+var emittedDiscoveryAdvertisingStateUpdate = {};
+
+var emitDiscoveryAdvertisingStateUpdate = function () {
   if (!thaliMobileStates.started) {
     return;
   }
-  // TODO: Implement to logic to react this event.
+  var equalsWithCurrentState = function (state) {
+    for (var key in discoveryAdvertisingState) {
+      if (discoveryAdvertisingState[key] !== state[key]) {
+        return false;
+      }
+    }
+    return true;
+  };
+  if (equalsWithCurrentState(emittedDiscoveryAdvertisingStateUpdate)) {
+    return;
+  }
+  emittedDiscoveryAdvertisingStateUpdate = getDiscoveryAdvertisingState();
   module.exports.emitter.emit('discoveryAdvertisingStateUpdate',
-    discoveryAdvertisingStateUpdateValue);
+    emittedDiscoveryAdvertisingStateUpdate);
 };
 
 /**
@@ -701,13 +714,11 @@ function (discoveryAdvertisingStateUpdateValue) {
  * comes through. If we get multiple events with the same state and they all
  * match our current state then they should be suppressed.
  * - We thought something was started but now we are getting a notice that it
- * is stopped. In that case we need to internally record that discovery or
- * advertising is no longer started and fire this event to update.
+ * is stopped.
  * - We thought something was stopped but now we are getting a notice that
  * they are started. This can happen because our network change event code
  * detected that a radio that was off is now on and we are trying to start
- * things. In that case we should mark the discovery or advertising as started
- * and fire this event.
+ * things.
  *
  * If we receive a {@link
  * module:ThaliWifiInfrastructure~discoveryAdvertisingStateUpdateWiFiEvent} then
@@ -728,14 +739,22 @@ function (discoveryAdvertisingStateUpdateValue) {
 ThaliMobileNativeWrapper.emitter.on(
   'discoveryAdvertisingStateUpdateNonTCPEvent',
   function (discoveryAdvertisingStateUpdateValue) {
-    emitDiscoveryAdvertisingStateUpdate(discoveryAdvertisingStateUpdateValue);
+    discoveryAdvertisingState.nonTCPDiscoveryActive =
+      discoveryAdvertisingStateUpdateValue.discoveryActive;
+    discoveryAdvertisingState.nonTCPAdvertisingActive =
+      discoveryAdvertisingStateUpdateValue.advertisingActive;
+    emitDiscoveryAdvertisingStateUpdate();
   }
 );
 
 thaliWifiInfrastructure.on(
   'discoveryAdvertisingStateUpdateWifiEvent',
   function (discoveryAdvertisingStateUpdateValue) {
-    emitDiscoveryAdvertisingStateUpdate(discoveryAdvertisingStateUpdateValue);
+    discoveryAdvertisingState.wifiDiscoveryActive =
+      discoveryAdvertisingStateUpdateValue.discoveryActive;
+    discoveryAdvertisingState.wifiAdvertisingActive =
+      discoveryAdvertisingStateUpdateValue.advertisingActive;
+    emitDiscoveryAdvertisingStateUpdate();
   }
 );
 

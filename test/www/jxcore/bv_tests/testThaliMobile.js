@@ -265,6 +265,38 @@ function (t) {
   });
 });
 
+test('does not emit duplicate discoveryAdvertisingStateUpdate', function (t) {
+  var spy = sinon.spy();
+  ThaliMobile.start(express.Router())
+  .then(function () {
+    var stateUpdateHandler = function (discoveryAdvertisingStatus) {
+      spy();
+      t.equals(spy.callCount, 1, 'called only once');
+      t.equals(discoveryAdvertisingStatus.nonTCPDiscoveryActive, true,
+        'discovery state matches');
+      t.equals(discoveryAdvertisingStatus.nonTCPAdvertisingActive, true,
+        'advertising state matches');
+      process.nextTick(function () {
+        ThaliMobile.emitter.removeListener(
+          'discoveryAdvertisingStateUpdate', stateUpdateHandler
+        );
+        t.end();
+      });
+    };
+    ThaliMobile.emitter.on('discoveryAdvertisingStateUpdate', stateUpdateHandler);
+    var testStatus = {
+      discoveryActive: true,
+      advertisingActive: true
+    };
+    // Emit the same status twice.
+    ThaliMobileNativeWrapper.emitter.emit(
+      'discoveryAdvertisingStateUpdateNonTCPEvent', testStatus
+    );
+    ThaliMobileNativeWrapper.emitter.emit(
+      'discoveryAdvertisingStateUpdateNonTCPEvent', testStatus
+    );
+  });
+});
 
 if (!tape.coordinated) {
   return;
