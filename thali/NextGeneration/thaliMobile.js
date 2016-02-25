@@ -326,10 +326,10 @@ module.exports.stopAdvertisingAndListening = function () {
     thaliMobileStates.advertising = false;
     Promise.all([
       promiseResultSuccessOrFailure(
-        thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
+        thaliWifiInfrastructure.stopAdvertisingAndListening()
       ),
       promiseResultSuccessOrFailure(
-        ThaliMobileNativeWrapper.startUpdateAdvertisingAndListening()
+        ThaliMobileNativeWrapper.stopAdvertisingAndListening()
       )
     ]).then(function (results) {
       resolve(getCombinedResult(results));

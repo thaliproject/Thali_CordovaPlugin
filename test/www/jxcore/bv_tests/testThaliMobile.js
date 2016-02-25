@@ -125,7 +125,8 @@ test('does not emit duplicate discoveryAdvertisingStateUpdate', function (t) {
         t.end();
       });
     };
-    ThaliMobile.emitter.on('discoveryAdvertisingStateUpdate', stateUpdateHandler);
+    ThaliMobile.emitter.on('discoveryAdvertisingStateUpdate',
+      stateUpdateHandler);
     var testStatus = {
       discoveryActive: true,
       advertisingActive: true
