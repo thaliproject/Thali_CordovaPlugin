@@ -8,9 +8,8 @@ import android.os.CountDownTimer;
 import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import org.thaliproject.p2p.btconnectorlib.utils.BluetoothSocketIoThread;
-import org.thaliproject.p2p.btconnectorlib.utils.CommonUtils;
 import java.io.IOException;
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -41,6 +40,8 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
     }
 
     private static final String TAG = HandshakeHelper.class.getName();
+    private static final String HANDSHAKE_MESSAGE_AS_STRING = "thali_handshake";
+    private static final byte[] HANDSHAKE_MESSAGE_AS_BYTE_ARRAY = HANDSHAKE_MESSAGE_AS_STRING.getBytes(StandardCharsets.UTF_8);
     private static final long HANDSHAKE_TIMEOUT_IN_MILLISECONDS = 3000;
     private static final long TIMEOUT_TIMER_INTERVAL_IN_MILLISECONDS = 1000;
     private final Listener mListener;
@@ -96,12 +97,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
 
                 if (mHandshakeConnections.addIfAbsent(handshakeConnection)) {
                     bluetoothSocketIoThread.start();
-
-                    success = bluetoothSocketIoThread.write(
-                        isIncoming
-                                ? CommonUtils.createServerHandshakeMessage()
-                                : CommonUtils.createClientHandshakeMessage(false) // TODO: Set the correct boolean value
-                    );
+                    success = bluetoothSocketIoThread.write(HANDSHAKE_MESSAGE_AS_BYTE_ARRAY);
 
                     if (success) {
                         handshakeConnection.handshakeAttemptStartedTime = new Date().getTime();
@@ -163,18 +159,19 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
      */
     @Override
     public void onBytesRead(byte[] bytes, int numberOfBytes, final BluetoothSocketIoThread bluetoothSocketIoThread) {
-        Log.d(TAG, "onBytesRead: Read " + numberOfBytes + " byte(s): \""
-                + new String(bytes) + "\" (thread ID: " + bluetoothSocketIoThread.getId());
-
+        Log.d(TAG, "onBytesRead: Read " + numberOfBytes + " byte(s) (thread ID: " + bluetoothSocketIoThread.getId() + ")");
         final HandshakeConnection handshakeConnection = getConnectionByBluetoothSocketIoThread(bluetoothSocketIoThread);
         mHandshakeConnections.remove(handshakeConnection);
-        final boolean isValidHandshakeMessage;
 
-        if (handshakeConnection.isIncoming) {
-            isValidHandshakeMessage = Arrays.equals(CommonUtils.createClientHandshakeMessage(false), bytes); // TODO: Set the correct boolean value
-        } else {
-            isValidHandshakeMessage = Arrays.equals(CommonUtils.createServerHandshakeMessage(), bytes);
+        String receivedBytesAsString = new String(bytes, StandardCharsets.UTF_8);
+
+        if (receivedBytesAsString != null && receivedBytesAsString.length() >= numberOfBytes) {
+            // Since the bytes we get is a buffer likely longer than our message, we need to remove
+            // the garbage from the end
+            receivedBytesAsString = receivedBytesAsString.substring(0, numberOfBytes);
         }
+
+        final boolean isValidHandshakeMessage = HANDSHAKE_MESSAGE_AS_STRING.equals(receivedBytesAsString);
 
         if (!mIsShuttingDown) {
             jxcore.activity.runOnUiThread(new Runnable() {
@@ -189,7 +186,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
                         mListener.onHandshakeFailed(
                                 handshakeConnection.bluetoothSocketIoThread.getSocket(),
                                 handshakeConnection.bluetoothSocketIoThread.getPeerProperties(),
-                                "Failed to validate handshake message");
+                                "Failed to validate the handshake message");
                     }
                 }
             });
@@ -200,8 +197,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
 
     @Override
     public void onBytesWritten(byte[] bytes, int numberOfBytes, BluetoothSocketIoThread bluetoothSocketIoThread) {
-        Log.d(TAG, "onBytesWritten: Wrote " + numberOfBytes + " byte(s): \""
-                + new String(bytes) + "\" (thread ID: " + bluetoothSocketIoThread.getId() + ")");
+        Log.d(TAG, "onBytesWritten: Wrote " + numberOfBytes + " byte(s) (thread ID: " + bluetoothSocketIoThread.getId() + ")");
     }
 
     /**

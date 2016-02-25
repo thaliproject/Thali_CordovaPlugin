@@ -111,14 +111,6 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         if (other instanceof SocketThreadBase) {
             SocketThreadBase otherSocketThreadBase = (SocketThreadBase) other;
 
-            if (otherSocketThreadBase.getPeerProperties() != null
-                    && mPeerProperties != null) {
-                Log.v(TAG, "equals: " + mPeerProperties.getId() + " == "
-                        + otherSocketThreadBase.getPeerProperties().getId() + " ?");
-            } else {
-                Log.v(TAG, "equals: At least one of the other instances is missing its peer properties");
-            }
-
             return (otherSocketThreadBase.getPeerProperties() != null
                     && mPeerProperties != null
                     && otherSocketThreadBase.getPeerProperties().equals(mPeerProperties));
