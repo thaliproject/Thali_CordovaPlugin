@@ -166,7 +166,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
         final boolean isValidHandshakeMessage;
 
         if (handshakeConnection.isIncoming) {
-            isValidHandshakeMessage = Arrays.equals(CommonUtils.createClientHandshakeMessage(false), bytes);
+            isValidHandshakeMessage = Arrays.equals(CommonUtils.createClientHandshakeMessage(false), bytes); // TODO: Set the correct boolean value
         } else {
             isValidHandshakeMessage = Arrays.equals(CommonUtils.createServerHandshakeMessage(), bytes);
         }
