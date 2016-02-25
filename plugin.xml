@@ -25,7 +25,7 @@
         <source-file src="src/android/java/io/jxcore/node/ConnectionHelper.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ConnectionModel.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ConnectivityInfo.java" target-dir="src/io/jxcore/node/" />
-		<source-file src="src/android/java/io/jxcore/node/HandshakeHelper.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/HandshakeHelper.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/IncomingSocketThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/JXcoreThaliCallback.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ListenerOrIncomingConnection.java" target-dir="src/io/jxcore/node/" />
