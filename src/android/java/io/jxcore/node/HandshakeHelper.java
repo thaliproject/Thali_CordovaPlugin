@@ -110,7 +110,12 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
                             constructTimeoutCheckTimer();
                         }
 
-                        Log.i(TAG, "initiateHandshake: OK");
+                        Log.i(TAG, "initiateHandshake: OK (thread ID: " + bluetoothSocketIoThread.getId() + ")");
+                    } else {
+                        Log.e(TAG, "initiateHandshake: Failed to write the handshake message (thread ID: "
+                                + bluetoothSocketIoThread.getId() + ")");
+                        mHandshakeConnections.remove(handshakeConnection);
+                        bluetoothSocketIoThread.close(true);
                     }
                 } else {
                     Log.e(TAG, "initiateHandshake: Handshake with the given peer already initiated");
@@ -159,7 +164,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
     @Override
     public void onBytesRead(byte[] bytes, int numberOfBytes, final BluetoothSocketIoThread bluetoothSocketIoThread) {
         Log.d(TAG, "onBytesRead: Read " + numberOfBytes + " byte(s): \""
-                + bytes.toString() + "\" (thread ID: " + bluetoothSocketIoThread.getId());
+                + new String(bytes) + "\" (thread ID: " + bluetoothSocketIoThread.getId());
 
         final HandshakeConnection handshakeConnection = getConnectionByBluetoothSocketIoThread(bluetoothSocketIoThread);
         mHandshakeConnections.remove(handshakeConnection);
@@ -196,7 +201,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
     @Override
     public void onBytesWritten(byte[] bytes, int numberOfBytes, BluetoothSocketIoThread bluetoothSocketIoThread) {
         Log.d(TAG, "onBytesWritten: Wrote " + numberOfBytes + " byte(s): \""
-                + bytes.toString() + "\" (thread ID: " + bluetoothSocketIoThread.getId());
+                + new String(bytes) + "\" (thread ID: " + bluetoothSocketIoThread.getId() + ")");
     }
 
     /**
@@ -207,7 +212,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
      */
     @Override
     public void onDisconnected(final String reason, BluetoothSocketIoThread bluetoothSocketIoThread) {
-        Log.d(TAG, "onDisconnected: " + reason + " (thread ID: " + bluetoothSocketIoThread.getId());
+        Log.d(TAG, "onDisconnected: " + reason + " (thread ID: " + bluetoothSocketIoThread.getId() + ")");
 
         final HandshakeConnection handshakeConnection = getConnectionByBluetoothSocketIoThread(bluetoothSocketIoThread);
         removeFailedHandshakeConnectionAndNotifyListener(handshakeConnection, reason);
@@ -323,14 +328,19 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
 
         /**
          * For addIfAbsent()
+         *
          * @param object Another HandshakeConnection instance.
-         * @return True, if the peer ID contained by BluetoothSocketIoThread instance matches.
+         * @return True, if the peer ID contained by BluetoothSocketIoThread instance matches and
+         * they are both either incoming or outgoing connections.
          */
         @Override
         public boolean equals(Object object) {
             if (object != null && object instanceof HandshakeConnection) {
-                return ((HandshakeConnection) object).bluetoothSocketIoThread.getPeerProperties().equals(
-                        bluetoothSocketIoThread.getPeerProperties());
+                HandshakeConnection handshakeConnection = (HandshakeConnection) object;
+
+                return (handshakeConnection.isIncoming == isIncoming
+                        && handshakeConnection.bluetoothSocketIoThread.getPeerProperties().equals(
+                            bluetoothSocketIoThread.getPeerProperties()));
             }
 
             return false;
