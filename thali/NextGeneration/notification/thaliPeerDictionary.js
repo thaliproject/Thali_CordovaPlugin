@@ -152,8 +152,18 @@ module.exports.NotificationPeerDictionaryEntry =
  * @constructor
  */
 function PeerDictionary() {
-
+  this._dictionary = [];
+  this._entryCounter = 0;
 }
+
+/**
+ * Maximum size of the dictionary 
+ *
+ * @public
+ * @readonly
+ * @type {number}
+ */
+PeerDictionary.MAXSIZE = 100;
 
 /**
  * Adds the entry if the peerId isn't yet in the table otherwise updates the
@@ -169,10 +179,65 @@ function PeerDictionary() {
  * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} peerTableEntry
  * @returns {?error} Null if all went well otherwise an error.
  */
-PeerDictionary.prototype.addUpdateEntry =
-  function (peerId, peerTableEntry) {
-    return null;
-  };
+PeerDictionary.prototype.addUpdateEntry = function (peerId, peerTableEntry) {
+
+  if (this._dictionary[peerId] === undefined) {
+    this._removeOldest();
+    this._dictionary[peerId] = {'entry' : peerTableEntry , 
+                                'entryCounter' : this._entryCounter++};
+  } else {
+    this._dictionary[peerId].entry = peerTableEntry;
+  }
+};
+
+
+/**
+ * Removes the oldest resolved entry. If there are no remaining resolved
+ * entries to remove then the oldest waiting entry is removed. If there
+ * are no remaining resolved entries to remove then kills the 
+ * oldest CONTROLLED_BY_POOL entry and removes it.
+ *
+ * @private
+ */
+PeerDictionary.prototype._removeOldest = function () {
+  
+  if (this._dictionary.length >= PeerDictionary.MAXSIZE) {
+    
+    var search = function (state) {
+      var smallestEntryCounterVal = Number.MAX_VALUE;
+      var smallestPeerId = null;
+      this._dictionary.forEach( function (element, index) {
+        if (element.entryCounter < smallestEntryCounterVal &&
+            element.entry.peerState == state) {
+          smallestPeerId = index; 
+          smallestEntryCounterVal = element.entryCounter;  
+        }
+        return smallestPeerId;
+      });
+    };
+    
+    var smallestPeerId = search(exports.peerState.RESOLVED);
+    
+    if (smallestPeerId != null ) {
+      delete this._dictionary[String(smallestPeerId)];
+      return;
+    }        
+
+    smallestPeerId = search(exports.peerState.WAITING);
+    
+    if (smallestPeerId != null ) {
+      delete this._dictionary[String(smallestPeerId)];
+      return;
+    }
+    
+    smallestPeerId = search(exports.peerState.CONTROLLED_BY_POOL);
+    
+    if (smallestPeerId != null ) {
+      delete this._dictionary[String(smallestPeerId)];
+      return;
+    }
+  }
+}
 
 /**
  * Removes the identified entry. It is not an error to specify a peerId that
@@ -181,7 +246,47 @@ PeerDictionary.prototype.addUpdateEntry =
  * @param {string} peerId
  */
 PeerDictionary.prototype.removeEntry =
-  function(peerId) {
+  function (peerId) {
+    delete this._dictionary[peerId];
   };
+
+/**
+ * Checks if the entry exists in the dictionary. 
+ * @public
+ * @param {string} peerId
+ */
+PeerDictionary.prototype.exists = function (peerId) {
+  if (this._dictionary[peerId] === undefined) {
+    return false;
+  } else 
+  {
+    return true;
+  }
+};
+
+/**
+ * Returns the selected entry from the dictionary 
+ * @public
+ * @param {string} peerId
+ */
+PeerDictionary.prototype.get = function (peerId) {
+  if (this._dictionary[peerId] === undefined) {
+    return null;
+  } else 
+  {
+    return this._dictionary[peerId].peerTableEntry;
+  }
+};
+
+/**
+ * Deletes the selected entry from the dictionary 
+ * @public
+ * @param {string} peerId
+ */
+PeerDictionary.prototype.delete = function (peerId) {
+  if (this._dictionary[peerId] != undefined) {
+    delete this._dictionary[peerId];
+  }
+};
 
 module.exports.PeerDictionary = PeerDictionary;

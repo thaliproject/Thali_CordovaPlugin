@@ -5,8 +5,10 @@ var sinon = require('sinon');
 var Promise = require('lie');
 
 var proxyquire = require('proxyquire').noCallThru();
-var NotificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
-var ThaliNotificationServer = require('thali/NextGeneration/notification/thaliNotificationServer');
+var NotificationBeacons = 
+  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var ThaliNotificationServer = 
+  require('thali/NextGeneration/notification/thaliNotificationServer');
 var thaliHttpTester = require('../lib/httpTester');
 
 var SECP256K1 = 'secp256k1';

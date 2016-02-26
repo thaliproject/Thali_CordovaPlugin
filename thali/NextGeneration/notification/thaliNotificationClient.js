@@ -1,7 +1,12 @@
 'use strict';
 
 var EventEmitter = require('events');
-var thaliPeerDictionary = require('thaliPeerDictionary');
+var ThaliPeerDictionary = require('./thaliPeerDictionary');
+var PromiseQueue = require('../promiseQueue');
+var ThaliMobile = require('../thaliMobile');
+var ThaliNotificationAction = require('./thaliNotificationAction.js');
+var ThaliPeerPoolInterface = require('../thaliPeerPool/thaliPeerPoolInterface.js');
+var ThaliPeerAction = require('../thaliPeerPool/thaliPeerAction.js');
 
 /** @module thaliNotificationClient */
 
@@ -24,11 +29,27 @@ var thaliPeerDictionary = require('thaliPeerDictionary');
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
  * @fires module:thaliNotificationClient.event:peerAdvertisesDataForUs
+ * @throws {Error} thaliPeerPoolInterface cannot be null
+ * @throws {Error} ecdhForLocalDevice cannot be null
+ *
  */
 function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
+
+  if (thaliPeerPoolInterface == null) {
+    throw new Error('thaliPeerPoolInterface cannot be null');
+  }
+
+  if (ecdhForLocalDevice == null) {
+    throw new Error('ecdhForLocalDevice cannot be null');
+  }
+
   EventEmitter.call(this);
-  this._init();
-  this.peerDictionary = new thaliPeerDictionary.PeerDictionary();
+
+  this.peerDictionary = new ThaliPeerDictionary.PeerDictionary();
+  this._thaliMobileListenerRegistered = false;
+  this._prioritizedReplicationList = null;
+  this._thaliPeerPoolInterface = thaliPeerPoolInterface;
+  this._ecdhForLocalDevice = ecdhForLocalDevice;
 }
 
 /**
@@ -48,67 +69,12 @@ ThaliNotificationClient.prototype.peerDictionary = null;
  * different prioritization lists but repeated start calls MUST only update that
  * list and MUST NOT cause multiple listeners to be registered with thaliMobile.
  *
- * ### Handling peerAvailabilityChanged Events
- *
- * The notification code is triggered via peerAvailabilityChanged events. In
- * handling these events remember that our goal is to find the notification
- * beacons associated with each peerIdentifier. Once we have retrieved the
- * beacons for a specific peerIdentifier we don't ever need to deal with that
- * specific peerIdentifier again. If the peer behind the identifier changes
- * their beacons then we will get a new peerIdentifier.
- *
- * + If hostAddress != null
- *  + If this peer is not in the dictionary
- *    + Create a {@link module:thaliNotificationAction~NotificationAction} and
- *    then call enqueue on the submitted {@link
- *    module:thaliPeerPoolInterface~ThaliPeerPoolInterface} object and then
- *    create a new PeerDictionaryEntry object with the peerState set to
- *    enqueued, the peerConnectionDictionary set to a single entry matching the
- *    data in the peerAvailabilityChanged event and the notificationAction set
- *    to the previously created notificationAction object.
- *  + If this peer is in the table
- *    + If this peer has been marked as RESOLVED
- *      + Ignore the event
- *    + If this peer has been marked as CONTROLLED_BY_POOL and the action's
- *      state is QUEUED or if the peer's state is WAITING
- *      + First update the connection dictionary for the peer's entry with the
- *      new data. Then if the connectionType of the new event is TCP_NATIVE and
- *      if the connectionType of the existing action isn't that then kill the
- *      existing action using {@link
- *      module:thaliPeerPoolInterface~ThaliPeerPoolInterface#kill} and create a
- *      new action and enqueue it and update the entry. The point of this
- *      exercise is that we prefer native TCP transport to other options.
- *    + If this peer has been marked as CONTROLLED_BY_POOL and the action's
- *      state is STARTED
- *      + If the connectionType of the event is different than the
- *      connectionType of the action then just update the
- *      peerConnectionDictionary and move on. If the connectionTypes are
- *      identical then kill the existing action as above. If the
- *      peerConnectionDictionary contains a TCP_NATIVE entry then create and
- *      enqueue an action for that. Otherwise take the entry that was just
- *      updated and create and enqueue that as an action.
- * + If hostAddress == null
- *   + If this peer is not in the table
- *     + This is technically possible in a number of cases. If this happens
- *     then just ignore the event.
- *   + If this peer is in the table
- *     + If this peer has been marked as resolved
- *       + Ignore the event.
- *     + If this peer has been marked as CONTROLLED_BY_POOL and the action's
- *     state is QUEUED or if the peer's state is WAITING or if this peer has
- *     been marked as CONTROLLED_BY_POOL and the action's state is STARTED
- *       + Call kill on the action via {@link
- *       module:thaliPeerPoolInterface~ThaliPeerPoolInterface#kill} and remove
- *       the associated entry in peerConnectionDictionary. If this leaves no
- *       entries in peerConnectionDictionary then remove this table entry in
- *       total from the dictionary. If there is still an entry left then create
- *       a notificationAction for it and enqueue it.
- *
+
  * ## Handling Resolved events from notificationActions
  *
  * When creating a notificationAction a listener MUST be placed on that action
  * to listen for the
- * {@link module:thaliNotificationAction~NotificationAction.event:Resolved}
+ * {@link module:thaliNotificationAction~ThaliNotificationAction.event:Resolved}
  * event.
  *
  * + BEACONS_RETRIEVED_AND_PARSED
@@ -153,6 +119,14 @@ ThaliNotificationClient.prototype.peerDictionary = null;
 ThaliNotificationClient.prototype.start =
   function (prioritizedReplicationList) {
 
+    this._prioritizedReplicationList = prioritizedReplicationList;
+
+    if (!this._thaliMobileListenerRegistered) {
+      this._thaliMobileListenerRegistered = true;
+      ThaliMobile.emitter.on('peerAvailabilityChanged',
+        this._peerAvailabilityChanged);
+    }
+
   };
 
 /**
@@ -170,6 +144,216 @@ ThaliNotificationClient.prototype.start =
  */
 ThaliNotificationClient.prototype.stop = function () {
 
+  if (this._thaliMobileListenerRegistered) {
+    this._thaliMobileListenerRegistered = false;
+    ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+      this._peerAvailabilityChanged);
+  }
+};
+
+
+/**
+ * * ### Handling peerAvailabilityChanged Events
+ *
+ * The notification code is triggered via peerAvailabilityChanged events. In
+ * handling these events remember that our goal is to find the notification
+ * beacons associated with each peerIdentifier. Once we have retrieved the
+ * beacons for a specific peerIdentifier we don't ever need to deal with that
+ * specific peerIdentifier again. If the peer behind the identifier changes
+ * their beacons then we will get a new peerIdentifier.
+ *
+ * + If hostAddress != null
+ *  + If this peer is not in the dictionary
+ *    + Create a {@link module:thaliNotificationAction~ThaliNotificationAction}
+ *    and then call enqueue on the submitted {@link
+ *    module:thaliPeerPoolInterface~ThaliPeerPoolInterface} object and then
+ *    create a new PeerDictionaryEntry object with the peerState set to
+ *    enqueued, the peerConnectionDictionary set to a single entry matching the
+ *    data in the peerAvailabilityChanged event and the notificationAction set
+ *    to the previously created notificationAction object.
+ *  + If this peer is in the table
+ *    + If this peer has been marked as RESOLVED
+ *      + Ignore the event
+ *    + If this peer has been marked as CONTROLLED_BY_POOL and the action's
+ *      state is QUEUED or if the peer's state is WAITING
+ *      + First update the connection dictionary for the peer's entry with the
+ *      new data. Then if the connectionType of the new event is TCP_NATIVE and
+ *      if the connectionType of the existing action isn't that then kill the
+ *      existing action using {@link
+ *      module:thaliPeerPoolInterface~ThaliPeerPoolInterface#kill} and create a
+ *      new action and enqueue it and update the entry. The point of this
+ *      exercise is that we prefer native TCP transport to other options.
+ *    + If this peer has been marked as CONTROLLED_BY_POOL and the action's
+ *      state is STARTED
+ *      //Why we kill it here?
+ *      + If the connectionType of the event is different than the
+ *      connectionType of the action then just update the
+ *      peerConnectionDictionary and move on. If the connectionTypes are
+ *      identical then kill the existing action as above. If the
+ *      peerConnectionDictionary contains a TCP_NATIVE entry then create and
+ *      enqueue an action for that. Otherwise take the entry that was just
+ *      updated and create and enqueue that as an action.
+ * + If hostAddress == null
+ *   + If this peer is not in the table
+ *     + This is technically possible in a number of cases. If this happens
+ *     then just ignore the event.
+ *   + If this peer is in the table
+ *     + If this peer has been marked as resolved
+ *       + Ignore the event.
+ *     + If this peer has been marked as CONTROLLED_BY_POOL and the action's
+ *     state is QUEUED or if the peer's state is WAITING or if this peer has
+ *     been marked as CONTROLLED_BY_POOL and the action's state is STARTED
+ *       + Call kill on the action via {@link
+ *       module:thaliPeerPoolInterface~ThaliPeerPoolInterface#kill} and remove
+ *       the associated entry in peerConnectionDictionary. If this leaves no
+ *       entries in peerConnectionDictionary then remove this table entry in
+ *       total from the dictionary. If there is still an entry left then create
+ *       a notificationAction for it and enqueue it.
+ *
+ *
+ */
+/** @private
+ * @param {module:thaliMobile.event:peerAvailabilityChanged} peer
+ */
+ThaliNotificationClient.prototype._peerAvailabilityChanged = function name(peer) {
+
+  if (peer.hostAddress != null) {
+    if (!this.peerDictionary.exists(peer.peerIdentifier)) {
+      
+      /* This peer is not in the dictionary */
+      var peerConnectionInfo = new ThaliPeerDictionary.PeerConnectionInformation(
+        peer.hostAddress, peer.portNumber, 10); // Timeout?
+      
+      var peerConnectionDictionary = [];
+      peerConnectionDictionary[peer.connectionType] = peerConnectionInfo;
+
+      var action = new ThaliNotificationAction(
+                        peer.peerIdentifier, peer.connectionType, 
+                        ThaliNotificationClient.ACTION_TYPE,
+                        this._ecdhForLocalDevice, function () {});
+
+      var dictionaryEntry = new ThaliPeerDictionary.NotificationPeerDictionaryEntry(
+                                 ThaliPeerDictionary.peerState.WAITING,
+                                 peerConnectionDictionary,
+                                 action);
+                                 
+      this.peerDictionary.addUpdateEntry(peer.peerIdentifier, dictionaryEntry);
+      this._thaliPeerPoolInterface.enque(action);
+
+    } else {
+      
+      /* This peer is already in the dictionary */
+      var peerEntry = this.peerDictionary.get(peer.peerIdentifier);
+      
+      if ((peerEntry.peerState == ThaliPeerDictionary.peerState.CONTROLLED_BY_POOL &&
+         peerEntry.notificationAction.actionType == ThaliPeerAction.actionState.CREATED) ||
+         peerEntry.peerState == ThaliPeerDictionary.peerState.WAITING) {
+           
+        var newPeerConnectionInfo = new ThaliPeerDictionary.PeerConnectionInformation(
+          peer.hostAddress, peer.portNumber, 10); // Timeout?
+        
+        peerEntry.peerConnectionDictionary[peer.connectionType] = 
+          newPeerConnectionInfo;
+        
+        this.peerDictionary.addUpdateEntry(peer.peerIdentifier, peerEntry);
+        
+        if (peer.connectionTypes == ThaliMobile.connectionTypes.TCP_NATIVE &&
+            peerEntry.notificationAction.connectionType !=
+            ThaliMobile.connectionTypes.TCP_NATIVE) {
+          
+          // When the connectionType of the new event is TCP_NATIVE and existing 
+          // action isn't that, we kill the existing action and create a new 
+          // action. We prefer native TCP transport to other options. 
+          
+          peerEntry.notificationAction.kill();
+          
+          var action = new ThaliNotificationAction(
+                            peer.peerIdentifier, peer.connectionTypes, 
+                            ThaliNotificationClient.ACTION_TYPE,
+                            this._ecdhForLocalDevice, function () {});
+          
+          this._thaliPeerPoolInterface.enqueue(action);
+          peerEntry.notificationAction = action;
+          this.peerDictionary.addUpdateEntry(peer.peerIdentifier, peerEntry);
+        }
+      }
+      else if (peerEntry.peerState == ThaliPeerDictionary.peerState.CONTROLLED_BY_POOL &&
+             peerEntry.notificationAction.actionType == ThaliPeerAction.actionState.STARTED) {
+        
+        // When the peerState is CONTROLLED_BY_POOL and the action's state is STARTED.
+ 
+        if (peer.connectionType != peerEntry.notificationAction.connectionType ) {
+          
+          // When the connectionType of the event is different than the connectionType 
+          // of the action then just update the peerConnectionDictionary.
+ 
+          var newPeerConnectionInfo = new ThaliPeerDictionary.PeerConnectionInformation(
+            peer.hostAddress, peer.portNumber, 10); // Timeout?
+        
+          peerEntry.peerConnectionDictionary[peer.connectionType] = 
+            newPeerConnectionInfo;
+          
+          this.peerDictionary.addUpdateEntry(peer.peerIdentifier, peerEntry);
+        } else {
+          
+          // when the connectionTypes are identical then kill the existing action
+          
+          peerEntry.notificationAction.kill();
+          
+          if (peerEntry.peerConnectionDictionary[ThaliMobile.connectionTypes.TCP_NATIVE]
+              !== null) {
+
+            // When the peerConnectionDictionary contains a TCP_NATIVE entry then 
+            // create and enqueue an action for that.
+
+            var actionWithTCP = new ThaliNotificationAction(
+                  peer.peerIdentifier, ThaliMobile.connectionTypes.TCP_NATIVE, 
+                  ThaliNotificationClient.ACTION_TYPE,
+                  this._ecdhForLocalDevice, function () {});
+            
+            this._thaliPeerPoolInterface.enqueue(actionWithTCP);
+            peerEntry.notificationAction = actionWithTCP;
+            this.peerDictionary.addUpdateEntry(peer.peerIdentifier, peerEntry);
+                  
+          } else {
+            // not implemented yet
+          }
+        }
+      }
+    }
+      
+  } else {
+    
+    // peer.hostAddress == null
+    
+    if (this.peerDictionary.exists(peer.peerIdentifier)) {
+      
+      var peerEntry = this.peerDictionary.get(peer.peerIdentifier);
+      
+      if ((peer.peerState == ThaliPeerDictionary.peerState.CONTROLLED_BY_POOL &&
+          peerEntry.notificationAction.actionType == ThaliPeerAction.actionState.STARTED || 
+          peerEntry.notificationAction.actionType == ThaliPeerAction.actionState.CREATED) ||
+          peer.peerState == ThaliPeerDictionary.peerState.WAITING) {
+        
+        peerEntry.notificationAction.kill();
+        delete peerEntry.peerConnectionDictionary[peer.connectionType];
+        
+        if (peerEntry.peerConnectionDictionary.lenght > 0) {
+          
+          var action = new ThaliNotificationAction(
+                            peer.peerIdentifier, peer.connectionTypes, 
+                            ThaliNotificationClient.ACTION_TYPE,
+                            this._ecdhForLocalDevice, function () {});
+          
+          this._thaliPeerPoolInterface.enqueue(action);
+          this.peerDictionary.addUpdateEntry(peer.peerIdentifier, peerEntry);
+          
+        } else {
+          this.peerDictionary.delete(peer.peerIdentifier);
+        }
+      }
+    }
+  }
 };
 
 /**
