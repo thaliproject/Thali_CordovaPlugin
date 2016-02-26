@@ -187,7 +187,7 @@ public class StartStopOperationQueue {
      * Checks if the current states match the expected outcome of the given operation after executed.
      *
      * @param startStopOperation The operation.
-     * @return True, if the current states match the expected outcome of the given operation.
+     * @return Null, if the states match the expected outcome. A string with an error message otherwise.
      */
     private String isTargetState(StartStopOperation startStopOperation) {
         return startStopOperation.isTargetState(
