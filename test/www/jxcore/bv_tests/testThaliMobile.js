@@ -10,7 +10,7 @@ var sinon = require('sinon');
 
 var verifyCombinedResultSuccess = function (t, combinedResult, message) {
   t.equal(combinedResult.wifiResult, null, message || 'error should be null');
-  // TODO: Add nativeResult check once it is returned
+  t.equal(combinedResult.nativeResult, null, message || 'error should be null');
 };
 
 var test = tape({
