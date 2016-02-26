@@ -84,7 +84,6 @@ public class StartStopOperationQueue {
 
             if (mOperationTimeoutTimer != null) {
                 mOperationTimeoutTimer.cancel();
-                mCurrentOperation = null;
             }
 
             mCurrentOperation.getCallback().callOnStartStopCallback(null);
