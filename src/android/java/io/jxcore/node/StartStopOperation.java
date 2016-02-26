@@ -115,7 +115,12 @@ public class StartStopOperation {
             }
         } else {
             // Is stop operation
-            if (!mShouldStartAdvertisingOrStopListening) {
+            if (mShouldStartAdvertisingOrStopListening) {
+                // Listening to advertisements should be stopped
+                if (isDiscovering) {
+                    return "Should NOT be discovering (listening to advertisements)";
+                }
+            } else {
                 // Everything should be stopped
                 if (connectionManagerState != ConnectionManagerState.NOT_STARTED
                         || discoveryManagerState != DiscoveryManagerState.NOT_STARTED) {

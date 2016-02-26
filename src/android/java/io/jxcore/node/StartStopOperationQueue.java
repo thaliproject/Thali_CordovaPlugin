@@ -167,8 +167,9 @@ public class StartStopOperationQueue {
                 @Override
                 public void onFinish() {
                     if (mCurrentOperation != null) {
-                        Log.d(TAG, "Operation timeout");
-                        mCurrentOperation.getCallback().onStartStopCallback("Operation timeout");
+                        String errorMessage = "Operation timeout, state error: " + isTargetState(mCurrentOperation);
+                        Log.d(TAG, errorMessage);
+                        mCurrentOperation.getCallback().onStartStopCallback(errorMessage);
                         mCurrentOperation = null;
                         mOperationTimeoutTimer = null;
                         executeNextOperation();

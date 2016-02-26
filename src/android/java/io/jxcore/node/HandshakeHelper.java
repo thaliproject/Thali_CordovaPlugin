@@ -265,6 +265,11 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
         }
 
         handshakeConnection.bluetoothSocketIoThread.close(true);
+
+        if (!mIsShuttingDown) {
+            Log.d(TAG, "removeFailedHandshakeConnectionAndNotifyListener: Thread with ID "
+                    + handshakeConnection.bluetoothSocketIoThread.getId() + " closed");
+        }
     }
 
     /**
