@@ -159,6 +159,10 @@ module.exports.start = function (router) {
       return reject(new Error('Call Stop!'));
     }
     thaliMobileStates.started = true;
+    peerAvailabilityWatcherInterval = setInterval(
+      peerAvailabilityWatcher,
+      ThaliConfig.PEER_AVAILABILITY_WATCHER_INTERVAL
+    );
     module.exports.emitter.on('networkChanged', handleNetworkChanged);
     Promise.all([
       promiseResultSuccessOrFailure(
@@ -187,6 +191,7 @@ module.exports.start = function (router) {
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
     thaliMobileStates = getInitialStates();
+    clearInterval(peerAvailabilityWatcherInterval);
     module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
     Promise.all([
       promiseResultSuccessOrFailure(
@@ -585,7 +590,9 @@ var changeCachedPeerUnavailable = function (peer) {
 };
 
 var changeCachedPeerAvailable = function (peer) {
-  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = peer;
+  var cachedPeer = JSON.parse(JSON.stringify(peer));
+  cachedPeer.availableSince = Date.now();
+  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
 };
 
 var changePeersUnavailable = function (connectionType) {
@@ -644,7 +651,8 @@ var handlePeer = function (peer, connectionType) {
   module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
 
-ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peer) {
+ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+function (peer) {
   var connectionType =
     jxcore.utils.OSInfo().isAndroid ?
     connectionTypes.BLUETOOTH :
@@ -655,6 +663,33 @@ ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', functi
 thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
   handlePeer(peer, connectionTypes.TCP_NATIVE);
 });
+
+var peerAvailabilityWatcherInterval = null;
+// A watcher function that monitors peer availabilities
+// and tries to determine when a peer is no longer available
+// based on characteristics of each connection type.
+// The watcher is started on an interval in start function
+// and stopped in stop function.
+var peerAvailabilityWatcher = function () {
+  var connectionType = connectionTypes.TCP_NATIVE;
+  var now = Date.now();
+  Object.keys(peerAvailabilities[connectionType])
+  .forEach(function (peerIdentifier) {
+    var peer = peerAvailabilities[connectionType][peerIdentifier];
+    var unavailabilityThreshold = ThaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 5;
+    // If the time from the latest availability advertisement doesn't
+    // exceed the threshold, no need to do anything.
+    if (peer.availableSince + unavailabilityThreshold < now) {
+      return;
+    }
+    changeCachedPeerUnavailable(peer);
+    module.exports.emitter.emit('peerAvailabilityChanged', {
+      peerIdentifier: peerIdentifier,
+      hostAddress: null,
+      portNumber: null
+    });
+  });
+};
 
 /**
  * Fired whenever our state changes.
