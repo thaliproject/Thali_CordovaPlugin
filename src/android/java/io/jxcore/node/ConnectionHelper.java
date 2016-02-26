@@ -376,6 +376,10 @@ public class ConnectionHelper
         mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
 
         if (!mHandshakeHelper.initiateHandshake(bluetoothSocket, peerProperties, isIncoming)) {
+            if (!isIncoming) {
+                handleOutgoingConnectionFailure(peerProperties, "Failed to initiate handshake");
+            }
+
             try {
                 bluetoothSocket.close();
             } catch (IOException e) {
