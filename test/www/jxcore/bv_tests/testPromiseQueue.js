@@ -193,3 +193,38 @@ test('mix enqueue and enqueueAtTop', function (t) {
     fourthPromise = true;
   });
 });
+
+test('queues handled independently', function (t) {
+  var firstQueue = new PromiseQueue();
+  var secondQueue = new PromiseQueue();
+
+  var shortInterval = 10;
+  var longInterval = shortInterval * 100;
+  var longOperationTimeout = null;
+
+  var shortOperation = function (resolve, reject) {
+    setTimeout(function () {
+      resolve();
+    }, shortInterval);
+  };
+  secondQueue.enqueue(shortOperation);
+
+  firstQueue.enqueue(function (resolve, reject) {
+    longOperationTimeout = setTimeout(function () {
+      resolve();
+    }, longInterval);
+  })
+  .then(function () {
+    t.fail();
+    t.end();
+  });
+  firstQueue.enqueue(shortOperation);
+
+  secondQueue.enqueue(shortOperation);
+  secondQueue.enqueue(shortOperation)
+  .then(function () {
+    t.ok(true, 'all short operations completed before the long resolves');
+    clearTimeout(longOperationTimeout);
+    t.end();
+  });
+});
