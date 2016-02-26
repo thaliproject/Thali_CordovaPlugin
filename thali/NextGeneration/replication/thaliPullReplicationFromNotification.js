@@ -14,15 +14,13 @@ var areBufferArraysEqual = require('./utilities').areBufferArraysEqual;
  * @public
  */
 function ReplicationManager() {
-
 }
 
 ReplicationManager.prototype.addPeer = function (peerNotification) {
-
 };
 
 ReplicationManager.prototype.removePeer = function (peerId) {
-
+  
 };
 
 /**
@@ -101,7 +99,7 @@ ThaliPullReplicationFromNotification.prototype._prioritizedReplicationList =
  * @private
  */
 ThaliPullReplicationFromNotification.prototype._updateReplications =
-  function(oldPrioritizedReplicationList, newPrioritizedReplicationList) {
+  function (oldPrioritizedReplicationList, newPrioritizedReplicationList) {
 
   };
 
