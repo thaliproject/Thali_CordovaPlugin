@@ -104,6 +104,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
 ThaliWifiInfrastructure.prototype._getInitialStates = function () {
   return {
     started: false,
+    stopping: false,
     listening: {
       target: false,
       current: false
@@ -112,15 +113,18 @@ ThaliWifiInfrastructure.prototype._getInitialStates = function () {
       target: false,
       current: false
     },
-    networkState: {}
+    networkState: null
   };
 };
 
 ThaliWifiInfrastructure.prototype._handleNetworkChanges =
 function (networkChangedValue) {
   var self = this;
-  // If the wifi state hasn't changed, we are not really interested
-  if (networkChangedValue.wifi === self.states.networkState.wifi) {
+  // If we are stopping or the wifi state hasn't changed,
+  // we are not really interested.
+  if (self.states.stopping === true,
+      self.states.networkState !== null &&
+      networkChangedValue.wifi === self.states.networkState.wifi) {
     return;
   }
   self.states.networkState = networkChangedValue;
@@ -270,13 +274,19 @@ ThaliWifiInfrastructure.prototype.start = function (router) {
     if (self.states.started === true) {
       return reject(new Error('Call Stop!'));
     }
+    ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+                                          self._networkChangedHandler);
     ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
     .then(function (networkStatus) {
-      self.states.networkState = networkStatus;
+      if (self.states.networkState === null) {
+        // Only assign the network state received here if it
+        // isn't assigned yet. It could have been already assigned
+        // in case a networkChangedNonTCP event was emitted
+        // while waiting for getNonTCPNetworkStatus() to be resolved.
+        self.states.networkState = networkStatus;
+      }
       self.states.started = true;
       self.router = router;
-      ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
-                                           self._networkChangedHandler);
       return resolve();
     });
   });
@@ -299,6 +309,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
     if (self.states.started === false) {
       return resolve();
     }
+    self.states.stopping = true;
     self._stopAdvertisingAndListening(true, true)
     .then(function () {
       return self._stopListeningForAdvertisements(true, true);
@@ -310,6 +321,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
       return resolve();
     })
     .catch(function (error) {
+      self.states.stopping = false;
       reject(error);
     });
   });
