@@ -8,7 +8,7 @@ var logger =
   require('../../thalilogger')('thaliSendNotificationBasedOnReplication');
 var urlsafeBase64 = require('urlsafe-base64');
 var assert = require('assert');
-var compareBufferArrays = require('./utilities').compareBufferArrays;
+var areBufferArraysEqual = require('./utilities').areBufferArraysEqual;
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
 var TransientState = require('./utilities').TransientState;
 
@@ -282,7 +282,7 @@ ThaliSendNotificationBasedOnReplication.prototype._commonStart =
       }
 
       if (!checkFn && self._state === stateEnum.STARTED &&
-          compareBufferArrays(
+          areBufferArraysEqual(
             self._transientState.prioritizedPeersToNotifyOfChanges,
             prioritizedPeersToNotifyOfChanges)) {
         return resolve();

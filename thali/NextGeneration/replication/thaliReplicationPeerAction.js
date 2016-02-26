@@ -62,18 +62,17 @@ ThaliReplicationPeerAction.prototype.resultPromise = null;
 
 /**
  * When start is called we will start a replication with the remote peer using
- * the settings specified below. We need
- * to set the ajax option in order to set the psk related values from
- * peerAdvertisesDataForUs. We will need to create the URL using the
- * hostAddress and portNumber from peerAdvertisesDataForUs. Also make sure to
- * set skip_setup to true.
+ * the settings specified below. We need to set the ajax option in order to set
+ * the psk related values from peerAdvertisesDataForUs. We will need to create
+ * the URL using the hostAddress and portNumber from peerAdvertisesDataForUs.
+ * Also make sure to set skip_setup to true.
  *
  * If we get an error that the database doesn't exist on the remote machine that
  * is fine, we're done. Although we should log a low priority error that we
  * tried to get to a database that doesn't exist. DO NOT log the peer ID.
  *
  * We then need to use db.replication.to with the remoteDB using the URL
- * specified in the constructor.. This will be the local DB we
+ * specified in the constructor. This will be the local DB we
  * will copy to. We need to do things this way so we can set the AJAX
  * options for PSK. We also need to set both options.retry and options.live
  * to true. See the changes event below for some of the implications of this.

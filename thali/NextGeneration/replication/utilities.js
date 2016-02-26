@@ -8,7 +8,7 @@ var assert = require('assert');
  * @param {Buffer[]} buffArray2
  * @returns {boolean}
  */
-function compareBufferArrays(buffArray1, buffArray2) {
+function areBufferArraysEqual(buffArray1, buffArray2) {
   assert(Array.isArray(buffArray1), 'We only accept arrays.');
   assert(Array.isArray(buffArray2), 'We only accept arrays.');
   if (buffArray1.length !== buffArray2.length) {
@@ -26,7 +26,7 @@ function compareBufferArrays(buffArray1, buffArray2) {
   return true;
 }
 
-module.exports.compareBufferArrays = compareBufferArrays;
+module.exports.areBufferArraysEqual = areBufferArraysEqual;
 
 /**
  * @private

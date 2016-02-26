@@ -1,8 +1,8 @@
 'use strict';
 
 var tape = require('../lib/thali-tape');
-var compareBufferArrays =
-  require('thali/NextGeneration/replication/utilities').compareBufferArrays;
+var areBufferArraysEqual =
+  require('thali/NextGeneration/replication/utilities').areBufferArraysEqual;
 var RefreshTimerManager =
   require('thali/NextGeneration/replication/utilities').RefreshTimerManager;
 var TransientState =
@@ -17,22 +17,22 @@ var test = tape({
   }
 });
 
-test('compareBufferArrays', function (t) {
+test('areBufferArraysEqual', function (t) {
   var aBoolean = true;
   var aNumber = 23;
   var buff1 = new Buffer('foo');
   var buff2 = new Buffer('bar');
   t.throws(function () {
-    compareBufferArrays(aBoolean, aNumber);
+    areBufferArraysEqual(aBoolean, aNumber);
   });
   t.throws(function () {
-    compareBufferArrays(buff1, aNumber);
+    areBufferArraysEqual(buff1, aNumber);
   });
-  t.notOk(compareBufferArrays([buff1], [buff1, buff2]));
-  t.notOk(compareBufferArrays([buff1, buff2], [buff2, buff1]));
-  t.ok(compareBufferArrays([], []));
-  t.ok(compareBufferArrays([buff1], [buff1]));
-  t.ok(compareBufferArrays([buff1, buff2], [buff1, buff2]));
+  t.notOk(areBufferArraysEqual([buff1], [buff1, buff2]));
+  t.notOk(areBufferArraysEqual([buff1, buff2], [buff2, buff1]));
+  t.ok(areBufferArraysEqual([], []));
+  t.ok(areBufferArraysEqual([buff1], [buff1]));
+  t.ok(areBufferArraysEqual([buff1, buff2], [buff1, buff2]));
   t.end();
 });
 
