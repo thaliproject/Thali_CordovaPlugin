@@ -124,9 +124,14 @@ public class ConnectionHelper
             return false;
         }
 
-        if (!mDiscoveryManager.start(true, startAdvertisements)) {
-            Log.e(TAG, "start: Failed to start the discovery manager");
-            return false;
+        if (!mDiscoveryManager.isRunning()
+                || (!mDiscoveryManager.isAdvertising() && startAdvertisements)) {
+            if (!mDiscoveryManager.start(true, startAdvertisements)) {
+                Log.e(TAG, "start: Failed to start the discovery manager");
+                return false;
+            }
+        } else {
+            Log.v(TAG, "start: Discovery manager already running");
         }
 
         Log.i(TAG, "start: OK");
@@ -476,12 +481,7 @@ public class ConnectionHelper
         Log.i(TAG, "onDiscoveryManagerStateChanged: State: " + state
                 + ", is discovering: " + isDiscovering + ", is advertising: " + isAdvertising);
 
-        new Handler(jxcore.activity.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
-            }
-        });
+        JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
     }
 
     /**

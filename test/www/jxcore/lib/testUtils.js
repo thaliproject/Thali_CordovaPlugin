@@ -1,9 +1,9 @@
 var LogCallback;
 var os = require('os');
 var tmp = require('tmp');
-var PouchDB = require('PouchDB');
+var PouchDB = require('pouchdb');
 var path = require('path');
-var randomstring = require('randomstring');
+var randomString = require('randomstring');
 var Promise = require('lie');
 var logger = require('thali/thalilogger')('testUtils');
 
@@ -148,7 +148,7 @@ module.exports.getTestPouchDBInstance = function (name) {
 };
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
-  var randomPouchDBName = randomstring.generate({
+  var randomPouchDBName = randomString.generate({
     length: 40,
     charset: 'alphabetic'
   });

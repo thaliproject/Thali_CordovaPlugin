@@ -278,7 +278,6 @@ ThaliSendNotificationBasedOnReplication.prototype._commonStart =
     var self = this;
     return function (resolve, reject) {
       if (checkFn && !checkFn()) {
-        console.log("Check failed!");
         return resolve();
       }
 
@@ -320,7 +319,6 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
       since: seqValue,
       timeout: false // Not sure we really need this
     }).on('change', function () {
-      console.log("In pouchdb chnage handler");
       // This check will guarantee that the object's transient variables
       // are in a trustworthy state
       if (self._state !== stateEnum.STARTED) {
@@ -344,7 +342,6 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
           'If the tokens were never updated then there should not be a' +
           'beacon timer');
         self._transientState.lastTimeBeaconsWereUpdated = Date.now();
-        console.log("lastTimeBeaconsWereUpdated was 0");
         return self._updateOnExpiration(0);
       }
 
@@ -373,7 +370,6 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
         var milliSecondsUntilNextRefresh =
           soonestPossibleRefresh - Date.now();
 
-        console.log("Setting long update on expiration");
         self._updateOnExpiration(milliSecondsUntilNextRefresh);
       }
     }).on('complete', function (info) {
