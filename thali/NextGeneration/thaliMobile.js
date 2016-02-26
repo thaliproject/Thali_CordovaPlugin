@@ -671,22 +671,31 @@ var peerAvailabilityWatcherInterval = null;
 // The watcher is started on an interval in start function
 // and stopped in stop function.
 var peerAvailabilityWatcher = function () {
-  var connectionType = connectionTypes.TCP_NATIVE;
   var now = Date.now();
-  Object.keys(peerAvailabilities[connectionType])
-  .forEach(function (peerIdentifier) {
-    var peer = peerAvailabilities[connectionType][peerIdentifier];
-    var unavailabilityThreshold = ThaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 5;
-    // If the time from the latest availability advertisement doesn't
-    // exceed the threshold, no need to do anything.
-    if (peer.availableSince + unavailabilityThreshold < now) {
-      return;
-    }
-    changeCachedPeerUnavailable(peer);
-    module.exports.emitter.emit('peerAvailabilityChanged', {
-      peerIdentifier: peerIdentifier,
-      hostAddress: null,
-      portNumber: null
+  Object.keys(connectionTypes).forEach(function (connectionTypeKey) {
+    var connectionType = connectionTypes[connectionTypeKey];
+    Object.keys(peerAvailabilities[connectionType])
+    .forEach(function (peerIdentifier) {
+      var peer = peerAvailabilities[connectionType][peerIdentifier];
+      var unavailabilityThreshold = 0;
+      if (connectionType === connectionTypes.TCP_NATIVE) {
+        unavailabilityThreshold =
+          ThaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+      } else {
+        unavailabilityThreshold =
+          ThaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
+      }
+      // If the time from the latest availability advertisement doesn't
+      // exceed the threshold, no need to do anything.
+      if (peer.availableSince + unavailabilityThreshold < now) {
+        return;
+      }
+      changeCachedPeerUnavailable(peer);
+      module.exports.emitter.emit('peerAvailabilityChanged', {
+        peerIdentifier: peerIdentifier,
+        hostAddress: null,
+        portNumber: null
+      });
     });
   });
 };
@@ -844,9 +853,12 @@ thaliWifiInfrastructure.on('networkChangedWifi', emitNetworkChanged);
  * again.
  */
 ThaliMobileNativeWrapper.emitter.on('incomingConnectionToPortNumberFailed',
-    function (portNumber) {
-  // Do stuff
-});
+  function (portNumber) {
+    // TODO: Should this event be handled internally within
+    // thaliMobileNativeWrapper who manages the TCP servers anyways?
+    // Is there a need to react to this event at all in thaliMobile?
+  }
+);
 
 /**
  * Use this emitter to subscribe to events
