@@ -124,25 +124,28 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
     toComplete = devices.length;
     devices.forEach(function (device) {
 
+      function setResult(result) {
+        results[result.test] = result.success &&
+          (result.test in results ? results[result.test] :
+            true);
+      }
+
       // The device has completed setup for this test
-      device.socket.once('setup_complete', function () {
-        doNext('start_test');
+      device.socket.once("setup_complete", function(result) {
+        setResult(JSON.parse(result));
+        doNext("start_test");
       });
 
       // The device has completed it's test
       device.socket.once('test_complete', function (result) {
-        result = JSON.parse(result);
-        if (!results[result.test]) {
-          results[result.test] = result.success;
-        } else {
-          results[result.test] &= result.success;
-        }
+        setResult(JSON.parse(result));
         doNext('teardown');
       });
 
       // The device has completed teardown for this test
-      device.socket.once('teardown_complete', function () {
-        if (--toComplete === 0) {
+      device.socket.once("teardown_complete", function(result) {
+        setResult(JSON.parse(result));
+        if (--toComplete == 0) {
           cb();
         }
       });

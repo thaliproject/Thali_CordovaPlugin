@@ -1,6 +1,6 @@
 /*
- Thali unit test implementation of tape.
- Highly inspired by wrapping-tape, and usage is very similar to the wrapping tape:
+ Thali unit test implementation of tape. Highly inspired by wrapping-tape, and
+ usage is very similar to the wrapping tape:
 
  var tape = require('thali-tape');
 
@@ -59,10 +59,15 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 
   tape('setup', function (t) {
     // Run setup function when the testServer tells us
+    var success = true;
     testServer.once('setup_' + name, function () {
       testServer.emit(util.format('setup_%s_ok', name));
-      t.on('end', function () {
-        testServer.emit('setup_complete', JSON.stringify({'test':name}));
+      t.on('result', function (res) {
+        success = success && res.ok;
+      });
+      t.once('end', function () {
+        testServer.emit('setup_complete',
+          JSON.stringify({'test':name, 'success': success}));
       });
       setup(t);
     });
@@ -76,9 +81,10 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
       success = success && res.ok;
     });
 
-    t.on('end', function () {
+    t.once('end', function () {
       // Tell the server we ran the test and what the result was (true == pass)
-      testServer.emit('test_complete', JSON.stringify({'test':name, 'success':success}));
+      testServer.emit('test_complete',
+        JSON.stringify({'test':name, 'success':success}));
     });
 
     // Run the test (cb) when the server tells us to
@@ -90,15 +96,20 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 
   tape('teardown', function (t) {
     // Run teardown function when the server tells us
+    var success = true;
     testServer.once('teardown_' + name, function () {
       testServer.emit(util.format('teardown_%s_ok', name));
-      t.on('end', function () {
-        testServer.emit('teardown_complete', JSON.stringify({'test':name}));
+      t.on('result', function (res) {
+        success = success && res.ok;
+      });
+      t.once('end', function () {
+        testServer.emit('teardown_complete',
+          JSON.stringify({'test':name, 'success':success}));
       });
       teardown(t);
     });
   });
-};
+}
 
 // The running number of the test that together with the test name guarantees
 // a unique identifier even if there exists multiple tests with same name
@@ -148,11 +159,13 @@ function createStream(testServer)
 
     for (var i = 0; i < failedRows.length; i++) {
       testUtils.logMessageToScreen(
-        failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' + failedRows[i].name
+        failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' +
+        failedRows[i].name
       );
     }
 
-    testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed + ', Failed: ' + failed);
+    testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed +
+      ', Failed: ' + failed);
     console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
 
     console.log('****TEST TOOK:  ms ****' );
@@ -171,9 +184,9 @@ function createStream(testServer)
       row.ok && passed++;
       !row.ok && failed++;
     }
-    rows.push(row);
 
-    testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' + row.name);
+    testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' +
+      row.name);
 
     if (row.ok && row.name) {
       if (!row.ok) {
@@ -192,10 +205,12 @@ thaliTape.begin = function () {
     transports: ['websocket']
   };
 
-  var testServer = io('http://' + require('../server-address') + ':' + 3000 + '/', serverOptions);
+  var testServer = io('http://' + require('../server-address') + ':' + 3000 +
+    '/', serverOptions);
 
   testServer.once('discard', function () {
-    // This device not needed, log appropriately so CI doesn't think we've failed
+    // This device not needed, log appropriately so CI doesn't think we've
+    // failed
     console.log('--= Surplus to requirements =--');
     console.log('****TEST TOOK:  ms ****');
     console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
