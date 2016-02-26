@@ -105,10 +105,6 @@ MobileCallInstance.prototype.router = null;
  */
 MobileCallInstance.prototype.startListeningForAdvertisements =
 function (callback) {
-  if (this.thaliWifiInfrastructure.states.listening.current) {
-    callback('Call Stop!');
-    return;
-  }
   this.thaliWifiInfrastructure.startListeningForAdvertisements()
   .then(function () {
     callback();
