@@ -25,6 +25,25 @@ abstract class JXcoreThaliCallback {
         mErrorMessage = errorMessage;
     }
 
+    public void callOnConnectCallback(
+            final String errorMessage, final ListenerOrIncomingConnection listenerOrIncomingConnection) {
+        jxcore.activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                onConnectCallback(errorMessage, listenerOrIncomingConnection);
+            }
+        });
+    }
+
+    public void callOnStartStopCallback(final String errorMessage) {
+        jxcore.activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                onStartStopCallback(errorMessage);
+            }
+        });
+    }
+
     /**
      * If err is not NULL then listenerOrIncomingConnection MUST be null and vice
      * versa.
@@ -36,6 +55,15 @@ abstract class JXcoreThaliCallback {
      *                                     submitted to failed. Otherwise this
      *                                     contains the success results.
      */
-    abstract void onConnectCallback(
-            String errorMessage, ListenerOrIncomingConnection listenerOrIncomingConnection);
+    protected void onConnectCallback(
+            String errorMessage, ListenerOrIncomingConnection listenerOrIncomingConnection) {
+        // No default implementation
+    }
+
+    /**
+     * @param errorMessage If null, the operation was successful.
+     */
+    protected void onStartStopCallback(String errorMessage) {
+        // No default implementation
+    }
 }
