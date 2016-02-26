@@ -20,7 +20,7 @@ var test = tape({
   teardown: function (t) {
     ThaliMobile.stop()
     .then(function (combinedResult) {
-      verifyCombinedResultSuccess(t, combinedResult);
+      verifyCombinedResultSuccess(t, combinedResult, 'teardown');
       t.end();
     });
   }
@@ -32,11 +32,11 @@ var testIdempotentFunction = function (t, functionName) {
     return ThaliMobile[functionName]();
   })
   .then(function (combinedResult) {
-    verifyCombinedResultSuccess(t, combinedResult);
+    verifyCombinedResultSuccess(t, combinedResult, 'testIdempotentFunction1');
     return ThaliMobile[functionName]();
   })
   .then(function (combinedResult) {
-    verifyCombinedResultSuccess(t, combinedResult);
+    verifyCombinedResultSuccess(t, combinedResult, 'testIdempotentFunction2');
     t.end();
   });
 };
@@ -211,6 +211,7 @@ test('calls correct starts when network changes', function (t) {
 
 test('when network connection is lost a peer should be marked unavailable',
   function (t) {
+    var PEER_AVAILABILITY_CHANGED = 'peerAvailabilityChanged';
     ThaliMobile.start(express.Router())
     .then(function () {
       var dummyPeerIdentifier = 'dummyPeer';
@@ -218,7 +219,7 @@ test('when network connection is lost a peer should be marked unavailable',
         if (peer.peerIdentifier !== dummyPeerIdentifier) {
           return;
         }
-        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+        ThaliMobile.emitter.removeListener(PEER_AVAILABILITY_CHANGED,
           availabilityHandler);
         var unavailabilityHandler = function (peer) {
           if (peer.peerIdentifier !== dummyPeerIdentifier) {
@@ -226,17 +227,17 @@ test('when network connection is lost a peer should be marked unavailable',
           }
           t.equals(peer.hostAddress, null, 'host address should be null');
           t.equals(peer.portNumber, null, 'port number should be null');
-          ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+          ThaliMobile.emitter.removeListener(PEER_AVAILABILITY_CHANGED,
             unavailabilityHandler);
 
           testUtils.toggleRadios(true);
           t.end();
         };
-        ThaliMobile.emitter.on('peerAvailabilityChanged',
+        ThaliMobile.emitter.on(PEER_AVAILABILITY_CHANGED,
           unavailabilityHandler);
         testUtils.toggleRadios(false);
       };
-      ThaliMobile.emitter.on('peerAvailabilityChanged',
+      ThaliMobile.emitter.on(PEER_AVAILABILITY_CHANGED,
         availabilityHandler);
       ThaliMobileNativeWrapper
         .emitter.emit('nonTCPPeerAvailabilityChangedEvent',
@@ -258,7 +259,7 @@ var setupDiscoveryAndFindPeer = function (t, callback) {
     // Just use the first peer that is changed. In reality, it is possible that
     // if this test is run in environment with multiple Thali apps running, the
     // peer we get here isn't exactly the one with whom we are running these
-    // tests with. However, even with any peer, this test vefifies that we do
+    // tests with. However, even with any peer, this test verifies that we do
     // get correctly formatted advertisements.
     callback(peer, function () {
       // On purpose not stopping anything within the test
@@ -270,15 +271,20 @@ var setupDiscoveryAndFindPeer = function (t, callback) {
   });
   ThaliMobile.start(express.Router())
   .then(function (combinedResult) {
-    verifyCombinedResultSuccess(t, combinedResult);
+    verifyCombinedResultSuccess(t, combinedResult,
+      'setupDiscoveryAndFindPeer - ThaliMobile.start');
     return ThaliMobile.startUpdateAdvertisingAndListening();
   })
   .then(function (combinedResult) {
-    verifyCombinedResultSuccess(t, combinedResult);
+    verifyCombinedResultSuccess(t, combinedResult,
+      'setupDiscoveryAndFindPeer - ' +
+      'ThaliMobile.startUpdateAdvertisingAndListening');
     return ThaliMobile.startListeningForAdvertisements();
   })
   .then(function (combinedResult) {
-    verifyCombinedResultSuccess(t, combinedResult);
+    verifyCombinedResultSuccess(t, combinedResult,
+      'setupDiscoveryAndFindPeer - ' +
+      'ThaliMobile.startListeningForAdvertisements');
   });
 };
 

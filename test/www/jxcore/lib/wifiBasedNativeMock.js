@@ -24,7 +24,7 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
         assert(!networkStatusCalled,
           'the mock network status should not be called twice');
         networkStatusCalled = true;
-        return Promise.resolve((getCurrentNetworkStatus()));
+        return Promise.resolve(getCurrentNetworkStatus());
       },
       '@noCallThru': true
     },
@@ -183,7 +183,7 @@ function (portNumber, callback) {
   var self = this;
   var doStart = function () {
     self.thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
-    .then(function () {
+    .then(function () {
       callback();
     });
   };

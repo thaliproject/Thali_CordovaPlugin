@@ -45,14 +45,28 @@ test('Call start twice and get error', function (t) {
   t.end();
 });
 
+function loopUntilTrue(conditionFn) {
+  function loop() {
+    setTimeout(function () {
+      if (!conditionFn()) {
+        loop();
+      }
+    }, 2);
+  }
+  loop();
+}
+
 test('Start and make sure it runs', function (t) {
   var ran = false;
   var rtm = new RefreshTimerManager(1, function () { ran = true; } );
   rtm.start();
-  setTimeout(function () {
-    t.ok(ran);
-    t.end();
-  }, 2);
+  loopUntilTrue(function () {
+    if (ran) {
+      t.end();
+      return true;
+    }
+    return false;
+  });
 });
 
 test('Make sure getTimeWhenRun is right after start', function (t) {
@@ -67,10 +81,13 @@ test('Make sure getTimeWhenRun is -1 after function is called', function (t) {
   var ran = false;
   var rtm = new RefreshTimerManager(1, function () { ran = true; });
   rtm.start();
-  setTimeout(function () {
-    t.ok(ran);
-    t.equal(rtm.getTimeWhenRun(), -1);
-    t.end();
+  loopUntilTrue(function () {
+    if (ran) {
+      t.equal(rtm.getTimeWhenRun(), -1);
+      t.end();
+      return true;
+    }
+    return false;
   });
 });
 
@@ -89,11 +106,15 @@ test('Make sure getTimeWhenRun is -2 when start has not been called ' +
 
 test('Test TransientState', function (t) {
   t.throws(function () {
+    /* jshint -W031 */
     new TransientState(null);
+    /* jshint +W031 */
   });
 
   t.throws(function () {
+    /* jshint -W031 */
     new TransientState(33);
+    /* jshint +W031 */
   });
 
   var peers = ['a', 'b'];
