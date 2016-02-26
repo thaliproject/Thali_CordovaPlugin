@@ -26,10 +26,8 @@ var Promise = require('lie');
  */
 function PromiseQueue () {
   this.globalPromise = Promise.resolve(true);
+  this._promiseFunctionArray = [];
 }
-
-PromiseQueue.prototype.globalPromise = null;
-PromiseQueue.prototype._promiseFunctionArray = [];
 
 /**
  * This is just a resolve or reject function returned by a Promise.
