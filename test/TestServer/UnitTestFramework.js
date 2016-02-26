@@ -15,7 +15,7 @@ function UnitTestFramework(testConfig, _logger)
     logger = _logger;
   }
 
-  var configFile = "./UnitTestConfig";
+  var configFile = './UnitTestConfig';
   if (testConfig.configFile) {
     configFile = testConfig.configFile;
   }
@@ -25,39 +25,41 @@ function UnitTestFramework(testConfig, _logger)
 
   // Track which platforms we expect to be running on
   var self = this;
-  self.runningTests = Object.keys(self.requiredDevices).filter(function (platform) {
-    return self.requiredDevices[platform];
-  });
+  self.runningTests = Object.keys(self.requiredDevices).filter(
+    function (platform) {
+      return self.requiredDevices[platform];
+    });
 }
 
 util.inherits(UnitTestFramework, TestFramework);
 
-UnitTestFramework.prototype.finishRun = function(devices, platform, tests, results) {
+UnitTestFramework.prototype.finishRun =
+  function (devices, platform, tests, results) {
 
-  // All devices have completed all their tests
-  logger.info("Test run on %s complete", platform);
+    // All devices have completed all their tests
+    logger.info('Test run on %s complete', platform);
 
-  // The whole point !! Log test results from the
-  // server
-  this.testReport(platform, tests, results);
+    // The whole point !! Log test results from the
+    // server
+    this.testReport(platform, tests, results);
 
-  // Signal devices to quit
-  devices.forEach(function(device) {
-    device.socket.emit("complete");
-  });
+    // Signal devices to quit
+    devices.forEach(function (device) {
+      device.socket.emit('complete');
+    });
 
-  // We're done running for this platform..
-  this.runningTests = this.runningTests.filter(function(p) {
-    return (p != platform);
-  });
+    // We're done running for this platform..
+    this.runningTests = this.runningTests.filter(function (p) {
+      return p !== platform;
+    });
 
-  // There may be other platforms still running
-  if (this.runningTests.length == 0) {
-    process.exit(0);
-  }
-}
+    // There may be other platforms still running
+    if (this.runningTests.length === 0) {
+      process.exit(0);
+    }
+  };
 
-UnitTestFramework.prototype.startTests = function(platform, tests) {
+UnitTestFramework.prototype.startTests = function (platform, tests) {
 
   var toComplete;
   var results = {};
@@ -71,19 +73,19 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
 
-  logger.info("Starting unit test run for platform: %s", platform);
+  logger.info('Starting unit test run for platform: %s', platform);
 
   var self = this;
   function doTest(test, cb) {
 
-    logger.info("Running on %s test: %s", platform, test);
+    logger.info('Running on %s test: %s', platform, test);
 
     function emit(device, msg) {
       var retries = 10;
       var emitTimeout = null;
 
       var acknowledged = false;
-      device.socket.once(util.format("%s_ok", msg), function() {
+      device.socket.once(util.format('%s_ok', msg), function () {
         acknowledged = true;
         if (emitTimeout !== null) {
           clearTimeout(emitTimeout);
@@ -97,22 +99,22 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
           if (--retries > 0) {
             emitTimeout = setTimeout(_emit, 1000);
           } else {
-            logger.error("test server: Device %s", device.deviceName);
+            logger.error('test server: Device %s', device.deviceName);
           }
         }
       }
       setTimeout(_emit, 0);
-    };
+    }
 
     // Convenience: Move to next stage in test
     function doNext(stage) {
       // We need to have seen all devices report in before we
       // can proceed to the next stage
-      if (--toComplete == 0) {
+      if (--toComplete === 0) {
         toComplete = devices.length;
-        devices.forEach(function(device) {
+        devices.forEach(function (device) {
           // Tell each device to proceed to the next stage
-          emit(device, stage + "_" + test);
+          emit(device, stage + '_' + test);
         });
       }
     }
@@ -120,7 +122,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
     // Add event handlers for each stage of a single test
     // Test proceed in the order shown below
     toComplete = devices.length;
-    devices.forEach(function(device) {
+    devices.forEach(function (device) {
 
       function setResult(result) {
         results[result.test] = result.success &&
@@ -135,7 +137,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       });
 
       // The device has completed it's test
-      device.socket.once("test_complete", function(result) {
+      device.socket.once('test_complete', function (result) {
         setResult(JSON.parse(result));
         doNext('teardown');
       });
@@ -149,7 +151,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
       });
 
       // All server-side handlers for this test are now installed, let's go..
-      emit(device, "setup_" + test);
+      emit(device, 'setup_' + test);
     });
   }
 
@@ -158,7 +160,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
     // and move to next test
     tests.shift();
     if (tests.length) {
-      process.nextTick(function() {
+      process.nextTick(function () {
         doTest(tests[0], nextTest);
       });
     } else {
@@ -169,46 +171,48 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
 
   toComplete = devices.length;
 
-  devices.forEach(function(device) {
+  devices.forEach(function (device) {
     // Wait for devices to signal they've scheduled their
     // test runs and then begin
-    device.socket.once("schedule_complete", function() {
+    device.socket.once('schedule_complete', function () {
       if (tests.length) {
-        if (--toComplete == 0) {
+        if (--toComplete === 0) {
           doTest(tests[0], nextTest);
         }
       } else {
-        logger.warn("Schedule complete with no tests to run");
+        logger.warn('Schedule complete with no tests to run');
         self.finishRun(devices, platform, _tests, results);
       }
     });
 
     // Tell devices to set tests up to run in the order we supply
-    device.socket.emit("schedule", JSON.stringify(tests));
+    device.socket.emit('schedule', JSON.stringify(tests));
   });
-}
+};
 
-UnitTestFramework.prototype.testReport = function(platform, tests, results) {
+UnitTestFramework.prototype.testReport = function (platform, tests, results) {
 
-  logger.info("\n\n-== UNIT TEST RESULTS ==-");
+  logger.info('\n\n-== UNIT TEST RESULTS ==-');
 
   var passed = 0;
   for (var test in results) {
     passed += results[test];
   }
 
-  logger.info("PLATFORM: %s", platform);
-  logger.info("RESULT: %s", passed == tests.length ? "PASS" : "FAIL");
-  logger.info("%d of %d tests completed", Object.keys(results).length, tests.length);
-  logger.info("%d/%d passed (%d failures)", passed, tests.length, tests.length - passed);
+  logger.info('PLATFORM: %s', platform);
+  logger.info('RESULT: %s', passed === tests.length ? 'PASS' : 'FAIL');
+  logger.info('%d of %d tests completed',
+    Object.keys(results).length, tests.length);
+  logger.info('%d/%d passed (%d failures)',
+    passed, tests.length, tests.length - passed);
 
-  logger.info("--- Test Details ---\n\n");
+  logger.info('--- Test Details ---\n\n');
 
   for (test in results) {
-    logger.info(test + " - " + (results[test] ? "pass" : "fail"));
+    logger.info(test + ' - ' + (results[test] ? 'pass' : 'fail'));
   }
 
-  logger.info("\n\n-== END ==-");
-}
+  logger.info('\n\n-== END ==-');
+};
 
 module.exports = UnitTestFramework;

@@ -448,8 +448,8 @@ var radioState = {
  *
  * @public
  * @typedef {Object} networkChanged
- * @property {module:thaliMobileNative~radioState} blueToothLowEnergy
- * @property {module:thaliMobileNative~radioState} blueTooth
+ * @property {module:thaliMobileNative~radioState} bluetoothLowEnergy
+ * @property {module:thaliMobileNative~radioState} bluetooth
  * @property {module:thaliMobileNative~radioState} wifi
  * @property {module:thaliMobileNative~radioState} cellular
  * @property {string} bssidName If null this value indicates that either

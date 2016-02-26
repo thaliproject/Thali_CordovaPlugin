@@ -2,7 +2,7 @@
 
 var tape = require('../lib/thali-tape');
 var notificationBeacons =
-  require('thali/NextGeneration/thaliNotificationBeacons');
+  require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var crypto = require('crypto');
 var long = require('long');
 

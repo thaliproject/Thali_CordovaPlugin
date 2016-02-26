@@ -3,6 +3,9 @@
 var logCallback;
 var os = require('os');
 var tmp = require('tmp');
+var PouchDB = require('pouchdb');
+var path = require('path');
+var randomString = require('randomstring');
 var Promise = require('lie');
 var logger = require('thali/thalilogger')('testUtils');
 
@@ -60,7 +63,7 @@ function isFunction(functionToCheck) {
  * receive logging messages and display them.
  * @param {string} message
  */
-exports.logMessageToScreen = function (message) {
+module.exports.logMessageToScreen = function (message) {
   if (isFunction(logCallback)) {
     logCallback(message);
   } else {
@@ -75,14 +78,14 @@ var myName;
  * retrievable via a function exposed to the Cordova side.
  * @param {string} name
  */
-exports.setName = function (name) {
+module.exports.setName = function (name) {
   myName = name;
 };
 
 /**
  * Get the name of this device.
  */
-exports.getName = function () {
+module.exports.getName = function () {
   return myName;
 };
 
@@ -107,7 +110,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  * and is removed when the process exits.
  */
 var tmpObject = null;
-exports.tmpDirectory = function () {
+module.exports.tmpDirectory = function () {
   if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
     return os.tmpdir();
   }
@@ -133,3 +136,25 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
     }
   });
 }
+
+
+// Use a folder specific to this test so that the database content
+// will not interfere with any other databases that might be created
+// during other tests.
+var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
+var LevelDownPouchDB = PouchDB.defaults({
+  db: require('leveldown-mobile'),
+  prefix: dbPath
+});
+
+module.exports.getTestPouchDBInstance = function (name) {
+  return new LevelDownPouchDB(name);
+};
+
+module.exports.getRandomlyNamedTestPouchDBInstance = function () {
+  var randomPouchDBName = randomString.generate({
+    length: 40,
+    charset: 'alphabetic'
+  });
+  return module.exports.getTestPouchDBInstance(randomPouchDBName);
+};

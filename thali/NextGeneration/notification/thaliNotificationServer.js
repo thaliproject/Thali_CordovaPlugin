@@ -6,31 +6,35 @@ var Promise = require('lie');
 
 /**
  * @classdesc This class will register the path to retrieve beacons on the
- * submitted router object and handle any beacon requests.
- *
- * The constructor MUST NOT take any action. It can only record values.
+ * submitted router object and handle any beacon requests. This class uses
+ * our promise queue to simplify dealing with concurrency so all calls will
+ * automatically be serialized.
  *
  * @param {Object} router An express router object that the class will use
  * to register its path.
  * @param {ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized with the
  * local device's public and private keys
- * @param {number} secondsUntilExpiration The number of seconds into the
- * future after which the beacons should expire.
+ * @param {number} millisecondsUntilExpiration The number of milliseconds into
+ * the future after which the beacons should expire.
  * @constructor
+ * The constructor MUST NOT take any action. It can only record values.
  */
 function ThaliNotificationServer(router, ecdhForLocalDevice,
-                                 secondsUntilExpiration) {
+                                 millisecondsUntilExpiration) {
 
 }
 
 /**
- * This method will cause the router object to have the beacon route registered
- * on it. This method is idempotent. But notice that there is no stop. This is
- * because there is no supported way in Express to unregister a route.
+ * Defines the HTTP path that beacons are supposed to be requested on when using
+ * a HTTP server to distribute beacons.
+ *
+ * @public
+ * @readonly
+ * @type {string}
  */
-ThaliNotificationServer.prototype.start = function () {
+ThaliNotificationServer.NOTIFICATION_BEACON_PATH =
+  '/NotificationBeacons';
 
-};
 
 /**
  * When called for the first time on an instance of ThaliNotificationServer
@@ -81,9 +85,19 @@ ThaliNotificationServer.prototype.start = function () {
  * @returns {Promise<?error>} Returns null if everything went fine otherwise
  * returns an error object.
  */
-ThaliNotificationServer.prototype.setBeacons = function (publicKeysToNotify) {
+ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
   return new Promise();
 };
 
+/**
+ * This is really a placebo method as in reality it just calls start with no
+ * keys to notify. The reason is that once a route is registered on an Express
+ * router there is no supported way of removing it.
+ *
+ * @returns {Promise<?error>}
+ */
+ThaliNotificationServer.prototype.stop = function () {
+  return this.start();
+};
 
-module.exports.ThaliNotificationServer = ThaliNotificationServer;
+module.exports = ThaliNotificationServer;

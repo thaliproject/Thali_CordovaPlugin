@@ -16,5 +16,5 @@
   "latedef": true,
   "freeze": true,
   "maxdepth": 3,
-  "predef": [ "Mobile" ]
+  "predef": [ "Mobile", "jxcore" ]
 }
