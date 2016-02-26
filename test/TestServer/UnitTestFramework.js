@@ -20,7 +20,7 @@ function UnitTestFramework(testConfig, _logger)
     configFile = testConfig.configFile;
   }
   var unitTestConfig = require(configFile);
-  
+
   UnitTestFramework.super_.call(this, testConfig, unitTestConfig, _logger);
 
   // Track which platforms we expect to be running on
@@ -66,7 +66,7 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
     // Default to all tests named by first device
     tests = this.devices[platform][0].tests;
   }
- 
+
   // Copy arrays
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
@@ -122,29 +122,33 @@ UnitTestFramework.prototype.startTests = function(platform, tests) {
     toComplete = devices.length;
     devices.forEach(function(device) {
 
+      function setResult(result) {
+        results[result.test] = result.success &&
+          (result.test in results ? results[result.test] :
+            true);
+      }
+
       // The device has completed setup for this test
-      device.socket.once("setup_complete", function(info) {
+      device.socket.once("setup_complete", function(result) {
+        setResult(JSON.parse(result));
         doNext("start_test");
       });
 
       // The device has completed it's test
       device.socket.once("test_complete", function(result) {
-        result = JSON.parse(result);
-        if (!results[result.test])
-          results[result.test] = result.success;
-        else
-          results[result.test] &= result.success;
+        setResult(JSON.parse(result));
         doNext('teardown');
       });
 
       // The device has completed teardown for this test
-      device.socket.once("teardown_complete", function(info) {
+      device.socket.once("teardown_complete", function(result) {
+        setResult(JSON.parse(result));
         if (--toComplete == 0) {
           cb();
         }
       });
 
-      // All server-side handlers for this test are now installed, let's go.. 
+      // All server-side handlers for this test are now installed, let's go..
       emit(device, "setup_" + test);
     });
   }

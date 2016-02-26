@@ -414,27 +414,6 @@ public class JXcoreExtension {
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
-
-
-        final LifeCycleMonitor mLifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.onLCEventCallback() {
-            @Override
-            public void onEvent(String eventString, boolean stopped) {
-                jxcore.activity.runOnUiThread(new Runnable() {
-                    public void run() {
-                        //String reply = "{\"lifecycleevent\":\"" + messageTmp + "\"}";
-                        //jxcore.CallJSMethod("onLifeCycleEvent", reply);
-                    }
-                });
-
-                // todo if we get Postcard fixed on lifecycle handling we should re-enable this
-                // now we need to just trust that postcard will shutdown correctly
-                //if(stopped) {
-                //    mBtConnectorHelper.close();
-                //}
-            }
-        });
-
-        mLifeCycleMonitor.Start();
     }
 
     public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
@@ -453,7 +432,14 @@ public class JXcoreExtension {
         if (jsonObjectCreated) {
             JSONArray jsonArray = new JSONArray();
             jsonArray.put(jsonObject);
-            jxcore.CallJSMethod(EVENT_NAME_PEER_AVAILABILITY_CHANGED, jsonArray.toString());
+            final String jsonArrayAsString = jsonArray.toString();
+
+            jxcore.activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    jxcore.CallJSMethod(EVENT_NAME_PEER_AVAILABILITY_CHANGED, jsonArrayAsString);
+                }
+            });
         }
     }
 
@@ -471,7 +457,14 @@ public class JXcoreExtension {
         }
 
         if (jsonObjectCreated) {
-            jxcore.CallJSMethod(EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE, jsonObject.toString());
+            final String jsonObjectAsString = jsonObject.toString();
+
+            jxcore.activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    jxcore.CallJSMethod(EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE, jsonObjectAsString);
+                }
+            });
         }
     }
 
@@ -551,7 +544,14 @@ public class JXcoreExtension {
         }
 
         if (jsonObjectCreated) {
-            jxcore.CallJSMethod(EVENT_NAME_NETWORK_CHANGED, jsonObject.toString());
+            final String jsonObjectAsString = jsonObject.toString();
+
+            jxcore.activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    jxcore.CallJSMethod(EVENT_NAME_NETWORK_CHANGED, jsonObjectAsString);
+                }
+            });
         }
     }
 
@@ -577,7 +577,14 @@ public class JXcoreExtension {
 
             if (jsonObjectCreated) {
                 mLastTimeIncomingConnectionFailedNotificationWasFired = currentTime;
-                jxcore.CallJSMethod(EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED, jsonObject.toString());
+                final String jsonObjectAsString = jsonObject.toString();
+
+                jxcore.activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        jxcore.CallJSMethod(EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED, jsonObjectAsString);
+                    }
+                });
             }
         }
     }

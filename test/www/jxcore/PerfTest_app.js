@@ -9,8 +9,6 @@
 var testUtils = require('./lib/testUtils');
 var TestFrameworkClient = require('./perf_tests/PerfTestFrameworkClient');
 
-testUtils.toggleRadios(true);
-
 /*------------------------------------------------------------------------------
  code for connecting to the coordinator server
  -----------------------------------------------------------------------------*/

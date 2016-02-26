@@ -28,7 +28,6 @@ class ConnectivityInfo {
     private final boolean mIsBleMultipleAdvertisementSupported;
     private BroadcastReceiver mConnectivityBroadcastReceiver = null;
     private String mBssidName = null;
-    private boolean mIsWifiEnabled = false;
     private boolean mIsBluetoothEnabled = false;
     private boolean mIsConnectedOrConnectingToActiveNetwork = false;
     private boolean mActiveNetworkTypeIsWifi = false;
@@ -45,7 +44,6 @@ class ConnectivityInfo {
         mIsBluetoothSupported = mDiscoveryManager.getBluetoothManager().isBluetoothSupported();
         mIsWifiDirectSupported = mDiscoveryManager.isWifiDirectSupported();
         mIsBleMultipleAdvertisementSupported = mDiscoveryManager.isBleMultipleAdvertisementSupported();
-        mIsWifiEnabled = mDiscoveryManager.getWifiDirectManager().isWifiEnabled();
         mIsBluetoothEnabled = mDiscoveryManager.getBluetoothManager().isBluetoothEnabled();
     }
 
@@ -107,15 +105,14 @@ class ConnectivityInfo {
     }
 
     public boolean isWifiEnabled() {
-        return mIsWifiEnabled;
+        return mDiscoveryManager.getWifiDirectManager().isWifiEnabled();
     }
 
     public void setIsWifiEnabled(boolean isEnabled) {
-        if (mIsWifiEnabled != isEnabled) {
-            mIsWifiEnabled = isEnabled;
-            mIsBluetoothEnabled = mDiscoveryManager.getBluetoothManager().isBluetoothEnabled();
-            updateConnectivityInfo(true);
-        }
+        Log.v(TAG, "setIsWifiEnabled: " + isEnabled);
+
+        // We don't use the given value, but check in updateConnectivityInfo() if the Wi-Fi is enabled
+        updateConnectivityInfo(true);
     }
 
     public boolean isBluetoothEnabled() {
@@ -124,7 +121,6 @@ class ConnectivityInfo {
 
     public void setIsBluetoothEnabled(boolean isEnabled) {
         if (mIsBluetoothEnabled != isEnabled) {
-            mIsWifiEnabled = mDiscoveryManager.getWifiDirectManager().isWifiEnabled();
             mIsBluetoothEnabled = isEnabled;
             updateConnectivityInfo(true);
         }
@@ -143,11 +139,16 @@ class ConnectivityInfo {
         final boolean isConnectedOrConnecting = (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting());
         final boolean activeNetworkTypeIsWifi = (activeNetworkInfo != null && activeNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI);
 
+        WifiManager wifiManager = (WifiManager) mActivity.getSystemService(Context.WIFI_SERVICE);
         WifiInfo wifiInfo = null;
+        boolean isWifiEnabled = false;
 
-        if (activeNetworkTypeIsWifi && activeNetworkInfo.isConnected()) {
-            final WifiManager wifiManager = (WifiManager) mActivity.getSystemService(Context.WIFI_SERVICE);
-            wifiInfo = wifiManager.getConnectionInfo();
+        if (wifiManager != null) {
+            isWifiEnabled = wifiManager.isWifiEnabled();
+
+            if (activeNetworkTypeIsWifi && activeNetworkInfo.isConnected()) {
+                wifiInfo = wifiManager.getConnectionInfo();
+            }
         }
 
         final String bssid = (wifiInfo != null) ? wifiInfo.getBSSID() : null;
@@ -163,18 +164,14 @@ class ConnectivityInfo {
             Log.i(TAG, "updateConnectivityInfo: "
                     + "\n    - is Wi-Fi Direct supported: " + mIsWifiDirectSupported
                     + "\n    - is Bluetooth LE multiple advertisement supported: " + mIsBleMultipleAdvertisementSupported
-                    + "\n    - is Wi-Fi enabled: " + mIsWifiEnabled
+                    + "\n    - is Wi-Fi enabled: " + isWifiEnabled
                     + "\n    - is Bluetooth enabled: " + mIsBluetoothEnabled
                     + "\n    - BSSID name: " + mBssidName
                     + "\n    - is connected/connecting to active network: " + mIsConnectedOrConnectingToActiveNetwork
                     + "\n    - active network type is Wi-Fi: " + mActiveNetworkTypeIsWifi
                     + "\n    - force notify: " + forceNotify);
 
-            mActivity.runOnUiThread(new Runnable() {
-                public void run() {
-                    JXcoreExtension.notifyNetworkChanged(mIsBluetoothEnabled, mIsWifiEnabled, mBssidName);
-                }
-            });
+            JXcoreExtension.notifyNetworkChanged(mIsBluetoothEnabled, isWifiEnabled, mBssidName);
         }
     }
 
