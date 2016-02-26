@@ -34,9 +34,10 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
          *
          * @param bluetoothSocket The Bluetooth socket.
          * @param peerProperties The properties of the peer.
+         * @param isIncoming True, if the connection is incoming. False if outgoing.
          * @param reason The reason why the handshake failed.
          */
-        void onHandshakeFailed(BluetoothSocket bluetoothSocket, PeerProperties peerProperties, String reason);
+        void onHandshakeFailed(BluetoothSocket bluetoothSocket, PeerProperties peerProperties, boolean isIncoming, String reason);
     }
 
     private static final String TAG = HandshakeHelper.class.getName();
@@ -88,35 +89,34 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
                 bluetoothSocketIoThread = new BluetoothSocketIoThread(bluetoothSocket, this);
             } catch (IOException e) {
                 Log.e(TAG, "initiateHandshake: Failed to construct a handshake thread: " + e.getMessage(), e);
+                return false;
             }
 
-            if (bluetoothSocketIoThread != null) {
-                bluetoothSocketIoThread.setPeerProperties(peerProperties);
-                bluetoothSocketIoThread.setExitThreadAfterRead(true);
-                HandshakeConnection handshakeConnection = new HandshakeConnection(bluetoothSocketIoThread, isIncoming);
+            bluetoothSocketIoThread.setPeerProperties(peerProperties);
+            bluetoothSocketIoThread.setExitThreadAfterRead(true);
+            HandshakeConnection handshakeConnection = new HandshakeConnection(bluetoothSocketIoThread, isIncoming);
 
-                if (mHandshakeConnections.addIfAbsent(handshakeConnection)) {
-                    bluetoothSocketIoThread.start();
-                    success = bluetoothSocketIoThread.write(HANDSHAKE_MESSAGE_AS_BYTE_ARRAY);
+            if (mHandshakeConnections.addIfAbsent(handshakeConnection)) {
+                bluetoothSocketIoThread.start();
+                success = bluetoothSocketIoThread.write(HANDSHAKE_MESSAGE_AS_BYTE_ARRAY);
 
-                    if (success) {
-                        handshakeConnection.handshakeAttemptStartedTime = new Date().getTime();
+                if (success) {
+                    handshakeConnection.handshakeAttemptStartedTime = new Date().getTime();
 
-                        if (mCheckForTimeoutsTimer == null) {
-                            constructTimeoutCheckTimer();
-                            mCheckForTimeoutsTimer.start();
-                        }
-
-                        Log.i(TAG, "initiateHandshake: OK (thread ID: " + bluetoothSocketIoThread.getId() + ")");
-                    } else {
-                        Log.e(TAG, "initiateHandshake: Failed to write the handshake message (thread ID: "
-                                + bluetoothSocketIoThread.getId() + ")");
-                        mHandshakeConnections.remove(handshakeConnection);
-                        bluetoothSocketIoThread.close(true);
+                    if (mCheckForTimeoutsTimer == null) {
+                        constructTimeoutCheckTimer();
+                        mCheckForTimeoutsTimer.start();
                     }
+
+                    Log.i(TAG, "initiateHandshake: OK (thread ID: " + bluetoothSocketIoThread.getId() + ")");
                 } else {
-                    Log.e(TAG, "initiateHandshake: Handshake with the given peer already initiated");
+                    Log.e(TAG, "initiateHandshake: Failed to write the handshake message (thread ID: "
+                            + bluetoothSocketIoThread.getId() + ")");
+                    mHandshakeConnections.remove(handshakeConnection);
+                    bluetoothSocketIoThread.close(true);
                 }
+            } else {
+                Log.e(TAG, "initiateHandshake: Handshake with the given peer already initiated");
             }
         } else {
             if (mIsShuttingDown) {
@@ -187,6 +187,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
                         mListener.onHandshakeFailed(
                                 handshakeConnection.bluetoothSocketIoThread.getSocket(),
                                 handshakeConnection.bluetoothSocketIoThread.getPeerProperties(),
+                                handshakeConnection.isIncoming,
                                 "Failed to validate the handshake message");
                     }
                 }
@@ -225,11 +226,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
         HandshakeConnection handshakeConnection = null;
 
         if (bluetoothSocketIoThread != null && bluetoothSocketIoThread.getPeerProperties() != null) {
-            Iterator<HandshakeConnection> connectionIterator = mHandshakeConnections.iterator();
-
-            while (connectionIterator.hasNext()) {
-                HandshakeConnection currentHandshakeConnection = connectionIterator.next();
-
+            for (HandshakeConnection currentHandshakeConnection : mHandshakeConnections) {
                 if (currentHandshakeConnection.bluetoothSocketIoThread.getPeerProperties().equals(
                         bluetoothSocketIoThread.getPeerProperties())) {
                     handshakeConnection = currentHandshakeConnection;
@@ -250,17 +247,18 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
      */
     private synchronized void removeFailedHandshakeConnectionAndNotifyListener(
             final HandshakeConnection handshakeConnection, final String reasonForFailure) {
-        if (!mHandshakeConnections.remove(handshakeConnection) && mIsShuttingDown) {
-            Log.e(TAG, "removeFailedHandshakeConnectionAndNotifyListener: Failed to remove the given connection");
-        }
-
         if (!mIsShuttingDown) {
+            if (!mHandshakeConnections.remove(handshakeConnection)) {
+                Log.e(TAG, "removeFailedHandshakeConnectionAndNotifyListener: Failed to remove the given connection");
+            }
+
             jxcore.activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     mListener.onHandshakeFailed(
                             handshakeConnection.bluetoothSocketIoThread.getSocket(),
                             handshakeConnection.bluetoothSocketIoThread.getPeerProperties(),
+                            handshakeConnection.isIncoming,
                             reasonForFailure);
                 }
             });
@@ -293,7 +291,8 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
                 while (connectionIterator.hasNext()) {
                     HandshakeConnection handshakeConnection = connectionIterator.next();
 
-                    if (currentTime > handshakeConnection.handshakeAttemptStartedTime + HANDSHAKE_TIMEOUT_IN_MILLISECONDS) {
+                    if (handshakeConnection.handshakeAttemptStartedTime != 0
+                            && currentTime > handshakeConnection.handshakeAttemptStartedTime + HANDSHAKE_TIMEOUT_IN_MILLISECONDS) {
                         Log.d(TAG, "Handshake thread with ID "
                                 + handshakeConnection.bluetoothSocketIoThread.getId() + " timed out");
                         removeFailedHandshakeConnectionAndNotifyListener(handshakeConnection, "Handshake timeout");

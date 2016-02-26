@@ -419,19 +419,7 @@ public class ConnectionHelper
         Log.e(TAG, "onConnectionFailed: Peer properties: " + peerProperties + ", error message: " + errorMessage);
 
         if (peerProperties != null) {
-            final String bluetoothMacAddress = peerProperties.getBluetoothMacAddress();
-            final JXcoreThaliCallback callback =
-                    mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress);
-
-            if (callback != null) {
-                callback.onConnectCallback(
-                        "Connection to peer " + peerProperties.toString() + " failed: " + errorMessage,
-                        null);
-
-                // Dispose the callback data
-                mConnectionModel.removeOutgoingConnectionCallback(bluetoothMacAddress);
-            }
-
+            handleOutgoingConnectionFailure(peerProperties, errorMessage);
             toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();
         }
     }
@@ -573,9 +561,16 @@ public class ConnectionHelper
     }
 
     @Override
-    public void onHandshakeFailed(BluetoothSocket bluetoothSocket, PeerProperties peerProperties, String reason) {
-        Log.e(TAG, "onHandshakeFailed: Handshake with peer " + peerProperties + " failed: " + reason);
+    public void onHandshakeFailed(BluetoothSocket bluetoothSocket, PeerProperties peerProperties, boolean isIncoming, String reason) {
+        Log.e(TAG, "onHandshakeFailed: Handshake with peer " + peerProperties
+                + " failed: " + reason + ", the connection was "
+                + (isIncoming ? "incoming" : "outgoing"));
+
         // No need to close the socket - it is already closed (by HandshakeHelper)
+
+        if (!isIncoming) {
+            handleOutgoingConnectionFailure(peerProperties, reason);
+        }
     }
 
     /**
@@ -705,6 +700,26 @@ public class ConnectionHelper
 
             Log.i(TAG, "onConnected: Incoming socket thread, for peer "
                     + peerProperties + ", created successfully");
+        }
+    }
+
+    /**
+     * Notifies the JXcore layer about the connection failure.
+     *
+     * @param peerProperties The properties of the peer we were trying to connect to.
+     * @param errorMessage The error message.
+     */
+    private synchronized void handleOutgoingConnectionFailure(PeerProperties peerProperties, String errorMessage) {
+        final String bluetoothMacAddress = peerProperties.getBluetoothMacAddress();
+        final JXcoreThaliCallback callback =
+                mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress);
+
+        if (callback != null) {
+            callback.onConnectCallback(
+                    "Connection to peer " + peerProperties + " failed: " + errorMessage, null);
+
+            // Dispose the callback data
+            mConnectionModel.removeOutgoingConnectionCallback(bluetoothMacAddress);
         }
     }
 
