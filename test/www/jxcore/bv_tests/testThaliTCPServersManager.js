@@ -359,7 +359,7 @@ test("peerListener - forwardConnection, pleaseConnect == false - no native serve
   var applicationPort = 4242;
   var firstConnection = false;
 
-  // We expect 'failedConnection' since there's no naive listener
+  // We expect 'failedConnection' since there's no native listener
   var serversManager = new ThaliTCPServersManager(applicationPort);
   serversManager.on("failedConnection", function(err) {
     t.ok(firstConnection, "should not get event until connection is made");
@@ -411,7 +411,6 @@ test("peerListener - forwardConnection, pleaseConnect == false - with native ser
   var firstConnection = false;
 
   var serversManager = new ThaliTCPServersManager(applicationPort);
-  // We expect 'failedConnection' since there's no native listener
   serversManager.on("failedConnection", function(err) {
     t.fail("connection shouldn't fail");
   });
@@ -437,6 +436,37 @@ test("peerListener - forwardConnection, pleaseConnect == false - with native ser
     var client = net.createConnection(peerPort);
     firstConnection = true;
   });
+});
+
+test("createPeerListener is idempotent", function(t) {
+
+  var nativePort = 4040;
+  var applicationPort = 4242;
+  var firstConnection = false;
+
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+  serversManager.on("failedConnection", function(err) {
+    t.fail("connection shouldn't fail");
+    t.end();
+  });
+
+  waitForPeerAvailabilityChanged(t, serversManager, false, function(peerPort) {
+    // Create another peerListener to peer1
+    serversManager.createPeerListener("peer1", false)
+    .then(function(port) {
+      t.equal(peerPort, port, "Second call to existing peerListener returns existing port");
+      serversManager.stop();
+      t.end();  
+    })
+    .catch(function(err) {
+      t.fail("should not get error - " + err);
+      serversManager.stop();
+      t.end();
+    });
+  });
+  
+  startServersManager(t, serversManager);
+  startAdvertisingAndListening(t, applicationPort, false);
 });
 
 // reverseConnections
