@@ -505,6 +505,7 @@ TCPServersManager.prototype._createNativeListener = function (routerPort) {
     self._nativeServer.listen(0, function (err) {
       if (err) {
         logger.warn(err);
+        reject(err);
         return;
       }
       if (self._nativeServer) {
