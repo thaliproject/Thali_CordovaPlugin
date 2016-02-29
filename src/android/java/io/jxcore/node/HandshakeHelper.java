@@ -43,7 +43,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
     private static final String TAG = HandshakeHelper.class.getName();
     private static final String HANDSHAKE_MESSAGE_AS_STRING = "thali_handshake";
     private static final byte[] HANDSHAKE_MESSAGE_AS_BYTE_ARRAY = HANDSHAKE_MESSAGE_AS_STRING.getBytes(StandardCharsets.UTF_8);
-    private static final long HANDSHAKE_TIMEOUT_IN_MILLISECONDS = 3000;
+    private static final long HANDSHAKE_TIMEOUT_IN_MILLISECONDS = 5000;
     private static final long TIMEOUT_TIMER_INTERVAL_IN_MILLISECONDS = 1000;
     private final Listener mListener;
     private final CopyOnWriteArrayList<HandshakeConnection> mHandshakeConnections = new CopyOnWriteArrayList<HandshakeConnection>();
@@ -93,6 +93,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
             }
 
             bluetoothSocketIoThread.setPeerProperties(peerProperties);
+            bluetoothSocketIoThread.setBufferSize(HANDSHAKE_MESSAGE_AS_BYTE_ARRAY.length);
             bluetoothSocketIoThread.setExitThreadAfterRead(true);
             HandshakeConnection handshakeConnection = new HandshakeConnection(bluetoothSocketIoThread, isIncoming);
 
@@ -162,17 +163,25 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
     public void onBytesRead(byte[] bytes, int numberOfBytes, final BluetoothSocketIoThread bluetoothSocketIoThread) {
         Log.d(TAG, "onBytesRead: Read " + numberOfBytes + " byte(s) (thread ID: " + bluetoothSocketIoThread.getId() + ")");
         final HandshakeConnection handshakeConnection = getConnectionByBluetoothSocketIoThread(bluetoothSocketIoThread);
-        mHandshakeConnections.remove(handshakeConnection);
+
+        if (!mHandshakeConnections.remove(handshakeConnection)) {
+            Log.e(TAG, "onBytesRead: Failed to remove the handshake connection (thread ID: "
+                    + handshakeConnection.bluetoothSocketIoThread.getId() + ")");
+        }
 
         String receivedBytesAsString = new String(bytes, StandardCharsets.UTF_8);
 
-        if (receivedBytesAsString != null && receivedBytesAsString.length() >= numberOfBytes) {
+        /*if (receivedBytesAsString != null && receivedBytesAsString.length() >= numberOfBytes) {
             // Since the bytes we get is a buffer likely longer than our message, we need to remove
             // the garbage from the end
             receivedBytesAsString = receivedBytesAsString.substring(0, numberOfBytes);
-        }
+        }*/
 
         final boolean isValidHandshakeMessage = HANDSHAKE_MESSAGE_AS_STRING.equals(receivedBytesAsString);
+
+        if (isValidHandshakeMessage) {
+            handshakeConnection.handshakeSucceeded = true;
+        }
 
         if (!mIsShuttingDown) {
             jxcore.activity.runOnUiThread(new Runnable() {
@@ -247,28 +256,34 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
      */
     private synchronized void removeFailedHandshakeConnectionAndNotifyListener(
             final HandshakeConnection handshakeConnection, final String reasonForFailure) {
-        if (!mIsShuttingDown) {
-            if (!mHandshakeConnections.remove(handshakeConnection)) {
-                Log.e(TAG, "removeFailedHandshakeConnectionAndNotifyListener: Failed to remove the given connection");
-            }
-
-            jxcore.activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mListener.onHandshakeFailed(
-                            handshakeConnection.bluetoothSocketIoThread.getSocket(),
-                            handshakeConnection.bluetoothSocketIoThread.getPeerProperties(),
-                            handshakeConnection.isIncoming,
-                            reasonForFailure);
-                }
-            });
+        if (!mHandshakeConnections.remove(handshakeConnection) && !mIsShuttingDown) {
+            Log.e(TAG, "removeFailedHandshakeConnectionAndNotifyListener: Failed to remove the given handshake connection (thread ID: "
+                    + handshakeConnection.bluetoothSocketIoThread.getId() + ")");
         }
 
-        handshakeConnection.bluetoothSocketIoThread.close(true);
+        if (!handshakeConnection.handshakeSucceeded) {
+            if (!mIsShuttingDown) {
+                jxcore.activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mListener.onHandshakeFailed(
+                                handshakeConnection.bluetoothSocketIoThread.getSocket(),
+                                handshakeConnection.bluetoothSocketIoThread.getPeerProperties(),
+                                handshakeConnection.isIncoming,
+                                reasonForFailure);
+                    }
+                });
+            }
 
-        if (!mIsShuttingDown) {
-            Log.d(TAG, "removeFailedHandshakeConnectionAndNotifyListener: Thread with ID "
-                    + handshakeConnection.bluetoothSocketIoThread.getId() + " closed");
+            handshakeConnection.bluetoothSocketIoThread.close(true);
+
+            if (!mIsShuttingDown) {
+                Log.d(TAG, "removeFailedHandshakeConnectionAndNotifyListener: Thread with ID "
+                        + handshakeConnection.bluetoothSocketIoThread.getId() + " closed");
+            }
+        } else {
+            Log.e(TAG, "removeFailedHandshakeConnectionAndNotifyListener: The given handshake connection succeeded and should have not got here (thread ID: "
+                    + handshakeConnection.bluetoothSocketIoThread.getId() + ")");
         }
     }
 
@@ -321,6 +336,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
         public final BluetoothSocketIoThread bluetoothSocketIoThread;
         public final boolean isIncoming;
         public long handshakeAttemptStartedTime = 0;
+        public boolean handshakeSucceeded = false;
 
         public HandshakeConnection(BluetoothSocketIoThread bluetoothSocketIoThread, boolean isIncoming) {
             this.bluetoothSocketIoThread = bluetoothSocketIoThread;

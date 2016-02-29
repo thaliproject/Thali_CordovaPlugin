@@ -150,12 +150,12 @@ public class StartStopOperationQueue {
         }
 
         if (mCurrentOperation != null) {
-            mCurrentOperation.setOperationExecutedTime(new Date().getTime());
-
             if (mOperationTimeoutTimer != null) {
                 mOperationTimeoutTimer.cancel();
                 mOperationTimeoutTimer = null;
             }
+
+            mCurrentOperation.setOperationExecutedTime(new Date().getTime());
 
             mOperationTimeoutTimer = new CountDownTimer(
                     OPERATION_TIMEOUT_IN_MILLISECONDS, OPERATION_TIMEOUT_IN_MILLISECONDS) {
