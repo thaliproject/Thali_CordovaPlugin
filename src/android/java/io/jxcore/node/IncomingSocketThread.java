@@ -49,6 +49,7 @@ class IncomingSocketThread extends SocketThreadBase {
     @Override
     public void run() {
         Log.d(TAG, "Entering thread (ID: " + getId() + ")");
+        mIsClosing = false;
         InputStream tempInputStream = null;
         OutputStream tempOutputStream = null;
         boolean localStreamsCreatedSuccessfully = false;

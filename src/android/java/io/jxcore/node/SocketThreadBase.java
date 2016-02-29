@@ -38,6 +38,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     protected StreamCopyingThread mSendingThread = null;
     protected StreamCopyingThread mReceivingThread = null;
     protected PeerProperties mPeerProperties = null;
+    protected boolean mIsClosing = false;
 
     /**
      * Constructor.
@@ -82,6 +83,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      * Closes all sub threads, sockets and streams.
      */
     public synchronized void close() {
+        mIsClosing = true;
+
         if (mReceivingThread != null) {
             Log.d(TAG, "close: Stopping receiving thread...");
             mReceivingThread.doStop();
@@ -96,6 +99,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
         closeLocalSocketAndStreams();
         closeBluetoothSocketAndStreams();
+        Log.i(TAG, "close: Complete (thread ID: " + getId() + ")");
     }
 
     /**
@@ -127,20 +131,22 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     @Override
     public void onStreamCopyError(StreamCopyingThread who, String errorMessage) {
-        if (who == mReceivingThread) {
-            // The receiving thread is the one having the Bluetooth input stream. Thus, if it fails,
-            // we know that connection was disconnected from the other end.
-            Log.e(TAG, "The receiving thread failed with error \"" + errorMessage
-                    + "\", this is likely due to peer having disconnected");
-        } else if (who == mSendingThread) {
-            // The sending thread has the local input stream. Thus, if it fails, we are getting a
-            // local disconnect.
-            Log.e(TAG, "The sending thread failed with error: " + errorMessage);
-        } else {
-            Log.e(TAG, "Unidentified stream copying thread failed with error: " + errorMessage);
-        }
+        if (!mIsClosing) {
+            if (who == mReceivingThread) {
+                // The receiving thread is the one having the Bluetooth input stream. Thus, if it fails,
+                // we know that connection was disconnected from the other end.
+                Log.e(TAG, "The receiving thread failed with error \"" + errorMessage
+                        + "\", this is likely due to peer having disconnected");
+            } else if (who == mSendingThread) {
+                // The sending thread has the local input stream. Thus, if it fails, we are getting a
+                // local disconnect.
+                Log.e(TAG, "The sending thread failed with error: " + errorMessage);
+            } else {
+                Log.e(TAG, "Unidentified stream copying thread failed with error: " + errorMessage);
+            }
 
-        mListener.onDisconnected(this, errorMessage);
+            mListener.onDisconnected(this, errorMessage);
+        }
     }
 
     /**
@@ -188,7 +194,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             mReceivingThread.setNotifyStreamCopyingProgress(true);
             mReceivingThread.start();
 
-            Log.i(TAG, "startStreamCopyingThreads: OK");
+            Log.i(TAG, "startStreamCopyingThreads: OK (thread ID: " + getId() + ")");
         }
     }
 
@@ -197,36 +203,42 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     protected synchronized void closeLocalSocketAndStreams() {
         if (mLocalhostSocket == null && mLocalInputStream == null && mLocalOutputStream == null) {
-            Log.d(TAG, "closeLocalSocketAndStreams: Nothing to close");
+            Log.d(TAG, "closeLocalSocketAndStreams: Nothing to close (thread ID: " + getId() + ")");
         } else {
-            Log.d(TAG, "closeLocalSocketAndStreams: Closing...");
+            Log.d(TAG, "closeLocalSocketAndStreams: Closing... (thread ID: " + getId() + ")");
         }
 
         if (mLocalInputStream != null) {
             try {
-                Log.d(TAG, "closeLocalSocketAndStreams: Closing the local input stream...");
+                //Log.v(TAG, "closeLocalSocketAndStreams: Closing the local input stream...");
                 mLocalInputStream.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the local input stream: " + e.getMessage(), e);
             }
+
+            mLocalInputStream = null;
         }
 
         if (mLocalOutputStream != null) {
             try {
-                Log.d(TAG, "closeLocalSocketAndStreams: Closing the local output stream...");
+                //Log.v(TAG, "closeLocalSocketAndStreams: Closing the local output stream...");
                 mLocalOutputStream.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the local output stream: " + e.getMessage(), e);
             }
+
+            mLocalOutputStream = null;
         }
 
         if (mLocalhostSocket != null) {
             try {
-                Log.d(TAG, "closeLocalSocketAndStreams: Closing the localhost socket...");
+                //Log.v(TAG, "closeLocalSocketAndStreams: Closing the localhost socket...");
                 mLocalhostSocket.close();
             } catch (IOException e) {
                 Log.e(TAG, "closeLocalSocketAndStreams: Failed to close the localhost socket: " + e.getMessage(), e);
             }
+
+            mLocalhostSocket = null;
         }
     }
 
@@ -234,7 +246,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      * Closes the Bluetooth socket and streams.
      */
     protected synchronized void closeBluetoothSocketAndStreams() {
-        Log.i(TAG, "closeBluetoothSocketAndStreams");
+        Log.d(TAG, "closeBluetoothSocketAndStreams: Closing... (thread ID: " + getId() + ")");
 
         if (mBluetoothInputStream != null) {
             try {

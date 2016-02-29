@@ -40,6 +40,7 @@ class OutgoingSocketThread extends SocketThreadBase {
     @Override
     public void run() {
         Log.d(TAG, "Entering thread (ID: " + getId() + ")");
+        mIsClosing = false;
 
         try {
             mServerSocket = new ServerSocket(0);
@@ -72,8 +73,11 @@ class OutgoingSocketThread extends SocketThreadBase {
                 tempOutputStream = mLocalhostSocket.getOutputStream();
                 localStreamsCreatedSuccessfully = true;
             } catch (IOException e) {
-                Log.e(TAG, "Failed to create local streams: " + e.getMessage(), e);
-                mListener.onDisconnected(this, "Failed to create local streams: " + e.getMessage());
+                if (!mIsClosing) {
+                    String errorMessage =  "Failed to create local streams: " + e.getMessage();
+                    Log.e(TAG, errorMessage, e);
+                    mListener.onDisconnected(this, errorMessage);
+                }
             }
 
             if (localStreamsCreatedSuccessfully) {
