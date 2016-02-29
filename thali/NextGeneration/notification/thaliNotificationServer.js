@@ -132,14 +132,26 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
  * Calls start with no keys to notify. 
  *
  * Errors: 
- *
- * 'Call Start!' - ThaliMobile.Start has to be called before calling this
- * function
- *
+ * TODO: lists errors that stopAdvertisingAndListening can return  
  * @returns {Promise<?error>}
  */
 ThaliNotificationServer.prototype.stop = function () {
-  return this.start([]);
+  var self = this;
+  return this._promiseQueue.enqueue(function (resolve, reject) {
+    if (!self._firstStartCall) {
+      self._preambleAndBeacons = null;
+      ThaliMobile.stopAdvertisingAndListening()
+      .then(function () {
+        return resolve();
+      }).catch(function (error) {
+        // Returns errors from the stopAdvertisingAndListening
+        return reject(error);
+      });
+    } else {
+      // We do nothing if the start is not called yet        
+      return resolve();
+    }
+  });
 };
 
 /**

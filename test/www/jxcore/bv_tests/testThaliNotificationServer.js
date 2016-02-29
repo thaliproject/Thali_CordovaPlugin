@@ -46,9 +46,17 @@ var GlobalVariables = function () {
   MockThaliMobile.startUpdateAdvertisingAndListening = function () {
     return Promise.resolve();
   };
+
+  // Mocks ThaliMobile.stopAdvertisingAndListening function
+  MockThaliMobile.stopAdvertisingAndListening = function () {
+    return Promise.resolve();
+  };
   
   this.spyStartUpdateAdvertisingAndListening = 
     sinon.spy(MockThaliMobile, 'startUpdateAdvertisingAndListening');
+
+  this.spyStopAdvertisingAndListening = 
+    sinon.spy(MockThaliMobile, 'stopAdvertisingAndListening');
   
 };
 
@@ -64,7 +72,6 @@ GlobalVariables.prototype.init = function () {
       if (err != null) {
         reject(err);
       } else {
-
         self.TESTURL = 'http://' + '127.0.0.1' + ':' + 
         self.expressServer.address().port + 
         ThaliNotificationServer.NOTIFICATION_BEACON_PATH;
@@ -145,8 +152,13 @@ test('Start and stop ThaliNotificationServer', function (t) {
   
   globalVariables.notificationServer.start(publicKeysToNotify).then(function () {
     globalVariables.notificationServer.stop().then(function () {
+
       t.equals(globalVariables.spyStartUpdateAdvertisingAndListening.callCount,
-      2, 'StartUpdateAdvertisingAndListening should be called twice');
+      1, 'ThaliMobile.StartUpdateAdvertisingAndListening should be called once');
+      
+      t.equals(globalVariables.spyStopAdvertisingAndListening.callCount,
+      1, 'ThaliMobile.StopAdvertisingAndListening should be called once');
+      
       t.end();
     }).catch(function (failure) {
       t.fail('Stopping failed:' + failure);
@@ -171,7 +183,10 @@ test('Pass an empty array to ThaliNotificationServer.start', function (t) {
       t.equals(globalVariables.spyStartUpdateAdvertisingAndListening.callCount,
       0, 'StartUpdateAdvertisingAndListening should not be called');
       ThaliHttpTester.runTest(globalVariables.TESTURL, httpResponseHandler);
-      
+
+      t.equals(globalVariables.spyStopAdvertisingAndListening.callCount,
+      1, 'ThaliMobile.StopAdvertisingAndListening should be called once');
+
     }).catch(function (failure) {
       t.fail('Stopping failed:' + failure);
       t.end();
