@@ -663,7 +663,7 @@ function (skipPromiseQueue, changeTarget) {
  *
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
  * OS/X or Windows. In the case that we are running on those platforms then If
- * we are running on those platforms then blueToothLowEnergy and blueTooth MUST
+ * we are running on those platforms then bluetoothLowEnergy and bluetooth MUST
  * both return radioState set to `doNotCare`. Also note that these platforms
  * don't generally support a push based way to detect WiFi state (at least not
  * without writing native code). So for now we can use polling and something
