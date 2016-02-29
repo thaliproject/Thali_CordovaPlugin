@@ -350,6 +350,23 @@ test('functions are run from a queue in the right order', function (t) {
   });
 });
 
+test('network changes are ignored while stopping', function (t) {
+  wifiInfrastructure.startListeningForAdvertisements()
+  .then(function () {
+    wifiInfrastructure.states.stopping = true;
+    var spy = sinon.spy(wifiInfrastructure, 'startListeningForAdvertisements');
+    testUtils.toggleWifi(false)
+    .then(function () {
+      return testUtils.toggleWifi(true);
+    })
+    .then(function () {
+      t.equals(spy.callCount, 0, 'should not be called');
+      wifiInfrastructure.startListeningForAdvertisements.restore();
+      t.end();
+    });
+  });
+});
+
 // From here onwards, tests only work on mocked up desktop
 // environment where network changes can be simulated.
 if (jxcore.utils.OSInfo().isMobile) {

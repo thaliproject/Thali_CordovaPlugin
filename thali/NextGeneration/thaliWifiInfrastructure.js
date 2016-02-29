@@ -122,9 +122,9 @@ function (networkChangedValue) {
   var self = this;
   // If we are stopping or the wifi state hasn't changed,
   // we are not really interested.
-  if (self.states.stopping === true,
-      self.states.networkState !== null &&
-      networkChangedValue.wifi === self.states.networkState.wifi) {
+  if (self.states.stopping === true ||
+      (self.states.networkState !== null &&
+      networkChangedValue.wifi === self.states.networkState.wifi)) {
     return;
   }
   self.states.networkState = networkChangedValue;
