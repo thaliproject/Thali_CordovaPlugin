@@ -5,10 +5,16 @@ var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
 var EventEmitter = require('events').EventEmitter;
 var logger = require('../thalilogger')('thaliMobileNativeWrapper');
+var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
+var express = require('express');
 
 var states = {
   started: false
 };
+
+var routerExpress = null;
+var routerServer = null;
+var routerServerPort = 0;
 
 /** @module thaliMobileNativeWrapper */
 
@@ -68,6 +74,9 @@ var states = {
  *
  * This method can be called after stop since this is a singleton object.
  *
+ * If the given router can't be used as express router, a "Bad Router"
+ * error MUST be returned.
+ *
  * @public
  * @param {Object} router This is an Express Router object (for example,
  * express-pouchdb is a router object) that the caller wants the non-TCP
@@ -77,9 +86,23 @@ var states = {
  */
 module.exports.start = function (router) {
   return promiseQueue.enqueue(function (resolve, reject) {
-    // TODO: Implement the specified logic
-    states.started = true;
-    resolve();
+    if (states.started) {
+      return reject(new Error('Call Stop!'));
+    }
+    routerExpress = express();
+    try {
+      routerExpress.use('/', router);
+    } catch (error) {
+      logger.error('Unable to use the given router: %s', error.toString());
+      return reject(new Error('Bad Router'));
+    }
+    routerServer = routerExpress.listen(0, function () {
+      routerServer = makeIntoCloseAllServer(routerServer);
+      routerServerPort = routerServer.address().port;
+      // TODO: Create TCP server manager with above port
+      states.started = true;
+      resolve();
+    });
   });
 };
 
@@ -96,9 +119,19 @@ module.exports.start = function (router) {
  */
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    // TODO: Implement the specified logic
-    states.started = false;
-    resolve();
+    var doStop = function () {
+      // TODO: Stop TCP server manager
+      states.started = false;
+      resolve();
+    };
+    if (routerServer === null) {
+      doStop();
+      return;
+    }
+    routerServer.closeAll(function () {
+      routerServer = null;
+      doStop();
+    });
   });
 };
 
@@ -127,7 +160,9 @@ module.exports.stop = function () {
  */
 module.exports.startListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    // TODO: Implement the specified logic
+    if (!states.started) {
+      return reject(new Error('Call Start!'));
+    }
     resolve();
   });
 };
@@ -221,7 +256,9 @@ module.exports.stopListeningForAdvertisements = function () {
  */
 module.exports.startUpdateAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    // TODO: Implement the specified logic
+    if (!states.started) {
+      return reject(new Error('Call Start!'));
+    }
     resolve();
   });
 };
@@ -344,18 +381,14 @@ module.exports.killConnections = function () {
  * peerAvailable = false for that peer. But when the system decides to issue a
  * peer not available event it MUST issue a {@link
  * event:nonTCPPeerAvailabilityChangedEvent} with peerIdentifier set to the
- * value in the peer object, portNumber set to null and suggestedTCPTimeout not
- * set.
+ * value in the peer object and portNumber set to null.
  *
  * If a peer's peerAvailable is set to true then we MUST call {@link
  * module:tcpServersManager.createPeerListener}. If an error is returned then
  * the error MUST be logged and we MUST treat this as if we received the value
  * with peerAvailable equal to false. If the call is a success then we MUST
  * issue a {@link event:nonTCPPeerAvailabilityChangedEvent} with peerIdentifier
- * set to the value in the peer object, portNumber set to the returned value and
- * suggestedTCPTimeout set based on the behavior we have seen on the platform.
- * That is, some non-TCP technologies can take longer to set up a connection
- * than others so we need to warn those upstream of that.
+ * set to the value in the peer object and portNumber set to the returned value.
  *
  * @public
  * @typedef {Object} nonTCPPeerAvailabilityChanged
@@ -363,9 +396,6 @@ module.exports.killConnections = function () {
  * @property {number|null} portNumber If this value is null then the system is advertising that it no longer believes
  * this peer is available. If this value is non-null then it is a port on 127.0.0.1 at which the local peer can
  * connect in order to establish a TCP/IP connection to the remote peer.
- * @property {number} [suggestedTCPTimeout] Based on the characteristics of the underlying non-TCP transport how long
- * the system suggests that the caller be prepared to wait before the TCP/IP connection to the remote peer can be
- * set up. This is measured in milliseconds.
  */
 
 /**
