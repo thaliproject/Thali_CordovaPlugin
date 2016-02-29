@@ -490,7 +490,6 @@ TCPServersManager.prototype._createNativeListener = function (routerPort) {
         mux._incoming.end();
         mux._incoming._mux = null;
         mux._incoming = null;
-        removeArrayElement(self._nativeServer._incoming, incoming);
       });
 
       // The client connection may have run it's connection
