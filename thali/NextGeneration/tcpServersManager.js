@@ -476,6 +476,7 @@ TCPServersManager.prototype._createNativeListener = function (routerPort) {
 
       mux.__id = nextId();
       incoming._mux = mux;
+      mux._incoming = incoming;
       mux._streams = [];
 
       logger.debug('new mux', mux.__id);
@@ -487,6 +488,8 @@ TCPServersManager.prototype._createNativeListener = function (routerPort) {
       mux.on('close', function () {
         logger.debug('mux close');
         mux._incoming.end();
+        mux._incoming._mux = null;
+        mux._incoming = null;
         removeArrayElement(self._nativeServer._incoming, incoming);
       });
 
