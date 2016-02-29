@@ -840,23 +840,6 @@ ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', emitNetworkChanged);
 thaliWifiInfrastructure.on('networkChangedWifi', emitNetworkChanged);
 
 /**
- * If we receive a {@link
- * module:thaliMobileNativeWrapper~incomingConnectionToPortNumberFailed} and we
- * are in stop state then it means that we had a race condition where someone
- * tried to connect to the server just as we were killing it. If we get this in
- * the start state after having turned on advertising then it means that our
- * server has failed. The best we can do is try to close the server and open it
- * again.
- */
-ThaliMobileNativeWrapper.emitter.on('incomingConnectionToPortNumberFailed',
-  function (portNumber) {
-    // TODO: Should this event be handled internally within
-    // thaliMobileNativeWrapper who manages the TCP servers anyways?
-    // Is there a need to react to this event at all in thaliMobile?
-  }
-);
-
-/**
  * Use this emitter to subscribe to events
  *
  * @public
