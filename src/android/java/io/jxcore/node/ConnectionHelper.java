@@ -114,13 +114,14 @@ public class ConnectionHelper
     public synchronized boolean start(
             int serverPortNumber, boolean startAdvertisements, JXcoreThaliCallback callback) {
         Log.i(TAG, "start: "
-                + "Port number: " + serverPortNumber
+                + "Port number: " + ((serverPortNumber > 0) ? serverPortNumber : mServerPortNumber)
                 + ", start advertisements: " + startAdvertisements);
 
         if (serverPortNumber > 0) {
             mServerPortNumber = serverPortNumber;
         }
 
+        restoreDefaultBleDiscoverySettings();
         mHandshakeHelper.reinitiate();
 
         if (!mConnectivityInfo.startMonitoring()) {
@@ -743,12 +744,7 @@ public class ConnectionHelper
 
                 @Override
                 public void onFinish() {
-                    this.cancel();
-                    Log.i(TAG, "Powering the BLE discovery back up");
-                    mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
-                    mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
-                    mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
-                    mPowerUpBleDiscoveryTimer = null;
+                    restoreDefaultBleDiscoverySettings();
                 }
             };
 
@@ -761,6 +757,21 @@ public class ConnectionHelper
             // Restart the timer
             mPowerUpBleDiscoveryTimer.cancel();
             mPowerUpBleDiscoveryTimer.start();
+        }
+    }
+
+    /**
+     * Restores the default Bluetooth LE discovery settings.
+     */
+    private synchronized void restoreDefaultBleDiscoverySettings() {
+        if (mPowerUpBleDiscoveryTimer != null) {
+            Log.i(TAG, "restoreDefaultBleDiscoverySettings: Powering the BLE discovery back up");
+            mPowerUpBleDiscoveryTimer.cancel();
+            mPowerUpBleDiscoveryTimer = null;
+
+            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+            mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
+            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
         }
     }
 }

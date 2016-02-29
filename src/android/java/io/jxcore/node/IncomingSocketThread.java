@@ -27,7 +27,7 @@ class IncomingSocketThread extends SocketThreadBase {
     public IncomingSocketThread(BluetoothSocket bluetoothSocket, Listener listener)
             throws IOException {
         super(bluetoothSocket, listener);
-        TAG = IncomingSocketThread.class.getName();
+        mTag = IncomingSocketThread.class.getName();
     }
 
     public int getTcpPortNumber() {
@@ -48,7 +48,7 @@ class IncomingSocketThread extends SocketThreadBase {
      */
     @Override
     public void run() {
-        Log.d(TAG, "Entering thread (ID: " + getId() + ")");
+        Log.d(mTag, "Entering thread (ID: " + getId() + ")");
         mIsClosing = false;
         InputStream tempInputStream = null;
         OutputStream tempOutputStream = null;
@@ -58,23 +58,23 @@ class IncomingSocketThread extends SocketThreadBase {
             Inet4Address mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
             mLocalhostSocket = new Socket(mLocalHostAddress, mTcpPortNumber);
 
-            Log.i(TAG, "Local host address: " + getLocalHostAddressAsString() + ", port: " + getLocalHostPort());
+            Log.i(mTag, "Local host address: " + getLocalHostAddressAsString() + ", port: " + getLocalHostPort());
 
             tempInputStream = mLocalhostSocket.getInputStream();
             tempOutputStream = mLocalhostSocket.getOutputStream();
             localStreamsCreatedSuccessfully = true;
         } catch (IOException e) {
-            Log.e(TAG, "Failed to create the local streams: " + e.getMessage(), e);
+            Log.e(mTag, "Failed to create the local streams: " + e.getMessage(), e);
             mListener.onDisconnected(this, "Failed to create the local streams: " + e.getMessage());
         }
 
         if (localStreamsCreatedSuccessfully) {
-            Log.d(TAG, "Setting local streams and starting stream copying threads...");
+            Log.d(mTag, "Setting local streams and starting stream copying threads...");
             mLocalInputStream = tempInputStream;
             mLocalOutputStream = tempOutputStream;
             startStreamCopyingThreads();
         }
 
-        Log.d(TAG, "Exiting thread (ID: " + getId() + ")");
+        Log.d(mTag, "Exiting thread (ID: " + getId() + ")");
     }
 }

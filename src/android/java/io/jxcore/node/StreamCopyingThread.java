@@ -101,11 +101,11 @@ class StreamCopyingThread extends Thread {
                 // Uncomment the logging, if you need to debug the stream copying process.
                 // However, note that Log calls are quite heavy and should be used here only, if
                 // necessary.
-                //Log.d(TAG, "Read " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
+                //Log.d(mTag, "Read " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
 
                 mOutputStream.write(buffer, 0, numberOfBytesRead); // Can throw IOException
 
-                //Log.d(TAG, "Wrote " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
+                //Log.d(mTag, "Wrote " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
 
                 if (mNotifyStreamCopyingProgress) {
                     mListener.onStreamCopySucceeded(this, numberOfBytesRead);
