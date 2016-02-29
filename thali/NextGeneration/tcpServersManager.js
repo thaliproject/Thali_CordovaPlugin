@@ -728,6 +728,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
   function _do(resolve, reject) {
 
     if (self._peerServers[peerIdentifier]) {
+      resolve(self._peerServers[peerIdentifier].address().port);
       return;
     }
 
