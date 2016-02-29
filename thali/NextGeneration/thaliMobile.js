@@ -677,14 +677,10 @@ var peerAvailabilityWatcher = function () {
     Object.keys(peerAvailabilities[connectionType])
     .forEach(function (peerIdentifier) {
       var peer = peerAvailabilities[connectionType][peerIdentifier];
-      var unavailabilityThreshold = 0;
-      if (connectionType === connectionTypes.TCP_NATIVE) {
-        unavailabilityThreshold =
-          ThaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
-      } else {
-        unavailabilityThreshold =
-          ThaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
-      }
+      var unavailabilityThreshold =
+        connectionType === connectionTypes.TCP_NATIVE ?
+        ThaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
+        ThaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
       // If the time from the latest availability advertisement doesn't
       // exceed the threshold, no need to do anything.
       if (peer.availableSince + unavailabilityThreshold < now) {
