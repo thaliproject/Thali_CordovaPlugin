@@ -179,6 +179,10 @@ TCPServersManager.prototype.start = function () {
       reject('We are stopped!');
       return;
     }
+    if (self._state == 'started') {
+      resolve(self._nativeServer.address().port);
+      return;
+    }
     self._state = 'started';
     self._createNativeListener(self._routerPort)
     .then(function (localPort) {
@@ -775,8 +779,6 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
       // Handle a new connection from the app to the server
 
-      var firstConnection = true;
-
       function findMuxForReverseConnection(_port) {
         // Find the mux for the reverse connection based on
         // incoming socket's remote port
@@ -835,7 +837,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
             'error': 'Mismatched serverPort',
             'peerIdentifier':peerIdentifier
           });
-          firstConnection = true;
+          server._firstConnection = true;
           return;
         }
 
@@ -849,7 +851,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
             'error':'Incoming connection died',
             'peerIdentifier':peerIdentifier
           });
-          firstConnection = true;
+          server._firstConnection = true;
           return false;
         }
 
@@ -869,9 +871,9 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
         incoming.pipe(stream).pipe(incoming);
       }
 
-      if (!pleaseConnect && firstConnection) {
+      if (!pleaseConnect && server._firstConnection) {
 
-        firstConnection = false;
+        server._firstConnection = false;
         logger.debug('first connection');
 
         Mobile('connect').callNative(peerIdentifier, // jshint ignore:line
@@ -941,6 +943,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
       var server = makeIntoCloseAllServer(net.createServer());
       server.__peerIdentifier = peerIdentifier;
+      server._firstConnection = true;
 
       server.on('connection', onNewConnection);
 

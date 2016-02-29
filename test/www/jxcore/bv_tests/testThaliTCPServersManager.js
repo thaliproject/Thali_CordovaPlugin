@@ -46,6 +46,27 @@ test("can start/stop servers manager", function(t) {
   });
 });
 
+test("starting twice resolves with listening port", function(t) {
+  var serversManager = new ThaliTCPServersManager(4242);
+  serversManager.start()
+  .then(function(localPort) {
+    serversManager.start()
+    .then(function (port) {
+      t.equal(localPort, port, "second start should return same port");
+      serversManager.stop();
+      t.end();
+    })
+    .catch(function(err) {
+      t.fail("server should not get error - " + err);
+      serversManager.stop();
+    });
+  })
+  .catch(function(err) {
+    t.fail("server should not get error - " + err);
+    serversManager.stop();
+  });
+});
+
 test("calling startNativeListener directly throws", function(t) {
   var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
