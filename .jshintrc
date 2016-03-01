@@ -1,5 +1,4 @@
 {
-  "esversion": 5,
   "eqeqeq": true,
   "noarg": true,
   "undef": true,
