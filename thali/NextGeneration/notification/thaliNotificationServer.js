@@ -57,7 +57,7 @@ ThaliNotificationServer.NOTIFICATION_BEACON_PATH =
  * which is registered on the submitted router object. 
  *
  * Every time this method is called advertised beacons are updated with the
- * submitted value, including NULL which starts to returning 204s.
+ * submitted value, including [] which starts to returning 204s.
  *
  * Errors: 
  *
@@ -112,7 +112,7 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
     
     // Following if clause ensures that we don't call 
     // startUpdateAdvertisingAndListening when the last two 
-    // start calls have had publicKeysToNotify as a null.
+    // start calls have had publicKeysToNotify as an empty array ([]).
     if (self._preambleAndBeacons != null || 
         previousPreambleAndBeacons != null) {
         
@@ -129,40 +129,37 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
 };
 
 /**
- * Calls start with no keys to notify. 
- *
- * Errors: 
- * TODO: lists errors that stopAdvertisingAndListening can return  
+ * Starts to returning 204 No Content to beacon requests. Also Stops 
+ * advertising beacons and tells the native layer to stop advertising 
+ * the presence of the peer, stop accepting incoming connections over the 
+ * non-TCP/IP transport and to disconnect all existing non-TCP/IP
+ * transport incoming connections.
+ * 
+ * Errors:
+ * 'Failed' - ThaliMobile.stopAdvertisingAndListening failed. 
+ * Check the logs for details.
  * @returns {Promise<?error>}
  */
 ThaliNotificationServer.prototype.stop = function () {
   var self = this;
   return this._promiseQueue.enqueue(function (resolve, reject) {
-    if (!self._firstStartCall) {
-      self._preambleAndBeacons = null;
-      ThaliMobile.stopAdvertisingAndListening()
-      .then(function () {
-        return resolve();
-      }).catch(function (error) {
-        // Returns errors from the stopAdvertisingAndListening
-        return reject(error);
-      });
-    } else {
-      // We do nothing if the start is not called yet        
+    self._preambleAndBeacons = null;
+    ThaliMobile.stopAdvertisingAndListening()
+    .then(function () {
       return resolve();
-    }
+    }).catch(function (error) {
+      // Returns errors from the ThaliMobile.stopAdvertisingAndListening
+      return reject(error);
+    });
   });
 };
 
 /**
  * Registers a new get handler for /NotificationBeacons path.
  *
- * If publicKeysToNotify is null then any GET requests on the endpoint is 
+ * If _preambleAndBeacons is null then any GET requests on the endpoint is 
  * responded to with 204.
  *
- * If requests/second for this endpoint exceed a set threshold responds 
- * with a 503 server overloaded.
- * 
  * Otherwise the endpoint responds with an application/octet-stream
  * content-type with cache-control: no-cache and a response body containing
  * the properly generated beacon contents.
