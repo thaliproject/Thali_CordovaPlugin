@@ -239,6 +239,11 @@ test("can call createPeerListener (pleaseConnect == false)", function(t) {
 });
 
 test("calling createPeerListener (pleaseConnect == true) with unknown peer is error", function(t) {
+  
+  Mobile("connect").nextNative(function(peerIdentifier, cb) {
+    cb("Unknown peer", null);
+  });
+
   var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function(localPort) {
@@ -362,7 +367,7 @@ test("peerListener - forwardConnection, pleaseConnect == false - no native serve
   // We expect 'failedConnection' since there's no native listener
   var serversManager = new ThaliTCPServersManager(applicationPort);
   serversManager.on("failedConnection", function(err) {
-    t.ok(firstConnection, "should not get event until connection is made");
+    t.ok(firstConnection, "Should not get event until connection is made");
     t.equal(err.error, "Cannot Connect To Peer", "reason should be as expected");
     serversManager.stop();
     t.end();
@@ -380,18 +385,27 @@ test("peerListener - forwardConnection, pleaseConnect == true - with native serv
   var nativePort = 4040;
   var applicationPort = 4242;
 
+  var outgoingSocket;
+  var serverAccepted = false;
+  var clientConnected = false;
+
   var serversManager = new ThaliTCPServersManager(applicationPort);
   serversManager.on("failedConnection", function(err) {
     t.fail("Shouldn't fail to connect to native listener");
   });
 
   var nativeServer = net.createServer(function(socket) {
+    serverAccepted = true;
+    outgoingSocket = socket;
     t.ok(true, "Should get spontaneous connection");
-    serversManager.stop();
-    nativeServer.close();
-    socket.end();
-    t.end();
+    if (clientConnected) {
+      outgoingSocket.end();
+      serversManager.stop();
+      nativeServer.close();
+      t.end();
+    }
   });
+
   nativeServer.listen(nativePort, function(err) {
     if (err) {
       t.fail("nativeServer should not fail");
@@ -400,7 +414,14 @@ test("peerListener - forwardConnection, pleaseConnect == true - with native serv
   });
 
   setUp(t, serversManager, applicationPort, nativePort, true, false, function(peerPort) {
+    clientConnected = true;
     t.notEqual(peerPort, nativePort, "peerPort != nativePort");
+    if (serverAccepted) {
+      outgoingSocket.end();
+      serversManager.stop();
+      nativeServer.close();
+      t.end();
+    }
   });
 });
 
@@ -467,6 +488,100 @@ test("createPeerListener is idempotent", function(t) {
   
   startServersManager(t, serversManager);
   startAdvertisingAndListening(t, applicationPort, false);
+});
+
+test("createPeerListener - pleaseConnect == true, failed connection rejects promise", function(t) {
+
+  var nativePort = 4040;
+  var applicationPort = 4242;
+  var firstConnection = false;
+
+  Mobile("connect").nextNative(function(peerIdentifier, cb) {
+    cb("a nasty error", null);
+  });
+
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+  serversManager.on("failedConnection", function(err) {
+    t.fail("connection shouldn't fail");
+    t.end();
+  });
+
+  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+    peers.forEach(function(peer) {
+      if (peer.peerAvailable) {
+        serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
+        .then(function(peerPort) {
+          t.fail("should not succeed when connection fails");
+          serversManager.stop();
+          t.end();
+        })
+        .catch(function(err) {
+          t.equal("a nasty error", err, "failed connection should reject with error");
+          serversManager.stop();
+          t.end();
+        });
+      }
+    });
+  });
+
+  startServersManager(t, serversManager);
+  startAdvertisingAndListening(t, applicationPort, true);
+});
+
+test("createPeerListener - pleaseConnect == true, connection resolves promise", function(t) {
+
+  var nativePort = 4040;
+  var applicationPort = 4242;
+
+  Mobile("connect").nextNative(function(peerIdentifier, cb) {
+    cb(null, {
+      listeningPort:nativePort, clientPort:0, serverPort: 0
+    });
+  });
+
+  var serversManager = new ThaliTCPServersManager(applicationPort);
+  serversManager.on("failedConnection", function(err) {
+    if (!serversManager._closing) {
+      t.fail("Shouldn't fail to connect to native listener");
+      t.end();
+    }
+  });
+
+  var nativeServer = net.createServer(function(socket) {
+    t.ok(true, "Should get spontaneous connection");
+    socket.end();
+  });
+
+  nativeServer.listen(nativePort, function(err) {
+    if (err) {
+      t.fail("nativeServer should not fail");
+      t.end();
+    }
+  });
+
+  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+    peers.forEach(function(peer) {
+      if (peer.peerAvailable) {
+        serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
+        .then(function(peerPort) {
+          t.ok(true, "promise should resolve");
+          nativeServer.close();
+          serversManager.stop();
+          
+          t.end();
+        })
+        .catch(function(err) {
+          t.fail("should not fail - " + err);
+          serversManager.stop();
+          nativeServer.close();
+          t.end();
+        });
+      }
+    });
+  });
+
+  startServersManager(t, serversManager);
+  startAdvertisingAndListening(t, applicationPort, true);
 });
 
 // reverseConnections

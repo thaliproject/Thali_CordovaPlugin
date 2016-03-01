@@ -28,6 +28,7 @@ var Mobile = function (key) {
         if (next[key].length == 0) {
           delete next[key];
         }
+        //console.log(fn.toString());
         fn.apply(this, arguments);
         return;
       }
