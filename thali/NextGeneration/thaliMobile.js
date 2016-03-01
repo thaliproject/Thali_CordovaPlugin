@@ -1,7 +1,6 @@
 /* global hostAddress */
 'use strict';
 
-var Promise = require('lie');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
@@ -13,6 +12,10 @@ var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 
 var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
 var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
+
+var Promise = require('lie');
+var PromiseQueue = require('./promiseQueue');
+var promiseQueue = new PromiseQueue();
 
 var promiseResultSuccessOrFailure = function (promise) {
   return promise.then(function (success) {
@@ -29,11 +32,15 @@ var getCombinedResult = function (results) {
   };
 };
 
-var thaliMobileStates = {
-  started: false,
-  listening: false,
-  advertising: false
+var getInitialStates = function () {
+  return {
+    started: false,
+    listening: false,
+    advertising: false
+  };
 };
+
+var thaliMobileStates = getInitialStates();
 
 var handleNetworkChanged = function (networkChangedValue) {
   if (networkChangedValue.wifi === 'off') {
@@ -147,20 +154,26 @@ var handleNetworkChanged = function (networkChangedValue) {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.start = function (router) {
-  if (thaliMobileStates.started === true) {
-    return Promise.reject(new Error('Call Stop!'));
-  }
-  thaliMobileStates.started = true;
-  module.exports.emitter.on('networkChanged', handleNetworkChanged);
-  return Promise.all([
-    promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.start(router)
-    ),
-    promiseResultSuccessOrFailure(
-      ThaliMobileNativeWrapper.start(router)
-    )
-  ]).then(function (results) {
-    return getCombinedResult(results);
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (thaliMobileStates.started === true) {
+      return reject(new Error('Call Stop!'));
+    }
+    thaliMobileStates.started = true;
+    peerAvailabilityWatcherInterval = setInterval(
+      peerAvailabilityWatcher,
+      ThaliConfig.PEER_AVAILABILITY_WATCHER_INTERVAL
+    );
+    module.exports.emitter.on('networkChanged', handleNetworkChanged);
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.start(router)
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.start(router)
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
+    });
   });
 };
 
@@ -176,24 +189,29 @@ module.exports.start = function (router) {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stop = function () {
-  thaliMobileStates.started = false;
-  module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
-  return Promise.all([
-    promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.stop()
-    ),
-    promiseResultSuccessOrFailure(
-      ThaliMobileNativeWrapper.stop()
-    )
-  ]).then(function (results) {
-    return getCombinedResult(results);
+  return promiseQueue.enqueue(function (resolve, reject) {
+    thaliMobileStates = getInitialStates();
+    clearInterval(peerAvailabilityWatcherInterval);
+    module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.stop()
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.stop()
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
+    });
   });
 };
 
 /**
- * This method calls the underlying startListeningForAdvertisements on
- * whichever radio stack is currently in start state. Note that once this method
- * is called it is giving explicit permission to this code to call this method
+ * This method calls the underlying startListeningForAdvertisements
+ * functions.
+ * 
+ * Note that once this method is called
+ * it is giving explicit permission to this code to call this method
  * on a radio stack that is currently disabled when the method is called but is
  * later re-enabled due to a network changed event. In other words if {@link
  * module:thaliMobile.start} is called and say WiFi doesn't work. Then this
@@ -213,31 +231,25 @@ module.exports.stop = function () {
  * This method MUST NOT be called if the object is not in start state or a
  * "Call Start!" error MUST be returned.
  *
- * The combinedResult MUST return an error of "Not Active" for any radio type
- * that we did not call startListeningForAdvertisements on.
- *
  * @public
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.startListeningForAdvertisements = function () {
-  if (thaliMobileStates.started === false) {
-    return Promise.reject(new Error('Call Start!'));
-  }
-  thaliMobileStates.listening = true;
-  var resultObject = {};
-  var promiseList = [];
-  if (thaliWifiInfrastructure.states.started) {
-    promiseList.push(promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.startListeningForAdvertisements()
-    ));
-  } else {
-    resultObject.wifiResult = new Error('Not Active');
-  }
-  return Promise.all(promiseList).then(function (results) {
-    return {
-      wifiResult: resultObject.wifiResult || results[0] || null,
-      nativeResult: null // results[1] || null
-    };
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (thaliMobileStates.started === false) {
+      return reject(new Error('Call Start!'));
+    }
+    thaliMobileStates.listening = true;
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.startListeningForAdvertisements()
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.startListeningForAdvertisements()
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
+    });
   });
 };
 
@@ -252,22 +264,24 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopListeningForAdvertisements = function () {
-  return Promise.all([
-    promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.stopListeningForAdvertisements()
-    )
-  ]).then(function (results) {
-    return {
-      wifiResult: results[0] || null
-      //nativeResult: results[1] || null
-    };
+  return promiseQueue.enqueue(function (resolve, reject) {
+    thaliMobileStates.listening = false;
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.stopListeningForAdvertisements()
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.stopListeningForAdvertisements()
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
+    });
   });
 };
 
 /**
- * This method calls the underlying
- * startUpdateAdvertisingAndListening on whichever radio
- * stack is currently in start state. This method has the same behavior as
+ * This method calls the underlying startUpdateAdvertisingAndListening
+ * functions. This method has the same behavior as
  * {@link module:thaliMobile.startListeningForAdvertisements} in that if a radio
  * type that was inactive should later become available and we are in start
  * state then we will try to call start and if that works and
@@ -283,24 +297,21 @@ module.exports.stopListeningForAdvertisements = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.startUpdateAdvertisingAndListening = function () {
-  if (thaliMobileStates.started === false) {
-    return Promise.reject(new Error('Call Start!'));
-  }
-  thaliMobileStates.advertising = true;
-  var resultObject = {};
-  var promiseList = [];
-  if (thaliWifiInfrastructure.states.started) {
-    promiseList.push(promiseResultSuccessOrFailure(
-      thaliWifiInfrastructure.startUpdateAdvertisingAndListening()));
-  } else {
-    resultObject.wifiResult = new Error('Not Active');
-  }
-  // TODO: Add native call
-  return Promise.all(promiseList).then(function (results) {
-    return {
-      wifiResult: resultObject.wifiResult || results[0] || null
-      //nativeResult: results[1] || null
-    };
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (thaliMobileStates.started === false) {
+      return reject(new Error('Call Start!'));
+    }
+    thaliMobileStates.advertising = true;
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.startUpdateAdvertisingAndListening()
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
+    });
   });
 };
 
@@ -316,7 +327,19 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopAdvertisingAndListening = function () {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    thaliMobileStates.advertising = false;
+    Promise.all([
+      promiseResultSuccessOrFailure(
+        thaliWifiInfrastructure.stopAdvertisingAndListening()
+      ),
+      promiseResultSuccessOrFailure(
+        ThaliMobileNativeWrapper.stopAdvertisingAndListening()
+      )
+    ]).then(function (results) {
+      resolve(getCombinedResult(results));
+    });
+  });
 };
 
 /**
@@ -334,7 +357,12 @@ module.exports.stopAdvertisingAndListening = function () {
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
 module.exports.getNetworkStatus = function () {
-  return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
+    .then(function (nonTCPNetworkStatus) {
+      resolve(nonTCPNetworkStatus);
+    });
+  });
 };
 
 /*
@@ -562,7 +590,9 @@ var changeCachedPeerUnavailable = function (peer) {
 };
 
 var changeCachedPeerAvailable = function (peer) {
-  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = peer;
+  var cachedPeer = JSON.parse(JSON.stringify(peer));
+  cachedPeer.availableSince = Date.now();
+  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
 };
 
 var changePeersUnavailable = function (connectionType) {
@@ -621,7 +651,8 @@ var handlePeer = function (peer, connectionType) {
   module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
 
-ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peer) {
+ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+function (peer) {
   var connectionType =
     jxcore.utils.OSInfo().isAndroid ?
     connectionTypes.BLUETOOTH :
@@ -632,6 +663,38 @@ ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', functi
 thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
   handlePeer(peer, connectionTypes.TCP_NATIVE);
 });
+
+var peerAvailabilityWatcherInterval = null;
+// A watcher function that monitors peer availabilities
+// and tries to determine when a peer is no longer available
+// based on characteristics of each connection type.
+// The watcher is started on an interval in start function
+// and stopped in stop function.
+var peerAvailabilityWatcher = function () {
+  var now = Date.now();
+  Object.keys(connectionTypes).forEach(function (connectionTypeKey) {
+    var connectionType = connectionTypes[connectionTypeKey];
+    Object.keys(peerAvailabilities[connectionType])
+    .forEach(function (peerIdentifier) {
+      var peer = peerAvailabilities[connectionType][peerIdentifier];
+      var unavailabilityThreshold =
+        connectionType === connectionTypes.TCP_NATIVE ?
+        ThaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
+        ThaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
+      // If the time from the latest availability advertisement doesn't
+      // exceed the threshold, no need to do anything.
+      if (peer.availableSince + unavailabilityThreshold < now) {
+        return;
+      }
+      changeCachedPeerUnavailable(peer);
+      module.exports.emitter.emit('peerAvailabilityChanged', {
+        peerIdentifier: peerIdentifier,
+        hostAddress: null,
+        portNumber: null
+      });
+    });
+  });
+};
 
 /**
  * Fired whenever our state changes.
@@ -652,14 +715,52 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
  * active on WiFi
  */
 
-var emitDiscoveryAdvertisingStateUpdate =
-function (discoveryAdvertisingStateUpdateValue) {
+var discoveryAdvertisingState = {
+  nonTCPDiscoveryActive: false,
+  nonTCPAdvertisingActive: false,
+  wifiDiscoveryActive: false,
+  wifiAdvertisingActive: false
+};
+var getDiscoveryAdvertisingState = function () {
+  var state = JSON.parse(JSON.stringify(discoveryAdvertisingState));
+  state.discoveryActive = thaliMobileStates.listening;
+  state.advertisingActive = thaliMobileStates.advertising;
+  return state;
+};
+var verifyDiscoveryAdvertisingState = function (state) {
+  var listening = thaliMobileStates.listening;
+  var advertising = thaliMobileStates.advertising;
+  if (listening !== state.discoveryActive ||
+      advertising !== state.advertisingActive) {
+    logger.info('Received state did not match with target: %s',
+      JSON.stringify(getDiscoveryAdvertisingState())
+    );
+  }
+};
+
+var emittedDiscoveryAdvertisingStateUpdate = {};
+
+var emitDiscoveryAdvertisingStateUpdate = function () {
   if (!thaliMobileStates.started) {
+    logger.info(
+      'Filtered out discoveryAdvertisingStateUpdate (was in stopped state).'
+    );
     return;
   }
-  // TODO: Implement to logic to react this event.
+  var equalsWithCurrentState = function (state) {
+    for (var key in discoveryAdvertisingState) {
+      if (discoveryAdvertisingState[key] !== state[key]) {
+        return false;
+      }
+    }
+    return true;
+  };
+  if (equalsWithCurrentState(emittedDiscoveryAdvertisingStateUpdate)) {
+    return;
+  }
+  emittedDiscoveryAdvertisingStateUpdate = getDiscoveryAdvertisingState();
   module.exports.emitter.emit('discoveryAdvertisingStateUpdate',
-    discoveryAdvertisingStateUpdateValue);
+    emittedDiscoveryAdvertisingStateUpdate);
 };
 
 /**
@@ -671,13 +772,11 @@ function (discoveryAdvertisingStateUpdateValue) {
  * comes through. If we get multiple events with the same state and they all
  * match our current state then they should be suppressed.
  * - We thought something was started but now we are getting a notice that it
- * is stopped. In that case we need to internally record that discovery or
- * advertising is no longer started and fire this event to update.
+ * is stopped.
  * - We thought something was stopped but now we are getting a notice that
  * they are started. This can happen because our network change event code
  * detected that a radio that was off is now on and we are trying to start
- * things. In that case we should mark the discovery or advertising as started
- * and fire this event.
+ * things.
  *
  * If we receive a {@link
  * module:ThaliWifiInfrastructure~discoveryAdvertisingStateUpdateWiFiEvent} then
@@ -698,14 +797,24 @@ function (discoveryAdvertisingStateUpdateValue) {
 ThaliMobileNativeWrapper.emitter.on(
   'discoveryAdvertisingStateUpdateNonTCPEvent',
   function (discoveryAdvertisingStateUpdateValue) {
-    emitDiscoveryAdvertisingStateUpdate(discoveryAdvertisingStateUpdateValue);
+    discoveryAdvertisingState.nonTCPDiscoveryActive =
+      discoveryAdvertisingStateUpdateValue.discoveryActive;
+    discoveryAdvertisingState.nonTCPAdvertisingActive =
+      discoveryAdvertisingStateUpdateValue.advertisingActive;
+    verifyDiscoveryAdvertisingState(discoveryAdvertisingStateUpdateValue);
+    emitDiscoveryAdvertisingStateUpdate();
   }
 );
 
 thaliWifiInfrastructure.on(
   'discoveryAdvertisingStateUpdateWifiEvent',
   function (discoveryAdvertisingStateUpdateValue) {
-    emitDiscoveryAdvertisingStateUpdate(discoveryAdvertisingStateUpdateValue);
+    discoveryAdvertisingState.wifiDiscoveryActive =
+      discoveryAdvertisingStateUpdateValue.discoveryActive;
+    discoveryAdvertisingState.wifiAdvertisingActive =
+      discoveryAdvertisingStateUpdateValue.advertisingActive;
+    verifyDiscoveryAdvertisingState(discoveryAdvertisingStateUpdateValue);
+    emitDiscoveryAdvertisingStateUpdate();
   }
 );
 
@@ -729,20 +838,6 @@ var emitNetworkChanged = function (networkChangedValue) {
 ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', emitNetworkChanged);
 
 thaliWifiInfrastructure.on('networkChangedWifi', emitNetworkChanged);
-
-/**
- * If we receive a {@link
- * module:thaliMobileNativeWrapper~incomingConnectionToPortNumberFailed} and we
- * are in stop state then it means that we had a race condition where someone
- * tried to connect to the server just as we were killing it. If we get this in
- * the start state after having turned on advertising then it means that our
- * server has failed. The best we can do is try to close the server and open it
- * again.
- */
-ThaliMobileNativeWrapper.emitter.on('incomingConnectionToPortNumberFailed',
-    function (portNumber) {
-  // Do stuff
-});
 
 /**
  * Use this emitter to subscribe to events
