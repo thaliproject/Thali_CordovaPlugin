@@ -9,14 +9,15 @@ module.exports = function (tag){
   }
   var logger = new winston.Logger({
     transports: [
-            new winston.transports.Console({
-              formatter: function (options) {
-                return options.level.toUpperCase() +' '+ options.meta.tag  +
-                    ' ' +  (undefined !== options.message ?
-                                                    options.message : '') ;
-              }
-            })
-        ]
+      new winston.transports.Console({
+        formatter: function (options) {
+          return options.level.toUpperCase() + ' ' +
+                 options.meta.tag  + ' ' +
+                 (undefined !== options.message ? options.message : '');
+        },
+        level: 'silly'
+      })
+    ]
   });
   logger.addRewriter(function (level, msg, meta) {
     if (!meta.tag) {
