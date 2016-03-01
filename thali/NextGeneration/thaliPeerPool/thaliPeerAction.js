@@ -5,20 +5,11 @@ var Promise = require('lie');
 /** @module thaliPeerAction */
 
 /**
- * Records the current state of the action.
- *
- * @public
- * @readonly
- * @enum {string}
+ * Used to give each PeerAction a unique ID to make it easier to match
+ * equal ones.
+ * @type {number}
  */
-module.exports.actionState = {
-  /** The action has been created but hasn't started or ended yet. */
-  CREATED: 'created',
-  /** The action is out of the queue and is currently running */
-  STARTED: 'started',
-  /** The action is not running and not in the queue */
-  KILLED: 'killed'
-};
+var peerActionCounter = 0;
 
 /**
  * An action that has been given to the pool to manage.
@@ -38,21 +29,40 @@ module.exports.actionState = {
  */
 function PeerAction (peerIdentifier, connectionType, actionType)
 {
-  this.peerIdentifier = peerIdentifier;
-  this.connectionType = connectionType;
-  this.actionType = actionType;
-  this.actionState = module.exports.actionState.STARTED;
+  this._peerIdentifier = peerIdentifier;
+  this._connectionType = connectionType;
+  this._actionType = actionType;
+  this._actionState = PeerAction.actionState.CREATED;
+  this._id = peerActionCounter;
+  ++peerActionCounter;
 }
+
+/**
+ * Records the current state of the action.
+ *
+ * @public
+ * @readonly
+ * @enum {string}
+ */
+PeerAction.actionState = {
+  /** The action has been created but hasn't started or ended yet. */
+  CREATED: 'created',
+  /** The action is out of the queue and is currently running */
+  STARTED: 'started',
+  /** The action is not running and not in the queue */
+  KILLED: 'killed'
+};
+
 
 /**
  * The remote peer this action targets
  * @private
  * @type {string}
  */
-PeerAction.prototype.peerIdentifier = null;
+PeerAction.prototype._peerIdentifier = null;
 
 PeerAction.prototype.getPeerIdentifier = function () {
-  return this.peerIdentifier;
+  return this._peerIdentifier;
 };
 
 /**
@@ -60,10 +70,10 @@ PeerAction.prototype.getPeerIdentifier = function () {
  * @private
  * @type {module:thaliMobile.connectionTypes}
  */
-PeerAction.prototype.connectionType = null;
+PeerAction.prototype._connectionType = null;
 
 PeerAction.prototype.getConnectionType = function () {
-  return this.connectionType;
+  return this._connectionType;
 };
 
 /**
@@ -71,10 +81,10 @@ PeerAction.prototype.getConnectionType = function () {
  * @private
  * @type {string}
  */
-PeerAction.prototype.actionType = null;
+PeerAction.prototype._actionType = null;
 
 PeerAction.prototype.getActionType = function () {
-  return this.actionType;
+  return this._actionType;
 };
 
 /**
@@ -82,10 +92,21 @@ PeerAction.prototype.getActionType = function () {
  * @private
  * @type {module:thaliPeerAction.actionState}
  */
-PeerAction.prototype.actionState = null;
+PeerAction.prototype._actionState = null;
 
 PeerAction.prototype.getActionState = function () {
-  return this.actionState;
+  return this._actionState;
+};
+
+/**
+ * A unique ID that can be used to identify this instance. This allows us to
+ * easily look up instances.
+ * @type {number}
+ */
+PeerAction.prototype._id = null;
+
+PeerAction.prototype.getId = function () {
+  return this._id;
 };
 
 /**
@@ -99,9 +120,12 @@ PeerAction.prototype.getActionState = function () {
  * start it and further calls will accomplish nothing more than just returning
  * the same promise that the original call returned.
  *
+ * If start is called on an action that is already started then a
+ * 'Only call start once' error MUST be returned.
+ *
  * If start is called on an action that has completed, successfully or not, then
  * the returned promised must be resolved with an error object MUST with the
- * value "action has completed."
+ * value "action has completed".
  *
  * If the action fails due to a network issue it is important that this be
  * reported to the pool because it can use this information to decide how to
@@ -129,10 +153,39 @@ PeerAction.prototype.getActionState = function () {
  * return success with null. After all, kill doesn't reflect a failure
  * of the action but a change in outside circumstances.
  */
+// jscs:disable disallowUnusedParams
 PeerAction.prototype.start = function (httpAgentPool) {
-  this.actionState = module.exports.actionState.STARTED;
-  return new Promise();
+  switch (this._actionState) {
+    case PeerAction.actionState.CREATED: {
+      this._actionState = PeerAction.actionState.STARTED;
+      return Promise.resolve();
+    }
+    case PeerAction.actionState.STARTED: {
+      return Promise.reject(new Error(PeerAction.DOUBLE_START));
+    }
+    case PeerAction.actionState.KILLED: {
+      return Promise.reject(new Error(PeerAction.START_AFTER_KILLED));
+    }
+    default: {
+      throw new Error('Action State is in illegal value ' + this._actionState);
+    }
+  }
 };
+// jscs:enable disallowUnusedParams
+
+/**
+ * Error message returned when start called twice in a row
+ * @type {string}
+ * @readonly
+ */
+PeerAction.DOUBLE_START = 'Only call start once';
+
+/**
+ * Error message returned when start is called after kill
+ * @type {string}
+ * @readonly
+ */
+PeerAction.START_AFTER_KILLED = 'action has completed';
 
 /**
  * Tells an action to stop executing immediately and synchronously.
@@ -154,17 +207,8 @@ PeerAction.prototype.start = function (httpAgentPool) {
  * @returns {?Error}
  */
 PeerAction.prototype.kill = function () {
-  this.actionState = module.exports.actionState.KILLED;
+  this._actionState = PeerAction.actionState.KILLED;
   return null;
 };
 
-
-/**
- *
- * @returns {*}
- */
-PeerAction.prototype.getActionState = function () {
-  return this.actionState;
-};
-
-module.exports.PeerAction = PeerAction;
+module.exports = PeerAction;

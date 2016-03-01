@@ -1,5 +1,8 @@
 'use strict';
 
+var PeerAction = require('./thaliPeerAction');
+var assert = require('assert');
+
 /** @module thaliPeerPoolInterface */
 
 /**
@@ -36,9 +39,18 @@
  * @constructor
  */
 function ThaliPeerPoolInterface() {
-
+  this._inQueue = {};
 }
 
+/**
+ * Tracks what actions are still somewhere in this object. Each object is
+ * added as a member of the inQueue object using its ID as the key.
+ * @type {Object}
+ * @private
+ */
+ThaliPeerPoolInterface.prototype._inQueue = null;
+
+// jscs:disable jsDoc
 /**
  * Adds a request to run the specified peerAction.
  *
@@ -48,6 +60,9 @@ function ThaliPeerPoolInterface() {
  *
  * If peerAction is null or not a peerAction object then a "Bad peerAction"
  * error MUST be returned.
+ *
+ * If a peerAction is submitted that is not in CREATED state then an error MUST
+ * be returned with the message "Object not in created".
  *
  * When an action is submitted the pool MUST override the action's kill method
  * so as to be able to intercept it. When kill is called if the action has
@@ -62,8 +77,46 @@ function ThaliPeerPoolInterface() {
  * @returns {?Error} Null unless there is a problem in which case Error is
  * returned.
  */
+// jscs:enable jsDoc
 ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
+  var self = this;
+  if (!peerAction || !(peerAction instanceof PeerAction)) {
+    return new Error(ThaliPeerPoolInterface.BAD_PEER_ACTION);
+  }
+  if (peerAction.getActionState() !== PeerAction.actionState.CREATED) {
+    return new Error(ThaliPeerPoolInterface.OBJECT_NOT_IN_CREATED);
+  }
+  if (self._inQueue[peerAction.getId()]) {
+    return new Error(ThaliPeerPoolInterface.OBJECT_ALREADY_ENQUEUED);
+  }
+  if (!peerAction._poolScratch) {
+    peerAction._poolScratch = {};
+  }
+  peerAction._poolScratch.kill = peerAction.kill;
+  peerAction.kill = function () {
+    assert(self._inQueue[peerAction.getId()] === peerAction, 'Items should ' +
+      'not escape the queue without going through kill');
+    delete self._inQueue[peerAction.getId()];
+    this._poolScratch.kill.call(peerAction);
+  };
+  self._inQueue[peerAction.getId()] = peerAction;
   return null;
 };
+
+/**
+ * Error message returned when enqueue is called with a null or bad object.
+ * @type {string}
+ * @readonly
+ */
+ThaliPeerPoolInterface.BAD_PEER_ACTION = 'Bad peerAction';
+
+/**
+ * Error message returned when enqueue is called with an action that is already
+ * in the queue.
+ * @type {string}
+ */
+ThaliPeerPoolInterface.OBJECT_ALREADY_ENQUEUED = 'Object already in use';
+
+ThaliPeerPoolInterface.OBJECT_NOT_IN_CREATED = 'Object not in created';
 
 module.exports = ThaliPeerPoolInterface;
