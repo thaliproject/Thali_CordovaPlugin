@@ -1,4 +1,14 @@
-"use strict";
+'use strict';
+
+// Take away when work on Android.
+if (jxcore.utils.OSInfo().isAndroid) {
+  return;
+}
+
+// Take away when work on iOS.
+if (jxcore.utils.OSInfo().isIOS) {
+  return;
+}
 
 var net = require('net');
 var randomstring = require('randomstring');
