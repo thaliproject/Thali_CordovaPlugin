@@ -126,7 +126,10 @@ module.exports.stop = function () {
  * @throws {Error}
  */
 module.exports.startListeningForAdvertisements = function () {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    resolve();
+  });
 };
 
 /**
@@ -148,7 +151,10 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.stopListeningForAdvertisements = function () {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    resolve();
+  });
 };
 
 /**
@@ -213,10 +219,12 @@ module.exports.stopListeningForAdvertisements = function () {
  * @public
  * @returns {Promise<?Error>}
  */
-module.exports.startUpdateAdvertisingAndListening =
-  function () {
-    return new Promise();
-  };
+module.exports.startUpdateAdvertisingAndListening = function () {
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    resolve();
+  });
+};
 
 /**
  * This method tells the native layer to stop advertising the presence of the
@@ -236,10 +244,14 @@ module.exports.startUpdateAdvertisingAndListening =
  * @returns {Promise<?Error>}
  */
 module.exports.stopAdvertisingAndListening = function () {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    resolve();
+  });
 };
 
 var nonTCPNetworkStatus = null;
+
 /**
  * This method returns the last value sent by the
  * {@link module:thaliMobileNativeWrapper.event:networkChangedNonTCP}
@@ -278,7 +290,10 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.terminateConnection = function (incomingConnectionId) {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    resolve();
+  });
 };
 
 /**
@@ -305,7 +320,10 @@ module.exports.terminateConnection = function (incomingConnectionId) {
  * @returns {Promise<?Error>}
  */
 module.exports.killConnections = function () {
-  return new Promise();
+  return promiseQueue.enqueue(function (resolve, reject) {
+    // TODO: Implement the specified logic
+    resolve();
+  });
 };
 
 /*
@@ -445,25 +463,30 @@ var registerToNative = function (methodName, callback) {
 };
 
 registerToNative('peerAvailabilityChanged', function (peers) {
+  logger.info('peerAvailabilityChanged: %s', JSON.stringify(peers));
   // do stuff!
 });
 
 registerToNative('discoveryAdvertisingStateUpdateNonTCP',
   function (discoveryAdvertisingStateUpdateValue) {
+    logger.info('discoveryAdvertisingStateUpdateNonTCP: %s',
+      JSON.stringify(discoveryAdvertisingStateUpdateValue));
     // do stuff!
   }
 );
 
-registerToNative('networkChanged', function (networkChanged) {
+registerToNative('networkChanged', function (networkChangedValue) {
+  logger.info('networkChanged: %s', JSON.stringify(networkChangedValue));
   // The value needs to be assigned here to nonTCPNetworkStatus
   // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
   // can return it.
-  nonTCPNetworkStatus = networkChanged;
+  nonTCPNetworkStatus = networkChangedValue;
   module.exports.emitter.emit('networkChangedNonTCP', nonTCPNetworkStatus);
 });
 
 registerToNative('incomingConnectionToPortNumberFailed',
   function (portNumber) {
+    logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
     // do stuff!
   }
 );

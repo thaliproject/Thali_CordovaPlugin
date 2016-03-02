@@ -1,7 +1,7 @@
 //
 //  The MIT License (MIT)
 //
-//  Copyright (c) 2015 Microsoft
+//  Copyright (c) 2015-2016 Microsoft
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -26,20 +26,20 @@
 //
 
 (function () {
-  var inter = setInterval(function() {
+  var inter = setInterval(function () {
     if (typeof jxcore == 'undefined') { return; }
 
     clearInterval(inter);
 
-    jxcore.isReady(function() {
+    jxcore.isReady(function () {
       if (window.ThaliPermissions) {
-        //requestLocationPermission ensures that the application has 
-        //the required ACCESS_COARSE_LOCATION permission in Android.
-        window.ThaliPermissions.requestLocationPermission(function() {
-          //Application has the required permission.
+        // requestLocationPermission ensures that the application has 
+        // the required ACCESS_COARSE_LOCATION permission in Android.
+        window.ThaliPermissions.requestLocationPermission(function () {
+          // Application has the required permission.
           loadMainFile();
         }, function (error) {
-          console.log("Location permission not granted. Error: " + error);
+          console.log('Location permission not granted. Error: ' + error);
           navigator.app.exitApp();
         });
       } else {
@@ -51,7 +51,7 @@
   function loadMainFile() {
     jxcore('app.js').loadMainFile(function (ret, err) {
       if (err) {
-        console.log("App.js file failed to load : " + JSON.stringify(err));
+        console.log('App.js file failed to load : ' + JSON.stringify(err));
         navigator.app.exitApp();
       } else {
         jxcore_ready();
@@ -62,20 +62,21 @@
   function jxcore_ready() {
     jxcore('getMyName').call(setNameToUI);
     jxcore('setLogCallback').call(logCallback);
-    document.getElementById("ClearLogButton").addEventListener("click", ClearLog);
-    console.log("UIApp is all set and ready!");
+    document.getElementById('ClearLogButton').addEventListener('click', ClearLog);
+    console.log('UIApp is all set and ready!');
   }
 
   function setNameToUI(name) {
-    document.getElementById("nameTag").innerHTML = name;
+    document.getElementById('nameTag').innerHTML = name;
   }
 
   function ClearLog() {
-    document.getElementById('LogBox').value = "";
+    document.getElementById('LogBox').value = '';
   }
 
   function logCallback(data) {
-    console.log("logCallback " + data);
-    document.getElementById('LogBox').value = data + "\n" + document.getElementById('LogBox').value;
+    console.log('logCallback ' + data);
+    document.getElementById('LogBox').value = data + '\n' + 
+      document.getElementById('LogBox').value;
   }
 }());

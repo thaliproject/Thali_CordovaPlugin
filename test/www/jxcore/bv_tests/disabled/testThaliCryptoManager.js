@@ -45,7 +45,9 @@ test('successfully create a new pkcs12 file and return hash value',
               extractPublicKey(configValues.password, pkcs12Content);
           t.ok(publicKey && publicKey.length > 0);
           t.equal(publicKeyHash, cryptomanager.
-              generateSlicedSHA256Hash(publicKey, configValues.hashSizeInBytes));
+              generateSlicedSHA256Hash(
+                publicKey,
+                configValues.hashSizeInBytes));
           t.end();
         });
       });

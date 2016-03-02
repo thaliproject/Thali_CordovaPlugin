@@ -18,19 +18,11 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
  * regret it as the default one has awful behavior. Building your own
  * thaliPeerPoolInterface is pretty much a requirement for a decent Thali
  * app.
- * @param {Object} [router] An express router object that the class will use
- * to register its path. Note that unles your application needs its own
- * custom HTTP endpoints exposed and/or you are dropping in Thali extensions
- * like identity exchange then you don't need this object.
- * @param {number} [secondsUntilExpiration] The number of seconds into the
- * future after which the beacons should expire.
  * @constructor
  */
 function ThaliReplicationManager(pouchDB,
                                  ecdhForLocalDevice,
-                                 thaliPeerPoolInterface,
-                                 router,
-                                 secondsUntilExpiration) {
+                                 thaliPeerPoolInterface) {
   this._thaliSendNotificationBasedOnReplication =
     new ThaliSendNotificationBasedOnReplication(router,
                                                 ecdhForLocalDevice,

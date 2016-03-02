@@ -2,12 +2,6 @@
 
 var net = require('net');
 var randomstring = require('randomstring');
-
-if (jxcore.utils.OSInfo().isAndroid) {
-  // REMOVE ME WHEN READY TO TEST ANDROID !!!
-  return;
-}
-
 var tape = require('../lib/thali-tape');
 
 var test = tape({
@@ -40,12 +34,11 @@ test('Can call start/stopListeningForAdvertisements', function (t) {
   });
 });
 
-test('Calling startListeningForAdvertisements twice is an error', function (t) {
+test('Calling startListeningForAdvertisements twice is NOT an error', function (t) {
   Mobile('startListeningForAdvertisements').callNative(function (err) {
     t.notOk(err, 'Can call startListeningForAdvertisements without error');
     Mobile('startListeningForAdvertisements').callNative(function (err) {
-      t.ok(err, 'Calling start twice is an error');
-      t.ok(err == "Call Stop!", 'Error must be "Call Stop!"');
+      t.notOk(err, 'Can call startListeningForAdvertisements twice without error');
       t.end();
     });
   });
@@ -63,7 +56,7 @@ test('Can call start/stopUpdateAdvertisingAndListening', function (t) {
   });
 });
 
-test('Calling startUpdateAdvertisingAndListening twice is NOT and error', 
+test('Calling startUpdateAdvertisingAndListening twice is NOT an error',
 function (t) {
   Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
@@ -175,7 +168,7 @@ test('Can connect to a remote peer', function (t) {
 
 test('Can shift large amounts of data', function (t) {
 
-  var complete = false;
+  var connected = false;
 
   var sockets = {};
   var echoServer = net.createServer(function (socket) {
@@ -267,7 +260,8 @@ test('Can shift large amounts of data', function (t) {
 
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {
-      if (peer.peerAvailable) {
+      if (peer.peerAvailable && !connected) {
+        connected = true;
         Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
           // We're happy here if we make a connection to anyone
           if (err == null) {
