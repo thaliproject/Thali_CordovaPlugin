@@ -1,4 +1,8 @@
 'use strict';
+var ThaliMobile = require('../thaliMobile');
+var ThaliPeerAction = require('../thaliPeerPool/thaliPeerAction');
+var ThaliNotificationClient = require('./thaliNotificationClient');
+var inherits = require('util').inherits;
 
 /** @module thaliNotificationAction */
 
@@ -11,19 +15,35 @@
  *
  * @param {string} peerIdentifier
  * @param {module:thaliMobile.connectionTypes} connectionType
- * @param {string} actionType
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
  * @param {addressBookCallback} addressBookCallback An object used to validate
  * which peers we are interested in talking to.
  * @constructor
  * @implements {module:thaliPeerAction~PeerAction}
- * @fires module:thaliNotificationAction~NotificationAction.event:Resolved
+ * @fires module:thaliNotificationAction.event:Resolved
  */
-function NotificationAction(peerIdentifier, connectionType, actionType,
+/* jshint -W003 */
+function ThaliNotificationAction(peerIdentifier, connectionType,
                             ecdhForLocalDevice, addressBookCallback) {
-  this.actionState = NotificationAction.ActionState.QUEUED;
+
+  ThaliNotificationAction.super_.call(this, peerIdentifier, connectionType,
+    ThaliNotificationClient.ACTION_TYPE);
+
+  this.actionState = ThaliPeerAction.actionState.CREATED;
+  this.connectionType = connectionType;
+  this._peerIdentifier = peerIdentifier;
+  this._ecdhForLocalDevice = ecdhForLocalDevice;
+  this._addressBookCallback = addressBookCallback;
+
 }
+/* jshint +W003 */
+
+inherits(ThaliNotificationAction, ThaliPeerAction);
+
+ThaliNotificationAction.prototype.actionType = null;
+ThaliNotificationAction.prototype.actionState = null;
+ThaliNotificationAction.prototype.connectionType = null;
 
 /**
  * Once started we MUST make a HTTP GET request to
@@ -42,7 +62,7 @@ function NotificationAction(peerIdentifier, connectionType, actionType,
  * module:thaliNotificationBeacons.parseBeacons} method.
  *
  * When completed fire
- * {@link module:thaliNotificationAction~NotificationAction.event:Resolved} with
+ * {@link module:thaliNotificationAction.event:Resolved} with
  * whatever value makes the most sense.
  *
  * Note that if we receive a kill method while waiting for the response then we
@@ -53,16 +73,16 @@ function NotificationAction(peerIdentifier, connectionType, actionType,
  * possible to call abort, get back a response and then still have the response
  * object show up? I should hope not.
  */
-NotificationAction.prototype.start = function () {
+ThaliNotificationAction.prototype.start = function () {
 
 };
 
 /**
  * In addition to the inherited behavior also make sure to fire the
- * {@link module:thaliNotificationAction~NotificationAction.event:Resolved}
+ * {@link module:thaliNotificationAction.event:Resolved}
  * event.
  */
-NotificationAction.prototype.kill = function () {
+ThaliNotificationAction.prototype.kill = function () {
 
 };
 
@@ -72,7 +92,7 @@ NotificationAction.prototype.kill = function () {
  * @readonly
  * @enum {string}
  */
-NotificationAction.ActionResolution = {
+ThaliNotificationAction.ActionResolution = {
   /**
    * The beacon values were successfully retrieved and parsed.
    */
@@ -103,7 +123,7 @@ NotificationAction.ActionResolution = {
  * When the action has completed this event MUST be fired. If the action
  * was able to retrieve the beacon
  *
- * @event module:thaliNotificationAction~NotificationAction.event:Resolved
+ * @event module:thaliNotificationAction.event:Resolved
  * @param {ActionResolution} actionResolution Explains how the action was
  * completed.
  * @param {module:thaliNotificationBeacons~ParseBeaconsResponse} beacon
@@ -112,4 +132,4 @@ NotificationAction.ActionResolution = {
  * this peer then the beacon object MUST be null.
  */
 
-module.exports.NotificationAction = NotificationAction;
+module.exports = ThaliNotificationAction;

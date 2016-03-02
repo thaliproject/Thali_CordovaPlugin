@@ -45,9 +45,9 @@ module.exports.peerState = {
  */
 function PeerConnectionInformation (hostAddress, portNumber,
                                     suggestedTCPTimeout) {
-  this.hostAddress = hostAddress;
-  this.portNumber = portNumber;
-  this.suggestedTCPTimeout = suggestedTCPTimeout;
+  this._hostAddress = hostAddress;
+  this._portNumber = portNumber;
+  this._suggestedTCPTimeout = suggestedTCPTimeout;
 }
 
 /**
@@ -56,10 +56,16 @@ function PeerConnectionInformation (hostAddress, portNumber,
  * @private
  * @type {string}
  */
-PeerConnectionInformation.prototype.hostAddress = null;
+PeerConnectionInformation.prototype._hostAddress = null;
 
-PeerConnectionInformation.prototype.getHostAddress = function() {
-  return this.hostAddress;
+/**
+ * Returns peer's host address, either IP or DNS
+ *
+ * @public
+ * @return {string} peer's host address, either IP or DNS
+ */
+PeerConnectionInformation.prototype.getHostAddress = function () {
+  return this._hostAddress;
 };
 
 /**
@@ -68,10 +74,16 @@ PeerConnectionInformation.prototype.getHostAddress = function() {
  * @private
  * @type {number}
  */
-PeerConnectionInformation.prototype.portNumber = null;
+PeerConnectionInformation.prototype._portNumber = null;
 
-PeerConnectionInformation.prototype.getPortNumber = function() {
-  return this.portNumber;
+/**
+ * Returns port to use with the host address
+ *
+ * @public
+ * @return {number} port to use with the host address
+ */
+PeerConnectionInformation.prototype.getPortNumber = function () {
+  return this._portNumber;
 };
 
 /**
@@ -80,10 +92,17 @@ PeerConnectionInformation.prototype.getPortNumber = function() {
  * @private
  * @type {number}
  */
-PeerConnectionInformation.prototype.suggestedTCPTimeout = null;
+PeerConnectionInformation.prototype._suggestedTCPTimeout = null;
 
-PeerConnectionInformation.prototype.getSuggestedTCPTimeout = function() {
-  return this.suggestedTCPTimeout;
+/**
+ * Returns TCP time out to use when establishing a TCP connection with the
+ * peer.
+ *
+ * @public
+ * @return {number} TCP time out
+ */
+PeerConnectionInformation.prototype.getSuggestedTCPTimeout = function () {
+  return this._suggestedTCPTimeout;
 };
 
 module.exports.PeerConnectionInformation = PeerConnectionInformation;
@@ -115,6 +134,7 @@ function NotificationPeerDictionaryEntry (peerState, peerConnectionDictionary,
   this.peerConnectionDictionary = peerConnectionDictionary;
   this.notificationAction = notificationAction;
 }
+
 
 /**
  * The current state of the peer
@@ -152,8 +172,18 @@ module.exports.NotificationPeerDictionaryEntry =
  * @constructor
  */
 function PeerDictionary() {
-
+  this._dictionary = [];
+  this._entryCounter = 0;
 }
+
+/**
+ * Maximum size of the dictionary
+ *
+ * @public
+ * @readonly
+ * @type {number}
+ */
+PeerDictionary.MAXSIZE = 100;
 
 /**
  * Adds the entry if the peerId isn't yet in the table otherwise updates the
@@ -169,19 +199,126 @@ function PeerDictionary() {
  * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} peerTableEntry
  * @returns {?error} Null if all went well otherwise an error.
  */
-PeerDictionary.prototype.addUpdateEntry =
-  function (peerId, peerTableEntry) {
-    return null;
-  };
+PeerDictionary.prototype.addUpdateEntry = function (peerId, peerTableEntry) {
+
+  if (this._dictionary[peerId] === undefined) {
+    this._removeOldest();
+    this._dictionary[peerId] = {'entry' : peerTableEntry ,
+                                'entryCounter' : this._entryCounter++};
+  } else {
+    this._dictionary[peerId].entry = peerTableEntry;
+  }
+};
 
 /**
- * Removes the identified entry. It is not an error to specify a peerId that
- * is not in the dictionary.
+ * Removes an entry which matches with peerId.
  * @public
  * @param {string} peerId
  */
-PeerDictionary.prototype.removeEntry =
-  function(peerId) {
-  };
+PeerDictionary.prototype.remove = function (peerId) {
+  if (this._dictionary[peerId] !== undefined) {
+    delete this._dictionary[peerId];
+  }
+};
+
+/**
+ * Checks if the entry exists in the dictionary.
+ * @public
+ * @param {string} peerId
+ * @returns {boolean} Returns true if the item exists, false otherwise.
+ * returns an error object.
+ */
+PeerDictionary.prototype.exists = function (peerId) {
+  if (this._dictionary[peerId] === undefined) {
+    return false;
+  } else {
+    return true;
+  }
+};
+
+/**
+ * Returns the selected entry from the dictionary
+ * @public
+ * @param {string} peerId
+ * @returns {module:thaliPeerDictionary~NotificationPeerDictionaryEntry}
+ * Returns an entry that matches with the peerId. If the entry is not found
+ * returns null.
+ */
+PeerDictionary.prototype.get = function (peerId) {
+  if (this._dictionary[peerId] === undefined) {
+    return null;
+  } else {
+    return this._dictionary[peerId].entry;
+  }
+};
+
+/**
+ * Deletes the selected entry from the dictionary
+ * @public
+ * @param {string} peerId
+ */
+PeerDictionary.prototype.delete = function (peerId) {
+  if (this._dictionary[peerId] !== undefined) {
+    delete this._dictionary[peerId];
+  }
+};
+
+/**
+ * Returns the size of the dictionary
+ * @public
+ * @returns {number} Size of the dictionary
+ */
+PeerDictionary.prototype.size = function () {
+  return Object.keys(this._dictionary).length;
+};
+
+/**
+ * If the dictionary is empty removes an entry in following order.
+ * Removes the oldest resolved entry. If there are no remaining resolved
+ * entries to remove then the oldest waiting entry is removed. If there
+ * are no remaining resolved entries to remove then kills the
+ * oldest CONTROLLED_BY_POOL entry and removes it.
+ *
+ * @private
+ */
+PeerDictionary.prototype._removeOldest = function () {
+  var self = this;
+  if (this.size() >= PeerDictionary.MAXSIZE) {
+
+    var search = function (state) {
+      var smallestEntryCounterVal = Number.MAX_VALUE;
+      var oldestPeerId = null;
+      for (var key in self._dictionary) {
+        if (self._dictionary[key].entryCounter < smallestEntryCounterVal &&
+            self._dictionary[key].entry.peerState === state) {
+          oldestPeerId = key;
+          smallestEntryCounterVal = self._dictionary[key].entryCounter;
+        }
+      }
+      return oldestPeerId;
+    };
+
+    var oldestPeerId = search(exports.peerState.RESOLVED);
+
+    if (oldestPeerId) {
+      delete self._dictionary[String(oldestPeerId)];
+      return;
+    }
+
+    oldestPeerId = search(exports.peerState.WAITING);
+
+    if (oldestPeerId) {
+      delete self._dictionary[String(oldestPeerId)];
+      return;
+    }
+
+    oldestPeerId = search(exports.peerState.CONTROLLED_BY_POOL);
+
+    if (oldestPeerId) {
+      delete self._dictionary[String(oldestPeerId)];
+      return;
+    }
+  }
+};
 
 module.exports.PeerDictionary = PeerDictionary;
