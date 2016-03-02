@@ -281,7 +281,7 @@ function waitForPeerAvailabilityChanged(t, serversManager, dontFail, then) {
         })
         .catch(function(err) {
           if (!dontFail) {
-            t.fail("Unexpected rejection creating peer listener");
+            t.fail("Unexpected rejection creating peer listener" + err);
             console.warn(err);
           }
         });
@@ -345,17 +345,50 @@ test("peerListener - forwardConnection, pleaseConnect == true - no native server
   var nativePort = 4040;
   var applicationPort = 4242;
 
+  var promiseRejected = false;
+  var failedConnection = false;
+
   // We expect 'failedConnection' since there's no native listener
   var serversManager = new ThaliTCPServersManager(applicationPort);
   serversManager.on("failedConnection", function(err) {
     t.equal(err.error, "Cannot Connect To Peer", "reason should be as expected");
-    serversManager.stop();
-    t.end();
+    failedConnection = true;
+    if (promiseRejected) {
+      serversManager.stop();
+      t.end();
+    }
   });
 
-  setUp(t, serversManager, applicationPort, nativePort, true, false, function(peerPort) {
-    t.notEqual(peerPort, nativePort, "peerPort should not be nativePort");
+  // Have the next Mobile("connect") call complete with a forward connection
+  Mobile("connect").nextNative(function(peerIdentifier, cb) {
+    cb(null, {listeningPort:nativePort, clientPort:0, serverPort:0});
   });
+
+  // Promise should be rejected when we fail to open a socket to the native listener
+  Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+    peers.forEach(function(peer) {
+      if (peer.peerAvailable) {
+        serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
+        .then(function(peerPort) {
+          if (then) {
+            then(peerPort);
+          }
+        })
+        .catch(function(err) {
+          t.ok(true, "Expected a reject");
+          promiseRejected = true;
+            console.log(serversManager);
+          if (failedConnection) {
+            serversManager.stop();
+            t.end();
+          }
+        });
+      }
+    });
+  });
+ 
+  startServersManager(t, serversManager);
+  startAdvertisingAndListening(t, applicationPort, true);
 });
 
 test("peerListener - forwardConnection, pleaseConnect == false - no native server", function(t) {

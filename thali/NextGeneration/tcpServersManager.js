@@ -218,8 +218,8 @@ TCPServersManager.prototype.stop = function () {
   }
   for (var peerIdentifier in this._peerServers) {
     if (this._peerServers.hasOwnProperty(peerIdentifier)) {
-      this._peerServers[peerIdentifier][1]._closing = true;
-      this._peerServers[peerIdentifier][1].closeAll();
+      this._peerServers[peerIdentifier].server._closing = true;
+      this._peerServers[peerIdentifier].server.closeAll();
     }
   }
   this._peerServers = {};
@@ -719,7 +719,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
   function _do(resolve, reject) {
 
     if (self._peerServers[peerIdentifier]) {
-      resolve(self._peerServers[peerIdentifier][1].address().port);
+      resolve(self._peerServers[peerIdentifier].server.address().port);
       return;
     }
 
@@ -962,7 +962,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
     server.on('listening', function() {
 
-      self._peerServers[peerIdentifier] = [new Date(), server];
+      self._peerServers[peerIdentifier] = { lastActive: new Date(), server: server };
 
       logger.debug('pleaseConnect=', pleaseConnect);
 
@@ -1011,7 +1011,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
                 'peerIdentifier':peerIdentifier
               });
             }
-            if (outgoing._connected) {
+            if (!outgoing._connected) {
               // Failed to connect, reject
               reject(err);
             }
