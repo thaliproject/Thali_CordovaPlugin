@@ -1,5 +1,4 @@
 {
-  "esversion": 5,
   "eqeqeq": true,
   "noarg": true,
   "undef": true,
@@ -16,5 +15,5 @@
   "latedef": true,
   "freeze": true,
   "maxdepth": 3,
-  "predef": [ "Mobile" ]
+  "predef": [ "Mobile", "jxcore" ]
 }

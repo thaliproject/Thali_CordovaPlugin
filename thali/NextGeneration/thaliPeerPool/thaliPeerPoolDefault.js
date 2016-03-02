@@ -6,6 +6,9 @@
  * @classdesc This is the default implementation of the
  * {@link module:thaliPeerPoolInterface~ThaliPeerPoolInterface} interface.
  *
+ * WARNING: This code is really just intended for use for testing and
+ * prototyping. It is not intended to be shipped.
+ *
  * How the default implementation function depends on what connection type an
  * action is associated with.
  *

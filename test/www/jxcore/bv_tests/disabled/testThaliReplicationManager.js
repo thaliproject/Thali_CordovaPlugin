@@ -123,7 +123,6 @@ test('ThaliReplicationManager receives identity', function (t) {
 });
 
 test('ThaliReplicationManager replicates database', function (t) {
-  
   // Create a local doc with local device name and sync to peer. On receiving that they'll swap
   // their device name for ours and sync it back. When both sides have successfully done this and
   // have seen the changes we know two-sync is working.

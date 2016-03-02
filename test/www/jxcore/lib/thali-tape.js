@@ -1,6 +1,6 @@
 /*
- Thali unit test implementation of tape.
- Highly inspired by wrapping-tape, and usage is very similar to the wrapping tape:
+ Thali unit test implementation of tape. Highly inspired by wrapping-tape, and
+ usage is very similar to the wrapping tape:
 
  var tape = require('thali-tape');
 

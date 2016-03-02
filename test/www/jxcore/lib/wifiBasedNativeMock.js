@@ -24,7 +24,7 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
         assert(!networkStatusCalled,
           'the mock network status should not be called twice');
         networkStatusCalled = true;
-        return Promise.resolve((getCurrentNetworkStatus()));
+        return Promise.resolve(getCurrentNetworkStatus());
       },
       '@noCallThru': true
     },
@@ -179,7 +179,7 @@ function (portNumber, callback) {
   var self = this;
   var doStart = function () {
     self.thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
-    .then(function () {
+    .then(function () {
       callback();
     });
   };
@@ -543,7 +543,7 @@ var networkChangedCallback = null;
 /**
  * At this point this event would only fire because we called toggleBluetooth
  * or toggleWifi. For the moment we will treat toggleBluetooth and turning
- * on/off both blueToothLowEnergy and blueTooth.
+ * on/off both bluetoothLowEnergy and bluetooth.
  *
  * __Open Issue:__ Near as I can tell both Android and iOS have a single
  * Bluetooth switch that activates and de-activates Bluetooth and BLE. Note
