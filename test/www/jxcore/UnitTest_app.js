@@ -12,10 +12,20 @@ if (typeof Mobile === 'undefined') {
 
 var testUtils = require('./lib/testUtils');
 
-Mobile('GetDeviceName').callNative(function (name) {
-  console.log('My device name is: %s', name);
-  testUtils.setName(name);
-  require('./runTests.js');
-});
+testUtils.toggleRadios(true);
+
+// Give radio toggling a little bit of time to turn on
+// radios and do Wifi access point association etc.
+// We can't call then on the promise returned from
+// toggleRadios since that triggers this issue:
+// https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
+var radioToggleTimeout = jxcore.utils.OSInfo().isMobile ? 5000 : 0;
+setTimeout(function () {
+  Mobile('GetDeviceName').callNative(function (name) {
+    console.log('My device name is: %s', name);
+    testUtils.setName(name);
+    require('./runTests.js');
+  });
+}, radioToggleTimeout);
 
 console.log('Unit Test app is loaded');
