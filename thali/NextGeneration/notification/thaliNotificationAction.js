@@ -30,9 +30,6 @@ function ThaliNotificationAction(peerIdentifier, connectionType,
   ThaliNotificationAction.super_.call(this, peerIdentifier, connectionType,
     ThaliNotificationClient.ACTION_TYPE);
 
-  this.actionState = ThaliPeerAction.actionState.CREATED;
-  this.connectionType = connectionType;
-  this._peerIdentifier = peerIdentifier;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
 
@@ -40,10 +37,6 @@ function ThaliNotificationAction(peerIdentifier, connectionType,
 /* jshint +W003 */
 
 inherits(ThaliNotificationAction, ThaliPeerAction);
-
-ThaliNotificationAction.prototype.actionType = null;
-ThaliNotificationAction.prototype.actionState = null;
-ThaliNotificationAction.prototype.connectionType = null;
 
 /**
  * Once started we MUST make a HTTP GET request to

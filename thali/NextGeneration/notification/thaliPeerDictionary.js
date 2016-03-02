@@ -43,7 +43,7 @@ module.exports.peerState = {
  * @param {number} portNumber
  * @param {number} suggestedTCPTimeout
  */
-function PeerConnectionInformation (hostAddress, portNumber,
+function PeerConnectionInformation(hostAddress, portNumber,
                                     suggestedTCPTimeout) {
   this._hostAddress = hostAddress;
   this._portNumber = portNumber;
@@ -59,7 +59,7 @@ function PeerConnectionInformation (hostAddress, portNumber,
 PeerConnectionInformation.prototype._hostAddress = null;
 
 /**
- * Returns peer's host address, either IP or DNS
+ * Returns peer's host address, either IP or DNS.
  *
  * @public
  * @return {string} peer's host address, either IP or DNS
@@ -69,7 +69,7 @@ PeerConnectionInformation.prototype.getHostAddress = function () {
 };
 
 /**
- * The port to use with the supplied host address
+ * The port to use with the supplied host address.
  *
  * @private
  * @type {number}
@@ -77,10 +77,10 @@ PeerConnectionInformation.prototype.getHostAddress = function () {
 PeerConnectionInformation.prototype._portNumber = null;
 
 /**
- * Returns port to use with the host address
+ * Returns port to use with the host address.
  *
  * @public
- * @return {number} port to use with the host address
+ * @return {number} port to use with the host address.
  */
 PeerConnectionInformation.prototype.getPortNumber = function () {
   return this._portNumber;
@@ -114,8 +114,6 @@ module.exports.PeerConnectionInformation = PeerConnectionInformation;
  *
  * @typedef {Object.<module:thaliMobile.connectionTypes, module:thaliPeerDictionary~PeerConnectionInformation>} PeerConnectionDictionary
  */
-// jscs:enable maximumLineLength
-
 
 /**
  * An entry to be put into the peerDictionary.
@@ -123,23 +121,24 @@ module.exports.PeerConnectionInformation = PeerConnectionInformation;
  * @public
  * @param {module:thaliPeerDictionary.peerState} peerState The
  * state of the peer.
- * @param {module:thaliPeerDictionary~PeerConnectionDictionary} peerConnectionDictionary A dictionary
+ * @param {module:thaliPeerDictionary~PeerConnectionDictionary} peerConnectionDictionary
+ * A dictionary.
  * of different connection types we know about for this peerIdentity
- * @param {module:thaliNotificationAction~NotificationAction} notificationAction
+ * @param {module:thaliNotificationAction} notificationAction
  * @constructor
  */
-function NotificationPeerDictionaryEntry (peerState, peerConnectionDictionary,
+function NotificationPeerDictionaryEntry(peerState, peerConnectionDictionary,
                               notificationAction) {
   this.peerState = peerState;
   this.peerConnectionDictionary = peerConnectionDictionary;
   this.notificationAction = notificationAction;
 }
-
+// jscs:enable maximumLineLength
 
 /**
  * The current state of the peer
  *
- * @private
+ * @public
  * @type {module:thaliPeerDictionary.peerState}
  */
 NotificationPeerDictionaryEntry.prototype.peerState = null;
@@ -147,14 +146,15 @@ NotificationPeerDictionaryEntry.prototype.peerState = null;
 /**
  * The current peer connection dictionary
  *
- * @private
- * @type {module:thaliPeerDictionary~PeerConnectionDictionary}
+ * @public
+ * @type {module:thaliPeerDictionary.PeerConnectionDictionary}
  */
 NotificationPeerDictionaryEntry.prototype.peerConnectionDictionary = null;
 
 /**
  * The notification action (if any) associated with the peer.
  *
+ * @public
  * @type {?module:thaliNotificationAction~NotificationAction}
  */
 NotificationPeerDictionaryEntry.prototype.notificationAction = null;
@@ -163,11 +163,11 @@ module.exports.NotificationPeerDictionaryEntry =
   NotificationPeerDictionaryEntry;
 
 /**
- * A dictionary used to manage information discovered about peers. It's only
- * difference from a typical dictionary is that we have to manage how many
- * entries are in the dictionary so that we don't overflow memory. Therefore
- * once we reach a certain number of entries any new entries will require old
- * entries to be removed.
+ * @classdesc This class manages dictionary of discovered peers. It manages
+ * how many entries are in the dictionary so that we don't overflow memory.
+ * Therefore once we reach a certain number of entries any new entries
+ * will cause old entries to be removed.
+ *
  * @public
  * @constructor
  */
@@ -188,30 +188,30 @@ PeerDictionary.MAXSIZE = 100;
 /**
  * Adds the entry if the peerId isn't yet in the table otherwise updates the
  * existing entry. If the new entry will increase the size of the dictionary
- * beyond the fixed maximum then the oldest resolved entry MUST be removed.
+ * beyond the fixed maximum then the oldest resolved entry is removed.
  * If there are no remaining resolved entries to remove then the oldest
- * waiting entry MUST be removed (and the associated timer killed). If there
- * are no remaining resolved entries to remove then kill MUST be called on the
- * oldest CONTROLLED_BY_POOL entry and it MUST be removed.
+ * waiting entry is removed. If there are no remaining resolved entries to
+ * remove then kill is called on the oldest CONTROLLED_BY_POOL entry
+ * and it is removed.
  *
  * @public
  * @param {string} peerId
- * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} peerTableEntry
- * @returns {?error} Null if all went well otherwise an error.
- */
-PeerDictionary.prototype.addUpdateEntry = function (peerId, peerTableEntry) {
-
+ * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} entry
+ * Entry to be added.
+  */
+PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
   if (this._dictionary[peerId] === undefined) {
-    this._removeOldest();
-    this._dictionary[peerId] = {'entry' : peerTableEntry ,
+    this._removeOldIfOverflow();
+    this._dictionary[peerId] = {'entry' : entry,
                                 'entryCounter' : this._entryCounter++};
   } else {
-    this._dictionary[peerId].entry = peerTableEntry;
+    this._dictionary[peerId].entry = entry;
   }
 };
 
 /**
- * Removes an entry which matches with peerId.
+ * Removes an entry which matches with the peerId.
+ *
  * @public
  * @param {string} peerId
  */
@@ -223,23 +223,20 @@ PeerDictionary.prototype.remove = function (peerId) {
 
 /**
  * Checks if the entry exists in the dictionary.
+ *
  * @public
  * @param {string} peerId
- * @returns {boolean} Returns true if the item exists, false otherwise.
- * returns an error object.
+ * @returns {boolean} Returns true if the entry exists, false otherwise.
  */
 PeerDictionary.prototype.exists = function (peerId) {
-  if (this._dictionary[peerId] === undefined) {
-    return false;
-  } else {
-    return true;
-  }
+  return this._dictionary[peerId] !== undefined;
 };
 
 /**
- * Returns the selected entry from the dictionary
+ * Returns an entry from the dictionary which matches with the peerId.
+ *
  * @public
- * @param {string} peerId
+ * @param {string} peerId ID of the entry that is returned.
  * @returns {module:thaliPeerDictionary~NotificationPeerDictionaryEntry}
  * Returns an entry that matches with the peerId. If the entry is not found
  * returns null.
@@ -247,15 +244,15 @@ PeerDictionary.prototype.exists = function (peerId) {
 PeerDictionary.prototype.get = function (peerId) {
   if (this._dictionary[peerId] === undefined) {
     return null;
-  } else {
-    return this._dictionary[peerId].entry;
   }
+  return this._dictionary[peerId].entry;
 };
 
 /**
- * Deletes the selected entry from the dictionary
+ * Removes an entry from the dictionary which matches with the peerID.
+ *
  * @public
- * @param {string} peerId
+ * @param {string} peerId ID of the element that is deleted.
  */
 PeerDictionary.prototype.delete = function (peerId) {
   if (this._dictionary[peerId] !== undefined) {
@@ -264,7 +261,8 @@ PeerDictionary.prototype.delete = function (peerId) {
 };
 
 /**
- * Returns the size of the dictionary
+ * Returns the size of the dictionary.
+ *
  * @public
  * @returns {number} Size of the dictionary
  */
@@ -273,7 +271,7 @@ PeerDictionary.prototype.size = function () {
 };
 
 /**
- * If the dictionary is empty removes an entry in following order.
+ * If the dictionary is full removes an entry in the following order.
  * Removes the oldest resolved entry. If there are no remaining resolved
  * entries to remove then the oldest waiting entry is removed. If there
  * are no remaining resolved entries to remove then kills the
@@ -281,10 +279,9 @@ PeerDictionary.prototype.size = function () {
  *
  * @private
  */
-PeerDictionary.prototype._removeOldest = function () {
+PeerDictionary.prototype._removeOldIfOverflow = function () {
   var self = this;
   if (this.size() >= PeerDictionary.MAXSIZE) {
-
     var search = function (state) {
       var smallestEntryCounterVal = Number.MAX_VALUE;
       var oldestPeerId = null;
@@ -298,24 +295,30 @@ PeerDictionary.prototype._removeOldest = function () {
       return oldestPeerId;
     };
 
+    // First search for the oldest RESOLVED entry
     var oldestPeerId = search(exports.peerState.RESOLVED);
 
     if (oldestPeerId) {
-      delete self._dictionary[String(oldestPeerId)];
+      self.delete(String(oldestPeerId));
       return;
     }
 
+    // Next search for the oldest WAITING entry
     oldestPeerId = search(exports.peerState.WAITING);
 
     if (oldestPeerId) {
-      delete self._dictionary[String(oldestPeerId)];
+      self.delete(String(oldestPeerId));
       return;
     }
 
+    // As a last search for the oldest CONTROLLED_BY_POOL entry
     oldestPeerId = search(exports.peerState.CONTROLLED_BY_POOL);
 
     if (oldestPeerId) {
-      delete self._dictionary[String(oldestPeerId)];
+      if (self._dictionary[oldestPeerId].entry.notificationAction) {
+        self._dictionary[oldestPeerId].entry.notificationAction.kill();
+      }
+      self.delete(String(oldestPeerId));
       return;
     }
   }
