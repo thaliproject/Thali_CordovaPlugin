@@ -128,15 +128,30 @@ module.exports.tmpDirectory = function () {
  * Android.
  */
 if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
-  Mobile('isBleMultipleAdvertisementSupported').callNative(function (err) {
-    if (err) {
-      console.log('BLE multiple advertisement not supported: ' + err);
-    } else {
-      console.log('BLE multiple advertisement supported');
-    }
-  });
+  var checkBleMultipleAdvertisementSupport = function () {
+    Mobile('isBleMultipleAdvertisementSupported').callNative(function (result) {
+      switch (result) {
+        case 'Not resolved': {
+          logger.info('BLE multiple advertisement support not yet resolved');
+          setTimeout(checkBleMultipleAdvertisementSupport, 5000);
+          break;
+        }
+        case 'Supported': {
+          logger.info('BLE multiple advertisement supported');
+          break;
+        }
+        case 'Not supported': {
+          logger.info('BLE multiple advertisement not supported');
+          break;
+        }
+        default: {
+          logger.warn('BLE multiple advertisement issue: ' + result);
+        }
+      }
+    });
+  };
+  checkBleMultipleAdvertisementSupport();
 }
-
 
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
