@@ -153,7 +153,7 @@ public class ConnectionHelper
         if (!stopOnlyListeningForAdvertisements) {
             mHandshakeHelper.shutdown();
             mConnectivityInfo.stopMonitoring();
-            killAllConnections();
+            mConnectionModel.closeAndRemoveAllOutgoingConnections();
         }
     }
 

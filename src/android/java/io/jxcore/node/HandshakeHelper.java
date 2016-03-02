@@ -114,7 +114,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
                     Log.e(TAG, "initiateHandshake: Failed to write the handshake message (thread ID: "
                             + bluetoothSocketIoThread.getId() + ")");
                     mHandshakeConnections.remove(handshakeConnection);
-                    bluetoothSocketIoThread.close(true);
+                    bluetoothSocketIoThread.close(true, true);
                 }
             } else {
                 Log.e(TAG, "initiateHandshake: Handshake with the given peer already initiated");
@@ -144,7 +144,9 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
             }
 
             for (HandshakeConnection handshakeConnection : mHandshakeConnections) {
-                handshakeConnection.bluetoothSocketIoThread.close(true);
+                Log.d(TAG, "shutdown: Closing handshake connection (thread ID: "
+                        + handshakeConnection.bluetoothSocketIoThread.getId() + ")");
+                handshakeConnection.bluetoothSocketIoThread.close(true, true);
             }
 
             mHandshakeConnections.clear();
@@ -202,7 +204,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
                 }
             });
         } else {
-           bluetoothSocketIoThread.close(true);
+           bluetoothSocketIoThread.close(true, true);
         }
     }
 
@@ -275,7 +277,7 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
                 });
             }
 
-            handshakeConnection.bluetoothSocketIoThread.close(true);
+            handshakeConnection.bluetoothSocketIoThread.close(true, true);
 
             if (!mIsShuttingDown) {
                 Log.d(TAG, "removeFailedHandshakeConnectionAndNotifyListener: Thread with ID "
