@@ -421,14 +421,13 @@ public class ConnectionHelper
 
     /**
      * ThaliPermissions class is responsible for managing permission requests. Thus, we do not try
-     * to handle them here, and will consider call to this method an error.
+     * to handle them here, but will return true every time.
      */
     @Override
     public boolean onPermissionCheckRequired(String permission) {
-        String errorMessage = "Received a request for permission \"" + permission
-                + "\", but we were expecting that all the required permissions were already granted";
-        Log.e(TAG, "onPermissionCheckRequired: " + errorMessage);
-        return false;
+        Log.v(TAG, "Received a request for permission \"" + permission
+                + "\", but we are expecting that all the required permissions have already been granted");
+        return true;
     }
 
     /**
