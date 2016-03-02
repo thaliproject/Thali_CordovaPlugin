@@ -174,8 +174,8 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
 
   networkStatus = @{
-    @"blueToothLowEnergy" : [[NSNumber alloc] initWithBool:_bleEnabled],
-    @"blueTooth" : [[NSNumber alloc] initWithBool:_bluetoothEnabled],
+    @"bluetoothLowEnergy" : [[NSNumber alloc] initWithBool:_bleEnabled],
+    @"bluetooth" : [[NSNumber alloc] initWithBool:_bluetoothEnabled],
     @"cellular" : [[NSNumber alloc] initWithBool:reachable],
     @"wifi" : [[NSNumber alloc] initWithBool:isWifi],
     @"bssidName" : [[NSNull alloc] init]
