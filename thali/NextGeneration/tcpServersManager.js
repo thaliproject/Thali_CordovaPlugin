@@ -730,6 +730,9 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
     }
 
     function multiplexToNativeListener(connection, server, cb) {
+      // Create an outgoing socket to the native listener via a mux
+      // New streams created on this mux by the remote side are initiated 
+      // by the user app connecting a socket to a remote thali server
       var outgoing = net.createConnection(connection.listeningPort,
       function () {
         var mux = new Multiplex(function onStream(stream) {
@@ -756,7 +759,11 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
             closeServer(server);
           }
         });
-
+       
+        outgoing.on("data", function() {
+          self._peerServers[server._peerIdentifer].lastActive = Date.now();
+        });
+ 
         outgoing.pipe(mux).pipe(outgoing);
  
         if (cb) {
@@ -962,7 +969,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
     server.on('listening', function() {
 
-      self._peerServers[peerIdentifier] = { lastActive: new Date(), server: server };
+      self._peerServers[peerIdentifier] = { lastActive: Date.now(), server: server };
 
       logger.debug('pleaseConnect=', pleaseConnect);
 
