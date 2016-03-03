@@ -173,12 +173,6 @@ public class HandshakeHelper implements BluetoothSocketIoThread.Listener {
 
         String receivedBytesAsString = new String(bytes, StandardCharsets.UTF_8);
 
-        /*if (receivedBytesAsString != null && receivedBytesAsString.length() >= numberOfBytes) {
-            // Since the bytes we get is a buffer likely longer than our message, we need to remove
-            // the garbage from the end
-            receivedBytesAsString = receivedBytesAsString.substring(0, numberOfBytes);
-        }*/
-
         final boolean isValidHandshakeMessage = HANDSHAKE_MESSAGE_AS_STRING.equals(receivedBytesAsString);
 
         if (isValidHandshakeMessage) {

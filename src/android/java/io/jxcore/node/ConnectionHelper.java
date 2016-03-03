@@ -47,7 +47,7 @@ public class ConnectionHelper
     private final DiscoveryManager mDiscoveryManager;
     private final DiscoveryManagerSettings mDiscoveryManagerSettings;
     private final ConnectivityInfo mConnectivityInfo;
-    private final StartStopOperationQueue mStartStopOperationQueue;
+    private final StartStopOperationHandler mStartStopOperationHandler;
     private final HandshakeHelper mHandshakeHelper;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = NO_PORT_NUMBER;
@@ -87,7 +87,7 @@ public class ConnectionHelper
         }
 
         mConnectivityInfo = new ConnectivityInfo(mDiscoveryManager);
-        mStartStopOperationQueue = new StartStopOperationQueue(mConnectionManager, mDiscoveryManager);
+        mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
         mHandshakeHelper = new HandshakeHelper(this);
     }
 
@@ -96,7 +96,7 @@ public class ConnectionHelper
      * Note that after calling this method, this instance cannot be used anymore.
      */
     public void dispose() {
-        mStartStopOperationQueue.clearQueue();
+        mStartStopOperationHandler.cancelCurrentOperation();
         mConnectionManager.dispose();
         mDiscoveryManager.dispose();
     }
@@ -129,7 +129,7 @@ public class ConnectionHelper
             return false;
         }
 
-        mStartStopOperationQueue.addStartOperation(startAdvertisements, callback);
+        mStartStopOperationHandler.executeStartOperation(startAdvertisements, callback);
 
         Log.i(TAG, "start: OK");
         return true;
@@ -148,7 +148,7 @@ public class ConnectionHelper
                     ? "Stopping only listening for advertisements"
                     : "Stopping all activities and killing all connections"));
 
-        mStartStopOperationQueue.addStopOperation(stopOnlyListeningForAdvertisements, callback);
+        mStartStopOperationHandler.executeStopOperation(stopOnlyListeningForAdvertisements, callback);
 
         if (!stopOnlyListeningForAdvertisements) {
             mHandshakeHelper.shutdown();
@@ -339,7 +339,7 @@ public class ConnectionHelper
     @Override
     public void onConnectionManagerStateChanged(ConnectionManagerState connectionManagerState) {
         Log.i(TAG, "onConnectionManagerStateChanged: " + connectionManagerState);
-        mStartStopOperationQueue.checkCurrentOperationAndExecuteNextIfSuccessful();
+        mStartStopOperationHandler.checkCurrentOperationStatus();
     }
 
     /**
@@ -466,7 +466,7 @@ public class ConnectionHelper
         Log.i(TAG, "onDiscoveryManagerStateChanged: State: " + state
                 + ", is discovering: " + isDiscovering + ", is advertising: " + isAdvertising);
 
-        mStartStopOperationQueue.checkCurrentOperationAndExecuteNextIfSuccessful();
+        mStartStopOperationHandler.checkCurrentOperationStatus();
         JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
     }
 

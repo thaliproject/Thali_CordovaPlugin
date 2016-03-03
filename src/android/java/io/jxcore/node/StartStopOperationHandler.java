@@ -8,17 +8,15 @@ import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import java.util.Date;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * A queue for the asynchronous start and stop calls.
+ * A handler for the asynchronous start and stop calls.
  */
-public class StartStopOperationQueue {
-    private static final String TAG = StartStopOperationQueue.class.getName();
+public class StartStopOperationHandler {
+    private static final String TAG = StartStopOperationHandler.class.getName();
     private static final long OPERATION_TIMEOUT_IN_MILLISECONDS = 3000;
     private final ConnectionManager mConnectionManager;
     private final DiscoveryManager mDiscoveryManager;
-    private final CopyOnWriteArrayList<StartStopOperation> mOperations = new CopyOnWriteArrayList<StartStopOperation>();
     private CountDownTimer mOperationTimeoutTimer = null;
     private StartStopOperation mCurrentOperation = null;
 
@@ -28,59 +26,66 @@ public class StartStopOperationQueue {
      * @param connectionManager The connection manager.
      * @param discoveryManager The discovery manager.
      */
-    public StartStopOperationQueue(ConnectionManager connectionManager, DiscoveryManager discoveryManager) {
+    public StartStopOperationHandler(ConnectionManager connectionManager, DiscoveryManager discoveryManager) {
         mConnectionManager = connectionManager;
         mDiscoveryManager = discoveryManager;
     }
 
     /**
-     * Clears the operation queue.
-     * Note that if there is an operation pending, its callback will not be called.
+     * Cancels the current operation.
+     * Note that the callback of the current operations, if one exists, will not be called.
      */
-    public void clearQueue() {
+    public void cancelCurrentOperation() {
         if (mOperationTimeoutTimer != null) {
             mOperationTimeoutTimer.cancel();
             mOperationTimeoutTimer = null;
         }
 
-        mOperations.clear();
         mCurrentOperation = null;
     }
 
     /**
-     * Adds a new start operation. If the queue is empty it will be executed right away. Otherwise,
-     * it will be added to the end of the queue.
+     * Executes a new start operation. Any pending operations will be cancelled.
      *
      * @param startAdvertising If true, will start advertising. If false, will only start listening
      *                         for advertisements.
      * @param callback The callback to call when we get the operation result.
      */
-    public synchronized void addStartOperation(boolean startAdvertising, JXcoreThaliCallback callback) {
-        mOperations.add(StartStopOperation.createStartOperation(startAdvertising, callback));
-        executeNextOperation();
+    public synchronized void executeStartOperation(boolean startAdvertising, JXcoreThaliCallback callback) {
+        if (mCurrentOperation != null) {
+            Log.w(TAG, "executeStartOperation: Cancelling a pending operation");
+            cancelCurrentOperation();
+        }
+
+        mCurrentOperation = StartStopOperation.createStartOperation(startAdvertising, callback);
+        executeCurrentOperation();
     }
 
     /**
-     * Adds a new stop operation. If the queue is empty it will be executed right away. Otherwise,
-     * it will be added to the end of the queue.
+     * Executes a new stop operation. Any pending operations will be cancelled.
      *
      * @param stopOnlyListeningForAdvertisements If true, will only stop listening for advertisements.
      *                                           If false, will stop everything.
      * @param callback The callback to call when we get the operation result.
      */
-    public synchronized void addStopOperation(
+    public synchronized void executeStopOperation(
             boolean stopOnlyListeningForAdvertisements, JXcoreThaliCallback callback) {
-        mOperations.add(StartStopOperation.createStopOperation(stopOnlyListeningForAdvertisements, callback));
-        executeNextOperation();
+        if (mCurrentOperation != null) {
+            Log.w(TAG, "executeStartOperation: Cancelling a pending operation");
+            cancelCurrentOperation();
+        }
+
+        mCurrentOperation = StartStopOperation.createStopOperation(stopOnlyListeningForAdvertisements, callback);
+        executeCurrentOperation();
     }
 
     /**
      * Checks if the current operation is successful (the current state matches the expected
-     * outcome) and if so, executes the next operation if one exists.
+     * outcome) and if so, calls its callback.
      */
-    public synchronized void checkCurrentOperationAndExecuteNextIfSuccessful() {
+    public synchronized void checkCurrentOperationStatus() {
         if (mCurrentOperation != null && isTargetState(mCurrentOperation) == null) {
-            Log.d(TAG, "checkCurrentOperationAndExecuteNextIfSuccessful: Operation successfully executed");
+            Log.d(TAG, "checkCurrentOperationStatus: Operation successfully executed");
 
             if (mOperationTimeoutTimer != null) {
                 mOperationTimeoutTimer.cancel();
@@ -89,56 +94,47 @@ public class StartStopOperationQueue {
 
             mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
-            executeNextOperation();
         }
     }
 
     /**
-     * Executes the next operation given that we have no operation execution pending and we have
-     * operations in the queue to execute.
+     * Executes the current operation.
      */
-    private synchronized void executeNextOperation() {
-        if (mCurrentOperation != null || mOperations.isEmpty()) {
-            // Previous operation is still pending or we have no operations execute
+    private synchronized void executeCurrentOperation() {
+        if (mCurrentOperation == null) {
+            // No operation to execute
             return;
         }
-
-        try {
-            mCurrentOperation = mOperations.get(0);
-        } catch (IndexOutOfBoundsException e) {
-            Log.e(TAG, "executeNextOperation: Failed to get the next operation from the queue: " + e.getMessage(), e);
-            return;
-        }
-
-        mOperations.remove(mCurrentOperation);
 
         if (isTargetState(mCurrentOperation) == null) {
             // The current state already matches the desired outcome of this operation so it is
             // pointless to execute this
-            Log.v(TAG, "executeNextOperation: The current state already matches the desired outcome of this operation, skipping...");
+            Log.v(TAG, "executeCurrentOperation: The current state already matches the desired outcome of this operation, skipping...");
             mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
         } else {
             if (mCurrentOperation.isStartOperation()) {
-                if (!mConnectionManager.start()) {
-                    final String errorMessage = "Failed to start the connection manager";
-                    Log.e(TAG, "executeNextOperation: " + errorMessage);
+                // Discovery manager should always be started, advertising depends on the operation parameter
+                if (!mDiscoveryManager.start(
+                        true, !mCurrentOperation.getShouldStartOrStopListeningOnly())) {
+                    final String errorMessage = "Failed to start the discovery manager";
+                    Log.e(TAG, "executeCurrentOperation: " + errorMessage);
                     mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
                     mCurrentOperation = null;
                 } else {
-                    // Starting of the connection manager initiated successfully (or was already running)
-                    // Discovery is always started, advertising depends on the operation parameter
-                    if (!mDiscoveryManager.start(
-                            true, mCurrentOperation.getShouldStartAdvertisingOrStopListening())) {
-                        final String errorMessage = "Failed to start the discovery manager";
-                        Log.e(TAG, "executeNextOperation: " + errorMessage);
+                    // Starting of the discovery manager initiated successfully (or was already running)
+                    // Connection manager shouldn't be started if we want to listen only
+                    if (!mCurrentOperation.getShouldStartOrStopListeningOnly()
+                            && !mConnectionManager.start()) {
+                        final String errorMessage = "Failed to start the connection manager";
+                        Log.e(TAG, "executeCurrentOperation: " + errorMessage);
                         mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
                         mCurrentOperation = null;
                     }
                 }
             } else {
                 // Is stop operation
-                if (mCurrentOperation.getShouldStartAdvertisingOrStopListening()) {
+                if (mCurrentOperation.getShouldStartOrStopListeningOnly()) {
                     // Should only stop listening for advertisements
                     mDiscoveryManager.stopDiscovery();
                 } else {
@@ -169,17 +165,14 @@ public class StartStopOperationQueue {
                     if (mCurrentOperation != null) {
                         String errorMessage = "Operation timeout, state error: " + isTargetState(mCurrentOperation);
                         Log.d(TAG, errorMessage);
-                        mCurrentOperation.getCallback().onStartStopCallback(errorMessage);
+                        mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
                         mCurrentOperation = null;
                         mOperationTimeoutTimer = null;
-                        executeNextOperation();
                     }
                 }
             };
 
             mOperationTimeoutTimer.start();
-        } else {
-            executeNextOperation();
         }
     }
 

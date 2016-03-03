@@ -32,7 +32,7 @@
         <source-file src="src/android/java/io/jxcore/node/OutgoingSocketThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/SocketThreadBase.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StartStopOperation.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/StartStopOperationQueue.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/StartStopOperationHandler.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
         
         <!-- ThaliPermissions -->
