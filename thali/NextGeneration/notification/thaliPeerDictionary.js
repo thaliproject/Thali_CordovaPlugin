@@ -228,6 +228,19 @@ PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
  * @param {string} peerId
  */
 PeerDictionary.prototype.remove = function (peerId) {
+
+  if (this._dictionary[peerId].entry.peerState === exports.peerState.WAITING) {
+
+    // stop the timer before an entry is removed
+    clearTimeout(this._dictionary[peerId].entry.waitingTimeout);
+
+  } else if (this._dictionary[peerId].entry.peerState ===
+              exports.peerState.CONTROLLED_BY_POOL) {
+
+    // kills a notification action before before an entry is removed
+    this._dictionary[peerId].entry.notificationAction.kill();
+  }
+
   delete this._dictionary[peerId];
 };
 
@@ -308,7 +321,6 @@ PeerDictionary.prototype._removeOldestIfOverflow = function () {
   oldestPeerId = search(exports.peerState.WAITING);
 
   if (oldestPeerId) {
-    clearTimeout(self._dictionary[oldestPeerId].entry.waitingTimeout);
     self.remove(oldestPeerId);
     return;
   }
@@ -317,7 +329,6 @@ PeerDictionary.prototype._removeOldestIfOverflow = function () {
   oldestPeerId = search(exports.peerState.CONTROLLED_BY_POOL);
 
   if (oldestPeerId) {
-    self._dictionary[oldestPeerId].entry.notificationAction.kill();
     self.remove(oldestPeerId);
     return;
   }
