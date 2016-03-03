@@ -34,8 +34,8 @@ module.exports.peerState = {
 };
 
 /**
- * Records information about how to connect to a peer over a particular
- * connectionType.
+ * @classdesc Records information about how to connect to a peer
+ * over a particular connectionType.
  *
  * @public
  * @constructor
@@ -114,26 +114,28 @@ module.exports.PeerConnectionInformation = PeerConnectionInformation;
  *
  * @typedef {Object.<module:thaliMobile.connectionTypes, module:thaliPeerDictionary~PeerConnectionInformation>} PeerConnectionDictionary
  */
+// jscs:enable maximumLineLength
 
+// jscs:disable maximumLineLength
 /**
- * An entry to be put into the peerDictionary.
+ * @classdesc An entry to be put into the peerDictionary.
  *
  * @public
  * @param {module:thaliPeerDictionary.peerState} peerState The
  * state of the peer.
- * @param {module:thaliPeerDictionary~PeerConnectionDictionary} peerConnectionDictionary
- * A dictionary.
- * of different connection types we know about for this peerIdentity
- * @param {module:thaliNotificationAction} notificationAction
+ * @param {module:thaliPeerDictionary~PeerConnectionDictionary} peerConnectionDictionary A dictionary
+ * of different connection types we know about for this peerIdentity.
+ * @param {module:thaliNotificationAction~NotificationAction} notificationAction
  * @constructor
  */
+// jscs:enable maximumLineLength
 function NotificationPeerDictionaryEntry(peerState, peerConnectionDictionary,
                               notificationAction) {
   this.peerState = peerState;
   this.peerConnectionDictionary = peerConnectionDictionary;
   this.notificationAction = notificationAction;
+  this.waitingTimeout = null;
 }
-// jscs:enable maximumLineLength
 
 /**
  * The current state of the peer
@@ -159,11 +161,20 @@ NotificationPeerDictionaryEntry.prototype.peerConnectionDictionary = null;
  */
 NotificationPeerDictionaryEntry.prototype.notificationAction = null;
 
+/**
+ * The waiting timeout object is used when the peer is in WAITING
+ * state before enqueuing a new request.
+ *
+ * @public
+ * @type {?timeoutObject}
+ */
+NotificationPeerDictionaryEntry.prototype.waitingTimeout = null;
+
 module.exports.NotificationPeerDictionaryEntry =
   NotificationPeerDictionaryEntry;
 
 /**
- * @classdesc This class manages dictionary of discovered peers. It manages
+ * @classdesc This class manages a dictionary of discovered peers. It manages
  * how many entries are in the dictionary so that we don't overflow memory.
  * Therefore once we reach a certain number of entries any new entries
  * will cause old entries to be removed.
@@ -200,12 +211,13 @@ PeerDictionary.MAXSIZE = 100;
  * Entry to be added.
   */
 PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
-  if (this._dictionary[peerId] === undefined) {
-    this._removeOldIfOverflow();
-    this._dictionary[peerId] = {'entry' : entry,
-                                'entryCounter' : this._entryCounter++};
-  } else {
+  if (this._dictionary[peerId]) {
     this._dictionary[peerId].entry = entry;
+    this._dictionary[peerId].entryNumber = this._entryCounter++;
+  } else {
+    this._removeOldestIfOverflow();
+    this._dictionary[peerId] = {'entry' : entry,
+      'entryNumber' : this._entryCounter++};
   }
 };
 
@@ -216,9 +228,7 @@ PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
  * @param {string} peerId
  */
 PeerDictionary.prototype.remove = function (peerId) {
-  if (this._dictionary[peerId] !== undefined) {
-    delete this._dictionary[peerId];
-  }
+  delete this._dictionary[peerId];
 };
 
 /**
@@ -242,22 +252,8 @@ PeerDictionary.prototype.exists = function (peerId) {
  * returns null.
  */
 PeerDictionary.prototype.get = function (peerId) {
-  if (this._dictionary[peerId] === undefined) {
-    return null;
-  }
-  return this._dictionary[peerId].entry;
-};
-
-/**
- * Removes an entry from the dictionary which matches with the peerID.
- *
- * @public
- * @param {string} peerId ID of the element that is deleted.
- */
-PeerDictionary.prototype.delete = function (peerId) {
-  if (this._dictionary[peerId] !== undefined) {
-    delete this._dictionary[peerId];
-  }
+  var entryObject = this._dictionary[peerId];
+  return entryObject ? entryObject.entry : null;
 };
 
 /**
@@ -271,56 +267,59 @@ PeerDictionary.prototype.size = function () {
 };
 
 /**
- * If the dictionary is full removes an entry in the following order.
- * Removes the oldest resolved entry. If there are no remaining resolved
- * entries to remove then the oldest waiting entry is removed. If there
- * are no remaining resolved entries to remove then kills the
+ * If the dictionary is full this function removes an entry
+ * in the following order. Removes the oldest resolved entry.
+ * If there are no remaining resolved entries to remove then
+ * the oldest waiting entry is removed. If there are no
+ * remaining resolved entries to remove then kills the
  * oldest CONTROLLED_BY_POOL entry and removes it.
  *
  * @private
  */
-PeerDictionary.prototype._removeOldIfOverflow = function () {
+PeerDictionary.prototype._removeOldestIfOverflow = function () {
   var self = this;
-  if (this.size() >= PeerDictionary.MAXSIZE) {
-    var search = function (state) {
-      var smallestEntryCounterVal = Number.MAX_VALUE;
-      var oldestPeerId = null;
-      for (var key in self._dictionary) {
-        if (self._dictionary[key].entryCounter < smallestEntryCounterVal &&
-            self._dictionary[key].entry.peerState === state) {
-          oldestPeerId = key;
-          smallestEntryCounterVal = self._dictionary[key].entryCounter;
-        }
+
+  if (this.size() < PeerDictionary.MAXSIZE) {
+    return;
+  }
+
+  var search = function (state) {
+    var smallestEntryNumber = self._entryCounter;
+    var oldestPeerId = null;
+    for (var key in self._dictionary) {
+      if (self._dictionary[key].entryNumber < smallestEntryNumber &&
+          self._dictionary[key].entry.peerState === state) {
+        oldestPeerId = key;
+        smallestEntryNumber = self._dictionary[key].entryNumber;
       }
-      return oldestPeerId;
-    };
-
-    // First search for the oldest RESOLVED entry
-    var oldestPeerId = search(exports.peerState.RESOLVED);
-
-    if (oldestPeerId) {
-      self.delete(String(oldestPeerId));
-      return;
     }
+    return oldestPeerId;
+  };
 
-    // Next search for the oldest WAITING entry
-    oldestPeerId = search(exports.peerState.WAITING);
+  // First search for the oldest RESOLVED entry
+  var oldestPeerId = search(exports.peerState.RESOLVED);
 
-    if (oldestPeerId) {
-      self.delete(String(oldestPeerId));
-      return;
-    }
+  if (oldestPeerId) {
+    self.remove(oldestPeerId);
+    return;
+  }
 
-    // As a last search for the oldest CONTROLLED_BY_POOL entry
-    oldestPeerId = search(exports.peerState.CONTROLLED_BY_POOL);
+  // Next search for the oldest WAITING entry
+  oldestPeerId = search(exports.peerState.WAITING);
 
-    if (oldestPeerId) {
-      if (self._dictionary[oldestPeerId].entry.notificationAction) {
-        self._dictionary[oldestPeerId].entry.notificationAction.kill();
-      }
-      self.delete(String(oldestPeerId));
-      return;
-    }
+  if (oldestPeerId) {
+    clearTimeout(self._dictionary[oldestPeerId].entry.waitingTimeout);
+    self.remove(oldestPeerId);
+    return;
+  }
+
+  // As a last search for the oldest CONTROLLED_BY_POOL entry
+  oldestPeerId = search(exports.peerState.CONTROLLED_BY_POOL);
+
+  if (oldestPeerId) {
+    self._dictionary[oldestPeerId].entry.notificationAction.kill();
+    self.remove(oldestPeerId);
+    return;
   }
 };
 

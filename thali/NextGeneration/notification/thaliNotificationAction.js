@@ -1,7 +1,8 @@
 'use strict';
 var ThaliMobile = require('../thaliMobile');
 var ThaliPeerAction = require('../thaliPeerPool/thaliPeerAction');
-var ThaliNotificationClient = require('./thaliNotificationClient');
+var NotificationClient = require('./thaliNotificationClient');
+var PeerDictionary = require('./thaliPeerDictionary');
 var inherits = require('util').inherits;
 
 /** @module thaliNotificationAction */
@@ -19,19 +20,24 @@ var inherits = require('util').inherits;
  * with the local device's public and private keys.
  * @param {addressBookCallback} addressBookCallback An object used to validate
  * which peers we are interested in talking to.
+ * @param {module:thaliPeerDictionary~PeerConnectionInformation} peerConnection
+ * connection parameters.
  * @constructor
  * @implements {module:thaliPeerAction~PeerAction}
  * @fires module:thaliNotificationAction.event:Resolved
  */
 /* jshint -W003 */
 function ThaliNotificationAction(peerIdentifier, connectionType,
-                            ecdhForLocalDevice, addressBookCallback) {
+                            ecdhForLocalDevice, addressBookCallback, peerConnection) {
+
 
   ThaliNotificationAction.super_.call(this, peerIdentifier, connectionType,
-    ThaliNotificationClient.ACTION_TYPE);
+    NotificationClient.ACTION_TYPE);
 
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
+
+  this._peerConnection = new PeerDictionary.PeerConnectionInformation('127.0.0.1', 3001, 10);
 
 }
 /* jshint +W003 */
@@ -65,8 +71,15 @@ inherits(ThaliNotificationAction, ThaliPeerAction);
  * __Open Issue:__ Is abort truly synchronous? In other words is it ever
  * possible to call abort, get back a response and then still have the response
  * object show up? I should hope not.
- */
-ThaliNotificationAction.prototype.start = function () {
+ * @public
+ * @param {http.Agent}  httpAgentPool The HTTP client connection pool to
+ * use when making requests to the requested peer.
+ * @returns {Promise<?Error>} returns a promise that will resolve when the
+ * action is done. Note that if kill is called on an action then it MUST still
+ * return success with null. After all, kill doesn't reflect a failure
+ * of the action but a change in outside circumstances.
+*/
+ThaliNotificationAction.prototype.start = function (httpAgentPool) {
 
 };
 

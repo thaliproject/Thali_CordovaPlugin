@@ -12,30 +12,28 @@ var ThaliNotificationClient =
 var ThaliMobile =
   require('thali/NextGeneration/thaliMobile');
 
-var ThaliPeerPoolInterface = 
+var ThaliPeerPoolInterface =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolInterface');
 
-var NotificationBeacons = 
+var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
-
-var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 var SECP256K1 = 'secp256k1';
 
 var globals = {};
 
 /**
- * @classdesc This class is a container for all variables and 
+ * @classdesc This class is a container for all variables and
  * functionality that are common to most of the ThaliNoficationServer
- * tests. 
+ * tests.
  */
 var GlobalVariables = function () {
-  
+
   this.sourceKeyExchangeObject = crypto.createECDH(SECP256K1);
   this.sourcePublicKey = this.sourceKeyExchangeObject.generateKeys();
-  this.sourcePublicKeyHash = 
+  this.sourcePublicKeyHash =
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
-  /*  
+  /*
   // Creates a proxyquired ThaliNotificationClient class.
   var MockThaliMobile = { };
   this.ThaliNotificationClientProxyquired =
@@ -44,10 +42,10 @@ var GlobalVariables = function () {
       MockThaliMobile});
   */
   this.peerPoolInterface = new ThaliPeerPoolInterface();
-  
-  this.spyThaliPeerPoolInterfaceEnqueue = 
+
+  this.spyThaliPeerPoolInterfaceEnqueue =
     sinon.spy(this.peerPoolInterface, 'enqueue');
-        
+
 };
 
 
@@ -57,7 +55,7 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    
+
     t.end();
   }
 });
@@ -65,12 +63,12 @@ var test = tape({
 
 test('ThaliNotificationClient 1. test', function (t) {
 
-  var notificationClient = 
+  var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterface,
     globals.sourceKeyExchangeObject);
-  
+
   notificationClient.start();
-  
+
   var PeerWithHost = {
     peerIdentifier: 'dummy',
     hostAddress: 'dummy',
@@ -81,11 +79,11 @@ test('ThaliNotificationClient 1. test', function (t) {
     peerIdentifier: 'dummy',
     portNumber: 8080
   };
-  
+
   notificationClient._peerAvailabilityChanged(PeerWithHost);
   notificationClient._peerAvailabilityChanged(PeerWithHost);
   notificationClient._peerAvailabilityChanged(PeerWithNoHost);
-  
+
   t.end();
 });
 
@@ -95,17 +93,17 @@ test('Replace the connectionType BLUETOOTH with TCP_NATIVE', function (t) {
   // 1. Event: connectionType is BLUETOOTH
   // 2. Event: connectionType is TCP_NATIVE
   // 3. Event: connectionType is BLUETOOTH
-  
-  // When the connectionType of the new event is TCP_NATIVE and existing 
-  // action isn't that, we kill the existing action and create a new 
-  // action. We prefer native TCP transport to other options. 
-  
-  var notificationClient = 
+
+  // When the connectionType of the new event is TCP_NATIVE and existing
+  // action isn't that, we kill the existing action and create a new
+  // action. We prefer native TCP transport to other options.
+
+  var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterface,
     globals.sourceKeyExchangeObject);
-  
+
   notificationClient.start();
-  
+
   var BluetoothEvent = {
     peerIdentifier: 'id123',
     hostAddress: 'anything',
@@ -119,25 +117,25 @@ test('Replace the connectionType BLUETOOTH with TCP_NATIVE', function (t) {
     portNumber: 8080,
     connectionType: ThaliMobile.connectionTypes.TCP_NATIVE
   };
-  
+
   // New peer with Bluetooth connection
   notificationClient._peerAvailabilityChanged(BluetoothEvent);
   var peer = notificationClient.peerDictionary.get('id123');
-  t.equal(peer.notificationAction.connectionType, 
+  t.equal(peer.notificationAction.connectionType,
     ThaliMobile.connectionTypes.BLUETOOTH);
-  
+
   // New peer with TCP_NATIVE connection
   notificationClient._peerAvailabilityChanged(TCPEvent);
   peer = notificationClient.peerDictionary.get('id123');
-  t.equal(peer.notificationAction.connectionType, 
+  t.equal(peer.notificationAction.connectionType,
     ThaliMobile.connectionTypes.TCP_NATIVE);
-  
+
   // New peer with BLUETOOTH connection
   notificationClient._peerAvailabilityChanged(BluetoothEvent);
   peer = notificationClient.peerDictionary.get('id123');
-  t.equal(peer.notificationAction.connectionType, 
+  t.equal(peer.notificationAction.connectionType,
     ThaliMobile.connectionTypes.TCP_NATIVE);
-  
+
   t.end();
-        
+
 });
