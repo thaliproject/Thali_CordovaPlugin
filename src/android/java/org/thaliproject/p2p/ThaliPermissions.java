@@ -56,6 +56,8 @@ public class ThaliPermissions extends CordovaPlugin {
      */
     @Override
     public boolean execute(String action, JSONArray data, CallbackContext callbackContext) throws JSONException {
+        int currentapiVersion = android.os.Build.VERSION.SDK_INT;
+        Log.i(TAG, "SDK.Build.VERSION: " + Integer.toString(currentapiVersion));
         Log.i(TAG, "execute: " + action);
         boolean methodFound = false;
 
