@@ -2,6 +2,7 @@
 var tape = require('../lib/thali-tape');
 var crypto = require('crypto');
 var sinon = require('sinon');
+var assert = require('assert');
 
 var PeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
@@ -15,7 +16,6 @@ var SECP256K1 = 'secp256k1';
 var ENTRY1 = 'entry1';
 var ENTRY2 = 'entry2';
 
-
 var test = tape({
   setup: function (t) {
     t.end();
@@ -25,21 +25,36 @@ var test = tape({
   }
 });
 
+/**
+ * Crates a new entry and tags all objects in it with the given name.
+ *
+ * @param {string} name
+ * @param {module:thaliPeerDictionary.peerState} state
+ */
 function createEntry(name, state) {
 
   var myPublicKey = crypto.createECDH(SECP256K1);
-
   myPublicKey.generateKeys();
 
   var act = new ThaliNotificationAction(name,
-    ThaliMobile.connectionTypes.BLUETOOTH, myPublicKey, function () { });
+    ThaliMobile.connectionTypes.BLUETOOTH, myPublicKey, null);
 
-  var peerConnInfo =
+  act._nameTag = name;
+
+  var peerConnInfo = {};
+  peerConnInfo[ThaliMobile.connectionTypes.TCP_NATIVE] =
     new PeerDictionary.PeerConnectionInformation('127.0.0.1', 3001, 10);
 
-  return new PeerDictionary.NotificationPeerDictionaryEntry(
+  peerConnInfo[ThaliMobile.connectionTypes.TCP_NATIVE]._nameTag = name;
+
+  var newEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
     state, peerConnInfo, act );
+
+  newEntry._nameTag = name;
+
+  return newEntry;
 }
+
 /**
  * Adds a series of entries to the dictionary object.
  *
@@ -57,22 +72,45 @@ function addEntries(dictionary, baseString, state, count) {
 }
 
 /**
+ * Checks that objects inside the entry have a unique tag. This
+ * ensures objects haven't been replaced with new accidentally.
+ *
+ * @param {string} tagName
+ * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} entry
+ */
+function testMatch(tagName, entry) {
+
+  if (entry._nameTag !== tagName ||
+    entry.notificationAction._nameTag !== tagName) {
+    return false;
+  }
+  for (var key in entry.peerConnectionDictionary) {
+    if (entry.peerConnectionDictionary[key]._nameTag !== tagName) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Verifies that a series of entries exists in the dictionary.
+ *
  * @param {module:thaliPeerDictionary.PeerDictionary} dictionary
  * @param {string} baseString prefix
  * @param {number} start counter start
  * @param {number} end counter end
  */
-function verifyEntriesExists(dictionary, baseString, start, end) {
-  var exists = true;
+function verifyEntries(dictionary, baseString, start, end) {
 
-  for (var i = start ; i < end ; i++) {
-    if (!dictionary.exists(baseString+i)) {
-      exists = false;
-      break;
+  for (var i = start; i <= end; i++) {
+    if (!dictionary.exists(baseString + i)) {
+      return false;
+    }
+    if (!testMatch(baseString + i, dictionary.get(baseString + i))) {
+      return false;
     }
   }
-  return exists;
+  return true;
 }
 
 test('Test PeerConnectionInformation basics', function (t) {
@@ -98,15 +136,22 @@ test('Test PeerDictionary basic functionality', function (t) {
   var entry1 = createEntry(ENTRY1, PeerDictionary.peerState.RESOLVED);
   var entry2 = createEntry(ENTRY2, PeerDictionary.peerState.RESOLVED);
 
+  var entry1Copy = JSON.parse(JSON.stringify(entry1));
+  var entry2Copy = JSON.parse(JSON.stringify(entry2));
+
   dictionary.addUpdateEntry(ENTRY1, entry1);
   t.equal(dictionary._entryCounter, 1, 'Entry counter must be 1');
+  t.equal(dictionary.size(), 1, 'Size must be 1');
 
   dictionary.addUpdateEntry(ENTRY2, entry2);
   t.equal(dictionary._entryCounter, 2, 'Entry counter must be 2');
+  t.equal(dictionary.size(), 2, 'Size must be 2');
 
-  t.ok(dictionary.get('entry1'), 'Entry should be found');
+  assert.deepEqual(dictionary.get('entry1'), entry1Copy);
+  assert.deepEqual(dictionary.get('entry2'), entry2Copy);
 
   dictionary.remove(ENTRY2);
+  t.equal(dictionary.get(ENTRY2), null, 'Entry2 should not be found');
   t.equal(dictionary.size(), 1, 'Size must be 1');
 
   dictionary.remove(ENTRY1);
@@ -128,8 +173,8 @@ test('Test PeerDictionary with multiple entries.', function (t) {
     'Size must be'+ PeerDictionary.PeerDictionary.MAXSIZE);
 
   // Tests that the newest entries remained (entries 20 - MAXSIZE+20)
-  var entriesExist = verifyEntriesExists(dictionary, 'resolved_', 20,
-    PeerDictionary.PeerDictionary.MAXSIZE + 20);
+  var entriesExist = verifyEntries(dictionary, 'resolved_', 20,
+    PeerDictionary.PeerDictionary.MAXSIZE + 19);
 
   t.equal(entriesExist, true,
     'Entries between 20 and MAXSIZE + 20 should exist');
@@ -156,12 +201,26 @@ test('RESOLVED entries are removed before WAITING state entry.', function (t) {
   var entryWaiting = createEntry(ENTRY1, PeerDictionary.peerState.WAITING);
   dictionary.addUpdateEntry(ENTRY1, entryWaiting);
 
+  var entryWaitingCopy = JSON.parse(JSON.stringify(entryWaiting));
+
   addEntries(dictionary, 'resolved_', PeerDictionary.peerState.RESOLVED,
     PeerDictionary.PeerDictionary.MAXSIZE + 5 );
 
   var entry = dictionary.get(ENTRY1);
+  assert.deepEqual(entry, entryWaitingCopy);
 
-  t.ok(entry != null, 'WAITING state entry should not be removed');
+  // Ensures that expected resolved entries remained.
+  var entriesExist = verifyEntries(dictionary, 'resolved_', 6,
+    PeerDictionary.PeerDictionary.MAXSIZE + 4);
+
+  t.equal(entriesExist, true,
+    'Entries between 6 and MAXSIZE + 4 should exist');
+
+  t.equal(dictionary.size(), PeerDictionary.PeerDictionary.MAXSIZE,
+    'Size should be MAXSIZE');
+
+  t.equal(dictionary._entryCounter, PeerDictionary.PeerDictionary.MAXSIZE+6,
+    'Size should be MAXSIZE+6');
 
   t.end();
 });
@@ -175,17 +234,30 @@ test('WAITING entries are removed before CONTROLLED_BY_POOL state entry.',
 
     dictionary.addUpdateEntry(ENTRY1, entryControlledByPool);
 
-    addEntries(dictionary, 'waiting_', PeerDictionary.peerState.RESOLVED,
+    addEntries(dictionary, 'waiting_', PeerDictionary.peerState.WAITING,
       PeerDictionary.PeerDictionary.MAXSIZE + 5 );
 
     var entry = dictionary.get(ENTRY1);
 
     t.ok(entry != null, 'WAITING state entry should not be removed');
 
+    // Ensures that expected waiting entries remained.
+    var entriesExist = verifyEntries(dictionary, 'waiting_', 6,
+      PeerDictionary.PeerDictionary.MAXSIZE + 4);
+
+    t.equal(entriesExist, true,
+      'Waiting entries between 6 and MAXSIZE + 4 should exist');
+
+    t.equal(dictionary.size(), PeerDictionary.PeerDictionary.MAXSIZE,
+      'Size should be MAXSIZE');
+
+    t.equal(dictionary._entryCounter, PeerDictionary.PeerDictionary.MAXSIZE+6,
+      'entryCounter should be MAXSIZE+6');
+
     t.end();
   });
 
-test('When CONTROLLED_BY_POOL entry is removed kill is called.', function (t) {
+test('When CONTROLLED_BY_POOL entry is removed and kill is called.', function (t) {
 
   var dictionary = new PeerDictionary.PeerDictionary();
 
@@ -203,6 +275,8 @@ test('When CONTROLLED_BY_POOL entry is removed kill is called.', function (t) {
 
   t.equals(spyKill.callCount,
     1, 'Kill should be called once');
+  t.equals(dictionary.size(),
+    100, 'Size should be 100');
 
   t.end();
 });
