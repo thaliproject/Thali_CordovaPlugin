@@ -162,17 +162,6 @@ function TCPServersManager(routerPort) {
 util.inherits(TCPServersManager, EventEmitter);
 
 /**
- * The number of milliseconds we will let a native socket connection (i.e. a
- * connection to or from the native layer) be idle before we kill it. This is
- * needed primarily for Bluetooth where there is a limit on how many Bluetooth
- * connections we can have at once. In this case each native TCP connection maps
- * to one Bluetooth connection.
- * @readonly
- * @type {number}
- */
-TCPServersManager.DEFAULT_CONNECTION_TIMEOUT_IN_MS = 30 * 1000;
-
-/**
  * This method will call
  * {@link module:tcpServersManager~TCPServersManager#_createNativeListener}
  * using the routerPort from the constructor and record the returned port.
@@ -211,7 +200,7 @@ TCPServersManager.prototype.start = function () {
     }
 
     self._state = TCPServersManagerStates.STARTED;
-    self._createNativeListener(self._routerPort)
+    self._createNativeListener()
     .then(function (localPort) {
       resolve(localPort);
     })
@@ -279,14 +268,11 @@ TCPServersManager.prototype.stop = function () {
 // jscs:exclude jsDoc
 /**
  * @private
- * @param {number} routerPort Port that the router object submitted to {@link
- * module:ThaliMobileNativeWrapper.startUpdateAdvertisingAndListening} is hosted
- * on. This value was passed into this object's constructor.
  * @returns {Promise<number|Error>} The port that the mux is listening on for
  * connections from the native layer or an Error object.
  */
 // jscs:include jsDoc
-TCPServersManager.prototype._createNativeListener = function (routerPort) {
+TCPServersManager.prototype._createNativeListener = function () {
   if (this._state !== TCPServersManagerStates.STARTED) {
     throw new Error('Call Start!');
   }
@@ -871,7 +857,8 @@ TCPServersManager.prototype.terminateIncomingConnection =
  * @property {number} routerPort
  */
 
-TCPServersManager.ROUTER_PORT_CONNECTION_FAILED = 'routerPortConnectionFailed';
+TCPServersManager.prototype.ROUTER_PORT_CONNECTION_FAILED =
+  'routerPortConnectionFailed';
 
 /**
  * @readonly
@@ -898,7 +885,8 @@ TCPServersManager.incomingConnectionState = {
  * Indicated if the connection has been established or cut.
  */
 
-TCPServersManager.INCOMING_CONNECTION_STATE = 'incomingConnectionState';
+TCPServersManager.prototype.INCOMING_CONNECTION_STATE =
+  'incomingConnectionState';
 
 /**
  *

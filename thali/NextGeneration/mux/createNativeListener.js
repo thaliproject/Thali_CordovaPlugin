@@ -4,13 +4,16 @@ var net = require('net');
 var Promise = require('lie');
 var logger = require('../../thalilogger')('createNativeListener');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
-var TCPServersManager = require('./tcpServersManager');
 var Multiplex = require('multiplex');
+var thaliConfig = require('../thaliConfig');
 
 function removeArrayElement(a, e) {
   var index = a.indexOf(e);
-  delete a[index]; // deleting -1 is a NOOP
-  return index !== -1;
+  if (index === -1) {
+    return false;
+  }
+  a.splice(index, 1);
+  return true;
 }
 
 /**
@@ -140,7 +143,7 @@ module.exports = function (self) {
     self._nativeServer.on('close', function () {
       // this == self._nativeServer (which is already null by
       // the time this handler is called)
-      self.emit(TCPServersManager.INCOMING_CONNECTION_STATE, 'DISCONNECTED');
+      self.emit(self.INCOMING_CONNECTION_STATE, 'DISCONNECTED');
       this._incoming.forEach(function (i) {
         i._mux.end();
       });
@@ -160,7 +163,7 @@ module.exports = function (self) {
         logger.warn(err);
       });
 
-      incoming.setTimeout(TCPServersManager.DEFAULT_CONNECTION_TIMEOUT_IN_MS);
+      incoming.setTimeout(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD);
       incoming.on('timeout', function () {
         logger.debug('incoming socket timeout');
         incoming.end();
@@ -171,7 +174,7 @@ module.exports = function (self) {
         if (self._nativeServer) {
           removeArrayElement(self._nativeServer._incoming, incoming);
         }
-        self.emit(TCPServersManager.INCOMING_CONNECTION_STATE, 'DISCONNECTED');
+        self.emit(self.INCOMING_CONNECTION_STATE, 'DISCONNECTED');
       });
 
       logger.debug('creating incoming mux');
@@ -210,10 +213,7 @@ module.exports = function (self) {
         outgoing.on('error', function (err) {
           logger.warn(err, outgoing);
           removeArrayElement(mux._streams, stream);
-          self.emit(TCPServersManager.ROUTER_PORT_CONNECTION_FAILED, {
-            error: err,
-            routerPort: self._routerPort
-          });
+          self.emit(self.ROUTER_PORT_CONNECTION_FAILED);
         });
 
         logger.debug('new outgoing socket:', outgoing);
@@ -243,7 +243,7 @@ module.exports = function (self) {
       }
 
       incoming.pipe(mux).pipe(incoming);
-      self.emit(TCPServersManager.INCOMING_CONNECTION_STATE, 'CONNECTED');
+      self.emit(self.INCOMING_CONNECTION_STATE, 'CONNECTED');
     });
 
     self._nativeServer.listen(0, function (err) {

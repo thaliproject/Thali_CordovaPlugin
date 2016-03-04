@@ -84,7 +84,6 @@ test('calling startNativeListener directly throws', function (t) {
 });
 
 test('emits incomingConnectionState', function (t) {
-
   // Ensure that dis/connecting to the the localPort of a servers manager
   // emits incomingConnectionState events
 
@@ -109,7 +108,6 @@ test('emits incomingConnectionState', function (t) {
 
     var client = net.createConnection(localPort, function () {
     });
-
   })
   .catch(function (err) {
     t.fail('server should not get error - ' + err);
@@ -867,8 +865,7 @@ test('native server - closing incoming stream cleans outgoing socket',
     serversManager.start()
     .then(function (localPort) {
       var incoming = net.createConnection(localPort, function () {
-        var mux = multiplex(function onStream() {
-        });
+        var mux = multiplex(function onStream() {});
         incoming.pipe(mux).pipe(incoming);
         stream = mux.createStream();
         stream.on('data', function () {
@@ -888,7 +885,7 @@ test('native server - closing incoming stream cleans outgoing socket',
       });
     })
     .catch(function () {
-      t.fail('server hould not get error - ');
+      t.fail('server should not get error - ');
       serversManager.stop();
     });
   }
