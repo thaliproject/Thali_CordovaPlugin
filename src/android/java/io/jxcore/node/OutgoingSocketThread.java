@@ -27,7 +27,7 @@ class OutgoingSocketThread extends SocketThreadBase {
     public OutgoingSocketThread(BluetoothSocket bluetoothSocket, Listener listener)
             throws IOException {
         super(bluetoothSocket, listener);
-        TAG = OutgoingSocketThread.class.getName();
+        mTag = OutgoingSocketThread.class.getName();
     }
 
     public int getListeningOnPortNumber() {
@@ -39,13 +39,14 @@ class OutgoingSocketThread extends SocketThreadBase {
      */
     @Override
     public void run() {
-        Log.d(TAG, "Entering thread (ID: " + getId() + ")");
+        Log.d(mTag, "Entering thread (ID: " + getId() + ")");
+        mIsClosing = false;
 
         try {
             mServerSocket = new ServerSocket(0);
-            Log.d(TAG, "Server socket local port: " + mServerSocket.getLocalPort());
+            Log.d(mTag, "Server socket local port: " + mServerSocket.getLocalPort());
         } catch (IOException e) {
-            Log.e(TAG, "Failed to create a server socket instance: " + e.getMessage(), e);
+            Log.e(mTag, "Failed to create a server socket instance: " + e.getMessage(), e);
             mServerSocket = null;
             mListener.onDisconnected(this, "Failed to create a server socket instance: " + e.getMessage());
         }
@@ -56,7 +57,7 @@ class OutgoingSocketThread extends SocketThreadBase {
             boolean localStreamsCreatedSuccessfully = false;
 
             try {
-                Log.i(TAG, "Now accepting connections...");
+                Log.i(mTag, "Now accepting connections...");
 
                 if (mListener != null) {
                     mListeningOnPortNumber = mServerSocket.getLocalPort();
@@ -65,40 +66,43 @@ class OutgoingSocketThread extends SocketThreadBase {
 
                 mLocalhostSocket = mServerSocket.accept(); // Blocking call
 
-                Log.i(TAG, "Incoming data from address: " + getLocalHostAddressAsString()
+                Log.i(mTag, "Incoming data from address: " + getLocalHostAddressAsString()
                         + ", port: " + mServerSocket.getLocalPort());
 
                 tempInputStream = mLocalhostSocket.getInputStream();
                 tempOutputStream = mLocalhostSocket.getOutputStream();
                 localStreamsCreatedSuccessfully = true;
             } catch (IOException e) {
-                Log.e(TAG, "Failed to create local streams: " + e.getMessage(), e);
-                mListener.onDisconnected(this, "Failed to create local streams: " + e.getMessage());
+                if (!mIsClosing) {
+                    String errorMessage =  "Failed to create local streams: " + e.getMessage();
+                    Log.e(mTag, errorMessage, e);
+                    mListener.onDisconnected(this, errorMessage);
+                }
             }
 
             if (localStreamsCreatedSuccessfully) {
-                Log.d(TAG, "Setting local streams and starting stream copying threads...");
+                Log.d(mTag, "Setting local streams and starting stream copying threads...");
                 mLocalInputStream = tempInputStream;
                 mLocalOutputStream = tempOutputStream;
                 startStreamCopyingThreads();
             }
         }
 
-        Log.d(TAG, "Exiting thread (ID: " + getId() + ")");
+        Log.d(mTag, "Exiting thread (ID: " + getId() + ")");
     }
 
     /**
      * Closes all the streams and sockets.
      */
     public synchronized void close() {
-        Log.i(TAG, "close");
+        Log.i(mTag, "close (thread ID: " + getId() + ")");
         super.close();
 
         if (mServerSocket != null) {
             try {
                 mServerSocket.close();
             } catch (IOException e) {
-                Log.e(TAG, "Failed to close the server socket: " + e.getMessage(), e);
+                Log.e(mTag, "Failed to close the server socket: " + e.getMessage(), e);
             }
 
             mServerSocket = null;
