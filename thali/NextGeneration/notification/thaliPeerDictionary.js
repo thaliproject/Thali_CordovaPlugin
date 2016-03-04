@@ -183,7 +183,7 @@ module.exports.NotificationPeerDictionaryEntry =
  * @constructor
  */
 function PeerDictionary() {
-  this._dictionary = [];
+  this._dictionary = {};
   this._entryCounter = 0;
 }
 
