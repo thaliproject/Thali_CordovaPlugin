@@ -254,12 +254,6 @@ public class ConnectionHelper
 
         String errorMessage = null;
 
-        if (!isRunning()) {
-            errorMessage = "Not running, please call start() first";
-            Log.e(TAG, "connect: " + errorMessage);
-            return errorMessage;
-        }
-
         if (mConnectionModel.hasOutgoingConnection(bluetoothMacAddress)) {
             errorMessage = "We already have an outgoing connection to peer with ID "
                     + bluetoothMacAddress;
