@@ -1,6 +1,8 @@
 'use strict';
 
 var Promise = require('lie');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
 
 /** @module thaliPeerAction */
 
@@ -29,6 +31,7 @@ var peerActionCounter = 0;
  */
 function PeerAction (peerIdentifier, connectionType, actionType)
 {
+  EventEmitter.call(this);
   this._peerIdentifier = peerIdentifier;
   this._connectionType = connectionType;
   this._actionType = actionType;
@@ -36,6 +39,8 @@ function PeerAction (peerIdentifier, connectionType, actionType)
   this._id = peerActionCounter;
   ++peerActionCounter;
 }
+
+inherits(PeerAction, EventEmitter);
 
 /**
  * Records the current state of the action.
