@@ -188,13 +188,13 @@ public class ConnectionModel {
      */
     public synchronized boolean closeAndRemoveOutgoingConnectionThread(final String peerId) {
         boolean wasFoundAndDisconnected = false;
-        OutgoingSocketThread socketThread = (OutgoingSocketThread) findSocketThread(peerId, false);
+        OutgoingSocketThread outgoingSocketThread = (OutgoingSocketThread) findSocketThread(peerId, false);
 
-        if (socketThread != null) {
+        if (outgoingSocketThread != null) {
             Log.i(TAG, "closeAndRemoveOutgoingConnectionThread: Closing connection, peer ID: " + peerId);
             mOutgoingConnectionCallbacks.remove(peerId);
-            mOutgoingSocketThreads.remove(socketThread);
-            socketThread.close();
+            mOutgoingSocketThreads.remove(outgoingSocketThread);
+            outgoingSocketThread.close();
             wasFoundAndDisconnected = true;
         }
 
