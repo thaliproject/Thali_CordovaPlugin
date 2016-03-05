@@ -6,6 +6,7 @@ var logger = require('../../thalilogger')('createNativeListener');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
 var Multiplex = require('multiplex');
 var thaliConfig = require('../thaliConfig');
+var assert = require('assert');
 
 function removeArrayElement(a, e) {
   var index = a.indexOf(e);
@@ -16,6 +17,7 @@ function removeArrayElement(a, e) {
   return true;
 }
 
+// jscs:disable jsDoc
 /**
  * This method creates a TCP listener (which MUST use {@link
  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) to handle requests
@@ -129,7 +131,17 @@ function removeArrayElement(a, e) {
  * from tcpServersManager
  * @returns {Promise<number|Error>}}
  */
+// jscs:enable jsDoc
 module.exports = function (self) {
+  if (self._state !== self.TCPServersManagerStates.STARTED) {
+    throw new Error('Call Start!');
+  }
+
+  if (self._nativeServer) {
+    // Must have been called twice
+    throw new Error('Don\'t call directly!');
+  }
+
   return new Promise(function (resolve, reject) {
     logger.debug('creating native server');
 
@@ -205,14 +217,13 @@ module.exports = function (self) {
 
         stream._outgoing = outgoing;
 
-        outgoing.on('end', function () {
+        outgoing.on('close', function () {
           stream.end();
           removeArrayElement(mux._streams, stream);
         });
 
         outgoing.on('error', function (err) {
           logger.warn(err, outgoing);
-          removeArrayElement(mux._streams, stream);
           self.emit(self.ROUTER_PORT_CONNECTION_FAILED);
         });
 
@@ -249,14 +260,14 @@ module.exports = function (self) {
     self._nativeServer.listen(0, function (err) {
       if (err) {
         logger.warn(err);
-        reject(err);
-        return;
+        return reject(err);
       }
 
-      if (self._nativeServer) {
-        logger.debug('listening', self._nativeServer.address().port);
-        resolve(self._nativeServer.address().port);
-      }
+      assert(self._nativeServer, 'It should not be possible for it to be ' +
+        'nulled out before we return from this call');
+
+      logger.debug('listening', self._nativeServer.address().port);
+      resolve(self._nativeServer.address().port);
     });
   });
 };

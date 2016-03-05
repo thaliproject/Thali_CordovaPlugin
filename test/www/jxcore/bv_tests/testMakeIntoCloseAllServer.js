@@ -39,3 +39,34 @@ test('closeAll can close even when connections open', function (t) {
     });
   });
 });
+
+test('closeAll with promise', function (t) {
+  var testServer = net.createServer(function (socket) {
+    socket.pipe(socket);
+  });
+  testServer = makeIntoCloseAllServer(testServer);
+  testServer.listen(0, function () {
+    var testServerPort = testServer.address().port;
+    var connection = net.connect(testServerPort, function () {
+      testServer.closeAllPromise()
+        .then(function () {
+          connection = net.connect(testServerPort, function () {
+              t.fail('connection should not succeed');
+              t.end();
+            });
+          connection.on('error', function (error) {
+            t.equals(error.code, 'ECONNREFUSED',
+              'not possible to connect to the server anymore');
+            t.end();
+          });
+        }).catch(function (err) {
+          t.fail(err);
+          t.end();
+        });
+    });
+    connection.on('error', function (error) {
+      t.equals(error.code, 'ECONNRESET',
+        'expect a specific error when the connection is closed');
+    });
+  });
+});

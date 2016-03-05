@@ -5,8 +5,9 @@ var mockMobile = require('../lib/MockMobile');
 var net = require('net');
 var multiplex = require('multiplex');
 var tape = require('../lib/thali-tape');
-var ThaliTCPServersManager = require('thali/NextGeneration/mux/tcpServersManager');
+var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersManager');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var Promise = require('lie');
 
 // Every call to Mobile trips this warning
 /* jshint -W064 */
@@ -17,68 +18,79 @@ if (tape.coordinated) {
   return;
 }
 
+var applicationPort = 4242;
+var nativePort = 4040;
+var serversManager = null;
+
 var test = tape({
   setup: function (t) {
     global.Mobile = mockMobile;
+    serversManager = new ThaliTCPServersManager(applicationPort);
     t.end();
   },
   teardown: function (t) {
-    global.Mobile = originalMobile;
-    t.end();
+    if (serversManager != null) {
+      serversManager.stop()
+        .catch(function (err) {
+          t.fail(err);
+          return Promise.resolve();
+        }).then(function () {
+          global.Mobile = originalMobile;
+          t.end();
+        });
+    } else {
+      global.Mobile = originalMobile;
+      t.end();
+    }
   }
 });
 
 test('can create servers manager', function (t) {
-  var manager = new ThaliTCPServersManager(4242);
-  t.ok(manager != null, 'manager must not be null');
-  t.ok(typeof manager === 'object', 'manager must be an object');
+  t.ok(serversManager != null, 'serversManager must not be null');
+  t.ok(typeof serversManager === 'object', 'serversManager must be an object');
+  serversManager = null; // So we don't call stop when we had not called start
   t.end();
 });
 
 test('can start/stop servers manager', function (t) {
-  var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function (localPort) {
     t.ok(localPort > 0 && localPort <= 65535, 'port must be in range');
-    serversManager.stop();
+  })
+  .then(function () {
     t.end();
   })
   .catch(function (err) {
     t.fail('server should not get error - ' + err);
-    serversManager.stop();
+    t.end();
   });
 });
 
 test('starting twice resolves with listening port', function (t) {
-  var serversManager = new ThaliTCPServersManager(4242);
+  var localPort = null;
   serversManager.start()
-  .then(function (localPort) {
-    serversManager.start()
-    .then(function (port) {
-      t.equal(localPort, port, 'second start should return same port');
-      serversManager.stop();
-      t.end();
-    })
-    .catch(function (err) {
-      t.fail('server should not get error - ' + err);
-      serversManager.stop();
-    });
-  })
-  .catch(function (err) {
+  .then(function (localLocalPort) {
+    localPort = localLocalPort;
+    return serversManager.start();
+  }).then(function (port) {
+    t.equal(localPort, port, 'second start should return same port');
+    t.end();
+  }).catch(function (err) {
     t.fail('server should not get error - ' + err);
-    serversManager.stop();
+    t.end();
   });
 });
 
 test('calling startNativeListener directly throws', function (t) {
-  var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function () {
     serversManager._createNativeListener();
+  }).then(function () {
+    t.fail('we should have gotten an error');
+    t.end();
   })
   .catch(function (err) {
     t.equal(err.message, 'Don\'t call directly!', 'Should throw');
-    serversManager.stop();
     t.end();
   });
 });
@@ -87,7 +99,6 @@ test('emits incomingConnectionState', function (t) {
   // Ensure that dis/connecting to the the localPort of a servers manager
   // emits incomingConnectionState events
 
-  var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function (localPort) {
 
@@ -98,7 +109,6 @@ test('emits incomingConnectionState', function (t) {
       serversManager.once('incomingConnectionState', function (state) {
         t.ok(state === 'DISCONNECTED',
           'final connection state should be DISCONNECTED');
-        serversManager.stop();
         t.end();
       });
 
@@ -111,7 +121,7 @@ test('emits incomingConnectionState', function (t) {
   })
   .catch(function (err) {
     t.fail('server should not get error - ' + err);
-    serversManager.stop();
+    t.end();
   });
 });
 
@@ -119,14 +129,12 @@ test('emits routerPortConnectionFailed', function (t) {
 
   // Make the server manager try and connect to a non-existent application
 
-  var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function (localPort) {
 
     // Expect the routerPortConnectionFailed event
     serversManager.once('routerPortConnectionFailed', function () {
       t.ok(true, 'routerPortConnectionFailed is emitted');
-      serversManager.stop();
       t.end();
     });
 
@@ -138,7 +146,7 @@ test('emits routerPortConnectionFailed', function (t) {
   })
   .catch(function (err) {
     t.fail('server should not get error - ' + err);
-    serversManager.stop();
+    t.end();
   });
 });
 
@@ -153,14 +161,11 @@ test('native server connections all up', function (t) {
     client.pipe(client);
   });
   applicationServer = makeIntoCloseAllServer(applicationServer);
-  applicationServer.listen(4242);
+  applicationServer.listen(applicationPort);
 
-  var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function (localPort) {
-
     var client = net.createConnection(localPort, function () {
-
       var mux = multiplex();
       client.pipe(mux).pipe(client);
       var stream1 = mux.createStream();
@@ -188,7 +193,6 @@ test('native server connections all up', function (t) {
           if (doneStream2) {
             t.ok(clientSockets === 2, 'Should be exactly 2 client sockets');
             applicationServer.closeAll(function () {
-              serversManager.stop();
               t.end();
             });
           }
@@ -207,7 +211,6 @@ test('native server connections all up', function (t) {
           if (doneStream1) {
             t.ok(clientSockets === 2, 'Should be exactly 2 client sockets');
             applicationServer.closeAll(function () {
-              serversManager.stop();
               t.end();
             });
           }
@@ -220,24 +223,22 @@ test('native server connections all up', function (t) {
   })
   .catch(function (err) {
     t.fail('server should not get error: ', err);
-    serversManager.stop();
+    t.end();
   });
 });
 
 test('can call createPeerListener (pleaseConnect === false)', function (t) {
-  var serversManager = new ThaliTCPServersManager(4242);
   serversManager.start()
   .then(function () {
     serversManager.createPeerListener('peerId', false)
     .then(function (peerPort) {
       t.ok(peerPort > 0 && peerPort <= 65535, 'port must be in range');
-      serversManager.stop();
       t.end();
     });
   })
   .catch(function () {
     t.fail('server should not get error');
-    serversManager.stop();
+    t.end();
   });
 });
 
@@ -248,7 +249,6 @@ test('calling createPeerListener (pleaseConnect === true) with unknown peer ' +
       cb('Unknown peer', null);
     });
 
-    var serversManager = new ThaliTCPServersManager(4242);
     serversManager.start()
     .then(function () {
       serversManager.createPeerListener('peerId', true)
@@ -256,13 +256,12 @@ test('calling createPeerListener (pleaseConnect === true) with unknown peer ' +
         // Should get an error here, we haven't yet started browsing or
         // discovered any peers
         t.ok(err, 'should get error');
-        serversManager.stop();
         t.end();
       });
     })
     .catch(function (err) {
       t.fail('server should not get error - ' + err);
-      serversManager.stop();
+      t.end();
     });
   }
 );
@@ -319,7 +318,6 @@ function startServersManager(t, serversManager) {
   })
   .catch(function (err) {
     t.fail('server should not get error: ' + err);
-    serversManager.stop();
   });
 }
 
@@ -353,20 +351,15 @@ function setUp(t, serversManager, appPort, forwardConnection, pleaseConnect,
 test('peerListener - forwardConnection, pleaseConnect === true - no native ' +
   'server',
   function (t) {
-    var nativePort = 4040;
-    var applicationPort = 4242;
-
     var promiseRejected = false;
     var failedConnection = false;
 
     // We expect 'failedConnection' since there's no native listener
-    var serversManager = new ThaliTCPServersManager(applicationPort);
     serversManager.on('failedConnection', function (err) {
       t.equal(err.error, 'Cannot Connect To Peer',
         'reason should be as expected');
       failedConnection = true;
       if (promiseRejected) {
-        serversManager.stop();
         t.end();
       }
     });
@@ -393,7 +386,6 @@ test('peerListener - forwardConnection, pleaseConnect === true - no native ' +
             promiseRejected = true;
             console.log(serversManager);
             if (failedConnection) {
-              serversManager.stop();
               t.end();
             }
           });
@@ -409,17 +401,13 @@ test('peerListener - forwardConnection, pleaseConnect === true - no native ' +
 test('peerListener - forwardConnection, pleaseConnect === false - no native ' +
   'server',
   function (t) {
-    var nativePort = 4040;
-    var applicationPort = 4242;
     var firstConnection = false;
 
     // We expect 'failedConnection' since there's no native listener
-    var serversManager = new ThaliTCPServersManager(applicationPort);
     serversManager.on('failedConnection', function (err) {
       t.ok(firstConnection, 'Should not get event until connection is made');
       t.equal(err.error, 'Cannot Connect To Peer',
                 'reason should be as expected');
-      serversManager.stop();
       t.end();
     });
 
@@ -435,14 +423,10 @@ test('peerListener - forwardConnection, pleaseConnect === false - no native ' +
 test('peerListener - forwardConnection, pleaseConnect === true - with native ' +
   'server',
   function (t) {
-    var nativePort = 4040;
-    var applicationPort = 4242;
-
     var outgoingSocket;
     var serverAccepted = false;
     var clientConnected = false;
 
-    var serversManager = new ThaliTCPServersManager(applicationPort);
     serversManager.on('failedConnection', function () {
       t.fail('Shouldn\'t fail to connect to native listener');
     });
@@ -453,7 +437,6 @@ test('peerListener - forwardConnection, pleaseConnect === true - with native ' +
       t.ok(true, 'Should get spontaneous connection');
       if (clientConnected) {
         outgoingSocket.end();
-        serversManager.stop();
         nativeServer.close();
         t.end();
       }
@@ -472,7 +455,6 @@ test('peerListener - forwardConnection, pleaseConnect === true - with native ' +
         t.notEqual(peerPort, nativePort, 'peerPort != nativePort');
         if (serverAccepted) {
           outgoingSocket.end();
-          serversManager.stop();
           nativeServer.close();
           t.end();
         }
@@ -484,11 +466,8 @@ test('peerListener - forwardConnection, pleaseConnect === true - with native ' +
 test('peerListener - forwardConnection, pleaseConnect === false - with ' +
   'native server',
   function (t) {
-    var nativePort = 4040;
-    var applicationPort = 4242;
     var firstConnection = false;
 
-    var serversManager = new ThaliTCPServersManager(applicationPort);
     serversManager.on('failedConnection', function () {
       t.fail('connection shouldn\'t fail');
     });
@@ -496,7 +475,6 @@ test('peerListener - forwardConnection, pleaseConnect === false - with ' +
     var nativeServer = net.createServer(function (socket) {
       t.ok(firstConnection, 'Should not get unexpected connection');
       t.ok(true, 'Should get connection');
-      serversManager.stop();
       nativeServer.close();
       socket.end();
       t.end();
@@ -520,9 +498,6 @@ test('peerListener - forwardConnection, pleaseConnect === false - with ' +
 );
 
 test('createPeerListener is idempotent', function (t) {
-  var applicationPort = 4242;
-
-  var serversManager = new ThaliTCPServersManager(applicationPort);
   serversManager.on('failedConnection', function () {
     t.fail('connection shouldn\'t fail');
     t.end();
@@ -534,12 +509,10 @@ test('createPeerListener is idempotent', function (t) {
     .then(function (port) {
       t.equal(peerPort, port,
         'Second call to existing peerListener returns existing port');
-      serversManager.stop();
       t.end();
     })
     .catch(function (err) {
       t.fail('should not get error - ' + err);
-      serversManager.stop();
       t.end();
     });
   });
@@ -551,13 +524,10 @@ test('createPeerListener is idempotent', function (t) {
 test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
   'promise',
   function (t) {
-    var applicationPort = 4242;
-
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
       cb('a nasty error', null);
     });
 
-    var serversManager = new ThaliTCPServersManager(applicationPort);
     serversManager.on('failedConnection', function () {
       t.fail('connection shouldn\'t fail');
       t.end();
@@ -570,13 +540,11 @@ test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
                                             peer.pleaseConnect)
           .then(function () {
             t.fail('should not succeed when connection fails');
-            serversManager.stop();
             t.end();
           })
           .catch(function (err) {
             t.equal('a nasty error', err,
                     'failed connection should reject with error');
-            serversManager.stop();
             t.end();
           });
         }
@@ -590,16 +558,12 @@ test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
 
 test('createPeerListener - pleaseConnect === true, connection resolves promise',
   function (t) {
-    var nativePort = 4040;
-    var applicationPort = 4242;
-
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
       cb(null, {
         listeningPort:nativePort, clientPort:0, serverPort: 0
       });
     });
 
-    var serversManager = new ThaliTCPServersManager(applicationPort);
     serversManager.on('failedConnection', function () {
       if (!serversManager._closing) {
         t.fail('Shouldn\'t fail to connect to native listener');
@@ -627,13 +591,10 @@ test('createPeerListener - pleaseConnect === true, connection resolves promise',
           .then(function () {
             t.ok(true, 'promise should resolve');
             nativeServer.close();
-            serversManager.stop();
-
             t.end();
           })
           .catch(function (err) {
             t.fail('should not fail - ' + err);
-            serversManager.stop();
             nativeServer.close();
             t.end();
           });
@@ -652,16 +613,11 @@ test('createPeerListener - pleaseConnect === true, connection resolves promise',
  */
 
 test('peerListener - reverseConnection, pleaseConnect === true', function (t) {
-  var nativePort = 4040;
-  var applicationPort = 4242;
-
   // We expect 'failedConnection' since pleaseConnect should
   // never result in a reverseConnection
-  var serversManager = new ThaliTCPServersManager(applicationPort);
   serversManager.on('failedConnection', function (err) {
     t.equal(err.error, 'Cannot Connect To Peer',
       'reason should be as expected');
-    serversManager.stop();
     t.end();
   });
 
@@ -674,18 +630,14 @@ test('peerListener - reverseConnection, pleaseConnect === true', function (t) {
 
 test('peerListener - reverseConnection, pleaseConnect === false - no incoming',
   function (t) {
-    var nativePort = 4040;
-    var applicationPort = 4242;
     var firstConnection = false;
 
     // We expect 'Incoming connction died' since we're forcing a reverse
     // connection but there's been no incoming connection
-    var serversManager = new ThaliTCPServersManager(applicationPort);
     serversManager.on('failedConnection', function (err) {
       t.ok(firstConnection, 'should not get event until connection is made');
       t.equal(err.error, 'Incoming connection died',
         'reason should be as expected');
-      serversManager.stop();
       t.end();
     });
 
@@ -702,9 +654,6 @@ test('peerListener - reverseConnection, pleaseConnect === false - no incoming',
 test('peerListener - reverseConnection, pleaseConnect === false - with ' +
   'incoming',
   function (t) {
-    var applicationPort = 4242;
-
-    var serversManager = new ThaliTCPServersManager(applicationPort);
     serversManager.on('failedConnection', function () {
       t.fail('connection shouldn\'t fail');
     });
@@ -744,7 +693,6 @@ test('peerListener - reverseConnection, pleaseConnect === false - with ' +
           toRecv += data.toString();
           if (toRecv.length >= toSend.length) {
             t.equal(toSend, toRecv, 'sent and received should be the same');
-            serversManager.stop();
             t.end();
           }
         });
@@ -758,9 +706,6 @@ test('peerListener - reverseConnection, pleaseConnect === false - with ' +
 
 test('peerListener - reverseConnection, pleaseConnect === false - no server',
   function (t) {
-    var applicationPort = 4242;
-
-    var serversManager = new ThaliTCPServersManager(applicationPort);
     serversManager.on('failedConnection', function () {
       t.fail('connection shouldn\'t fail');
     });
@@ -769,7 +714,6 @@ test('peerListener - reverseConnection, pleaseConnect === false - no server',
     // trigger routerPortConnection failed since there's no app listening
     serversManager.on('routerPortConnectionFailed', function () {
       t.ok(true, 'should get routerPortConnectionFailed');
-      serversManager.stop();
       t.end();
     });
 
@@ -822,15 +766,12 @@ test('native server - closing incoming stream cleans outgoing socket',
         t.equal(serversManager._nativeServer._incoming.length, 1,
                 'incoming remains open');
         applicationServer.close();
-        serversManager.stop();
         t.end();
       });
       streamClosed = true;
       stream.end();
     });
-    applicationServer.listen(4242);
-
-    var serversManager = new ThaliTCPServersManager(4242);
+    applicationServer.listen(applicationPort);
 
     serversManager.start()
     .then(function (localPort) {
@@ -842,11 +783,56 @@ test('native server - closing incoming stream cleans outgoing socket',
       });
     })
     .catch(function () {
-      t.fail('server hould not get error - ');
-      serversManager.stop();
+      t.fail('server should not get error - ');
+      t.end();
     });
   }
 );
+
+//test('native server - closing incoming connection cleans outgoing socket',
+//  function (t) {
+//    // An incoming socket to native listener creates a mux, each stream created
+//    // on that mux should create a new outgoing socket. When we close the stream
+//    // the outgoing socket to the app should get closed.
+//
+//    // This is different than the previous test in that here we are closing the
+//    // incoming TCP connection, not the mux behind the stream.
+//
+//    var incomingClosed = false;
+//    var applicationServer = net.createServer(function (socket) {
+//      socket.on('data', function () {
+//      });
+//      socket.on('end', function () {
+//        t.ok(incomingClosed, 'socket shouldn\'t close until after incoming');
+//        t.equal(serversManager._nativeServer._incoming.length, 0,
+//          'incoming is cleaned up');
+//        applicationServer.close();
+//        t.end();
+//      });
+//    });
+//    applicationServer.listen(applicationPort, function (err) {
+//      t.notOk(err, 'listening should have started without problem');
+//      serversManager.start()
+//        .then(function (localPort) {
+//          var incoming = net.createConnection(localPort, function () {
+//            var mux = multiplex(function onStream() {
+//            });
+//            incoming.pipe(mux).pipe(incoming);
+//            var stream = mux.createStream();
+//            stream.write(new Buffer('something'), function(err) {
+//              t.notOk(err, 'we should not have gotten an error');
+//              incomingClosed = true;
+//              incoming.destroy();
+//            });
+//          });
+//        })
+//        .catch(function () {
+//          t.fail('server should not get error - ');
+//          t.end();
+//        });
+//    });
+//  }
+//);
 
 test('native server - closing incoming stream cleans outgoing socket',
   function (t) {
@@ -858,9 +844,7 @@ test('native server - closing incoming stream cleans outgoing socket',
     var applicationServer = net.createServer(function (socket) {
       socket.end();
     });
-    applicationServer.listen(4242);
-
-    var serversManager = new ThaliTCPServersManager(4242);
+    applicationServer.listen(applicationPort);
 
     serversManager.start()
     .then(function (localPort) {
@@ -879,14 +863,13 @@ test('native server - closing incoming stream cleans outgoing socket',
             serversManager._nativeServer._incoming[0]._mux._streams.length, 0,
             'mux should have no streams');
           applicationServer.close();
-          serversManager.stop();
           t.end();
         });
       });
     })
     .catch(function () {
       t.fail('server should not get error - ');
-      serversManager.stop();
+      t.end();
     });
   }
 );

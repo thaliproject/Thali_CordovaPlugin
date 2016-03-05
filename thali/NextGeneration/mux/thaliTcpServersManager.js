@@ -18,20 +18,6 @@ var logger = require('../../thalilogger')('tcpServersManager');
 var maxPeersToAdvertise = 20;
 
 /**
- * Defines the state TCPServersManager can be in
- * @readonly
- * @enum {string}
- */
-var TCPServersManagerStates = {
-  /** Neither start nor stop have been called yet **/
-  INITIALIZED: 'initialized',
-  /** Start has been called, but not stop **/
-  STARTED: 'started',
-  /** Stop has been called **/
-  STOPPED: 'stopped'
-};
-
-/**
  * @classdesc This is where we manage creating multiplex objects. For all
  * intents and purposes this file should be treated as part of {@link
  * module:thaliMobileNativeWrapper}. We have broken this functionality out here
@@ -141,9 +127,9 @@ var TCPServersManagerStates = {
  * @fires event:failedConnection
  * @fires event:incomingConnectionState
  */
-function TCPServersManager(routerPort) {
+function ThaliTcpServersManager(routerPort) {
 
-  this._state = TCPServersManagerStates.INITIALIZED;
+  this._state = this.TCPServersManagerStates.INITIALIZED;
 
   // The single native server created by _createNativeListener
   this._nativeServer = null;
@@ -159,7 +145,7 @@ function TCPServersManager(routerPort) {
   this._routerPort = routerPort;
 }
 
-util.inherits(TCPServersManager, EventEmitter);
+util.inherits(ThaliTcpServersManager, EventEmitter);
 
 /**
  * This method will call
@@ -180,17 +166,17 @@ util.inherits(TCPServersManager, EventEmitter);
  * external:"Mobile('startUpdateAdvertisingAndListening')".ca
  * llNative} when the system is ready to receive external incoming connections.
  */
-TCPServersManager.prototype.start = function () {
+ThaliTcpServersManager.prototype.start = function () {
   var self = this;
   function _do(resolve, reject) {
     switch (self._state) {
-      case TCPServersManagerStates.STOPPED: {
+      case self.TCPServersManagerStates.STOPPED: {
         return reject('We are stopped!');
       }
-      case TCPServersManagerStates.STARTED: {
+      case self.TCPServersManagerStates.STARTED: {
         return resolve(self._nativeServer.address().port);
       }
-      case TCPServersManagerStates.INITIALIZED: {
+      case self.TCPServersManagerStates.INITIALIZED: {
         break;
       }
       default: {
@@ -199,7 +185,7 @@ TCPServersManager.prototype.start = function () {
       }
     }
 
-    self._state = TCPServersManagerStates.STARTED;
+    self._state = self.TCPServersManagerStates.STARTED;
     self._createNativeListener()
     .then(function (localPort) {
       resolve(localPort);
@@ -222,47 +208,54 @@ TCPServersManager.prototype.start = function () {
  * a row without changing state.
  *
  * If this method is called before calling start then a "Call Start!" Error MUST
- * be thrown.
+ * be returned.
  *
  * Once called the object is in the stop state and cannot leave it. To start
  * again this object must be disposed and a new one created.
  *
  * @public
- * @returns {?Error}
+ * @returns {Promise<?Error>}
  */
 // jscs:include jsDoc
-TCPServersManager.prototype.stop = function () {
-  switch (this._state) {
-    case TCPServersManagerStates.STOPPED: {
-      return null;
+ThaliTcpServersManager.prototype.stop = function () {
+  var self = this;
+  switch (self._state) {
+    case self.TCPServersManagerStates.STOPPED: {
+      return Promise.resolve();
     }
-    case TCPServersManagerStates.INITIALIZED: {
+    case self.TCPServersManagerStates.INITIALIZED: {
       throw new Error('Call Start!');
     }
-    case TCPServersManagerStates.STARTED: {
+    case self.TCPServersManagerStates.STARTED: {
       break;
     }
     default: {
-      throw new Error('stop - Unsupported TCPServersManagerStates value - ' +
-        this._state);
+      return Promise.reject(
+        new Error('stop - Unsupported TCPServersManagerStates value - ' +
+          self._state));
     }
   }
 
-  this._state = TCPServersManagerStates.STOPPED;
+  self._state = self.TCPServersManagerStates.STOPPED;
 
-  if (this._nativeServer) {
-    this._nativeServer.closeAll();
-    this._nativeServer = null;
+  var promisesArray = [];
+
+  if (self._nativeServer) {
+    promisesArray.push(self._nativeServer.closeAllPromise()
+      .then(function () {
+        self._nativeServer = null;
+      }));
   }
-  for (var peerIdentifier in this._peerServers) {
-    if (this._peerServers.hasOwnProperty(peerIdentifier)) {
-      this._peerServers[peerIdentifier].server._closing = true;
-      this._peerServers[peerIdentifier].server.closeAll();
+  for (var peerIdentifier in self._peerServers) {
+    if (self._peerServers.hasOwnProperty(peerIdentifier)) {
+      self._peerServers[peerIdentifier].server._closing = true;
+      promisesArray.push(
+        self._peerServers[peerIdentifier].server.closeAllPromise());
     }
   }
-  this._peerServers = {};
+  self._peerServers = {};
 
-  return null;
+  return Promise.all(promisesArray);
 };
 
 // jscs:exclude jsDoc
@@ -272,16 +265,7 @@ TCPServersManager.prototype.stop = function () {
  * connections from the native layer or an Error object.
  */
 // jscs:include jsDoc
-TCPServersManager.prototype._createNativeListener = function () {
-  if (this._state !== TCPServersManagerStates.STARTED) {
-    throw new Error('Call Start!');
-  }
-
-  if (this._nativeServer) {
-    // Must have been called twice
-    throw new Error('Don\'t call directly!');
-  }
-
+ThaliTcpServersManager.prototype._createNativeListener = function () {
   return createNativeListener(this);
 };
 
@@ -471,8 +455,8 @@ TCPServersManager.prototype._createNativeListener = function () {
  * incoming connection to the TCP server.
  * @returns {Promise<number|Error>}
  */
-TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
-                                                           pleaseConnect) {
+ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
+                                                                pleaseConnect) {
 
   // This section manages a server that accepts incoming connections
   // from the application. The first connection causes the p2p link to
@@ -487,7 +471,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
   logger.debug('createPeerListener');
 
-  if (this._state !== TCPServersManagerStates.STARTED) {
+  if (this._state !== this.TCPServersManagerStates.STARTED) {
     throw new Error('Call Start!');
   }
 
@@ -826,7 +810,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
  * @param {Object} incomingConnectionId
  * @returns {Promise<?error>}
  */
-TCPServersManager.prototype.terminateIncomingConnection =
+ThaliTcpServersManager.prototype.terminateIncomingConnection =
   function () {
     return new Promise();
   };
@@ -857,7 +841,7 @@ TCPServersManager.prototype.terminateIncomingConnection =
  * @property {number} routerPort
  */
 
-TCPServersManager.prototype.ROUTER_PORT_CONNECTION_FAILED =
+ThaliTcpServersManager.prototype.ROUTER_PORT_CONNECTION_FAILED =
   'routerPortConnectionFailed';
 
 /**
@@ -865,7 +849,7 @@ TCPServersManager.prototype.ROUTER_PORT_CONNECTION_FAILED =
  * @public
  * @enum {string}
  */
-TCPServersManager.incomingConnectionState = {
+ThaliTcpServersManager.incomingConnectionState = {
   'CONNECTED': 'connected',
   'DISCONNECTED': 'disconnected'
 };
@@ -885,13 +869,27 @@ TCPServersManager.incomingConnectionState = {
  * Indicated if the connection has been established or cut.
  */
 
-TCPServersManager.prototype.INCOMING_CONNECTION_STATE =
+ThaliTcpServersManager.prototype.INCOMING_CONNECTION_STATE =
   'incomingConnectionState';
+
+/**
+ * Defines the state TCPServersManager can be in
+ * @readonly
+ * @enum {string}
+ */
+ThaliTcpServersManager.prototype.TCPServersManagerStates = {
+  /** Neither start nor stop have been called yet **/
+  INITIALIZED: 'initialized',
+  /** Start has been called, but not stop **/
+  STARTED: 'started',
+  /** Stop has been called **/
+  STOPPED: 'stopped'
+};
 
 /**
  *
  * @param {Object} incomingConnectionId
- * @param {{module:TCPServersManager~TCPServersManager.incomingConnectionState}} state
+ * @param {{module:ThaliTcpServersManager~TCPServersManager.incomingConnectionState}} state
  * @returns {incomingConnectionState}
  */
 function createIncomingConnectionState(incomingConnectionId, state) {
@@ -902,4 +900,4 @@ function createIncomingConnectionState(incomingConnectionId, state) {
 }
 
 
-module.exports = TCPServersManager;
+module.exports = ThaliTcpServersManager;
