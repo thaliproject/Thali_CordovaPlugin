@@ -789,50 +789,54 @@ test('native server - closing incoming stream cleans outgoing socket',
   }
 );
 
-//test('native server - closing incoming connection cleans outgoing socket',
-//  function (t) {
-//    // An incoming socket to native listener creates a mux, each stream created
-//    // on that mux should create a new outgoing socket. When we close the stream
-//    // the outgoing socket to the app should get closed.
-//
-//    // This is different than the previous test in that here we are closing the
-//    // incoming TCP connection, not the mux behind the stream.
-//
-//    var incomingClosed = false;
-//    var applicationServer = net.createServer(function (socket) {
-//      socket.on('data', function () {
-//      });
-//      socket.on('end', function () {
-//        t.ok(incomingClosed, 'socket shouldn\'t close until after incoming');
-//        t.equal(serversManager._nativeServer._incoming.length, 0,
-//          'incoming is cleaned up');
-//        applicationServer.close();
-//        t.end();
-//      });
-//    });
-//    applicationServer.listen(applicationPort, function (err) {
-//      t.notOk(err, 'listening should have started without problem');
-//      serversManager.start()
-//        .then(function (localPort) {
-//          var incoming = net.createConnection(localPort, function () {
-//            var mux = multiplex(function onStream() {
-//            });
-//            incoming.pipe(mux).pipe(incoming);
-//            var stream = mux.createStream();
-//            stream.write(new Buffer('something'), function(err) {
-//              t.notOk(err, 'we should not have gotten an error');
-//              incomingClosed = true;
-//              incoming.destroy();
-//            });
-//          });
-//        })
-//        .catch(function () {
-//          t.fail('server should not get error - ');
-//          t.end();
-//        });
-//    });
-//  }
-//);
+test('native server - closing incoming connection cleans outgoing socket',
+  function (t) {
+    // An incoming socket to native listener creates a mux, each stream created
+    // on that mux should create a new outgoing socket. When we close the stream
+    // the outgoing socket to the app should get closed.
+
+    // This is different than the previous test in that here we are closing the
+    // incoming TCP connection, not the mux behind the stream.
+
+    var incomingClosed = false;
+    var applicationServer = net.createServer(function (socket) {
+      socket.on('data', function () {
+      });
+      socket.on('end', function () {
+        t.ok(incomingClosed, 'socket shouldn\'t close until after incoming');
+        t.equal(serversManager._nativeServer._incoming.length, 0,
+          'incoming is cleaned up');
+        applicationServer.close();
+        t.end();
+      });
+    });
+    applicationServer.listen(applicationPort, function (err) {
+      t.notOk(err, 'listening should have started without problem');
+      serversManager.start()
+        .then(function (localPort) {
+          var incoming = net.createConnection(localPort, function () {
+            var mux = multiplex(function onStream() {
+              t.fail('We should not have gotten a stream here');
+            });
+            mux.on('error', function (err) {
+              t.fail(err, 'mux got error');
+            });
+            incoming.pipe(mux).pipe(incoming);
+            var stream = mux.createStream();
+            stream.write(new Buffer('something'), function (err) {
+              t.notOk(err, 'we should not have gotten an error');
+              incomingClosed = true;
+              incoming.destroy();
+            });
+          });
+        })
+        .catch(function () {
+          t.fail('server should not get error - ');
+          t.end();
+        });
+    });
+  }
+);
 
 test('native server - closing incoming stream cleans outgoing socket',
   function (t) {

@@ -212,7 +212,9 @@ module.exports = function (self) {
         });
 
         var outgoing = net.createConnection(self._routerPort, function () {
-          stream.pipe(outgoing).pipe(stream);
+          if (!stream.destroyed && !outgoing.destroyed) {
+            stream.pipe(outgoing).pipe(stream);
+          }
         });
 
         stream._outgoing = outgoing;
