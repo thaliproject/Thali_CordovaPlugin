@@ -12,51 +12,52 @@ import org.thaliproject.p2p.btconnectorlib.DiscoveryManager.DiscoveryManagerStat
 public class StartStopOperation {
     private final JXcoreThaliCallback mCallback;
     private final boolean mIsStartOperation;
-    private final boolean mShouldStartOrStopListeningOnly;
+    private final boolean mShouldStartOrStopListeningToAdvertisementsOnly;
     private long mOperationExecutedTime = 0;
 
     /**
      * Creates a new start operation.
      *
-     * @param startListeningOnly If true, will start listening for advertisements only, and will not
-     *                           start the connection manager.
-     *                           If false, will start the connection manager and will start advertising.
+     * @param startListeningToAdvertisementsOnly
+     *  If true, will start listening for advertisements only, and will not start the connection manager.
+     *  If false, will start the connection manager and will start advertising.
      * @param callback The callback to call when we get the operation result.
      * @return A newly created start operation.
      */
     public static StartStopOperation createStartOperation(
-            boolean startListeningOnly, JXcoreThaliCallback callback) {
-        return new StartStopOperation(true, startListeningOnly, callback);
+            boolean startListeningToAdvertisementsOnly, JXcoreThaliCallback callback) {
+        return new StartStopOperation(true, startListeningToAdvertisementsOnly, callback);
     }
 
     /**
      * Creates a new stop operation.
      *
-     * @param stopListeningOnly If true, will only stop listening for advertisements.
-     *                          If false, will stop everything.
+     * @param stopListeningToAdvertisementsOnly
+     *  If true, will only stop listening for advertisements.
+     *  If false, will stop everything.
      * @param callback The callback to call when we get the operation result.
      * @return A newly created stop operation.
      */
     public static StartStopOperation createStopOperation(
-            boolean stopListeningOnly, JXcoreThaliCallback callback) {
-        return new StartStopOperation(false, stopListeningOnly, callback);
+            boolean stopListeningToAdvertisementsOnly, JXcoreThaliCallback callback) {
+        return new StartStopOperation(false, stopListeningToAdvertisementsOnly, callback);
     }
 
     /**
      * Constructor.
      *
      * @param isStartOperation If true, this will be a start operation. If false, a stop operation.
-     * @param startOrStopListeningOnly In case of start operation: If true should start listening
-     *                                 for advertisements only. In case of stop operation: If true,
-     *                                 will only stop listening for advertisements, if false, will
-     *                                 stop everything.
+     * @param startOrStopListeningToAdvertisementsOnly
+     *  In case of start operation: If true should start listening for advertisements only.
+     *  In case of stop operation: If true, will only stop listening for advertisements, if false,
+     *  will stop everything.
      * @param callback The callback to call when we get the operation result.
      */
     private StartStopOperation(
-            boolean isStartOperation, boolean startOrStopListeningOnly, JXcoreThaliCallback callback) {
+            boolean isStartOperation, boolean startOrStopListeningToAdvertisementsOnly, JXcoreThaliCallback callback) {
         mCallback = callback;
         mIsStartOperation = isStartOperation;
-        mShouldStartOrStopListeningOnly = startOrStopListeningOnly;
+        mShouldStartOrStopListeningToAdvertisementsOnly = startOrStopListeningToAdvertisementsOnly;
     }
 
     public JXcoreThaliCallback getCallback() {
@@ -70,8 +71,8 @@ public class StartStopOperation {
     /**
      * See constructor doc.
      */
-    public boolean getShouldStartOrStopListeningOnly() {
-        return mShouldStartOrStopListeningOnly;
+    public boolean getShouldStartOrStopListeningToAdvertisementsOnly() {
+        return mShouldStartOrStopListeningToAdvertisementsOnly;
     }
 
     /**
@@ -111,7 +112,7 @@ public class StartStopOperation {
                 return "Is not discovering";
             }
 
-            if (mShouldStartOrStopListeningOnly) {
+            if (mShouldStartOrStopListeningToAdvertisementsOnly) {
                 // Connection manager should not be running and we shouldn't be advertising
                 if (connectionManagerState != ConnectionManagerState.NOT_STARTED) {
                     return "Connection manager running, but should not be";
@@ -132,7 +133,7 @@ public class StartStopOperation {
             }
         } else {
             // Is stop operation
-            if (mShouldStartOrStopListeningOnly) {
+            if (mShouldStartOrStopListeningToAdvertisementsOnly) {
                 // Listening to advertisements should be stopped
                 if (isDiscovering) {
                     return "Is discovering (listening to advertisements), but should not be";
