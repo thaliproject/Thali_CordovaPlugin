@@ -86,20 +86,21 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-                ArrayList<Object> args = new ArrayList<Object>();
-                String errorString = startConnectionHelper(ConnectionHelper.NO_PORT_NUMBER, false);
-                args.add(errorString);
-                jxcore.CallJSMethod(callbackId, args.toArray());
+                startConnectionHelper(ConnectionHelper.NO_PORT_NUMBER, false, callbackId);
             }
         });
 
         jxcore.RegisterMethod(METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
-            public void Receiver(ArrayList<Object> params, String callbackId) {
-                mConnectionHelper.stopListeningForAdvertisements();
-                ArrayList<Object> args = new ArrayList<Object>();
-                args.add(null);
-                jxcore.CallJSMethod(callbackId, args.toArray());
+            public void Receiver(ArrayList<Object> params, final String callbackId) {
+                mConnectionHelper.stop(true, new JXcoreThaliCallback() {
+                    @Override
+                    protected void onStartStopCallback(String errorMessage) {
+                        ArrayList<Object> args = new ArrayList<Object>();
+                        args.add(errorMessage);
+                        jxcore.CallJSMethod(callbackId, args.toArray());
+                    }
+                });
             }
         });
 
@@ -107,13 +108,13 @@ public class JXcoreExtension {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ArrayList<Object> args = new ArrayList<Object>();
-                String errorString;
+                String errorString = null;
 
                 if (params != null && params.size() > 0) {
                     Object parameterObject = params.get(0);
 
                     if (parameterObject instanceof Integer && ((Integer) parameterObject > 0)) {
-                        errorString = startConnectionHelper((Integer) parameterObject, true);
+                        startConnectionHelper((Integer) parameterObject, true, callbackId);
                     } else {
                         errorString = "Required parameter, {number} portNumber, is invalid - must be a positive integer";
                     }
@@ -121,19 +122,25 @@ public class JXcoreExtension {
                     errorString = "Required parameter, {number} portNumber, missing";
                 }
 
-                Log.d(TAG, "METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING" + ": errorString == " + errorString);
-                args.add(errorString); // Null errorString indicates success
-                jxcore.CallJSMethod(callbackId, args.toArray());
+                if (errorString != null) {
+                    // Failed straight away
+                    args.add(errorString);
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                }
             }
         });
 
         jxcore.RegisterMethod(METHOD_NAME_STOP_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
             @Override
-            public void Receiver(ArrayList<Object> params, String callbackId) {
-                mConnectionHelper.stop();
-                ArrayList<Object> args = new ArrayList<Object>();
-                args.add(null);
-                jxcore.CallJSMethod(callbackId, args.toArray());
+            public void Receiver(ArrayList<Object> params, final String callbackId) {
+                mConnectionHelper.stop(false, new JXcoreThaliCallback() {
+                    @Override
+                    protected void onStartStopCallback(String errorMessage) {
+                        ArrayList<Object> args = new ArrayList<Object>();
+                        args.add(null);
+                        jxcore.CallJSMethod(callbackId, args.toArray());
+                    }
+                });
             }
         });
 
@@ -206,7 +213,7 @@ public class JXcoreExtension {
                     return;
                 }
 
-                JXcoreThaliCallback resultCallback =
+                final String errorMessage =
                         mConnectionHelper.connect(bluetoothMacAddress, new JXcoreThaliCallback() {
                             @Override
                             public void onConnectCallback(
@@ -228,11 +235,9 @@ public class JXcoreExtension {
                             }
                         });
 
-                if (resultCallback != null) {
+                if (errorMessage != null) {
                     // Failed to start connecting
                     ArrayList<Object> args = new ArrayList<Object>();
-                    String errorMessage = (resultCallback.getErrorMessage() != null)
-                            ? resultCallback.getErrorMessage() : "Unknown error";
                     args.add(errorMessage);
                     args.add(null);
                     jxcore.CallJSMethod(callbackId, args.toArray());
@@ -590,20 +595,28 @@ public class JXcoreExtension {
     }
 
     /**
-     * Starts the connection helper.
+     * Tries to starts the connection helper.
      *
      * @param serverPortNumber    The port on 127.0.0.1 that any incoming connections over the native
      *                            non-TCP/IP transport should be bridged to.
      * @param startAdvertisements If true, will start advertising our presence and scanning for other peers.
      *                            If false, will only scan for other peers.
-     * @return Null, if successful. A string with error message otherwise.
+     * @param callbackId          The JXcore callback ID.
      */
-    private static String startConnectionHelper(int serverPortNumber, boolean startAdvertisements) {
+    private static void startConnectionHelper(
+            int serverPortNumber, boolean startAdvertisements, final String callbackId) {
+        final ArrayList<Object> args = new ArrayList<Object>();
         String errorString = null;
 
         if (mConnectionHelper.getConnectivityInfo().isBleMultipleAdvertisementSupported()) {
             boolean succeededToStartOrWasAlreadyRunning =
-                    mConnectionHelper.start(serverPortNumber, startAdvertisements);
+                    mConnectionHelper.start(serverPortNumber, startAdvertisements, new JXcoreThaliCallback() {
+                        @Override
+                        protected void onStartStopCallback(final String errorMessage) {
+                            args.add(errorMessage);
+                            jxcore.CallJSMethod(callbackId, args.toArray());
+                        }
+                    });
 
             if (succeededToStartOrWasAlreadyRunning) {
                 final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
@@ -622,7 +635,11 @@ public class JXcoreExtension {
             errorString = "No Native Non-TCP Support";
         }
 
-        return errorString;
+        if (errorString != null) {
+            // Failed straight away
+            args.add(errorString);
+            jxcore.CallJSMethod(callbackId, args.toArray());
+        }
     }
 
     /**
