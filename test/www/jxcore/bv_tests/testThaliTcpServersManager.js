@@ -836,7 +836,7 @@ test('native server - closing incoming connection cleans outgoing socket',
             incoming.pipe(mux).pipe(incoming);
             var stream = mux.createStream();
             stream.write(new Buffer('something'), function (err) {
-              t.notOk(err, 'we should not have gotten an error');
+              t.fail(err, 'we should not have gotten an error');
               incomingClosed = true;
               incoming.destroy();
             });
@@ -850,7 +850,7 @@ test('native server - closing incoming connection cleans outgoing socket',
   }
 );
 
-test('native server - closing incoming stream cleans outgoing socket',
+test('native server - closing outgoing socket cleans associated mux stream',
   function (t) {
     // An incoming socket to native listener creates a mux, each stream created
     // on that mux should create a new outgoing socket. When we close the stream
@@ -889,3 +889,79 @@ test('native server - closing incoming stream cleans outgoing socket',
     });
   }
 );
+
+// Closing nativeServer causes everything else upstream to close
+
+//test('native server - closing the whole server cleans everything up',
+//  function (t) {
+//    var nativeServerClosed = false;
+//    var allDoneButSocket = false;
+//    var applicationServer = net.createServer(function (socket) {
+//      socket.on('data', function (data) {
+//        t.ok(Buffer.compare(data, new Buffer('quick test')) === 0,
+//          'Buffers are identical');
+//        var nativeServer = serversManager._nativeServer;
+//        var incoming = nativeServer._incoming[0];
+//        var incomingMux = incoming._mux;
+//        var incomingMuxStream = incomingMux._streams[0];
+//        serversManager.stop()
+//          .then(function () {
+//            t.equal(serversManager._nativeServer, null, 'native server is ' +
+//              'nulled out');
+//            t.ok(nativeServerClosed, 'native server should be closed');
+//
+//            t.equal(nativeServer._incoming.length, 0, 'incoming has been ' +
+//              'removed');
+//
+//            t.ok(incoming.destroyed, 'Incoming should be done');
+//
+//            t.ok(incomingMux.destroyed, 'The mux object should be closed');
+//
+//            t.ok(incomingMuxStream.destroyed,
+//              'The mux stream should be closed');
+//
+//            if (socket.destroyed) {
+//              return t.end();
+//            }
+//
+//            // Still waiting for socket to close
+//            allDoneButSocket = true;
+//          }).catch(function (err) {
+//            t.fail(err);
+//            t.end();
+//          });
+//      });
+//      socket.on('close', function () {
+//        if (allDoneButSocket) {
+//          return t.end();
+//        }
+//      });
+//    });
+//    applicationServer.listen(applicationPort, function (err) {
+//      t.notOk(err, 'listen should not have failed');
+//      serversManager.start()
+//        .then(function (localPort) {
+//          serversManager._nativeServer.on('close', function () {
+//            nativeServerClosed = true;
+//          });
+//          var incoming = net.createConnection(localPort,
+//            function () {
+//              var mux = multiplex(function onStream() {
+//
+//              });
+//              mux.on('error',
+//                function () {
+//                });
+//              incoming.pipe(mux).pipe(incoming);
+//              var stream = mux.createStream();
+//              stream.write(new Buffer('quick test'), function (err) {
+//                t.fail(err, 'we should not have gotten an error');
+//              });
+//            });
+//        });
+//    });
+//  });
+
+
+// Closing a mux causes its incoming connection to be closed as well as its
+//  streams and outgoing connections

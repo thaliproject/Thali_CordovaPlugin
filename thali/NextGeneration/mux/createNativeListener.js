@@ -214,6 +214,11 @@ module.exports = function (self) {
         var outgoing = net.createConnection(self._routerPort, function () {
           if (!stream.destroyed && !outgoing.destroyed) {
             stream.pipe(outgoing).pipe(stream);
+          } else {
+            logger.warn('could not pipe - ' + stream.destroyed + ' - ' +
+                          outgoing.destroyed);
+            //!stream.destroyed && stream.destroy();
+            //!outgoing.destroyed && outgoing.destroy();
           }
         });
 
