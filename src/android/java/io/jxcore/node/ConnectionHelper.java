@@ -47,6 +47,7 @@ public class ConnectionHelper
     private final DiscoveryManager mDiscoveryManager;
     private final DiscoveryManagerSettings mDiscoveryManagerSettings;
     private final ConnectivityInfo mConnectivityInfo;
+    private final StartStopOperationHandler mStartStopOperationHandler;
     private final HandshakeHelper mHandshakeHelper;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = NO_PORT_NUMBER;
@@ -86,6 +87,7 @@ public class ConnectionHelper
         }
 
         mConnectivityInfo = new ConnectivityInfo(mDiscoveryManager);
+        mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
         mHandshakeHelper = new HandshakeHelper(this);
     }
 
@@ -94,6 +96,7 @@ public class ConnectionHelper
      * Note that after calling this method, this instance cannot be used anymore.
      */
     public void dispose() {
+        mStartStopOperationHandler.cancelCurrentOperation();
         mConnectionManager.dispose();
         mDiscoveryManager.dispose();
     }
@@ -105,17 +108,20 @@ public class ConnectionHelper
      *                            non-TCP/IP transport should be bridged to.
      * @param startAdvertisements If true, will start advertising our presence and scanning for other peers.
      *                            If false, will only scan for other peers.
+     * @param callback            The callback to call when we get the (start) operation result.
      * @return True, if started successfully. False otherwise.
      */
-    public synchronized boolean start(int serverPortNumber, boolean startAdvertisements) {
+    public synchronized boolean start(
+            int serverPortNumber, boolean startAdvertisements, JXcoreThaliCallback callback) {
         Log.i(TAG, "start: "
-                + "Port number: " + serverPortNumber
+                + "Port number: " + ((serverPortNumber > 0) ? serverPortNumber : mServerPortNumber)
                 + ", start advertisements: " + startAdvertisements);
 
         if (serverPortNumber > 0) {
             mServerPortNumber = serverPortNumber;
         }
 
+        restoreDefaultBleDiscoverySettings();
         mHandshakeHelper.reinitiate();
 
         if (!mConnectivityInfo.startMonitoring()) {
@@ -123,43 +129,32 @@ public class ConnectionHelper
             return false;
         }
 
-        if (!mConnectionManager.start()) {
-            Log.e(TAG, "start: Failed to start the connection manager");
-            return false;
-        }
-
-        if (!mDiscoveryManager.isRunning()
-                || (!mDiscoveryManager.isAdvertising() && startAdvertisements)) {
-            if (!mDiscoveryManager.start(true, startAdvertisements)) {
-                Log.e(TAG, "start: Failed to start the discovery manager");
-                return false;
-            }
-        } else {
-            Log.v(TAG, "start: Discovery manager already running");
-        }
+        mStartStopOperationHandler.executeStartOperation(startAdvertisements, callback);
 
         Log.i(TAG, "start: OK");
         return true;
     }
 
     /**
-     * Stops all activities and kills all connections.
+     * Stops discovery partially (listening) or stops everything depending on the given argument.
+     *
+     * @param stopOnlyListeningForAdvertisements If true, will only stop listening for advertisements.
+     *                                           If false, will stop everything.
+     * @param callback The callback to call when we get the (stop) operation result.
      */
-    public synchronized void stop() {
-        Log.i(TAG, "stop: Stopping all activities and killing all connections...");
-        mHandshakeHelper.shutdown();
-        mConnectionManager.stop();
-        mDiscoveryManager.stop();
-        mConnectivityInfo.stopMonitoring();
-        killAllConnections();
-    }
+    public synchronized void stop(boolean stopOnlyListeningForAdvertisements, JXcoreThaliCallback callback) {
+        Log.i(TAG, "stop: "
+                + (stopOnlyListeningForAdvertisements
+                    ? "Stopping only listening for advertisements"
+                    : "Stopping all activities and killing all connections"));
 
-    /**
-     * Stops scanning/discovering peers. Call start to restart.
-     */
-    public synchronized void stopListeningForAdvertisements() {
-        Log.i(TAG, "stopListeningForAdvertisements");
-        mDiscoveryManager.stopDiscovery();
+        mStartStopOperationHandler.executeStopOperation(stopOnlyListeningForAdvertisements, callback);
+
+        if (!stopOnlyListeningForAdvertisements) {
+            mHandshakeHelper.shutdown();
+            mConnectivityInfo.stopMonitoring();
+            mConnectionModel.closeAndRemoveAllOutgoingConnections();
+        }
     }
 
     /**
@@ -247,9 +242,9 @@ public class ConnectionHelper
      *
      * @param bluetoothMacAddress The Bluetooth MAC address of the peer to connect to.
      * @param callback            The callback that will be associated with the connection.
-     * @return Null, if successful. Callback with an error description otherwise.
+     * @return Null, if successful. A string with an error description otherwise.
      */
-    public synchronized JXcoreThaliCallback connect(final String bluetoothMacAddress, JXcoreThaliCallback callback) {
+    public synchronized String connect(final String bluetoothMacAddress, JXcoreThaliCallback callback) {
         Log.i(TAG, "connect: Trying to connect to peer with ID " + bluetoothMacAddress);
 
         if (callback == null) {
@@ -257,24 +252,13 @@ public class ConnectionHelper
             throw new NullPointerException("Callback is null");
         }
 
-        JXcoreThaliCallback resultCallback = new JXcoreThaliCallback() {
-            @Override
-            void onConnectCallback(String errorMessage, ListenerOrIncomingConnection listenerOrIncomingConnection) {
-                // No implementation required
-            }
-        };
-
-        if (!isRunning()) {
-            resultCallback.setErrorMessage("Not running, please call start() first");
-            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
-            return resultCallback;
-        }
+        String errorMessage = null;
 
         if (mConnectionModel.hasOutgoingConnection(bluetoothMacAddress)) {
-            resultCallback.setErrorMessage("We already have an outgoing connection to peer with ID "
-                    + bluetoothMacAddress);
-            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
-            return resultCallback;
+            errorMessage = "We already have an outgoing connection to peer with ID "
+                    + bluetoothMacAddress;
+            Log.e(TAG, "connect: " + errorMessage);
+            return errorMessage;
         }
 
         if (mConnectionModel.hasIncomingConnection(bluetoothMacAddress)) {
@@ -283,11 +267,11 @@ public class ConnectionHelper
         }
 
         if (hasMaximumNumberOfConnections()) {
-            resultCallback.setErrorMessage("Maximum number of peer connections ("
+            errorMessage = "Maximum number of peer connections ("
                     + mConnectionModel.getNumberOfCurrentOutgoingConnections()
-                    + ") reached, please try again after disconnecting a peer");
-            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
-            return resultCallback;
+                    + ") reached, please try again after disconnecting a peer";
+            Log.e(TAG, "connect: " + errorMessage);
+            return errorMessage;
         }
 
         PeerProperties selectedDevice =
@@ -300,26 +284,26 @@ public class ConnectionHelper
         }
 
         if (!BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothMacAddress())) {
-            resultCallback.setErrorMessage("Invalid Bluetooth MAC address: "
-                    + selectedDevice.getBluetoothMacAddress());
-            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
-            return resultCallback;
+            errorMessage = "Invalid Bluetooth MAC address: "
+                    + selectedDevice.getBluetoothMacAddress();
+            Log.e(TAG, "connect: " + errorMessage);
+            return errorMessage;
         }
 
         callback.getListenerOrIncomingConnection().setServerPortNumber(mServerPortNumber);
 
         if (!mConnectionModel.addOutgoingConnectionCallback(bluetoothMacAddress, callback)) {
-            resultCallback.setErrorMessage("Failed to add the callback for the connection");
-            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
-            return resultCallback;
+            errorMessage = "Failed to add the callback for the connection";
+            Log.e(TAG, "connect: " + errorMessage);
+            return errorMessage;
         }
 
         if (mConnectionManager.connect(selectedDevice)) {
             Log.i(TAG, "connect: Connection process successfully started (peer ID: " + bluetoothMacAddress + ")");
         } else {
-            resultCallback.setErrorMessage("Failed to start connecting");
-            Log.e(TAG, "connect: " + resultCallback.getErrorMessage());
-            return resultCallback;
+            errorMessage = "Failed to start connecting";
+            Log.e(TAG, "connect: " + errorMessage);
+            return errorMessage;
         }
 
         return null;
@@ -342,13 +326,14 @@ public class ConnectionHelper
     }
 
     /**
-     * Does nothing but logs the new state.
+     * Logs the new state and checks the pending start/stop operations in the queue if any.
      *
      * @param connectionManagerState The new state.
      */
     @Override
     public void onConnectionManagerStateChanged(ConnectionManagerState connectionManagerState) {
-        Log.i(TAG, "onConnectionManagerStateChanged: " + connectionManagerState.toString());
+        Log.i(TAG, "onConnectionManagerStateChanged: " + connectionManagerState);
+        mStartStopOperationHandler.checkCurrentOperationStatus();
     }
 
     /**
@@ -401,7 +386,7 @@ public class ConnectionHelper
                     mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress);
 
             if (callback != null) {
-                callback.onConnectCallback(
+                callback.callOnConnectCallback(
                         "Connection to peer " + peerProperties.toString() + " timed out", null);
 
                 // Dispose the callback data
@@ -430,14 +415,13 @@ public class ConnectionHelper
 
     /**
      * ThaliPermissions class is responsible for managing permission requests. Thus, we do not try
-     * to handle them here, and will consider call to this method an error.
+     * to handle them here, but will return true every time.
      */
     @Override
     public boolean onPermissionCheckRequired(String permission) {
-        String errorMessage = "Received a request for permission \"" + permission
-                + "\", but we were expecting that all the required permissions were already granted";
-        Log.e(TAG, "onPermissionCheckRequired: " + errorMessage);
-        return false;
+        Log.v(TAG, "Received a request for permission \"" + permission
+                + "\", but we are expecting that all the required permissions have already been granted");
+        return true;
     }
 
     /**
@@ -463,7 +447,8 @@ public class ConnectionHelper
     }
 
     /**
-     * Forwards the information to the Node layer via JXcoreExtension class.
+     * Logs the new state, checks the pending start/stop operations in the queue if any, and
+     * forwards the event to the Node layer via JXcoreExtension class.
      *
      * @param state         The new state.
      * @param isDiscovering True, if peer discovery is active. False otherwise.
@@ -475,6 +460,7 @@ public class ConnectionHelper
         Log.i(TAG, "onDiscoveryManagerStateChanged: State: " + state
                 + ", is discovering: " + isDiscovering + ", is advertising: " + isAdvertising);
 
+        mStartStopOperationHandler.checkCurrentOperationStatus();
         JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
     }
 
@@ -597,7 +583,7 @@ public class ConnectionHelper
 
                     if (callback != null) {
                         callback.getListenerOrIncomingConnection().setListeningOnPortNumber(portNumber);
-                        callback.onConnectCallback(null, callback.getListenerOrIncomingConnection());
+                        callback.callOnConnectCallback(null, callback.getListenerOrIncomingConnection());
                     }
                 }
 
@@ -624,7 +610,7 @@ public class ConnectionHelper
             Log.e(TAG, "onConnected: Failed to create an outgoing connection thread instance: " + e.getMessage(), e);
 
             if (callback != null) {
-                callback.onConnectCallback(
+                callback.callOnConnectCallback(
                         "Failed to create an outgoing connection thread instance: " + e.getMessage(), null);
                 mConnectionModel.removeOutgoingConnectionCallback(finalPeerId);
             }
@@ -719,7 +705,7 @@ public class ConnectionHelper
                 mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress);
 
         if (callback != null) {
-            callback.onConnectCallback(
+            callback.callOnConnectCallback(
                     "Connection to peer " + peerProperties + " failed: " + errorMessage, null);
 
             // Dispose the callback data
@@ -751,12 +737,7 @@ public class ConnectionHelper
 
                 @Override
                 public void onFinish() {
-                    this.cancel();
-                    Log.i(TAG, "Powering the BLE discovery back up");
-                    mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
-                    mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
-                    mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
-                    mPowerUpBleDiscoveryTimer = null;
+                    restoreDefaultBleDiscoverySettings();
                 }
             };
 
@@ -769,6 +750,21 @@ public class ConnectionHelper
             // Restart the timer
             mPowerUpBleDiscoveryTimer.cancel();
             mPowerUpBleDiscoveryTimer.start();
+        }
+    }
+
+    /**
+     * Restores the default Bluetooth LE discovery settings.
+     */
+    private synchronized void restoreDefaultBleDiscoverySettings() {
+        if (mPowerUpBleDiscoveryTimer != null) {
+            Log.i(TAG, "restoreDefaultBleDiscoverySettings: Powering the BLE discovery back up");
+            mPowerUpBleDiscoveryTimer.cancel();
+            mPowerUpBleDiscoveryTimer = null;
+
+            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+            mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
+            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
         }
     }
 }

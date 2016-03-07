@@ -189,6 +189,7 @@
  * client connected to.
  */
 
+// jscs:disable maximumLineLength
 /**
  * This is the callback used by {@link external:"Mobile('connect')".callNative}.
  *
@@ -197,16 +198,23 @@
  *
  * @public
  * @callback ConnectCallback
- * @param {error} err If null then the call the callback was submitted to was
- * successful. If not null then it will be an Error object that will define what
- * went wrong.
- * @param {module:thaliMobileNative~ListenerOrIncomingConnection} listenerOrIncomingConnection
+ * @param {?string} err If null then the call the callback was submitted to was
+ * successful. If not null then it will be a string that will defined what
+ * went wrong. We have to use a string because for some reason this value is
+ * passed as a JSON.stringfy output and the Error object cannot be stringified.
+ * @param {?module:thaliMobileNative~ListenerOrIncomingConnection} listenerOrIncomingConnection
+ * For some odd reason lost to the depths of time both Android and iOS return
+ * a stringified version of this object rather than just the object (which
+ * they can do). Rather than fix it we are just sticking this odd behavior
+ * into the spec. Sorry. :(
  */
+// jscs:enable maximumLineLength
 
 /**
  * @external "Mobile('connect')"
  */
 
+// jscs:disable maximumLineLength
 /**
  * This method tells the native layer to establish a non-TCP/IP connection to
  * the identified peer and to then create a TCP/IP bridge on top of that
@@ -287,6 +295,7 @@
  * error or the 127.0.0.1 port to connect to in order to get a connection to the
  * remote peer
  */
+// jscs:enable maximumLineLength
 
 /**
  * @external "Mobile('didRegisterToNative')"
@@ -402,6 +411,7 @@
  * @external "Mobile('discoveryAdvertisingStateUpdateNonTCP')"
  */
 
+// jscs:disable maximumLineLength
 /**
  * This is the callback used by
  * {@link external:"Mobile('discoveryAdvertisingStateUpdateNonTCP')".registerToNative}
@@ -410,7 +420,9 @@
  * @callback discoveryAdvertisingStateUpdateNonTCPCallback
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
+// jscs:enable maximumLineLength
 
+// jscs:disable maximumLineLength
 /**
  * Please see the definition of
  * {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateNonTCPEvent}
@@ -419,7 +431,9 @@
  * @function external:"Mobile('discoveryAdvertisingStateUpdateNonTCP')".registerToNative
  * @param {module:thaliMobileNative~discoveryAdvertisingStateUpdateNonTCPCallback} callback
  */
+// jscs:enable maximumLineLength
 
+/* jshint -W098 */
 /**
  * Enum to describe the state of the system's radios
  *
@@ -442,6 +456,7 @@ var radioState = {
    * to determine its state. */
   DO_NOT_CARE: 'doNotCare'
 };
+/* jshint +W098 */
 
 /**
  * This object defines the current state of the network
@@ -499,6 +514,7 @@ var radioState = {
  * @external "Mobile('incomingConnectionToPortNumberFailed')"
  */
 
+// jscs:disable maximumLineLength
 /**
  * This is the callback used by
  * {@link external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative}
@@ -508,22 +524,25 @@ var radioState = {
  * @property {number} portNumber The 127.0.0.1 port that the TCP/IP bridge tried
  * to connect to.
  */
+// jscs:enable maximumLineLength
 
+// jscs:disable maximumLineLength
 /**
  * Please see the definition of
  * {@link module:thaliMobileNativeWrapper.incomingConnectionToPortNumberFailed}.
  *
- * This event MUST NOT be sent more often than every 100 ms. This means that
- * one cannot count the number of instances of this event in order to count how
- * many connections were missed. This also means that the native layer is only
- * required to track exactly one instance of this event for any given port within
- * the 100 ms window. In other words if the systetm is listening on port X and
- * 10,000 incoming requests come for port X within 100 ms (that would be impressive)
- * then the native layer is only obligated to send up exactly one notification of
- * the problem. This is because the native app only needs to know that its port is
- * either overloaded or down as a general notification.
+ * This event MUST NOT be sent more often than every 100 ms. This means that one
+ * cannot count the number of instances of this event in order to count how many
+ * connections were missed. This also means that the native layer is only
+ * required to track exactly one instance of this event for any given port
+ * within the 100 ms window. In other words if the systetm is listening on port
+ * X and 10,000 incoming requests come for port X within 100 ms (that would be
+ * impressive) then the native layer is only obligated to send up exactly one
+ * notification of the problem. This is because the native app only needs to
+ * know that its port is either overloaded or down as a general notification.
  *
  * @public
  * @function external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative
  * @param {module:thaliMobileNative~incomingConnectionToPortNumberFailedCallback} callback
  */
+// jscs:enable maximumLineLength
