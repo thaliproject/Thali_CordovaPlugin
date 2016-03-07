@@ -116,17 +116,17 @@ public class StartStopOperationHandler {
             if (mCurrentOperation.isStartOperation()) {
                 // Discovery manager should always be started, advertising depends on the operation parameter
                 if (!mDiscoveryManager.start(
-                        true, !mCurrentOperation.getShouldStartOrStopListeningOnly())) {
+                        true, !mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly())) {
                     final String errorMessage = "Failed to start the discovery manager";
                     Log.e(TAG, "executeCurrentOperation: " + errorMessage);
                     mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
                     mCurrentOperation = null;
                 } else {
                     // Starting of the discovery manager initiated successfully (or was already running)
-                    // Connection manager shouldn't be started if we want to listen only
-                    if (!mCurrentOperation.getShouldStartOrStopListeningOnly()
-                            && !mConnectionManager.start()) {
-                        final String errorMessage = "Failed to start the connection manager";
+                    // Connection manager shouldn't be started if we want to listen to *advertisements* only
+                    if (!mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly()
+                            && !mConnectionManager.startListeningForIncomingConnections()) {
+                        final String errorMessage = "Failed to start the connection manager (Bluetooth connection listener)";
                         Log.e(TAG, "executeCurrentOperation: " + errorMessage);
                         mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
                         mCurrentOperation = null;
@@ -134,12 +134,13 @@ public class StartStopOperationHandler {
                 }
             } else {
                 // Is stop operation
-                if (mCurrentOperation.getShouldStartOrStopListeningOnly()) {
-                    // Should only stop listening for advertisements
+                if (mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly()) {
+                    // Should only stop listening to advertisements
                     mDiscoveryManager.stopDiscovery();
                 } else {
                     // Should stop everything
-                    mConnectionManager.stop();
+                    mConnectionManager.stopListeningForIncomingConnections();
+                    mConnectionManager.cancelAllConnectionAttempts();
                     mDiscoveryManager.stop();
                 }
             }
