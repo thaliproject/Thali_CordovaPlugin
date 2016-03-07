@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 var keys = {};
 
@@ -56,7 +56,7 @@ Mobile.invokeStopBroadcasting = function () {
   invokeCallback('StopBroadcasting', args);
 };
 
-Mobile.NativeCall = function(key) {
+Mobile.NativeCall = function (key) {
   this.key = key;
   this.registerNativeCallback = null;
   this.callNativeArguments = null;

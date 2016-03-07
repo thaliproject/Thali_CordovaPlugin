@@ -52,6 +52,18 @@ test('can create servers manager', function (t) {
   t.end();
 });
 
+test('calling stop without start causes error', function (t) {
+  serversManager.stop()
+    .then(function () {
+      t.fail('we should have gotten an error saying to call start');
+      t.end();
+    }).catch(function (err) {
+      t.equal(err.message, 'Call Start!', 'We need to call start first');
+      serversManager = null; // Stop teardown from calling stop
+      t.end();
+    });
+});
+
 test('can start/stop servers manager', function (t) {
   serversManager.start()
   .then(function (localPort) {
@@ -81,15 +93,14 @@ test('starting twice resolves with listening port', function (t) {
   });
 });
 
-test('calling startNativeListener directly throws', function (t) {
+test('calling startNativeListener directly rejects', function (t) {
   serversManager.start()
   .then(function () {
-    serversManager._createNativeListener();
+    return serversManager._createNativeListener();
   }).then(function () {
     t.fail('we should have gotten an error');
     t.end();
-  })
-  .catch(function (err) {
+  }).catch(function (err) {
     t.equal(err.message, 'Don\'t call directly!', 'Should throw');
     t.end();
   });
@@ -246,7 +257,7 @@ test('calling createPeerListener (pleaseConnect === true) with unknown peer ' +
   'is error',
   function (t) {
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
-      cb('Unknown peer', null);
+      cb('Unknown Peer');
     });
 
     serversManager.start()
@@ -328,15 +339,14 @@ function setUp(t, serversManager, appPort, forwardConnection, pleaseConnect,
 
   if (forwardConnection !== 0) {
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
-      cb(null, {listeningPort:forwardConnection, clientPort:0, serverPort:0});
+      cb(null,
+        Mobile.createListenerOrIncomingConnection(forwardConnection, 0, 0));
     });
   }
   else {
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
-      cb(null, {
-        listeningPort:0,
-        clientPort:0, serverPort:serversManager._nativeServer.address().port
-      });
+      cb(null, Mobile.createListenerOrIncomingConnection(0, 0,
+        serversManager._nativeServer.address().port));
     });
   }
 
@@ -366,7 +376,7 @@ test('peerListener - forwardConnection, pleaseConnect === true - no native ' +
 
     // Have the next Mobile("connect") call complete with a forward connection
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
-      cb(null, {listeningPort:nativePort, clientPort:0, serverPort:0});
+      cb(null, Mobile.createListenerOrIncomingConnection(nativePort, 0, 0));
     });
 
     // Promise should be rejected when we fail to open a socket to the native
@@ -525,7 +535,7 @@ test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
   'promise',
   function (t) {
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
-      cb('a nasty error', null);
+      cb('a nasty error');
     });
 
     serversManager.on('failedConnection', function () {
@@ -543,7 +553,7 @@ test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
             t.end();
           })
           .catch(function (err) {
-            t.equal('a nasty error', err,
+            t.equal(err.message, 'a nasty error',
                     'failed connection should reject with error');
             t.end();
           });
@@ -559,9 +569,7 @@ test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
 test('createPeerListener - pleaseConnect === true, connection resolves promise',
   function (t) {
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
-      cb(null, {
-        listeningPort:nativePort, clientPort:0, serverPort: 0
-      });
+      cb(null, Mobile.createListenerOrIncomingConnection(nativePort, 0, 0));
     });
 
     serversManager.on('failedConnection', function () {
@@ -672,8 +680,10 @@ test('peerListener - reverseConnection, pleaseConnect === false - with ' +
         });
         incoming.pipe(mux).pipe(incoming);
         process.nextTick(function () {
-          cb(null, {listeningPort:0, clientPort:incoming.address().port,
-            serverPort:serverPort});
+          cb(null, Mobile.createListenerOrIncomingConnection(
+                    0,
+                    incoming.address().port,
+                    serverPort));
         });
       });
 
@@ -727,8 +737,10 @@ test('peerListener - reverseConnection, pleaseConnect === false - no server',
         // application server
         mux.createStream();
         process.nextTick(function () {
-          cb(null, {listeningPort:0, clientPort:incoming.address().port,
-            serverPort:serverPort});
+          cb(null, Mobile.createListenerOrIncomingConnection(
+                    0,
+                    incoming.address().port,
+                    serverPort));
         });
       });
     });

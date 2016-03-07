@@ -180,7 +180,7 @@ ThaliTcpServersManager.prototype.start = function () {
         break;
       }
       default: {
-        throw new Error('start - Unsupported TCPServersManagerStates value - ' +
+        return reject('start - Unsupported TCPServersManagerStates value - ' +
           self._state);
       }
     }
@@ -224,7 +224,7 @@ ThaliTcpServersManager.prototype.stop = function () {
       return Promise.resolve();
     }
     case self.TCPServersManagerStates.INITIALIZED: {
-      throw new Error('Call Start!');
+      return Promise.reject(new Error('Call Start!'));
     }
     case self.TCPServersManagerStates.STARTED: {
       break;
@@ -639,17 +639,17 @@ ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
         logger.debug('first connection');
 
         Mobile('connect').callNative(peerIdentifier, // jshint ignore:line
-          function (err, connection) {
-
+          function (err, unParsedConnection) {
             if (err) {
-              logger.warn(err);
+              var error = new Error(err);
+              logger.warn(error);
               logger.debug('failedConnection');
               incoming.end();
               self.emit('failedConnection',
-                { 'error':err, 'peerIdentifier':peerIdentifier });
+                { 'error':error, 'peerIdentifier':peerIdentifier });
               return;
             }
-
+            var connection = JSON.parse(unParsedConnection);
             if (connection.listeningPort === 0) {
 
               // So this is annoying.. there's no guarantee on the order of the
@@ -741,18 +741,20 @@ ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
 
         // We're being asked to connect to by a lower sorted peer
         Mobile('connect').callNative(peerIdentifier, // jshint ignore:line
-        function (err, connection) {
+        function (err, unParsedConnection) {
 
           // This must be a forward connection (connection.listeningPort != 0),
           // anything else would be an error
 
           if (err) {
-            logger.warn(err);
+            var error = new Error(err);
+            logger.warn(error);
             logger.debug('failedConnection');
-            reject(err);
+            reject(error);
             return;
           }
 
+          var connection = JSON.parse(unParsedConnection);
           if (connection.listeningPort === 0) {
             logger.warn('was expecting a forward connection to be made');
             self.emit('failedConnection', {

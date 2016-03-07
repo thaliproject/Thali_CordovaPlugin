@@ -198,10 +198,15 @@
  *
  * @public
  * @callback ConnectCallback
- * @param {error} err If null then the call the callback was submitted to was
- * successful. If not null then it will be an Error object that will define what
- * went wrong.
- * @param {module:thaliMobileNative~ListenerOrIncomingConnection} listenerOrIncomingConnection
+ * @param {?string} err If null then the call the callback was submitted to was
+ * successful. If not null then it will be a string that will defined what
+ * went wrong. We have to use a string because for some reason this value is
+ * passed as a JSON.stringfy output and the Error object cannot be stringified.
+ * @param {?module:thaliMobileNative~ListenerOrIncomingConnection} listenerOrIncomingConnection
+ * For some odd reason lost to the depths of time both Android and iOS return
+ * a stringified version of this object rather than just the object (which
+ * they can do). Rather than fix it we are just sticking this odd behavior
+ * into the spec. Sorry. :(
  */
 // jscs:enable maximumLineLength
 

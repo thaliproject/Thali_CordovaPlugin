@@ -134,12 +134,12 @@ function removeArrayElement(a, e) {
 // jscs:enable jsDoc
 module.exports = function (self) {
   if (self._state !== self.TCPServersManagerStates.STARTED) {
-    throw new Error('Call Start!');
+    return Promise.reject(new Error('Call Start!'));
   }
 
   if (self._nativeServer) {
     // Must have been called twice
-    throw new Error('Don\'t call directly!');
+    return Promise.reject(new Error('Don\'t call directly!'));
   }
 
   return new Promise(function (resolve, reject) {
