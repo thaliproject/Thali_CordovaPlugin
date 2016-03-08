@@ -1,6 +1,7 @@
 'use strict';
 
 var express = require('express');
+var http = require('http');
 
 if (typeof Mobile === 'undefined') {
   return;
@@ -115,3 +116,92 @@ test('error returned with bad router', function (t) {
     t.end();
   });
 });
+
+if (!jxcore.utils.OSInfo().isMobile) {
+  test('peer changes handled from a queue', function (t) {
+    ThaliMobileNativeWrapper.start(express.Router())
+    .then(function () {
+      var peerAvailabilityHandler;
+      var peerCount = 10;
+      var getDummyPeers = function (peerAvailable) {
+        var dummyPeers = [];
+        for (var i = 1; i <= peerCount; i++) {
+          dummyPeers.push({
+            peerIdentifier: i + '',
+            peerAvailable: peerAvailable,
+            pleaseConnect: false
+          });
+        }
+        return dummyPeers;
+      };
+      var endTest = function () {
+        ThaliMobileNativeWrapper.emitter.removeListener(
+          'nonTCPPeerAvailabilityChangedEvent',
+          peerAvailabilityHandler
+        );
+        Mobile.firePeerAvailabilityChanged(getDummyPeers(false));
+        t.end();
+      };
+      var previousPeerNumber = 0;
+      peerAvailabilityHandler = function (peer) {
+        var peerNumber = parseInt(peer.peerIdentifier);
+        if (peerNumber - 1 !== previousPeerNumber) {
+          t.fail('peers should be handled in order');
+          endTest();
+        }
+        previousPeerNumber = peerNumber;
+        if (peerNumber === peerCount) {
+          t.ok(true, 'peers were handled in the right order');
+          endTest();
+        }
+      };
+      ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+        peerAvailabilityHandler);
+      Mobile.firePeerAvailabilityChanged(getDummyPeers(true));
+    });
+  });
+}
+
+if (!tape.coordinated) {
+  return;
+}
+
+/*
+test('can do HTTP requests between peers', function (t) {
+  var testPath = '/test';
+  var testData = 'foobar';
+  var router = express.Router();
+  router.get(testPath, function (req, res) {
+    res.send(testData);
+  });
+
+  var peerAvailabilityHandler = function (peer) {
+    ThaliMobileNativeWrapper.emitter.removeListener(
+      'nonTCPPeerAvailabilityChangedEvent',
+      peerAvailabilityHandler
+    );
+    http.get({
+      path: testPath,
+      port: peer.portNumber,
+      agent: false // to prevent connection keep-alive
+    }, function (res) {
+      t.equal(res.statusCode, 200, 'server should respond with code 200');
+      t.equal(res.TODO, testData, 'test data should have been received');
+      t.end();
+    });
+  };
+  ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+    peerAvailabilityHandler);
+
+  ThaliMobileNativeWrapper.start(router)
+  .then(function () {
+    return ThaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return ThaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    t.ok(true, 'was able call necessary starts');
+  });
+});
+*/

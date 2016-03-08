@@ -1,7 +1,5 @@
-/* global hostAddress */
 'use strict';
 
-var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
 var logger = require('../thalilogger')('thaliMobile');

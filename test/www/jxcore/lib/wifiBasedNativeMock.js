@@ -684,6 +684,12 @@ function toggleWiFi(platform, thaliWifiInfrastructure) {
   };
 }
 
+function firePeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
+  return function (peers) {
+    peerAvailabilityChangedCallback(peers);
+  };
+}
+
 /**
  * To use this mock save the current global object Mobile (if it exists) and
  * replace it with this object. In general this object won't exist on the
@@ -719,9 +725,14 @@ function WifiBasedNativeMock(platform, router) {
                                   thaliWifiInfrastructure);
   };
 
-  mobileHandler.toggleBluetooth = toggleBluetooth(thaliWifiInfrastructure);
+  mobileHandler.toggleBluetooth =
+    toggleBluetooth(platform, thaliWifiInfrastructure);
 
-  mobileHandler.toggleWiFi = toggleWiFi(thaliWifiInfrastructure);
+  mobileHandler.toggleWiFi =
+    toggleWiFi(platform, thaliWifiInfrastructure);
+
+  mobileHandler.firePeerAvailabilityChanged =
+    firePeerAvailabilityChanged(platform, thaliWifiInfrastructure);
 
   return mobileHandler;
 }

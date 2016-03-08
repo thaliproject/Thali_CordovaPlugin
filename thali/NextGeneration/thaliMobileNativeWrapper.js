@@ -1,12 +1,12 @@
 'use strict';
 
-var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
 var EventEmitter = require('events').EventEmitter;
 var logger = require('../thalilogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var express = require('express');
+var TCPServersManager = require('./mux/thaliTcpServersManager');
 
 var states = {
   started: false
@@ -15,6 +15,7 @@ var states = {
 var routerExpress = null;
 var routerServer = null;
 var routerServerPort = 0;
+var serversManager = null;
 
 /** @module thaliMobileNativeWrapper */
 
@@ -99,9 +100,12 @@ module.exports.start = function (router) {
     routerServer = routerExpress.listen(0, function () {
       routerServer = makeIntoCloseAllServer(routerServer);
       routerServerPort = routerServer.address().port;
-      // TODO: Create TCP server manager with above port
-      states.started = true;
-      resolve();
+      serversManager = new TCPServersManager(routerServerPort);
+      serversManager.start()
+      .then(function () {
+        states.started = true;
+        resolve();
+      });
     });
   });
 };
@@ -119,18 +123,37 @@ module.exports.start = function (router) {
  */
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    var doStop = function () {
-      // TODO: Stop TCP server manager
-      states.started = false;
-      resolve();
-    };
-    if (routerServer === null) {
-      doStop();
-      return;
+    if (!states.started) {
+      return resolve();
     }
-    routerServer.closeAll(function () {
-      routerServer = null;
-      doStop();
+    Mobile('stopAdvertisingAndListening').callNative(function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+      Mobile('stopListeningForAdvertisements').callNative(function (error) {
+        if (error) {
+          return reject(new Error(error));
+        }
+        var doStop = function () {
+          serversManager.stop()
+          .then(function () {
+            serversManager = null;
+            states.started = false;
+            resolve();
+          })
+          .catch(function (error) {
+            reject(error);
+          });
+        };
+        if (routerServer === null) {
+          doStop();
+          return;
+        }
+        routerServer.closeAll(function () {
+          routerServer = null;
+          doStop();
+        });
+      });
     });
   });
 };
@@ -163,7 +186,12 @@ module.exports.startListeningForAdvertisements = function () {
     if (!states.started) {
       return reject(new Error('Call Start!'));
     }
-    resolve();
+    Mobile('startListeningForAdvertisements').callNative(function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+      resolve();
+    });
   });
 };
 
@@ -187,8 +215,12 @@ module.exports.startListeningForAdvertisements = function () {
  */
 module.exports.stopListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    // TODO: Implement the specified logic
-    resolve();
+    Mobile('stopListeningForAdvertisements').callNative(function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+      resolve();
+    });
   });
 };
 
@@ -259,7 +291,15 @@ module.exports.startUpdateAdvertisingAndListening = function () {
     if (!states.started) {
       return reject(new Error('Call Start!'));
     }
-    resolve();
+    Mobile('startUpdateAdvertisingAndListening').callNative(
+      routerServerPort,
+      function (error) {
+        if (error) {
+          return reject(new Error(error));
+        }
+        resolve();
+      }
+    );
   });
 };
 
@@ -282,8 +322,12 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  */
 module.exports.stopAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    // TODO: Implement the specified logic
-    resolve();
+    Mobile('stopAdvertisingAndListening').callNative(function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+      resolve();
+    });
   });
 };
 
@@ -427,6 +471,38 @@ module.exports.killConnections = function () {
  * @property {module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} peer
  */
 
+var peerAvailabilityChangedQueue = new PromiseQueue();
+var handlePeerAvailabilityChanged = function (peer) {
+  if (!states.started) {
+    logger.info('Filtered out nonTCPPeerAvailabilityChangedEvent ' +
+                'due to not being in started state');
+    return;
+  }
+  return peerAvailabilityChangedQueue.enqueue(function (resolve) {
+    if (peer.peerAvailable) {
+      serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
+      .then(function (portNumber) {
+        peer.portNumber = portNumber;
+        module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', peer);
+        resolve();
+      })
+      .catch(function (error) {
+        logger.warn('Received error from createPeerListener: ' + error);
+        // Even in case of errors, resolve the promise to let the
+        // queue handle the next peer availability change.
+        resolve();
+      });
+    } else {
+      // TODO: Should the created peer listener be cleaned up when
+      // peer becomes unavailable and which function should be used
+      // for that?
+      peer.portNumber = null;
+      module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', peer);
+      resolve();
+    }
+  });
+};
+
 /**
  * This is used whenever discovery or advertising starts or stops. Since it's
  * possible for these to be stopped (in particular) due to events outside of
@@ -493,8 +569,15 @@ var registerToNative = function (methodName, callback) {
 };
 
 registerToNative('peerAvailabilityChanged', function (peers) {
-  logger.info('peerAvailabilityChanged: %s', JSON.stringify(peers));
-  // do stuff!
+  if (typeof peers === 'string') {
+    peers = JSON.parse(peers);
+  }
+  if (typeof peers.forEach !== 'function') {
+    peers = [peers];
+  }
+  peers.forEach(function (peer) {
+    handlePeerAvailabilityChanged(peer);
+  });
 });
 
 registerToNative('discoveryAdvertisingStateUpdateNonTCP',
