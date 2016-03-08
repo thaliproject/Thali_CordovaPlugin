@@ -851,7 +851,7 @@ ThaliTcpServersManager.prototype.ROUTER_PORT_CONNECTION_FAILED =
  * @public
  * @enum {string}
  */
-ThaliTcpServersManager.incomingConnectionState = {
+ThaliTcpServersManager.prototype.incomingConnectionState = {
   'CONNECTED': 'connected',
   'DISCONNECTED': 'disconnected'
 };
@@ -868,7 +868,7 @@ ThaliTcpServersManager.incomingConnectionState = {
  * Otherwise the object must be treated as opaque.
  * @property
  * {module:TCPServersManager~TCPServersManager.incomingConnectionState} state
- * Indicated if the connection has been established or cut.
+ * Indicates if the connection has been established or cut.
  */
 
 ThaliTcpServersManager.prototype.INCOMING_CONNECTION_STATE =
@@ -887,19 +887,5 @@ ThaliTcpServersManager.prototype.TCPServersManagerStates = {
   /** Stop has been called **/
   STOPPED: 'stopped'
 };
-
-/**
- *
- * @param {Object} incomingConnectionId
- * @param {{module:ThaliTcpServersManager~TCPServersManager.incomingConnectionState}} state
- * @returns {incomingConnectionState}
- */
-function createIncomingConnectionState(incomingConnectionId, state) {
-  return {
-    incomingConnectionId: incomingConnectionId,
-    state: state
-  };
-}
-
 
 module.exports = ThaliTcpServersManager;

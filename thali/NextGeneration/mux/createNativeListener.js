@@ -155,9 +155,10 @@ module.exports = function (self) {
     self._nativeServer.on('close', function () {
       // this == self._nativeServer (which is already null by
       // the time this handler is called)
-      self.emit(self.INCOMING_CONNECTION_STATE, 'DISCONNECTED');
       this._incoming.forEach(function (i) {
-        i._mux.end();
+        if (i._mux) {
+          i._mux.destroy();
+        }
       });
       this._incoming = [];
     });
@@ -178,7 +179,8 @@ module.exports = function (self) {
       incoming.setTimeout(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD);
       incoming.on('timeout', function () {
         logger.debug('incoming socket timeout');
-        incoming.end();
+        incoming.destroy();
+        incoming._mux && incoming._mux.destroy();
       });
 
       incoming.on('close', function () {
@@ -186,7 +188,8 @@ module.exports = function (self) {
         if (self._nativeServer) {
           removeArrayElement(self._nativeServer._incoming, incoming);
         }
-        self.emit(self.INCOMING_CONNECTION_STATE, 'DISCONNECTED');
+        emitIncomingConnectionState(self, incoming,
+          self.incomingConnectionState.DISCONNECTED);
       });
 
       logger.debug('creating incoming mux');
@@ -217,8 +220,8 @@ module.exports = function (self) {
           } else {
             logger.warn('could not pipe - ' + stream.destroyed + ' - ' +
                           outgoing.destroyed);
-            //!stream.destroyed && stream.destroy();
-            //!outgoing.destroyed && outgoing.destroy();
+            !stream.destroyed && stream.destroy();
+            !outgoing.destroyed && outgoing.destroy();
           }
         });
 
@@ -261,7 +264,8 @@ module.exports = function (self) {
       }
 
       incoming.pipe(mux).pipe(incoming);
-      self.emit(self.INCOMING_CONNECTION_STATE, 'CONNECTED');
+      emitIncomingConnectionState(self, incoming,
+        self.incomingConnectionState.CONNECTED);
     });
 
     self._nativeServer.listen(0, function (err) {
@@ -278,3 +282,11 @@ module.exports = function (self) {
     });
   });
 };
+
+function emitIncomingConnectionState(self, incomingConnectionId,
+                                     incomingConnectionState) {
+  self.emit(self.INCOMING_CONNECTION_STATE, {
+    incomingConnectionId: incomingConnectionId,
+    state: incomingConnectionState
+  });
+}
