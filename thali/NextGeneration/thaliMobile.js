@@ -651,6 +651,9 @@ var handlePeer = function (peer, connectionType) {
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (peer) {
+  if (peer.portNumber) {
+    peer.hostAddress = '127.0.0.1';
+  }
   var connectionType =
     jxcore.utils.OSInfo().isAndroid ?
     connectionTypes.BLUETOOTH :
