@@ -9,6 +9,7 @@ var fs = require('fs-extra-promise');
 var url = require('url');
 var FILE_NOT_FOUND = 'ENOENT';
 
+
 // If this file exists in the thaliDontCheckIn directory then
 // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
 // project to this Cordova project.
@@ -84,6 +85,27 @@ function getEtagFromEtagFile(depotName, branchName, directoryToInstallIn) {
       }
     });
 }
+
+/**
+ * This method is used to retrieve the release configuration data
+ * stored in the releaseConfig.json
+ *
+ * @returns {Promise}
+ */
+function getReleaseConfig() {
+  var configFileName = path.join(__dirname, 'releaseConfig.json');
+
+
+  return fs.readFileAsync(configFileName, "utf-8")
+    .catch(function (err) {
+      return Promise.reject(err);
+
+    }).then(function (data) {
+      return (Promise.resolve(JSON.parse(data)));
+    });
+}
+
+
 
 function returnEtagFromResponse(httpResponse) {
   // The etag value is returned with quotes but when we set the header it adds
@@ -298,13 +320,21 @@ module.exports = function (callback, appRootDirectory) {
   var appScriptsFolder =
     path.join(appRootDirectory, 'plugins/org.thaliproject.p2p/scripts');
 
-  var jxCoreVersionNumber = '0.1.1';
 
-  var thaliProjectName = 'thaliproject';
-  var thaliDepotName = 'Thali_CordovaPlugin';
-  var thaliBranchName = 'npmv2.1.0';
+  var thaliProjectName, thaliDepotName, thaliBranchName;
 
-  fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, jxCoreVersionNumber)
+  getReleaseConfig()
+    .then(function (conf) {
+      if (!conf) {
+        return Promise.reject("Configuration error!");
+      }
+
+      thaliProjectName = conf.thali.projectName;
+      thaliDepotName = conf.thali.depotName;
+      thaliBranchName = conf.thali.branchName;
+
+      return fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, conf["jxcore-cordova"])
+    })
     .then(function () {
       if (doesMagicDirectoryNamedExist(thaliDontCheckIn)) {
         return copyDevelopmentThaliCordovaPluginToProject(appRootDirectory,
