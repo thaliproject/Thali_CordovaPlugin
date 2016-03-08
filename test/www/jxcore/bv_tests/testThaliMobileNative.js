@@ -75,12 +75,10 @@ if (!tape.coordinated) {
 test('peerAvailabilityChange is called', function (t) {
   ThaliMobileNativeWrapper.emitter.once('nonTCPPeerAvailabilityChangedEvent',
   function (peer) {
-    t.ok(peer.hasOwnProperty('peerIdentifier'), 'peer must have peerIdentifier');
-    t.ok(typeof peer.peerIdentifier === 'string', 'peerIdentifier must be a string');
-
-    t.ok(peer.hasOwnProperty('peerAvailable'), 'peer must have peerAvailable');
-    t.ok(peer.hasOwnProperty('pleaseConnect'), 'peer must have pleaseConnect');
-
+    t.ok(peer.hasOwnProperty('peerIdentifier'),
+      'peer must have peerIdentifier');
+    t.ok(typeof peer.peerIdentifier === 'string',
+      'peerIdentifier must be a string');
     t.end();
   });
 

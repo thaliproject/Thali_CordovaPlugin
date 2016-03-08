@@ -165,7 +165,6 @@ if (!jxcore.utils.OSInfo().isMobile) {
 if (!tape.coordinated) {
   return;
 }
-
 /*
 test('can do HTTP requests between peers', function (t) {
   var testPath = '/test';

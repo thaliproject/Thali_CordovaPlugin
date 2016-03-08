@@ -479,26 +479,35 @@ var handlePeerAvailabilityChanged = function (peer) {
     return;
   }
   return peerAvailabilityChangedQueue.enqueue(function (resolve) {
+    var handlePeerUnavailable = function () {
+      // TODO: Should the created peer listener be cleaned up when
+      // peer becomes unavailable and which function should be used
+      // for that?
+      module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+        peerIdentifier: peer.peerIdentifier,
+        portNumber: null
+      });
+      resolve();
+    };
     if (peer.peerAvailable) {
       serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
       .then(function (portNumber) {
-        peer.portNumber = portNumber;
-        module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', peer);
+        module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+          peerIdentifier: peer.peerIdentifier,
+          portNumber: portNumber
+        });
         resolve();
       })
       .catch(function (error) {
         logger.warn('Received error from createPeerListener: ' + error);
-        // Even in case of errors, resolve the promise to let the
-        // queue handle the next peer availability change.
-        resolve();
+        // In case there is an error creating a peer listener,
+        // handle the peer as if we would have received an unavailability
+        // message since the upper layers couldn't connect to the peer
+        // anyways.
+        handlePeerUnavailable();
       });
     } else {
-      // TODO: Should the created peer listener be cleaned up when
-      // peer becomes unavailable and which function should be used
-      // for that?
-      peer.portNumber = null;
-      module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', peer);
-      resolve();
+      handlePeerUnavailable();
     }
   });
 };
