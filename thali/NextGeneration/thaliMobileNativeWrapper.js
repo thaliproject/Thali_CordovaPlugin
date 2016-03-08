@@ -321,7 +321,7 @@ module.exports.getNonTCPNetworkStatus = function () {
 };
 
 /**
- * This is used for native connections and calls through to TCPServersManager.
+ * This is used for native connections and calls through to ThaliTcpServersManager.
  *
  * @param {Object} incomingConnectionId
  * @returns {Promise<?Error>}

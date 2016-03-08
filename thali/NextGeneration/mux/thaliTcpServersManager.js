@@ -5,8 +5,9 @@ var util = require('util');
 var Promise = require('lie');
 var Multiplex = require('multiplex');
 var EventEmitter = require('events').EventEmitter;
-var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
-var logger = require('../thalilogger')('tcpServersManager');
+var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
+var createNativeListener = require('./createNativeListener');
+var logger = require('../../thalilogger')('tcpServersManager');
 
 /** @module TCPServersManager */
 
@@ -126,9 +127,9 @@ var maxPeersToAdvertise = 20;
  * @fires event:failedConnection
  * @fires event:incomingConnectionState
  */
-function TCPServersManager(routerPort) {
+function ThaliTcpServersManager(routerPort) {
 
-  this._state = 'initialized';
+  this._state = this.TCPServersManagerStates.INITIALIZED;
 
   // The single native server created by _createNativeListener
   this._nativeServer = null;
@@ -144,14 +145,7 @@ function TCPServersManager(routerPort) {
   this._routerPort = routerPort;
 }
 
-util.inherits(TCPServersManager, EventEmitter);
-
-var objectId = 0;
-// Use this to uniquely id objects as they're created
-// (JS can only index on strings and many objects hash to the string ['Object'])
-function nextId() {
-  return objectId++;
-}
+util.inherits(ThaliTcpServersManager, EventEmitter);
 
 /**
  * This method will call
@@ -172,15 +166,27 @@ function nextId() {
  * external:"Mobile('startUpdateAdvertisingAndListening')".ca
  * llNative} when the system is ready to receive external incoming connections.
  */
-TCPServersManager.prototype.start = function () {
+ThaliTcpServersManager.prototype.start = function () {
   var self = this;
   function _do(resolve, reject) {
-    if (self._state === 'stopped') {
-      reject('We are stopped!');
-      return;
+    switch (self._state) {
+      case self.TCPServersManagerStates.STOPPED: {
+        return reject('We are stopped!');
+      }
+      case self.TCPServersManagerStates.STARTED: {
+        return resolve(self._nativeServer.address().port);
+      }
+      case self.TCPServersManagerStates.INITIALIZED: {
+        break;
+      }
+      default: {
+        return reject('start - Unsupported TCPServersManagerStates value - ' +
+          self._state);
+      }
     }
-    self._state = 'started';
-    self._createNativeListener(self._routerPort)
+
+    self._state = self.TCPServersManagerStates.STARTED;
+    self._createNativeListener()
     .then(function (localPort) {
       resolve(localPort);
     })
@@ -202,317 +208,65 @@ TCPServersManager.prototype.start = function () {
  * a row without changing state.
  *
  * If this method is called before calling start then a "Call Start!" Error MUST
- * be thrown.
+ * be returned.
  *
  * Once called the object is in the stop state and cannot leave it. To start
  * again this object must be disposed and a new one created.
  *
  * @public
- * @returns {?Error}
+ * @returns {Promise<?Error>}
  */
 // jscs:include jsDoc
-TCPServersManager.prototype.stop = function () {
-  if (this._state !== 'started') {
-    throw new Error('Call Start!');
-  }
-  if (this._nativeServer) {
-    this._nativeServer.closeAll();
-    this._nativeServer = null;
-  }
-  for (var peerIdentifier in this._peerServers) {
-    if (this._peerServers.hasOwnProperty(peerIdentifier)) {
-      this._peerServers[peerIdentifier][1].closeAll();
+ThaliTcpServersManager.prototype.stop = function () {
+  var self = this;
+  switch (self._state) {
+    case self.TCPServersManagerStates.STOPPED: {
+      return Promise.resolve();
+    }
+    case self.TCPServersManagerStates.INITIALIZED: {
+      return Promise.reject(new Error('Call Start!'));
+    }
+    case self.TCPServersManagerStates.STARTED: {
+      break;
+    }
+    default: {
+      return Promise.reject(
+        new Error('stop - Unsupported TCPServersManagerStates value - ' +
+          self._state));
     }
   }
-  this._peerServers = {};
 
-  return null;
+  self._state = self.TCPServersManagerStates.STOPPED;
+
+  var promisesArray = [];
+
+  if (self._nativeServer) {
+    promisesArray.push(self._nativeServer.closeAllPromise()
+      .then(function () {
+        self._nativeServer = null;
+      }));
+  }
+  for (var peerIdentifier in self._peerServers) {
+    if (self._peerServers.hasOwnProperty(peerIdentifier)) {
+      self._peerServers[peerIdentifier].server._closing = true;
+      promisesArray.push(
+        self._peerServers[peerIdentifier].server.closeAllPromise());
+    }
+  }
+  self._peerServers = {};
+
+  return Promise.all(promisesArray);
 };
 
 // jscs:exclude jsDoc
 /**
- * This method creates a TCP listener (which MUST use {@link
- * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) to handle requests
- * from the native layer and to then pass them through a multiplex object who
- * will route all the multiplexed connections to routerPort, the port the system
- * has hosted the submitted router object on. The TCP listener will be started
- * on port 0 and the port it is hosted on will be returned in the promise. This
- * is the port that MUST be submitted to the native layer's {@link
- * external:"Mobile('startUpdateAdvertisingAndListening')".callNative} command.
- *
- * If this method is called when we are not in the start state then an exception
- * MUST be thrown because this is a private method and something very bad just
- * happened.
- *
- * If this method is called twice an exception MUST be thrown because this
- * should only be called once from the constructor.
- *
- * ## TCP Listener
- *
- * ### Connect Event
- *
- * A multiplex object MUST be created and MUST be directly piped in both
- * directions with the TCP socket returned by the listener. We MUST set a
- * timeout on the incoming TCP socket to a reasonable value for the platform.
- * The created multiplex object MUST be recorded with an index of the client
- * port used by the incoming TCP socket.
- *
- * A unique ID MUST be created for this connection and stored with this
- * connection and then a
- * {@link module:TCPServersManager.event:incomingConnectionState} event MUST
- * be fired.
- *
- * ### Error Event
- *
- * The error MUST be logged.
- *
- * ### Close Event
- *
- * We MUST call destroy on all multiplex objects spawned by this TCP listener.
- *
- * We MUST also fire a
- * {@link module:TCPServersManager.event:incomingConnectionState} event.
- *
- * ## Incoming TCP socket returned by the server's connect event
- *
- * ### Error Event
- *
- * The error MUST be logged.
- *
- * ### Timeout Event
- *
- * Destroy MUST be called on the piped multiplex object. This will trigger a
- * total cleanup.
- *
- * ### Close Event
- *
- * If this close is not the result of a destroy on the multiplex object then
- * destroy MUST be called on the multiplex object.
- *
- * ## Multiplex Object
- *
- * ### onStream Callback
- *
- * The incoming stream MUST cause us to create a net.createConnection to
- * routerPort and to then take the new TCP socket and pipe it in both directions
- * with the newly created stream. We MUST track the TCP socket so we can clean
- * it up later. Note that the TCP socket will track its associated stream and
- * handle cleaning it up. If the TCP socket cannot be connected to routerPort
- * then a routerPortConnectionFailed event MUST be fired and destroy MUST be
- * called on the stream provided in the callback.
- *
- * ### Error Event
- *
- * The error MUST be logged.
- *
- * ### Close Event
- *
- * Destroy MUST first be called on all the TCP sockets we created to routerPort
- * (the TCP sockets will then close their associated multiplex streams). Then we
- * MUST call Destroy on the incoming TCP socket from the native layer. Note that
- * in some cases one or more of these objects could already be closed before we
- * call destroy so we MUST be prepared to catch any exceptions. Finally we MUST
- * remove the multiplex object from the list of multiplex objects we are
- * maintaining.
- *
- * ## TCP client socket created by net.createConnection call from multiplex
- * object
- *
- * ### Error Event
- *
- * The error MUST be logged.
- *
- * ### Close Event
- *
- * Destroy MUST be called on the stream this TCP socket is piped to assuming
- * that it wasn't that stream that called destroy on the TCP client socket.
- *
- * ## multiplex onStream stream
- *
- * ### Error Event
- *
- * The error MUST be logged.
- *
- * ### Close Event
- *
- * If the close did not come from the TCP socket this stream is piped to then
- * close MUST be called on the associated TCP socket.
- *
  * @private
- * @param {number} routerPort Port that the router object submitted to {@link
- * module:ThaliMobileNativeWrapper.startUpdateAdvertisingAndListening} is hosted
- * on. This value was passed into this object's constructor.
  * @returns {Promise<number|Error>} The port that the mux is listening on for
  * connections from the native layer or an Error object.
  */
 // jscs:include jsDoc
-TCPServersManager.prototype._createNativeListener = function (routerPort) {
-
-  if (this._state !== 'started') {
-    throw new Error('Call Start!');
-  }
-
-  if (this._nativeServer) {
-    // Must have been called twice
-    throw new Error('Don\'t call directly!');
-  }
-
-  function removeArrayElement(a, e) {
-    // Remove an element from array based on __id comparison
-    function findIndex() {
-      for (var i = 0; i < a.length; i++) {
-        if (a[i].__id === e.__id) {
-          return i;
-        }
-      }
-      return -1;
-    }
-    var idx = findIndex();
-    if (idx !== -1) {
-      a.splice(idx, 1);
-      return true;
-    }
-    return false;
-  }
-
-  var self = this;
-  function _do(resolve) {
-
-    logger.debug('creating native server');
-
-    self._nativeServer = makeIntoCloseAllServer(net.createServer());
-    self._nativeServer.__id = nextId();
-    self._nativeServer._incoming = [];
-
-    self._nativeServer.on('error', function (err) {
-      logger.warn(err);
-    });
-
-    self._nativeServer.on('close', function () {
-      // this == self._nativeServer (which is already null by
-      // the time this handler is called)
-      self.emit('incomingConnectionState', 'DISCONNECTED');
-      this._incoming.forEach(function (i) {
-        i.end();
-      });
-      this._incoming = [];
-    });
-
-    self._nativeServer.on('connection', function (incoming) {
-
-      incoming.__id = nextId();
-      self._nativeServer._incoming.push(incoming);
-      logger.debug('new incoming socket:', incoming.__id);
-
-      // We've received a new incoming connection from the P2P layer
-      // Wrap this new socket in a multiplex. New streams appearing
-      // from the mux are client sockets being created on the remote
-      // side and should be connected to the application server port.
-
-      incoming.on('error', function (err) {
-        logger.warn(err);
-      });
-
-      incoming.on('timeout', function () {
-        logger.debug('incoming socket timeout');
-        if (self._nativeServer) {
-          removeArrayElement(self._nativeServer._incoming, incoming);
-        }
-      });
-
-      incoming.on('close', function () {
-        logger.debug('incoming socket close', incoming.__id);
-        if (self._nativeServer) {
-          removeArrayElement(self._nativeServer._incoming, incoming);
-        }
-        self.emit('incomingConnectionState', 'DISCONNECTED');
-      });
-
-      logger.debug('creating incoming mux');
-      var mux = new Multiplex(function onStream(stream) {
-
-        stream.__id = nextId();
-        mux._streams.push(stream);
-
-        logger.debug('new stream: ', stream.__id);
-
-        // Remote side is trying to connect a new client
-        // socket into their mux, connect this new stream
-        // to the application server
-
-        stream.on('error', function (err) {
-          logger.warn(err);
-        });
-
-        stream.on('close', function () {
-          logger.debug('stream close:', stream.__id);
-          stream._outgoing.end();
-          if (!removeArrayElement(mux._streams, stream)) {
-            logger.debug('stream not found in mux');
-          }
-        });
-
-        var outgoing = net.createConnection(routerPort, function () {
-          stream.pipe(outgoing).pipe(stream);
-        });
-        outgoing.__id = nextId();
-
-        stream._outgoing = outgoing;
-
-        outgoing.on('end', function () {
-          logger.debug('outgoing close: ', outgoing.__id);
-          stream.end();
-          removeArrayElement(mux._streams, stream);
-        });
-
-        outgoing.on('error', function (err) {
-          logger.warn(err, outgoing.__id);
-          removeArrayElement(mux._streams, stream);
-          self.emit('routerPortConnectionFailed');
-        });
-
-        logger.debug('new outgoing socket:', outgoing.__id);
-      });
-
-      mux.__id = nextId();
-      incoming._mux = mux;
-      mux._streams = [];
-
-      logger.debug('new mux', mux.__id);
-
-      mux.on('error', function (err) {
-        logger.warn(err);
-      });
-
-      mux.on('close', function () {
-        logger.debug('mux close');
-        mux._incoming.end();
-        removeArrayElement(self._nativeServer._incoming, incoming);
-      });
-
-      // The client connection may have run it's connection
-      // handler before this one.. handle that.
-      if (self._pendingReverseConnections[incoming.remotePort]) {
-        self._pendingReverseConnections[incoming.remotePort][0]();
-      }
-
-      incoming.pipe(mux).pipe(incoming);
-      self.emit('incomingConnectionState', 'CONNECTED');
-    });
-
-    self._nativeServer.listen(0, function (err) {
-      if (err) {
-        logger.warn(err);
-        return;
-      }
-      if (self._nativeServer) {
-        logger.debug('listening', self._nativeServer.address().port);
-        resolve(self._nativeServer.address().port);
-      }
-    });
-  }
-
-  return new Promise(_do);
+ThaliTcpServersManager.prototype._createNativeListener = function () {
+  return createNativeListener(this);
 };
 
 /**
@@ -701,8 +455,8 @@ TCPServersManager.prototype._createNativeListener = function (routerPort) {
  * incoming connection to the TCP server.
  * @returns {Promise<number|Error>}
  */
-TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
-                                                           pleaseConnect) {
+ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
+                                                                pleaseConnect) {
 
   // This section manages a server that accepts incoming connections
   // from the application. The first connection causes the p2p link to
@@ -717,7 +471,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
   logger.debug('createPeerListener');
 
-  if (this._state !== 'started') {
+  if (this._state !== this.TCPServersManagerStates.STARTED) {
     throw new Error('Call Start!');
   }
 
@@ -725,44 +479,58 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
   function _do(resolve, reject) {
 
     if (self._peerServers[peerIdentifier]) {
+      resolve(self._peerServers[peerIdentifier].server.address().port);
       return;
     }
 
     function closeServer(server) {
+      server._closing = true;
       server.closeAll();
-      delete self._peerServers[server.__peerIdentifier];
+      delete self._peerServers[server._peerIdentifier];
     }
 
-    function multiplexToNativeListener(connection, server) {
-      logger.debug('outgoing to: ', connection.listeningPort);
-
+    function multiplexToNativeListener(connection, server, cb) {
+      // Create an outgoing socket to the native listener via a mux
+      // New streams created on this mux by the remote side are initiated
+      // by the user app connecting a socket to a remote thali server
       var outgoing = net.createConnection(connection.listeningPort,
-        function () {
-          var mux = new Multiplex(function onStream(stream) {
-            var client = net.createConnection(self._routerPort, function () {
-              client.pipe(stream).pipe(client);
-            });
-
-            client.on('error', function (err) {
-              logger.warn(err);
-              self.emit('routerPortConnectionFailed');
-            });
-
-            client.on('close', function () {
-              stream.end();
-            });
+      function () {
+        var mux = new Multiplex(function onStream(stream) {
+          var client = net.createConnection(self._routerPort, function () {
+            client.pipe(stream).pipe(client);
           });
 
-          mux.on('error', function (err) {
+          client.on('error', function (err) {
             logger.warn(err);
+            self.emit('routerPortConnectionFailed');
           });
 
-          mux.on('close', function () {
-            closeServer(server);
+          client.on('close', function () {
+            stream.end();
           });
-
-          outgoing.pipe(mux).pipe(outgoing);
         });
+
+        mux.on('error', function (err) {
+          logger.warn(err);
+        });
+
+        mux.on('close', function () {
+          if (!server._closing) {
+            closeServer(server);
+          }
+        });
+
+        outgoing.on('data', function () {
+          self._peerServers[server._peerIdentifer].lastActive = Date.now();
+        });
+
+        outgoing.pipe(mux).pipe(outgoing);
+
+        if (cb) {
+          // Callback on successful connection
+          cb();
+        }
+      });
 
       return outgoing;
     }
@@ -770,8 +538,6 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
     function onNewConnection(incoming) {
 
       // Handle a new connection from the app to the server
-
-      var firstConnection = true;
 
       function findMuxForReverseConnection(_port) {
         // Find the mux for the reverse connection based on
@@ -792,11 +558,15 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
         // Connect to the native listener and mux the connection
         // When the other side creates a stream, send it to the application
-        var outgoing = multiplexToNativeListener(connection, server);
+        var outgoing = multiplexToNativeListener(connection, server,
+          function onConnection() {
+          });
 
         outgoing.on('error', function (err) {
           logger.warn(err);
-          closeServer(server);
+          if (!server._closing) {
+            closeServer(server);
+          }
           self.emit('failedConnection', {
             'error':'Cannot Connect To Peer',
             'peerIdentifier':peerIdentifier
@@ -831,7 +601,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
             'error': 'Mismatched serverPort',
             'peerIdentifier':peerIdentifier
           });
-          firstConnection = true;
+          server._firstConnection = true;
           return;
         }
 
@@ -845,43 +615,41 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
             'error':'Incoming connection died',
             'peerIdentifier':peerIdentifier
           });
-          firstConnection = true;
+          server._firstConnection = true;
           return false;
         }
 
         // Create a new stream on the existing mux
         var stream = mux.createStream();
-        stream.__id = nextId();
 
         stream.on('error', function () {
           logger.warn('stream error - reverse connection');
         });
 
         stream.on('close', function () {
-          console.log('stream close');
           incoming.end();
         });
 
         incoming.pipe(stream).pipe(incoming);
       }
 
-      if (!pleaseConnect && firstConnection) {
+      if (!pleaseConnect && server._firstConnection) {
 
-        firstConnection = false;
+        server._firstConnection = false;
         logger.debug('first connection');
 
         Mobile('connect').callNative(peerIdentifier, // jshint ignore:line
-          function (err, connection) {
-
+          function (err, unParsedConnection) {
             if (err) {
-              logger.warn(err);
+              var error = new Error(err);
+              logger.warn(error);
               logger.debug('failedConnection');
               incoming.end();
               self.emit('failedConnection',
-                { 'error':err, 'peerIdentifier':peerIdentifier });
+                { 'error':error, 'peerIdentifier':peerIdentifier });
               return;
             }
-
+            var connection = JSON.parse(unParsedConnection);
             if (connection.listeningPort === 0) {
 
               // So this is annoying.. there's no guarantee on the order of the
@@ -910,7 +678,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
       }
     }
 
-    function createServer(onNewConnection) {
+    function createServer(onNewConnection, onListen) {
       // This is the server that will listen for connection coming from the
       // application
 
@@ -936,45 +704,57 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
       }
 
       var server = makeIntoCloseAllServer(net.createServer());
-      server.__peerIdentifier = peerIdentifier;
+      server._peerIdentifier = peerIdentifier;
+      server._firstConnection = true;
+      server._muxes = [];
 
       server.on('connection', onNewConnection);
 
-      server.listen(0, function (err) {
-        if (err) {
-          logger.warn(err);
-          return null;
-        }
+      server.on('close', function onClose() {
+        server._muxes.forEach(function (m) {
+          m.end();
+        });
+        server._muxes = [];
       });
-
-      self._peerServers[peerIdentifier] = [new Date(), server];
 
       return server;
     }
 
     var server = createServer(onNewConnection);
-    if (server == null) {
-      reject(null);
-      return;
-    }
 
-    logger.debug('pleaseConnect=', pleaseConnect);
+    server.on('error', function (err) {
+      logger.warn(err);
+      reject(err);
+    });
 
-    if (pleaseConnect) {
+    server.on('listening', function () {
 
-      // We're being asked to connect to by a lower sorted peer
-      Mobile('connect').callNative(peerIdentifier, // jshint ignore:line
-        function (err, connection) {
+      self._peerServers[peerIdentifier] =
+      { lastActive: Date.now(), server: server };
+
+      logger.debug('pleaseConnect=', pleaseConnect);
+
+      if (!pleaseConnect) {
+        resolve(server.address().port);
+      }
+      else {
+
+        // We're being asked to connect to by a lower sorted peer
+        Mobile('connect').callNative(peerIdentifier, // jshint ignore:line
+        function (err, unParsedConnection) {
+
           // This must be a forward connection (connection.listeningPort != 0),
           // anything else would be an error
 
           if (err) {
-            logger.warn(err);
+            var error = new Error(err);
+            logger.warn(error);
             logger.debug('failedConnection');
-            reject(err);
+            reject(error);
             return;
           }
 
+          var connection = JSON.parse(unParsedConnection);
           if (connection.listeningPort === 0) {
             logger.warn('was expecting a forward connection to be made');
             self.emit('failedConnection', {
@@ -987,28 +767,35 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
 
           // Create a connection to the native listener, mux it and
           // connect new streams to the application
-          var outgoing = multiplexToNativeListener(connection, server);
+          var outgoing = multiplexToNativeListener(connection, server,
+            function onConnect() {
+              outgoing._connected = true;
+              resolve(server.address().port);
+            });
 
           outgoing.on('error', function (err) {
-            logger.warn(err);
-            closeServer(server);
-            self.emit('failedConnection', {
-              'error':'Cannot Connect To Peer',
-              'peerIdentifier':peerIdentifier
-            });
-            reject(err);
+            logger.warn('outgoing socket - ' + err);
+            if (!server._closing) {
+              closeServer(server);
+              self.emit('failedConnection', {
+                'error':'Cannot Connect To Peer',
+                'peerIdentifier':peerIdentifier
+              });
+            }
+            if (!outgoing._connected) {
+              // Failed to connect, reject
+              reject(err);
+            }
           });
 
           outgoing.on('timeout', function () {
             outgoing.destroy();
           });
-
-          resolve(server.address().port);
         });
-    }
-    else {
-      resolve(server.address().port);
-    }
+      }
+    });
+
+    server.listen(0);
   }
 
   return new Promise(_do);
@@ -1025,7 +812,7 @@ TCPServersManager.prototype.createPeerListener = function (peerIdentifier,
  * @param {Object} incomingConnectionId
  * @returns {Promise<?error>}
  */
-TCPServersManager.prototype.terminateIncomingConnection =
+ThaliTcpServersManager.prototype.terminateIncomingConnection =
   function () {
     return new Promise();
   };
@@ -1056,12 +843,15 @@ TCPServersManager.prototype.terminateIncomingConnection =
  * @property {number} routerPort
  */
 
+ThaliTcpServersManager.prototype.ROUTER_PORT_CONNECTION_FAILED =
+  'routerPortConnectionFailed';
+
 /**
  * @readonly
  * @public
  * @enum {string}
  */
-TCPServersManager.incomingConnectionState = {
+ThaliTcpServersManager.prototype.incomingConnectionState = {
   'CONNECTED': 'connected',
   'DISCONNECTED': 'disconnected'
 };
@@ -1078,7 +868,24 @@ TCPServersManager.incomingConnectionState = {
  * Otherwise the object must be treated as opaque.
  * @property
  * {module:TCPServersManager~TCPServersManager.incomingConnectionState} state
- * Indicated if the connection has been established or cut.
+ * Indicates if the connection has been established or cut.
  */
 
-module.exports = TCPServersManager;
+ThaliTcpServersManager.prototype.INCOMING_CONNECTION_STATE =
+  'incomingConnectionState';
+
+/**
+ * Defines the state TCPServersManager can be in
+ * @readonly
+ * @enum {string}
+ */
+ThaliTcpServersManager.prototype.TCPServersManagerStates = {
+  /** Neither start nor stop have been called yet **/
+  INITIALIZED: 'initialized',
+  /** Start has been called, but not stop **/
+  STARTED: 'started',
+  /** Stop has been called **/
+  STOPPED: 'stopped'
+};
+
+module.exports = ThaliTcpServersManager;

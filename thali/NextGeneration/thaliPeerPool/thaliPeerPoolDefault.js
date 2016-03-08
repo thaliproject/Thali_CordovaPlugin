@@ -1,10 +1,18 @@
 'use strict';
 
+var util = require('util');
+var ThaliPeerPoolInterface = require('./thaliPeerPoolInterface');
+var Agent = require('http').Agent;
+var thaliConfig = require('../thaliConfig');
+
 /** @module thaliPeerPoolDefault */
 
 /**
  * @classdesc This is the default implementation of the
  * {@link module:thaliPeerPoolInterface~ThaliPeerPoolInterface} interface.
+ *
+ * WARNING: This code is really just intended for use for testing and
+ * prototyping. It is not intended to be shipped.
  *
  * How the default implementation function depends on what connection type an
  * action is associated with.
@@ -20,9 +28,6 @@
  * that number of connections to run in parallel, but not today. Today they
  * all run, just the pool controls them.
  *
- * The pool btw is defined by http.Agent in Node.js. For now we will us
- * the existing maxSockets of 5 (this means we can have up to 5 connections
- * with the same host:port). This seems a reasonable limit.
  *
  * # Multipeer Connectivity Framework
  *
@@ -43,12 +48,52 @@
  * we have. Instead we will give each client connection its own HTTP
  * agent pool and call it a day.
  *
+ * # Connection pooling
+ *
+ * We owe each action an Agent to manage their connection count. The tricky
+ * part here is that while we can re-use connections when we are talking to
+ * the same peer, we can't re-use them across peers because the PSK will be
+ * different. So in theory we have to create a new agent for each action but
+ * for bonus points we could detect when we see the same peerID across two
+ * different actions and have them share the same pool. We aren't going to
+ * bother being that smart for right now.
  *
  * @public
  * @constructor
  */
-function ThaliPeerPoolDefault(thaliMobile) {
-
+function ThaliPeerPoolDefault() {
+  ThaliPeerPoolDefault.super_.call(this);
 }
+
+util.inherits(ThaliPeerPoolDefault, ThaliPeerPoolInterface);
+
+ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
+  // Right now we will just allow everything to run parallel
+
+  var enqueueResult =
+    ThaliPeerPoolDefault.super_.prototype
+      .enqueue.call(this, peerAction);
+
+  if (enqueueResult) {
+    return enqueueResult;
+  }
+
+  var actionAgent = new Agent({
+    keepAlive: true,
+    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+    maxSockets: Infinity,
+    maxFreeSockets: 256
+  });
+
+  // We hook our clean up code to kill and it is always legal to call
+  // kill, even if it has already been called. So this ensures that our
+  // cleanup code gets called regardless of how the action ended.
+  peerAction.start(actionAgent).then(function () {
+    peerAction.kill();
+  });
+
+  return null;
+};
+
 
 module.exports = ThaliPeerPoolDefault;

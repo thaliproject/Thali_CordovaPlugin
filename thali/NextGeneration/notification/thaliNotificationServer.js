@@ -1,6 +1,9 @@
 'use strict';
-
-var Promise = require('lie');
+var assert = require('assert');
+var NotificationBeacons = require('./thaliNotificationBeacons');
+var PromiseQueue = require('../promiseQueue');
+var ThaliMobile = require('../thaliMobile');
+var logger = require('../../thalilogger')('thaliNotificationServer');
 
 /** @module thaliNotificationServer */
 
@@ -17,11 +20,25 @@ var Promise = require('lie');
  * @param {number} millisecondsUntilExpiration The number of milliseconds into
  * the future after which the beacons should expire.
  * @constructor
- * The constructor MUST NOT take any action. It can only record values.
  */
 function ThaliNotificationServer(router, ecdhForLocalDevice,
                                  millisecondsUntilExpiration) {
-
+  
+  assert(router !== null, 'router must not be null');
+  assert(ecdhForLocalDevice !== null, 'ecdhForLocalDevice must not be null');
+  
+  assert(millisecondsUntilExpiration > 0 &&
+    millisecondsUntilExpiration <= NotificationBeacons.ONE_DAY,
+    'millisecondsUntilExpiration must be > 0 & < ' +
+    NotificationBeacons.ONE_DAY);
+  
+  this._router = router;
+  this._ecdhForLocalDevice = ecdhForLocalDevice;
+  this._millisecondsUntilExpiration = millisecondsUntilExpiration;
+  this._promiseQueue = new PromiseQueue();
+  this._firstStartCall = true;
+  this._preambleAndBeacons = null;
+  this._getEventsQueue = [];
 }
 
 /**
@@ -35,69 +52,135 @@ function ThaliNotificationServer(router, ecdhForLocalDevice,
 ThaliNotificationServer.NOTIFICATION_BEACON_PATH =
   '/NotificationBeacons';
 
-
 /**
- * When called for the first time on an instance of ThaliNotificationServer
- * the route "/NotificationBeacons" MUST be registered on the submitted
- * router object with a GET handler. Registration of the path on the router
- * MUST occur at most once. The notification server MUST use {@link
- * module:makeIntoCloseAllServer~makeIntoCloseAllServer}
+ * Starts to listen incoming GET request at the "/NotificationBeacons" path 
+ * which is registered on the submitted router object. 
  *
- * If publicKeysToNotify is null then any GET requests on the endpoint MUST be
- * responded to with 204 No Content per the
- * [spec](https://github.com/thaliproject/thali/blob/gh-pages/pages/documentatio
- * n/PresenceProtocolBindings.md#transferring-discovery-beacon-values-over-http)
- * .
+ * Every time this method is called advertised beacons are updated with the
+ * submitted value, including [] which starts to returning 204s.
  *
- * Otherwise the endpoint MUST respond with an application/octet-stream
- * content-type with cache-control: no-cache and a response body containing
- * the properly generated beacon contents from
- * {@link module:thaliNotificationBeacons.generatePreambleAndBeacons}.
+ * Errors: 
  *
- * If we get null for publicKeysToNotify we MUST stop advertising any values
- * over whatever the local discovery transport we are using. This is NOT the
- * same as turning off advertising. If advertising were turned off then we would
- * emit the error give below. If we simply say we want to advertise but have
- * nothing to advertise then we just stop advertising anything until we get a
- * value.
- *
- * There MUST be logic in the endpoint to make sure that if requests/second for
- * this endpoint exceed a set threshold then we MUST respond with a 503
- * server overloaded. We MUST be careful when logging information about
- * overloads to make sure we don't overload the log. Once the request rate
- * for this endpoint has fallen below the threshold then we MUST start serving
- * beacons (or 204s) again.
- *
- * Every time this method is called the beacons MUST be updated with the
- * submitted value, including NULL to start returning 204s.
- *
- * The following error values MUST be used as appropriate:
- *
- * 'bad public keys' - This indicates that one or more of the public keys is
+ * 'bad public keys' - this indicates that one or more of the public keys is
  * of the wrong type or otherwise malformed and so it is not possible to use
  * these keys to create beacons.
  *
- * 'Advertising is off' - We do not have advertising activated so we can't
- * advertise anything.
- *
- * @param {buffer[]} [publicKeysToNotify] - An array of buffers holding the
+ * 'Call Start!' - ThaliMobile.Start has to be called before calling this
+ * function
+ * 
+ * @param {buffer[]} publicKeysToNotify - An array of buffers holding the
  * ECDH public keys to notify that we have data for them.
  * @returns {Promise<?error>} Returns null if everything went fine otherwise
  * returns an error object.
  */
 ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
-  return new Promise();
+  var self = this;
+  
+  return this._promiseQueue.enqueue(function (resolve, reject) {
+    var previousPreambleAndBeacons = self._preambleAndBeacons;
+    
+    if (!Array.isArray(publicKeysToNotify)) {
+      return reject( new Error('bad public keys'));
+    }
+    
+    if (publicKeysToNotify.length > 0) {
+      publicKeysToNotify.forEach(function (publicKey) {
+        if (typeof publicKey !== 'object' || publicKey.length === 0) {
+          return reject( new Error('bad public keys'));
+        }
+      });
+      try { 
+        self._preambleAndBeacons = 
+          NotificationBeacons.generatePreambleAndBeacons(
+            publicKeysToNotify, self._ecdhForLocalDevice, 
+            self._millisecondsUntilExpiration);
+            
+      } catch (error) {
+        logger.warn('generatePreambleAndBeacons failed: %s', error);
+        return reject(error);
+      }
+    } else {
+      // publicKeysToNotify is an empty array
+      self._preambleAndBeacons = null;
+    }
+    
+    if (self._firstStartCall) {
+      // Registers a new request handler when the start is called first time. 
+      self._registerNotificationPath();
+      self._firstStartCall = false;
+    }
+    
+    // Following if clause ensures that we don't call 
+    // startUpdateAdvertisingAndListening when the last two 
+    // start calls have had publicKeysToNotify as an empty array ([]).
+    if (self._preambleAndBeacons != null || 
+        previousPreambleAndBeacons != null) {
+        
+      ThaliMobile.startUpdateAdvertisingAndListening()
+      .then(function () {
+        return resolve();
+      }).catch(function (error) {
+        // Returns errors from startUpdateAdvertisingAndListening
+        return reject(error);
+      });
+    }
+    return resolve();
+  });
 };
 
 /**
- * This is really a placebo method as in reality it just calls start with no
- * keys to notify. The reason is that once a route is registered on an Express
- * router there is no supported way of removing it.
- *
+ * Starts to returning 204 No Content to beacon requests. Also Stops 
+ * advertising beacons and tells the native layer to stop advertising 
+ * the presence of the peer, stop accepting incoming connections over the 
+ * non-TCP/IP transport and to disconnect all existing non-TCP/IP
+ * transport incoming connections.
+ * 
+ * Errors:
+ * 'Failed' - ThaliMobile.stopAdvertisingAndListening failed. 
+ * Check the logs for details.
  * @returns {Promise<?error>}
  */
 ThaliNotificationServer.prototype.stop = function () {
-  return this.start();
+  var self = this;
+  return this._promiseQueue.enqueue(function (resolve, reject) {
+    self._preambleAndBeacons = null;
+    ThaliMobile.stopAdvertisingAndListening()
+    .then(function () {
+      return resolve();
+    }).catch(function (error) {
+      // Returns errors from the ThaliMobile.stopAdvertisingAndListening
+      return reject(error);
+    });
+  });
 };
 
+/**
+ * Registers a new get handler for /NotificationBeacons path.
+ *
+ * If _preambleAndBeacons is null then any GET requests on the endpoint is 
+ * responded to with 204.
+ *
+ * Otherwise the endpoint responds with an application/octet-stream
+ * content-type with cache-control: no-cache and a response body containing
+ * the properly generated beacon contents.
+ * 
+ * @private
+ */
+ThaliNotificationServer.prototype._registerNotificationPath = function () {
+  var self = this;
+  var getBeaconNotifications = function (req, res) {
+    
+    if (self._preambleAndBeacons == null) {
+      res.status(204).send();
+    } else {
+      res.set('Content-Type', 'application/octet-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.send(self._preambleAndBeacons);
+    }
+  };
+
+  self._router.get(ThaliNotificationServer.NOTIFICATION_BEACON_PATH,
+                  getBeaconNotifications);
+};
+ 
 module.exports = ThaliNotificationServer;

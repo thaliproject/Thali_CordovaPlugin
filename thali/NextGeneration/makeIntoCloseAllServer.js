@@ -1,6 +1,7 @@
 'use strict';
 
 var assert = require('assert');
+var Promise = require('lie');
 
 /** @module makeIntoCloseAllServer */
 
@@ -56,6 +57,23 @@ function makeIntoCloseAllServer(server) {
     server.close(callback);
     connections.forEach(function (connection) {
       connection.destroy();
+    });
+  };
+
+  /**
+   * Same as closeAll but returns a promise.
+   *
+   * @returns {Promise<?Error>}
+   */
+  server.closeAllPromise = function () {
+    var self = this;
+    return new Promise(function (resolve, reject) {
+      self.closeAll(function (err) {
+        if (err) {
+          return reject(err);
+        }
+        resolve();
+      });
     });
   };
 
