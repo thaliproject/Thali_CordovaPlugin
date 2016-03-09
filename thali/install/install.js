@@ -9,12 +9,10 @@ var fs = require('fs-extra-promise');
 var url = require('url');
 var FILE_NOT_FOUND = 'ENOENT';
 
-
 // If this file exists in the thaliDontCheckIn directory then
 // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
 // project to this Cordova project.
 var MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT = 'localdev';
-
 
 // I tried child-process-promise but it failed without errors and I just don't
 // have time to fight with it right now.
@@ -34,7 +32,6 @@ function childProcessExecPromise(command, currentWorkingDirectory) {
       });
   });
 }
-
 
 // Unfortunately the obvious library, request-promise, doesn't handle streams
 // well so it would take the multi-megabyte ZIP response file and turn it into
@@ -93,19 +90,23 @@ function getEtagFromEtagFile(depotName, branchName, directoryToInstallIn) {
  * @returns {Promise}
  */
 function getReleaseConfig() {
-  var configFileName = path.join(__dirname, 'releaseConfig.json');
-
+  var configFileName = path.join(__dirname, '../', 'package.json');
 
   return fs.readFileAsync(configFileName, "utf-8")
-    .catch(function (err) {
-      return Promise.reject(err);
-
-    }).then(function (data) {
-      return (Promise.resolve(JSON.parse(data)));
+    .then(function (data) {
+      var conf;
+      try {
+        conf = JSON.parse(data);
+        if (conf && conf.thaliInstall) {
+          return conf.thaliInstall;
+        }
+        return Promise.reject("Configuration error!");
+      }
+      catch (err) {
+        return Promise.reject(new Error(err));
+      }
     });
 }
-
-
 
 function returnEtagFromResponse(httpResponse) {
   // The etag value is returned with quotes but when we set the header it adds
@@ -325,9 +326,6 @@ module.exports = function (callback, appRootDirectory) {
 
   getReleaseConfig()
     .then(function (conf) {
-      if (!conf) {
-        return Promise.reject("Configuration error!");
-      }
 
       thaliProjectName = conf.thali.projectName;
       thaliDepotName = conf.thali.depotName;
