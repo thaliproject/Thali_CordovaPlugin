@@ -12,10 +12,16 @@ var states = {
   started: false
 };
 
+var routerObject = null;
 var routerExpress = null;
 var routerServer = null;
 var routerServerPort = 0;
 var serversManager = null;
+var serversManagerLocalPort = 0;
+// Used only for testing.
+module.exports._getServersManagerLocalPort = function () {
+  return serversManagerLocalPort;
+};
 
 /** @module thaliMobileNativeWrapper */
 
@@ -97,12 +103,14 @@ module.exports.start = function (router) {
       logger.error('Unable to use the given router: %s', error.toString());
       return reject(new Error('Bad Router'));
     }
+    routerObject = router;
     routerServer = routerExpress.listen(0, function () {
       routerServer = makeIntoCloseAllServer(routerServer);
       routerServerPort = routerServer.address().port;
       serversManager = new TCPServersManager(routerServerPort);
       serversManager.start()
-      .then(function () {
+      .then(function (localPort) {
+        serversManagerLocalPort = localPort;
         states.started = true;
         resolve();
       });
@@ -609,6 +617,28 @@ registerToNative('networkChanged', function (networkChangedValue) {
 registerToNative('incomingConnectionToPortNumberFailed',
   function (portNumber) {
     logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
-    // do stuff!
+    // Enqueue the restart to prevent other calls being handled
+    // while the restart is ongoing.
+    promiseQueue.enqueueAtTop(function (resolve) {
+      serversManager.stop()
+      .then(function () {
+        serversManager = new TCPServersManager(routerServerPort);
+        return serversManager.start();
+      })
+      .then(function (localPort) {
+        serversManagerLocalPort = localPort;
+        resolve();
+      })
+      .catch(function (error) {
+        logger.error('Error when trying to restart servers manager: ' + error);
+        // If we end up here, the TCP servers manager is not in a functional
+        // state so there is not much left to be done, but to stop everything.
+        module.exports.stop();
+        resolve();
+      });
+    });
+    // TODO: Currently, nobody in the upper layers is acting on this event
+    // so should we skip emitting it until there is a need to?
+    module.exports.emitter.emit('networkChangedNonTCP', portNumber);
   }
 );

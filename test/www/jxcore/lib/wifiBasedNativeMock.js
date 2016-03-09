@@ -563,6 +563,7 @@ MobileCallInstance.prototype.networkChanged = function (callback) {
   });
 };
 
+var incomingConnectionToPortNumberFailedCallback = null;
 /**
  * This is used anytime the TCP proxy for incoming connections cannot connect
  * to the portNumber set in
@@ -572,8 +573,9 @@ MobileCallInstance.prototype.networkChanged = function (callback) {
  * @param {module:thaliMobileNative~incomingConnectionToPortNumberFailedCallback} callback
  */
 MobileCallInstance.prototype.incomingConnectionToPortNumberFailed =
-    function (callback) {
-    };
+function (callback) {
+  incomingConnectionToPortNumberFailedCallback = callback;
+};
 
 MobileCallInstance.prototype.registerToNative = function () {
   switch (this.mobileMethodName) {
@@ -690,6 +692,14 @@ function firePeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
   };
 }
 
+function fireIncomingConnectionToPortNumberFailed(platform,
+                                                  thaliWifiInfrastructure) {
+  return function (portNumber) {
+    portNumber = portNumber || incomingConnectionsServer.address().port;
+    incomingConnectionToPortNumberFailedCallback(portNumber);
+  };
+}
+
 /**
  * To use this mock save the current global object Mobile (if it exists) and
  * replace it with this object. In general this object won't exist on the
@@ -733,6 +743,9 @@ function WifiBasedNativeMock(platform, router) {
 
   mobileHandler.firePeerAvailabilityChanged =
     firePeerAvailabilityChanged(platform, thaliWifiInfrastructure);
+
+  mobileHandler.fireIncomingConnectionToPortNumberFailed =
+    fireIncomingConnectionToPortNumberFailed(platform, thaliWifiInfrastructure);
 
   return mobileHandler;
 }

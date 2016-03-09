@@ -160,6 +160,25 @@ if (!jxcore.utils.OSInfo().isMobile) {
       Mobile.firePeerAvailabilityChanged(getDummyPeers(true));
     });
   });
+
+  test('Servers manager is restarted when incomingConnectionToPortNumberFailed is received', function (t) {
+    ThaliMobileNativeWrapper.start(express.Router())
+    .then(function () {
+      return ThaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+    })
+    .then(function () {
+      var localPort = ThaliMobileNativeWrapper._getServersManagerLocalPort();
+      Mobile.fireIncomingConnectionToPortNumberFailed();
+      setImmediate(function () {
+        t.notEquals(
+          localPort,
+          ThaliMobileNativeWrapper._getServersManagerLocalPort(),
+          'the port should have changed in the restart'
+        );
+        t.end();
+      });
+    });
+  });
 }
 
 if (!tape.coordinated) {
