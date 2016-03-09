@@ -4,7 +4,7 @@ var net = require('net');
 var Promise = require('lie');
 var logger = require('../../thalilogger')('createNativeListener');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
-var Multiplex = require('multiplex');
+var multiplex = require('multiplex');
 var thaliConfig = require('../thaliConfig');
 var assert = require('assert');
 
@@ -149,7 +149,7 @@ module.exports = function (self) {
     self._nativeServer._incoming = [];
 
     self._nativeServer.on('error', function (err) {
-      logger.warn(err);
+      logger.debug(err);
     });
 
     self._nativeServer.on('close', function () {
@@ -173,7 +173,7 @@ module.exports = function (self) {
       // side and should be connected to the application server port.
 
       incoming.on('error', function (err) {
-        logger.warn(err);
+        logger.debug(err);
       });
 
       incoming.setTimeout(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD);
@@ -193,7 +193,7 @@ module.exports = function (self) {
       });
 
       logger.debug('creating incoming mux');
-      var mux = new Multiplex(function onStream(stream) {
+      var mux = multiplex(function onStream(stream) {
         mux._streams.push(stream);
 
         logger.debug('new stream: ', stream);
@@ -203,7 +203,7 @@ module.exports = function (self) {
         // to the application server
 
         stream.on('error', function (err) {
-          logger.warn(err);
+          logger.debug(err);
         });
 
         stream.on('close', function () {
@@ -218,8 +218,6 @@ module.exports = function (self) {
           if (!stream.destroyed && !outgoing.destroyed) {
             stream.pipe(outgoing).pipe(stream);
           } else {
-            logger.warn('could not pipe - ' + stream.destroyed + ' - ' +
-                          outgoing.destroyed);
             !stream.destroyed && stream.destroy();
             !outgoing.destroyed && outgoing.destroy();
           }
@@ -232,8 +230,7 @@ module.exports = function (self) {
           removeArrayElement(mux._streams, stream);
         });
 
-        outgoing.on('error', function (err) {
-          logger.warn(err, outgoing);
+        outgoing.on('error', function () {
           self.emit(self.ROUTER_PORT_CONNECTION_FAILED);
         });
 
@@ -247,7 +244,7 @@ module.exports = function (self) {
       logger.debug('new mux', mux);
 
       mux.on('error', function (err) {
-        logger.warn('mux ' + err);
+        logger.debug('mux ' + err);
       });
 
       mux.on('close', function () {

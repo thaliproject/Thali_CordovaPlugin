@@ -425,7 +425,11 @@ test('native server - closing the whole server cleans multiple connections',
         if (connectionFailure && !applicationServerCloseCalled) {
           applicationServerCloseCalled = true;
           applicationServer.close();
-          t.end();
+          return t.end();
+        }
+
+        if (applicationServerCloseCalled) {
+          return;
         }
 
         totalData = Buffer.concat([totalData, data]);
@@ -483,6 +487,10 @@ test('native server - closing the whole server cleans multiple connections',
           });
         }
       });
+      socket.on('error', function (err) {
+        // Only uncomment if you are debugging
+        //t.fail('Got error in socket ' + err);
+      });
       socket.on('close', function () {
         closedSockets.push(socket);
         if (allDoneButSocketCloses &&
@@ -521,10 +529,12 @@ test('native server - closing the whole server cleans multiple connections',
           }
         });
       incoming.on('error', function (err) {
-        t.fail('got socket err ' + JSON.stringify(err) + ' this means we have' +
-          'too many simultaneous connections for the server, we have not ' +
-          'put in recovery code for this.');
-        connectionFailure = true;
+        if (!connectionFailure) {
+          t.fail('got socket err ' + JSON.stringify(err) + ' this means we have' +
+            'too many simultaneous connections for the server, we have not ' +
+            'put in recovery code for this.');
+          connectionFailure = true;
+        }
       });
     }
 
