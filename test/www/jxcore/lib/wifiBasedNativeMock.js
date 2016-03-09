@@ -527,6 +527,7 @@ MobileCallInstance.prototype.peerAvailabilityChanged = function (callback) {
   peerAvailabilityChangedCallback = callback;
 };
 
+var discoveryAdvertisingStateUpdateNonTCPCallback = null;
 /**
  * Any time there is a call to start and stop or if Bluetooth is turned off on
  * Android (which also MUST mean that we have disabled both advertising and
@@ -536,8 +537,9 @@ MobileCallInstance.prototype.peerAvailabilityChanged = function (callback) {
  * @param {module:thaliMobileNative~discoveryAdvertisingStateUpdateNonTCPCallback} callback
  */
 MobileCallInstance.prototype.discoveryAdvertisingStateUpdateNonTCP =
-    function (callback) {
-    };
+function (callback) {
+  discoveryAdvertisingStateUpdateNonTCPCallback = callback;
+};
 
 var networkChangedCallback = null;
 /**
@@ -700,6 +702,15 @@ function fireIncomingConnectionToPortNumberFailed(platform,
   };
 }
 
+function fireDiscoveryAdvertisingStateUpdateNonTCP(platform,
+                                                   thaliWifiInfrastructure) {
+  return function (discoveryAdvertisingStateUpdateValue) {
+    discoveryAdvertisingStateUpdateNonTCPCallback(
+      discoveryAdvertisingStateUpdateValue
+    );
+  };
+}
+
 /**
  * To use this mock save the current global object Mobile (if it exists) and
  * replace it with this object. In general this object won't exist on the
@@ -746,6 +757,9 @@ function WifiBasedNativeMock(platform, router) {
 
   mobileHandler.fireIncomingConnectionToPortNumberFailed =
     fireIncomingConnectionToPortNumberFailed(platform, thaliWifiInfrastructure);
+
+  mobileHandler.fireDiscoveryAdvertisingStateUpdateNonTCP =
+    fireDiscoveryAdvertisingStateUpdateNonTCP(platform, thaliWifiInfrastructure);
 
   return mobileHandler;
 }

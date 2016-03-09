@@ -161,7 +161,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
     });
   });
 
-  test('Servers manager is restarted when incomingConnectionToPortNumberFailed is received', function (t) {
+  test('servers manager is restarted when incomingConnectionToPortNumberFailed is received', function (t) {
     ThaliMobileNativeWrapper.start(express.Router())
     .then(function () {
       return ThaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
@@ -176,6 +176,26 @@ if (!jxcore.utils.OSInfo().isMobile) {
           'the port should have changed in the restart'
         );
         t.end();
+      });
+    });
+  });
+
+  test('relaying discoveryAdvertisingStateUpdateNonTCP', function (t) {
+    ThaliMobileNativeWrapper.start(express.Router())
+    .then(function () {
+      ThaliMobileNativeWrapper.emitter.once(
+        'discoveryAdvertisingStateUpdateNonTCP',
+        function (discoveryAdvertisingStateUpdateValue) {
+          t.ok(discoveryAdvertisingStateUpdateValue.discoveryActive,
+            'discovery is active');
+          t.ok(discoveryAdvertisingStateUpdateValue.advertisingActive,
+            'advertising is active');
+          t.end();
+        }
+      );
+      Mobile.fireDiscoveryAdvertisingStateUpdateNonTCP({
+        discoveryActive: true,
+        advertisingActive: true
       });
     });
   });

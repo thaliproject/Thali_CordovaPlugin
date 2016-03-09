@@ -598,7 +598,10 @@ registerToNative('discoveryAdvertisingStateUpdateNonTCP',
   function (discoveryAdvertisingStateUpdateValue) {
     logger.info('discoveryAdvertisingStateUpdateNonTCP: %s',
       JSON.stringify(discoveryAdvertisingStateUpdateValue));
-    // do stuff!
+    module.exports.emitter.emit(
+      'discoveryAdvertisingStateUpdateNonTCP',
+      discoveryAdvertisingStateUpdateValue
+    );
   }
 );
 
