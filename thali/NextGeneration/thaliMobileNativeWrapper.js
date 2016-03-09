@@ -586,9 +586,6 @@ var registerToNative = function (methodName, callback) {
 };
 
 registerToNative('peerAvailabilityChanged', function (peers) {
-  if (typeof peers === 'string') {
-    peers = JSON.parse(peers);
-  }
   if (typeof peers.forEach !== 'function') {
     peers = [peers];
   }
