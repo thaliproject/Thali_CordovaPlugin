@@ -689,7 +689,8 @@ ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
             oldest = k;
           }
           else {
-            if (self._peerServers[k][0] < self._peerServers[oldest][0]) {
+            if (self._peerServers[k].lastActive <
+                self._peerServers[oldest].lastActive) {
               oldest = k;
             }
           }
