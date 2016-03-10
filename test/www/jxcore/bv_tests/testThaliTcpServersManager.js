@@ -591,7 +591,8 @@ test('peerListener - reverseConnection, pleaseConnect === false - no server',
         incoming.pipe(mux).pipe(incoming);
         // Force the other side to connect to it's (non-existent in this case)
         // application server
-        mux.createStream();
+        var stream = mux.createStream();
+        stream.on('error', function () {});
         process.nextTick(function () {
           cb(null, Mobile.createListenerOrIncomingConnection(
                     0,
