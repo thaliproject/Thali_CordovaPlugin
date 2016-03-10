@@ -398,7 +398,7 @@ test('native server - we can get a ton of connections and data through ' +
     // Create multiple connections with multiple streams and make sure they all
     // clean up when we stop the tcpSeversManager
 
-    var numberOfConnections = 51;
+    var numberOfConnections = 10;
     var numberOfStreams = 4;
     var totalConfirmedReads = 0;
     var randomBuffer = new Buffer(10000);
