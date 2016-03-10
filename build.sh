@@ -55,7 +55,7 @@ then
   jx npm update -g cordova;ERROR_ABORT
 fi
 # Print the Cordova version for debugging purposes
-cordova -v;ERROR_ABORT
+echo "Cordova version: $(cordova -v)";ERROR_ABORT
 
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
