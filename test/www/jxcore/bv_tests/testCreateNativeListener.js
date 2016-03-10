@@ -107,7 +107,8 @@ test('emits routerPortConnectionFailed', function (t) {
       var client = net.createConnection(localPort, function () {
         var mux = multiplex();
         client.pipe(mux).pipe(client);
-        mux.createStream();
+        var stream = mux.createStream();
+        stream.on('error', function () {});
       });
     })
     .catch(function (err) {
@@ -146,6 +147,8 @@ test('native server connections all up', function (t) {
         var doneStream1 = false;
         var doneStream2 = false;
 
+        stream1.on('error', function () {});
+        stream2.on('error', function () {});
         stream1.on('data', function (data) {
           recvStream1 += data.toString();
           if (recvStream1.length >= toSend) {
@@ -230,9 +233,7 @@ test('native server - closing incoming stream cleans outgoing socket',
           });
           incoming.pipe(mux).pipe(incoming);
           stream = mux.createStream();
-          stream.on('error', function () {
-
-          });
+          stream.on('error', function () {});
         });
       })
       .catch(function () {
@@ -276,6 +277,7 @@ test('native server - closing incoming connection cleans outgoing socket',
             });
             incoming.pipe(mux).pipe(incoming);
             var stream = mux.createStream();
+            stream.on('error', function() {});
             stream.write(new Buffer('something'), function (err) {
               t.notOk(err, 'we should not have gotten an error');
               incomingClosed = true;
@@ -309,9 +311,7 @@ test('native server - closing outgoing socket cleans associated mux stream',
           var mux = multiplex(function onStream() {});
           incoming.pipe(mux).pipe(incoming);
           stream = mux.createStream();
-          stream.on('error', function () {
-
-          });
+          stream.on('error', function () {});
           stream.on('data', function () {
             // Need to read data or we never get end
           });
@@ -400,6 +400,7 @@ test('native server - closing the whole server cleans everything up',
                 });
               incoming.pipe(mux).pipe(incoming);
               var stream = mux.createStream();
+              stream.on('error', function () {});
               stream.write(new Buffer('quick test'), function (err) {
                 t.notOk(err, 'we should not have gotten an error');
               });
@@ -544,7 +545,7 @@ test('native server - we can get a ton of connections and data through ' +
             sendStream(mux);
           }
         });
-      incoming.setTimeout(1000 * 5);
+      incoming.setTimeout(1000 * 60 * 10);
       incoming.on('timeout', function () {
         incoming.end();
         shutDown('incoming timed out');
@@ -644,6 +645,7 @@ function causeDisaster(t, disasterFn) {
               });
             incoming.pipe(mux).pipe(incoming);
             var stream = mux.createStream();
+            stream.on('error', function () {});
             stream.write(new Buffer('quick test'), function (err) {
               t.notOk(err, 'we should not have gotten an error');
             });
