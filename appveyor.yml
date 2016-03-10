@@ -8,3 +8,5 @@ install:
 build_script:
 - '"C:\Program Files\Git\bin\sh.exe" --login -c "./build.sh"'
 test: off
+on_finish:
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
