@@ -244,6 +244,11 @@ module.exports = function (self) {
 
         outgoing.on('error', function (err) {
           logger.debug(err);
+          if (mux._incoming) {
+            mux._incoming.end();
+            mux._incoming._mux = null;
+            mux._incoming = null;
+          }
           self.emit(self.ROUTER_PORT_CONNECTION_FAILED);
         });
 
