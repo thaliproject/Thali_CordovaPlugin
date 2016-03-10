@@ -157,6 +157,14 @@ test('Test PeerDictionary basic functionality', function (t) {
   dictionary.remove(ENTRY1);
   t.equal(dictionary.size(), 0, 'Size must be 0');
 
+  var errorMessage = null;
+
+  try {
+    dictionary.remove(ENTRY1);
+  } catch (err) {
+    errorMessage = err.message;
+  }
+  t.equal(errorMessage, 'entry not found', 'entry not found must be thrown');
   t.end();
 });
 

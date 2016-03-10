@@ -1,5 +1,7 @@
 'use strict';
 
+var assert = require('assert');
+
 /** @module thaliPeerDictionary */
 
 /**
@@ -224,23 +226,19 @@ PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
 /**
  * Removes an entry which matches with the peerId.
  *
+ * Errors:
+ *
+ * 'entry not found' - can't remove an entry because it is not
+ * found.
+ *
  * @public
  * @param {string} peerId
  */
 PeerDictionary.prototype.remove = function (peerId) {
-
-  if (this._dictionary[peerId].entry.peerState === exports.peerState.WAITING) {
-
-    // stop the timer before an entry is removed
-    clearTimeout(this._dictionary[peerId].entry.waitingTimeout);
-
-  } else if (this._dictionary[peerId].entry.peerState ===
-              exports.peerState.CONTROLLED_BY_POOL) {
-
-    // kills a notification action before before an entry is removed
-    this._dictionary[peerId].entry.notificationAction.kill();
-  }
-
+  var entry = this.get(peerId);
+  assert(entry !== null, 'entry not found');
+  entry.waitingTimeout && clearTimeout(entry.waitingTimeout);
+  entry.notificationAction && entry.notificationAction.kill();
   delete this._dictionary[peerId];
 };
 
