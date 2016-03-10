@@ -17,6 +17,14 @@ function removeArrayElement(a, e) {
   return true;
 }
 
+function emitIncomingConnectionState(self, incomingConnectionId,
+                                     incomingConnectionState) {
+  self.emit(self.INCOMING_CONNECTION_STATE, {
+    incomingConnectionId: incomingConnectionId,
+    state: incomingConnectionState
+  });
+}
+
 // jscs:disable jsDoc
 /**
  * This method creates a TCP listener (which MUST use {@link
@@ -165,7 +173,7 @@ module.exports = function (self) {
 
     self._nativeServer.on('connection', function (incoming) {
       self._nativeServer._incoming.push(incoming);
-      logger.debug('new incoming socket:', incoming);
+      logger.debug('new incoming socket');
 
       // We've received a new incoming connection from the P2P layer
       // Wrap this new socket in a multiplex. New streams appearing
@@ -184,7 +192,7 @@ module.exports = function (self) {
       });
 
       incoming.on('close', function () {
-        logger.debug('incoming socket close', incoming);
+        logger.debug('incoming socket close');
         if (self._nativeServer) {
           removeArrayElement(self._nativeServer._incoming, incoming);
         }
@@ -204,6 +212,10 @@ module.exports = function (self) {
 
         stream.on('error', function (err) {
           logger.debug(err);
+        });
+
+        stream.on('finish', function () {
+          stream.destroy(); // Guarantees that close event will fire
         });
 
         stream.on('close', function () {
@@ -226,22 +238,23 @@ module.exports = function (self) {
         stream._outgoing = outgoing;
 
         outgoing.on('close', function () {
-          stream.end();
+          stream.destroy();
           removeArrayElement(mux._streams, stream);
         });
 
-        outgoing.on('error', function () {
+        outgoing.on('error', function (err) {
+          logger.debug(err);
           self.emit(self.ROUTER_PORT_CONNECTION_FAILED);
         });
 
-        logger.debug('new outgoing socket:', outgoing);
+        logger.debug('new outgoing socket');
       });
 
       incoming._mux = mux;
       mux._incoming = incoming;
       mux._streams = [];
 
-      logger.debug('new mux', mux);
+      logger.debug('new mux');
 
       mux.on('error', function (err) {
         logger.debug('mux ' + err);
@@ -280,10 +293,3 @@ module.exports = function (self) {
   });
 };
 
-function emitIncomingConnectionState(self, incomingConnectionId,
-                                     incomingConnectionState) {
-  self.emit(self.INCOMING_CONNECTION_STATE, {
-    incomingConnectionId: incomingConnectionId,
-    state: incomingConnectionState
-  });
-}

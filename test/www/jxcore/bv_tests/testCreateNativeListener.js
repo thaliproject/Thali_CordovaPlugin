@@ -34,9 +34,9 @@ var test = tape({
           t.fail(err);
           return Promise.resolve();
         }).then(function () {
-        global.Mobile = originalMobile;
-        t.end();
-      });
+          global.Mobile = originalMobile;
+          t.end();
+        });
     } else {
       global.Mobile = originalMobile;
       t.end();
@@ -107,7 +107,8 @@ test('emits routerPortConnectionFailed', function (t) {
       var client = net.createConnection(localPort, function () {
         var mux = multiplex();
         client.pipe(mux).pipe(client);
-        mux.createStream();
+        var stream = mux.createStream();
+        stream.on('error', function () {});
       });
     })
     .catch(function (err) {
@@ -146,6 +147,8 @@ test('native server connections all up', function (t) {
         var doneStream1 = false;
         var doneStream2 = false;
 
+        stream1.on('error', function () {});
+        stream2.on('error', function () {});
         stream1.on('data', function (data) {
           recvStream1 += data.toString();
           if (recvStream1.length >= toSend) {
@@ -208,9 +211,11 @@ test('native server - closing incoming stream cleans outgoing socket',
     var applicationServer = net.createServer(function (socket) {
       socket.on('data', function () {
       });
+      socket.on('error', function () {
+
+      });
       socket.on('end', function () {
         t.ok(streamClosed, 'socket shouldn\'t close until after stream');
-        t.ok(true, 'socket gets closed when stream is');
         t.equal(serversManager._nativeServer._incoming.length, 1,
           'incoming remains open');
         applicationServer.close();
@@ -228,6 +233,7 @@ test('native server - closing incoming stream cleans outgoing socket',
           });
           incoming.pipe(mux).pipe(incoming);
           stream = mux.createStream();
+          stream.on('error', function () {});
         });
       })
       .catch(function () {
@@ -271,6 +277,7 @@ test('native server - closing incoming connection cleans outgoing socket',
             });
             incoming.pipe(mux).pipe(incoming);
             var stream = mux.createStream();
+            stream.on('error', function() {});
             stream.write(new Buffer('something'), function (err) {
               t.notOk(err, 'we should not have gotten an error');
               incomingClosed = true;
@@ -304,6 +311,7 @@ test('native server - closing outgoing socket cleans associated mux stream',
           var mux = multiplex(function onStream() {});
           incoming.pipe(mux).pipe(incoming);
           stream = mux.createStream();
+          stream.on('error', function () {});
           stream.on('data', function () {
             // Need to read data or we never get end
           });
@@ -392,6 +400,7 @@ test('native server - closing the whole server cleans everything up',
                 });
               incoming.pipe(mux).pipe(incoming);
               var stream = mux.createStream();
+              stream.on('error', function () {});
               stream.write(new Buffer('quick test'), function (err) {
                 t.notOk(err, 'we should not have gotten an error');
               });
@@ -400,15 +409,14 @@ test('native server - closing the whole server cleans everything up',
     });
   });
 
-test('native server - closing the whole server cleans multiple connections',
+
+test('native server - we can get a ton of connections and data through ' +
+  'and still clean up the server completely',
   function (t) {
     // Create multiple connections with multiple streams and make sure they all
     // clean up when we stop the tcpSeversManager
 
-    // NOTE: It's easy to spam the logs with a lot of success results so we
-    // are careful to not use t to check success conditions and instead just
-    // use fail.
-    var numberOfConnections = 25;
+    var numberOfConnections = 51;
     var numberOfStreams = 4;
     var totalConfirmedReads = 0;
     var randomBuffer = new Buffer(10000);
@@ -416,94 +424,91 @@ test('native server - closing the whole server cleans multiple connections',
     var allDoneButSocketCloses = false;
     var incomingConnections = [];
     var closedSockets = [];
-    var connectionFailure = false;
     var applicationServerCloseCalled = false;
 
-    var applicationServer = net.createServer(function (socket) {
-      var totalData = new Buffer(0);
-      socket.on('data', function (data) {
-        if (connectionFailure && !applicationServerCloseCalled) {
-          applicationServerCloseCalled = true;
-          applicationServer.close();
+    function shutDown(failureMessage) {
+      if (applicationServerCloseCalled) {
+        return Promise.resolve();
+      }
+
+      if (failureMessage) {
+        t.fail(failureMessage);
+      }
+
+      applicationServerCloseCalled = true;
+      return applicationServer.closeAllPromise()
+        .then(function () {
           return t.end();
-        }
+        }).catch(function (err) {
+          t.fail('close all failed', err);
+          return t.end();
+        });
+    }
 
-        if (applicationServerCloseCalled) {
-          return;
-        }
-
-        totalData = Buffer.concat([totalData, data]);
-        if (totalData.length === randomBuffer.length) {
-          if (Buffer.compare(totalData, randomBuffer) !== 0) {
-            t.fail('buffers do not equal!');
-          }
-          ++totalConfirmedReads;
-        }
-        if (totalData.length > randomBuffer.length) {
-          t.fail('buffer length is too long!');
-        }
-
-        if (totalConfirmedReads === numberOfConnections * numberOfStreams) {
-          var nativeServer = serversManager._nativeServer;
-          serversManager.stop()
-            .then(function () {
-              t.equal(serversManager._nativeServer, null, 'native server is ' +
-                'nulled out');
-              t.ok(nativeServerClosed, 'native server should be closed');
-
-              t.equal(nativeServer._incoming.length, 0, 'incoming has been ' +
-                'removed');
-
-              incomingConnections.forEach(function (connection) {
-                if (!connection.destroyed) {
-                  t.fail('Connect should be done');
-                }
-
-                if (!connection.incomingMux.destroyed) {
-                  t.fail('The mux object should be closed');
-                }
-
-                connection.incomingMuxStreams.forEach(function (stream) {
-                  if (!stream.destroyed) {
-                    t.fail('all streams are closed');
-                  }
-                });
-              });
-
-              if (closedSockets.length === numberOfConnections) {
-                applicationServer.close();
-                return t.end();
-              }
-
-              // Still waiting for socket to close
-              allDoneButSocketCloses = true;
-            }).catch(function (err) {
-            t.fail(err, 'stop failed when it should not have');
-            if (!applicationServerCloseCalled) {
-              applicationServerCloseCalled = true;
-              applicationServer.close();
-              t.end();
+    var applicationServer = makeIntoCloseAllServer(net.createServer(
+      function (socket) {
+        var totalData = new Buffer(0);
+        socket.on('data', function (data) {
+          totalData = Buffer.concat([totalData, data]);
+          if (totalData.length === randomBuffer.length) {
+            if (Buffer.compare(totalData, randomBuffer) !== 0) {
+              return shutDown('buffers do not equal!');
             }
-          });
-        }
-      });
-      socket.on('error', function (err) {
-        // Only uncomment if you are debugging
-        //t.fail('Got error in socket ' + err);
-      });
-      socket.on('close', function () {
-        closedSockets.push(socket);
-        if (allDoneButSocketCloses &&
-          closedSockets.length === numberOfConnections &&
-          !applicationServerCloseCalled) {
-          applicationServer.close();
-          return t.end();
-        }
-      });
-    });
+            ++totalConfirmedReads;
+          }
 
-    applicationServer.on('close', function () {
-      t.ok('Test may have failed but at least we closed');
+          if (totalData.length > randomBuffer.length) {
+            shutDown('buffer length is too long!');
+          }
+
+          if (totalConfirmedReads === numberOfConnections * numberOfStreams) {
+            var nativeServer = serversManager._nativeServer;
+            serversManager.stop()
+              .then(function () {
+                t.equal(serversManager._nativeServer, null, 'native server is '+
+                  'nulled out');
+
+                t.ok(nativeServerClosed, 'native server should be closed');
+
+                t.equal(nativeServer._incoming.length, 0, 'incoming has been ' +
+                  'removed');
+
+                incomingConnections.forEach(function (connection) {
+                  if (!connection.destroyed) {
+                    t.fail('Connect should be done');
+                  }
+
+                  if (!connection.incomingMux.destroyed) {
+                    t.fail('The mux object should be closed');
+                  }
+
+                  connection.incomingMuxStreams.forEach(function (stream) {
+                    if (!stream.destroyed) {
+                      t.fail('all streams are closed');
+                    }
+                  });
+                });
+
+                allDoneButSocketCloses = true;
+              }).catch(function (err) {
+              return shutDown('stop failed when it should not have' + err);
+            });
+          }
+        });
+        socket.on('error', function (err) {
+          return shutDown('Got error in socket ' + err);
+        });
+        socket.on('close', function () {
+          closedSockets.push(socket);
+          if (closedSockets.length === numberOfConnections * numberOfStreams) {
+            return shutDown(allDoneButSocketCloses ? null :
+              'We did not get all the data before closing.');
+          }
+        });
+      }));
+
+    applicationServer.on('error', function (err) {
+      shutDown('application server failed with ' + err);
     });
 
     function connectAndSend(localPort) {
@@ -512,29 +517,43 @@ test('native server - closing the whole server cleans multiple connections',
           function noError(err) {
             // Don't want to fill logs
             if (err) {
-              t.fail('got error on connection ' + err);
+              shutDown('got error on connection ' + err);
             }
           }
-          var mux = multiplex(function onStream() {
 
+          function sendStream(mux) {
+            var stream = mux.createStream();
+            stream.on('error', function () {
+              setTimeout(function () {
+                sendStream(mux);
+              }, 100);
+            });
+            if (!stream.write(randomBuffer, noError)) {
+              shutDown('write got buffered');
+            }
+          }
+
+          var mux = multiplex(function onStream() {
+            shutDown('we should not have gotten an incoming stream');
           });
           mux.on('error',
             function (err) {
-              t.fail('mux failed with ' + JSON.stringify(err));
+              shutDown('mux failed with ' + JSON.stringify(err));
             });
           incoming.pipe(mux).pipe(incoming);
           for (var i = 0; i < numberOfStreams; ++i) {
-            var stream = mux.createStream();
-            stream.write(randomBuffer, noError);
+            sendStream(mux);
           }
         });
+      incoming.setTimeout(1000 * 60 * 10);
+      incoming.on('timeout', function () {
+        incoming.end();
+        shutDown('incoming timed out');
+      });
       incoming.on('error', function (err) {
-        if (!connectionFailure) {
-          t.fail('got socket err ' + JSON.stringify(err) + ' this means we have' +
-            'too many simultaneous connections for the server, we have not ' +
-            'put in recovery code for this.');
-          connectionFailure = true;
-        }
+        setTimeout(function () {
+          connectAndSend(localPort);
+        }, 100);
       });
     }
 
@@ -567,6 +586,7 @@ test('native server - closing the whole server cleans multiple connections',
         });
     });
   });
+
 
 function causeDisaster(t, disasterFn) {
   var nativeServerClosed = false;
@@ -625,6 +645,7 @@ function causeDisaster(t, disasterFn) {
               });
             incoming.pipe(mux).pipe(incoming);
             var stream = mux.createStream();
+            stream.on('error', function () {});
             stream.write(new Buffer('quick test'), function (err) {
               t.notOk(err, 'we should not have gotten an error');
             });
