@@ -35,10 +35,25 @@ var replaceJXCoreExtension = function (appRoot) {
   } catch (e) {
     console.log(e);
     console.log('Failed to update the JXcoreExtension.java file!');
-    console.log('Please make sure plugins org.thaliproject.p2p and io.jxcore.node are installed.')
+    console.log('Please make sure plugins org.thaliproject.p2p and io.jxcore.node are installed.');
     // Exit the process on this error, because it is a hard requirement for this
     // plugin to get the right JXcoreExtension.java or otherwise there will be
     // a build error when the app is tried to be built.
+    process.exit(-1);
+  }
+};
+
+var updateBtconnectorlibVersion = function (appRoot) {
+  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/android/gradle.properties');
+  var targetFile = path.join(appRoot, 'platforms/android/gradle.properties');
+  try {
+    var sourceContent = fs.readFileSync(sourceFile);
+    fs.writeFileSync(targetFile, sourceContent);
+  } catch (e) {
+    console.log(e);
+    console.log('Failed to update the gradle.properties file!');
+    // Exit the process on this error, because it is a hard requirement for this
+    // plugin to get the right btconnectorlib2 version.
     process.exit(-1);
   }
 };
@@ -52,5 +67,6 @@ module.exports = function (context) {
   var appRoot = context.opts.projectRoot;
   updateAndroidSDKVersion(appRoot);
   replaceJXCoreExtension(appRoot);
+  updateBtconnectorlibVersion(appRoot);
   removeInstallFromPlatform(appRoot);
 };

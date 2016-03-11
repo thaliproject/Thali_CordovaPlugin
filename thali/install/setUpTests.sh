@@ -37,7 +37,7 @@ fi
 
 cd ThaliTest
 cordova platform add ios
-cordova platform add android
+cordova platform add android@5.0.0
 cd www/jxcore
 jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
 
