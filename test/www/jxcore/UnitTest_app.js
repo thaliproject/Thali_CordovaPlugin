@@ -21,10 +21,20 @@ testUtils.toggleRadios(true);
 // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
 var radioToggleTimeout = jxcore.utils.OSInfo().isMobile ? 5000 : 0;
 setTimeout(function () {
-  Mobile('GetDeviceName').callNative(function (name) {
-    console.log('My device name is: %s', name);
-    testUtils.setName(name);
-    require('./runTests.js');
+  testUtils.hasRequiredHardware()
+  .then(function (hasRequiredHardware) {
+    if (hasRequiredHardware) {
+      Mobile('GetDeviceName').callNative(function (name) {
+        console.log('My device name is: %s', name);
+        testUtils.setName(name);
+        require('./runTests.js');
+      });
+    } else {
+      testUtils.logMessageToScreen(
+        'Device did not have required hardware capabilities!'
+      );
+      console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    }
   });
 }, radioToggleTimeout);
 
