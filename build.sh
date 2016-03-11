@@ -27,9 +27,8 @@ ERROR_ABORT() {
 ### END - JXcore Test Server   --------
 
 # The build has sometimes failed with the default value of maximum open
-# files per process, which is 256. Doubling it here to 512 to workaround
-# that issue.
-ulimit -n 512;ERROR_ABORT
+# files per process, which is 256. Try to boost it as workaround.
+ulimit -n 1024;ERROR_ABORT
 
 PROJECT_ROOT=$(pwd)
 
