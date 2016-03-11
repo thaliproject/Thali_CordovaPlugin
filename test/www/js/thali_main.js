@@ -1,3 +1,5 @@
+'use strict';
+
 //
 //  The MIT License (MIT)
 //
@@ -36,7 +38,7 @@
         // requestLocationPermission ensures that the application has 
         // the required ACCESS_COARSE_LOCATION permission in Android.
         window.ThaliPermissions.requestLocationPermission(function () {
-          // Application has the required permission.
+          console.log('Application has the required permission.');
           loadMainFile();
         }, function (error) {
           console.log('Location permission not granted. Error: ' + error);
