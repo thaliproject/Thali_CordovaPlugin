@@ -28,6 +28,12 @@
 //
 
 (function () {
+  var doExit = function () {
+    // This is to inform the CI system the process exits.
+    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+    navigator.app.exitApp();
+  };
+
   var inter = setInterval(function () {
     if (typeof jxcore == 'undefined') { return; }
 
@@ -42,7 +48,7 @@
           loadMainFile();
         }, function (error) {
           console.log('Location permission not granted. Error: ' + error);
-          navigator.app.exitApp();
+          doExit();
         });
       } else {
         loadMainFile();
@@ -54,7 +60,7 @@
     jxcore('app.js').loadMainFile(function (ret, err) {
       if (err) {
         console.log('App.js file failed to load : ' + JSON.stringify(err));
-        navigator.app.exitApp();
+        doExit();
       } else {
         jxcore_ready();
       }
