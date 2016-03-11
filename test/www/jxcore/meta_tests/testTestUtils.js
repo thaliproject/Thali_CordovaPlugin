@@ -7,15 +7,16 @@ var testUtils = require('../lib/testUtils.js');
 var tape = require('../lib/thali-tape');
 
 var test = tape({
-  setup: function(t) {
+  setup: function (t) {
     t.end();
   },
-  teardown: function(t) {
+  teardown: function (t) {
     t.end();
   }
 });
 
-test('test utils should return same temporary folder when called multiple times', function (t) {
+test('should return same temporary folder when called multiple times',
+function (t) {
   var firstDirectory = testUtils.tmpDirectory();
   var secondDirectory = testUtils.tmpDirectory();
   t.equal(firstDirectory, secondDirectory);
@@ -27,6 +28,15 @@ test('should be able to write to the temporary folder', function (t) {
   console.log(temporaryDirectory);
   fs.mkdir(path.join(temporaryDirectory, 'somePath'), function (err) {
     t.equal(err, null, 'no error returned when creating a subfolder');
+    t.end();
+  });
+});
+
+test('can call hasRequiredHardware', function (t) {
+  testUtils.hasRequiredHardware()
+  .then(function (hasRequiredHardware) {
+    t.ok(hasRequiredHardware === true || hasRequiredHardware === false,
+      'resolves with a boolean');
     t.end();
   });
 });

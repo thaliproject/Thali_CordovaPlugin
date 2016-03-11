@@ -60,13 +60,13 @@
   }
 
   function jxcore_ready() {
-    jxcore('getMyName').call(setNameToUI);
+    jxcore('setMyNameCallback').call(nameCallback);
     jxcore('setLogCallback').call(logCallback);
     document.getElementById('ClearLogButton').addEventListener('click', ClearLog);
     console.log('UIApp is all set and ready!');
   }
 
-  function setNameToUI(name) {
+  function nameCallback(name) {
     document.getElementById('nameTag').innerHTML = name;
   }
 
