@@ -252,18 +252,6 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
       var outgoing = net.createConnection(connection.listeningPort,
         function () {
           var mux = multiplex(function onStream(stream) {
-            stream.on('error', function (err) {
-              logger.debug('multiplexToNativeListener.stream ' + err);
-            });
-
-            stream.on('finish', function () {
-              stream.destroy();
-            });
-
-            stream.on('close', function () {
-              client.end();
-            });
-
             var client = net.createConnection(self._routerPort, function () {
               client.pipe(stream).pipe(client);
             });
@@ -277,7 +265,7 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
             });
 
             client.on('close', function () {
-              stream.destroy();
+              stream.end();
             });
           });
 
@@ -286,7 +274,6 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
           });
 
           mux.on('close', function () {
-            outgoing.destroy();
             if (!server._closing) {
               closeServer(server);
             }
@@ -295,14 +282,6 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
           outgoing.on('data', function () {
             //BUGBUG - Why isn't this just server.lastActive?
             self._peerServers[server._peerIdentifer].lastActive = Date.now();
-          });
-
-          outgoing.on('error', function (err) {
-            logger.debug('multiplexToNativeListener.outgoing ' + err);
-          });
-
-          outgoing.on('close', function () {
-            mux.close();
           });
 
           outgoing.pipe(mux).pipe(outgoing);
