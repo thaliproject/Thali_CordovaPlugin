@@ -94,7 +94,7 @@ function getReleaseConfig() {
 
   return fs.readFileAsync(configFileName, "utf-8")
     .then(function (data) {
-      var conf, gradleFileName;
+      var conf;
       try {
         conf = JSON.parse(data);
         if (conf && conf.thaliInstall) {
