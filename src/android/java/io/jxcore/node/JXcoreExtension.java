@@ -59,8 +59,8 @@ public class JXcoreExtension {
     private static final String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
     private static final String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
     private static final String EVENT_VALUE_ADVERTISING_ACTIVE = "advertisingActive";
-    private static final String EVENT_VALUE_BLUETOOTH_LOW_ENERGY = "blueToothLowEnergy";
-    private static final String EVENT_VALUE_BLUETOOTH = "blueTooth";
+    private static final String EVENT_VALUE_BLUETOOTH_LOW_ENERGY = "bluetoothLowEnergy";
+    private static final String EVENT_VALUE_BLUETOOTH = "bluetooth";
     private static final String EVENT_VALUE_WIFI = "wifi";
     private static final String EVENT_VALUE_CELLULAR = "cellular";
     private static final String EVENT_VALUE_BSSID_NAME = "bssidName";

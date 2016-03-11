@@ -350,6 +350,12 @@ test('functions are run from a queue in the right order', function (t) {
   });
 });
 
+// From here onwards, tests only work on mocked up desktop
+// environment where network changes can be simulated.
+if (jxcore.utils.OSInfo().isMobile) {
+  return;
+}
+
 test('network changes are ignored while stopping', function (t) {
   wifiInfrastructure.startListeningForAdvertisements()
   .then(function () {
@@ -366,12 +372,6 @@ test('network changes are ignored while stopping', function (t) {
     });
   });
 });
-
-// From here onwards, tests only work on mocked up desktop
-// environment where network changes can be simulated.
-if (jxcore.utils.OSInfo().isMobile) {
-  return;
-}
 
 var tryStartingFunctionWhileWifiOff = function (t, functionName, keyName) {
   wifiInfrastructure.stop()

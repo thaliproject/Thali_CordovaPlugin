@@ -178,14 +178,11 @@
 {
   @synchronized(self)
   {
-    if (_isListening)
+    if (!_isListening)
     {
-      return false;
+        [self startClient];
     }
-    
-    [self stopClient];
     _isListening = true;
-    [self startClient];
   }
   return true;
 }

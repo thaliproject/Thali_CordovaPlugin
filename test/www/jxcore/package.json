@@ -31,7 +31,7 @@
     "minimist": "^1.2.0",
     "multiplex": "^6.7.0",
     "nock": "^2.12.0",
-    "node-ssdp": "thaliproject/node-ssdp#thali-vnext-changes",
+    "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
     "node-uuid": "^1.4.7",
     "pouchdb": "^5.2.1",
     "proxyquire": "^1.7.4",
