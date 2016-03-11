@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 if (jxcore.utils.OSInfo().isMobile) {
   return;
@@ -197,6 +197,8 @@ test('Can shift large amounts of data', function (t) {
       t.fail();
     });
 
+    var toRecv = '';
+
     if (reverseConnection) {
 
       // Since this is a reverse connection, the socket we've been handed has already
@@ -204,7 +206,6 @@ test('Can shift large amounts of data', function (t) {
       // sending data. Without multiplex support we can't both talk at the same time so
       // wait for the other side to finish before sending our data.
 
-      var toRecv = '';
       var totalRecvd = 0;
       sock.on('data', function(data) {
 
@@ -231,8 +232,7 @@ test('Can shift large amounts of data', function (t) {
     
       // This one's more straightforward.. we're going to send first, read back our echo and then
       // echo out any extra data
-    
-      var toRecv = '';
+
       var done = false;
       sock.on('data', function (data) {
         var remaining = dataSize - toRecv.length;
@@ -267,22 +267,26 @@ test('Can shift large amounts of data', function (t) {
       if (peer.peerAvailable && !connected) {
         connected = true;
         Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
+          var client = null;
           // We're happy here if we make a connection to anyone
           if (err == null) {
             connection = JSON.parse(connection);
             console.log(connection);
             if (connection.listeningPort) {
-              console.log("Forward connection");
+              console.log('Forward connection');
               // We made a forward connection
-              var client = net.connect(connection.listeningPort, function() {
+              client = net.connect(connection.listeningPort, function () {
                 shiftData(client, false);
               });
             } else {
-              console.log("Reverse connection");
+              console.log('Reverse connection');
               // We made a reverse connection
               client = sockets[connection.clientPort];
               shiftData(client, true);
             }
+          } else {
+            t.fail('Error from connect: ' + err);
+            t.end();
           }
         });
       }
