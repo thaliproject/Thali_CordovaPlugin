@@ -61,7 +61,7 @@ mocks.StopBroadcasting = function (args, callback) {
   });
 };
 
-mocks.Connect = function (args, callback) {
+mocks.connect = function (args, callback) {
   var peerIdentifier = args[0];
   // Check if we try to connect to an unknown peer or if
   // we are already connected.
