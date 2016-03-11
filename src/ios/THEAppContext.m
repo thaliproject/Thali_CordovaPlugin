@@ -170,15 +170,13 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
     }
   }*/
   
-  BOOL reachable = [[NPReachability sharedInstance] isCurrentlyReachable] || _bluetoothEnabled;
   BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
 
   networkStatus = @{
-    @"blueToothLowEnergy" : [[NSNumber alloc] initWithBool:_bleEnabled],
-    @"blueTooth" : [[NSNumber alloc] initWithBool:_bluetoothEnabled],
-    @"cellular" : [[NSNumber alloc] initWithBool:reachable],
-    @"wifi" : [[NSNumber alloc] initWithBool:isWifi],
-    @"bssidName" : [[NSNull alloc] init]
+    @"bluetoothLowEnergy" : _bleEnabled ? @"on" : @"off",
+    @"bluetooth" : _bluetoothEnabled ? @"on" : @"off",
+    @"cellular" : @"doNotCare",
+    @"wifi" : isWifi ? @"on" : @"off"
   };
 
   if (_eventDelegate)
