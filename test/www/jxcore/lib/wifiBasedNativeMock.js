@@ -759,7 +759,8 @@ function WifiBasedNativeMock(platform, router) {
     fireIncomingConnectionToPortNumberFailed(platform, thaliWifiInfrastructure);
 
   mobileHandler.fireDiscoveryAdvertisingStateUpdateNonTCP =
-    fireDiscoveryAdvertisingStateUpdateNonTCP(platform, thaliWifiInfrastructure);
+    fireDiscoveryAdvertisingStateUpdateNonTCP(platform,
+                                              thaliWifiInfrastructure);
 
   return mobileHandler;
 }
