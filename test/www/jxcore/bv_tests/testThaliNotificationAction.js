@@ -150,7 +150,7 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
     t.equals(
         res,
         NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
@@ -180,7 +180,7 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
     t.equals(
       res,
       NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
@@ -188,13 +188,10 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
   });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
-  act.start(keepAliveAgent).then( function () {
-    t.fail('This call should cause reject.');
+  act.start(keepAliveAgent).then( function (res) {
+    t.equals(res, null, 'must return null after successful call');
   }).catch(function (err) {
-    t.equals(
-      err.message,
-      NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
-      'reject reason should be HTTP_BAD_RESPONSE');
+    t.fail('Test failed:' + err.message);
   });
 });
 
@@ -209,7 +206,7 @@ test('Test NETWORK_PROBLEM locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
     t.equals(
       res,
       NotificationAction.ActionResolution.NETWORK_PROBLEM,
@@ -222,8 +219,8 @@ test('Test NETWORK_PROBLEM locally', function (t) {
   }).catch(function (err) {
     t.equals(
       err.message,
-      NotificationAction.ActionResolution.NETWORK_PROBLEM,
-      'reject reason should be HTTP_BAD_RESPONSE');
+      'Could not establish TCP connection',
+      'reject reason should be: Could not establish TCP connection');
   });
 });
 
@@ -243,7 +240,7 @@ test('Test timeout locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
     t.equals(
       res,
       NotificationAction.ActionResolution.NETWORK_PROBLEM,
@@ -257,8 +254,8 @@ test('Test timeout locally', function (t) {
   }).catch(function (err) {
     t.equals(
       err.message,
-      NotificationAction.ActionResolution.NETWORK_PROBLEM,
-      'reject reason should be HTTP_BAD_RESPONSE');
+      'Could not establish TCP connection',
+      'reject reason should be Could not establish TCP connection');
   });
 });
 
@@ -277,7 +274,7 @@ test('Call the start two times', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
     t.equals(
       res,
       NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
@@ -312,7 +309,7 @@ test('Call the kill before calling the start', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback, connInfo);
 
-  act.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
     t.equals(res, NotificationAction.ActionResolution.KILLED,
       'Should be Killed');
   });
@@ -340,7 +337,7 @@ test('Call the kill immediately after the start', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
     t.equals(
       res,
       NotificationAction.ActionResolution.KILLED,
@@ -376,7 +373,7 @@ test('Call the kill while waiting a response from the server', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
     t.equals(
       res,
       NotificationAction.ActionResolution.KILLED,
@@ -408,6 +405,8 @@ test('Call the kill while waiting a response from the server', function (t) {
 
 test('Test to exceed the max content size locally', function (t) {
 
+  t.plan(2);
+
   var buffer = new Buffer(1000);
   buffer.fill('h');
 
@@ -422,7 +421,7 @@ test('Test to exceed the max content size locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
     t.equals(
       res,
       NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
@@ -430,9 +429,9 @@ test('Test to exceed the max content size locally', function (t) {
   });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
-  act.start(keepAliveAgent).catch(function (err) {
-    t.equals(err.message, NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
-      'HTTP_BAD_RESPONSE expected');
-    t.end();
+  act.start(keepAliveAgent).then( function (res) {
+    t.equals(res, null, 'must return null after successful call');
+  }).catch(function (failure) {
+    t.fail('Test failed:' + failure);
   });
 });
