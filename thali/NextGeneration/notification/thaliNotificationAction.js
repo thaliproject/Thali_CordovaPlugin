@@ -240,7 +240,6 @@ ThaliNotificationAction.prototype._parseBeacons = function (body) {
  *
  * @param {boolean} success Indicates if the action was successful
  * @param {ActionResolution} resolution Explains how the action was
- * resolved.
  * @param {?Buffer} unencryptedKeyId Null if none of the beacons could
  * be validated as being targeted at the local peer or if the beacon
  * came from a remote peer the local peer does not wish to communicate
