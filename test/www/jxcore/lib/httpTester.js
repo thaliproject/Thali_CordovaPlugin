@@ -25,17 +25,19 @@ module.exports.runTest = function (url, handler) {
 };
 
 /**
- * This function registers the path to start to serve incoming
- * http requests to.
+ * This function registers new path to the incoming express router object.
+ * This service can be used to test different HTTP client scenarios
+ * such as connecting to a delayed service.
  *
  * @param {Object} router An express router object
- * @param {string} url The request URL
+ * @param {string} path A request path
  * @param {number} responseCode HTTP response code
- * @param {string} body response body
- * @param {number} times how many times same body is sent
- * @param {?number} delay how long delay before sending response
+ * @param {string} body a Response body
+ * @param {number} times Tells how many times the body is written to the
+ * response.
+ * @param {?number} delay A delay before sending a response
  */
-module.exports.runServer = function (router, url, responseCode, body, times,
+module.exports.runServer = function (router, path, responseCode, body, times,
                                      delay) {
 
   var requestHandler = function (req, res) {

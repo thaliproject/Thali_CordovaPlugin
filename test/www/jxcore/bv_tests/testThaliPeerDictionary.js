@@ -151,7 +151,7 @@ test('Test PeerDictionary basic functionality', function (t) {
   dictionary.addUpdateEntry(ENTRY2, entry2);
   t.equal(dictionary._entryCounter, 2, 'Entry counter must be 2');
   t.equal(dictionary.size(), 2, 'Size must be 2');
-  var entry1Get = dictionary.get('entry1');
+
 
   assert.deepEqual(dictionary.get('entry1'), entry1Copy);
   assert.deepEqual(dictionary.get('entry2'), entry2Copy);
