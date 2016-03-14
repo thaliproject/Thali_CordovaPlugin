@@ -464,12 +464,16 @@ public class JXcoreExtension {
         if (jsonObjectCreated) {
             final String jsonObjectAsString = jsonObject.toString();
 
-            jxcore.activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    jxcore.CallJSMethod(EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE, jsonObjectAsString);
-                }
-            });
+            try {
+                jxcore.activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        jxcore.CallJSMethod(EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE, jsonObjectAsString);
+                    }
+                });
+            } catch (NullPointerException e) {
+                Log.e(TAG, "notifyDiscoveryAdvertisingStateUpdateNonTcp: Failed to notify: " + e.getMessage(), e);
+            }
         }
     }
 
