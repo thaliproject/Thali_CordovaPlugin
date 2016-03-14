@@ -1,9 +1,5 @@
 'use strict';
 
-if (jxcore.utils.OSInfo().isMobile) {
-  return;
-}
-
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thali-tape');
@@ -109,6 +105,35 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
+function connectToPeer(peer, successCb, failureCb) {
+
+  var RETRIES = 3;
+  var RETRY_INTERVAL = 1000;
+
+  var retries = RETRIES;
+
+  retries--;
+  Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
+
+    if (err == null) {
+      // Connected successfully..
+      successCb(err, connection);
+    } else {
+      // Retry a failed connection..
+      if (retries[peer.peerIdentifier] > 0) {
+        setTimeout(function() {
+          connectToPeer(peer, onSuccess, onFailure);
+        }, RETRY_INTERVAL); 
+      } else {
+        if (failureCb) {
+          // Exceeded retries..
+          failureCb(err, connection);
+        }
+      }
+    }
+  });
+}
+
 test('Can connect to a remote peer', function (t) {
 
   var connected = false;
@@ -120,42 +145,40 @@ test('Can connect to a remote peer', function (t) {
   echoServer.listen(0, function () {
     var applicationPort = echoServer.address().port;
 
+    function onSuccess(err, connection) {
+
+      // Called if we successfully connecto to a peer
+      connection = JSON.parse(connection);
+      console.log(connection);
+
+      t.ok(connection.hasOwnProperty("listeningPort"), "Must have listeningPort");
+      t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
+      t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
+      t.ok(typeof connection.clientPort === 'number', "clientPort must be a number");
+      t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
+      t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
+
+      if (connection.listeningPort != 0)
+      {
+        // Forward connection
+        t.ok(connection.clientPort == 0);
+        t.ok(connection.serverPort == 0);
+      }
+      else
+      {
+        // Reverse connection
+        t.ok(connection.clientPort != 0);
+        t.ok(connection.serverPort != 0);
+      }
+
+      t.end();
+    }
+
     Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+      console.log(peers);
       peers.forEach(function(peer) {
         if (peer.peerAvailable && !connected) {
-          connected = true;
-          Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
-            // We're happy here if we make a connection to anyone
-            if (err == null) {
-              connection = JSON.parse(connection);
-              console.log(connection);
-
-              t.ok(connection.hasOwnProperty("listeningPort"), "Must have listeningPort");
-              t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
-              t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
-              t.ok(typeof connection.clientPort === 'number', "clientPort must be a number");
-              t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
-              t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
-
-              if (connection.listeningPort != 0)
-              {
-                // Forward connection
-                t.ok(connection.clientPort == 0);
-                t.ok(connection.serverPort == 0);
-              }
-              else
-              {
-                // Reverse connection
-                t.ok(connection.clientPort != 0);
-                t.ok(connection.serverPort != 0);
-              }
-
-              t.end();
-            } else {
-              t.fail('Error from connect: ' + err);
-              t.end();
-            }
-          });
+          connectToPeer(peer, onSuccess);
         }
       });
     });
@@ -265,30 +288,29 @@ test('Can shift large amounts of data', function (t) {
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {
       if (peer.peerAvailable && !connected) {
-        connected = true;
-        Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
+
+        function onConnectSucess(err, connection) {
           var client = null;
+
           // We're happy here if we make a connection to anyone
-          if (err == null) {
-            connection = JSON.parse(connection);
-            console.log(connection);
-            if (connection.listeningPort) {
-              console.log('Forward connection');
-              // We made a forward connection
-              client = net.connect(connection.listeningPort, function () {
-                shiftData(client, false);
-              });
-            } else {
-              console.log('Reverse connection');
-              // We made a reverse connection
-              client = sockets[connection.clientPort];
-              shiftData(client, true);
-            }
+          connection = JSON.parse(connection);
+          console.log(connection);
+
+          if (connection.listeningPort) {
+            console.log('Forward connection');
+            // We made a forward connection
+            client = net.connect(connection.listeningPort, function () {
+              shiftData(client, false);
+            });
           } else {
-            t.fail('Error from connect: ' + err);
-            t.end();
+            console.log('Reverse connection');
+            // We made a reverse connection
+            client = sockets[connection.clientPort];
+            shiftData(client, true);
           }
-        });
+        }
+
+        connectToPeer(peer, onConnectSuccess);
       }
     });
   });
