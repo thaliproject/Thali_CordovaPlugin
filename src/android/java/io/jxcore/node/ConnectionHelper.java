@@ -83,7 +83,7 @@ public class ConnectionHelper
             mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
             mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
         } else {
-            throw new UnsupportedOperationException("Bluetooth LE discovery mode is not supported");
+            Log.e(TAG, "Constructor: Bluetooth LE discovery mode is not supported");
         }
 
         mConnectivityInfo = new ConnectivityInfo(mDiscoveryManager);

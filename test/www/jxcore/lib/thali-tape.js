@@ -29,7 +29,6 @@ var testUtils = require('./testUtils');
 process.on('uncaughtException', function (err) {
   console.log('Uncaught Exception: ' + err);
   console.log(err.stack);
-  console.log('****TEST TOOK:  ms ****' );
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 });
@@ -37,7 +36,6 @@ process.on('uncaughtException', function (err) {
 process.on('unhandledRejection', function (err) {
   console.log('Uncaught Promise Rejection: ' + JSON.stringify(err));
   console.trace(err);
-  console.log('****TEST TOOK:  ms ****' );
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 });
@@ -168,7 +166,6 @@ function createStream(testServer)
       ', Failed: ' + failed);
     console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
 
-    console.log('****TEST TOOK:  ms ****' );
     console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   });
 
@@ -212,7 +209,6 @@ thaliTape.begin = function () {
     // This device not needed, log appropriately so CI doesn't think we've
     // failed
     console.log('--= Surplus to requirements =--');
-    console.log('****TEST TOOK:  ms ****');
     console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   });
 
