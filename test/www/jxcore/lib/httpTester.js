@@ -53,7 +53,7 @@ module.exports.runServer = function (router, path, responseCode, body, times,
   delay = delay || 0;
 
   var delayCallback = function (req, res, next){ setTimeout(next, delay);};
-  router.get(url, delayCallback, requestHandler);
+  router.get(path, delayCallback, requestHandler);
 };
 
 
