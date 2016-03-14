@@ -122,16 +122,7 @@ public class StartStopOperation {
                 return "Is not discovering";
             }
 
-            if (mShouldStartOrStopListeningToAdvertisementsOnly) {
-                // Connection manager should not be running and we shouldn't be advertising
-                if (connectionManagerState != ConnectionManagerState.NOT_STARTED) {
-                    return "Connection manager running, but should not be";
-                }
-
-                if (isAdvertising) {
-                    return "Is advertising, but should not be";
-                }
-            } else {
+            if (!mShouldStartOrStopListeningToAdvertisementsOnly) {
                 // Connection manager should be running and we should be advertising
                 if (connectionManagerState == ConnectionManagerState.NOT_STARTED) {
                     return "Connection manager not started";

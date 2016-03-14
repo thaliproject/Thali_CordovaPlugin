@@ -138,7 +138,7 @@
  *
  * When we are using our normal behavior the listeningPort parameter will be
  * set to the port the local Thali application should connect to and both
- * clientPort and serverPort MUST be null.
+ * clientPort and serverPort MUST be 0.
  *
  * However, we also have to deal with a bug in iOS's multipeer connectivity
  * framework. Our original iOS design involved us having one MCSession that
