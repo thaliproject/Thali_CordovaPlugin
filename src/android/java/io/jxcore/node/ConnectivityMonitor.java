@@ -137,7 +137,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
      *
      * @param forceNotify If true, will notify even if nothing has changed.
      */
-    public void updateConnectivityInfo(boolean forceNotify) {
+    public synchronized void updateConnectivityInfo(boolean forceNotify) {
         ConnectivityManager connectivityManager =
                 (ConnectivityManager) mActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
@@ -192,7 +192,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
                 JXcoreExtension.notifyNetworkChanged(mIsBluetoothEnabled, mIsWifiEnabled, mBssidName);
             }
         } else {
-            Log.v(TAG, "updateConnectivityInfo: No state changes");
+            Log.v(TAG, "updateConnectivityInfo: No relevant state changes");
         }
     }
 

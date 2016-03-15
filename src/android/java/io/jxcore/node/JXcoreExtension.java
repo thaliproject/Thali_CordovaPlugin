@@ -155,7 +155,7 @@ public class JXcoreExtension {
                     return;
                 }
 
-                if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() !=
+                if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() ==
                         BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("No Native Non-TCP Support");
