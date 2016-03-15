@@ -4,8 +4,7 @@ var NotificationBeacons = require('./thaliNotificationBeacons');
 var PromiseQueue = require('../promiseQueue');
 var ThaliMobile = require('../thaliMobile');
 var logger = require('../../thalilogger')('thaliNotificationServer');
-var NotificationCommon = require('./thaliNotificationCommon');
-
+var ThaliConfig = require('../thaliConfig');
 /** @module thaliNotificationServer */
 
 /**
@@ -170,7 +169,7 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
     }
   };
 
-  self._router.get(NotificationCommon.NOTIFICATION_BEACON_PATH,
+  self._router.get(ThaliConfig.NOTIFICATION_BEACON_PATH,
                   getBeaconNotifications);
 };
 

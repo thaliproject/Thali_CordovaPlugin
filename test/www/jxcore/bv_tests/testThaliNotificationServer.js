@@ -11,8 +11,8 @@ var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var ThaliNotificationServer =
   require('thali/NextGeneration/notification/thaliNotificationServer');
-var NotificationCommon =
-  require('thali/NextGeneration/notification/thaliNotificationCommon');
+var ThaliConfig =
+  require('thali/NextGeneration/thaliConfig');
 var MakeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 
@@ -76,7 +76,7 @@ GlobalVariables.prototype.init = function () {
       } else {
         self.TESTURL = 'http://' + '127.0.0.1' + ':' +
         self.expressServer.address().port +
-          NotificationCommon.NOTIFICATION_BEACON_PATH;
+          ThaliConfig.NOTIFICATION_BEACON_PATH;
 
         MakeIntoCloseAllServer(self.expressServer);
 
