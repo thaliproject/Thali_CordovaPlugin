@@ -1,7 +1,7 @@
 'use strict';
 
+var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
-var promiseQueue = new PromiseQueue();
 var EventEmitter = require('events').EventEmitter;
 var logger = require('../thalilogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
@@ -12,16 +12,27 @@ var states = {
   started: false
 };
 
-var routerObject = null;
-var routerExpress = null;
-var routerServer = null;
-var routerServerPort = 0;
-var serversManager = null;
-var serversManagerLocalPort = 0;
+var gPromiseQueue = new PromiseQueue();
+var gRouterObject = null;
+var gRouterExpress = null;
+var gRouterServer = null;
+var gRouterServerPort = 0;
+var gServersManager = null;
+var gServersManagerLocalPort = 0;
+var gNonTcpNetworkStatus = null;
+
 // Used only for testing.
 module.exports._getServersManagerLocalPort = function () {
-  return serversManagerLocalPort;
+  return gServersManagerLocalPort;
 };
+
+// Used only for testing.
+module.exports._isStarted = function () {
+  return states.started;
+};
+
+// Turns off a warning that would otherwise go off on Mobile
+/* jshint -W064 */
 
 /** @module thaliMobileNativeWrapper */
 
@@ -55,6 +66,81 @@ module.exports._getServersManagerLocalPort = function () {
         METHODS
  */
 
+function failedConnectionHandler(failedConnection) {
+  var peer = {
+    peerIdentifier: failedConnection.peerIdentifier,
+    portNumber: null
+  };
+  handlePeerAvailabilityChanged(peer);
+  module.exports.emitter.emit('failedConnection', failedConnection);
+}
+
+function routerPortConnectionFailedHandler(failedRouterPort) {
+  logger.info('routerPortConnectionFailed - ' +
+    JSON.stringify(failedRouterPort));
+
+  if (!states.started) {
+    // We are stopped anyway so no reason to kick up a fuss
+    logger.info('got routerPortConnectionFailed while we were not in start');
+    return;
+  }
+
+  if (failedRouterPort.routerPort !== gRouterServerPort) {
+    // Some kind of race condition? This isn't for us
+    logger.info('got routerPortConnectionFailed but not for our port, ' +
+      ', our port is ' + gRouterServerPort + ' and the error was for ' +
+      failedRouterPort.routerPort);
+    return;
+  }
+
+  gPromiseQueue.enqueueAtTop(stop())
+    .catch(function (err) {
+      return err;
+    })
+    .then(function (err) {
+      var errorArray = [failedRouterPort.error];
+      if (err) {
+        errorArray.push(err);
+      }
+      module.exports.emitter.emit('incomingConnectionToPortNumberFailed',
+        {
+          reason: module.exports.routerFailureReason.APP_LISTENER,
+          errors: errorArray,
+          routerPort: failedRouterPort.routerPort
+        });
+    });
+}
+
+function stopServersManager() {
+  if (!gServersManager) {
+    return Promise.resolve();
+  }
+  var oldServersManager = gServersManager;
+  gServersManager = null;
+  return oldServersManager.stop()
+    .then(function () {
+      oldServersManager.removeListener('failedConnection',
+        failedConnectionHandler);
+      oldServersManager.removeListener('routerPortConnectionFailed',
+        routerPortConnectionFailedHandler);
+    });
+}
+
+function stopCreateAndStartServersManager() {
+  return stopServersManager()
+    .then(function () {
+      gServersManager = new TCPServersManager(gRouterServerPort);
+      gServersManager.on('failedConnection', failedConnectionHandler);
+      gServersManager.on('routerPortConnectionFailed',
+        routerPortConnectionFailedHandler);
+      return gServersManager.start();
+    })
+    .then(function (localPort) {
+      gServersManagerLocalPort = localPort;
+    });
+}
+
+// jscs:disable jsDoc
 /**
  * This method MUST be called before any other method here other than
  * registering for events on the emitter or calling
@@ -91,32 +177,80 @@ module.exports._getServersManagerLocalPort = function () {
  * make sure your paths are set up appropriately.
  * @returns {Promise<?Error>}
  */
+// jscs:enable jsDoc
 module.exports.start = function (router) {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return gPromiseQueue.enqueue(function (resolve, reject) {
     if (states.started) {
       return reject(new Error('Call Stop!'));
     }
-    routerExpress = express();
+    gRouterExpress = express();
     try {
-      routerExpress.use('/', router);
+      gRouterExpress.use('/', router);
     } catch (error) {
       logger.error('Unable to use the given router: %s', error.toString());
       return reject(new Error('Bad Router'));
     }
-    routerObject = router;
-    routerServer = routerExpress.listen(0, function () {
-      routerServer = makeIntoCloseAllServer(routerServer);
-      routerServerPort = routerServer.address().port;
-      serversManager = new TCPServersManager(routerServerPort);
-      serversManager.start()
-      .then(function (localPort) {
-        serversManagerLocalPort = localPort;
-        states.started = true;
-        resolve();
-      });
+    gRouterObject = router;
+    gRouterServer = gRouterExpress.listen(0, function () {
+      gRouterServer = makeIntoCloseAllServer(gRouterServer);
+      gRouterServerPort = gRouterServer.address().port;
+      stopCreateAndStartServersManager()
+        .then(function () {
+          states.started = true;
+          resolve();
+        })
+        .catch(function (err) {
+          reject(err);
+        });
     });
   });
 };
+
+function stop() {
+  return function (resolve, reject) {
+    if (!states.started) {
+      return resolve();
+    }
+
+    states.started = false;
+
+    var errorDescriptions = {};
+
+    Mobile('stopAdvertisingAndListening').callNative(function (error) {
+      if (error) {
+        errorDescriptions.stopAdvertisingError = new Error(error);
+      }
+      Mobile('stopListeningForAdvertisements').callNative(function (error) {
+        if (error) {
+          errorDescriptions.stopListeningError = new Error(error);
+        }
+        stopServersManager()
+          .catch(function (err) {
+            errorDescriptions.stopServersManagerError = err;
+          })
+          .then(function () {
+            var oldRouterServer = gRouterServer;
+            gRouterServer = null;
+            return oldRouterServer ? oldRouterServer.closeAllPromise() :
+              Promise.resolve();
+          })
+          .catch(function (err) {
+            errorDescriptions.stopRouterServerError = err;
+          })
+          .then(function () {
+            if (Object.getOwnPropertyNames(errorDescriptions).length === 0) {
+              return resolve();
+            }
+
+            var error = new Error('check errorDescriptions property');
+            error.errorDescriptions = errorDescriptions;
+
+            return reject(error);
+          });
+      });
+    });
+  };
+}
 
 /**
  * This method will call all the stop methods, call stop on the {@link
@@ -130,42 +264,10 @@ module.exports.start = function (router) {
  * @returns {Promise<?Error>}
  */
 module.exports.stop = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
-    if (!states.started) {
-      return resolve();
-    }
-    Mobile('stopAdvertisingAndListening').callNative(function (error) {
-      if (error) {
-        return reject(new Error(error));
-      }
-      Mobile('stopListeningForAdvertisements').callNative(function (error) {
-        if (error) {
-          return reject(new Error(error));
-        }
-        var doStop = function () {
-          serversManager.stop()
-          .then(function () {
-            serversManager = null;
-            states.started = false;
-            resolve();
-          })
-          .catch(function (error) {
-            reject(error);
-          });
-        };
-        if (routerServer === null) {
-          doStop();
-          return;
-        }
-        routerServer.closeAll(function () {
-          routerServer = null;
-          doStop();
-        });
-      });
-    });
-  });
+  return gPromiseQueue.enqueue(stop());
 };
 
+// jscs:disable maximumLineLength
 /**
  * This method instructs the native layer to discover what other devices are
  * within range using the platform's non-TCP P2P capabilities. When a device is
@@ -189,8 +291,9 @@ module.exports.stop = function () {
  * @returns {Promise<?Error>}
  * @throws {Error}
  */
+// jscs:enable maximumLineLength
 module.exports.startListeningForAdvertisements = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
     }
@@ -222,7 +325,7 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.stopListeningForAdvertisements = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return gPromiseQueue.enqueue(function (resolve, reject) {
     Mobile('stopListeningForAdvertisements').callNative(function (error) {
       if (error) {
         return reject(new Error(error));
@@ -232,6 +335,7 @@ module.exports.stopListeningForAdvertisements = function () {
   });
 };
 
+// jscs:disable maximumLineLength
 /**
  * This method has two separate but related functions. It's first function is to
  * begin advertising the Thali peer's presence to other peers. The second
@@ -294,13 +398,14 @@ module.exports.stopListeningForAdvertisements = function () {
  * @public
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 module.exports.startUpdateAdvertisingAndListening = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
     }
     Mobile('startUpdateAdvertisingAndListening').callNative(
-      routerServerPort,
+      gRouterServerPort,
       function (error) {
         if (error) {
           return reject(new Error(error));
@@ -329,7 +434,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.stopAdvertisingAndListening = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return gPromiseQueue.enqueue(function (resolve, reject) {
     Mobile('stopAdvertisingAndListening').callNative(function (error) {
       if (error) {
         return reject(new Error(error));
@@ -338,8 +443,6 @@ module.exports.stopAdvertisingAndListening = function () {
     });
   });
 };
-
-var nonTCPNetworkStatus = null;
 
 /**
  * This method returns the last value sent by the
@@ -359,32 +462,55 @@ var nonTCPNetworkStatus = null;
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
 module.exports.getNonTCPNetworkStatus = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
-    if (nonTCPNetworkStatus === null) {
+  return gPromiseQueue.enqueue(function (resolve) {
+    if (gNonTcpNetworkStatus === null) {
       module.exports.emitter.once('networkChangedNonTCP',
       function (networkChangedValue) {
-        nonTCPNetworkStatus = networkChangedValue;
-        return resolve(nonTCPNetworkStatus);
+        gNonTcpNetworkStatus = networkChangedValue;
+        return resolve(gNonTcpNetworkStatus);
       });
     } else {
-      return resolve(nonTCPNetworkStatus);
+      return resolve(gNonTcpNetworkStatus);
     }
   });
 };
 
+// jscs:disable jsDoc
 /**
- * This is used for native connections and calls through to ThaliTcpServersManager.
+ * This is used for native connections and calls through to
+ * ThaliTcpServersManager.
  *
  * @param {Object} incomingConnectionId
  * @returns {Promise<?Error>}
  */
+// jscs:enable jsDoc
 module.exports.terminateConnection = function (incomingConnectionId) {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return gPromiseQueue.enqueue(function (resolve, reject) {
     // TODO: Implement the specified logic
     resolve();
   });
 };
 
+/**
+ * Terminates a server listening for connections to be sent to a remote device.
+ *
+ * It is NOT an error to terminate a listener that has already been terminated.
+ *
+ * This method MUST be idempotent so multiple calls with the same value MUST NOT
+ * cause an error or a state change.
+ *
+ * @param {string} peerIdentifier
+ * @param {number} port
+ * @returns {Promise<?error>}
+ */
+module.exports.terminateListener =
+  function (peerIdentifier, port) {
+    // TODO: Call terminateOutgoingConnection on tcpServersManager
+  };
+
+
+
+// jscs:disable jsDoc
 /**
  * # WARNING: This method is intended for internal Thali testing only. DO NOT
  * USE!
@@ -408,8 +534,9 @@ module.exports.terminateConnection = function (incomingConnectionId) {
  * @private
  * @returns {Promise<?Error>}
  */
+// jscs:enable jsDoc
 module.exports.killConnections = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return gPromiseQueue.enqueue(function (resolve, reject) {
     // TODO: Implement the specified logic
     resolve();
   });
@@ -444,12 +571,15 @@ module.exports.killConnections = function () {
  *
  * @public
  * @typedef {Object} nonTCPPeerAvailabilityChanged
- * @property {string} peerIdentifier See {@link module:thaliMobileNative~peer.peerIdentifier}.
- * @property {number|null} portNumber If this value is null then the system is advertising that it no longer believes
- * this peer is available. If this value is non-null then it is a port on 127.0.0.1 at which the local peer can
+ * @property {string} peerIdentifier See {@link
+ * module:thaliMobileNative~peer.peerIdentifier}.
+ * @property {?number} portNumber If this value is null then the system is
+ * advertising that it no longer believes this peer is available. If this value
+ * is non-null then it is a port on 127.0.0.1 at which the local peer can
  * connect in order to establish a TCP/IP connection to the remote peer.
  */
 
+// jscs:disable maximumLineLength
 /**
  * This event MAY start firing as soon as either of the start methods is called.
  * Start listening for advertisements obviously looks for new peers but in some
@@ -478,11 +608,11 @@ module.exports.killConnections = function () {
  * @type {Object}
  * @property {module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} peer
  */
-
+// jscs:enable maximumLineLength
 var peerAvailabilityChangedQueue = new PromiseQueue();
 var handlePeerAvailabilityChanged = function (peer) {
   if (!states.started) {
-    logger.info('Filtered out nonTCPPeerAvailabilityChangedEvent ' +
+    logger.debug('Filtered out nonTCPPeerAvailabilityChangedEvent ' +
                 'due to not being in started state');
     return;
   }
@@ -498,7 +628,8 @@ var handlePeerAvailabilityChanged = function (peer) {
       resolve();
     };
     if (peer.peerAvailable) {
-      serversManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect)
+      gServersManager.createPeerListener(peer.peerIdentifier,
+                                         peer.pleaseConnect)
       .then(function (portNumber) {
         module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
           peerIdentifier: peer.peerIdentifier,
@@ -520,6 +651,7 @@ var handlePeerAvailabilityChanged = function (peer) {
   });
 };
 
+// jscs:disable maximumLineLength
 /**
  * This is used whenever discovery or advertising starts or stops. Since it's
  * possible for these to be stopped (in particular) due to events outside of
@@ -532,10 +664,11 @@ var handlePeerAvailabilityChanged = function (peer) {
  * someone calls start or stop advertising/incoming on the wrapper.
  *
  * @public
- * @event discoveryAdvertisingStateUpdateNonTCPEvent
+ * @event discoveryAdvertisingStateUpdateNonTCP
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
+// jscs:enable maximumLineLength
 
 /**
  * Provides a notification when the network's state changes as well as when our
@@ -550,16 +683,42 @@ var handlePeerAvailabilityChanged = function (peer) {
  */
 
 /**
- * This event specifies that our internal TCP servers are no longer accepting
- * connections so we are in serious trouble. Stopping and restarting is almost
- * certainly necessary at this point. We can discover this either because of an
- * error in {@link module:tcpServersManager} or because of {@link
- * external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative}.
+ * @readonly
+ * @enum {string}
+ */
+module.exports.routerFailureReason = {
+  NATIVE_LISTENER: 'nativeListener',
+  APP_LISTENER: 'appListener'
+};
+
+/**
+ * This event specifies that one of our two internal TCP servers has failed.
+ *
+ * If we got {@link
+ * external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative}
+ * this means that our TCP listener for native connections has failed.
+ *
+ * If we got
+ * {@link module:thaliTcpServersManager.event:routerPortConnectionFailed}
+ * then this means that the app server we are hosting has failed.
+ *
+ * We will indicate which type of failure occurred using the reason entry.
+ *
+ * But in either case these are unrecoverable errors indicating something has
+ * gone seriously wrong. As such if we get these errors we will stop the
+ * thaliMobileNativeWrapper and will emit this event to let the listener know
+ * they are in serious trouble.
  *
  * @public
  * @event incomingConnectionToPortNumberFailed
- * @property {number} portNumber the 127.0.0.1 port that the TCP/IP bridge tried
- * to connect to.
+ * @property {routerFailureReason} reason
+ * @property {Error[]} errors If the reason is NATIVE_LISTENER then the errors,
+ * if any, will be from calling stop. If the reason is APP_LISTENER then the
+ * first error will be the one returned with routerPortConnectionFailed from
+ * thaliTcpServersManager and the rest, if any, will be from stop.
+ * @property {number} routerPort If the reason is NATIVE_LISTENER then this is
+ * the port we were listening to native connections on. If APP_LISTENER then
+ * this is the port we were listening for application connections on.
  */
 
 /**
@@ -569,7 +728,7 @@ var handlePeerAvailabilityChanged = function (peer) {
  * @fires event:nonTCPPeerAvailabilityChangedEvent
  * @fires event:networkChangedNonTCP
  * @fires event:incomingConnectionToPortNumberFailed
- * @fires event:discoveryAdvertisingStateUpdateNonTCPEvent
+ * @fires event:discoveryAdvertisingStateUpdateNonTCP
  * @fires module:TCPServersManager~failedConnection We repeat these events
  * @fires module:TCPServersManager~incomingConnectionState we repeat these
  * events.
@@ -581,7 +740,7 @@ module.exports.emitter = new EventEmitter();
 var registerToNative = function (methodName, callback) {
   Mobile(methodName).registerToNative(callback);
   Mobile('didRegisterToNative').callNative(methodName, function () {
-    logger.info('Method %s registered to native', methodName);
+    logger.debug('Method %s registered to native', methodName);
   });
 };
 
@@ -596,7 +755,7 @@ registerToNative('peerAvailabilityChanged', function (peers) {
 
 registerToNative('discoveryAdvertisingStateUpdateNonTCP',
   function (discoveryAdvertisingStateUpdateValue) {
-    logger.info('discoveryAdvertisingStateUpdateNonTCP: %s',
+    logger.debug('discoveryAdvertisingStateUpdateNonTCP: %s',
       JSON.stringify(discoveryAdvertisingStateUpdateValue));
     module.exports.emitter.emit(
       'discoveryAdvertisingStateUpdateNonTCP',
@@ -606,39 +765,43 @@ registerToNative('discoveryAdvertisingStateUpdateNonTCP',
 );
 
 registerToNative('networkChanged', function (networkChangedValue) {
-  logger.info('networkChanged: %s', JSON.stringify(networkChangedValue));
-  // The value needs to be assigned here to nonTCPNetworkStatus
+  logger.debug('networkChanged: %s', JSON.stringify(networkChangedValue));
+  // The value needs to be assigned here to gNonTcpNetworkStatus
   // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
   // can return it.
-  nonTCPNetworkStatus = networkChangedValue;
-  module.exports.emitter.emit('networkChangedNonTCP', nonTCPNetworkStatus);
+  gNonTcpNetworkStatus = networkChangedValue;
+  module.exports.emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
 });
 
 registerToNative('incomingConnectionToPortNumberFailed',
   function (portNumber) {
     logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
+
+    if (!states.started) {
+      logger.info('got incomingConnectionToPortNumberFailed while not in ' +
+        'start');
+      return;
+    }
+
+    if (gServersManagerLocalPort !== portNumber) {
+      logger.info('got incomingConnectionToPortNumberFailed for port ' +
+        portNumber + ' but we are listening on ' + gServersManagerLocalPort);
+      return;
+    }
+
     // Enqueue the restart to prevent other calls being handled
     // while the restart is ongoing.
-    promiseQueue.enqueueAtTop(function (resolve) {
-      serversManager.stop()
-      .then(function () {
-        serversManager = new TCPServersManager(routerServerPort);
-        return serversManager.start();
+    gPromiseQueue.enqueueAtTop(stop())
+      .catch(function (err) {
+        return err;
       })
-      .then(function (localPort) {
-        serversManagerLocalPort = localPort;
-        resolve();
-      })
-      .catch(function (error) {
-        logger.error('Error when trying to restart servers manager: ' + error);
-        // If we end up here, the TCP servers manager is not in a functional
-        // state so there is not much left to be done, but to stop everything.
-        module.exports.stop();
-        resolve();
+      .then(function (err) {
+        module.exports.emitter.emit('incomingConnectionToPortNumberFailed',
+          {
+            reason: module.exports.routerFailureReason.NATIVE_LISTENER,
+            errors: err ? [err] : [],
+            routerPort: portNumber
+          });
       });
-    });
-    // TODO: Currently, nobody in the upper layers is acting on this event
-    // so should we skip emitting it until there is a need to?
-    module.exports.emitter.emit('networkChangedNonTCP', portNumber);
   }
 );
