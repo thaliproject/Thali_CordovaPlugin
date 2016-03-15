@@ -235,7 +235,7 @@ module.exports.generatePreambleAndBeacons = generatePreambleAndBeacons;
  */
 
 /**
- * @type {Object} parseBeaconsResponse
+ * @typedef {Object} parseBeaconsResponse
  * @property {Buffer} preAmble A Buffer containing the preamble from the
  * beacon stream
  * @property {Buffer} unencryptedKeyId The first 16 bytes of the sha 256 hash
@@ -481,6 +481,7 @@ module.exports.generateBeaconStreamAndSecrets = generateBeaconStreamAndSecrets;
  * http://thaliproject.org/PresenceProtocolBindings/).
  * @param {Buffer} preAmble
  * @param {Buffer} beacon
+ * @returns {string}
  */
 // jscs:enable jsDoc
 function generatePskIdentityField(preAmble, beacon) {
@@ -494,6 +495,7 @@ module.exports.generatePskIdentityField = generatePskIdentityField;
  * @param {ECDH} ecdhForLocalDevice
  * @param {Buffer} remotePeerPublicKey
  * @param {Buffer} pskIdentityField
+ * @returns {Buffer}
  */
 function generatePskSecret(ecdhForLocalDevice, remotePeerPublicKey,
                                   pskIdentityField) {
