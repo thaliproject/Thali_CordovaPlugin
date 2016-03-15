@@ -6,6 +6,7 @@ var notificationBeacons =
 var crypto = require('crypto');
 var long = require('long');
 var urlSafeBase64 = require('urlsafe-base64');
+var testUtils = require('../lib/testUtils.js');
 
 var test = tape({
   setup: function (t) {
@@ -429,25 +430,6 @@ test('#parseBeacons addressBookCallback returns spurious match', function (t) {
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
   notificationBeacons.EXPIRATION_SIZE;
 
-function extractPreAmble(beaconStreamWithPreAmble) {
-  return beaconStreamWithPreAmble.slice(0, preAmbleSizeInBytes);
-}
-
-function extractBeacon(beaconStreamWithPreAmble, beaconIndexToExtract) {
-  var beaconStreamNoPreAmble =
-    beaconStreamWithPreAmble.slice(preAmbleSizeInBytes);
-  var beaconCount = 0;
-  for (var i = 0; i < beaconStreamNoPreAmble.length;
-       i += notificationBeacons.BEACON_SIZE) {
-    if (beaconCount === beaconIndexToExtract) {
-      return beaconStreamNoPreAmble
-        .slice(i, i + notificationBeacons.BEACON_SIZE);
-    }
-    ++beaconCount;
-  }
-  return null;
-}
-
 test('#parseBeacons addressBookCallback returns public key', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
@@ -486,8 +468,8 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
     addressBookCallback
   );
 
-  var preAmble = extractPreAmble(beaconStreamWithPreAmble);
-  var beacon = extractBeacon(beaconStreamWithPreAmble, 1);
+  var preAmble = testUtils.extractPreAmble(beaconStreamWithPreAmble);
+  var beacon = testUtils.extractBeacon(beaconStreamWithPreAmble, 1);
 
   // Remember spurious matches can cause the count to be higher than 1, with
   // GCM it would be guaranteed to be exactly one

@@ -5,6 +5,7 @@ var crypto = require('crypto');
 var Promise = require('lie');
 var http = require('http');
 
+var testUtils = require('../lib/testUtils.js');
 var httpTester = require('../lib/httpTester.js');
 
 var ThaliMobile =
@@ -125,7 +126,7 @@ var test = tape({
 
 test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
 
-  t.plan(2);
+  t.plan(5);
 
   httpTester.runServer(globals.expressRouter,
     ThaliConfig.NOTIFICATION_BEACON_PATH,
@@ -138,12 +139,22 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-    t.equals(
-        res,
-        NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
-        'Response should be BEACONS_RETRIEVED_AND_PARSED');
-  });
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (res, beaconDetails) {
+
+      t.equals(
+          res,
+          NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
+          'Response should be BEACONS_RETRIEVED_AND_PARSED');
+
+      t.ok(beaconDetails.encryptedBeaconKeyId.compare(testUtils.extractBeacon(
+          globals.preambleAndBeacons, 1)) === 0, 'good beacon');
+      t.ok(beaconDetails.preAmble.compare(testUtils.extractPreAmble(
+          globals.preambleAndBeacons)) === 0, 'good preAmble');
+      t.ok(globals.sourcePublicKeyHash.compare(
+          beaconDetails.unencryptedKeyId) === 0, 'public keys match!');
+
+    });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
   act.start(keepAliveAgent).then( function (res) {

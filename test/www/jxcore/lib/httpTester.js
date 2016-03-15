@@ -1,7 +1,7 @@
 'use strict';
 var request = require('request');
 var express = require('express');
-var Promise = require('lie');
+
 
 /**
  * This function will generate HTTP request to selected endpoint and calls

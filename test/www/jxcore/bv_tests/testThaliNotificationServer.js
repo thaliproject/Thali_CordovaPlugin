@@ -4,13 +4,11 @@ var express = require('express');
 var crypto = require('crypto');
 var sinon = require('sinon');
 var Promise = require('lie');
-
+var testUtils = require('../lib/testUtils.js');
 var proxyquire = require('proxyquire').noCallThru();
 
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
-var ThaliNotificationServer =
-  require('thali/NextGeneration/notification/thaliNotificationServer');
 var ThaliConfig =
   require('thali/NextGeneration/thaliConfig');
 var MakeIntoCloseAllServer =
@@ -89,7 +87,6 @@ GlobalVariables.prototype.init = function () {
   });
 };
 
-
 /**
  * Frees reserved resources from globalVariables after the each test run.
  */
@@ -152,24 +149,29 @@ test('Start and stop ThaliNotificationServer', function (t) {
 
   var publicKeysToNotify = globalVariables.createPublicKeysToNotify();
 
-  globalVariables.notificationServer.start(publicKeysToNotify).then(function () {
-    globalVariables.notificationServer.stop().then(function () {
+  globalVariables.notificationServer.start(publicKeysToNotify).
+    then(function () {
+      globalVariables.notificationServer.stop().then(function () {
 
-      t.equals(globalVariables.spyStartUpdateAdvertisingAndListening.callCount,
-      1, 'ThaliMobile.StartUpdateAdvertisingAndListening should be called once');
+        t.equals(
+          globalVariables.spyStartUpdateAdvertisingAndListening.callCount,
+          1, 'ThaliMobile.StartUpdateAdvertisingAndListening ' +
+          'should be called once');
 
-      t.equals(globalVariables.spyStopAdvertisingAndListening.callCount,
-      1, 'ThaliMobile.StopAdvertisingAndListening should be called once');
+        t.equals(
+          globalVariables.spyStopAdvertisingAndListening.callCount,
+          1, 'ThaliMobile.StopAdvertisingAndListening' +
+          'should be called once');
 
-      t.end();
+        t.end();
+      }).catch(function (failure) {
+        t.fail('Stopping failed:' + failure);
+        t.end();
+      });
     }).catch(function (failure) {
-      t.fail('Stopping failed:' + failure);
+      t.fail('Starting failed:' + failure);
       t.end();
     });
-  }).catch(function (failure) {
-    t.fail('Starting failed:' + failure);
-    t.end();
-  });
 });
 
 test('Pass an empty array to ThaliNotificationServer.start', function (t) {
@@ -251,7 +253,8 @@ test('Make an HTTP request to /NotificationBeacons', function (t) {
     var parseResult = NotificationBeacons.parseBeacons(body,
       globalVariables.targetDeviceKeyExchangeObjects[0], addressBookCallback);
 
-    t.ok(parseResult.compare(globalVariables.sourcePublicKeyHash) === 0);
+    t.ok(parseResult.unencryptedKeyId.compare(
+        globalVariables.sourcePublicKeyHash) === 0);
 
     // Stops the server and checks that it returns 204 as expected
     globalVariables.notificationServer.stop().then(function () {
@@ -280,12 +283,13 @@ test('Make an HTTP request to /NotificationBeacons (no keys)', function (t) {
   });
 });
 
-test('Make an HTTP request to /NotificationBeacons before calling start', function (t) {
+test('Make an HTTP request to /NotificationBeacons'+'' +
+  'before calling start', function (t) {
 
-  var httpResponseHandler = function (error, response) {
-    t.equal(response.statusCode, 404, 'should be 404' );
-    t.end();
-  };
+    var httpResponseHandler = function (error, response) {
+      t.equal(response.statusCode, 404, 'should be 404' );
+      t.end();
+    };
 
-  ThaliHttpTester.runTest(globalVariables.TESTURL, httpResponseHandler);
-});
+    ThaliHttpTester.runTest(globalVariables.TESTURL, httpResponseHandler);
+  });

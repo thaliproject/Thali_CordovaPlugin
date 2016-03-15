@@ -235,22 +235,22 @@ ThaliNotificationAction.prototype._responseCallback = function (self) {
  *
  * @param {ActionResolution} resolution Explains how the action was
  * was completed. This item will be emitted.
- * @param {?Buffer} unencryptedKeyId Null if none of the beacons could
- * be validated as being targeted at the local peer or if the beacon
- * came from a remote peer the local peer does not wish to communicate
- * with. Otherwise a Node.js Buffer containing the unencryptedKeyId
- * for the remote peer.
+ * @param {?module:thaliNotificationBeacons~parseBeaconsResponse} beaconDetails
+ * Null if none of the beacons could be validated as being targeted
+ * at the local peer or if the beacon came from a remote peer the
+ * local peer does not wish to communicate with. If not null then a
+ * beacon has been identified to be targeted at the local peer.
  * @param {?string} error Error text which will be returned to reject
  */
 ThaliNotificationAction.prototype._complete = function (resolution,
-                                                        unencryptedKeyId,
+                                                        beaconDetails,
                                                         error) {
   if (!this._resolution) {
     this._resolution = resolution;
     this._httpRequest && this._httpRequest.abort();
 
     this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
-      resolution, unencryptedKeyId);
+      resolution, beaconDetails);
 
     if (error && this._reject) {
       this._reject(new Error(error));
