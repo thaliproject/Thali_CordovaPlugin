@@ -1,7 +1,7 @@
 'use strict';
 
 var express = require('express');
-var http = require('http');
+var request = require('request');
 
 if (typeof Mobile === 'undefined') {
   return;
@@ -196,6 +196,58 @@ if (!jxcore.utils.OSInfo().isMobile) {
     });
   });
 
+  test('can do HTTP requests between peers', function (t) {
+    var testPath = '/test';
+    var testData = 'foobar';
+    var router = express.Router();
+    router.get(testPath, function (req, res) {
+      res.send(testData);
+    });
+
+    var peerAvailabilityHandler = function (peer) {
+      t.ok(true, 'found a peer! ' + JSON.stringify(peer));
+      thaliMobileNativeWrapper.emitter.removeListener(
+        'nonTCPPeerAvailabilityChangedEvent',
+        peerAvailabilityHandler
+      );
+
+      var requestUri = 'http://127.0.0.1:' + peer.portNumber + testPath;
+      request(
+        {
+          uri: requestUri,
+          timeout: 10 * 1000
+        }, function (error, response, body) {
+          if (error) {
+            t.fail(error, 'GET request failed');
+            return t.end();
+          }
+
+          t.equal(response.statusCode, 200, 'Server should return 200');
+          t.equal(body, testData, 'Response body should match testData');
+          t.end();
+        });
+    };
+
+    thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+      peerAvailabilityHandler);
+
+    thaliMobileNativeWrapper.start(router)
+      .then(function () {
+        return thaliMobileNativeWrapper.startListeningForAdvertisements();
+      })
+      .then(function () {
+        return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+      })
+      .then(function () {
+        Mobile.firePeerAvailabilityChanged([{
+          peerIdentifier: 'foo',
+          peerAvailable: true,
+          pleaseConnect: false
+        }]);
+      });
+  });
+
+
   test('thaliMobileNativeWrapper is stopped when ' +
     'incomingConnectionToPortNumberFailed is received',
     function (t) {
@@ -257,7 +309,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
 if (!tape.coordinated) {
   return;
 }
-/*
+
 test('can do HTTP requests between peers', function (t) {
   var testPath = '/test';
   var testData = 'foobar';
@@ -267,20 +319,29 @@ test('can do HTTP requests between peers', function (t) {
   });
 
   var peerAvailabilityHandler = function (peer) {
+    t.ok(true, 'found a peer! ' + JSON.stringify(peer));
     thaliMobileNativeWrapper.emitter.removeListener(
       'nonTCPPeerAvailabilityChangedEvent',
       peerAvailabilityHandler
     );
-    http.get({
-      path: testPath,
-      port: peer.portNumber,
-      agent: false // to prevent connection keep-alive
-    }, function (res) {
-      t.equal(res.statusCode, 200, 'server should respond with code 200');
-      t.equal(res.TODO, testData, 'test data should have been received');
-      t.end();
-    });
+
+    var requestUri = 'http://127.0.0.1:' + peer.portNumber + testPath;
+    request(
+      {
+        uri: requestUri,
+        timeout: 10 * 1000
+      }, function (error, response, body) {
+          if (error) {
+            t.fail(error, 'GET request failed');
+            return t.end();
+          }
+
+          t.equal(response.statusCode, 200, 'Server should return 200');
+          t.equal(body, testData, 'Response body should match testData');
+          t.end();
+        });
   };
+
   thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
     peerAvailabilityHandler);
 
@@ -295,7 +356,7 @@ test('can do HTTP requests between peers', function (t) {
     t.ok(true, 'was able call necessary starts');
   });
 });
-*/
+
 
 test('Can do requests between peers after start and stop', function (t) {
   // TODO: A great way to shake out bugs is to call start, exchange messages,
