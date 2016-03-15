@@ -331,8 +331,11 @@ ThaliNotificationClient.prototype._hostAddressAndIdentifier = function (peer) {
 };
 
 /**
-* This function will be called when the incoming peer has no hostAddress and
-*  there is a record for the 'peer.peerIdentifier' already.
+* This function will be called when
+* 1. the incoming peer has no hostAddress and
+* 2. there is a record for the 'peer.peerIdentifier' already.
+*
+*
 *   + If this peer is not in the table
 *     + This is technically possible in a number of cases. If this happens
 *     then just ignore the event.
@@ -353,7 +356,7 @@ ThaliNotificationClient.prototype._noHostAddressAndIdentifier = function (peer) 
 
   var peerEntry = this.peerDictionary.get(peer.peerIdentifier);
 
-  if(peerEntry.peerState === PeerDictionary.peerState.RESOLVED){
+  if (peerEntry.peerState === PeerDictionary.peerState.RESOLVED){
     // If this peer has been marked as RESOLVED, Ignore the event
     return;
   }

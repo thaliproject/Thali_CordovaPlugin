@@ -42,7 +42,7 @@ function ThaliNotificationAction(peerIdentifier, connectionType,
   ThaliNotificationAction.super_.call(this, peerIdentifier, connectionType,
     ThaliNotificationAction.ACTION_TYPE);
 
-  EventEmitter.call(this);
+  this.eventEmitter = new EventEmitter();
 
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
@@ -58,9 +58,14 @@ function ThaliNotificationAction(peerIdentifier, connectionType,
 
 inherits(ThaliNotificationAction, ThaliPeerAction);
 
-/* jshint -W103 */
-ThaliNotificationAction.prototype.__proto__ = EventEmitter.prototype;
-/* jshint +W103 */
+/**
+ * NotificationAction's event emitter
+ *
+ * @public
+ * @type {EventEmitter}
+ */
+ThaliNotificationAction.eventEmitter = null;
+
 /**
  * Tells the action to start processing. This action makes a HTTP GET request
  * to '/NotificationBeacons' path at a host address and a port number
@@ -71,10 +76,7 @@ ThaliNotificationAction.prototype.__proto__ = EventEmitter.prototype;
  * {@link module:thaliNotificationAction.event:Resolved} event with a value
  * from {@link module:thaliNotificationAction~ActionResolution}.
  *
- * Errors:
- * If the action failed, it will reject the returned promise object
- * with an error code defined in
- * {@link module:thaliNotificationAction~ActionResolution}.
+ * Error codes
  *
  * If start is called on an action that is already started then a
  * 'Only call start once' error is returned.
@@ -82,6 +84,9 @@ ThaliNotificationAction.prototype.__proto__ = EventEmitter.prototype;
  * If start is called on an action that has completed, successfully or not, then
  * the returned promised is resolved with an error with the value
  * 'action has completed'.
+ *
+ * 'Could not establish TCP connection' - DNS resolution, TCP level,
+ * HTTP protocol error or network timeout causes this.
  *
  * @public
  * @param {http.Agent} httpAgentPool The HTTP client connection pool to
@@ -127,11 +132,17 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
       // We set _self reference that we'll use in the _responseCallback
       self._httpRequest._self = self;
 
-      // This error event handler is fired on DNS resolution, TCP level errors,
-      // or HTTP protocol errors, or if _httpRequest.abort is called.
+      // Error event handler is fired on DNS resolution, TCP protocol,
+      // or HTTP protocol errors. Or if the httpRequest.abort is called.
+      // The httpRequest is aborted when http request timeout
+      // happens or the kill function is called. However abort coming
+      // from kill is ignored at this point and it is not causing
+      // anything in the _complete function because it is the second call to
+      // _complete.
       self._httpRequest.on('error', function () {
-        self._complete(false,
-          ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM);
+        self._complete(
+          ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
+          null, 'Could not establish TCP connection');
       });
 
       self._httpRequest.end();
@@ -140,19 +151,14 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
 };
 
 /**
- * This function tells an action to stop executing immediately
- * and synchronously. It also aborts ongoing HTTP request
- * and fires KILLED event.
+ * This synchronous function tells an action to stop executing immediately.
+ * It aborts ongoing HTTP request and fires KILLED event.
  *
  * @public
  */
 ThaliNotificationAction.prototype.kill = function () {
-
   ThaliNotificationAction.super_.prototype.kill.call(this);
-
-  this._complete(true,
-    ThaliNotificationAction.ActionResolution.KILLED, null);
-
+  this._complete(ThaliNotificationAction.ActionResolution.KILLED);
 };
 
 /**
@@ -183,7 +189,7 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
   res.on('data', function (chunk) {
     totalReceived += chunk.length;
     if (totalReceived >= ThaliNotificationAction.MAX_CONTENT_SIZE) {
-      self._complete(false,
+      self._complete(
         ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
       return;
     }
@@ -199,7 +205,7 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
       return;
     }
 
-    self._complete(false,
+    self._complete(
       ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
   });
 };
@@ -218,11 +224,11 @@ ThaliNotificationAction.prototype._parseBeacons = function (body) {
     unencryptedKeyId = NotificationBeacons.parseBeacons(body,
       this._ecdhForLocalDevice, this._addressBookCallback);
   } catch (err) {
-    this._complete(false,
+    this._complete(
       ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD);
     return;
   }
-  this._complete(true,
+  this._complete(
     ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
     unencryptedKeyId);
 };
@@ -238,29 +244,29 @@ ThaliNotificationAction.prototype._parseBeacons = function (body) {
  *
  * @private
  *
- * @param {boolean} success Indicates if the action was successful
  * @param {ActionResolution} resolution Explains how the action was
+ * was completed. This item will be emitted.
  * @param {?Buffer} unencryptedKeyId Null if none of the beacons could
  * be validated as being targeted at the local peer or if the beacon
  * came from a remote peer the local peer does not wish to communicate
  * with. Otherwise a Node.js Buffer containing the unencryptedKeyId
  * for the remote peer.
+ * @param {?string} error Error text which will be returned to reject
  */
-ThaliNotificationAction.prototype._complete = function (success,
-                                                        resolution,
-                                                        unencryptedKeyId) {
-
+ThaliNotificationAction.prototype._complete = function (resolution,
+                                                        unencryptedKeyId,
+                                                        error) {
   if (!this._resolution) {
     this._resolution = resolution;
     this._httpRequest && this._httpRequest.abort();
 
-    this.emit(ThaliNotificationAction.Events.Resolved,
+    this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
       resolution, unencryptedKeyId);
 
-    if (success && this._resolve) {
+    if (error && this._reject) {
+      this._reject(new Error(error));
+    } else if (this._resolve) {
       this._resolve(null);
-    } else if (this._reject) {
-      this._reject(new Error(resolution));
     }
   }
 };
