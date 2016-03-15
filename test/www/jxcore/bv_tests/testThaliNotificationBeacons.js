@@ -5,6 +5,7 @@ var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var crypto = require('crypto');
 var long = require('long');
+var urlSafeBase64 = require('urlsafe-base64');
 
 var test = tape({
   setup: function (t) {
@@ -425,6 +426,28 @@ test('#parseBeacons addressBookCallback returns spurious match', function (t) {
   t.end();
 });
 
+var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
+  notificationBeacons.EXPIRATION_SIZE;
+
+function extractPreAmble(beaconStreamWithPreAmble) {
+  return beaconStreamWithPreAmble.slice(0, preAmbleSizeInBytes);
+}
+
+function extractBeacon(beaconStreamWithPreAmble, beaconIndexToExtract) {
+  var beaconStreamNoPreAmble =
+    beaconStreamWithPreAmble.slice(preAmbleSizeInBytes);
+  var beaconCount = 0;
+  for (var i = 0; i < beaconStreamNoPreAmble.length;
+       i += notificationBeacons.BEACON_SIZE) {
+    if (beaconCount === beaconIndexToExtract) {
+      return beaconStreamNoPreAmble
+        .slice(i, i + notificationBeacons.BEACON_SIZE);
+    }
+    ++beaconCount;
+  }
+  return null;
+}
+
 test('#parseBeacons addressBookCallback returns public key', function (t) {
   var publicKeys = [];
   var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
@@ -463,50 +486,48 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
     addressBookCallback
   );
 
-  t.equal(success, 1);
-  t.ok(results.compare(localDeviceKeyHash) === 0);
+  var preAmble = extractPreAmble(beaconStreamWithPreAmble);
+  var beacon = extractBeacon(beaconStreamWithPreAmble, 1);
+
+  // Remember spurious matches can cause the count to be higher than 1, with
+  // GCM it would be guaranteed to be exactly one
+  t.ok(success >= 1 && success < 3, 'right number of calls to address book');
+  t.ok(results.preAmble.compare(preAmble) === 0, 'good preAmble');
+  t.ok(results.unencryptedKeyId.compare(localDeviceKeyHash) === 0, 'good ' +
+    'unencryptedKeyId');
+  t.ok(results.encryptedBeaconKeyId.compare(beacon) === 0, 'good beacon');
   t.end();
 });
 
-test('#parseBeacons with beacons both for and not for the user', function (t) {
-  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
-  var localDeviceKey = localDevice.generateKeys();
+test('validate generatePskIdentityField', function (t) {
+  var preAmble = new Buffer(10);
+  var beacon = new Buffer(20);
+  var actualResult =
+    notificationBeacons.generatePskIdentityField(preAmble, beacon);
+  var decodedActualResult = urlSafeBase64.decode(actualResult);
+  t.ok(decodedActualResult.compare(Buffer.concat([preAmble, beacon])) === 0,
+    'decoded buffers match');
+  t.end();
+});
 
-  var ecdhForDummyDevice = crypto.createECDH(notificationBeacons.SECP256K1);
-  var publicKeyForDummyDevice = ecdhForDummyDevice.generateKeys();
+test('validate generatePskSecret', function (t) {
+  var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
+  var device1Key = device1.generateKeys();
 
-  var ecdhForTargetDevice = crypto.createECDH(notificationBeacons.SECP256K1);
-  var publicKeyForTargetDevice = ecdhForTargetDevice.generateKeys();
+  var device2 = crypto.createECDH(notificationBeacons.SECP256K1);
+  var device2Key = device2.generateKeys();
 
-  var publicKeys = [];
-  // Note that the first key is explicitly not for the device
-  publicKeys.push(publicKeyForDummyDevice, publicKeyForTargetDevice);
+  var preAmble = new Buffer(preAmbleSizeInBytes);
+  var beacon = new Buffer(notificationBeacons.BEACON_SIZE);
+  var pskIdentityField =
+    notificationBeacons.generatePskIdentityField(preAmble, beacon);
 
-  var beaconStreamWithPreAmble =
-    notificationBeacons.generatePreambleAndBeacons(
-      publicKeys,
-      localDevice,
-      10 * 60 * 60 * 1000); // 10 hours in the future, just a big value
+  var device1Secret = notificationBeacons.generatePskSecret(device1,
+    device2Key, pskIdentityField);
 
-  var success = 0;
-  var localDeviceKeyHash =
-    notificationBeacons.
-    createPublicKeyHash(localDeviceKey);
-  var addressBookCallback = function (unencryptedKeyId) {
-    if (unencryptedKeyId.compare(localDeviceKeyHash) === 0) {
-      ++success;
-      return localDeviceKey;
-    }
-    return null;
-  };
+  var device2Secret = notificationBeacons.generatePskSecret(device2,
+    device1Key, pskIdentityField);
 
-  var results = notificationBeacons.parseBeacons(
-    beaconStreamWithPreAmble,
-    ecdhForTargetDevice,
-    addressBookCallback
-  );
-
-  t.equal(success, 1);
-  t.ok(results.compare(localDeviceKeyHash) === 0);
+  t.ok(device1Secret.compare(device2Secret) === 0, 'secrets match');
   t.end();
 });
