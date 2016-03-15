@@ -1,9 +1,5 @@
 'use strict';
 
-if (jxcore.utils.OSInfo().isMobile) {
-  return;
-}
-
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thali-tape');
