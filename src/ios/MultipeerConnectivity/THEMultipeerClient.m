@@ -63,7 +63,8 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   NSMutableDictionary<NSString *, NSTimer *> *_pendingReverseConnectionTimeouts;
 }
 
-static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
+static const int REVERSE_CONNECTION_TIMEOUT = 10; // Wait max 10 seconds for a reverse connection to complete
+static const int MAX_PENDING_REVERSE_CONNECTIONS = 64; // Don't allow more than 64 reverse connections to be pending
 
 - (id)initWithPeerId:(MCPeerID *)peerId
                         withServiceType:(NSString *)serviceType
@@ -241,11 +242,16 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
             @synchronized(_pendingReverseConnections)
             {
               _pendingReverseConnections[remotePeerUUID] = [connectCallback copy];
-              _pendingReverseConnectionTimeouts[remotePeerUUID] = [NSTimer scheduledTimerWithTimeInterval:10
-                                                           target:self
-                                                         selector:@selector(didTimeoutWaitingForReverseConnection:)
-                                                         userInfo:remotePeerUUID
-                                                          repeats:NO];
+              
+              // Need to schedule timers on main thread
+              dispatch_async(dispatch_get_main_queue(), ^{
+                _pendingReverseConnectionTimeouts[remotePeerUUID] =
+                  [NSTimer scheduledTimerWithTimeInterval:REVERSE_CONNECTION_TIMEOUT
+                                                   target:self
+                                                 selector:@selector(didTimeoutWaitingForReverseConnection:)
+                                                 userInfo:remotePeerUUID
+                                                  repeats:NO];
+              });
             }
 
             [clientSession reverseConnect];
