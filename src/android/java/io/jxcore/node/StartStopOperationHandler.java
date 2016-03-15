@@ -57,7 +57,7 @@ public class StartStopOperationHandler {
             cancelCurrentOperation();
         }
 
-        mCurrentOperation = StartStopOperation.createStartOperation(startAdvertising, callback);
+        mCurrentOperation = StartStopOperation.createStartOperation(!startAdvertising, callback);
         executeCurrentOperation();
     }
 

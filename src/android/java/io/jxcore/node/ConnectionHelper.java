@@ -30,7 +30,7 @@ public class ConnectionHelper
             HandshakeHelper.Listener {
     private static final String TAG = ConnectionHelper.class.getName();
 
-    public static final int NO_PORT_NUMBER = -1;
+    public static final int NO_PORT_NUMBER = 0;
     private static final String SERVICE_TYPE = "Cordovap2p._tcp";
     private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
     private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
@@ -83,7 +83,7 @@ public class ConnectionHelper
             mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
             mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
         } else {
-            throw new UnsupportedOperationException("Bluetooth LE discovery mode is not supported");
+            Log.e(TAG, "Constructor: Bluetooth LE discovery mode is not supported");
         }
 
         mConnectivityInfo = new ConnectivityInfo(mDiscoveryManager);
@@ -289,8 +289,6 @@ public class ConnectionHelper
             Log.e(TAG, "connect: " + errorMessage);
             return errorMessage;
         }
-
-        callback.getListenerOrIncomingConnection().setServerPortNumber(mServerPortNumber);
 
         if (!mConnectionModel.addOutgoingConnectionCallback(bluetoothMacAddress, callback)) {
             errorMessage = "Failed to add the callback for the connection";
