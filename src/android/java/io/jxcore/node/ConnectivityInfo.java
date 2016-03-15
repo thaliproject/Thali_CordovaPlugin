@@ -4,6 +4,7 @@
 package io.jxcore.node;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,25 +13,27 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
+import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
+import org.thaliproject.p2p.btconnectorlib.internal.wifi.WifiDirectManager;
 
 /**
  * Monitors the connectivity status and provides notifications on connectivity state changes for
  * the node layer.
  */
-class ConnectivityInfo {
+class ConnectivityInfo implements WifiDirectManager.WifiStateListener, BluetoothManager.BluetoothManagerListener {
     private static final String TAG = ConnectivityInfo.class.getName();
     private final Activity mActivity = jxcore.activity;
-    private final DiscoveryManager mDiscoveryManager;
-    private final boolean mIsBluetoothSupported;
-    private final boolean mIsWifiDirectSupported;
-    private final boolean mIsBleMultipleAdvertisementSupported;
+    private final BluetoothManager mBluetoothManager;
+    private final WifiDirectManager mWifiDirectManager;
     private BroadcastReceiver mConnectivityBroadcastReceiver = null;
     private String mBssidName = null;
-    private boolean mIsBluetoothEnabled = false;
     private boolean mIsConnectedOrConnectingToActiveNetwork = false;
     private boolean mActiveNetworkTypeIsWifi = false;
+    private boolean mIsBluetoothEnabled = false;
+    private boolean mIsWifiEnabled = false;
 
     /**
      * Constructor.
@@ -40,11 +43,23 @@ class ConnectivityInfo {
             throw new IllegalArgumentException("Discovery manager is null");
         }
 
-        mDiscoveryManager = discoveryManager;
-        mIsBluetoothSupported = mDiscoveryManager.getBluetoothManager().isBluetoothSupported();
-        mIsWifiDirectSupported = mDiscoveryManager.isWifiDirectSupported();
-        mIsBleMultipleAdvertisementSupported = mDiscoveryManager.isBleMultipleAdvertisementSupported();
-        mIsBluetoothEnabled = mDiscoveryManager.getBluetoothManager().isBluetoothEnabled();
+        mBluetoothManager = discoveryManager.getBluetoothManager();
+        mWifiDirectManager = discoveryManager.getWifiDirectManager();
+
+        mBluetoothManager.bind(this);
+        mWifiDirectManager.bind(this);
+
+        mIsBluetoothEnabled = mBluetoothManager.isBluetoothEnabled();
+        mIsWifiEnabled = mWifiDirectManager.isWifiEnabled();
+    }
+
+    /**
+     * Should be called when this class instance is no longer needed.
+     * Note that after calling this method, this instance cannot be used anymore.
+     */
+    public void dispose() {
+        mBluetoothManager.release(this);
+        mWifiDirectManager.release(this);
     }
 
     /**
@@ -79,6 +94,9 @@ class ConnectivityInfo {
         return (mConnectivityBroadcastReceiver != null);
     }
 
+    /**
+     * Stops monitoring connectivity actions (except Bluetooth and Wi-Fi enabled/disabled events).
+     */
     public synchronized void stopMonitoring() {
         if (mConnectivityBroadcastReceiver != null) {
             try {
@@ -93,35 +111,53 @@ class ConnectivityInfo {
     }
 
     public boolean isWifiDirectSupported() {
-        return mIsWifiDirectSupported;
+        return mWifiDirectManager.isWifiDirectSupported();
     }
 
     public boolean isBluetoothSupported() {
-        return mIsBluetoothSupported;
+        return mBluetoothManager.isBluetoothSupported();
     }
 
     public boolean isBleMultipleAdvertisementSupported() {
-        return mIsBleMultipleAdvertisementSupported;
+        return (mBluetoothManager.isBleMultipleAdvertisementSupported() != BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED);
     }
 
     public boolean isWifiEnabled() {
-        return mDiscoveryManager.getWifiDirectManager().isWifiEnabled();
-    }
-
-    public void setIsWifiEnabled(boolean isEnabled) {
-        Log.v(TAG, "setIsWifiEnabled: " + isEnabled);
-
-        // We don't use the given value, but check in updateConnectivityInfo() if the Wi-Fi is enabled
-        updateConnectivityInfo(true);
+        return mWifiDirectManager.isWifiEnabled();
     }
 
     public boolean isBluetoothEnabled() {
-        return mIsBluetoothEnabled;
+        return mBluetoothManager.isBluetoothEnabled();
     }
 
-    public void setIsBluetoothEnabled(boolean isEnabled) {
-        if (mIsBluetoothEnabled != isEnabled) {
-            mIsBluetoothEnabled = isEnabled;
+    /**
+     * Called when Bluetooth is enabled or disabled.
+     *
+     * @param mode The new Bluetooth mode.
+     */
+    @Override
+    public void onBluetoothAdapterScanModeChanged(int mode) {
+        boolean isBluetoothEnabled = (mode != BluetoothAdapter.SCAN_MODE_NONE);
+
+        if (mIsBluetoothEnabled != isBluetoothEnabled) {
+            Log.d(TAG, "onBluetoothAdapterScanModeChanged: Bluetooth " + (isBluetoothEnabled ? "enabled" : "disabled"));
+            mIsBluetoothEnabled = isBluetoothEnabled;
+            updateConnectivityInfo(true);
+        }
+    }
+
+    /**
+     * Called when Wi-Fi is enabled or disabled.
+     *
+     * @param state The new Wi-Fi state.
+     */
+    @Override
+    public void onWifiStateChanged(int state) {
+        boolean isWifiEnabled = (state != WifiP2pManager.WIFI_P2P_STATE_DISABLED);
+
+        if (mIsWifiEnabled != isWifiEnabled) {
+            Log.d(TAG, "onWifiStateChanged: Wi-Fi " + (isWifiEnabled ? "enabled" : "disabled"));
+            mIsWifiEnabled = isWifiEnabled;
             updateConnectivityInfo(true);
         }
     }
@@ -157,21 +193,22 @@ class ConnectivityInfo {
                 (!stringsMatch(mBssidName, bssid)
                         || mIsConnectedOrConnectingToActiveNetwork != isConnectedOrConnecting
                         || mActiveNetworkTypeIsWifi != activeNetworkTypeIsWifi)) {
+            boolean isBluetoothEnabled = isBluetoothEnabled();
             mBssidName = bssid;
             mIsConnectedOrConnectingToActiveNetwork = isConnectedOrConnecting;
             mActiveNetworkTypeIsWifi = activeNetworkTypeIsWifi;
 
-            Log.i(TAG, "updateConnectivityInfo: "
-                    + "\n    - is Wi-Fi Direct supported: " + mIsWifiDirectSupported
-                    + "\n    - is Bluetooth LE multiple advertisement supported: " + mIsBleMultipleAdvertisementSupported
+            Log.v(TAG, "updateConnectivityInfo: "
+                    + "\n    - is Wi-Fi Direct supported: " + isWifiDirectSupported()
+                    + "\n    - is Bluetooth LE multiple advertisement supported: " + isBleMultipleAdvertisementSupported()
                     + "\n    - is Wi-Fi enabled: " + isWifiEnabled
-                    + "\n    - is Bluetooth enabled: " + mIsBluetoothEnabled
+                    + "\n    - is Bluetooth enabled: " + isBluetoothEnabled
                     + "\n    - BSSID name: " + mBssidName
                     + "\n    - is connected/connecting to active network: " + mIsConnectedOrConnectingToActiveNetwork
                     + "\n    - active network type is Wi-Fi: " + mActiveNetworkTypeIsWifi
                     + "\n    - force notify: " + forceNotify);
 
-            JXcoreExtension.notifyNetworkChanged(mIsBluetoothEnabled, isWifiEnabled, mBssidName);
+            JXcoreExtension.notifyNetworkChanged(isBluetoothEnabled, isWifiEnabled, mBssidName);
         }
     }
 

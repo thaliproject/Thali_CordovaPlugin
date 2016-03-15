@@ -99,6 +99,7 @@ public class ConnectionHelper
         mStartStopOperationHandler.cancelCurrentOperation();
         mConnectionManager.dispose();
         mDiscoveryManager.dispose();
+        mConnectivityInfo.dispose();
     }
 
     /**
@@ -420,28 +421,6 @@ public class ConnectionHelper
         Log.v(TAG, "Received a request for permission \"" + permission
                 + "\", but we are expecting that all the required permissions have already been granted");
         return true;
-    }
-
-    /**
-     * Stores the new state in ConnectivityInfo instance, which is then responsible to take any
-     * actions necessary.
-     *
-     * @param isEnabled True, if enabled. False, if disabled.
-     */
-    @Override
-    public void onWifiEnabledChanged(boolean isEnabled) {
-        mConnectivityInfo.setIsWifiEnabled(isEnabled);
-    }
-
-    /**
-     * Stores the new state in ConnectivityInfo instance, which is then responsible to take any
-     * actions necessary.
-     *
-     * @param isEnabled True, if enabled. False, if disabled.
-     */
-    @Override
-    public void onBluetoothEnabledChanged(boolean isEnabled) {
-        mConnectivityInfo.setIsBluetoothEnabled(isEnabled);
     }
 
     /**
