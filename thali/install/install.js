@@ -344,7 +344,7 @@ module.exports = function (callback, appRootDirectory) {
         return installGitHubZip(thaliProjectName, thaliDepotName,
                                 thaliBranchName, thaliDontCheckIn);
       }
-    }).then(function(directory){
+    }).then(function(thaliCordovaPluginUnZipResult){
       // This step is used to prepare the gradle.properties file
       // containing the btconnectorlib2 version
       var projectDir = createUnzippedDirectoryPath(thaliDepotName, thaliBranchName, thaliDontCheckIn);
@@ -353,7 +353,7 @@ module.exports = function (callback, appRootDirectory) {
       return fs.writeFileAsync(gradleFileName,
         "btconnectorlib2Version=" + btconnectorlib2)
         .then(function() {
-          return directory;
+          return thaliCordovaPluginUnZipResult;
         });
     })
     .then(function (thaliCordovaPluginUnZipResult) {

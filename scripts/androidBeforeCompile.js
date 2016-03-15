@@ -46,15 +46,16 @@ var replaceJXCoreExtension = function (appRoot) {
 var updateBtconnectorlibVersion = function (appRoot) {
   var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/android/gradle.properties');
   var targetFile = path.join(appRoot, 'platforms/android/gradle.properties');
-  fs.copy(sourceFile, targetFile, function (err) {
-    if (err){
-      console.log(err);
-      console.log('Failed to update the gradle.properties file!');
-      // Exit the process on this error, because it is a hard requirement for this
-      // plugin to get the right btconnectorlib2 version.
-      process.exit(-1);
-    }
-  });
+  try {
+    // the target file gradle.properties should not exist
+    fs.copySync(sourceFile, targetFile, {"clobber": false});
+  } catch (err) {
+    console.log(err);
+    console.log('Failed to update the gradle.properties file!');
+    // Exit the process on this error, because it is a hard requirement for this
+    // plugin to get the right btconnectorlib2 version.
+    process.exit(-1);
+  }
 };
 
 var removeInstallFromPlatform = function (appRoot) {
