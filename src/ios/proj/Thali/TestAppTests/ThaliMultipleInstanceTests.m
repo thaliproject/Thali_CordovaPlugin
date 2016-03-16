@@ -932,4 +932,94 @@ static const int DEFAULT_EXPECT_TIMEOUT = 30.0;
   XCTAssertTrue(clientConnectError != nil);
 }
 
+- (void)testExistingServerSessionIsReturnedCorrectly
+{
+  // First, we wait for app1 to discover app2
+  
+  XCTestExpectation *app1DiscoveryExpectation = [self expectationWithDescription:@"app1 discovers app2"];
+  
+  __block NSDictionary *app2Peer = nil;
+  __weak THEMultipeerManager *weakApp2 = _app2;
+  _app1Handler->_didFindPeerHandler = ^void(NSDictionary *p)
+  {
+    // Screen out the ghosts (dead sessions still floating around the ether)
+    if ([p[@"peerIdentifier"] isEqual: [weakApp2 localPeerIdentifier]])
+    {
+      app2Peer = p;
+      [app1DiscoveryExpectation fulfill];
+    }
+  };
+
+  // .. and for app2 to discover app1
+  XCTestExpectation *app2DiscoveryExpectation = [self expectationWithDescription:@"app2 discovers app1"];
+
+  __block NSDictionary *app1Peer = nil;
+  __weak THEMultipeerManager *weakApp1 = _app1;
+  _app2Handler->_didFindPeerHandler = ^void(NSDictionary *p)
+  {
+    // Screen out the ghosts (dead sessions still floating around the ether)
+    if ([p[@"peerIdentifier"] isEqual: [weakApp1 localPeerIdentifier]])
+    {
+      app1Peer = p;
+      [app2DiscoveryExpectation fulfill];
+    }
+  };
+
+  [_app1 startListening];
+  [_app1 startServerWithServerPort:4141];
+  
+  [_app2 startListening];
+  [_app2 startServerWithServerPort:4242];
+  
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+  
+  _app1Handler->_didFindPeerHandler = nil;
+  _app2Handler->_didFindPeerHandler = nil;
+  
+  // Both apps have discovered each other, now connect app2 to app1 (a forward connection for app2
+  // that will create a server session on app1)
+
+  XCTestExpectation *app2ConnectExpectation = [self expectationWithDescription:@"app2 connect should succeed"];
+  [_app2 connectToPeerWithPeerIdentifier:app1Peer[@"peerIdentifier"]
+                    withConnectCallback:^void(NSString *error, NSDictionary *connection)
+    {
+      [app2ConnectExpectation fulfill];
+    }
+  ];
+  
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+
+  // Now connection app1 to app2, the existing server session should be returned
+  __block NSString *app1ConnectionError = nil;
+  __block NSDictionary *app1ConnectionDetails = nil;
+  XCTestExpectation *app1ConnectExpectation = [self expectationWithDescription:@"app1 connect should succeed"];
+  [_app1 connectToPeerWithPeerIdentifier:app2Peer[@"peerIdentifier"]
+                    withConnectCallback:^void(NSString *error, NSDictionary *connection)
+    {
+      app1ConnectionError = error;
+      app1ConnectionDetails = connection;
+      [app1ConnectExpectation fulfill];
+    }
+  ];
+  
+  [self waitForExpectationsWithTimeout:DEFAULT_EXPECT_TIMEOUT handler:^(NSError *error) {
+    if (error) {
+      XCTFail(@"Expectation Failed with error: %@", error);
+    }
+  }];
+  
+  XCTAssertTrue(app1ConnectionError == nil, "Should be no connection error");
+  XCTAssertTrue([app1ConnectionDetails[@"clientPort"] intValue] != 0);
+  XCTAssertTrue([app1ConnectionDetails[@"serverPort"] intValue] != 0);
+  XCTAssertTrue([app1ConnectionDetails[@"listeningPort"] intValue] == 0);
+}
+
 @end

@@ -155,14 +155,14 @@ test('Can connect to a remote peer', function (t) {
     if (connection.listeningPort != 0)
     {
       // Forward connection
-      t.ok(connection.clientPort == 0);
-      t.ok(connection.serverPort == 0);
+      t.ok(connection.clientPort == 0, "forward connection must have clientPort == 0");
+      t.ok(connection.serverPort == 0, "forward connectionmust have serverPort == 0);
     }
     else
     {
       // Reverse connection
-      t.ok(connection.clientPort != 0);
-      t.ok(connection.serverPort != 0);
+      t.ok(connection.clientPort != 0, "reverse connection must have clientPort != 0");
+      t.ok(connection.serverPort != 0, "reverse connection must have serverPort != 0");
     }
 
     t.end();
