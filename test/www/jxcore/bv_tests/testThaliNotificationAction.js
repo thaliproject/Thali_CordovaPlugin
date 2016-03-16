@@ -5,6 +5,7 @@ var crypto = require('crypto');
 var Promise = require('lie');
 var http = require('http');
 
+var testUtils = require('../lib/testUtils.js');
 var httpTester = require('../lib/httpTester.js');
 
 var ThaliMobile =
@@ -17,10 +18,10 @@ var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var MakeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
-var NotificationCommmon =
-  require('thali/NextGeneration/notification/thaliNotificationCommon');
 var ThaliPeerAction =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
+var ThaliConfig =
+  require('thali/NextGeneration/thaliConfig');
 
 var SECP256K1 = 'secp256k1';
 
@@ -61,27 +62,15 @@ GlobalVariables.prototype.init = function () {
 };
 
 /**
- * Frees reserved resources from globals after the each test run.
+ * Frees GlobalVariables instance's resources.
+ * @returns {Promise<?Error>} Returns a promise that will resolve when the
+ * resources are released.
  */
 GlobalVariables.prototype.kill = function () {
-
-  var self = this;
-  return new Promise(function (resolve, reject) {
-    if (self.expressServer) {
-
-      self.expressServer.closeAll(function (error) {
-
-        self.expressServer = null;
-        if (error != null) {
-          reject(error);
-        } else {
-          resolve();
-        }
-      });
-    } else {
-      resolve();
-    }
-  });
+  if (this.expressServer) {
+    return this.expressServer.closeAllPromise();
+  }
+  return Promise.resolve();
 };
 
 GlobalVariables.prototype.createPublicKeysToNotifyAndPreamble = function () {
@@ -137,10 +126,10 @@ var test = tape({
 
 test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
 
-  t.plan(2);
+  t.plan(5);
 
   httpTester.runServer(globals.expressRouter,
-    NotificationCommmon.NOTIFICATION_BEACON_PATH,
+    ThaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
@@ -150,12 +139,22 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-    t.equals(
-        res,
-        NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
-        'Response should be BEACONS_RETRIEVED_AND_PARSED');
-  });
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (res, beaconDetails) {
+
+      t.equals(
+          res,
+          NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
+          'Response should be BEACONS_RETRIEVED_AND_PARSED');
+
+      t.ok(beaconDetails.encryptedBeaconKeyId.compare(testUtils.extractBeacon(
+          globals.preambleAndBeacons, 1)) === 0, 'good beacon');
+      t.ok(beaconDetails.preAmble.compare(testUtils.extractPreAmble(
+          globals.preambleAndBeacons)) === 0, 'good preAmble');
+      t.ok(globals.sourcePublicKeyHash.compare(
+          beaconDetails.unencryptedKeyId) === 0, 'public keys match!');
+
+    });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
   act.start(keepAliveAgent).then( function (res) {
@@ -171,7 +170,7 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
   t.plan(2);
 
   httpTester.runServer(globals.expressRouter,
-    NotificationCommmon.NOTIFICATION_BEACON_PATH, 503, 'hello', 1);
+    ThaliConfig.NOTIFICATION_BEACON_PATH, 503, 'hello', 1);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
     globals.expressServer.address().port, 2000);
@@ -229,7 +228,8 @@ test('Test timeout locally', function (t) {
   t.plan(2);
 
   // Sets 3000 milliseconds delay for request handling.
-  httpTester.runServer(globals.expressRouter, '/NotificationBeacons', 503,
+  httpTester.runServer(globals.expressRouter,
+    ThaliConfig.NOTIFICATION_BEACON_PATH, 503,
     'hello', 1, 3000);
 
   // Sets 1000 milliseconds TCP timeout.
@@ -264,7 +264,7 @@ test('Call the start two times', function (t) {
   t.plan(3);
 
   httpTester.runServer(globals.expressRouter,
-    NotificationCommmon.NOTIFICATION_BEACON_PATH,
+    ThaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
@@ -407,15 +407,15 @@ test('Test to exceed the max content size locally', function (t) {
 
   t.plan(2);
 
-  var buffer = new Buffer(1000);
+  var buffer = new Buffer(1024);
   buffer.fill('h');
 
   httpTester.runServer(globals.expressRouter,
-    NotificationCommmon.NOTIFICATION_BEACON_PATH,
-    200, buffer, NotificationAction.MAX_CONTENT_SIZE/1000);
+    ThaliConfig.NOTIFICATION_BEACON_PATH,
+    200, buffer, 1+NotificationAction.MAX_CONTENT_SIZE_IN_BYTES/1024);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
-    globals.expressServer.address().port, 1000);
+    globals.expressServer.address().port, 10000);
 
   var act = new NotificationAction('hello',
     ThaliMobile.connectionTypes.TCP_NATIVE,
@@ -435,3 +435,52 @@ test('Test to exceed the max content size locally', function (t) {
     t.fail('Test failed:' + failure);
   });
 });
+
+test('Close the server socket while the client is waiting a response' +
+  'from the server. Local test.',
+  function (t) {
+
+    t.plan(2);
+
+    // Sets 10000 milliseconds delay for request handling.
+    httpTester.runServer(globals.expressRouter, '/NotificationBeacons', 503,
+      'hello', 1, 10000);
+
+    // Sets 10000 milliseconds TCP timeout.
+    var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
+      globals.expressServer.address().port, 10000);
+
+    var act = new NotificationAction('hello',
+      ThaliMobile.connectionTypes.TCP_NATIVE,
+      globals.targetDeviceKeyExchangeObjects[0], addressBookCallback ,
+      connInfo);
+
+    act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.NETWORK_PROBLEM,
+        'Should be NETWORK_PROBLEM caused closing server socket');
+    });
+
+    var keepAliveAgent = new http.Agent({ keepAlive: true });
+
+    act.start(keepAliveAgent).then( function () {
+      t.fail('Test should return failure: Could not establish TCP connection');
+    }).catch(function (err) {
+      t.equals(
+        err.message,
+        'Could not establish TCP connection',
+        'Should be Could not establish TCP connection');
+    });
+
+    // This kills the server socket after 2 seconds. This should give enough
+    // time to establish a HTTP connection in slow devices but since the server
+    // waits 10 seconds before it answers we end up killing the connection when
+    // the client is waiting the server to answer.
+
+    setTimeout( function () {
+      globals.kill().then(function () {
+        globals.expressServer = null;
+      });
+    }, 2000);
+  });
