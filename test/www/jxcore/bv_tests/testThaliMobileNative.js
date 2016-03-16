@@ -5,17 +5,17 @@ var randomstring = require('randomstring');
 var tape = require('../lib/thali-tape');
 
 var test = tape({
-  setup: function(t) {
+  setup: function (t) {
     t.end();
   },
-  teardown: function(t) {
+  teardown: function (t) {
     // Need to call stops here to ensure we're in stopped state since Mobile is a static
     // singleton
     Mobile('stopListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, "Should be able to call stopListeningForAdvertisments in teardown");
       Mobile('stopAdvertisingAndListening').callNative(function(err) {
         t.notOk(
-          err, 
+          err,
           "Should be able to call stopAdvertisingAndListening in teardown"
         );
         t.end();
@@ -105,6 +105,32 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
+function connectToPeer(peer, retries, successCb, failureCb) {
+
+  var RETRY_INTERVAL = 3000;
+
+  retries--;
+  Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
+
+    if (err == null) {
+      // Connected successfully..
+      successCb(err, connection);
+    } else {
+      // Retry a failed connection..
+      if (retries > 0) {
+        setTimeout(function() {
+          connectToPeer(peer, retries, successCb, failureCb);
+        }, RETRY_INTERVAL); 
+      } else {
+        if (failureCb) {
+          // Exceeded retries..
+          failureCb(err, connection);
+        }
+      }
+    }
+  });
+}
+
 test('Can connect to a remote peer', function (t) {
 
   var connected = false;
@@ -113,45 +139,49 @@ test('Can connect to a remote peer', function (t) {
     socket.pipe(socket);
   });
 
+  function onConnectSuccess(err, connection) {
+
+    // Called if we successfully connecto to a peer
+    connection = JSON.parse(connection);
+    console.log(connection);
+
+    t.ok(connection.hasOwnProperty("listeningPort"), "Must have listeningPort");
+    t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
+    t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
+    t.ok(typeof connection.clientPort === 'number', "clientPort must be a number");
+    t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
+    t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
+
+    if (connection.listeningPort != 0)
+    {
+      // Forward connection
+      t.ok(connection.clientPort == 0, "forward connection must have clientPort == 0");
+      t.ok(connection.serverPort == 0, "forward connectionmust have serverPort == 0");
+    }
+    else
+    {
+      // Reverse connection
+      t.ok(connection.clientPort != 0, "reverse connection must have clientPort != 0");
+      t.ok(connection.serverPort != 0, "reverse connection must have serverPort != 0");
+    }
+
+    t.end();
+  }
+
+  function onConnectFailure(err, connection) {
+    // NOOP
+  }
+
   echoServer.listen(0, function () {
+
     var applicationPort = echoServer.address().port;
 
     Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
+      console.log(peers);
       peers.forEach(function(peer) {
         if (peer.peerAvailable && !connected) {
-          connected = true;
-          Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
-            // We're happy here if we make a connection to anyone
-            if (err == null) {
-              connection = JSON.parse(connection);
-              console.log(connection);
-
-              t.ok(connection.hasOwnProperty("listeningPort"), "Must have listeningPort");
-              t.ok(typeof connection.listeningPort === 'number', "listeningPort must be a number");
-              t.ok(connection.hasOwnProperty("clientPort"), "Connection must have clientPort");
-              t.ok(typeof connection.clientPort === 'number', "clientPort must be a number");
-              t.ok(connection.hasOwnProperty("serverPort"), "Connection must have serverPort");
-              t.ok(typeof connection.serverPort === 'number', "serverPort must be a number");
-
-              if (connection.listeningPort != 0)
-              {
-                // Forward connection
-                t.ok(connection.clientPort == 0);
-                t.ok(connection.serverPort == 0);
-              }
-              else
-              {
-                // Reverse connection
-                t.ok(connection.clientPort != 0);
-                t.ok(connection.serverPort != 0);
-              }
-
-              t.end();
-            } else {
-              t.fail('Error from connect: ' + err);
-              t.end();
-            }
-          });
+          var RETRIES = 10;
+          connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
         }
       });
     });
@@ -205,9 +235,11 @@ test('Can shift large amounts of data', function (t) {
       var totalRecvd = 0;
       sock.on('data', function(data) {
 
+        console.log("reverseData");
         totalRecvd += data.length;
 
         if (totalRecvd == dataSize) {
+          console.log("reverseSend");
           // We've seen all the remote's data, send our own
           sock.write(toSend);
         }
@@ -219,7 +251,7 @@ test('Can shift large amounts of data', function (t) {
 
         if (toRecv.length == dataSize) {
           // Should have an exact copy of what we sent
-          t.ok(toRecv == toSend, "received should match sent");
+          t.ok(toRecv == toSend, "received should match sent reverse");
           t.end();
         }
       });
@@ -231,6 +263,9 @@ test('Can shift large amounts of data', function (t) {
 
       var done = false;
       sock.on('data', function (data) {
+
+        console.log("forwardData");
+
         var remaining = dataSize - toRecv.length;
 
         if (remaining >= data.length) {
@@ -245,7 +280,7 @@ test('Can shift large amounts of data', function (t) {
         if (toRecv.length == dataSize) {
           if (!done) {
             done = true;
-            t.ok(toSend == toRecv, "received should match sent");
+            t.ok(toSend == toRecv, "received should match sent forward");
             t.end();
           }
           if (data.length) {
@@ -254,42 +289,49 @@ test('Can shift large amounts of data', function (t) {
         }
       });
 
+      console.log("forwardSend");
       sock.write(toSend);
     }
+  }
+
+  function onConnectSuccess(err, connection) {
+
+    var client = null;
+    connected = true;
+
+    // We're happy here if we make a connection to anyone
+    connection = JSON.parse(connection);
+    console.log(connection);
+
+    if (connection.listeningPort) {
+      console.log('Forward connection');
+      // We made a forward connection
+      client = net.connect(connection.listeningPort, function () {
+        shiftData(client, false);
+      });
+    } else {
+      console.log('Reverse connection');
+      // We made a reverse connection
+      client = sockets[connection.clientPort];
+      shiftData(client, true);
+    }
+  }
+
+  function onConnectFailure(err, connection) {
+    // NOOP
   }
 
   Mobile("peerAvailabilityChanged").registerToNative(function(peers) {
     peers.forEach(function(peer) {
       if (peer.peerAvailable && !connected) {
-        connected = true;
-        Mobile("connect").callNative(peer.peerIdentifier, function(err, connection) {
-          var client = null;
-          // We're happy here if we make a connection to anyone
-          if (err == null) {
-            connection = JSON.parse(connection);
-            console.log(connection);
-            if (connection.listeningPort) {
-              console.log('Forward connection');
-              // We made a forward connection
-              client = net.connect(connection.listeningPort, function () {
-                shiftData(client, false);
-              });
-            } else {
-              console.log('Reverse connection');
-              // We made a reverse connection
-              client = sockets[connection.clientPort];
-              shiftData(client, true);
-            }
-          } else {
-            t.fail('Error from connect: ' + err);
-            t.end();
-          }
-        });
+        var RETRIES = 10;
+        connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
       }
     });
   });
 
   echoServer.listen(0, function () {
+
     var applicationPort = echoServer.address().port;
 
     Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
