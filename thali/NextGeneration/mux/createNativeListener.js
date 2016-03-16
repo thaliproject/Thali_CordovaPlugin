@@ -135,8 +135,8 @@ function emitIncomingConnectionState(self, incomingConnectionId,
  * close MUST be called on the associated TCP socket.
  *
  * @public
- * @param {module:tcpServersManager~TCPServersManager} self The 'this' object
- * from tcpServersManager
+ * @param {module:thaliTcpServersManager~ThaliTcpServersManager} self The 'this'
+ * object from tcpServersManager
  * @returns {Promise<number|Error>}}
  */
 // jscs:enable jsDoc
@@ -244,7 +244,11 @@ module.exports = function (self) {
 
         outgoing.on('error', function (err) {
           logger.debug(err);
-          self.emit(self.ROUTER_PORT_CONNECTION_FAILED);
+          self.emit(self.ROUTER_PORT_CONNECTION_FAILED,
+            {
+              error: err,
+              routerPort: self._routerPort
+            });
         });
 
         logger.debug('new outgoing socket');
