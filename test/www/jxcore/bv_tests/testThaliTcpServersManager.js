@@ -166,10 +166,16 @@ test('terminateIncomingConnection will terminate a connection', function (t) {
 
 test('terminate an Outgoing connection will terminate the server',
   function (t) {
-
+    serversManager.start()
+      .then(function () {
+        t.end();
+      });
   });
 
 test('terminate an Outgoing connection with wrong arguments is not harmful',
   function (t) {
-
+    serversManager.start()
+      .then(function () {
+        t.end();
+      });
   });

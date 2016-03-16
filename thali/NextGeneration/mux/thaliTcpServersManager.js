@@ -265,9 +265,8 @@ ThaliTcpServersManager.prototype._createNativeListener = function () {
  * lexically smaller peer asked for a connection so the lexically larger peer
  * (the local device) will immediately call {@link
  * external:"Mobile('connect')".callNative} to create a connection. If false
- * (the default value) then the call to {@link
- * external:"Mobile('connect')".callNative} will only happen on the first
- * incoming connection to the TCP server.
+ * then the call to {@link external:"Mobile('connect')".callNative} will only
+ * happen on the first incoming connection to the TCP server.
  * @returns {Promise<number|Error>}
  */
 ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,

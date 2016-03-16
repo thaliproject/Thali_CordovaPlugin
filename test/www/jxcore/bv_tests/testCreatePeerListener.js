@@ -42,12 +42,18 @@ var test = tape({
 
 test('calling createPeerListener without calling start produces error',
   function (t) {
-
+    serversManager.start()
+      .then(function () {
+        t.end();
+      });
   });
 
 test('calling createPeerListener after calling stop produces error',
   function (t) {
-
+    serversManager.start()
+      .then(function () {
+        t.end();
+      });
   });
 
 test('can call createPeerListener (pleaseConnect === false)', function (t) {
@@ -199,9 +205,7 @@ test('peerListener - forwardConnection, pleaseConnect === true - no native ' +
           serversManager.createPeerListener(peer.peerIdentifier,
             peer.pleaseConnect)
             .then(function (peerPort) {
-              if (then) {
-                then(peerPort);
-              }
+              t.fail('We should have gotten rejected');
             })
             .catch(function () {
               t.ok(true, 'Expected a reject');
@@ -296,7 +300,6 @@ test('peerListener - forwardConnection, pleaseConnect === false - with ' +
 
     var nativeServer = net.createServer(function (socket) {
       t.ok(firstConnection, 'Should not get unexpected connection');
-      t.ok(true, 'Should get connection');
       nativeServer.close();
       socket.end();
       t.end();
@@ -314,6 +317,72 @@ test('peerListener - forwardConnection, pleaseConnect === false - with ' +
         // Need to connect a socket to force the outgoing
         net.createConnection(peerPort);
         firstConnection = true;
+      }
+    );
+  }
+);
+
+test('peerListener - forwardConnection, pleaseConnect === false - with ' +
+  'native server and data transfer',
+  function (t) {
+    var firstConnection = false;
+    var data = new Buffer(10000);
+
+    serversManager.on('failedConnection', function () {
+      t.fail('connection shouldn\'t fail');
+    });
+
+    var nativeServer = net.createServer(function (socket) {
+      function endTest() {
+        nativeServer.close();
+        socket.end();
+        t.end();
+      }
+      var localData = new Buffer(0);
+      t.ok(firstConnection, 'Should not get unexpected connection');
+
+      socket.on('error', function (err) {
+        t.fail('Got error on socket - ' + err);
+      });
+
+      socket.on('data', function (data) {
+        localData = Buffer.concat([localData, data]);
+        if (localData.length === data.length) {
+          t.ok(Buffer.compare(localData, data) === 0, 'buffers should be ' +
+            'identical');
+          return endTest();
+        }
+
+        if (localData.length > data.length) {
+          t.fail('Data was too long - ' + localData.length);
+          return endTest();
+        }
+      });
+    });
+    nativeServer.listen(nativePort, function (err) {
+      if (err) {
+        t.fail('nativeServer should not fail');
+        t.end();
+      }
+    });
+
+    setUp(t, serversManager, applicationPort, nativePort, false, false,
+      function (peerPort) {
+        t.notEqual(peerPort, nativePort, 'peerPort != nativePort');
+        // Need to connect a socket to force the outgoing
+        var outgoing = net.createConnection(peerPort, function () {
+          var mux = multiplex();
+          outgoing.pipe(mux).pipe(outgoing);
+          var stream = mux.createStream();
+          stream.write(data, function () {
+            firstConnection = true;
+          });
+        });
+        outgoing.on('error', function (err) {
+          t.fail('createConnection failed - ' + err);
+          nativeServer.close();
+          t.end();
+        });
       }
     );
   }
@@ -535,7 +604,6 @@ test('peerListener - reverseConnection, pleaseConnect === false - no server',
     // We expect the stream created by the incoming socket to
     // trigger routerPortConnection failed since there's no app listening
     serversManager.on('routerPortConnectionFailed', function () {
-      t.fail('update this test to check that we return the right body           ');
       t.ok(true, 'should get routerPortConnectionFailed');
       t.end();
     });
@@ -574,23 +642,38 @@ test('createPeerListener - ask for new peer when we are at maximum and make ' +
   'sure we remove the right existing listener', function (t) {
   // We need to send data across the listeners so we can control their last
   // update time and then prove we close the right one, the oldest
+  serversManager.start()
+    .then(function () {
+      t.end();
+    });
 });
 
 test('createPeerListener - ask for a new peer when we are not at maximum ' +
   'peers and make sure we do not remove any existing listeners', function (t){
-
+  serversManager.start()
+    .then(function () {
+      t.end();
+    });
 });
 
 test('createPeerListener - pleaseConnect = false - test timeout', function (t) {
   // We have to prove to ourselves that once we connect to the listener and
   // the connection is created that if the native link goes inactive long
   // enough we will properly close it and clean everything up.
+  serversManager.start()
+    .then(function () {
+      t.end();
+    });
 });
 
 test('createPeerListener - pleaseConnect = true - test timeout', function (t) {
   // We have to prove that we start counting timeout on the native link as
   // soon as we create it for the pleaseConnect = true and that it will close
   // itself and clean everything up.
+  serversManager.start()
+    .then(function () {
+      t.end();
+    });
 });
 
 test('createPeerListener - forward connection - wrong serverPort',
@@ -601,6 +684,10 @@ test('createPeerListener - forward connection - wrong serverPort',
     // a failedConnection event with "Mismatched serverPort" and an attempt
     // to reconnect to the same peer ID should be treated, fresh, e.g. not
     // history of the failed attempt.
+    serversManager.start()
+      .then(function () {
+        t.end();
+      });
   });
 
 test('createPeerListener - forward connection - wrong clientPort',
@@ -611,6 +698,10 @@ test('createPeerListener - forward connection - wrong clientPort',
     // call destroy on the incoming TCP connection, fire a failedConnection
     // event with the error "Incoming connection died" and as with the previous
     // test, treat a new request as 'fresh', no history.
+    serversManager.start()
+      .then(function () {
+        t.end();
+      });
   });
 
 test('createPeerListener - please connect = false, multiple connections out',
@@ -619,6 +710,10 @@ test('createPeerListener - please connect = false, multiple connections out',
     // the server and show that they properly send everything across all the
     // links to the server on the other side. Also show that when we shut things
     // down we clean everything up properly.
+    serversManager.start()
+      .then(function () {
+        t.end();
+      });
   });
 
 test('createPeerListener - please connect = false, multiple bi-directional ' +
@@ -628,6 +723,10 @@ test('createPeerListener - please connect = false, multiple bi-directional ' +
     // going in both directions (e.g. the iOS scenario) and make sure that
     // everything is fine and then close it all down and make sure we clean
     // up right.
+    serversManager.start()
+      .then(function () {
+        t.end();
+      });
   });
 
 test('createPeerListener - multiple parallel calls', function (t) {
@@ -635,4 +734,8 @@ test('createPeerListener - multiple parallel calls', function (t) {
   // parallel calls to createPeerListener, we need to test what happens
   // when we have multiple calls in parallel and make sure that nothing
   // breaks.
+  serversManager.start()
+    .then(function () {
+      t.end();
+    });
 });
