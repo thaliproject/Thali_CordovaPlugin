@@ -280,7 +280,7 @@
  * |--------------|-------------|
  * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
  * | startListeningForAdvertisements is not active | Go start it! |
- * | Alreading connect(ing/ed) | There already is a connection or a request to createone is already in process |
+ * | Already connect(ing/ed) | There already is a connection or a request to create one is already in process. |
  * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
  * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
  * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
