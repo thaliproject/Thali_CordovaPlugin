@@ -1,8 +1,14 @@
 'use strict';
 
 var assert = require('assert');
+var Promise = require('lie');
 
 /** @module makeIntoCloseAllServer */
+
+/**
+ * @public
+ * @callback thunk
+ */
 
 /**
  * Takes any of the NET server object types (such as HTTP, HTTPS and NET itself
@@ -13,7 +19,7 @@ var assert = require('assert');
  *
  * @public
  * @param {net.Server} server
- * @returns {Object}
+ * @returns {net.Server}
  */
 function makeIntoCloseAllServer(server) {
   var connections = [];
@@ -41,16 +47,33 @@ function makeIntoCloseAllServer(server) {
   /**
    * Closes the server and then closes all incoming connections to the server.
    *
-   * @param {callback} [callback]
+   * @param {thunk} [callback]
    */
   server.closeAll = function (callback) {
     // By closing the server first we prevent any new incoming connections
     // to the server.
     // Also note that the callback won't be called until all the connections
     // are destroyed because the destroy calls are synchronous.
-    this.close(callback);
+    server.close(callback);
     connections.forEach(function (connection) {
       connection.destroy();
+    });
+  };
+
+  /**
+   * Same as closeAll but returns a promise.
+   *
+   * @returns {Promise<?Error>}
+   */
+  server.closeAllPromise = function () {
+    var self = this;
+    return new Promise(function (resolve, reject) {
+      self.closeAll(function (err) {
+        if (err) {
+          return reject(err);
+        }
+        resolve();
+      });
     });
   };
 

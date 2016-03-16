@@ -59,8 +59,8 @@ public class JXcoreExtension {
     private static final String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
     private static final String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
     private static final String EVENT_VALUE_ADVERTISING_ACTIVE = "advertisingActive";
-    private static final String EVENT_VALUE_BLUETOOTH_LOW_ENERGY = "blueToothLowEnergy";
-    private static final String EVENT_VALUE_BLUETOOTH = "blueTooth";
+    private static final String EVENT_VALUE_BLUETOOTH_LOW_ENERGY = "bluetoothLowEnergy";
+    private static final String EVENT_VALUE_BLUETOOTH = "bluetooth";
     private static final String EVENT_VALUE_WIFI = "wifi";
     private static final String EVENT_VALUE_CELLULAR = "cellular";
     private static final String EVENT_VALUE_BSSID_NAME = "bssidName";
@@ -155,7 +155,8 @@ public class JXcoreExtension {
                     return;
                 }
 
-                if (!mConnectionHelper.getConnectivityInfo().isBleMultipleAdvertisementSupported()) {
+                if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() ==
+                        BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("No Native Non-TCP Support");
                     args.add(null);
@@ -273,7 +274,7 @@ public class JXcoreExtension {
                         
                         if (methodName.equals(METHOD_ARGUMENT_NETWORK_CHANGED)) {
                             mNetworkChangedRegistered = true;
-                            mConnectionHelper.getConnectivityInfo().updateConnectivityInfo(true); // Will call notifyNetworkChanged
+                            mConnectionHelper.getConnectivityMonitor().updateConnectivityInfo(true); // Will call notifyNetworkChanged
                         } else {
                             errorString = "Unrecognized method name: " + methodName;
                         }
@@ -464,12 +465,16 @@ public class JXcoreExtension {
         if (jsonObjectCreated) {
             final String jsonObjectAsString = jsonObject.toString();
 
-            jxcore.activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    jxcore.CallJSMethod(EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE, jsonObjectAsString);
-                }
-            });
+            try {
+                jxcore.activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        jxcore.CallJSMethod(EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE, jsonObjectAsString);
+                    }
+                });
+            } catch (NullPointerException e) {
+                Log.e(TAG, "notifyDiscoveryAdvertisingStateUpdateNonTcp: Failed to notify: " + e.getMessage(), e);
+            }
         }
     }
 
@@ -496,9 +501,10 @@ public class JXcoreExtension {
         RadioState wifiRadioState;
         RadioState cellularRadioState = RadioState.DO_NOT_CARE;
 
-        final ConnectivityInfo connectivityInfo = mConnectionHelper.getConnectivityInfo();
+        final ConnectivityMonitor connectivityMonitor = mConnectionHelper.getConnectivityMonitor();
 
-        if (connectivityInfo.isBleMultipleAdvertisementSupported()) {
+        if (connectivityMonitor.isBleMultipleAdvertisementSupported() !=
+                BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
             if (isBluetoothEnabled) {
                 bluetoothLowEnergyRadioState = RadioState.ON;
             } else {
@@ -508,7 +514,7 @@ public class JXcoreExtension {
             bluetoothLowEnergyRadioState = RadioState.NOT_HERE;
         }
 
-        if (connectivityInfo.isBluetoothSupported()) {
+        if (connectivityMonitor.isBluetoothSupported()) {
             if (isBluetoothEnabled) {
                 bluetoothRadioState = RadioState.ON;
             } else {
@@ -518,7 +524,7 @@ public class JXcoreExtension {
             bluetoothRadioState = RadioState.NOT_HERE;
         }
 
-        if (connectivityInfo.isWifiDirectSupported()) {
+        if (connectivityMonitor.isWifiDirectSupported()) {
             if (isWifiEnabled) {
                 wifiRadioState = RadioState.ON;
             } else {
@@ -608,7 +614,8 @@ public class JXcoreExtension {
         final ArrayList<Object> args = new ArrayList<Object>();
         String errorString = null;
 
-        if (mConnectionHelper.getConnectivityInfo().isBleMultipleAdvertisementSupported()) {
+        if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() !=
+                BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
             boolean succeededToStartOrWasAlreadyRunning =
                     mConnectionHelper.start(serverPortNumber, startAdvertisements, new JXcoreThaliCallback() {
                         @Override

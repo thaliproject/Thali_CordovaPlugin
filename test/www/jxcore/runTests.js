@@ -32,7 +32,7 @@ if (hasJavaScriptSuffix(testsToRun)) {
   loadFile(path.join(__dirname, testsToRun));
 } else {
   fs.readdirSync(path.join(__dirname, testsToRun)).forEach(function (fileName) {
-    if ((fileName.indexOf('test') == 0) &&
+    if ((fileName.indexOf('test') === 0) &&
          hasJavaScriptSuffix(fileName)) {
       var filePath = path.join(__dirname, testsToRun, fileName);
       loadFile(filePath);

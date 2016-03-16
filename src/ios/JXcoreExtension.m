@@ -52,7 +52,7 @@ NSString * const kNetworkChanged = @"networkChanged";
 NSString * const kPeerAvailabilityChanged = @"peerAvailabilityChanged";
 NSString * const kAppEnteringBackground = @"appEnteringBackground";
 NSString * const kAppEnteredForeground = @"appEnteredForeground";
-NSString * const kDiscoveryAdvertisingStateUpdate = @"discoveryAdvertisingStateUpdate";
+NSString * const kDiscoveryAdvertisingStateUpdate = @"discoveryAdvertisingStateUpdateNonTCP";
 NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToPortNumberFailed";
 
 @implementation JXcoreExtension
@@ -198,7 +198,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   
       @synchronized(self)
       {
-        [JXcore callEventCallback:callbackId withParams:@[@"Call Stop!"]];
+        [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
       }
     }
   } withName:@"startListeningForAdvertisements"];

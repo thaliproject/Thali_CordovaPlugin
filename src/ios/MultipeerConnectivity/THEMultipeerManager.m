@@ -178,14 +178,11 @@
 {
   @synchronized(self)
   {
-    if (_isListening)
+    if (!_isListening)
     {
-      return false;
+        [self startClient];
     }
-    
-    [self stopClient];
     _isListening = true;
-    [self startClient];
   }
   return true;
 }
@@ -382,8 +379,17 @@
                           withConnectCallback:(ClientConnectCallback)connectCallback
 {
   // Connect to a previously discovered peer
-  return [_client connectToPeerWithPeerIdentifier:peerIdentifier 
-                              withConnectCallback:connectCallback];
+  @synchronized(self)
+  {
+    if (!_client)
+    {
+      connectCallback(@"Start browsing first", 0);
+      return NO;
+    }
+    
+    return [_client connectToPeerWithPeerIdentifier:peerIdentifier
+                                withConnectCallback:connectCallback];
+  }
 }
 
 - (BOOL)killConnection:(NSString *)peerIdentifier

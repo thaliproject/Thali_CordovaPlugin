@@ -10,8 +10,8 @@
     "javascript-state-machine": "^2.3.5",
     "lie": "^3.0.2",
     "long": "^3.0.3",
-    "multiplex": "^6.2.2",
-    "node-ssdp": "thaliproject/node-ssdp#thali-vnext-changes",
+    "multiplex": "^6.7.0",
+    "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
     "node-uuid": "^1.4.7",
     "request": "^2.64.0",
     "urlsafe-base64": "^1.0.0",
@@ -26,7 +26,7 @@
       "depotName": "Thali_CordovaPlugin",
       "branchName": "npmv2.1.0"
     },
-    "btconnectorlib2": "0.2.6",
+    "btconnectorlib2": "0.2.9",
     "jxcore-cordova": "0.1.1"
   },
   "scripts": {

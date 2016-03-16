@@ -112,8 +112,10 @@ TransientState.prototype.pouchDBChangesCancelObject = null;
  * @type {?RefreshTimerManager}
  */
 TransientState.prototype.beaconRefreshTimerManager = null;
+
 /**
- * @type {number} Number of milliseconds since the epoch.
+ * Number of milliseconds since the epoch.
+ * @type {number}
  */
 TransientState.prototype.lastTimeBeaconsWereUpdated = 0;
 
