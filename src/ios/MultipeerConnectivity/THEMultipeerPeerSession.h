@@ -71,5 +71,7 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 
 + (NSString *)peerUUIDFromPeerIdentifier:(NSString *)peerIdentifier;
 
+- (void)changeState:(THEPeerSessionState)newState;
+
 @end
 
