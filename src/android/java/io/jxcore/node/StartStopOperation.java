@@ -3,6 +3,7 @@
  */
 package io.jxcore.node;
 
+import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager.ConnectionManagerState;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager.DiscoveryManagerState;
 
@@ -10,6 +11,7 @@ import org.thaliproject.p2p.btconnectorlib.DiscoveryManager.DiscoveryManagerStat
  * Represents a start or a stop operation.
  */
 public class StartStopOperation {
+    private static final String TAG = StartStopOperation.class.getName();
     private final JXcoreThaliCallback mCallback;
     private final boolean mIsStartOperation;
     private final boolean mShouldStartOrStopListeningToAdvertisementsOnly;
@@ -102,6 +104,14 @@ public class StartStopOperation {
     public String isTargetState(
             ConnectionManagerState connectionManagerState, DiscoveryManagerState discoveryManagerState,
             boolean isDiscovering, boolean isAdvertising) {
+        Log.v(TAG, "isTargetState: Connectivity: " + connectionManagerState
+                + ", discovery: " + discoveryManagerState
+                + ", is discovering: " + isDiscovering
+                + ", is advertising: " + isAdvertising
+                + " - " + (mIsStartOperation ? "Start" : "Stop" ) + " operation: "
+                + (mShouldStartOrStopListeningToAdvertisementsOnly
+                    ? "Should affect listening to advertisements only" : "Should start/stop everything"));
+
         if (mIsStartOperation) {
             // Discovery manager should always be running and we should be listening for advertisements
             if (discoveryManagerState == DiscoveryManagerState.NOT_STARTED) {
@@ -112,16 +122,7 @@ public class StartStopOperation {
                 return "Is not discovering";
             }
 
-            if (mShouldStartOrStopListeningToAdvertisementsOnly) {
-                // Connection manager should not be running and we shouldn't be advertising
-                if (connectionManagerState != ConnectionManagerState.NOT_STARTED) {
-                    return "Connection manager running, but should not be";
-                }
-
-                if (isAdvertising) {
-                    return "Is advertising, but should not be";
-                }
-            } else {
+            if (!mShouldStartOrStopListeningToAdvertisementsOnly) {
                 // Connection manager should be running and we should be advertising
                 if (connectionManagerState == ConnectionManagerState.NOT_STARTED) {
                     return "Connection manager not started";
