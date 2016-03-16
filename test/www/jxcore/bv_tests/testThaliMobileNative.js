@@ -5,17 +5,17 @@ var randomstring = require('randomstring');
 var tape = require('../lib/thali-tape');
 
 var test = tape({
-  setup: function(t) {
+  setup: function (t) {
     t.end();
   },
-  teardown: function(t) {
+  teardown: function (t) {
     // Need to call stops here to ensure we're in stopped state since Mobile is a static
     // singleton
     Mobile('stopListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, "Should be able to call stopListeningForAdvertisments in teardown");
       Mobile('stopAdvertisingAndListening').callNative(function(err) {
         t.notOk(
-          err, 
+          err,
           "Should be able to call stopAdvertisingAndListening in teardown"
         );
         t.end();
