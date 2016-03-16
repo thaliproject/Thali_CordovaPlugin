@@ -271,7 +271,14 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
     var jxcBin =
       path.join(__dirname, 'node_modules', 'jxc', 'bin', 'jxc.bin.js');
     var jxcInstall =
-      spawn('jx', [jxcBin, 'install', jxCoreVersionNumber], { cwd: baseDir });
+      spawn('jx',
+        [
+          jxcBin, 'install', jxCoreVersionNumber,
+          '--use-url',
+          'http://jxcore.azureedge.net/0312/io.jxcore.node.jx'
+        ],
+        { cwd: baseDir }
+      );
     jxcInstall.stdout.on('data', function (data) {
       console.log(data + '');
     });
