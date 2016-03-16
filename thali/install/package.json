@@ -5,7 +5,7 @@
   "main": "install.js",
   "dependencies": {
     "fs-extra-promise": "^0.2.0",
-    "jxc": "^1.0.12",
+    "jxc": "vjrantal/jxc#use-url",
     "lie": "^3.0.1",
     "request": "^2.64.0",
     "unzip": "^0.1.11"
