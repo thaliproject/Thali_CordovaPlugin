@@ -275,7 +275,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
         [
           jxcBin, 'install', jxCoreVersionNumber,
           '--use-url',
-          'http://jxcore.azureedge.net/0312/io.jxcore.node.jx'
+          'http://jxcore.azureedge.net/0312/debug/io.jxcore.node.jx'
         ],
         { cwd: baseDir }
       );
