@@ -191,13 +191,23 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64; // Don't allow more than 
     {
       // We're already in the process of accepting a connection from this peer
       // Just wait for it to complete.
+      
+      NSString *remotePeerUUID = [THEMultipeerPeerSession peerUUIDFromPeerIdentifier:peerIdentifier];
 
       NSLog(@"client: server already connecting");
       @synchronized(_pendingReverseConnections)
       {
         if ([_pendingReverseConnections count] < MAX_PENDING_REVERSE_CONNECTIONS)
         {
-          _pendingReverseConnections[peerIdentifier] = [connectCallback copy];
+          _pendingReverseConnections[remotePeerUUID] = [connectCallback copy];
+          dispatch_async(dispatch_get_main_queue(), ^{
+            _pendingReverseConnectionTimeouts[remotePeerUUID] =
+              [NSTimer scheduledTimerWithTimeInterval:REVERSE_CONNECTION_TIMEOUT
+                                               target:self
+                                             selector:@selector(didTimeoutWaitingForReverseConnection:)
+                                             userInfo:remotePeerUUID
+                                              repeats:NO];
+          });
           return YES;
         }
         else

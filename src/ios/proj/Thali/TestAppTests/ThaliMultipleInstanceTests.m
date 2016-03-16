@@ -934,6 +934,11 @@ static const int DEFAULT_EXPECT_TIMEOUT = 30.0;
 
 - (void)testExistingServerSessionIsReturnedCorrectly
 {
+  // In order for a server to succesfully complete a connection we *MUST* have
+  // a listening application
+  TestEchoServer *echoServer = [[TestEchoServer alloc] init];
+  XCTAssertTrue([echoServer start:4141]);
+
   // First, we wait for app1 to discover app2
   
   XCTestExpectation *app1DiscoveryExpectation = [self expectationWithDescription:@"app1 discovers app2"];
