@@ -325,13 +325,13 @@ test('peerListener - forwardConnection, pleaseConnect === false - with ' +
 test('peerListener - forwardConnection, pleaseConnect === false - with ' +
   'native server and data transfer',
   function (t) {
-    var firstConnection = false;
     var data = new Buffer(10000);
 
     serversManager.on('failedConnection', function () {
       t.fail('connection shouldn\'t fail');
     });
 
+    var connectionCount = 0;
     var nativeServer = net.createServer(function (socket) {
       function endTest() {
         nativeServer.close();
@@ -339,7 +339,8 @@ test('peerListener - forwardConnection, pleaseConnect === false - with ' +
         t.end();
       }
       var localData = new Buffer(0);
-      t.ok(firstConnection, 'Should not get unexpected connection');
+      ++connectionCount;
+      t.equal(connectionCount, 1, 'We should only get one connection');
 
       socket.on('error', function (err) {
         t.fail('Got error on socket - ' + err);
@@ -374,9 +375,11 @@ test('peerListener - forwardConnection, pleaseConnect === false - with ' +
           var mux = multiplex();
           outgoing.pipe(mux).pipe(outgoing);
           var stream = mux.createStream();
-          stream.write(data, function () {
-            firstConnection = true;
-          });
+          stream.write(data);
+          stream.on('error', function (err) {
+            t.fail('stream error ' + err);
+            t.end();
+          })
         });
         outgoing.on('error', function (err) {
           t.fail('createConnection failed - ' + err);
