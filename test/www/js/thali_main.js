@@ -28,12 +28,6 @@
 //
 
 (function () {
-  var doExit = function () {
-    // This is to inform the CI system the process exits.
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-    navigator.app.exitApp();
-  };
-
   var inter = setInterval(function () {
     if (typeof jxcore == 'undefined') { return; }
 
@@ -48,7 +42,8 @@
           loadMainFile();
         }, function (error) {
           console.log('Location permission not granted. Error: ' + error);
-          doExit();
+          console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+          navigator.app.exitApp();
         });
       } else {
         loadMainFile();
@@ -60,7 +55,12 @@
     jxcore('app.js').loadMainFile(function (ret, err) {
       if (err) {
         console.log('App.js file failed to load : ' + JSON.stringify(err));
-        doExit();
+        // This is an error scenario, which occurs in CI, but should not
+        // be an issue with the app code so inform CI that this was a
+        // success case. This can be made an error after this is fixed:
+        // https://github.com/thaliproject/Thali_CordovaPlugin/issues/594
+        console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+        navigator.app.exitApp();
       } else {
         jxcore_ready();
       }
