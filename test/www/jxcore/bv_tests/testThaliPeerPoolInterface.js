@@ -85,3 +85,11 @@ test('#ThaliPeerPoolInterface - make sure we catch kill and dequeue',
       testPeerAction2, 'second item is still in queue');
     t.end();
   });
+
+test('#ThaliPeerPoolInterface - make sure our changes to the action leave ' +
+  'kill as idempotent', function (t) {
+  t.equal(testThaliPeerPool.enqueue(testPeerAction), null, 'good enqueue');
+  t.equal(testPeerAction.kill(), null, 'first kill');
+  t.equal(testPeerAction.kill(), null, 'second NOOP kill');
+  t.end();
+});
