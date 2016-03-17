@@ -196,7 +196,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
     });
   });
 
-  test('can do HTTP requests between peers', function (t) {
+  test('can do HTTP requests between peers without coordinator', function (t) {
     var testPath = '/test';
     var testData = 'foobar';
     var router = express.Router();
@@ -215,7 +215,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
       request(
         {
           uri: requestUri,
-          timeout: 10 * 1000
+          timeout: 10 * 1000 * 1000
         }, function (error, response, body) {
           if (error) {
             t.fail(error, 'GET request failed');
@@ -239,11 +239,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
         return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
       })
       .then(function () {
-        Mobile.firePeerAvailabilityChanged([{
-          peerIdentifier: 'foo',
-          peerAvailable: true,
-          pleaseConnect: false
-        }]);
+        Mobile.wifiPeerAvailabilityChanged('foo');
       });
   });
 
@@ -332,7 +328,7 @@ test('can do HTTP requests between peers', function (t) {
         timeout: 10 * 1000
       }, function (error, response, body) {
           if (error) {
-            t.fail(error, 'GET request failed');
+            t.fail('GET request failed' + error);
             return t.end();
           }
 
@@ -347,6 +343,8 @@ test('can do HTTP requests between peers', function (t) {
 
   thaliMobileNativeWrapper.start(router)
   .then(function () {
+    t.ok(true, 'my servers manage local port ' +
+      thaliMobileNativeWrapper._getServersManagerLocalPort());
     return thaliMobileNativeWrapper.startListeningForAdvertisements();
   })
   .then(function () {
