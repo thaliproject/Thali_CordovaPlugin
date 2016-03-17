@@ -293,8 +293,7 @@ static NSDictionary *stateChanges = nil;
 
       @synchronized(self)
       {
-        NSLog(@"%@ session: connected", _sessionType);
-        [self changeState:THEPeerSessionStateConnected];
+        NSLog(@"%@ session: p2p link connected", _sessionType);
 
         // Start the server output stream.
         NSError * error;
