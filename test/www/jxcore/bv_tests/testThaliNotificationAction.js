@@ -126,7 +126,7 @@ var test = tape({
 
 test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
 
-  t.plan(5);
+  t.plan(6);
 
   httpTester.runServer(globals.expressRouter,
     ThaliConfig.NOTIFICATION_BEACON_PATH,
@@ -135,12 +135,17 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
   var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
     globals.expressServer.address().port, 2000);
 
-  var act = new NotificationAction('hello',
+  var act = new NotificationAction('identifier',
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (res, beaconDetails) {
+    function (peerIdentifier, res, beaconDetails) {
+
+      t.equals(
+        peerIdentifier,
+        'identifier',
+        'peerIdentifier should be hello');
 
       t.equals(
           res,
@@ -175,16 +180,17 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
   var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
     globals.expressServer.address().port, 2000);
 
-  var act = new NotificationAction('hello',
+  var act = new NotificationAction('identifier',
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-    t.equals(
-      res,
-      NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
-      'Response should be HTTP_BAD_RESPONSE');
-  });
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
+        'Response should be HTTP_BAD_RESPONSE');
+    });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
   act.start(keepAliveAgent).then( function (res) {
@@ -205,12 +211,13 @@ test('Test NETWORK_PROBLEM locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-    t.equals(
-      res,
-      NotificationAction.ActionResolution.NETWORK_PROBLEM,
-      'Response should be NETWORK_PROBLEM');
-  });
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.NETWORK_PROBLEM,
+        'Response should be NETWORK_PROBLEM');
+    });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
   act.start(keepAliveAgent).then( function () {
@@ -240,12 +247,13 @@ test('Test timeout locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-    t.equals(
-      res,
-      NotificationAction.ActionResolution.NETWORK_PROBLEM,
-      'Should be NETWORK_PROBLEM caused by timeout');
-  });
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.NETWORK_PROBLEM,
+        'Should be NETWORK_PROBLEM caused by timeout');
+    });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
 
@@ -274,7 +282,8 @@ test('Call the start two times', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
     t.equals(
       res,
       NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
@@ -309,10 +318,11 @@ test('Call the kill before calling the start', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback, connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-    t.equals(res, NotificationAction.ActionResolution.KILLED,
-      'Should be Killed');
-  });
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
+      t.equals(res, NotificationAction.ActionResolution.KILLED,
+        'Should be Killed');
+    });
   act.kill();
   var keepAliveAgent = new http.Agent({ keepAlive: true });
 
@@ -337,12 +347,13 @@ test('Call the kill immediately after the start', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-    t.equals(
-      res,
-      NotificationAction.ActionResolution.KILLED,
-      'Should be KILLED');
-  });
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.KILLED,
+        'Should be KILLED');
+    });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
 
@@ -373,12 +384,13 @@ test('Call the kill while waiting a response from the server', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-    t.equals(
-      res,
-      NotificationAction.ActionResolution.KILLED,
-      'Should be KILLED');
-  });
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.KILLED,
+        'Should be KILLED');
+    });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
 
@@ -421,12 +433,13 @@ test('Test to exceed the max content size locally', function (t) {
     ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-    t.equals(
-      res,
-      NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
-      'HTTP_BAD_RESPONSE should be response when content size is exceeded');
-  });
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
+        'HTTP_BAD_RESPONSE should be response when content size is exceeded');
+    });
 
   var keepAliveAgent = new http.Agent({ keepAlive: true });
   act.start(keepAliveAgent).then( function (res) {
@@ -436,7 +449,7 @@ test('Test to exceed the max content size locally', function (t) {
   });
 });
 
-test('Close the server socket while the client is waiting a response' +
+test('Close the server socket while the client is waiting a response ' +
   'from the server. Local test.',
   function (t) {
 
@@ -455,12 +468,13 @@ test('Close the server socket while the client is waiting a response' +
       globals.targetDeviceKeyExchangeObjects[0], addressBookCallback ,
       connInfo);
 
-    act.eventEmitter.on(NotificationAction.Events.Resolved, function (res) {
-      t.equals(
-        res,
-        NotificationAction.ActionResolution.NETWORK_PROBLEM,
-        'Should be NETWORK_PROBLEM caused closing server socket');
-    });
+    act.eventEmitter.on(NotificationAction.Events.Resolved,
+      function (peerIdentifier, res) {
+        t.equals(
+          res,
+          NotificationAction.ActionResolution.NETWORK_PROBLEM,
+          'Should be NETWORK_PROBLEM caused closing server socket');
+      });
 
     var keepAliveAgent = new http.Agent({ keepAlive: true });
 
@@ -481,6 +495,58 @@ test('Close the server socket while the client is waiting a response' +
     setTimeout( function () {
       globals.kill().then(function () {
         globals.expressServer = null;
+      });
+    }, 2000);
+  });
+
+test('Close the client socket while the client is waiting a response ' +
+  'from the server. Local test.',
+  function (t) {
+
+    t.plan(2);
+
+    // Sets 10000 milliseconds delay for request handling.
+    httpTester.runServer(globals.expressRouter, '/NotificationBeacons', 503,
+      'hello', 1, 10000);
+
+    // Sets 10000 milliseconds TCP timeout.
+    var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
+      globals.expressServer.address().port, 10000);
+
+    var act = new NotificationAction('hello',
+      ThaliMobile.connectionTypes.TCP_NATIVE,
+      globals.targetDeviceKeyExchangeObjects[0], addressBookCallback ,
+      connInfo);
+
+    act.eventEmitter.on(NotificationAction.Events.Resolved,
+      function (peerIdentifier, res) {
+        t.equals(
+          res,
+          NotificationAction.ActionResolution.NETWORK_PROBLEM,
+          'Should be NETWORK_PROBLEM caused closing client socket');
+      });
+
+    var keepAliveAgent = new http.Agent({ keepAlive: true });
+
+    act.start(keepAliveAgent).then( function () {
+      t.fail('Test should return failure: Could not establish TCP connection');
+    }).catch(function (err) {
+      t.equals(
+        err.message,
+        'Could not establish TCP connection',
+        'Should be Could not establish TCP connection');
+    });
+
+    // This kills the client socket after 2 seconds. This should give enough
+    // time to establish a HTTP connection in slow devices but since the server
+    // waits 10 seconds before it answers we end up killing the connection when
+    // the client is waiting the server to answer.
+
+    setTimeout( function () {
+      Object.keys(keepAliveAgent.sockets).forEach(function (key) {
+        keepAliveAgent.sockets[key].forEach(function (socket) {
+          socket.destroy();
+        });
       });
     }, 2000);
   });

@@ -106,7 +106,7 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
     return new Promise(function (resolve, reject) {
 
       // Check if kill is called before entering into this promise
-      if (self.killed()) {
+      if (self.getActionState() === PeerAction.actionState.KILLED) {
         return resolve(null);
       }
 
@@ -122,15 +122,13 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         family: 4
       };
 
-      self._httpRequest = http.request(options, self._responseCallback(self));
+      self._httpRequest = http.request(options,
+        self._responseCallback.bind(self));
 
       self._httpRequest.setTimeout(
         self._peerConnection.getSuggestedTCPTimeout(), function () {
           self._httpRequest.abort();
         });
-
-      // We set _self reference that we'll use in the _responseCallback
-      // self._httpRequest._self = self;
 
       // Error event handler is fired on DNS resolution, TCP protocol,
       // or HTTP protocol errors. Or if the httpRequest.abort is called.
@@ -156,19 +154,8 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
  * @public
  */
 ThaliNotificationAction.prototype.kill = function () {
-  this._complete(ThaliNotificationAction.ActionResolution.KILLED);
   ThaliNotificationAction.super_.prototype.kill.call(this);
-};
-
-/**
- * Returns true if the action is killed.
- *
- * @public
- * @returns {boolean} Returns true if the action is killed and returns false
- * otherwise.
- */
-ThaliNotificationAction.prototype.killed = function () {
-  return this.getActionState() === PeerAction.actionState.KILLED;
+  this._complete(ThaliNotificationAction.ActionResolution.KILLED);
 };
 
 /**
@@ -177,49 +164,47 @@ ThaliNotificationAction.prototype.killed = function () {
  * and size of the response stays under MAX_CONTENT_SIZE.
  *
  * @private
- * @param {ThaliNotificationAction} self Reference to itself
+ * @param {http.IncomingMessage} res Response object to HTTP request
  * @returns {Function} returns a function that http.request can use
- * processed.
  */
-ThaliNotificationAction.prototype._responseCallback = function (self) {
+ThaliNotificationAction.prototype._responseCallback = function (res) {
+  var self = this;
+  var data = [];
+  var totalReceived = 0;
 
-  return function (res) {
-    var data = [];
-    var totalReceived = 0;
+  if (res.statusCode !== 200 ||
+    res.headers['content-type'] !== 'application/octet-stream') {
 
-    if (res.statusCode !== 200 ||
-      res.headers['content-type'] !== 'application/octet-stream') {
+    return self._complete(
+      ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
+  }
 
+  res.on('data', function (chunk) {
+    totalReceived += chunk.length;
+    if (totalReceived >= ThaliNotificationAction.MAX_CONTENT_SIZE_IN_BYTES) {
       return self._complete(
         ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
     }
+    data.push(chunk);
+  });
 
-    res.on('data', function (chunk) {
-      totalReceived += chunk.length;
-      if (totalReceived >= ThaliNotificationAction.MAX_CONTENT_SIZE_IN_BYTES) {
-        return self._complete(
-          ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
-      }
-      data.push(chunk);
-    });
+  res.on('end', function () {
+    var unencryptedKeyId = null;
+    var buffer = Buffer.concat(data);
 
-    res.on('end', function () {
-      var unencryptedKeyId = null;
-      var buffer = Buffer.concat(data);
+    try {
+      // Try to parse beacons from the message body
+      unencryptedKeyId = NotificationBeacons.parseBeacons(buffer,
+        self._ecdhForLocalDevice, self._addressBookCallback);
+    } catch (err) {
+      return self._complete(
+        ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD);
+    }
+    self._complete(
+      ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
+      unencryptedKeyId);
+  });
 
-      try {
-        // Try to parse beacons from the message body
-        unencryptedKeyId = NotificationBeacons.parseBeacons(buffer,
-          self._ecdhForLocalDevice, self._addressBookCallback);
-      } catch (err) {
-        return self._complete(
-          ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD);
-      }
-      self._complete(
-        ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
-        unencryptedKeyId);
-    });
-  };
 };
 
 /**
@@ -250,7 +235,7 @@ ThaliNotificationAction.prototype._complete = function (resolution,
     this._httpRequest && this._httpRequest.abort();
 
     this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
-      resolution, beaconDetails);
+      this.getPeerIdentifier(), resolution, beaconDetails);
 
     if (error && this._reject) {
       this._reject(new Error(error));
@@ -322,6 +307,7 @@ ThaliNotificationAction.ACTION_TYPE = 'GetRequestBeacon';
  * was able to retrieve the beacon
  *
  * @event module:thaliNotificationAction.event:Resolved
+ * @param {string} peerIdentifier Action's peer identifier.
  * @param {ActionResolution} actionResolution Explains how the action was
  * completed.
  * @param {module:thaliNotificationBeacons~ParseBeaconsResponse} beacon
