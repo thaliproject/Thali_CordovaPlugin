@@ -130,6 +130,9 @@ Some test files will also happily run stand-alone so you can run a test directly
 (e.g. `jx runTests.js bv_tests/testTests.js`)
 thus allowing you to easily run and debug individual tests.
 
+It is also possible to run just one test file through the coordinator instead of
+ all of them using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`
+
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.
 

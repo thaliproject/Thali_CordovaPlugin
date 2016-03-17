@@ -6,13 +6,14 @@ var parseargv = require('minimist');
 var argv = parseargv(process.argv.slice(2), {
   default: {
     test: 'UnitTest_app.js',
+    filter: null,
     instanceCount: 2,
     serverLogs: true,
     instanceLogs: true
   },
-  boolean: true
+  boolean: ['serverLogs', 'instanceLogs'],
+  string: ['test', 'filter']
 });
-
 var instanceLogs = {};
 
 var logInstanceOutput = function (data, instanceId) {
@@ -67,7 +68,11 @@ setListeners(testServerInstance, 0);
 
 var testInstances = {};
 var spawnTestInstance = function (instanceId) {
-  var testInstance = spawn('jx', [argv.test]);
+  var instanceArgs = [argv.test];
+  if (argv.filter) {
+    instanceArgs.push(argv.filter);
+  }
+  var testInstance = spawn('jx', instanceArgs);
   setListeners(testInstance, instanceId);
   testInstances[instanceId] = testInstance;
 };
