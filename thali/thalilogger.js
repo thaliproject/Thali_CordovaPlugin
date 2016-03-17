@@ -32,11 +32,12 @@ module.exports = function (tag) {
       new Thalilogger()
     ]
   });
-  logger.addRewriter(function (level, msg, meta) {
+  logger.rewriters.push(function (level, msg, meta) {
     if (!meta.tag) {
       meta.tag = tag;
     }
     return meta;
   });
+  logger.level = 'debug';
   return logger;
 };
