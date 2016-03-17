@@ -291,7 +291,7 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64; // Don't allow more than 
         else
         {
           NSLog(@"client: already connect(ing/ed) to %@", peerIdentifier);
-          connectCallback(@"Aleady connecting", 0);
+          connectCallback(@"Already connect(ing/ed)", 0);
           success = NO;
         }
       }
