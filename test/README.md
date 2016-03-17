@@ -63,6 +63,47 @@ coordination server. Obviously edit the device counts passed on the command line
 environment.
 6. Deploy and run the tests on your two Android or two iPhone devices.
 
+#### Testing Doze and App Standby on Android
+
+Doze and App Standby are two new power-saving features introduced in Android 6.0 (API level 23). 
+For more information, see [Optimizing for Doze and App Standby](http://developer.android.com/training/monitoring-device-state/doze-standby.html).
+To test how the Thali Cordova Plug-in copes with these modes on Android, follow the steps below:
+
+1. Get [the modified Thali Native Test application](https://github.com/thaliproject/Thali_CordovaPlugin_BtLibrary/releases/tag/v0.2.8) for **device A**.
+   This device does not have to be running Android 6.0 - Android 5.0+ (API level 21 or greater) is
+   sufficient as long as the device support acting as a BLE peripheral (has BLE multiple advertisment
+   support).
+ * On the Settings tab of the application clear the peer name (set it empty) - this will utilize the
+   simplified handshake message used by the Cordova Plug-in. You may need to restart the application
+   in order for the setting to be applied.
+2. Apply the following changes to [the `ConnectionHelper` class](https://github.com/thaliproject/Thali_CordovaPlugin/blob/vNext/src/android/java/io/jxcore/node/ConnectionHelper.java)
+   of the Android project:
+ * Use only one UUID ("b6a44ad1-d319-4b3a-815d-8b805a47fb51"):
+
+    ```java
+    private static final String SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51"; //"fa87c0d0-afac-11de-8a39-0800200c9a66";
+    private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
+    ```
+
+ * Start `ConnectionManager` and `DiscoveryManager` explicitly in the constructor (on last line):
+
+    ```java
+    start(50000, true, new JXcoreThaliCallback() { });
+    ```
+
+  * Note that the server port (50000) is arbitrary and will not actually be used.
+ * These changes can be added also to the generated and built Android application (after step 3).
+3. Build the Thali Test app (in this project). See the instructions above (under **Mobile**).
+4. Run the Thali Test app (the one you just generated/built with all the Cordova and JXcore stuff)
+   on **device B** (this device has to run Android 6.0 or greater) and make sure you record its
+   logcat logs. Recommended word for filtering the essential information from the log is "thali".
+5. Active the Doze or the App Standby mode on **device B** using `adb` commands as explained [here](http://developer.android.com/training/monitoring-device-state/doze-standby.html#testing_doze_and_app_standby).
+6. Use **device A** (the one running the Native Test application) to connect to **device B** and
+   check the logs for results.
+ * Note: You can only connect once after which the Thali Test app (on **device B**) needs to be
+   restarted. This is because the Thali Test app will not be aware of disconnect events since it is
+   running a dummy mode.
+
 ### Desktop
 
 All of the test files are designed to be runnable also on the desktop. Tests that require the real mobile environment
@@ -88,6 +129,9 @@ $ jx npm run test-coordinated
 Some test files will also happily run stand-alone so you can run a test directly
 (e.g. `jx runTests.js bv_tests/testTests.js`)
 thus allowing you to easily run and debug individual tests.
+
+It is also possible to run just one test file through the coordinator instead of
+ all of them using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`
 
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.

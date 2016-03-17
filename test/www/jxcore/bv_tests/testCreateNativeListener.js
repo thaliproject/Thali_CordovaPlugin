@@ -1,7 +1,5 @@
 'use strict';
 
-var originalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
-var mockMobile = require('../lib/MockMobile');
 var net = require('net');
 var multiplex = require('multiplex');
 var tape = require('../lib/thali-tape');
@@ -21,7 +19,6 @@ var test = tape({
       t.fail('could not listen, failed with error - ' + err);
       t.end();
     }
-    global.Mobile = mockMobile;
     applicationServer = makeIntoCloseAllServer(net.createServer())
       .listen(0, function () {
         serversManager = new ThaliTCPServersManager(this.address().port);
@@ -33,14 +30,16 @@ var test = tape({
   teardown: function (t) {
     (applicationServer !== null ? applicationServer.closeAllPromise() :
         Promise.resolve())
+      .catch(function (err) {
+        t.fail('applicationServer had stop err ' + err);
+      })
       .then(function () {
         return serversManager !== null && serversManager.stop();
       })
       .catch(function (err) {
-        t.fail(err);
+        t.fail('serversManager had stop failed ' + err);
       })
       .then(function () {
-        global.Mobile = originalMobile;
         t.end();
       });
   }
@@ -95,6 +94,7 @@ test('emits incomingConnectionState', function (t) {
 
 test('emits routerPortConnectionFailed', function (t) {
   // Make the server manager try and connect to a non-existent application
+  var applicationServerPort = applicationServer.address().port;
   applicationServer.closeAllPromise()
     .then(function () {
       applicationServer = null;
@@ -102,10 +102,15 @@ test('emits routerPortConnectionFailed', function (t) {
     })
     .then(function (localPort) {
       // Expect the routerPortConnectionFailed event
-      serversManager.once('routerPortConnectionFailed', function () {
-        t.ok(true, 'routerPortConnectionFailed is emitted');
-        t.end();
-      });
+      serversManager.once(serversManager.ROUTER_PORT_CONNECTION_FAILED,
+        function (routerPortConnectionFailed) {
+          t.equals(routerPortConnectionFailed.routerPort,
+            applicationServerPort, 'tried to connect to right port');
+          t.equals(routerPortConnectionFailed.error.errno,
+            'ECONNREFUSED', 'failed due to refused connection');
+          t.ok(true, 'routerPortConnectionFailed is emitted');
+          t.end();
+        });
 
       var client = net.createConnection(localPort, function () {
         var mux = multiplex();
