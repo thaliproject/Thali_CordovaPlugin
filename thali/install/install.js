@@ -275,7 +275,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
         [
           jxcBin, 'install', jxCoreVersionNumber,
           '--use-url',
-          'http://jxcore.azureedge.net/jxcore-cordova/0.1.2/release/io.jxcore.node.jx '
+          'http://jxcore.azureedge.net/jxcore-cordova/0.1.2/release/io.jxcore.node.jx'
         ],
         { cwd: baseDir }
       );
@@ -305,7 +305,7 @@ module.exports = function (callback, appRootDirectory) {
   var appScriptsFolder =
     path.join(appRootDirectory, 'plugins/org.thaliproject.p2p/scripts');
 
-  var jxCoreVersionNumber = '0.1.1';
+  var jxCoreVersionNumber = '0.1.2';
 
   var thaliProjectName = 'thaliproject';
   var thaliDepotName = 'Thali_CordovaPlugin';
