@@ -122,10 +122,8 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         family: 4
       };
 
-      self._responseCallback.bind(self);
-
       self._httpRequest = http.request(options,
-        self._responseCallback());
+        self._responseCallback.bind(self));
 
       self._httpRequest.setTimeout(
         self._peerConnection.getSuggestedTCPTimeout(), function () {
@@ -166,47 +164,47 @@ ThaliNotificationAction.prototype.kill = function () {
  * and size of the response stays under MAX_CONTENT_SIZE.
  *
  * @private
+ * @param {http.IncomingMessage} res Response object to HTTP request
  * @returns {Function} returns a function that http.request can use
  */
-ThaliNotificationAction.prototype._responseCallback = function () {
+ThaliNotificationAction.prototype._responseCallback = function (res) {
   var self = this;
-  return function (res) {
-    var data = [];
-    var totalReceived = 0;
+  var data = [];
+  var totalReceived = 0;
 
-    if (res.statusCode !== 200 ||
-      res.headers['content-type'] !== 'application/octet-stream') {
+  if (res.statusCode !== 200 ||
+    res.headers['content-type'] !== 'application/octet-stream') {
 
+    return self._complete(
+      ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
+  }
+
+  res.on('data', function (chunk) {
+    totalReceived += chunk.length;
+    if (totalReceived >= ThaliNotificationAction.MAX_CONTENT_SIZE_IN_BYTES) {
       return self._complete(
         ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
     }
+    data.push(chunk);
+  });
 
-    res.on('data', function (chunk) {
-      totalReceived += chunk.length;
-      if (totalReceived >= ThaliNotificationAction.MAX_CONTENT_SIZE_IN_BYTES) {
-        return self._complete(
-          ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
-      }
-      data.push(chunk);
-    });
+  res.on('end', function () {
+    var unencryptedKeyId = null;
+    var buffer = Buffer.concat(data);
 
-    res.on('end', function () {
-      var unencryptedKeyId = null;
-      var buffer = Buffer.concat(data);
+    try {
+      // Try to parse beacons from the message body
+      unencryptedKeyId = NotificationBeacons.parseBeacons(buffer,
+        self._ecdhForLocalDevice, self._addressBookCallback);
+    } catch (err) {
+      return self._complete(
+        ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD);
+    }
+    self._complete(
+      ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
+      unencryptedKeyId);
+  });
 
-      try {
-        // Try to parse beacons from the message body
-        unencryptedKeyId = NotificationBeacons.parseBeacons(buffer,
-          self._ecdhForLocalDevice, self._addressBookCallback);
-      } catch (err) {
-        return self._complete(
-          ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD);
-      }
-      self._complete(
-        ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
-        unencryptedKeyId);
-    });
-  };
 };
 
 /**
