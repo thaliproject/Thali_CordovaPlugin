@@ -1,6 +1,7 @@
 'use strict';
 
 var assert = require('assert');
+var ThaliMobile = require('../thaliMobile');
 
 /** @module thaliPeerDictionary */
 
@@ -117,6 +118,93 @@ module.exports.PeerConnectionInformation = PeerConnectionInformation;
  * @typedef {Object.<module:thaliMobile.connectionTypes, module:thaliPeerDictionary~PeerConnectionInformation>} PeerConnectionDictionary
  */
 // jscs:enable maximumLineLength
+
+/**
+ * @classdesc A dictionary of different connectionTypes and their associated
+ * connection information.
+ *
+ * @public
+ * @constructor
+ */
+function PeerConnectionDictionary() {
+  this._dictionary = {};
+}
+/**
+ * Returns the size of the dictionary.
+ *
+ * @public
+ * @returns {number} Size of the dictionary
+ */
+PeerConnectionDictionary.prototype.size = function () {
+  return Object.keys(this._dictionary).length;
+};
+
+/**
+ * Adds or updates the entry in the dictionary.
+ *
+ * @public
+ * @param {module:thaliMobile.connectionTypes} connectionType
+ * @param {module:thaliPeerDictionary~PeerConnectionInformation} entry
+ * Entry to be added.
+ */
+PeerConnectionDictionary.prototype.set = function (connectionType, entry) {
+  this._dictionary[connectionType] = entry;
+};
+
+/**
+ * Checks if an entry exists for given connection type.
+ *
+ * @public
+ * @param {module:thaliMobile.connectionTypes} connectionType
+ * @returns {module:thaliPeerDictionary~PeerConnectionInformation}
+ */
+PeerConnectionDictionary.prototype.get = function (connectionType) {
+  var entryObject = this._dictionary[connectionType];
+  return entryObject ? entryObject.entry : null;
+};
+
+/**
+ * Checks if the entry exists in the dictionary.
+ *
+ * @public
+ * @param {module:thaliMobile.connectionTypes} connectionType
+ * @returns {boolean} Returns true if the entry exists, false otherwise.
+ */
+PeerConnectionDictionary.prototype.exists = function (connectionType) {
+  return this._dictionary[connectionType] !== undefined;
+};
+
+/**
+ * Removes an entry which matches with the connectionType.
+ *
+ * Errors:
+ * 'entry not found' - can't remove an entry because it is not
+ * found.
+ *
+ * @public
+ * @param {module:thaliMobile.connectionTypes} connectionType
+ */
+PeerConnectionDictionary.prototype.remove = function (connectionType) {
+  var entry = this.get(connectionType);
+  assert(entry !== null, 'entry not found');
+  delete this._dictionary[connectionType];
+};
+
+PeerConnectionDictionary.prototype.getPreferredConnectionType = function () {
+  if (this.size() > 0) {
+    if (this.exists(ThaliMobile.connectionTypes.TCP_NATIVE)) {
+      return ThaliMobile.connectionTypes.TCP_NATIVE;
+    }else if (this.exists(ThaliMobile.connectionTypes.BLUETOOTH)) {
+      return ThaliMobile.connectionTypes.BLUETOOTH;
+    } else if (this.exists(
+        ThaliMobile.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK)) {
+      return ThaliMobile.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
+    }
+  }
+  return null;
+};
+
+module.exports.PeerConnectionDictionary = PeerConnectionDictionary;
 
 // jscs:disable maximumLineLength
 /**
@@ -241,6 +329,18 @@ PeerDictionary.prototype.remove = function (peerId) {
   entry.notificationAction && entry.notificationAction.kill();
   delete this._dictionary[peerId];
 };
+
+/**
+ * Removes all entries from the dictionary.
+ * @public
+ */
+PeerDictionary.prototype.removeAll = function () {
+  var self = this;
+  Object.keys(this._dictionary).forEach(function (key) {
+    self.remove(key);
+  });
+};
+
 
 /**
  * Checks if the entry exists in the dictionary.
