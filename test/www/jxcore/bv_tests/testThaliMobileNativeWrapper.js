@@ -125,6 +125,67 @@ test('error returned with bad router', function (t) {
   });
 });
 
+function trivialEndToEndTest(t, needManualNotify) {
+  var testPath = '/test';
+  var testData = 'foobar';
+  var router = express.Router();
+  router.get(testPath, function (req, res) {
+    res.send(testData);
+  });
+
+  var peerAvailabilityHandler = function (peer) {
+    t.ok(true, 'found a peer! ' + JSON.stringify(peer));
+    thaliMobileNativeWrapper.emitter.removeListener(
+      'nonTCPPeerAvailabilityChangedEvent',
+      peerAvailabilityHandler
+    );
+
+    var requestUri = 'http://127.0.0.1:' + peer.portNumber + testPath;
+    request(
+      {
+        uri: requestUri,
+        timeout: 10 * 1000 * 1000
+      }, function (error, response, body) {
+        if (error) {
+          t.fail(error, 'GET request failed');
+          return t.end();
+        }
+
+        t.equal(response.statusCode, 200, 'Server should return 200');
+        t.equal(body, testData, 'Response body should match testData');
+        t.end();
+      });
+  };
+
+  thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+    peerAvailabilityHandler);
+
+  thaliMobileNativeWrapper.start(router)
+    .then(function () {
+      return thaliMobileNativeWrapper.startListeningForAdvertisements();
+    })
+    .then(function () {
+      return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+    })
+    .then(function () {
+      if (needManualNotify) {
+        Mobile.wifiPeerAvailabilityChanged('foo');        
+      }
+    });
+}
+
+if (!jxcore.utils.OSInfo().isMobile) {
+  // This test primarily exists to make sure that we can easily debug the full
+  // connection life cycle from the HTTP client through thaliMobileNativeWrapper
+  // down through the mux layer down to mobile and back up all the way to the
+  // HTTP server we are hosting for the user. Since it is just meant for
+  // debugging it is only intended to be run on a desktop. So this test really
+  // needs to stay not running when we are on mobile.
+  test('can do HTTP requests between peers without coordinator', function (t) {
+    trivialEndToEndTest(t, true);
+  });
+}
+
 if (!jxcore.utils.OSInfo().isMobile) {
   test('Make sure all services are stopped when we call stop', function (t) {
     // TODO: Make sure we check that advertisingAndListening as well as
@@ -195,55 +256,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
       Mobile.firePeerAvailabilityChanged(getDummyPeers(true));
     });
   });
-
-  test('can do HTTP requests between peers without coordinator', function (t) {
-    var testPath = '/test';
-    var testData = 'foobar';
-    var router = express.Router();
-    router.get(testPath, function (req, res) {
-      res.send(testData);
-    });
-
-    var peerAvailabilityHandler = function (peer) {
-      t.ok(true, 'found a peer! ' + JSON.stringify(peer));
-      thaliMobileNativeWrapper.emitter.removeListener(
-        'nonTCPPeerAvailabilityChangedEvent',
-        peerAvailabilityHandler
-      );
-
-      var requestUri = 'http://127.0.0.1:' + peer.portNumber + testPath;
-      request(
-        {
-          uri: requestUri,
-          timeout: 10 * 1000 * 1000
-        }, function (error, response, body) {
-          if (error) {
-            t.fail(error, 'GET request failed');
-            return t.end();
-          }
-
-          t.equal(response.statusCode, 200, 'Server should return 200');
-          t.equal(body, testData, 'Response body should match testData');
-          t.end();
-        });
-    };
-
-    thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-      peerAvailabilityHandler);
-
-    thaliMobileNativeWrapper.start(router)
-      .then(function () {
-        return thaliMobileNativeWrapper.startListeningForAdvertisements();
-      })
-      .then(function () {
-        return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
-      })
-      .then(function () {
-        Mobile.wifiPeerAvailabilityChanged('foo');
-      });
-  });
-
-
+  
   test('thaliMobileNativeWrapper is stopped when ' +
     'incomingConnectionToPortNumberFailed is received',
     function (t) {
@@ -307,52 +320,7 @@ if (!tape.coordinated) {
 }
 
 test('can do HTTP requests between peers', function (t) {
-  var testPath = '/test';
-  var testData = 'foobar';
-  var router = express.Router();
-  router.get(testPath, function (req, res) {
-    res.send(testData);
-  });
-
-  var peerAvailabilityHandler = function (peer) {
-    t.ok(true, 'found a peer! ' + JSON.stringify(peer));
-    thaliMobileNativeWrapper.emitter.removeListener(
-      'nonTCPPeerAvailabilityChangedEvent',
-      peerAvailabilityHandler
-    );
-
-    var requestUri = 'http://127.0.0.1:' + peer.portNumber + testPath;
-    request(
-      {
-        uri: requestUri,
-        timeout: 10 * 1000
-      }, function (error, response, body) {
-          if (error) {
-            t.fail('GET request failed' + error);
-            return t.end();
-          }
-
-          t.equal(response.statusCode, 200, 'Server should return 200');
-          t.equal(body, testData, 'Response body should match testData');
-          t.end();
-        });
-  };
-
-  thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-    peerAvailabilityHandler);
-
-  thaliMobileNativeWrapper.start(router)
-  .then(function () {
-    t.ok(true, 'my servers manage local port ' +
-      thaliMobileNativeWrapper._getServersManagerLocalPort());
-    return thaliMobileNativeWrapper.startListeningForAdvertisements();
-  })
-  .then(function () {
-    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
-  })
-  .then(function () {
-    t.ok(true, 'was able call necessary starts');
-  });
+  trivialEndToEndTest(t, false);
 });
 
 
