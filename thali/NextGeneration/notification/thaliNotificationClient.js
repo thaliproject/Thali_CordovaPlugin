@@ -5,6 +5,8 @@ var ThaliMobile = require('../thaliMobile');
 var ThaliNotificationAction = require('./thaliNotificationAction.js');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction.js');
 var assert = require('assert');
+var EventEmitter = require('events').EventEmitter;
+var util = require('util');
 
 /** @module thaliNotificationClient */
 
@@ -36,6 +38,7 @@ var assert = require('assert');
 function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice,
                                  addressBookCallback ) {
 
+  EventEmitter.call(this);
   assert(thaliPeerPoolInterface,
     ThaliNotificationClient.Errors.PEERPOOL_NOT_NULL);
   assert(ecdhForLocalDevice,
@@ -44,13 +47,15 @@ function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice,
     ThaliNotificationClient.Errors.ADDRESS_BOOK_CALLBACK_NOT_NULL);
 
   this.peerDictionary = new PeerDictionary.PeerDictionary();
-  this._thaliMobileListenerRegistered = false;
+  this._running = false;
   this._thaliPeerPoolInterface = thaliPeerPoolInterface;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
 
   this._prioritizedReplicationList = null;
 }
+
+util.inherits(ThaliNotificationClient, EventEmitter);
 
 /**
  * A dictionary used to track the state of peers we have received notifications
@@ -121,8 +126,8 @@ ThaliNotificationClient.prototype.start =
 
     this._prioritizedReplicationList = prioritizedReplicationList;
 
-    if (!this._thaliMobileListenerRegistered) {
-      this._thaliMobileListenerRegistered = true;
+    if (!this._started) {
+      this._running = true;
       ThaliMobile.emitter.on('peerAvailabilityChanged',
         this._peerAvailabilityChanged);
     }
@@ -135,8 +140,8 @@ ThaliNotificationClient.prototype.start =
  */
 ThaliNotificationClient.prototype.stop = function () {
 
-  if (this._thaliMobileListenerRegistered) {
-    this._thaliMobileListenerRegistered = false;
+  if (this._started) {
+    this._running = false;
 
     ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
       this._peerAvailabilityChanged);
@@ -340,6 +345,7 @@ ThaliNotificationClient.prototype._noHostIdentifierExists = function (peer) {
   }
 };
 
+
 /**
  * This function registers listener to action
  * @private
@@ -354,19 +360,87 @@ ThaliNotificationClient.prototype._createAndEnqueueAction =
       this._ecdhForLocalDevice, this._addressBookCallback,
       connection);
 
-    var resolved = function (self) {
-      return function (par) {
-        console.log(par);
-      };
-    };
-
     action.eventEmitter.on(ThaliNotificationAction.Events.Resolved,
-      resolved(this));
+      this._resolved.bind(this));
 
     peerEntry.notificationAction = action;
     this._thaliPeerPoolInterface.enqueue(action);
     this.peerDictionary.addUpdateEntry(identifier, peerEntry);
   };
+
+/**
+ * + BEACONS_RETRIEVED_AND_PARSED
+ *  + Mark the entry in the dictionary as RESOLVED and fire
+ *  {@link module:thaliNotificationClient.event:peerAdvertisesDataForUs}
+ * + BEACONS_RETRIEVED_BUT_BAD
+ *  + This indicates a malfunctioning peer. We need to assume they are bad all
+ *  up and mark their entry as RESOLVED without taking any further action. This
+ *  means we will ignore this peerIdentifier in the future.
+ * + HTTP_BAD_RESPONSE
+ *  + This tells us that the peer is there but not in good shape. But we will
+ *  give them the benefit of the doubt. We will wait 100 ms if we are in the
+ *  foreground and 500 ms if we are in the background (the later only applies
+ *  to Android) and then create a new action (remember, prefer TCP_NATIVE) and
+ *  then enqueue it. Make sure to set the dictionary entry's state to
+ *  WAITING and when the timer is up and we enqueue to CONTROLLED_BY_POOL.
+ * + NETWORK_problem
+ *  + Treat the same as HTTP_BAD_RESPONSE
+ * + KILLED
+ *  + We MUST check the value of the notificationAction on the associated
+ *  dictionary entry with the notificationAction that this handler was created
+ *  on. If they are different then this means that this class was the one who
+ *  called kill and so we can ignore this event. If they are the same then it
+ *  means that the ThaliPeerPoolInterface called kill (due to resource
+ *  exhaustion). Having the pool kill us is a pretty extreme event, it means
+ *  we have so many peerIdentifiers that we blew up the pool. So at that point
+ *  the best thing for us to do is to just delete the entire entry for this
+ *  peerIdentifier and move on.
+ *
+ */
+
+ThaliNotificationClient.prototype._resolved =
+  function (peerId, resolution, beaconDetails) {
+
+    if (!this._running) {
+      // Ignore events if the client is not running
+      return;
+    }
+
+    console.log(peerId);
+    console.log(resolution);
+
+    var entry = this.peerDictionary.get(peerId);
+
+    if (resolution ===
+      ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED) {
+      entry.peerState = PeerDictionary.peerState.RESOLVED;
+
+      var peerAdvertises = new PeerAdvertisesEventData(
+
+      );
+
+
+      this.emit('peerAdvertisesDataForUs', peerAdvertises);
+
+    } else if (resolution ===
+      ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD) {
+
+      entry.peerState = PeerDictionary.peerState.RESOLVED;
+
+    } else if (resolution ===
+      ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD ||
+      resolution ===
+      ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD) {
+      entry.peerState = PeerDictionary.peerState.WAITING;
+      //todo: enqueue
+    } else if (resolution ===
+      ThaliNotificationAction.ActionResolution.KILLED) {
+      //todo: killed
+
+      entry.peerState = PeerDictionary.peerState.RESOLVED;
+    }
+
+  }
 
 
 /**
@@ -429,6 +503,39 @@ ThaliNotificationClient.ACTION_TYPE = 'GetRequestBeacon';
  * @property {module:thaliMobile.connectionTypes} connectionType The type of
  * connection that will be used when connecting to this peer.
  */
+
+/**
+ * @classdesc Data of peerAdvertisesDataForUs event
+ *
+ * @param {buffer} keyId The buffer contains the ECDH public key for the
+ * peer.
+ * @param {string} pskIdentifyField
+ * @param {buffer} psk This is the calculated pre-shared key that will be
+ * needed to establish a TLS PSK connection.
+ * @param {string} hostAddress The IP/DNS address of the peer
+ * @param {number} portNumber The TCP/IP port at the hostAddress the peer
+ * can be contacted on
+ * @param {number} suggestedTCPTimeout Provides a hint to what time out to
+ * put on the TCP connection. For some transports a handshake can take quite a
+ * long time.
+ * @param {module:thaliMobile.connectionTypes} connectionType The type of
+ * connection that will be used when connecting to this peer.
+ */
+function PeerAdvertisesEventData(keyId, pskIdentifyField,
+                                 psk, hostAddress, portNumber,
+                                 suggestedTCPTimeout, connectionType) {
+  this.keyId = keyId;
+  this.pskIdentifyField = pskIdentifyField;
+  this.psk = psk;
+  this.hostAddress = hostAddress;
+  this.portNumber = portNumber;
+  this.suggestedTCPTimeout = suggestedTCPTimeout;
+  this.connectionType = connectionType;
+}
+
+module.exports = PeerAdvertisesEventData;
+
+
 
 ThaliNotificationClient.Errors = {
   PEERPOOL_NOT_NULL : 'thaliPeerPoolInterface must not be null',

@@ -273,7 +273,7 @@ test('Try to run action', function (t) {
 
   var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterfaceStub,
-      globals.sourceKeyExchangeObject, addressBookCallback);
+      globals.targetDeviceKeyExchangeObjects[0], addressBookCallback);
 
   notificationClient.start();
 
