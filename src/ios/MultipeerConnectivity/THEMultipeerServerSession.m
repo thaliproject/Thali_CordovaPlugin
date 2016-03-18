@@ -87,7 +87,8 @@
   @synchronized(self)
   {
     _clientPort = clientPort;
-    
+    [self changeState:THEPeerSessionStateConnected];
+
     if (_connectCallback)
     {
       _connectCallback([self remotePeerUUID], clientPort, serverPort);
