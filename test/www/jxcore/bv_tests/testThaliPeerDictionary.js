@@ -33,17 +33,22 @@ var test = tape({
  */
 function createEntry(name, state) {
 
+  var connectionInfo =
+    new PeerDictionary.PeerConnectionInformation('127.0.0.1', 3001, 10);
+
   var myPublicKey = crypto.createECDH(SECP256K1);
   myPublicKey.generateKeys();
 
+  // JSON.parse(JSON.stringify()) doesn't properly handle callback functions
+  // that's why we pass empty object as 4th parameter instead of a callback
+  // function.
   var act = new ThaliNotificationAction(name,
-    ThaliMobile.connectionTypes.BLUETOOTH, myPublicKey, null);
+    ThaliMobile.connectionTypes.BLUETOOTH, myPublicKey, {}, connectionInfo );
 
   act._nameTag = name;
 
   var peerConnInfo = {};
-  peerConnInfo[ThaliMobile.connectionTypes.TCP_NATIVE] =
-    new PeerDictionary.PeerConnectionInformation('127.0.0.1', 3001, 10);
+  peerConnInfo[ThaliMobile.connectionTypes.TCP_NATIVE] = connectionInfo;
 
   peerConnInfo[ThaliMobile.connectionTypes.TCP_NATIVE]._nameTag = name;
 
@@ -146,6 +151,7 @@ test('Test PeerDictionary basic functionality', function (t) {
   dictionary.addUpdateEntry(ENTRY2, entry2);
   t.equal(dictionary._entryCounter, 2, 'Entry counter must be 2');
   t.equal(dictionary.size(), 2, 'Size must be 2');
+
 
   assert.deepEqual(dictionary.get('entry1'), entry1Copy);
   assert.deepEqual(dictionary.get('entry2'), entry2Copy);

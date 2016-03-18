@@ -9,6 +9,9 @@ var randomString = require('randomstring');
 var Promise = require('lie');
 var logger = require('thali/thalilogger')('testUtils');
 
+var notificationBeacons =
+  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
     return Promise.resolve();
@@ -71,7 +74,8 @@ module.exports.logMessageToScreen = function (message) {
   }
 };
 
-var myName;
+var myName = '';
+var myNameCallback = null;
 
 /**
  * Set the name given used by this device. The name is
@@ -80,6 +84,7 @@ var myName;
  */
 module.exports.setName = function (name) {
   myName = name;
+  myNameCallback && myNameCallback(myName);
 };
 
 /**
@@ -94,8 +99,8 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
     logCallback = callback;
   });
 
-  Mobile('getMyName').registerAsync(function (callback) {
-    callback(myName);
+  Mobile('setMyNameCallback').registerAsync(function (callback) {
+    myNameCallback = callback;
   });
 } else {
   logCallback = function (message) {
@@ -124,34 +129,54 @@ module.exports.tmpDirectory = function () {
 };
 
 /**
- * Logs the result of BLE multiple advertisement feature support check on
- * Android.
+ * Returns a promise that resolved with true or false depending on if this
+ * device has the hardware capabilities required.
+ * On Android, checks the BLE multiple advertisement feature and elsewhere
+ * always resolves with true.
  */
-if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
-  var checkBleMultipleAdvertisementSupport = function () {
-    Mobile('isBleMultipleAdvertisementSupported').callNative(function (result) {
-      switch (result) {
-        case 'Not resolved': {
-          logger.info('BLE multiple advertisement support not yet resolved');
-          setTimeout(checkBleMultipleAdvertisementSupport, 5000);
-          break;
-        }
-        case 'Supported': {
-          logger.info('BLE multiple advertisement supported');
-          break;
-        }
-        case 'Not supported': {
-          logger.info('BLE multiple advertisement not supported');
-          break;
-        }
-        default: {
-          logger.warn('BLE multiple advertisement issue: ' + result);
-        }
-      }
-    });
-  };
-  checkBleMultipleAdvertisementSupport();
-}
+module.exports.hasRequiredHardware = function () {
+  return new Promise(function (resolve) {
+    if (jxcore.utils.OSInfo().isAndroid) {
+      var checkBleMultipleAdvertisementSupport = function () {
+        Mobile('isBleMultipleAdvertisementSupported').callNative(
+          function (error, result) {
+            if (error) {
+              logger.warn('BLE multiple advertisement error: ' + error);
+              resolve(false);
+              return;
+            }
+            switch (result) {
+              case 'Not resolved': {
+                logger.info(
+                  'BLE multiple advertisement support not yet resolved'
+                );
+                setTimeout(checkBleMultipleAdvertisementSupport, 5000);
+                break;
+              }
+              case 'Supported': {
+                logger.info('BLE multiple advertisement supported');
+                resolve(true);
+                break;
+              }
+              case 'Not supported': {
+                logger.info('BLE multiple advertisement not supported');
+                resolve(false);
+                break;
+              }
+              default: {
+                logger.warn('BLE multiple advertisement issue: ' + result);
+                resolve(false);
+              }
+            }
+          }
+        );
+      };
+      checkBleMultipleAdvertisementSupport();
+    } else {
+      resolve(true);
+    }
+  });
+};
 
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
@@ -173,3 +198,26 @@ module.exports.getRandomlyNamedTestPouchDBInstance = function () {
   });
   return module.exports.getTestPouchDBInstance(randomPouchDBName);
 };
+
+
+var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
+  notificationBeacons.EXPIRATION_SIZE;
+
+module.exports.extractPreAmble = function (beaconStreamWithPreAmble) {
+  return beaconStreamWithPreAmble.slice(0, preAmbleSizeInBytes);
+}
+
+module.exports.extractBeacon = function (beaconStreamWithPreAmble, beaconIndexToExtract) {
+  var beaconStreamNoPreAmble =
+    beaconStreamWithPreAmble.slice(preAmbleSizeInBytes);
+  var beaconCount = 0;
+  for (var i = 0; i < beaconStreamNoPreAmble.length;
+       i += notificationBeacons.BEACON_SIZE) {
+    if (beaconCount === beaconIndexToExtract) {
+      return beaconStreamNoPreAmble
+        .slice(i, i + notificationBeacons.BEACON_SIZE);
+    }
+    ++beaconCount;
+  }
+  return null;
+}
