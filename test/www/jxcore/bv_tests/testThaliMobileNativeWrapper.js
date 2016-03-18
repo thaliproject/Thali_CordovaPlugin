@@ -408,4 +408,5 @@ test('We successfully receive and replay discoveryAdvertisingStateUpdate',
     // TODO: This really needs to be run live
     t.ok('IMPLEMENT ME!!!!');
     t.end();
-});
+  }
+);
