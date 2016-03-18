@@ -177,7 +177,7 @@ function trivialEndToEndTest(t, needManualNotify) {
       }
     });
 }
-
+/*
 var connectionTester = function (port, callback) {
   var connection = net.createConnection(port, function () {
     connection.destroy();
@@ -254,7 +254,7 @@ test('all services are stopped when we call stop', function (t) {
     );
   });
 });
-
+*/
 if (!jxcore.utils.OSInfo().isMobile) {
   // This test primarily exists to make sure that we can easily debug the full
   // connection life cycle from the HTTP client through thaliMobileNativeWrapper
