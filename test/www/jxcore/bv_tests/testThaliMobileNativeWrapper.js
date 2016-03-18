@@ -2,7 +2,7 @@
 
 var express = require('express');
 var request = require('request');
-var net = require('net');
+//var net = require('net');
 
 if (typeof Mobile === 'undefined') {
   return;
