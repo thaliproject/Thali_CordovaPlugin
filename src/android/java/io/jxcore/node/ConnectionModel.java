@@ -168,20 +168,24 @@ public class ConnectionModel {
      * @return True, if the thread was found, the connection was closed and the thread was removed from the list.
      */
     public synchronized boolean closeAndRemoveIncomingConnectionThread(final long incomingThreadId) {
-        boolean wasFoundClosedAndRemoved = false;
+        boolean wasFoundAndClosed = false;
 
         for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
             if (incomingSocketThread != null && incomingSocketThread.getId() == incomingThreadId) {
                 Log.i(TAG, "closeAndRemoveIncomingConnectionThread: Closing and removing incoming connection thread with ID " + incomingThreadId);
                 mIncomingSocketThreads.remove(incomingSocketThread);
                 incomingSocketThread.close();
-                wasFoundClosedAndRemoved = true;
+                wasFoundAndClosed = true;
                 break;
             }
         }
 
+        if (!wasFoundAndClosed) {
+            Log.e(TAG, "closeAndRemoveIncomingConnectionThread: Failed to find an incoming connection thread with ID " + incomingThreadId);
+        }
+
         Log.d(TAG, "closeAndRemoveIncomingConnectionThread: " + mIncomingSocketThreads.size() + " incoming connection(s) left");
-        return wasFoundClosedAndRemoved;
+        return wasFoundAndClosed;
     }
 
     /**

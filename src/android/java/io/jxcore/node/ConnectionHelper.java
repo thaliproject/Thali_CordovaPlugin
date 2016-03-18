@@ -544,12 +544,18 @@ public class ConnectionHelper
                 }
             });
         } catch (IOException e) {
-            Log.e(TAG, "onConnected: Failed to create an outgoing connection thread instance: " + e.getMessage(), e);
+            Log.e(TAG, "handleOutgoingConnection: Failed to create an outgoing connection thread instance: " + e.getMessage(), e);
 
             if (callback != null) {
                 callback.callOnConnectCallback(
                         "Failed to create an outgoing connection thread instance: " + e.getMessage(), null);
                 mConnectionModel.removeOutgoingConnectionCallback(finalPeerId);
+            }
+
+            try {
+                bluetoothSocket.close();
+            } catch (IOException e2) {
+                Log.e(TAG, "handleOutgoingConnection: Failed to close the Bluetooth socket: " + e.getMessage(), e);
             }
 
             newOutgoingSocketThread = null;
@@ -611,7 +617,14 @@ public class ConnectionHelper
                 }
             });
         } catch (IOException e) {
-            Log.e(TAG, "onConnected: Failed to create an incoming connection thread instance: " + e.getMessage(), e);
+            Log.e(TAG, "handleIncomingConnection: Failed to create an incoming connection thread instance: " + e.getMessage(), e);
+
+            try {
+                bluetoothSocket.close();
+            } catch (IOException e2) {
+                Log.e(TAG, "handleIncomingConnection: Failed to close the Bluetooth socket: " + e.getMessage(), e);
+            }
+
             newIncomingSocketThread = null;
         }
 
