@@ -189,11 +189,12 @@ function (portNumber, callback) {
   } else {
     incomingConnectionsServer = net.createServer(function (socket) {
       var proxySocket = net.connect(portNumber, function () {
-        proxySocket.on('error', function (err) {
-          logger.debug('error on proxy socket - ' + err);
-        });
-        proxySocket.on('close', socket.destroy);
+        logger.debug('proxy socket connected');
       });
+      proxySocket.on('error', function (err) {
+        logger.debug('error on proxy socket - ' + err);
+      });
+      proxySocket.on('close', socket.destroy);
       proxySocket.pipe(socket).pipe(proxySocket);
       socket.on('error', function (err) {
         logger.debug('error on socket - ' + err);
