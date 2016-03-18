@@ -3,26 +3,36 @@
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thali-tape');
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var logger = require('thali/thalilogger')('testThaliMobileNative');
+
+// A variable that can be used to store a server
+// that will get closed in teardown.
+var serverToBeClosed = null;
 
 var test = tape({
   setup: function (t) {
+    serverToBeClosed = {
+      closeAll: function (callback) {
+        callback();
+      }
+    };
     t.end();
   },
   teardown: function (t) {
-    // Need to call stops here to ensure we're in stopped state since Mobile is
-    // a static singleton
-    Mobile('stopListeningForAdvertisements').callNative(function (err) {
-      t.notOk(
-        err,
-        'Should be able to call stopListeningForAdvertisments in teardown'
-      );
-      Mobile('stopAdvertisingAndListening').callNative(function (err) {
+    serverToBeClosed.closeAll(function () {
+      Mobile('stopListeningForAdvertisements').callNative(function (err) {
         t.notOk(
           err,
-          'Should be able to call stopAdvertisingAndListening in teardown'
+          'Should be able to call stopListeningForAdvertisments in teardown'
         );
-        t.end();
+        Mobile('stopAdvertisingAndListening').callNative(function (err) {
+          t.notOk(
+            err,
+            'Should be able to call stopAdvertisingAndListening in teardown'
+          );
+          t.end();
+        });
       });
     });
   }
@@ -153,6 +163,8 @@ test('Can connect to a remote peer', function (t) {
   var echoServer = net.createServer(function (socket) {
     socket.pipe(socket);
   });
+  echoServer = makeIntoCloseAllServer(echoServer);
+  serverToBeClosed = echoServer;
 
   function onConnectSuccess(err, connection) {
 
@@ -179,7 +191,7 @@ test('Can connect to a remote peer', function (t) {
       t.ok(connection.clientPort === 0,
         'forward connection must have clientPort == 0');
       t.ok(connection.serverPort === 0,
-        'forward connectionmust have serverPort == 0');
+        'forward connection must have serverPort == 0');
     }
     else
     {
@@ -194,7 +206,8 @@ test('Can connect to a remote peer', function (t) {
   }
 
   function onConnectFailure () {
-    // NOOP
+    t.fail('Connect failed!');
+    t.end();
   }
 
   echoServer.listen(0, function () {
@@ -235,11 +248,13 @@ test('Can shift large amounts of data', function (t) {
     });
     socket.on('end', socket.end);
     socket.on('error', function (error) {
-      logger.info('Error on echo server socket: ' + error);
+      logger.warn('Error on echo server socket: ' + error);
       t.fail();
     });
     sockets[socket.remotePort] = socket;
   });
+  echoServer = makeIntoCloseAllServer(echoServer);
+  serverToBeClosed = echoServer;
 
   var dataSize = 4096;
   var toSend = randomstring.generate(dataSize);
@@ -247,7 +262,7 @@ test('Can shift large amounts of data', function (t) {
   function shiftData(sock, reverseConnection) {
 
     sock.on('error', function (error) {
-      logger.info('Error on client socket: ' + error);
+      logger.warn('Error on client socket: ' + error);
       t.fail();
     });
 
@@ -346,7 +361,8 @@ test('Can shift large amounts of data', function (t) {
   }
 
   function onConnectFailure() {
-    // NOOP
+    t.fail('Connect failed!');
+    t.end();
   }
 
   Mobile('peerAvailabilityChanged').registerToNative(function (peers) {

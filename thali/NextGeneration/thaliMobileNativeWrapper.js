@@ -21,12 +21,15 @@ var gServersManager = null;
 var gServersManagerLocalPort = 0;
 var gNonTcpNetworkStatus = null;
 
-// Used only for testing.
+// Exports below only used for testing.
 module.exports._getServersManagerLocalPort = function () {
   return gServersManagerLocalPort;
 };
 
-// Used only for testing.
+module.exports._getRouterServerPort = function () {
+  return gRouterServerPort;
+};
+
 module.exports._isStarted = function () {
   return states.started;
 };
@@ -613,7 +616,7 @@ var peerAvailabilityChangedQueue = new PromiseQueue();
 var handlePeerAvailabilityChanged = function (peer) {
   if (!states.started) {
     logger.debug('Filtered out nonTCPPeerAvailabilityChangedEvent ' +
-                'due to not being in started state');
+                 'due to not being in started state');
     return;
   }
   return peerAvailabilityChangedQueue.enqueue(function (resolve) {
@@ -735,73 +738,88 @@ module.exports.routerFailureReason = {
  */
 module.exports.emitter = new EventEmitter();
 
-// Function to register a method to the native side
-// and inform that the registration was done.
-var registerToNative = function (methodName, callback) {
-  Mobile(methodName).registerToNative(callback);
-  Mobile('didRegisterToNative').callNative(methodName, function () {
-    logger.debug('Method %s registered to native', methodName);
+/**
+ * Function to register event handler functions
+ * for events emitted from the native side.
+ * 
+ * Exported only so that it can be used from automated
+ * tests to make sure right functions are registered
+ * certain tests are executed.
+ *
+ * @private
+ */
+module.exports._registerToNative = function () {
+  // Function to register a method to the native side
+  // and inform that the registration was done.
+  var registerToNative = function (methodName, callback) {
+    Mobile(methodName).registerToNative(callback);
+    Mobile('didRegisterToNative').callNative(methodName, function () {
+      logger.debug('Method %s registered to native', methodName);
+    });
+  };
+
+  registerToNative('peerAvailabilityChanged', function (peers) {
+    if (typeof peers.forEach !== 'function') {
+      peers = [peers];
+    }
+    peers.forEach(function (peer) {
+      handlePeerAvailabilityChanged(peer);
+    });
   });
+
+  registerToNative('discoveryAdvertisingStateUpdateNonTCP',
+    function (discoveryAdvertisingStateUpdateValue) {
+      logger.debug('discoveryAdvertisingStateUpdateNonTCP: %s',
+        JSON.stringify(discoveryAdvertisingStateUpdateValue));
+      module.exports.emitter.emit(
+        'discoveryAdvertisingStateUpdateNonTCP',
+        discoveryAdvertisingStateUpdateValue
+      );
+    }
+  );
+
+  registerToNative('networkChanged', function (networkChangedValue) {
+    logger.debug('networkChanged: %s', JSON.stringify(networkChangedValue));
+    // The value needs to be assigned here to gNonTcpNetworkStatus
+    // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
+    // can return it.
+    gNonTcpNetworkStatus = networkChangedValue;
+    module.exports.emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
+  });
+
+  registerToNative('incomingConnectionToPortNumberFailed',
+    function (portNumber) {
+      logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
+
+      if (!states.started) {
+        logger.info('got incomingConnectionToPortNumberFailed while not in ' +
+          'start');
+        return;
+      }
+
+      if (gServersManagerLocalPort !== portNumber) {
+        logger.info('got incomingConnectionToPortNumberFailed for port ' +
+          portNumber + ' but we are listening on ' + gServersManagerLocalPort);
+        return;
+      }
+
+      // Enqueue the restart to prevent other calls being handled
+      // while the restart is ongoing.
+      gPromiseQueue.enqueueAtTop(stop())
+        .catch(function (err) {
+          return err;
+        })
+        .then(function (err) {
+          module.exports.emitter.emit('incomingConnectionToPortNumberFailed',
+            {
+              reason: module.exports.routerFailureReason.NATIVE_LISTENER,
+              errors: err ? [err] : [],
+              routerPort: portNumber
+            });
+        });
+    }
+  );
 };
 
-registerToNative('peerAvailabilityChanged', function (peers) {
-  if (typeof peers.forEach !== 'function') {
-    peers = [peers];
-  }
-  peers.forEach(function (peer) {
-    handlePeerAvailabilityChanged(peer);
-  });
-});
-
-registerToNative('discoveryAdvertisingStateUpdateNonTCP',
-  function (discoveryAdvertisingStateUpdateValue) {
-    logger.debug('discoveryAdvertisingStateUpdateNonTCP: %s',
-      JSON.stringify(discoveryAdvertisingStateUpdateValue));
-    module.exports.emitter.emit(
-      'discoveryAdvertisingStateUpdateNonTCP',
-      discoveryAdvertisingStateUpdateValue
-    );
-  }
-);
-
-registerToNative('networkChanged', function (networkChangedValue) {
-  logger.debug('networkChanged: %s', JSON.stringify(networkChangedValue));
-  // The value needs to be assigned here to gNonTcpNetworkStatus
-  // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
-  // can return it.
-  gNonTcpNetworkStatus = networkChangedValue;
-  module.exports.emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
-});
-
-registerToNative('incomingConnectionToPortNumberFailed',
-  function (portNumber) {
-    logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
-
-    if (!states.started) {
-      logger.info('got incomingConnectionToPortNumberFailed while not in ' +
-        'start');
-      return;
-    }
-
-    if (gServersManagerLocalPort !== portNumber) {
-      logger.info('got incomingConnectionToPortNumberFailed for port ' +
-        portNumber + ' but we are listening on ' + gServersManagerLocalPort);
-      return;
-    }
-
-    // Enqueue the restart to prevent other calls being handled
-    // while the restart is ongoing.
-    gPromiseQueue.enqueueAtTop(stop())
-      .catch(function (err) {
-        return err;
-      })
-      .then(function (err) {
-        module.exports.emitter.emit('incomingConnectionToPortNumberFailed',
-          {
-            reason: module.exports.routerFailureReason.NATIVE_LISTENER,
-            errors: err ? [err] : [],
-            routerPort: portNumber
-          });
-      });
-  }
-);
+// Perform the registration when this file first required.
+module.exports._registerToNative();

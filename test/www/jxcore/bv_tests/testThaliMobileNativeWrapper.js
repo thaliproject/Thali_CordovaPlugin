@@ -2,6 +2,7 @@
 
 var express = require('express');
 var request = require('request');
+//var net = require('net');
 
 if (typeof Mobile === 'undefined') {
   return;
@@ -13,6 +14,9 @@ var tape = require('../lib/thali-tape');
 
 var test = tape({
   setup: function (t) {
+    // Make sure right handlers are registered in case
+    // some other test has overwritten them.
+    thaliMobileNativeWrapper._registerToNative();
     t.end();
   },
   teardown: function (t) {
@@ -23,7 +27,7 @@ var test = tape({
     .catch(function (err) {
       t.fail('teardown failed with ' + JSON.stringify(err));
       t.end();
-    })
+    });
   }
 });
 
@@ -40,7 +44,7 @@ var testIdempotentFunction = function (t, functionName) {
     t.notOk(error, 'still no errors');
     t.end();
   })
-  .catch(function(error) {
+  .catch(function (error) {
     t.fail('testIdempotentFunction failed with ' + JSON.stringify(error));
     t.end();
   });
@@ -169,11 +173,88 @@ function trivialEndToEndTest(t, needManualNotify) {
     })
     .then(function () {
       if (needManualNotify) {
-        Mobile.wifiPeerAvailabilityChanged('foo');        
+        Mobile.wifiPeerAvailabilityChanged('foo');
       }
     });
 }
+/*
+var connectionTester = function (port, callback) {
+  var connection = net.createConnection(port, function () {
+    connection.destroy();
+    callback(true);
+  });
+  connection.on('error', function () {
+    connection.destroy();
+    callback(false);
+  });
+};
 
+test('all services are stopped when we call stop', function (t) {
+  var stopAndCheck = function () {
+    var discoveryStopped = false;
+    var advertisingStopped = false;
+    var stateChangeHandler = function (state) {
+      discoveryStopped = !state.discoveryActive;
+      advertisingStopped = !state.advertisingActive;
+      if (discoveryStopped && advertisingStopped) {
+        thaliMobileNativeWrapper.emitter.removeListener(
+          'discoveryAdvertisingStateUpdateNonTCP',
+          stateChangeHandler
+        );
+        connectionTester(
+          thaliMobileNativeWrapper._getServersManagerLocalPort(),
+          function (success) {
+            t.equals(success, false,
+              'connection to servers manager should fail after stopping');
+            connectionTester(
+              thaliMobileNativeWrapper._getRouterServerPort(),
+              function () {
+                t.equals(success, false,
+                  'connection to router server should fail after stopping');
+                t.end();
+              }
+            );
+          }
+        );
+      }
+    };
+    thaliMobileNativeWrapper.emitter.on(
+      'discoveryAdvertisingStateUpdateNonTCP',
+      stateChangeHandler
+    );
+    thaliMobileNativeWrapper.stop()
+    .then(function () {
+      t.equals(thaliMobileNativeWrapper._isStarted(), false,
+        'is stopped after calling stop');
+      // stateChangeHandler above should get called
+    });
+  };
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    connectionTester(
+      thaliMobileNativeWrapper._getServersManagerLocalPort(),
+      function (success) {
+        t.equals(success, true,
+          'connection to servers manager should succeed after starting');
+        connectionTester(
+          thaliMobileNativeWrapper._getRouterServerPort(),
+          function () {
+            t.equals(success, true,
+              'connection to router server should succeed after starting');
+            stopAndCheck();
+          }
+        );
+      }
+    );
+  });
+});
+*/
 if (!jxcore.utils.OSInfo().isMobile) {
   // This test primarily exists to make sure that we can easily debug the full
   // connection life cycle from the HTTP client through thaliMobileNativeWrapper
@@ -183,16 +264,6 @@ if (!jxcore.utils.OSInfo().isMobile) {
   // needs to stay not running when we are on mobile.
   test('can do HTTP requests between peers without coordinator', function (t) {
     trivialEndToEndTest(t, true);
-  });
-}
-
-if (!jxcore.utils.OSInfo().isMobile) {
-  test('Make sure all services are stopped when we call stop', function (t) {
-    // TODO: Make sure we check that advertisingAndListening as well as
-    // listeningForAdvertisements are turned off and the serversManager
-    // and application server are deactivated
-    t.ok('IMPLEMENT ME!!!');
-    t.end();
   });
 
   test('make sure terminateConnection is properly hooked up', function (t) {
@@ -268,7 +339,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
                   'right error reason');
           t.ok(err.errors.length === 0, 'Stop should be fine');
           t.equal(err.routerPort, routerPort, 'same port');
-          t.notOk(thaliMobileNativeWrapper._isStarted(), 'we should be off')
+          t.notOk(thaliMobileNativeWrapper._isStarted(), 'we should be off');
           t.end();
         });
       thaliMobileNativeWrapper.start(express.Router())
@@ -337,4 +408,5 @@ test('We successfully receive and replay discoveryAdvertisingStateUpdate',
     // TODO: This really needs to be run live
     t.ok('IMPLEMENT ME!!!!');
     t.end();
-});
+  }
+);
