@@ -26,8 +26,7 @@ import java.util.UUID;
 public class ConnectionHelper
         implements
             ConnectionManager.ConnectionManagerListener,
-            DiscoveryManager.DiscoveryManagerListener,
-            HandshakeHelper.Listener {
+            DiscoveryManager.DiscoveryManagerListener {
     private static final String TAG = ConnectionHelper.class.getName();
 
     public static final int NO_PORT_NUMBER = 0;
@@ -48,7 +47,6 @@ public class ConnectionHelper
     private final DiscoveryManagerSettings mDiscoveryManagerSettings;
     private final ConnectivityMonitor mConnectivityMonitor;
     private final StartStopOperationHandler mStartStopOperationHandler;
-    private final HandshakeHelper mHandshakeHelper;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = NO_PORT_NUMBER;
 
@@ -73,7 +71,7 @@ public class ConnectionHelper
 
         mConnectionManager = new ConnectionManager(mContext, this, SERVICE_UUID, BLUETOOTH_NAME);
         ConnectionManagerSettings connectionManagerSettings = ConnectionManagerSettings.getInstance(mContext);
-        connectionManagerSettings.setHandshakeRequired(false);
+        connectionManagerSettings.setHandshakeRequired(true);
 
         mDiscoveryManager = new DiscoveryManager(mContext, this, BLE_SERVICE_UUID, SERVICE_TYPE);
         mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance(mContext);
@@ -90,7 +88,6 @@ public class ConnectionHelper
         mConnectivityMonitor.start(); // Should be running as long as the app is alive
 
         mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
-        mHandshakeHelper = new HandshakeHelper(this);
     }
 
     /**
@@ -125,7 +122,6 @@ public class ConnectionHelper
         }
 
         restoreDefaultBleDiscoverySettings();
-        mHandshakeHelper.reinitiate();
 
         // Make sure the connectivity monitor is running, even though it should have been already
         // started in the constructor
@@ -153,12 +149,11 @@ public class ConnectionHelper
                     ? "Stopping only listening for advertisements"
                     : "Stopping all activities and killing all connections"));
 
-        mStartStopOperationHandler.executeStopOperation(stopOnlyListeningForAdvertisements, callback);
-
         if (!stopOnlyListeningForAdvertisements) {
-            mHandshakeHelper.shutdown();
             mConnectionModel.closeAndRemoveAllOutgoingConnections();
         }
+
+        mStartStopOperationHandler.executeStopOperation(stopOnlyListeningForAdvertisements, callback);
     }
 
     /**
@@ -339,7 +334,7 @@ public class ConnectionHelper
     }
 
     /**
-     * Takes ownership of the given Bluetooth socket and initiates a handshake for the connection.
+     * Takes ownership of the given Bluetooth socket and finalizes the connection.
      *
      * @param bluetoothSocket The Bluetooth socket.
      * @param isIncoming      True, if the connection is incoming. False, if it is outgoing.
@@ -355,24 +350,17 @@ public class ConnectionHelper
             throw new RuntimeException("onConnected: Bluetooth socket is null");
         }
 
-        if (mConnectionModel.hasConnection(peerProperties.getId())) {
-            Log.w(TAG, "onConnected: Already connected with peer " + peerProperties.toString() + ", continuing anyway...");
-        }
-
         // Add the peer to the list, if was not discovered before
         mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
 
-        if (!mHandshakeHelper.initiateHandshake(bluetoothSocket, peerProperties, isIncoming)) {
-            if (!isIncoming) {
-                handleOutgoingConnectionFailure(peerProperties, "Failed to initiate handshake");
-            }
-
-            try {
-                bluetoothSocket.close();
-            } catch (IOException e) {
-                Log.d(TAG, "onConnected: Failed to close the socket after handshake initiation failed: " + e.getMessage(), e);
-            }
+        if (isIncoming) {
+            handleIncomingConnection(bluetoothSocket, peerProperties);
+        } else {
+            handleOutgoingConnection(bluetoothSocket, peerProperties);
         }
+
+        Log.d(TAG, "onConnected: The total number of connections is now "
+                + mConnectionModel.getNumberOfCurrentConnections());
     }
 
     /**
@@ -504,43 +492,6 @@ public class ConnectionHelper
     public void onBluetoothMacAddressResolved(String bluetoothMacAddress) {
         Log.d(TAG, "onBluetoothMacAddressResolved: " + bluetoothMacAddress + " - Bro Mode is not supported");
         throw new UnsupportedOperationException("Bro Mode is not supported");
-    }
-
-    /**
-     * Handles the new connection with validated handshake.
-     *
-     * @param bluetoothSocket The Bluetooth socket.
-     * @param peerProperties The properties of the peer.
-     * @param isIncoming True, if the connection is incoming. False if outgoing.
-     */
-    @Override
-    public void onHandshakeSucceeded(BluetoothSocket bluetoothSocket, PeerProperties peerProperties, boolean isIncoming) {
-        Log.d(TAG, "onHandshakeSucceeded: Handshake with peer " + peerProperties
-                + " succeeded, the connection is "
-                + (isIncoming ? "incoming" : "outgoing"));
-
-        if (isIncoming) {
-            handleIncomingConnection(bluetoothSocket, peerProperties);
-        } else {
-            handleOutgoingConnection(bluetoothSocket, peerProperties);
-
-        }
-
-        Log.d(TAG, "onHandshakeSucceeded: The total number of connections is now "
-                + mConnectionModel.getNumberOfCurrentConnections());
-    }
-
-    @Override
-    public void onHandshakeFailed(BluetoothSocket bluetoothSocket, PeerProperties peerProperties, boolean isIncoming, String reason) {
-        Log.e(TAG, "onHandshakeFailed: Handshake with peer " + peerProperties
-                + " failed: " + reason + ", the connection was "
-                + (isIncoming ? "incoming" : "outgoing"));
-
-        // No need to close the socket - it is already closed (by HandshakeHelper)
-
-        if (!isIncoming) {
-            handleOutgoingConnectionFailure(peerProperties, reason);
-        }
     }
 
     /**
