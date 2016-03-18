@@ -371,6 +371,7 @@ public class ConnectionHelper
     @Override
     public void onConnectionTimeout(PeerProperties peerProperties) {
         if (peerProperties != null) {
+            Log.e(TAG, "onConnectionTimeout: Connection attempt with peer " + peerProperties + " timed out");
             final String bluetoothMacAddress = peerProperties.getBluetoothMacAddress();
             final JXcoreThaliCallback callback =
                     mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress);
@@ -384,6 +385,8 @@ public class ConnectionHelper
             }
 
             toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();
+        } else {
+            Log.e(TAG, "onConnectionTimeout");
         }
     }
 
@@ -516,6 +519,9 @@ public class ConnectionHelper
                         callback.getListenerOrIncomingConnection().setListeningOnPortNumber(portNumber);
                         callback.callOnConnectCallback(null, callback.getListenerOrIncomingConnection());
                     }
+
+                    // Remove the callback since it's no longer needed
+                    mConnectionModel.removeOutgoingConnectionCallback(finalPeerId);
                 }
 
                 @Override
@@ -652,6 +658,9 @@ public class ConnectionHelper
      * transfer speed as using BLE for discovery will likely interfere with the data transfer done
      * utilizing Bluetooth sockets because in most modern phones the Bluetooth and BLE stacks
      * share the same 2.4 GHz antenna (along with WiFi).
+     *
+     * Note that changing the power settings in the fly may disturb ongoing connection attempts
+     * (and incoming connections) causing connection failures.
      */
     private synchronized void lowerBleDiscoveryPowerAndStartResetTimer() {
         if (mPowerUpBleDiscoveryTimer == null) {

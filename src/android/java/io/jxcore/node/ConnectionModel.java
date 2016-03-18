@@ -132,7 +132,11 @@ public class ConnectionModel {
      * @param bluetoothMacAddress The Bluetooth MAC address of an outgoing connection.
      */
     public synchronized void removeOutgoingConnectionCallback(String bluetoothMacAddress) {
-        mOutgoingConnectionCallbacks.remove(bluetoothMacAddress);
+        if (mOutgoingConnectionCallbacks.remove(bluetoothMacAddress) != null) {
+            Log.d(TAG, "removeOutgoingConnectionCallback: Callback associated with Bluetooth MAC address \"" + bluetoothMacAddress + "\" removed");
+        } else {
+            Log.e(TAG, "removeOutgoingConnectionCallback: Callback associated with Bluetooth MAC address \"" + bluetoothMacAddress + "\" not found");
+        }
     }
 
     /**
@@ -187,7 +191,7 @@ public class ConnectionModel {
      * @return True, if the thread was found, the connection was closed and the thread was removed from the list.
      */
     public synchronized boolean closeAndRemoveOutgoingConnectionThread(final String peerId) {
-        boolean wasFoundAndDisconnected = false;
+        boolean wasFoundAndClosed = false;
         OutgoingSocketThread outgoingSocketThread = (OutgoingSocketThread) findSocketThread(peerId, false);
 
         if (outgoingSocketThread != null) {
@@ -195,15 +199,15 @@ public class ConnectionModel {
             mOutgoingConnectionCallbacks.remove(peerId);
             mOutgoingSocketThreads.remove(outgoingSocketThread);
             outgoingSocketThread.close();
-            wasFoundAndDisconnected = true;
+            wasFoundAndClosed = true;
         }
 
-        if (!wasFoundAndDisconnected) {
+        if (!wasFoundAndClosed) {
             Log.e(TAG, "closeAndRemoveOutgoingConnectionThread: Failed to find an outgoing connection to peer with ID " + peerId);
         }
 
         Log.d(TAG, "closeAndRemoveOutgoingConnectionThread: " + mOutgoingSocketThreads.size() + " outgoing connection(s) left");
-        return wasFoundAndDisconnected;
+        return wasFoundAndClosed;
     }
 
     /**
