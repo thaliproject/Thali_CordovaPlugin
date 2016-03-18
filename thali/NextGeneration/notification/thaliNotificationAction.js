@@ -159,6 +159,18 @@ ThaliNotificationAction.prototype.kill = function () {
 };
 
 /**
+ * This synchronous function returns a connection information.
+ *
+ * @public
+ * @returns {module:thaliPeerDictionary~PeerConnectionInformation}
+ * Connection parameters to connect to peer.
+ */
+ThaliNotificationAction.prototype.getConnectionInformation = function () {
+  return this._peerConnection;
+};
+
+
+/**
  * This callback function processes incoming HTTP response. It validates
  * that the content type is 'application/octet-stream',
  * and size of the response stays under MAX_CONTENT_SIZE.
@@ -206,6 +218,8 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
   });
 
 };
+
+
 
 /**
  * This function gets called when the HTTP response processing has been

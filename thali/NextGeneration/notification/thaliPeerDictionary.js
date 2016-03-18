@@ -2,6 +2,7 @@
 
 var assert = require('assert');
 var ThaliMobile = require('../thaliMobile');
+var ThaliNotificationAction = require('./thaliNotificationAction.js');
 
 /** @module thaliPeerDictionary */
 
@@ -160,7 +161,7 @@ PeerConnectionDictionary.prototype.set = function (connectionType, entry) {
  */
 PeerConnectionDictionary.prototype.get = function (connectionType) {
   var entryObject = this._dictionary[connectionType];
-  return entryObject ? entryObject.entry : null;
+  return entryObject ? entryObject : null;
 };
 
 /**
@@ -225,6 +226,7 @@ function NotificationPeerDictionaryEntry(peerState, peerConnectionDictionary,
   this.peerConnectionDictionary = peerConnectionDictionary;
   this.notificationAction = notificationAction;
   this.waitingTimeout = null;
+  this.retryCounter = 0;
 }
 
 /**
@@ -259,6 +261,14 @@ NotificationPeerDictionaryEntry.prototype.notificationAction = null;
  * @type {?timeoutObject}
  */
 NotificationPeerDictionaryEntry.prototype.waitingTimeout = null;
+
+/**
+ * The retry number.
+ *
+ * @public
+ * @type {number}
+ */
+NotificationPeerDictionaryEntry.prototype.retryCounter = null;
 
 module.exports.NotificationPeerDictionaryEntry =
   NotificationPeerDictionaryEntry;
@@ -326,6 +336,9 @@ PeerDictionary.prototype.remove = function (peerId) {
   var entry = this.get(peerId);
   assert(entry !== null, 'entry not found');
   entry.waitingTimeout && clearTimeout(entry.waitingTimeout);
+  entry.notificationAction &&
+    entry.notificationAction.eventEmitter.removeAllListeners(
+    ThaliNotificationAction.Events.Resolved);
   entry.notificationAction && entry.notificationAction.kill();
   delete this._dictionary[peerId];
 };
