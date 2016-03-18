@@ -405,7 +405,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
       return reject(new Error('Call Start!'));
     }
     Mobile('startUpdateAdvertisingAndListening').callNative(
-      gRouterServerPort,
+      gServersManagerLocalPort,
       function (error) {
         if (error) {
           return reject(new Error(error));
