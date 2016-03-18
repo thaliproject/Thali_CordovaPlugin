@@ -30,7 +30,7 @@ public class ConnectionHelper
             HandshakeHelper.Listener {
     private static final String TAG = ConnectionHelper.class.getName();
 
-    public static final int NO_PORT_NUMBER = -1;
+    public static final int NO_PORT_NUMBER = 0;
     private static final String SERVICE_TYPE = "Cordovap2p._tcp";
     private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
     private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
@@ -46,7 +46,7 @@ public class ConnectionHelper
     private final ConnectionManager mConnectionManager;
     private final DiscoveryManager mDiscoveryManager;
     private final DiscoveryManagerSettings mDiscoveryManagerSettings;
-    private final ConnectivityInfo mConnectivityInfo;
+    private final ConnectivityMonitor mConnectivityMonitor;
     private final StartStopOperationHandler mStartStopOperationHandler;
     private final HandshakeHelper mHandshakeHelper;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
@@ -83,10 +83,12 @@ public class ConnectionHelper
             mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
             mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
         } else {
-            throw new UnsupportedOperationException("Bluetooth LE discovery mode is not supported");
+            Log.e(TAG, "Constructor: Bluetooth LE discovery mode is not supported");
         }
 
-        mConnectivityInfo = new ConnectivityInfo(mDiscoveryManager);
+        mConnectivityMonitor = new ConnectivityMonitor(mDiscoveryManager);
+        mConnectivityMonitor.start(); // Should be running as long as the app is alive
+
         mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
         mHandshakeHelper = new HandshakeHelper(this);
     }
@@ -99,6 +101,7 @@ public class ConnectionHelper
         mStartStopOperationHandler.cancelCurrentOperation();
         mConnectionManager.dispose();
         mDiscoveryManager.dispose();
+        mConnectivityMonitor.stop();
     }
 
     /**
@@ -124,7 +127,9 @@ public class ConnectionHelper
         restoreDefaultBleDiscoverySettings();
         mHandshakeHelper.reinitiate();
 
-        if (!mConnectivityInfo.startMonitoring()) {
+        // Make sure the connectivity monitor is running, even though it should have been already
+        // started in the constructor
+        if (!mConnectivityMonitor.start()) {
             Log.e(TAG, "start: Failed to start monitoring the connectivity");
             return false;
         }
@@ -152,7 +157,6 @@ public class ConnectionHelper
 
         if (!stopOnlyListeningForAdvertisements) {
             mHandshakeHelper.shutdown();
-            mConnectivityInfo.stopMonitoring();
             mConnectionModel.closeAndRemoveAllOutgoingConnections();
         }
     }
@@ -176,10 +180,10 @@ public class ConnectionHelper
     }
 
     /**
-     * @return The ConnectivityInfo instance.
+     * @return The ConnectivityMonitor instance.
      */
-    public final ConnectivityInfo getConnectivityInfo() {
-        return mConnectivityInfo;
+    public final ConnectivityMonitor getConnectivityMonitor() {
+        return mConnectivityMonitor;
     }
 
     /**
@@ -289,8 +293,6 @@ public class ConnectionHelper
             Log.e(TAG, "connect: " + errorMessage);
             return errorMessage;
         }
-
-        callback.getListenerOrIncomingConnection().setServerPortNumber(mServerPortNumber);
 
         if (!mConnectionModel.addOutgoingConnectionCallback(bluetoothMacAddress, callback)) {
             errorMessage = "Failed to add the callback for the connection";
@@ -422,28 +424,6 @@ public class ConnectionHelper
         Log.v(TAG, "Received a request for permission \"" + permission
                 + "\", but we are expecting that all the required permissions have already been granted");
         return true;
-    }
-
-    /**
-     * Stores the new state in ConnectivityInfo instance, which is then responsible to take any
-     * actions necessary.
-     *
-     * @param isEnabled True, if enabled. False, if disabled.
-     */
-    @Override
-    public void onWifiEnabledChanged(boolean isEnabled) {
-        mConnectivityInfo.setIsWifiEnabled(isEnabled);
-    }
-
-    /**
-     * Stores the new state in ConnectivityInfo instance, which is then responsible to take any
-     * actions necessary.
-     *
-     * @param isEnabled True, if enabled. False, if disabled.
-     */
-    @Override
-    public void onBluetoothEnabledChanged(boolean isEnabled) {
-        mConnectivityInfo.setIsBluetoothEnabled(isEnabled);
     }
 
     /**
