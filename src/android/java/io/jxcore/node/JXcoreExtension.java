@@ -26,6 +26,7 @@ import org.thaliproject.p2p.btconnectorlib.utils.CommonUtils;
  * https://github.com/thaliproject/Thali_CordovaPlugin/blob/vNext/thali/NextGeneration/thaliMobileNative.js
  */
 public class JXcoreExtension {
+
     public enum RadioState {
         ON, // The radio is on and available for use.
         OFF, // The radio exists on the device but is turned off.
@@ -81,7 +82,29 @@ public class JXcoreExtension {
     private static boolean mNetworkChangedRegistered = false;
 
     public static void LoadExtensions() {
+        if (mConnectionHelper != null) {
+            Log.e(TAG, "LoadExtensions: A connection helper instance already exists - this indicates that this method was called twice - disposing of the previous instance");
+            mConnectionHelper.dispose();
+            mConnectionHelper = null;
+        }
+
         mConnectionHelper = new ConnectionHelper();
+
+        final LifeCycleMonitor lifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.LifeCycleMonitorListener() {
+            @Override
+            public void onActivityLifeCycleEvent(LifeCycleMonitor.ActivityLifeCycleEvent activityLifeCycleEvent) {
+                Log.d(TAG, "onActivityLifeCycleEvent: " + activityLifeCycleEvent);
+
+                switch (activityLifeCycleEvent) {
+                    case DESTROYED:
+                        mConnectionHelper.dispose();
+                    default:
+                        // No need to do anything
+                }
+            }
+        });
+
+        lifeCycleMonitor.start();
 
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override

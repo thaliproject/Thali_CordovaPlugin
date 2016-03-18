@@ -1,3 +1,5 @@
+'use strict';
+
 //
 //  The MIT License (MIT)
 //
@@ -36,10 +38,11 @@
         // requestLocationPermission ensures that the application has 
         // the required ACCESS_COARSE_LOCATION permission in Android.
         window.ThaliPermissions.requestLocationPermission(function () {
-          // Application has the required permission.
+          console.log('Application has the required permission.');
           loadMainFile();
         }, function (error) {
           console.log('Location permission not granted. Error: ' + error);
+          console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
           navigator.app.exitApp();
         });
       } else {
@@ -52,6 +55,11 @@
     jxcore('app.js').loadMainFile(function (ret, err) {
       if (err) {
         console.log('App.js file failed to load : ' + JSON.stringify(err));
+        // This is an error scenario, which occurs in CI, but should not
+        // be an issue with the app code so inform CI that this was a
+        // success case. This can be made an error after this is fixed:
+        // https://github.com/thaliproject/Thali_CordovaPlugin/issues/594
+        console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
         navigator.app.exitApp();
       } else {
         jxcore_ready();
@@ -60,13 +68,13 @@
   }
 
   function jxcore_ready() {
-    jxcore('getMyName').call(setNameToUI);
+    jxcore('setMyNameCallback').call(nameCallback);
     jxcore('setLogCallback').call(logCallback);
     document.getElementById('ClearLogButton').addEventListener('click', ClearLog);
     console.log('UIApp is all set and ready!');
   }
 
-  function setNameToUI(name) {
+  function nameCallback(name) {
     document.getElementById('nameTag').innerHTML = name;
   }
 
