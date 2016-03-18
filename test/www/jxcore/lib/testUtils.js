@@ -9,6 +9,9 @@ var randomString = require('randomstring');
 var Promise = require('lie');
 var logger = require('thali/thalilogger')('testUtils');
 
+var notificationBeacons =
+  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
     return Promise.resolve();
@@ -173,3 +176,26 @@ module.exports.getRandomlyNamedTestPouchDBInstance = function () {
   });
   return module.exports.getTestPouchDBInstance(randomPouchDBName);
 };
+
+
+var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
+  notificationBeacons.EXPIRATION_SIZE;
+
+module.exports.extractPreAmble = function (beaconStreamWithPreAmble) {
+  return beaconStreamWithPreAmble.slice(0, preAmbleSizeInBytes);
+}
+
+module.exports.extractBeacon = function (beaconStreamWithPreAmble, beaconIndexToExtract) {
+  var beaconStreamNoPreAmble =
+    beaconStreamWithPreAmble.slice(preAmbleSizeInBytes);
+  var beaconCount = 0;
+  for (var i = 0; i < beaconStreamNoPreAmble.length;
+       i += notificationBeacons.BEACON_SIZE) {
+    if (beaconCount === beaconIndexToExtract) {
+      return beaconStreamNoPreAmble
+        .slice(i, i + notificationBeacons.BEACON_SIZE);
+    }
+    ++beaconCount;
+  }
+  return null;
+}
