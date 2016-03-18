@@ -504,24 +504,36 @@ MobileCallInstance.prototype.callNative = function () {
 
 var peerAvailabilityChangedCallback = null;
 var peerAvailabilities = {};
-var setupPeerAvailabilityChangedListener = function (thaliWifiInfrastructure) {
-  thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged',
-  function (wifiPeer) {
-    if (peerAvailabilityChangedCallback === null) {
-      return;
+var setupListeners = function (thaliWifiInfrastructure) {
+  thaliWifiInfrastructure.on(
+    'wifiPeerAvailabilityChanged',
+    function (wifiPeer) {
+      if (peerAvailabilityChangedCallback === null) {
+        return;
+      }
+      var peerAvailable = !!wifiPeer.hostAddress;
+      if (peerAvailable) {
+        peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
+      } else {
+        delete peerAvailabilities[wifiPeer.peerIdentifier];
+      }
+      peerAvailabilityChangedCallback([{
+        peerIdentifier: wifiPeer.peerIdentifier,
+        peerAvailable: peerAvailable,
+        pleaseConnect: false
+      }]);
     }
-    var peerAvailable = !!wifiPeer.hostAddress;
-    if (peerAvailable) {
-      peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
-    } else {
-      delete peerAvailabilities[wifiPeer.peerIdentifier];
+  );
+  thaliWifiInfrastructure.on(
+    'discoveryAdvertisingStateUpdateWifiEvent',
+    function (discoveryAdvertisingStateUpdateValue) {
+      if (discoveryAdvertisingStateUpdateNonTCPCallback !== null) {
+        discoveryAdvertisingStateUpdateNonTCPCallback(
+          discoveryAdvertisingStateUpdateValue
+        );
+      }
     }
-    peerAvailabilityChangedCallback([{
-      peerIdentifier: wifiPeer.peerIdentifier,
-      peerAvailable: peerAvailable,
-      pleaseConnect: false
-    }]);
-  });
+  );
 };
 
 /**
@@ -774,7 +786,7 @@ function WifiBasedNativeMock(platform, router) {
   // In practice, the stop function never gets called, but that is okay
   // for the purpose of this mock Mobile object.
   thaliWifiInfrastructure.start(router);
-  setupPeerAvailabilityChangedListener(thaliWifiInfrastructure);
+  setupListeners(thaliWifiInfrastructure);
 
   var mobileHandler = function (mobileMethodName) {
     return new MobileCallInstance(mobileMethodName, platform, router,

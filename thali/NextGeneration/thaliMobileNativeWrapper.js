@@ -21,12 +21,15 @@ var gServersManager = null;
 var gServersManagerLocalPort = 0;
 var gNonTcpNetworkStatus = null;
 
-// Used only for testing.
+// Exports below only used for testing.
 module.exports._getServersManagerLocalPort = function () {
   return gServersManagerLocalPort;
 };
 
-// Used only for testing.
+module.exports._getRouterServerPort = function () {
+  return gRouterServerPort;
+};
+
 module.exports._isStarted = function () {
   return states.started;
 };
@@ -613,7 +616,7 @@ var peerAvailabilityChangedQueue = new PromiseQueue();
 var handlePeerAvailabilityChanged = function (peer) {
   if (!states.started) {
     logger.debug('Filtered out nonTCPPeerAvailabilityChangedEvent ' +
-                'due to not being in started state');
+                 'due to not being in started state');
     return;
   }
   return peerAvailabilityChangedQueue.enqueue(function (resolve) {
