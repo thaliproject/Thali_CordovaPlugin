@@ -51,10 +51,13 @@ RUN_IN_CI=$?
 if [ $RUN_IN_CI == 0 ]
 then
   # Make sure build works with the latest cordova release
-  jx npm update -g cordova;ERROR_ABORT
+  jx npm install -g cordova;ERROR_ABORT
 fi
+
 # Print the Cordova version for debugging purposes
-echo "Cordova version: $(cordova -v)";ERROR_ABORT
+# and to make sure Cordova is installed
+echo "Cordova version:";ERROR_ABORT
+cordova -v;ERROR_ABORT
 
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
