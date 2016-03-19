@@ -70,6 +70,7 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 - (const THEMultipeerSocketRelay *)relay;
 
 + (NSString *)peerUUIDFromPeerIdentifier:(NSString *)peerIdentifier;
++ (NSString *)peerGenerationFromPeerIdentifier:(NSString *)peerIdentifier;
 
 - (void)changeState:(THEPeerSessionState)newState;
 

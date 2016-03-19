@@ -139,6 +139,14 @@ function connectToPeer(peer, retries, successCb, failureCb) {
       successCb(err, connection);
     } else {
       logger.info('Connect returned an error: ' + err);
+      if (err.indexOf("unreachable") != -1) {
+        logger.info("Aborting retries since unreachable");
+        return;
+      }
+      if (err.indexOf("Already connected") != -1) {
+        logger.info("Aborting retries since already connected");
+        return;
+      }
       // Retry a failed connection..
       if (retries > 0) {
         logger.info('Scheduling a connect retry - retries left: ' + retries);
@@ -158,7 +166,7 @@ function connectToPeer(peer, retries, successCb, failureCb) {
 
 test('Can connect to a remote peer', function (t) {
 
-  var connecting = false;
+  var connected = false;
 
   var echoServer = net.createServer(function (socket) {
     socket.pipe(socket);
@@ -167,6 +175,8 @@ test('Can connect to a remote peer', function (t) {
   serverToBeClosed = echoServer;
 
   function onConnectSuccess(err, connection) {
+
+    connected = true;
 
     // Called if we successfully connecto to a peer
     connection = JSON.parse(connection);
@@ -206,8 +216,10 @@ test('Can connect to a remote peer', function (t) {
   }
 
   function onConnectFailure () {
-    t.fail('Connect failed!');
-    t.end();
+    if (!connected) {
+      t.fail('Connect failed!');
+      t.end();
+    }
   }
 
   echoServer.listen(0, function () {
@@ -219,8 +231,7 @@ test('Can connect to a remote peer', function (t) {
         JSON.stringify(peers)
       );
       peers.forEach(function (peer) {
-        if (peer.peerAvailable && !connecting) {
-          connecting = true;
+        if (peer.peerAvailable && !connected) {
           var RETRIES = 10;
           connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
         }
@@ -239,11 +250,12 @@ test('Can connect to a remote peer', function (t) {
 
 test('Can shift large amounts of data', function (t) {
 
-  var connecting = false;
+  var connected = false;
 
   var sockets = {};
   var echoServer = net.createServer(function (socket) {
     socket.on('data', function (data) {
+      console.log("data on: " + socket.remotePort);
       socket.write(data);
     });
     socket.on('end', socket.end);
@@ -251,13 +263,14 @@ test('Can shift large amounts of data', function (t) {
       logger.warn('Error on echo server socket: ' + error);
       t.fail();
     });
+    console.log("new socket: " + socket.remotePort);
     sockets[socket.remotePort] = socket;
   });
   echoServer = makeIntoCloseAllServer(echoServer);
   serverToBeClosed = echoServer;
 
-  var dataSize = 4096;
-  var toSend = randomstring.generate(dataSize);
+  var dataSize = 5;//4096;
+  var toSend = "HELLO";//randomstring.generate(dataSize);
 
   function shiftData(sock, reverseConnection) {
 
@@ -268,22 +281,17 @@ test('Can shift large amounts of data', function (t) {
 
     var toRecv = '';
 
-    if (reverseConnection) {
+    if (!reverseConnection) {
 
-      // Since this is a reverse connection, the socket we've been handed has
-      // already been accepted by our server and there's a client on the other
-      // end already sending data.
-      // Without multiplex support we can't both talk at the same time so
-      // wait for the other side to finish before sending our data.
+      // Forward connection, wait until we've received all expected data from the 
+      // other side before sending our payload
 
       var totalRecvd = 0;
       sock.on('data', function (data) {
 
-        logger.info('reverseData');
         totalRecvd += data.length;
 
         if (totalRecvd === dataSize) {
-          logger.info('reverseSend');
           // We've seen all the remote's data, send our own
           sock.write(toSend);
         }
@@ -301,14 +309,11 @@ test('Can shift large amounts of data', function (t) {
       });
     }
     else {
-    
-      // This one's more straightforward.. we're going to send first,
-      // read back our echo and then echo out any extra data
 
+      // Reverse connection, we send first to ensure everyone's connected and listening
+      
       var done = false;
       sock.on('data', function (data) {
-
-        logger.info('forwardData');
 
         var remaining = dataSize - toRecv.length;
 
@@ -327,13 +332,9 @@ test('Can shift large amounts of data', function (t) {
             t.ok(toSend === toRecv, 'received should match sent forward');
             t.end();
           }
-          if (data.length) {
-            sock.write(data);
-          }
         }
       });
 
-      logger.info('forwardSend');
       sock.write(toSend);
     }
   }
@@ -341,8 +342,10 @@ test('Can shift large amounts of data', function (t) {
   function onConnectSuccess(err, connection) {
 
     var client = null;
+    connected = true;
 
     // We're happy here if we make a connection to anyone
+    logger.info(connection);
     connection = JSON.parse(connection);
     logger.info(connection);
 
@@ -361,14 +364,18 @@ test('Can shift large amounts of data', function (t) {
   }
 
   function onConnectFailure() {
-    t.fail('Connect failed!');
-    t.end();
+    if (!connected) {
+      t.fail('Connect failed!');
+      t.end();
+    }
   }
 
   Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
+    logger.info('Received peerAvailabilityChanged with peers: ' +
+      JSON.stringify(peers)
+    );
     peers.forEach(function (peer) {
-      if (peer.peerAvailable && !connecting) {
-        connecting = true;
+      if (peer.peerAvailable && !connected) {
         var RETRIES = 10;
         connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
       }

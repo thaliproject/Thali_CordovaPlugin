@@ -344,7 +344,7 @@
   NSLog(@"multipeer manager: start client restart timer: %p", self);
 
   dispatch_async(dispatch_get_main_queue(), ^{
-    _clientRestartTimer = [NSTimer scheduledTimerWithTimeInterval:20
+    _clientRestartTimer = [NSTimer scheduledTimerWithTimeInterval:10
                                                            target:self
                                                          selector:@selector(restartClient:)
                                                          userInfo:nil
