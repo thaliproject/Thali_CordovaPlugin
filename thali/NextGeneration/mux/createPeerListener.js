@@ -287,7 +287,9 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
           });
 
           outgoing.on('data', function () {
-            self._peerServers[server._peerIdentifier].lastActive = Date.now();
+            if (self._peerServers[server._peerIdentifier]) {
+              self._peerServers[server._peerIdentifier].lastActive = Date.now();
+            }
           });
 
           outgoing.pipe(mux).pipe(outgoing);

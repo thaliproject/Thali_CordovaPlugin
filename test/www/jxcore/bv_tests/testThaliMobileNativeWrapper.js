@@ -1,7 +1,7 @@
 'use strict';
 
 var express = require('express');
-var request = require('request');
+var http = require('http');
 //var net = require('net');
 
 if (typeof Mobile === 'undefined') {
@@ -144,21 +144,31 @@ function trivialEndToEndTest(t, needManualNotify) {
       peerAvailabilityHandler
     );
 
-    var requestUri = 'http://127.0.0.1:' + peer.portNumber + testPath;
-    request(
-      {
-        uri: requestUri,
-        timeout: 10 * 1000 * 1000
-      }, function (error, response, body) {
-        if (error) {
-          t.fail(error, 'GET request failed');
-          return t.end();
-        }
-
-        t.equal(response.statusCode, 200, 'Server should return 200');
-        t.equal(body, testData, 'Response body should match testData');
+    var request = http.request({
+      hostname: '127.0.0.1',
+      port: peer.portNumber,
+      path: testPath,
+      agent: false
+    }, function (response) {
+      t.equal(response.statusCode, 200, 'server should return 200');
+      var responseBody = '';
+      response.on('data', function (data) {
+        responseBody += data;
+      });
+      response.on('end', function () {
+        t.equal(responseBody, testData, 'response body should match testData');
         t.end();
       });
+      response.resume();
+    });
+    request.on('error', function (error) {
+      t.fail(error);
+      t.end();
+    });
+    // Wait for 15 seconds since the request can take a while
+    // in mobile environment over a non-TCP transport.
+    request.setTimeout(15 * 1000 * 1000);
+    request.end();
   };
 
   thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',

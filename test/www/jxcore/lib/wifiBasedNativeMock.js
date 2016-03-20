@@ -405,11 +405,14 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
   peerProxyServers[peerIdentifier].listen(0, function () {
     peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
     function () {
-      callback(null, JSON.stringify({
-        listeningPort: peerProxyServers[peerIdentifier].address().port,
-        clientPort: 0,
-        serverPort: 0
-      }));
+      setTimeout(function () {
+        callback(null, JSON.stringify({
+          listeningPort: peerProxyServers[peerIdentifier].address().port,
+          clientPort: 0,
+          serverPort: 0
+        }));
+      },
+      100);
     });
     peerConnections[peerIdentifier].on('error', function (err) {
       logger.debug('error on peerConnections socket for ' + peerIdentifier +
