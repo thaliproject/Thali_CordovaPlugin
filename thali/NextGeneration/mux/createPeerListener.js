@@ -6,13 +6,15 @@ var net = require('net');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
 var Promise = require('lie');
 var assert = require('assert');
+var thaliConfig = require('./../thaliConfig');
 
 /**
  * Maximum number of peers we support simultaneously advertising as being
  * available to be connected to
  * @type {number}
  */
-var maxPeersToAdvertise = 20;
+var maxPeersToAdvertise =
+  thaliConfig.MAXIMUM_NATIVE_PEERS_CREATE_PEER_LISTENER_ADVERTISES;
 
 function closeServer(self, server, failedConnectionErr)
 {
@@ -54,6 +56,18 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
           client.pipe(stream).pipe(client);
         });
 
+        stream.on('error', function (err) {
+          logger.debug('multiplexToNativeListener.stream ' + err);
+        });
+
+        stream.on('finish', function () {
+          stream.destroy();
+        });
+
+        stream.on('close', function () {
+          client.destroy();
+        });
+
         client.on('error', function (err) {
           logger.debug('multiplexToNativeListener.client ' + err);
           self.emit('routerPortConnectionFailed', {
@@ -72,15 +86,18 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
       });
 
       mux.on('finish', function () {
-        mux.destroy();
+
       });
 
       mux.on('close', function () {
-        closeServer(self, server);
+        outgoing.end();
       });
 
       outgoing.on('data', function () {
-        self._peerServers[server._peerIdentifier].lastActive = Date.now();
+        var peerServerEntry = self._peerServers[server._peerIdentifier];
+        if (peerServerEntry) {
+          peerServerEntry.lastActive = Date.now();
+        }
       });
 
       outgoing.pipe(mux).pipe(outgoing);
@@ -228,7 +245,7 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
                 handleReverseConnection(self, incoming, server,
                                         listenerOrIncomingConnection);
                 resolve();
-              }, 1000)
+              }, thaliConfig.MILLISECONDS_TO_WAIT_FOR_REVERSE_CONNECTION)
             };
           }
         }
@@ -493,7 +510,7 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
         })
         .catch(function (err) {
           logger.debug('failed incoming connection because of mux promise ' +
-            'failue' + err);
+            'failure - ' + err);
           incoming.end();
         });
     }

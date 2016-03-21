@@ -469,22 +469,21 @@ test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
 
 test('createPeerListener - pleaseConnect === true, connection resolves promise',
   function (t) {
-    t.plan(4);
+    var promiseResolved = false;
+    var connectionReceived = false;
 
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
       cb(null, Mobile.createListenerOrIncomingConnection(nativePort, 0, 0));
     });
 
-    serversManager.on('failedConnection', function (value) {
-      if (!serversManager._closing) {
-        t.fail('Shouldn\'t fail to connect to native listener');
-        t.end();
-      }
-    });
-
     var nativeServer = net.createServer(function (socket) {
       t.ok(true, 'Should get spontaneous connection');
       socket.end();
+      connectionReceived = true;
+      if (promiseResolved) {
+        nativeServer.close();
+        t.end();
+      }
     });
 
     nativeServer.listen(nativePort, function (err) {
@@ -500,8 +499,11 @@ test('createPeerListener - pleaseConnect === true, connection resolves promise',
           serversManager.createPeerListener(peer.peerIdentifier,
             peer.pleaseConnect)
             .then(function () {
-              nativeServer.close();
+              promiseResolved = true;
               t.ok(true, 'promise should resolve');
+              if (connectionReceived) {
+                nativeServer.close();
+              }
             })
             .catch(function (err) {
               t.fail('should not fail - ' + err);
@@ -542,7 +544,7 @@ test('peerListener - reverseConnection, pleaseConnect === false - no incoming',
   function (t) {
     var firstConnection = false;
 
-    // We expect 'Incoming connction died' since we're forcing a reverse
+    // We expect 'Incoming connection died' since we're forcing a reverse
     // connection but there's been no incoming connection
     serversManager.on('failedConnection', function (err) {
       t.ok(firstConnection, 'should not get event until connection is made');
