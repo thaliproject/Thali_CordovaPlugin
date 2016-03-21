@@ -3,6 +3,7 @@
 var PeerDictionary = require('./thaliPeerDictionary');
 var ThaliMobile = require('../thaliMobile');
 var ThaliNotificationAction = require('./thaliNotificationAction.js');
+var NotificationBeacons = require('./thaliNotificationBeacons');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction.js');
 var logger = require('../../thalilogger')('thaliNotificationClient');
 
@@ -82,31 +83,36 @@ function PeerAdvertisesDataForUs (keyId, pskIdentifyField,
  * capabilities.
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
- * @param {addressBookCallback} addressBookCallback A callback used to validate
- * which peers we are interested in talking to.
  * @fires module:thaliNotificationClient.event:peerAdvertisesDataForUs
  * @throws {Error} thaliPeerPoolInterface cannot be null
  * @throws {Error} ecdhForLocalDevice cannot be null
- * @throws {Error} addressBookCallback cannot be null
  */
-function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice,
-                                 addressBookCallback ) {
+function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
 
   EventEmitter.call(this);
   assert(thaliPeerPoolInterface,
     ThaliNotificationClient.Errors.PEERPOOL_NOT_NULL);
   assert(ecdhForLocalDevice,
     ThaliNotificationClient.Errors.EDCH_FOR_LOCAL_DEVICE_NOT_NULL);
-  assert(addressBookCallback,
-    ThaliNotificationClient.Errors.ADDRESS_BOOK_CALLBACK_NOT_NULL);
 
-  this.peerDictionary = new PeerDictionary.PeerDictionary();
-  this._running = false;
+  this.peerDictionary = null;
   this._thaliPeerPoolInterface = thaliPeerPoolInterface;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
-  this._addressBookCallback = addressBookCallback;
+  this._publicKeysToListen = [];
+  this._publicKeysToListenHashes = [];
 
-  this._prioritizedReplicationList = null;
+  var self = this;
+
+  this._addressBookCallback = function (unencryptedKeyId) {
+    for (var i = 0 ; i < self._publicKeysToListenHashes.length ; i++)
+    {
+      var pubKeyHash = self._publicKeysToListenHashes[i];
+      if (unencryptedKeyId.compare(pubKeyHash) === 0) {
+        return self._publicKeysToListen[i];
+      }
+    }
+    return null;
+  };
 }
 
 util.inherits(ThaliNotificationClient, EventEmitter);
@@ -129,41 +135,54 @@ ThaliNotificationClient.prototype.peerDictionary = null;
  * list and MUST NOT cause multiple listeners to be registered with thaliMobile.
  *
  * @public
- * @param {Buffer[]} prioritizedReplicationList Used to decide what peer
- * notifications to pay attention to and when scheduling replications what
- * order to schedule them in (if possible). This list consists of an array
+ * @param {Buffer[]} publicKeysToListen Used to decide what peer
+ * notifications to pay attention to. This list consists of an array
  * of buffers that contain the serialization of the public ECDH keys of the
- * peers we are interested in synching with.
+ * peers we are interested in syncing with.
  *
- * BUGBUG: Having to give a flat prioritizedReplicationList is obviously a
- * bad idea as it limits the effective size of that list to something we
- * are o.k. passing around. If we ever want a bigger list we need a lookup
- * object. But for now we decided to stick with simplicity.
+ * @throws {Error} Public keys to listen must be an array
  */
 ThaliNotificationClient.prototype.start =
-  function (prioritizedReplicationList) {
+  function (publicKeysToListen) {
 
-    this._prioritizedReplicationList = prioritizedReplicationList;
-    this.peerDictionary = new PeerDictionary.PeerDictionary();
+    var self = this;
 
-    if (!this._running) {
+    assert(Array.isArray(publicKeysToListen),
+      ThaliNotificationClient.Errors.PUBLIC_KEYS_TO_LISTEN_NOT_ARRAY);
+
+    if (publicKeysToListen) {
+      this._publicKeysToListen = publicKeysToListen;
+      this._publicKeysToListenHashes = [];
+
+      publicKeysToListen.forEach(function (pubKy) {
+        self._publicKeysToListenHashes.push(
+          NotificationBeacons.createPublicKeyHash(pubKy));
+      });
+    } else {
+      this._publicKeysToListen = [];
+      this._publicKeysToListenHashes = [];
+    }
+
+    if (!this.peerDictionary) {
       this._running = true;
       ThaliMobile.emitter.on('peerAvailabilityChanged',
         this._peerAvailabilityChanged);
     }
+
+    this.peerDictionary = new PeerDictionary.PeerDictionary();
+
   };
 
 /**
- * This function will stop listening events
- * {@link module:thaliMobile.event:peerAvailabilityChanged} and
- * events {@link module:thaliNotificationAction.eventEmitter:Resolved}.
- * And it will also remove all items from the dictionary.
+ * This method will cause the ThaliNotificationClient to stop listening on
+ * {@link module:thaliMobile.event:peerAvailabilityChanged}
+ * and {@link module:thaliNotificationAction.eventEmitter:Resolved} events.
+ * And it will also remove all items from the dictionary and set it to null.
  * @public
  */
 ThaliNotificationClient.prototype.stop = function () {
 
-  if (this._running) {
-    this._running = false;
+  if (this.peerDictionary) {
 
     ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
       this._peerAvailabilityChanged);
@@ -201,11 +220,11 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged = function (peer) {
 };
 
 /**
- * This function will create a new entry to the dictionary and enqueue a new
+ * This function adds a new entry into the dictionary and enqueues a new
  * action into the peer pool. It is called when we have received
  * peerAvailabilityChanged event for a new peer that doesn't have an entry
  * in the dictionary yet.
- * Following is required:
+ * The function is called when:
  * - The incoming peer has a hostAddress AND port number.
  * - The peer is not in the dictionary.
  *
@@ -234,12 +253,12 @@ ThaliNotificationClient.prototype._hostAddressNoIdentifier =
   };
 
 /**
- * This function possibly updates existing entry in the dictionary.
+ * This function updates an existing entry in the dictionary.
  * It is called when when there is already an entry in the dictionary
  * that matches with the peer identification that we received with
- * peerAvailabilityChanged event.
+ * {@link module:thaliMobile.event:peerAvailabilityChanged} event.
  * This function will be called when:
- * - Both hostAddress and port number are not null
+ * - HostAddress and port number are not null
  * - The peer is already in the dictionary.
  *
  * @private
@@ -430,7 +449,6 @@ ThaliNotificationClient.prototype._createAndEnqueueAction =
       this.peerDictionary.addUpdateEntry(identifier, peerEntry);
 
     } catch (err) {
-
       logger.warn('_createAndEnqueueAction: failed to enqueue item: %s', err);
     }
   };
@@ -451,8 +469,9 @@ ThaliNotificationClient.prototype._createAndEnqueueAction =
 ThaliNotificationClient.prototype._resolved =
   function (peerId, resolution, beaconDetails) {
 
-    if (!this._running) {
-      // Ignore events if the client is not running
+    if (!this.peerDictionary) {
+      // Ignore events if the peerDictionary is set to null.
+      // This happens when the stop is called
       return;
     }
 
@@ -463,7 +482,10 @@ ThaliNotificationClient.prototype._resolved =
 
     if (resolution ===
       ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED) {
+
       var connInfo = entry.notificationAction.getConnectionInformation();
+      entry.peerState = PeerDictionary.peerState.RESOLVED;
+      this.peerDictionary.addUpdateEntry(entry);
 
       var peerAdvertises = new PeerAdvertisesDataForUs(
         beaconDetails.unencryptedKeyId,
@@ -474,9 +496,8 @@ ThaliNotificationClient.prototype._resolved =
         entry.notificationAction.getConnectionType()
       );
 
-      this.emit('peerAdvertisesDataForUs', peerAdvertises);
-      entry.peerState = PeerDictionary.peerState.RESOLVED;
-      this.peerDictionary.addUpdateEntry(entry);
+      this.emit(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+        peerAdvertises);
 
     } else if (resolution ===
       ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD) {
@@ -549,7 +570,7 @@ ThaliNotificationClient.Events = {
 ThaliNotificationClient.Errors = {
   PEERPOOL_NOT_NULL : 'thaliPeerPoolInterface must not be null',
   EDCH_FOR_LOCAL_DEVICE_NOT_NULL : 'ecdhForLocalDevice must not be null',
-  ADDRESS_BOOK_CALLBACK_NOT_NULL : 'addressBookCallback must not be null'
+  PUBLIC_KEYS_TO_LISTEN_NOT_ARRAY: 'Public keys to listen must be an array'
 };
 
 module.exports = ThaliNotificationClient;
