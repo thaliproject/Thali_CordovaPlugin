@@ -485,7 +485,7 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
         })
         .catch(function (err) {
           logger.debug('failed incoming connection because of mux promise ' +
-            'failue' + err);
+            'failure: ' + err);
           incoming.end();
         });
     }

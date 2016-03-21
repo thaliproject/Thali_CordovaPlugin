@@ -400,12 +400,16 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
     socket.on('close', function () {
       peerConnections[peerIdentifier] &&
         peerConnections[peerIdentifier].destroy();
-    })
+    });
   });
   peerProxyServers[peerIdentifier].listen(0, function () {
     peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
     function () {
       setTimeout(function () {
+        if (!peerProxyServers[peerIdentifier]) {
+          callback('Unspecified Error with Radio infrastructure');
+          return;
+        }
         callback(null, JSON.stringify({
           listeningPort: peerProxyServers[peerIdentifier].address().port,
           clientPort: 0,
