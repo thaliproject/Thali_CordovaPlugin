@@ -432,7 +432,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
       .then(function () {
         var routerServerPort = thaliMobileNativeWrapper._getRouterServerPort();
         var errorDescription = 'Dummy Error';
-        thaliMobileNativeWrapper.emitter.on(
+        thaliMobileNativeWrapper.emitter.once(
           'incomingConnectionToPortNumberFailed',
           function (routerFailureReason) {
             t.equals(
@@ -441,7 +441,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
               'failure reason is as expected'
             );
             t.equals(
-              routerFailureReason.errors[0],
+              routerFailureReason.errors[0].message,
               errorDescription,
               'error description is as expected'
             );
@@ -454,7 +454,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
           'routerPortConnectionFailed',
           {
             routerPort: routerServerPort,
-            error: errorDescription
+            error: new Error(errorDescription)
           }
         );
       });
@@ -462,10 +462,32 @@ if (!jxcore.utils.OSInfo().isMobile) {
   );
 
   test('We repeat failedConnection event when we get it from ' +
-    'thaliTcpServersManager', function (t) {
-    t.ok('IMPLEMENT ME!!!!!!');
-    t.end();
-  });
+    'thaliTcpServersManager',
+    function (t) {
+      thaliMobileNativeWrapper.start(express.Router())
+      .then(function () {
+        var peerIdentifier = 'some-identifier';
+        var errorDescription = 'Dummy Error';
+        thaliMobileNativeWrapper.emitter.once(
+          'failedConnection',
+          function (failedConnection) {
+            t.equals(failedConnection.peerIdentifier, peerIdentifier,
+              'peerIdentifier matches');
+            t.equals(failedConnection.error.message, errorDescription,
+              'error description matches');
+            t.end();
+          }
+        );
+        thaliMobileNativeWrapper._getServersManager().emit(
+          'failedConnection',
+          {
+            peerIdentifier: peerIdentifier,
+            error: new Error(errorDescription)
+          }
+        );
+      });
+    }
+  );
 
   test('relaying discoveryAdvertisingStateUpdateNonTCP', function (t) {
     thaliMobileNativeWrapper.start(express.Router())
@@ -497,7 +519,7 @@ test('can do HTTP requests between peers', function (t) {
 });
 
 
-test('Can do requests between peers after start and stop', function (t) {
+test('can do requests between peers after start and stop', function (t) {
   // TODO: A great way to shake out bugs is to call start, exchange messages,
   // call stop, call start again, exchange messages and then call stop and
   // check along the way that our state is working correctly.
@@ -505,7 +527,7 @@ test('Can do requests between peers after start and stop', function (t) {
   t.end();
 });
 
-test('We successfully receive and replay discoveryAdvertisingStateUpdate',
+test('we successfully receive and replay discoveryAdvertisingStateUpdate',
   function (t) {
     // TODO: This really needs to be run live
     t.ok('IMPLEMENT ME!!!!');
