@@ -510,6 +510,66 @@ if (!jxcore.utils.OSInfo().isMobile) {
   });
 }
 
+test('we successfully receive and replay discoveryAdvertisingStateUpdate',
+  function (t) {
+    var doEqualsChecks = function (value, discoveryActive, advertisingActive) {
+      t.equals(
+        value.discoveryActive,
+        discoveryActive,
+        'discoveryActive matches'
+      );
+      t.equals(
+        value.advertisingActive,
+        advertisingActive,
+        'advertisingActive matches'
+      );
+    };
+    var doChecks = function (discoveryActive, advertisingActive, callback) {
+      thaliMobileNativeWrapper.emitter.once(
+        'discoveryAdvertisingStateUpdateNonTCP',
+        function (discoveryAdvertisingStateUpdateValue) {
+          doEqualsChecks(
+            discoveryAdvertisingStateUpdateValue,
+            discoveryActive,
+            advertisingActive
+          );
+          thaliMobileNativeWrapper.emitter.once(
+            'discoveryAdvertisingStateUpdateNonTCP',
+            function (discoveryAdvertisingStateUpdateValue) {
+              doEqualsChecks(
+                discoveryAdvertisingStateUpdateValue,
+                false,
+                false
+              );
+              thaliMobileNativeWrapper.start(express.Router())
+              .then(function () {
+                callback();
+              });
+            }
+          );
+          thaliMobileNativeWrapper.stop();
+        }
+      );
+    };
+    var checkDiscovery = function (callback) {
+      doChecks(true, false, callback);
+      thaliMobileNativeWrapper.startListeningForAdvertisements();
+    };
+    var checkAdvertising = function (callback) {
+      doChecks(false, true, callback);
+      thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+    };
+    thaliMobileNativeWrapper.start(express.Router())
+    .then(function () {
+      checkDiscovery(function () {
+        checkAdvertising(function () {
+          t.end();
+        });
+      });
+    });
+  }
+);
+
 if (!tape.coordinated) {
   return;
 }
@@ -526,11 +586,3 @@ test('can do requests between peers after start and stop', function (t) {
   t.ok('Implement Me!!!!');
   t.end();
 });
-
-test('we successfully receive and replay discoveryAdvertisingStateUpdate',
-  function (t) {
-    // TODO: This really needs to be run live
-    t.ok('IMPLEMENT ME!!!!');
-    t.end();
-  }
-);
