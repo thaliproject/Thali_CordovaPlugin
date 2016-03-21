@@ -135,7 +135,7 @@ var test = tape({
     });
   }
 });
-
+/*
 test('ThaliNotificationClient really basic test', function (t) {
 
   var notificationClient =
@@ -260,19 +260,30 @@ test('Existing TCP_NATIVE peer loses DNS', function (t) {
 
 });
 
+*/
 
-test('Try to run action', function (t) {
+test('Try to run an action locally', function (t) {
 
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, hostaddress is set
-  // 2. Event: connectionType is TCP_NATIVE, hostaddress is not set
+
+  // Simulates how peer pool runs actions
+  var enqueue = function (action) {
+    var keepAliveAgent = new http.Agent({ keepAlive: true });
+    action.start(keepAliveAgent).then( function () {
+    }).catch( function ( ) {
+      t.fail('This action should not fail!');
+    });
+  };
+
+  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
 
   httpTester.runServer(globals.expressRouter,
     ThaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
   var notificationClient =
-    new ThaliNotificationClient(globals.peerPoolInterfaceStub,
+    new ThaliNotificationClient(globals.peerPoolInterface,
       globals.targetDeviceKeyExchangeObjects[0], addressBookCallback);
 
   notificationClient.start();
@@ -285,23 +296,77 @@ test('Try to run action', function (t) {
     suggestedTCPTimeout: 100000
   };
 
+  // this.keyId = keyId;
+  // this.pskIdentifyField = pskIdentifyField;
+  // this.psk = psk;
+
+  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+    function ( res) {
+      t.equals(
+        res.hostAddress,
+        TCPEvent.hostAddress,
+        'Host address must match');
+      t.equals(
+        res.suggestedTCPTimeout,
+        TCPEvent.suggestedTCPTimeout,
+        'suggestedTCPTimeout must match');
+      t.equals(
+        res.connectionType,
+        TCPEvent.connectionType,
+        'connectionType must match');
+      t.equals(
+        res.portNumber,
+        TCPEvent.portNumber,
+        'portNumber must match');
+
+      t.end();
+    });
+
   // New peer with TCP connection
   notificationClient._peerAvailabilityChanged(TCPEvent);
 
+});
+
+test('Action fails to bad DNS.', function (t) {
+
+  // Scenario:
+  // ConnectionType is TCP_NATIVE, host address is having wrong DNS.
+  // ThaliNotificationClient tries to connect 6 times and then stops.
+
+  var counter = 0;
+
   // Simulates how peer pool runs actions
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
-  var action = notificationClient.peerDictionary.get('id123').notificationAction;
+  var enqueue = function (action) {
+    var keepAliveAgent = new http.Agent({ keepAlive: true });
+    action.start(keepAliveAgent).then( function () {
+      t.fail('This action should fail always.');
+      t.end();
+    }).catch( function ( ) {
+      console.log('runs fine');
+      if (++counter === 6) {
+        t.end();
+      }
+    });
+  };
 
-  action.start(keepAliveAgent).then( function () {
-    console.log('runs fine');
-    t.end();
-  }).catch( function (err) {
-    console.log(err);
-    notificationClient.stop();
-    t.end();
-  });
+  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
 
+  var notificationClient =
+    new ThaliNotificationClient(globals.peerPoolInterface,
+      globals.targetDeviceKeyExchangeObjects[0], addressBookCallback);
 
+  notificationClient.start();
+
+  var TCPEvent = {
+    peerIdentifier: 'id123',
+    hostAddress: 'address-that-does-not-exists',
+    portNumber: 123,
+    connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
+    suggestedTCPTimeout: 100000
+  };
+
+  // New peer with TCP connection
+  notificationClient._peerAvailabilityChanged(TCPEvent);
 
 });
 

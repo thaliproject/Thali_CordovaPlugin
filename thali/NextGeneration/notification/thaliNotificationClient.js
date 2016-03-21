@@ -37,7 +37,7 @@ var util = require('util');
 
 /**
  * @classdesc Data of peerAdvertisesDataForUs event
- *
+ * @constructor
  * @param {buffer} keyId The buffer contains the ECDH public key for the
  * peer.
  * @param {string} pskIdentifyField
@@ -350,9 +350,10 @@ ThaliNotificationClient.prototype._hostAddressAndIdentifier = function (peer) {
  * 2. there is a record for the 'peer.peerIdentifier' already.
  *
  * @private
- * @param {Peer} peer An incoming peer variable.
+ * @param {module:thaliMobile~PeerAvailabilityChangedData} peer An incoming peer variable.
  */
 ThaliNotificationClient.prototype._noHostIdentifierExists = function (peer) {
+
 
   var peerEntry = this.peerDictionary.get(peer.peerIdentifier);
 
@@ -438,7 +439,7 @@ ThaliNotificationClient.prototype._createAndEnqueueAction =
  * This function handles resolved events coming from actions.
  *
  * @private
- * @param {string} peerId Identifies the peer this aciton belongs to.
+ * @param {string} peerId Identifies the peer this action belongs to.
  * @param {module:thaliNotificationAction.ActionResolution} resolution
  * The result of the actions.
  * @param {?module:thaliNotificationBeacons~parseBeaconsResponse} beaconDetails
