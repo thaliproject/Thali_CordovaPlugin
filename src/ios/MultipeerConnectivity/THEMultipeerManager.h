@@ -58,7 +58,7 @@
                     withConnectCallback:(ClientConnectCallback)connectCallback;
 
 // Kill the connection without clean-up. Testing only !!
-- (BOOL)killConnection:(NSString *)peerIdentifier;
+- (BOOL)killConnections:(NSString *)peerIdentifier;
 
 // Allow external components to see our current id
 - (NSString *)localPeerIdentifier;

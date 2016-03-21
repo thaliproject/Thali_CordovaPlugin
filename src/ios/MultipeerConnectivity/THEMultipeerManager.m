@@ -392,10 +392,10 @@
   }
 }
 
-- (BOOL)killConnection:(NSString *)peerIdentifier
+- (BOOL)killConnections:(NSString *)peerIdentifier
 {
   // Cause trouble for testing purposes
-  return [_client killConnection:peerIdentifier];
+  return [_client killConnections:peerIdentifier];
 }
 
 @end

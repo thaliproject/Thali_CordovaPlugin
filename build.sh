@@ -53,8 +53,11 @@ then
   # Make sure build works with the latest cordova release
   jx npm update -g cordova;ERROR_ABORT
 fi
+
 # Print the Cordova version for debugging purposes
-echo "Cordova version: $(cordova -v)";ERROR_ABORT
+# and to make sure Cordova is installed
+echo "Cordova version:";ERROR_ABORT
+cordova -v;ERROR_ABORT
 
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
@@ -64,9 +67,9 @@ jx npm run test-meta;ERROR_ABORT
 jx npm run test-coordinated;ERROR_ABORT
 
 # Verify that docs can be generated
-cd $PROJECT_ROOT/thali/;ERROR_ABORT
-jx npm run createPublicDocs
-jx npm run createInternalDocs
+#cd $PROJECT_ROOT/thali/;ERROR_ABORT
+#jx npm run createPublicDocs;ERROR_ABORT
+#jx npm run createInternalDocs;ERROR_ABORT
 
 # Make sure we are back in the project root folder
 # after the test execution

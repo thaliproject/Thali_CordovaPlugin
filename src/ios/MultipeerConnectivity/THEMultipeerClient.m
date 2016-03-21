@@ -309,7 +309,7 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64; // Don't allow more than 
   return success;
 }
 
-- (BOOL)killConnection:(NSString *)peerUUID
+- (BOOL)killConnections:(NSString *)peerUUID
 {
   __block BOOL success = NO;
 

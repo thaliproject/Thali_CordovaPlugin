@@ -11,6 +11,7 @@ var validations = require('../validations');
 var ThaliConfig = require('./thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 var logger = require('../thalilogger')('thaliWifiInfrastructure');
+var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
@@ -526,6 +527,7 @@ function () {
       };
       var listeningHandler = function () {
         self.routerServerPort = self.routerServer.address().port;
+        self.routerServer = makeIntoCloseAllServer(self.routerServer);
         self._server.setUSN(self.usn);
         // We need to update the location string, because the port
         // may have changed when we re-start the router server.
@@ -578,7 +580,7 @@ function (skipPromiseQueue, changeTarget) {
       return resolve();
     }
     self._server.stop(function () {
-      self.routerServer.close(function () {
+      self.routerServer.closeAll(function () {
         // The port needs to be reset, because
         // otherwise there is no guarantee that
         // the same port is available next time

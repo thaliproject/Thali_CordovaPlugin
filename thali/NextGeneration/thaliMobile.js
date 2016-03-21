@@ -1,7 +1,5 @@
-/* global hostAddress */
 'use strict';
 
-var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
 var logger = require('../thalilogger')('thaliMobile');
@@ -653,6 +651,9 @@ var handlePeer = function (peer, connectionType) {
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (peer) {
+  if (peer.portNumber) {
+    peer.hostAddress = '127.0.0.1';
+  }
   var connectionType =
     jxcore.utils.OSInfo().isAndroid ?
     connectionTypes.BLUETOOTH :
