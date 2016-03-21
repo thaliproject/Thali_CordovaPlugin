@@ -3,7 +3,6 @@
 var Promise = require('lie');
 var EventEmitter = require('events').EventEmitter;
 var uuid = require('node-uuid');
-var testUtils = require('./testUtils.js');
 var express = require('express');
 var assert = require('assert');
 var net = require('net');
@@ -11,39 +10,6 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 
 var proxyquire = require('proxyquire');
 proxyquire.noPreserveCache();
-
-var mockEmitter = new EventEmitter();
-var networkStatusCalled = false;
-
-var ThaliWifiInfrastructure =
-proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
-  {
-    './thaliMobileNativeWrapper': {
-      emitter: mockEmitter,
-      getNonTCPNetworkStatus: function () {
-        assert(!networkStatusCalled,
-          'the mock network status should not be called twice');
-        networkStatusCalled = true;
-        return Promise.resolve(getCurrentNetworkStatus());
-      },
-      '@noCallThru': true
-    },
-    './thaliConfig': {
-      // Use a unique NT for messaging between mock code so
-      // that the SSDP traffic doesn't get mixed up with real
-      // Thali messaging (for example, if in a desktop test,
-      // the native and Wifi layers are run simultaneously).
-      SSDP_NT: 'http://www.thaliproject.org/mock'
-    },
-    'ip': {
-      address: function () {
-        // In desktop mocking scenario, all peers are running
-        // in localhost.
-        return '127.0.0.1';
-      }
-    }
-  }
-);
 
 /** @module WifiBasedNativeMock */
 
@@ -89,6 +55,58 @@ MobileCallInstance.prototype.platform = null;
 MobileCallInstance.prototype.router = null;
 
 /**
+ * Most of the functions we are mocking are supposed to have at most one
+ * outstanding call to them at a time. This wrapper enforces that requirement
+ * by asserting if there is more than one outstanding call.
+ * @param {Object} funSelf The 'this' for the method being called
+ * @param {Object} fun The function to be invoked
+ * @constructor
+ */
+function CallOnce(funSelf, fun) {
+  this.called = false;
+  this.fun = fun;
+  this.funSelf = funSelf;
+}
+
+/**
+ * This checks if the function being wrapped in CallOnce has been wrapped and
+ * if not it will wrap it. Note that we assume that for any function that
+ * is submitted its last argument when invoked is always a callback.
+ * @param {Object} self The self that the function to be invoked should be
+ * called with
+ * @param {string} funName The name of the function to be invoked 
+ * @param {Object[]} args The args that were submitted to the function being
+ * invoked.
+ */
+CallOnce.check = function (self, funName, args) {
+  var callOnceFunName = funName + 'CallOnce';
+  if (!self[callOnceFunName]) {
+    self[callOnceFunName] = 
+      new CallOnce(self, self[funName]);
+  }
+  
+  return self[callOnceFunName].startCall.apply(self[callOnceFunName], args);
+};
+
+CallOnce.prototype.startCall = function () {
+  var self = this;
+  assert(!self.called, 'Only one call at a time');
+  self.called = true;
+  // arguments isn't a real array so we make it into one, bad perf
+  // but we don't care
+  var functionArgs = Array.prototype.slice.call(arguments);
+  var originalCallback = functionArgs.slice(-1)[0];
+  var callbackWrapper = function () {
+    assert(self.called, 'Stop should only be called after start');
+    self.called = false;
+    return originalCallback.apply(self.funSelf, arguments);
+  };
+  functionArgs[functionArgs.length - 1] = callbackWrapper;
+  return self.fun.apply(self.funSelf, functionArgs);
+};
+
+
+/**
  * In effect this listens for SSDP:alive and SSDP:byebye messages along with
  * the use of SSDP queries to find out who is around. These will be translated
  * to peer availability callbacks as specified below. This code MUST meet the
@@ -103,10 +121,15 @@ MobileCallInstance.prototype.router = null;
  * @public
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
-MobileCallInstance.prototype.startListeningForAdvertisements =
+MobileCallInstance.prototype.startListeningForAdvertisements = 
+  function (callback) {// jscs:ignore disallowUnusedParams
+    return CallOnce.check(this, '_startListeningForAdvertisements', arguments);
+  };
+
+MobileCallInstance.prototype._startListeningForAdvertisements =
 function (callback) {
   this.thaliWifiInfrastructure.startListeningForAdvertisements()
-  .then(function () {
+  .then(function () {
     callback();
   })
   .catch(function (error) {
@@ -123,10 +146,15 @@ function (callback) {
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopListeningForAdvertisements =
-function (callback) {
+  function (callBack) {// jscs:ignore disallowUnusedParams
+    return CallOnce.check(this, '_stopListeningForAdvertisements', arguments);
+  };
+
+MobileCallInstance.prototype._stopListeningForAdvertisements =
+function (callBack) {
   this.thaliWifiInfrastructure.stopListeningForAdvertisements()
-  .then(function () {
-    callback();
+  .then(function () {
+    callBack();
   });
 };
 
@@ -175,6 +203,12 @@ var incomingConnectionsServer = null;
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
+  function (portNumber, callback) {// jscs:ignore disallowUnusedParams
+    return CallOnce.check(this, '_startUpdateAdvertisingAndListening', 
+                          arguments);
+  };
+
+MobileCallInstance.prototype._startUpdateAdvertisingAndListening =
 function (portNumber, callback) {
   var self = this;
   var doStart = function () {
@@ -221,7 +255,12 @@ function (portNumber, callback) {
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopAdvertisingAndListening =
-function (callback) {
+  function (callBack) {// jscs:ignore disallowUnusedParams
+    return CallOnce.check(this, '_stopAdvertisingAndListening', arguments);
+  };
+
+MobileCallInstance.prototype._stopAdvertisingAndListening =
+function (callBack) {
   var self = this;
   var doStop = function () {
     peerAvailabilities = {};
@@ -236,8 +275,8 @@ function (callback) {
       delete peerProxyServers[peerIdentifier];
     }
     self.thaliWifiInfrastructure.stopAdvertisingAndListening()
-    .then(function () {
-      callback();
+    .then(function () {
+      callBack();
     });
   };
   if (incomingConnectionsServer !== null) {
@@ -706,6 +745,40 @@ function WifiBasedNativeMock(platform, router) {
   if (!router) {
     router = express.Router();
   }
+
+  var mockEmitter = new EventEmitter();
+  var networkStatusCalled = false;
+
+  var ThaliWifiInfrastructure =
+    proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
+      {
+        './thaliMobileNativeWrapper': {
+          emitter: mockEmitter,
+          getNonTCPNetworkStatus: function () {
+            assert(!networkStatusCalled,
+              'the mock network status should not be called twice');
+            networkStatusCalled = true;
+            return Promise.resolve(getCurrentNetworkStatus());
+          },
+          '@noCallThru': true
+        },
+        './thaliConfig': {
+          // Use a unique NT for messaging between mock code so
+          // that the SSDP traffic doesn't get mixed up with real
+          // Thali messaging (for example, if in a desktop test,
+          // the native and Wifi layers are run simultaneously).
+          SSDP_NT: 'http://www.thaliproject.org/mock'
+        },
+        'ip': {
+          address: function () {
+            // In desktop mocking scenario, all peers are running
+            // in localhost.
+            return '127.0.0.1';
+          }
+        }
+      }
+    );
+  
   var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
   // In the native side, there is no equivalent for the start call,
   // but it needs to be done once somewhere before calling other functions.
