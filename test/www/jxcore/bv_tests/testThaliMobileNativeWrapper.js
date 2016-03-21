@@ -2,7 +2,7 @@
 
 var express = require('express');
 var http = require('http');
-//var net = require('net');
+var net = require('net');
 
 if (typeof Mobile === 'undefined') {
   return;
@@ -187,19 +187,29 @@ function trivialEndToEndTest(t, needManualNotify) {
       }
     });
 }
-/*
+
 var connectionTester = function (port, callback) {
+  var returned = false;
   var connection = net.createConnection(port, function () {
     connection.destroy();
-    callback(true);
+    if (!returned) {
+      returned = true;
+      callback(true);
+    }
   });
   connection.on('error', function () {
     connection.destroy();
-    callback(false);
+    if (!returned) {
+      returned = true;
+      callback(false);
+    }
   });
 };
 
 test('all services are stopped when we call stop', function (t) {
+  var stopped = false;
+  var serversManagerLocalPort = 0;
+  var routerServerPort = 0;
   var stopAndCheck = function () {
     var discoveryStopped = false;
     var advertisingStopped = false;
@@ -211,21 +221,32 @@ test('all services are stopped when we call stop', function (t) {
           'discoveryAdvertisingStateUpdateNonTCP',
           stateChangeHandler
         );
-        connectionTester(
-          thaliMobileNativeWrapper._getServersManagerLocalPort(),
-          function (success) {
-            t.equals(success, false,
-              'connection to servers manager should fail after stopping');
-            connectionTester(
-              thaliMobileNativeWrapper._getRouterServerPort(),
-              function () {
-                t.equals(success, false,
-                  'connection to router server should fail after stopping');
-                t.end();
-              }
-            );
+        var doConnectTest = function () {
+          // It is possible that the state changes
+          // are emitted before the stop call has been
+          // completed so don't proceed with the checks
+          // until the stop has been done.
+          if (stopped === false) {
+            setImmediate(doConnectTest);
+            return;
           }
-        );
+          connectionTester(
+            serversManagerLocalPort,
+            function (success) {
+              t.equals(success, false,
+                'connection to servers manager should fail after stopping');
+              connectionTester(
+                routerServerPort,
+                function () {
+                  t.equals(success, false,
+                    'connection to router server should fail after stopping');
+                  t.end();
+                }
+              );
+            }
+          );
+        }
+        doConnectTest();
       }
     };
     thaliMobileNativeWrapper.emitter.on(
@@ -236,6 +257,7 @@ test('all services are stopped when we call stop', function (t) {
     .then(function () {
       t.equals(thaliMobileNativeWrapper._isStarted(), false,
         'is stopped after calling stop');
+      stopped = true;
       // stateChangeHandler above should get called
     });
   };
@@ -247,13 +269,17 @@ test('all services are stopped when we call stop', function (t) {
     return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
   })
   .then(function () {
+    serversManagerLocalPort =
+      thaliMobileNativeWrapper._getServersManagerLocalPort();
+    routerServerPort =
+      thaliMobileNativeWrapper._getRouterServerPort();
     connectionTester(
-      thaliMobileNativeWrapper._getServersManagerLocalPort(),
+      serversManagerLocalPort,
       function (success) {
         t.equals(success, true,
           'connection to servers manager should succeed after starting');
         connectionTester(
-          thaliMobileNativeWrapper._getRouterServerPort(),
+          routerServerPort,
           function () {
             t.equals(success, true,
               'connection to router server should succeed after starting');
@@ -264,7 +290,7 @@ test('all services are stopped when we call stop', function (t) {
     );
   });
 });
-*/
+
 if (!jxcore.utils.OSInfo().isMobile) {
   // This test primarily exists to make sure that we can easily debug the full
   // connection life cycle from the HTTP client through thaliMobileNativeWrapper
