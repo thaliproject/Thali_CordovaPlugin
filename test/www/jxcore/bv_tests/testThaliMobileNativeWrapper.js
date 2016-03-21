@@ -347,31 +347,6 @@ test('make sure we actually call kill connections properly', function (t) {
   });
 });
 
-test('thaliMobileNativeWrapper is stopped when ' +
-  'incomingConnectionToPortNumberFailed is received',
-  function (t) {
-    var routerPort = 0;
-    thaliMobileNativeWrapper.emitter
-      .once('incomingConnectionToPortNumberFailed', function (err) {
-        t.equal(err.reason,
-                thaliMobileNativeWrapper.routerFailureReason.NATIVE_LISTENER,
-                'right error reason');
-        t.ok(err.errors.length === 0, 'Stop should be fine');
-        t.equal(err.routerPort, routerPort, 'same port');
-        t.notOk(thaliMobileNativeWrapper._isStarted(), 'we should be off');
-        t.end();
-      });
-    thaliMobileNativeWrapper.start(express.Router())
-    .then(function () {
-      routerPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
-      return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
-    })
-    .then(function () {
-      Mobile.fireIncomingConnectionToPortNumberFailed(routerPort);
-    });
-  }
-);
-
 test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
   'is received',
   function (t) {
@@ -508,6 +483,31 @@ if (!jxcore.utils.OSInfo().isMobile) {
       });
     });
   });
+
+  test('thaliMobileNativeWrapper is stopped when ' +
+    'incomingConnectionToPortNumberFailed is received',
+    function (t) {
+      var routerPort = 0;
+      thaliMobileNativeWrapper.emitter
+        .once('incomingConnectionToPortNumberFailed', function (err) {
+          t.equal(err.reason,
+                  thaliMobileNativeWrapper.routerFailureReason.NATIVE_LISTENER,
+                  'right error reason');
+          t.ok(err.errors.length === 0, 'Stop should be fine');
+          t.equal(err.routerPort, routerPort, 'same port');
+          t.notOk(thaliMobileNativeWrapper._isStarted(), 'we should be off');
+          t.end();
+        });
+      thaliMobileNativeWrapper.start(express.Router())
+      .then(function () {
+        routerPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
+        return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+      })
+      .then(function () {
+        Mobile.fireIncomingConnectionToPortNumberFailed(routerPort);
+      });
+    }
+  );
 }
 
 test('we successfully receive and replay discoveryAdvertisingStateUpdate',
@@ -581,7 +581,9 @@ test('can do HTTP requests between peers', function (t) {
 /*
 // TODO: This one is more challenging, because there needs to be coordination
 // between the peers about when an HTTP request is complete so that the
-// other side knows when it can stop (and ramp down everything)..
+// other side knows when it can stop (and ramp down everything).
+// A simple workaround will be just to run the test a few times so the
+// coordination will happen in setup / teardown.
 test('can do requests between peers after start and stop', function (t) {
   trivialEndToEndTest(t, false, function () {
     t.equals(thaliMobileNativeWrapper._isStarted(), true, 'must be started');
