@@ -194,6 +194,7 @@
 {
   @synchronized(self)
   {
+    [self changeState:THEPeerSessionStateConnected];
     [self fireConnectCallback:nil withPort:port];
   }
 }

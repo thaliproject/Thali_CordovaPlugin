@@ -63,7 +63,6 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
   this.testServer.on('too_late', function (data) {
     // We connected too late to take part in a test session
     // signal to CI (via stdout) that we're quitting (and do so)
-    console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****");
     process.exit(0);
   });
@@ -138,7 +137,6 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
   this.testServer.on('end', function() {
 
     // Test server is telling us we can quit
-    console.log("****TEST TOOK:  ms ****" );
     console.log("****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****");
 
     // Acknowledge the server's request to end

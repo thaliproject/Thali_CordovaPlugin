@@ -83,6 +83,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     public synchronized void close() {
         mIsClosing = true;
+        closeBluetoothSocketAndStreams();
 
         if (mReceivingThread != null) {
             Log.d(mTag, "close: Stopping receiving thread...");
@@ -97,7 +98,6 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         }
 
         closeLocalSocketAndStreams();
-        closeBluetoothSocketAndStreams();
         Log.i(mTag, "close: Complete (thread ID: " + getId() + ")");
     }
 
@@ -266,6 +266,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         if (mBluetoothSocket != null) {
             try {
                 mBluetoothSocket.close();
+                Log.d(mTag, "closeBluetoothSocketAndStreams: Bluetooth socket closed");
             } catch (IOException e) {
                 Log.e(mTag, "closeBluetoothSocketAndStreams: Failed to close the Bluetooth socket: " + e.getMessage(), e);
             }
