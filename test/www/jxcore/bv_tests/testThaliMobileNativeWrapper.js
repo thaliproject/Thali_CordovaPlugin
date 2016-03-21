@@ -3,6 +3,8 @@
 var express = require('express');
 var http = require('http');
 var net = require('net');
+var Promise = require('lie');
+var sinon = require('sinon');
 
 if (typeof Mobile === 'undefined') {
   return;
@@ -291,6 +293,59 @@ test('all services are stopped when we call stop', function (t) {
   });
 });
 
+var verifyCallWithArguments = function (t, callName, parameters) {
+  var mockServersManager = {};
+  var spy = sinon.spy();
+  mockServersManager[callName] = function () {
+    spy.apply(this, arguments);
+    return Promise.resolve();
+  };
+  var oldServersManager = thaliMobileNativeWrapper._getServersManager();
+  thaliMobileNativeWrapper._setServersManager(mockServersManager);
+  thaliMobileNativeWrapper[callName].apply(this, parameters)
+  .then(function () {
+    t.equals(
+      JSON.stringify(parameters),
+      JSON.stringify(spy.args[0]),
+      'called with right arguments'
+    );
+    thaliMobileNativeWrapper._setServersManager(oldServersManager);
+    t.end();
+  });
+};
+
+test('make sure terminateConnection is properly hooked up', function (t) {
+  verifyCallWithArguments(t, 'terminateConnection', ['connection-id']);
+});
+
+test('make sure terminateListener is properly hooked up', function (t) {
+  verifyCallWithArguments(t, 'terminateListener', ['peer-id', 8080]);
+});
+
+test('make sure we actually call kill connections properly', function (t) {
+  thaliMobileNativeWrapper.killConnections()
+  .then(function () {
+    if (jxcore.utils.OSInfo().isAndroid) {
+      t.fail('should not succeed on Android');
+      t.end();
+    } else {
+      // TODO: Do right checks on iOS.
+      // Also implement the right behavior in the Wifi-based mock.
+      t.ok(true, 'IMPLEMENT ME!!!!!!');
+      t.end();
+    }
+  })
+  .catch(function (error) {
+    if (jxcore.utils.OSInfo().isAndroid) {
+      t.equals(error.message, 'Not Supported', 'specific error expected');
+      t.end();
+    } else {
+      t.fail('should not fail on iOS');
+      t.end();
+    }
+  });
+});
+
 if (!jxcore.utils.OSInfo().isMobile) {
   // This test primarily exists to make sure that we can easily debug the full
   // connection life cycle from the HTTP client through thaliMobileNativeWrapper
@@ -300,26 +355,6 @@ if (!jxcore.utils.OSInfo().isMobile) {
   // needs to stay not running when we are on mobile.
   test('can do HTTP requests between peers without coordinator', function (t) {
     trivialEndToEndTest(t, true);
-  });
-
-  test('make sure terminateConnection is properly hooked up', function (t) {
-    // TODO: Our goal is NOT to test that the function works since it is
-    // thaliTcpServersManager job to do that. Our job is just to make sure
-    // we are calling it correctly.
-    t.ok('IMPLEMENT ME!!!!');
-    t.end();
-  });
-
-  test('make sure terminateListener is properly hooked up', function (t) {
-    // TODO: Same as above
-    t.ok('IMPLEMENT ME!!!!');
-    t.end();
-  });
-
-  test('make sure we actually call kill connections property', function (t) {
-    // TODO: Implement me!
-    t.ok('IMPLEMENT ME!!!!');
-    t.end();
   });
 
   test('peer changes handled from a queue', function (t) {

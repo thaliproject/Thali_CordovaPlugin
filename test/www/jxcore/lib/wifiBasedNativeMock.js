@@ -435,6 +435,8 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.killConnections = function (callback) {
+  // TODO: Implement specified behavior
+  callback();
 };
 
 
