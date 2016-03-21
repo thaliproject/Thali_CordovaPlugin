@@ -110,10 +110,11 @@ test('can get the network status before starting', function (t) {
         'bluetoothLowEnergy',
         'cellular'
       ];
-      for (var index in requiredProperties) {
+      requiredProperties.forEach(function (requiredProperty) {
         validations.ensureNonNullOrEmptyString(
-          networkChangedValue[requiredProperties[index]]);
-      }
+          networkChangedValue[requiredProperty]
+        );
+      });
     }, 'network status should have certain non-empty properties');
     t.end();
   });
@@ -247,7 +248,7 @@ test('all services are stopped when we call stop', function (t) {
               );
             }
           );
-        }
+        };
         doConnectTest();
       }
     };
@@ -421,14 +422,44 @@ if (!jxcore.utils.OSInfo().isMobile) {
       .then(function () {
         Mobile.fireIncomingConnectionToPortNumberFailed(routerPort);
       });
-    });
+    }
+  );
 
   test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
-    'is received', function (t) {
-    // TODO: Implement
-    t.ok('IMPLEMENT ME!!!!');
-    t.end();
-  });
+    'is received',
+    function (t) {
+      thaliMobileNativeWrapper.start(express.Router())
+      .then(function () {
+        var routerServerPort = thaliMobileNativeWrapper._getRouterServerPort();
+        var errorDescription = 'Dummy Error';
+        thaliMobileNativeWrapper.emitter.on(
+          'incomingConnectionToPortNumberFailed',
+          function (routerFailureReason) {
+            t.equals(
+              routerFailureReason.reason,
+              thaliMobileNativeWrapper.routerFailureReason.APP_LISTENER,
+              'failure reason is as expected'
+            );
+            t.equals(
+              routerFailureReason.errors[0],
+              errorDescription,
+              'error description is as expected'
+            );
+            t.equals(thaliMobileNativeWrapper._isStarted(), false,
+              'must be stopped');
+            t.end();
+          }
+        );
+        thaliMobileNativeWrapper._getServersManager().emit(
+          'routerPortConnectionFailed',
+          {
+            routerPort: routerServerPort,
+            error: errorDescription
+          }
+        );
+      });
+    }
+  );
 
   test('We repeat failedConnection event when we get it from ' +
     'thaliTcpServersManager', function (t) {
