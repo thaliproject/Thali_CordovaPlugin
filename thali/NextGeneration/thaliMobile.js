@@ -207,7 +207,7 @@ module.exports.stop = function () {
 /**
  * This method calls the underlying startListeningForAdvertisements
  * functions.
- * 
+ *
  * Note that once this method is called
  * it is giving explicit permission to this code to call this method
  * on a radio stack that is currently disabled when the method is called but is
@@ -559,7 +559,7 @@ module.exports.connectionTypes = connectionTypes;
  *
  * @public
  * @event module:thaliMobile.event:peerAvailabilityChanged
- * @type {Object}
+ * @typedef {Object} peerAvailabilityStatus
  * @property {string} peerIdentifier This is exclusively used to detect if
  * this is a repeat announcement or if a peer has gone to correlate it to the
  * announcement of the peer's presence. But this value is not used to establish
