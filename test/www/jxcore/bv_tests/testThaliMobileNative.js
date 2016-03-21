@@ -1,6 +1,7 @@
 'use strict';
 
 var net = require('net');
+var crypto = require('crypto');
 var randomstring = require('randomstring');
 var tape = require('../lib/thali-tape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
@@ -252,114 +253,103 @@ test('Can shift large amounts of data', function (t) {
 
   var connected = false;
 
+  // Just send a random string plus it's digest to the other side
+  // and have it compare it's own computed digest with ours
+
   var sockets = {};
-  var echoServer = net.createServer(function (socket) {
-    socket.on('data', function (data) {
-      console.log("data on: " + socket.remotePort);
-      socket.write(data);
-    });
+  var server = net.createServer(function (socket) {
     socket.on('end', socket.end);
     socket.on('error', function (error) {
       logger.warn('Error on echo server socket: ' + error);
       t.fail();
     });
-    console.log("new socket: " + socket.remotePort);
     sockets[socket.remotePort] = socket;
   });
-  echoServer = makeIntoCloseAllServer(echoServer);
-  serverToBeClosed = echoServer;
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
 
-  var dataSize = 5;//4096;
-  var toSend = "HELLO";//randomstring.generate(dataSize);
+  var ID_LEN = 16;
+  var DATA_LEN = 1024;
 
-  function shiftData(sock, reverseConnection) {
+  function readMax(data, size, resultCallback) {
+    var result = '';
+    while (data.length && size--) {
+      result += data.slice(0, 1).toString();
+      data = data.slice(1);
+    }
+    resultCallback(result);
+    return data;
+  }
 
-    sock.on('error', function (error) {
-      logger.warn('Error on client socket: ' + error);
-      t.fail();
+  function shiftData(sock) {
+    var toSend = randomstring.generate(DATA_LEN);
+    var digest = crypto.createHash('sha1').update(toSend).digest('base64');
+   
+    var toRecv = '';
+    var remoteDigest = ''; 
+    var digestLength = '';
+    var digestLengthReceived = false;
+
+    sock.on("data", function(data) {
+
+      logger.info(data.toString());
+
+      while (toRecv.length < DATA_LEN) {
+        data = readMax(data, DATA_LEN - toRecv.length, function(result) {
+          toRecv += result;
+        });
+        if (data.length == 0) {
+          return;
+        }
+      }
+
+      while (digestLengthReceived == false) {
+        data = readMax(data, 1, function(result) {
+          if (result == ' ') {
+            digestLengthReceived = true;
+            digestLength = digestLength.toString();
+          }
+          else {
+            digestLength += result;
+          }
+        });
+        if (data.length == 0) {
+          return;
+        }
+      }
+
+      while (remoteDigest.length < digestLength) {
+        if (data.length == 0) {
+          return;
+        }
+        data = readMax(data, digestLength - remoteDigest.length, function(result) {
+          remoteDigest += result;
+        });
+      }
+
+      t.equal(remoteDigest, crypto.createHash('sha1').update(toRecv).digest('base64'), 
+      "remote and local computed digests should match");
+      t.end();
     });
 
-    var toRecv = '';
-
-    if (!reverseConnection) {
-
-      // Forward connection, wait until we've received all expected data from the 
-      // other side before sending our payload
-
-      var totalRecvd = 0;
-      sock.on('data', function (data) {
-
-        totalRecvd += data.length;
-
-        if (totalRecvd === dataSize) {
-          // We've seen all the remote's data, send our own
-          sock.write(toSend);
-        }
-
-        if (totalRecvd > dataSize) {
-          // This should now be our own data echoing back
-          toRecv += data.toString(); 
-        } 
-
-        if (toRecv.length === dataSize) {
-          // Should have an exact copy of what we sent
-          t.ok(toRecv === toSend, 'received should match sent reverse');
-          t.end();
-        }
-      });
-    }
-    else {
-
-      // Reverse connection, we send first to ensure everyone's connected and listening
-      
-      var done = false;
-      sock.on('data', function (data) {
-
-        var remaining = dataSize - toRecv.length;
-
-        if (remaining >= data.length) {
-          toRecv += data.toString();
-          data = data.slice(0, 0);
-        }
-        else {
-          toRecv += data.toString('utf8', 0, remaining);
-          data = data.slice(remaining);
-        }
-
-        if (toRecv.length === dataSize) {
-          if (!done) {
-            done = true;
-            t.ok(toSend === toRecv, 'received should match sent forward');
-            t.end();
-          }
-        }
-      });
-
-      sock.write(toSend);
-    }
+    sock.write(toSend);
+    sock.write(digest.length.toString() + " " + digest);
   }
 
   function onConnectSuccess(err, connection) {
 
+    connection = JSON.parse(connection);
+    
     var client = null;
     connected = true;
 
-    // We're happy here if we make a connection to anyone
-    logger.info(connection);
-    connection = JSON.parse(connection);
-    logger.info(connection);
-
     if (connection.listeningPort) {
-      logger.info('Forward connection');
-      // We made a forward connection
       client = net.connect(connection.listeningPort, function () {
-        shiftData(client, false);
+        shiftData(client);
       });
     } else {
-      logger.info('Reverse connection');
-      // We made a reverse connection
       client = sockets[connection.clientPort];
-      shiftData(client, true);
+      shiftData(client);
     }
   }
 
@@ -382,9 +372,9 @@ test('Can shift large amounts of data', function (t) {
     });
   });
 
-  echoServer.listen(0, function () {
+  server.listen(0, function () {
 
-    var applicationPort = echoServer.address().port;
+    var applicationPort = server.address().port;
 
     Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
     function (err) {
