@@ -118,6 +118,8 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 // The running number of the test that together with the test name guarantees
 // a unique identifier even if there exists multiple tests with same name
 var testRunningNumber = 0;
+// Flag used to check if we have completed all the tests we should run
+var complete = false;
 
 var thaliTape = function (fixture) {
   // Thali_Tape - Adapt tape such that tests are executed when explicitly
@@ -166,6 +168,10 @@ thaliTape.begin = function () {
   });
 
   testServer.on('disconnect', function () {
+    if (complete) {
+      process.exit(0);
+      return;
+    }
     // Just log the error since socket.io will try
     // to reconnect.
     console.log('Disconnected from the test server');

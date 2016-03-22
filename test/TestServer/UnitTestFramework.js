@@ -55,7 +55,7 @@ UnitTestFramework.prototype.finishRun =
 
     // There may be other platforms still running
     if (this.runningTests.length === 0) {
-      process.exit(0);
+      this.emit('completed');
     }
   };
 
