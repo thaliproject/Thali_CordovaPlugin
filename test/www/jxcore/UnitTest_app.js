@@ -39,10 +39,21 @@ ThaliMobile.getNetworkStatus()
         });
       });
     } else {
-      testUtils.logMessageToScreen(
-        'Device did not have required hardware capabilities!'
-      );
-      console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+      ThaliMobile.getNetworkStatus()
+      .then(function (networkStatus) {
+        testUtils.logMessageToScreen(
+          'Device did not have required hardware capabilities!'
+        );
+        console.log(networkStatus);
+        if (networkStatus.bluetoothLowEnergy === 'on') {
+          // If we are on a device that doesn't have required capabilities
+          // the network status for BLE must not be reported to be "on"
+          // which would mean "The radio is on and available for use."
+          console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+        } else {
+          console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+        }
+      });
     }
   });
 });

@@ -56,7 +56,7 @@
                     withConnectCallback:(ClientConnectCallback)connectCallback;
 
 // Kill connection for testing purposes
-- (BOOL)killConnection:(NSString *)peerIdentifier;
+- (BOOL)killConnections:(NSString *)peerIdentifier;
 
 - (const THEMultipeerClientSession *)sessionForUUID:(NSString *)peerUUID;
 
