@@ -1,6 +1,7 @@
 'use strict';
 
 var net = require('net');
+var crypto = require('crypto');
 var randomstring = require('randomstring');
 var tape = require('../lib/thali-tape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
@@ -139,6 +140,14 @@ function connectToPeer(peer, retries, successCb, failureCb) {
       successCb(err, connection);
     } else {
       logger.info('Connect returned an error: ' + err);
+      if (err.indexOf("unreachable") != -1) {
+        logger.info("Aborting retries since unreachable");
+        return;
+      }
+      if (err.indexOf("Already connected") != -1) {
+        logger.info("Aborting retries since already connected");
+        return;
+      }
       // Retry a failed connection..
       if (retries > 0) {
         logger.info('Scheduling a connect retry - retries left: ' + retries);
@@ -158,7 +167,7 @@ function connectToPeer(peer, retries, successCb, failureCb) {
 
 test('Can connect to a remote peer', function (t) {
 
-  var connecting = false;
+  var connected = false;
 
   var echoServer = net.createServer(function (socket) {
     socket.pipe(socket);
@@ -167,6 +176,8 @@ test('Can connect to a remote peer', function (t) {
   serverToBeClosed = echoServer;
 
   function onConnectSuccess(err, connection) {
+
+    connected = true;
 
     // Called if we successfully connecto to a peer
     connection = JSON.parse(connection);
@@ -206,8 +217,10 @@ test('Can connect to a remote peer', function (t) {
   }
 
   function onConnectFailure () {
-    t.fail('Connect failed!');
-    t.end();
+    if (!connected) {
+      t.fail('Connect failed!');
+      t.end();
+    }
   }
 
   echoServer.listen(0, function () {
@@ -219,8 +232,7 @@ test('Can connect to a remote peer', function (t) {
         JSON.stringify(peers)
       );
       peers.forEach(function (peer) {
-        if (peer.peerAvailable && !connecting) {
-          connecting = true;
+        if (peer.peerAvailable && !connected) {
           var RETRIES = 10;
           connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
         }
@@ -239,13 +251,13 @@ test('Can connect to a remote peer', function (t) {
 
 test('Can shift large amounts of data', function (t) {
 
-  var connecting = false;
+  var connected = false;
+
+  // Just send a random string plus it's digest to the other side
+  // and have it compare it's own computed digest with ours
 
   var sockets = {};
-  var echoServer = net.createServer(function (socket) {
-    socket.on('data', function (data) {
-      socket.write(data);
-    });
+  var server = net.createServer(function (socket) {
     socket.on('end', socket.end);
     socket.on('error', function (error) {
       logger.warn('Error on echo server socket: ' + error);
@@ -253,131 +265,116 @@ test('Can shift large amounts of data', function (t) {
     });
     sockets[socket.remotePort] = socket;
   });
-  echoServer = makeIntoCloseAllServer(echoServer);
-  serverToBeClosed = echoServer;
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
 
-  var dataSize = 4096;
-  var toSend = randomstring.generate(dataSize);
+  var ID_LEN = 16;
+  var DATA_LEN = 1024;
 
-  function shiftData(sock, reverseConnection) {
+  function readMax(data, size, resultCallback) {
+    var result = '';
+    while (data.length && size--) {
+      result += data.slice(0, 1).toString();
+      data = data.slice(1);
+    }
+    resultCallback(result);
+    return data;
+  }
 
-    sock.on('error', function (error) {
-      logger.warn('Error on client socket: ' + error);
-      t.fail();
+  function shiftData(sock) {
+    var toSend = randomstring.generate(DATA_LEN);
+    var digest = crypto.createHash('sha1').update(toSend).digest('base64');
+   
+    var toRecv = '';
+    var remoteDigest = ''; 
+    var digestLength = '';
+    var digestLengthReceived = false;
+
+    sock.on("data", function(data) {
+
+      logger.info(data.toString());
+
+      while (toRecv.length < DATA_LEN) {
+        data = readMax(data, DATA_LEN - toRecv.length, function(result) {
+          toRecv += result;
+        });
+        if (data.length == 0) {
+          return;
+        }
+      }
+
+      while (digestLengthReceived == false) {
+        data = readMax(data, 1, function(result) {
+          if (result == ' ') {
+            digestLengthReceived = true;
+            digestLength = digestLength.toString();
+          }
+          else {
+            digestLength += result;
+          }
+        });
+        if (data.length == 0) {
+          return;
+        }
+      }
+
+      while (remoteDigest.length < digestLength) {
+        if (data.length == 0) {
+          return;
+        }
+        data = readMax(data, digestLength - remoteDigest.length, function(result) {
+          remoteDigest += result;
+        });
+      }
+
+      t.equal(remoteDigest, crypto.createHash('sha1').update(toRecv).digest('base64'), 
+      "remote and local computed digests should match");
+      t.end();
     });
 
-    var toRecv = '';
-
-    if (reverseConnection) {
-
-      // Since this is a reverse connection, the socket we've been handed has
-      // already been accepted by our server and there's a client on the other
-      // end already sending data.
-      // Without multiplex support we can't both talk at the same time so
-      // wait for the other side to finish before sending our data.
-
-      var totalRecvd = 0;
-      sock.on('data', function (data) {
-
-        logger.info('reverseData');
-        totalRecvd += data.length;
-
-        if (totalRecvd === dataSize) {
-          logger.info('reverseSend');
-          // We've seen all the remote's data, send our own
-          sock.write(toSend);
-        }
-
-        if (totalRecvd > dataSize) {
-          // This should now be our own data echoing back
-          toRecv += data.toString(); 
-        } 
-
-        if (toRecv.length === dataSize) {
-          // Should have an exact copy of what we sent
-          t.ok(toRecv === toSend, 'received should match sent reverse');
-          t.end();
-        }
-      });
-    }
-    else {
-    
-      // This one's more straightforward.. we're going to send first,
-      // read back our echo and then echo out any extra data
-
-      var done = false;
-      sock.on('data', function (data) {
-
-        logger.info('forwardData');
-
-        var remaining = dataSize - toRecv.length;
-
-        if (remaining >= data.length) {
-          toRecv += data.toString();
-          data = data.slice(0, 0);
-        }
-        else {
-          toRecv += data.toString('utf8', 0, remaining);
-          data = data.slice(remaining);
-        }
-
-        if (toRecv.length === dataSize) {
-          if (!done) {
-            done = true;
-            t.ok(toSend === toRecv, 'received should match sent forward');
-            t.end();
-          }
-          if (data.length) {
-            sock.write(data);
-          }
-        }
-      });
-
-      logger.info('forwardSend');
-      sock.write(toSend);
-    }
+    sock.write(toSend);
+    sock.write(digest.length.toString() + " " + digest);
   }
 
   function onConnectSuccess(err, connection) {
 
-    var client = null;
-
-    // We're happy here if we make a connection to anyone
     connection = JSON.parse(connection);
-    logger.info(connection);
+    
+    var client = null;
+    connected = true;
 
     if (connection.listeningPort) {
-      logger.info('Forward connection');
-      // We made a forward connection
       client = net.connect(connection.listeningPort, function () {
-        shiftData(client, false);
+        shiftData(client);
       });
     } else {
-      logger.info('Reverse connection');
-      // We made a reverse connection
       client = sockets[connection.clientPort];
-      shiftData(client, true);
+      shiftData(client);
     }
   }
 
   function onConnectFailure() {
-    t.fail('Connect failed!');
-    t.end();
+    if (!connected) {
+      t.fail('Connect failed!');
+      t.end();
+    }
   }
 
   Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
+    logger.info('Received peerAvailabilityChanged with peers: ' +
+      JSON.stringify(peers)
+    );
     peers.forEach(function (peer) {
-      if (peer.peerAvailable && !connecting) {
-        connecting = true;
+      if (peer.peerAvailable && !connected) {
         var RETRIES = 10;
         connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
       }
     });
   });
 
-  echoServer.listen(0, function () {
+  server.listen(0, function () {
 
-    var applicationPort = echoServer.address().port;
+    var applicationPort = server.address().port;
 
     Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
     function (err) {

@@ -137,7 +137,10 @@
   {
     NSLog(@"client session: onLinkFailure: %@", [self remotePeerUUID]);
 
-    assert([self connectionState] != THEPeerSessionStateNotConnected);
+    if ([self connectionState] == THEPeerSessionStateNotConnected)
+    {
+      return;
+    }
 
     THEPeerSessionState prevState = [self connectionState];
     [self disconnect];

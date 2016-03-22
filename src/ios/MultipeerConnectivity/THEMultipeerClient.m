@@ -229,7 +229,13 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64; // Don't allow more than 
     clientSession = (THEMultipeerClientSession *)p;
     if (clientSession)
     {
-      if (![clientSession visible])
+      NSString *sessionGeneration = [THEMultipeerPeerSession peerGenerationFromPeerIdentifier: [clientSession remotePeerIdentifier]];
+      NSString *requestedGeneration = [THEMultipeerPeerSession peerGenerationFromPeerIdentifier: peerIdentifier];
+
+      NSLog(@"sessionGeneration: %d requestedGeneration: %d", [sessionGeneration intValue], [requestedGeneration intValue]);
+      
+      // Peer is unreachable if not visible or we're being asked for a stale generation
+      if (![clientSession visible] || [sessionGeneration intValue] > [requestedGeneration intValue])
       {
         success = NO;
         NSLog( @"client: connect: unreachable %@", remotePeerUUID);
@@ -277,7 +283,7 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64; // Don't allow more than 
             [_nearbyServiceBrowser invitePeer:[clientSession remotePeerID]
                                     toSession:[clientSession session]
                                   withContext:contextData
-                                      timeout:30];
+                                      timeout:10];
 
             success = YES;
           }
@@ -288,10 +294,16 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64; // Don't allow more than 
             success = NO;
           }
         }
+        else if ([clientSession connectionState] == THEPeerSessionStateConnecting)
+        {
+          NSLog(@"client: already connecting to %@", peerIdentifier);
+          connectCallback(@"Already connecting", 0);
+          success = NO;
+        }
         else
         {
-          NSLog(@"client: already connect(ing/ed) to %@", peerIdentifier);
-          connectCallback(@"Already connect(ing/ed)", 0);
+          NSLog(@"client: already connected to %@", peerIdentifier);
+          connectCallback(@"Already connected", 0);
           success = NO;
         }
       }
@@ -433,6 +445,8 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64; // Don't allow more than 
       if ([remotePeerIdentifier compare:[clientSession remotePeerIdentifier]] != NSOrderedSame)
       {
         NSLog(@"client: found updated peer: %@", remotePeerIdentifier);
+        // Updting the peer id implies declaring the old one no longer reachable
+        [_multipeerDiscoveryDelegate didLosePeerIdentifier:[clientSession remotePeerIdentifier]];
         [clientSession updateRemotePeerIdentifier:remotePeerIdentifier];
         previouslyVisible = FALSE;
       }

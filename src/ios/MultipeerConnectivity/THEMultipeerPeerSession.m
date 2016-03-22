@@ -129,6 +129,12 @@ static NSDictionary *stateChanges = nil;
   return uuid;
 }
 
++ (NSString *)peerGenerationFromPeerIdentifier:(NSString *)peerIdentifier
+{
+  NSString *generation = [peerIdentifier componentsSeparatedByString:@":"][1];
+  return generation;
+}
+
 - (THEPeerSessionState)connectionState
 {
   return _connectionState;
