@@ -63,9 +63,14 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
       t.on('result', function (res) {
         success = success && res.ok;
       });
-      t.once('end', function () {
+      t.once('end', function (data) {
         testServer.emit('setup_complete',
-          JSON.stringify({'test':name, 'success': success}));
+          JSON.stringify({
+            'test': name,
+            'success': success,
+            'data': t.data || null
+          })
+        );
       });
       setup(t);
     });
@@ -86,7 +91,8 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     });
 
     // Run the test (cb) when the server tells us to
-    testServer.once('start_test_' + name, function () {
+    testServer.once('start_test_' + name, function (data) {
+      t.participants = JSON.parse(data);
       testServer.emit(util.format('start_test_%s_ok', name));
       cb(t);
     });

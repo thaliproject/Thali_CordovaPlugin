@@ -80,7 +80,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
 
     logger.info('Running on %s test: %s', platform, test);
 
-    function emit(device, msg) {
+    function emit(device, msg, data) {
       var retries = 10;
       var emitTimeout = null;
 
@@ -95,7 +95,11 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       // Emit message every second until acknowledged
       function _emit() {
         if (!acknowledged) {
-          device.socket.emit(msg);
+          if (data) {
+            device.socket.emit(msg, data);
+          } else {
+            device.socket.emit(msg);
+          }
           if (--retries > 0) {
             emitTimeout = setTimeout(_emit, 1000);
           } else {
@@ -106,16 +110,28 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       setTimeout(_emit, 0);
     }
 
+    var nextStageData = [];
     // Convenience: Move to next stage in test
-    function doNext(stage) {
+    function doNext(stage, stageData) {
+      if (stageData) {
+        nextStageData.push({
+          uuid: stageData.uuid,
+          data: stageData.data
+        });
+      }
       // We need to have seen all devices report in before we
       // can proceed to the next stage
       if (--toComplete === 0) {
         toComplete = devices.length;
         devices.forEach(function (device) {
           // Tell each device to proceed to the next stage
-          emit(device, stage + '_' + test);
+          emit(
+            device,
+            stage + '_' + test,
+            JSON.stringify(nextStageData)
+          );
         });
+        nextStageData = [];
       }
     }
 
@@ -131,9 +147,13 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       }
 
       // The device has completed setup for this test
-      device.socket.once("setup_complete", function(result) {
-        setResult(JSON.parse(result));
-        doNext("start_test");
+      device.socket.once('setup_complete', function (result) {
+        var parsedResult = JSON.parse(result);
+        setResult(parsedResult);
+        doNext('start_test', {
+          uuid: device.uuid,
+          data: parsedResult.data
+        });
       });
 
       // The device has completed it's test
@@ -143,7 +163,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       });
 
       // The device has completed teardown for this test
-      device.socket.once("teardown_complete", function(result) {
+      device.socket.once('teardown_complete', function (result) {
         setResult(JSON.parse(result));
         if (--toComplete == 0) {
           cb();
