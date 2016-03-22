@@ -198,18 +198,22 @@ UnitTestFramework.prototype.testReport = function (platform, tests, results) {
   for (var test in results) {
     passed += results[test];
   }
+  var failed = tests.length - passed;
 
   logger.info('PLATFORM: %s', platform);
   logger.info('RESULT: %s', passed === tests.length ? 'PASS' : 'FAIL');
   logger.info('%d of %d tests completed',
     Object.keys(results).length, tests.length);
   logger.info('%d/%d passed (%d failures)',
-    passed, tests.length, tests.length - passed);
+    passed, tests.length, failed);
 
-  logger.info('--- Test Details ---\n\n');
-
-  for (test in results) {
-    logger.info(test + ' - ' + (results[test] ? 'pass' : 'fail'));
+  if (failed > 0) {
+    logger.info('\n\n--- Failed tests ---');
+    for (test in results) {
+      if (!results[test]) {
+        logger.warn(test + ' - fail');
+      }
+    }
   }
 
   logger.info('\n\n-== END ==-');
