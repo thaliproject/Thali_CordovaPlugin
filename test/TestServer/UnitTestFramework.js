@@ -16,10 +16,10 @@ function UnitTestFramework(testConfig, _logger)
   }
 
   var configFile = './UnitTestConfig';
-  if (testConfig.configFile) {
-    configFile = testConfig.configFile;
-  }
   var unitTestConfig = require(configFile);
+  if (testConfig.userConfig) {
+    unitTestConfig = testConfig.userConfig;
+  }
 
   UnitTestFramework.super_.call(this, testConfig, unitTestConfig, _logger);
 
