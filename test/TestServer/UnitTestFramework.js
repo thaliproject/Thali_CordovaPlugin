@@ -103,7 +103,8 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
           if (--retries > 0) {
             emitTimeout = setTimeout(_emit, 1000);
           } else {
-            logger.error('test server: Device %s', device.deviceName);
+            logger.error('Too many emit retries to device: %s',
+              device.deviceName);
           }
         }
       }
@@ -164,8 +165,14 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
 
       // The device has completed teardown for this test
       device.socket.once('teardown_complete', function (result) {
-        setResult(JSON.parse(result));
-        if (--toComplete == 0) {
+        var parsedResult = JSON.parse(result);
+        setResult(parsedResult);
+        if (--toComplete === 0) {
+          if (!results[parsedResult.test]) {
+            logger.warn(
+              'Failed on %s test: %s', platform, test
+            );
+          }
           cb();
         }
       });
