@@ -7,7 +7,7 @@ var argv = parseargv(process.argv.slice(2), {
   default: {
     test: 'UnitTest_app.js',
     filter: null,
-    instanceCount: 2,
+    instanceCount: 3,
     serverLogs: true,
     instanceLogs: true
   },
@@ -82,9 +82,13 @@ for (var i = 1; i <= argv.instanceCount; i++) {
 }
 
 var shutdown = function (code) {
-  Object.keys(testInstances).forEach(function (key) {
-    testInstances[key].kill();
-  });
-  testServerInstance.kill();
-  process.exit(code);
+  // A small delay so that instances have time to print
+  // the test results.
+  setTimeout(function () {
+    Object.keys(testInstances).forEach(function (key) {
+      testInstances[key].kill();
+    });
+    testServerInstance.kill();
+    process.exit(code);
+  }, 100);
 };
