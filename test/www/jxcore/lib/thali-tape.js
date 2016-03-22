@@ -63,7 +63,7 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
       t.on('result', function (res) {
         success = success && res.ok;
       });
-      t.once('end', function (data) {
+      t.once('end', function () {
         testServer.emit('setup_complete',
           JSON.stringify({
             'test': name,
@@ -144,64 +144,6 @@ var thaliTape = function (fixture) {
   };
 };
 
-function createStream(testServer)
-{
-  // tape is slightly counter-intuitive in that no tests will
-  // run until the output streams are set up.
-
-  // ** Nothing will run until this function is called !! **
-
-  var total = 0;
-  var passed = 0;
-  var failed = 0;
-  var failedRows = [];
-
-  testServer.once('complete', function () {
-
-    // Log final results once server tells us all is done..
-    testUtils.logMessageToScreen('------ Final results ---- ');
-
-    for (var i = 0; i < failedRows.length; i++) {
-      testUtils.logMessageToScreen(
-        failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' +
-        failedRows[i].name
-      );
-    }
-
-    testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed +
-      ', Failed: ' + failed);
-    console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
-
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-  });
-
-  tape.createStream({ objectMode: true })
-  .on('data', function (row) {
-
-    // Collate and log results as they come in
-
-    console.log(JSON.stringify(row));
-
-    if (row.type === 'assert') {
-      total++;
-      row.ok && passed++;
-      !row.ok && failed++;
-    }
-
-    testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' +
-      row.name);
-
-    if (row.ok && row.name) {
-      if (!row.ok) {
-        failedRows.push(row);
-      }
-    }
-  })
-  .on('end', function () {
-    console.log('Tests Complete');
-  });
-}
-
 thaliTape.begin = function () {
 
   var serverOptions = {
@@ -248,7 +190,6 @@ thaliTape.begin = function () {
           tests[test].fn
         );
       });
-      createStream(testServer);
       testServer.emit('schedule_complete');
     });
 
@@ -267,6 +208,12 @@ thaliTape.begin = function () {
       'type': 'unittest',
       'tests': Object.keys(tests)
     }));
+  });
+
+  testServer.once('complete', function () {
+    // Currently always informing success to the CI if all tests
+    // complete regardless of the result.
+    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   });
 };
 
