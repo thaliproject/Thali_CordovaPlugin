@@ -51,7 +51,8 @@ function PeerConnectionInformation(hostAddress, portNumber,
                                     suggestedTCPTimeout) {
   this._hostAddress = hostAddress;
   this._portNumber = portNumber;
-  this._suggestedTCPTimeout = suggestedTCPTimeout;
+  this._suggestedTCPTimeout = suggestedTCPTimeout ||
+    PeerConnectionInformation.DEFAULT_TCP_TIMEOUT;
 }
 
 /**
@@ -109,16 +110,15 @@ PeerConnectionInformation.prototype.getSuggestedTCPTimeout = function () {
   return this._suggestedTCPTimeout;
 };
 
-module.exports.PeerConnectionInformation = PeerConnectionInformation;
-
-// jscs:disable maximumLineLength
 /**
- * A dictionary of different connectionTypes and their associated connection
- * information.
- *
- * @typedef {Object.<module:thaliMobile.connectionTypes, module:thaliPeerDictionary~PeerConnectionInformation>} PeerConnectionDictionary
+ * This is default TCP timeout that is used if suggestedTCPTimeout is
+ * not defied for the PeerConnectionInformation.
+ * @type {number}
+ * @readonly
  */
-// jscs:enable maximumLineLength
+PeerConnectionInformation.DEFAULT_TCP_TIMEOUT = 2000;
+
+module.exports.PeerConnectionInformation = PeerConnectionInformation;
 
 /**
  * @classdesc A dictionary of different connectionTypes and their associated

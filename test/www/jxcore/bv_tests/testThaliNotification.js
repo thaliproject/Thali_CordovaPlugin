@@ -11,6 +11,9 @@ var proxyquire = require('proxyquire').noCallThru();
 var ThaliNotificationClient =
   require('thali/NextGeneration/notification/thaliNotificationClient');
 
+var ThaliNotificationServer =
+  require('thali/NextGeneration/notification/thaliNotificationServer');
+
 var ThaliMobile =
   require('thali/NextGeneration/thaliMobile');
 
@@ -71,8 +74,6 @@ GlobalVariables.prototype.init = function () {
         reject(err);
       } else {
         MakeIntoCloseAllServer(self.expressServer);
-        self.notificationServer = new self.ThaliNotificationServerProxyquired(
-          self.expressRouter, self.serverKeyExchangeObject, 90000);
         self.TCPEvent.portNumber = self.expressServer.address().port;
         resolve();
       }
@@ -173,9 +174,71 @@ test('Client to server request locally', function (t) {
 
       t.end();
     });
-  
+
+  // Initializes ThaliNotificationServer
+  var notificationServer = new globals.ThaliNotificationServerProxyquired(
+    globals.expressRouter, globals.serverKeyExchangeObject, 90000);
+
+
+  notificationServer.start(globals.targetPublicKeysToNotify).
+  then(function () {
+    notificationClient._peerAvailabilityChanged(globals.TCPEvent);
+  });
+});
+
+/*
+if (!tape.coordinated) {
+  return;
+}
+
+
+test('Client to server request coordinated', function (t) {
+
+  var peerPool = new ThaliPeerPoolDefault();
+
+  // Simulates how the peer pool runs actions
+  var enqueue = function (action) {
+    var keepAliveAgent = new http.Agent({ keepAlive: true });
+    action.start(keepAliveAgent).then( function () {
+    }).catch( function ( ) {
+      t.fail('This action should not fail!');
+    });
+  };
+
+  sinon.stub(peerPool, 'enqueue', enqueue);
+
+  // Initialize the ThaliNotificationClient
+  var notificationClient =
+    new ThaliNotificationClient(peerPool,
+      globals.targetDeviceKeyExchangeObjects[0]);
+
+  notificationClient.start([globals.serverPublicKey]);
+
+  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+    function ( res) {
+      t.equals(
+        res.hostAddress,
+        globals.TCPEvent.hostAddress,
+        'Host address must match');
+      t.equals(
+        res.suggestedTCPTimeout,
+        globals.TCPEvent.suggestedTCPTimeout,
+        'suggestedTCPTimeout must match');
+      t.equals(
+        res.connectionType,
+        globals.TCPEvent.connectionType,
+        'connectionType must match');
+      t.equals(
+        res.portNumber,
+        globals.TCPEvent.portNumber,
+        'portNumber must match');
+
+      t.end();
+    });
+
   globals.notificationServer.start(globals.targetPublicKeysToNotify).
   then(function () {
     notificationClient._peerAvailabilityChanged(globals.TCPEvent);
   });
 });
+*/
