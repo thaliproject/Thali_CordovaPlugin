@@ -137,7 +137,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 }
 
 // Kill connection with extreme prejudice, no clean-up, testing only
-- (BOOL)killConnection:(NSString *)peerIdentifier
+- (BOOL)killConnections:(NSString *)peerIdentifier
 {
   return false;
 }
