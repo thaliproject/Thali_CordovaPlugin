@@ -443,9 +443,9 @@ function (t) {
     setTimeout(function () {
       ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
         availabilityChangedHandler);
-      // The maximum amount is the participants count times 2, because
-      // the same participant may be reached via Wifi and non-TCP.
-      var maxAvailabilityChanges = t.participants.length * 2;
+      // The maximum amount is the participants count minues ourseld times 2,
+      // because the same participant may be reached via Wifi and non-TCP.
+      var maxAvailabilityChanges = (t.participants.length - 1) * 2;
       t.ok(spy.callCount <= maxAvailabilityChanges,
         'must not receive too many peer availabilities');
       done();
