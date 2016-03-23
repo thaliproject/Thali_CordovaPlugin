@@ -12,6 +12,39 @@ var logger = require('thali/thalilogger')('wifiBasedNativeMock');
 var proxyquire = require('proxyquire');
 proxyquire.noPreserveCache();
 
+var mockEmitter = new EventEmitter();
+var networkStatusCalled = false;
+
+var ThaliWifiInfrastructure =
+proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
+  {
+    './thaliMobileNativeWrapper': {
+      emitter: mockEmitter,
+      getNonTCPNetworkStatus: function () {
+        assert(!networkStatusCalled,
+          'the mock network status should not be called twice');
+        networkStatusCalled = true;
+        return Promise.resolve(getCurrentNetworkStatus());
+      },
+      '@noCallThru': true
+    },
+    './thaliConfig': {
+      // Use a unique NT for messaging between mock code so
+      // that the SSDP traffic doesn't get mixed up with real
+      // Thali messaging (for example, if in a desktop test,
+      // the native and Wifi layers are run simultaneously).
+      SSDP_NT: 'http://www.thaliproject.org/mock'
+    },
+    'ip': {
+      address: function () {
+        // In desktop mocking scenario, all peers are running
+        // in localhost.
+        return '127.0.0.1';
+      }
+    }
+  }
+);
+
 /** @module WifiBasedNativeMock */
 
 /**
@@ -75,17 +108,17 @@ function CallOnce(funSelf, fun) {
  * is submitted its last argument when invoked is always a callback.
  * @param {Object} self The self that the function to be invoked should be
  * called with
- * @param {string} funName The name of the function to be invoked 
+ * @param {string} funName The name of the function to be invoked
  * @param {Object[]} args The args that were submitted to the function being
  * invoked.
  */
 CallOnce.check = function (self, funName, args) {
   var callOnceFunName = funName + 'CallOnce';
   if (!self[callOnceFunName]) {
-    self[callOnceFunName] = 
+    self[callOnceFunName] =
       new CallOnce(self, self[funName]);
   }
-  
+
   return self[callOnceFunName].startCall.apply(self[callOnceFunName], args);
 };
 
@@ -107,6 +140,7 @@ CallOnce.prototype.startCall = function () {
 };
 
 
+var startListeningForAdvertisementsIsActive = false;
 /**
  * In effect this listens for SSDP:alive and SSDP:byebye messages along with
  * the use of SSDP queries to find out who is around. These will be translated
@@ -122,7 +156,7 @@ CallOnce.prototype.startCall = function () {
  * @public
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
-MobileCallInstance.prototype.startListeningForAdvertisements = 
+MobileCallInstance.prototype.startListeningForAdvertisements =
   function (callback) {// jscs:ignore disallowUnusedParams
     return CallOnce.check(this, '_startListeningForAdvertisements', arguments);
   };
@@ -131,6 +165,7 @@ MobileCallInstance.prototype._startListeningForAdvertisements =
 function (callback) {
   this.thaliWifiInfrastructure.startListeningForAdvertisements()
   .then(function () {
+    startListeningForAdvertisementsIsActive = true;
     callback();
   })
   .catch(function (error) {
@@ -155,12 +190,15 @@ MobileCallInstance.prototype._stopListeningForAdvertisements =
 function (callBack) {
   this.thaliWifiInfrastructure.stopListeningForAdvertisements()
   .then(function () {
+    startListeningForAdvertisementsIsActive = false;
     callBack();
+  }).catch(function (err) {
+    callBack(err);
   });
 };
 
 var incomingConnectionsServer = null;
-
+var startUpdateAdvertisingAndListeningIsActive = false;
 /**
  * This method tells the system to both start advertising and to accept
  * incoming connections. In both cases we need to accept incoming connections.
@@ -205,7 +243,7 @@ var incomingConnectionsServer = null;
  */
 MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
   function (portNumber, callback) {// jscs:ignore disallowUnusedParams
-    return CallOnce.check(this, '_startUpdateAdvertisingAndListening', 
+    return CallOnce.check(this, '_startUpdateAdvertisingAndListening',
                           arguments);
   };
 
@@ -215,32 +253,44 @@ function (portNumber, callback) {
   var doStart = function () {
     self.thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
     .then(function () {
+      startUpdateAdvertisingAndListeningIsActive = true;
       callback();
+    }).catch(function (err) {
+      callback(err);
     });
   };
   if (incomingConnectionsServer !== null) {
     doStart();
   } else {
-    incomingConnectionsServer = net.createServer(function (socket) {
-      var proxySocket = net.connect(portNumber, function () {
-        logger.debug('proxy socket connected');
-      });
-      proxySocket.on('error', function (err) {
-        logger.debug('error on proxy socket - ' + err);
-      });
-      proxySocket.on('close', socket.destroy);
-      proxySocket.pipe(socket).pipe(proxySocket);
-      socket.on('error', function (err) {
-        logger.debug('error on socket - ' + err);
-      });
-      socket.on('close', proxySocket.destroy);
-    });
-    incomingConnectionsServer =
-      makeIntoCloseAllServer(incomingConnectionsServer);
+    incomingConnectionsServer = makeIntoCloseAllServer(
+      net.createServer(function (socket) {
+        var proxySocket = net.connect(portNumber, function () {
+          logger.debug('proxy socket connected');
+        });
+
+        proxySocket.on('error', function (err) {
+          logger.debug('error on proxy socket - ' + err);
+        });
+
+        proxySocket.on('close', socket.destroy);
+
+        proxySocket.pipe(socket).pipe(proxySocket);
+
+        socket.on('error', function (err) {
+          logger.debug('error on socket - ' + err);
+        });
+
+        socket.on('close', proxySocket.destroy);
+    }));
+
     incomingConnectionsServer.listen(0, function () {
       self.thaliWifiInfrastructure.advertisedPortOverride =
         incomingConnectionsServer.address().port;
       doStart();
+    });
+    
+    incomingConnectionsServer.on('error', function (err) {
+      logger.debug('got error on incoming connection server ' + err);
     });
   }
 };
@@ -263,31 +313,42 @@ MobileCallInstance.prototype.stopAdvertisingAndListening =
 MobileCallInstance.prototype._stopAdvertisingAndListening =
 function (callBack) {
   var self = this;
-  var doStop = function () {
-    peerAvailabilities = {};
-    for (var peerIdentifier in peerConnections) {
-      var peerConnection = peerConnections[peerIdentifier];
-      peerConnection.end();
-      delete peerConnections[peerIdentifier];
-    }
-    for (var peerIdentifier in peerProxyServers) {
-      var peerProxyServer = peerProxyServers[peerIdentifier];
-      peerProxyServer.close();
-      delete peerProxyServers[peerIdentifier];
-    }
-    self.thaliWifiInfrastructure.stopAdvertisingAndListening()
+  return (incomingConnectionsServer ?
+          incomingConnectionsServer.closeAllPromise() :
+          Promise.resolve())
     .then(function () {
-      callBack();
-    });
-  };
-  if (incomingConnectionsServer !== null) {
-    incomingConnectionsServer.closeAll(function () {
       incomingConnectionsServer = null;
-      doStop();
+      peerAvailabilities = {};
+      for (var peerIdentifier in peerConnections) {
+        var peerConnection = peerConnections[peerIdentifier];
+        peerConnection.end();
+        delete peerConnections[peerIdentifier];
+      }
+
+      var peerProxyServerClosePromises = [];
+      for (var peerIdentifier in peerProxyServers) {
+        var peerProxyServer = peerProxyServers[peerIdentifier];
+        peerProxyServerClosePromises.push(peerProxyServer.closeAll());
+        delete peerProxyServers[peerIdentifier];
+      }
+
+      for (var peerIdentifier in peerProxySockets) {
+        peerProxySockets[peerIdentifier].destroy();
+        delete peerProxySockets[peerIdentifier];
+      }
+
+      return Promise.all(peerProxyServerClosePromises);
+    })
+    .then(function () {
+      return self.thaliWifiInfrastructure.stopAdvertisingAndListening();
+    })
+    .then(function () {
+      startUpdateAdvertisingAndListeningIsActive = false;
+      callBack();
+    })
+    .catch(function (err) {
+      callBack(err);
     });
-  } else {
-    doStop();
-  }
 };
 
 var peerConnections = {};
@@ -421,50 +482,103 @@ var peerProxySockets = {};
  * @param {module:thaliMobileNative~ConnectCallback} callback
  */
 MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
+  if (!startListeningForAdvertisementsIsActive) {
+    return callback('startListeningForAdvertisements is not active');
+  }
+  
+  function returnSuccessfulConnectResponse() {
+    var server = peerProxyServers[peerIdentifier];
+    
+    if (!server || !server.address())  {
+      return callback('Server was either closed or is not yet listening');
+    }
+    
+    callback(null, JSON.stringify({
+      listeningPort: peerProxyServers[peerIdentifier].address().port,
+      clientPort: 0,
+      serverPort: 0
+    }));
+  }
+
   var peerToConnect = peerAvailabilities[peerIdentifier];
   if (!peerToConnect) {
     setImmediate(function () {
-      callback('Error');
+      callback('Connection could not be established');
     });
     return;
   }
-  peerProxyServers[peerIdentifier] = net.createServer(function (socket) {
-    peerProxySockets[peerIdentifier] = socket;
-    peerProxySockets[peerIdentifier].pipe(peerConnections[peerIdentifier])
-      .pipe(peerProxySockets[peerIdentifier]);
-    socket.on('error', function (err) {
-      logger.debug('error on peerProxyServers socket for ' + peerIdentifier +
-        ', err - ' + err);
+
+  if (peerProxyServers[peerIdentifier]) {
+    return peerProxyServers[peerIdentifier].waitingPromise
+      .then(function () {
+        returnSuccessfulConnectResponse();
+      })
+      .catch(function (err) {
+        callback(err);
+      });
+  }
+
+  peerProxyServers[peerIdentifier] = makeIntoCloseAllServer(
+    net.createServer(function (socket) {
+      if (peerProxySockets[peerIdentifier]) {
+        socket.destroy();
+        return;
+      }
+
+      var peerConnection = peerConnections[peerIdentifier];
+
+      if (!peerConnection || peerConnection.destroyed) {
+        socket.destroy();
+      }
+
+      peerProxySockets[peerIdentifier] = socket;
+      peerProxySockets[peerIdentifier].pipe(peerConnections[peerIdentifier])
+        .pipe(peerProxySockets[peerIdentifier]);
+      socket.on('error', function (err) {
+        logger.debug('error on peerProxyServers socket for ' + peerIdentifier +
+          ', err - ' + err);
+      });
+      socket.on('close', function () {
+        peerConnections[peerIdentifier] &&
+          peerConnections[peerIdentifier].destroy();
+        delete peerProxySockets[peerIdentifier];
+      });
+    }),
+    true
+  );
+
+  peerProxyServers[peerIdentifier].waitingPromise =
+    new Promise(function(resolve, reject) {
+      peerProxyServers[peerIdentifier].listen(0, function () {
+        peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
+          function () {
+            setTimeout(function () {
+                if (!peerProxyServers[peerIdentifier]) {
+                  var error = 'Unspecified Error with Radio infrastructure';
+                  callback(error);
+                  return reject(error);
+                }
+                returnSuccessfulConnectResponse();
+                resolve();
+              },
+              100);
+          });
+        peerConnections[peerIdentifier].on('error', function (err) {
+          logger.debug('error on peerConnections socket for ' + peerIdentifier +
+            ', err - ' + err);
+        });
+        peerConnections[peerIdentifier].on('close', function () {
+          peerProxySockets[peerIdentifier] &&
+            peerProxySockets[peerIdentifier].destroy();
+          peerProxyServers[peerIdentifier] &&
+            peerProxyServers[peerIdentifier].closeAll();
+          delete peerConnections[peerIdentifier];
+        });
+      });
     });
-    socket.on('close', function () {
-      peerConnections[peerIdentifier] &&
-        peerConnections[peerIdentifier].destroy();
-    });
-  });
-  peerProxyServers[peerIdentifier].listen(0, function () {
-    peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
-    function () {
-      setTimeout(function () {
-        if (!peerProxyServers[peerIdentifier]) {
-          callback('Unspecified Error with Radio infrastructure');
-          return;
-        }
-        callback(null, JSON.stringify({
-          listeningPort: peerProxyServers[peerIdentifier].address().port,
-          clientPort: 0,
-          serverPort: 0
-        }));
-      },
-      100);
-    });
-    peerConnections[peerIdentifier].on('error', function (err) {
-      logger.debug('error on peerConnections socket for ' + peerIdentifier +
-        ', err - ' + err);
-    });
-    peerConnections[peerIdentifier].on('close', function () {
-      peerProxySockets[peerIdentifier] &&
-        peerProxySockets[peerIdentifier].destroy();
-    });
+
+  peerProxyServers[peerIdentifier].on('close', function() {
+    delete peerConnections[peerIdentifier];
   });
 };
 
@@ -479,10 +593,10 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
  */
 MobileCallInstance.prototype.killConnections = function (callback) {
   // TODO: Implement specified behavior
-  callback();
+  callback('not implemented');
 };
 
-
+var fakeDeviceName = uuid.v4();
 /**
  * Generates a UUID that will be used as the name of the current device.
  *
@@ -491,7 +605,7 @@ MobileCallInstance.prototype.killConnections = function (callback) {
  */
 MobileCallInstance.prototype.getDeviceName = function (callback) {
   setImmediate(function () {
-    callback(uuid.v4());
+    callback(fakeDeviceName);
   });
 };
 
@@ -559,6 +673,14 @@ var setupListeners = function (thaliWifiInfrastructure) {
       if (peerAvailabilityChangedCallback === null) {
         return;
       }
+      
+      // No sending events until at least one of the two start methods is
+      // running.
+      if (!startListeningForAdvertisementsIsActive &&
+          !startUpdateAdvertisingAndListeningIsActive) {
+        return;
+      }
+      
       var peerAvailable = !!wifiPeer.hostAddress;
       if (peerAvailable) {
         peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
@@ -828,40 +950,6 @@ function WifiBasedNativeMock(platform, router) {
   if (!router) {
     router = express.Router();
   }
-
-  var mockEmitter = new EventEmitter();
-  var networkStatusCalled = false;
-
-  var ThaliWifiInfrastructure =
-    proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
-      {
-        './thaliMobileNativeWrapper': {
-          emitter: mockEmitter,
-          getNonTCPNetworkStatus: function () {
-            assert(!networkStatusCalled,
-              'the mock network status should not be called twice');
-            networkStatusCalled = true;
-            return Promise.resolve(getCurrentNetworkStatus());
-          },
-          '@noCallThru': true
-        },
-        './thaliConfig': {
-          // Use a unique NT for messaging between mock code so
-          // that the SSDP traffic doesn't get mixed up with real
-          // Thali messaging (for example, if in a desktop test,
-          // the native and Wifi layers are run simultaneously).
-          SSDP_NT: 'http://www.thaliproject.org/mock'
-        },
-        'ip': {
-          address: function () {
-            // In desktop mocking scenario, all peers are running
-            // in localhost.
-            return '127.0.0.1';
-          }
-        }
-      }
-    );
-  
   var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
   // In the native side, there is no equivalent for the start call,
   // but it needs to be done once somewhere before calling other functions.
