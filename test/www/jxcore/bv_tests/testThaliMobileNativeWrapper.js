@@ -24,6 +24,8 @@ var test = tape({
   teardown: function (t) {
     thaliMobileNativeWrapper.stop()
     .then(function () {
+      t.equals(thaliMobileNativeWrapper._isStarted(), false,
+        'must be stopped');
       t.end();
     })
     .catch(function (err) {
@@ -147,9 +149,17 @@ function trivialEndToEndTest(t, needManualNotify, callback) {
       peerAvailabilityHandler
     );
 
+    var host = '127.0.0.1';
+    var port = peer.portNumber;
+    var complete = false;
+
+    var end = function () {
+      callback && callback() || t.end();
+    };
+
     var request = http.request({
-      hostname: '127.0.0.1',
-      port: peer.portNumber,
+      hostname: host,
+      port: port,
       path: testPath,
       agent: false
     }, function (response) {
@@ -160,13 +170,18 @@ function trivialEndToEndTest(t, needManualNotify, callback) {
       });
       response.on('end', function () {
         t.equal(responseBody, testData, 'response body should match testData');
-        callback && callback() || t.end();
+        complete = true;
+        end();
       });
       response.resume();
     });
     request.on('error', function (error) {
-      t.fail(error);
-      callback && callback() || t.end();
+      // Avoid reacting to errors that may happen
+      // when sockets are getting closed.
+      if (!complete) {
+        t.fail(error);
+        end();
+      }
     });
     // Wait for 15 seconds since the request can take a while
     // in mobile environment over a non-TCP transport.
@@ -574,33 +589,17 @@ if (!tape.coordinated) {
   return;
 }
 
-test('can do HTTP requests between peers', function (t) {
-  trivialEndToEndTest(t, false);
-});
-
-/*
-// TODO: This one is more challenging, because there needs to be coordination
-// between the peers about when an HTTP request is complete so that the
-// other side knows when it can stop (and ramp down everything).
-// A simple workaround will be just to run the test a few times so the
-// coordination will happen in setup / teardown.
-test('can do requests between peers after start and stop', function (t) {
+var endToEndWithStateCheck = function (t) {
   trivialEndToEndTest(t, false, function () {
     t.equals(thaliMobileNativeWrapper._isStarted(), true, 'must be started');
-    thaliMobileNativeWrapper.stop()
-    .then(function () {
-      t.equals(thaliMobileNativeWrapper._isStarted(), false, 'must be stopped');
-      trivialEndToEndTest(t, false, function () {
-        t.equals(thaliMobileNativeWrapper._isStarted(), true,
-          'must be started');
-        thaliMobileNativeWrapper.stop()
-        .then(function () {
-          t.equals(thaliMobileNativeWrapper._isStarted(), false,
-            'must be stopped');
-          t.end();
-        });
-      });
-    });
+    t.end();
   });
+};
+
+test('can do HTTP requests between peers', function (t) {
+  endToEndWithStateCheck(t);
 });
-*/
+
+test('can still do HTTP requests between peers', function (t) {
+  endToEndWithStateCheck(t);
+});
