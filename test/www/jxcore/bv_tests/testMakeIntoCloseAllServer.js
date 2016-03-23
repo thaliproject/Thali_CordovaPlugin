@@ -70,3 +70,38 @@ test('closeAll with promise', function (t) {
     });
   });
 });
+
+test('closeAll properly throws when closing a non open server with ' +
+  'eatNotRunning set to false', function (t) {
+  var testServer = net.createServer(function () {
+
+  });
+  testServer = makeIntoCloseAllServer(testServer);
+  testServer.closeAllPromise()
+    .then(function () {
+      t.fail('we should have gotten an error');
+      t.end();
+    })
+    .catch(function (err) {
+      t.ok(err instanceof Error && err.message === 'Not running', 
+              'Got the right error');
+      t.end();
+    })
+});
+
+test('closeAll works even with a server that is not listening yet with' +
+  'eatNotRunning set to true', 
+  function (t) {
+    var testServer = net.createServer(function () {
+      
+    });
+    testServer = makeIntoCloseAllServer(testServer, true);
+    testServer.closeAllPromise()
+      .then(function () {
+        t.end();
+      })
+      .catch(function (err) {
+        t.fail(err);
+        t.end();
+      });
+  });
