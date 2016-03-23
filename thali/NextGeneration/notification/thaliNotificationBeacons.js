@@ -228,8 +228,8 @@ module.exports.generatePreambleAndBeacons = generatePreambleAndBeacons;
  * can complete.
  * @callback addressBookCallback
  * @param {Buffer} unencryptedKeyId - This is a Buffer containing the
- * unencryptedKeId
- * @returns {?Buffer} - The base64 encoded public key associated with the
+ * unencryptedKeyId
+ * @returns {?Buffer} - The public key associated with the
  * unecryptedKeyId or null if the remove peer is not one the local peer
  * recognizes or wishes to communicate with
  */
@@ -422,7 +422,7 @@ module.exports.parseBeacons = parseBeacons;
  * local device's public and private keys
  * @param {Buffer} beaconStreamWithPreAmble - A buffer stream containing the
  * preamble and beacons
- * @returns {Promise<Object.<string,keyAndSecret>|Error>}
+ * @returns {Promise<pskMap|Error>}
  */
 function generatePskSecrets(publicKeysToNotify,
                             ecdhForLocalDevice,

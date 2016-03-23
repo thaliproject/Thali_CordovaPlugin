@@ -1,7 +1,7 @@
 'use strict';
 
 var express = require('express');
-var http = require('http');
+var https = require('https');
 var net = require('net');
 var Promise = require('lie');
 var sinon = require('sinon');
@@ -132,9 +132,9 @@ test('error returned with bad router', function (t) {
   });
 });
 
-function trivialEndToEndTest(t, needManualNotify, callback) {
+function trivialEndToEndTestScafold(t, needManualNotify,
+  clientResponseHandler, pskIdtoSecret, pskIdentity, pskKey, testData) {
   var testPath = '/test';
-  var testData = 'foobar';
   var router = express.Router();
   router.get(testPath, function (req, res) {
     res.send(testData);
@@ -147,26 +147,17 @@ function trivialEndToEndTest(t, needManualNotify, callback) {
       peerAvailabilityHandler
     );
 
-    var request = http.request({
+    var request = https.request({
       hostname: '127.0.0.1',
       port: peer.portNumber,
       path: testPath,
-      agent: false
-    }, function (response) {
-      t.equal(response.statusCode, 200, 'server should return 200');
-      var responseBody = '';
-      response.on('data', function (data) {
-        responseBody += data;
-      });
-      response.on('end', function () {
-        t.equal(responseBody, testData, 'response body should match testData');
-        callback && callback() || t.end();
-      });
-      response.resume();
-    });
+      agent: false,
+      pskIdentity: pskIdentity,
+      pskKey: pskKey
+    }, clientResponseHandler);
     request.on('error', function (error) {
       t.fail(error);
-      callback && callback() || t.end();
+      t.end();
     });
     // Wait for 15 seconds since the request can take a while
     // in mobile environment over a non-TCP transport.
@@ -177,7 +168,7 @@ function trivialEndToEndTest(t, needManualNotify, callback) {
   thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
     peerAvailabilityHandler);
 
-  thaliMobileNativeWrapper.start(router)
+  thaliMobileNativeWrapper.start(router, pskIdtoSecret)
     .then(function () {
       return thaliMobileNativeWrapper.startListeningForAdvertisements();
     })
@@ -189,6 +180,50 @@ function trivialEndToEndTest(t, needManualNotify, callback) {
         Mobile.wifiPeerAvailabilityChanged('foo');
       }
     });
+}
+
+function trivialEndToEndTest(t, needManualNotify) {
+  var pskIdentity = 'I am me!';
+  var pskKey = new Buffer('I am a reasonable long string');
+  var testData = 'foobar';
+
+  function clientResponseHandler(response) {
+    t.equal(response.statusCode, 200, 'server should return 200');
+    var responseBody = '';
+    response.on('data', function (data) {
+      responseBody += data;
+    });
+    response.on('end', function () {
+      t.equal(responseBody, testData, 'response body should match testData');
+      t.end();
+    });
+    response.resume();
+  }
+
+  function pskIdToSecret(id) {
+    t.equal(id, pskIdentity, 'Should only get expected id');
+    return id === pskIdentity ? pskKey : null;
+  }
+
+  trivialEndToEndTestScafold(t, needManualNotify,
+    clientResponseHandler, pskIdToSecret, pskIdentity, pskKey, testData);
+}
+
+function trivialBadEndtoEndTest(t, needManualNotify) {
+  var pskIdentity = 'Yo ho ho';
+  var pskKey = new Buffer('It really does not matter');
+  var testData = 'Not important';
+
+  function clientResponseHandler(response) {
+    console.log(response);
+  }
+
+  function pskIdToSecret() {
+    return null;
+  }
+
+  trivialEndToEndTestScafold(t, needManualNotify,
+    clientResponseHandler, pskIdToSecret, pskIdentity, pskKey, testData);
 }
 
 var connectionTester = function (port, callback) {
@@ -422,6 +457,10 @@ if (!jxcore.utils.OSInfo().isMobile) {
     trivialEndToEndTest(t, true);
   });
 
+  test('make sure bad PSK connections fail', function (t) {
+    trivialBadEndtoEndTest(t, true);
+  });
+
   test('peer changes handled from a queue', function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
@@ -576,6 +615,10 @@ if (!tape.coordinated) {
 
 test('can do HTTP requests between peers', function (t) {
   trivialEndToEndTest(t, false);
+});
+
+test('will fail bad PSK connection between peers', function (t) {
+  trivialBadEndtoEndTest(t, false);
 });
 
 /*
