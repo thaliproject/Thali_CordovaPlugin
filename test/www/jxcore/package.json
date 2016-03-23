@@ -33,7 +33,7 @@
     "nock": "^2.12.0",
     "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
     "node-uuid": "^1.4.7",
-    "pouchdb": "^5.2.1",
+    "pouchdb": "thaliproject/pouchdb",
     "proxyquire": "^1.7.4",
     "randomstring": "^1.0.7",
     "request": "^2.64.0",
