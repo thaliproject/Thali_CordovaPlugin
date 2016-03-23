@@ -2,18 +2,27 @@
 
 var spawn = require('child_process').spawn;
 
+var DEFAULT_INSTANCE_COUNT = 3;
+
 var parseargv = require('minimist');
 var argv = parseargv(process.argv.slice(2), {
   default: {
     test: 'UnitTest_app.js',
     filter: null,
-    instanceCount: 2,
+    instanceCount: DEFAULT_INSTANCE_COUNT,
     serverLogs: true,
-    instanceLogs: true
+    instanceLogs: true,
+    waitForInstance: false
   },
-  boolean: ['serverLogs', 'instanceLogs'],
+  boolean: ['serverLogs', 'instanceLogs', 'waitForInstance'],
   string: ['test', 'filter']
 });
+
+var spawnedInstanceCount = argv.instanceCount;
+if (argv.waitForInstance) {
+  spawnedInstanceCount = DEFAULT_INSTANCE_COUNT - 1;
+}
+
 var instanceLogs = {};
 
 var logInstanceOutput = function (data, instanceId) {
@@ -60,8 +69,17 @@ var testServerConfiguration = {
     'android': 0,
     'ios': argv.instanceCount
   },
-  'honorCount': true
+  'honorCount': true,
+  userConfig: {
+    ios: {
+      numDevices: argv.instanceCount
+    },
+    android: {
+      numDevices: 0
+    }
+  }
 };
+
 var testServerInstance = spawn('jx', ['../../TestServer/index.js',
   JSON.stringify(testServerConfiguration)]);
 setListeners(testServerInstance, 0);
@@ -77,14 +95,18 @@ var spawnTestInstance = function (instanceId) {
   testInstances[instanceId] = testInstance;
 };
 
-for (var i = 1; i <= argv.instanceCount; i++) {
+for (var i = 1; i <= spawnedInstanceCount; i++) {
   spawnTestInstance(i);
 }
 
 var shutdown = function (code) {
-  Object.keys(testInstances).forEach(function (key) {
-    testInstances[key].kill();
-  });
-  testServerInstance.kill();
-  process.exit(code);
+  // A small delay so that instances have time to print
+  // the test results.
+  setTimeout(function () {
+    Object.keys(testInstances).forEach(function (key) {
+      testInstances[key].kill();
+    });
+    testServerInstance.kill();
+    process.exit(code);
+  }, 100);
 };
