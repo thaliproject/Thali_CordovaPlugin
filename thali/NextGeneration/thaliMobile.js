@@ -597,11 +597,17 @@ var changePeersUnavailable = function (connectionType) {
   Object.keys(peerAvailabilities[connectionType]).forEach(function (peerIdentifier) {
     changeCachedPeerUnavailable(peerAvailabilities[connectionType]
       [peerIdentifier]);
-    module.exports.emitter.emit('peerAvailabilityChanged', {
-      peerIdentifier: peerIdentifier,
-      hostAddress: null,
-      portNumber: null
-    });
+    module.exports.emitter.emit(
+      'peerAvailabilityChanged',
+      getExtendedPeer(
+        {
+          peerIdentifier: peerIdentifier,
+          hostAddress: null,
+          portNumber: null
+        },
+        connectionType
+      )
+    );
   });
 };
 
@@ -688,11 +694,17 @@ var peerAvailabilityWatcher = function () {
         return;
       }
       changeCachedPeerUnavailable(peer);
-      module.exports.emitter.emit('peerAvailabilityChanged', {
-        peerIdentifier: peerIdentifier,
-        hostAddress: null,
-        portNumber: null
-      });
+      module.exports.emitter.emit(
+        'peerAvailabilityChanged',
+        getExtendedPeer(
+          {
+            peerIdentifier: peerIdentifier,
+            hostAddress: null,
+            portNumber: null
+          },
+          connectionType
+        )
+      );
     });
   });
 };

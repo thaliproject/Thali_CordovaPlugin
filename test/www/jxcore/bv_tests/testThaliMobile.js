@@ -30,6 +30,36 @@ var test = tape({
   }
 });
 
+var checkPeer = function (t, peer, available) {
+  t.doesNotThrow(function () {
+    validations.ensureNonNullOrEmptyString(peer.peerIdentifier);
+  }, 'peer should have a non-empty identifier');
+
+  if (available) {
+    t.doesNotThrow(function () {
+      validations.ensureNonNullOrEmptyString(peer.hostAddress);
+    }, 'peer should have a non-empty host address');
+    t.equals(typeof peer.portNumber, 'number',
+      'peer should have port number');
+  } else {
+    t.equals(peer.hostAddress, null, 'host address should be null');
+    t.equals(peer.portNumber, null, 'port number should be null');
+  }
+
+  t.equals(typeof peer.suggestedTCPTimeout, 'number',
+    'peer should have suggested timeout');
+  t.ok(peer.connectionType,
+    'peer should have a connection type');
+  var connectionTypeKey;
+  for (var key in ThaliMobile.connectionTypes) {
+    if (peer.connectionType === ThaliMobile.connectionTypes[key]) {
+      connectionTypeKey = key;
+    }
+  }
+  t.equals(peer.connectionType, ThaliMobile.connectionTypes[connectionTypeKey],
+    'connection type should match one of the pre-defined types');
+};
+
 var testIdempotentFunction = function (t, functionName) {
   ThaliMobile.start(express.Router())
   .then(function () {
@@ -336,8 +366,7 @@ function (t) {
         if (peer.peerIdentifier !== dummyPeerIdentifier) {
           return;
         }
-        t.equals(peer.hostAddress, null, 'host address should be null');
-        t.equals(peer.portNumber, null, 'port number should be null');
+        checkPeer(t, peer, false);
         ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
           unavailabilityHandler);
 
@@ -396,25 +425,7 @@ var setupDiscoveryAndFindPeer = function (t, callback) {
 test('a peer should be found after #startListeningForAdvertisements is called',
 function (t) {
   setupDiscoveryAndFindPeer(t, function (peer, done) {
-    t.doesNotThrow(function () {
-      validations.ensureNonNullOrEmptyString(peer.peerIdentifier);
-    }, 'peer should have a non-empty identifier');
-    t.doesNotThrow(function () {
-      validations.ensureNonNullOrEmptyString(peer.hostAddress);
-    }, 'peer should have a non-empty host address');
-    t.equals(typeof peer.suggestedTCPTimeout, 'number',
-             'peer should have suggested timeout');
-    t.equals(typeof peer.portNumber, 'number', 'peer should have port number');
-    t.ok(peer.connectionType, 'peer should have a connection type');
-    var connectionTypeKey;
-    for (var key in ThaliMobile.connectionTypes) {
-      if (peer.connectionType === ThaliMobile.connectionTypes[key]) {
-        connectionTypeKey = key;
-      }
-    }
-    t.equals(peer.connectionType,
-             ThaliMobile.connectionTypes[connectionTypeKey],
-             'connection type should match one of the pre-defined types');
+    checkPeer(t, peer, true);
     done();
   });
 });
