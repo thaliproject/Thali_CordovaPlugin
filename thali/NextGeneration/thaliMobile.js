@@ -690,7 +690,7 @@ var peerAvailabilityWatcher = function () {
         ThaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
       // If the time from the latest availability advertisement doesn't
       // exceed the threshold, no need to do anything.
-      if (peer.availableSince + unavailabilityThreshold < now) {
+      if (peer.availableSince + unavailabilityThreshold > now) {
         return;
       }
       changeCachedPeerUnavailable(peer);
