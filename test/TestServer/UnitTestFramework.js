@@ -16,10 +16,10 @@ function UnitTestFramework(testConfig, _logger)
   }
 
   var configFile = './UnitTestConfig';
-  if (testConfig.configFile) {
-    configFile = testConfig.configFile;
-  }
   var unitTestConfig = require(configFile);
+  if (testConfig.userConfig) {
+    unitTestConfig = testConfig.userConfig;
+  }
 
   UnitTestFramework.super_.call(this, testConfig, unitTestConfig, _logger);
 
@@ -55,7 +55,7 @@ UnitTestFramework.prototype.finishRun =
 
     // There may be other platforms still running
     if (this.runningTests.length === 0) {
-      process.exit(0);
+      this.emit('completed');
     }
   };
 
@@ -103,7 +103,8 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
           if (--retries > 0) {
             emitTimeout = setTimeout(_emit, 1000);
           } else {
-            logger.error('test server: Device %s', device.deviceName);
+            logger.error('Too many emit retries to device: %s',
+              device.deviceName);
           }
         }
       }
@@ -164,8 +165,14 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
 
       // The device has completed teardown for this test
       device.socket.once('teardown_complete', function (result) {
-        setResult(JSON.parse(result));
-        if (--toComplete == 0) {
+        var parsedResult = JSON.parse(result);
+        setResult(parsedResult);
+        if (--toComplete === 0) {
+          if (!results[parsedResult.test]) {
+            logger.warn(
+              'Failed on %s test: %s', platform, test
+            );
+          }
           cb();
         }
       });
