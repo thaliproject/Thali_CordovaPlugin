@@ -510,7 +510,12 @@ test('#startUpdateAdvertisingAndListening - killing remote peers connection ' +
   
     startAndGetConnection(t, pretendLocalMux, onConnectSuccess, 
                           onConnectFailure);
+  
+  var foo = "TEST THAT RETRYING TO CONNECT DOESN'T WORK, THE PORT SHOULD BE GONE'";
 });
+
+var bar = "test('reverse the previous test')";
+
 
 test('We do not send peerAvailabilityChanged events until one of the start ' +
   'methods is called', function (t) {
