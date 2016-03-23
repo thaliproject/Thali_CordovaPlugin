@@ -138,12 +138,12 @@ var test = tape({
   }
 });
 
-test('Replace the connectionType BLUETOOTH with TCP_NATIVE', function (t) {
+
+test('Add two Peers.', function (t) {
 
   // Scenario:
   // 1. Event: connectionType is BLUETOOTH
   // 2. Event: connectionType is TCP_NATIVE
-  // 3. Event: connectionType is BLUETOOTH
 
   // Expected result:
   // When the connectionType of the new event is TCP_NATIVE and existing
@@ -166,7 +166,7 @@ test('Replace the connectionType BLUETOOTH with TCP_NATIVE', function (t) {
   };
 
   var TCPEvent = {
-    peerIdentifier: 'id123',
+    peerIdentifier: 'id3212',
     hostAddress: 'anything',
     portNumber: 8080,
     connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
@@ -175,22 +175,20 @@ test('Replace the connectionType BLUETOOTH with TCP_NATIVE', function (t) {
 
   // New peer with Bluetooth connection
   notificationClient._peerAvailabilityChanged(BluetoothEvent);
-  var peer = notificationClient.peerDictionary.get('id123');
-  t.equal(peer.notificationAction.getConnectionType(),
-    ThaliMobile.connectionTypes.BLUETOOTH);
+  t.equal(notificationClient.peerDictionary.size(), 1);
 
   // New peer with TCP_NATIVE connection
   notificationClient._peerAvailabilityChanged(TCPEvent);
-  peer = notificationClient.peerDictionary.get('id123');
-  t.equal(peer.notificationAction.getConnectionType(),
-    ThaliMobile.connectionTypes.TCP_NATIVE);
+  t.equal(notificationClient.peerDictionary.size(), 2);
 
-  // New peer with BLUETOOTH connection
-  notificationClient._peerAvailabilityChanged(BluetoothEvent);
-  peer = notificationClient.peerDictionary.get('id123');
+  var peer = notificationClient.peerDictionary.get('id123');
+  var peer2 = notificationClient.peerDictionary.get('id3212');
+
   t.equal(peer.notificationAction.getConnectionType(),
+    ThaliMobile.connectionTypes.BLUETOOTH);
+
+  t.equal(peer2.notificationAction.getConnectionType(),
     ThaliMobile.connectionTypes.TCP_NATIVE);
-  t.equal(notificationClient.peerDictionary.size(), 1);
 
   notificationClient.stop();
   t.equal(notificationClient.peerDictionary, null);
@@ -198,7 +196,7 @@ test('Replace the connectionType BLUETOOTH with TCP_NATIVE', function (t) {
 
 });
 
-test('Existing TCP_NATIVE peer loses DNS', function (t) {
+test('TCP_NATIVE peer loses DNS', function (t) {
 
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, hostaddress is set
@@ -217,7 +215,8 @@ test('Existing TCP_NATIVE peer loses DNS', function (t) {
   t.equal(notificationClient.peerDictionary.size(), 1);
 
   globals.TCPEvent.hostAddress = undefined;
-  // New peer with TCP_NATIVE connection
+
+  // New peer with TCP_NATIVE connection but without hostaddress
   notificationClient._peerAvailabilityChanged(globals.TCPEvent);
 
   t.equal(notificationClient.peerDictionary.size(), 0);
@@ -234,7 +233,7 @@ test('Resolves an action locally', function (t) {
   // 1. Event: connectionType is TCP_NATIVE, hostaddress is set
   // 2. Action is getting resolved ok
 
-  // Simulates how peer pool runs actions
+  // Simulates how the peer pool runs actions
   var enqueue = function (action) {
     var keepAliveAgent = new http.Agent({ keepAlive: true });
     action.start(keepAliveAgent).then( function () {
@@ -282,6 +281,7 @@ test('Resolves an action locally', function (t) {
 
 });
 
+
 test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
 
   // Scenario:
@@ -326,6 +326,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
 
 });
 
+/*
 test('Action fails because of a bad hostname.', function (t) {
 
   // Scenario:
@@ -333,7 +334,7 @@ test('Action fails because of a bad hostname.', function (t) {
   // ThaliNotificationClient tries to connect 6 times and then stops.
 
   // Expected result:
-  // todo: add expected result and spy
+  // Connection is tried RETRY_TIMEOUTS.length times
 
   var counter = 0;
 
@@ -368,7 +369,7 @@ test('Action fails because of a bad hostname.', function (t) {
   // New peer with TCP connection
   notificationClient._peerAvailabilityChanged(TCPEvent);
 });
-
+*/
 test('hostaddress is removed when the action is running. ', function (t) {
 
   // Scenario:
@@ -379,11 +380,6 @@ test('hostaddress is removed when the action is running. ', function (t) {
   // Expected result:
   // Action gets killed when the simulated peer pool is running it
   // and the peer is removed from the dictionary.
-
-  // Coverage:
-  // 1. _peerAvailabilityChanged, _hostAddressPeerNotFound
-  // 2. start
-  // 3. _hostLostPeerFound
 
   // Simulates how peer pool runs actions
   var enqueue = function (action) {
@@ -408,7 +404,7 @@ test('hostaddress is removed when the action is running. ', function (t) {
   notificationClient.start([globals.sourcePublicKey]);
 
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
-    function ( res) {
+    function () {
       t.fail('This should never happen when action is getting killed' +
         'because of the hostname is removed');
       t.end();
@@ -427,66 +423,6 @@ test('hostaddress is removed when the action is running. ', function (t) {
     t.equal(notificationClient.peerDictionary.size(), 0);
     notificationClient.stop();
     t.end();
-  }, 2000);
-});
-
-test('hostaddress is updated when the action is running. ', function (t) {
-
-  // Scenario:
-  // 1. Event: connectionType is TCP_NATIVE, hostaddress is set
-  // 2. Start to resolve the action
-  // 3. Event: connectionType is TCP_NATIVE, hostaddress is not set
-
-  // Expected result:
-  // Action gets killed when the simulated peer pool is running it
-  // and the peer is removed from the dictionary.
-
-  // Coverage
-  // 1. _peerAvailabilityChanged, _hostAddressPeerNotFound
-  // 2. start
-  // 3. _hostAddressPeerFound
-
-  // Simulates how peer pool runs actions
-  var enqueue = function (action) {
-    var keepAliveAgent = new http.Agent({ keepAlive: true });
-    action.start(keepAliveAgent).then( function () {
-
-    }).catch( function () {
-      t.fail('This action should not fail');
-    });
-  };
-
-  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
-
-  httpTester.runServer(globals.expressRouter,
-    ThaliConfig.NOTIFICATION_BEACON_PATH,
-    200, globals.preambleAndBeacons, 1, 10000); // 10 seconds delay
-
-  var notificationClient =
-    new ThaliNotificationClient(globals.peerPoolInterface,
-      globals.targetDeviceKeyExchangeObjects[0]);
-
-  notificationClient.start([globals.sourcePublicKey]);
-
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
-    function ( res) {
-      t.equals(
-        res.hostAddress,
-        globals.TCPEvent.hostAddress,
-        'Host address must match');
-      t.end();
-    });
-
-  // New peer with TCP connection
-  notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-
-  // This updates the action after 2 seconds. This should give enough time to
-  // establish a HTTP connection in slow devices but since the server waits
-  // 10 seconds before it answers we have time to update the entry.
-
-  setTimeout( function () {
-    notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-
   }, 2000);
 });
 

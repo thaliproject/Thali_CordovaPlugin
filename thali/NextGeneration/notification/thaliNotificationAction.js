@@ -28,18 +28,19 @@ var ThaliConfig = require('../thaliConfig');
  * @fires module:thaliNotificationAction.event:Resolved
  */
 /* jshint -W003 */
-function ThaliNotificationAction(peerIdentifier, connectionType,
-                                 ecdhForLocalDevice, addressBookCallback,
+function ThaliNotificationAction(peerIdentifier,
+                                 ecdhForLocalDevice,
+                                 addressBookCallback,
                                  peerConnection) {
 
   assert(peerIdentifier, 'peerIdentifier must not be null or undefined');
-  assert(connectionType, 'connectionType must not be null or undefined');
   assert(ecdhForLocalDevice, 'connectionType must not be null or undefined');
   assert(addressBookCallback,
     'addressBookCallback must not be null or undefined');
   assert(peerConnection, 'peerConnection must not be null or undefined');
 
-  ThaliNotificationAction.super_.call(this, peerIdentifier, connectionType,
+  ThaliNotificationAction.super_.call(this, peerIdentifier,
+    peerConnection.getConnectionType(),
     ThaliNotificationAction.ACTION_TYPE);
 
   this.eventEmitter = new EventEmitter();

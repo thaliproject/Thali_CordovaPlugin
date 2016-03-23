@@ -34,7 +34,8 @@ var test = tape({
 function createEntry(name, state) {
 
   var connectionInfo =
-    new PeerDictionary.PeerConnectionInformation('127.0.0.1', 3001, 10);
+    new PeerDictionary.PeerConnectionInformation(
+      ThaliMobile.connectionTypes.TCP_NATIVE, '127.0.0.1', 3001, 10);
 
   var myPublicKey = crypto.createECDH(SECP256K1);
   myPublicKey.generateKeys();
@@ -43,17 +44,12 @@ function createEntry(name, state) {
   // that's why we pass empty object as 4th parameter instead of a callback
   // function.
   var act = new ThaliNotificationAction(name,
-    ThaliMobile.connectionTypes.BLUETOOTH, myPublicKey, {}, connectionInfo );
+    myPublicKey, {}, connectionInfo );
 
   act._nameTag = name;
 
-  var peerConnInfo = {};
-  peerConnInfo[ThaliMobile.connectionTypes.TCP_NATIVE] = connectionInfo;
-
-  peerConnInfo[ThaliMobile.connectionTypes.TCP_NATIVE]._nameTag = name;
-
   var newEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
-    state, peerConnInfo, act );
+    state, act );
 
   newEntry._nameTag = name;
 
@@ -121,7 +117,11 @@ function verifyEntries(dictionary, baseString, start, end) {
 test('Test PeerConnectionInformation basics', function (t) {
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
+    ThaliMobile.connectionTypes.TCP_NATIVE,
     '127.0.0.1', 123, 10);
+
+  t.equals( connInfo.getConnectionType(),
+    ThaliMobile.connectionTypes.TCP_NATIVE, 'connection type works');
 
   t.equals( connInfo.getHostAddress(),
     '127.0.0.1', 'getHostAddress works');

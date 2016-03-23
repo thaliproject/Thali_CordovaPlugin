@@ -35,7 +35,7 @@ var GlobalVariables = function () {
 
   this.expressApp = express();
   this.expressRouter = express.Router();
-
+  /*
   // Creates a proxyquired ThaliNotificationServer class.
   var MockThaliMobile = { };
   this.ThaliNotificationServerProxyquired =
@@ -52,7 +52,7 @@ var GlobalVariables = function () {
   MockThaliMobile.stopAdvertisingAndListening = function () {
     return Promise.resolve();
   };
-
+  */
   this.TCPEvent = {
     peerIdentifier: 'id123',
     hostAddress: '127.0.0.1',
@@ -60,8 +60,6 @@ var GlobalVariables = function () {
     connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
     suggestedTCPTimeout: 100000
   };
-
-  this.createKeys();
 };
 
 GlobalVariables.prototype.init = function () {
@@ -93,8 +91,9 @@ GlobalVariables.prototype.kill = function () {
   return Promise.resolve();
 };
 
-GlobalVariables.prototype.createKeys = function () {
+GlobalVariables.prototype.createKeysForLocalTest = function () {
 
+  // These keys are for local test
   this.targetPublicKeysToNotify = [];
   this.targetDeviceKeyExchangeObjects = [];
 
@@ -111,15 +110,29 @@ GlobalVariables.prototype.createKeys = function () {
 
 };
 
+GlobalVariables.prototype.createKeysForCoordinatedTest = function () {
+  this.ecdh = crypto.createECDH(SECP256K1);
+  this.myKeyExchangeObject = this.ecdh.generateKeys();
+  this.myPublicBase64 = this.ecdh.getPublicKey('base64');
+};
+
 var test = tape({
   setup: function (t) {
     globals = new GlobalVariables();
+
+    if (tape.coordinated) {
+      console.log('setting data');
+      globals.createKeysForCoordinatedTest();
+      t.data = globals.myPublicBase64;
+    }
+
     globals.init().then(function () {
       t.end();
     }).catch(function (failure) {
       t.fail('Test setting up failed:' + failure);
       t.end();
     });
+
   },
   teardown: function (t) {
     globals.kill().then(function () {
@@ -130,8 +143,10 @@ var test = tape({
     });
   }
 });
-
+/*
 test('Client to server request locally', function (t) {
+
+  globals.createKeysForLocalTest();
 
   var peerPool = new ThaliPeerPoolDefault();
 
@@ -185,60 +200,59 @@ test('Client to server request locally', function (t) {
     notificationClient._peerAvailabilityChanged(globals.TCPEvent);
   });
 });
-
+*/
 /*
 if (!tape.coordinated) {
   return;
 }
-
-
+*/
 test('Client to server request coordinated', function (t) {
 
-  var peerPool = new ThaliPeerPoolDefault();
-
-  // Simulates how the peer pool runs actions
-  var enqueue = function (action) {
-    var keepAliveAgent = new http.Agent({ keepAlive: true });
-    action.start(keepAliveAgent).then( function () {
-    }).catch( function ( ) {
-      t.fail('This action should not fail!');
+  var addressBook = [];
+  if (t.participants) {
+    t.participants.forEach(function (participant) {
+      if (participant.data !== globals.myPublicBase64) {
+        addressBook.push(new Buffer(participant.data, 'base64'));
+      }
     });
-  };
+  }
 
-  sinon.stub(peerPool, 'enqueue', enqueue);
+  if (!t.participants || addressBook.length === 0) {
+    t.pass('Can\'t run the test because no participants');
+    return t.end();
+  }
+
+  console.log('participants:' + addressBook.length);
+
+  var peerPool = new ThaliPeerPoolDefault();
 
   // Initialize the ThaliNotificationClient
   var notificationClient =
     new ThaliNotificationClient(peerPool,
-      globals.targetDeviceKeyExchangeObjects[0]);
-
-  notificationClient.start([globals.serverPublicKey]);
+      globals.myKeyExchangeObject);
 
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function ( res) {
-      t.equals(
-        res.hostAddress,
-        globals.TCPEvent.hostAddress,
-        'Host address must match');
-      t.equals(
-        res.suggestedTCPTimeout,
-        globals.TCPEvent.suggestedTCPTimeout,
-        'suggestedTCPTimeout must match');
-      t.equals(
-        res.connectionType,
-        globals.TCPEvent.connectionType,
-        'connectionType must match');
-      t.equals(
-        res.portNumber,
-        globals.TCPEvent.portNumber,
-        'portNumber must match');
+    t.pass('We pass to any results at this point ');
+    t.end();
 
-      t.end();
+  });
+
+  // Initializes ThaliNotificationServer
+  var notificationServer = new ThaliNotificationServer(
+    globals.expressRouter, globals.ecdh, 90000);
+  // sama routeri
+  var pThaliMobile = ThaliMobile.start(express.Router());
+  pThaliMobile.then( function () {
+    return notificationServer.start(addressBook).then(function () {
+      console.log('server started!');
+      return;
     });
-
-  globals.notificationServer.start(globals.targetPublicKeysToNotify).
-  then(function () {
-    notificationClient._peerAvailabilityChanged(globals.TCPEvent);
+  }).then( function () {
+    notificationClient.start(addressBook);
+    return ThaliMobile.startListeningForAdvertisements().then( function ( ) {
+      console.log('startListeningForAdvertisements');
+    });
   });
 });
-*/
+
