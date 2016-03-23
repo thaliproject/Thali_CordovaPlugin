@@ -400,16 +400,23 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
     socket.on('close', function () {
       peerConnections[peerIdentifier] &&
         peerConnections[peerIdentifier].destroy();
-    })
+    });
   });
   peerProxyServers[peerIdentifier].listen(0, function () {
     peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
     function () {
-      callback(null, JSON.stringify({
-        listeningPort: peerProxyServers[peerIdentifier].address().port,
-        clientPort: 0,
-        serverPort: 0
-      }));
+      setTimeout(function () {
+        if (!peerProxyServers[peerIdentifier]) {
+          callback('Unspecified Error with Radio infrastructure');
+          return;
+        }
+        callback(null, JSON.stringify({
+          listeningPort: peerProxyServers[peerIdentifier].address().port,
+          clientPort: 0,
+          serverPort: 0
+        }));
+      },
+      100);
     });
     peerConnections[peerIdentifier].on('error', function (err) {
       logger.debug('error on peerConnections socket for ' + peerIdentifier +
@@ -432,6 +439,8 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.killConnections = function (callback) {
+  // TODO: Implement specified behavior
+  callback();
 };
 
 

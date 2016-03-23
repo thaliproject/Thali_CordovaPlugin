@@ -30,6 +30,14 @@ module.exports._getRouterServerPort = function () {
   return gRouterServerPort;
 };
 
+module.exports._getServersManager = function () {
+  return gServersManager;
+};
+
+module.exports._setServersManager = function (serversManager) {
+  gServersManager = serversManager;
+};
+
 module.exports._isStarted = function () {
   return states.started;
 };
@@ -489,8 +497,13 @@ module.exports.getNonTCPNetworkStatus = function () {
 // jscs:enable jsDoc
 module.exports.terminateConnection = function (incomingConnectionId) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    // TODO: Implement the specified logic
-    resolve();
+    gServersManager.terminateConnection(incomingConnectionId)
+    .then(function () {
+      resolve();
+    })
+    .catch(function (error) {
+      reject(error);
+    });
   });
 };
 
@@ -506,11 +519,17 @@ module.exports.terminateConnection = function (incomingConnectionId) {
  * @param {number} port
  * @returns {Promise<?error>}
  */
-module.exports.terminateListener =
-  function (peerIdentifier, port) {
-    // TODO: Call terminateOutgoingConnection on tcpServersManager
-  };
-
+module.exports.terminateListener = function (peerIdentifier, port) {
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    gServersManager.terminateListener(peerIdentifier, port)
+    .then(function () {
+      resolve();
+    })
+    .catch(function (error) {
+      reject(error);
+    });
+  });
+};
 
 
 // jscs:disable jsDoc
@@ -540,8 +559,13 @@ module.exports.terminateListener =
 // jscs:enable jsDoc
 module.exports.killConnections = function () {
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    // TODO: Implement the specified logic
-    resolve();
+    Mobile('killConnections').callNative(function (error) {
+      if (error) {
+        reject(new Error(error));
+        return;
+      }
+      resolve();
+    });
   });
 };
 

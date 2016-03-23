@@ -22,19 +22,29 @@ var createTestDevice = function (socket, platform, index) {
   return new TestDevice(socket, name, uuid, platform, 'unittest', tests, null);
 };
 
+var amountOfDevices = 3;
+
 var testConfig = {
   devices: {
-    ios: 2,
-    android: 2
+    ios: amountOfDevices,
+    android: amountOfDevices
   },
-  honorCount: true
+  honorCount: true,
+  userConfig: {
+    ios: {
+      numDevices: amountOfDevices
+    },
+    android: {
+      numDevices: amountOfDevices
+    }
+  }
 };
 
 var addSetupHandler = function (device, cb) {
   device.tests.forEach(function (test) {
-    device.socket.on('setup_' + test, function (data) {
+    device.socket.on('setup_' + test, function () {
       device.socket.emit(util.format('setup_%s_ok', test));
-      cb(data);
+      cb();
     });
   });
   return device;
@@ -68,7 +78,7 @@ test('should get right number of setup emits', function (t) {
       iosSetupCount++;
       if (iosSetupCount === testConfig.devices.ios) {
         iosSetupDone = true;
-        for (var i = 0; i < 2; i++) {
+        for (var i = 0; i < amountOfDevices; i++) {
           unitTestFramework.addDevice(
             addAndroidSetupHandlers(
               createTestDevice(mockAndroidSocket, 'android', i)));
@@ -82,7 +92,7 @@ test('should get right number of setup emits', function (t) {
   });
 
   var unitTestFramework = new UnitTestFramework(testConfig);
-  for (var i = 0; i < 2; i++) {
+  for (var i = 0; i < amountOfDevices; i++) {
     unitTestFramework.addDevice(
       addIOSSetupHandlers(createTestDevice(mockSocket, 'ios', i)));
   }
@@ -91,12 +101,12 @@ test('should get right number of setup emits', function (t) {
 test('should discard surplus devices', function (t) {
   var unitTestFramework = new UnitTestFramework(testConfig);
   // Add one device more than required in the test config
-  var amountOfDevices = testConfig.devices.ios + 1;
-  for (var i = 0; i < amountOfDevices; i++) {
+  for (var i = 0; i < amountOfDevices + 1; i++) {
     unitTestFramework.addDevice(
-      addSetupHandler(createTestDevice(new EventEmitter(), 'ios', i)));
+      addSetupHandler(createTestDevice(new EventEmitter(), 'ios', i))
+    );
   }
-  t.ok(unitTestFramework.devices.ios.length === amountOfDevices - 1,
+  t.equals(unitTestFramework.devices.ios.length, amountOfDevices,
     'should have discarded the extra device');
   t.end();
 });

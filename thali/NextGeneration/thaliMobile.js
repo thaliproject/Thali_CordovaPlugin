@@ -597,11 +597,17 @@ var changePeersUnavailable = function (connectionType) {
   Object.keys(peerAvailabilities[connectionType]).forEach(function (peerIdentifier) {
     changeCachedPeerUnavailable(peerAvailabilities[connectionType]
       [peerIdentifier]);
-    module.exports.emitter.emit('peerAvailabilityChanged', {
-      peerIdentifier: peerIdentifier,
-      hostAddress: null,
-      portNumber: null
-    });
+    module.exports.emitter.emit(
+      'peerAvailabilityChanged',
+      getExtendedPeer(
+        {
+          peerIdentifier: peerIdentifier,
+          hostAddress: null,
+          portNumber: null
+        },
+        connectionType
+      )
+    );
   });
 };
 
@@ -684,15 +690,21 @@ var peerAvailabilityWatcher = function () {
         ThaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
       // If the time from the latest availability advertisement doesn't
       // exceed the threshold, no need to do anything.
-      if (peer.availableSince + unavailabilityThreshold < now) {
+      if (peer.availableSince + unavailabilityThreshold > now) {
         return;
       }
       changeCachedPeerUnavailable(peer);
-      module.exports.emitter.emit('peerAvailabilityChanged', {
-        peerIdentifier: peerIdentifier,
-        hostAddress: null,
-        portNumber: null
-      });
+      module.exports.emitter.emit(
+        'peerAvailabilityChanged',
+        getExtendedPeer(
+          {
+            peerIdentifier: peerIdentifier,
+            hostAddress: null,
+            portNumber: null
+          },
+          connectionType
+        )
+      );
     });
   });
 };
