@@ -16,10 +16,10 @@ function UnitTestFramework(testConfig, _logger)
   }
 
   var configFile = './UnitTestConfig';
-  if (testConfig.configFile) {
-    configFile = testConfig.configFile;
-  }
   var unitTestConfig = require(configFile);
+  if (testConfig.userConfig) {
+    unitTestConfig = testConfig.userConfig;
+  }
 
   UnitTestFramework.super_.call(this, testConfig, unitTestConfig, _logger);
 
@@ -55,7 +55,7 @@ UnitTestFramework.prototype.finishRun =
 
     // There may be other platforms still running
     if (this.runningTests.length === 0) {
-      process.exit(0);
+      this.emit('completed');
     }
   };
 
@@ -80,7 +80,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
 
     logger.info('Running on %s test: %s', platform, test);
 
-    function emit(device, msg) {
+    function emit(device, msg, data) {
       var retries = 10;
       var emitTimeout = null;
 
@@ -95,27 +95,44 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       // Emit message every second until acknowledged
       function _emit() {
         if (!acknowledged) {
-          device.socket.emit(msg);
+          if (data) {
+            device.socket.emit(msg, data);
+          } else {
+            device.socket.emit(msg);
+          }
           if (--retries > 0) {
             emitTimeout = setTimeout(_emit, 1000);
           } else {
-            logger.error('test server: Device %s', device.deviceName);
+            logger.error('Too many emit retries to device: %s',
+              device.deviceName);
           }
         }
       }
       setTimeout(_emit, 0);
     }
 
+    var nextStageData = [];
     // Convenience: Move to next stage in test
-    function doNext(stage) {
+    function doNext(stage, stageData) {
+      if (stageData) {
+        nextStageData.push({
+          uuid: stageData.uuid,
+          data: stageData.data
+        });
+      }
       // We need to have seen all devices report in before we
       // can proceed to the next stage
       if (--toComplete === 0) {
         toComplete = devices.length;
         devices.forEach(function (device) {
           // Tell each device to proceed to the next stage
-          emit(device, stage + '_' + test);
+          emit(
+            device,
+            stage + '_' + test,
+            JSON.stringify(nextStageData)
+          );
         });
+        nextStageData = [];
       }
     }
 
@@ -131,9 +148,13 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       }
 
       // The device has completed setup for this test
-      device.socket.once("setup_complete", function(result) {
-        setResult(JSON.parse(result));
-        doNext("start_test");
+      device.socket.once('setup_complete', function (result) {
+        var parsedResult = JSON.parse(result);
+        setResult(parsedResult);
+        doNext('start_test', {
+          uuid: device.uuid,
+          data: parsedResult.data
+        });
       });
 
       // The device has completed it's test
@@ -143,9 +164,15 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       });
 
       // The device has completed teardown for this test
-      device.socket.once("teardown_complete", function(result) {
-        setResult(JSON.parse(result));
-        if (--toComplete == 0) {
+      device.socket.once('teardown_complete', function (result) {
+        var parsedResult = JSON.parse(result);
+        setResult(parsedResult);
+        if (--toComplete === 0) {
+          if (!results[parsedResult.test]) {
+            logger.warn(
+              'Failed on %s test: %s', platform, test
+            );
+          }
           cb();
         }
       });
@@ -198,18 +225,22 @@ UnitTestFramework.prototype.testReport = function (platform, tests, results) {
   for (var test in results) {
     passed += results[test];
   }
+  var failed = tests.length - passed;
 
   logger.info('PLATFORM: %s', platform);
   logger.info('RESULT: %s', passed === tests.length ? 'PASS' : 'FAIL');
   logger.info('%d of %d tests completed',
     Object.keys(results).length, tests.length);
   logger.info('%d/%d passed (%d failures)',
-    passed, tests.length, tests.length - passed);
+    passed, tests.length, failed);
 
-  logger.info('--- Test Details ---\n\n');
-
-  for (test in results) {
-    logger.info(test + ' - ' + (results[test] ? 'pass' : 'fail'));
+  if (failed > 0) {
+    logger.info('\n\n--- Failed tests ---');
+    for (test in results) {
+      if (!results[test]) {
+        logger.warn(test + ' - fail');
+      }
+    }
   }
 
   logger.info('\n\n-== END ==-');
