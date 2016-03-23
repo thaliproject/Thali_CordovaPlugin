@@ -170,7 +170,6 @@ ThaliNotificationAction.prototype.getConnectionInformation = function () {
   return this._peerConnection;
 };
 
-
 /**
  * This callback function processes incoming HTTP response. It validates
  * that the content type is 'application/octet-stream',
@@ -219,8 +218,6 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
   });
 
 };
-
-
 
 /**
  * This function gets called when the HTTP response processing has been

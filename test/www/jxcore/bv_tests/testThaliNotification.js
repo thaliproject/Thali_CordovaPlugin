@@ -35,7 +35,7 @@ var GlobalVariables = function () {
 
   this.expressApp = express();
   this.expressRouter = express.Router();
-  /*
+
   // Creates a proxyquired ThaliNotificationServer class.
   var MockThaliMobile = { };
   this.ThaliNotificationServerProxyquired =
@@ -52,7 +52,7 @@ var GlobalVariables = function () {
   MockThaliMobile.stopAdvertisingAndListening = function () {
     return Promise.resolve();
   };
-  */
+
   this.TCPEvent = {
     peerIdentifier: 'id123',
     hostAddress: '127.0.0.1',
@@ -68,7 +68,7 @@ GlobalVariables.prototype.init = function () {
     // Initializes the server with the expressRouter
     self.expressApp.use('/', self.expressRouter);
     resolve();
-    /*
+
     self.expressServer = self.expressApp.listen(0, function (err) {
       if (err) {
         reject(err);
@@ -78,7 +78,7 @@ GlobalVariables.prototype.init = function () {
         resolve();
       }
     });
-    */
+
   });
 };
 
@@ -146,7 +146,7 @@ var test = tape({
     });
   }
 });
-/*
+
 test('Client to server request locally', function (t) {
 
   globals.createKeysForLocalTest();
@@ -203,12 +203,13 @@ test('Client to server request locally', function (t) {
     notificationClient._peerAvailabilityChanged(globals.TCPEvent);
   });
 });
-*/
+
+// todo: fix coordinated tests
 /*
 if (!tape.coordinated) {
   return;
 }
-*/
+
 test('Client to server request coordinated', function (t) {
 
   var addressBook = [];
@@ -244,7 +245,7 @@ test('Client to server request coordinated', function (t) {
   // Initializes ThaliNotificationServer
   var notificationServer = new ThaliNotificationServer(
     globals.expressRouter, globals.ecdh, 90000);
-  // sama routeri
+
   var pThaliMobile = ThaliMobile.start(globals.expressRouter);
   pThaliMobile.then( function () {
     return notificationServer.start(addressBook).then(function () {
@@ -258,4 +259,4 @@ test('Client to server request coordinated', function (t) {
     });
   });
 });
-
+ */
