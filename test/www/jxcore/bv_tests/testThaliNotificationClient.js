@@ -10,6 +10,8 @@ var httpTester = require('../lib/httpTester.js');
 
 var proxyquire = require('proxyquire').noCallThru();
 
+var ThaliPeerDictionary =
+  require('thali/NextGeneration/notification/thaliPeerDictionary');
 var ThaliNotificationClient =
   require('thali/NextGeneration/notification/thaliNotificationClient');
 var ThaliMobile =
@@ -62,6 +64,8 @@ var GlobalVariables = function () {
     suggestedTCPTimeout: 100000
   };
 
+  this.originalTimeOuts = ThaliNotificationClient.RETRY_TIMEOUTS;
+
   this.createPublicKeysToNotifyAndPreamble();
 };
 
@@ -88,6 +92,11 @@ GlobalVariables.prototype.init = function () {
  * resources are released.
  */
 GlobalVariables.prototype.kill = function () {
+
+  console.log('killed');
+  ThaliNotificationClient.RETRY_TIMEOUTS =
+    this.originalTimeOuts;
+
   if (this.expressServer) {
     return this.expressServer.closeAllPromise();
   }
@@ -138,7 +147,6 @@ var test = tape({
   }
 });
 
-
 test('Add two Peers.', function (t) {
 
   // Scenario:
@@ -146,10 +154,7 @@ test('Add two Peers.', function (t) {
   // 2. Event: connectionType is TCP_NATIVE
 
   // Expected result:
-  // When the connectionType of the new event is TCP_NATIVE and existing
-  // action isn't that, we kill the existing action and create a new
-  // action. However when the existing connection type is TCP_NATIVE and new
-  // is BLUETOOTH we don't do kill existing connection.
+  // Two peers are added into the dictionary
 
   var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterfaceStub,
@@ -231,7 +236,9 @@ test('Resolves an action locally', function (t) {
 
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, hostaddress is set
-  // 2. Action is getting resolved ok
+
+  // Expected result:
+  // Action is getting resolved ok
 
   // Simulates how the peer pool runs actions
   var enqueue = function (action) {
@@ -281,12 +288,13 @@ test('Resolves an action locally', function (t) {
 
 });
 
-
 test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
 
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, hostaddress is set
-  // 2. Action is getting resolved ok
+
+  // Expected result:
+  // Action is getting resolved ok
 
   var peerPool = new ThaliPeerPoolDefault();
   httpTester.runServer(globals.expressRouter,
@@ -326,28 +334,30 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
 
 });
 
-/*
 test('Action fails because of a bad hostname.', function (t) {
 
   // Scenario:
   // ConnectionType is TCP_NATIVE, host address is having wrong DNS.
-  // ThaliNotificationClient tries to connect 6 times and then stops.
 
   // Expected result:
   // Connection is tried RETRY_TIMEOUTS.length times
 
-  var counter = 0;
+  // Make timeouts shorter (kill will return values to original)
+  ThaliNotificationClient.RETRY_TIMEOUTS =
+    [100, 300, 600];
+
+  var requestCount = 0;
+  var failCount = 0;
 
   // Simulates how peer pool runs actions
   var enqueue = function (action) {
+    requestCount++;
     var keepAliveAgent = new http.Agent({ keepAlive: true });
     action.start(keepAliveAgent).then( function () {
       t.fail('This action should fail always.');
       t.end();
     }).catch( function ( ) {
-      if (++counter === ThaliNotificationClient.RETRY_TIMEOUTS.length) {
-        t.end();
-      }
+      failCount++;
     });
   };
 
@@ -366,10 +376,21 @@ test('Action fails because of a bad hostname.', function (t) {
     connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
     suggestedTCPTimeout: 100000
   };
+
   // New peer with TCP connection
   notificationClient._peerAvailabilityChanged(TCPEvent);
+
+  // Waits 5 seconds. And checks results
+  setTimeout( function () {
+    t.equals(requestCount-1, ThaliNotificationClient.RETRY_TIMEOUTS.length);
+    t.equals(failCount-1, ThaliNotificationClient.RETRY_TIMEOUTS.length);
+    var entry = notificationClient.peerDictionary.get('id123');
+    t.equals(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED);
+    notificationClient.stop();
+    t.end();
+  }, 5000);
 });
-*/
+
 test('hostaddress is removed when the action is running. ', function (t) {
 
   // Scenario:
@@ -378,7 +399,7 @@ test('hostaddress is removed when the action is running. ', function (t) {
   // 3. Event: connectionType is TCP_NATIVE, hostaddress is not set
 
   // Expected result:
-  // Action gets killed when the simulated peer pool is running it
+  // Action gets killed while the peer pool is running it
   // and the peer is removed from the dictionary.
 
   // Simulates how peer pool runs actions

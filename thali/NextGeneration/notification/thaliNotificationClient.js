@@ -301,7 +301,7 @@ ThaliNotificationClient.prototype._resolved =
 
       var connInfo = entry.notificationAction.getConnectionInformation();
       entry.peerState = PeerDictionary.peerState.RESOLVED;
-      this.peerDictionary.addUpdateEntry(entry);
+      this.peerDictionary.addUpdateEntry(peerId, entry);
 
       // todo: this event needs to be updated
       var peerAdvertises = new PeerAdvertisesDataForUs(
@@ -325,7 +325,7 @@ ThaliNotificationClient.prototype._resolved =
       // action. This means we will ignore this peerIdentifier
       // in the future.
       entry.peerState = PeerDictionary.peerState.RESOLVED;
-      this.peerDictionary.addUpdateEntry(entry);
+      this.peerDictionary.addUpdateEntry(peerId, entry);
 
     } else if (resolution ===
       ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE ||
@@ -336,6 +336,7 @@ ThaliNotificationClient.prototype._resolved =
       // will give them the benefit of the doubt. We will retry after the delay
       // specified in the RETRY_TIMEOUTS array.
       var timeOutHandler = function (peerId) {
+
         entry = this.peerDictionary.get(peerId);
         if (entry && entry.peerState === PeerDictionary.peerState.WAITING) {
 
@@ -352,17 +353,17 @@ ThaliNotificationClient.prototype._resolved =
       if (entry.retryCounter < maxRetries) {
 
         entry.peerState = PeerDictionary.peerState.WAITING;
-        this.peerDictionary.addUpdateEntry(entry);
+        this.peerDictionary.addUpdateEntry(peerId, entry);
 
         entry.waitingTimeout = setTimeout(
           timeOutHandler.bind(this, peerId),
           ThaliNotificationClient.RETRY_TIMEOUTS[entry.retryCounter++]);
-
+        this.peerDictionary.addUpdateEntry(peerId, entry);
       } else {
         // Gives up after all the timeouts from the RETRY_TIMEOUTS array
         // has been spent.
         entry.peerState = PeerDictionary.peerState.RESOLVED;
-        this.peerDictionary.addUpdateEntry(entry);
+        this.peerDictionary.addUpdateEntry(peerId, entry);
       }
 
     } else if (resolution ===

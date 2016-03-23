@@ -67,6 +67,8 @@ GlobalVariables.prototype.init = function () {
   return new Promise(function (resolve, reject) {
     // Initializes the server with the expressRouter
     self.expressApp.use('/', self.expressRouter);
+    resolve();
+    /*
     self.expressServer = self.expressApp.listen(0, function (err) {
       if (err) {
         reject(err);
@@ -76,6 +78,7 @@ GlobalVariables.prototype.init = function () {
         resolve();
       }
     });
+    */
   });
 };
 
@@ -242,7 +245,7 @@ test('Client to server request coordinated', function (t) {
   var notificationServer = new ThaliNotificationServer(
     globals.expressRouter, globals.ecdh, 90000);
   // sama routeri
-  var pThaliMobile = ThaliMobile.start(express.Router());
+  var pThaliMobile = ThaliMobile.start(globals.expressRouter);
   pThaliMobile.then( function () {
     return notificationServer.start(addressBook).then(function () {
       console.log('server started!');
