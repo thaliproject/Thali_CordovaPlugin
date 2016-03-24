@@ -54,7 +54,7 @@ var GlobalVariables = function () {
   this.enqueStub = sinon.stub(this.peerPoolInterfaceStub, 'enqueue', enqueue);
 
   this.TCPEvent = {
-    peerIdentifier: 'id123',
+    peerIdentifier: 'id124',
     hostAddress: '127.0.0.1',
     portNumber: 0,
     connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
