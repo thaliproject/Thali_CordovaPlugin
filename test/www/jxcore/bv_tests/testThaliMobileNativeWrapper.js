@@ -5,6 +5,7 @@ var http = require('http');
 var net = require('net');
 var Promise = require('lie');
 var sinon = require('sinon');
+var testUtils = require('../lib/testUtils.js');
 
 if (typeof Mobile === 'undefined') {
   return;
@@ -143,6 +144,10 @@ function trivialEndToEndTest(t, needManualNotify, callback) {
   });
 
   var peerAvailabilityHandler = function (peer) {
+    // Ignore peer unavailable events
+    if (peer.portNumber === null) {
+      return;
+    }
     t.ok(true, 'found a peer! ' + JSON.stringify(peer));
     thaliMobileNativeWrapper.emitter.removeListener(
       'nonTCPPeerAvailabilityChangedEvent',
@@ -602,4 +607,32 @@ test('can do HTTP requests between peers', function (t) {
 
 test('can still do HTTP requests between peers', function (t) {
   endToEndWithStateCheck(t);
+});
+
+// The connection cut is implemented as a separate test instead
+// of doing it in the middle of the actual test so that the
+// step gets coordinated between peers.
+test('test to coordinate connection cut', function (t) {
+  // This cuts connections on Android.
+  testUtils.toggleBluetooth(false)
+  .then(function () {
+    // This cuts connections on iOS.
+    return thaliMobileNativeWrapper.killConnections();
+  })
+  .then(function () {
+    t.end();
+  })
+  .catch(function () {
+    t.end();
+  });
+});
+
+test('can do HTTP requests after connections are cut', function (t) {
+  // Turn Bluetooth back on so that Android can operate
+  // (iOS does not require separate call to operate since
+  // killConnections is more like a single-shot thing).
+  testUtils.toggleBluetooth(true)
+  .then(function () {
+    endToEndWithStateCheck(t);
+  });
 });
