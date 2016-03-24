@@ -42,6 +42,6 @@ module.exports = {
   BOGUS_KEY_PEM: BOGUS_KEY_PEM,
   MAXIMUM_NATIVE_PEERS_CREATE_PEER_LISTENER_ADVERTISES: 20,
   BEACON_PSK_IDENTITY: 'Beacon Please',
-  BEACON_KEY: new Buffer('Let me in please!!'),œ
+  BEACON_KEY: new Buffer('Let me in please!!'),
   MILLISECONDS_TO_WAIT_FOR_REVERSE_CONNECTION: 1000
 };
