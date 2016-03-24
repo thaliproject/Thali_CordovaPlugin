@@ -7,21 +7,18 @@ var Promise = require('lie');
 var http = require('http');
 
 var proxyquire = require('proxyquire').noCallThru();
-
 var ThaliNotificationClient =
   require('thali/NextGeneration/notification/thaliNotificationClient');
-
 var ThaliNotificationServer =
   require('thali/NextGeneration/notification/thaliNotificationServer');
-
 var ThaliMobile =
   require('thali/NextGeneration/thaliMobile');
-
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
+var NotificationBeacons =
+  require('thali/NextGeneration/notification/thaliNotificationBeacons');
 
 var SECP256K1 = 'secp256k1';
 
@@ -209,16 +206,23 @@ test('Client to server request locally', function (t) {
 if (!tape.coordinated) {
   return;
 }
+var NO_REPLY = 1;
+var REPLY = 2;
 
 test('Client to server request coordinated', function (t) {
 
   globals.initCoordinated();
 
   var addressBook = [];
+  var replies = {};
+
   if (t.participants) {
     t.participants.forEach(function (participant) {
       if (participant.data !== globals.myPublicBase64) {
-        addressBook.push(new Buffer(participant.data, 'base64'));
+        var publicKey = new Buffer(participant.data, 'base64');
+        addressBook.push(publicKey);
+        var publicKeyHash = NotificationBeacons.createPublicKeyHash(publicKey);
+        replies[publicKeyHash] = NO_REPLY;
       }
     });
   }
@@ -241,19 +245,26 @@ test('Client to server request coordinated', function (t) {
   var notificationServer = new ThaliNotificationServer(
     globals.expressRouter, globals.ecdh, 90000);
 
-  var replyCount = 0;
+  var finished = false;
 
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
-        
-      if (++replyCount === t.participants.length-1) {
 
-        t.pass('We pass to any results at this point ');
-        t.end();
-
+      replies[res.keyId] = REPLY;
+      var allReplied = true;
+      Object.keys(replies).forEach(function (key) {
+        if (replies[key] === NO_REPLY) {
+          allReplied = false;
+        }
+      });
+      if (allReplied && !finished) {
+        finished = true;
+        ThaliMobile.stopListeningForAdvertisements();
         //  Kills services after 3 seconds gives all peers time to run their tests.
         setTimeout( function () {
-          ThaliMobile.stopListeningForAdvertisements();
+          t.pass('We pass to any results at this point ');
+          t.end();
+
           notificationServer.stop();
           notificationClient.stop();
         }, 3000);
