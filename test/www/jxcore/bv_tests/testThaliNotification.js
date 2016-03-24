@@ -30,6 +30,7 @@ var globals = {};
  */
 var GlobalVariables = function () {
 
+  this.local = true;
   this.expressApp = express();
   this.expressRouter = express.Router();
 
@@ -79,6 +80,7 @@ GlobalVariables.prototype.initLocal = function () {
 };
 
 GlobalVariables.prototype.initCoordinated = function () {
+  this.local = false;
   this.expressApp.use('/', this.expressRouter);
 };
 
@@ -88,7 +90,7 @@ GlobalVariables.prototype.initCoordinated = function () {
  * resources are released.
  */
 GlobalVariables.prototype.kill = function () {
-  if (this.expressServer) {
+  if (this.expressServer && this.local) {
     return this.expressServer.closeAllPromise();
   }
   return Promise.resolve();
@@ -168,8 +170,9 @@ test('Client to server request locally', function (t) {
     var notificationServer = new globals.ThaliNotificationServerProxyquired(
       globals.expressRouter, globals.serverKeyExchangeObject, 90000);
 
-    notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
-      function ( res) {
+    notificationClient.on(
+      ThaliNotificationClient.Events.PeerAdvertisesDataForUs, function ( res) {
+
         t.equals(
           res.hostAddress,
           globals.TCPEvent.hostAddress,
@@ -188,12 +191,13 @@ test('Client to server request locally', function (t) {
           'portNumber must match');
         notificationClient.stop();
         notificationServer.stop().then(function () {
-          console.log('stopped ok');
+
           t.end();
         }).catch(function (failure) {
           t.fail('Stopping failed:' + failure);
           t.end();
         });
+
       });
 
     notificationServer.start(globals.targetPublicKeysToNotify).
@@ -212,14 +216,18 @@ test('Client to server request locally', function (t) {
 if (!tape.coordinated) {
   return;
 }
-var NO_REPLY = 1;
-var REPLY = 2;
 
 test('Client to server request coordinated', function (t) {
+
+  // For this test we share our own public key with other peers and collect
+  // their public keys. Then we wait until we get notification event
+  // from each of these peers.
 
   globals.initCoordinated();
 
   var addressBook = [];
+
+  // We use replies table to ensure we get response back from all peers.
   var replies = {};
 
   if (t.participants) {
@@ -228,7 +236,7 @@ test('Client to server request coordinated', function (t) {
         var publicKey = new Buffer(participant.data, 'base64');
         addressBook.push(publicKey);
         var publicKeyHash = NotificationBeacons.createPublicKeyHash(publicKey);
-        replies[publicKeyHash] = NO_REPLY;
+        replies[publicKeyHash] = true;
       }
     });
   }
@@ -237,8 +245,6 @@ test('Client to server request coordinated', function (t) {
     t.pass('Can\'t run the test because no participants');
     return t.end();
   }
-
-  console.log('participants:' + addressBook.length);
 
   var peerPool = new ThaliPeerPoolDefault();
 
@@ -255,10 +261,11 @@ test('Client to server request coordinated', function (t) {
 
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
-      replies[res.keyId] = REPLY;
+
+      replies[res.keyId] = true;
       var allReplied = true;
       Object.keys(replies).forEach(function (key) {
-        if (replies[key] === NO_REPLY) {
+        if (!replies[key]) {
           allReplied = false;
         }
       });
@@ -271,13 +278,14 @@ test('Client to server request coordinated', function (t) {
           // ongoing requests.
           setTimeout( function () {
             notificationServer.stop().then(function () {
-              t.pass('received keys from all peers');
+              t.pass('received keys from all peers. Peer count:'+
+                addressBook.length);
               t.end();
             }).catch(function (failure) {
               t.fail('Stopping failed:' + failure);
               t.end();
             });
-          }, 3000);
+          }, 6000);
         }).catch(function (failure) {
           t.fail('Failed to call stopListeningForAdvertisements:' + failure);
           t.end();
@@ -287,10 +295,7 @@ test('Client to server request coordinated', function (t) {
 
   var pThaliMobile = ThaliMobile.start(globals.expressRouter);
   pThaliMobile.then( function () {
-    return notificationServer.start(addressBook).then(function () {
-      console.log('server started!');
-      return;
-    });
+    return notificationServer.start(addressBook);
   }).then( function () {
     notificationClient.start(addressBook);
     return ThaliMobile.startListeningForAdvertisements().then( function ( ) {
