@@ -28,18 +28,19 @@ var thaliConfig = require('../thaliConfig');
  * @fires module:thaliNotificationAction.event:Resolved
  */
 /* jshint -W003 */
-function ThaliNotificationAction(peerIdentifier, connectionType,
-                                 ecdhForLocalDevice, addressBookCallback,
+function ThaliNotificationAction(peerIdentifier,
+                                 ecdhForLocalDevice,
+                                 addressBookCallback,
                                  peerConnection) {
 
   assert(peerIdentifier, 'peerIdentifier must not be null or undefined');
-  assert(connectionType, 'connectionType must not be null or undefined');
   assert(ecdhForLocalDevice, 'connectionType must not be null or undefined');
   assert(addressBookCallback,
     'addressBookCallback must not be null or undefined');
   assert(peerConnection, 'peerConnection must not be null or undefined');
 
-  ThaliNotificationAction.super_.call(this, peerIdentifier, connectionType,
+  ThaliNotificationAction.super_.call(this, peerIdentifier,
+    peerConnection.getConnectionType(),
     ThaliNotificationAction.ACTION_TYPE);
 
   this.eventEmitter = new EventEmitter();
@@ -158,6 +159,17 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
 ThaliNotificationAction.prototype.kill = function () {
   ThaliNotificationAction.super_.prototype.kill.call(this);
   this._complete(ThaliNotificationAction.ActionResolution.KILLED);
+};
+
+/**
+ * This synchronous function returns a connection information.
+ *
+ * @public
+ * @returns {module:thaliPeerDictionary~PeerConnectionInformation}
+ * Connection parameters to connect to peer.
+ */
+ThaliNotificationAction.prototype.getConnectionInformation = function () {
+  return this._peerConnection;
 };
 
 /**
