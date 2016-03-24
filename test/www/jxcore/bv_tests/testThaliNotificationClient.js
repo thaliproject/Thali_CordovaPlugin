@@ -58,7 +58,7 @@ var GlobalVariables = function () {
     hostAddress: '127.0.0.1',
     portNumber: 0,
     connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
-    suggestedTCPTimeout: 100000
+    suggestedTCPTimeout: 10000
   };
 
   this.originalTimeOuts = ThaliNotificationClient.RETRY_TIMEOUTS;
