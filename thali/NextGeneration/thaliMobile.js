@@ -659,7 +659,9 @@ var handlePeer = function (peer, connectionType) {
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (peer) {
-  if (peer.portNumber) {
+  if (peer.portNumber === null) {
+    peer.hostAddress = null;
+  } else {
     peer.hostAddress = '127.0.0.1';
   }
   var connectionType =
