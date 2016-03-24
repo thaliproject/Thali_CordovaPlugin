@@ -200,7 +200,6 @@ function stopCreateAndStartServersManager() {
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately.
  * @param {pskIdToSecret} pskIdToSecret
- * to public keys and pre-shared secrets
  * @returns {Promise<?Error>}
  */
 // jscs:enable jsDoc
@@ -227,7 +226,6 @@ module.exports.start = function (router, pskIdToSecret) {
     };
     gRouterServer = https.createServer(options, gRouterExpress).listen(0, 
       function () {
-        gRouterServer = makeIntoCloseAllServer(gRouterServer);
         gRouterServerPort = gRouterServer.address().port;
         stopCreateAndStartServersManager()
           .then(function () {
@@ -238,6 +236,7 @@ module.exports.start = function (router, pskIdToSecret) {
             reject(err);
           });
       });
+    gRouterServer = makeIntoCloseAllServer(gRouterServer);
   });
 };
 

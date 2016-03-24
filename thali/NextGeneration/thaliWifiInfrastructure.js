@@ -8,10 +8,11 @@ var uuid = require('node-uuid');
 var url = require('url');
 var express = require('express');
 var validations = require('../validations');
-var ThaliConfig = require('./thaliConfig');
+var thaliConfig = require('./thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 var logger = require('../thalilogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
+var https = require('https');
 
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
@@ -71,6 +72,7 @@ function ThaliWifiInfrastructure () {
   this.routerServerPort = 0;
   this.routerServerAddress = ip.address();
   this.routerServerErrorListener = null;
+  this.pskIdToSecret = null;
 
   this.states = this._getInitialStates();
 
@@ -81,8 +83,8 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 
 ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
-    adInterval: ThaliConfig.SSDP_ADVERTISEMENT_INTERVAL,
-    udn: ThaliConfig.SSDP_NT
+    adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL,
+    udn: thaliConfig.SSDP_NT
   };
   this._server = new nodessdp.Server(serverOptions);
   this._setLocation();
@@ -211,7 +213,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 // relevant for Thali.
 ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
   // First check if the data contains the Thali-specific NT.
-  if (data.NT === ThaliConfig.SSDP_NT) {
+  if (data.NT === thaliConfig.SSDP_NT) {
     // Filtering out messages from ourselves.
     if (data.USN === this.usn) {
       return true;
@@ -267,14 +269,16 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
  * express-pouchdb is a router object) that the caller wants the WiFi
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately.
+ * @param {pskIdToSecret} pskIdToSecret
  * @returns {Promise<?Error>}
  */
-ThaliWifiInfrastructure.prototype.start = function (router) {
+ThaliWifiInfrastructure.prototype.start = function (router, pskIdToSecret) {
   var self = this;
   return promiseQueue.enqueue(function (resolve, reject) {
     if (self.states.started === true) {
       return reject(new Error('Call Stop!'));
     }
+    self.pskIdToSecret = pskIdToSecret;
     ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
                                           self._networkChangedHandler);
     ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
@@ -527,7 +531,6 @@ function () {
       };
       var listeningHandler = function () {
         self.routerServerPort = self.routerServer.address().port;
-        self.routerServer = makeIntoCloseAllServer(self.routerServer);
         self._server.setUSN(self.usn);
         // We need to update the location string, because the port
         // may have changed when we re-start the router server.
@@ -543,8 +546,17 @@ function () {
           return resolve();
         });
       };
-      self.routerServer = self.expressApp.listen(self.routerServerPort,
-                                                 listeningHandler);
+      var options = {
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+        pskCallback: function (id) {
+          return self.pskIdToSecret(id);
+        },
+        key: thaliConfig.BOGUS_KEY_PEM,
+        cert: thaliConfig.BOGUS_CERT_PEM
+      };
+      self.routerServer = https.createServer(options, self.expressApp)
+        .listen(self.routerServerPort, listeningHandler);
+      self.routerServer = makeIntoCloseAllServer(self.routerServer);
       self.routerServer.on('error', startErrorListener);
     }
   });
