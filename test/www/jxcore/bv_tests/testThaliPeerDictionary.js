@@ -163,14 +163,10 @@ test('Test PeerDictionary basic functionality', function (t) {
   dictionary.remove(ENTRY1);
   t.equal(dictionary.size(), 0, 'Size must be 0');
 
-  var errorMessage = null;
+  // We should be able to remove non existing entry without
+  // any errors
+  dictionary.remove(ENTRY1);
 
-  try {
-    dictionary.remove(ENTRY1);
-  } catch (err) {
-    errorMessage = err.message;
-  }
-  t.equal(errorMessage, 'entry not found', 'entry not found must be thrown');
   t.end();
 });
 
@@ -210,7 +206,7 @@ test('Test PeerDictionary with multiple entries.', function (t) {
 
 test('RESOLVED entries are removed before WAITING state entry.', function (t) {
 
-  
+
 
   var dictionary = new PeerDictionary.PeerDictionary();
 
