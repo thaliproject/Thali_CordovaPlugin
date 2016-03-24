@@ -42,11 +42,13 @@ var GlobalVariables = function () {
 
   // Mocks ThaliMobile.startUpdateAdvertisingAndListening function
   MockThaliMobile.startUpdateAdvertisingAndListening = function () {
+    console.log('startUpdateAdvertisingAndListening');
     return Promise.resolve();
   };
 
   // Mocks ThaliMobile.stopAdvertisingAndListening function
   MockThaliMobile.stopAdvertisingAndListening = function () {
+    console.log('stopAdvertisingAndListening');
     return Promise.resolve();
   };
 
@@ -129,9 +131,7 @@ var test = tape({
   },
 
   teardown: function (t) {
-
     globals.kill().then(function () {
-      console.log('killed properly');
       t.end();
     }).catch(function (failure) {
       t.fail('Server cleaning failed:' + failure);
@@ -139,7 +139,7 @@ var test = tape({
     });
   }
 });
-/*
+
 test('Client to server request locally', function (t) {
 
   var p = globals.initLocal();
@@ -164,6 +164,10 @@ test('Client to server request locally', function (t) {
       new ThaliNotificationClient(peerPool,
         globals.targetDeviceKeyExchangeObjects[0]);
 
+    // Initializes ThaliNotificationServer
+    var notificationServer = new globals.ThaliNotificationServerProxyquired(
+      globals.expressRouter, globals.serverKeyExchangeObject, 90000);
+
     notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
       function ( res) {
         t.equals(
@@ -182,13 +186,15 @@ test('Client to server request locally', function (t) {
           res.portNumber,
           globals.TCPEvent.portNumber,
           'portNumber must match');
-
-        t.end();
+        notificationClient.stop();
+        notificationServer.stop().then(function () {
+          console.log('stopped ok');
+          t.end();
+        }).catch(function (failure) {
+          t.fail('Stopping failed:' + failure);
+          t.end();
+        });
       });
-
-    // Initializes ThaliNotificationServer
-    var notificationServer = new globals.ThaliNotificationServerProxyquired(
-      globals.expressRouter, globals.serverKeyExchangeObject, 90000);
 
     notificationServer.start(globals.targetPublicKeysToNotify).
     then(function () {
@@ -202,7 +208,7 @@ test('Client to server request locally', function (t) {
   });
 
 });
-*/
+
 if (!tape.coordinated) {
   return;
 }
@@ -249,8 +255,6 @@ test('Client to server request coordinated', function (t) {
 
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
-      console.log('reply');
-      /*
       replies[res.keyId] = REPLY;
       var allReplied = true;
       Object.keys(replies).forEach(function (key) {
@@ -260,17 +264,25 @@ test('Client to server request coordinated', function (t) {
       });
       if (allReplied && !finished) {
         finished = true;
-        ThaliMobile.stopListeningForAdvertisements();
-        //  Kills services after 3 seconds gives all peers time to run their tests.
-        setTimeout( function () {
-          t.pass('We pass to any results at this point ');
-          t.end();
-
-          notificationServer.stop();
+        ThaliMobile.stopListeningForAdvertisements().then(function () {
           notificationClient.stop();
-        }, 3000);
+          // Kills the server after 6 seconds.
+          // This gives other peers time to finish their
+          // ongoing requests.
+          setTimeout( function () {
+            notificationServer.stop().then(function () {
+              t.pass('received keys from all peers');
+              t.end();
+            }).catch(function (failure) {
+              t.fail('Stopping failed:' + failure);
+              t.end();
+            });
+          }, 3000);
+        }).catch(function (failure) {
+          t.fail('Failed to call stopListeningForAdvertisements:' + failure);
+          t.end();
+        });
       }
-      */
     });
 
   var pThaliMobile = ThaliMobile.start(globals.expressRouter);
