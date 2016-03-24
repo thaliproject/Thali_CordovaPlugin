@@ -251,6 +251,7 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
   });
 };
 
+// jscs:disable jsDoc
 /**
  * This method MUST be called before any other method here other than
  * registering for events on the emitter. This method only registers the router
@@ -269,9 +270,10 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
  * express-pouchdb is a router object) that the caller wants the WiFi
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately.
- * @param {pskIdToSecret} pskIdToSecret
+ * @param {module:thaliMobileNativeWrapper~pskIdToSecret pskIdToSecret} pskIdToSecret
  * @returns {Promise<?Error>}
  */
+// jscs:enable jsDoc
 ThaliWifiInfrastructure.prototype.start = function (router, pskIdToSecret) {
   var self = this;
   return promiseQueue.enqueue(function (resolve, reject) {
