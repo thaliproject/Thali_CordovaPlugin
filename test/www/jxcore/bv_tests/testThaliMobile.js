@@ -440,6 +440,13 @@ function (t) {
     availabilityChangedHandler);
   setupDiscoveryAndFindPeer(t, function (peer, done) {
     checkPeer(t, peer, true);
+    // The timeout is the unavailability threshold plus a bit extra
+    // so that our test verifies the peer is not marked unavailable
+    // too soon. The reason the peer should not be marked unavailable
+    // is that we advertise over SSDP every 500 milliseconds so the
+    // unavailability threshold should never be met when all works
+    // normally.
+    var timeout = ThaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD + 500;
     setTimeout(function () {
       ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
         availabilityChangedHandler);
@@ -449,6 +456,6 @@ function (t) {
       t.ok(spy.callCount <= maxAvailabilityChanges,
         'must not receive too many peer availabilities');
       done();
-    }, ThaliConfig.PEER_AVAILABILITY_WATCHER_INTERVAL + 100);
+    }, timeout);
   });
 });
