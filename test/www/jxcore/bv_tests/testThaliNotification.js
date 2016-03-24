@@ -249,7 +249,8 @@ test('Client to server request coordinated', function (t) {
 
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
-
+      console.log('reply');
+      /*
       replies[res.keyId] = REPLY;
       var allReplied = true;
       Object.keys(replies).forEach(function (key) {
@@ -269,6 +270,7 @@ test('Client to server request coordinated', function (t) {
           notificationClient.stop();
         }, 3000);
       }
+      */
     });
 
   var pThaliMobile = ThaliMobile.start(globals.expressRouter);
