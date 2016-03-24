@@ -503,6 +503,7 @@ test('createPeerListener - pleaseConnect === true, connection resolves promise',
               t.ok(true, 'promise should resolve');
               if (connectionReceived) {
                 nativeServer.close();
+                t.end();
               }
             })
             .catch(function (err) {
