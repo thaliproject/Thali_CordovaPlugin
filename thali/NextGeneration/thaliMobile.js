@@ -149,7 +149,7 @@ var handleNetworkChanged = function (networkChangedValue) {
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately. If stop is called then the
  * system will take down the server so it is no longer available.
- * @param {pskIdToSecret} pskIdToSecret
+ * @param {module:thaliMobileNativeWrapper~pskIdToSecret} pskIdToSecret
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.start = function (router, pskIdToSecret) {
