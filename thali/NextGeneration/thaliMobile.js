@@ -611,11 +611,13 @@ var changePeersUnavailable = function (connectionType) {
   });
 };
 
-var peerHasChanged = function (peer) {
-  var cachedPeer = peerAvailabilities[peer.connectionType][peer.peerIdentifier];
+var updateAndCheckChanges = function (peer) {
+  var cachedPeer =
+    peerAvailabilities[peer.connectionType][peer.peerIdentifier];
   if (!cachedPeer) {
     return true;
   }
+  cachedPeer.availableSince = Date.now();
   if (cachedPeer.hostAddress !== peer.hostAddress ||
       cachedPeer.portNumber !== peer.portNumber) {
     return true;
@@ -644,7 +646,7 @@ var getExtendedPeer = function (peer, connectionType) {
 
 var handlePeer = function (peer, connectionType) {
   peer = getExtendedPeer(peer, connectionType);
-  if (!peerHasChanged(peer)) {
+  if (!updateAndCheckChanges(peer)) {
     return;
   }
   if (peer.hostAddress === null) {
