@@ -101,7 +101,7 @@ PeerConnectionInformation.prototype.getConnectionType = function () {
 
 /**
  * This is default TCP timeout that is used if suggestedTCPTimeout is
- * not defied for the PeerConnectionInformation.
+ * not defined for the PeerConnectionInformation.
  * @type {number}
  * @readonly
  */
@@ -227,7 +227,9 @@ PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
  */
 PeerDictionary.prototype.remove = function (peerId) {
   var entry = this.get(peerId);
-  assert(entry !== null, 'entry not found');
+  if (!entry) {
+    return;
+  }
   entry.waitingTimeout && clearTimeout(entry.waitingTimeout);
   entry.notificationAction &&
     entry.notificationAction.eventEmitter.removeAllListeners(

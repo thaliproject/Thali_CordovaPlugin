@@ -5,10 +5,7 @@ var crypto = require('crypto');
 var sinon = require('sinon');
 var Promise = require('lie');
 var http = require('http');
-
 var httpTester = require('../lib/httpTester.js');
-
-var proxyquire = require('proxyquire').noCallThru();
 
 var ThaliPeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
@@ -23,7 +20,7 @@ var ThaliPeerPoolDefault =
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 
-var MakeIntoCloseAllServer =
+var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var ThaliConfig =
@@ -59,7 +56,7 @@ var GlobalVariables = function () {
   this.TCPEvent = {
     peerIdentifier: 'id123',
     hostAddress: '127.0.0.1',
-    portNumber: 8080,
+    portNumber: 0,
     connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
     suggestedTCPTimeout: 100000
   };
@@ -78,7 +75,7 @@ GlobalVariables.prototype.init = function () {
       if (err) {
         reject(err);
       } else {
-        MakeIntoCloseAllServer(self.expressServer);
+        self.expressServer = makeIntoCloseAllServer(self.expressServer);
         self.TCPEvent.portNumber = self.expressServer.address().port;
         resolve();
       }
@@ -374,7 +371,7 @@ test('Action fails because of a bad hostname.', function (t) {
     hostAddress: 'address-that-does-not-exists',
     portNumber: 123,
     connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
-    suggestedTCPTimeout: 100000
+    suggestedTCPTimeout: 10000
   };
 
   // New peer with TCP connection
