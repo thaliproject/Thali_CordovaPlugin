@@ -189,6 +189,18 @@ ThaliNotificationClient.prototype.stop = function () {
 ThaliNotificationClient.prototype._peerAvailabilityChanged =
   function (peerStatus) {
 
+    if (!this.peerDictionary) {
+      return;
+    }
+    if (!peerStatus) {
+      logger.warn('_peerAvailabilityChanged: peerStatus is not set');
+      return;
+    }
+    if (!peerStatus.peerIdentifier) {
+      logger.warn('_peerAvailabilityChanged: peerIdentifier is not set');
+      return;
+    }
+
     // Todo: clean when coordinated tests are done
     console.log('_peerAvailabilityChanged');
     console.log('peerIdentifier:' + peerStatus.peerIdentifier);
@@ -196,16 +208,6 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
     console.log('hostAddress:' + peerStatus.hostAddress);
     console.log('portNumber:' + peerStatus.portNumber);
     console.log('_peerAvailabilityChanged - end');
-
-    if (!peerStatus) {
-      logger.warn('_peerAvailabilityChanged: peerStatus is not set');
-      return;
-    }
-
-    if (!peerStatus.peerIdentifier) {
-      logger.warn('_peerAvailabilityChanged: peerIdentifier is not set');
-      return;
-    }
 
     if (peerStatus.hostAddress &&
         peerStatus.portNumber &&
