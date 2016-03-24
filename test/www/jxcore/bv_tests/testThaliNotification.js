@@ -20,7 +20,7 @@ var ThaliMobile =
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 
-var MakeIntoCloseAllServer =
+var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var SECP256K1 = 'secp256k1';
@@ -56,30 +56,31 @@ var GlobalVariables = function () {
   this.TCPEvent = {
     peerIdentifier: 'id123',
     hostAddress: '127.0.0.1',
-    portNumber: 8080,
+    portNumber: 0,
     connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
-    suggestedTCPTimeout: 100000
+    suggestedTCPTimeout: 10000
   };
 };
 
-GlobalVariables.prototype.init = function () {
+GlobalVariables.prototype.initLocal = function () {
   var self = this;
+  self.createKeysForLocalTest();
   return new Promise(function (resolve, reject) {
-    // Initializes the server with the expressRouter
     self.expressApp.use('/', self.expressRouter);
-    return resolve();
-
     self.expressServer = self.expressApp.listen(0, function (err) {
       if (err) {
         reject(err);
       } else {
-        MakeIntoCloseAllServer(self.expressServer);
+        makeIntoCloseAllServer(self.expressServer);
         self.TCPEvent.portNumber = self.expressServer.address().port;
         resolve();
       }
     });
-
   });
+};
+
+GlobalVariables.prototype.initCoordinated = function () {
+  this.expressApp.use('/', this.expressRouter);
 };
 
 /**
@@ -124,21 +125,16 @@ var test = tape({
     globals = new GlobalVariables();
 
     if (tape.coordinated) {
-      console.log('setting data');
       globals.createKeysForCoordinatedTest();
       t.data = globals.myPublicBase64;
     }
-
-    globals.init().then(function () {
-      t.end();
-    }).catch(function (failure) {
-      t.fail('Test setting up failed:' + failure);
-      t.end();
-    });
-
+    t.end();
   },
+
   teardown: function (t) {
+
     globals.kill().then(function () {
+      console.log('killed properly');
       t.end();
     }).catch(function (failure) {
       t.fail('Server cleaning failed:' + failure);
@@ -149,69 +145,74 @@ var test = tape({
 /*
 test('Client to server request locally', function (t) {
 
-  globals.createKeysForLocalTest();
+  var p = globals.initLocal();
 
-  var peerPool = new ThaliPeerPoolDefault();
+  p.then(function () {
 
-  // Simulates how the peer pool runs actions
-  var enqueue = function (action) {
-    var keepAliveAgent = new http.Agent({ keepAlive: true });
-    action.start(keepAliveAgent).then( function () {
-    }).catch( function ( ) {
-      t.fail('This action should not fail!');
+    var peerPool = new ThaliPeerPoolDefault();
+
+    // Simulates how the peer pool runs actions
+    var enqueue = function (action) {
+      var keepAliveAgent = new http.Agent({ keepAlive: true });
+      action.start(keepAliveAgent).then( function () {
+      }).catch( function ( ) {
+        t.fail('This action should not fail!');
+      });
+    };
+
+    sinon.stub(peerPool, 'enqueue', enqueue);
+
+    // Initialize the ThaliNotificationClient
+    var notificationClient =
+      new ThaliNotificationClient(peerPool,
+        globals.targetDeviceKeyExchangeObjects[0]);
+
+    notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+      function ( res) {
+        t.equals(
+          res.hostAddress,
+          globals.TCPEvent.hostAddress,
+          'Host address must match');
+        t.equals(
+          res.suggestedTCPTimeout,
+          globals.TCPEvent.suggestedTCPTimeout,
+          'suggestedTCPTimeout must match');
+        t.equals(
+          res.connectionType,
+          globals.TCPEvent.connectionType,
+          'connectionType must match');
+        t.equals(
+          res.portNumber,
+          globals.TCPEvent.portNumber,
+          'portNumber must match');
+
+        t.end();
+      });
+
+    // Initializes ThaliNotificationServer
+    var notificationServer = new globals.ThaliNotificationServerProxyquired(
+      globals.expressRouter, globals.serverKeyExchangeObject, 90000);
+
+    notificationServer.start(globals.targetPublicKeysToNotify).
+    then(function () {
+      notificationClient.start([globals.serverPublicKey]);
+      notificationClient._peerAvailabilityChanged(globals.TCPEvent);
     });
-  };
 
-  sinon.stub(peerPool, 'enqueue', enqueue);
-
-  // Initialize the ThaliNotificationClient
-  var notificationClient =
-    new ThaliNotificationClient(peerPool,
-      globals.targetDeviceKeyExchangeObjects[0]);
-
-  notificationClient.start([globals.serverPublicKey]);
-
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
-    function ( res) {
-      t.equals(
-        res.hostAddress,
-        globals.TCPEvent.hostAddress,
-        'Host address must match');
-      t.equals(
-        res.suggestedTCPTimeout,
-        globals.TCPEvent.suggestedTCPTimeout,
-        'suggestedTCPTimeout must match');
-      t.equals(
-        res.connectionType,
-        globals.TCPEvent.connectionType,
-        'connectionType must match');
-      t.equals(
-        res.portNumber,
-        globals.TCPEvent.portNumber,
-        'portNumber must match');
-
-      t.end();
-    });
-
-  // Initializes ThaliNotificationServer
-  var notificationServer = new globals.ThaliNotificationServerProxyquired(
-    globals.expressRouter, globals.serverKeyExchangeObject, 90000);
-
-
-  notificationServer.start(globals.targetPublicKeysToNotify).
-  then(function () {
-    notificationClient._peerAvailabilityChanged(globals.TCPEvent);
+  }).catch(function (failure) {
+    t.fail('Test setting up failed:' + failure);
+    t.end();
   });
+
 });
 */
-
-// todo: fix coordinated tests
-
 if (!tape.coordinated) {
   return;
 }
 
 test('Client to server request coordinated', function (t) {
+
+  globals.initCoordinated();
 
   var addressBook = [];
   if (t.participants) {
@@ -234,18 +235,30 @@ test('Client to server request coordinated', function (t) {
   // Initialize the ThaliNotificationClient
   var notificationClient =
     new ThaliNotificationClient(peerPool,
-      globals.myKeyExchangeObject);
-
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
-    function ( res) {
-    t.pass('We pass to any results at this point ');
-    t.end();
-
-  });
+      globals.ecdh);
 
   // Initializes ThaliNotificationServer
   var notificationServer = new ThaliNotificationServer(
     globals.expressRouter, globals.ecdh, 90000);
+
+  var replyCount = 0;
+
+  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+    function (res) {
+        
+      if (++replyCount === t.participants.length-1) {
+
+        t.pass('We pass to any results at this point ');
+        t.end();
+
+        //  Kills services after 3 seconds gives all peers time to run their tests.
+        setTimeout( function () {
+          ThaliMobile.stopListeningForAdvertisements();
+          notificationServer.stop();
+          notificationClient.stop();
+        }, 3000);
+      }
+    });
 
   var pThaliMobile = ThaliMobile.start(globals.expressRouter);
   pThaliMobile.then( function () {

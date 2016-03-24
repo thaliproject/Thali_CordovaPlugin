@@ -189,10 +189,10 @@ ThaliNotificationClient.prototype.stop = function () {
 ThaliNotificationClient.prototype._peerAvailabilityChanged =
   function (peerStatus) {
 
-    if(peerStatus.connectionType !== ThaliMobile.connectionTypes.TCP_NATIVE) {
+    if (peerStatus.connectionType === ThaliMobile.connectionTypes.TCP_NATIVE) {
       return;
     }
-    
+
     // Todo: clean when coordinated tests are done
     console.log('_peerAvailabilityChanged');
     console.log('peerIdentifier:' + peerStatus.peerIdentifier);
@@ -294,6 +294,7 @@ ThaliNotificationClient.prototype._resolved =
     if (!this.peerDictionary) {
       return;
     }
+
     var entry = this.peerDictionary.get(peerId);
 
     if (!entry) {
