@@ -391,7 +391,10 @@ module.exports.connectionTypes = connectionTypes;
  * event for a specific peerIdentifier + connectionType combination that it will
  * not fire another peerAvailabilityChanged event for that peerIdentifier +
  * connectionType combination unless the combination has a new hostAddress or
- * portNumber.
+ * portNumber. If the hostAddress or portNumber changes, there must first
+ * be an event emitted with null values to mark that peer becomes unavailable
+ * in the old location and only after that an event with the updated hostAddress
+ * and portNumber.
  *
  * Note that this code explicitly does not do any kind of duplicate detection
  * for the same peerIdentifier across different connectionTypes. This is because
@@ -578,6 +581,19 @@ module.exports.connectionTypes = connectionTypes;
  * us.
  */
 
+var emitPeerUnavailable = function (peerIdentifier, connectionType) {
+  module.exports.emitter.emit('peerAvailabilityChanged',
+    getExtendedPeer(
+      {
+        peerIdentifier: peerIdentifier,
+        hostAddress: null,
+        portNumber: null
+      },
+      connectionType
+    )
+  );
+};
+
 var peerAvailabilities = {};
 peerAvailabilities[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
 peerAvailabilities[connectionTypes.BLUETOOTH] = {};
@@ -597,17 +613,7 @@ var changePeersUnavailable = function (connectionType) {
   Object.keys(peerAvailabilities[connectionType]).forEach(function (peerIdentifier) {
     changeCachedPeerUnavailable(peerAvailabilities[connectionType]
       [peerIdentifier]);
-    module.exports.emitter.emit(
-      'peerAvailabilityChanged',
-      getExtendedPeer(
-        {
-          peerIdentifier: peerIdentifier,
-          hostAddress: null,
-          portNumber: null
-        },
-        connectionType
-      )
-    );
+    emitPeerUnavailable(peerIdentifier, connectionType);
   });
 };
 
@@ -620,6 +626,7 @@ var updateAndCheckChanges = function (peer) {
   cachedPeer.availableSince = Date.now();
   if (cachedPeer.hostAddress !== peer.hostAddress ||
       cachedPeer.portNumber !== peer.portNumber) {
+    emitPeerUnavailable(peer.peerIdentifier, peer.connectionType);
     return true;
   }
   return false;
@@ -698,17 +705,7 @@ var peerAvailabilityWatcher = function () {
         return;
       }
       changeCachedPeerUnavailable(peer);
-      module.exports.emitter.emit(
-        'peerAvailabilityChanged',
-        getExtendedPeer(
-          {
-            peerIdentifier: peerIdentifier,
-            hostAddress: null,
-            portNumber: null
-          },
-          connectionType
-        )
-      );
+      emitPeerUnavailable(peerIdentifier, connectionType);
     });
   });
 };
