@@ -95,6 +95,25 @@ test('calling createPeerListener (pleaseConnect === true) with unknown peer ' +
   }
 );
 
+test('calling createPeerListener twice with same peerIdentifier should ' +
+  'return the same port', function(t) {
+  serversManager.start()
+    .then(function () {
+      var promise1 = serversManager.createPeerListener('peer1', false);
+      var promise2 = serversManager.createPeerListener('peer1', false);
+      return Promise.all([promise1, promise2]);
+    })
+    .then(function (promiseResultArray) {
+      t.equal(promiseResultArray[0], promiseResultArray[1],
+        'port values should be the same');
+      t.end();
+    })
+    .catch(function (err) {
+      t.fail('oops ' + err);
+      t.end();
+    });
+});
+
 /*
  //////////////////////////////////////////////////////////////////////////
  Now we get to the complex stuff
@@ -184,7 +203,7 @@ test('peerListener - forwardConnection, pleaseConnect === true - no native ' +
 
     // We expect 'failedConnection' since there's no native listener
     serversManager.on('failedConnection', function (err) {
-      t.equal(err.error, 'Cannot Connect To Peer',
+      t.equal(err.error.message, 'Cannot Connect To Peer',
         'reason should be as expected');
       failedConnection = true;
       if (promiseRejected) {
@@ -204,13 +223,11 @@ test('peerListener - forwardConnection, pleaseConnect === true - no native ' +
         if (peer.peerAvailable) {
           serversManager.createPeerListener(peer.peerIdentifier,
             peer.pleaseConnect)
-            .then(function (peerPort) {
+            .then(function () {
               t.fail('We should have gotten rejected');
             })
             .catch(function () {
-              t.ok(true, 'Expected a reject');
               promiseRejected = true;
-              console.log(serversManager);
               if (failedConnection) {
                 t.end();
               }
@@ -232,7 +249,7 @@ test('peerListener - forwardConnection, pleaseConnect === false - no native ' +
     // We expect 'failedConnection' since there's no native listener
     serversManager.on('failedConnection', function (err) {
       t.ok(firstConnection, 'Should not get event until connection is made');
-      t.equal(err.error, 'Cannot Connect To Peer',
+      t.equal(err.error.message, 'Cannot Connect To Peer',
         'reason should be as expected');
       t.end();
     });
@@ -418,13 +435,14 @@ test('createPeerListener is idempotent', function (t) {
 test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
   'promise',
   function (t) {
+    t.plan(4);
+
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
       cb('a nasty error');
     });
 
     serversManager.on('failedConnection', function () {
-      t.fail('connection shouldn\'t fail');
-      t.end();
+      t.ok(true, 'got our failed connection');
     });
 
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
@@ -439,7 +457,6 @@ test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
             .catch(function (err) {
               t.equal(err.message, 'a nasty error',
                 'failed connection should reject with error');
-              t.end();
             });
         }
       });
@@ -452,20 +469,21 @@ test('createPeerListener - pleaseConnect === true, failed connection rejects ' +
 
 test('createPeerListener - pleaseConnect === true, connection resolves promise',
   function (t) {
+    var promiseResolved = false;
+    var connectionReceived = false;
+
     Mobile('connect').nextNative(function (peerIdentifier, cb) {
       cb(null, Mobile.createListenerOrIncomingConnection(nativePort, 0, 0));
-    });
-
-    serversManager.on('failedConnection', function () {
-      if (!serversManager._closing) {
-        t.fail('Shouldn\'t fail to connect to native listener');
-        t.end();
-      }
     });
 
     var nativeServer = net.createServer(function (socket) {
       t.ok(true, 'Should get spontaneous connection');
       socket.end();
+      connectionReceived = true;
+      if (promiseResolved) {
+        nativeServer.close();
+        t.end();
+      }
     });
 
     nativeServer.listen(nativePort, function (err) {
@@ -481,9 +499,12 @@ test('createPeerListener - pleaseConnect === true, connection resolves promise',
           serversManager.createPeerListener(peer.peerIdentifier,
             peer.pleaseConnect)
             .then(function () {
+              promiseResolved = true;
               t.ok(true, 'promise should resolve');
-              nativeServer.close();
-              t.end();
+              if (connectionReceived) {
+                nativeServer.close();
+                t.end();
+              }
             })
             .catch(function (err) {
               t.fail('should not fail - ' + err);
@@ -508,7 +529,7 @@ test('peerListener - reverseConnection, pleaseConnect === true', function (t) {
   // We expect 'failedConnection' since pleaseConnect should
   // never result in a reverseConnection
   serversManager.on('failedConnection', function (err) {
-    t.equal(err.error, 'Cannot Connect To Peer',
+    t.equal(err.error.message, 'Cannot Connect To Peer',
       'reason should be as expected');
     t.end();
   });
@@ -524,11 +545,11 @@ test('peerListener - reverseConnection, pleaseConnect === false - no incoming',
   function (t) {
     var firstConnection = false;
 
-    // We expect 'Incoming connction died' since we're forcing a reverse
+    // We expect 'Incoming connection died' since we're forcing a reverse
     // connection but there's been no incoming connection
     serversManager.on('failedConnection', function (err) {
       t.ok(firstConnection, 'should not get event until connection is made');
-      t.equal(err.error, 'Incoming connection died',
+      t.equal(err.error.message, 'Incoming connection died',
         'reason should be as expected');
       t.end();
     });
