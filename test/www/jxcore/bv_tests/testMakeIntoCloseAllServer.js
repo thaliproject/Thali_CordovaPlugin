@@ -51,18 +51,18 @@ test('closeAll with promise', function (t) {
       testServer.closeAllPromise()
         .then(function () {
           connection = net.connect(testServerPort, function () {
-            t.fail('connection should not succeed');
-            t.end();
-          });
+              t.fail('connection should not succeed');
+              t.end();
+            });
           connection.on('error', function (error) {
             t.equals(error.code, 'ECONNREFUSED',
               'not possible to connect to the server anymore');
             t.end();
           });
         }).catch(function (err) {
-        t.fail(err);
-        t.end();
-      });
+          t.fail(err);
+          t.end();
+        });
     });
     connection.on('error', function (error) {
       t.equals(error.code, 'ECONNRESET',
@@ -83,17 +83,17 @@ test('closeAll properly throws when closing a non open server with ' +
       t.end();
     })
     .catch(function (err) {
-      t.ok(err instanceof Error && err.message === 'Not running',
-        'Got the right error');
+      t.ok(err instanceof Error && err.message === 'Not running', 
+              'Got the right error');
       t.end();
     })
 });
 
 test('closeAll works even with a server that is not listening yet with' +
-  'eatNotRunning set to true',
+  'eatNotRunning set to true', 
   function (t) {
     var testServer = net.createServer(function () {
-
+      
     });
     testServer = makeIntoCloseAllServer(testServer, true);
     testServer.closeAllPromise()
