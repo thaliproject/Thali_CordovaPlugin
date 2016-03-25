@@ -210,6 +210,12 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
  * an ID to this function we should check the dictionaries in LIFO order 
  * (since it's likely that the newest dictionary has the right value).
  * 
+ * ## Dealing with beacon requests
+ *
+ * If we get an id equal to thaliConfig.BEACON_PSK_IDENTITY then we MUST always
+ * return thaliConfig.BEACON_KEY. This check MUST come before looking into any
+ * of the dictionaries.
+ * 
  * ## Policy for remembering and forgetting secret dictionaries
  * 
  * Each time a beacon is generated it has an associated expiration date. We
@@ -280,6 +286,10 @@ ThaliNotificationServer.prototype.getPskIdToSecret = function () {
  * module:thaliNotificationServer~ThaliNotificationServer.getPskIdToSecret}
  * except that it returns the public key from the secrets dictionary instead of
  * the PSK secret.
+ * 
+ * In the case of the beacon ID (e.g. thaliConfig.BEACON_PSK_IDENTITY) if we get
+ * that specific ID then we MUST return null. This check MUST come before
+ * checking any of the dictionaries.
  * 
  * And yes, there is a race condition where a dictionary might not have quite
  * yet expired when getPskIdToSecret is called but could then have expired

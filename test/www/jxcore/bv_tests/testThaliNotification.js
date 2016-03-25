@@ -19,6 +19,7 @@ var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var SECP256K1 = 'secp256k1';
 
@@ -261,7 +262,6 @@ test('Client to server request coordinated', function (t) {
 
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
-
       replies[res.keyId] = true;
       var allReplied = true;
       Object.keys(replies).forEach(function (key) {
@@ -293,12 +293,16 @@ test('Client to server request coordinated', function (t) {
       }
     });
 
-  var pThaliMobile = ThaliMobile.start(globals.expressRouter);
-  pThaliMobile.then( function () {
+  // TODO: Replace our fixed pskIdToSecret with the one from thaliNotificationServer
+  var pThaliMobile = ThaliMobile.start(globals.expressRouter,
+  function (id) {
+    return id === thaliConfig.BEACON_PSK_IDENTITY ?
+      thaliConfig.BEACON_KEY : null;
+  }).then(function () {
     return notificationServer.start(addressBook);
-  }).then( function () {
+  }).then(function () {
     notificationClient.start(addressBook);
-    return ThaliMobile.startListeningForAdvertisements().then( function ( ) {
+    return ThaliMobile.startListeningForAdvertisements().then(function () {
       console.log('startListeningForAdvertisements');
     });
   });

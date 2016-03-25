@@ -9,6 +9,8 @@ var NotificationBeacons = require('./thaliNotificationBeacons');
 var EventEmitter = require('events').EventEmitter;
 var thaliConfig = require('../thaliConfig');
 
+var logger = require('../../thalilogger')('thaliNotificationAction');
+
 /** @module thaliNotificationAction */
 
 /**
@@ -140,7 +142,8 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
       // from kill is ignored at this point and it is not causing
       // anything in the _complete function because it is the second call to
       // _complete.
-      self._httpRequest.on('error', function () {
+      self._httpRequest.on('error', function (err) {
+        logger.debug('http request error - ' + err);
         self._complete(
           ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
           null, 'Could not establish TCP connection');
