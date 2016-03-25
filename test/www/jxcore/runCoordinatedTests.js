@@ -20,7 +20,7 @@ var argv = parseargv(process.argv.slice(2), {
 
 var spawnedInstanceCount = argv.instanceCount;
 if (argv.waitForInstance) {
-  spawnedInstanceCount = DEFAULT_INSTANCE_COUNT - 1;
+  spawnedInstanceCount = spawnedInstanceCount - 1;
 }
 
 var instanceLogs = {};
