@@ -140,7 +140,7 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
-function getMessageByLength(t, socket, lengthOfMessage) {
+function getMessageByLength(socket, lengthOfMessage) {
   return new Promise(function (resolve, reject) {
     var readData = new Buffer(0);
     var dataHandlerFunc = function (data) {
@@ -160,7 +160,7 @@ function getMessageByLength(t, socket, lengthOfMessage) {
 }
 
 function getMessageAndThen(t, socket, messageToReceive, cb) {
-  return getMessageByLength(t, socket, messageToReceive.length)
+  return getMessageByLength(socket, messageToReceive.length)
     .then(function (data) {
       t.ok(Buffer.compare(messageToReceive, data) === 0, 'Data matches');
       return cb();
@@ -177,7 +177,7 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
   retries--;
   Mobile('connect').callNative(peer.peerIdentifier, function (err, connection) {
     if (quitSignal && quitSignal.raised) {
-      return;
+      successCb(null, null);
     }
     if (err == null) {
       // Connected successfully..
@@ -191,7 +191,7 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
           quitSignal && quitSignal.removeTimeout(timeoutCancel);
           connectToPeer(peer, retries, successCb, failureCb);
         }, TIME_BETWEEN_RETRIES);
-        quitSignal && quitSignal.addTimeout(timeoutCancel);
+        quitSignal && quitSignal.addTimeout(timeoutCancel, successCb);
       } else {
         if (failureCb) {
           logger.warn('Too many connect retries!');
@@ -249,7 +249,7 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
     var dataResult = null;
     var connection = net.connect(port, function () {
       connection.write(request);
-      getMessageByLength(t, connection, responseLength)
+      getMessageByLength(connection, responseLength)
         .then(function (data) {
           dataResult = data;
         })
@@ -724,7 +724,7 @@ test('We do not emit peerAvailabilityChanged events until one of the start ' +
   // announcements and thus close)
   var smallest = findSmallestParticipant(t.participants);
 
-  if (t.uuid !== smallest) {
+  if (tape.uuid !== smallest) {
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'We should start listening fine');
       Mobile('startUpdateAdvertisingAndListening').callNative(4242,
@@ -780,9 +780,9 @@ function QuitSignal() {
   this.timeOuts = [];
 }
 
-QuitSignal.prototype.addTimeout = function (timeOut) {
+QuitSignal.prototype.addTimeout = function (timeOut, successCb) {
   assert(!this.raised, 'No calling addTimeout after signal is raised');
-  this.timeOuts.push(timeOut);
+  this.timeOuts.push({ timeOut: timeOut, successCb: successCb});
 };
 
 QuitSignal.prototype.removeTimeout = function (timeOut) {
@@ -797,24 +797,25 @@ QuitSignal.prototype.removeTimeout = function (timeOut) {
 
 QuitSignal.prototype.raiseSignal = function () {
   this.raised = true;
-  this.timeOuts.forEach(function (timeOut) {
-    clearTimeout(timeOut);
+  this.timeOuts.forEach(function (timeOutStruct) {
+    clearTimeout(timeOutStruct.timeOut);
+    timeOutStruct.successCb(null, null);
   });
 };
 
-function parseMessage(t, dataBuffer) {
+function parseMessage(dataBuffer) {
   return {
-    uuid: dataBuffer.slice(0, t.uuid.length).toString(),
-    code: dataBuffer.slice(t.uuid.length, 1).toString(),
-    bulkData: dataBuffer.slice(t.uuid.length + 1)
+    uuid: dataBuffer.slice(0, tape.uuid.length).toString(),
+    code: dataBuffer.slice(tape.uuid.length, tape.uuid.length + 1).toString(),
+    bulkData: dataBuffer.slice(tape.uuid.length + 1)
   };
 }
 
 var bulkMessage = new Buffer(100000);
 bulkMessage.fill(1);
 
-function messageLength(t) {
-  return t.uuid.length + 1 + bulkMessage.length;
+function messageLength() {
+  return tape.uuid.length + 1 + bulkMessage.length;
 }
 
 /**
@@ -835,8 +836,11 @@ var protocolResult = {
   WRONG_SYNTAX: '4'
 };
 
-function createMessage(t, code) {
-  return Buffer.concat([new Buffer(t.uuid), new Buffer(code), bulkMessage]);
+function createMessage(code) {
+  var message =
+    Buffer.concat([new Buffer(tape.uuid), new Buffer(code), bulkMessage]);
+  assert(message.length === messageLength(), 'Right size message');
+  return message;
 }
 
 /**
@@ -910,13 +914,13 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
       return reject(error);
     }
 
-    var clientMessage = createMessage(t, roundNumber.toString());
+    var clientMessage = createMessage(roundNumber.toString());
 
     connectToListenerSendMessageGetResponseLength(t,
-        connection.listeningPort, clientMessage, messageLength(t), 60000)
+        connection.listeningPort, clientMessage, messageLength(), 60000)
         .then(function (dataBuffer) {
           var connection = dataBuffer.connection;
-          var parsedMessage = parseMessage(t, dataBuffer);
+          var parsedMessage = parseMessage(dataBuffer);
           switch (validateServerResponse(t, parsedMessage)) {
             case validateResponse.NON_FATAL: {
               connection.destroy();
@@ -925,10 +929,8 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
               return reject(error);
             }
             case validateResponse.OK: {
-              connection.on('end', function () {
-                peersWeSucceededWith[parsedMessage.uuid] = true;
-                resolve();
-              });
+              peersWeSucceededWith.push(parsedMessage.uuid);
+              resolve();
               connection.end();
               break;
             }
@@ -950,7 +952,7 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
 
 function clientRound(t, roundNumber, boundListener) {
   var peersWeAreOrHaveResolved = {};
-  var peersWeSucceededWith = {};
+  var peersWeSucceededWith = [];
   var quitSignal = new QuitSignal();
   return new Promise(function (resolve, reject) {
     boundListener.listener = function (peers) {
@@ -979,6 +981,9 @@ function clientRound(t, roundNumber, boundListener) {
             return Promise.reject(err);
           })
           .then(function (connection) {
+            if (quitSignal.raised) {
+              return;
+            }
             return clientSuccessConnect(t, roundNumber, connection,
               peersWeSucceededWith);
           })
@@ -995,6 +1000,7 @@ function clientRound(t, roundNumber, boundListener) {
       Promise.all(peerPromises)
         .then(function () {
           if (peersWeSucceededWith.length === t.participants.length - 1) {
+            quitSignal.raiseSignal();
             resolve();
           }
         })
@@ -1007,7 +1013,7 @@ function clientRound(t, roundNumber, boundListener) {
 }
 
 function validateRequest(t, roundNumber, parsedMessage) {
-  if (!peerInTestList(t, parsedMessage)) {
+  if (!peerInTestList(t, parsedMessage.uuid)) {
     logger.debug('Unrecognized peer at server');
     return protocolResult.WRONG_TEST;
   }
@@ -1016,11 +1022,11 @@ function validateRequest(t, roundNumber, parsedMessage) {
     return protocolResult.WRONG_SYNTAX;
   }
 
-  if (parsedMessage.uuid === t.uuid) {
+  if (parsedMessage.uuid === tape.uuid) {
     return protocolResult.WRONG_ME;
   }
 
-  if (parsedMessage.code !== roundNumber) {
+  if (parsedMessage.code !== roundNumber.toString()) {
     return protocolResult.WRONG_GEN;
   }
 
@@ -1028,16 +1034,16 @@ function validateRequest(t, roundNumber, parsedMessage) {
 }
 
 function serverRound(t, roundNumber, pretendLocalMux) {
-  var validPeersForThisRound = {};
+  var validPeersForThisRound = [];
   return new Promise(function (resolve, reject) {
     var connectionListener = function (socket) {
       connectionDiesClean(t, socket);
-      getMessageByLength(t, socket, messageLength(t))
+      getMessageByLength(socket, messageLength())
         .then(function (dataBuffer) {
-          var parsedMessage = parseMessage(t, dataBuffer);
+          var parsedMessage = parseMessage(dataBuffer);
           var validationResult =
             validateRequest(t, roundNumber, parsedMessage);
-          socket.write(createMessage(t, validationResult), function () {
+          socket.write(createMessage(validationResult), function () {
             socket.end();
           });
           switch (validationResult) {
@@ -1048,7 +1054,7 @@ function serverRound(t, roundNumber, pretendLocalMux) {
             }
             case protocolResult.SUCCESS: {
               socket.on('end', function () {
-                validPeersForThisRound[parsedMessage.uuid] = true;
+                validPeersForThisRound.push(parsedMessage.uuid);
                 if (validPeersForThisRound.length === t.participants.length - 1)
                 {
                   pretendLocalMux
@@ -1110,6 +1116,7 @@ test('Test updating advertising and parallel data transfer', function (t) {
   Promise.all([clientRound(t, 0, boundListener),
                serverRound(t, 0, pretendLocalMux)])
     .then(function () {
+      logger.debug('We made it through round one');
       return Promise.all([clientRound(t, 1, boundListener),
                           serverRound(t, 1, pretendLocalMux)]);
     })
