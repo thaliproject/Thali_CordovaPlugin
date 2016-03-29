@@ -478,8 +478,11 @@ var setupDiscoveryAndFindPeer = function (t, callback) {
 test('peer should be found once after listening and discovery started',
 function (t) {
   var spy = sinon.spy();
-  var availabilityChangedHandler = function () {
-    spy();
+  var availabilityChangedHandler = function (peer) {
+    // Only count changes that mark peer becoming available.
+    if (peer.hostAddress !== null && peer.portNumber !== null) {
+      spy();
+    }
   };
   ThaliMobile.emitter.on('peerAvailabilityChanged',
     availabilityChangedHandler);
