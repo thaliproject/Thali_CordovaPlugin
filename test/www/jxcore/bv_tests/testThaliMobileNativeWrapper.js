@@ -598,30 +598,44 @@ test('we successfully receive and replay discoveryAdvertisingStateUpdate',
       );
     };
     var doChecks = function (discoveryActive, advertisingActive, callback) {
-      thaliMobileNativeWrapper.emitter.once(
-        'discoveryAdvertisingStateUpdateNonTCP',
-        function (discoveryAdvertisingStateUpdateValue) {
+      var previousStateUpdateValue = {};
+      var checkingStopping = false;
+      var stateUpdateHandler = function (stateUpdateValue) {
+        // Ignore duplicates
+        if (stateUpdateValue.advertisingActive ===
+            previousStateUpdateValue.advertisingActive &&
+            stateUpdateValue.discoveryActive ===
+            previousStateUpdateValue.discoveryActive) {
+          return;
+        }
+        previousStateUpdateValue = stateUpdateValue;
+        if (!checkingStopping) {
           doEqualsChecks(
-            discoveryAdvertisingStateUpdateValue,
+            stateUpdateValue,
             discoveryActive,
             advertisingActive
           );
-          thaliMobileNativeWrapper.emitter.once(
-            'discoveryAdvertisingStateUpdateNonTCP',
-            function (discoveryAdvertisingStateUpdateValue) {
-              doEqualsChecks(
-                discoveryAdvertisingStateUpdateValue,
-                false,
-                false
-              );
-              thaliMobileNativeWrapper.start(express.Router())
-              .then(function () {
-                callback();
-              });
-            }
-          );
+          checkingStopping = true;
           thaliMobileNativeWrapper.stop();
+        } else {
+          doEqualsChecks(
+            stateUpdateValue,
+            false,
+            false
+          );
+          thaliMobileNativeWrapper.start(express.Router())
+          .then(function () {
+            thaliMobileNativeWrapper.emitter.removeListener(
+              'discoveryAdvertisingStateUpdateNonTCP',
+              stateUpdateHandler
+            );
+            callback();
+          });
         }
+      };
+      thaliMobileNativeWrapper.emitter.on(
+        'discoveryAdvertisingStateUpdateNonTCP',
+        stateUpdateHandler
       );
     };
     var checkDiscovery = function (callback) {
