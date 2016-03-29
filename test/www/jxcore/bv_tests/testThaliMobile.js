@@ -391,6 +391,10 @@ test('peer is marked unavailable if port number changes', function (t) {
         t.equals(peer.portNumber, somePort + 1,
           'port number must match');
         checkPeer(t, peer, true);
+        ThaliMobile.emitter.removeListener(
+          'peerAvailabilityChanged',
+          availabilityHandler
+        );
         t.end();
       }
     };
