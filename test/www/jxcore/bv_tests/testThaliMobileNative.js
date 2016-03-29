@@ -66,6 +66,17 @@ function (t) {
   });
 });
 
+test('Calling stopListeningForAdvertisements without calling start is NOT ' +
+  'an error', function (t) {
+  Mobile('stopListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'Can call stopListeningForAdvertisements without error');
+    Mobile('stopListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call stopListeningForAdvertisements without error');
+      t.end();
+    });
+  });
+});
+
 test('Can call start/stopUpdateAdvertisingAndListening', function (t) {
   Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
@@ -92,6 +103,18 @@ function (t) {
     });
   });
 });
+
+test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
+  'it is not an error', function (t) {
+  Mobile('stopAdvertisingAndListening').callNative(function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('stopAdvertisingAndListening').callNative(function (err) {
+      t.notOk(err, 'Can call stopAdvertisingAndListening without error');
+      t.end();
+    });
+  });
+});
+
 
 test('cannot call connect when start listening for advertisements is not ' +
   'active', function (t) {

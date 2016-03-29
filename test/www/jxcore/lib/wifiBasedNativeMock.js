@@ -593,7 +593,7 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
  */
 MobileCallInstance.prototype.killConnections = function (callback) {
   // TODO: Implement specified behavior
-  callback('not implemented');
+  callback('Not Supported');
 };
 
 var fakeDeviceName = uuid.v4();
@@ -945,7 +945,7 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
 // jscs:enable jsDoc
 function WifiBasedNativeMock(platform, router) {
   if (!platform) {
-    platform = platformChoice.IOS;
+    platform = platformChoice.ANDROID;
   }
   if (!router) {
     router = express.Router();
