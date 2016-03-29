@@ -5,6 +5,8 @@ var randomstring = require('randomstring');
 var tape = require('../lib/thali-tape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var logger = require('thali/thalilogger')('testThaliMobileNative');
+var Promise = require('lie');
+var assert = require('assert');
 
 // jshint -W064
 
@@ -26,7 +28,7 @@ var test = tape({
       Mobile('stopListeningForAdvertisements').callNative(function (err) {
         t.notOk(
           err,
-          'Should be able to call stopListeningForAdvertisments in teardown'
+          'Should be able to call stopListeningForAdvertisements in teardown'
         );
         Mobile('stopAdvertisingAndListening').callNative(function (err) {
           t.notOk(
@@ -119,7 +121,7 @@ test('peerAvailabilityChange is called', function (t) {
         'peer must have peerIdentifier');
       t.ok(typeof peers[0].peerIdentifier === 'string',
         'peerIdentifier must be a string');
-      
+
       t.ok(peers[0].hasOwnProperty('peerAvailable'),
         'peer must have peerAvailable');
       t.ok(peers[0].hasOwnProperty('pleaseConnect'),
@@ -138,30 +140,45 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
-function getMessageAndThen(t, socket, messageToReceive, cb) {
-  var readData = new Buffer(0);
-  socket.on('data', function (data) {
-    logger.info('got data');
-    readData = Buffer.concat([readData, data]);
-    if (readData.length === messageToReceive.length &&
-      Buffer.compare(messageToReceive, readData) === 0) {
-      return cb();
-    }
-
-    if (readData.length >= messageToReceive.length) {
-      t.fail('data is not equal or is too long');
-      t.end();
-    }
+function getMessageByLength(t, socket, lengthOfMessage) {
+  return new Promise(function (resolve, reject) {
+    var readData = new Buffer(0);
+    var dataHandlerFunc = function (data) {
+      logger.info('got data');
+      readData = Buffer.concat([readData, data]);
+      if (readData.length >= lengthOfMessage) {
+        socket.removeListener('data', dataHandlerFunc);
+        if (readData.length === lengthOfMessage) {
+          resolve(readData);
+        } else {
+          reject(new Error('data is too long'));
+        }
+      }
+    };
+    socket.on('data', dataHandlerFunc);
   });
 }
 
-function connectToPeer(peer, retries, successCb, failureCb) {
+function getMessageAndThen(t, socket, messageToReceive, cb) {
+  return getMessageByLength(t, socket, messageToReceive.length)
+    .then(function (data) {
+      t.ok(Buffer.compare(messageToReceive, data) === 0, 'Data matches');
+      return cb();
+    })
+    .catch(function (err) {
+      t.fail(err);
+      t.end();
+    });
+}
 
+function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
   var TIME_BETWEEN_RETRIES = 3000;
 
   retries--;
   Mobile('connect').callNative(peer.peerIdentifier, function (err, connection) {
-
+    if (quitSignal && quitSignal.raised) {
+      return;
+    }
     if (err == null) {
       // Connected successfully..
       successCb(err, connection);
@@ -170,9 +187,11 @@ function connectToPeer(peer, retries, successCb, failureCb) {
       // Retry a failed connection..
       if (retries > 0) {
         logger.info('Scheduling a connect retry - retries left: ' + retries);
-        setTimeout(function () {
+        var timeoutCancel = setTimeout(function () {
+          quitSignal && quitSignal.removeTimeout(timeoutCancel);
           connectToPeer(peer, retries, successCb, failureCb);
         }, TIME_BETWEEN_RETRIES);
+        quitSignal && quitSignal.addTimeout(timeoutCancel);
       } else {
         if (failureCb) {
           logger.warn('Too many connect retries!');
@@ -184,34 +203,118 @@ function connectToPeer(peer, retries, successCb, failureCb) {
   });
 }
 
-function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
-  var connecting = false;
+function connectToPeerPromise(peer, retries, quitSignal) {
+  return new Promise(function (resolve, reject) {
+    connectToPeer(peer, retries, function (err, connection) {
+      resolve(connection);
+    }, function (err) {
+      reject(err);
+    }, quitSignal);
+  });
+}
+
+function connectionDiesClean(t, connection) {
+  var errorFired = false;
+  var endFired = false;
+  var closedFired = false;
+  connection.on('error', function () {
+    assert(!errorFired, 'On error handle to a socket');
+
+    if (endFired) {
+      logger.debug('Got error after end');
+    }
+
+    errorFired = true;
+  });
+  connection.on('end', function () {
+    assert(!endFired, 'One end handle to a socket');
+    assert(!errorFired, 'Should not get an end after error');
+    endFired = true;
+  });
+  connection.on('close', function () {
+    assert(!closedFired, 'One close to a customer');
+    if (!errorFired && !endFired) {
+      logger.debug('Got to close without error or end!');      
+    }
+    t.ok(errorFired || endFired, 
+      'At least one should fire before we hit close');
+    closedFired = true;
+  });
+}
+
+function connectToListenerSendMessageGetResponseLength(t, port, request,
+                                                        responseLength,
+                                                        timeout) {
+  return new Promise(function (resolve, reject) {
+    var dataResult = null;
+    var connection = net.connect(port, function () {
+      connection.write(request);
+      getMessageByLength(t, connection, responseLength)
+        .then(function (data) {
+          dataResult = data;
+        })
+        .catch(function (err) {
+          err.connection = connection;
+          reject(err);
+        });
+    });
+    connectionDiesClean(t,  connection);
+    connection.setTimeout(timeout, function () {
+      var error = new Error('We timed out');
+      error.connection = connection;
+      reject(error);
+    });
+    connection.on('end', function () {
+      if (!dataResult) {
+        var error = new Error('Got end without data result');
+        error.connection = connection;
+        return reject(error);
+      }
+      dataResult.connection = connection;
+      resolve(dataResult);
+    });
+    connection.on('error', function (err) {
+      var error = new Error('Got error in ' +
+        'connectToListenerSendMessageGetResponseAndThen - ' + err);
+      error.connection = connection;
+      reject(error);
+    });
+  });
+}
+
+function startAndListen(t, server, peerAvailabilityChangedHandler) {
   server.listen(0, function () {
 
     var applicationPort = server.address().port;
 
-    Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-      logger.info('Received peerAvailabilityChanged with peers: ' +
-        JSON.stringify(peers)
-      );
-      peers.forEach(function (peer) {
-        if (peer.peerAvailable && !connecting) {
-          connecting = true;
-          var RETRIES = 10;
-          connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
-        }
-      });
-    });
+    Mobile('peerAvailabilityChanged')
+      .registerToNative(peerAvailabilityChangedHandler);
 
     Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
       function (err) {
-        t.notOk(err, 
+        t.notOk(err,
           'Can call startUpdateAdvertisingAndListening without error');
         Mobile('startListeningForAdvertisements').callNative(function (err) {
-          t.notOk(err, 
+          t.notOk(err,
             'Can call startListeningForAdvertisements without error');
         });
       });
+  });
+}
+
+function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
+  var connecting = false;
+  startAndListen(t, server, function (peers) {
+    logger.info('Received peerAvailabilityChanged with peers: ' +
+      JSON.stringify(peers)
+    );
+    peers.forEach(function (peer) {
+      if (peer.peerAvailable && !connecting) {
+        connecting = true;
+        var RETRIES = 10;
+        connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+      }
+    });
   });
 }
 
@@ -348,8 +451,8 @@ test('Can shift large amounts of data', function (t) {
 
         if (totalRecvd > dataSize) {
           // This should now be our own data echoing back
-          toRecv += data.toString(); 
-        } 
+          toRecv += data.toString();
+        }
 
         if (toRecv.length === dataSize) {
           // Should have an exact copy of what we sent
@@ -359,7 +462,7 @@ test('Can shift large amounts of data', function (t) {
       });
     }
     else {
-    
+
       // This one's more straightforward.. we're going to send first,
       // read back our echo and then echo out any extra data
 
@@ -449,7 +552,6 @@ test('Can shift large amounts of data', function (t) {
 
 test('#startUpdateAdvertisingAndListening - killing remote peers connection ' +
   'kills the local connection', function (t) {
-
     // pretendLocalMux ---> listeningPort ---> remoteServerNativeListener --->
     //   other side's pretendLocalMux
     // We want to show that killing the connection between listeningPort
@@ -457,7 +559,7 @@ test('#startUpdateAdvertisingAndListening - killing remote peers connection ' +
     // pretendLocalMux and listeningPort to be terminated.
     var testMessage = new Buffer('I am a test message!');
     var closeMessage = new Buffer('I am closing down now!');
-  
+
     var pretendLocalMux = net.createServer(function (socket) {
       getMessageAndThen(t, socket, testMessage, function () {
         socket.write(closeMessage, function () {
@@ -465,14 +567,14 @@ test('#startUpdateAdvertisingAndListening - killing remote peers connection ' +
         });
       });
     });
-  
+
     pretendLocalMux.on('error', function (err) {
       logger.debug('got error on pretendLocalMux ' + err);
     });
-    
+
     pretendLocalMux = makeIntoCloseAllServer(pretendLocalMux);
     serverToBeClosed = pretendLocalMux;
-  
+
     function onConnectSuccess(err, connection) {
       connection = JSON.parse(connection);
       var gotCloseMessage = false;
@@ -482,43 +584,543 @@ test('#startUpdateAdvertisingAndListening - killing remote peers connection ' +
       }
 
       logger.info('connection ' + JSON.stringify(connection));
-      
+
       var connectToListeningPort = net.connect(connection.listeningPort,
         function () {
           logger.info('connection to listening port is made');
           connectToListeningPort.write(testMessage);
         });
-      
+
       getMessageAndThen(t, connectToListeningPort, closeMessage, function () {
         gotCloseMessage = true;
       });
-      
+
       connectToListeningPort.on('error', function (err) {
         t.ok(err, 'We got an error, it can happen ' + err);
       });
-      
+
       connectToListeningPort.on('close', function () {
         t.ok(gotCloseMessage, 'We got the close message and we are closed');
-        t.end();
+        // Confirm that nobody is listening on the port
+        var secondConnectionToListeningPort =
+          net.connect(connection.listeningPort, function () {
+            t.fail('The port should be closed');
+            t.end();
+          });
+        secondConnectionToListeningPort.on('error', function (err) {
+          t.ok(err, 'We got an error which is what we wanted');
+          t.end();
+        });
       });
     }
-  
+
     function onConnectFailure() {
       t.fail('Connect failed');
       t.end();
     }
-  
-    startAndGetConnection(t, pretendLocalMux, onConnectSuccess, 
+
+    startAndGetConnection(t, pretendLocalMux, onConnectSuccess,
                           onConnectFailure);
-  
-  var foo = "TEST THAT RETRYING TO CONNECT DOESN'T WORK, THE PORT SHOULD BE GONE'";
+  });
+
+test('#startUpdateAdvertisingAndListening - killing the local connection ' +
+  'kills the connection to the remote peer', function (t) {
+  // pretendLocalMux ---> listeningPort ---> remoteServerNativeListener --->
+  //   other side's pretendLocalMux
+  // We want to show that killing the connection between pretendLocalMux
+  // and listeningPort will cause the connection between
+  // listeningPort and remoteServerNativeListener to be terminated.
+  var testMessage = new Buffer('I am a test message!');
+  var closeMessage = new Buffer('I am closing down now!');
+
+  var pretendLocalMux = net.createServer(function (socket) {
+    getMessageAndThen(t, socket, testMessage, function () {
+      socket.write(closeMessage, function () {});
+    });
+  });
+
+  pretendLocalMux.on('error', function (err) {
+    logger.debug('got error on pretendLocalMux ' + err);
+  });
+
+  pretendLocalMux = makeIntoCloseAllServer(pretendLocalMux);
+  serverToBeClosed = pretendLocalMux;
+
+  function onConnectSuccess(err, connection) {
+    connection = JSON.parse(connection);
+    var gotCloseMessage = false;
+    if (connection.listeningPort === 0) {
+      // This is a reverse connection, we aren't testing that
+      t.end();
+    }
+
+    logger.info('connection ' + JSON.stringify(connection));
+
+    var connectToListeningPort = net.connect(connection.listeningPort,
+      function () {
+        logger.info('connection to listening port is made');
+        connectToListeningPort.write(testMessage);
+      });
+
+    getMessageAndThen(t, connectToListeningPort, closeMessage, function () {
+      gotCloseMessage = true;
+      connectToListeningPort.destroy();
+    });
+
+    connectToListeningPort.on('error', function (err) {
+      t.ok(err, 'We got an error, it can happen ' + err);
+    });
+
+    connectToListeningPort.on('close', function () {
+      t.ok(gotCloseMessage, 'We got the close message and we are closed');
+      // Confirm that nobody is listening on the port
+      var secondConnectionToListeningPort =
+        net.connect(connection.listeningPort, function () {
+          // In this test there is a race condition where it's possible for us
+          // to connect before the listener host doesn't know it should be
+          // dead yet. If that happens then we shouldn't be able to send
+          // any data.
+          secondConnectionToListeningPort.write(testMessage);
+          getMessageAndThen(t, secondConnectionToListeningPort, closeMessage,
+          function () {
+            t.fail('We should never have gotten the second message');
+            t.end();
+          });
+        });
+      secondConnectionToListeningPort.on('error', function (err) {
+        t.ok(err, 'We got an error which is what we wanted');
+      });
+      secondConnectionToListeningPort.on('close', function () {
+        t.end();
+      });
+    });
+  }
+
+  function onConnectFailure() {
+    t.fail('Connect failed');
+    t.end();
+  }
+
+  startAndGetConnection(t, pretendLocalMux, onConnectSuccess,
+    onConnectFailure);
 });
 
-var bar = "test('reverse the previous test')";
+function findSmallestParticipant(participants) {
+  var smallest = null;
+  participants.forEach(function (participant) {
+    smallest = !smallest ? participant.uuid :
+      participant.uuid < smallest ? participant.uuid :
+        smallest;
+  });
+  return smallest;
+}
 
-
-test('We do not send peerAvailabilityChanged events until one of the start ' +
+test('We do not emit peerAvailabilityChanged events until one of the start ' +
   'methods is called', function (t) {
-  t.ok(true, 'PLEASE IMPLEMENT ME');
-  t.end();
+  // the node with the smallest UUID will be the one who waits 2 seconds
+  // before listening for advertisements and making sure it gets some.
+  // Everyone else will just start advertising immediately and end the
+  // test (waiting for the smallest peer ID to end when it sees the
+  // announcements and thus close)
+  var smallest = findSmallestParticipant(t.participants);
+
+  if (t.uuid !== smallest) {
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'We should start listening fine');
+      Mobile('startUpdateAdvertisingAndListening').callNative(4242,
+        function (err) {
+          t.notOk(err, 'We should start updating fine');
+          t.end();
+        });
+    });
+    return;
+  }
+
+  var readyToReceiveEvents = false;
+  var gotFirstChanged = false;
+  Mobile('peerAvailabilityChanged').registerToNative(function () {
+    if (!readyToReceiveEvents) {
+      t.fail('We got an availability event too soon');
+    } else {
+      if (!gotFirstChanged) {
+        gotFirstChanged = true;
+        // Stop listening, give some time for any in queue ads to drain and
+        // then check we aren't getting any further ads
+        Mobile('stopAdvertisingAndListening').callNative(function (err) {
+          t.notOk(err, 'stop ads worked');
+          Mobile('stopListeningForAdvertisements').callNative(function (err) {
+            t.notOk(err, 'test stop worked');
+            setTimeout(function () {
+              readyToReceiveEvents = false;
+              setTimeout(function () {
+                t.end();
+              }, 2000);
+            }, 1000);
+          });
+        });
+      }
+    }
+  });
+
+  setTimeout(function () {
+    readyToReceiveEvents = true;
+    // Only calling start update for iOS
+    Mobile('startUpdateAdvertisingAndListening').callNative(4242,
+      function (err) {
+        t.notOk(err, 'Ready to advertise');
+        Mobile('startListeningForAdvertisements').callNative(function (err) {
+          t.notOk(err, 'Ready to listen');
+        });
+      });
+  }, 2000);
+});
+
+function QuitSignal() {
+  this.raised = false;
+  this.timeOuts = [];
+}
+
+QuitSignal.prototype.addTimeout = function (timeOut) {
+  assert(!this.raised, 'No calling addTimeout after signal is raised');
+  this.timeOuts.push(timeOut);
+};
+
+QuitSignal.prototype.removeTimeout = function (timeOut) {
+  assert(!this.raised, 'No calling removeTimeout after signal is raised');
+  var keys = Object.keys(this.timeOuts);
+  for (var i = 0; i < keys.length; ++i) {
+    if (this.timeOuts[keys[i]] === timeOut) {
+      delete this.timeOuts[keys[i]];
+    }
+  }
+};
+
+QuitSignal.prototype.raiseSignal = function () {
+  this.raised = true;
+  this.timeOuts.forEach(function (timeOut) {
+    clearTimeout(timeOut);
+  });
+};
+
+function parseMessage(t, dataBuffer) {
+  return {
+    uuid: dataBuffer.slice(0, t.uuid.length).toString(),
+    code: dataBuffer.slice(t.uuid.length, 1).toString(),
+    bulkData: dataBuffer.slice(t.uuid.length + 1)
+  };
+}
+
+var bulkMessage = new Buffer(100000);
+bulkMessage.fill(1);
+
+function messageLength(t) {
+  return t.uuid.length + 1 + bulkMessage.length;
+}
+
+/**
+ *
+ * @readonly
+ * @enum {string}
+ */
+var protocolResult = {
+  /** The sender is not in the same generation as the receiver */
+  WRONG_GEN: '0',
+  /** The sender is not in the participants list for the receiver */
+  WRONG_TEST: '1',
+  /** Everything matched */
+  SUCCESS: '2',
+  /** We got an old advertisement for ourselves! */
+  WRONG_ME: '3',
+  /** A peer on our list gave us bad syntax, no hope of test passing */
+  WRONG_SYNTAX: '4'
+};
+
+function createMessage(t, code) {
+  return Buffer.concat([new Buffer(t.uuid), new Buffer(code), bulkMessage]);
+}
+
+/**
+ *
+ * @param {Object} t
+ * @param {string} uuid
+ */
+function peerInTestList(t, uuid) {
+  for (var i = 0; i < t.participants.length; ++i) {
+    if (t.participants[i].uuid === uuid) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * @readonly
+ * @type {{FATAL: string, NON_FATAL: string, OK: string}}
+ */
+var validateResponse = {
+  FATAL: 'fatal',
+  NON_FATAL: 'non-fatal',
+  OK: 'ok'
+};
+
+function validateServerResponse(t, serverResponse) {
+  if (!peerInTestList(t, serverResponse.uuid)) {
+    logger.debug('Unrecognized peer at client');
+    return validateResponse.NON_FATAL;
+  }
+
+  if (Buffer.compare(bulkMessage, serverResponse.bulkData) !== 0) {
+    logger.debug('Bulk message is wrong');
+    return validateResponse.FATAL;
+  }
+
+  switch (serverResponse.code) {
+    case protocolResult.WRONG_ME:
+    case protocolResult.WRONG_GEN: {
+      logger.debug('Survivable response error ' + serverResponse.code);
+      return validateResponse.NON_FATAL;
+    }
+    case protocolResult.WRONG_TEST: // Server is on our list but we aren't on
+                                    // its
+    case protocolResult.WRONG_SYNTAX: {
+      logger.debug('Unsurvivable response error ' + serverResponse.code);
+      return validateResponse.FATAL;
+    }
+    case protocolResult.SUCCESS: {
+      return validateResponse.OK;
+    }
+    default: {
+      logger.debug('Got unrecognized result code ' + serverResponse.code);
+      return validateResponse.FATAL;
+    }
+  }
+}
+
+function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
+{
+  return new Promise(function (resolve, reject) {
+    connection = JSON.parse(connection);
+    var error = null;
+
+    if (connection.listeningPort === 0) {
+      // We couldn't connect but that could be a transient error
+      // or this could be iOS in which case we have a problem
+      error = new Error('ListeningPort is 0');
+      error.fatal = false;
+      return reject(error);
+    }
+
+    var clientMessage = createMessage(t, roundNumber.toString());
+
+    connectToListenerSendMessageGetResponseLength(t,
+        connection.listeningPort, clientMessage, messageLength(t), 60000)
+        .then(function (dataBuffer) {
+          var connection = dataBuffer.connection;
+          var parsedMessage = parseMessage(t, dataBuffer);
+          switch (validateServerResponse(t, parsedMessage)) {
+            case validateResponse.NON_FATAL: {
+              connection.destroy();
+              error = new Error('Got non-fatal error, see logs');
+              error.fatal = false;
+              return reject(error);
+            }
+            case validateResponse.OK: {
+              connection.on('end', function () {
+                peersWeSucceededWith[parsedMessage.uuid] = true;
+                resolve();
+              });
+              connection.end();
+              break;
+            }
+            default: { // Includes validateResponse.FATAL
+              connection.destroy();
+              error = new Error('Got fatal error, see logs');
+              error.fatal = true;
+              return reject(error);
+            }
+          }
+        })
+        .catch(function (err) {
+          err.connection.destroy();
+          err.fatal = false;
+          reject(err);
+        });
+  });
+}
+
+function clientRound(t, roundNumber, boundListener) {
+  var peersWeAreOrHaveResolved = {};
+  var peersWeSucceededWith = {};
+  var quitSignal = new QuitSignal();
+  return new Promise(function (resolve, reject) {
+    boundListener.listener = function (peers) {
+      if (peersWeSucceededWith.length === t.participants.length - 1) {
+        return;
+      }
+      var peerPromises = [];
+      peers.forEach(function (peer) {
+        if (peersWeAreOrHaveResolved[peer.peerIdentifier]) {
+          return;
+        }
+
+        if (!peer.peerAvailable) {
+          // In theory a peer could become unavailable and then with the same
+          // peerID available again so we have to be willing to accept future
+          // connections from this peer.
+          return;
+        }
+
+        peersWeAreOrHaveResolved[peer.peerIdentifier] = true;
+
+        var RETRIES = 10;
+        peerPromises.push(connectToPeerPromise(peer, RETRIES, quitSignal)
+          .catch(function (err) {
+            err.fatal = false;
+            return Promise.reject(err);
+          })
+          .then(function (connection) {
+            return clientSuccessConnect(t, roundNumber, connection,
+              peersWeSucceededWith);
+          })
+          .catch(function (err) {
+            if (err.fatal) {
+              return Promise.reject(err);
+            }
+            logger.debug('Got recoverable client error ' + err);
+            // Failure could be transient so we have to keep trying
+            delete peersWeAreOrHaveResolved[peer.peerIdentifier];
+            return Promise.resolve();
+          }));
+      });
+      Promise.all(peerPromises)
+        .then(function () {
+          if (peersWeSucceededWith.length === t.participants.length - 1) {
+            resolve();
+          }
+        })
+        .catch(function (err) {
+          quitSignal.raiseSignal();
+          reject(err);
+        });
+    };
+  });
+}
+
+function validateRequest(t, roundNumber, parsedMessage) {
+  if (!peerInTestList(t, parsedMessage)) {
+    logger.debug('Unrecognized peer at server');
+    return protocolResult.WRONG_TEST;
+  }
+
+  if (Buffer.compare(parsedMessage.bulkData, bulkMessage) !== 0) {
+    return protocolResult.WRONG_SYNTAX;
+  }
+
+  if (parsedMessage.uuid === t.uuid) {
+    return protocolResult.WRONG_ME;
+  }
+
+  if (parsedMessage.code !== roundNumber) {
+    return protocolResult.WRONG_GEN;
+  }
+
+  return protocolResult.SUCCESS;
+}
+
+function serverRound(t, roundNumber, pretendLocalMux) {
+  var validPeersForThisRound = {};
+  return new Promise(function (resolve, reject) {
+    var connectionListener = function (socket) {
+      connectionDiesClean(t, socket);
+      getMessageByLength(t, socket, messageLength(t))
+        .then(function (dataBuffer) {
+          var parsedMessage = parseMessage(t, dataBuffer);
+          var validationResult =
+            validateRequest(t, roundNumber, parsedMessage);
+          socket.write(createMessage(t, validationResult), function () {
+            socket.end();
+          });
+          switch (validationResult) {
+            case protocolResult.WRONG_TEST:
+            case protocolResult.WRONG_ME:
+            case protocolResult.WRONG_GEN: {
+              return;
+            }
+            case protocolResult.SUCCESS: {
+              socket.on('end', function () {
+                validPeersForThisRound[parsedMessage.uuid] = true;
+                if (validPeersForThisRound.length === t.participants.length - 1)
+                {
+                  pretendLocalMux
+                    .removeListener('connection', connectionListener);
+                  resolve();
+                }
+              });
+              return;
+            }
+            default: { // This includes WRONG_SYNTAX
+              return reject(new Error('validationResult code ' +
+                validationResult));
+            }
+          }
+        })
+        .catch(function (err) {
+          logger.debug('Got a non-fatal error in server ' + err);
+        });
+    };
+    if (roundNumber > 0) { // 0 round calls start update from startAndListen
+      Mobile('startUpdateAdvertisingAndListening').callNative(
+        pretendLocalMux.address().port,
+        function (err) {
+          t.notOk(err, 'Round ' + roundNumber + 'ready');
+          if (err) {
+            reject(err);
+          }
+          pretendLocalMux.on('connection', connectionListener);
+        });
+    } else {
+      pretendLocalMux.on('connection', connectionListener);
+    }
+  });
+}
+
+function setUpPretendLocalMux() {
+  var pretendLocalMux = net.createServer();
+  pretendLocalMux.on('error', function (err) {
+    logger.debug('got error on pretendLocalMux ' + err);
+  });
+
+  pretendLocalMux = makeIntoCloseAllServer(pretendLocalMux);
+  serverToBeClosed = pretendLocalMux;
+
+  return pretendLocalMux;
+}
+
+test('Test updating advertising and parallel data transfer', function (t) {
+  var pretendLocalMux = setUpPretendLocalMux();
+
+  /*
+   * Lets us change our listeners for incoming peer events between rounds.
+   * This is just to avoid having to set up another emitter
+   */
+  var boundListener = {
+    listener: null
+  };
+
+  Promise.all([clientRound(t, 0, boundListener),
+               serverRound(t, 0, pretendLocalMux)])
+    .then(function () {
+      return Promise.all([clientRound(t, 1, boundListener),
+                          serverRound(t, 1, pretendLocalMux)]);
+    })
+    .catch(function (err) {
+      t.fail('Got error ' + err);
+    })
+    .then(function () {
+      t.end();
+    });
+
+  startAndListen(t, pretendLocalMux, function (peers) {
+    boundListener.listener(peers);
+  });
 });

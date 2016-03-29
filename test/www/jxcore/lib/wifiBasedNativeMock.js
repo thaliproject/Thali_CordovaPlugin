@@ -532,7 +532,7 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
       }
 
       peerProxySockets[peerIdentifier] = socket;
-      peerProxySockets[peerIdentifier].pipe(peerConnections[peerIdentifier])
+      peerProxySockets[peerIdentifier].pipe(peerConnection)
         .pipe(peerProxySockets[peerIdentifier]);
       socket.on('error', function (err) {
         logger.debug('error on peerProxyServers socket for ' + peerIdentifier +
@@ -541,7 +541,6 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
       socket.on('close', function () {
         peerConnections[peerIdentifier] &&
           peerConnections[peerIdentifier].destroy();
-        delete peerProxySockets[peerIdentifier];
       });
     }),
     true
@@ -572,6 +571,7 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
             peerProxySockets[peerIdentifier].destroy();
           peerProxyServers[peerIdentifier] &&
             peerProxyServers[peerIdentifier].closeAll();
+          delete peerProxySockets[peerIdentifier];
           delete peerConnections[peerIdentifier];
         });
       });

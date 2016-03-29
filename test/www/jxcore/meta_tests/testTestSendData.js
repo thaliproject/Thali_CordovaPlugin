@@ -6,6 +6,8 @@ var SendDataTCPServer = require('../perf_tests/SendDataTCPServer.js');
 var TestSendData = require('../perf_tests/testSendData.js');
 var tape = require('../lib/thali-tape');
 
+var testPort = 8889;
+
 var test = tape({
   setup: function(t) {
     global.Mobile = function (key) {
@@ -31,7 +33,6 @@ var test = tape({
 var somePeer = {
   'peerIdentifier': 'some-peer-identifier'
 };
-var testPort = 8889;
 
 test('connector should fail if server not running', function (t) {
   var retryCount = 0; // Make it 0 so that we fail after first attempt

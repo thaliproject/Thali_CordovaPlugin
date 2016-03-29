@@ -26,6 +26,8 @@ var tape = require('tape-catch');
 var io = require('socket.io-client');
 var testUtils = require('./testUtils');
 
+var myUUID = uuid.v4();
+
 process.on('uncaughtException', function (err) {
   console.log('Uncaught Exception: ' + err);
   console.log(err.stack);
@@ -93,6 +95,7 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     // Run the test (cb) when the server tells us to
     testServer.once('start_test_' + name, function (data) {
       t.participants = JSON.parse(data);
+      t.uuid = myUUID;
       testServer.emit(util.format('start_test_%s_ok', name));
       cb(t);
     });
@@ -206,11 +209,10 @@ thaliTape.begin = function () {
       platform = 'ios';
     }
 
-    var _uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
       'os': platform,
       'name': testUtils.getName(),
-      'uuid': _uuid,
+      'uuid': myUUID,
       'type': 'unittest',
       'tests': Object.keys(tests)
     }));
