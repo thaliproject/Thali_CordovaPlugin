@@ -1,13 +1,15 @@
 'use strict';
 var inherits = require('util').inherits;
-var http = require('http');
+var https = require('https');
 var Promise = require('lie');
 var assert = require('assert');
 
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var NotificationBeacons = require('./thaliNotificationBeacons');
 var EventEmitter = require('events').EventEmitter;
-var ThaliConfig = require('../thaliConfig');
+var thaliConfig = require('../thaliConfig');
+
+var logger = require('../../thalilogger')('thaliNotificationAction');
 
 /** @module thaliNotificationAction */
 
@@ -118,12 +120,14 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         method: 'GET',
         hostname: self._peerConnection.getHostAddress(),
         port: self._peerConnection.getPortNumber(),
-        path: ThaliConfig.NOTIFICATION_BEACON_PATH,
+        path: thaliConfig.NOTIFICATION_BEACON_PATH,
         agent: httpAgentPool,
-        family: 4
+        family: 4,
+        pskIdentity: thaliConfig.BEACON_PSK_IDENTITY,
+        pskKey: thaliConfig.BEACON_KEY
       };
 
-      self._httpRequest = http.request(options,
+      self._httpRequest = https.request(options,
         self._responseCallback.bind(self));
 
       self._httpRequest.setTimeout(
@@ -138,7 +142,8 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
       // from kill is ignored at this point and it is not causing
       // anything in the _complete function because it is the second call to
       // _complete.
-      self._httpRequest.on('error', function () {
+      self._httpRequest.on('error', function (err) {
+        logger.debug('http request error - ' + err);
         self._complete(
           ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
           null, 'Could not establish TCP connection');

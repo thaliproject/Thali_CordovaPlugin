@@ -274,7 +274,8 @@ module.exports = function (self) {
       // The client connection may have run it's connection
       // handler before this one.. handle that.
       if (self._pendingReverseConnections[incoming.remotePort]) {
-        self._pendingReverseConnections[incoming.remotePort][0]();
+        self._pendingReverseConnections[incoming.remotePort]
+          .handleReverseConnection();
       }
 
       incoming.pipe(mux).pipe(incoming);

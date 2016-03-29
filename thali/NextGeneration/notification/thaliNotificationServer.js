@@ -173,4 +173,138 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
                   getBeaconNotifications);
 };
 
+/**
+ * This is the pskIdToSecret function that has to be passed into 
+ * thaliMobile.start(). It's response to ID requests will change as the
+ * notification server changes the beacons it is advertising.
+ * 
+ * ## Introduction 
+ * 
+ * This function starts life by replacing the call above to 
+ * generatePreambleAndBeacons with a call to generateBeaconStreamAndSecrets.
+ * This will return the beaconStreamAndSecretDictionary. The beacon stream
+ * is the existing value already used above. The secret dictionary is our
+ * new addition to enable PSK support. This dictionary takes as input an
+ * ID passed in over PSK and returns two values, one is a public key and
+ * the other is the secret to be used by PSK. If life were trivial (and it is
+ * not) then the function below would just point to the latest value of the
+ * secret dictionary, pass in the ID to the dictionary and then return the
+ * secret (ignoring for a moment te public key, we'll get to that).
+ * 
+ * But life really isn't that easy. The problem is a race condition. Imagine
+ * that at time A we advertise beacon A. Then a little later at time B we
+ * advertise beacon B. Because beacons contain a random value that is changed
+ * every time we change beacons none of the entries in the secret dictionary
+ * returned when beacon A was generated will match any of the entries when
+ * beacon B is generated. So if some poor device heard the beacon A 
+ * advertisements and just as it got the beacon the device switches to beacon B
+ * then when the device tries to connect using a value derived from beacon A
+ * the connection will fail because the secret dictionary has changed.
+ * 
+ * To avoid these race conditions the function below has to remember multiple
+ * secret dictionaries. So any time we generate a beacon we will remember the
+ * secret dictionary generated with that beacon for some window of time and at
+ * the end of that window of time we will forget that dictionary.
+ * 
+ * So this means we effectively need an array of dictionaries and when we get
+ * an ID to this function we should check the dictionaries in LIFO order 
+ * (since it's likely that the newest dictionary has the right value).
+ * 
+ * ## Dealing with beacon requests
+ *
+ * If we get an id equal to thaliConfig.BEACON_PSK_IDENTITY then we MUST always
+ * return thaliConfig.BEACON_KEY. This check MUST come before looking into any
+ * of the dictionaries.
+ * 
+ * ## Policy for remembering and forgetting secret dictionaries
+ * 
+ * Each time a beacon is generated it has an associated expiration date. We
+ * have to calculate each expiration date (you can cheat and just add
+ * the expiration to the current time minux say a few hundred MS rather than
+ * having to read the time from the beacon) and mark each beacon's entry with
+ * that date.
+ * 
+ * We MUST NOT set timers to get rid of old entries. The reason is that these
+ * timers will force the device to wake up even if it isn't doing anything and
+ * that kills battery. So absolutely no timers!
+ * 
+ * Instead what we need is something like the peer dictionary where we will
+ * remember a fixed number of dictionaries (start with 50, it's a nice number,
+ * but whatever it is, stick it into thaliConfig). If we are asked to add a
+ * dictionary and if we are all full then we must check the expiration dates on
+ * all the dictionaries we have and remove any expired ones. If this doesn't
+ * create any room then we must delete the oldest dictionary.
+ * 
+ * When we get a call to the ID function we must check to see if we have any
+ * expired dictionaries and if so we must remove them before processing the
+ * ID request (e.g. looking it up in some dictionary).
+ * 
+ * Note that since the dictionaries MUST be in LIFO order if we start from the
+ * back of the queue then we only need to check expiration's until we hit the
+ * first unexpired dictionary. Since any dictionaries after that must be newer
+ * we know they aren't expired. This will make the expiration check much
+ * cheaper.
+ * 
+ * Once we know we have a good set of dictionaries then we take the ID and
+ * starting with the top of the stack we see if any of the dictionaries have
+ * a response. If they do then we return the secret (not the public key) from
+ * the dictionary. If they don't the we return null.
+ *
+ * ## Dealing with start and stop
+ * 
+ * If this function is called while we are in stop state then we MUST return
+ * null.
+ * 
+ * If start is called and then later stop is called then this function MUST
+ * forget all dictionaries and it MUST clear its state.
+ * 
+ * If start is called twice however nothing special happens beyond adding a new
+ * dictionary to the existing list.
+ * 
+ * @public
+ * @returns {module:thaliMobileNativeWrapper~pskIdToSecret}
+ */
+ThaliNotificationServer.prototype.getPskIdToSecret = function () {
+  return function (id) {
+    return null;
+  };
+};
+
+/**
+ * This function takes a psk ID value and turns it into a public key if
+ * recognized or otherwise returns null.
+ *
+ * @public
+ * @callback pskIdentityToPublicKey
+ * @param {string} id
+ * @returns {?Buffer} The public key associated with the ID or null if there
+ * is no match.
+ */
+
+/**
+ * This function has identical functionality to {@link 
+ * module:thaliNotificationServer~ThaliNotificationServer.getPskIdToSecret}
+ * except that it returns the public key from the secrets dictionary instead of
+ * the PSK secret.
+ * 
+ * In the case of the beacon ID (e.g. thaliConfig.BEACON_PSK_IDENTITY) if we get
+ * that specific ID then we MUST return null. This check MUST come before
+ * checking any of the dictionaries.
+ * 
+ * And yes, there is a race condition where a dictionary might not have quite
+ * yet expired when getPskIdToSecret is called but could then have expired
+ * when getPskIdToPublicKey has called. If this happens the caller will be able
+ * to make a TCP connection but all of their requests for protected content
+ * (e.g. not beacons) will be rejected with unauthorized errors. This is a
+ * bummer but should be very rare in the real world so we aren't going to worry
+ * excessively about it.
+ * 
+ * @returns {pskIdentityToPublicKey} 
+ */
+ThaliNotificationServer.prototype.getPskIdToPublicKey = function () {
+  return function (id) {
+    return null;
+  };
+};
+
 module.exports = ThaliNotificationServer;
