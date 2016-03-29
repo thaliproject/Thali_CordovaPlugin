@@ -132,11 +132,13 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
     ThaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
-  var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
-    globals.expressServer.address().port, 2000);
+  var connInfo = new PeerDictionary.PeerConnectionInformation(
+    ThaliMobile.connectionTypes.TCP_NATIVE,
+    '127.0.0.1',
+    globals.expressServer.address().port,
+    2000);
 
   var act = new NotificationAction('identifier',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
@@ -145,7 +147,7 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
       t.equals(
         peerIdentifier,
         'identifier',
-        'peerIdentifier should be hello');
+        'peerIdentifier should be identifier');
 
       t.equals(
           res,
@@ -177,11 +179,13 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
   httpTester.runServer(globals.expressRouter,
     ThaliConfig.NOTIFICATION_BEACON_PATH, 503, 'hello', 1);
 
-  var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
-    globals.expressServer.address().port, 2000);
+  var connInfo = new PeerDictionary.PeerConnectionInformation(
+    ThaliMobile.connectionTypes.TCP_NATIVE,
+    '127.0.0.1',
+    globals.expressServer.address().port,
+    2000);
 
   var act = new NotificationAction('identifier',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
@@ -205,11 +209,14 @@ test('Test NETWORK_PROBLEM locally', function (t) {
   t.plan(2);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
+    ThaliMobile.connectionTypes.TCP_NATIVE,
     'address_that_cant_exists', 100, 2000);
 
-  var act = new NotificationAction('hello',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
-    globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
+  var act = new NotificationAction(
+    'hello',
+    globals.targetDeviceKeyExchangeObjects[0],
+    addressBookCallback ,
+    connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
     function (peerIdentifier, res) {
@@ -240,12 +247,15 @@ test('Test timeout locally', function (t) {
     'hello', 1, 3000);
 
   // Sets 1000 milliseconds TCP timeout.
-  var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
+  var connInfo = new PeerDictionary.PeerConnectionInformation(
+    ThaliMobile.connectionTypes.TCP_NATIVE,
+    '127.0.0.1',
     globals.expressServer.address().port, 1000);
 
   var act = new NotificationAction('hello',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
-    globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
+    globals.targetDeviceKeyExchangeObjects[0],
+    addressBookCallback,
+    connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
     function (peerIdentifier, res) {
@@ -275,11 +285,12 @@ test('Call the start two times', function (t) {
     ThaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
-  var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
+  var connInfo = new PeerDictionary.PeerConnectionInformation(
+    ThaliMobile.connectionTypes.TCP_NATIVE,
+    '127.0.0.1',
     globals.expressServer.address().port, 2000);
 
   var act = new NotificationAction('hello',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
@@ -312,10 +323,10 @@ test('Call the kill before calling the start', function (t) {
   t.plan(2);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
+    ThaliMobile.connectionTypes.TCP_NATIVE,
     5000, 2000);
 
   var act = new NotificationAction('hello',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback, connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
@@ -340,11 +351,12 @@ test('Call the kill immediately after the start', function (t) {
   httpTester.runServer(globals.expressRouter, '/NotificationBeacons', 503,
     'hello', 1, 2000);
 
-  var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
+  var connInfo = new PeerDictionary.PeerConnectionInformation(
+    ThaliMobile.connectionTypes.TCP_NATIVE,
+    '127.0.0.1',
     globals.expressServer.address().port, 1);
 
   var act = new NotificationAction('hello',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
@@ -377,11 +389,12 @@ test('Call the kill while waiting a response from the server', function (t) {
     'hello', 1, 10000);
 
   // Sets 10000 milliseconds TCP timeout.
-  var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
+  var connInfo = new PeerDictionary.PeerConnectionInformation(
+    ThaliMobile.connectionTypes.TCP_NATIVE,
+    '127.0.0.1',
     globals.expressServer.address().port, 10000);
 
   var act = new NotificationAction('hello',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
@@ -426,11 +439,12 @@ test('Test to exceed the max content size locally', function (t) {
     ThaliConfig.NOTIFICATION_BEACON_PATH,
     200, buffer, 1+NotificationAction.MAX_CONTENT_SIZE_IN_BYTES/1024);
 
-  var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
+  var connInfo = new PeerDictionary.PeerConnectionInformation(
+    ThaliMobile.connectionTypes.TCP_NATIVE,
+    '127.0.0.1',
     globals.expressServer.address().port, 10000);
 
   var act = new NotificationAction('hello',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
     globals.targetDeviceKeyExchangeObjects[0], addressBookCallback , connInfo);
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
@@ -460,11 +474,13 @@ test('Close the server socket while the client is waiting a response ' +
       'hello', 1, 10000);
 
     // Sets 10000 milliseconds TCP timeout.
-    var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
-      globals.expressServer.address().port, 10000);
+    var connInfo = new PeerDictionary.PeerConnectionInformation(
+      ThaliMobile.connectionTypes.TCP_NATIVE,
+      '127.0.0.1',
+      globals.expressServer.address().port,
+      10000);
 
     var act = new NotificationAction('hello',
-      ThaliMobile.connectionTypes.TCP_NATIVE,
       globals.targetDeviceKeyExchangeObjects[0], addressBookCallback ,
       connInfo);
 
@@ -510,11 +526,12 @@ test('Close the client socket while the client is waiting a response ' +
       'hello', 1, 10000);
 
     // Sets 10000 milliseconds TCP timeout.
-    var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
+    var connInfo = new PeerDictionary.PeerConnectionInformation(
+      ThaliMobile.connectionTypes.TCP_NATIVE,
+      '127.0.0.1',
       globals.expressServer.address().port, 10000);
 
     var act = new NotificationAction('hello',
-      ThaliMobile.connectionTypes.TCP_NATIVE,
       globals.targetDeviceKeyExchangeObjects[0], addressBookCallback ,
       connInfo);
 
@@ -550,3 +567,4 @@ test('Close the client socket while the client is waiting a response ' +
       });
     }, 2000);
   });
+
