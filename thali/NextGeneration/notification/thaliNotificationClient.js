@@ -300,7 +300,8 @@ ThaliNotificationClient.prototype._resolved =
     }
 
     switch (resolution) {
-      case ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED:
+      case ThaliNotificationAction.ActionResolution
+        .BEACONS_RETRIEVED_AND_PARSED:
       {
         var connInfo = entry.notificationAction.getConnectionInformation();
         entry.peerState = PeerDictionary.peerState.RESOLVED;

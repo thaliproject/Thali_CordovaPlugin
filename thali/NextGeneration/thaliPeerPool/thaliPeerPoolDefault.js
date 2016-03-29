@@ -4,6 +4,7 @@ var util = require('util');
 var ThaliPeerPoolInterface = require('./thaliPeerPoolInterface');
 var Agent = require('http').Agent;
 var thaliConfig = require('../thaliConfig');
+var logger = require('../../thalilogger')('thaliPeerPoolDefault');
 
 /** @module thaliPeerPoolDefault */
 
@@ -88,7 +89,11 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   // We hook our clean up code to kill and it is always legal to call
   // kill, even if it has already been called. So this ensures that our
   // cleanup code gets called regardless of how the action ended.
-  peerAction.start(actionAgent).then(function () {
+  peerAction.start(actionAgent)
+    .catch(function (err) {
+      logger.debug('action failed with promise error - ' + err);
+    })
+    .then(function () {
     peerAction.kill();
   });
 
