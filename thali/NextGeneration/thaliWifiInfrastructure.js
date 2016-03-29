@@ -62,6 +62,7 @@ var promiseResultSuccessOrFailure = function (promise) {
 function ThaliWifiInfrastructure () {
   EventEmitter.call(this);
   this.usn = null;
+  this.previousUsn = null;
   // Can be used in tests to override the port
   // advertised in SSDP messages.
   this.advertisedPortOverride = null;
@@ -213,7 +214,7 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
   // First check if the data contains the Thali-specific NT.
   if (data.NT === ThaliConfig.SSDP_NT) {
     // Filtering out messages from ourselves.
-    if (data.USN === this.usn) {
+    if (data.USN === this.usn || data.USN === this.previousUsn) {
       return true;
     } else {
       return false;
@@ -485,6 +486,9 @@ function () {
 
     self.states.advertising.target = true;
 
+    // Store previous USN value so that we can filter byebye messages
+    // from the previously used USN.
+    self.previousUsn = self.usn;
     // Generate a new USN value to flag that something has changed
     // in this peer.
     self.usn = 'urn:uuid:' + uuid.v4();
