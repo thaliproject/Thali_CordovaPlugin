@@ -205,9 +205,10 @@ var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
 
 module.exports.extractPreAmble = function (beaconStreamWithPreAmble) {
   return beaconStreamWithPreAmble.slice(0, preAmbleSizeInBytes);
-}
+};
 
-module.exports.extractBeacon = function (beaconStreamWithPreAmble, beaconIndexToExtract) {
+module.exports.extractBeacon = function (beaconStreamWithPreAmble, 
+                                         beaconIndexToExtract) {
   var beaconStreamNoPreAmble =
     beaconStreamWithPreAmble.slice(preAmbleSizeInBytes);
   var beaconCount = 0;
@@ -220,4 +221,4 @@ module.exports.extractBeacon = function (beaconStreamWithPreAmble, beaconIndexTo
     ++beaconCount;
   }
   return null;
-}
+};
