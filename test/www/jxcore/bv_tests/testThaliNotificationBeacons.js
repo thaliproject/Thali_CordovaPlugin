@@ -513,3 +513,89 @@ test('validate generatePskSecret', function (t) {
   t.ok(device1Secret.compare(device2Secret) === 0, 'secrets match');
   t.end();
 });
+
+test('validate generatePskSecrets', function (t) {
+  var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
+  var device1Key = device1.generateKeys();
+
+  var device2 = crypto.createECDH(notificationBeacons.SECP256K1);
+  var device2Key = device2.generateKeys();
+
+  var device3 = crypto.createECDH(notificationBeacons.SECP256K1);
+  var device3Key = device3.generateKeys();
+
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
+  localDevice.generateKeys();
+  var expiration = 9000;
+
+  var publicKeys = [device1Key, device2Key, device3Key];
+
+  var beaconsWithPreamble =
+    notificationBeacons.
+      generatePreambleAndBeacons(publicKeys, localDevice, expiration);
+
+  var pskMap = notificationBeacons.generatePskSecrets(publicKeys,
+      localDevice, beaconsWithPreamble);
+
+  t.equal(Object.keys(pskMap).length, publicKeys.length, 'Matching numbers');
+
+  var preAmble = testUtils.extractPreAmble(beaconsWithPreamble);
+
+  for (var i = 0; i < publicKeys.length; ++i) {
+    var beacon = testUtils.extractBeacon(beaconsWithPreamble, i);
+    var pskIdentityField =
+      notificationBeacons.generatePskIdentityField(preAmble, beacon);
+    var pskSecret = notificationBeacons.generatePskSecret(localDevice,
+        publicKeys[i], pskIdentityField);
+    var mapEntry = pskMap[pskIdentityField];
+    t.ok(mapEntry, 'We have an entry!');
+    t.ok(publicKeys[i].compare(mapEntry.publicKey) === 0, 'keys match');
+    t.ok(pskSecret.compare(mapEntry.pskSecret) === 0, 'secrets match');
+  }
+
+  t.end();
+});
+
+test('validate generateBeaconStreamAndSecrets', function (t) {
+  var device1 = crypto.createECDH(notificationBeacons.SECP256K1);
+  var device1Key = device1.generateKeys();
+
+  var localDevice = crypto.createECDH(notificationBeacons.SECP256K1);
+  localDevice.generateKeys();
+  var expiration = 9000;
+
+  var publicKeys = [device1Key];
+
+  var beaconStreamAndDictionary =
+    notificationBeacons
+      .generateBeaconStreamAndSecrets(publicKeys, localDevice, expiration);
+
+  var dummyForSizeOnly =
+    notificationBeacons
+      .generatePreambleAndBeacons(publicKeys, localDevice, expiration);
+
+  // Since each call to generatePreambleAndBeacons generates a new ephemeral
+  // key we can't compare them directly because each call will be different
+  t.ok(beaconStreamAndDictionary.beaconStreamWithPreAmble.length ===
+    dummyForSizeOnly.length, 'Streams have same length');
+
+  var pskMap =
+    notificationBeacons
+      .generatePskSecrets(publicKeys, localDevice,
+        beaconStreamAndDictionary.beaconStreamWithPreAmble);
+
+
+  var keyAndSecret =  beaconStreamAndDictionary.keyAndSecret;
+  t.ok(Object.keys(pskMap).length ===
+         Object.keys(keyAndSecret).length,
+      'matching size');
+  var keys = Object.keys(pskMap);
+  keys.forEach(function (key)  {
+    t.ok(pskMap[key].publicKey.compare(keyAndSecret[key].publicKey) === 0,
+      'keys match');
+    t.ok(pskMap[key].pskSecret.compare(keyAndSecret[key].pskSecret) === 0,
+      'secrets match');
+  });
+  
+  t.end();
+});

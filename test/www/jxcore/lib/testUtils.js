@@ -7,6 +7,7 @@ var PouchDB = require('pouchdb');
 var path = require('path');
 var randomString = require('randomstring');
 var Promise = require('lie');
+var https = require('https');
 var logger = require('thali/thalilogger')('testUtils');
 
 var notificationBeacons =
@@ -205,9 +206,10 @@ var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
 
 module.exports.extractPreAmble = function (beaconStreamWithPreAmble) {
   return beaconStreamWithPreAmble.slice(0, preAmbleSizeInBytes);
-}
+};
 
-module.exports.extractBeacon = function (beaconStreamWithPreAmble, beaconIndexToExtract) {
+module.exports.extractBeacon = function (beaconStreamWithPreAmble, 
+                                         beaconIndexToExtract) {
   var beaconStreamNoPreAmble =
     beaconStreamWithPreAmble.slice(preAmbleSizeInBytes);
   var beaconCount = 0;
@@ -220,4 +222,44 @@ module.exports.extractBeacon = function (beaconStreamWithPreAmble, beaconIndexTo
     ++beaconCount;
   }
   return null;
-}
+};
+
+module.exports.get = function (host, port, path, pskIdentity, pskKey) {
+  var complete = false;
+  return new Promise(function (resolve, reject) {
+    var request = https.request({
+      hostname: host,
+      port: port,
+      path: path,
+      agent: false,
+      pskIdentity: pskIdentity,
+      pskKey: pskKey
+    }, function (response) {
+      var responseBody = '';
+      response.on('data', function (data) {
+        responseBody += data;
+      });
+      response.on('end', function () {
+        complete = true;
+        resolve(responseBody);
+      });
+      response.on('error', function (error) {
+        if (!complete) {
+          logger.error('%j', error);
+          reject(error);
+        }
+      });
+      response.resume();
+    });
+    request.on('error', function (error) {
+      if (!complete) {
+        logger.error('%j', error);
+        reject(error);
+      }
+    });
+    // Wait for 15 seconds since the request can take a while
+    // in mobile environment over a non-TCP transport.
+    request.setTimeout(15 * 1000 * 1000);
+    request.end();
+  });
+};
