@@ -19,7 +19,6 @@ var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var SECP256K1 = 'secp256k1';
 
@@ -142,7 +141,7 @@ var test = tape({
     });
   }
 });
-
+/*
 test('Client to server request locally', function (t) {
 
   var p = globals.initLocal();
@@ -217,10 +216,7 @@ test('Client to server request locally', function (t) {
 if (!tape.coordinated) {
   return;
 }
-
-// TODO: Take this return away once below test works with PSK
-return;
-
+*/
 test('Client to server request coordinated', function (t) {
 
   // For this test we share our own public key with other peers and collect
@@ -296,12 +292,8 @@ test('Client to server request coordinated', function (t) {
       }
     });
 
-  // TODO: Replace our fixed pskIdToSecret with the one from thaliNotificationServer
-  var pThaliMobile = ThaliMobile.start(globals.expressRouter,
-  function (id) {
-    return id === thaliConfig.BEACON_PSK_IDENTITY ?
-      thaliConfig.BEACON_KEY : null;
-  }).then(function () {
+  ThaliMobile.start(globals.expressRouter, notificationServer.getPskIdToSecret())
+  .then(function () {
     return notificationServer.start(addressBook);
   }).then(function () {
     notificationClient.start(addressBook);

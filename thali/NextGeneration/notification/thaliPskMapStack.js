@@ -1,5 +1,5 @@
 'use strict';
-
+var thaliConfig = require('../thaliConfig');
 /**
  * @classdesc An class that stores PskMaps.
  *
@@ -10,8 +10,14 @@ function ThaliPskMapStack() {
   this._stack = [];
 }
 
+/**
+ * Stores the dictionary into the stack.
+ *
+ * @public
+ * @param {module:thaliNotificationBeacons~beaconStreamAndSecretDictionary} entry
+ */
 ThaliPskMapStack.prototype.push = function (entry) {
-  this.clean();
+  this.clean(true);
   var item = { keySecret: entry, expiration : Date.now() + 200};
   this._stack.push(item);
 };
@@ -25,7 +31,7 @@ ThaliPskMapStack.prototype.push = function (entry) {
  * is no match.
  */
 ThaliPskMapStack.prototype.getSecret = function (id) {
-
+  this.clean(false);
   for (var i = 0 ; i < this._stack.length ; i++) {
     var secret = this._stack[i][id].pskSecret;
     if (secret) {
@@ -44,6 +50,7 @@ ThaliPskMapStack.prototype.getSecret = function (id) {
  * is no match.
  */
 ThaliPskMapStack.prototype.getPublic = function (id) {
+  this.clean(false);
   for (var i = 0 ; i < this._stack.length ; i++) {
     var secret = this._stack[i][id].publicKey;
     if (secret) {
@@ -53,23 +60,32 @@ ThaliPskMapStack.prototype.getPublic = function (id) {
   return null;
 };
 
-/* If we are asked to add a
-* dictionary and if we are all full then we must check the expiration dates on
-* all the dictionaries we have and remove any expired ones. If this doesn't
-* create any room then we must delete the oldest dictionary.
-*/
-ThaliPskMapStack.prototype.clean = function () {
+/**
+ * Cleans expired items from the dictionary.
+ *
+ * @public
+ * @param {?boolean} forceRemove Forces to remove at least one item from the
+ * dictionary, if it is full.
+ */
+ThaliPskMapStack.prototype.clean = function (forceRemove) {
 
-  var cleanFrom = this._stack.length;
+  var cleanFrom = 0;
 
-  for (var i = 0 ; i < this._stack.length ; i++) {
-    if ( this._stack[i].expiration < Date.now() ) {
-      cleanFrom = i;
+  for (var i = this._stack.length-1 ; i >= 0 ; i--) {
+    if ( this._stack[i].expiration > Date.now() ) {
+      cleanFrom = i+1;
       break;
     }
   }
+
   if (cleanFrom < this._stack.length ) {
-    this._stack.splice(cleanFrom, this._stack.length - cleanFrom - 1);
+    this._stack.splice(cleanFrom, this._stack.length - cleanFrom);
+    return;
+  }
+
+  if (forceRemove && this._stack.length >=
+    thaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE) {
+    this._stack.pop();
   }
 };
 

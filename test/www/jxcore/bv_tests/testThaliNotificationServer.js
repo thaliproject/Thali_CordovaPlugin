@@ -4,14 +4,14 @@ var express = require('express');
 var crypto = require('crypto');
 var sinon = require('sinon');
 var Promise = require('lie');
-var testUtils = require('../lib/testUtils.js');
 var proxyquire = require('proxyquire').noCallThru();
-
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var ThaliPskMapStack =
+  require('thali/NextGeneration/notification/thaliPskMapStack');
 var ThaliConfig =
   require('thali/NextGeneration/thaliConfig');
-var MakeIntoCloseAllServer =
+var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var ThaliHttpTester = require('../lib/httpTester');
@@ -76,7 +76,7 @@ GlobalVariables.prototype.init = function () {
         self.expressServer.address().port +
           ThaliConfig.NOTIFICATION_BEACON_PATH;
 
-        MakeIntoCloseAllServer(self.expressServer);
+        makeIntoCloseAllServer(self.expressServer);
 
         self.notificationServer = new self.ThaliNotificationServerProxyquired(
           self.expressRouter, self.sourceKeyExchangeObject, 90000);
@@ -143,6 +143,37 @@ var test = tape({
       t.end();
     });
   }
+});
+
+test('Test ThaliPskMapStack', function (t) {
+
+  var stack = new ThaliPskMapStack();
+  var overFlow = ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE + 10;
+
+  for (var i = 0 ; i < overFlow ; i++) {
+    stack.push({});
+  }
+
+  t.equal(stack._stack.length,
+    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE,
+  'ThaliPskMapStack should not exceed' +
+  ' MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE');
+
+  stack.clean(true);
+
+  t.equal(stack._stack.length,
+    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE-1,
+    'ThaliPskMapStack should not exceed' +
+    ' MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE-1');
+
+
+  setTimeout( function () {
+    stack.clean();
+    t.equal(stack._stack.length,
+      0, 'All entries should be expired after 1 second');
+    t.end();
+  }, 1000);
+
 });
 
 test('Start and stop ThaliNotificationServer', function (t) {

@@ -201,6 +201,10 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
       return;
     }
 
+    if (peerStatus.connectionType !== ThaliMobile.connectionTypes.TCP_NATIVE) {
+      return;
+    }
+
     // Todo: clean when coordinated tests are done
     console.log('_peerAvailabilityChanged');
     console.log('peerIdentifier:' + peerStatus.peerIdentifier);
