@@ -450,22 +450,33 @@ if (!tape.coordinated) {
   return;
 }
 
-var setupDiscoveryAndFindPeer = function (t, callback) {
-  ThaliMobile.emitter.once('peerAvailabilityChanged', function (peer) {
-    // Just use the first peer that is changed. In reality, it is possible that
-    // if this test is run in environment with multiple Thali apps running, the
-    // peer we get here isn't exactly the one with whom we are running these
-    // tests with. However, even with any peer, this test vefifies that we do
-    // get correctly formatted advertisements.
+var pskIdentity = 'I am me!';
+var pskKey = new Buffer('I am a reasonable long string');
+
+var pskIdToSecret = function (id) {
+  return id === pskIdentity ? pskKey : null;
+};
+
+var setupDiscoveryAndFindPeers = function (t, router, callback) {
+  var availabilityHandler = function (peer) {
+    if (peer.hostAddress === null || peer.portNumber === null) {
+      return;
+    }
     callback(peer, function () {
+      ThaliMobile.emitter.removeListener(
+        'peerAvailabilityChanged',
+        availabilityHandler
+      );
       // On purpose not stopping anything within the test
       // because another device might still be running the test
       // and waiting for advertisements. The stop happens in the
       // test teardown phase.
       t.end();
     });
-  });
-  ThaliMobile.start(express.Router())
+  };
+  ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+  ThaliMobile.start(router, pskIdToSecret)
   .then(function (combinedResult) {
     verifyCombinedResultSuccess(t, combinedResult);
     return ThaliMobile.startUpdateAdvertisingAndListening();
@@ -488,9 +499,14 @@ function (t) {
       spy();
     }
   };
+  var peerFound = false;
   ThaliMobile.emitter.on('peerAvailabilityChanged',
     availabilityChangedHandler);
-  setupDiscoveryAndFindPeer(t, function (peer, done) {
+  setupDiscoveryAndFindPeers(t, express.Router(), function (peer, done) {
+    if (peerFound) {
+      return;
+    }
+    peerFound = true;
     checkPeer(t, peer, true);
     // The timeout is the unavailability threshold plus a bit extra
     // so that our test verifies the peer is not marked unavailable
@@ -509,5 +525,48 @@ function (t) {
         'must not receive too many peer availabilities');
       done();
     }, timeout);
+  });
+});
+
+test('can get data from all participants', function (t) {
+  var uuidPath = '/uuid';
+  var router = express.Router();
+  // Register a handler that returns the UUID of this
+  // test instance to an HTTP GET request.
+  router.get(uuidPath, function (req, res) {
+    res.send(tape.uuid);
+  });
+
+  var remainingParticipants = {};
+  t.participants.forEach(function (participant) {
+    if (participant.uuid === tape.uuid) {
+      return;
+    }
+    remainingParticipants[participant.uuid] = true;
+  });
+  setupDiscoveryAndFindPeers(t, router, function (peer, done) {
+    // Try to get data only from non-TCP peers so that the test
+    // works the same way on desktop on CI where Wifi is blocked
+    // between peers.
+    if (peer.connectionType === ThaliMobile.connectionTypes.TCP_NATIVE) {
+      return;
+    }
+    testUtils.get(
+      peer.hostAddress, peer.portNumber,
+      uuidPath, pskIdentity, pskKey
+    )
+    .then(function (responseBody) {
+      t.ok(remainingParticipants[responseBody],
+        'received uuid must be in remaining list');
+      delete remainingParticipants[responseBody];
+      if (Object.keys(remainingParticipants).length === 0) {
+        t.ok(true, 'received all uuids');
+        done();
+      }
+    })
+    .catch(function (error) {
+      t.fail(error);
+      done();
+    });
   });
 });

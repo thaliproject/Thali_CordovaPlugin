@@ -1,7 +1,6 @@
 'use strict';
 
 var express = require('express');
-var https = require('https');
 var net = require('net');
 var Promise = require('lie');
 var sinon = require('sinon');
@@ -135,7 +134,7 @@ test('error returned with bad router', function (t) {
   });
 });
 
-function trivialEndToEndTestScafold(t, needManualNotify, clientResponseHandler,
+function trivialEndToEndTestScafold(t, needManualNotify,
   pskIdtoSecret, pskIdentity, pskKey, testData, callback) {
   var testPath = '/test';
   var router = express.Router();
@@ -154,46 +153,19 @@ function trivialEndToEndTestScafold(t, needManualNotify, clientResponseHandler,
       peerAvailabilityHandler
     );
 
-    var host = '127.0.0.1';
-    var port = peer.portNumber;
-    var complete = false;
-
     var end = function () {
       callback && callback() || t.end();
     };
 
-    var request = https.request({
-      hostname: host,
-      port: port,
-      path: testPath,
-      agent: false,
-      pskIdentity: pskIdentity,
-      pskKey: pskKey
-    }, function (response) {
-      t.equal(response.statusCode, 200, 'server should return 200');
-      var responseBody = '';
-      response.on('data', function (data) {
-        responseBody += data;
-      });
-      response.on('end', function () {
-        t.equal(responseBody, testData, 'response body should match testData');
-        complete = true;
-        end();
-      });
-      response.resume();
+    testUtils.get('127.0.0.1', peer.portNumber, testPath, pskIdentity, pskKey)
+    .then(function (responseBody) {
+      t.equal(responseBody, testData, 'response body should match testData');
+      end();
+    })
+    .catch(function (error) {
+      t.fail(error);
+      end();
     });
-    request.on('error', function (error) {
-      // Avoid reacting to errors that may happen
-      // when sockets are getting closed.
-      if (!complete) {
-        t.fail(error);
-        end();
-      }
-    });
-    // Wait for 15 seconds since the request can take a while
-    // in mobile environment over a non-TCP transport.
-    request.setTimeout(15 * 1000 * 1000);
-    request.end();
   };
 
   thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
@@ -218,25 +190,12 @@ function trivialEndToEndTest(t, needManualNotify, callback) {
   var pskKey = new Buffer('I am a reasonable long string');
   var testData = 'foobar';
 
-  function clientResponseHandler(response) {
-    t.equal(response.statusCode, 200, 'server should return 200');
-    var responseBody = '';
-    response.on('data', function (data) {
-      responseBody += data;
-    });
-    response.on('end', function () {
-      t.equal(responseBody, testData, 'response body should match testData');
-      callback && callback() || t.end();
-    });
-    response.resume();
-  }
-
   function pskIdToSecret(id) {
     t.equal(id, pskIdentity, 'Should only get expected id');
     return id === pskIdentity ? pskKey : null;
   }
 
-  trivialEndToEndTestScafold(t, needManualNotify, clientResponseHandler,
+  trivialEndToEndTestScafold(t, needManualNotify,
     pskIdToSecret, pskIdentity, pskKey, testData, callback);
 }
 
@@ -245,15 +204,11 @@ function trivialBadEndtoEndTest(t, needManualNotify, callback) {
   var pskKey = new Buffer('It really does not matter');
   var testData = 'Not important';
 
-  function clientResponseHandler(response) {
-    console.log(response);
-  }
-
   function pskIdToSecret() {
     return null;
   }
 
-  trivialEndToEndTestScafold(t, needManualNotify, clientResponseHandler,
+  trivialEndToEndTestScafold(t, needManualNotify,
     pskIdToSecret, pskIdentity, pskKey, testData, callback);
 }
 
