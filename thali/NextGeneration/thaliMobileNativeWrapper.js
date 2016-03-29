@@ -7,6 +7,8 @@ var logger = require('../thalilogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
+var https = require('https');
+var thaliConfig = require('./thaliConfig');
 
 var states = {
   started: false
@@ -151,6 +153,17 @@ function stopCreateAndStartServersManager() {
     });
 }
 
+/**
+ * Takes a PSK ID as input and returns either null if the ID is not supported or
+ * a Buffer with the pre-shared secret associated with that identity if it
+ * is supported.
+ * 
+ * @public
+ * @callback pskIdToSecret
+ * @param {string} id
+ * @returns {?Buffer} secret
+ */
+
 // jscs:disable jsDoc
 /**
  * This method MUST be called before any other method here other than
@@ -186,10 +199,11 @@ function stopCreateAndStartServersManager() {
  * express-pouchdb is a router object) that the caller wants the non-TCP
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately.
+ * @param {pskIdToSecret} pskIdToSecret
  * @returns {Promise<?Error>}
  */
 // jscs:enable jsDoc
-module.exports.start = function (router) {
+module.exports.start = function (router, pskIdToSecret) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (states.started) {
       return reject(new Error('Call Stop!'));
@@ -202,18 +216,27 @@ module.exports.start = function (router) {
       return reject(new Error('Bad Router'));
     }
     gRouterObject = router;
-    gRouterServer = gRouterExpress.listen(0, function () {
-      gRouterServer = makeIntoCloseAllServer(gRouterServer);
-      gRouterServerPort = gRouterServer.address().port;
-      stopCreateAndStartServersManager()
-        .then(function () {
-          states.started = true;
-          resolve();
-        })
-        .catch(function (err) {
-          reject(err);
-        });
-    });
+    var options = {
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskCallback : function (id) {
+        return pskIdToSecret(id);
+      },
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
+    };
+    gRouterServer = https.createServer(options, gRouterExpress).listen(0, 
+      function () {
+        gRouterServerPort = gRouterServer.address().port;
+        stopCreateAndStartServersManager()
+          .then(function () {
+            states.started = true;
+            resolve();
+          })
+          .catch(function (err) {
+            reject(err);
+          });
+      });
+    gRouterServer = makeIntoCloseAllServer(gRouterServer);
   });
 };
 

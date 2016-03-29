@@ -7,7 +7,7 @@ var tape = require('../lib/thali-tape');
 var testUtils = require('../lib/testUtils.js');
 var nodessdp = require('node-ssdp');
 var express = require('express');
-var http = require('http');
+var https = require('https');
 var net = require('net');
 var uuid = require('node-uuid');
 var sinon = require('sinon');
@@ -15,18 +15,32 @@ var randomstring = require('randomstring');
 
 var wifiInfrastructure = new ThaliWifiInfrastructure();
 
+var pskIdentity = 'I am an id!';
+var pskKey = new Buffer('And I am a secret!!!!');
+
+var pskIdToSecret = function (id) {
+  return id === pskIdentity ? pskKey : null;
+};
+
+var pskIdToSecretHolder = function (id) {
+  return pskIdToSecret(id);
+};
+
 var test = tape({
   setup: function (t) {
-    wifiInfrastructure.start(express.Router()).then(function () {
-      t.equals(wifiInfrastructure.states.started, true, 'should be in started state');
-      t.end();
-    });
+    wifiInfrastructure.start(express.Router(), pskIdToSecretHolder)
+      .then(function () {
+        t.equals(wifiInfrastructure.states.started, true,
+          'should be in started state');
+        t.end();
+      });
   },
   teardown: function (t) {
     // Stop everything at the end of tests to make sure
     // the next test starts from clean state
     wifiInfrastructure.stop().then(function () {
-      t.equals(wifiInfrastructure.states.started, false, 'should not be in started state');
+      t.equals(wifiInfrastructure.states.started, false,
+        'should not be in started state');
       t.end();
     });
   }
@@ -48,7 +62,8 @@ var createTestServer = function (peerIdentifier) {
   return testServer;
 };
 
-test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged events should be emitted', function (t) {
+test('After #startListeningForAdvertisements call ' +
+  'wifiPeerAvailabilityChanged events should be emitted', function (t) {
   var peerIdentifier = 'urn:uuid:' + uuid.v4();
   var testServer = createTestServer(peerIdentifier);
   var peerAvailableListener = function (peer) {
@@ -92,7 +107,8 @@ test('After #startListeningForAdvertisements call wifiPeerAvailabilityChanged ev
   });
 });
 
-test('#startUpdateAdvertisingAndListening should use different USN after every invocation', function (t) {
+test('#startUpdateAdvertisingAndListening should use different USN after ' +
+  'every invocation', function (t) {
   var testClient = new nodessdp.Client();
 
   var firstUSN = null;
@@ -100,12 +116,14 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
   testClient.on('advertise-alive', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
-    if (data.NT !== ThaliConfig.SSDP_NT || data.USN !== wifiInfrastructure.usn) {
+    if (data.NT !== ThaliConfig.SSDP_NT || data.USN !== wifiInfrastructure.usn)
+    {
       return;
     }
     if (firstUSN !== null) {
       secondUSN = data.USN;
-      t.notEqual(firstUSN, secondUSN, 'USN should have changed from the first one');
+      t.notEqual(firstUSN, secondUSN, 'USN should have changed from the ' +
+        'first one');
       wifiInfrastructure.stopAdvertisingAndListening();
     } else {
       firstUSN = data.USN;
@@ -117,14 +135,17 @@ test('#startUpdateAdvertisingAndListening should use different USN after every i
   testClient.on('advertise-bye', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
-    if (data.NT !== ThaliConfig.SSDP_NT || data.USN !== wifiInfrastructure.usn) {
+    if (data.NT !== ThaliConfig.SSDP_NT || data.USN !== wifiInfrastructure.usn)
+    {
       return;
     }
     if (data.USN === firstUSN) {
-      t.equals(secondUSN, null, 'when receiving the first byebye, the second USN should not be set yet');
+      t.equals(secondUSN, null, 'when receiving the first byebye, the second ' +
+        'USN should not be set yet');
     }
     if (data.USN === secondUSN) {
-      t.ok(firstUSN, 'when receiving the second byebye, the first USN should be already set');
+      t.ok(firstUSN, 'when receiving the second byebye, the first USN should ' +
+        'be already set');
       testClient.stop(function () {
         t.end();
       });
@@ -153,21 +174,25 @@ test('messages with invalid location or USN should be ignored', function (t) {
   t.end();
 });
 
-test('verify that Thali-specific messages are filtered correctly', function (t) {
+test('verify that Thali-specific messages are filtered correctly', function (t)
+{
   var irrelevantMessage = {
     NT: 'foobar'
   };
-  t.equal(true, wifiInfrastructure._shouldBeIgnored(irrelevantMessage), 'irrelevant messages should be ignored');
+  t.equal(true, wifiInfrastructure._shouldBeIgnored(irrelevantMessage),
+    'irrelevant messages should be ignored');
   var relevantMessage = {
     NT: ThaliConfig.SSDP_NT,
     USN: uuid.v4()
   };
-  t.equal(false, wifiInfrastructure._shouldBeIgnored(relevantMessage), 'relevant messages should not be ignored');
+  t.equal(false, wifiInfrastructure._shouldBeIgnored(relevantMessage),
+    'relevant messages should not be ignored');
   var messageFromSelf = {
     NT: ThaliConfig.SSDP_NT,
     USN: wifiInfrastructure.usn
   };
-  t.equal(true, wifiInfrastructure._shouldBeIgnored(messageFromSelf), 'messages from this device should be ignored');
+  t.equal(true, wifiInfrastructure._shouldBeIgnored(messageFromSelf),
+    'messages from this device should be ignored');
   t.end();
 });
 
@@ -182,13 +207,15 @@ var testFunctionBeforeStart = function (t, functionName) {
   });
 };
 
-test('#startListeningForAdvertisements should fail if start not called', function (t) {
-  testFunctionBeforeStart(t, 'startListeningForAdvertisements');
-});
+test('#startListeningForAdvertisements should fail if start not called',
+  function (t) {
+    testFunctionBeforeStart(t, 'startListeningForAdvertisements');
+  });
 
-test('#startUpdateAdvertisingAndListening should fail if start not called', function (t) {
-  testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
-});
+test('#startUpdateAdvertisingAndListening should fail if start not called',
+  function (t) {
+    testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
+  });
 
 test('#start should fail if called twice in a row', function (t) {
   // The start here is already the second since it is being
@@ -207,15 +234,20 @@ test('#start should fail if called twice in a row', function (t) {
 test('should not be started after stop is called', function (t) {
   wifiInfrastructure.stop().then(function () {
     t.notOk(wifiInfrastructure.states.started, 'should not be started');
-    t.notOk(wifiInfrastructure.states.listening.current, 'should not be listening');
-    t.notOk(wifiInfrastructure.states.listening.target, 'should not target listening');
-    t.notOk(wifiInfrastructure.states.advertising.current, 'should not be advertising');
-    t.notOk(wifiInfrastructure.states.advertising.target, 'should not target advertising');
+    t.notOk(wifiInfrastructure.states.listening.current,
+      'should not be listening');
+    t.notOk(wifiInfrastructure.states.listening.target,
+      'should not target listening');
+    t.notOk(wifiInfrastructure.states.advertising.current,
+      'should not be advertising');
+    t.notOk(wifiInfrastructure.states.advertising.target,
+      'should not target advertising');
     t.end();
   });
 });
 
-test('#startUpdateAdvertisingAndListening should fail invalid router has been passed', function (t) {
+test('#startUpdateAdvertisingAndListening should fail invalid router has ' +
+  'been passed', function (t) {
   wifiInfrastructure.stop()
   .then(function () {
     return wifiInfrastructure.start('invalid router object');
@@ -229,12 +261,13 @@ test('#startUpdateAdvertisingAndListening should fail invalid router has been pa
   });
 });
 
-test('#startUpdateAdvertisingAndListening should fail if router server starting fails', function (t) {
+test('#startUpdateAdvertisingAndListening should fail if router server ' +
+  'starting fails', function (t) {
   // Save the old port so that it can be reassigned after the test.
   var oldPort = wifiInfrastructure.routerServerPort;
   // Create a test server that is used to block the port
   // onto which the router server is tried to be started.
-  var testServer = net.createServer(function (c) {
+  var testServer = net.createServer(function () {
     // NOOP
   });
   testServer.listen(0, function () {
@@ -246,7 +279,8 @@ test('#startUpdateAdvertisingAndListening should fail if router server starting 
     wifiInfrastructure.routerServerPort = testServerPort;
     wifiInfrastructure.startUpdateAdvertisingAndListening()
     .catch(function (error) {
-      t.equals(error.message, 'Unspecified Error with Radio infrastructure', 'specific error expected');
+      t.equals(error.message, 'Unspecified Error with Radio infrastructure',
+        'specific error expected');
       wifiInfrastructure.routerServerPort = oldPort;
       testServer.close(function () {
         t.end();
@@ -255,7 +289,8 @@ test('#startUpdateAdvertisingAndListening should fail if router server starting 
   });
 });
 
-test('#startUpdateAdvertisingAndListening should start hosting given router object', function (t) {
+test('#startUpdateAdvertisingAndListening should start hosting given router ' +
+  'object', function (t) {
   var router = express.Router();
   var testPath = '/test';
   router.get(testPath, function (req, res) {
@@ -263,16 +298,18 @@ test('#startUpdateAdvertisingAndListening should start hosting given router obje
   });
   wifiInfrastructure.stop()
   .then(function () {
-    return wifiInfrastructure.start(router);
+    return wifiInfrastructure.start(router, pskIdToSecret);
   })
   .then(function () {
     return wifiInfrastructure.startUpdateAdvertisingAndListening();
   })
   .then(function () {
-    http.get({
+    https.get({
       path: testPath,
       port: wifiInfrastructure.routerServerPort,
-      agent: false // to prevent connection keep-alive
+      agent: false, // to prevent connection keep-alive,
+      pskIdentity: pskIdentity,
+      pskKey: pskKey
     }, function (res) {
       t.equal(res.statusCode, 200, 'server should respond with code 200');
       t.end();
@@ -280,53 +317,96 @@ test('#startUpdateAdvertisingAndListening should start hosting given router obje
   });
 });
 
+test('#startUpdateAdvertisingAndListening bad psk should be rejected ' +
+  'object', function (t) {
+  var router = express.Router();
+  var testPath = '/test';
+  router.get(testPath, function (req, res) {
+    res.send('foobar');
+  });
+  wifiInfrastructure.stop()
+    .then(function () {
+      return wifiInfrastructure.start(router, function () { return null; });
+    })
+    .then(function () {
+      return wifiInfrastructure.startUpdateAdvertisingAndListening();
+    })
+    .then(function () {
+      var httpRequest = https.get({
+        path: testPath,
+        port: wifiInfrastructure.routerServerPort,
+        agent: false, // to prevent connection keep-alive,
+        pskIdentity: pskIdentity,
+        pskKey: pskKey
+      }, function () {
+        t.fail('connection should have been rejected');
+        t.end();
+      });
+      httpRequest.on('error', function (err) {
+        t.equal(err.message, 'socket hang up', 'Connection should be rejected');
+        t.end();
+      });
+    });
+});
+
 test('#stop can be called multiple times in a row', function (t) {
   wifiInfrastructure.stop()
   .then(function () {
-    t.equal(wifiInfrastructure.states.started, false, 'should be in stopped state');
+    t.equal(wifiInfrastructure.states.started, false, 'should be in stopped ' +
+      'state');
     return wifiInfrastructure.stop();
   })
   .then(function () {
-    t.equal(wifiInfrastructure.states.started, false, 'should still be in stopped state');
+    t.equal(wifiInfrastructure.states.started, false, 'should still be in ' +
+      'stopped state');
     t.end();
   });
 });
 
-test('#startListeningForAdvertisements can be called multiple times in a row', function (t) {
-  wifiInfrastructure.startListeningForAdvertisements()
-  .then(function () {
-    t.equal(wifiInfrastructure.states.listening.current, true, 'should be in listening state');
-    return wifiInfrastructure.startListeningForAdvertisements();
-  })
-  .then(function () {
-    t.equal(wifiInfrastructure.states.listening.current, true, 'should still be in listening state');
-    t.end();
+test('#startListeningForAdvertisements can be called multiple times in a row',
+  function (t) {
+    wifiInfrastructure.startListeningForAdvertisements()
+    .then(function () {
+      t.equal(wifiInfrastructure.states.listening.current, true,
+        'should be in listening state');
+      return wifiInfrastructure.startListeningForAdvertisements();
+    })
+    .then(function () {
+      t.equal(wifiInfrastructure.states.listening.current, true,
+        'should still be in listening state');
+      t.end();
+    });
   });
-});
 
-test('#stopListeningForAdvertisements can be called multiple times in a row', function (t) {
-  wifiInfrastructure.stopListeningForAdvertisements()
-  .then(function () {
-    t.equal(wifiInfrastructure.states.listening.current, false, 'should not be in listening state');
-    return wifiInfrastructure.stopListeningForAdvertisements();
-  })
-  .then(function () {
-    t.equal(wifiInfrastructure.states.listening.current, false, 'should still not be in listening state');
-    t.end();
+test('#stopListeningForAdvertisements can be called multiple times in a row',
+  function (t) {
+    wifiInfrastructure.stopListeningForAdvertisements()
+    .then(function () {
+      t.equal(wifiInfrastructure.states.listening.current, false,
+        'should not be in listening state');
+      return wifiInfrastructure.stopListeningForAdvertisements();
+    })
+    .then(function () {
+      t.equal(wifiInfrastructure.states.listening.current, false,
+        'should still not be in listening state');
+      t.end();
+    });
   });
-});
 
-test('#stopAdvertisingAndListening can be called multiple times in a row', function (t) {
-  wifiInfrastructure.stopAdvertisingAndListening()
-  .then(function () {
-    t.equal(wifiInfrastructure.states.advertising.current, false, 'should not be in advertising state');
-    return wifiInfrastructure.stopAdvertisingAndListening();
-  })
-  .then(function () {
-    t.equal(wifiInfrastructure.states.advertising.current, false, 'should still not be in advertising state');
-    t.end();
+test('#stopAdvertisingAndListening can be called multiple times in a row',
+  function (t) {
+    wifiInfrastructure.stopAdvertisingAndListening()
+    .then(function () {
+      t.equal(wifiInfrastructure.states.advertising.current, false,
+        'should not be in advertising state');
+      return wifiInfrastructure.stopAdvertisingAndListening();
+    })
+    .then(function () {
+      t.equal(wifiInfrastructure.states.advertising.current, false,
+        'should still not be in advertising state');
+      t.end();
+    });
   });
-});
 
 test('functions are run from a queue in the right order', function (t) {
   var firstSpy = sinon.spy();
@@ -402,12 +482,16 @@ var tryStartingFunctionWhileWifiOff = function (t, functionName, keyName) {
   });
 };
 
-test('#startListeningForAdvertisements returns error if wifi is off and fires event when on', function (t) {
-  tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements', 'discoveryActive');
+test('#startListeningForAdvertisements returns error if wifi is off and ' +
+  'fires event when on', function (t) {
+  tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements',
+    'discoveryActive');
 });
 
-test('#startUpdateAdvertisingAndListening returns error if wifi is off and fires event when on', function (t) {
-  tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening', 'advertisingActive');
+test('#startUpdateAdvertisingAndListening returns error if wifi is off and ' +
+  'fires event when on', function (t) {
+  tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening',
+    'advertisingActive');
 });
 
 test('when wifi is enabled discovery is activated and peers become available',
