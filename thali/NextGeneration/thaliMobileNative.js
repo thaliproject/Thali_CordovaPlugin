@@ -131,7 +131,7 @@
  */
 
 /**
- * When we are asked to connect to a remote peer the way we normally handles
+ * When we are asked to connect to a remote peer the way we normally handle
  * this is by opening a port on 127.0.0.1 and listening for an incoming
  * connection. When we get the incoming connection we then bridge it to the
  * remote peer.
@@ -227,9 +227,8 @@
  * consistent.
  *
  * If this method is called consecutively with the same peerIdentifier and a
- * connection is either in progress or already exists then an error MUST
- * be returned. Otherwise a new
- * connection MUST be created.
+ * connection is either in progress or already exists then an error MUST be
+ * returned. Otherwise a new connection MUST be created.
  *
  * In the case of Android there MUST be at most one
  * Bluetooth client connection between this peer and the identified remote peer.
