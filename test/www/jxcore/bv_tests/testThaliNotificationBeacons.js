@@ -482,12 +482,17 @@ test('#parseBeacons addressBookCallback returns public key', function (t) {
 });
 
 test('validate generatePskIdentityField', function (t) {
-  var preAmble = new Buffer(10);
-  var beacon = new Buffer(20);
+  var preAmble = new Buffer(73);
+  var beacon = new Buffer(48);
   var actualResult =
     notificationBeacons.generatePskIdentityField(preAmble, beacon);
   var decodedActualResult = urlSafeBase64.decode(actualResult);
-  t.ok(decodedActualResult.compare(Buffer.concat([preAmble, beacon])) === 0,
+  
+  var hash = crypto.createHash('sha256');
+  hash.update(Buffer.concat([preAmble, beacon]));
+  var calculatedDecodedResult = hash.digest();
+  
+  t.ok(decodedActualResult.compare(calculatedDecodedResult) === 0,
     'decoded buffers match');
   t.end();
 });
