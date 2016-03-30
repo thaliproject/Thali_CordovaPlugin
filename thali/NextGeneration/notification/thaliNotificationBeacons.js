@@ -390,7 +390,9 @@ module.exports.parseBeacons = parseBeacons;
  */
 // jscs:enable jsDoc
 function generatePskIdentityField(preAmble, beacon) {
-  return urlSafeBase64.encode(Buffer.concat([preAmble, beacon]));
+  var hash = crypto.createHash('sha256');
+  hash.update(Buffer.concat([preAmble, beacon]));
+  return urlSafeBase64.encode(hash.digest());
 }
 
 module.exports.generatePskIdentityField = generatePskIdentityField;
