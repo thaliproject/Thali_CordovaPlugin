@@ -237,45 +237,6 @@ test('Test NETWORK_PROBLEM locally', function (t) {
   });
 });
 
-test('Test timeout locally', function (t) {
-
-  t.plan(2);
-
-  // Sets 3000 milliseconds delay for request handling.
-  httpTester.runServer(globals.expressRouter,
-    ThaliConfig.NOTIFICATION_BEACON_PATH, 503,
-    'hello', 1, 3000);
-
-  // Sets 1000 milliseconds TCP timeout.
-  var connInfo = new PeerDictionary.PeerConnectionInformation(
-    ThaliMobile.connectionTypes.TCP_NATIVE,
-    '127.0.0.1',
-    globals.expressServer.address().port, 1000);
-
-  var act = new NotificationAction('hello',
-    globals.targetDeviceKeyExchangeObjects[0],
-    addressBookCallback,
-    connInfo);
-
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res) {
-      t.equals(
-        res,
-        NotificationAction.ActionResolution.NETWORK_PROBLEM,
-        'Should be NETWORK_PROBLEM caused by timeout');
-    });
-
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
-
-  act.start(keepAliveAgent).then( function () {
-    t.fail('This call should cause reject.');
-  }).catch(function (err) {
-    t.equals(
-      err.message,
-      'Could not establish TCP connection',
-      'reject reason should be Could not establish TCP connection');
-  });
-});
 
 test('Call the start two times', function (t) {
 

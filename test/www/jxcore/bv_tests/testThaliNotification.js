@@ -5,6 +5,7 @@ var crypto = require('crypto');
 var sinon = require('sinon');
 var Promise = require('lie');
 var http = require('http');
+var https = require('https');
 
 var proxyquire = require('proxyquire').noCallThru();
 var ThaliNotificationClient =
@@ -19,8 +20,11 @@ var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var SECP256K1 = 'secp256k1';
+var HELLO = 'Hello world';
+var HELLO_PATH = '/hello';
 
 var globals = {};
 
@@ -65,7 +69,19 @@ var GlobalVariables = function () {
 GlobalVariables.prototype.initLocal = function () {
   var self = this;
   self.createKeysForLocalTest();
+  // Initializes ThaliNotificationServer
+  self.notificationServer = new globals.ThaliNotificationServerProxyquired(
+    self.expressRouter, globals.serverKeyExchangeObject, 90000);
+
   return new Promise(function (resolve, reject) {
+
+    var options = {
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskCallback: self.notificationServer.getPskIdToSecret(),
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
+    };
+
     self.expressApp.use('/', self.expressRouter);
     self.expressServer = self.expressApp.listen(0, function (err) {
       if (err) {
@@ -141,7 +157,7 @@ var test = tape({
     });
   }
 });
-
+/*
 test('Client to server request locally', function (t) {
 
   var p = globals.initLocal();
@@ -166,9 +182,7 @@ test('Client to server request locally', function (t) {
       new ThaliNotificationClient(peerPool,
         globals.targetDeviceKeyExchangeObjects[0]);
 
-    // Initializes ThaliNotificationServer
-    var notificationServer = new globals.ThaliNotificationServerProxyquired(
-      globals.expressRouter, globals.serverKeyExchangeObject, 90000);
+
 
     notificationClient.on(
       ThaliNotificationClient.Events.PeerAdvertisesDataForUs, function ( res) {
@@ -213,8 +227,44 @@ test('Client to server request locally', function (t) {
 
 });
 
+ */
+
 if (!tape.coordinated) {
   return;
+}
+
+function connectToPeer(peerDetails){
+
+  // pskKey: thaliConfig.BEACON_KEY,
+  // pskIdentity: thaliConfig.BEACON_PSK_IDENTITY,
+
+  console.log(peerDetails.pskIdentifyField);
+  var options = {
+    method: 'GET',
+    hostname: peerDetails.hostAddress,
+    port: peerDetails.portNumber,
+    path: HELLO_PATH,
+    agent: false,
+    family: 4,
+    pskIdentity: peerDetails.pskIdentifyField,
+    pskKey: new Buffer('asdasd'),
+    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS
+  };
+
+  var req = https.request(options, function (res) {
+    res.on('data', function (chunk) {
+      if (chunk){
+        console.log(chunk);
+      }
+    });
+  });
+
+  req.on('error', function (err) {
+    console.log('http request error - ' + err);
+  });
+
+  req.end();
+
 }
 
 test('Client to server request coordinated', function (t) {
@@ -236,7 +286,7 @@ test('Client to server request coordinated', function (t) {
         var publicKey = new Buffer(participant.data, 'base64');
         addressBook.push(publicKey);
         var publicKeyHash = NotificationBeacons.createPublicKeyHash(publicKey);
-        replies[publicKeyHash] = true;
+        replies[publicKeyHash] = false;
       }
     });
   }
@@ -250,24 +300,38 @@ test('Client to server request coordinated', function (t) {
 
   // Initialize the ThaliNotificationClient
   var notificationClient =
-    new ThaliNotificationClient(peerPool,
-      globals.ecdh);
+    new ThaliNotificationClient(peerPool, globals.ecdh);
 
   // Initializes ThaliNotificationServer
   var notificationServer = new ThaliNotificationServer(
     globals.expressRouter, globals.ecdh, 90000);
 
+
+  // Initializes test server that just says 'hello world'
+  var helloWorld = function (req, res) {
+    console.log('request');
+    res.send('hello world');
+  };
+
+  globals.expressRouter.get(HELLO_PATH,
+    helloWorld);
+
   var finished = false;
 
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
-      replies[res.keyId] = true;
+
+      connectToPeer(res);
+      var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);
+      replies[publicKeyHash] = true;
+
       var allReplied = true;
       Object.keys(replies).forEach(function (key) {
         if (!replies[key]) {
           allReplied = false;
         }
       });
+
       if (allReplied && !finished) {
         finished = true;
         ThaliMobile.stopListeningForAdvertisements().then(function () {

@@ -200,7 +200,7 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
       logger.warn('_peerAvailabilityChanged: peerIdentifier is not set');
       return;
     }
-    
+
     if (peerStatus.connectionType !== ThaliMobile.connectionTypes.TCP_NATIVE) {
       return;
     }
@@ -311,11 +311,19 @@ ThaliNotificationClient.prototype._resolved =
         entry.peerState = PeerDictionary.peerState.RESOLVED;
         this.peerDictionary.addUpdateEntry(peerId, entry);
 
-        // todo: this event needs psk additions
+        var pubKx = this._addressBookCallback(beaconDetails.unencryptedKeyId);
+
+        var pskIdentifyField =
+          NotificationBeacons.generatePskIdentityField(
+            beaconDetails.preAmble, beaconDetails.encryptedBeaconKeyId);
+
+        var pskSecret = NotificationBeacons.generatePskSecret(
+          this._ecdhForLocalDevice, pubKx, pskIdentifyField);
+
         var peerAdvertises = new PeerAdvertisesDataForUs(
-          beaconDetails.unencryptedKeyId,
-          'pskIdentifyField',
-          [1, 2, 3],
+          pubKx,
+          pskIdentifyField,
+          pskSecret,
           connInfo.getHostAddress(),
           connInfo.getPortNumber(),
           connInfo.getSuggestedTCPTimeout(),

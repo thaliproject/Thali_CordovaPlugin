@@ -124,16 +124,13 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         agent: false, // todo: replace with httpAgentPool
         family: 4,
         pskIdentity: thaliConfig.BEACON_PSK_IDENTITY,
-        pskKey: thaliConfig.BEACON_KEY
+        pskKey: thaliConfig.BEACON_KEY,
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS
       };
 
       self._httpRequest = https.request(options,
         self._responseCallback.bind(self));
 
-      self._httpRequest.setTimeout(
-        self._peerConnection.getSuggestedTCPTimeout(), function () {
-          self._httpRequest.abort();
-        });
 
       // Error event handler is fired on DNS resolution, TCP protocol,
       // or HTTP protocol errors. Or if the httpRequest.abort is called.

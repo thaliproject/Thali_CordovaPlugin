@@ -215,7 +215,7 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
 ThaliNotificationServer.prototype.getPskIdToSecret = function () {
   var self = this;
   return function (id) {
-
+    console.log('getPskIdToSecret:' + id);
     if (!self._secrets) {
       return null;
     }
@@ -246,11 +246,10 @@ ThaliNotificationServer.prototype.getPskIdToSecret = function () {
 ThaliNotificationServer.prototype.getPskIdToPublicKey = function () {
   var self = this;
   return function (id) {
-
+    console.log('getPskIdToPublicKey:' + id);
     if (!self._secrets) {
       return null;
     }
-
     return id === thaliConfig.BEACON_PSK_IDENTITY ?
       null : self._secrets.getPublic(id);
   };
