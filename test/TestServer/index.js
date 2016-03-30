@@ -48,13 +48,8 @@ io.on('connection', function (socket) {
   socket.deviceName = 'NOT YET SET';
 
   socket.on('disconnect', function (reason) {
-    logger.debug('Socket disconnected: %s %s (%s)', reason,
+    logger.info('Socket disconnected: %s %s (%s)', reason,
       this.id, socket.deviceName);
-    socket.emit(
-      'test_error',
-      JSON.stringify({'timeout ':
-        'message not acceptable in current Test Server state'})
-    );
   });
 
   socket.on('present', function (msg) {
@@ -81,7 +76,7 @@ io.on('connection', function (socket) {
     );
 
     logger.debug(
-      'Device presented: %s (%s) %s socket:%d',
+      'Device presented: %s (%s) %s socket: %d',
       _device.name, _device.os, _device.type, this.id
     );
 

@@ -41,6 +41,7 @@ process.on('unhandledRejection', function (err) {
 });
 
 var tests = {};
+var allSuccess = true;
 
 function declareTest(testServer, name, setup, teardown, opts, cb) {
 
@@ -64,6 +65,9 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
         success = success && res.ok;
       });
       t.once('end', function () {
+        if (!success) {
+          allSuccess = false;
+        }
         testServer.emit('setup_complete',
           JSON.stringify({
             'test': name,
@@ -85,6 +89,9 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     });
 
     t.once('end', function () {
+      if (!success) {
+        allSuccess = false;
+      }
       // Tell the server we ran the test and what the result was (true == pass)
       testServer.emit('test_complete',
         JSON.stringify({'test':name, 'success':success}));
@@ -107,6 +114,9 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
         success = success && res.ok;
       });
       t.once('end', function () {
+        if (!success) {
+          allSuccess = false;
+        }
         testServer.emit('teardown_complete',
           JSON.stringify({'test':name, 'success':success}));
       });
@@ -146,6 +156,11 @@ var thaliTape = function (fixture) {
   };
 };
 
+var platform =
+  typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid ?
+  'android' :
+  'ios';
+
 thaliTape.begin = function () {
 
   var serverOptions = {
@@ -170,15 +185,20 @@ thaliTape.begin = function () {
   testServer.on('disconnect', function () {
     if (complete) {
       process.exit(0);
-      return;
+    } else {
+      // Just log the error since socket.io will try
+      // to reconnect.
+      console.log('Disconnected from the test server');
     }
-    // Just log the error since socket.io will try
-    // to reconnect.
-    console.log('Disconnected from the test server');
   });
 
   testServer.on('reconnect', function () {
-    console.log('Reconnected to the test server');
+    testServer.emit('present', JSON.stringify({
+      'os': platform,
+      'name': testUtils.getName(),
+      'uuid': thaliTape.uuid,
+      'type': 'unittest'
+    }));
   });
 
   // Wait until we're connected
@@ -199,14 +219,8 @@ thaliTape.begin = function () {
       testServer.emit('schedule_complete');
     });
 
-    var platform;
-    if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
-      platform = 'android';
-    } else {
-      platform = 'ios';
-    }
-
     thaliTape.uuid = uuid.v4();
+
     testServer.emit('present', JSON.stringify({
       'os': platform,
       'name': testUtils.getName(),
@@ -217,10 +231,16 @@ thaliTape.begin = function () {
   });
 
   testServer.once('complete', function () {
-    // Currently always informing success to the CI if all tests
-    // complete regardless of the result.
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    complete = true;
+    if (allSuccess) {
+      console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    } else {
+      console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+    }
   });
+
+  // Only used for testing purposes..
+  thaliTape._testServer = testServer;
 };
 
 if (typeof jxcore === 'undefined' ||

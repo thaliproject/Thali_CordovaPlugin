@@ -73,7 +73,10 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
 
-  logger.info('Starting unit test run for platform: %s', platform);
+  logger.info(
+    'Starting unit test run on %d %s devices',
+    this.devices[platform].length, platform
+  );
 
   var self = this;
   function doTest(test, cb) {

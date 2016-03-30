@@ -100,13 +100,17 @@ test('should get right number of setup emits', function (t) {
 
 test('should discard surplus devices', function (t) {
   var unitTestFramework = new UnitTestFramework(testConfig);
+
+  unitTestFramework.startTests = function (devices) {
+    t.equals(unitTestFramework.devices.ios.length, amountOfDevices,
+      'should have discarded the extra devices');
+    t.end();
+  };
+
   // Add one device more than required in the test config
-  for (var i = 0; i < amountOfDevices + 1; i++) {
+  for (var i = 0; i < amountOfDevices + 2; i++) {
     unitTestFramework.addDevice(
       addSetupHandler(createTestDevice(new EventEmitter(), 'ios', i))
     );
   }
-  t.equals(unitTestFramework.devices.ios.length, amountOfDevices,
-    'should have discarded the extra device');
-  t.end();
 });

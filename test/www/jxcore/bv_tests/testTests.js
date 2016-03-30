@@ -43,3 +43,20 @@ test('can pass data in setup', function (t) {
   t.equals(uuidFound, true, 'own UUID is found from the participants list');
   t.end();
 });
+
+if (!jxcore.utils.OSInfo().isMobile) {
+  test('can continue after disconnect from server', function (t) {
+    t.timeoutAfter(5000);
+    tape._testServer.once('reconnect', function () {
+      t.ok(true, 'got reconnect event');
+      t.end();
+    });
+    tape._testServer.disconnect();
+    tape._testServer.connect();
+  });
+
+  test('test after disconnect', function (t) {
+    t.ok(true, 'worked');
+    t.end();
+  });
+}
