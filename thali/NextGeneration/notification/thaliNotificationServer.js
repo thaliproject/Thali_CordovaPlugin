@@ -1,7 +1,7 @@
 'use strict';
 var assert = require('assert');
 var NotificationBeacons = require('./thaliNotificationBeacons');
-var ThaliPskMapStack = require('./thaliPskMapStack');
+var ThaliPskMapCache = require('./thaliPskMapCache');
 var PromiseQueue = require('../promiseQueue');
 var ThaliMobile = require('../thaliMobile');
 var logger = require('../../thalilogger')('thaliNotificationServer');
@@ -92,7 +92,8 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
           beaconStreamAndSecrets.beaconStreamWithPreAmble;
 
         if (!self._secrets) {
-          self._secrets = new ThaliPskMapStack();
+          self._secrets = new ThaliPskMapCache(
+            self._millisecondsUntilExpiration);
         }
         self._secrets.push(beaconStreamAndSecrets.keyAndSecret);
 
@@ -189,7 +190,6 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
  * This is the pskIdToSecret function that has to be passed into
  * thaliMobile.start(). It's response to ID requests will change as the
  * notification server changes the beacons it is advertising.
- *
  * ## Introduction
  *
  * This function starts life by replacing the call above to
@@ -273,8 +273,27 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
  * If start is called twice however nothing special happens beyond adding a new
  * dictionary to the existing list.
  *
+ */
+
+
+/**
+ * This function takes a psk id value and turns it into a private key if
+ * recognized or otherwise returns null.
+ *
  * @public
- * @returns {module:thaliMobileNativeWrapper~pskIdToSecret}
+ * @callback pskIdentityToPrivateKey
+ * @param {string} id
+ * @returns {?Buffer} The public key associated with the ID or null if there
+ * is no match.
+ */
+
+/**
+ * This function returns a function that takes a psk id value and turns it
+ * into a private key. Return value of this function has to be passed into
+ * {module:thaliMobile~ThaliMobile.start}.
+ *
+ * @public
+ * @returns {pskIdentityToPrivateKey}
  */
 ThaliNotificationServer.prototype.getPskIdToSecret = function () {
   var self = this;
@@ -302,20 +321,8 @@ ThaliNotificationServer.prototype.getPskIdToSecret = function () {
 /**
  * This function has identical functionality to {@link
  * module:thaliNotificationServer~ThaliNotificationServer.getPskIdToSecret}
- * except that it returns the public key from the secrets dictionary instead of
- * the PSK secret.
- *
- * In the case of the beacon ID (e.g. thaliConfig.BEACON_PSK_IDENTITY) if we get
- * that specific ID then we MUST return null. This check MUST come before
- * checking any of the dictionaries.
- *
- * And yes, there is a race condition where a dictionary might not have quite
- * yet expired when getPskIdToSecret is called but could then have expired
- * when getPskIdToPublicKey has called. If this happens the caller will be able
- * to make a TCP connection but all of their requests for protected content
- * (e.g. not beacons) will be rejected with unauthorized errors. This is a
- * bummer but should be very rare in the real world so we aren't going to worry
- * excessively about it.
+ * except that it returns a function that returns the public key from the
+ * secrets dictionary instead of the PSK secret.
  *
  * @returns {pskIdentityToPublicKey}
  */
@@ -328,7 +335,7 @@ ThaliNotificationServer.prototype.getPskIdToPublicKey = function () {
     }
 
     return id === thaliConfig.BEACON_PSK_IDENTITY ?
-      thaliConfig.BEACON_KEY : self._secrets.getPublic(id);
+      null : self._secrets.getPublic(id);
   };
 };
 

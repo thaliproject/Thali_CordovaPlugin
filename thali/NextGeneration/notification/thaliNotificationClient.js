@@ -200,7 +200,7 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
       logger.warn('_peerAvailabilityChanged: peerIdentifier is not set');
       return;
     }
-
+    
     if (peerStatus.connectionType !== ThaliMobile.connectionTypes.TCP_NATIVE) {
       return;
     }

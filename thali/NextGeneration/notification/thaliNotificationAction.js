@@ -121,7 +121,7 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         hostname: self._peerConnection.getHostAddress(),
         port: self._peerConnection.getPortNumber(),
         path: thaliConfig.NOTIFICATION_BEACON_PATH,
-        agent: httpAgentPool,
+        agent: false, // todo: replace with httpAgentPool
         family: 4,
         pskIdentity: thaliConfig.BEACON_PSK_IDENTITY,
         pskKey: thaliConfig.BEACON_KEY

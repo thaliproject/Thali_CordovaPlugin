@@ -141,7 +141,7 @@ var test = tape({
     });
   }
 });
-/*
+
 test('Client to server request locally', function (t) {
 
   var p = globals.initLocal();
@@ -216,7 +216,7 @@ test('Client to server request locally', function (t) {
 if (!tape.coordinated) {
   return;
 }
-*/
+
 test('Client to server request coordinated', function (t) {
 
   // For this test we share our own public key with other peers and collect

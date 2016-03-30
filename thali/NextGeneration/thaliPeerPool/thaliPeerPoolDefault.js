@@ -2,7 +2,7 @@
 
 var util = require('util');
 var ThaliPeerPoolInterface = require('./thaliPeerPoolInterface');
-var Agent = require('http').Agent;
+var Agent = require('https').Agent;
 var thaliConfig = require('../thaliConfig');
 var logger = require('../../thalilogger')('thaliPeerPoolDefault');
 

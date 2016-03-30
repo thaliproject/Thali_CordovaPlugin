@@ -7,8 +7,8 @@ var Promise = require('lie');
 var proxyquire = require('proxyquire').noCallThru();
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
-var ThaliPskMapStack =
-  require('thali/NextGeneration/notification/thaliPskMapStack');
+var ThaliPskMapCache =
+  require('thali/NextGeneration/notification/thaliPskMapCache');
 var ThaliConfig =
   require('thali/NextGeneration/thaliConfig');
 var makeIntoCloseAllServer =
@@ -145,36 +145,97 @@ var test = tape({
   }
 });
 
-test('Test ThaliPskMapStack', function (t) {
+test('Test ThaliPskMapCache clean and expiration', function (t) {
 
-  var stack = new ThaliPskMapStack();
-  var overFlow = ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE + 10;
+  var cache = new ThaliPskMapCache(500);
+  var overFlow = ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE + 10;
 
   for (var i = 0 ; i < overFlow ; i++) {
-    stack.push({});
+    cache.push({});
   }
 
-  t.equal(stack._stack.length,
-    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE,
-  'ThaliPskMapStack should not exceed' +
-  ' MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE');
+  t.equal(cache._queue.length,
+    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE,
+  'ThaliPskMapCache should not exceed' +
+  ' MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE');
 
-  stack.clean(true);
+  cache.clean(true);
 
-  t.equal(stack._stack.length,
-    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE-1,
-    'ThaliPskMapStack should not exceed' +
-    ' MAX_NOTIFICATIONSERVER_PSK_MAP_STACK_SIZE-1');
+  t.equal(cache._queue.length,
+    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE-1,
+    'ThaliPskMapCache should not exceed' +
+    ' MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE-1');
 
 
   setTimeout( function () {
-    stack.clean();
-    t.equal(stack._stack.length,
+    cache.clean();
+    t.equal(cache._queue.length,
       0, 'All entries should be expired after 1 second');
     t.end();
   }, 1000);
 
 });
+
+test('Test ThaliPskMapCache getSecret and getPublic', function (t) {
+
+  var cache = new ThaliPskMapCache(500);
+
+  var publicKeysToNotify = globalVariables.createPublicKeysToNotify();
+  var beaconStreamAndSecretDictionary =
+    NotificationBeacons.generateBeaconStreamAndSecrets(
+      publicKeysToNotify, globalVariables.sourceKeyExchangeObject, 500);
+
+  cache.push(beaconStreamAndSecretDictionary.keyAndSecret);
+
+  var match = true;
+
+  Object.keys(cache._queue[0].keySecret).forEach( function (key) {
+    if (beaconStreamAndSecretDictionary.keyAndSecret[key].publicKey !==
+      cache.getPublic(key) ||
+      beaconStreamAndSecretDictionary.keyAndSecret[key].pskSecret !==
+      cache.getSecret(key)) {
+      match = false;
+    }
+  });
+
+  t.ok(match, 'All keys need to be available in the cache');
+
+  setTimeout( function () {
+    cache.getPublic('irrelevant');
+    t.equal(cache._queue.length,
+      0, 'All entries should be expired after 1 second');
+    t.end();
+  }, 1000);
+
+});
+
+test('Test ThaliPskMapCache multiple entries', function (t) {
+
+  var cache = new ThaliPskMapCache(2000);
+
+  var publicKeysToNotify = globalVariables.createPublicKeysToNotify();
+  var beaconStreamAndSecretDictionary =
+    NotificationBeacons.generateBeaconStreamAndSecrets(
+      publicKeysToNotify, globalVariables.sourceKeyExchangeObject, 2000);
+
+  cache.push(beaconStreamAndSecretDictionary.keyAndSecret);
+
+  setTimeout( function () {
+    cache.push(beaconStreamAndSecretDictionary.keyAndSecret);
+    t.equal(cache._queue.length,
+      2, 'Size of the cache should be 2');
+
+    setTimeout( function () {
+      cache.getPublic('irrelevant');
+      t.equal(cache._queue.length,
+        1, 'Size of the cache should be 1');
+      t.end();
+    }, 1200);
+
+  }, 1200);
+
+});
+
 
 test('Start and stop ThaliNotificationServer', function (t) {
 
