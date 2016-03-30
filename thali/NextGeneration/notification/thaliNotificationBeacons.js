@@ -9,6 +9,8 @@ var crypto = require('crypto');
 var Long = require('long');
 var HKDF = require('./../security/hkdf');
 var Promise = require('lie');
+var urlSafeBase64 = require('urlsafe-base64');
+var assert = require('assert');
 
 // Constants
 module.exports.SHA256 = 'sha256';
@@ -38,6 +40,13 @@ module.exports.EXPIRATION_FUZZ_MAX_VALUE = 255;
  * @constant
  */
 module.exports.AES_128_KEY_SIZE = 16;
+
+/**
+ * Size in bytes of an AES 256 key
+ * @type {number}
+ * @constant
+ */
+module.exports.AES_256_KEY_SIZE = 32;
 
 /**
  * Size in bytes for a SHA256 HMAC
@@ -107,8 +116,8 @@ module.exports.BEACON_HMAC_SIZE = 16;
  * We choose 16 bytes as large enough to prevent accidentally collisions but
  * small enough not to eat up excess space in a beacon.
  *
- * @param {buffer} ecdhPublicKey The buffer representing the ECDH's public key.
- * @returns {buffer}
+ * @param {Buffer} ecdhPublicKey The buffer representing the ECDH's public key.
+ * @returns {Buffer}
  */
 function createPublicKeyHash (ecdhPublicKey) {
   return crypto.createHash(module.exports.SHA256)
@@ -123,7 +132,7 @@ module.exports.createPublicKeyHash = createPublicKeyHash;
  * This function will generate a buffer containing the notification preamble and
  * beacons for the given set of public keys using the supplied private key and
  * set to the specified seconds until expiration.
- * @param {buffer[]} publicKeysToNotify - An array of buffers holding ECDH
+ * @param {Buffer[]} publicKeysToNotify - An array of buffers holding ECDH
  * public keys.
  * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
  * local device's public and private keys
@@ -220,10 +229,20 @@ module.exports.generatePreambleAndBeacons = generatePreambleAndBeacons;
  * can complete.
  * @callback addressBookCallback
  * @param {Buffer} unencryptedKeyId - This is a Buffer containing the
- * unencryptedKeId
- * @returns {?Buffer} - The base64 encoded public key associated with the
+ * unencryptedKeyId
+ * @returns {?Buffer} - The public key associated with the
  * unecryptedKeyId or null if the remove peer is not one the local peer
  * recognizes or wishes to communicate with
+ */
+
+/**
+ * @typedef {Object} parseBeaconsResponse
+ * @property {Buffer} preAmble A Buffer containing the preamble from the
+ * beacon stream
+ * @property {Buffer} unencryptedKeyId The first 16 bytes of the sha 256 hash
+ * of the remote peer's public ke
+ * @property {Buffer} encryptedBeaconKeyId A horrible name representing the
+ * beacon, aka the EncryptedBeaconFlag + BeaconHmac.
  */
 
 /**
@@ -237,10 +256,9 @@ module.exports.generatePreambleAndBeacons = generatePreambleAndBeacons;
  * @param {addressBookCallback} addressBookCallback - A callback used by the
  * function to determine if the identified remote peer's public key hash
  * represents a remote peer the local peer wishes to communicate with.
- * @returns {?Buffer} - Null if none of the beacons could be validated as being
- * targeted at the local peer or if the beacon came from a remote peer the local
- * peer does not wish to communicate with. Otherwise a Node.js Buffer containing
- * the unencryptedKeyId for the remote peer.
+ * @returns {?parseBeaconsResponse} - Null if none of the beacons could be
+ * validated as being targeted at the local peer or if the beacon came from a
+ * remote peer the local peer does not wish to communicate with.
  */
 function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
                        addressBookCallback) {
@@ -346,7 +364,13 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
 
     // if (beaconHmac.equals(otherBeaconHmac)) {
     if (beaconHmac.compare(otherBeaconHmac) === 0) {
-      return unencryptedKeyId;
+      return {
+        preAmble: beaconStreamWithPreAmble.slice(0,
+          module.exports.PUBLIC_KEY_SIZE +
+          module.exports.EXPIRATION_SIZE),
+        unencryptedKeyId: unencryptedKeyId,
+        encryptedBeaconKeyId: encryptedBeaconKeyId
+      };
     }
   }
 
@@ -355,13 +379,45 @@ function parseBeacons (beaconStreamWithPreAmble, ecdhForLocalDevice,
 
 module.exports.parseBeacons = parseBeacons;
 
+// jscs:disable jsDoc
+/**
+ * Creates the PSK_Identity_Field to identify a TLS client establishing a PSK
+ * connection using beacon data (see
+ * http://thaliproject.org/PresenceProtocolBindings/).
+ * @param {Buffer} preAmble
+ * @param {Buffer} beacon
+ * @returns {string}
+ */
+// jscs:enable jsDoc
+function generatePskIdentityField(preAmble, beacon) {
+  return urlSafeBase64.encode(Buffer.concat([preAmble, beacon]));
+}
+
+module.exports.generatePskIdentityField = generatePskIdentityField;
+
+/**
+ * Generates a PSK secret between the local device and a remote peer.
+ * @param {ECDH} ecdhForLocalDevice
+ * @param {Buffer} remotePeerPublicKey
+ * @param {string} pskIdentityField
+ * @returns {Buffer}
+ */
+function generatePskSecret(ecdhForLocalDevice, remotePeerPublicKey,
+                                  pskIdentityField) {
+  var sxy = ecdhForLocalDevice.computeSecret(remotePeerPublicKey);
+  return HKDF(module.exports.SHA256, sxy, pskIdentityField)
+    .derive('', module.exports.AES_256_KEY_SIZE);
+}
+
+module.exports.generatePskSecret = generatePskSecret;
+
 /**
  * Encodes the public key and associated PSK secret.
  *
  * @public
  * @typedef {Object} keyAndSecret
- * @property {buffer} publicKey
- * @property {buffer} pskSecret
+ * @property {Buffer} publicKey
+ * @property {Buffer} pskSecret
  */
 
 /**
@@ -374,7 +430,7 @@ module.exports.parseBeacons = parseBeacons;
  */
 
 /**
- * This function takes a ist of public keys and the device's ECDH private key
+ * This function takes a list of public keys and the device's ECDH private key
  * along with a beacon stream with preamble that was generated using those
  * public keys. The function requires that the beacon values in the beacon
  * stream MUST be in the same order as the keys listed in the publicKeysToNotify
@@ -393,25 +449,52 @@ module.exports.parseBeacons = parseBeacons;
  * is the base64 url safe'd pre-amble + beacon value and who value is the
  * secret along with the associated publicKey.
  *
- * @param {buffer[]} publicKeysToNotify - An array of buffers holding ECDH
+ * @param {Buffer[]} publicKeysToNotify - An array of buffers holding ECDH
  * public keys.
  * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
  * local device's public and private keys
  * @param {Buffer} beaconStreamWithPreAmble - A buffer stream containing the
  * preamble and beacons
- * @returns {Promise<Object.<string,keyAndSecret>|Error>}
+ * @returns {pskMap|Error}
  */
 function generatePskSecrets(publicKeysToNotify,
                             ecdhForLocalDevice,
                             beaconStreamWithPreAmble) {
-  return Promise.resolve();
+  var preAmbleSizeInBytes = module.exports.PUBLIC_KEY_SIZE +
+    module.exports.EXPIRATION_SIZE;
+
+  var preAmble = beaconStreamWithPreAmble.slice(0, preAmbleSizeInBytes);
+  var beaconStreamNoPreAmble =
+    beaconStreamWithPreAmble.slice(preAmbleSizeInBytes);
+
+  var beacons = [];
+  for (var i = 0; i < beaconStreamNoPreAmble.length;
+       i += module.exports.BEACON_SIZE) {
+    beacons.push(
+      beaconStreamNoPreAmble.slice(i, i + module.exports.BEACON_SIZE));
+  }
+
+  assert(beacons.length === publicKeysToNotify.length, 'We should have the' +
+    'same number of beacons as public keys to notify');
+
+  var pskMap = {};
+  for (i = 0; i < publicKeysToNotify.length; ++i) {
+    var pskIdentityField = generatePskIdentityField(preAmble, beacons[i]);
+    var pskSecret = generatePskSecret(ecdhForLocalDevice, publicKeysToNotify[i],
+      pskIdentityField);
+    pskMap[pskIdentityField] = {
+      publicKey: publicKeysToNotify[i],
+      pskSecret: pskSecret
+    };
+  }
+  return pskMap;
 }
 
 module.exports.generatePskSecrets = generatePskSecrets;
 
 /**
  * @typedef {Object} beaconStreamAndSecretDictionary
- * @property {buffer} beaconStreamWithPreAmble
+ * @property {Buffer} beaconStreamWithPreAmble
  * @property {keyAndSecret} keyAndSecret
  */
 
@@ -420,7 +503,7 @@ module.exports.generatePskSecrets = generatePskSecrets;
  * preamble as well as the secret dictionary needed to validate TLS PSK
  * connections generated as a consequence of the advertised beacon stream.
  *
- * @param {buffer[]} publicKeysToNotify - An array of buffers holding ECDH
+ * @param {Buffer[]} publicKeysToNotify - An array of buffers holding ECDH
  * public keys.
  * @param {ECDH} ecdhForLocalDevice - A Crypto.ECDH object initialized with the
  * local device's public and private keys
@@ -433,20 +516,19 @@ function generateBeaconStreamAndSecrets(publicKeysToNotify,
                                         secondsUntilExpiration) {
   var beaconStreamWithPreAmble =
     generatePreambleAndBeacons(publicKeysToNotify, ecdhForLocalDevice,
-                               secondsUntilExpiration);
+      secondsUntilExpiration);
 
   if (!beaconStreamWithPreAmble) {
-    return Promise.resolve(null);
+    return null;
   }
 
-  return generatePskSecrets(publicKeysToNotify, ecdhForLocalDevice,
-                            beaconStreamWithPreAmble)
-    .then(function (secretDictionary) {
-      return {
-        beaconStreamWithPreAmble: beaconStreamWithPreAmble,
-        keyAndSecret : secretDictionary
-      };
-    });
-}
+  var pskMap = generatePskSecrets(publicKeysToNotify, ecdhForLocalDevice,
+    beaconStreamWithPreAmble);
+  
+  return {
+    beaconStreamWithPreAmble: beaconStreamWithPreAmble,
+    keyAndSecret: pskMap
+  };
+}  
 
 module.exports.generateBeaconStreamAndSecrets = generateBeaconStreamAndSecrets;

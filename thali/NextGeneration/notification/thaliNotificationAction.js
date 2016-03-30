@@ -1,90 +1,271 @@
 'use strict';
-var ThaliMobile = require('../thaliMobile');
-var ThaliPeerAction = require('../thaliPeerPool/thaliPeerAction');
 var inherits = require('util').inherits;
+var http = require('http');
+var Promise = require('lie');
+var assert = require('assert');
+
+var PeerAction = require('../thaliPeerPool/thaliPeerAction');
+var NotificationBeacons = require('./thaliNotificationBeacons');
+var EventEmitter = require('events').EventEmitter;
+var ThaliConfig = require('../thaliConfig');
 
 /** @module thaliNotificationAction */
 
 /**
  * Creates a sub-type of the {@link module:thaliPeerPoolInterface~PeerAction}
- * class to represent actions for retrieving notifications. We MUST default
- * ActionState to queued. We are explicitly assuming that all created actions
- * will be added to the queue.
+ * class to represent actions for retrieving notifications.
  *
  * @param {string} peerIdentifier
  * @param {module:thaliMobile.connectionTypes} connectionType
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
- * @param {addressBookCallback} addressBookCallback An object used to validate
+ * @param {addressBookCallback} addressBookCallback A callback used to validate
  * which peers we are interested in talking to.
+ * @param {module:thaliPeerDictionary~PeerConnectionInformation} peerConnection
+ * Connection parameters to connect to peer.
  * @constructor
  * @implements {module:thaliPeerAction~PeerAction}
  * @fires module:thaliNotificationAction.event:Resolved
  */
 /* jshint -W003 */
-function ThaliNotificationAction(peerIdentifier, connectionType,
-                            ecdhForLocalDevice, addressBookCallback) {
+function ThaliNotificationAction(peerIdentifier,
+                                 ecdhForLocalDevice,
+                                 addressBookCallback,
+                                 peerConnection) {
 
-  ThaliNotificationAction.super_.call(this, peerIdentifier, connectionType,
+  assert(peerIdentifier, 'peerIdentifier must not be null or undefined');
+  assert(ecdhForLocalDevice, 'connectionType must not be null or undefined');
+  assert(addressBookCallback,
+    'addressBookCallback must not be null or undefined');
+  assert(peerConnection, 'peerConnection must not be null or undefined');
+
+  ThaliNotificationAction.super_.call(this, peerIdentifier,
+    peerConnection.getConnectionType(),
     ThaliNotificationAction.ACTION_TYPE);
+
+  this.eventEmitter = new EventEmitter();
 
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
+  this._peerConnection = peerConnection;
 
+  this._httpRequest = null;
+  this._resolution = null;
+  this._resolve = null;
+  this._reject = null;
 }
+
 /* jshint +W003 */
 
-inherits(ThaliNotificationAction, ThaliPeerAction);
+inherits(ThaliNotificationAction, PeerAction);
 
 /**
- * This is the action type that will be used by instances of this class when
- * registering with {@link
-  * module:thaliPeerPoolInterface~ThaliPeerPoolInterface}.
- * @type {string}
- * @readonly
+ * NotificationAction's event emitter
+ *
+ * @public
+ * @type {EventEmitter}
  */
-ThaliNotificationAction.ACTION_TYPE = 'GetRequestBeacon';
+ThaliNotificationAction.prototype.eventEmitter = null;
 
 /**
- * Once started we MUST make a HTTP GET request to
- * http://[hostAddress]:[portNumber]/NotificationBeacons. Make sure to set the
- * TCP/IP timeout using suggestedTCPTimeout.
+ * Tells the action to start processing. This action makes a HTTP GET request
+ * to '/NotificationBeacons' path at a host address and a port number
+ * specified in the peerIdentifier object which is passed to the constructor.
  *
- * The logic for the GET request MUST asynchronous read the response to the
- * GET request and ensure that it is not beyond a prefixed maximum size. Note
- * that node does not validate that the length of a response body and the
- * content-length header match so we MUST read the response in chunks
- * asynchronously and if the total data read exceeds our predefined limit
- * then we MUST abort the request object.
+ * When the action is completed it will resolve the returned promise
+ * successfully with a null value. Also when the action is completed, it fires
+ * {@link module:thaliNotificationAction.event:Resolved} event with a value
+ * from {@link module:thaliNotificationAction~ActionResolution}.
  *
- * If we do get a successful beacon response then we MUST submit the beacon
- * stream along with ecdhForLocalDevice and addressBookCallback to the {@link
- * module:thaliNotificationBeacons.parseBeacons} method.
+ * Error codes
  *
- * When completed fire
- * {@link module:thaliNotificationAction.event:Resolved} with
- * whatever value makes the most sense.
+ * If start is called on an action that is already started then a
+ * 'Only call start once' error is returned.
  *
- * Note that if we receive a kill method while waiting for the response then we
- * MUST call abort the HTTP request, set our ActionState to KILLED and fire off
- * a Resolved event.
+ * If start is called on an action that has completed, successfully or not, then
+ * the returned promised is resolved with an error with the value
+ * 'action has completed'.
  *
- * __Open Issue:__ Is abort truly synchronous? In other words is it ever
- * possible to call abort, get back a response and then still have the response
- * object show up? I should hope not.
- */
-ThaliNotificationAction.prototype.start = function () {
+ * 'Could not establish TCP connection' - DNS resolution, TCP level,
+ * HTTP protocol error or network timeout causes this.
+ *
+ * @public
+ * @param {http.Agent} httpAgentPool The HTTP client connection pool to
+ * be used to establish HTTP connection to the target peer.
+ * @returns {Promise<?Error>} returns a promise that will resolve when the
+ * action is done. Note that if kill is called on an action then it MUST still
+ * return success with null. After all, kill doesn't reflect a failure
+ * of the action but a change in outside circumstances.
+*/
+ThaliNotificationAction.prototype.start = function (httpAgentPool) {
+  var self = this;
 
+  var p = ThaliNotificationAction.super_.prototype.start
+    .call(this, httpAgentPool);
+
+  return p.then( function () {
+    return new Promise(function (resolve, reject) {
+
+      // Check if kill is called before entering into this promise
+      if (self.getActionState() === PeerAction.actionState.KILLED) {
+        return resolve(null);
+      }
+
+      self._resolve = resolve;
+      self._reject = reject;
+
+      var options = {
+        method: 'GET',
+        hostname: self._peerConnection.getHostAddress(),
+        port: self._peerConnection.getPortNumber(),
+        path: ThaliConfig.NOTIFICATION_BEACON_PATH,
+        agent: httpAgentPool,
+        family: 4
+      };
+
+      self._httpRequest = http.request(options,
+        self._responseCallback.bind(self));
+
+      self._httpRequest.setTimeout(
+        self._peerConnection.getSuggestedTCPTimeout(), function () {
+          self._httpRequest.abort();
+        });
+
+      // Error event handler is fired on DNS resolution, TCP protocol,
+      // or HTTP protocol errors. Or if the httpRequest.abort is called.
+      // The httpRequest is aborted when http request timeout
+      // happens or the kill function is called. However abort coming
+      // from kill is ignored at this point and it is not causing
+      // anything in the _complete function because it is the second call to
+      // _complete.
+      self._httpRequest.on('error', function () {
+        self._complete(
+          ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
+          null, 'Could not establish TCP connection');
+      });
+      self._httpRequest.end();
+    });
+  });
 };
 
 /**
- * In addition to the inherited behavior also make sure to fire the
- * {@link module:thaliNotificationAction.event:Resolved}
- * event.
+ * This synchronous function tells an action to stop executing immediately.
+ * It aborts ongoing HTTP request and fires KILLED event.
+ *
+ * @public
  */
 ThaliNotificationAction.prototype.kill = function () {
+  ThaliNotificationAction.super_.prototype.kill.call(this);
+  this._complete(ThaliNotificationAction.ActionResolution.KILLED);
+};
+
+/**
+ * This synchronous function returns a connection information.
+ *
+ * @public
+ * @returns {module:thaliPeerDictionary~PeerConnectionInformation}
+ * Connection parameters to connect to peer.
+ */
+ThaliNotificationAction.prototype.getConnectionInformation = function () {
+  return this._peerConnection;
+};
+
+/**
+ * This callback function processes incoming HTTP response. It validates
+ * that the content type is 'application/octet-stream',
+ * and size of the response stays under MAX_CONTENT_SIZE.
+ *
+ * @private
+ * @param {http.IncomingMessage} res Response object to HTTP request
+ * @returns {Function} returns a function that http.request can use
+ */
+ThaliNotificationAction.prototype._responseCallback = function (res) {
+  var self = this;
+  var data = [];
+  var totalReceived = 0;
+
+  if (res.statusCode !== 200 ||
+    res.headers['content-type'] !== 'application/octet-stream') {
+
+    return self._complete(
+      ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
+  }
+
+  res.on('data', function (chunk) {
+    totalReceived += chunk.length;
+    if (totalReceived >= ThaliNotificationAction.MAX_CONTENT_SIZE_IN_BYTES) {
+      return self._complete(
+        ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE);
+    }
+    data.push(chunk);
+  });
+
+  res.on('end', function () {
+    var unencryptedKeyId = null;
+    var buffer = Buffer.concat(data);
+
+    try {
+      // Try to parse beacons from the message body
+      unencryptedKeyId = NotificationBeacons.parseBeacons(buffer,
+        self._ecdhForLocalDevice, self._addressBookCallback);
+    } catch (err) {
+      return self._complete(
+        ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD);
+    }
+    self._complete(
+      ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
+      unencryptedKeyId);
+  });
 
 };
+
+/**
+ * This function gets called when the HTTP response processing has been
+ * completed, or HTTP request has failed at some point, or the kill
+ * function is called.
+ *
+ * It emits the event to listeners, aborts potentially ongoing
+ * HTTP client request and resolves or rejects the promise
+ * that was returned by the start function call.
+ *
+ * @private
+ *
+ * @param {ActionResolution} resolution Explains how the action was
+ * was completed. This item will be emitted.
+ * @param {?module:thaliNotificationBeacons~parseBeaconsResponse} beaconDetails
+ * Null if none of the beacons could be validated as being targeted
+ * at the local peer or if the beacon came from a remote peer the
+ * local peer does not wish to communicate with. If not null then a
+ * beacon has been identified to be targeted at the local peer.
+ * @param {?string} error Error text which will be returned to reject
+ */
+ThaliNotificationAction.prototype._complete = function (resolution,
+                                                        beaconDetails,
+                                                        error) {
+  if (!this._resolution) {
+    this._resolution = resolution;
+    this._httpRequest && this._httpRequest.abort();
+
+    this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
+      this.getPeerIdentifier(), resolution, beaconDetails);
+
+    if (error && this._reject) {
+      this._reject(new Error(error));
+    } else if (this._resolve) {
+      this._resolve(null);
+    }
+  }
+};
+
+/**
+ * Defines a maximum content size that is accepted as a response from
+ * the server.
+ *
+ * @public
+ * @readonly
+ * @type {number}
+ */
+ThaliNotificationAction.MAX_CONTENT_SIZE_IN_BYTES = 4*1024;
 
 /**
  * Records the final outcome of the action.
@@ -104,7 +285,8 @@ ThaliNotificationAction.ActionResolution = {
    */
   BEACONS_RETRIEVED_BUT_BAD: 'beaconsRetrievedButBad',
   /**
-   * A HTTP response other than 200 was returned.
+   * A HTTP response other than 200 was returned. Or the response size exceeds
+   * MAX_CONTENT_SIZE.
    */
   HTTP_BAD_RESPONSE: 'httpBadResponse',
   /**
@@ -119,11 +301,25 @@ ThaliNotificationAction.ActionResolution = {
   KILLED: 'killed'
 };
 
+ThaliNotificationAction.Events = {
+  Resolved: 'Resolved'
+};
+
+/**
+ * This is the action type that will be used by instances of this class when
+ * registering with {@link
+  * module:thaliPeerPoolInterface~ThaliPeerPoolInterface}.
+ * @type {string}
+ * @readonly
+ */
+ThaliNotificationAction.ACTION_TYPE = 'GetRequestBeacon';
+
 /**
  * When the action has completed this event MUST be fired. If the action
  * was able to retrieve the beacon
  *
  * @event module:thaliNotificationAction.event:Resolved
+ * @param {string} peerIdentifier Action's peer identifier.
  * @param {ActionResolution} actionResolution Explains how the action was
  * completed.
  * @param {module:thaliNotificationBeacons~ParseBeaconsResponse} beacon

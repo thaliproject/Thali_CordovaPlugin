@@ -19,9 +19,11 @@ var Promise = require('lie');
  *
  * @public
  * @param {net.Server} server
+ * @param {boolean} [eatNotRunning] Will consume a not running error when
+ * calling one of our close methods rather than throwing it.
  * @returns {net.Server}
  */
-function makeIntoCloseAllServer(server) {
+function makeIntoCloseAllServer(server, eatNotRunning) {
   var connections = [];
 
   server.on('connection', function (socket) {
@@ -50,14 +52,28 @@ function makeIntoCloseAllServer(server) {
    * @param {thunk} [callback]
    */
   server.closeAll = function (callback) {
+    var forceCallback = false;
     // By closing the server first we prevent any new incoming connections
     // to the server.
     // Also note that the callback won't be called until all the connections
     // are destroyed because the destroy calls are synchronous.
-    server.close(callback);
+    try {
+      server.close(callback);
+    } catch(err){
+      if (!eatNotRunning || !(err instanceof Error) ||
+        (err && err.message !== 'Not running')) {
+        throw err;
+      }
+      forceCallback = true;
+    }
+
     connections.forEach(function (connection) {
       connection.destroy();
     });
+
+    if (forceCallback && callback) {
+      callback();
+    }
   };
 
   /**

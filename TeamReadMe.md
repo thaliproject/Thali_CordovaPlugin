@@ -167,3 +167,22 @@ way is to nuke all `node_modules` folders from your local source tree.
 `./build.sh` from the root of the repository.
   * The script removes the folder `../ThaliTest` (relative to your clones souces)
   so before running it, make sure you don't have any precious changes there.
+
+## Debugging AppVeyor failues
+
+If you get a failure in AppVeyor that you can't reproduce locally, you can RDP
+into the build server to debug the issue there.
+
+Instructions can be found from https://www.appveyor.com/docs/how-to/rdp-to-build-worker,
+but the most convenient way is to add this to the end of `appveyor.yml`:
+
+```
+on_finish:
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+```
+
+Above will make AppVeyor print RDP connection details to the build output log
+and wait for someone to connect. Using the credentials from the build output,
+RDP into the machine and do debugging. When ready, you can remove the AppVeyor
+"lock file" that you can find from the desktop if you want AppVeyor to proceed
+with the build.

@@ -4,13 +4,13 @@ var UnitTestFramework = require('../../../TestServer/UnitTestFramework.js');
 var TestDevice = require('../../../TestServer/TestDevice.js');
 var tape = require('../lib/thali-tape');
 var EventEmitter = require('events').EventEmitter;
-var util = require("util");
+var util = require('util');
 
 var test = tape({
-  setup: function(t) {
+  setup: function (t) {
     t.end();
   },
-  teardown: function(t) {
+  teardown: function (t) {
     t.end();
   }
 });
@@ -20,25 +20,35 @@ var createTestDevice = function (socket, platform, index) {
   var uuid = platform + '-uuid-' + index;
   var tests = ['test-1', 'test-2'];
   return new TestDevice(socket, name, uuid, platform, 'unittest', tests, null);
-}
+};
+
+var amountOfDevices = 3;
 
 var testConfig = {
   devices: {
-    ios: 2,
-    android: 2
+    ios: amountOfDevices,
+    android: amountOfDevices
   },
-  honorCount: true
+  honorCount: true,
+  userConfig: {
+    ios: {
+      numDevices: amountOfDevices
+    },
+    android: {
+      numDevices: amountOfDevices
+    }
+  }
 };
 
-var addSetupHandler = function(device, cb) {
+var addSetupHandler = function (device, cb) {
   device.tests.forEach(function (test) {
-    device.socket.on('setup_' + test, function (data) {
-      device.socket.emit(util.format("setup_%s_ok", test));
-      cb(data);
+    device.socket.on('setup_' + test, function () {
+      device.socket.emit(util.format('setup_%s_ok', test));
+      cb();
     });
   });
   return device;
-}
+};
 
 
 test('should get right number of setup emits', function (t) {
@@ -49,14 +59,14 @@ test('should get right number of setup emits', function (t) {
   var mockSocket = new EventEmitter();
   var mockAndroidSocket = new EventEmitter();
 
-  mockSocket.on('schedule', function (data) {
+  mockSocket.on('schedule', function () {
     mockSocket.emit('schedule_complete');
   });
 
   function addAndroidSetupHandlers(device) {
-    return addSetupHandler(device, function(data) {
+    return addSetupHandler(device, function () {
       androidSetupCount++;
-      if (androidSetupCount == testConfig.devices.ios) {
+      if (androidSetupCount === testConfig.devices.ios) {
         t.ok(true, 'received right amount of setup commands from the server');
         t.end();
       }
@@ -64,55 +74,39 @@ test('should get right number of setup emits', function (t) {
   }
 
   function addIOSSetupHandlers(device) {
-    return addSetupHandler(device, function(data) {
+    return addSetupHandler(device, function () {
       iosSetupCount++;
-      if (iosSetupCount == testConfig.devices.ios) {
+      if (iosSetupCount === testConfig.devices.ios) {
         iosSetupDone = true;
-        for (var i = 0; i < 2; i++) {
+        for (var i = 0; i < amountOfDevices; i++) {
           unitTestFramework.addDevice(
-            addAndroidSetupHandlers(createTestDevice(mockAndroidSocket, 'android', i))
-          );
+            addAndroidSetupHandlers(
+              createTestDevice(mockAndroidSocket, 'android', i)));
         }
       }
     });
   }
 
-  mockAndroidSocket.on('schedule', function (data) {
+  mockAndroidSocket.on('schedule', function () {
     mockAndroidSocket.emit('schedule_complete');
   });
 
   var unitTestFramework = new UnitTestFramework(testConfig);
-  for (var i = 0; i < 2; i++) {
-    unitTestFramework.addDevice(addIOSSetupHandlers(createTestDevice(mockSocket, 'ios', i)));
+  for (var i = 0; i < amountOfDevices; i++) {
+    unitTestFramework.addDevice(
+      addIOSSetupHandlers(createTestDevice(mockSocket, 'ios', i)));
   }
 });
 
 test('should discard surplus devices', function (t) {
-
-  function addSetupHandlers(device) {
-    device.tests.forEach(function (test) {
-      device.socket.on('setup_' + test, function (data) {
-        device.socket.emit(util.format("setup_%s_ok", test));
-        iosSetupCount++;
-        if (iosSetupCount == testConfig.devices.ios) {
-          iosSetupDone = true;
-          for (var i = 0; i < 2; i++) {
-            unitTestFramework.addDevice(
-              addAndroidSetupHandlers(createTestDevice(mockAndroidSocket, 'android', i))
-            );
-          }
-        }
-      });
-    });
-    return device;
-  }
-
   var unitTestFramework = new UnitTestFramework(testConfig);
   // Add one device more than required in the test config
-  var amountOfDevices = testConfig.devices.ios + 1;
-  for (var i = 0; i < amountOfDevices; i++) {
-    unitTestFramework.addDevice(addSetupHandler(createTestDevice(new EventEmitter(), 'ios', i)));
+  for (var i = 0; i < amountOfDevices + 1; i++) {
+    unitTestFramework.addDevice(
+      addSetupHandler(createTestDevice(new EventEmitter(), 'ios', i))
+    );
   }
-  t.ok(unitTestFramework.devices['ios'].length === amountOfDevices - 1, 'should have discarded the extra device');
+  t.equals(unitTestFramework.devices.ios.length, amountOfDevices,
+    'should have discarded the extra device');
   t.end();
 });

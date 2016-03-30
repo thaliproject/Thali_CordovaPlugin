@@ -1,7 +1,5 @@
-/* global hostAddress */
 'use strict';
 
-var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
 var logger = require('../thalilogger')('thaliMobile');
@@ -151,9 +149,10 @@ var handleNetworkChanged = function (networkChangedValue) {
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately. If stop is called then the
  * system will take down the server so it is no longer available.
+ * @param {pskIdToSecret} pskIdToSecret
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
-module.exports.start = function (router) {
+module.exports.start = function (router, pskIdToSecret) {
   return promiseQueue.enqueue(function (resolve, reject) {
     if (thaliMobileStates.started === true) {
       return reject(new Error('Call Stop!'));
@@ -166,10 +165,10 @@ module.exports.start = function (router) {
     module.exports.emitter.on('networkChanged', handleNetworkChanged);
     Promise.all([
       promiseResultSuccessOrFailure(
-        thaliWifiInfrastructure.start(router)
+        thaliWifiInfrastructure.start(router, pskIdToSecret)
       ),
       promiseResultSuccessOrFailure(
-        ThaliMobileNativeWrapper.start(router)
+        ThaliMobileNativeWrapper.start(router, pskIdToSecret)
       )
     ]).then(function (results) {
       resolve(getCombinedResult(results));
@@ -209,7 +208,7 @@ module.exports.stop = function () {
 /**
  * This method calls the underlying startListeningForAdvertisements
  * functions.
- * 
+ *
  * Note that once this method is called
  * it is giving explicit permission to this code to call this method
  * on a radio stack that is currently disabled when the method is called but is
@@ -393,7 +392,10 @@ module.exports.connectionTypes = connectionTypes;
  * event for a specific peerIdentifier + connectionType combination that it will
  * not fire another peerAvailabilityChanged event for that peerIdentifier +
  * connectionType combination unless the combination has a new hostAddress or
- * portNumber.
+ * portNumber. If the hostAddress or portNumber changes, there must first
+ * be an event emitted with null values to mark that peer becomes unavailable
+ * in the old location and only after that an event with the updated hostAddress
+ * and portNumber.
  *
  * Note that this code explicitly does not do any kind of duplicate detection
  * for the same peerIdentifier across different connectionTypes. This is because
@@ -561,7 +563,7 @@ module.exports.connectionTypes = connectionTypes;
  *
  * @public
  * @event module:thaliMobile.event:peerAvailabilityChanged
- * @type {Object}
+ * @typedef {Object} peerAvailabilityStatus
  * @property {string} peerIdentifier This is exclusively used to detect if
  * this is a repeat announcement or if a peer has gone to correlate it to the
  * announcement of the peer's presence. But this value is not used to establish
@@ -579,6 +581,19 @@ module.exports.connectionTypes = connectionTypes;
  * we can better manage how we use the different transport types available to
  * us.
  */
+
+var emitPeerUnavailable = function (peerIdentifier, connectionType) {
+  module.exports.emitter.emit('peerAvailabilityChanged',
+    getExtendedPeer(
+      {
+        peerIdentifier: peerIdentifier,
+        hostAddress: null,
+        portNumber: null
+      },
+      connectionType
+    )
+  );
+};
 
 var peerAvailabilities = {};
 peerAvailabilities[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
@@ -599,21 +614,20 @@ var changePeersUnavailable = function (connectionType) {
   Object.keys(peerAvailabilities[connectionType]).forEach(function (peerIdentifier) {
     changeCachedPeerUnavailable(peerAvailabilities[connectionType]
       [peerIdentifier]);
-    module.exports.emitter.emit('peerAvailabilityChanged', {
-      peerIdentifier: peerIdentifier,
-      hostAddress: null,
-      portNumber: null
-    });
+    emitPeerUnavailable(peerIdentifier, connectionType);
   });
 };
 
-var peerHasChanged = function (peer) {
-  var cachedPeer = peerAvailabilities[peer.connectionType][peer.peerIdentifier];
+var updateAndCheckChanges = function (peer) {
+  var cachedPeer =
+    peerAvailabilities[peer.connectionType][peer.peerIdentifier];
   if (!cachedPeer) {
     return true;
   }
+  cachedPeer.availableSince = Date.now();
   if (cachedPeer.hostAddress !== peer.hostAddress ||
       cachedPeer.portNumber !== peer.portNumber) {
+    emitPeerUnavailable(peer.peerIdentifier, peer.connectionType);
     return true;
   }
   return false;
@@ -640,7 +654,7 @@ var getExtendedPeer = function (peer, connectionType) {
 
 var handlePeer = function (peer, connectionType) {
   peer = getExtendedPeer(peer, connectionType);
-  if (!peerHasChanged(peer)) {
+  if (!updateAndCheckChanges(peer)) {
     return;
   }
   if (peer.hostAddress === null) {
@@ -653,6 +667,11 @@ var handlePeer = function (peer, connectionType) {
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (peer) {
+  if (peer.portNumber === null) {
+    peer.hostAddress = null;
+  } else {
+    peer.hostAddress = '127.0.0.1';
+  }
   var connectionType =
     jxcore.utils.OSInfo().isAndroid ?
     connectionTypes.BLUETOOTH :
@@ -683,15 +702,11 @@ var peerAvailabilityWatcher = function () {
         ThaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
       // If the time from the latest availability advertisement doesn't
       // exceed the threshold, no need to do anything.
-      if (peer.availableSince + unavailabilityThreshold < now) {
+      if (peer.availableSince + unavailabilityThreshold > now) {
         return;
       }
       changeCachedPeerUnavailable(peer);
-      module.exports.emitter.emit('peerAvailabilityChanged', {
-        peerIdentifier: peerIdentifier,
-        hostAddress: null,
-        portNumber: null
-      });
+      emitPeerUnavailable(peerIdentifier, connectionType);
     });
   });
 };

@@ -1,0 +1,633 @@
+'use strict';
+
+var logger = require('../../thalilogger')('createPeerListener');
+var multiplex = require('multiplex');
+var net = require('net');
+var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
+var Promise = require('lie');
+var assert = require('assert');
+var thaliConfig = require('./../thaliConfig');
+
+/**
+ * Maximum number of peers we support simultaneously advertising as being
+ * available to be connected to
+ * @type {number}
+ */
+var maxPeersToAdvertise =
+  thaliConfig.MAXIMUM_NATIVE_PEERS_CREATE_PEER_LISTENER_ADVERTISES;
+
+function closeServer(self, server, failedConnectionErr)
+{
+  server._closing = true;
+  server.closeAll();
+  delete self._peerServers[server._peerIdentifier];
+  if (failedConnectionErr) {
+    self.emit('failedConnection', {
+      'error': failedConnectionErr,
+      'peerIdentifier': server._peerIdentifier
+    });
+  }
+}
+
+function findMuxForReverseConnection(nativeServer, clientPort) {
+  // Find the mux for the reverse connection based on
+  // incoming socket's remote port
+  var mux = null;
+  logger.debug('looking up mux for client port: ', clientPort);
+  nativeServer._incoming.forEach(function (i) {
+    if (i.remotePort === clientPort) {
+      mux = i._mux;
+    }
+  });
+  return mux;
+}
+
+function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
+                                   cb)
+{
+  // Create an outgoing socket to the native listener via a mux
+  // New streams created on this mux by the remote side are initiated
+  // by the user app connecting a socket to a remote thali server
+  var outgoing = net.createConnection(
+    listenerOrIncomingConnection.listeningPort,
+    function () {
+      var mux = multiplex(function onStream(stream) {
+        var client = net.createConnection(self._routerPort, function () {
+          client.pipe(stream).pipe(client);
+        });
+
+        stream.on('error', function (err) {
+          logger.debug('multiplexToNativeListener.stream ' + err);
+        });
+
+        stream.on('finish', function () {
+          stream.destroy();
+        });
+
+        stream.on('close', function () {
+          client.destroy();
+        });
+
+        client.on('error', function (err) {
+          logger.debug('multiplexToNativeListener.client ' + err);
+          self.emit('routerPortConnectionFailed', {
+            error: err,
+            routerPort: self._routerPort
+          });
+        });
+
+        client.on('close', function () {
+          stream.end();
+        });
+      });
+
+      mux.on('error', function (err) {
+        logger.debug('multiplexToNativeListener.mux ' + err);
+      });
+
+      mux.on('finish', function () {
+
+      });
+
+      mux.on('close', function () {
+        outgoing.end();
+      });
+
+      outgoing.on('data', function () {
+        var peerServerEntry = self._peerServers[server._peerIdentifier];
+        if (peerServerEntry) {
+          peerServerEntry.lastActive = Date.now();
+        }
+      });
+
+      outgoing.pipe(mux).pipe(outgoing);
+
+      server._mux = mux;
+
+      if (cb) {
+        // Callback on successful connection
+        cb();
+      }
+    });
+
+  return outgoing;
+}
+
+function handleForwardConnection(self, listenerOrIncomingConnection, server,
+                                 resolve, reject) {
+  logger.debug('forward connection');
+  var promiseResolved = false;
+
+  // Connect to the native listener and mux the connection
+  // When the other side creates a stream, send it to the application
+  var outgoing = multiplexToNativeListener(self, listenerOrIncomingConnection,
+    server,
+    function onConnection() {
+      promiseResolved = true;
+      resolve();
+    });
+
+  outgoing.on('error', function (err) {
+    logger.warn(err);
+    var error = new Error('Cannot Connect To Peer');
+    error.outgoingError = err;
+    closeServer(self, server, error);
+    if (!promiseResolved) {
+      promiseResolved = true;
+      reject();
+    }
+  });
+
+  outgoing.on('close', function () {
+    server._mux && server._mux.end();
+  });
+
+  outgoing.on('timeout', function () {
+    outgoing.destroy();
+  });
+}
+
+function handleReverseConnection(self, incoming, server,
+                                 listenerOrIncomingConnection) {
+  // We expect to be connected to from the p2p side which
+  // implies by the time we get here there is already a
+  // client socket connected to the server set up by
+  // _createNativeListener, find the associated mux
+  // and hook it to our incoming connection
+
+  logger.debug('reverse connection');
+
+  if (listenerOrIncomingConnection.clientPort in
+    self._pendingReverseConnections) {
+    clearTimeout(
+      self._pendingReverseConnections[
+        listenerOrIncomingConnection.clientPort].timerCancel);
+    delete self._pendingReverseConnections[
+      listenerOrIncomingConnection.clientPort];
+  }
+
+  if (listenerOrIncomingConnection.serverPort !==
+    self._nativeServer.address().port) {
+    logger.warn('failedConnection');
+    // This isn't the socket you're looking for !!
+    assert(incoming, 'Reverse connections should only happen after we get a' +
+      'TCP incoming request, pleaseConnect === true should never trigger' +
+      'one so we should always have an incoming');
+    incoming.destroy();
+    closeServer(self, server, new Error('Mismatched serverPort'));
+    server._firstConnection = true;
+    return false;
+  }
+
+  // Find the mux for the incoming socket that should have
+  // been created when the reverse connection completed
+  var mux = findMuxForReverseConnection(self._nativeServer,
+                                      listenerOrIncomingConnection.clientPort);
+  if (!mux) {
+    logger.debug('no mux found');
+    incoming.destroy();
+    closeServer(self, server, new Error('Incoming connection died'));
+    server._firstConnection = true;
+    return false;
+  }
+
+  server._mux = mux;
+  return true;
+}
+
+function connectToRemotePeer(self, incoming, peerIdentifier, server,
+                             pleaseConnect)
+{
+  return new Promise(function (resolve, reject) {
+    assert(server._firstConnection, 'We should only get called once');
+    server._firstConnection = false;
+    logger.debug('first connection');
+
+    Mobile('connect').callNative(peerIdentifier, // jshint ignore:line
+      function (err, unParsedConnection) {
+        if (err) {
+          var error = new Error(err);
+          logger.warn(error);
+          logger.debug('failedConnection');
+          incoming && incoming.end();
+          closeServer(self, server, error);
+          return reject(error);
+        }
+        var listenerOrIncomingConnection = JSON.parse(unParsedConnection);
+        if (listenerOrIncomingConnection.listeningPort === 0) {
+          if (pleaseConnect) {
+            logger.warn('was expecting a forward connection to be made');
+            closeServer(self, server, new Error('Cannot Connect To Peer'));
+            return reject(new Error('Unexpected Reverse Connection'));
+          }
+          // So this is annoying.. there's no guarantee on the order of the
+          // server running it's onConnection handler and us getting here.
+          // So we don't always find a mux when handling a reverse
+          // connection. Handle that here.
+
+          if (findMuxForReverseConnection(self._nativeServer,
+              listenerOrIncomingConnection.clientPort)) {
+            handleReverseConnection(self, incoming, server,
+                                    listenerOrIncomingConnection);
+            return resolve();
+          }
+          else {
+            // Record the pending connection, give it a second to turn up
+            self._pendingReverseConnections[
+              listenerOrIncomingConnection.clientPort] = {
+              handleReverseConnection : function () {
+                handleReverseConnection(self, incoming, server,
+                                        listenerOrIncomingConnection);
+                resolve();
+              },
+              timerCancel: setTimeout(function () {
+                logger.debug('timed out waiting for incoming connection');
+                handleReverseConnection(self, incoming, server,
+                                        listenerOrIncomingConnection);
+                resolve();
+              }, thaliConfig.MILLISECONDS_TO_WAIT_FOR_REVERSE_CONNECTION)
+            };
+          }
+        }
+        else {
+          handleForwardConnection(self, listenerOrIncomingConnection, server,
+                                  resolve, reject);
+        }
+      });
+  });
+}
+
+
+/**
+ * This creates a local TCP server (which MUST use {@link
+ * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) to accept incoming
+ * connections from the Thali app that will be sent to the identified peer.
+ *
+ * If this method is called before start is called then a "Call Start!" error
+ * MUST be thrown. If this method is called after stop is called then a "We are
+ * stopped!" error MUST be thrown.
+ *
+ * If there is already a TCP server listening for connections to the submitted
+ * peerIdentifier then the port for the TCP server MUST be returned.
+ *
+ * If there is no existing TCP server for the specified peer then we MUST
+ * examine how many peers we are advertising 127.0.0.1 ports for. If that number
+ * is equal to maxPeersToAdvertise then we MUST call destroy on one of those TCP
+ * listeners before continuing with this method. That way we will never offer
+ * connections to more than maxPeersToAdvertise peers at a time. We should
+ * order existing listeners by the last time they had data sent across their
+ * native link (this could, in the iOS case, be in either direction) and then
+ * pick the oldest to close. Once we have closed the TCP server, if
+ * necessary, then a new TCP server MUST be created on port 0 (e.g. any
+ * available port) and configured as follows:
+ *
+ * ## TCP server
+ *
+ * If pleaseConnect is true then an immediate call MUST be made to {@link
+ * external:"Mobile('connect')".callNative} to connect to the specified peer. If
+ * that call fails then the error MUST be returned. Otherwise a new multiplex
+ * object MUST be created and a new TCP connection via net.createConnection
+ * pointed at the port returned by the connect call. The multiplex object MUST
+ * be piped in both directions with the new TCP connection. The TCP connection
+ * MUST have setTimeout called on it and set to a reasonable value for the
+ * platform.
+ *
+ * ### Connection Event
+ *
+ * #### First call to connection event when pleaseConnect is false
+ *
+ * If pleaseConnect is false then when the first connection event occurs we MUST
+ * issue a {@link external:"Mobile('connect')".callNative} for the requested
+ * peer and handle the response as given in the following sections.
+ *
+ * ##### Error
+ *
+ * If we get an error then we MUST close the TCP connection and fire a {@link
+  * event:failedConnection} event with the returned error.
+ *
+ * ##### listenerPort
+ *
+ * If the response is listenerPort then we MUST perform the actions specified
+ * above for pleaseConnect is true with the exception that if the connect fails
+ * then we MUST call close on the TCP server since the peer is not available and
+ * fire a {@link event:failedConnection} event with the error set to "Cannot
+ * Connect To Peer".
+ *
+ * ##### clientPort/serverPort
+ *
+ * If clientPort/serverPort are not null then we MUST confirm that the
+ * serverPort matches the port that the server created in {@link
+ * module:tcpServersManager._createNativeListener} is listening on and if not
+ * then we MUST call destroy on the incoming TCP connection, fire a {@link
+ * event:failedConnection} event with the error set to "Mismatched serverPort",
+ * and act as if connection had not been called (e.g. the next connection will
+ * be treated as the first).
+ *
+ * Otherwise we must then lookup the multiplex object via the clientPort. If
+ * there is no multiplex object associated with that clientPort then we have a
+ * race condition where the incoming connection died between when the connect
+ * response was sent and now. In that case we MUST call destroy on the incoming
+ * TCP connection, fire a {@link event:failedConnection} event with the error
+ * set to "Incoming connection died" and as previously described treat the next
+ * connection as if it were the first.
+ *
+ * Otherwise we MUST configure the multiplex object with the behavior specified
+ * below.
+ *
+ * #### Standard connection event behavior
+ *
+ * Each socket returned by the connection event MUST cause a call to
+ * createStream on the multiplex object and the returned stream MUST be piped in
+ * both directions with the connection TCP socket.
+ *
+ * ### Error Event
+ *
+ * The error MUST be logged.
+ *
+ * ### Close Event
+ *
+ * All the TCP sockets to routerPort MUST first be destroyed. Then all the TCP
+ * sockets from the Thali application MUST be destroyed.
+ *
+ * Unless destroy was called on the TCP server by the multiplex object then
+ * destroy MUST be called on the multiplex object.
+ *
+ * ## Multiplex object
+ *
+ * ### onStream callback
+ *
+ * If a stream is received a call to net.createConnection MUST be made pointed
+ * at routerPort. If the TCP connection cannot be successfully connected then a
+ * {@link event:routerPortConnectionFailed} MUST be fired and destroy MUST be
+ * called on the stream. Otherwise the TCP connection and the stream MUST be
+ * piped to each other in both directions.
+ *
+ * Note that we will support the ability to accept incoming connections over the
+ * multiplex object even for platforms like Android that do not need it. This is
+ * just to keep the code and testing simple and consistent.
+ *
+ * ### Error Event
+ *
+ * The error MUST be logged.
+ *
+ * ### Close Event
+ *
+ * If the destroy didn't come from the TCP server then destroy MUST be called on
+ * the TCP server. If the destroy didn't come from the TCP native socket then
+ * destroy MUST be called on the TCP native socket.
+ *
+ * ## TCP socket to native layer
+ *
+ * ### Timeout Event
+ *
+ * Destroy MUST be called on itself.
+ *
+ * ### Error Event
+ *
+ * The error MUST be logged.
+ *
+ * ### Close Event
+ *
+ * Destroy MUST be called on the multiplex object the stream is piped to.
+ *
+ * ## TCP socket from Thali Application
+ *
+ * ### Error Event
+ *
+ * The error MUST be logged.
+ *
+ * ### Close Event
+ *
+ * Destroy MUST be called on the stream object the socket is piped to if that
+ * isn't the object that called destroy on the socket.
+ *
+ * ## createStream Socket
+ *
+ * ### Error Event
+ *
+ * The error MUST be logged.
+ *
+ * ### Finish Event
+ *
+ * We MUST call destroy on the mux which will trigger close.
+ *
+ * ### Close Event
+ *
+ * If destroy wasn't called by the TCP socket from Thali Application the stream
+ * is piped to then destroy MUST be called on that TCP socket.
+ *
+ * ## TCP socket to routerPort
+ *
+ * ### Error Event
+ *
+ * The error MUST be logged.
+ *
+ * ### Close Event
+ *
+ * Destroy MUST be called on the stream object the socket is piped to if that
+ * isn't the object that called destroy on the socket.
+ *
+ * ## onStream callback stream
+ *
+ * ### Error Event
+ *
+ * The error MUST be logged.
+ *
+ * ### Close Event
+ *
+ * If destroy wasn't called by the TCP socket to routerPort the stream is piped
+ * to then destroy MUST be called on that TCP socket.
+ *
+ * @public
+ * @param {module:thaliTcpServersManager~ThaliTcpServersManager} self the
+ * this object from tcpServersManager.
+ * @param {string} peerIdentifier
+ * @param {boolean} [pleaseConnect] If set to true this indicates that a
+ * lexically smaller peer asked for a connection so the lexically larger peer
+ * (the local device) who will immediately call {@link
+ * external:"Mobile('connect')".callNative} to create a connection. If false
+ * (the default value) then the call to {@link
+ * external:"Mobile('connect')".callNative} will only happen on the first
+ * incoming connection to the TCP server.
+ * @returns {Promise<number|Error>}
+ */
+module.exports = function (self, peerIdentifier, pleaseConnect) {
+
+  // This section manages a server that accepts incoming connections
+  // from the application. The first connection causes the p2p link to
+  // be established and connects a mux to the native listener that will
+  // have been set up. Subsequent connections create new streams on that
+  // link.
+
+  // In general:
+  // - an incoming socket is one _from_ the application
+  // - an outgoing socket is one to the native listener on the p2p side
+  // - a client socket is one _to_ the application, 1 per remote created stream
+
+  logger.debug('createPeerListener');
+
+  switch (self._state) {
+    case self.TCPServersManagerStates.INITIALIZED: {
+      return Promise.reject(new Error('Call Start!'));
+    }
+    case self.TCPServersManagerStates.STARTED: {
+      break;
+    }
+    case self.TCPServersManagerStates.STOPPED: {
+      return Promise.reject(new Error('We are stopped!'));
+    }
+    default: {
+      return Promise.reject(new Error('Unsupported state ' + self._state));
+    }
+  }
+
+  function _do(resolve, reject) {
+    function onNewConnection(incoming) {
+      // Handle a new connection from the app to the server
+      if (!pleaseConnect && server._firstConnection) {
+        server.muxPromise = connectToRemotePeer(self, incoming, peerIdentifier,
+                                                server, pleaseConnect);
+      }
+
+      server.muxPromise
+        .then(function () {
+          assert(server._mux, 'server._mux must exist by now');
+          var incomingStream = server._mux.createStream();
+
+          incomingStream.on('error', function (err) {
+            logger.debug('error on incoming stream - ' + err);
+          });
+
+          incomingStream.on('finish', function () {
+            server._mux.destroy();
+          });
+
+          incomingStream.on('close', function () {
+            incoming.end();
+          });
+
+          incomingStream.pipe(incoming).pipe(incomingStream);
+        })
+        .catch(function (err) {
+          logger.debug('failed incoming connection because of mux promise ' +
+            'failure - ' + err);
+          incoming.end();
+        });
+    }
+
+    function createServer(onNewConnection) {
+      // This is the server that will listen for connection coming from the
+      // application
+
+      function closeOldestServer() {
+        var oldest = null;
+        Object.keys(self._peerServers).forEach(function (k) {
+          if (oldest == null) {
+            oldest = k;
+          }
+          else {
+            if (self._peerServers[k].lastActive <
+              self._peerServers[oldest].lastActive) {
+              oldest = k;
+            }
+          }
+        });
+        if (oldest) {
+          closeServer(self, self._peerServers[oldest]);
+        }
+      }
+
+      if (self._peerServers.length === maxPeersToAdvertise) {
+        closeOldestServer();
+      }
+
+      var server = makeIntoCloseAllServer(net.createServer(), true);
+      server._peerIdentifier = peerIdentifier;
+      server._firstConnection = true;
+
+      server.on('connection', onNewConnection);
+
+      server.on('close', function onClose() {
+      });
+
+      return server;
+    }
+
+    var peerServerEntry = self._peerServers[peerIdentifier];
+    if (peerServerEntry) {
+      // If address is there then we have successfully gotten a port for the
+      // server
+      var address = peerServerEntry.server.address();
+      if (address) {
+        return resolve(address.port);
+      }
+      // Otherwise we need to record the resolve and reject and clean things
+      // up one way or another when we figure out if we are going to get
+      // a port
+      peerServerEntry.promisesOnListen.push({
+        resolve: resolve,
+        reject: reject
+      });
+    }
+
+    var server = createServer(onNewConnection);
+
+    self._peerServers[peerIdentifier] =
+    { lastActive: Date.now(), server: server, promisesOnListen: []};
+
+    function successfulStartup() {
+      resolve(server.address().port);
+      self._peerServers[peerIdentifier].promisesOnListen.forEach(
+        function (resolveReject) {
+          resolveReject.resolve(server.address().port);
+        });
+      // Once successfulStartup is called it means that we are out of listen
+      // and so no further promises should be enqueued, they will instead
+      // be returned the server's address. So we can set this to null.
+      self._peerServers[peerIdentifier].promisesOnListen = null;
+    }
+
+    /**
+     * We have to keep this value around because by the time we call failed
+     * startup the server's entry will have been deleted from _peerServers
+     * as part of closing the server (the inevitably result of anything that
+     * ends up with us calling failedStartup).
+     */
+    var peerServerEntry = self._peerServers[peerIdentifier];
+
+    function failedStartup(err) {
+      peerServerEntry.promisesOnListen
+        .forEach(function (resolveReject) {
+          resolveReject.reject(err);
+        });
+
+      reject(err);
+    }
+
+    server.on('error', function (err) {
+      logger.warn(err);
+      failedStartup(err);
+    });
+
+    server.listen(0, function () {
+      logger.debug('pleaseConnect=', pleaseConnect);
+
+      if (!pleaseConnect) {
+        successfulStartup();
+      }
+      else {
+        // We're being asked to connect to by a lower sorted peer
+        server.muxPromise = connectToRemotePeer(self, null, peerIdentifier,
+                                                server, pleaseConnect)
+          .then(function () {
+            successfulStartup();
+          })
+          .catch(function (err) {
+            failedStartup(err);
+          });
+      }
+    });
+  }
+
+  return new Promise(_do);
+};

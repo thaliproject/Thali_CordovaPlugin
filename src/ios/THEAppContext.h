@@ -57,7 +57,7 @@ typedef void(^ClientConnectCallback)(NSString *error, NSDictionary *connection);
 - (BOOL)connectToPeer:(NSString *)peerIdentifier connectCallback:(ClientConnectCallback)connectCallback;
 
 // Kill connection without cleanup - Testing only !!
-- (BOOL)killConnection:(NSString *)peerIdentifier;
+- (BOOL)killConnections:(NSString *)peerIdentifier;
 
 - (void)didFindPeer:(NSDictionary *)peer;
 - (void)didLosePeer:(NSString *)peerIdentifier;

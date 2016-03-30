@@ -97,7 +97,10 @@ ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
     assert(self._inQueue[peerAction.getId()] === peerAction, 'Items should ' +
       'not escape the queue without going through kill');
     delete self._inQueue[peerAction.getId()];
-    this._poolScratch.kill.call(peerAction);
+    // This code only needs to run once so we can restore the original kill
+    // to handle future calls.
+    peerAction.kill = this._poolScratch.kill.bind(peerAction);
+    return this._poolScratch.kill.call(peerAction);
   };
   self._inQueue[peerAction.getId()] = peerAction;
   return null;

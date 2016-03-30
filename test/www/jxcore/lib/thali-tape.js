@@ -29,7 +29,6 @@ var testUtils = require('./testUtils');
 process.on('uncaughtException', function (err) {
   console.log('Uncaught Exception: ' + err);
   console.log(err.stack);
-  console.log('****TEST TOOK:  ms ****' );
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 });
@@ -37,7 +36,6 @@ process.on('uncaughtException', function (err) {
 process.on('unhandledRejection', function (err) {
   console.log('Uncaught Promise Rejection: ' + JSON.stringify(err));
   console.trace(err);
-  console.log('****TEST TOOK:  ms ****' );
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 });
@@ -67,7 +65,12 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
       });
       t.once('end', function () {
         testServer.emit('setup_complete',
-          JSON.stringify({'test':name, 'success': success}));
+          JSON.stringify({
+            'test': name,
+            'success': success,
+            'data': t.data || null
+          })
+        );
       });
       setup(t);
     });
@@ -88,7 +91,8 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     });
 
     // Run the test (cb) when the server tells us to
-    testServer.once('start_test_' + name, function () {
+    testServer.once('start_test_' + name, function (data) {
+      t.participants = JSON.parse(data);
       testServer.emit(util.format('start_test_%s_ok', name));
       cb(t);
     });
@@ -114,6 +118,8 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 // The running number of the test that together with the test name guarantees
 // a unique identifier even if there exists multiple tests with same name
 var testRunningNumber = 0;
+// Flag used to check if we have completed all the tests we should run
+var complete = false;
 
 var thaliTape = function (fixture) {
   // Thali_Tape - Adapt tape such that tests are executed when explicitly
@@ -140,65 +146,6 @@ var thaliTape = function (fixture) {
   };
 };
 
-function createStream(testServer)
-{
-  // tape is slightly counter-intuitive in that no tests will
-  // run until the output streams are set up.
-
-  // ** Nothing will run until this function is called !! **
-
-  var total = 0;
-  var passed = 0;
-  var failed = 0;
-  var failedRows = [];
-
-  testServer.once('complete', function () {
-
-    // Log final results once server tells us all is done..
-    testUtils.logMessageToScreen('------ Final results ---- ');
-
-    for (var i = 0; i < failedRows.length; i++) {
-      testUtils.logMessageToScreen(
-        failedRows[i].id + ' isOK: ' + failedRows[i].ok + ' : ' +
-        failedRows[i].name
-      );
-    }
-
-    testUtils.logMessageToScreen('Total: ' + total + ', Passed: ' + passed +
-      ', Failed: ' + failed);
-    console.log('Total: %d\tPassed: %d\tFailed: %d', total, passed, failed);
-
-    console.log('****TEST TOOK:  ms ****' );
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-  });
-
-  tape.createStream({ objectMode: true })
-  .on('data', function (row) {
-
-    // Collate and log results as they come in
-
-    console.log(JSON.stringify(row));
-
-    if (row.type === 'assert') {
-      total++;
-      row.ok && passed++;
-      !row.ok && failed++;
-    }
-
-    testUtils.logMessageToScreen(row.id + ' isOK: ' + row.ok + ' : ' +
-      row.name);
-
-    if (row.ok && row.name) {
-      if (!row.ok) {
-        failedRows.push(row);
-      }
-    }
-  })
-  .on('end', function () {
-    console.log('Tests Complete');
-  });
-}
-
 thaliTape.begin = function () {
 
   var serverOptions = {
@@ -212,7 +159,6 @@ thaliTape.begin = function () {
     // This device not needed, log appropriately so CI doesn't think we've
     // failed
     console.log('--= Surplus to requirements =--');
-    console.log('****TEST TOOK:  ms ****');
     console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   });
 
@@ -222,6 +168,10 @@ thaliTape.begin = function () {
   });
 
   testServer.on('disconnect', function () {
+    if (complete) {
+      process.exit(0);
+      return;
+    }
     // Just log the error since socket.io will try
     // to reconnect.
     console.log('Disconnected from the test server');
@@ -246,7 +196,6 @@ thaliTape.begin = function () {
           tests[test].fn
         );
       });
-      createStream(testServer);
       testServer.emit('schedule_complete');
     });
 
@@ -257,14 +206,20 @@ thaliTape.begin = function () {
       platform = 'ios';
     }
 
-    var _uuid = uuid.v4();
+    thaliTape.uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
       'os': platform,
       'name': testUtils.getName(),
-      'uuid': _uuid,
+      'uuid': thaliTape.uuid,
       'type': 'unittest',
       'tests': Object.keys(tests)
     }));
+  });
+
+  testServer.once('complete', function () {
+    // Currently always informing success to the CI if all tests
+    // complete regardless of the result.
+    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   });
 };
 

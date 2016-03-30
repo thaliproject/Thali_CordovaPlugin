@@ -11,21 +11,51 @@ if (typeof Mobile === 'undefined') {
 }
 
 var testUtils = require('./lib/testUtils');
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var Promise = require('lie');
 
-testUtils.toggleRadios(true);
-
-// Give radio toggling a little bit of time to turn on
-// radios and do Wifi access point association etc.
-// We can't call then on the promise returned from
-// toggleRadios since that triggers this issue:
-// https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
-var radioToggleTimeout = jxcore.utils.OSInfo().isMobile ? 5000 : 0;
-setTimeout(function () {
-  Mobile('GetDeviceName').callNative(function (name) {
-    console.log('My device name is: %s', name);
-    testUtils.setName(name);
-    require('./runTests.js');
+ThaliMobile.getNetworkStatus()
+.then(function (networkStatus) {
+  var promiseList = [];
+  if (networkStatus.wifi === 'off') {
+    promiseList.push(testUtils.toggleWifi(true));
+  }
+  if (networkStatus.bluetooth === 'off') {
+    promiseList.push(testUtils.toggleBluetooth(true));
+  }
+  Promise.all(promiseList)
+  .then(function () {
+    return testUtils.hasRequiredHardware();
+  })
+  .then(function (hasRequiredHardware) {
+    if (hasRequiredHardware) {
+      Mobile('GetDeviceName').callNative(function (name) {
+        console.log('My device name is: %s', name);
+        testUtils.setName(name);
+        // The setImmediate is to avoid this issue:
+        // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
+        setImmediate(function () {
+          require('./runTests.js');
+        });
+      });
+    } else {
+      ThaliMobile.getNetworkStatus()
+      .then(function (networkStatus) {
+        testUtils.logMessageToScreen(
+          'Device did not have required hardware capabilities!'
+        );
+        console.log(networkStatus);
+        if (networkStatus.bluetoothLowEnergy === 'on') {
+          // If we are on a device that doesn't have required capabilities
+          // the network status for BLE must not be reported to be "on"
+          // which would mean "The radio is on and available for use."
+          console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+        } else {
+          console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+        }
+      });
+    }
   });
-}, radioToggleTimeout);
+});
 
 console.log('Unit Test app is loaded');

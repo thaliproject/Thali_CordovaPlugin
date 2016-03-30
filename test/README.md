@@ -58,7 +58,7 @@ Android and iOS. This assumes you are running on a Mac with all the right tools.
 3. Go to Thali_CordovaPlugin/test/TestServer
 4. Examine Config_PerfTest.json or Config_UnitTest.json (depending on the test type you are running) and make sure it
 is configured properly.
-5. Run `jx index.js {\"devices\":{\"ios\":\"2\",\"android\":\"2\"}}` in that directory on your local PC to start the 
+5. Run `jx index.js \{\"devices\":\{\"ios\":\"2\",\"android\":\"2\"}}` in that directory on your local PC to start the 
 coordination server. Obviously edit the device counts passed on the command line to reflect the actual test
 environment.
 6. Deploy and run the tests on your two Android or two iPhone devices.
@@ -129,6 +129,9 @@ $ jx npm run test-coordinated
 Some test files will also happily run stand-alone so you can run a test directly
 (e.g. `jx runTests.js bv_tests/testTests.js`)
 thus allowing you to easily run and debug individual tests.
+
+It is also possible to run just one test file through the coordinator instead of
+ all of them using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`
 
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.

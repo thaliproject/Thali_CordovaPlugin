@@ -27,9 +27,8 @@ ERROR_ABORT() {
 ### END - JXcore Test Server   --------
 
 # The build has sometimes failed with the default value of maximum open
-# files per process, which is 256. Doubling it here to 512 to workaround
-# that issue.
-ulimit -n 512;ERROR_ABORT
+# files per process, which is 256. Try to boost it as workaround.
+ulimit -n 1024;ERROR_ABORT
 
 PROJECT_ROOT=$(pwd)
 
@@ -54,8 +53,11 @@ then
   # Make sure build works with the latest cordova release
   jx npm update -g cordova;ERROR_ABORT
 fi
+
 # Print the Cordova version for debugging purposes
-echo "Cordova version: $(cordova -v)";ERROR_ABORT
+# and to make sure Cordova is installed
+echo "Cordova version:";ERROR_ABORT
+cordova -v;ERROR_ABORT
 
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
@@ -65,9 +67,9 @@ jx npm run test-meta;ERROR_ABORT
 jx npm run test-coordinated;ERROR_ABORT
 
 # Verify that docs can be generated
-cd $PROJECT_ROOT/thali/;ERROR_ABORT
-jx npm run createPublicDocs
-jx npm run createInternalDocs
+#cd $PROJECT_ROOT/thali/;ERROR_ABORT
+#jx npm run createPublicDocs;ERROR_ABORT
+#jx npm run createInternalDocs;ERROR_ABORT
 
 # Make sure we are back in the project root folder
 # after the test execution

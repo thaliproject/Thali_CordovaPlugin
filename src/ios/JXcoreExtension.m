@@ -336,11 +336,11 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
-    NSLog(@"jxcore: killConnection");
+    NSLog(@"jxcore: killConnections");
 
     if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
     {
-      NSLog(@"jxcore: killConnection: badParam");
+      NSLog(@"jxcore: killConnections: badParam");
 
       @synchronized(self)
       {
@@ -349,9 +349,9 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     }
     else
     {
-      if ([theApp killConnection: params[0]])
+      if ([theApp killConnections: params[0]])
       {
-        NSLog(@"jxcore: killConnection: success");
+        NSLog(@"jxcore: killConnections: success");
 
         @synchronized(self)
         {
@@ -360,7 +360,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       }
       else
       {
-        NSLog(@"jxcore: killConnection: fail");
+        NSLog(@"jxcore: killConnections: fail");
 
         @synchronized(self)
         {
@@ -368,7 +368,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
         }
       }
     }
-  } withName:@"killConnection"];
+  } withName:@"killConnections"];
 
   // didRegisterToNative - Allow JXCore to inform us that someone registered
   // a JS function to native

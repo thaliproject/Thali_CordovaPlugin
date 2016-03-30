@@ -1,6 +1,8 @@
 'use strict';
 
 var assert = require('assert');
+var ThaliMobile = require('../thaliMobile');
+var ThaliNotificationAction = require('./thaliNotificationAction.js');
 
 /** @module thaliPeerDictionary */
 
@@ -41,24 +43,19 @@ module.exports.peerState = {
  *
  * @public
  * @constructor
+ * @param {module:thaliMobile.connectionTypes} connectionType
  * @param {string} hostAddress
  * @param {number} portNumber
  * @param {number} suggestedTCPTimeout
  */
-function PeerConnectionInformation(hostAddress, portNumber,
-                                    suggestedTCPTimeout) {
+function PeerConnectionInformation(connectionType, hostAddress,
+                                   portNumber, suggestedTCPTimeout) {
+  this._connectionType = connectionType;
   this._hostAddress = hostAddress;
   this._portNumber = portNumber;
-  this._suggestedTCPTimeout = suggestedTCPTimeout;
+  this._suggestedTCPTimeout = suggestedTCPTimeout ||
+    PeerConnectionInformation.DEFAULT_TCP_TIMEOUT;
 }
-
-/**
- * Peer's host address, either IP or DNS
- *
- * @private
- * @type {string}
- */
-PeerConnectionInformation.prototype._hostAddress = null;
 
 /**
  * Returns peer's host address, either IP or DNS.
@@ -70,13 +67,6 @@ PeerConnectionInformation.prototype.getHostAddress = function () {
   return this._hostAddress;
 };
 
-/**
- * The port to use with the supplied host address.
- *
- * @private
- * @type {number}
- */
-PeerConnectionInformation.prototype._portNumber = null;
 
 /**
  * Returns port to use with the host address.
@@ -89,14 +79,6 @@ PeerConnectionInformation.prototype.getPortNumber = function () {
 };
 
 /**
- * The TCP time out to use when establishing a TCP connection with the peer.
- *
- * @private
- * @type {number}
- */
-PeerConnectionInformation.prototype._suggestedTCPTimeout = null;
-
-/**
  * Returns TCP time out to use when establishing a TCP connection with the
  * peer.
  *
@@ -107,16 +89,26 @@ PeerConnectionInformation.prototype.getSuggestedTCPTimeout = function () {
   return this._suggestedTCPTimeout;
 };
 
+/**
+ * Returns the connection type that we use to communicate with the peer.
+ *
+ * @public
+ * @return {module:thaliMobile.connectionTypes} TCP time out
+ */
+PeerConnectionInformation.prototype.getConnectionType = function () {
+  return this._connectionType;
+};
+
+/**
+ * This is default TCP timeout that is used if suggestedTCPTimeout is
+ * not defined for the PeerConnectionInformation.
+ * @type {number}
+ * @readonly
+ */
+PeerConnectionInformation.DEFAULT_TCP_TIMEOUT = 2000;
+
 module.exports.PeerConnectionInformation = PeerConnectionInformation;
 
-// jscs:disable maximumLineLength
-/**
- * A dictionary of different connectionTypes and their associated connection
- * information.
- *
- * @typedef {Object.<module:thaliMobile.connectionTypes, module:thaliPeerDictionary~PeerConnectionInformation>} PeerConnectionDictionary
- */
-// jscs:enable maximumLineLength
 
 // jscs:disable maximumLineLength
 /**
@@ -125,18 +117,17 @@ module.exports.PeerConnectionInformation = PeerConnectionInformation;
  * @public
  * @param {module:thaliPeerDictionary.peerState} peerState The
  * state of the peer.
- * @param {module:thaliPeerDictionary~PeerConnectionDictionary} peerConnectionDictionary A dictionary
- * of different connection types we know about for this peerIdentity.
+ * @param {module:thaliPeerDictionary~PeerConnectionInformation} peerConnection connection
+ * information that use to connect to the peer.
  * @param {module:thaliNotificationAction~NotificationAction} notificationAction
  * @constructor
  */
 // jscs:enable maximumLineLength
-function NotificationPeerDictionaryEntry(peerState, peerConnectionDictionary,
-                              notificationAction) {
+function NotificationPeerDictionaryEntry(peerState, notificationAction) {
   this.peerState = peerState;
-  this.peerConnectionDictionary = peerConnectionDictionary;
   this.notificationAction = notificationAction;
   this.waitingTimeout = null;
+  this.retryCounter = 0;
 }
 
 /**
@@ -146,14 +137,6 @@ function NotificationPeerDictionaryEntry(peerState, peerConnectionDictionary,
  * @type {module:thaliPeerDictionary.peerState}
  */
 NotificationPeerDictionaryEntry.prototype.peerState = null;
-
-/**
- * The current peer connection dictionary
- *
- * @public
- * @type {module:thaliPeerDictionary.PeerConnectionDictionary}
- */
-NotificationPeerDictionaryEntry.prototype.peerConnectionDictionary = null;
 
 /**
  * The notification action (if any) associated with the peer.
@@ -171,6 +154,14 @@ NotificationPeerDictionaryEntry.prototype.notificationAction = null;
  * @type {?timeoutObject}
  */
 NotificationPeerDictionaryEntry.prototype.waitingTimeout = null;
+
+/**
+ * The retry number.
+ *
+ * @public
+ * @type {number}
+ */
+NotificationPeerDictionaryEntry.prototype.retryCounter = null;
 
 module.exports.NotificationPeerDictionaryEntry =
   NotificationPeerDictionaryEntry;
@@ -236,10 +227,26 @@ PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
  */
 PeerDictionary.prototype.remove = function (peerId) {
   var entry = this.get(peerId);
-  assert(entry !== null, 'entry not found');
+  if (!entry) {
+    return;
+  }
   entry.waitingTimeout && clearTimeout(entry.waitingTimeout);
+  entry.notificationAction &&
+    entry.notificationAction.eventEmitter.removeAllListeners(
+    ThaliNotificationAction.Events.Resolved);
   entry.notificationAction && entry.notificationAction.kill();
   delete this._dictionary[peerId];
+};
+
+/**
+ * Removes all entries from the dictionary.
+ * @public
+ */
+PeerDictionary.prototype.removeAll = function () {
+  var self = this;
+  Object.keys(this._dictionary).forEach(function (key) {
+    self.remove(key);
+  });
 };
 
 /**

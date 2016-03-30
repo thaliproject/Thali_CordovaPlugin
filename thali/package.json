@@ -15,7 +15,7 @@
     "node-uuid": "^1.4.7",
     "request": "^2.64.0",
     "urlsafe-base64": "^1.0.0",
-    "winston": "^1.0.2"
+    "winston": "^2.2.0"
   },
   "devDependencies": {
     "jsdoc": "^3.3.3"
@@ -26,7 +26,7 @@
       "depotName": "Thali_CordovaPlugin",
       "branchName": "npmv2.1.0"
     },
-    "btconnectorlib2": "0.2.9",
+    "btconnectorlib2": "0.3.0",
     "jxcore-cordova": "0.1.1"
   },
   "scripts": {

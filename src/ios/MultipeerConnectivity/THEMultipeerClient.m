@@ -59,10 +59,12 @@ static NSString * const PEER_IDENTIFIER_KEY  = @"PeerIdentifier";
   
   // Map of pending reverse connections (the connections we initiated
   // but will be completed by the remote connecting back to us)
-  NSMutableDictionary *_pendingReverseConnections;
+  NSMutableDictionary<NSString *, ClientConnectCallback> *_pendingReverseConnections;
+  NSMutableDictionary<NSString *, NSTimer *> *_pendingReverseConnectionTimeouts;
 }
 
-static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
+static const int REVERSE_CONNECTION_TIMEOUT = 10; // Wait max 10 seconds for a reverse connection to complete
+static const int MAX_PENDING_REVERSE_CONNECTIONS = 64; // Don't allow more than 64 reverse connections to be pending
 
 - (id)initWithPeerId:(MCPeerID *)peerId
                         withServiceType:(NSString *)serviceType
@@ -85,7 +87,10 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
   _sessionStateDelegate = sessionDelegate;
   _multipeerDiscoveryDelegate = discoveryDelegate;
 
+  // ARC has annoying rules about storing callbacks in structs and similar so I can't
+  // easily have a single dict to hold both callbacks an timeouts
   _pendingReverseConnections = [[NSMutableDictionary alloc] init];
+  _pendingReverseConnectionTimeouts = [[NSMutableDictionary alloc] init];
   
   return self;
 }
@@ -148,6 +153,18 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
   connectCallback(nil, connection);
 }
 
+- (void)callConnectCallback:(ClientConnectCallback)connectCallback withError:(NSString *)error
+{
+  NSMutableDictionary *connection = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
+    [NSNumber numberWithInteger:0], @"listeningPort",
+    [NSNumber numberWithInteger:0], @"clientPort",
+    [NSNumber numberWithInteger:0], @"serverPort",
+    nil
+  ];
+
+  connectCallback(error, connection);
+}
+
 - (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
                     withConnectCallback:(ClientConnectCallback)connectCallback
 {
@@ -174,18 +191,28 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
     {
       // We're already in the process of accepting a connection from this peer
       // Just wait for it to complete.
+      
+      NSString *remotePeerUUID = [THEMultipeerPeerSession peerUUIDFromPeerIdentifier:peerIdentifier];
 
       NSLog(@"client: server already connecting");
       @synchronized(_pendingReverseConnections)
       {
         if ([_pendingReverseConnections count] < MAX_PENDING_REVERSE_CONNECTIONS)
         {
-          _pendingReverseConnections[peerIdentifier] = connectCallback;
+          _pendingReverseConnections[remotePeerUUID] = [connectCallback copy];
+          dispatch_async(dispatch_get_main_queue(), ^{
+            _pendingReverseConnectionTimeouts[remotePeerUUID] =
+              [NSTimer scheduledTimerWithTimeInterval:REVERSE_CONNECTION_TIMEOUT
+                                               target:self
+                                             selector:@selector(didTimeoutWaitingForReverseConnection:)
+                                             userInfo:remotePeerUUID
+                                              repeats:NO];
+          });
           return YES;
         }
         else
         {
-          NSLog( @"client: connect: too many pending reverse connections");
+          NSLog(@"client: connect: too many pending reverse connections");
           connectCallback(@"Too many pending reverse connections", 0);
           return NO;
         }
@@ -224,7 +251,17 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
             NSLog(@"client: server will connect");
             @synchronized(_pendingReverseConnections)
             {
-              _pendingReverseConnections[remotePeerUUID] = connectCallback;
+              _pendingReverseConnections[remotePeerUUID] = [connectCallback copy];
+              
+              // Need to schedule timers on main thread
+              dispatch_async(dispatch_get_main_queue(), ^{
+                _pendingReverseConnectionTimeouts[remotePeerUUID] =
+                  [NSTimer scheduledTimerWithTimeInterval:REVERSE_CONNECTION_TIMEOUT
+                                                   target:self
+                                                 selector:@selector(didTimeoutWaitingForReverseConnection:)
+                                                 userInfo:remotePeerUUID
+                                                  repeats:NO];
+              });
             }
 
             [clientSession reverseConnect];
@@ -254,7 +291,7 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
         else
         {
           NSLog(@"client: already connect(ing/ed) to %@", peerIdentifier);
-          connectCallback(@"Aleady connecting", 0);
+          connectCallback(@"Already connect(ing/ed)", 0);
           success = NO;
         }
       }
@@ -272,7 +309,7 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
   return success;
 }
 
-- (BOOL)killConnection:(NSString *)peerUUID
+- (BOOL)killConnections:(NSString *)peerUUID
 {
   __block BOOL success = NO;
 
@@ -308,13 +345,41 @@ static const int MAX_PENDING_REVERSE_CONNECTIONS = 64;
   {
     ClientConnectCallback connectCallback = [_pendingReverseConnections objectForKey:peerIdentifier];
     
-    if (connectCallback != nil)
+    if (connectCallback)
     {
       [self callConnectCallback:connectCallback withListeningPort:0
                                                    withClientPort:clientPort
                                                    withServerPort:serverPort];
     }
+    
     [_pendingReverseConnections removeObjectForKey:peerIdentifier];
+
+    // Clean up any timer
+    NSTimer *timer = [_pendingReverseConnectionTimeouts objectForKey:peerIdentifier];
+    if (timer)
+    {
+      [timer invalidate];
+    }
+    [_pendingReverseConnectionTimeouts removeObjectForKey:peerIdentifier];
+  }
+}
+
+- (void)didTimeoutWaitingForReverseConnection:(NSTimer *)timer
+{
+  // We waited in vain for a reverseConnection that never came
+  
+  @synchronized(_pendingReverseConnections)
+  {
+    NSString *peerIdentifier = [timer userInfo];
+    ClientConnectCallback connectCallback = [_pendingReverseConnections objectForKey:peerIdentifier];
+    
+    if (connectCallback != nil)
+    {
+      [self callConnectCallback:connectCallback withError:@"Timed out awaiting reverse connection"];
+    }
+    
+    [_pendingReverseConnections removeObjectForKey:peerIdentifier];
+    [_pendingReverseConnectionTimeouts removeObjectForKey:peerIdentifier];
   }
 }
 
