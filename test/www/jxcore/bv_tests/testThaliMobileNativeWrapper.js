@@ -154,7 +154,7 @@ function trivialEndToEndTestScafold(t, needManualNotify,
     );
 
     var end = function () {
-      callback && callback() || t.end();
+      callback ? callback() : t.end();
     };
 
     testUtils.get('127.0.0.1', peer.portNumber, testPath, pskIdentity, pskKey)

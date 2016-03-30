@@ -534,7 +534,7 @@ var radioState = {
  * cannot count the number of instances of this event in order to count how many
  * connections were missed. This also means that the native layer is only
  * required to track exactly one instance of this event for any given port
- * within the 100 ms window. In other words if the systetm is listening on port
+ * within the 100 ms window. In other words if the system is listening on port
  * X and 10,000 incoming requests come for port X within 100 ms (that would be
  * impressive) then the native layer is only obligated to send up exactly one
  * notification of the problem. This is because the native app only needs to

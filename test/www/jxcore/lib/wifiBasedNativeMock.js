@@ -525,9 +525,22 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
       clientPort: 0,
       serverPort: 0
     }));
+    
+    setTimeout(function () {
+      if (!peerProxySockets[peerIdentifier]) {
+        // Either the code that called connect didn't connect within the allowed
+        // window or the server already failed.
+        cleanProxyServer();
+      }
+    }, 2000);
   }
   
+  var cleanProxyServerCalled = false;
   function cleanProxyServer() {
+    if (cleanProxyServerCalled) {
+      return;
+    }
+    cleanProxyServerCalled = true;
     peerConnections[peerIdentifier] &&
       peerConnections[peerIdentifier].destroy();
     peerProxySockets[peerIdentifier] &&
@@ -541,6 +554,7 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
         })
         .catch(function (err) {
           logger.debug('Got error closing server ' + err);
+          throw err;
         });
   }
 
