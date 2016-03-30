@@ -1,10 +1,10 @@
 'use strict';
 
 var express = require('express');
-var https = require('https');
 var net = require('net');
 var Promise = require('lie');
 var sinon = require('sinon');
+var testUtils = require('../lib/testUtils.js');
 
 if (typeof Mobile === 'undefined') {
   return;
@@ -24,6 +24,8 @@ var test = tape({
   teardown: function (t) {
     thaliMobileNativeWrapper.stop()
     .then(function () {
+      t.equals(thaliMobileNativeWrapper._isStarted(), false,
+        'must be stopped');
       t.end();
     })
     .catch(function (err) {
@@ -133,7 +135,7 @@ test('error returned with bad router', function (t) {
 });
 
 function trivialEndToEndTestScafold(t, needManualNotify,
-  clientResponseHandler, pskIdtoSecret, pskIdentity, pskKey, testData) {
+  pskIdtoSecret, pskIdentity, pskKey, testData, callback) {
   var testPath = '/test';
   var router = express.Router();
   router.get(testPath, function (req, res) {
@@ -141,28 +143,29 @@ function trivialEndToEndTestScafold(t, needManualNotify,
   });
 
   var peerAvailabilityHandler = function (peer) {
+    // Ignore peer unavailable events
+    if (peer.portNumber === null) {
+      return;
+    }
     t.ok(true, 'found a peer! ' + JSON.stringify(peer));
     thaliMobileNativeWrapper.emitter.removeListener(
       'nonTCPPeerAvailabilityChangedEvent',
       peerAvailabilityHandler
     );
 
-    var request = https.request({
-      hostname: '127.0.0.1',
-      port: peer.portNumber,
-      path: testPath,
-      agent: false,
-      pskIdentity: pskIdentity,
-      pskKey: pskKey
-    }, clientResponseHandler);
-    request.on('error', function (error) {
+    var end = function () {
+      callback && callback() || t.end();
+    };
+
+    testUtils.get('127.0.0.1', peer.portNumber, testPath, pskIdentity, pskKey)
+    .then(function (responseBody) {
+      t.equal(responseBody, testData, 'response body should match testData');
+      end();
+    })
+    .catch(function (error) {
       t.fail(error);
-      t.end();
+      end();
     });
-    // Wait for 15 seconds since the request can take a while
-    // in mobile environment over a non-TCP transport.
-    request.setTimeout(15 * 1000 * 1000);
-    request.end();
   };
 
   thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
@@ -182,23 +185,10 @@ function trivialEndToEndTestScafold(t, needManualNotify,
     });
 }
 
-function trivialEndToEndTest(t, needManualNotify) {
+function trivialEndToEndTest(t, needManualNotify, callback) {
   var pskIdentity = 'I am me!';
   var pskKey = new Buffer('I am a reasonable long string');
   var testData = 'foobar';
-
-  function clientResponseHandler(response) {
-    t.equal(response.statusCode, 200, 'server should return 200');
-    var responseBody = '';
-    response.on('data', function (data) {
-      responseBody += data;
-    });
-    response.on('end', function () {
-      t.equal(responseBody, testData, 'response body should match testData');
-      t.end();
-    });
-    response.resume();
-  }
 
   function pskIdToSecret(id) {
     t.equal(id, pskIdentity, 'Should only get expected id');
@@ -206,24 +196,20 @@ function trivialEndToEndTest(t, needManualNotify) {
   }
 
   trivialEndToEndTestScafold(t, needManualNotify,
-    clientResponseHandler, pskIdToSecret, pskIdentity, pskKey, testData);
+    pskIdToSecret, pskIdentity, pskKey, testData, callback);
 }
 
-function trivialBadEndtoEndTest(t, needManualNotify) {
+function trivialBadEndtoEndTest(t, needManualNotify, callback) {
   var pskIdentity = 'Yo ho ho';
   var pskKey = new Buffer('It really does not matter');
   var testData = 'Not important';
-
-  function clientResponseHandler(response) {
-    console.log(response);
-  }
 
   function pskIdToSecret() {
     return null;
   }
 
   trivialEndToEndTestScafold(t, needManualNotify,
-    clientResponseHandler, pskIdToSecret, pskIdentity, pskKey, testData);
+    pskIdToSecret, pskIdentity, pskKey, testData, callback);
 }
 
 var connectionTester = function (port, callback) {
@@ -567,30 +553,44 @@ test('we successfully receive and replay discoveryAdvertisingStateUpdate',
       );
     };
     var doChecks = function (discoveryActive, advertisingActive, callback) {
-      thaliMobileNativeWrapper.emitter.once(
-        'discoveryAdvertisingStateUpdateNonTCP',
-        function (discoveryAdvertisingStateUpdateValue) {
+      var previousStateUpdateValue = {};
+      var checkingStopping = false;
+      var stateUpdateHandler = function (stateUpdateValue) {
+        // Ignore duplicates
+        if (stateUpdateValue.advertisingActive ===
+            previousStateUpdateValue.advertisingActive &&
+            stateUpdateValue.discoveryActive ===
+            previousStateUpdateValue.discoveryActive) {
+          return;
+        }
+        previousStateUpdateValue = stateUpdateValue;
+        if (!checkingStopping) {
           doEqualsChecks(
-            discoveryAdvertisingStateUpdateValue,
+            stateUpdateValue,
             discoveryActive,
             advertisingActive
           );
-          thaliMobileNativeWrapper.emitter.once(
-            'discoveryAdvertisingStateUpdateNonTCP',
-            function (discoveryAdvertisingStateUpdateValue) {
-              doEqualsChecks(
-                discoveryAdvertisingStateUpdateValue,
-                false,
-                false
-              );
-              thaliMobileNativeWrapper.start(express.Router())
-              .then(function () {
-                callback();
-              });
-            }
-          );
+          checkingStopping = true;
           thaliMobileNativeWrapper.stop();
+        } else {
+          doEqualsChecks(
+            stateUpdateValue,
+            false,
+            false
+          );
+          thaliMobileNativeWrapper.start(express.Router())
+          .then(function () {
+            thaliMobileNativeWrapper.emitter.removeListener(
+              'discoveryAdvertisingStateUpdateNonTCP',
+              stateUpdateHandler
+            );
+            callback();
+          });
         }
+      };
+      thaliMobileNativeWrapper.emitter.on(
+        'discoveryAdvertisingStateUpdateNonTCP',
+        stateUpdateHandler
       );
     };
     var checkDiscovery = function (callback) {
@@ -616,8 +616,47 @@ if (!tape.coordinated) {
   return;
 }
 
+var endToEndWithStateCheck = function (t) {
+  trivialEndToEndTest(t, false, function () {
+    t.equals(thaliMobileNativeWrapper._isStarted(), true, 'must be started');
+    t.end();
+  });
+};
+
 test('can do HTTP requests between peers', function (t) {
-  trivialEndToEndTest(t, false);
+  endToEndWithStateCheck(t);
+});
+
+test('can still do HTTP requests between peers', function (t) {
+  endToEndWithStateCheck(t);
+});
+
+// The connection cut is implemented as a separate test instead
+// of doing it in the middle of the actual test so that the
+// step gets coordinated between peers.
+test('test to coordinate connection cut', function (t) {
+  // This cuts connections on Android.
+  testUtils.toggleBluetooth(false)
+  .then(function () {
+    // This cuts connections on iOS.
+    return thaliMobileNativeWrapper.killConnections();
+  })
+  .then(function () {
+    t.end();
+  })
+  .catch(function () {
+    t.end();
+  });
+});
+
+test('can do HTTP requests after connections are cut', function (t) {
+  // Turn Bluetooth back on so that Android can operate
+  // (iOS does not require separate call to operate since
+  // killConnections is more like a single-shot thing).
+  testUtils.toggleBluetooth(true)
+  .then(function () {
+    endToEndWithStateCheck(t);
+  });
 });
 
 test('will fail bad PSK connection between peers', function (t) {
@@ -626,30 +665,3 @@ test('will fail bad PSK connection between peers', function (t) {
   t.ok(true, 'FIX ME, PLEASE!!!');
   t.end();
 });
-
-/*
-// TODO: This one is more challenging, because there needs to be coordination
-// between the peers about when an HTTP request is complete so that the
-// other side knows when it can stop (and ramp down everything).
-// A simple workaround will be just to run the test a few times so the
-// coordination will happen in setup / teardown.
-test('can do requests between peers after start and stop', function (t) {
-  trivialEndToEndTest(t, false, function () {
-    t.equals(thaliMobileNativeWrapper._isStarted(), true, 'must be started');
-    thaliMobileNativeWrapper.stop()
-    .then(function () {
-      t.equals(thaliMobileNativeWrapper._isStarted(), false, 'must be stopped');
-      trivialEndToEndTest(t, false, function () {
-        t.equals(thaliMobileNativeWrapper._isStarted(), true,
-          'must be started');
-        thaliMobileNativeWrapper.stop()
-        .then(function () {
-          t.equals(thaliMobileNativeWrapper._isStarted(), false,
-            'must be stopped');
-          t.end();
-        });
-      });
-    });
-  });
-});
-*/

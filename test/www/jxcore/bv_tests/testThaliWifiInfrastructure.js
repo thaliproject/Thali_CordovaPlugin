@@ -430,6 +430,39 @@ test('functions are run from a queue in the right order', function (t) {
   });
 });
 
+test('does not get peer changes from self', function (t) {
+  var knownOwnUsns = [];
+
+  var peerChangedListener = function (peer) {
+    t.equal(knownOwnUsns.indexOf(peer.peerIdentifier), -1,
+      'we should not get notified about any USN that we have used');
+  };
+
+  wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerChangedListener);
+  wifiInfrastructure.startListeningForAdvertisements()
+  .then(function () {
+    return wifiInfrastructure.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    knownOwnUsns.push(wifiInfrastructure.usn);
+    setTimeout(function () {
+      wifiInfrastructure.startUpdateAdvertisingAndListening()
+      .then(function () {
+        t.equal(knownOwnUsns.indexOf(wifiInfrastructure.usn), -1,
+          'USN must have changed again');
+        knownOwnUsns.push(wifiInfrastructure.usn);
+      });
+      setTimeout(function () {
+        wifiInfrastructure.removeListener(
+          'wifiPeerAvailabilityChanged',
+          peerChangedListener
+        );
+        t.end();
+      }, ThaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2);
+    }, ThaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2);
+  });
+});
+
 // From here onwards, tests only work on mocked up desktop
 // environment where network changes can be simulated.
 if (jxcore.utils.OSInfo().isMobile) {

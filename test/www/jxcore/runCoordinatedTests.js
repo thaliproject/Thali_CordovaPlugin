@@ -29,10 +29,14 @@ var logInstanceOutput = function (data, instanceId) {
   instanceLogs[instanceId] += data;
 
   if (argv.serverLogs && instanceId === 0) {
-    console.log(data + '\n');
+    jxcore.utils.console.log(data + '');
   } else if (argv.instanceLogs) {
-    console.log('Instance ' + instanceId + ':');
-    console.log(data + '\n');
+    var colors = [
+      'green',
+      'blue',
+      'yellow'
+    ];
+    jxcore.utils.console.log(data + '', colors[instanceId - 1]);
   }
 };
 

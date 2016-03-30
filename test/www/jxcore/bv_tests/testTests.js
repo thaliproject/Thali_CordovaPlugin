@@ -32,9 +32,14 @@ if (!tape.coordinated) {
 }
 
 test('can pass data in setup', function (t) {
+  var uuidFound = false;
   t.participants.forEach(function (participant) {
+    if (tape.uuid === participant.uuid) {
+      uuidFound = true;
+    }
     t.ok(participant.uuid, 'test participant has uuid');
     t.equals(participant.data, customData, 'participant data matches');
   });
+  t.equals(uuidFound, true, 'own UUID is found from the participants list');
   t.end();
 });

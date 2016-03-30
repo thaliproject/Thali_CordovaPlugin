@@ -206,11 +206,11 @@ thaliTape.begin = function () {
       platform = 'ios';
     }
 
-    var _uuid = uuid.v4();
+    thaliTape.uuid = uuid.v4();
     testServer.emit('present', JSON.stringify({
       'os': platform,
       'name': testUtils.getName(),
-      'uuid': _uuid,
+      'uuid': thaliTape.uuid,
       'type': 'unittest',
       'tests': Object.keys(tests)
     }));
