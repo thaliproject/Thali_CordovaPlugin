@@ -83,8 +83,7 @@
   }
 
   function logCallback(data) {
-    console.log('logCallback ' + data);
-    document.getElementById('LogBox').value = data + '\n' + 
-      document.getElementById('LogBox').value;
+    var logBox = document.getElementById('LogBox');
+    logBox.value = data + '\n' + logBox.value;
   }
 }());

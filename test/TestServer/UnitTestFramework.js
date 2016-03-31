@@ -27,8 +27,13 @@ function UnitTestFramework(testConfig, _logger)
   var self = this;
   self.runningTests = Object.keys(self.requiredDevices).filter(
     function (platform) {
+      logger.info(
+        'Require %d %s devices',
+        self.requiredDevices[platform], platform
+      );
       return self.requiredDevices[platform];
-    });
+    }
+  );
 }
 
 util.inherits(UnitTestFramework, TestFramework);

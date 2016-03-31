@@ -51,6 +51,10 @@ io.on('connection', function (socket) {
     );
   });
 
+  socket.on('error', function (error) {
+    logger.error(error);
+  });
+
   socket.on('present', function (msg) {
 
     // present - The device is announcing it's presence and telling us

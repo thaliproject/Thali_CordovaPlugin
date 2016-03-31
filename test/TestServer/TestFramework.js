@@ -49,6 +49,9 @@ function TestFramework(testConfig, userConfig, _logger) {
     } else {
       self.requiredDevices[platform] = self.availableDevices[platform];
     }
+    if (self.requiredDevices[platform] > self.availableDevices[platform]) {
+      self.requiredDevices[platform] = self.availableDevices[platform];
+    }
   });
 }
 

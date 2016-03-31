@@ -71,7 +71,7 @@ module.exports.logMessageToScreen = function (message) {
   if (isFunction(logCallback)) {
     logCallback(message);
   } else {
-    console.log('logCallback not set !!!!');
+    logger.warn('logCallback not set!');
   }
 };
 
@@ -85,7 +85,11 @@ var myNameCallback = null;
  */
 module.exports.setName = function (name) {
   myName = name;
-  myNameCallback && myNameCallback(myName);
+  if (isFunction(myNameCallback)) {
+    myNameCallback(name);
+  } else {
+    logger.warn('myNameCallback not set!');
+  }
 };
 
 /**
@@ -102,6 +106,11 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
 
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
+    // If the name is already set, pass it to the callback
+    // right away.
+    if (myName) {
+      myNameCallback(myName);
+    }
   });
 } else {
   logCallback = function (message) {
