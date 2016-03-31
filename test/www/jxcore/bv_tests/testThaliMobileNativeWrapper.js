@@ -154,7 +154,7 @@ function trivialEndToEndTestScafold(t, needManualNotify,
     );
 
     var end = function () {
-      callback && callback() || t.end();
+      callback ? callback() : t.end();
     };
 
     testUtils.get('127.0.0.1', peer.portNumber, testPath, pskIdentity, pskKey)
@@ -358,11 +358,11 @@ test('make sure we actually call kill connections properly', function (t) {
     }
   })
   .catch(function (error) {
-    if (jxcore.utils.OSInfo().isAndroid) {
-      t.equals(error.message, 'Not Supported', 'specific error expected');
+    if (jxcore.utils.OSInfo().isIOS) {
+      t.fail('should not fail on iOS');
       t.end();
     } else {
-      t.fail('should not fail on iOS');
+      t.equals(error.message, 'Not Supported', 'specific error expected');
       t.end();
     }
   });
