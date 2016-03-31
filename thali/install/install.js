@@ -14,7 +14,6 @@ var FILE_NOT_FOUND = 'ENOENT';
 // project to this Cordova project.
 var MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT = 'localdev';
 
-
 // I tried child-process-promise but it failed without errors and I just don't
 // have time to fight with it right now.
 function childProcessExecPromise(command, currentWorkingDirectory) {
@@ -33,7 +32,6 @@ function childProcessExecPromise(command, currentWorkingDirectory) {
       });
   });
 }
-
 
 // Unfortunately the obvious library, request-promise, doesn't handle streams
 // well so it would take the multi-megabyte ZIP response file and turn it into
@@ -81,6 +79,31 @@ function getEtagFromEtagFile(depotName, branchName, directoryToInstallIn) {
         return Promise.reject(err);
       } else {
         return Promise.resolve();
+      }
+    });
+}
+
+/**
+ * This method is used to retrieve the release configuration data
+ * stored in the releaseConfig.json
+ *
+ * @returns {Promise}
+ */
+function getReleaseConfig() {
+  var configFileName = path.join(__dirname, '../', 'package.json');
+
+  return fs.readFileAsync(configFileName, "utf-8")
+    .then(function (data) {
+      var conf;
+      try {
+        conf = JSON.parse(data);
+        if (conf && conf.thaliInstall) {
+          return conf.thaliInstall;
+        }
+        return Promise.reject("Configuration error!");
+      }
+      catch (err) {
+        return Promise.reject(new Error(err));
       }
     });
 }
@@ -307,11 +330,18 @@ module.exports = function (callback, appRootDirectory) {
 
   var jxCoreVersionNumber = '0.1.2';
 
-  var thaliProjectName = 'thaliproject';
-  var thaliDepotName = 'Thali_CordovaPlugin';
-  var thaliBranchName = 'npmv2.1.0';
+  var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
 
-  fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, jxCoreVersionNumber)
+  getReleaseConfig(thaliDontCheckIn)
+    .then(function (conf) {
+
+      thaliProjectName = conf.thali.projectName;
+      thaliDepotName = conf.thali.depotName;
+      thaliBranchName = conf.thali.branchName;
+      btconnectorlib2 = conf.btconnectorlib2;
+
+      return fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, conf["jxcore-cordova"])
+    })
     .then(function () {
       if (doesMagicDirectoryNamedExist(thaliDontCheckIn)) {
         return copyDevelopmentThaliCordovaPluginToProject(appRootDirectory,
@@ -322,6 +352,17 @@ module.exports = function (callback, appRootDirectory) {
         return installGitHubZip(thaliProjectName, thaliDepotName,
                                 thaliBranchName, thaliDontCheckIn);
       }
+    }).then(function(thaliCordovaPluginUnZipResult){
+      // This step is used to prepare the gradle.properties file
+      // containing the btconnectorlib2 version
+      var projectDir = createUnzippedDirectoryPath(thaliDepotName, thaliBranchName, thaliDontCheckIn);
+      var gradleFileName = path.join(projectDir, 'src', 'android', 'gradle.properties');
+
+      return fs.writeFileAsync(gradleFileName,
+        "btconnectorlib2Version=" + btconnectorlib2)
+        .then(function() {
+          return thaliCordovaPluginUnZipResult;
+        });
     })
     .then(function (thaliCordovaPluginUnZipResult) {
       if (thaliCordovaPluginUnZipResult.directoryUpdated) {

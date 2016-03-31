@@ -21,6 +21,15 @@
   "devDependencies": {
     "jsdoc": "^3.3.3"
   },
+  "thaliInstall": {
+    "thali": {
+      "projectName": "thaliproject",
+      "depotName": "Thali_CordovaPlugin",
+      "branchName": "npmv2.1.0"
+    },
+    "btconnectorlib2": "0.3.0",
+    "jxcore-cordova": "0.1.1"
+  },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",
     "postpublish": "jx install/postPublishThaliCordovaPlugin.js",

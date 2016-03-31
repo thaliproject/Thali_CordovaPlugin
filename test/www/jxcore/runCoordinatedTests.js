@@ -33,10 +33,19 @@ var logInstanceOutput = function (data, instanceId) {
   } else if (argv.instanceLogs) {
     var colors = [
       'green',
-      'blue',
-      'yellow'
+      'cyan',
+      'yellow',
+      'magenta',
+      'grey'
     ];
-    jxcore.utils.console.log(data + '', colors[instanceId - 1]);
+
+    // Use grey color for instances that don't have
+    // own color in the colors array.
+    var color = instanceId <= colors.length ?
+      instanceId - 1 : colors.length-1;
+
+    jxcore.utils.console.log(data + '', colors[color]);
+
   }
 };
 
