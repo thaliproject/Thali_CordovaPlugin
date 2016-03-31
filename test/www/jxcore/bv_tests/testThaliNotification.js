@@ -2,12 +2,8 @@
 var tape = require('../lib/thali-tape');
 var express = require('express');
 var crypto = require('crypto');
-var sinon = require('sinon');
-var Promise = require('lie');
-var http = require('http');
 var https = require('https');
 
-var proxyquire = require('proxyquire').noCallThru();
 var ThaliNotificationClient =
   require('thali/NextGeneration/notification/thaliNotificationClient');
 var ThaliNotificationServer =
@@ -16,8 +12,6 @@ var ThaliMobile =
   require('thali/NextGeneration/thaliMobile');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-var makeIntoCloseAllServer =
-  require('thali/NextGeneration/makeIntoCloseAllServer');
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
@@ -33,207 +27,45 @@ var globals = {};
  * functionality that are common to most of the ThaliNoficationtests.
  */
 var GlobalVariables = function () {
-
-  this.local = true;
   this.expressApp = express();
   this.expressRouter = express.Router();
-
-  // Creates a proxyquired ThaliNotificationServer class.
-  var MockThaliMobile = { };
-  this.ThaliNotificationServerProxyquired =
-    proxyquire('thali/NextGeneration/notification/thaliNotificationServer',
-      { '../thaliMobile':
-      MockThaliMobile});
-
-  // Mocks ThaliMobile.startUpdateAdvertisingAndListening function
-  MockThaliMobile.startUpdateAdvertisingAndListening = function () {
-    console.log('startUpdateAdvertisingAndListening');
-    return Promise.resolve();
-  };
-
-  // Mocks ThaliMobile.stopAdvertisingAndListening function
-  MockThaliMobile.stopAdvertisingAndListening = function () {
-    console.log('stopAdvertisingAndListening');
-    return Promise.resolve();
-  };
-
-  this.TCPEvent = {
-    peerIdentifier: 'id123',
-    hostAddress: '127.0.0.1',
-    portNumber: 0,
-    connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
-    suggestedTCPTimeout: 10000
-  };
-};
-
-GlobalVariables.prototype.initLocal = function () {
-  var self = this;
-  self.createKeysForLocalTest();
-  // Initializes ThaliNotificationServer
-  self.notificationServer = new globals.ThaliNotificationServerProxyquired(
-    self.expressRouter, globals.serverKeyExchangeObject, 90000);
-
-  return new Promise(function (resolve, reject) {
-
-    var options = {
-      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-      pskCallback: self.notificationServer.getPskIdToSecret(),
-      key: thaliConfig.BOGUS_KEY_PEM,
-      cert: thaliConfig.BOGUS_CERT_PEM
-    };
-
-    self.expressApp.use('/', self.expressRouter);
-    self.expressServer = self.expressApp.listen(0, function (err) {
-      if (err) {
-        reject(err);
-      } else {
-        makeIntoCloseAllServer(self.expressServer);
-        self.TCPEvent.portNumber = self.expressServer.address().port;
-        resolve();
-      }
-    });
-  });
-};
-
-GlobalVariables.prototype.initCoordinated = function () {
-  this.local = false;
   this.expressApp.use('/', this.expressRouter);
-};
-
-/**
- * Frees GlobalVariables instance's resources.
- * @returns {Promise<?Error>} Returns a promise that will resolve when the
- * resources are released.
- */
-GlobalVariables.prototype.kill = function () {
-  if (this.expressServer && this.local) {
-    return this.expressServer.closeAllPromise();
-  }
-  return Promise.resolve();
-};
-
-GlobalVariables.prototype.createKeysForLocalTest = function () {
-
-  // These keys are for local test
-  this.targetPublicKeysToNotify = [];
-  this.targetDeviceKeyExchangeObjects = [];
-
-  this.serverKeyExchangeObject = crypto.createECDH(SECP256K1);
-  this.serverPublicKey = this.serverKeyExchangeObject.generateKeys();
-
-  var device1 = crypto.createECDH(SECP256K1);
-  var device1Key = device1.generateKeys();
-  var device2 = crypto.createECDH(SECP256K1);
-  var device2Key = device2.generateKeys();
-
-  this.targetPublicKeysToNotify.push(device1Key, device2Key);
-  this.targetDeviceKeyExchangeObjects.push(device2, device2);
-
-};
-
-GlobalVariables.prototype.createKeysForCoordinatedTest = function () {
   this.ecdh = crypto.createECDH(SECP256K1);
   this.myKeyExchangeObject = this.ecdh.generateKeys();
   this.myPublicBase64 = this.ecdh.getPublicKey('base64');
+
+  // This counters is used to track that we can make a successful https
+  // request to all peers.
+  this.httpsResponseCountSuccess = 0;
+  this.httpsResponseCountFailed = 0;
+
+  // This counter is used to track that all peers can make succesfull
+  // https request to our server.
+
+  this.httpsServerRequestCount = 0;
+
+
 };
 
 var test = tape({
   setup: function (t) {
     globals = new GlobalVariables();
-
     if (tape.coordinated) {
-      globals.createKeysForCoordinatedTest();
       t.data = globals.myPublicBase64;
     }
     t.end();
   },
 
   teardown: function (t) {
-    globals.kill().then(function () {
-      t.end();
-    }).catch(function (failure) {
-      t.fail('Server cleaning failed:' + failure);
-      t.end();
-    });
+    t.end();
   }
 });
-/*
-test('Client to server request locally', function (t) {
-
-  var p = globals.initLocal();
-
-  p.then(function () {
-
-    var peerPool = new ThaliPeerPoolDefault();
-
-    // Simulates how the peer pool runs actions
-    var enqueue = function (action) {
-      var keepAliveAgent = new http.Agent({ keepAlive: true });
-      action.start(keepAliveAgent).then( function () {
-      }).catch( function ( ) {
-        t.fail('This action should not fail!');
-      });
-    };
-
-    sinon.stub(peerPool, 'enqueue', enqueue);
-
-    // Initialize the ThaliNotificationClient
-    var notificationClient =
-      new ThaliNotificationClient(peerPool,
-        globals.targetDeviceKeyExchangeObjects[0]);
-
-
-
-    notificationClient.on(
-      ThaliNotificationClient.Events.PeerAdvertisesDataForUs, function ( res) {
-
-        t.equals(
-          res.hostAddress,
-          globals.TCPEvent.hostAddress,
-          'Host address must match');
-        t.equals(
-          res.suggestedTCPTimeout,
-          globals.TCPEvent.suggestedTCPTimeout,
-          'suggestedTCPTimeout must match');
-        t.equals(
-          res.connectionType,
-          globals.TCPEvent.connectionType,
-          'connectionType must match');
-        t.equals(
-          res.portNumber,
-          globals.TCPEvent.portNumber,
-          'portNumber must match');
-        notificationClient.stop();
-        notificationServer.stop().then(function () {
-
-          t.end();
-        }).catch(function (failure) {
-          t.fail('Stopping failed:' + failure);
-          t.end();
-        });
-
-      });
-
-    notificationServer.start(globals.targetPublicKeysToNotify).
-    then(function () {
-      notificationClient.start([globals.serverPublicKey]);
-      notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-    });
-
-  }).catch(function (failure) {
-    t.fail('Test setting up failed:' + failure);
-    t.end();
-  });
-
-});
-
- */
 
 if (!tape.coordinated) {
   return;
 }
 
-function connectToPeer(peerDetails){
+function initiateHttpsRequestToPeer(peerDetails){
 
   var options = {
     method: 'GET',
@@ -250,17 +82,18 @@ function connectToPeer(peerDetails){
   var req = https.request(options, function (res) {
     res.on('data', function (chunk) {
       if (chunk){
-        console.log(chunk);
+        var textChunk = chunk.toString('utf8');
+        if (textChunk === HELLO) {
+          globals.httpsResponseCountSuccess++;
+        }
       }
     });
   });
-
   req.on('error', function (err) {
-    console.log('http request error - ' + err);
+    globals.httpsResponseCountFailed++;
+    console.log(err);
   });
-
   req.end();
-
 }
 
 test('Client to server request coordinated', function (t) {
@@ -269,7 +102,10 @@ test('Client to server request coordinated', function (t) {
   // their public keys. Then we wait until we get notification event
   // from each of these peers.
 
-  globals.initCoordinated();
+  // Second phase of the test is to connect to other peers over https.
+  // All peers have a https service and they listen on path /hello.
+  // Each peer needs to make a https request to all other peers it
+  // sees and peer needs to response to all these request.
 
   var addressBook = [];
 
@@ -302,12 +138,13 @@ test('Client to server request coordinated', function (t) {
   var notificationServer = new ThaliNotificationServer(
     globals.expressRouter, globals.ecdh, 90000);
 
-
   // Initializes test server that just says 'hello world'
   var helloWorld = function (req, res) {
-    // req.connection.psIdentity
-    console.log('request');
-    res.send('hello world');
+    // req.connection.pskIdentity
+    globals.httpsServerRequestCount++;
+    res.set('Content-Type', 'text/plain');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(HELLO);
   };
 
   globals.expressRouter.get(HELLO_PATH,
@@ -318,7 +155,8 @@ test('Client to server request coordinated', function (t) {
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
 
-      connectToPeer(res);
+      initiateHttpsRequestToPeer(res);
+
       var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);
       replies[publicKeyHash] = true;
 
@@ -332,19 +170,26 @@ test('Client to server request coordinated', function (t) {
         finished = true;
         ThaliMobile.stopListeningForAdvertisements().then(function () {
           notificationClient.stop();
-          // Kills the server after 6 seconds.
+          // Kills the server after 10 seconds.
           // This gives other peers time to finish their
           // ongoing requests.
           setTimeout( function () {
             notificationServer.stop().then(function () {
               t.pass('received keys from all peers. Peer count:'+
                 addressBook.length);
+
+              t.equal(globals.httpsResponseCountSuccess, addressBook.length,
+                'Peer made right amount of https requests.');
+
+              t.equal(globals.httpsServerRequestCount, addressBook.length,
+              'Peer received right amount of http requests.');
+
               t.end();
             }).catch(function (failure) {
               t.fail('Stopping failed:' + failure);
               t.end();
             });
-          }, 6000);
+          }, 10000);
         }).catch(function (failure) {
           t.fail('Failed to call stopListeningForAdvertisements:' + failure);
           t.end();
@@ -352,7 +197,8 @@ test('Client to server request coordinated', function (t) {
       }
     });
 
-  ThaliMobile.start(globals.expressRouter, notificationServer.getPskIdToSecret())
+  ThaliMobile.start(globals.expressRouter,
+    notificationServer.getPskIdToSecret())
   .then(function () {
     return notificationServer.start(addressBook);
   }).then(function () {
