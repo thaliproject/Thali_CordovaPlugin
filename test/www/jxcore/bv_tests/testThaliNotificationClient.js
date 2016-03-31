@@ -20,11 +20,12 @@ var ThaliPeerPoolDefault =
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 
-var makeIntoCloseAllServer =
-  require('thali/NextGeneration/makeIntoCloseAllServer');
-
-var ThaliConfig =
+var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
+
+var pskIdToSecret = function (id) {
+  return id === thaliConfig.BEACON_PSK_IDENTITY ? thaliConfig.BEACON_KEY : null;
+};
 
 var SECP256K1 = 'secp256k1';
 
@@ -48,11 +49,6 @@ var GlobalVariables = function () {
   this.peerPoolInterface = new ThaliPeerPoolDefault();
   this.peerPoolInterfaceStub = new ThaliPeerPoolDefault();
 
-  var enqueue = function () {
-  };
-
-  this.enqueStub = sinon.stub(this.peerPoolInterfaceStub, 'enqueue', enqueue);
-
   this.TCPEvent = {
     peerIdentifier: 'id124',
     hostAddress: '127.0.0.1',
@@ -62,25 +58,21 @@ var GlobalVariables = function () {
   };
 
   this.originalTimeOuts = ThaliNotificationClient.RETRY_TIMEOUTS;
-
   this.createPublicKeysToNotifyAndPreamble();
 };
 
 GlobalVariables.prototype.init = function () {
   var self = this;
-  return new Promise(function (resolve, reject) {
-    // Initializes the server with the expressRouter
-    self.expressApp.use('/', self.expressRouter);
-    self.expressServer = self.expressApp.listen(0, function (err) {
-      if (err) {
-        reject(err);
-      } else {
-        self.expressServer = makeIntoCloseAllServer(self.expressServer);
-        self.TCPEvent.portNumber = self.expressServer.address().port;
-        resolve();
-      }
+  return httpTester.getTestHttpsServer(self.expressApp,
+    self.expressRouter, pskIdToSecret)
+    .then(function (server) {
+      self.expressServer = server;
+      self.TCPEvent.portNumber = self.expressServer.address().port;
+      return Promise.resolve();
+    })
+    .catch(function (failure) {
+      return Promise.reject(failure);
     });
-  });
 };
 
 /**
@@ -90,7 +82,6 @@ GlobalVariables.prototype.init = function () {
  */
 GlobalVariables.prototype.kill = function () {
 
-  console.log('killed');
   ThaliNotificationClient.RETRY_TIMEOUTS =
     this.originalTimeOuts;
 
@@ -239,7 +230,8 @@ test('Resolves an action locally', function (t) {
 
   // Simulates how the peer pool runs actions
   var enqueue = function (action) {
-    var keepAliveAgent = new http.Agent({ keepAlive: true });
+    var keepAliveAgent = httpTester.getTestAgent(
+      thaliConfig.BEACON_PSK_IDENTITY, thaliConfig.BEACON_KEY);
     action.start(keepAliveAgent).then( function () {
     }).catch( function ( ) {
       t.fail('This action should not fail!');
@@ -249,7 +241,7 @@ test('Resolves an action locally', function (t) {
   sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
 
   httpTester.runServer(globals.expressRouter,
-    ThaliConfig.NOTIFICATION_BEACON_PATH,
+    thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
   var notificationClient =
@@ -295,7 +287,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
 
   var peerPool = new ThaliPeerPoolDefault();
   httpTester.runServer(globals.expressRouter,
-    ThaliConfig.NOTIFICATION_BEACON_PATH,
+    thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
   var notificationClient =
@@ -412,7 +404,7 @@ test('hostaddress is removed when the action is running. ', function (t) {
   sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
 
   httpTester.runServer(globals.expressRouter,
-    ThaliConfig.NOTIFICATION_BEACON_PATH,
+    thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1, 10000); // 10 seconds delay
 
   var notificationClient =

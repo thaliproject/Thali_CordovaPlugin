@@ -3,8 +3,6 @@ var tape = require('../lib/thali-tape');
 var express = require('express');
 var crypto = require('crypto');
 var Promise = require('lie');
-var ForeverAgent = require('forever-agent');
-var https = require('https');
 var testUtils = require('../lib/testUtils.js');
 var httpTester = require('../lib/httpTester.js');
 
@@ -16,8 +14,6 @@ var PeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
-var MakeIntoCloseAllServer =
-  require('thali/NextGeneration/makeIntoCloseAllServer');
 var ThaliPeerAction =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
 var thaliConfig =
@@ -27,12 +23,7 @@ var SECP256K1 = 'secp256k1';
 
 var globals = {};
 
-var pskIdentity = 'I am me!';
-var pskKey = new Buffer('I am a reasonable long string');
 
-var pskIdToSecret = function (id) {
-  return id === pskIdentity ? pskKey : null;
-};
 
 /**
  * @classdesc This class is a container for all variables and
@@ -48,42 +39,21 @@ var GlobalVariables = function () {
   this.sourcePublicKeyHash =
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
 
-  this.actionAgent = new ForeverAgent.SSL({
-    keepAlive: true,
-    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-    maxSockets: Infinity,
-    maxFreeSockets: 256,
-    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-    pskIdentity: pskIdentity,
-    pskKey: pskKey
-  });
+  this.actionAgent = httpTester.getTestAgent();
 
   this.createPublicKeysToNotifyAndPreamble();
 };
 
 GlobalVariables.prototype.init = function () {
   var self = this;
-  return new Promise(function (resolve, reject) {
-    // Initializes the server with the expressRouter
-    self.expressApp.use('/', self.expressRouter);
-
-    var options = {
-      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-      pskCallback : pskIdToSecret,
-      key: thaliConfig.BOGUS_KEY_PEM,
-      cert: thaliConfig.BOGUS_CERT_PEM
-    };
-    
-    self.expressServer = https.createServer(options, self.expressApp).
-      listen(0, function (err) {
-        if (err) {
-          reject(err);
-        } else {
-          MakeIntoCloseAllServer(self.expressServer);
-          resolve();
-        }
-      });
-  });
+  return httpTester.getTestHttpsServer(self.expressApp, self.expressRouter)
+    .then(function (server) {
+      self.expressServer = server;
+      return Promise.resolve();
+    })
+    .catch(function (failure) {
+      return Promise.reject(failure);
+    });
 };
 
 /**
@@ -538,4 +508,3 @@ test('Close the client socket while the client is waiting a response ' +
       });
     }, 2000);
   });
-
