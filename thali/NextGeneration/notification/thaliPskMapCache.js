@@ -27,11 +27,6 @@ function ThaliPskMapCache(millisecondsUntilExpiration) {
  */
 // jscs:enable maximumLineLength
 ThaliPskMapCache.prototype.push = function (dictionary) {
-
-  Object.keys(dictionary).forEach( function (key) {
-    console.log('pushed key:' +key);
-  });
-
   this.clean(true);
   var item = { keySecret: dictionary, expiration : Date.now() +
     this._millisecondsUntilExpiration - 200};
@@ -48,7 +43,6 @@ ThaliPskMapCache.prototype.push = function (dictionary) {
  * is no match.
  */
 ThaliPskMapCache.prototype.getSecret = function (id) {
-  console.log('getSecret:'+id);
   this.clean(false);
   for (var i = this._queue.length - 1 ; i >= 0 ; i--) {
     if (this._queue[i].keySecret[id] &&
@@ -69,7 +63,6 @@ ThaliPskMapCache.prototype.getSecret = function (id) {
  * is no match.
  */
 ThaliPskMapCache.prototype.getPublic = function (id) {
-  console.log('getPublic:'+id);
   this.clean(false);
   for (var i = this._queue.length - 1 ; i >= 0 ; i--) {
     if (this._queue[i].keySecret[id] &&
@@ -88,7 +81,6 @@ ThaliPskMapCache.prototype.getPublic = function (id) {
  * dictionary, if it is full.
  */
 ThaliPskMapCache.prototype.clean = function (forceRemove) {
-
   var clearCount = 0;
   var now = Date.now();
 

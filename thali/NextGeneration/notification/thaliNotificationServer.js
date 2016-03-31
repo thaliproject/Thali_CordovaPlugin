@@ -137,8 +137,8 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
  * non-TCP/IP transport and to disconnect all existing non-TCP/IP
  * transport incoming connections.
  *
- * Errors:
- * 'Failed' - ThaliMobile.stopAdvertisingAndListening failed.
+ * Error codes
+ * 'Failed' - {@link module:ThaliMobile.stopAdvertisingAndListening} failed.
  * Check the logs for details.
  * @returns {Promise<?error>}
  */
@@ -215,7 +215,6 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
 ThaliNotificationServer.prototype.getPskIdToSecret = function () {
   var self = this;
   return function (id) {
-    console.log('getPskIdToSecret:' + id);
     if (!self._secrets) {
       return null;
     }

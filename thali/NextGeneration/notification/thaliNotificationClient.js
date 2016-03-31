@@ -202,12 +202,12 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
     }
 
     // Todo: clean when coordinated tests are done
-    console.log('_peerAvailabilityChanged');
-    console.log('peerIdentifier:' + peerStatus.peerIdentifier);
-    console.log('connectionType:' + peerStatus.connectionType);
-    console.log('hostAddress:' + peerStatus.hostAddress);
-    console.log('portNumber:' + peerStatus.portNumber);
-    console.log('_peerAvailabilityChanged - end');
+    var msg = '_peerAvailabilityChanged:' + peerStatus.peerIdentifier +
+      ', '+peerStatus.connectionType+', ' + peerStatus.hostAddress + ', '+
+      peerStatus.portNumber;
+
+    console.log(msg);
+
 
     if (peerStatus.hostAddress &&
         peerStatus.portNumber &&

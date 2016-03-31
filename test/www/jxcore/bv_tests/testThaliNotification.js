@@ -19,7 +19,6 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var SECP256K1 = 'secp256k1';
 var HELLO = 'Hello world';
 var HELLO_PATH = '/hello';
-
 var globals = {};
 
 /**
@@ -43,8 +42,6 @@ var GlobalVariables = function () {
   // https request to our server.
 
   this.httpsServerRequestCount = 0;
-
-
 };
 
 var test = tape({
@@ -55,15 +52,10 @@ var test = tape({
     }
     t.end();
   },
-
   teardown: function (t) {
     t.end();
   }
 });
-
-if (!tape.coordinated) {
-  return;
-}
 
 function initiateHttpsRequestToPeer(peerDetails){
 
@@ -96,16 +88,25 @@ function initiateHttpsRequestToPeer(peerDetails){
   req.end();
 }
 
+if (!tape.coordinated) {
+  return;
+}
+
 test('Client to server request coordinated', function (t) {
 
   // For this test we share our own public key with other peers and collect
-  // their public keys. Then we wait until we get notification event
-  // from each of these peers.
+  // their public keys. Then we wait until we get a peerAvailabilityChanged
+  // event from each of these peers. This will cause ThaliNotificationClient
+  // to emit PeerAdvertisesDataForUs event. In the test code we listen this
+  // event and ensure we get it from all peers.
 
   // Second phase of the test is to connect to other peers over https.
-  // All peers have a https service and they listen on path /hello.
+  // All peers have a https service and they listen to path /hello.
   // Each peer needs to make a https request to all other peers it
   // sees and peer needs to response to all these request.
+
+  // Total number of https requests grows exponentially. With 2 peers we
+  // make 2 request, with 3 peers 6, with 4 peers 12, etc.
 
   var addressBook = [];
 
@@ -155,9 +156,13 @@ test('Client to server request coordinated', function (t) {
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
 
-      initiateHttpsRequestToPeer(res);
-
       var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);
+
+      // This ensures that we only make one outgoing http request per one peer
+      if (!replies[publicKeyHash]) {
+        initiateHttpsRequestToPeer(res);
+      }
+
       replies[publicKeyHash] = true;
 
       var allReplied = true;
@@ -210,4 +215,3 @@ test('Client to server request coordinated', function (t) {
     });
   });
 });
-
