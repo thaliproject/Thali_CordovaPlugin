@@ -205,9 +205,7 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
     var msg = '_peerAvailabilityChanged:' + peerStatus.peerIdentifier +
       ', '+peerStatus.connectionType+', ' + peerStatus.hostAddress + ', '+
       peerStatus.portNumber;
-
     console.log(msg);
-
 
     if (peerStatus.hostAddress &&
         peerStatus.portNumber &&

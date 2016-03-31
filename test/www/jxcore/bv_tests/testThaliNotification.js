@@ -184,7 +184,7 @@ test('Client to server request coordinated', function (t) {
                 addressBook.length);
 
               t.equal(globals.httpsResponseCountSuccess, addressBook.length,
-                'Peer made right amount of https requests. Received: ' +
+                'Peer made right amount of https requests. Request made: ' +
                 globals.httpsResponseCountSuccess);
 
               t.equal(globals.httpsServerRequestCount, addressBook.length,

@@ -29,7 +29,7 @@ var test = tape({
 // to the super constructor
 /* jshint -W003 */
 function TestPeerAction(peerIdentifier, connectionType, actionType) {
-  TestPeerAction.super_.call(this, peerIdentifier, connectionType, actionType);
+  TestPeerAction.super_.call(this, peerIdentifier, connectionType, actionType, pskIdentity, pskKey);
 }
 /* jshint +W003 */
 
