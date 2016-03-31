@@ -47,12 +47,27 @@ test('can pass data in setup', function (t) {
 if (!jxcore.utils.OSInfo().isMobile) {
   test('can continue after disconnect from server', function (t) {
     t.timeoutAfter(5000);
+    var reconnected = false;
+    tape._testServer.once('connect', function () {
+      if (reconnected) {
+        return;
+      }
+      reconnected = true;
+      t.ok(true, 'got connect event');
+      t.end();
+    });
     tape._testServer.once('reconnect', function () {
+      if (reconnected) {
+        return;
+      }
+      reconnected = true;
       t.ok(true, 'got reconnect event');
       t.end();
     });
     tape._testServer.disconnect();
-    tape._testServer.connect();
+    setTimeout(function () {
+      tape._testServer.connect();
+    }, 500);
   });
 
   test('test after disconnect', function (t) {

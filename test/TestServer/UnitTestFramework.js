@@ -84,7 +84,12 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
     logger.info('Running on %s test: %s', platform, test);
 
     function emit(device, msg, data) {
-      var retries = 10;
+      // Try to retry 120 times every second, because
+      // it might be that the socket connection is temporarily
+      // down while the retries are tried so this gives
+      // the device 2 minutes to reconnect.
+      var retries = 120;
+      var retryInterval = 1000;
       var emitTimeout = null;
 
       var acknowledged = false;
@@ -104,7 +109,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
             device.socket.emit(msg);
           }
           if (--retries > 0) {
-            emitTimeout = setTimeout(_emit, 1000);
+            emitTimeout = setTimeout(_emit, retryInterval);
           } else {
             logger.error('Too many emit retries to device: %s',
               device.deviceName);

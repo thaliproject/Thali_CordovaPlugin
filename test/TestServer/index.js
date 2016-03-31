@@ -37,19 +37,18 @@ process.on('SIGINT', function () {
   process.exit(130); // Ctrl-C std exit code
 });
 
-var socketId = 0;
-
 io.on('connection', function (socket) {
 
   // A new device has connected to us.. we expect the next thing to happen to be
   // a 'present' message
 
-  socket.id = socketId++;
-  socket.deviceName = 'NOT YET SET';
+  socket.deviceName = 'DEVICE THAT HAS NOT PRESENTED YET';
 
   socket.on('disconnect', function (reason) {
-    logger.info('Socket disconnected: %s %s (%s)', reason,
-      this.id, socket.deviceName);
+    logger.info(
+      'Socket to device %s disconnected: %s',
+      socket.deviceName, reason
+    );
   });
 
   socket.on('present', function (msg) {
@@ -76,8 +75,8 @@ io.on('connection', function (socket) {
     );
 
     logger.debug(
-      'Device presented: %s (%s) %s socket: %d',
-      _device.name, _device.os, _device.type, this.id
+      'Device presented: %s (%s) %s',
+      _device.name, _device.os, _device.uuid
     );
 
     switch (device.type)
