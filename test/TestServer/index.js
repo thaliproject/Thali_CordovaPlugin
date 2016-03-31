@@ -52,7 +52,7 @@ io.on('connection', function (socket) {
   });
 
   socket.on('error', function (error) {
-    logger.error(error);
+    logger.debug(error);
   });
 
   socket.on('present', function (msg) {
@@ -62,7 +62,7 @@ io.on('connection', function (socket) {
 
     var _device = JSON.parse(msg);
     if (!_device.os || !_device.name || !_device.type) {
-      logger.error('malformed message');
+      logger.debug('malformed message');
       socket.emit('error', JSON.stringify({
         'errorDescription ': 'malformed message',
         'message' : msg
@@ -94,7 +94,7 @@ io.on('connection', function (socket) {
         break;
       }
       default : {
-        logger.error('unrecognised test type: ' + device.type);
+        logger.debug('unrecognised test type: ' + device.type);
       }
     }
   });

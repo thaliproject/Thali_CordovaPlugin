@@ -116,7 +116,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
           if (--retries > 0) {
             emitTimeout = setTimeout(_emit, retryInterval);
           } else {
-            logger.error('Too many emit retries to device: %s',
+            logger.debug('Too many emit retries to device: %s',
               device.deviceName);
           }
         }
