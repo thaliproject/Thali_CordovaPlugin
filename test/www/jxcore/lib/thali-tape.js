@@ -173,7 +173,7 @@ var platform =
   'android' :
   'ios';
 
-thaliTape.begin = function (hasRequiredHardware) {
+thaliTape.begin = function (version, hasRequiredHardware) {
 
   var serverOptions = {
     transports: ['websocket']
@@ -204,6 +204,7 @@ thaliTape.begin = function (hasRequiredHardware) {
 
     var presentData = {
       os: platform,
+      version: version,
       supportedHardware: hasRequiredHardware,
       name: testUtils.getName(),
       uuid: thaliTape.uuid,

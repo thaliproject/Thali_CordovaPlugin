@@ -41,6 +41,10 @@ if (hasJavaScriptSuffix(testsToRun)) {
   });
 }
 
-testUtils.hasRequiredHardware().then(function (hasRequiredHardware) {
-  thaliTape.begin(hasRequiredHardware);
+testUtils.hasRequiredHardware()
+.then(function (hasRequiredHardware) {
+  testUtils.getOSVersion()
+  .then(function (version) {
+    thaliTape.begin(version, hasRequiredHardware);
+  });
 });

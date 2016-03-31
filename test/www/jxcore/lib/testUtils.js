@@ -212,6 +212,17 @@ module.exports.returnsValidNetworkStatus = function () {
   });
 };
 
+module.exports.getOSVersion = function () {
+  return new Promise(function (resolve) {
+    if (!jxcore.utils.OSInfo().isMobile) {
+      return resolve('dummy');
+    }
+    Mobile('getOSVersion').callNative(function (version) {
+      resolve(version);
+    });
+  });
+};
+
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
 // during other tests.

@@ -79,8 +79,8 @@ io.on('connection', function (socket) {
     );
 
     logger.debug(
-      'Device presented: %s (%s) %s',
-      _device.name, _device.os, _device.uuid
+      'Device presented: %s (%s) - %s %s',
+      _device.name, _device.uuid, _device.os, _device.version
     );
 
     switch (device.type)
