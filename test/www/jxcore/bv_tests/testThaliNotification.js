@@ -179,10 +179,12 @@ test('Client to server request coordinated', function (t) {
                 addressBook.length);
 
               t.equal(globals.httpsResponseCountSuccess, addressBook.length,
-                'Peer made right amount of https requests.');
+                'Peer made right amount of https requests. Received: ' +
+                globals.httpsResponseCountSuccess);
 
               t.equal(globals.httpsServerRequestCount, addressBook.length,
-              'Peer received right amount of http requests.');
+                'Peer received right amount of http requests. Received: ' +
+                globals.httpsServerRequestCount);
 
               t.end();
             }).catch(function (failure) {
