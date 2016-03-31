@@ -235,10 +235,6 @@ if (!tape.coordinated) {
 
 function connectToPeer(peerDetails){
 
-  // pskKey: thaliConfig.BEACON_KEY,
-  // pskIdentity: thaliConfig.BEACON_PSK_IDENTITY,
-
-  console.log(peerDetails.pskIdentifyField);
   var options = {
     method: 'GET',
     hostname: peerDetails.hostAddress,
@@ -247,7 +243,7 @@ function connectToPeer(peerDetails){
     agent: false,
     family: 4,
     pskIdentity: peerDetails.pskIdentifyField,
-    pskKey: new Buffer('asdasd'),
+    pskKey: peerDetails.psk,
     ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS
   };
 
@@ -309,6 +305,7 @@ test('Client to server request coordinated', function (t) {
 
   // Initializes test server that just says 'hello world'
   var helloWorld = function (req, res) {
+    // req.connection.psIdentity
     console.log('request');
     res.send('hello world');
   };
@@ -331,7 +328,6 @@ test('Client to server request coordinated', function (t) {
           allReplied = false;
         }
       });
-
       if (allReplied && !finished) {
         finished = true;
         ThaliMobile.stopListeningForAdvertisements().then(function () {

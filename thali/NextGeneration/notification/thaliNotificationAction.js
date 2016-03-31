@@ -1,6 +1,6 @@
 'use strict';
 var inherits = require('util').inherits;
-var https = require('https');
+var http = require('http');
 var Promise = require('lie');
 var assert = require('assert');
 
@@ -8,8 +8,6 @@ var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var NotificationBeacons = require('./thaliNotificationBeacons');
 var EventEmitter = require('events').EventEmitter;
 var thaliConfig = require('../thaliConfig');
-
-var logger = require('../../thalilogger')('thaliNotificationAction');
 
 /** @module thaliNotificationAction */
 
@@ -43,7 +41,9 @@ function ThaliNotificationAction(peerIdentifier,
 
   ThaliNotificationAction.super_.call(this, peerIdentifier,
     peerConnection.getConnectionType(),
-    ThaliNotificationAction.ACTION_TYPE);
+    ThaliNotificationAction.ACTION_TYPE,
+    thaliConfig.BEACON_PSK_IDENTITY,
+    thaliConfig.BEACON_KEY);
 
   this.eventEmitter = new EventEmitter();
 
@@ -121,16 +121,17 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         hostname: self._peerConnection.getHostAddress(),
         port: self._peerConnection.getPortNumber(),
         path: thaliConfig.NOTIFICATION_BEACON_PATH,
-        agent: false, // todo: replace with httpAgentPool
-        family: 4,
-        pskIdentity: thaliConfig.BEACON_PSK_IDENTITY,
-        pskKey: thaliConfig.BEACON_KEY,
-        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS
+        agent: httpAgentPool,
+        family: 4
       };
 
-      self._httpRequest = https.request(options,
+      self._httpRequest = http.request(options,
         self._responseCallback.bind(self));
 
+      self._httpRequest.setTimeout(
+        self._peerConnection.getSuggestedTCPTimeout(), function () {
+          self._httpRequest.abort();
+        });
 
       // Error event handler is fired on DNS resolution, TCP protocol,
       // or HTTP protocol errors. Or if the httpRequest.abort is called.
@@ -139,8 +140,7 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
       // from kill is ignored at this point and it is not causing
       // anything in the _complete function because it is the second call to
       // _complete.
-      self._httpRequest.on('error', function (err) {
-        logger.debug('http request error - ' + err);
+      self._httpRequest.on('error', function () {
         self._complete(
           ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
           null, 'Could not establish TCP connection');

@@ -2,9 +2,8 @@
 
 var util = require('util');
 var ThaliPeerPoolInterface = require('./thaliPeerPoolInterface');
-var Agent = require('https').Agent;
 var thaliConfig = require('../thaliConfig');
-var logger = require('../../thalilogger')('thaliPeerPoolDefault');
+var ForeverAgent = require('forever-agent');
 
 /** @module thaliPeerPoolDefault */
 
@@ -79,21 +78,20 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     return enqueueResult;
   }
 
-  var actionAgent = new Agent({
+  var actionAgent = new ForeverAgent.SSL({
     keepAlive: true,
     keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
     maxSockets: Infinity,
-    maxFreeSockets: 256
+    maxFreeSockets: 256,
+    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+    pskIdentity: peerAction.getPskIdentity(),
+    pskKey: peerAction.getPskKey()
   });
 
   // We hook our clean up code to kill and it is always legal to call
   // kill, even if it has already been called. So this ensures that our
   // cleanup code gets called regardless of how the action ended.
-  peerAction.start(actionAgent)
-    .catch(function (err) {
-      logger.debug('action failed with promise error - ' + err);
-    })
-    .then(function () {
+  peerAction.start(actionAgent).then(function () {
     peerAction.kill();
   });
 
