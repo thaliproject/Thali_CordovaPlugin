@@ -32,8 +32,17 @@ For all of this to work we have to have files in at least four different places:
 The release preparations start from updating the dependency in the thali NPM package. This is needed
 so that the NPM package installations picks up the matching version of the Thali Cordova plugin.
 
-The file at `thali/install/install.js` has a variable `thaliBranchName` inside the function it exports.
-The value must be matching to the release you are about to make, for example, `npmv2.0.4`.
+The `thaliInstall` property of the `thali/package.json` defines repository-related properties and binaries
+that contain versions used during the installation.
+
+The repository-related properties are located under the `thali` property:
+- projectName - usually `thaliproject`
+- depotName - usually `Thali_CordovaPlugin`
+- branchName - this value must be matching to the release you are about to make, for example, `npmv2.0.4`
+
+The binary dependencies are defined in the `thaliInstall` property:
+- btconnectorlib2 - used to get the right `btconnectorlib2` version
+- jxcore-cordova - used to fetch and install the proper version of the JXCore's Cordova plugin
 
 There are different levels that the version can be bumped to.
 Please read the [version](https://docs.npmjs.com/cli/version) docs to understand the choices and make sure
