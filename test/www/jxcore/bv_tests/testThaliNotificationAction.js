@@ -3,8 +3,8 @@ var tape = require('../lib/thali-tape');
 var express = require('express');
 var crypto = require('crypto');
 var Promise = require('lie');
-var http = require('http');
-
+var ForeverAgent = require('forever-agent');
+var https = require('https');
 var testUtils = require('../lib/testUtils.js');
 var httpTester = require('../lib/httpTester.js');
 
@@ -20,12 +20,19 @@ var MakeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 var ThaliPeerAction =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
-var ThaliConfig =
+var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 
 var SECP256K1 = 'secp256k1';
 
 var globals = {};
+
+var pskIdentity = 'I am me!';
+var pskKey = new Buffer('I am a reasonable long string');
+
+var pskIdToSecret = function (id) {
+  return id === pskIdentity ? pskKey : null;
+};
 
 /**
  * @classdesc This class is a container for all variables and
@@ -36,11 +43,20 @@ var GlobalVariables = function () {
 
   this.expressApp = express();
   this.expressRouter = express.Router();
-
   this.sourceKeyExchangeObject = crypto.createECDH(SECP256K1);
   this.sourcePublicKey = this.sourceKeyExchangeObject.generateKeys();
   this.sourcePublicKeyHash =
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
+
+  this.actionAgent = new ForeverAgent.SSL({
+    keepAlive: true,
+    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+    maxSockets: Infinity,
+    maxFreeSockets: 256,
+    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+    pskIdentity: pskIdentity,
+    pskKey: pskKey
+  });
 
   this.createPublicKeysToNotifyAndPreamble();
 };
@@ -50,14 +66,23 @@ GlobalVariables.prototype.init = function () {
   return new Promise(function (resolve, reject) {
     // Initializes the server with the expressRouter
     self.expressApp.use('/', self.expressRouter);
-    self.expressServer = self.expressApp.listen(0, function (err) {
-      if (err) {
-        reject(err);
-      } else {
-        MakeIntoCloseAllServer(self.expressServer);
-        resolve();
-      }
-    });
+
+    var options = {
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskCallback : pskIdToSecret,
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
+    };
+    
+    self.expressServer = https.createServer(options, self.expressApp).
+      listen(0, function (err) {
+        if (err) {
+          reject(err);
+        } else {
+          MakeIntoCloseAllServer(self.expressServer);
+          resolve();
+        }
+      });
   });
 };
 
@@ -129,7 +154,7 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
   t.plan(6);
 
   httpTester.runServer(globals.expressRouter,
-    ThaliConfig.NOTIFICATION_BEACON_PATH,
+    thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
@@ -163,8 +188,7 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
 
     });
 
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
-  act.start(keepAliveAgent).then( function (res) {
+  act.start(globals.actionAgent).then( function (res) {
     t.equals(res, null, 'must return null after successful call');
   })
   .catch(function (failure) {
@@ -177,7 +201,7 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
   t.plan(2);
 
   httpTester.runServer(globals.expressRouter,
-    ThaliConfig.NOTIFICATION_BEACON_PATH, 503, 'hello', 1);
+    thaliConfig.NOTIFICATION_BEACON_PATH, 503, 'hello', 1);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
     ThaliMobile.connectionTypes.TCP_NATIVE,
@@ -196,8 +220,7 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
         'Response should be HTTP_BAD_RESPONSE');
     });
 
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
-  act.start(keepAliveAgent).then( function (res) {
+  act.start(globals.actionAgent).then( function (res) {
     t.equals(res, null, 'must return null after successful call');
   }).catch(function (err) {
     t.fail('Test failed:' + err.message);
@@ -226,8 +249,7 @@ test('Test NETWORK_PROBLEM locally', function (t) {
         'Response should be NETWORK_PROBLEM');
     });
 
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
-  act.start(keepAliveAgent).then( function () {
+  act.start(globals.actionAgent).then( function () {
     t.fail('This call should cause reject.');
   }).catch(function (err) {
     t.equals(
@@ -243,7 +265,7 @@ test('Call the start two times', function (t) {
   t.plan(3);
 
   httpTester.runServer(globals.expressRouter,
-    ThaliConfig.NOTIFICATION_BEACON_PATH,
+    thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
@@ -262,17 +284,15 @@ test('Call the start two times', function (t) {
       'Response should be BEACONS_RETRIEVED_AND_PARSED');
   });
 
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
-  var keepAliveAgent2 = new http.Agent({ keepAlive: true });
 
-  act.start(keepAliveAgent).then( function (res) {
+  act.start(globals.actionAgent).then( function (res) {
       t.equals(res, null, 'must return null after successful call.');
     })
     .catch(function (failure) {
       t.fail('Test failed:' + failure);
     });
 
-  act.start(keepAliveAgent2).then( function () {
+  act.start(globals.actionAgent).then( function () {
       t.fail('Second start should not be successful.');
     }).catch( function (err) {
     t.equals(err.message, ThaliPeerAction.DOUBLE_START, 'Call start once');
@@ -296,9 +316,8 @@ test('Call the kill before calling the start', function (t) {
         'Should be Killed');
     });
   act.kill();
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
 
-  act.start(keepAliveAgent).catch( function (err) {
+  act.start(globals.actionAgent).catch( function (err) {
     t.equals(err.message, ThaliPeerAction.START_AFTER_KILLED,
       'Start after killed');
   });
@@ -328,9 +347,7 @@ test('Call the kill immediately after the start', function (t) {
         'Should be KILLED');
     });
 
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
-
-  act.start(keepAliveAgent).then( function (res) {
+  act.start(globals.actionAgent).then( function (res) {
       t.equals(res, null, 'must return null after successful kill');
     })
     .catch(function (failure) {
@@ -366,9 +383,8 @@ test('Call the kill while waiting a response from the server', function (t) {
         'Should be KILLED');
     });
 
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
 
-  act.start(keepAliveAgent).then( function (res) {
+  act.start(globals.actionAgent).then( function (res) {
     t.equals(
       res,
       null,
@@ -388,7 +404,6 @@ test('Call the kill while waiting a response from the server', function (t) {
 
 });
 
-
 test('Test to exceed the max content size locally', function (t) {
 
   t.plan(2);
@@ -397,7 +412,7 @@ test('Test to exceed the max content size locally', function (t) {
   buffer.fill('h');
 
   httpTester.runServer(globals.expressRouter,
-    ThaliConfig.NOTIFICATION_BEACON_PATH,
+    thaliConfig.NOTIFICATION_BEACON_PATH,
     200, buffer, 1+NotificationAction.MAX_CONTENT_SIZE_IN_BYTES/1024);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
@@ -416,8 +431,7 @@ test('Test to exceed the max content size locally', function (t) {
         'HTTP_BAD_RESPONSE should be response when content size is exceeded');
     });
 
-  var keepAliveAgent = new http.Agent({ keepAlive: true });
-  act.start(keepAliveAgent).then( function (res) {
+  act.start(globals.actionAgent).then( function (res) {
     t.equals(res, null, 'must return null after successful call');
   }).catch(function (failure) {
     t.fail('Test failed:' + failure);
@@ -453,9 +467,7 @@ test('Close the server socket while the client is waiting a response ' +
           'Should be NETWORK_PROBLEM caused closing server socket');
       });
 
-    var keepAliveAgent = new http.Agent({ keepAlive: true });
-
-    act.start(keepAliveAgent).then( function () {
+    act.start(globals.actionAgent).then( function () {
       t.fail('Test should return failure: Could not establish TCP connection');
     }).catch(function (err) {
       t.equals(
@@ -465,7 +477,7 @@ test('Close the server socket while the client is waiting a response ' +
     });
 
     // This kills the server socket after 2 seconds. This should give enough
-    // time to establish a HTTP connection in slow devices but since the server
+    // time to establish a HTTPS connection in slow devices but since the server
     // waits 10 seconds before it answers we end up killing the connection when
     // the client is waiting the server to answer.
 
@@ -504,9 +516,7 @@ test('Close the client socket while the client is waiting a response ' +
           'Should be NETWORK_PROBLEM caused closing client socket');
       });
 
-    var keepAliveAgent = new http.Agent({ keepAlive: true });
-
-    act.start(keepAliveAgent).then( function () {
+    act.start(globals.actionAgent).then( function () {
       t.fail('Test should return failure: Could not establish TCP connection');
     }).catch(function (err) {
       t.equals(
@@ -521,8 +531,8 @@ test('Close the client socket while the client is waiting a response ' +
     // the client is waiting the server to answer.
 
     setTimeout( function () {
-      Object.keys(keepAliveAgent.sockets).forEach(function (key) {
-        keepAliveAgent.sockets[key].forEach(function (socket) {
+      Object.keys(globals.actionAgent.sockets).forEach(function (key) {
+        globals.actionAgent.sockets[key].forEach(function (socket) {
           socket.destroy();
         });
       });
