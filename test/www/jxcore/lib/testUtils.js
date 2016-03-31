@@ -188,6 +188,30 @@ module.exports.hasRequiredHardware = function () {
   });
 };
 
+module.exports.returnsValidNetworkStatus = function () {
+  // The require is here instead of top of file so that
+  // we can require the test utils also from an environment
+  // where Mobile isn't defined (which is a requirement when
+  // thaliMobile is required).
+  var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  // Check that network status is as expected and
+  // report to CI that this device is ready.
+  return ThaliMobile.getNetworkStatus()
+  .then(function (networkStatus) {
+    module.exports.logMessageToScreen(
+      'Device did not have required hardware capabilities!'
+    );
+    if (networkStatus.bluetoothLowEnergy === 'on') {
+      // If we are on a device that doesn't have required capabilities
+      // the network status for BLE must not be reported to be "on"
+      // which would mean "The radio is on and available for use."
+      return Promise.resolve(false);
+    } else {
+      return Promise.resolve(true);
+    }
+  });
+};
+
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
 // during other tests.

@@ -5,6 +5,7 @@
 
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
+var assert = require('assert');
 
 var logger = console;
 
@@ -94,7 +95,10 @@ TestFramework.prototype.addDevice = function (device) {
       return d.uuid === device.uuid;
     });
 
-    if (existing.length > 0) {
+    assert(existing.length <= 1,
+      'should not have more than 1 device with same uuid');
+
+    if (existing.length === 1) {
       var existingDevice = existing[0];
 
       logger.info(
@@ -120,16 +124,36 @@ TestFramework.prototype.addDevice = function (device) {
       'All %d %s devices are present',
       this.availableDevices[device.platform], device.platform
     );
-    shuffle(this.devices[device.platform]);
+
+    var finalDevices = this.devices[device.platform]
+      .filter(function (deviceCandidate) {
+        if (!deviceCandidate.supportedHardware) {
+          logger.info('Disqualifying device with unsupported hardware: %s',
+            deviceCandidate.deviceName);
+          deviceCandidate.socket.emit('disqualify');
+          return false;
+        }
+        return true;
+      }
+    );
+    shuffle(finalDevices);
+
     var requiredDevices = this.requiredDevices[device.platform].length;
-    var availableDevices = this.availableDevices[device.platform].length;
-    for (var i = requiredDevices - 1; i < availableDevices; i++) {
-      var surplusDevice = this.devices[device.platform][i];
-      // Discard surplus devices..
-      logger.info('Discarding surplus device: %s', surplusDevice.deviceName);
-      surplusDevice.socket.emit('discard');
-    }
-    this.devices[device.platform].splice(requiredDevices, availableDevices);
+    var deviceNumber = 0;
+    this.devices[device.platform] = finalDevices
+      .filter(function (deviceCandidate) {
+        deviceNumber++;
+        if (deviceNumber > requiredDevices) {
+          // Discard surplus devices..
+          logger.info('Discarding surplus device: %s',
+            deviceCandidate.deviceName);
+          deviceCandidate.socket.emit('discard');
+          return false;
+        }
+        return true;
+      }
+    );
+
     this.startTests(device.platform);
   }
 };

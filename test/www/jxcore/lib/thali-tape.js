@@ -26,20 +26,15 @@ var tape = require('tape-catch');
 var io = require('socket.io-client');
 var testUtils = require('./testUtils');
 
-var logConsoleAndScreen = function (message) {
-  testUtils.logMessageToScreen(message);
-  console.log(message);
-};
-
 process.on('uncaughtException', function (err) {
-  logConsoleAndScreen('Uncaught Exception: ' + err);
+  testUtils.logMessageToScreen('Uncaught Exception: ' + err);
   console.log(err.stack);
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 });
 
 process.on('unhandledRejection', function (err) {
-  logConsoleAndScreen('Uncaught Promise Rejection: ' + JSON.stringify(err));
+  testUtils.logMessageToScreen('Uncaught Promise Rejection: ' + JSON.stringify(err));
   console.trace(err);
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
@@ -178,7 +173,7 @@ var platform =
   'android' :
   'ios';
 
-thaliTape.begin = function () {
+thaliTape.begin = function (hasRequiredHardware) {
 
   var serverOptions = {
     transports: ['websocket']
@@ -206,8 +201,10 @@ thaliTape.begin = function () {
       });
     }
     firstConnection = false;
+
     var presentData = {
       os: platform,
+      supportedHardware: hasRequiredHardware,
       name: testUtils.getName(),
       uuid: thaliTape.uuid,
       type: 'unittest',
@@ -221,25 +218,37 @@ thaliTape.begin = function () {
   // we get the connect event even if we have been connected before
   // (and sometimes the reconnect event).
   testServer.on('connect', function () {
-    logConsoleAndScreen('Connected to the test server');
+    testUtils.logMessageToScreen('Connected to the test server');
     onConnection();
   });
   testServer.on('reconnect', function () {
-    logConsoleAndScreen('Reconnected to the test server');
+    testUtils.logMessageToScreen('Reconnected to the test server');
     onConnection();
   });
 
   testServer.once('discard', function () {
     // This device not needed, log appropriately so CI doesn't think we've
     // failed
-    logConsoleAndScreen('Device discarded as surplus');
+    testUtils.logMessageToScreen('Device discarded as surplus');
     console.log('--= Surplus to requirements =--');
     console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   });
 
+  testServer.once('disqualify', function () {
+    testUtils.logMessageToScreen('Device disqualified');
+    testUtils.returnsValidNetworkStatus()
+    .then(function (validStatus) {
+      if (validStatus) {
+        console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+      } else {
+        console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+      }
+    });
+  });
+
   testServer.on('error', function (data) {
     var errData = JSON.parse(data);
-    logConsoleAndScreen('Error: ' + data + ' : ' + errData.type +
+    testUtils.logMessageToScreen('Error: ' + data + ' : ' + errData.type +
       ' : ' + errData.data);
   });
 
@@ -249,12 +258,12 @@ thaliTape.begin = function () {
     } else {
       // Just log the error since socket.io will try
       // to reconnect.
-      logConsoleAndScreen('Disconnected from the test server');
+      testUtils.logMessageToScreen('Disconnected from the test server');
     }
   });
 
   testServer.once('complete', function () {
-    logConsoleAndScreen('Tests complete');
+    testUtils.logMessageToScreen('Tests complete');
     complete = true;
     if (allSuccess) {
       console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
