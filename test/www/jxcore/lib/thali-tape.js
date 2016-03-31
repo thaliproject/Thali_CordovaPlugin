@@ -140,6 +140,8 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 var testRunningNumber = 0;
 // Flag used to check if we have completed all the tests we should run
 var complete = false;
+var nextTestOnly = false;
+var ignoreRemainingTests = false;
 
 var thaliTape = function (fixture) {
   // Thali_Tape - Adapt tape such that tests are executed when explicitly
@@ -147,14 +149,30 @@ var thaliTape = function (fixture) {
   // This enables us to run tests in lock step across a number of devices
 
   // test([name], [opts], fn)
-  return function (name, opts, fn) {
+  var addTest = function (name, opts, fn) {
 
     // This is the function that declares and performs the test.
     // cb is the test function. We wrap this in setup and
 
+    if (ignoreRemainingTests) {
+      return;
+    }
+
     if (!fn) {
       fn = opts;
       opts = null;
+    }
+
+    if (nextTestOnly) {
+      tests = {
+        name: {
+          opts: opts,
+          fn: fn,
+          fixture: fixture
+        }
+      };
+      ignoreRemainingTests = true;
+      return;
     }
 
     testRunningNumber++;
@@ -164,6 +182,13 @@ var thaliTape = function (fixture) {
       fixture: fixture
     };
   };
+
+  addTest.only = function (name, opts, fn) {
+    nextTestOnly = true;
+    addTest(name, opts, fn);
+  };
+
+  return addTest;
 };
 
 thaliTape.uuid = uuid.v4();
