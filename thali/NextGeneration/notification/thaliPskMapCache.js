@@ -4,7 +4,7 @@ var thaliConfig = require('../thaliConfig');
 /** @module thaliPskMapCache */
 
 /**
- * @classdesc An class that stores PskMaps. When new entries are added into the
+ * @classdesc A class that stores PskMaps. When new entries are added into the
  * cache object or existing entries are fetched from it we always check if
  * there are expired items. If expired items are found they will be removed.
  *

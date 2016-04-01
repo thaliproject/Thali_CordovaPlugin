@@ -97,7 +97,7 @@ test('Client to server request coordinated', function (t) {
   // For this test we share our own public key with other peers and collect
   // their public keys. Then we wait until we get a peerAvailabilityChanged
   // event from each of these peers. This will cause ThaliNotificationClient
-  // to emit PeerAdvertisesDataForUs event. In the test code we listen this
+  // to emit PeerAdvertisesDataForUs event. In the test code we listen to this
   // event and ensure we get it from all peers.
 
   // Second phase of the test is to connect to other peers over https.
@@ -188,7 +188,7 @@ test('Client to server request coordinated', function (t) {
                 globals.httpsResponseCountSuccess);
 
               t.equal(globals.httpsServerRequestCount, addressBook.length,
-                'Peer received right amount of http requests. Received: ' +
+                'Peer received right amount of https requests. Received: ' +
                 globals.httpsServerRequestCount);
 
               t.end();

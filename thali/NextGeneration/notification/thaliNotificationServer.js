@@ -199,7 +199,7 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
 
 /**
  * This function returns a function that takes a psk id value and turns it
- * into a private key if recognized or otherwise returns null. One exception
+ * into a PSK key if recognized or otherwise returns null. One exception
  * is if it gets an id equal to {@link module:thaliConfig.BEACON_PSK_IDENTITY}
  * then it returns {@link module:thaliConfig.BEACON_KEY}.
  *
@@ -245,7 +245,6 @@ ThaliNotificationServer.prototype.getPskIdToSecret = function () {
 ThaliNotificationServer.prototype.getPskIdToPublicKey = function () {
   var self = this;
   return function (id) {
-    console.log('getPskIdToPublicKey:' + id);
     if (!self._secrets) {
       return null;
     }
