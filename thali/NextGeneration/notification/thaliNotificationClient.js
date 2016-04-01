@@ -202,12 +202,10 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
     }
 
     // Todo: clean when coordinated tests are done
-    console.log('_peerAvailabilityChanged');
-    console.log('peerIdentifier:' + peerStatus.peerIdentifier);
-    console.log('connectionType:' + peerStatus.connectionType);
-    console.log('hostAddress:' + peerStatus.hostAddress);
-    console.log('portNumber:' + peerStatus.portNumber);
-    console.log('_peerAvailabilityChanged - end');
+    var msg = '_peerAvailabilityChanged:' + peerStatus.peerIdentifier +
+      ', '+peerStatus.connectionType+', ' + peerStatus.hostAddress + ', '+
+      peerStatus.portNumber;
+    console.log(msg);
 
     if (peerStatus.hostAddress &&
         peerStatus.portNumber &&
@@ -300,17 +298,26 @@ ThaliNotificationClient.prototype._resolved =
     }
 
     switch (resolution) {
-      case ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED:
+      case ThaliNotificationAction.ActionResolution
+        .BEACONS_RETRIEVED_AND_PARSED:
       {
         var connInfo = entry.notificationAction.getConnectionInformation();
         entry.peerState = PeerDictionary.peerState.RESOLVED;
         this.peerDictionary.addUpdateEntry(peerId, entry);
 
-        // todo: this event needs psk additions
+        var pubKx = this._addressBookCallback(beaconDetails.unencryptedKeyId);
+
+        var pskIdentifyField =
+          NotificationBeacons.generatePskIdentityField(
+            beaconDetails.preAmble, beaconDetails.encryptedBeaconKeyId);
+
+        var pskSecret = NotificationBeacons.generatePskSecret(
+          this._ecdhForLocalDevice, pubKx, pskIdentifyField);
+
         var peerAdvertises = new PeerAdvertisesDataForUs(
-          beaconDetails.unencryptedKeyId,
-          'pskIdentifyField',
-          [1, 2, 3],
+          pubKx,
+          pskIdentifyField,
+          pskSecret,
           connInfo.getHostAddress(),
           connInfo.getPortNumber(),
           connInfo.getSuggestedTCPTimeout(),

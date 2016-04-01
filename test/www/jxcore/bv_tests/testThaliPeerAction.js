@@ -11,11 +11,13 @@ var testPeerAction = null;
 var peerIdentifier = 'foo';
 var connectionType = connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
 var actionType = 'bar';
+var pskIdentity = 'I\'m a little tea cup';
+var pskKey = new Buffer('Short and stout');
 
 var test = tape({
   setup: function (t) {
     testPeerAction = new TestPeerAction(peerIdentifier, connectionType,
-                                        actionType);
+                                        actionType, pskIdentity, pskKey);
     t.end();
   },
   teardown: function (t) {
@@ -27,7 +29,7 @@ var test = tape({
 // to the super constructor
 /* jshint -W003 */
 function TestPeerAction(peerIdentifier, connectionType, actionType) {
-  TestPeerAction.super_.call(this, peerIdentifier, connectionType, actionType);
+  TestPeerAction.super_.call(this, peerIdentifier, connectionType, actionType, pskIdentity, pskKey);
 }
 /* jshint +W003 */
 
@@ -42,6 +44,9 @@ test('#testThaliPeerAction - test getters', function (t) {
   t.equal(testPeerAction.getActionType(), actionType, 'getActionType');
   t.equal(testPeerAction.getActionState(), PeerAction.actionState.CREATED,
           'getActionState');
+  t.equal(testPeerAction.getPskIdentity(), pskIdentity, 'getPskIdentity');
+  t.ok(Buffer.compare(pskKey, testPeerAction.getPskKey()) === 0,
+        'getPskKey')
   t.end();
 });
 

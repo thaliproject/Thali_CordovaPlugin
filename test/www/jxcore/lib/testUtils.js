@@ -261,7 +261,6 @@ module.exports._universalGet = function (options, requestFn) {
   });
 };
 
-
 module.exports._httpsGet = function (options) {
   return module.exports._universalGet(options, https.request);
 };

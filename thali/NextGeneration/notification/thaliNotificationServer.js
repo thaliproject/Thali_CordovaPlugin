@@ -1,10 +1,11 @@
 'use strict';
 var assert = require('assert');
 var NotificationBeacons = require('./thaliNotificationBeacons');
+var ThaliPskMapCache = require('./thaliPskMapCache');
 var PromiseQueue = require('../promiseQueue');
 var ThaliMobile = require('../thaliMobile');
 var logger = require('../../thalilogger')('thaliNotificationServer');
-var ThaliConfig = require('../thaliConfig');
+var thaliConfig = require('../thaliConfig');
 /** @module thaliNotificationServer */
 
 /**
@@ -39,7 +40,7 @@ function ThaliNotificationServer(router, ecdhForLocalDevice,
   this._promiseQueue = new PromiseQueue();
   this._firstStartCall = true;
   this._preambleAndBeacons = null;
-
+  this._secrets = null;
 }
 
 /**
@@ -80,10 +81,21 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
         }
       });
       try {
+
+        var beaconStreamAndSecrets =
+        NotificationBeacons.generateBeaconStreamAndSecrets(
+          publicKeysToNotify,
+          self._ecdhForLocalDevice,
+          self._millisecondsUntilExpiration);
+
         self._preambleAndBeacons =
-          NotificationBeacons.generatePreambleAndBeacons(
-            publicKeysToNotify, self._ecdhForLocalDevice,
+          beaconStreamAndSecrets.beaconStreamWithPreAmble;
+
+        if (!self._secrets) {
+          self._secrets = new ThaliPskMapCache(
             self._millisecondsUntilExpiration);
+        }
+        self._secrets.push(beaconStreamAndSecrets.keyAndSecret);
 
       } catch (error) {
         logger.warn('generatePreambleAndBeacons failed: %s', error);
@@ -125,8 +137,8 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
  * non-TCP/IP transport and to disconnect all existing non-TCP/IP
  * transport incoming connections.
  *
- * Errors:
- * 'Failed' - ThaliMobile.stopAdvertisingAndListening failed.
+ * Error codes
+ * 'Failed' - {@link module:ThaliMobile.stopAdvertisingAndListening} failed.
  * Check the logs for details.
  * @returns {Promise<?error>}
  */
@@ -134,6 +146,7 @@ ThaliNotificationServer.prototype.stop = function () {
   var self = this;
   return this._promiseQueue.enqueue(function (resolve, reject) {
     self._preambleAndBeacons = null;
+    self._secrets = null;
     ThaliMobile.stopAdvertisingAndListening()
     .then(function () {
       return resolve();
@@ -169,8 +182,76 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
     }
   };
 
-  self._router.get(ThaliConfig.NOTIFICATION_BEACON_PATH,
+  self._router.get(thaliConfig.NOTIFICATION_BEACON_PATH,
                   getBeaconNotifications);
+};
+
+/**
+ * This function takes a psk id value and turns it into a private key if
+ * recognized or otherwise returns null.
+ *
+ * @public
+ * @callback pskIdentityToPrivateKey
+ * @param {string} id
+ * @returns {?Buffer} The public key associated with the ID or null if there
+ * is no match.
+ */
+
+/**
+ * This function returns a function that takes a psk id value and turns it
+ * into a private key if recognized or otherwise returns null. One exception
+ * is if it gets an id equal to {@link module:thaliConfig.BEACON_PSK_IDENTITY}
+ * then it returns {@link module:thaliConfig.BEACON_KEY}.
+ *
+ * Return function's responses to id requests will change as the notification
+ * server changes the beacons it is advertising.
+ *
+ * Return value of this function has to be passed into
+ * {module:thaliMobile~ThaliMobile.start}.
+ *
+ * @public
+ * @returns {pskIdentityToPrivateKey}
+ */
+ThaliNotificationServer.prototype.getPskIdToSecret = function () {
+  var self = this;
+  return function (id) {
+    if (!self._secrets) {
+      return null;
+    }
+    return id === thaliConfig.BEACON_PSK_IDENTITY ?
+      thaliConfig.BEACON_KEY : self._secrets.getSecret(id);
+  };
+};
+
+/**
+ * This function takes a psk ID value and turns it into a public key if
+ * recognized or otherwise returns null.
+ *
+ * @public
+ * @callback pskIdentityToPublicKey
+ * @param {string} id
+ * @returns {?Buffer} The public key associated with the ID or null if there
+ * is no match.
+ */
+
+/**
+ * This function has identical functionality to {@link
+ * module:thaliNotificationServer~ThaliNotificationServer.getPskIdToSecret}
+ * except that it returns a function that returns the public key from the
+ * secrets dictionary instead of the PSK secret.
+ *
+ * @returns {pskIdentityToPublicKey}
+ */
+ThaliNotificationServer.prototype.getPskIdToPublicKey = function () {
+  var self = this;
+  return function (id) {
+    console.log('getPskIdToPublicKey:' + id);
+    if (!self._secrets) {
+      return null;
+    }
+    return id === thaliConfig.BEACON_PSK_IDENTITY ?
+      null : self._secrets.getPublic(id);
+  };
 };
 
 module.exports = ThaliNotificationServer;

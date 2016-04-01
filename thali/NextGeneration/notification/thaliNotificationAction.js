@@ -1,13 +1,12 @@
 'use strict';
 var inherits = require('util').inherits;
-var http = require('http');
 var Promise = require('lie');
 var assert = require('assert');
-
+var https = require('https');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var NotificationBeacons = require('./thaliNotificationBeacons');
 var EventEmitter = require('events').EventEmitter;
-var ThaliConfig = require('../thaliConfig');
+var thaliConfig = require('../thaliConfig');
 
 /** @module thaliNotificationAction */
 
@@ -41,7 +40,9 @@ function ThaliNotificationAction(peerIdentifier,
 
   ThaliNotificationAction.super_.call(this, peerIdentifier,
     peerConnection.getConnectionType(),
-    ThaliNotificationAction.ACTION_TYPE);
+    ThaliNotificationAction.ACTION_TYPE,
+    thaliConfig.BEACON_PSK_IDENTITY,
+    thaliConfig.BEACON_KEY);
 
   this.eventEmitter = new EventEmitter();
 
@@ -118,18 +119,13 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         method: 'GET',
         hostname: self._peerConnection.getHostAddress(),
         port: self._peerConnection.getPortNumber(),
-        path: ThaliConfig.NOTIFICATION_BEACON_PATH,
+        path: thaliConfig.NOTIFICATION_BEACON_PATH,
         agent: httpAgentPool,
         family: 4
       };
 
-      self._httpRequest = http.request(options,
+      self._httpRequest = https.request(options,
         self._responseCallback.bind(self));
-
-      self._httpRequest.setTimeout(
-        self._peerConnection.getSuggestedTCPTimeout(), function () {
-          self._httpRequest.abort();
-        });
 
       // Error event handler is fired on DNS resolution, TCP protocol,
       // or HTTP protocol errors. Or if the httpRequest.abort is called.
