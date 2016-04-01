@@ -16,7 +16,7 @@ var test = tape({
   }
 });
 
-test('basic', function (t) {
+test.only('basic', function (t) {
   // Sanity test the test framework
   t.ok(true, 'sane');
   t.end();
