@@ -3,7 +3,7 @@
 var originalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
 var mockMobile = require('../bv_tests/disabled/mockmobile.js');
 var PerfTestFrameworkClient = require('../perf_tests/PerfTestFrameworkClient.js');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var EventEmitter = require("events").EventEmitter;
 
 var test = tape({

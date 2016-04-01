@@ -1,7 +1,7 @@
 'use strict';
 
 var tcpmultiplex = require('thali/tcpmultiplex');
-var tape = require('../../lib/thali-tape');
+var tape = require('../../lib/thaliTape');
 var net = require('net');
 var randomstring = require('randomstring');
 var multiplex = require('multiplex');

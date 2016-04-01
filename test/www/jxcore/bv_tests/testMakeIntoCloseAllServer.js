@@ -1,7 +1,7 @@
 'use strict';
 
 var net = require('net');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var test = tape({

@@ -4,7 +4,7 @@ var path = require('path');
 var fs = require('fs');
 
 var testUtils = require('../lib/testUtils.js');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 
 var test = tape({
   setup: function (t) {

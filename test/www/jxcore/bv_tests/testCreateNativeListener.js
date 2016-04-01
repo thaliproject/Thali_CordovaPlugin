@@ -2,7 +2,7 @@
 
 var net = require('net');
 var multiplex = require('multiplex');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersManager');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');

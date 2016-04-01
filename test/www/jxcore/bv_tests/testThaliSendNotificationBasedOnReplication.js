@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var getRandomlyNamedTestPouchDBInstance =
   require('../lib/testUtils.js').getRandomlyNamedTestPouchDBInstance;
 var ThaliNotificationServer =

@@ -152,7 +152,7 @@ A test file will only be run if it starts with the letters 'test'.
 Each test file must include:
 
 ```node
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 ```
 
 Tests must also include a setup and tear down:

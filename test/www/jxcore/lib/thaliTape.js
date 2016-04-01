@@ -2,7 +2,7 @@
  Thali unit test implementation of tape. Highly inspired by wrapping-tape, and
  usage is very similar to the wrapping tape:
 
- var tape = require('thali-tape');
+ var tape = require('thaliTape');
 
  var test = tape({
  setup: function(t) {
