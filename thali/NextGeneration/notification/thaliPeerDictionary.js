@@ -1,7 +1,5 @@
 'use strict';
 
-var assert = require('assert');
-var ThaliMobile = require('../thaliMobile');
 var ThaliNotificationAction = require('./thaliNotificationAction.js');
 
 /** @module thaliPeerDictionary */

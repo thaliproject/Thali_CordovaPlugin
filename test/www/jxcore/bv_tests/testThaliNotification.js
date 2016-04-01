@@ -15,11 +15,33 @@ var ThaliPeerPoolDefault =
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var logger = require('thali/thalilogger')('testThaliNotification');
 
 var SECP256K1 = 'secp256k1';
 var HELLO = 'Hello world';
 var HELLO_PATH = '/hello';
 var globals = {};
+
+function allDictionaryItemsNonZero(dictionary) {
+  Object.keys(dictionary).forEach(function (key) {
+    if (dictionary[key] === 0) {
+      return false;
+    }
+  });
+  return true;
+}
+
+function countNonZeroItems(dictionary) {
+  var counter = 0;
+  Object.keys(dictionary).forEach(function (key) {
+    if (dictionary[key] !== 0) {
+      counter++;
+    }
+  });
+  return counter;
+}
+
+var getPskIdToPublicKey = null;
 
 /**
  * @classdesc This class is a container for all variables and
@@ -33,15 +55,22 @@ var GlobalVariables = function () {
   this.myKeyExchangeObject = this.ecdh.generateKeys();
   this.myPublicBase64 = this.ecdh.getPublicKey('base64');
 
-  // This counters is used to track that we can make a successful https
-  // request to all peers.
-  this.httpsResponseCountSuccess = 0;
-  this.httpsResponseCountFailed = 0;
+  // We use this dictionary to ensure that we get advertisement from all peers.
+  this.peerAdvertisesDataForUsEvents = {};
 
-  // This counter is used to track that all peers can make succesfull
-  // https request to our server.
+  // This dictionary is used to track that we are able make succesfull HTTPS
+  // request to all peers
+  this.peerRepliedToUs = {};
 
-  this.httpsServerRequestCount = 0;
+  // This dictionary is used to track that we receive succesfull HTTPS
+  // request from all peers.
+  this.peerRequestedUs = {};
+
+  // Counts failed psk keys on the server
+  this.failedPskIdentityCount = 0;
+
+  this.numberOfParticipants = 0;
+
 };
 
 var test = tape({
@@ -53,11 +82,22 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    // Clears timeout
+    var summary =
+      'Participants:' + globals.numberOfParticipants +
+      ' Peers Replied to us:' + countNonZeroItems(globals.peerRepliedToUs)+
+      ' Peers requested to:' + countNonZeroItems(globals.peerRequestedUs);
+    logger.info(summary);
     t.end();
   }
 });
 
-function initiateHttpsRequestToPeer(peerDetails){
+function initiateHttpsRequestToPeer(peerDetails, requestNumber){
+
+  // 3 times is max that we try to reconnect
+  if (requestNumber++ > 3) {
+    return;
+  }
 
   var options = {
     method: 'GET',
@@ -72,19 +112,30 @@ function initiateHttpsRequestToPeer(peerDetails){
   };
 
   var req = https.request(options, function (res) {
+    var data = [];
+
     res.on('data', function (chunk) {
-      if (chunk){
-        var textChunk = chunk.toString('utf8');
+      data.push(chunk);
+    });
+
+    res.on('end', function () {
+      if (data) {
+        var buffer = Buffer.concat(data);
+        var textChunk = buffer.toString('utf8');
         if (textChunk === HELLO) {
-          globals.httpsResponseCountSuccess++;
+          var publicKeyHash =
+            NotificationBeacons.createPublicKeyHash(peerDetails.keyId);
+          globals.peerRepliedToUs[publicKeyHash]++;
         }
       }
     });
   });
+
   req.on('error', function (err) {
-    globals.httpsResponseCountFailed++;
-    console.log(err);
+    logger.warn(err.message);
+    initiateHttpsRequestToPeer(peerDetails, requestNumber);
   });
+
   req.end();
 }
 
@@ -108,18 +159,23 @@ test('Client to server request coordinated', function (t) {
   // Total number of https requests grows exponentially. With 2 peers we
   // make 2 request, with 3 peers 6, with 4 peers 12, etc.
 
+  // Test duration is fixed 2 minutes. Test will be succesfull if after 2
+  // minutes peer was able to make https request to all peers and it
+  // received https request from all peers. Hash tables like peerRepliedToUs
+  // are used to track this.
+
   var addressBook = [];
 
-  // We use replies table to ensure we get response back from all peers.
-  var replies = {};
-
   if (t.participants) {
+    globals.numberOfParticipants = t.participants.length;
     t.participants.forEach(function (participant) {
       if (participant.data !== globals.myPublicBase64) {
         var publicKey = new Buffer(participant.data, 'base64');
         addressBook.push(publicKey);
         var publicKeyHash = NotificationBeacons.createPublicKeyHash(publicKey);
-        replies[publicKeyHash] = false;
+        globals.peerAdvertisesDataForUsEvents[publicKeyHash] = 0;
+        globals.peerRepliedToUs[publicKeyHash] = 0;
+        globals.peerRequestedUs[publicKeyHash] = 0;
       }
     });
   }
@@ -139,10 +195,25 @@ test('Client to server request coordinated', function (t) {
   var notificationServer = new ThaliNotificationServer(
     globals.expressRouter, globals.ecdh, 90000);
 
+  getPskIdToPublicKey = notificationServer.getPskIdToPublicKey();
+
   // Initializes test server that just says 'hello world'
   var helloWorld = function (req, res) {
-    // req.connection.pskIdentity
-    globals.httpsServerRequestCount++;
+
+    var clientPubKey = null;
+
+    if (req.connection.pskIdentity) {
+      clientPubKey = getPskIdToPublicKey(req.connection.pskIdentity);
+    }
+
+    if(clientPubKey) {
+      var publicKeyHash =
+        NotificationBeacons.createPublicKeyHash(clientPubKey);
+      globals.peerRequestedUs[publicKeyHash]++;
+    } else {
+      globals.failedPskIdentityCount++;
+    }
+
     res.set('Content-Type', 'text/plain');
     res.setHeader('Cache-Control', 'no-cache');
     res.send(HELLO);
@@ -151,58 +222,46 @@ test('Client to server request coordinated', function (t) {
   globals.expressRouter.get(HELLO_PATH,
     helloWorld);
 
-  var finished = false;
-
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
 
+      var msg = 'PeerAdvertisesDataForUs:' + res.connectionType +
+        ', '+res.hostAddress+', ' + res.hostAddress + ', '+
+        res.portNumber;
+      logger.info(msg);
+
       var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);
+      globals.peerAdvertisesDataForUsEvents[publicKeyHash]++;
 
-      // This ensures that we only make one outgoing http request per one peer
-      if (!replies[publicKeyHash]) {
-        initiateHttpsRequestToPeer(res);
-      }
+      initiateHttpsRequestToPeer(res, 1);
 
-      replies[publicKeyHash] = true;
-
-      var allReplied = true;
-      Object.keys(replies).forEach(function (key) {
-        if (!replies[key]) {
-          allReplied = false;
-        }
-      });
-      if (allReplied && !finished) {
-        finished = true;
-        ThaliMobile.stopListeningForAdvertisements().then(function () {
-          notificationClient.stop();
-          // Kills the server after 10 seconds.
-          // This gives other peers time to finish their
-          // ongoing requests.
-          setTimeout( function () {
-            notificationServer.stop().then(function () {
-              t.pass('received keys from all peers. Peer count:'+
-                addressBook.length);
-
-              t.equal(globals.httpsResponseCountSuccess, addressBook.length,
-                'Peer made right amount of https requests. Request made: ' +
-                globals.httpsResponseCountSuccess);
-
-              t.equal(globals.httpsServerRequestCount, addressBook.length,
-                'Peer received right amount of https requests. Received: ' +
-                globals.httpsServerRequestCount);
-
-              t.end();
-            }).catch(function (failure) {
-              t.fail('Stopping failed:' + failure);
-              t.end();
-            });
-          }, 10000);
-        }).catch(function (failure) {
-          t.fail('Failed to call stopListeningForAdvertisements:' + failure);
-          t.end();
-        });
-      }
     });
+
+  setTimeout( function () {
+    ThaliMobile.stopListeningForAdvertisements().then(function () {
+      notificationClient.stop();
+      notificationServer.stop().then(function () {
+
+        t.ok(allDictionaryItemsNonZero(globals.peerRepliedToUs),
+          'Peer made successful https requests to all peers');
+
+        t.ok(allDictionaryItemsNonZero(globals.peerRequestedUs),
+          'Peer received right amount of https requests');
+
+        t.ok(globals.failedPskIdentityCount === 0,
+          'HTTPS server received zero PSK Identities. Count:' +
+          globals.failedPskIdentityCount);
+
+        t.end();
+      }).catch(function (failure) {
+        t.fail('Stopping the server failed:' + failure);
+        t.end();
+      });
+    }).catch(function (failure) {
+    t.fail('Failed to call stopListeningForAdvertisements:' + failure);
+    t.end();
+  });
+  }, 2 * 6 * 10000);
 
   ThaliMobile.start(globals.expressRouter,
     notificationServer.getPskIdToSecret())
@@ -211,7 +270,7 @@ test('Client to server request coordinated', function (t) {
   }).then(function () {
     notificationClient.start(addressBook);
     return ThaliMobile.startListeningForAdvertisements().then(function () {
-      console.log('startListeningForAdvertisements');
+      logger.info('startListeningForAdvertisements');
     });
   });
 });

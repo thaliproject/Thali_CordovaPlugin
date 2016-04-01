@@ -115,8 +115,7 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
     // Following if clause ensures that we don't call
     // startUpdateAdvertisingAndListening when the last two
     // start calls have had publicKeysToNotify as an empty array ([]).
-    if (self._preambleAndBeacons != null ||
-        previousPreambleAndBeacons != null) {
+    if (self._preambleAndBeacons || previousPreambleAndBeacons ) {
 
       ThaliMobile.startUpdateAdvertisingAndListening()
       .then(function () {
@@ -173,17 +172,26 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
   var self = this;
   var getBeaconNotifications = function (req, res) {
 
-    if (self._preambleAndBeacons == null) {
-      res.status(204).send();
-    } else {
+    if (self._preambleAndBeacons) {
       res.set('Content-Type', 'application/octet-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.send(self._preambleAndBeacons);
+    } else {
+      res.status(204).send();
     }
   };
 
   self._router.get(thaliConfig.NOTIFICATION_BEACON_PATH,
                   getBeaconNotifications);
+};
+/**
+ * This function returns secrets object.
+ *
+ * @private
+ * @returns {module:thaliPskMapCache~ThaliPskMapCache}
+ */
+ThaliNotificationServer.prototype._getSecrets = function() {
+  return this._secrets ? this._secrets : null;
 };
 
 /**
@@ -215,11 +223,13 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
 ThaliNotificationServer.prototype.getPskIdToSecret = function () {
   var self = this;
   return function (id) {
-    if (!self._secrets) {
+    var secrets = self._getSecrets();
+
+    if (!secrets) {
       return null;
     }
     return id === thaliConfig.BEACON_PSK_IDENTITY ?
-      thaliConfig.BEACON_KEY : self._secrets.getSecret(id);
+      thaliConfig.BEACON_KEY : secrets.getSecret(id);
   };
 };
 
@@ -245,11 +255,13 @@ ThaliNotificationServer.prototype.getPskIdToSecret = function () {
 ThaliNotificationServer.prototype.getPskIdToPublicKey = function () {
   var self = this;
   return function (id) {
-    if (!self._secrets) {
+    var secrets = self._getSecrets();
+
+    if (!secrets) {
       return null;
     }
     return id === thaliConfig.BEACON_PSK_IDENTITY ?
-      null : self._secrets.getPublic(id);
+      null : secrets.getPublic(id);
   };
 };
 

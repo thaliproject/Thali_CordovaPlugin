@@ -69,7 +69,7 @@ GlobalVariables.prototype.init = function () {
     // Initializes the server with the expressRouter
     self.expressApp.use('/', self.expressRouter);
     self.expressServer = self.expressApp.listen(0, function (err) {
-      if (err != null) {
+      if (err) {
         reject(err);
       } else {
         self.TESTURL = 'http://' + '127.0.0.1' + ':' +
@@ -96,7 +96,7 @@ GlobalVariables.prototype.kill = function () {
     if (self.expressServer) {
       self.expressServer.closeAll(function (error) {
         self.expressServer = null;
-        if (error != null) {
+        if (error) {
           reject(error);
         } else {
           resolve();
@@ -213,29 +213,59 @@ test('Test ThaliPskMapCache multiple entries', function (t) {
 
   var cache = new ThaliPskMapCache(2000);
 
+  var keyExchangeObject1 = crypto.createECDH(SECP256K1);
+  keyExchangeObject1.generateKeys();
+
+  var keyExchangeObject2 = crypto.createECDH(SECP256K1);
+  keyExchangeObject2.generateKeys();
+
   var publicKeysToNotify = globalVariables.createPublicKeysToNotify();
-  var beaconStreamAndSecretDictionary =
+
+  var dictionary1 =
     NotificationBeacons.generateBeaconStreamAndSecrets(
-      publicKeysToNotify, globalVariables.sourceKeyExchangeObject, 2000);
+      publicKeysToNotify, keyExchangeObject1, 2000);
 
-  cache.push(beaconStreamAndSecretDictionary.keyAndSecret);
+  var dictionary2 =
+    NotificationBeacons.generateBeaconStreamAndSecrets(
+      publicKeysToNotify, keyExchangeObject2, 2000);
 
+  cache.push(dictionary1.keyAndSecret);
+  var matches = true;
   setTimeout( function () {
-    cache.push(beaconStreamAndSecretDictionary.keyAndSecret);
+    cache.push(dictionary2.keyAndSecret);
     t.equal(cache._queue.length,
       2, 'Size of the cache should be 2');
+
+    Object.keys(dictionary1.keyAndSecret).
+    forEach(function (key) {
+      var secret = dictionary1.keyAndSecret[key].pskSecret;
+      if (secret.compare(cache.getSecret(key)) !== 0) {
+        matches = false;
+      }
+    });
+
+    t.ok(matches, 'Cache doesn\'t contain dictionary1');
+    matches = true;
 
     setTimeout( function () {
       cache.getPublic('irrelevant');
       t.equal(cache._queue.length,
         1, 'Size of the cache should be 1');
+
+      Object.keys(dictionary2.keyAndSecret).
+        forEach(function (key) {
+          var secret = dictionary2.keyAndSecret[key].pskSecret;
+          if (secret.compare(cache.getSecret(key)) !== 0) {
+            matches = false;
+          }
+        });
+      t.ok(matches, 'Cache doesn\'t contain beaconStreamAndSecretDictionary2');
       t.end();
     }, 1200);
 
   }, 1200);
 
 });
-
 
 test('Start and stop ThaliNotificationServer', function (t) {
 
