@@ -309,14 +309,9 @@ if (typeof jxcore === 'undefined' ||
   exports = thaliTape;
   exports.coordinated = true;
 } else {
-  // On desktop we just use wrapping-tape
-  exports = require('wrapping-tape');
+  // On desktop we just use simple non-coordinated tape
+  exports = require('./simpleTape');
   exports.coordinated = false;
-
-  // thaliTape has a begin function that we patch in here to make
-  // the api identical
-  exports.begin = function () {
-  };
 }
 
 module.exports = exports;
