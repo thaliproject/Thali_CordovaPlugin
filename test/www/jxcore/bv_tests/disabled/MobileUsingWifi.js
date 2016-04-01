@@ -4,7 +4,7 @@ var os = require('os');
 var net = require('net');
 var url = require('url');
 
-var testUtils = require('./testUtils.js');
+var testUtils = require('./../../lib/testUtils.js');
 var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
 
 var randomSuffix = '' + Math.round((Math.random() * 10000))

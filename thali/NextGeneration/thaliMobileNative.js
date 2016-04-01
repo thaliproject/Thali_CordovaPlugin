@@ -131,7 +131,7 @@
  */
 
 /**
- * When we are asked to connect to a remote peer the way we normally handles
+ * When we are asked to connect to a remote peer the way we normally handle
  * this is by opening a port on 127.0.0.1 and listening for an incoming
  * connection. When we get the incoming connection we then bridge it to the
  * remote peer.
@@ -227,9 +227,8 @@
  * consistent.
  *
  * If this method is called consecutively with the same peerIdentifier and a
- * connection is either in progress or already exists then an error MUST
- * be returned. Otherwise a new
- * connection MUST be created.
+ * connection is either in progress or already exists then an error MUST be
+ * returned. Otherwise a new connection MUST be created.
  *
  * In the case of Android there MUST be at most one
  * Bluetooth client connection between this peer and the identified remote peer.
@@ -535,7 +534,7 @@ var radioState = {
  * cannot count the number of instances of this event in order to count how many
  * connections were missed. This also means that the native layer is only
  * required to track exactly one instance of this event for any given port
- * within the 100 ms window. In other words if the systetm is listening on port
+ * within the 100 ms window. In other words if the system is listening on port
  * X and 10,000 incoming requests come for port X within 100 ms (that would be
  * impressive) then the native layer is only obligated to send up exactly one
  * notification of the problem. This is because the native app only needs to
