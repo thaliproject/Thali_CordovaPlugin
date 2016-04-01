@@ -184,15 +184,6 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
   self._router.get(thaliConfig.NOTIFICATION_BEACON_PATH,
                   getBeaconNotifications);
 };
-/**
- * This function returns secrets object.
- *
- * @private
- * @returns {module:thaliPskMapCache~ThaliPskMapCache}
- */
-ThaliNotificationServer.prototype._getSecrets = function() {
-  return this._secrets ? this._secrets : null;
-};
 
 /**
  * This function takes a psk id value and turns it into a private key if
@@ -223,13 +214,11 @@ ThaliNotificationServer.prototype._getSecrets = function() {
 ThaliNotificationServer.prototype.getPskIdToSecret = function () {
   var self = this;
   return function (id) {
-    var secrets = self._getSecrets();
-
-    if (!secrets) {
+    if (!self._secrets) {
       return null;
     }
     return id === thaliConfig.BEACON_PSK_IDENTITY ?
-      thaliConfig.BEACON_KEY : secrets.getSecret(id);
+      thaliConfig.BEACON_KEY : self._secrets.getSecret(id);
   };
 };
 
@@ -255,13 +244,11 @@ ThaliNotificationServer.prototype.getPskIdToSecret = function () {
 ThaliNotificationServer.prototype.getPskIdToPublicKey = function () {
   var self = this;
   return function (id) {
-    var secrets = self._getSecrets();
-
-    if (!secrets) {
+    if (!self._secrets) {
       return null;
     }
     return id === thaliConfig.BEACON_PSK_IDENTITY ?
-      null : secrets.getPublic(id);
+      null : self._secrets.getPublic(id);
   };
 };
 

@@ -23,12 +23,18 @@ var HELLO_PATH = '/hello';
 var globals = {};
 
 function allDictionaryItemsNonZero(dictionary) {
+  if( Object.keys(dictionary).length === 0) {
+    return false;
+  }
+
+  var result = true;
+
   Object.keys(dictionary).forEach(function (key) {
     if (dictionary[key] === 0) {
-      return false;
+      result = false;
     }
   });
-  return true;
+  return result;
 }
 
 function countNonZeroItems(dictionary) {
@@ -54,6 +60,8 @@ var GlobalVariables = function () {
   this.ecdh = crypto.createECDH(SECP256K1);
   this.myKeyExchangeObject = this.ecdh.generateKeys();
   this.myPublicBase64 = this.ecdh.getPublicKey('base64');
+
+  this.testInterval = null;
 
   // We use this dictionary to ensure that we get advertisement from all peers.
   this.peerAdvertisesDataForUsEvents = {};
@@ -111,6 +119,8 @@ function initiateHttpsRequestToPeer(peerDetails, requestNumber){
     ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS
   };
 
+  var requestSuccessful = false;
+
   var req = https.request(options, function (res) {
     var data = [];
 
@@ -126,6 +136,7 @@ function initiateHttpsRequestToPeer(peerDetails, requestNumber){
           var publicKeyHash =
             NotificationBeacons.createPublicKeyHash(peerDetails.keyId);
           globals.peerRepliedToUs[publicKeyHash]++;
+          requestSuccessful = true;
         }
       }
     });
@@ -133,7 +144,12 @@ function initiateHttpsRequestToPeer(peerDetails, requestNumber){
 
   req.on('error', function (err) {
     logger.warn(err.message);
-    initiateHttpsRequestToPeer(peerDetails, requestNumber);
+  });
+
+  req.on('close', function (err) {
+    if(!requestSuccessful) {
+      initiateHttpsRequestToPeer(peerDetails, requestNumber);
+    }
   });
 
   req.end();
@@ -141,6 +157,17 @@ function initiateHttpsRequestToPeer(peerDetails, requestNumber){
 
 if (!tape.coordinated) {
   return;
+}
+
+function checkSuccess() {
+
+  if (allDictionaryItemsNonZero(globals.peerAdvertisesDataForUsEvents) &&
+    allDictionaryItemsNonZero(globals.peerRepliedToUs) &&
+    allDictionaryItemsNonZero(globals.peerRequestedUs))
+  {
+    return true;
+  }
+  return false;
 }
 
 test('Client to server request coordinated', function (t) {
@@ -236,32 +263,36 @@ test('Client to server request coordinated', function (t) {
       initiateHttpsRequestToPeer(res, 1);
 
     });
+  var intervalRounds = 0;
 
-  setTimeout( function () {
-    ThaliMobile.stopListeningForAdvertisements().then(function () {
-      notificationClient.stop();
-      notificationServer.stop().then(function () {
+  globals.testInterval = setInterval( function () {
+    if(checkSuccess() || ++intervalRounds > 24) {
+      clearInterval(globals.testInterval);
+      ThaliMobile.stopListeningForAdvertisements().then(function () {
+        notificationClient.stop();
+        notificationServer.stop().then(function () {
 
-        t.ok(allDictionaryItemsNonZero(globals.peerRepliedToUs),
-          'Peer made successful https requests to all peers');
+          t.ok(allDictionaryItemsNonZero(globals.peerRepliedToUs),
+            'Peer made successful https requests to all peers');
 
-        t.ok(allDictionaryItemsNonZero(globals.peerRequestedUs),
-          'Peer received right amount of https requests');
+          t.ok(allDictionaryItemsNonZero(globals.peerRequestedUs),
+            'Peer received right amount of https requests');
 
-        t.ok(globals.failedPskIdentityCount === 0,
-          'HTTPS server received zero PSK Identities. Count:' +
-          globals.failedPskIdentityCount);
+          t.ok(globals.failedPskIdentityCount === 0,
+            'HTTPS server received zero PSK Identities. Count:' +
+            globals.failedPskIdentityCount);
 
-        t.end();
+          t.end();
+        }).catch(function (failure) {
+          t.fail('Stopping the server failed:' + failure);
+          t.end();
+        });
       }).catch(function (failure) {
-        t.fail('Stopping the server failed:' + failure);
+        t.fail('Failed to call stopListeningForAdvertisements:' + failure);
         t.end();
       });
-    }).catch(function (failure) {
-    t.fail('Failed to call stopListeningForAdvertisements:' + failure);
-    t.end();
-  });
-  }, 2 * 6 * 10000);
+    }
+  }, 5000);
 
   ThaliMobile.start(globals.expressRouter,
     notificationServer.getPskIdToSecret())
