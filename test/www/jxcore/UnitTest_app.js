@@ -25,36 +25,15 @@ ThaliMobile.getNetworkStatus()
   }
   Promise.all(promiseList)
   .then(function () {
-    return testUtils.hasRequiredHardware();
-  })
-  .then(function (hasRequiredHardware) {
-    if (hasRequiredHardware) {
-      Mobile('GetDeviceName').callNative(function (name) {
-        console.log('My device name is: %s', name);
-        testUtils.setName(name);
-        // The setImmediate is to avoid this issue:
-        // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
-        setImmediate(function () {
-          require('./runTests.js');
-        });
+    Mobile('GetDeviceName').callNative(function (name) {
+      console.log('My device name is: %s', name);
+      testUtils.setName(name);
+      // The setImmediate is to avoid this issue:
+      // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
+      setImmediate(function () {
+        require('./runTests.js');
       });
-    } else {
-      ThaliMobile.getNetworkStatus()
-      .then(function (networkStatus) {
-        testUtils.logMessageToScreen(
-          'Device did not have required hardware capabilities!'
-        );
-        console.log(networkStatus);
-        if (networkStatus.bluetoothLowEnergy === 'on') {
-          // If we are on a device that doesn't have required capabilities
-          // the network status for BLE must not be reported to be "on"
-          // which would mean "The radio is on and available for use."
-          console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-        } else {
-          console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-        }
-      });
-    }
+    });
   });
 });
 

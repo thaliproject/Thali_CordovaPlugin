@@ -5,6 +5,7 @@
 
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
+var assert = require('assert');
 
 var logger = console;
 
@@ -25,29 +26,60 @@ function TestFramework(testConfig, userConfig, _logger) {
 
   var self = this;
 
-  // requiredDevices is the number of device of each platform 
-  // we need to have seen before we'll start a test
+  // availableDevices is the number of devices per platform
+  // we need to complete the test
+  this.availableDevices = {};
+
+  // requiredDevices is the number of devices per platform
+  // we need to complete the test
   this.requiredDevices = {};
 
   // Populate first from the original testConfig which is
-  // the number of devices the CI system think deployed succesfully
-  Object.keys(this.testConfig.devices).forEach(function(platform) {
-    self.requiredDevices[platform] = self.testConfig.devices[platform];
+  // the number of available devices the CI system think deployed succesfully
+  Object.keys(this.testConfig.devices).forEach(function (platform) {
+    self.availableDevices[platform] = self.testConfig.devices[platform];
   });
 
-  // .. then override with userConfig which may specify a smaller number
+  // Then use the userConfig which may specify a smaller number
   // of devices
-  Object.keys(this.userConfig).forEach(function(platform) {
-    // -1 indicates to inherit from testConfig (i.e. all available)
-    if (self.userConfig[platform].numDevices && self.userConfig[platform].numDevices !== -1) {
+  Object.keys(this.userConfig).forEach(function (platform) {
+    // -1 indicates to use all devices
+    if (self.userConfig[platform].numDevices &&
+        self.userConfig[platform].numDevices !== -1) {
       self.requiredDevices[platform] = self.userConfig[platform].numDevices;
+    } else {
+      self.requiredDevices[platform] = self.availableDevices[platform];
+    }
+    if (self.requiredDevices[platform] > self.availableDevices[platform]) {
+      self.requiredDevices[platform] = self.availableDevices[platform];
     }
   });
 }
 
 util.inherits(TestFramework, EventEmitter);
 
-TestFramework.prototype.addDevice = function(device) {
+// the Fisher-Yates (aka Knuth) Shuffle.
+// http://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
+var shuffle = function (array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+};
+
+TestFramework.prototype.addDevice = function (device) {
 
   // this.devices = { 'ios' : [dev1, dev2], 'android' : [dev3, dev4] }
   if (!this.devices[device.platform]) {
@@ -59,48 +91,71 @@ TestFramework.prototype.addDevice = function(device) {
     // the uuid's. The new socket won't have any of the old socket's event handlers though..
     // .. so we need to transfer them from the old to the new socket.
 
-    var existing = this.devices[device.platform].filter(function(d) {
-      return (d.uuid == device.uuid);
+    var existing = this.devices[device.platform].filter(function (d) {
+      return d.uuid === device.uuid;
     });
 
-    if (existing.length) {
+    assert(existing.length <= 1,
+      'should not have more than 1 device with same uuid');
+
+    if (existing.length === 1) {
+      var existingDevice = existing[0];
+
       logger.info(
-        "Updating existing device: %s (%s)", existing[0].deviceName, existing[0].uuid
+        'Updating existing device: %s (%s)',
+        existingDevice.deviceName, existingDevice.uuid
       );
 
-      // Transfer the test data listener.. 99% of the time this will be the only one
-      var listeners = existing[0].socket.listeners('test data');
-      if (listeners.length) {
-        device.socket.on("test data", listeners[0]);
-      }
+      // Move all the event listeners from the existing device
+      device.socket._events = existingDevice.socket._events;
+      existingDevice.socket = device.socket;
 
-      existing[0].socket = device.socket;
       return;
-
-    } else {
-      // Straightforward add new device
-      this.devices[device.platform].push(device);
     }
+
+    // Straightforward add new device
+    this.devices[device.platform].push(device);
   }
 
-  // See if we have enough devices of platform type to start a test run
-  if (this.devices[device.platform].length === this.requiredDevices[device.platform]) {
+  // See if we have added all devices of platform type
+  if (this.devices[device.platform].length ===
+      this.availableDevices[device.platform]) {
     logger.info(
-      "Required number of %s devices presented (%d)", 
-      device.platform, this.requiredDevices[device.platform]
+      'All %d %s devices are present',
+      this.availableDevices[device.platform], device.platform
     );
-    this.startTests(device.platform);
-  } else if (this.devices[device.platform].length >= this.requiredDevices[device.platform]) {
-    // Discard surplus devices..
-    logger.info("Discarding surplus device: %s", device.deviceName);
-    this.removeDevice(device);
-    device.socket.emit("discard");
-  }
-}
 
-TestFramework.prototype.removeDevice = function (device) {
-  var i = this.devices[device.platform].indexOf(device);
-  this.devices[device.platform].splice(i, 1);
+    var finalDevices = this.devices[device.platform]
+      .filter(function (deviceCandidate) {
+        if (!deviceCandidate.supportedHardware) {
+          logger.info('Disqualifying device with unsupported hardware: %s',
+            deviceCandidate.deviceName);
+          deviceCandidate.socket.emit('disqualify');
+          return false;
+        }
+        return true;
+      }
+    );
+    shuffle(finalDevices);
+
+    var requiredDevices = this.requiredDevices[device.platform].length;
+    var deviceNumber = 0;
+    this.devices[device.platform] = finalDevices
+      .filter(function (deviceCandidate) {
+        deviceNumber++;
+        if (deviceNumber > requiredDevices) {
+          // Discard surplus devices..
+          logger.info('Discarding surplus device: %s',
+            deviceCandidate.deviceName);
+          deviceCandidate.socket.emit('discard');
+          return false;
+        }
+        return true;
+      }
+    );
+
+    this.startTests(device.platform);
+  }
 };
 
 module.exports = TestFramework;

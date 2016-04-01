@@ -384,6 +384,15 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       [self didRegisterToNative: params[0]];
     }
   } withName:@"didRegisterToNative"];
+
+  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+   {
+     NSString * const version = [[NSProcessInfo processInfo] operatingSystemVersionString];
+     @synchronized(self)
+     {
+       [JXcore callEventCallback:callbackId withParams:@[version]];
+     }
+   } withName:@"getOSVersion"];
 }
 
 @end
