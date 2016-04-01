@@ -71,7 +71,7 @@ module.exports.logMessageToScreen = function (message) {
   if (isFunction(logCallback)) {
     logCallback(message);
   } else {
-    console.log('logCallback not set !!!!');
+    logger.warn('logCallback not set!');
   }
 };
 
@@ -85,7 +85,11 @@ var myNameCallback = null;
  */
 module.exports.setName = function (name) {
   myName = name;
-  myNameCallback && myNameCallback(myName);
+  if (isFunction(myNameCallback)) {
+    myNameCallback(name);
+  } else {
+    logger.warn('myNameCallback not set!');
+  }
 };
 
 /**
@@ -102,6 +106,11 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
 
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
+    // If the name is already set, pass it to the callback
+    // right away.
+    if (myName) {
+      myNameCallback(myName);
+    }
   });
 } else {
   logCallback = function (message) {
@@ -176,6 +185,41 @@ module.exports.hasRequiredHardware = function () {
     } else {
       resolve(true);
     }
+  });
+};
+
+module.exports.returnsValidNetworkStatus = function () {
+  // The require is here instead of top of file so that
+  // we can require the test utils also from an environment
+  // where Mobile isn't defined (which is a requirement when
+  // thaliMobile is required).
+  var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  // Check that network status is as expected and
+  // report to CI that this device is ready.
+  return ThaliMobile.getNetworkStatus()
+  .then(function (networkStatus) {
+    module.exports.logMessageToScreen(
+      'Device did not have required hardware capabilities!'
+    );
+    if (networkStatus.bluetoothLowEnergy === 'on') {
+      // If we are on a device that doesn't have required capabilities
+      // the network status for BLE must not be reported to be "on"
+      // which would mean "The radio is on and available for use."
+      return Promise.resolve(false);
+    } else {
+      return Promise.resolve(true);
+    }
+  });
+};
+
+module.exports.getOSVersion = function () {
+  return new Promise(function (resolve) {
+    if (!jxcore.utils.OSInfo().isMobile) {
+      return resolve('dummy');
+    }
+    Mobile('getOSVersion').callNative(function (version) {
+      resolve(version);
+    });
   });
 };
 

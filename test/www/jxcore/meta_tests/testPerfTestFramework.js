@@ -5,10 +5,10 @@ var TestDevice = require('../../../TestServer/TestDevice.js');
 var tape = require('../lib/thali-tape');
 
 var test = tape({
-  setup: function(t) {
+  setup: function (t) {
     t.end();
   },
-  teardown: function(t) {
+  teardown: function (t) {
     t.end();
   }
 });
@@ -21,8 +21,10 @@ test('should be able to add devices to the framework', function (t) {
     honorCount: true
   };
   var perfTestFramework = new PerfTestFramework(testConfig);
-  var testDevice = new TestDevice(null, 'Some name', 'uuid', 'ios', 'perftest', [], null);
+  var testDevice = new TestDevice(
+    null, 'Some name', 'uuid', 'ios', 'perftest', [], true, null
+  );
   perfTestFramework.addDevice(testDevice);
-  t.equal(perfTestFramework.devices['ios'].length, 1);
+  t.equal(perfTestFramework.devices.ios.length, 1);
   t.end();
 });

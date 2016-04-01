@@ -27,8 +27,13 @@ function UnitTestFramework(testConfig, _logger)
   var self = this;
   self.runningTests = Object.keys(self.requiredDevices).filter(
     function (platform) {
+      logger.info(
+        'Require %d %s devices',
+        self.requiredDevices[platform], platform
+      );
       return self.requiredDevices[platform];
-    });
+    }
+  );
 }
 
 util.inherits(UnitTestFramework, TestFramework);
@@ -73,7 +78,10 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
 
-  logger.info('Starting unit test run for platform: %s', platform);
+  logger.info(
+    'Starting unit test run on %d %s devices',
+    this.devices[platform].length, platform
+  );
 
   var self = this;
   function doTest(test, cb) {
@@ -81,7 +89,12 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
     logger.info('Running on %s test: %s', platform, test);
 
     function emit(device, msg, data) {
-      var retries = 10;
+      // Try to retry 120 times every second, because
+      // it might be that the socket connection is temporarily
+      // down while the retries are tried so this gives
+      // the device 2 minutes to reconnect.
+      var retries = 120;
+      var retryInterval = 1000;
       var emitTimeout = null;
 
       var acknowledged = false;
@@ -101,9 +114,9 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
             device.socket.emit(msg);
           }
           if (--retries > 0) {
-            emitTimeout = setTimeout(_emit, 1000);
+            emitTimeout = setTimeout(_emit, retryInterval);
           } else {
-            logger.error('Too many emit retries to device: %s',
+            logger.debug('Too many emit retries to device: %s',
               device.deviceName);
           }
         }

@@ -12,9 +12,15 @@ var argv = parseargv(process.argv.slice(2), {
     instanceCount: DEFAULT_INSTANCE_COUNT,
     serverLogs: true,
     instanceLogs: true,
-    waitForInstance: false
+    waitForInstance: false,
+    showFailedLog: false
   },
-  boolean: ['serverLogs', 'instanceLogs', 'waitForInstance'],
+  boolean: [
+    'serverLogs',
+    'instanceLogs',
+    'waitForInstance',
+    'showFailedLog'
+  ],
   string: ['test', 'filter']
 });
 
@@ -57,7 +63,9 @@ var setListeners = function (instance, instanceId) {
 
     if (data.indexOf('PROCESS_ON_EXIT_') >= 0) {
       if (data.indexOf('PROCESS_ON_EXIT_FAILED') >= 0) {
-        console.log(instanceLogs[instanceId]);
+        if (argv.showFailedLog) {
+          console.log(instanceLogs[instanceId]);
+        }
         shutdown(1);
       }
     } else if (data.indexOf('-== END ==-') >= 0) {

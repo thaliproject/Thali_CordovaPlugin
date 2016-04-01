@@ -3,6 +3,7 @@
 var fs = require('fs-extra-promise');
 var path = require('path');
 var thaliTape = require('./lib/thali-tape');
+var testUtils = require('./lib/testUtils');
 var logger = require('thali/thalilogger')('runTests');
 
 // The global.Mobile object is replaced here after thali-tape
@@ -40,4 +41,10 @@ if (hasJavaScriptSuffix(testsToRun)) {
   });
 }
 
-thaliTape.begin();
+testUtils.hasRequiredHardware()
+.then(function (hasRequiredHardware) {
+  testUtils.getOSVersion()
+  .then(function (version) {
+    thaliTape.begin(version, hasRequiredHardware);
+  });
+});
