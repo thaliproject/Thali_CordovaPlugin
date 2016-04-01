@@ -11,6 +11,7 @@ var sinon = require('sinon');
 var uuid = require('node-uuid');
 var nodessdp = require('node-ssdp');
 var randomstring = require('randomstring');
+var Promise = require('lie');
 
 var verifyCombinedResultSuccess = function (t, combinedResult, message) {
   t.equal(combinedResult.wifiResult, null, message || 'error should be null');
@@ -528,7 +529,7 @@ function (t) {
   });
 });
 
-test('can get data from all participants', function (t) {
+test.only('can get data from all participants and test bad requests', function (t) {
   var uuidPath = '/uuid';
   var router = express.Router();
   // Register a handler that returns the UUID of this
@@ -546,7 +547,7 @@ test('can get data from all participants', function (t) {
   });
   setupDiscoveryAndFindPeers(t, router, function (peer, done) {
     // Try to get data only from non-TCP peers so that the test
-    // works the same way on desktop on CI where Wifi is blocked
+    // works the same way on desktop as on CI where Wifi is blocked
     // between peers.
     if (peer.connectionType === ThaliMobile.connectionTypes.TCP_NATIVE) {
       return;
@@ -559,10 +560,54 @@ test('can get data from all participants', function (t) {
       t.ok(remainingParticipants[responseBody],
         'received uuid must be in remaining list');
       delete remainingParticipants[responseBody];
+      
+      // Now test that bad requests get rejected
+      var badId = testUtils.get(
+        peer.hostAddress, peer.portNumber,
+        uuidPath, 'wrong id', pskKey)
+        .then(function () {
+          t.fail('wrong id should not have worked');
+        })
+        .catch(function (error) {
+          t.equal(error.code, 'ECONNRESET', 'properly failed wrong id');
+          return Promise.resolve();
+        });
+      var badKey = testUtils.get(
+        peer.hostAddress, peer.portNumber,
+        uuidPath, pskIdentity, new Buffer('wrong key'))
+        .then(function () {
+          t.fail('wrong key should not have worked');
+        })
+        .catch(function (error) {
+          t.equal(error.code, 'ECONNRESET', 'properly failed wrong key');
+          return Promise.resolve();
+        });
+      var badHTTPS = testUtils.getWithAgent(peer.hostAddress, peer.portNumber,
+        uuidPath, null)
+        .then(function () {
+          t.fail('simple HTTPS should not have worked');
+        })
+        .catch(function (error) {
+          t.equal(error.code, 'ECONNRESET', 'properly failed on simple HTTPS');
+          return Promise.resolve();
+        });
+      var badHTTP = testUtils.httpGet(peer.hostAddress, peer.portNumber,
+        uuidPath)
+        .then(function () {
+          t.fail('HTTP get should not have worked');
+        })
+        .catch(function (error) {
+          t.equal(error.code, 'ECONNRESET', 
+            'properly failed on simple HTTP GET');
+          return Promise.resolve();
+        });
+      return Promise.all([badId, badKey, badHTTPS, badHTTP]);
+    })
+    .then(function () {
       if (Object.keys(remainingParticipants).length === 0) {
         t.ok(true, 'received all uuids');
         done();
-      }
+      }      
     })
     .catch(function (error) {
       t.fail(error);
