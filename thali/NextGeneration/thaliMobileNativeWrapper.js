@@ -124,6 +124,18 @@ function routerPortConnectionFailedHandler(failedRouterPort) {
     });
 }
 
+function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
+  if (!states.started) {
+    // We aren't supposed to emit events when we aren't started
+    return;
+  }
+
+  module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+    peerIdentifier: recreateAnnouncement.peerIdentifier,
+    portNumber: recreateAnnouncement.portNumber
+  });
+}
+
 function stopServersManager() {
   if (!gServersManager) {
     return Promise.resolve();
@@ -136,6 +148,8 @@ function stopServersManager() {
         failedConnectionHandler);
       oldServersManager.removeListener('routerPortConnectionFailed',
         routerPortConnectionFailedHandler);
+      oldServersManager.removeListener('listenerRecreatedAfterFailure',
+        listenerRecreatedAfterFailureHandler);
     });
 }
 
@@ -146,6 +160,8 @@ function stopCreateAndStartServersManager() {
       gServersManager.on('failedConnection', failedConnectionHandler);
       gServersManager.on('routerPortConnectionFailed',
         routerPortConnectionFailedHandler);
+      gServersManager.on('listenerRecreatedAfterFailure',
+        listenerRecreatedAfterFailureHandler);
       return gServersManager.start();
     })
     .then(function (localPort) {

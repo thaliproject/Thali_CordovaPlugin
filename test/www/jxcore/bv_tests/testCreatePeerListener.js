@@ -8,6 +8,7 @@ var tape = require('../lib/thali-tape');
 var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersManager');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
+var logger = require('thali/thalilogger')('testCreatePeerListener');
 
 // Every call to Mobile trips this warning
 /* jshint -W064 */
@@ -96,12 +97,13 @@ test('calling createPeerListener (pleaseConnect === true) with unknown peer ' +
 );
 
 test('calling createPeerListener twice with same peerIdentifier should ' +
-  'return the same port', function(t) {
+  'return the same port', function (t) {
   serversManager.start()
     .then(function () {
       var promise1 = serversManager.createPeerListener('peer1', false);
       var promise2 = serversManager.createPeerListener('peer1', false);
-      return Promise.all([promise1, promise2]);
+      var promise3 = serversManager.createPeerListener('peer1', false);
+      return Promise.all([promise1, promise2, promise3]);
     })
     .then(function (promiseResultArray) {
       t.equal(promiseResultArray[0], promiseResultArray[1],
@@ -112,6 +114,54 @@ test('calling createPeerListener twice with same peerIdentifier should ' +
       t.fail('oops ' + err);
       t.end();
     });
+});
+
+test('Killed a listener causes a new one to spawn', function (t) {
+  var firstPort = null;
+
+  var nativeServer = net.createServer(function (socket) {
+    setTimeout(function () {
+      socket.destroy();
+    }, 200);
+  });
+
+  nativeServer.listen(0, function () {
+    // Have the next Mobile("connect") call complete with a forward connection
+    Mobile('connect').nextNative(function (peerIdentifier, cb) {
+      cb(null, Mobile.createListenerOrIncomingConnection(
+        nativeServer.address().port, 0, 0));
+    });
+
+    serversManager.on('listenerRecreatedAfterFailure', function (record) {
+      t.equal('peer2', record.peerIdentifier, 'same peer ID');
+      t.notEqual(firstPort, record.portNumber, 'different ports');
+      t.end();
+    });
+
+    serversManager.start()
+      .then(function () {
+        return serversManager.createPeerListener('peer2', false);
+      })
+      .then(function (port) {
+        firstPort = port;
+        var socket = net.connect(nativeServer.address().port);
+        socket.on('close', function () {
+          logger.debug('socket closed');
+        })
+      })
+      .catch(function (err) {
+        t.fail(err);
+        serversManager.removeAllListeners('listenerRecreatedAfterFailure');
+        t.end();
+      });
+  });
+
+  nativeServer.on('error', function (err) {
+    if (err) {
+      t.fail('nativeServer should not fail');
+      return t.end();
+    }
+  });
 });
 
 /*
@@ -762,4 +812,14 @@ test('createPeerListener - multiple parallel calls', function (t) {
     .then(function () {
       t.end();
     });
+});
+
+test('createPeerListener - closing connection to listener closes everything',
+function (t) {
+  
+});
+
+test('createPeerListener - closing native connection with listener closes ' +
+  'everything', function (t) {
+  
 });
