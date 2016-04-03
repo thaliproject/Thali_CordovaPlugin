@@ -9,6 +9,8 @@ var randomString = require('randomstring');
 var Promise = require('lie');
 var https = require('https');
 var logger = require('thali/thalilogger')('testUtils');
+var ForeverAgent = require('forever-agent');
+var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
@@ -268,17 +270,10 @@ module.exports.extractBeacon = function (beaconStreamWithPreAmble,
   return null;
 };
 
-module.exports.get = function (host, port, path, pskIdentity, pskKey) {
+module.exports._get = function (host, port, path, options) {
   var complete = false;
   return new Promise(function (resolve, reject) {
-    var request = https.request({
-      hostname: host,
-      port: port,
-      path: path,
-      agent: false,
-      pskIdentity: pskIdentity,
-      pskKey: pskKey
-    }, function (response) {
+    var request = https.request(options, function (response) {
       var responseBody = '';
       response.on('data', function (data) {
         responseBody += data;
@@ -306,4 +301,28 @@ module.exports.get = function (host, port, path, pskIdentity, pskKey) {
     request.setTimeout(15 * 1000 * 1000);
     request.end();
   });
+};
+
+module.exports.get = function (host, port, path, pskIdentity, pskKey) {
+  var options = {
+    hostname: host,
+    port: port,
+    path: path,
+    agent: new ForeverAgent.SSL({
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskIdentity: pskIdentity,
+      pskKey: pskKey
+    })
+  };
+  return module.exports._get(host, port, path, options);
+};
+
+module.exports.getWithAgent = function (host, port, path, agent) {
+  var options = {
+    hostname: host,
+    port: port,
+    path: path,
+    agent: agent
+  };
+  return module.exports._get(host, port, path, options);
 };
