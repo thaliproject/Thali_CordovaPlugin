@@ -27,20 +27,31 @@ var io = require('socket.io-client');
 var testUtils = require('./testUtils');
 
 process.on('uncaughtException', function (err) {
-  console.log('Uncaught Exception: ' + err);
+  testUtils.logMessageToScreen('Uncaught Exception: ' + err);
   console.log(err.stack);
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 });
 
 process.on('unhandledRejection', function (err) {
-  console.log('Uncaught Promise Rejection: ' + JSON.stringify(err));
+  testUtils.logMessageToScreen('Uncaught Promise Rejection: ' + JSON.stringify(err));
   console.trace(err);
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 });
 
 var tests = {};
+var allSuccess = true;
+
+var emitWhenConnected = function (socket, name, data) {
+  if (socket.connected) {
+    data ? socket.emit(name, data) : socket.emit(name);
+  } else {
+    setTimeout(function () {
+      emitWhenConnected(socket, name, data);
+    }, 1000);
+  }
+};
 
 function declareTest(testServer, name, setup, teardown, opts, cb) {
 
@@ -59,12 +70,15 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     // Run setup function when the testServer tells us
     var success = true;
     testServer.once('setup_' + name, function () {
-      testServer.emit(util.format('setup_%s_ok', name));
+      emitWhenConnected(testServer, util.format('setup_%s_ok', name));
       t.on('result', function (res) {
         success = success && res.ok;
       });
       t.once('end', function () {
-        testServer.emit('setup_complete',
+        if (!success) {
+          allSuccess = false;
+        }
+        emitWhenConnected(testServer, 'setup_complete',
           JSON.stringify({
             'test': name,
             'success': success,
@@ -85,15 +99,18 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     });
 
     t.once('end', function () {
+      if (!success) {
+        allSuccess = false;
+      }
       // Tell the server we ran the test and what the result was (true == pass)
-      testServer.emit('test_complete',
+      emitWhenConnected(testServer, 'test_complete',
         JSON.stringify({'test':name, 'success':success}));
     });
 
     // Run the test (cb) when the server tells us to
     testServer.once('start_test_' + name, function (data) {
       t.participants = JSON.parse(data);
-      testServer.emit(util.format('start_test_%s_ok', name));
+      emitWhenConnected(testServer, util.format('start_test_%s_ok', name));
       cb(t);
     });
   });
@@ -102,12 +119,15 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     // Run teardown function when the server tells us
     var success = true;
     testServer.once('teardown_' + name, function () {
-      testServer.emit(util.format('teardown_%s_ok', name));
+      emitWhenConnected(testServer, util.format('teardown_%s_ok', name));
       t.on('result', function (res) {
         success = success && res.ok;
       });
       t.once('end', function () {
-        testServer.emit('teardown_complete',
+        if (!success) {
+          allSuccess = false;
+        }
+        emitWhenConnected(testServer, 'teardown_complete',
           JSON.stringify({'test':name, 'success':success}));
       });
       teardown(t);
@@ -120,6 +140,8 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 var testRunningNumber = 0;
 // Flag used to check if we have completed all the tests we should run
 var complete = false;
+var nextTestOnly = false;
+var ignoreRemainingTests = false;
 
 var thaliTape = function (fixture) {
   // Thali_Tape - Adapt tape such that tests are executed when explicitly
@@ -127,14 +149,30 @@ var thaliTape = function (fixture) {
   // This enables us to run tests in lock step across a number of devices
 
   // test([name], [opts], fn)
-  return function (name, opts, fn) {
+  var addTest = function (name, opts, fn) {
 
     // This is the function that declares and performs the test.
     // cb is the test function. We wrap this in setup and
 
+    if (ignoreRemainingTests) {
+      return;
+    }
+
     if (!fn) {
       fn = opts;
       opts = null;
+    }
+
+    if (nextTestOnly) {
+      tests = {
+        name: {
+          opts: opts,
+          fn: fn,
+          fixture: fixture
+        }
+      };
+      ignoreRemainingTests = true;
+      return;
     }
 
     testRunningNumber++;
@@ -144,9 +182,23 @@ var thaliTape = function (fixture) {
       fixture: fixture
     };
   };
+
+  addTest.only = function (name, opts, fn) {
+    nextTestOnly = true;
+    addTest(name, opts, fn);
+  };
+
+  return addTest;
 };
 
-thaliTape.begin = function () {
+thaliTape.uuid = uuid.v4();
+
+var platform =
+  typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid ?
+  'android' :
+  'ios';
+
+thaliTape.begin = function (version, hasRequiredHardware) {
 
   var serverOptions = {
     transports: ['websocket']
@@ -155,72 +207,99 @@ thaliTape.begin = function () {
   var testServer = io('http://' + require('../server-address') + ':' + 3000 +
     '/', serverOptions);
 
+  var firstConnection = true;
+  var onConnection = function () {
+    if (firstConnection) {
+      // Once connected, let the server know who we are and what we do
+      testServer.once('schedule', function (schedule) {
+        JSON.parse(schedule).forEach(function (test) {
+          declareTest(
+            testServer,
+            test,
+            tests[test].fixture.setup,
+            tests[test].fixture.teardown,
+            tests[test].opts,
+            tests[test].fn
+          );
+        });
+        emitWhenConnected(testServer, 'schedule_complete');
+      });
+    }
+    firstConnection = false;
+
+    var presentData = {
+      os: platform,
+      version: version,
+      supportedHardware: hasRequiredHardware,
+      name: testUtils.getName(),
+      uuid: thaliTape.uuid,
+      type: 'unittest',
+      tests: Object.keys(tests)
+    };
+    emitWhenConnected(testServer, 'present', JSON.stringify(presentData));
+  };
+
+  // We are having similar logic in both connect reconnect
+  // events, because socket.io seems to behave so that sometimes
+  // we get the connect event even if we have been connected before
+  // (and sometimes the reconnect event).
+  testServer.on('connect', function () {
+    testUtils.logMessageToScreen('Connected to the test server');
+    onConnection();
+  });
+  testServer.on('reconnect', function () {
+    testUtils.logMessageToScreen('Reconnected to the test server');
+    onConnection();
+  });
+
   testServer.once('discard', function () {
     // This device not needed, log appropriately so CI doesn't think we've
     // failed
+    testUtils.logMessageToScreen('Device discarded as surplus');
     console.log('--= Surplus to requirements =--');
     console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   });
 
+  testServer.once('disqualify', function () {
+    testUtils.logMessageToScreen('Device disqualified');
+    testUtils.returnsValidNetworkStatus()
+    .then(function (validStatus) {
+      if (validStatus) {
+        console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+      } else {
+        console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+      }
+    });
+  });
+
   testServer.on('error', function (data) {
     var errData = JSON.parse(data);
-    console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
+    testUtils.logMessageToScreen('Error: ' + data + ' : ' + errData.type +
+      ' : ' + errData.data);
   });
 
   testServer.on('disconnect', function () {
     if (complete) {
       process.exit(0);
-      return;
-    }
-    // Just log the error since socket.io will try
-    // to reconnect.
-    console.log('Disconnected from the test server');
-  });
-
-  testServer.on('reconnect', function () {
-    console.log('Reconnected to the test server');
-  });
-
-  // Wait until we're connected
-  testServer.once('connect', function () {
-
-    // Once connected, let the server know who we are and what we do
-    testServer.once('schedule', function (schedule) {
-      JSON.parse(schedule).forEach(function (test) {
-        declareTest(
-          testServer,
-          test,
-          tests[test].fixture.setup,
-          tests[test].fixture.teardown,
-          tests[test].opts,
-          tests[test].fn
-        );
-      });
-      testServer.emit('schedule_complete');
-    });
-
-    var platform;
-    if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid) {
-      platform = 'android';
     } else {
-      platform = 'ios';
+      // Just log the error since socket.io will try
+      // to reconnect.
+      testUtils.logMessageToScreen('Disconnected from the test server');
     }
-
-    thaliTape.uuid = uuid.v4();
-    testServer.emit('present', JSON.stringify({
-      'os': platform,
-      'name': testUtils.getName(),
-      'uuid': thaliTape.uuid,
-      'type': 'unittest',
-      'tests': Object.keys(tests)
-    }));
   });
 
   testServer.once('complete', function () {
-    // Currently always informing success to the CI if all tests
-    // complete regardless of the result.
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    testUtils.logMessageToScreen('Tests complete');
+    complete = true;
+    if (allSuccess) {
+      console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    } else {
+      console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+    }
   });
+
+  // Only used for testing purposes..
+  thaliTape._testServer = testServer;
 };
 
 if (typeof jxcore === 'undefined' ||

@@ -37,24 +37,22 @@ process.on('SIGINT', function () {
   process.exit(130); // Ctrl-C std exit code
 });
 
-var socketId = 0;
-
 io.on('connection', function (socket) {
 
   // A new device has connected to us.. we expect the next thing to happen to be
   // a 'present' message
 
-  socket.id = socketId++;
-  socket.deviceName = 'NOT YET SET';
+  socket.deviceName = 'DEVICE THAT HAS NOT PRESENTED YET';
 
   socket.on('disconnect', function (reason) {
-    logger.debug('Socket disconnected: %s %s (%s)', reason,
-      this.id, socket.deviceName);
-    socket.emit(
-      'test_error',
-      JSON.stringify({'timeout ':
-        'message not acceptable in current Test Server state'})
+    logger.info(
+      'Socket to device %s disconnected: %s',
+      socket.deviceName, reason
     );
+  });
+
+  socket.on('error', function (error) {
+    logger.debug(error);
   });
 
   socket.on('present', function (msg) {
@@ -64,7 +62,7 @@ io.on('connection', function (socket) {
 
     var _device = JSON.parse(msg);
     if (!_device.os || !_device.name || !_device.type) {
-      logger.error('malformed message');
+      logger.debug('malformed message');
       socket.emit('error', JSON.stringify({
         'errorDescription ': 'malformed message',
         'message' : msg
@@ -77,12 +75,12 @@ io.on('connection', function (socket) {
     // Add the new device to the test type/os it reports as belonging to
     var device = new TestDevice(
       socket, _device.name, _device.uuid, _device.os, _device.type,
-      _device.tests, _device.btaddress
+      _device.tests, _device.supportedHardware, _device.btaddress
     );
 
     logger.debug(
-      'Device presented: %s (%s) %s socket:%d',
-      _device.name, _device.os, _device.type, this.id
+      'Device presented: %s (%s) - %s %s',
+      _device.name, _device.uuid, _device.os, _device.version
     );
 
     switch (device.type)
@@ -96,7 +94,7 @@ io.on('connection', function (socket) {
         break;
       }
       default : {
-        logger.error('unrecognised test type: ' + device.type);
+        logger.debug('unrecognised test type: ' + device.type);
       }
     }
   });

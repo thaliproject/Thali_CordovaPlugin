@@ -19,7 +19,9 @@ var createTestDevice = function (socket, platform, index) {
   var name = platform + ' device ' + index;
   var uuid = platform + '-uuid-' + index;
   var tests = ['test-1', 'test-2'];
-  return new TestDevice(socket, name, uuid, platform, 'unittest', tests, null);
+  return new TestDevice(
+    socket, name, uuid, platform, 'unittest', tests, true, null
+  );
 };
 
 var amountOfDevices = 3;
@@ -100,13 +102,47 @@ test('should get right number of setup emits', function (t) {
 
 test('should discard surplus devices', function (t) {
   var unitTestFramework = new UnitTestFramework(testConfig);
-  // Add one device more than required in the test config
-  for (var i = 0; i < amountOfDevices + 1; i++) {
+
+  unitTestFramework.startTests = function (devices) {
+    t.equals(unitTestFramework.devices.ios.length, amountOfDevices,
+      'should have discarded the extra devices');
+    t.end();
+  };
+
+  // Add two devices more than required in the test config
+  for (var i = 0; i < amountOfDevices + 2; i++) {
     unitTestFramework.addDevice(
       addSetupHandler(createTestDevice(new EventEmitter(), 'ios', i))
     );
   }
-  t.equals(unitTestFramework.devices.ios.length, amountOfDevices,
-    'should have discarded the extra device');
-  t.end();
+});
+
+test('should disqualify unsupported device', function (t) {
+  var unitTestFramework = new UnitTestFramework(testConfig);
+  unitTestFramework.startTests = function () {
+    // NOOP
+  };
+
+  var mockSocket = new EventEmitter();
+  mockSocket.on('disqualify', function () {
+    t.ok(true, 'disqualified unsupported device');
+    t.end();
+  });
+
+  // Add one device less than required in the test config
+  for (var i = 0; i < amountOfDevices - 1; i++) {
+    unitTestFramework.addDevice(
+      addSetupHandler(createTestDevice(new EventEmitter(), 'ios', i))
+    );
+  }
+
+  unitTestFramework.addDevice(
+    addSetupHandler(
+      new TestDevice(
+        mockSocket, 'some-name', 'some-uuid', 'ios', 'unittest', [],
+        false, // this means the device doesn't have supported hardware
+        null
+      )
+    )
+  );
 });

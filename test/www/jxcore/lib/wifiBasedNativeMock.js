@@ -3,7 +3,6 @@
 var Promise = require('lie');
 var EventEmitter = require('events').EventEmitter;
 var uuid = require('node-uuid');
-var testUtils = require('./testUtils.js');
 var express = require('express');
 var assert = require('assert');
 var net = require('net');
@@ -15,6 +14,37 @@ proxyquire.noPreserveCache();
 
 var mockEmitter = new EventEmitter();
 var networkStatusCalled = false;
+
+var peerConnections = {};
+var peerProxyServers = {};
+var peerProxySockets = {};
+
+var peerAvailabilityChangedCallback = null;
+var peerAvailabilities = {};
+
+/**
+ * Enum to describe the platforms we can simulate, this mostly controls how we
+ * handle connect
+ *
+ * @public
+ * @readonly
+ * @enum {string}
+ */
+var platformChoice = {
+  ANDROID: 'Android',
+  IOS: 'iOS'
+};
+
+var currentNetworkStatus = {
+  wifi: 'on',
+  bluetooth: 'on',
+  bluetoothLowEnergy: 'doNotCare',
+  cellular: 'doNotCare'
+};
+
+var getCurrentNetworkStatus = function () {
+  return JSON.parse(JSON.stringify(currentNetworkStatus));
+};
 
 var ThaliWifiInfrastructure =
 proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
@@ -90,6 +120,59 @@ MobileCallInstance.prototype.platform = null;
 MobileCallInstance.prototype.router = null;
 
 /**
+ * Most of the functions we are mocking are supposed to have at most one
+ * outstanding call to them at a time. This wrapper enforces that requirement
+ * by asserting if there is more than one outstanding call.
+ * @param {Object} funSelf The 'this' for the method being called
+ * @param {Object} fun The function to be invoked
+ * @constructor
+ */
+function CallOnce(funSelf, fun) {
+  this.called = false;
+  this.fun = fun;
+  this.funSelf = funSelf;
+}
+
+/**
+ * This checks if the function being wrapped in CallOnce has been wrapped and
+ * if not it will wrap it. Note that we assume that for any function that
+ * is submitted its last argument when invoked is always a callback.
+ * @param {Object} self The self that the function to be invoked should be
+ * called with
+ * @param {string} funName The name of the function to be invoked
+ * @param {Object[]} args The args that were submitted to the function being
+ * invoked.
+ */
+CallOnce.check = function (self, funName, args) {
+  var callOnceFunName = funName + 'CallOnce';
+  if (!self[callOnceFunName]) {
+    self[callOnceFunName] =
+      new CallOnce(self, self[funName]);
+  }
+
+  return self[callOnceFunName].startCall.apply(self[callOnceFunName], args);
+};
+
+CallOnce.prototype.startCall = function () {
+  var self = this;
+  assert(!self.called, 'Only one call at a time');
+  self.called = true;
+  // arguments isn't a real array so we make it into one, bad perf
+  // but we don't care
+  var functionArgs = Array.prototype.slice.call(arguments);
+  var originalCallback = functionArgs.slice(-1)[0];
+  var callbackWrapper = function () {
+    assert(self.called, 'Stop should only be called after start');
+    self.called = false;
+    return originalCallback.apply(self.funSelf, arguments);
+  };
+  functionArgs[functionArgs.length - 1] = callbackWrapper;
+  return self.fun.apply(self.funSelf, functionArgs);
+};
+
+
+var startListeningForAdvertisementsIsActive = false;
+/**
  * In effect this listens for SSDP:alive and SSDP:byebye messages along with
  * the use of SSDP queries to find out who is around. These will be translated
  * to peer availability callbacks as specified below. This code MUST meet the
@@ -105,9 +188,15 @@ MobileCallInstance.prototype.router = null;
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.startListeningForAdvertisements =
+  function (callback) {// jscs:ignore disallowUnusedParams
+    return CallOnce.check(this, '_startListeningForAdvertisements', arguments);
+  };
+
+MobileCallInstance.prototype._startListeningForAdvertisements =
 function (callback) {
   this.thaliWifiInfrastructure.startListeningForAdvertisements()
-  .then(function () {
+  .then(function () {
+    startListeningForAdvertisementsIsActive = true;
     callback();
   })
   .catch(function (error) {
@@ -124,15 +213,23 @@ function (callback) {
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopListeningForAdvertisements =
-function (callback) {
+  function (callBack) {// jscs:ignore disallowUnusedParams
+    return CallOnce.check(this, '_stopListeningForAdvertisements', arguments);
+  };
+
+MobileCallInstance.prototype._stopListeningForAdvertisements =
+function (callBack) {
   this.thaliWifiInfrastructure.stopListeningForAdvertisements()
-  .then(function () {
-    callback();
+  .then(function () {
+    startListeningForAdvertisementsIsActive = false;
+    callBack();
+  }).catch(function (err) {
+    callBack(err);
   });
 };
 
 var incomingConnectionsServer = null;
-
+var startUpdateAdvertisingAndListeningIsActive = false;
 /**
  * This method tells the system to both start advertising and to accept
  * incoming connections. In both cases we need to accept incoming connections.
@@ -176,37 +273,55 @@ var incomingConnectionsServer = null;
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
+  function (portNumber, callback) {// jscs:ignore disallowUnusedParams
+    return CallOnce.check(this, '_startUpdateAdvertisingAndListening',
+                          arguments);
+  };
+
+MobileCallInstance.prototype._startUpdateAdvertisingAndListening =
 function (portNumber, callback) {
   var self = this;
   var doStart = function () {
     self.thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
     .then(function () {
+      startUpdateAdvertisingAndListeningIsActive = true;
       callback();
+    }).catch(function (err) {
+      callback(err);
     });
   };
   if (incomingConnectionsServer !== null) {
     doStart();
   } else {
-    incomingConnectionsServer = net.createServer(function (socket) {
-      var proxySocket = net.connect(portNumber, function () {
-        logger.debug('proxy socket connected');
-      });
-      proxySocket.on('error', function (err) {
-        logger.debug('error on proxy socket - ' + err);
-      });
-      proxySocket.on('close', socket.destroy);
-      proxySocket.pipe(socket).pipe(proxySocket);
-      socket.on('error', function (err) {
-        logger.debug('error on socket - ' + err);
-      });
-      socket.on('close', proxySocket.destroy);
-    });
-    incomingConnectionsServer =
-      makeIntoCloseAllServer(incomingConnectionsServer);
+    incomingConnectionsServer = makeIntoCloseAllServer(
+      net.createServer(function (socket) {
+        var proxySocket = net.connect(portNumber, function () {
+          logger.debug('proxy socket connected');
+        });
+
+        proxySocket.on('error', function (err) {
+          logger.debug('error on proxy socket - ' + err);
+        });
+
+        proxySocket.on('close', socket.destroy);
+
+        proxySocket.pipe(socket).pipe(proxySocket);
+
+        socket.on('error', function (err) {
+          logger.debug('error on socket - ' + err);
+        });
+
+        socket.on('close', proxySocket.destroy);
+      }));
+
     incomingConnectionsServer.listen(0, function () {
       self.thaliWifiInfrastructure.advertisedPortOverride =
         incomingConnectionsServer.address().port;
       doStart();
+    });
+    
+    incomingConnectionsServer.on('error', function (err) {
+      logger.debug('got error on incoming connection server ' + err);
     });
   }
 };
@@ -222,38 +337,52 @@ function (portNumber, callback) {
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopAdvertisingAndListening =
-function (callback) {
-  var self = this;
-  var doStop = function () {
-    peerAvailabilities = {};
-    for (var peerIdentifier in peerConnections) {
-      var peerConnection = peerConnections[peerIdentifier];
-      peerConnection.end();
-      delete peerConnections[peerIdentifier];
-    }
-    for (var peerIdentifier in peerProxyServers) {
-      var peerProxyServer = peerProxyServers[peerIdentifier];
-      peerProxyServer.close();
-      delete peerProxyServers[peerIdentifier];
-    }
-    self.thaliWifiInfrastructure.stopAdvertisingAndListening()
-    .then(function () {
-      callback();
-    });
+  function (callBack) {// jscs:ignore disallowUnusedParams
+    return CallOnce.check(this, '_stopAdvertisingAndListening', arguments);
   };
-  if (incomingConnectionsServer !== null) {
-    incomingConnectionsServer.closeAll(function () {
+
+MobileCallInstance.prototype._stopAdvertisingAndListening =
+function (callBack) {
+  var self = this;
+  return (incomingConnectionsServer ?
+          incomingConnectionsServer.closeAllPromise() :
+          Promise.resolve())
+    .then(function () {
       incomingConnectionsServer = null;
-      doStop();
+      peerAvailabilities = {};
+      for (var peerIdentifier in peerConnections) {
+        var peerConnection = peerConnections[peerIdentifier];
+        peerConnection.end();
+        delete peerConnections[peerIdentifier];
+      }
+
+      var peerProxyServerClosePromises = [];
+      for (var peerIdentifier in peerProxyServers) {
+        var peerProxyServer = peerProxyServers[peerIdentifier];
+        peerProxyServerClosePromises.push(peerProxyServer.closeAll());
+        delete peerProxyServers[peerIdentifier];
+      }
+
+      for (var peerIdentifier in peerProxySockets) {
+        peerProxySockets[peerIdentifier].destroy();
+        delete peerProxySockets[peerIdentifier];
+      }
+
+      return Promise.all(peerProxyServerClosePromises);
+    })
+    .then(function () {
+      return self.thaliWifiInfrastructure.stopAdvertisingAndListening();
+    })
+    .then(function () {
+      startUpdateAdvertisingAndListeningIsActive = false;
+      callBack();
+    })
+    .catch(function (err) {
+      callBack(err);
     });
-  } else {
-    doStop();
-  }
 };
 
-var peerConnections = {};
-var peerProxyServers = {};
-var peerProxySockets = {};
+// jscs:disable jsDoc
 /**
  * All the usual restrictions on connect apply including throwing errors if
  * start listening isn't active, handling consecutive calls, etc. Please see the
@@ -267,18 +396,15 @@ var peerProxySockets = {};
  * radios as well as properly enforce behaviors such as those below that let our
  * local listener only accept one connection and simulating time outs on a
  * single peer correctly (e.g. the other side is still available but we had no
- * activity locally and so need to tear down). If setting up the outgoing TCP
- * proxy is a big enough pain we could probably figure a way around it but I'm
- * guessing that since we need it anyway for incoming connections it shouldn't
- * be a big deal.
+ * activity locally and so need to tear down).
  *
- * In the case of simulating Android we just have to make sure that at any
- * time we have exactly one outgoing connection to any peerIdentifier. So if we
- * get a second connect for the same peerIdentifier then we have to return the
- * port for the existing TCP listener we are using, even if it is connected. We
- * also need the right tear down behavior so that if the local app connection to
- * the local TCP listener (that will then relay to the remote peer's port) is
- * torn down then we tear down the connection to the remote peer and vice versa.
+ * In the case of simulating Android we just have to make sure that at any time
+ * we have exactly one outgoing connection to any peerIdentifier. So if we get a
+ * second connect for the same peerIdentifier while the first is active then we
+ * need to return an 'Already connect(ing/ed)' error. We also need the right
+ * tear down behavior so that if the local app connection to the local TCP
+ * listener (that will then relay to the remote peer's port) is torn down then
+ * we tear down the connection to the remote peer and vice versa.
  *
  * On iOS we need the same behavior as Android plus we have to deal with the
  * MCSession problem. This means we have to look at the peerIdentifier, compare
@@ -381,51 +507,128 @@ var peerProxySockets = {};
  * @param {string} peerIdentifier
  * @param {module:thaliMobileNative~ConnectCallback} callback
  */
+// jscs:enable jsDoc
 MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
+  if (!startListeningForAdvertisementsIsActive) {
+    return callback('startListeningForAdvertisements is not active');
+  }
+  
+  function returnSuccessfulConnectResponse() {
+    var server = peerProxyServers[peerIdentifier];
+    
+    if (!server || !server.address())  {
+      return callback('Server was either closed or is not yet listening');
+    }
+    
+    callback(null, JSON.stringify({
+      listeningPort: peerProxyServers[peerIdentifier].address().port,
+      clientPort: 0,
+      serverPort: 0
+    }));
+    
+    setTimeout(function () {
+      if (!peerProxySockets[peerIdentifier]) {
+        // Either the code that called connect didn't connect within the allowed
+        // window or the server already failed.
+        cleanProxyServer();
+      }
+    }, 2000);
+  }
+  
+  var cleanProxyServerCalled = false;
+  function cleanProxyServer() {
+    if (cleanProxyServerCalled) {
+      return;
+    }
+    cleanProxyServerCalled = true;
+    peerConnections[peerIdentifier] &&
+      peerConnections[peerIdentifier].destroy();
+    peerProxySockets[peerIdentifier] &&
+      peerProxySockets[peerIdentifier].destroy();
+    peerProxyServers[peerIdentifier] &&
+      peerProxyServers[peerIdentifier].closeAllPromise()
+        .then(function () {
+          delete peerConnections[peerIdentifier];
+          delete peerProxySockets[peerIdentifier];
+          delete peerProxyServers[peerIdentifier];
+        })
+        .catch(function (err) {
+          logger.debug('Got error closing server ' + err);
+          throw err;
+        });
+  }
+
   var peerToConnect = peerAvailabilities[peerIdentifier];
   if (!peerToConnect) {
     setImmediate(function () {
-      callback('Error');
+      callback('Connection could not be established');
     });
     return;
   }
-  peerProxyServers[peerIdentifier] = net.createServer(function (socket) {
-    peerProxySockets[peerIdentifier] = socket;
-    peerProxySockets[peerIdentifier].pipe(peerConnections[peerIdentifier])
-      .pipe(peerProxySockets[peerIdentifier]);
-    socket.on('error', function (err) {
-      logger.debug('error on peerProxyServers socket for ' + peerIdentifier +
-        ', err - ' + err);
-    });
-    socket.on('close', function () {
-      peerConnections[peerIdentifier] &&
-        peerConnections[peerIdentifier].destroy();
-    });
-  });
+
+  if (peerProxyServers[peerIdentifier]) {
+    return callback('Already connect(ing/ed)');
+  }
+
+  peerProxyServers[peerIdentifier] = makeIntoCloseAllServer(
+    net.createServer(function (socket) {
+      if (peerProxySockets[peerIdentifier]) {
+        socket.destroy();
+        return;
+      }
+
+      var peerConnection = peerConnections[peerIdentifier];
+
+      if (!peerConnection || peerConnection.destroyed) {
+        socket.destroy();
+        return;
+      }
+
+      peerProxySockets[peerIdentifier] = socket;
+      peerProxySockets[peerIdentifier].pipe(peerConnection)
+        .pipe(peerProxySockets[peerIdentifier]);
+      socket.on('end', function () {
+        logger.debug('got an end on peerProxySockets');
+        socket.end();
+      });
+      socket.on('error', function (err) {
+        logger.debug('error on peerProxyServers socket for ' + peerIdentifier +
+          ', err - ' + err);
+      });
+      socket.on('close', function () {
+        cleanProxyServer();
+      });
+    }),
+    true
+  );
+
   peerProxyServers[peerIdentifier].listen(0, function () {
     peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
-    function () {
-      setTimeout(function () {
-        if (!peerProxyServers[peerIdentifier]) {
-          callback('Unspecified Error with Radio infrastructure');
-          return;
-        }
-        callback(null, JSON.stringify({
-          listeningPort: peerProxyServers[peerIdentifier].address().port,
-          clientPort: 0,
-          serverPort: 0
-        }));
-      },
-      100);
+      function () {
+        setTimeout(function () {
+            if (!peerProxyServers[peerIdentifier]) {
+              var error = 'Unspecified Error with Radio infrastructure';
+              callback(error);
+            }
+            returnSuccessfulConnectResponse();
+          },
+          100);
+      });
+    peerConnections[peerIdentifier].on('end', function () {
+      peerConnections[peerIdentifier] &&
+        peerConnections[peerIdentifier].end();
     });
     peerConnections[peerIdentifier].on('error', function (err) {
       logger.debug('error on peerConnections socket for ' + peerIdentifier +
         ', err - ' + err);
     });
     peerConnections[peerIdentifier].on('close', function () {
-      peerProxySockets[peerIdentifier] &&
-        peerProxySockets[peerIdentifier].destroy();
+      cleanProxyServer();
     });
+  });
+  
+  peerProxyServers[peerIdentifier].on('close', function () {
+    cleanProxyServer();
   });
 };
 
@@ -440,10 +643,10 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
  */
 MobileCallInstance.prototype.killConnections = function (callback) {
   // TODO: Implement specified behavior
-  callback();
+  callback('Not Supported');
 };
 
-
+var fakeDeviceName = uuid.v4();
 /**
  * Generates a UUID that will be used as the name of the current device.
  *
@@ -452,7 +655,7 @@ MobileCallInstance.prototype.killConnections = function (callback) {
  */
 MobileCallInstance.prototype.getDeviceName = function (callback) {
   setImmediate(function () {
-    callback(uuid.v4());
+    callback(fakeDeviceName);
   });
 };
 
@@ -511,8 +714,6 @@ MobileCallInstance.prototype.callNative = function () {
   }
 };
 
-var peerAvailabilityChangedCallback = null;
-var peerAvailabilities = {};
 var setupListeners = function (thaliWifiInfrastructure) {
   thaliWifiInfrastructure.on(
     'wifiPeerAvailabilityChanged',
@@ -520,6 +721,14 @@ var setupListeners = function (thaliWifiInfrastructure) {
       if (peerAvailabilityChangedCallback === null) {
         return;
       }
+      
+      // No sending events until at least one of the two start methods is
+      // running.
+      if (!startListeningForAdvertisementsIsActive &&
+          !startUpdateAdvertisingAndListeningIsActive) {
+        return;
+      }
+      
       var peerAvailable = !!wifiPeer.hostAddress;
       if (peerAvailable) {
         peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
@@ -545,6 +754,7 @@ var setupListeners = function (thaliWifiInfrastructure) {
   );
 };
 
+// jscs:disable jsDoc
 /**
  * Anytime we are looking for advertising and we receive a SSDP:alive,
  * SSDP:byebye or a response to one of our periodic queries we should use it to
@@ -556,11 +766,13 @@ var setupListeners = function (thaliWifiInfrastructure) {
  *
  * @param {module:thaliMobileNative~peerAvailabilityChangedCallback} callback
  */
+// jscs:enable jsDoc
 MobileCallInstance.prototype.peerAvailabilityChanged = function (callback) {
   peerAvailabilityChangedCallback = callback;
 };
 
 var discoveryAdvertisingStateUpdateNonTCPCallback = null;
+// jscs:disable maximumLineLength
 /**
  * Any time there is a call to start and stop or if Bluetooth is turned off on
  * Android (which also MUST mean that we have disabled both advertising and
@@ -569,12 +781,14 @@ var discoveryAdvertisingStateUpdateNonTCPCallback = null;
  * @public
  * @param {module:thaliMobileNative~discoveryAdvertisingStateUpdateNonTCPCallback} callback
  */
+// jscs:enable maximumLineLength
 MobileCallInstance.prototype.discoveryAdvertisingStateUpdateNonTCP =
 function (callback) {
   discoveryAdvertisingStateUpdateNonTCPCallback = callback;
 };
 
 var networkChangedCallback = null;
+// jscs:disable jsDoc
 /**
  * At this point this event would only fire because we called toggleBluetooth
  * or toggleWifi. For the moment we will treat toggleBluetooth and turning
@@ -589,6 +803,7 @@ var networkChangedCallback = null;
  * @public
  * @param {module:thaliMobileNative~networkChangedCallback} callback
  */
+// jscs:enable jsDoc
 MobileCallInstance.prototype.networkChanged = function (callback) {
   networkChangedCallback = callback;
   // Implement the logic to emit networkChangedNonTCP
@@ -599,6 +814,7 @@ MobileCallInstance.prototype.networkChanged = function (callback) {
 };
 
 var incomingConnectionToPortNumberFailedCallback = null;
+// jscs:disable maximumLineLength
 /**
  * This is used anytime the TCP proxy for incoming connections cannot connect
  * to the portNumber set in
@@ -607,6 +823,7 @@ var incomingConnectionToPortNumberFailedCallback = null;
  * @public
  * @param {module:thaliMobileNative~incomingConnectionToPortNumberFailedCallback} callback
  */
+// jscs:enable maximumLineLength
 MobileCallInstance.prototype.incomingConnectionToPortNumberFailed =
 function (callback) {
   incomingConnectionToPortNumberFailedCallback = callback;
@@ -638,30 +855,6 @@ MobileCallInstance.prototype.registerToNative = function () {
   }
 };
 
-/**
- * Enum to describe the platforms we can simulate, this mostly controls how we
- * handle connect
- *
- * @public
- * @readonly
- * @enum {string}
- */
-var platformChoice = {
-  ANDROID: 'Android',
-  IOS: 'iOS'
-};
-
-var currentNetworkStatus = {
-  wifi: 'on',
-  bluetooth: 'on',
-  bluetoothLowEnergy: 'doNotCare',
-  cellular: 'doNotCare'
-};
-
-var getCurrentNetworkStatus = function () {
-  return JSON.parse(JSON.stringify(currentNetworkStatus));
-};
-
 var doToggle = function (setting, property, callback) {
   var newStatus = setting ? 'on' : 'off';
   if (newStatus === currentNetworkStatus[property]) {
@@ -684,6 +877,7 @@ var doToggle = function (setting, property, callback) {
   setImmediate(callback);
 };
 
+// jscs:disable jsDoc
 /**
  * This simulates turning Bluetooth on and off.
  *
@@ -697,12 +891,14 @@ var doToggle = function (setting, property, callback) {
  * @param {ThaliWifiInfrastructure} thaliWifiInfrastructure
  * @returns {Function}
  */
-function toggleBluetooth (platform, thaliWifiInfrastructure) {
+// jscs:enable jsDoc
+function toggleBluetooth () {
   return function (setting, callback) {
     doToggle(setting, 'bluetooth', callback);
   };
 }
 
+// jscs:disable jsDoc
 /**
  * If we are on Android then then is a NOOP since we don't care (although to
  * be good little programmers we should still fire a network changed event). We
@@ -715,28 +911,27 @@ function toggleBluetooth (platform, thaliWifiInfrastructure) {
  * @param {ThaliWifiInfrastructure} thaliWifiInfrastructure
  * @returns {Function}
  */
-function toggleWiFi(platform, thaliWifiInfrastructure) {
+// jscs:enable jsDoc
+function toggleWiFi() {
   return function (setting, callback) {
     doToggle(setting, 'wifi', callback);
   };
 }
 
-function firePeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
+function firePeerAvailabilityChanged() {
   return function (peers) {
     peerAvailabilityChangedCallback(peers);
   };
 }
 
-function fireIncomingConnectionToPortNumberFailed(platform,
-                                                  thaliWifiInfrastructure) {
+function fireIncomingConnectionToPortNumberFailed() {
   return function (portNumber) {
     portNumber = portNumber || incomingConnectionsServer.address().port;
     incomingConnectionToPortNumberFailedCallback(portNumber);
   };
 }
 
-function fireDiscoveryAdvertisingStateUpdateNonTCP(platform,
-                                                   thaliWifiInfrastructure) {
+function fireDiscoveryAdvertisingStateUpdateNonTCP() {
   return function (discoveryAdvertisingStateUpdateValue) {
     discoveryAdvertisingStateUpdateNonTCPCallback(
       discoveryAdvertisingStateUpdateValue
@@ -744,6 +939,7 @@ function fireDiscoveryAdvertisingStateUpdateNonTCP(platform,
   };
 }
 
+// jscs:disable maximumLineLength
 /**
  * This is a sleazy trick to let us use this mobile infrastructure when we
  * are testing without the coordinator. We create a server on localhost
@@ -754,6 +950,7 @@ function fireDiscoveryAdvertisingStateUpdateNonTCP(platform,
  * @param {Object} platform
  * @param {module:thaliWifiInfrastructure~ThaliWifiInfrastructure} thaliWifiInfrastructure
  */
+// jscs:enable maximumLineLength
 function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
   return function (peerIdentifier) {
     thaliWifiInfrastructure.emit('wifiPeerAvailabilityChanged',
@@ -762,7 +959,7 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
         hostAddress: '127.0.0.1',
         portNumber: thaliWifiInfrastructure.advertisedPortOverride
       });
-  }
+  };
 }
 
 // jscs:disable jsDoc
@@ -784,7 +981,7 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
 // jscs:enable jsDoc
 function WifiBasedNativeMock(platform, router) {
   if (!platform) {
-    platform = platformChoice.IOS;
+    platform = platformChoice.ANDROID;
   }
   if (!router) {
     router = express.Router();

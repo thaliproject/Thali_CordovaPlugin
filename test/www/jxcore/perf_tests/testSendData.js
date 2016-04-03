@@ -42,7 +42,7 @@ function testSendData(jsonData, name, addressList) {
 
   console.log(
     'testSendData created ' + JSON.stringify(jsonData) + 
-    "bt-address length : " + addressList.length
+    'bt-address length : ' + addressList.length
   );
 
   this.name = name;
@@ -54,11 +54,11 @@ function testSendData(jsonData, name, addressList) {
 
   this.startTime = new Date();
   this.endTime = new Date();
-  this.endReason = "";
+  this.endReason = '';
 
   this.debugCallback = function (data) {
     self.emit('debug', data);
-  }
+  };
 
   this.doneCallback = function (data) {
 
@@ -75,7 +75,7 @@ function testSendData(jsonData, name, addressList) {
     // and we schedule the re-try to be handled after all other peers we have in the list currently
     if (self.bluetoothAddressList && self.bluetoothAddressList.length > 0) {
       for (var i = 0; i < resultData.length; i++) {
-        if (resultData[i].result != "OK") {
+        if (resultData[i].result != 'OK') {
           areAllTestOk = false;
           peerAddress = resultData[i].name;
           peerTryCount = resultData[i].tryCount;
@@ -90,22 +90,22 @@ function testSendData(jsonData, name, addressList) {
         self.resultArray.push(resultData[i]);
       }
     } else if (peerAddress != 0) { //we gotta re-try it later
-      console.log('---- gotta redo : ' + peerAddress + ", try count now: " + peerTryCount);
-      self.bluetoothAddressList.push({"address":peerAddress,"tryCount":peerTryCount});
+      console.log('---- gotta redo : ' + peerAddress + ', try count now: ' + peerTryCount);
+      self.bluetoothAddressList.push({'address':peerAddress, 'tryCount':peerTryCount});
     }
 
     self.testStarted = false;
     if (!self.doneAlready) {
       self.startWithNextDevice();
     }
-  }
+  };
 
   this.foundSofar = 0;
   this.timerId = null;
   this.foundPeers = {};
   this.resultArray = [];
 
-  this.peerAvailabilityChanged = function(peers) {
+  this.peerAvailabilityChanged = function (peers) {
 
     // If we are using the given address list, we are ignoring the peer
     // availability changes and connecting to the peers in the list.
@@ -123,19 +123,19 @@ function testSendData(jsonData, name, addressList) {
           (!self.foundPeers[peer.peerIdentifier].doneAlready)) {
 
         self.foundPeers[peer.peerIdentifier] = peer;
-        console.log("Found peer : " + peer.peerName + ", Available: " + peer.peerAvailable);
+        console.log('Found peer : ' + peer.peerName + ', Available: ' + peer.peerAvailable);
       }
     }
 
     if (!self.testStarted) {
-        self.startWithNextDevice();
+      self.startWithNextDevice();
     }
-  }
+  };
 }
 
 inherits(testSendData, EventEmitter);
 
-testSendData.prototype.start = function(serverPort) {
+testSendData.prototype.start = function (serverPort) {
 
   var self = this;
   this.doneAlready = false;
@@ -149,7 +149,7 @@ testSendData.prototype.start = function(serverPort) {
   );
 
   this.testConnector.on('done', this.doneCallback);
-  this.testConnector.on('debug',this.debugCallback);
+  this.testConnector.on('debug', this.debugCallback);
 
   console.log('check server');
   serverPort = this.testServer.getServerPort();
@@ -172,18 +172,18 @@ testSendData.prototype.start = function(serverPort) {
   });
 
   if (this.commandData.timeout) {
-    this.timerId = setTimeout(function() {
+    this.timerId = setTimeout(function () {
       console.log('timeout now');
       if (!self.doneAlready) {
-        self.endReason = "TIMEOUT";
-        self.emit('debug', "*** TIMEOUT ***");
+        self.endReason = 'TIMEOUT';
+        self.emit('debug', '*** TIMEOUT ***');
         self.weAreDoneNow();
       }
     }, this.commandData.timeout);
   }
-}
+};
 
-testSendData.prototype.stop = function(doReport) {
+testSendData.prototype.stop = function (doReport) {
 
   var self = this;
 
@@ -207,7 +207,7 @@ testSendData.prototype.stop = function(doReport) {
   }
 
   if (doReport){
-    this.emit('debug', "---- sendReportNow");
+    this.emit('debug', '---- sendReportNow');
     this.sendReportNow();
   }
   
@@ -222,11 +222,11 @@ testSendData.prototype.stop = function(doReport) {
   this.testServer.stopServer(function () {
     // No need to do anything since this is the end of this test
   });
-}
+};
 
-testSendData.prototype.startWithNextDevice = function() {
+testSendData.prototype.startWithNextDevice = function () {
 
-  console.log("startWithNextDevice");
+  console.log('startWithNextDevice');
 
   if (this.doneAlready || this.testConnector == null) {
     return;
@@ -235,7 +235,7 @@ testSendData.prototype.startWithNextDevice = function() {
   if (this.bluetoothAddressList) {
 
     if (this.bluetoothAddressList.length == 0) {
-      this.endReason = "OK";
+      this.endReason = 'OK';
       this.weAreDoneNow();
       return;
     }
@@ -257,7 +257,7 @@ testSendData.prototype.startWithNextDevice = function() {
   } else {
 
     if (this.foundSofar >= this.toFindCount) {
-      this.endReason = "OK";
+      this.endReason = 'OK';
       this.weAreDoneNow();
       return;
     }
@@ -266,7 +266,7 @@ testSendData.prototype.startWithNextDevice = function() {
       if (this.foundPeers[peerId].peerAvailable && !this.foundPeers[peerId].doneAlready) {
         this.testStarted = true;
         this.emit('debug', '--- start for : ' + this.foundPeers[peerId].peerName + ' ---');
-        this.foundSofar++
+        this.foundSofar++;
         console.log('device[' + this.foundSofar + ']: ' + this.foundPeers[peerId].peerIdentifier);
 
         this.foundPeers[peerId].doneAlready = true;
@@ -275,9 +275,9 @@ testSendData.prototype.startWithNextDevice = function() {
       }
     }
   }
-}
+};
 
-testSendData.prototype.weAreDoneNow = function() {
+testSendData.prototype.weAreDoneNow = function () {
   var self = this;
 
   if (this.doneAlready || this.testConnector == null) {
@@ -304,13 +304,13 @@ testSendData.prototype.weAreDoneNow = function() {
   // The test server can't be stopped here, because even though this device
   // is done with it's own list of peers, it might be still acting as a test
   // peer for some other devices and thus the server is might still be needed.
-}
+};
 
-testSendData.prototype.sendReportNow = function() {
+testSendData.prototype.sendReportNow = function () {
 
   this.endTime = new Date();
   
-  console.log("sendReportNow");
+  console.log('sendReportNow');
 
   if (this.testConnector != null) {
     var isAlreadyAdded = false;
@@ -335,24 +335,24 @@ testSendData.prototype.sendReportNow = function() {
     for (var ii = 0; ii < this.bluetoothAddressList.length; ii++) {
       if (this.bluetoothAddressList[ii]){
         this.resultArray.push( {
-          "connections": this.bluetoothAddressList[ii].tryCount,
-          "name": this.bluetoothAddressList[ii].address,
-          "time": 0,
-          "result": "Fail"
+          'connections': this.bluetoothAddressList[ii].tryCount,
+          'name': this.bluetoothAddressList[ii].address,
+          'time': 0,
+          'result': 'Fail'
         });
       }
     }
   }
 
-  this.emit('debug', "---- finished : send-data -- ");
+  this.emit('debug', '---- finished : send-data -- ');
   var responseTime = this.endTime - this.startTime;
 
   this.emit('done', JSON.stringify({
-    "name:": this.name,
-    "time": responseTime,
-    "result": this.endReason,
-    "sendList": this.resultArray
+    'name:': this.name,
+    'time': responseTime,
+    'result': this.endReason,
+    'sendList': this.resultArray
   }));
-}
+};
 
 module.exports = testSendData;
