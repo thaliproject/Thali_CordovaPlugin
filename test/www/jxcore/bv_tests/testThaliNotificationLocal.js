@@ -1,5 +1,5 @@
 'use strict';
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var express = require('express');
 var crypto = require('crypto');
 var sinon = require('sinon');
