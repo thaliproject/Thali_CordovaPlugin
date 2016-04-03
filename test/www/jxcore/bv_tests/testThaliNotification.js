@@ -160,14 +160,9 @@ if (!tape.coordinated) {
 }
 
 function checkSuccess() {
-
-  if (allDictionaryItemsNonZero(globals.peerAdvertisesDataForUsEvents) &&
+  return allDictionaryItemsNonZero(globals.peerAdvertisesDataForUsEvents) &&
     allDictionaryItemsNonZero(globals.peerRepliedToUs) &&
-    allDictionaryItemsNonZero(globals.peerRequestedUs))
-  {
-    return true;
-  }
-  return false;
+    allDictionaryItemsNonZero(globals.peerRequestedUs);
 }
 
 test('Client to server request coordinated', function (t) {
@@ -186,10 +181,11 @@ test('Client to server request coordinated', function (t) {
   // Total number of https requests grows exponentially. With 2 peers we
   // make 2 request, with 3 peers 6, with 4 peers 12, etc.
 
-  // Test duration is fixed 2 minutes. Test will be succesfull if after 2
-  // minutes peer was able to make https request to all peers and it
-  // received https request from all peers. Hash tables like peerRepliedToUs
-  // are used to track this.
+  // Test checks every 5 second intervals if the all test criteria has been
+  // met calling checkSuccess function. If the function returns true then
+  // the test will close notificationClient and notificationServer and
+  // finish. If test is not passed in the 2 minutes it will force close
+  // itself.
 
   var addressBook = [];
 
@@ -251,7 +247,6 @@ test('Client to server request coordinated', function (t) {
 
   notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
-
       var msg = 'PeerAdvertisesDataForUs:' + res.connectionType +
         ', '+res.hostAddress+', ' + res.hostAddress + ', '+
         res.portNumber;
@@ -259,14 +254,14 @@ test('Client to server request coordinated', function (t) {
 
       var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);
       globals.peerAdvertisesDataForUsEvents[publicKeyHash]++;
-
       initiateHttpsRequestToPeer(res, 1);
-
     });
+
   var intervalRounds = 0;
 
   globals.testInterval = setInterval( function () {
     if(checkSuccess() || ++intervalRounds > 24) {
+      // Test has been completed successfully or we have hit the time limit
       clearInterval(globals.testInterval);
       ThaliMobile.stopListeningForAdvertisements().then(function () {
         notificationClient.stop();
