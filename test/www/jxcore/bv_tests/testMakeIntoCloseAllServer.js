@@ -1,7 +1,7 @@
 'use strict';
 
 var net = require('net');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var test = tape({
@@ -13,6 +13,8 @@ var test = tape({
   }
 });
 
+var timeBeforeClose = 100;
+
 test('closeAll can close even when connections open', function (t) {
   var testServer = net.createServer(function (socket) {
     socket.pipe(socket);
@@ -21,17 +23,19 @@ test('closeAll can close even when connections open', function (t) {
   testServer.listen(0, function () {
     var testServerPort = testServer.address().port;
     var connection = net.connect(testServerPort, function () {
-      testServer.closeAll(function () {
-        connection = net.connect(testServerPort, function () {
-          t.fail('connection should not succeed');
-          t.end();
+      setTimeout(function () {
+        testServer.closeAll(function () {
+          connection = net.connect(testServerPort, function () {
+            t.fail('connection should not succeed');
+            t.end();
+          });
+          connection.on('error', function (error) {
+            t.equals(error.code, 'ECONNREFUSED',
+              'not possible to connect to the server anymore');
+            t.end();
+          });
         });
-        connection.on('error', function (error) {
-          t.equals(error.code, 'ECONNREFUSED',
-            'not possible to connect to the server anymore');
-          t.end();
-        });
-      });
+      }, timeBeforeClose);
     });
     connection.on('error', function (error) {
       t.equals(error.code, 'ECONNRESET',
@@ -48,21 +52,23 @@ test('closeAll with promise', function (t) {
   testServer.listen(0, function () {
     var testServerPort = testServer.address().port;
     var connection = net.connect(testServerPort, function () {
-      testServer.closeAllPromise()
-        .then(function () {
-          connection = net.connect(testServerPort, function () {
-              t.fail('connection should not succeed');
+      setTimeout(function () {
+        testServer.closeAllPromise()
+          .then(function () {
+            connection = net.connect(testServerPort, function () {
+                t.fail('connection should not succeed');
+                t.end();
+              });
+            connection.on('error', function (error) {
+              t.equals(error.code, 'ECONNREFUSED',
+                'not possible to connect to the server anymore');
               t.end();
             });
-          connection.on('error', function (error) {
-            t.equals(error.code, 'ECONNREFUSED',
-              'not possible to connect to the server anymore');
+          }).catch(function (err) {
+            t.fail(err);
             t.end();
           });
-        }).catch(function (err) {
-          t.fail(err);
-          t.end();
-        });
+      }, timeBeforeClose);
     });
     connection.on('error', function (error) {
       t.equals(error.code, 'ECONNRESET',
@@ -77,16 +83,18 @@ test('closeAll properly throws when closing a non open server with ' +
 
   });
   testServer = makeIntoCloseAllServer(testServer);
-  testServer.closeAllPromise()
-    .then(function () {
-      t.fail('we should have gotten an error');
-      t.end();
-    })
-    .catch(function (err) {
-      t.ok(err instanceof Error && err.message === 'Not running', 
-              'Got the right error');
-      t.end();
-    })
+  setTimeout(function () {
+    testServer.closeAllPromise()
+      .then(function () {
+        t.fail('we should have gotten an error');
+        t.end();
+      })
+      .catch(function (err) {
+        t.ok(err instanceof Error && err.message === 'Not running',
+                'Got the right error');
+        t.end();
+      });
+  }, timeBeforeClose);
 });
 
 test('closeAll works even with a server that is not listening yet with' +
@@ -96,12 +104,14 @@ test('closeAll works even with a server that is not listening yet with' +
       
     });
     testServer = makeIntoCloseAllServer(testServer, true);
-    testServer.closeAllPromise()
-      .then(function () {
-        t.end();
-      })
-      .catch(function (err) {
-        t.fail(err);
-        t.end();
-      });
+    setTimeout(function () {
+      testServer.closeAllPromise()
+        .then(function () {
+          t.end();
+        })
+        .catch(function (err) {
+          t.fail(err);
+          t.end();
+        });
+    }, timeBeforeClose);
   });

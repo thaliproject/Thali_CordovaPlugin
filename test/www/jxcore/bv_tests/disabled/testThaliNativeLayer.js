@@ -7,7 +7,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
 var net = require('net');
 var randomstring = require('randomstring');
 var ThaliEmitter = require('thali/thaliemitter');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 
 function newPeerIdentifier() {
   return (+ new Date()).toString() + "." + process.pid;

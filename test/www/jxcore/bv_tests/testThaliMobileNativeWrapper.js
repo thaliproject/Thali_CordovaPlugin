@@ -12,7 +12,7 @@ if (typeof Mobile === 'undefined') {
 
 var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var validations = require('thali/validations');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 
 var test = tape({
   setup: function (t) {

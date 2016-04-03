@@ -1,7 +1,7 @@
 'use strict';
 
 var ResultsProcessor = require('../../../TestServer/ResultsProcessor.js');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 
 var test = tape({
   setup: function (t) {

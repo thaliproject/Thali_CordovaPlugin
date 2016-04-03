@@ -48,8 +48,7 @@
     "thali": "*",
     "tmp": "^0.0.28",
     "urlsafe-base64": "^1.0.0",
-    "uuid": "^2.0.0",
-    "wrapping-tape": "^0.0.3"
+    "uuid": "^2.0.0"
   },
   "devDependencies": {}
 }

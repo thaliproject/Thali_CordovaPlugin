@@ -5,7 +5,7 @@ var mockMobile = require('./mockmobile');
 var fs = require('fs-extra-promise');
 var path = require('path');
 var crypto = require('crypto');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var cryptomanager = require('thali/thalicryptomanager');
 var testUtils = require('../lib/testUtils.js');
 
