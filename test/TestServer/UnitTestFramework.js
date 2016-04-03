@@ -1,5 +1,5 @@
 /**
- * Unit test framework used with thali-tape.
+ * Unit test framework used with thaliTape.
  */
 
 'use strict';

@@ -138,9 +138,6 @@ the test definition, for example:
 +test.only('basic', function (t) {
 ```
 
-Running single tests only works in coordinated runs and not in stand-alone mode
-(i.e., when using `jx runTests.js`).
-
 It is also possible to run one test file through the coordinator instead of
 all of the files using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`
 
@@ -152,7 +149,7 @@ A test file will only be run if it starts with the letters 'test'.
 Each test file must include:
 
 ```node
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 ```
 
 Tests must also include a setup and tear down:

@@ -6,7 +6,7 @@ return;
 var http = require('http');
 var request = require('request');
 var requestPromise = require('request-promise');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var identityExchangeEndpoint = require('thali/identityExchange/identityexchangeendpoint');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');

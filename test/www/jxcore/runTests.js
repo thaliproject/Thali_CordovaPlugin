@@ -2,12 +2,12 @@
 
 var fs = require('fs-extra-promise');
 var path = require('path');
-var thaliTape = require('./lib/thali-tape');
+var thaliTape = require('./lib/thaliTape');
 var testUtils = require('./lib/testUtils');
 var logger = require('thali/thalilogger')('runTests');
 
-// The global.Mobile object is replaced here after thali-tape
-// has been required so that thali-tape can pick up the right
+// The global.Mobile object is replaced here after thaliTape
+// has been required so that thaliTape can pick up the right
 // test framework to be used.
 if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();

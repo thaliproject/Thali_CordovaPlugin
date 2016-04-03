@@ -2,7 +2,7 @@
 
 var UnitTestFramework = require('../../../TestServer/UnitTestFramework.js');
 var TestDevice = require('../../../TestServer/TestDevice.js');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 

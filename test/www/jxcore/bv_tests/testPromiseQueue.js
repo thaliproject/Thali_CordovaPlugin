@@ -1,5 +1,5 @@
 'use strict';
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var PromiseQueue = require('thali/NextGeneration/promiseQueue');
 var Promise = require('lie');
 
