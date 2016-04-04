@@ -4,7 +4,7 @@ var originalMobile = typeof Mobile === 'undefined' ? undefined : Mobile;
 var SendDataConnector = require('../perf_tests/SendDataConnector.js');
 var SendDataTCPServer = require('../perf_tests/SendDataTCPServer.js');
 var TestSendData = require('../perf_tests/testSendData.js');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 
 var testPort = 8889;
 

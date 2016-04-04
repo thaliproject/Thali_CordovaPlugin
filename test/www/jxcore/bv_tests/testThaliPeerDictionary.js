@@ -1,8 +1,7 @@
 'use strict';
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var crypto = require('crypto');
 var sinon = require('sinon');
-var assert = require('assert');
 
 var PeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
@@ -12,7 +11,6 @@ var ThaliMobile =
   require('thali/NextGeneration/thaliMobile');
 
 var SECP256K1 = 'secp256k1';
-
 var ENTRY1 = 'entry1';
 var ENTRY2 = 'entry2';
 
@@ -141,9 +139,6 @@ test('Test PeerDictionary basic functionality', function (t) {
   var entry1 = createEntry(ENTRY1, PeerDictionary.peerState.RESOLVED);
   var entry2 = createEntry(ENTRY2, PeerDictionary.peerState.RESOLVED);
 
-  var entry1Copy = JSON.parse(JSON.stringify(entry1));
-  var entry2Copy = JSON.parse(JSON.stringify(entry2));
-
   dictionary.addUpdateEntry(ENTRY1, entry1);
   t.equal(dictionary._entryCounter, 1, 'Entry counter must be 1');
   t.equal(dictionary.size(), 1, 'Size must be 1');
@@ -151,10 +146,6 @@ test('Test PeerDictionary basic functionality', function (t) {
   dictionary.addUpdateEntry(ENTRY2, entry2);
   t.equal(dictionary._entryCounter, 2, 'Entry counter must be 2');
   t.equal(dictionary.size(), 2, 'Size must be 2');
-
-
-  assert.deepEqual(dictionary.get('entry1'), entry1Copy);
-  assert.deepEqual(dictionary.get('entry2'), entry2Copy);
 
   dictionary.remove(ENTRY2);
   t.equal(dictionary.get(ENTRY2), null, 'Entry2 should not be found');
@@ -206,20 +197,14 @@ test('Test PeerDictionary with multiple entries.', function (t) {
 
 test('RESOLVED entries are removed before WAITING state entry.', function (t) {
 
-
-
   var dictionary = new PeerDictionary.PeerDictionary();
 
   var entryWaiting = createEntry(ENTRY1, PeerDictionary.peerState.WAITING);
   dictionary.addUpdateEntry(ENTRY1, entryWaiting);
 
-  var entryWaitingCopy = JSON.parse(JSON.stringify(entryWaiting));
-
   addEntries(dictionary, 'resolved_', PeerDictionary.peerState.RESOLVED,
     PeerDictionary.PeerDictionary.MAXSIZE + 5 );
 
-  var entry = dictionary.get(ENTRY1);
-  assert.deepEqual(entry, entryWaitingCopy);
 
   // Ensures that expected resolved entries remained.
   var entriesExist = verifyEntries(dictionary, 'resolved_', 6,
@@ -269,29 +254,29 @@ test('WAITING entries are removed before CONTROLLED_BY_POOL state entry.',
     t.end();
   });
 
-test('When CONTROLLED_BY_POOL entry is removed and kill is called.', function (t) {
+test('When CONTROLLED_BY_POOL entry is removed and kill is called.',
+  function (t) {
+    var dictionary = new PeerDictionary.PeerDictionary();
 
-  var dictionary = new PeerDictionary.PeerDictionary();
+    var entryControlledByPool = createEntry(ENTRY1,
+      PeerDictionary.peerState.CONTROLLED_BY_POOL);
 
-  var entryControlledByPool = createEntry(ENTRY1,
-    PeerDictionary.peerState.CONTROLLED_BY_POOL);
+    dictionary.addUpdateEntry(ENTRY1, entryControlledByPool);
 
-  dictionary.addUpdateEntry(ENTRY1, entryControlledByPool);
+    var spyKill =
+      sinon.spy(entryControlledByPool.notificationAction, 'kill');
 
-  var spyKill =
-    sinon.spy(entryControlledByPool.notificationAction, 'kill');
+    addEntries(dictionary, 'waiting_',
+      PeerDictionary.peerState.CONTROLLED_BY_POOL,
+      PeerDictionary.PeerDictionary.MAXSIZE + 5 );
 
-  addEntries(dictionary, 'waiting_',
-    PeerDictionary.peerState.CONTROLLED_BY_POOL,
-    PeerDictionary.PeerDictionary.MAXSIZE + 5 );
+    t.equals(spyKill.callCount,
+      1, 'Kill should be called once');
+    t.equals(dictionary.size(),
+      100, 'Size should be 100');
 
-  t.equals(spyKill.callCount,
-    1, 'Kill should be called once');
-  t.equals(dictionary.size(),
-    100, 'Size should be 100');
-
-  t.end();
-});
+    t.end();
+  });
 
 
 

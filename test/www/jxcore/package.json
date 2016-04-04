@@ -23,6 +23,7 @@
     "concat-map": "^0.0.1",
     "express": "4.13.3",
     "express-pouchdb": "^1.0.2",
+    "forever-agent": "0.6.1",
     "fs-extra-promise": "^0.2.0",
     "is-property": "^1.0.2",
     "leveldown-mobile": "^1.1.1",
@@ -47,8 +48,7 @@
     "thali": "*",
     "tmp": "^0.0.28",
     "urlsafe-base64": "^1.0.0",
-    "uuid": "^2.0.0",
-    "wrapping-tape": "^0.0.3"
+    "uuid": "^2.0.0"
   },
   "devDependencies": {}
 }

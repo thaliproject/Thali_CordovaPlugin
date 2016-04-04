@@ -1,7 +1,7 @@
 'use strict';
 
 var install = require('../../../../thali/install/install.js');
-var tape = require('../lib/thali-tape');
+var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var exec = require('child_process').exec;
 var path = require('path');
