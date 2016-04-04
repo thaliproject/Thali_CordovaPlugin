@@ -1,7 +1,20 @@
 'use strict';
 var request = require('request');
 var express = require('express');
+var https = require('https');
+var ForeverAgent = require('forever-agent');
+var Promise = require('lie');
+var thaliConfig =
+  require('thali/NextGeneration/thaliConfig');
+var makeIntoCloseAllServer =
+  require('thali/NextGeneration/makeIntoCloseAllServer');
 
+var gPskIdentity = 'I am me!';
+var gPskKey = new Buffer('I am a reasonable long string');
+
+var pskIdToSecret = function (id) {
+  return id === gPskIdentity ? gPskKey : null;
+};
 
 /**
  * This function will generate HTTP request to selected endpoint and calls
@@ -56,4 +69,47 @@ module.exports.runServer = function (router, path, responseCode, body, times,
   router.get(path, delayCallback, requestHandler);
 };
 
+module.exports.getTestAgent = function (pskIdentity, pskKey ) {
 
+  pskIdentity = pskIdentity || gPskIdentity;
+  pskKey = pskKey || gPskKey;
+  
+  return new ForeverAgent.SSL({
+    keepAlive: true,
+    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+    maxSockets: Infinity,
+    maxFreeSockets: 256,
+    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+    pskIdentity: pskIdentity,
+    pskKey: pskKey
+  });
+};
+
+module.exports.getTestHttpsServer = function (expressApp,
+                                              expressRouter,
+                                              pskCallback){
+
+  pskCallback = pskCallback || pskIdToSecret;
+
+  return new Promise(function (resolve, reject) {
+    // Initializes the server with the expressRouter
+    expressApp.use('/', expressRouter);
+
+    var options = {
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskCallback : pskCallback,
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
+    };
+
+    var expressServer = https.createServer(options, expressApp).
+    listen(0, function (err) {
+      if (err) {
+        reject(err);
+      } else {
+        expressServer = makeIntoCloseAllServer(expressServer);
+        resolve(expressServer);
+      }
+    });
+  });
+};
