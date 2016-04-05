@@ -22,17 +22,26 @@ if (tape.coordinated) {
 var applicationPort = 4242;
 var nativePort = 4040;
 var serversManager = null;
-
+var nativeServer = null;
 var test = tape({
   setup: function (t) {
     global.Mobile = mockMobile;
-    serversManager = new ThaliTCPServersManager(applicationPort);
-    t.end();
+    nativeServer =  makeIntoCloseAllServer(net.createServer());
+    nativeServer.listen(0, function () {
+      serversManager = new ThaliTCPServersManager(nativeServer.address().port);
+      t.end();
+    });
   },
   teardown: function (t) {
     (serversManager ? serversManager.stop() : Promise.resolve())
       .catch(function (err) {
         t.fail('serversManager had stop error ' + err);
+      })
+      .then(function () {
+        var promise = nativeServer ? nativeServer.closeAllPromise() :
+                      Promise.resolve();
+        nativeServer = null;
+        return promise;
       })
       .then(function () {
         global.Mobile = originalMobile;
@@ -116,52 +125,185 @@ test('calling createPeerListener twice with same peerIdentifier should ' +
     });
 });
 
-test('Killed a listener causes a new one to spawn', function (t) {
-  var firstPort = null;
+// test('Killed a listener causes a new one to spawn', function (t) {
+//   var firstPort = null;
+//
+//   var nativeServer = net.createServer(function (socket) {
+//     setTimeout(function () {
+//       socket.destroy();
+//     }, 200);
+//   });
+//
+//   nativeServer.listen(0, function () {
+//     // Have the next Mobile("connect") call complete with a forward connection
+//     Mobile('connect').nextNative(function (peerIdentifier, cb) {
+//       cb(null, Mobile.createListenerOrIncomingConnection(
+//         nativeServer.address().port, 0, 0));
+//     });
+//
+//     serversManager.on('listenerRecreatedAfterFailure', function (record) {
+//       t.equal('peer2', record.peerIdentifier, 'same peer ID');
+//       t.notEqual(firstPort, record.portNumber, 'different ports');
+//       t.end();
+//     });
+//
+//     serversManager.start()
+//       .then(function () {
+//         return serversManager.createPeerListener('peer2', false);
+//       })
+//       .then(function (port) {
+//         firstPort = port;
+//         var socket = net.connect(nativeServer.address().port);
+//         socket.on('close', function () {
+//           logger.debug('socket closed');
+//         })
+//       })
+//       .catch(function (err) {
+//         t.fail(err);
+//         serversManager.removeAllListeners('listenerRecreatedAfterFailure');
+//         t.end();
+//       });
+//   });
+//
+//   nativeServer.on('error', function (err) {
+//     if (err) {
+//       t.fail('nativeServer should not fail');
+//       return t.end();
+//     }
+//   });
+// });
 
-  var nativeServer = net.createServer(function (socket) {
-    setTimeout(function () {
-      socket.destroy();
-    }, 200);
+var validateIncomingData = function (t, socket, desiredMessage) {
+  var done = false;
+  var collectedData = new Buffer(0);
+  socket.on('data', function (data) {
+    if (done) {
+      t.fail('Got too much data');
+    }
+    collectedData = Buffer.concat([collectedData, data]);
+    if (collectedData.length < desiredMessage.length) {
+      return;
+    }
+
+    done = true;
+
+    if (collectedData.length > desiredMessage.length) {
+      return t.fail('Got too much data');
+    }
+    t.ok(Buffer.compare(collectedData, desiredMessage) === 0,
+          'Data should be of same length and content');
   });
+};
 
-  nativeServer.listen(0, function () {
-    // Have the next Mobile("connect") call complete with a forward connection
-    Mobile('connect').nextNative(function (peerIdentifier, cb) {
-      cb(null, Mobile.createListenerOrIncomingConnection(
-        nativeServer.address().port, 0, 0));
-    });
-
-    serversManager.on('listenerRecreatedAfterFailure', function (record) {
-      t.equal('peer2', record.peerIdentifier, 'same peer ID');
-      t.notEqual(firstPort, record.portNumber, 'different ports');
+test('createPeerListener - closing connection to native listener closes ' +
+  'everything', function (t) {
+    var haveQuit = false;
+    var quit = function () {
+      if (haveQuit) {
+        return;
+      }
+      haveQuit = true;
+      serversManager.removeAllListeners('listenerRecreatedAfterFailure');
       t.end();
+    };
+
+    nativeServer.on('connection', function (socket) {
+      validateIncomingData(t, socket, new Buffer('test'));
+      socket.on('data', function (data) {
+        socket.destroy();
+      });
     });
 
     serversManager.start()
-      .then(function () {
+      .then(function (incomingMuxListenerPort) {
+        // Have the next Mobile("connect") call complete with a forward
+        // connection
+        Mobile('connect').nextNative(function (peerIdentifier, cb) {
+          cb(null, Mobile.createListenerOrIncomingConnection(
+            incomingMuxListenerPort, 0, 0));
+        });
         return serversManager.createPeerListener('peer2', false);
       })
       .then(function (port) {
-        firstPort = port;
-        var socket = net.connect(nativeServer.address().port);
+        var socket = net.connect(port, function () {
+          socket.write(new Buffer('test'));
+        });
         socket.on('close', function () {
-          logger.debug('socket closed');
-        })
+          quit();
+        });
       })
       .catch(function (err) {
         t.fail(err);
-        serversManager.removeAllListeners('listenerRecreatedAfterFailure');
-        t.end();
+        quit();
       });
+
+    nativeServer.on('error', function (err) {
+      if (err) {
+        t.fail('nativeServer should not fail');
+        quit();
+      }
+    });
   });
+
+test('createPeerListener - closing mux closes listener ', function (t) {
+  var haveQuit = false;
+  var quit = function () {
+    if (haveQuit) {
+      return;
+    }
+    haveQuit = true;
+    serversManager.removeAllListeners('listenerRecreatedAfterFailure');
+    t.end();
+  };
+
+  nativeServer.on('connection', function (socket) {
+    validateIncomingData(t, socket, new Buffer('test'));
+    socket.on('data', function () {
+      socket.write(new Buffer('test'));
+    });
+  });
+
+  serversManager.start()
+    .then(function (incomingMuxListenerPort) {
+      // Have the next Mobile("connect") call complete with a forward
+      // connection
+      Mobile('connect').nextNative(function (peerIdentifier, cb) {
+        cb(null, Mobile.createListenerOrIncomingConnection(
+          incomingMuxListenerPort, 0, 0));
+      });
+      return serversManager.createPeerListener('peer2', false);
+    })
+    .then(function (port) {
+      var socket = net.connect(port, function () {
+        socket.write(new Buffer('test'));
+      });
+      validateIncomingData(t, socket, new Buffer('test'));
+      socket.on('data', function (data) {
+        serversManager._peerServers.peer2.server._mux.destroy();
+      });
+      socket.on('error', function (err) {
+        logger.debug('Socket got error - ' + err);
+      });
+      socket.on('close', function () {
+        quit();
+      });
+    })
+    .catch(function (err) {
+      t.fail(err);
+      quit();
+    });
 
   nativeServer.on('error', function (err) {
     if (err) {
       t.fail('nativeServer should not fail');
-      return t.end();
+      quit();
     }
   });
+});
+
+test('Killing a tcp connection to the listener does not close the listener',
+function (t) {
+
 });
 
 /*
@@ -812,14 +954,4 @@ test('createPeerListener - multiple parallel calls', function (t) {
     .then(function () {
       t.end();
     });
-});
-
-test('createPeerListener - closing connection to listener closes everything',
-function (t) {
-  
-});
-
-test('createPeerListener - closing native connection with listener closes ' +
-  'everything', function (t) {
-  
 });
