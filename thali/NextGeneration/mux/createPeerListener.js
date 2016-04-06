@@ -18,8 +18,13 @@ var maxPeersToAdvertise =
 
 function closeServer(self, server, failedConnectionErr, canRetry)
 {
+  if (server._closing) {
+    return;
+  }
   server._closing = true;
   server.closeAll();
+  server._mux && server._mux.destroy();
+  server._mux = null;
   delete self._peerServers[server._peerIdentifier];
   if (failedConnectionErr) {
     self.emit('failedConnection', {
@@ -102,7 +107,7 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
         client.on('finish', function () {
           stream.end();
         });
-        
+
         client.on('close', function () {
           stream.destroy();
         });
@@ -127,16 +132,16 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
           peerServerEntry.lastActive = Date.now();
         }
       });
-      
+
       outgoing.on('error', function (err) {
         logger.debug('Got error on outgoing to native - ' + err);
         mux.destroy();
       });
-      
+
       outgoing.on('finish', function () {
         mux.end();
       });
-      
+
       outgoing.on('close', function () {
         mux.destroy();
       });
@@ -180,7 +185,7 @@ function handleForwardConnection(self, listenerOrIncomingConnection, server,
   });
 
   outgoing.on('close', function () {
-    server._mux && server._mux.end();
+    closeServer(self, server, null, true);
   });
 
   outgoing.on('timeout', function () {
@@ -505,7 +510,7 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
   // - an incoming socket is one _from_ the application
   // - an outgoing socket is one to the native listener on the p2p side
   // - a client socket is one _to_ the application, 1 per remote created stream
-  
+
   switch (self._state) {
     case self.TCPServersManagerStates.INITIALIZED: {
       return Promise.reject(new Error('Call Start!'));
@@ -551,15 +556,15 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
             logger.debug('error on incoming socket - ' + err);
             incomingStream.destroy();
           });
-          
+
           incoming.on('finish', function () {
             incomingStream.end();
           });
-          
+
           incoming.on('close', function () {
-            incoming.destroy();
+            incomingStream.destroy();
           });
-          
+
           incomingStream.pipe(incoming).pipe(incomingStream);
         })
         .catch(function (err) {
@@ -626,7 +631,7 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
     }
 
     logger.debug('createPeerListener creating new server');
-    
+
     var server = createServer(onNewConnection);
 
     self._peerServers[peerIdentifier] =
@@ -639,7 +644,7 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
       * ends up with us calling failedStartup).
       */
     peerServerEntry = self._peerServers[peerIdentifier];
-    
+
     function successfulStartup() {
       resolve(server.address().port);
       self._peerServers[peerIdentifier].promisesOnListen.forEach(

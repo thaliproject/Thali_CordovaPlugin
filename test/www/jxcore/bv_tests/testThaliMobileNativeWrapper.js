@@ -134,19 +134,25 @@ test('error returned with bad router', function (t) {
   });
 });
 
-function trivialEndToEndTestScafold(t, needManualNotify,
-  pskIdtoSecret, pskIdentity, pskKey, testData, callback) {
-  var testPath = '/test';
+var testPath = '/test';
+function trivialEndToEndTestScaffold(t, needManualNotify,
+                                     pskIdtoSecret, pskIdentity, pskKey, 
+                                     testData, callback) {
   var router = express.Router();
   router.get(testPath, function (req, res) {
     res.send(testData);
   });
 
+  var selectedPeer = null;
   var peerAvailabilityHandler = function (peer) {
+    if (selectedPeer && peer.peerIdentifier !== selectedPeer) {
+      return;
+    }
     // Ignore peer unavailable events
     if (peer.portNumber === null) {
       return;
     }
+    selectedPeer = peer.peerIdentifier;
     t.ok(true, 'found a peer! ' + JSON.stringify(peer));
     thaliMobileNativeWrapper.emitter.removeListener(
       'nonTCPPeerAvailabilityChangedEvent',
@@ -154,7 +160,7 @@ function trivialEndToEndTestScafold(t, needManualNotify,
     );
 
     var end = function () {
-      callback ? callback() : t.end();
+      callback ? callback(peer) : t.end();
     };
 
     testUtils.get('127.0.0.1', peer.portNumber, testPath, pskIdentity, pskKey)
@@ -185,21 +191,20 @@ function trivialEndToEndTestScafold(t, needManualNotify,
     });
 }
 
+var pskIdentity = 'I am me!';
+var pskKey = new Buffer('I am a reasonable long string');
+var testData = 'foobar';
 function trivialEndToEndTest(t, needManualNotify, callback) {
-  var pskIdentity = 'I am me!';
-  var pskKey = new Buffer('I am a reasonable long string');
-  var testData = 'foobar';
-
   function pskIdToSecret(id) {
     t.equal(id, pskIdentity, 'Should only get expected id');
     return id === pskIdentity ? pskKey : null;
   }
 
-  trivialEndToEndTestScafold(t, needManualNotify,
+  trivialEndToEndTestScaffold(t, needManualNotify,
     pskIdToSecret, pskIdentity, pskKey, testData, callback);
 }
 
-function trivialBadEndtoEndTest(t, needManualNotify, callback) {
+function trivialBadEndToEndTest(t, needManualNotify, callback) {
   var pskIdentity = 'Yo ho ho';
   var pskKey = new Buffer('It really does not matter');
   var testData = 'Not important';
@@ -208,7 +213,7 @@ function trivialBadEndtoEndTest(t, needManualNotify, callback) {
     return null;
   }
 
-  trivialEndToEndTestScafold(t, needManualNotify,
+  trivialEndToEndTestScaffold(t, needManualNotify,
     pskIdToSecret, pskIdentity, pskKey, testData, callback);
 }
 
@@ -665,3 +670,51 @@ test('will fail bad PSK connection between peers', function (t) {
   t.ok(true, 'FIX ME, PLEASE!!!');
   t.end();
 });
+
+test('We provide notification when a listener dies and we recreate it',
+  function (t) {
+    var recreatedPort = null;
+    trivialEndToEndTest(t, false, function (peer) {
+      function recreatedHandler(record) {
+        t.equal(record.peerIdentifier, peer.peerIdentifier, 'same ids');
+        recreatedPort = record.portNumber;
+      }
+      thaliMobileNativeWrapper._getServersManager()
+        .on('listenerRecreatedAfterFailure', recreatedHandler);
+
+      function exit() {
+        thaliMobileNativeWrapper._getServersManager()
+          .removeListener('listenerRecreatedAfterFailure', recreatedHandler);
+        thaliMobileNativeWrapper.emitter
+          .removeListener('nonTCPPeerAvailabilityChangedEvent', 
+            nonTCPAvaiHandler);
+        t.end();
+      }
+      
+      function nonTCPAvaiHandler(record) {
+        if (record.peerIdentifier !== peer.peerIdentifier) {
+          return;
+        }
+        if (!recreatedPort || 
+          recreatedPort && record.portNumber !== recreatedPort) {
+          return;
+        }
+        testUtils.get('127.0.0.1', record.portNumber, testPath, pskIdentity,
+                      pskKey)
+          .then(function (responseBody) {
+            t.equal(responseBody, testData, 'matching bodies');
+            exit();
+          })
+          .catch(function (err) {
+            t.fail(err);
+            exit();
+          });
+      }
+      
+      thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+        nonTCPAvaiHandler);
+      
+      thaliMobileNativeWrapper._getServersManager().
+        _peerServers[peer.peerIdentifier].server._mux.destroy();
+    });
+  });
