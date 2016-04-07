@@ -242,6 +242,9 @@ ThaliNotificationAction.prototype._complete = function (resolution,
     this._resolution = resolution;
     this._httpRequest && this._httpRequest.abort();
 
+    // Sets our state to KILLED now that we are done
+    ThaliNotificationAction.super_.prototype.kill.call(this);
+    
     this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
       this.getPeerIdentifier(), resolution, beaconDetails);
 

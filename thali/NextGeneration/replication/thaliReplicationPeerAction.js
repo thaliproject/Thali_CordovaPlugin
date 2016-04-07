@@ -2,34 +2,57 @@
 
 var Promise = require('lie');
 var util = require('util');
-var PeerAction = require('thaliPeerAction').PeerAction;
-var actionState = require('thaliPeerAction').actionState;
+var ThaliPeerAction = require('../thaliPeerPool/thaliPeerAction');
+var actionState = ThaliPeerAction.actionState;
+var assert = require('assert');
+var thaliConfig = require('../thaliConfig');
+var logger = require('../../thalilogger')('thaliReplicationPeerAction');
 
 /** @module thaliReplicationPeerAction */
 
 /**
  * @classdesc Manages replicating information with a peer we have discovered
  * via notifications.
- * @private
- * @param {buffer} peerId A buffer containing the public key identifying the
- * peer who we are to replicate with.
+ * 
+ * @param {Buffer} peerIdentifier A buffer containing the public key identifying
+ * the peer who we are to replicate with.
  * @param {module:thaliNotificationClient.event:peerAdvertisesDataForUs} peerAdvertisesDataForUs
  * The notification that triggered this replication. This gives us the
  * information we need to create a connection as well the connection type
  * we need for the base class's constructor.
- * @param {PouchDB} pouchDB The pouchDB database we will use to replicate into.
- * Note that we will get the name for the remote database by taking this
- * database's name and appending it to http://[hostAddress]:[portNumber]/db/
+ * @param {PouchDB} PouchDB The PouchDB class constructor we are supposed to
+ * use.
+ * @param {string} dbName The name of the DB we will use both for local use as
+ * well as remote use. Note that we will get the name for the remote database by
+ * taking dbName and appending it to http://[hostAddress]:[portNumber]/db/
  * [name] where hostAddress and portNumber are from the previous argument.
  * @constructor
  */
-function ThaliReplicationPeerAction(peerId,
+function ThaliReplicationPeerAction(peerIdentifier,
                                     peerAdvertisesDataForUs,
-                                    pouchDB) {
-  // remember to call the base class's constructor
+                                    PouchDB,
+                                    dbName) {
+  assert(peerIdentifier, 'there must be a peerIdentifier');
+  assert(peerAdvertisesDataForUs, 'there must be peerAdvertisesDataForUs');
+  assert(PouchDB, 'there must be PouchDB');
+  assert(dbName, 'there must be dbName');
+  
+  ThaliReplicationPeerAction.super_.call(this, peerIdentifier,
+    peerAdvertisesDataForUs.connectionType,
+    ThaliReplicationPeerAction.actionType,
+    peerAdvertisesDataForUs.pskIdentifyField,
+    peerAdvertisesDataForUs.psk);
+  
+  this._peerAdvertisesDataForUs = peerAdvertisesDataForUs;
+  this._PouchDB = PouchDB;
+  this._dbName = dbName;
+  this._lastWrittenSeq = 0;
+  this._cancelReplication = null;
+  this._resolveStart = null;
+  this._rejectStart = null;
 }
 
-util.inherits(ThaliReplicationPeerAction, PeerAction);
+util.inherits(ThaliReplicationPeerAction, ThaliPeerAction);
 
 /**
  * The actionType we will use when calling the base class's constructor.
@@ -60,32 +83,50 @@ ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds = 200;
 
 ThaliReplicationPeerAction.prototype.resultPromise = null;
 
+ThaliReplicationPeerAction.prototype._writeSeq = function (seq) {
+  assert(seq >= this._lastWrittenSeq, 'seq should only go up');
+  //This will take a sequence and first see if it's time to send a new
+  //sequence. If not it will just update the sequence we want to write out
+  //and return. When time is up we will do the PUT. But I don't think we
+  //should fail if there is an error, so long as we can pull down data
+  //its good.
+  //This function returns a promise that will resolve when this particular
+  //write request is done.
+  //If kill is called we have to find all the outstanding promises and nuke
+  //them.
+};
+
+ThaliReplicationPeerAction.prototype._replicationTimer = function () {
+  //This is called when replication starts. It starts a timer. The timer is
+  //reset every time this function is called. If the timer expires then we call
+  //complete and shut down
+};
+
+ThaliReplicationPeerAction.prototype._complete = 
+  function (sendLastUpdate, error) {
+    //Cancel replication
+    //Cancel replicationTimer
+    //If sendLastUpdate is true then force out an immediate writeSeq and once
+    //it is done then resolve or reject. Otherwise resolve/reject immediately.
+    //Make sure to call kill on super since that will set state to killed
+  };
+
 /**
  * When start is called we will start a replication with the remote peer using
- * the settings specified below. We need
- * to set the ajax option in order to set the psk related values from
- * peerAdvertisesDataForUs. We will need to create the URL using the
- * hostAddress and portNumber from peerAdvertisesDataForUs. Also make sure to
- * set skip_setup to true.
+ * the settings specified below. We need to set the ajax option in order to set
+ * the psk related values from peerAdvertisesDataForUs. We will need to create
+ * the URL using the hostAddress and portNumber from peerAdvertisesDataForUs.
+ * Also make sure to set skip_setup to true.
  *
  * If we get an error that the database doesn't exist on the remote machine that
  * is fine, we're done. Although we should log a low priority error that we
  * tried to get to a database that doesn't exist. DO NOT log the peer ID.
  *
  * We then need to use db.replication.to with the remoteDB using the URL
- * specified in the constructor.. This will be the local DB we
- * will copy to. We need to do things this way so we can set the AJAX
- * options for PSK. We also need to set both options.retry and options.live
- * to true. See the changes event below for some of the implications of this.
- *
- * __OPEN ISSUE:__ I'm only sure that the options.ajax works on the PouchDB
- * constructor. I have no idea if we can submit options.ajax on a replication.
- * If not then we will need to accept a PouchDB constructor object with a DB
- * name and create everything from scratch.
- *
- * __OPEN ISSUE:__ One suspects we need to play around with
- * options.back_off_function to find something that works well for P2P
- * transports.
+ * specified in the constructor.. This will be the local DB we will copy to. We
+ * need to do things this way so we can set the AJAX options for PSK. We also
+ * need to set both options.retry and options.live to true. See the changes
+ * event below for some of the implications of this.
  *
  * We must hook these events from the replication object.
  *
@@ -95,25 +136,24 @@ ThaliReplicationPeerAction.prototype.resultPromise = null;
  *
  * active - Log per the previous.
  *
- * denied - This is a genuine error, it should never happen to log with high
+ * denied - This is a genuine error, it should never happen so log with high
  * priority so we can investigate. Again, don't include any identifying
  * information, not even the DB name. It's a hint.
  *
- * complete - Return resolve(); if there was no error otherwise return
- * Reject() with a Error object with the string that either matches one of the
- * {@link module:thaliPeerAction~ThaliPeerAction.start} error strings or
- * else something appropriate. Even if there is an error we should always do a
- * final write to `_Local/<peer ID>` with the last_seq in the info object
- * passed to complete.
+ * complete - Return resolve(); if there was no error otherwise return Reject()
+ * with a Error object with the string that either matches one of the {@link
+ * module:thaliPeerAction~ThaliPeerAction.start} error strings or else something
+ * appropriate. Even if there is an error we should always do a final write to
+ * `_Local/<peer ID>` with the last_seq in the info object passed to complete.
  *
  * error - Log with reasonably high priority but with no identifying
- * information. Otherwise take no further action as the complete event
- * should also fire and we'll handle things there.
+ * information. Otherwise take no further action as the complete event should
+ * also fire and we'll handle things there.
  *
- * __OPEN ISSUE:__ We actually need to investigate what kinds of err values
- * come back in order to determine if we can figure out if it was a connection
- * error. This is important for the thread pool to know. See the errors defined
- * on {@link module:thaliPeerAction~PeerAction.start}.
+ * __OPEN ISSUE:__ We actually need to investigate what kinds of err values come
+ * back in order to determine if we can figure out if it was a connection error.
+ * This is important for the thread pool to know. See the errors defined on
+ * {@link module:thaliPeerAction~PeerAction.start}.
  *
  * change - If we don't see any changes on the replication for {@link
  * module:thaliReplicationPeerAction~ThaliReplicatonPeerAction.maxIdlePeriodSeconds}
@@ -131,28 +171,57 @@ ThaliReplicationPeerAction.prototype.resultPromise = null;
  * @returns {Promise<?Error>}
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
-  switch(this.getActionType()) {
-    case actionState.CREATED: {
-      this.actionState = module.exports.actionState.STARTED;
-      this.resultPromise = new Promise(function (resolve, reject) {
+  var self = this;
+  
+  ThaliReplicationPeerAction.super_.prototype.start.call(this, httpAgentPool)
+    .then(function () {
+      var ajaxOptions = {
+        ajax : {
+          rejectUnauthorized: false,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+          pskIdentity: self.getPskIdentity(),
+          pskKey: self.getPskKey()
+        },
+        live: true,
+        retry: true,
+        skip_setup: true// jscs:ignore requireCamelCaseOrUpperCaseIdentifiers
+      };
+      var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
+        ':' + self._peerAdvertisesDataForUs.portNumber + '/db/' + self._dbName;
 
+      var remoteDB = new self._PouchDB(remoteUrl, ajaxOptions);
+      var errorHappened = false;
+      self._replicationTimer();
+      return new Promise(function (resolve, reject) {
+        self._resolveStart = resolve;
+        self._rejectStart = reject;
+        self._cancelReplication = remoteDB.replicate.to(self._dbName)
+          .on('paused', function (err) {
+            logger.debug('Got paused with ' + JSON.stringify(err));
+          })
+          .on('active', function () {
+            logger.debug('Replication resumed');
+          })
+          .on('denied', function (err) {
+            logger.warn('We got denied on a PouchDB access, this really should ' +
+              'not happen - ' + JSON.stringify(err));
+            errorHappened = true;
+          })
+          .on('complete', function (info) {
+            self._complete(errorHappened, info);
+          })
+          .on('error', function (err) {
+            logger.warn('Got error on replication - ' + JSON.stringify(err));
+            errorHappened = true;
+          })
+          .on('change', function (info) {
+            self._replicationTimer();
+            // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+            self._writeSeq(info.last_seq);
+            // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+          });
       });
-      return this.resultPromise;
-    }
-    case actionState.STARTED: {
-      return this.resultPromise;
-    }
-    case actionState.KILLED: {
-      return Promise.reject(new Error('action has completed'));
-    }
-    default: {
-      /*
-      __Open Issue__: How do we want to handle this? We either should panic and
-      throw an exception since this really should never happen or we can
-      more mutely panic and log this and then kill the replication.
-       */
-    }
-  }
+    });
 };
 
 /**
@@ -161,6 +230,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
  *
  */
 ThaliReplicationPeerAction.prototype.kill = function () {
+  ThaliReplicationPeerAction.super_.prototype.kill.call(this);
 
 };
 

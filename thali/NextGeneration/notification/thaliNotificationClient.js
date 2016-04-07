@@ -14,10 +14,10 @@ var util = require('util');
 /**
  * @classdesc Data of peerAdvertisesDataForUs event
  * @constructor
- * @param {buffer} keyId The buffer contains the ECDH public key for the
+ * @param {Buffer} keyId The buffer contains the ECDH public key for the
  * peer.
  * @param {string} pskIdentifyField
- * @param {buffer} psk This is the calculated pre-shared key that will be
+ * @param {Buffer} psk This is the calculated pre-shared key that will be
  * needed to establish a TLS PSK connection.
  * @param {string} hostAddress The IP/DNS address of the peer
  * @param {number} portNumber The TCP/IP port at the hostAddress the peer

@@ -120,8 +120,7 @@ var test = tape({
 });
 
 test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
-
-  t.plan(6);
+  t.plan(7);
 
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH,
@@ -158,8 +157,10 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
 
     });
 
-  act.start(globals.actionAgent).then( function (res) {
+  act.start(globals.actionAgent).then(function (res) {
     t.equals(res, null, 'must return null after successful call');
+    t.equals(act.getActionState(), ThaliPeerAction.actionState.KILLED, 
+      'Once start returns the action should be in KILLED state');
   })
   .catch(function (failure) {
     t.fail('Test failed:' + failure);

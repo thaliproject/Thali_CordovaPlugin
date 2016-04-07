@@ -27,7 +27,7 @@ var peerActionCounter = 0;
  * @param {module:thaliMobile.connectionTypes} connectionType
  * @param {string} actionType
  * @param {string} pskIdentity
- * @param {buffer} pskKey
+ * @param {Buffer} pskKey
  */
 function PeerAction (peerIdentifier, connectionType, actionType, pskIdentity,
                       pskKey)
@@ -118,7 +118,7 @@ PeerAction.prototype.getPskIdentity = function () {
 /**
  * The buffer to use as our pre-shared key, we need this to initialize the
  * pool agent
- * @type {buffer}
+ * @type {Buffer}
  * @private
  */
 PeerAction.prototype._pskKey = null;
