@@ -16,15 +16,40 @@ var thaliConfig = require('./../thaliConfig');
 var maxPeersToAdvertise =
   thaliConfig.MAXIMUM_NATIVE_PEERS_CREATE_PEER_LISTENER_ADVERTISES;
 
-function closeServer(self, server, failedConnectionErr)
+function closeServer(self, server, failedConnectionErr, canRetry)
 {
+  if (server._closing) {
+    return;
+  }
   server._closing = true;
   server.closeAll();
+  server._mux && server._mux.destroy();
+  server._mux = null;
   delete self._peerServers[server._peerIdentifier];
   if (failedConnectionErr) {
     self.emit('failedConnection', {
       'error': failedConnectionErr,
       'peerIdentifier': server._peerIdentifier
+    });
+  }
+  if (canRetry) {
+    logger.debug('Recreating listener');
+    // We use next tick just to avoid building up a stack but we want
+    // to make sure this code runs before anyone else so we can grab
+    // the server spot for the identifier we are using and no this probably
+    // isn't actually required and we could have used setImmediate
+    process.nextTick(function () {
+      module.exports(self, server._peerIdentifier, false)
+        .then(function (port) {
+          self.emit('listenerRecreatedAfterFailure', {
+            'peerIdentifier': server._peerIdentifier,
+            'portNumber': port
+          });
+        })
+        .catch(function (err) {
+          logger.warn('Got error trying to restart listener after failure -' +
+            err);
+        });
     });
   }
 }
@@ -58,10 +83,12 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
 
         stream.on('error', function (err) {
           logger.debug('multiplexToNativeListener.stream ' + err);
+          client.destroy();
         });
 
         stream.on('finish', function () {
           stream.destroy();
+          client.end();
         });
 
         stream.on('close', function () {
@@ -70,23 +97,29 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
 
         client.on('error', function (err) {
           logger.debug('multiplexToNativeListener.client ' + err);
+          stream.destroy();
           self.emit('routerPortConnectionFailed', {
             error: err,
             routerPort: self._routerPort
           });
         });
 
-        client.on('close', function () {
+        client.on('finish', function () {
           stream.end();
+        });
+
+        client.on('close', function () {
+          stream.destroy();
         });
       });
 
       mux.on('error', function (err) {
         logger.debug('multiplexToNativeListener.mux ' + err);
+        outgoing.destroy();
       });
 
       mux.on('finish', function () {
-
+        outgoing.end();
       });
 
       mux.on('close', function () {
@@ -98,6 +131,19 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
         if (peerServerEntry) {
           peerServerEntry.lastActive = Date.now();
         }
+      });
+
+      outgoing.on('error', function (err) {
+        logger.debug('Got error on outgoing to native - ' + err);
+        mux.destroy();
+      });
+
+      outgoing.on('finish', function () {
+        mux.end();
+      });
+
+      outgoing.on('close', function () {
+        mux.destroy();
       });
 
       outgoing.pipe(mux).pipe(outgoing);
@@ -131,7 +177,7 @@ function handleForwardConnection(self, listenerOrIncomingConnection, server,
     logger.warn(err);
     var error = new Error('Cannot Connect To Peer');
     error.outgoingError = err;
-    closeServer(self, server, error);
+    closeServer(self, server, error, true);
     if (!promiseResolved) {
       promiseResolved = true;
       reject();
@@ -139,7 +185,7 @@ function handleForwardConnection(self, listenerOrIncomingConnection, server,
   });
 
   outgoing.on('close', function () {
-    server._mux && server._mux.end();
+    closeServer(self, server, null, true);
   });
 
   outgoing.on('timeout', function () {
@@ -174,7 +220,7 @@ function handleReverseConnection(self, incoming, server,
       'TCP incoming request, pleaseConnect === true should never trigger' +
       'one so we should always have an incoming');
     incoming.destroy();
-    closeServer(self, server, new Error('Mismatched serverPort'));
+    closeServer(self, server, new Error('Mismatched serverPort'), true);
     server._firstConnection = true;
     return false;
   }
@@ -186,7 +232,7 @@ function handleReverseConnection(self, incoming, server,
   if (!mux) {
     logger.debug('no mux found');
     incoming.destroy();
-    closeServer(self, server, new Error('Incoming connection died'));
+    closeServer(self, server, new Error('Incoming connection died'), true);
     server._firstConnection = true;
     return false;
   }
@@ -210,14 +256,15 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
           logger.warn(error);
           logger.debug('failedConnection');
           incoming && incoming.end();
-          closeServer(self, server, error);
+          closeServer(self, server, error, true);
           return reject(error);
         }
         var listenerOrIncomingConnection = JSON.parse(unParsedConnection);
         if (listenerOrIncomingConnection.listeningPort === 0) {
           if (pleaseConnect) {
             logger.warn('was expecting a forward connection to be made');
-            closeServer(self, server, new Error('Cannot Connect To Peer'));
+            closeServer(self, server, new Error('Cannot Connect To Peer'),
+                        true);
             return reject(new Error('Unexpected Reverse Connection'));
           }
           // So this is annoying.. there's no guarantee on the order of the
@@ -464,8 +511,6 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
   // - an outgoing socket is one to the native listener on the p2p side
   // - a client socket is one _to_ the application, 1 per remote created stream
 
-  logger.debug('createPeerListener');
-
   switch (self._state) {
     case self.TCPServersManagerStates.INITIALIZED: {
       return Promise.reject(new Error('Call Start!'));
@@ -496,14 +541,28 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
 
           incomingStream.on('error', function (err) {
             logger.debug('error on incoming stream - ' + err);
+            incoming.destroy();
           });
 
           incomingStream.on('finish', function () {
-            server._mux.destroy();
+            incoming.end();
           });
 
           incomingStream.on('close', function () {
-            incoming.end();
+            incoming.destroy();
+          });
+
+          incoming.on('error', function (err) {
+            logger.debug('error on incoming socket - ' + err);
+            incomingStream.destroy();
+          });
+
+          incoming.on('finish', function () {
+            incomingStream.end();
+          });
+
+          incoming.on('close', function () {
+            incomingStream.destroy();
           });
 
           incomingStream.pipe(incoming).pipe(incomingStream);
@@ -533,7 +592,7 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
           }
         });
         if (oldest) {
-          closeServer(self, self._peerServers[oldest]);
+          closeServer(self, self._peerServers[oldest], null, false);
         }
       }
 
@@ -568,12 +627,23 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
         resolve: resolve,
         reject: reject
       });
+      return;
     }
+
+    logger.debug('createPeerListener creating new server');
 
     var server = createServer(onNewConnection);
 
     self._peerServers[peerIdentifier] =
     { lastActive: Date.now(), server: server, promisesOnListen: []};
+
+    /**
+      * We have to keep this value around because by the time we call failed
+      * startup the server's entry will have been deleted from _peerServers
+      * as part of closing the server (the inevitably result of anything that
+      * ends up with us calling failedStartup).
+      */
+    peerServerEntry = self._peerServers[peerIdentifier];
 
     function successfulStartup() {
       resolve(server.address().port);
@@ -586,14 +656,6 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
       // be returned the server's address. So we can set this to null.
       self._peerServers[peerIdentifier].promisesOnListen = null;
     }
-
-    /**
-     * We have to keep this value around because by the time we call failed
-     * startup the server's entry will have been deleted from _peerServers
-     * as part of closing the server (the inevitably result of anything that
-     * ends up with us calling failedStartup).
-     */
-    var peerServerEntry = self._peerServers[peerIdentifier];
 
     function failedStartup(err) {
       peerServerEntry.promisesOnListen
