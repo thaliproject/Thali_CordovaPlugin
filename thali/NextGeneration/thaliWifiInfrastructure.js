@@ -282,6 +282,7 @@ ThaliWifiInfrastructure.prototype.start = function (router, pskIdToSecret) {
       return reject(new Error('Call Stop!'));
     }
     self.pskIdToSecret = pskIdToSecret;
+    self.pskIdToPublicKey = pskIdToPublicKey;
     ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
                                           self._networkChangedHandler);
     ThaliMobileNativeWrapper.getNonTCPNetworkStatus()

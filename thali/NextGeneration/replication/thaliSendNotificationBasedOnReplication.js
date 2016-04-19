@@ -140,6 +140,16 @@ ThaliSendNotificationBasedOnReplication.prototype._state = stateEnum.STOPPED;
 
 ThaliSendNotificationBasedOnReplication.prototype._transientState = null;
 
+ThaliSendNotificationBasedOnReplication.prototype.getPskIdToSecret =
+  function() {
+    return this._thaliNotificationServer.getPskIdToSecret();
+  };
+
+ThaliSendNotificationBasedOnReplication.prototype.getPskIdToPublicKey =
+  function () {
+    return this._thaliNotificationServer.getPskIdToPublicKey();
+  }
+
 /**
  * Will start monitoring the submitted pouchDB and updating the notification
  * layer with peers to notify of changes.

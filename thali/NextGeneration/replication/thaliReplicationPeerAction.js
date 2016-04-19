@@ -13,7 +13,7 @@ var logger = require('../../thalilogger')('thaliReplicationPeerAction');
 /**
  * @classdesc Manages replicating information with a peer we have discovered
  * via notifications.
- * 
+ *
  * @param {Buffer} peerIdentifier A buffer containing the public key identifying
  * the peer who we are to replicate with.
  * @param {module:thaliNotificationClient.event:peerAdvertisesDataForUs} peerAdvertisesDataForUs
@@ -36,17 +36,18 @@ function ThaliReplicationPeerAction(peerIdentifier,
   assert(peerAdvertisesDataForUs, 'there must be peerAdvertisesDataForUs');
   assert(PouchDB, 'there must be PouchDB');
   assert(dbName, 'there must be dbName');
-  
+
   ThaliReplicationPeerAction.super_.call(this, peerIdentifier,
     peerAdvertisesDataForUs.connectionType,
     ThaliReplicationPeerAction.actionType,
     peerAdvertisesDataForUs.pskIdentifyField,
     peerAdvertisesDataForUs.psk);
-  
+
   this._peerAdvertisesDataForUs = peerAdvertisesDataForUs;
   this._PouchDB = PouchDB;
   this._dbName = dbName;
   this._lastWrittenSeq = 0;
+  this._seqWriteTiemout = null;
   this._cancelReplication = null;
   this._resolveStart = null;
   this._rejectStart = null;
@@ -81,10 +82,25 @@ ThaliReplicationPeerAction.maxIdlePeriodSeconds = 30;
  */
 ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds = 200;
 
-ThaliReplicationPeerAction.prototype.resultPromise = null;
-
 ThaliReplicationPeerAction.prototype._writeSeq = function (seq) {
-  assert(seq >= this._lastWrittenSeq, 'seq should only go up');
+  // Seq should only go up but if there is a problem it's because we got
+  // bad data from the remote server.
+  if (seq <= this._lastWrittenSeq) {
+    logger.debug('Got a bad seq, submitted seq ' + seq + ', lastWrittenSeq: ' +
+      this._lastWrittenSeq);
+    return;
+  }
+  
+  /*
+  If we haven't yet created a timer for write seq then we should immediately
+  fire off a GET request to see if we have ever written to this DB before and
+  then use the result to first off a PUT. This should all be wrapped in a
+  promise so we can make sure to serialize our next action.
+  
+  We would then start a timer
+   */
+  
+  
   //This will take a sequence and first see if it's time to send a new
   //sequence. If not it will just update the sequence we want to write out
   //and return. When time is up we will do the PUT. But I don't think we
@@ -96,13 +112,23 @@ ThaliReplicationPeerAction.prototype._writeSeq = function (seq) {
   //them.
 };
 
+/**
+ * The replication timer is needed because by default we do live replications
+ * which will keep a connection open to the remote server and send heartbeats
+ * to keep things going. This means that our timers at lower levels in our
+ * stack will see 'activity' and so won't time out a connection that isn't
+ * actually doing useful work. This timer however is connected directly to the
+ * changes feed and so can see if 'useful' work is happening and time out if it
+ * is not.
+ * @private
+ */
 ThaliReplicationPeerAction.prototype._replicationTimer = function () {
   //This is called when replication starts. It starts a timer. The timer is
   //reset every time this function is called. If the timer expires then we call
   //complete and shut down
 };
 
-ThaliReplicationPeerAction.prototype._complete = 
+ThaliReplicationPeerAction.prototype._complete =
   function (sendLastUpdate, error) {
     //Cancel replication
     //Cancel replicationTimer
@@ -172,7 +198,7 @@ ThaliReplicationPeerAction.prototype._complete =
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   var self = this;
-  
+
   ThaliReplicationPeerAction.super_.prototype.start.call(this, httpAgentPool)
     .then(function () {
       var ajaxOptions = {

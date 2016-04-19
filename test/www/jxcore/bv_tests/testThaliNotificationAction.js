@@ -19,11 +19,7 @@ var ThaliPeerAction =
 var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 
-var SECP256K1 = 'secp256k1';
-
 var globals = {};
-
-
 
 /**
  * @classdesc This class is a container for all variables and
@@ -34,7 +30,7 @@ var GlobalVariables = function () {
 
   this.expressApp = express();
   this.expressRouter = express.Router();
-  this.sourceKeyExchangeObject = crypto.createECDH(SECP256K1);
+  this.sourceKeyExchangeObject = crypto.createECDH(thaliConfig.BEACON_CURVE);
   this.sourcePublicKey = this.sourceKeyExchangeObject.generateKeys();
   this.sourcePublicKeyHash =
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
@@ -74,11 +70,11 @@ GlobalVariables.prototype.createPublicKeysToNotifyAndPreamble = function () {
   this.targetDeviceKeyExchangeObjects = [];
   this.preambleAndBeacons = {};
 
-  var device1 = crypto.createECDH(SECP256K1);
+  var device1 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device1Key = device1.generateKeys();
   var device1KeyHash = NotificationBeacons.createPublicKeyHash(device1Key);
 
-  var device2 = crypto.createECDH(SECP256K1);
+  var device2 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device2Key = device2.generateKeys();
   var device2KeyHash = NotificationBeacons.createPublicKeyHash(device2Key);
 
@@ -168,7 +164,6 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
 });
 
 test('Test HTTP_BAD_RESPONSE locally', function (t) {
-
   t.plan(2);
 
   httpTester.runServer(globals.expressRouter,
@@ -199,7 +194,6 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
 });
 
 test('Test NETWORK_PROBLEM locally', function (t) {
-
   t.plan(2);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
@@ -232,7 +226,6 @@ test('Test NETWORK_PROBLEM locally', function (t) {
 
 
 test('Call the start two times', function (t) {
-
   t.plan(3);
 
   httpTester.runServer(globals.expressRouter,

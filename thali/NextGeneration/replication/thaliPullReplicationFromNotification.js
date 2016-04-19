@@ -1,5 +1,7 @@
 'use strict';
 
+var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNotificationClient');
+
 /** @module thaliPullReplicationFromNotification */
 
 /**
@@ -26,19 +28,26 @@
  * specified for them.
  *
  * @public
- * @param {PouchDB} pouchDB The database we will replicate all changes to. The
- * name of the remote DB MUST be http://[host from discovery]:[port from
- * discovery]/db/[name] where name is taken from pouchDB.info's db_name field.
+ * @param {PouchDB} PouchDB The factory we will use to create the database we
+ * will replicate all changes to. 
+ * @param {string} dbName The name of the DB. The name of the remote DB MUST be
+ * http://[host from discovery]:[port from discovery]/db/[name] where name is
+ * taken from pouchDB.info's db_name field.
  * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} thaliPeerPoolInterface
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
  * @constructor
  */
-function ThaliPullReplicationFromNotification(pouchDB,
+function ThaliPullReplicationFromNotification(PouchDB,
+                                              dbName,
                                               thaliPeerPoolInterface,
                                               ecdhForLocalDevice) {
+  this._thaliNotificationClient =
+    new ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice);
 
 }
+
+ThaliPullReplicationFromNotification.prototype._thaliNotificationClient = null;
 
 /**
  * Starts to listen for peer discovery events for interesting peers and
@@ -53,7 +62,7 @@ function ThaliPullReplicationFromNotification(pouchDB,
  */
 ThaliPullReplicationFromNotification.prototype.start =
   function (prioritizedReplicationList) {
-    // start thaliNotificationClient here
+    return this._thaliNotificationClient.start(prioritizedReplicationList);
   };
 
 /**
@@ -63,7 +72,7 @@ ThaliPullReplicationFromNotification.prototype.start =
  * This method is idempotent.
  */
 ThaliPullReplicationFromNotification.prototype.stop = function () {
-  // stop thaliNotificationClient here
+  return this._thaliNotificationClient.stop();
 };
 
 

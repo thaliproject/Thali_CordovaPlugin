@@ -16,8 +16,6 @@ var makeIntoCloseAllServer =
 
 var ThaliHttpTester = require('../lib/httpTester');
 
-var SECP256K1 = 'secp256k1';
-
 var globalVariables = {};
 
 /**
@@ -27,7 +25,7 @@ var globalVariables = {};
  */
 var GlobalVariables = function () {
 
-  this.sourceKeyExchangeObject = crypto.createECDH(SECP256K1);
+  this.sourceKeyExchangeObject = crypto.createECDH(thaliConfig.BEACON_CURVE);
   this.sourcePublicKey = this.sourceKeyExchangeObject.generateKeys();
   this.sourcePublicKeyHash =
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
@@ -115,9 +113,9 @@ GlobalVariables.prototype.createPublicKeysToNotify = function () {
   this.publicKeysToNotify = [];
   this.targetDeviceKeyExchangeObjects = [];
 
-  var device1 = crypto.createECDH(SECP256K1);
+  var device1 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device1Key = device1.generateKeys();
-  var device2 = crypto.createECDH(SECP256K1);
+  var device2 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device2Key = device2.generateKeys();
 
   this.publicKeysToNotify.push(device1Key, device2Key);
@@ -213,10 +211,10 @@ test('Test ThaliPskMapCache multiple entries', function (t) {
 
   var cache = new ThaliPskMapCache(2000);
 
-  var keyExchangeObject1 = crypto.createECDH(SECP256K1);
+  var keyExchangeObject1 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   keyExchangeObject1.generateKeys();
 
-  var keyExchangeObject2 = crypto.createECDH(SECP256K1);
+  var keyExchangeObject2 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   keyExchangeObject2.generateKeys();
 
   var publicKeysToNotify = globalVariables.createPublicKeysToNotify();

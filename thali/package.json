@@ -6,6 +6,7 @@
   "dependencies": {
     "body-parser": "^1.13.3",
     "express": "4.13.3",
+    "express-pouchdb": "1.0.3",
     "forever-agent": "0.6.1",
     "ip": "^1.0.1",
     "javascript-state-machine": "^2.3.5",
@@ -15,6 +16,7 @@
     "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
     "node-uuid": "^1.4.7",
     "request": "^2.64.0",
+    "salti": "^0.2.0",
     "urlsafe-base64": "^1.0.0",
     "winston": "^2.2.0"
   },

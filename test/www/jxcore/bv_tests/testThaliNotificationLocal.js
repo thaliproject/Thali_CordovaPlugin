@@ -14,7 +14,6 @@ var ThaliMobile =
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 
-var SECP256K1 = 'secp256k1';
 var globals = {};
 
 /**
@@ -54,12 +53,12 @@ var GlobalVariables = function () {
   this.targetPublicKeysToNotify = [];
   this.targetDeviceKeyExchangeObjects = [];
 
-  this.serverKeyExchangeObject = crypto.createECDH(SECP256K1);
+  this.serverKeyExchangeObject = crypto.createECDH(thaliConfig.BEACON_CURVE);
   this.serverPublicKey = this.serverKeyExchangeObject.generateKeys();
 
-  var device1 = crypto.createECDH(SECP256K1);
+  var device1 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device1Key = device1.generateKeys();
-  var device2 = crypto.createECDH(SECP256K1);
+  var device2 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device2Key = device2.generateKeys();
 
   this.targetPublicKeysToNotify.push(device1Key, device2Key);

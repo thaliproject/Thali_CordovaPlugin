@@ -27,8 +27,6 @@ var pskIdToSecret = function (id) {
   return id === thaliConfig.BEACON_PSK_IDENTITY ? thaliConfig.BEACON_KEY : null;
 };
 
-var SECP256K1 = 'secp256k1';
-
 var globals = {};
 
 /**
@@ -41,7 +39,7 @@ var GlobalVariables = function () {
   this.expressApp = express();
   this.expressRouter = express.Router();
 
-  this.sourceKeyExchangeObject = crypto.createECDH(SECP256K1);
+  this.sourceKeyExchangeObject = crypto.createECDH(thaliConfig.BEACON_CURVE);
   this.sourcePublicKey = this.sourceKeyExchangeObject.generateKeys();
   this.sourcePublicKeyHash =
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
@@ -97,11 +95,11 @@ GlobalVariables.prototype.createPublicKeysToNotifyAndPreamble = function () {
   this.targetDeviceKeyExchangeObjects = [];
   this.preambleAndBeacons = {};
 
-  var device1 = crypto.createECDH(SECP256K1);
+  var device1 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device1Key = device1.generateKeys();
   var device1KeyHash = NotificationBeacons.createPublicKeyHash(device1Key);
 
-  var device2 = crypto.createECDH(SECP256K1);
+  var device2 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device2Key = device2.generateKeys();
   var device2KeyHash = NotificationBeacons.createPublicKeyHash(device2Key);
 

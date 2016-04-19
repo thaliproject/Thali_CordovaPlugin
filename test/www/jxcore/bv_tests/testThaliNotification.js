@@ -17,7 +17,6 @@ var NotificationBeacons =
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var logger = require('thali/thalilogger')('testThaliNotification');
 
-var SECP256K1 = 'secp256k1';
 var HELLO = 'Hello world';
 var HELLO_PATH = '/hello';
 var globals = {};
@@ -57,7 +56,7 @@ var GlobalVariables = function () {
   this.expressApp = express();
   this.expressRouter = express.Router();
   this.expressApp.use('/', this.expressRouter);
-  this.ecdh = crypto.createECDH(SECP256K1);
+  this.ecdh = crypto.createECDH(thaliConfig.BEACON_CURVE);
   this.myKeyExchangeObject = this.ecdh.generateKeys();
   this.myPublicBase64 = this.ecdh.getPublicKey('base64');
 
