@@ -256,9 +256,8 @@ public class ConnectionHelper
         String errorMessage = null;
 
         if (mConnectionModel.hasOutgoingConnection(bluetoothMacAddress)) {
-            errorMessage = "We already have an outgoing connection to peer with ID "
-                    + bluetoothMacAddress;
-            Log.e(TAG, "connect: " + errorMessage);
+            Log.e(TAG, "connect: We already have an outgoing connection to peer with ID " + bluetoothMacAddress);
+            errorMessage = "Already connect(ing/ed)";
             return errorMessage;
         }
 
