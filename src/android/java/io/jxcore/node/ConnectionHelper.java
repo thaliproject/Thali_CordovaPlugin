@@ -36,6 +36,7 @@ public class ConnectionHelper
     private static final String BLUETOOTH_NAME = "Thali_Bluetooth";
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
     private static final UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
+    private static final int MANUFACTURER_ID = 7413;
     private static final long POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS = 15000;
     private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 30; // TODO: Determine a way to figure out a proper value here, see issue #37
 
@@ -77,6 +78,7 @@ public class ConnectionHelper
         mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance(mContext);
 
         if (mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE)) {
+            mDiscoveryManagerSettings.setManufacturerId(MANUFACTURER_ID);
             mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
             mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
             mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
