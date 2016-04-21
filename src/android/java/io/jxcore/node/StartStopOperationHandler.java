@@ -7,6 +7,8 @@ import android.os.CountDownTimer;
 import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
+import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
+
 import java.util.Date;
 
 /**
@@ -92,7 +94,16 @@ public class StartStopOperationHandler {
                 mOperationTimeoutTimer = null;
             }
 
-            mCurrentOperation.getCallback().callOnStartStopCallback(null);
+            jxcore.coreThread.handler.postDelayed(new Runnable() {
+                final StartStopOperation operation = mCurrentOperation;
+
+                @Override
+                public void run() {
+                    operation.getCallback().callOnStartStopCallback(null);
+                }
+            }, 1000);
+
+            //mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
         }
     }
@@ -104,6 +115,11 @@ public class StartStopOperationHandler {
         if (mCurrentOperation == null) {
             // No operation to execute
             return;
+        }
+
+        if (mCurrentOperation.isStartOperation()
+                && !mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly()) {
+            updateBeaconAdExtraInformation();
         }
 
         if (isTargetState(mCurrentOperation) == null) {
@@ -189,5 +205,21 @@ public class StartStopOperationHandler {
                 mDiscoveryManager.getState(),
                 mDiscoveryManager.isDiscovering(),
                 mDiscoveryManager.isAdvertising());
+    }
+
+    /**
+     * Updates the extra information of the beacon advertisement to notify the listeners that we
+     * have new information. This affects the peer ID given to the node layer.
+     */
+    private void updateBeaconAdExtraInformation() {
+        DiscoveryManagerSettings discoveryManagerSettings = DiscoveryManagerSettings.getInstance(null);
+        int extraInformation = discoveryManagerSettings.getBeaconAdExtraInformation() + 1;
+
+        if (extraInformation > 255) {
+            extraInformation = 1;
+        }
+
+        Log.i(TAG, "updateBeaconAdExtraInformation: New value: " + extraInformation);
+        discoveryManagerSettings.setBeaconAdExtraInformation(extraInformation);
     }
 }

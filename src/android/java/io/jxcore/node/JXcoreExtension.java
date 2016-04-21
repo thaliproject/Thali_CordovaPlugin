@@ -77,6 +77,7 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_SHOW_TOAST = "showToast";
 
     private static final String TAG = JXcoreExtension.class.getName();
+    private static final String BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR = "-";
     private static final long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
 
     private static ConnectionHelper mConnectionHelper = null;
@@ -209,7 +210,16 @@ public class JXcoreExtension {
                     return;
                 }
 
-                String bluetoothMacAddress = params.get(0).toString();
+                String peerId = params.get(0).toString();
+                String bluetoothMacAddress = null;
+
+                if (peerId != null) {
+                    try {
+                        bluetoothMacAddress = peerId.split(BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR)[0];
+                    } catch (IndexOutOfBoundsException e) {
+                        Log.e(TAG, METHOD_NAME_CONNECT + ": Failed to extract the Bluetooth MAC address: " + e.getMessage(), e);
+                    }
+                }
 
                 if (!BluetoothUtils.isValidBluetoothMacAddress(bluetoothMacAddress)) {
                     ArrayList<Object> args = new ArrayList<Object>();
@@ -458,11 +468,14 @@ public class JXcoreExtension {
     }
 
     public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
+        String peerId = peerProperties.getId()
+                + BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR
+                + peerProperties.getExtraInformation();
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
+            jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
             jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
             jsonObjectCreated = true;
