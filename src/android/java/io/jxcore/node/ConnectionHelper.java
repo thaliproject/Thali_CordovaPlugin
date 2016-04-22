@@ -153,6 +153,9 @@ public class ConnectionHelper
 
         if (!stopOnlyListeningForAdvertisements) {
             mConnectionModel.closeAndRemoveAllOutgoingConnections();
+
+            // Uncomment the following to kill all connections (including incoming)
+            //killAllConnections();
         }
 
         mStartStopOperationHandler.executeStopOperation(stopOnlyListeningForAdvertisements, callback);
@@ -351,8 +354,12 @@ public class ConnectionHelper
             throw new RuntimeException("onConnected: Bluetooth socket is null");
         }
 
-        // Add the peer to the list, if was not discovered before
-        mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
+        if (mDiscoveryManager.getPeerModel()
+                .getDiscoveredPeerByBluetoothMacAddress(peerProperties.getBluetoothMacAddress()) == null) {
+            Log.i(TAG, "onConnected: This (" + peerProperties.toString()
+                    + ") is a new (undiscovered) peer - add it to the model");
+            mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
+        }
 
         if (isIncoming) {
             handleIncomingConnection(bluetoothSocket, peerProperties);
@@ -445,8 +452,8 @@ public class ConnectionHelper
     public void onPeerDiscovered(PeerProperties peerProperties) {
         Log.i(TAG, "onPeerDiscovered: " + peerProperties.toString()
                 + ", Bluetooth address: " + peerProperties.getBluetoothMacAddress()
-                + ", device name: " + peerProperties.getDeviceName()
-                + ", device address: " + peerProperties.getDeviceAddress());
+                + ", device name: '" + peerProperties.getDeviceName()
+                + "', device address: '" + peerProperties.getDeviceAddress() + "'");
 
         JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, true);
     }
@@ -459,8 +466,10 @@ public class ConnectionHelper
     @Override
     public void onPeerUpdated(PeerProperties peerProperties) {
         Log.i(TAG, "onPeerUpdated: " + peerProperties.toString()
-                + ", device name: " + peerProperties.getDeviceName()
-                + ", device address: " + peerProperties.getDeviceAddress());
+                + ", device name: '" + peerProperties.getDeviceName()
+                + "', device address: '" + peerProperties.getDeviceAddress() + "'");
+
+        JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, true);
     }
 
     /**
@@ -614,7 +623,6 @@ public class ConnectionHelper
 
                     final IncomingSocketThread incomingSocketThread = (IncomingSocketThread) who;
                     mConnectionModel.closeAndRemoveIncomingConnectionThread(incomingSocketThread.getId());
-                    JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(incomingSocketThread.getTcpPortNumber());
                 }
             });
         } catch (IOException e) {

@@ -94,6 +94,10 @@ class StreamCopyingThread extends Thread {
         Log.d(TAG, "Entering thread (ID: " + getId() + ", name: " + mThreadName + ")");
         byte[] buffer = new byte[mBufferSize];
 
+        // Byte counters for debugging
+        long totalNumberOfBytesRead = 0;
+        long totalNumberOfBytesWritten = 0;
+
         try {
             int numberOfBytesRead = 0;
 
@@ -101,11 +105,13 @@ class StreamCopyingThread extends Thread {
                 // Uncomment the logging, if you need to debug the stream copying process.
                 // However, note that Log calls are quite heavy and should be used here only, if
                 // necessary.
-                //Log.d(mTag, "Read " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
+                //Log.d(TAG, "Read " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
+                totalNumberOfBytesRead += numberOfBytesRead;
 
                 mOutputStream.write(buffer, 0, numberOfBytesRead); // Can throw IOException
 
-                //Log.d(mTag, "Wrote " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
+                //Log.d(TAG, "Wrote " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
+                totalNumberOfBytesWritten += numberOfBytesRead;
 
                 if (mNotifyStreamCopyingProgress) {
                     mListener.onStreamCopySucceeded(this, numberOfBytesRead);
@@ -125,7 +131,10 @@ class StreamCopyingThread extends Thread {
             mListener.onStreamCopyError(this, "Either failed to read from the output stream or write to the input stream: " + e.getMessage());
         }
 
-        Log.d(TAG, "Exiting thread (ID: " + getId() + ", name: " + mThreadName + ")");
+        Log.d(TAG, "Exiting thread (ID: " + getId() + ", name: " + mThreadName
+                + "), during the lifetime of the thread the total number of bytes read was "
+                + totalNumberOfBytesRead + " and the total number of bytes written "
+                + totalNumberOfBytesWritten);
     }
 
     /**

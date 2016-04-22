@@ -101,7 +101,7 @@ public class StartStopOperationHandler {
                 public void run() {
                     operation.getCallback().callOnStartStopCallback(null);
                 }
-            }, 1000);
+            }, 2000);
 
             //mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
@@ -129,6 +129,8 @@ public class StartStopOperationHandler {
             mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
         } else {
+            Log.v(TAG, "executeCurrentOperation: Executing: " + mCurrentOperation.toString());
+
             if (mCurrentOperation.isStartOperation()) {
                 // Discovery manager should always be started, advertising depends on the operation parameter
                 if (!mDiscoveryManager.start(
