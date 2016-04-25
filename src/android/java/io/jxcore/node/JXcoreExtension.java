@@ -113,6 +113,7 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
+                Log.d(TAG, METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS);
                 startConnectionHelper(ConnectionHelper.NO_PORT_NUMBER, false, callbackId);
             }
         });
@@ -120,6 +121,8 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
+                Log.d(TAG, METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS);
+
                 mConnectionHelper.stop(true, new JXcoreThaliCallback() {
                     @Override
                     protected void onStartStopCallback(String errorMessage) {
@@ -134,6 +137,7 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
+                Log.d(TAG, METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING);
                 ArrayList<Object> args = new ArrayList<Object>();
                 String errorString = null;
 
@@ -160,6 +164,8 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_STOP_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
+                Log.d(TAG, METHOD_NAME_STOP_ADVERTISING_AND_LISTENING);
+
                 mConnectionHelper.stop(false, new JXcoreThaliCallback() {
                     @Override
                     protected void onStartStopCallback(String errorMessage) {
@@ -230,7 +236,10 @@ public class JXcoreExtension {
                     return;
                 }
 
+                Log.d(TAG, METHOD_NAME_CONNECT + ": " + bluetoothMacAddress);
+
                 if (mConnectionHelper.getConnectionModel().getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress) != null) {
+                    Log.e(TAG, METHOD_NAME_CONNECT + ": Already connecting");
                     ArrayList<Object> args = new ArrayList<Object>();
 
                     // In case you want to check, if we are already connected (instead of connecting), do:

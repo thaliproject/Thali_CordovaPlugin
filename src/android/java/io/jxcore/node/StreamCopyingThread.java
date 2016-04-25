@@ -50,6 +50,8 @@ class StreamCopyingThread extends Thread {
     private int mBufferSize = DEFAULT_BUFFER_SIZE;
     private boolean mNotifyStreamCopyingProgress = false;
     private boolean mDoStop = false;
+    private boolean mHasThreadExited = false;
+    private boolean mIsClosed = false;
 
     /**
      * Constructor. Note that the responsibility to close the given streams is that of the caller
@@ -149,8 +151,12 @@ class StreamCopyingThread extends Thread {
         try {
             mOutputStream.flush();
         } catch (IOException e) {
-            Log.e(TAG, "Failed to flush the output stream (thread ID: " + getId()
+            Log.w(TAG, "Failed to flush the output stream (thread ID: " + getId()
                     + ", thread name: " + mThreadName + "): " + e.getMessage());
+        }
+
+        if (mDoStop) {
+            closeStreams();
         }
 
         if (isDone) {
@@ -165,42 +171,47 @@ class StreamCopyingThread extends Thread {
                 + "), during the lifetime of the thread the total number of bytes read was "
                 + totalNumberOfBytesRead + " and the total number of bytes written "
                 + totalNumberOfBytesWritten);
+
+        mHasThreadExited = true;
     }
 
     /**
      * Stops the thread.
      */
-    public void doStop() {
-        Log.i(TAG, "doStop: Thread ID: " + getId());
-        mDoStop = true;
+    public void close() {
+        Log.i(TAG, "close: Thread ID: " + getId());
 
-        /*jxcore.coreThread.handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                closeStreams();
-            }
-        }, 1000);*/
+        if (mHasThreadExited) {
+            closeStreams();
+        }
+
+        mDoStop = true;
     }
 
     /**
      * Closes the input and the output stream.
      */
-    public void closeStreams() {
-        try {
-            mInputStream.close();
-        } catch (IOException e) {
-            Log.e(TAG, "closeStreams: Failed to close the input stream (thread ID: "
-                    + getId() + ", name: " + mThreadName + "): " + e.getMessage());
-        }
+    public synchronized void closeStreams() {
+        if (!mIsClosed) {
+            try {
+                mInputStream.close();
+            } catch (IOException e) {
+                Log.e(TAG, "closeStreams: Failed to close the input stream (thread ID: "
+                        + getId() + ", name: " + mThreadName + "): " + e.getMessage());
+            }
 
-        try {
-            mOutputStream.close();
-        } catch (IOException e) {
-            Log.e(TAG, "closeStreams: Failed to close the output stream (thread ID: "
-                    + getId() + ", name: " + mThreadName + "): " + e.getMessage());
-        }
+            try {
+                mOutputStream.close();
+            } catch (IOException e) {
+                Log.e(TAG, "closeStreams: Failed to close the output stream (thread ID: "
+                        + getId() + ", name: " + mThreadName + "): " + e.getMessage());
+            }
 
-        Log.d(TAG, "closeStreams: Streams closed (thread ID: "
-                + getId() + ", name: " + mThreadName + ")");
+            Log.d(TAG, "closeStreams: Streams closed (thread ID: "
+                    + getId() + ", name: " + mThreadName + ")");
+            mIsClosed = true;
+        } else {
+            Log.v(TAG, "closeStreams: Already closed");
+        }
     }
 }

@@ -20,6 +20,14 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
         void onDataTransferred(int numberOfBytes);
 
+        /**
+         * Called when either the sending or the receiving thread is done.
+         *
+         * @param who The associated SocketThreadBase instance (this).
+         * @param threadDoneWasSending If true, the sending thread is done. If false, the receiving thread is done.
+         */
+        void onDone(SocketThreadBase who, boolean threadDoneWasSending);
+
         void onDisconnected(SocketThreadBase who, String errorMessage);
     }
 
@@ -87,14 +95,23 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
         if (mReceivingThread != null) {
             Log.v(mTag, "close: Stopping receiving thread...");
-            mReceivingThread.doStop();
+            mReceivingThread.close();
             mReceivingThread = null;
         }
 
         if (mSendingThread != null) {
             Log.v(mTag, "close: Stopping sending thread...");
-            mSendingThread.doStop();
+            mSendingThread.close();
             mSendingThread = null;
+        }
+
+        if (mBluetoothSocket != null) {
+            try {
+                Log.v(mTag, "close: Closing the Bluetooth socket...");
+                mBluetoothSocket.close();
+            } catch (IOException e) {
+                Log.e(mTag, "close: Failed to close the Bluetooth socket: " + e.getMessage(), e);
+            }
         }
 
         if (mLocalhostSocket != null) {
@@ -106,15 +123,6 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             }
 
             mLocalhostSocket = null;
-        }
-
-        if (mBluetoothSocket != null) {
-            try {
-                Log.v(mTag, "close: Closing the Bluetooth socket...");
-                mBluetoothSocket.close();
-            } catch (IOException e) {
-                Log.e(mTag, "close: Failed to close the Bluetooth socket: " + e.getMessage(), e);
-            }
         }
 
         Log.i(mTag, "close: Complete (thread ID: " + getId() + ")");
@@ -155,12 +163,14 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             Log.i(mTag, "Unidentified stream copying thread done");
         }
 
+        final SocketThreadBase socketThreadBase = this;
+
         jxcore.coreThread.handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                who.closeStreams();
+                mListener.onDone(socketThreadBase, (who == mSendingThread));
             }
-        }, 2000);
+        }, 1000);
     }
 
     /**
