@@ -37,6 +37,7 @@ public class ConnectionHelper
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
     private static final UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
     private static final int MANUFACTURER_ID = 7413;
+    private static final long NOTIFY_DISCOVERY_ADVERTISING_STATE_DELAY_IN_MILLISECONDS = 1000;
     private static final long POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS = 15000;
     private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 30; // TODO: Determine a way to figure out a proper value here, see issue #37
 
@@ -48,6 +49,7 @@ public class ConnectionHelper
     private final DiscoveryManagerSettings mDiscoveryManagerSettings;
     private final ConnectivityMonitor mConnectivityMonitor;
     private final StartStopOperationHandler mStartStopOperationHandler;
+    private CountDownTimer mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = NO_PORT_NUMBER;
 
@@ -444,7 +446,31 @@ public class ConnectionHelper
                 + ", is discovering: " + isDiscovering + ", is advertising: " + isAdvertising);
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
-        JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
+
+        // Since we may get more than one state changed events when starting/stopping the discovery
+        // manager, we use a timer to suppress excess notifications to Node layer
+
+        if (mNotifyDiscoveryAdvertisingStateUpdateNonTcp != null) {
+            // There was a pending notification - cancel it
+            mNotifyDiscoveryAdvertisingStateUpdateNonTcp.cancel();
+            mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
+        }
+
+        mNotifyDiscoveryAdvertisingStateUpdateNonTcp = new CountDownTimer(
+                NOTIFY_DISCOVERY_ADVERTISING_STATE_DELAY_IN_MILLISECONDS,
+                NOTIFY_DISCOVERY_ADVERTISING_STATE_DELAY_IN_MILLISECONDS) {
+            @Override
+            public void onTick(long l) {
+                // Not used
+            }
+
+            @Override
+            public void onFinish() {
+                JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
+                mNotifyDiscoveryAdvertisingStateUpdateNonTcp.cancel();
+                mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
+            }
+        }.start();
     }
 
     /**
