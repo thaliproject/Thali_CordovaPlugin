@@ -149,26 +149,30 @@ public class ConnectionHelper
         Log.i(TAG, "stop: "
                 + (stopOnlyListeningForAdvertisements
                     ? "Stopping only listening for advertisements"
-                    : "Stopping all activities and killing all connections"));
+                    : "Stopping all activities and killing connections"));
 
         if (!stopOnlyListeningForAdvertisements) {
-            mConnectionModel.closeAndRemoveAllOutgoingConnections();
-
-            // Uncomment the following to kill all connections (including incoming)
-            //killAllConnections();
+            killConnections(false);
         }
 
         mStartStopOperationHandler.executeStopOperation(stopOnlyListeningForAdvertisements, callback);
     }
 
     /**
-     * Kills all connections.
+     * Kills outgoing (and optionally incoming) connections.
      *
+     * @param killIncomingConnections If true, will kill incoming connections too if any exist.
      * @return The number of incoming connections killed.
      */
-    public synchronized int killAllConnections() {
+    public synchronized int killConnections(boolean killIncomingConnections) {
         mConnectionModel.closeAndRemoveAllOutgoingConnections();
-        return mConnectionModel.closeAndRemoveAllIncomingConnections();
+        int numberOfIncomingConnectionsKilled = 0;
+
+        if (killIncomingConnections) {
+            numberOfIncomingConnectionsKilled = mConnectionModel.closeAndRemoveAllIncomingConnections();
+        }
+
+        return numberOfIncomingConnectionsKilled;
     }
 
     /**

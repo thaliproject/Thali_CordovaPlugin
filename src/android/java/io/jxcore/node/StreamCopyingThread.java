@@ -15,6 +15,13 @@ class StreamCopyingThread extends Thread {
 
     interface Listener {
         /**
+         * Called when the end of the stream has been reached (InputStream.read returns -1).
+         *
+         * @param who The StreamCopyingThread that is done.
+         */
+        void onStreamCopyingThreadDone(StreamCopyingThread who);
+
+        /**
          * Called when copying the content fails. If this error occurs, the thread is exited.
          *
          * @param who          The thread, which failed.
@@ -93,14 +100,16 @@ class StreamCopyingThread extends Thread {
     public void run() {
         Log.d(TAG, "Entering thread (ID: " + getId() + ", name: " + mThreadName + ")");
         byte[] buffer = new byte[mBufferSize];
+        int numberOfBytesRead = 0;
 
         // Byte counters for debugging
         long totalNumberOfBytesRead = 0;
         long totalNumberOfBytesWritten = 0;
 
-        try {
-            int numberOfBytesRead = 0;
+        boolean isDone = false;
+        String errorMessage = null;
 
+        try {
             while (!mDoStop && (numberOfBytesRead = mInputStream.read(buffer)) != -1) {
                 // Uncomment the logging, if you need to debug the stream copying process.
                 // However, note that Log calls are quite heavy and should be used here only, if
@@ -118,17 +127,38 @@ class StreamCopyingThread extends Thread {
                 }
             }
 
-            // Not probably an error, if we are stopping and even it was, no need to report
-            // since we are stopping anyway (referring to mDoStop if true)
             if (numberOfBytesRead == -1 && !mDoStop) {
-                Log.e(TAG, "Input stream got -1 on read (thread ID: "
+                Log.d(TAG, "The end of the stream has been reached (thread ID: "
                         + getId() + ", thread name: " + mThreadName + ")");
-                mListener.onStreamCopyError(this, "Input stream got -1 on read");
+                isDone = true;
             }
         } catch (IOException e) {
-            Log.w(TAG, "Either failed to read from the output stream or write to the input stream (thread ID: "
-                    + getId() + ", thread name: " + mThreadName + "): " + e.getMessage());
-            mListener.onStreamCopyError(this, "Either failed to read from the output stream or write to the input stream: " + e.getMessage());
+            if (!mDoStop) {
+                if (numberOfBytesRead == -1) {
+                    errorMessage = "Failed to read from the input stream";
+                } else {
+                    errorMessage = "Failed to write to the output stream";
+                }
+
+                Log.e(TAG, errorMessage + " (thread ID: " + getId() + ", thread name: "
+                        + mThreadName + "): " + e.getMessage());
+                errorMessage += ": " + e.getMessage();
+            }
+        }
+
+        try {
+            mOutputStream.flush();
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to flush the output stream (thread ID: " + getId()
+                    + ", thread name: " + mThreadName + "): " + e.getMessage());
+        }
+
+        if (isDone) {
+            mListener.onStreamCopyingThreadDone(this);
+        }
+
+        if (errorMessage != null) {
+            mListener.onStreamCopyError(this, errorMessage);
         }
 
         Log.d(TAG, "Exiting thread (ID: " + getId() + ", name: " + mThreadName
@@ -143,5 +173,34 @@ class StreamCopyingThread extends Thread {
     public void doStop() {
         Log.i(TAG, "doStop: Thread ID: " + getId());
         mDoStop = true;
+
+        /*jxcore.coreThread.handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                closeStreams();
+            }
+        }, 1000);*/
+    }
+
+    /**
+     * Closes the input and the output stream.
+     */
+    public void closeStreams() {
+        try {
+            mInputStream.close();
+        } catch (IOException e) {
+            Log.e(TAG, "closeStreams: Failed to close the input stream (thread ID: "
+                    + getId() + ", name: " + mThreadName + "): " + e.getMessage());
+        }
+
+        try {
+            mOutputStream.close();
+        } catch (IOException e) {
+            Log.e(TAG, "closeStreams: Failed to close the output stream (thread ID: "
+                    + getId() + ", name: " + mThreadName + "): " + e.getMessage());
+        }
+
+        Log.d(TAG, "closeStreams: Streams closed (thread ID: "
+                + getId() + ", name: " + mThreadName + ")");
     }
 }

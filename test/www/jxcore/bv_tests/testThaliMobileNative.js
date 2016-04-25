@@ -1046,6 +1046,7 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
             case validateResponse.OK: {
               peersWeSucceededWith.push(parsedMessage.uuid);
               resolve();
+              logger.debug('Response validated, calling connection.end');
               connection.end();
               break;
             }
@@ -1162,6 +1163,7 @@ function serverRound(t, roundNumber, pretendLocalMux) {
           var validationResult =
             validateRequest(t, roundNumber, parsedMessage);
           socket.write(createMessage(validationResult), function () {
+            logger.debug('serverRound: Message written, closing socket (calling socket.end)');
             socket.end();
           });
           switch (validationResult) {

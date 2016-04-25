@@ -72,6 +72,7 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
     private static final String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
     private static final String METHOD_NAME_GET_BLUETOOTH_NAME = "getBluetoothName";
+    private static final String METHOD_NAME_KILL_OUTGOING_CONNECTIONS = "killOutgoingConnections";
     private static final String METHOD_NAME_GET_OS_VERSION = "getOSVersion";
     private static final String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
     private static final String METHOD_NAME_SHOW_TOAST = "showToast";
@@ -409,6 +410,16 @@ public class JXcoreExtension {
                     args.add(bluetoothNameString);
                 }
 
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+        jxcore.RegisterMethod(METHOD_NAME_KILL_OUTGOING_CONNECTIONS, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                mConnectionHelper.killConnections(false);
+                ArrayList<Object> args = new ArrayList<Object>();
+                args.add(null);
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });

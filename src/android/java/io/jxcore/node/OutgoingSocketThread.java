@@ -88,6 +88,16 @@ class OutgoingSocketThread extends SocketThreadBase {
             }
         }
 
+        if (mServerSocket != null) {
+            try {
+                mServerSocket.close();
+            } catch (IOException e) {
+                Log.e(mTag, "Failed to close the server socket: " + e.getMessage(), e);
+            }
+
+            mServerSocket = null;
+        }
+
         Log.d(mTag, "Exiting thread (ID: " + getId() + ")");
     }
 
