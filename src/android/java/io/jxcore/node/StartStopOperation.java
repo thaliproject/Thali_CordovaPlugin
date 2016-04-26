@@ -111,13 +111,9 @@ public class StartStopOperation {
                 + " - " + toString());
 
         if (mIsStartOperation) {
-            // Discovery manager should always be running and we should be listening for advertisements
+            // Discovery manager should always be running
             if (discoveryManagerState == DiscoveryManagerState.NOT_STARTED) {
                 return "Discovery manager not started";
-            }
-
-            if (!isDiscovering) {
-                return "Is not discovering";
             }
 
             if (!mShouldStartOrStopListeningToAdvertisementsOnly) {
@@ -128,6 +124,11 @@ public class StartStopOperation {
 
                 if (!isAdvertising) {
                     return "Is not advertising";
+                }
+            } else {
+                // We should be listening for advertisements
+                if (!isDiscovering) {
+                    return "Is not discovering";
                 }
             }
         } else {
