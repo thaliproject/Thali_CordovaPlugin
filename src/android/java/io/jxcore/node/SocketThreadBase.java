@@ -170,7 +170,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             public void run() {
                 mListener.onDone(socketThreadBase, (who == mSendingThread));
             }
-        }, 1000);
+        }, 1500);
     }
 
     /**

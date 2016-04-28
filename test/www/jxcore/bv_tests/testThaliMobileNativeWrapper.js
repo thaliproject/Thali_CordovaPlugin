@@ -711,15 +711,19 @@ test('We provide notification when a listener dies and we recreate it',
             + record.peerIdentifier + ' !== ' + peer.peerIdentifier);
           return;
         }
+
+        // TODO:
         // There is a race condition when this test is ran on Android:
         // This function is called just before recreatedHandler leading
         // to recreatedPort being null.
+        // Re-enable the check below once #719 is fixed.
         /*if (!recreatedPort ||
           recreatedPort && record.portNumber !== recreatedPort) {
           logger.debug('No recreated port or port numbers do not match: '
             + record.portNumber + ' !== ' + recreatedPort);
           return;
         }*/
+
         testUtils.get('127.0.0.1', record.portNumber, testPath, pskIdentity,
                       pskKey)
           .then(function (responseBody) {

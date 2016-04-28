@@ -8,7 +8,6 @@ import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
-
 import java.util.Date;
 
 /**
@@ -94,16 +93,16 @@ public class StartStopOperationHandler {
                 mOperationTimeoutTimer = null;
             }
 
-            jxcore.coreThread.handler.postDelayed(new Runnable() {
+            /*jxcore.coreThread.handler.postDelayed(new Runnable() {
                 final StartStopOperation operation = mCurrentOperation;
 
                 @Override
                 public void run() {
                     operation.getCallback().callOnStartStopCallback(null);
                 }
-            }, 2000);
+            }, 2000);*/
 
-            //mCurrentOperation.getCallback().callOnStartStopCallback(null);
+            mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
         }
     }
