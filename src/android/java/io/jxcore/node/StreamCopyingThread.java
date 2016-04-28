@@ -108,6 +108,7 @@ class StreamCopyingThread extends Thread {
         long totalNumberOfBytesRead = 0;
         long totalNumberOfBytesWritten = 0;
 
+        boolean isFlushing = false;
         boolean isDone = false;
         String errorMessage = null;
 
@@ -120,6 +121,10 @@ class StreamCopyingThread extends Thread {
                 totalNumberOfBytesRead += numberOfBytesRead;
 
                 mOutputStream.write(buffer, 0, numberOfBytesRead); // Can throw IOException
+
+                isFlushing = true;
+                mOutputStream.flush(); // Can throw IOException
+                isFlushing = false;
 
                 //Log.d(TAG, "Wrote " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
                 totalNumberOfBytesWritten += numberOfBytesRead;
@@ -136,7 +141,9 @@ class StreamCopyingThread extends Thread {
             }
         } catch (IOException e) {
             if (!mDoStop) {
-                if (numberOfBytesRead == -1) {
+                if (isFlushing) {
+                    errorMessage = "Failed to flush the output stream";
+                } else if (numberOfBytesRead == -1) {
                     errorMessage = "Failed to read from the input stream";
                 } else {
                     errorMessage = "Failed to write to the output stream";
