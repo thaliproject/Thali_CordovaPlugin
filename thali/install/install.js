@@ -287,7 +287,7 @@ function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
   return fs.existsSync(magicFileLocation);
 }
 
-function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
+function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber, jxCoreUrl) {
   return new Promise(function (resolve, reject) {
     console.log('Trying to install jxcore-cordova version: ' +
                 jxCoreVersionNumber);
@@ -297,8 +297,7 @@ function fetchAndInstallJxCoreCordovaPlugin(baseDir, jxCoreVersionNumber) {
       spawn('jx',
         [
           jxcBin, 'install', jxCoreVersionNumber,
-          '--use-url',
-          'http://jxcore.azureedge.net/jxcore-cordova/0.1.2/release/io.jxcore.node.jx'
+          '--use-url', jxCoreUrl
         ],
         { cwd: baseDir }
       );
@@ -328,8 +327,6 @@ module.exports = function (callback, appRootDirectory) {
   var appScriptsFolder =
     path.join(appRootDirectory, 'plugins/org.thaliproject.p2p/scripts');
 
-  var jxCoreVersionNumber = '0.1.2';
-
   var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
 
   getReleaseConfig(thaliDontCheckIn)
@@ -340,7 +337,7 @@ module.exports = function (callback, appRootDirectory) {
       thaliBranchName = conf.thali.branchName;
       btconnectorlib2 = conf.btconnectorlib2;
 
-      return fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, conf["jxcore-cordova"])
+      return fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, conf["jxcore-cordova"], conf["jxcore-cordova-url"]);
     })
     .then(function () {
       if (doesMagicDirectoryNamedExist(thaliDontCheckIn)) {
