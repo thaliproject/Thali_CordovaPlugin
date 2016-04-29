@@ -665,7 +665,7 @@ test('can do HTTP requests after connections are cut', function (t) {
 
     setTimeout(function() {
       endToEndWithStateCheck(t);
-    }, 15000);
+    }, 20000);
   } else {
     // Turn Bluetooth back on so that Android can operate
     // (iOS does not require separate call to operate since
