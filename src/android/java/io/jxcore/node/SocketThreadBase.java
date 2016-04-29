@@ -165,12 +165,12 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
         final SocketThreadBase socketThreadBase = this;
 
-        //jxcore.coreThread.handler.postDelayed(new Runnable() {
-        //    @Override
-        //    public void run() {
+        jxcore.coreThread.handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
                 mListener.onDone(socketThreadBase, (who == mSendingThread));
-        //    }
-        //}, 1500);
+            }
+        }, 1000);
     }
 
     /**

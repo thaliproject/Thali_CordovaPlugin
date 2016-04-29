@@ -50,7 +50,6 @@ class StreamCopyingThread extends Thread {
     private int mBufferSize = DEFAULT_BUFFER_SIZE;
     private boolean mNotifyStreamCopyingProgress = false;
     private boolean mDoStop = false;
-    private boolean mHasThreadExited = false;
     private boolean mIsClosed = false;
 
     /**
@@ -155,17 +154,6 @@ class StreamCopyingThread extends Thread {
             }
         }
 
-        try {
-            mOutputStream.flush();
-        } catch (IOException e) {
-            Log.w(TAG, "Failed to flush the output stream (thread ID: " + getId()
-                    + ", thread name: " + mThreadName + "): " + e.getMessage());
-        }
-
-        if (mDoStop) {
-            closeStreams();
-        }
-
         if (isDone) {
             mListener.onStreamCopyingThreadDone(this);
         }
@@ -178,8 +166,6 @@ class StreamCopyingThread extends Thread {
                 + "), during the lifetime of the thread the total number of bytes read was "
                 + totalNumberOfBytesRead + " and the total number of bytes written "
                 + totalNumberOfBytesWritten);
-
-        mHasThreadExited = true;
     }
 
     /**
@@ -187,12 +173,8 @@ class StreamCopyingThread extends Thread {
      */
     public void close() {
         Log.i(TAG, "close: Thread ID: " + getId());
-
-        if (mHasThreadExited) {
-            closeStreams();
-        }
-
         mDoStop = true;
+        closeStreams();
     }
 
     /**
