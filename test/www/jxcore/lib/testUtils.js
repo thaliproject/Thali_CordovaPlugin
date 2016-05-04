@@ -125,14 +125,16 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  * to store temporary data.
  * On desktop, returns a directory that does not persist between app restarts
  * and is removed when the process exits.
+ * @returns {string}
  */
 var tmpObject = null;
 module.exports.tmpDirectory = function () {
   if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
     return os.tmpdir();
   }
+
+  tmp.setGracefulCleanup();
   if (tmpObject === null) {
-    tmp.setGracefulCleanup();
     tmpObject = tmp.dirSync({
       unsafeCleanup: true
     });
@@ -234,6 +236,10 @@ var LevelDownPouchDB = PouchDB.defaults({
   prefix: dbPath
 });
 
+module.exports.getLevelDownPouchDb = function () {
+  return LevelDownPouchDB;
+};
+
 module.exports.getTestPouchDBInstance = function (name) {
   return new LevelDownPouchDB(name);
 };
@@ -254,7 +260,7 @@ module.exports.extractPreAmble = function (beaconStreamWithPreAmble) {
   return beaconStreamWithPreAmble.slice(0, preAmbleSizeInBytes);
 };
 
-module.exports.extractBeacon = function (beaconStreamWithPreAmble, 
+module.exports.extractBeacon = function (beaconStreamWithPreAmble,
                                          beaconIndexToExtract) {
   var beaconStreamNoPreAmble =
     beaconStreamWithPreAmble.slice(preAmbleSizeInBytes);

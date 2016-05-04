@@ -8,89 +8,53 @@ var thaliNotificationBeacons = require('../notification/thaliNotificationBeacons
 var urlsafeBase64 = require('urlsafe-base64');
 
 function LocalSeqManager(maximumUpdateInterval,
-                         hostName, port, dbName, ourPublicKey, agentPool) {
+                         remotePouchDB, ourPublicKey) {
   this._maximumUpdateInterval = maximumUpdateInterval;
-  this._hostName = hostName;
-  this._port = port;
-  this._dbName = dbName;
-  this._ourPublicKeyHash =
+  this._remotePouchDB = remotePouchDB;
+
+  var ourPublicKeyHash =
     urlsafeBase64.encode(
       thaliNotificationBeacons.createPublicKeyHash(ourPublicKey));
-  this._agentPool = agentPool;
+
+  this._localId = '/_local/thali_' + this._ourPublicKeyHash;
 
   this._lastUpdate = 0;
   this._cancelTimeoutToken = null;
-  this._nextActionPromise = null;
   this._seqDocRev = null;
   this._currentHttpRequest = null;
-  this._nextSeqValueToSend = null;
+  this._nextSeqValueToSend = -1;
 }
 
-LocalSeqManager.prototype._baseHttpsRequestOptions = function (method,
-                                                               contentType) {
-  var options = {
-    agent: this._agentPool,
-    hostname: this._hostName,
-    family: 4,
-    method: method,
-    port: this._port,
-    path: thaliConfig.BASE_DB_PATH + '/' + this._dbName + '/_local/thali_' + 
-          this._ourPublicKeyHash
-  };
-  if (contentType) {
-    options.headers = { 'Content-Type': contentType};
-  }
-  return options;
-};
+/*
+ To grab the seq document we first have to do a get if we haven't gotten its
+ rev before. If the seq doesn't exist on the remote db then we will get a
+ catch on the get with a 'status' set to 404. Otherwise we can pull
+ '_rev' out of the successfull response.
+ */
 
-LocalSeqManager.prototype._getRemoteLastSeqDoc = function () {
-  var self = this;
-  return new Promise(function (resolve, reject) {
-    self._currentHttpRequest =
-      https.request(self._baseHttpsRequestOptions('GET'));
+/*
+ If we haven't yet created a timer for write seq then we should immediately
+ fire off a GET request to see if we have ever written to this DB before and
+ then use the result to first off a PUT. This should all be wrapped in a
+ promise so we can make sure to serialize our next action.
 
-    var currentData = new Buffer(0);
-    var error = false;
+ We would then start a timer
 
-    self._currentHttpRequest.on('response', function (res) {
-      res.on('data', function (data) {
-        Buffer.concat([currentData, data]);
-      });
-      res.on('error', function (err) {
-        logger.debug('Got error in _getRemoteLastSeqDoc response - ' +
-          JSON.stringify(err));
-        error = true;
-        reject(err);
-      });
-      res.on('close', function () {
-        if (error) {
-          return;
-        }
+ So the logic goes:
+ If we haven't sent an update in longer than the allowed interval then
+ immediately fire off an update
+ */
 
-        if (res.statusCode !== 200) {
-          return reject(new Error('Did not get status code 200, got ' +
-            res.statusCode));
-        }
 
-        try {
-          var seqDoc = JSON.parse(currentData.toString('utf8'));
-          if (!seqDoc._rev) {
-            return reject(new Error('Did not get a rev'));
-          }
-          self._seqDocRev = seqDoc._rev;
-          return resolve();
-        } catch (err) {
-          return reject(err);
-        }
-      });
-    });
-    self._currentHttpRequest.on('error', function (err) {
-      error = true;
-      return reject('Got error in _getRemoteLastSeqDoc request - ' + err);
-    });
-    self._currentHttpRequest.end();
-  });
-};
+//This will take a sequence and first see if it's time to send a new
+//sequence. If not it will just update the sequence we want to write out
+//and return. When time is up we will do the PUT. But I don't think we
+//should fail if there is an error, so long as we can pull down data
+//its good.
+//This function returns a promise that will resolve when this particular
+//write request is done.
+//If kill is called we have to find all the outstanding promises and nuke
+//them.
 
 LocalSeqManager.prototype._setRemoteLastSeqDoc = function () {
   return new Promise(function (resolve, reject) {
@@ -104,21 +68,38 @@ LocalSeqManager.prototype._setRemoteLastSeqDoc = function () {
 };
 
 LocalSeqManager.prototype._doImmediateSeqUpdate = function () {
-  this._cancelTimeoutToken && clearTimeout(this._cancelTimeoutToken);
-  this._cancelTimeoutToken = null;
-  this._currentHttpRequest && this._currentHttpRequest.abort();
-  this._currentHttpRequest = null;
-  (this._seqDocId ? Promise.resolve() : this._getRemoteLastSeqDoc)
-    .then(function () {
-      return this._setRemoteLastSeqDoc();
-    })
-    .catch(function (err) {
+  var self = this;
+
+  function getRevOrNull() {
+    return self._remotePouchDB.get(self._localId)
+      .catch(function (err) {
+        if (err.status === 404) {
+          return null;
+        }
+        return Promise.reject(err);
+      })
+      .then(function (response) {
+        return response._rev;
+      });
+  }
+
+  return (self._seqDocRev ? Promise.resolve(self._seqDocRev) : getRevOrNull())
+    .then(function (rev) {
 
     });
+
 };
 
 LocalSeqManager.prototype.update = function (seq, immediate) {
   var self = this;
+
+  if (seq <= this._nextSeqValueToSend) {
+    logger.debug('Got a bad seq, submitted seq ' + seq +
+      ', _nextSeqValueToSend: ' + this._nextSeqValueToSend);
+    return;
+  }
+
+
   self._nextSeqValueToSend = seq;
   if (immediate ||
       Date.now() - self._lastUpdate >= self._maximumUpdateInterval) {

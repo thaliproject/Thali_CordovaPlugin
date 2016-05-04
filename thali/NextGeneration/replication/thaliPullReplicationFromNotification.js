@@ -1,6 +1,6 @@
 'use strict';
 
-var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNotificationClient');
+var ThaliNotificationClient = require('../notification/thaliNotificationClient');
 
 /** @module thaliPullReplicationFromNotification */
 
@@ -29,7 +29,7 @@ var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNo
  *
  * @public
  * @param {PouchDB} PouchDB The factory we will use to create the database we
- * will replicate all changes to. 
+ * will replicate all changes to.
  * @param {string} dbName The name of the DB. The name of the remote DB MUST be
  * http://[host from discovery]:[port from discovery]/db/[name] where name is
  * taken from pouchDB.info's db_name field.

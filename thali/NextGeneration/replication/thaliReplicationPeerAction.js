@@ -25,7 +25,8 @@ var logger = require('../../thalilogger')('thaliReplicationPeerAction');
  * @param {string} dbName The name of the DB we will use both for local use as
  * well as remote use. Note that we will get the name for the remote database by
  * taking dbName and appending it to http://[hostAddress]:[portNumber]/db/
- * [name] where hostAddress and portNumber are from the previous argument.
+ * [name] where hostAddress and portNumber are from the peerAdvertisesDataForUs
+ * argument.
  * @constructor
  */
 function ThaliReplicationPeerAction(peerIdentifier,
@@ -90,17 +91,23 @@ ThaliReplicationPeerAction.prototype._writeSeq = function (seq) {
       this._lastWrittenSeq);
     return;
   }
-  
+  /*
+  To grab the seq document we first have to do a get if we haven't gotten its
+  rev before. If the seq doesn't exist on the remote db then we will get a
+  catch on the get with a 'status' set to 404. Otherwise we can pull
+  '_rev' out of the successfull response.
+   */
+
   /*
   If we haven't yet created a timer for write seq then we should immediately
   fire off a GET request to see if we have ever written to this DB before and
   then use the result to first off a PUT. This should all be wrapped in a
   promise so we can make sure to serialize our next action.
-  
+
   We would then start a timer
    */
-  
-  
+
+
   //This will take a sequence and first see if it's time to send a new
   //sequence. If not it will just update the sequence we want to write out
   //and return. When time is up we will do the PUT. But I don't think we
@@ -139,17 +146,16 @@ ThaliReplicationPeerAction.prototype._complete =
 
 /**
  * When start is called we will start a replication with the remote peer using
- * the settings specified below. We need to set the ajax option in order to set
- * the psk related values from peerAdvertisesDataForUs. We will need to create
- * the URL using the hostAddress and portNumber from peerAdvertisesDataForUs.
- * Also make sure to set skip_setup to true.
+ * the settings specified below. We will need to create the URL using the
+ * hostAddress and portNumber from peerAdvertisesDataForUs. Also make sure to
+ * set skip_setup to true.
  *
  * If we get an error that the database doesn't exist on the remote machine that
  * is fine, we're done. Although we should log a low priority error that we
  * tried to get to a database that doesn't exist. DO NOT log the peer ID.
  *
  * We then need to use db.replication.to with the remoteDB using the URL
- * specified in the constructor.. This will be the local DB we will copy to. We
+ * specified in the constructor. This will be the local DB we will copy to. We
  * need to do things this way so we can set the AJAX options for PSK. We also
  * need to set both options.retry and options.live to true. See the changes
  * event below for some of the implications of this.
@@ -193,7 +199,8 @@ ThaliReplicationPeerAction.prototype._complete =
  * need it for kill.
  *
  * @param {http.Agent} httpAgentPool This is the HTTP connection pool to use
- * when creating HTTP requests related to this action.
+ * when creating HTTP requests related to this action. Note that this is where
+ * the PSK related settings are specified.
  * @returns {Promise<?Error>}
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {

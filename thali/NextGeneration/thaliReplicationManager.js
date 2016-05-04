@@ -1,12 +1,12 @@
 'use strict';
 
 var ThaliSendNotificationBasedOnReplication =
-  require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
+  require('./replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification =
-  require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  require('./replication/thaliPullReplicationFromNotification');
+var ThaliMobile = require('./thaliMobile');
 var express = require('express');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var thaliConfig = require('./thaliConfig');
 var salti = require('salti');
 var acl = require('salti/test/acl-block.1');
 
@@ -17,7 +17,9 @@ var acl = require('salti/test/acl-block.1');
  * @param {expressPouchdb} expressPouchDB The express-pouchdb object we are
  * supposed to use to create the router.
  * @param {PouchDB} PouchDB PouchDB object we are supposed to use to create
- * dbs.
+ * dbs. Typically this should have PouchDB.defaults set with db to
+ * require('leveldown-mobile') and prefix to the path where the application
+ * wishes to store the DB.
  * @param {string} dbName Name of the db, both locally and remotely that we are
  * interacting with.
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized with
@@ -35,10 +37,10 @@ function ThaliReplicationManager(expressPouchDB,
                                  ecdhForLocalDevice,
                                  thaliPeerPoolInterface) {
   this._router = express.Router();
-  
+
   this._thaliSendNotificationBasedOnReplication =
     new ThaliSendNotificationBasedOnReplication(this._router,
-        ecdhForLocalDevice, thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE, 
+        ecdhForLocalDevice, thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE,
         new PouchDB(dbName));
 
   this._thaliPullReplicationFromNotification =
@@ -46,15 +48,6 @@ function ThaliReplicationManager(expressPouchDB,
                                              dbName,
                                              thaliPeerPoolInterface,
                                              ecdhForLocalDevice);
-  
-  this._router.all('*', function(req, res, next) {
-    if (req.connection.pskIdentity === thaliConfig.BEACON_PSK_IDENTITY) {
-      
-    }
-  });
-  
-  this._router.all('*', salti(dbName, acl));
-
 
   this._router.use(thaliConfig.BASE_DB_PATH, expressPouchDB(PouchDB, {
     mode: 'minimumForPouchDB'
@@ -87,7 +80,7 @@ ThaliReplicationManager.prototype.start =
     var self = this;
     self._thaliPullReplicationFromNotification
           .start(arrayOfRemoteKeys);
-    return ThaliMobile.start(self._router, 
+    return ThaliMobile.start(self._router,
             self._thaliSendNotificationBasedOnReplication.getPskIdToSecret())
     .then(function () {
       /*

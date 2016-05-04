@@ -14,15 +14,19 @@ var ForeverAgent = require('forever-agent');
 var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNotificationClient');
 var Promise = require('lie');
 var logger = require('thali/thalilogger')('testLocalSeqManager');
+var testUtils = require('../lib/testUtils');
+
+var express = require('express');
 
 var thaliReplicationManager = null;
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey = devicePublicPrivateKey.generateKeys();
+var TestPouchDB = testUtils.getLevelDownPouchDb();
 
 var test = tape({
   setup: function (t) {
     thaliReplicationManager = new ThaliReplicationManager(expressPouchdb,
-      PouchDB, 'test', devicePublicPrivateKey, new ThaliPeerPoolDefault());
+      TestPouchDB, 'test', devicePublicPrivateKey, new ThaliPeerPoolDefault());
     t.data = devicePublicKey.toJSON();
     t.end();
   },
@@ -31,6 +35,29 @@ var test = tape({
     t.end();
   }
 });
+
+test('delme', function (t) {
+
+
+
+  var ConfigedPouchDbFactory = testUtils.getLevelDownPouchDb();
+
+  var testPouch = new ConfigedPouchDbFactory('icky');
+
+  testPouch.get('_local/foo')
+    .then(function (response) {
+      console.log('response - ' + response);
+    }).catch(function (err) {
+      console.log('err - ' + err);
+    });
+
+  console.log(testUtils.tmpDirectory());
+
+  var app = express();
+  app.use('/db', expressPouchdb(ConfigedPouchDbFactory));
+  app.listen(2020);
+});
+
 
 if (!tape.coordinated) {
   return;
