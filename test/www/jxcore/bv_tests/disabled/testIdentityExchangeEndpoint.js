@@ -44,7 +44,7 @@ var test = tape({
   setup: function(t) {
     setUpServer().then(function() {
       server.on('error', function(err) {
-        t.comment("Server emitted an error event - " + JSON.stringify(err));
+        t.pass(("Server emitted an error event - " + JSON.stringify(err));
       });
       if (jxcore.utils.OSInfo().isMobile) {
         var levelDownPouchDb = identityExchangeTestUtils.LevelDownPouchDB();

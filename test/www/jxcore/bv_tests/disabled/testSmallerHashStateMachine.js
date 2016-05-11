@@ -131,7 +131,7 @@ function endlessMockConnectionTableLoop(t, expectedPeerId, port, noChannelBindin
   var mock = new MockConnectionTable(function(peerId, lastLookupTime) {
     t.equal(expectedPeerId, peerId);
     if (!noChannelBindingErrors) {
-      t.comment('lookupTime: ' + lookupTime + ', lastLookupTime: ' + lastLookupTime);
+      t.pass('lookupTime: ' + lookupTime + ', lastLookupTime: ' + lastLookupTime);
       t.ok(lookupTime === 0 || lookupTime === lastLookupTime);
     }
 
