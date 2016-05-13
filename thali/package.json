@@ -29,8 +29,9 @@
       "depotName": "Thali_CordovaPlugin",
       "branchName": "npmv2.1.0"
     },
-    "btconnectorlib2": "0.3.0",
-    "jxcore-cordova": "0.1.1"
+    "btconnectorlib2": "0.3.1",
+    "jxcore-cordova": "0.1.2",
+    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.2/release/io.jxcore.node.jx"
   },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",

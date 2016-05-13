@@ -72,11 +72,13 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
     private static final String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
     private static final String METHOD_NAME_GET_BLUETOOTH_NAME = "getBluetoothName";
+    private static final String METHOD_NAME_KILL_OUTGOING_CONNECTIONS = "killOutgoingConnections";
     private static final String METHOD_NAME_GET_OS_VERSION = "getOSVersion";
     private static final String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
     private static final String METHOD_NAME_SHOW_TOAST = "showToast";
 
     private static final String TAG = JXcoreExtension.class.getName();
+    private static final String BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR = "-";
     private static final long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
 
     private static ConnectionHelper mConnectionHelper = null;
@@ -111,6 +113,7 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
+                Log.d(TAG, METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS);
                 startConnectionHelper(ConnectionHelper.NO_PORT_NUMBER, false, callbackId);
             }
         });
@@ -118,6 +121,8 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
+                Log.d(TAG, METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS);
+
                 mConnectionHelper.stop(true, new JXcoreThaliCallback() {
                     @Override
                     protected void onStartStopCallback(String errorMessage) {
@@ -132,6 +137,7 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
+                Log.d(TAG, METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING);
                 ArrayList<Object> args = new ArrayList<Object>();
                 String errorString = null;
 
@@ -158,6 +164,8 @@ public class JXcoreExtension {
         jxcore.RegisterMethod(METHOD_NAME_STOP_ADVERTISING_AND_LISTENING, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
+                Log.d(TAG, METHOD_NAME_STOP_ADVERTISING_AND_LISTENING);
+
                 mConnectionHelper.stop(false, new JXcoreThaliCallback() {
                     @Override
                     protected void onStartStopCallback(String errorMessage) {
@@ -209,7 +217,16 @@ public class JXcoreExtension {
                     return;
                 }
 
-                String bluetoothMacAddress = params.get(0).toString();
+                String peerId = params.get(0).toString();
+                String bluetoothMacAddress = null;
+
+                if (peerId != null) {
+                    try {
+                        bluetoothMacAddress = peerId.split(BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR)[0];
+                    } catch (IndexOutOfBoundsException e) {
+                        Log.e(TAG, METHOD_NAME_CONNECT + ": Failed to extract the Bluetooth MAC address: " + e.getMessage(), e);
+                    }
+                }
 
                 if (!BluetoothUtils.isValidBluetoothMacAddress(bluetoothMacAddress)) {
                     ArrayList<Object> args = new ArrayList<Object>();
@@ -219,7 +236,10 @@ public class JXcoreExtension {
                     return;
                 }
 
+                Log.d(TAG, METHOD_NAME_CONNECT + ": " + bluetoothMacAddress);
+
                 if (mConnectionHelper.getConnectionModel().getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress) != null) {
+                    Log.e(TAG, METHOD_NAME_CONNECT + ": Already connecting");
                     ArrayList<Object> args = new ArrayList<Object>();
 
                     // In case you want to check, if we are already connected (instead of connecting), do:
@@ -403,6 +423,16 @@ public class JXcoreExtension {
             }
         });
 
+        jxcore.RegisterMethod(METHOD_NAME_KILL_OUTGOING_CONNECTIONS, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                mConnectionHelper.killConnections(false);
+                ArrayList<Object> args = new ArrayList<Object>();
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
         jxcore.RegisterMethod(METHOD_NAME_GET_OS_VERSION, new JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
@@ -458,11 +488,14 @@ public class JXcoreExtension {
     }
 
     public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
+        String peerId = peerProperties.getId()
+                + BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR
+                + peerProperties.getExtraInformation();
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
+            jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
             jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
             jsonObjectCreated = true;
