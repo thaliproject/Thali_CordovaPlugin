@@ -14,7 +14,6 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
-var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
@@ -350,6 +349,9 @@ module.exports.getWithAgent = function (host, port, path, agent) {
  */
 module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
                                                 selectedPeerId) {
+  // We don't load thaliMobileNativeWrapper until after the tests have started
+  // running so we pick up the right version of mobile
+  var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
   return new Promise(function (resolve, reject) {
     var retryCount = 0;
     var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 30 * 2;

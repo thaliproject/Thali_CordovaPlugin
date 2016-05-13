@@ -5,7 +5,6 @@ var net = require('net');
 var Promise = require('lie');
 var sinon = require('sinon');
 var testUtils = require('../lib/testUtils.js');
-var logger = require('thali/thalilogger')('testThaliMobileNativeWrapper');
 
 if (typeof Mobile === 'undefined') {
   return;
