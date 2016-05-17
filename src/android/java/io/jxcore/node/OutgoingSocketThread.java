@@ -78,6 +78,12 @@ class OutgoingSocketThread extends SocketThreadBase {
                     Log.e(mTag, errorMessage, e);
                     mListener.onDisconnected(this, errorMessage);
                 }
+            } catch (NullPointerException e) {
+                if (!mIsClosing) {
+                    String errorMessage = e.getMessage();
+                    Log.e(mTag, errorMessage, e);
+                    mListener.onDisconnected(this, errorMessage);
+                }
             }
 
             if (localStreamsCreatedSuccessfully) {

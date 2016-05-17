@@ -31,7 +31,7 @@ public class ConnectionHelper
 
     public static final int NO_PORT_NUMBER = 0;
     private static final String SERVICE_TYPE = "Cordovap2p._tcp";
-    private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
+    private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66"; // "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
     private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
     private static final String BLUETOOTH_NAME = "Thali_Bluetooth";
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
@@ -52,6 +52,10 @@ public class ConnectionHelper
     private CountDownTimer mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = NO_PORT_NUMBER;
+
+    // Uncomment the following to take the TestHelper into use.
+    // See the documentation in TestHelper.java for more information.
+    //private TestHelper mTestHelper = null;
 
     /**
      * Constructor.
@@ -94,6 +98,11 @@ public class ConnectionHelper
         mConnectivityMonitor.start(); // Should be running as long as the app is alive
 
         mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
+
+        // Uncomment the following to take the TestHelper into use.
+        // See the documentation in TestHelper.java for more information.
+        /*mTestHelper = new TestHelper(this);
+        mTestHelper.startTest(TestHelper.TestType.REPETITIVE_CONNECT_AND_DISCONNECT);*/
     }
 
     /**
