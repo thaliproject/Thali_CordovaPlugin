@@ -3,6 +3,7 @@
  */
 package io.jxcore.node;
 
+import android.os.CountDownTimer;
 import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
@@ -33,20 +34,43 @@ public class TestHelper implements PeerModel.Listener {
          * peer, all outgoing connections are killed and the peer model is cleared in order to get
          * new "peer added" event to start the cycle again.
          */
-        REPETITIVE_CONNECT_AND_DISCONNECT
+        REPETITIVE_CONNECT_AND_DISCONNECT,
+
+        /**
+         * Keep listening
+         *
+         * Keeps listening for and accepting incoming connections. Will not disconnect.
+         */
+        KEEP_LISTENING,
+
+        /**
+         * Keep listening with repetitive disconnect
+         *
+         * Keeps listening for incoming connections and after a successful connection attempt will
+         * disconnect with a delay.
+         */
+        KEEP_LISTENING_WITH_REPETITIVE_DISCONNECT,
     }
 
     private static final String TAG = TestHelper.class.getSimpleName();
+    private static final long DISCONNECT_DELAY_IN_MILLISECONDS = 3000;
+    private static final long CHECK_INCOMING_CONNECTIONS_STATUS_INTERVAL_IN_MILLISECONDS = DISCONNECT_DELAY_IN_MILLISECONDS;
 
     private ConnectionHelper mConnectionHelper;
     private DiscoveryManager mDiscoveryManager;
     private PeerModel mPeerModel;
     private ConnectionModel mConnectionModel;
     private TestJXcoreThaliCallback mTestJXcoreThaliCallback;
+    private CountDownTimer mCheckIncomingConnectionStatusTimer;
     private TestType mCurrentTestType = TestType.NONE;
     private int mTotalNumberOfConnectionsAttempts;
     private int mNumberOfSuccessfulConnectionAttempts;
 
+    /**
+     * Constructor.
+     *
+     * @param connectionHelper The ConnectionHelper instance.
+     */
     public TestHelper(ConnectionHelper connectionHelper) {
         mConnectionHelper = connectionHelper;
         mDiscoveryManager = mConnectionHelper.getDiscoveryManager();
@@ -56,6 +80,11 @@ public class TestHelper implements PeerModel.Listener {
         mTestJXcoreThaliCallback = new TestJXcoreThaliCallback();
     }
 
+    /**
+     * Starts the specified test scenario.
+     *
+     * @param testTypeToStart The type of the test to start.
+     */
     public void startTest(TestType testTypeToStart) {
         mTotalNumberOfConnectionsAttempts = 0;
         mNumberOfSuccessfulConnectionAttempts = 0;
@@ -67,8 +96,40 @@ public class TestHelper implements PeerModel.Listener {
                 // Do nothing
                 break;
             case REPETITIVE_CONNECT_AND_DISCONNECT:
+            case KEEP_LISTENING:
+            case KEEP_LISTENING_WITH_REPETITIVE_DISCONNECT:
                 mDiscoveryManager.start(true, true);
-                mConnectionHelper.start(1337, false, mTestJXcoreThaliCallback);
+                mConnectionHelper.start(1337, true, mTestJXcoreThaliCallback);
+
+                if (mCurrentTestType == TestType.KEEP_LISTENING_WITH_REPETITIVE_DISCONNECT) {
+                    mCheckIncomingConnectionStatusTimer = new CountDownTimer(
+                            CHECK_INCOMING_CONNECTIONS_STATUS_INTERVAL_IN_MILLISECONDS,
+                            CHECK_INCOMING_CONNECTIONS_STATUS_INTERVAL_IN_MILLISECONDS) {
+                        @Override
+                        public void onTick(long l) {
+                            // Not used
+                        }
+
+                        @Override
+                        public void onFinish() {
+                            mCheckIncomingConnectionStatusTimer.cancel();
+
+                            jxcore.coreThread.handler.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    final int connectionCount = mConnectionModel.getNumberOfCurrentConnections();
+
+                                    if (connectionCount > 0) {
+                                        Log.i(TAG, "Killing " + connectionCount + " connection(s)");
+                                        mConnectionHelper.killConnections(true);
+                                    }
+                                }
+                            }, DISCONNECT_DELAY_IN_MILLISECONDS);
+
+                            mCheckIncomingConnectionStatusTimer.start();
+                        }
+                    }.start();
+                }
                 break;
             default:
                 throw new IllegalStateException("Invalid test type");
@@ -118,12 +179,16 @@ public class TestHelper implements PeerModel.Listener {
                 }
 
                 break;
+            case KEEP_LISTENING:
+            case KEEP_LISTENING_WITH_REPETITIVE_DISCONNECT:
+                // Do nothing
+                break;
             default:
                 throw new IllegalStateException("Invalid test type");
         }
     }
 
-    private void onConnectAttemptResult(String errorMessage) {
+    private void onConnectAttemptResult(final String errorMessage) {
         if (errorMessage == null) {
             Log.i(TAG, "onConnected: Successfully connected");
             mNumberOfSuccessfulConnectionAttempts++;
@@ -139,13 +204,19 @@ public class TestHelper implements PeerModel.Listener {
                 // Do nothing
                 break;
             case REPETITIVE_CONNECT_AND_DISCONNECT:
-                if (errorMessage == null) {
-                    // Successfully connected
-                    Log.i(TAG, "onConnected: Killing all outgoing connections");
-                    mConnectionHelper.killConnections(false);
-                }
+                jxcore.coreThread.handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (errorMessage == null) {
+                            // Successfully connected
+                            Log.i(TAG, "onConnected: Killing all outgoing connections");
+                            mConnectionHelper.killConnections(false);
+                        }
 
-                mPeerModel.clear(); // Clear the peer model to get new "peer added" events
+                        mPeerModel.clear(); // Clear the peer model to get new "peer added" events
+                    }
+                }, DISCONNECT_DELAY_IN_MILLISECONDS);
+
                 break;
             default:
                 throw new IllegalStateException("Invalid test type");
