@@ -38,7 +38,7 @@ module.exports.runTest = function (url, handler) {
 };
 
 /**
- * This function registers new path to the incoming express router object.
+ * This function registers a new path to the incoming express router object.
  * This service can be used to test different HTTP client scenarios
  * such as connecting to a delayed service.
  *
@@ -69,11 +69,11 @@ module.exports.runServer = function (router, path, responseCode, body, times,
   router.get(path, delayCallback, requestHandler);
 };
 
-module.exports.getTestAgent = function (pskIdentity, pskKey ) {
+module.exports.getTestAgent = function (pskIdentity, pskKey) {
 
   pskIdentity = pskIdentity || gPskIdentity;
   pskKey = pskKey || gPskKey;
-  
+
   return new ForeverAgent.SSL({
     keepAlive: true,
     keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
@@ -110,6 +110,35 @@ module.exports.getTestHttpsServer = function (expressApp,
         expressServer = makeIntoCloseAllServer(expressServer);
         resolve(expressServer);
       }
+    });
+  });
+};
+
+module.exports.pskGet = function(serverPort, path, pskId, pskKey) {
+  return new Promise(function (resolve, reject) {
+    https.get({
+      hostname: '127.0.0.1',
+      path: path,
+      port: serverPort,
+      agent: false,
+      pskIdentity: pskId,
+      pskKey: pskKey
+    }, function (res) {
+      if (res.statusCode !== 200) {
+        return reject(new Error('response code was ' + res.status));
+      }
+      var response = '';
+      res.on('data', function (chunk) {
+        response += chunk;
+      });
+      res.on('end', function () {
+        resolve(response);
+      });
+      res.on('error', function (err) {
+        reject(err);
+      });
+    }).on('error', function (err) {
+      reject(err);
     });
   });
 };
