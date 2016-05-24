@@ -2,10 +2,9 @@
 
 var logger = require('../../thalilogger')('localSeqManager');
 var Promise = require('lie');
-var https = require('https');
-var thaliConfig = require('../thaliConfig');
 var thaliNotificationBeacons = require('../notification/thaliNotificationBeacons');
 var urlsafeBase64 = require('urlsafe-base64');
+var assert = require('assert');
 
 /**
  * Handles updating the remote sequence number for Thali's distributed
@@ -34,11 +33,14 @@ function LocalSeqManager(maximumUpdateInterval,
   this._stopCalled = false;
 
   this._cancelTimeoutToken = null;
+  this._timerPromise = null;
+  this._timerReject = null;
   this._seqDocRev = null;
 
   // We use this to serialize requests so we don't have puts trying to run
   // over each other's revs and causing update failures
   this._currentUpdateRequest = Promise.resolve();
+  this._blockedUpdateRequest = null;
   this._nextSeqValueToSend = -1;
 }
 
@@ -109,56 +111,86 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
 LocalSeqManager.prototype.update = function (seq, immediate) {
   var self = this;
 
+  function cancelTimer(reject) {
+    clearTimeout(self._cancelTimeoutToken);
+    self._cancelTimeoutToken = null;
+    self._timerPromise = null;
+    reject && self._timerReject &&
+      self._timerReject(new Error('Timer Cancelled'));
+    self._timerReject = null;
+  }
+
+  function runUpdate() {
+    self._blockedUpdateRequest = new Promise(function (resolve, reject) {
+      return self._currentUpdateRequest
+        .catch(function () {
+          // We don't care if the current request ended in an error, we depend
+          // on the replication logic to handle errors, we will continue to
+          // send updates.
+        })
+        .then(function () {
+          self._blockedUpdateRequest = null;
+          self._currentUpdateRequest =
+            self._doImmediateSeqUpdate(self._nextSeqValueToSend);
+          return self._currentUpdateRequest;
+        })
+        .then(function (result) {
+          resolve(result);
+        })
+        .catch(function (err) {
+          reject(err);
+        });
+    });
+    return self._blockedUpdateRequest ? self._blockedUpdateRequest :
+            self._currentUpdateRequest;
+  }
+
   if (self._stopCalled) {
     return Promise.reject(new Error('Stop Called'));
   }
 
-  if (seq <= this._nextSeqValueToSend) {
+  if (seq <= self._nextSeqValueToSend) {
     logger.debug('Got a bad seq, submitted seq ' + seq +
-      ', _nextSeqValueToSend: ' + this._nextSeqValueToSend);
+      ', _nextSeqValueToSend: ' + self._nextSeqValueToSend);
     return Promise.reject(new Error('Bad Seq'));
   }
 
   self._nextSeqValueToSend = seq;
 
-  var millisecondsSinceLastUpdate = Date.now() - self._lastUpdateTime;
+  if (self._blockedUpdateRequest) {
+    return self._blockedUpdateRequest;
+  }
 
-  if (immediate ||
-      millisecondsSinceLastUpdate >= self._maximumUpdateInterval) {
-    clearTimeout(self._cancelTimeoutToken);
-    self._cancelTimeoutToken = null;
-    return self._currentUpdateRequest
-      .catch(function () {
-        // We don't care if there is an error, we are going to continue on
-        // We rely on the replication logic run in parallel with this logic
-        // to detect when we have lost contact with a peer
-      })
-      .then(function () {
-        self._currentUpdateRequest = self._doImmediateSeqUpdate(seq);
-        return self._currentUpdateRequest;
-      })
+  var millisecondsUntilNextUpdate = self._maximumUpdateInterval -
+    (Date.now() - self._lastUpdateTime);
+
+  if (immediate || millisecondsUntilNextUpdate <= 0) {
+    cancelTimer(true);
+    return runUpdate()
       .then(function () {
         return null;
-      })
+      });
   }
 
   if (!self._cancelTimeoutToken) {
-    return new Promise(function (resolve, reject) {
+    self._timerPromise = new Promise(function (resolve, reject) {
+      self._timerReject = reject;
       self._cancelTimeoutToken = setTimeout(function () {
-        self._cancelTimeoutToken = null;
-        self._currentUpdateRequest = self._doImmediateSeqUpdate(seq);
-        self._currentUpdateRequest
+        cancelTimer(false);
+        runUpdate()
           .then(function () {
             resolve(null);
           })
           .catch(function (err) {
             reject(err);
           });
-      }, self._maximumUpdateInterval - millisecondsSinceLastUpdate);
+      }, millisecondsUntilNextUpdate);
     });
   }
 
-
+  assert(self._timerPromise, 'We should not get here without a non-null ' +
+    'timer promise');
+  return self._timerPromise;
 };
 
 /**

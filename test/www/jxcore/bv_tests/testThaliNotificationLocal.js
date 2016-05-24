@@ -13,6 +13,8 @@ var ThaliMobile =
   require('thali/NextGeneration/thaliMobile');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+var thaliConfig =
+  require('thali/NextGeneration/thaliConfig');
 
 var globals = {};
 

@@ -18,10 +18,8 @@ var testUtils = require('../lib/testUtils');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var https = require('https');
 var randomString = require('randomstring');
-var urlsafeBase64 = require('urlsafe-base64');
 var thaliNotificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var httpTester = require('../lib/httpTester');
-
 var express = require('express');
 
 var thaliReplicationManager = null;
@@ -60,31 +58,15 @@ var test = tape({
 /*
   These are all run against local servers:
 
-  update
-    Set seq even if wait isn't over if immediate is set
-    Set seq via timer then update before timer is run and make sure we set last seq
-    Fail if we give a smaller seq number than last time
-
   Run with coordinator:
     For each peer set the initial seq doc and then update it twice.
  */
 
-function createPskPouchDBRemote(serverPort, dbName) {
-  return new TestPouchDB('https://127.0.0.1:' + serverPort + '/db/' + dbName,
-    {
-      ajax: {
-        agentOptions: {
-          rejectUnauthorized: false,
-          pskIdentity: pskId,
-          pskKey: pskKey,
-          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS
-        }
-      }
-    });
-}
+
 
 function runBadImmediateSeqUpdateTest(t, serverPort, validateErrFunc) {
-  var pouchDB = createPskPouchDBRemote(serverPort, 'foo');
+  var pouchDB = testUtils.createPskPouchDBRemote(serverPort, 'foo', pskId,
+                                                  pskKey);
   localSeqManager = new LocalSeqManager(100, pouchDB, devicePublicKey);
   localSeqManager._doImmediateSeqUpdate(23)
     .then(function () {
@@ -97,7 +79,6 @@ function runBadImmediateSeqUpdateTest(t, serverPort, validateErrFunc) {
 }
 
 test('#_doImmediateSeqUpdate - server is not there', function (t) {
-  var self = this;
   testCloseAllServer = makeIntoCloseAllServer(net.createServer(), true);
 
   testCloseAllServer.listen(0, function () {
@@ -117,7 +98,6 @@ test('#_doImmediateSeqUpdate - server is not there', function (t) {
 
 test('#_doImmediateSeqUpdate - server accepts & closes connection',
   function (t) {
-    var self = this;
     testCloseAllServer = makeIntoCloseAllServer(
       net.createServer(function (socket) {
         socket.end();
@@ -139,7 +119,7 @@ test('#_doImmediateSeqUpdate - server always returns 500', function (t) {
     }
   };
   testCloseAllServer = makeIntoCloseAllServer(
-    https.createServer(options, function(req, res) {
+    https.createServer(options, function (req, res) {
       res.writeHead(500, 'Nobody home');
       res.end();
     }));
@@ -166,34 +146,16 @@ function setUpServer(testBody, appConfig) {
   testCloseAllServer.listen(0, function () {
     var serverPort = testCloseAllServer.address().port;
     var randomDBName = randomString.generate(30);
-    var remotePouchDB = createPskPouchDBRemote(serverPort, randomDBName);
+    var remotePouchDB =
+      testUtils.createPskPouchDBRemote(serverPort, randomDBName, pskId, pskKey);
     testBody(serverPort, randomDBName, remotePouchDB);
   });
 }
 
-function getSeqDoc(randomDBName, serverPort) {
-  var path = '/db/' + randomDBName + '/_local/thali_' +
-    urlsafeBase64
-      .encode(thaliNotificationBeacons
-        .createPublicKeyHash(devicePublicKey));
-  return httpTester.pskGet(serverPort, path, pskId, pskKey)
-    .then(function (responseBody) {
-      return JSON.parse(responseBody);
-    });
-}
-
-function validateSeqNumber(t, randomDBName, serverPort, seq) {
-  return getSeqDoc(randomDBName, serverPort)
-    .then(function (pouchResponse) {
-      t.equal(pouchResponse.lastSyncedSequenceNumber, seq);
-      return pouchResponse;
-    });
-}
-
 function validateRev(t, rev, lastSyncedSequenceNumber, randomDBName, serverPort)
 {
-  return validateSeqNumber(t, randomDBName, serverPort,
-    lastSyncedSequenceNumber)
+  return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+    lastSyncedSequenceNumber, pskId, pskKey, devicePublicKey)
     .then(function (pouchResponse) {
       t.equal(pouchResponse._rev, rev, 'revs are equal');
     });
@@ -218,7 +180,7 @@ test('#_doImmediateSeqUpdate - create new seq doc', function (t) {
 });
 
 test('#_doImmediateSeqUpdate - doc exists, need to get rev and update',
-  function(t) {
+  function (t) {
     setUpServer(function (serverPort, randomDBName, remotePouchDB) {
       var lastSyncedSequenceNumber = 23;
       localSeqManager =
@@ -391,11 +353,105 @@ test('#update - set seq for first time', function (t) {
     var lastSyncedSequenceNumber = 2000;
     localSeqManager.update(lastSyncedSequenceNumber)
       .then(function () {
-        return validateSeqNumber(t, randomDBName, serverPort,
-                                  lastSyncedSequenceNumber);
+        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+                                  lastSyncedSequenceNumber, pskId, pskKey,
+                                  devicePublicKey);
       })
       .catch(function (err) {
         t.fail('Got an error - ' + JSON.stringify(err));
+      })
+      .then(function () {
+        t.end();
+      });
+  });
+});
+
+test('#update - Fail on bad seq value', function (t) {
+  setUpServer(function (serverPort, randomDBName, remotePouchDB) {
+    localSeqManager =
+      new LocalSeqManager(1000, remotePouchDB, devicePublicKey);
+    localSeqManager.update(10)
+      .catch(function (err) {
+        t.fail('Got unexpected error - ' + JSON.serialize(err));
+      })
+      .then(function () {
+        return localSeqManager.update(9);
+      })
+      .then(function () {
+        t.fail('Should have gotten an error');
+      })
+      .catch(function (err) {
+        t.equal(err.message, 'Bad Seq', 'Expected bad seq error');
+      })
+      .then(function () {
+        t.end();
+      });
+  });
+});
+
+test('#update - do we cancel timer properly on an immediate?', function (t) {
+  setUpServer(function (serverPort, randomDBName, remotePouchDB) {
+    localSeqManager =
+      new LocalSeqManager(1000, remotePouchDB, devicePublicKey);
+    var timerPromise = null;
+    var immediatePromise = null;
+    var lastSyncedSequenceNumber = 12;
+    localSeqManager.update(11)
+      .catch(function (err) {
+        t.fail('Should not have gotten ' + JSON.serialize(err));
+      })
+      .then(function () {
+        timerPromise = localSeqManager.update(lastSyncedSequenceNumber);
+        ++lastSyncedSequenceNumber;
+        immediatePromise = localSeqManager.update(lastSyncedSequenceNumber,
+                                                  true);
+        t.ok(timerPromise !== immediatePromise, 'Different promises');
+        return timerPromise;
+      })
+      .then(function () {
+        t.fail('timerPromise should have failed.');
+      })
+      .catch(function (err) {
+        t.equal(err.message, 'Timer Cancelled', 'Timer was cancelled');
+        return immediatePromise;
+      })
+      .then(function () {
+        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+          lastSyncedSequenceNumber, pskId, pskKey, devicePublicKey);
+      })
+      .catch(function (err) {
+        t.fail('Got unexpected err - ' + JSON.serialize(err));
+      })
+      .then(function () {
+        t.end();
+      });
+  });
+});
+
+test('#update - do we wait for blocked update', function (t) {
+  setUpServer(function (serverPort, randomDBName, remotePouchDb) {
+    localSeqManager =
+      new LocalSeqManager(1000, remotePouchDb, devicePublicKey);
+    var lastSyncedSequenceNumber = 790798;
+    var promises = [];
+    promises[0] = localSeqManager.update(lastSyncedSequenceNumber);
+    ++lastSyncedSequenceNumber;
+    promises[1] = localSeqManager.update(lastSyncedSequenceNumber);
+    ++lastSyncedSequenceNumber;
+    promises[2] = localSeqManager.update(lastSyncedSequenceNumber, true);
+    ++lastSyncedSequenceNumber;
+    promises[3] = localSeqManager.update(lastSyncedSequenceNumber, true);
+    t.notEqual(promises[0], promises[1], 'One go and one blocked');
+    t.equal(promises[1], promises[2], 'All blocked');
+    t.equal(promises[2], promises[3], 'Still blocked');
+    Promise.all(promises)
+      .then(function () {
+        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+                                  lastSyncedSequenceNumber, pskId, pskKey,
+                                  devicePublicKey);
+      })
+      .catch(function (err) {
+        t.fail('Oops - ' + JSON.serialize(err));
       })
       .then(function () {
         t.end();
@@ -417,11 +473,12 @@ function testTimer(t, updateFn) {
       })
       .then(function (newSeqNumber) {
         lastSyncedSequenceNumber = newSeqNumber;
-        t.ok(Date.now() - startTimeForSecondUpdate >=
+        var elapsedTime = Date.now() - startTimeForSecondUpdate;
+        t.ok(elapsedTime >=
           1000 - (startTimeForSecondUpdate - firstUpdateTime),
           'We waited long enough');
-        return validateSeqNumber(t, randomDBName, serverPort,
-          lastSyncedSequenceNumber);
+        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+          lastSyncedSequenceNumber, pskId, pskKey, devicePublicKey);
       })
       .catch(function (err) {
         t.fail('Got error - ' + JSON.stringify(err));
@@ -446,122 +503,20 @@ test('#update - test that we pick up new sequences while we wait',
   function (t) {
     testTimer(t, function (lastSyncedSequenceNumber) {
       lastSyncedSequenceNumber += 101;
-      localSeqManager.update(lastSyncedSequenceNumber);
+      var promise1 = localSeqManager.update(lastSyncedSequenceNumber);
       lastSyncedSequenceNumber += 12;
-      localSeqManager.update(lastSyncedSequenceNumber);
+      var promise2 = localSeqManager.update(lastSyncedSequenceNumber);
       lastSyncedSequenceNumber += 23;
-      return localSeqManager.update(lastSyncedSequenceNumber)
+      t.equal(promise1, promise2, 'Should have gotten same timer promise');
+      var promise3 = localSeqManager.update(lastSyncedSequenceNumber);
+      t.equal(promise2, promise3, 'Still same timer promise');
+      return promise3
         .then(function () {
           return lastSyncedSequenceNumber;
         });
     });
   });
 
-//test('delme', function (t) {
-//
-//
-//
-//  var ConfigedPouchDbFactory = testUtils.getLevelDownPouchDb();
-//
-//  var testPouch = new ConfigedPouchDbFactory('icky');
-//
-//  testPouch.get('_local/foo')
-//    .then(function (response) {
-//      console.log('response - ' + response);
-//    }).catch(function (err) {
-//      console.log('err - ' + err);
-//    });
-//
-//  console.log(testUtils.tmpDirectory());
-//
-//  var app = express();
-//  app.use('/db', expressPouchdb(ConfigedPouchDbFactory));
-//  app.listen(2020);
-//});
-//
-//
-//if (!tape.coordinated) {
-//  return;
-//}
-//
-///*
-//We get all the participants and we wait for a notification from each one and
-//once we get the notification then we run the test
-// */
-//
-//var MAX_FAILURE = 10;
-//
-//function runTestOnAllParticipants(t, testToRun) {
-//  return new Promise(function (resolve, reject) {
-//    var completed = false;
-//    var thaliNotificationClient =
-//      thaliReplicationManager.
-//        _thaliPullReplicationFromNotification.
-//        _thaliNotificationClient;
-//
-//    /*
-//    Each participant is recorded via their public key
-//    If the value is -1 then they are done
-//    If the value is 0 then no test has completed
-//    If the value is greater than 0 then that is how many failures there have
-//    been.
-//     */
-//    var participantCount = {};
-//
-//    t.participants.forEach(function (participant) {
-//      var publicKey = new Buffer(JSON.parse(participant.data));
-//      participantCount[publicKey] = 0;
-//    });
-//
-//    function success(publicKey) {
-//      return function () {
-//        if (completed) {
-//          return;
-//        }
-//
-//        participantCount[publicKey] = -1;
-//
-//        var allSuccess = true;
-//        var participantKeys =
-//          Object.getOwnPropertyNames(participantCount);
-//        for(var i = 0; i < participantKeys.length; ++i) {
-//          if (participantCount[participantKeys[i]] === -1) {
-//            allSuccess = false;
-//            return;
-//          }
-//        }
-//        if (allSuccess) {
-//          completed = true;
-//          resolve();
-//        }
-//      };
-//    }
-//
-//    function fail(publicKey) {
-//      return function(err) {
-//        logger.debug('Got an err - ' + JSON.stringify(err));
-//        if (completed || participantCount[publicKey] === -1) {
-//          return;
-//        }
-//        ++participantCount[publicKey];
-//        if (participantCount[publicKey] >= MAX_FAILURE) {
-//          completed = true;
-//          reject(err);
-//        }
-//      };
-//    }
-//
-//    thaliNotificationClient.on(
-//      ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
-//      function (notificationForUs) {
-//        testToRun(notificationForUs, success, fail(notificationForUs.keyId));
-//      });
-//  });
-//
-//
-//
-//}
-//
 //test('Simple doc request', function (t) {
 //  /*
 //  We start the replication manager with our own public key
@@ -610,16 +565,3 @@ test('#update - test that we pick up new sequences while we wait',
 //      t.end();
 //    });
 //});
-
-// test('Request to a server that is not there', function (t) {
-//   var blockPortServer = net.createServer(0, function () {
-//     var serverPort = blockPortServer.address().port;
-//     var blockingConnection = net.createConnection(serverPort, function () {
-//       blockPortServer.close();
-//       // Now we are blocking the port the server was listening on because we
-//       // still have a connection open but not new requests will be honored.
-//     });
-//
-//   })
-//   var localSeqManager = new LocalSeqManager(10000, '127.0.0.1', )
-// });

@@ -271,7 +271,7 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
  * express-pouchdb is a router object) that the caller wants the WiFi
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately.
- * @param {module:thaliMobileNativeWrapper~pskIdToSecret pskIdToSecret} pskIdToSecret
+ * @param {module:thaliMobileNativeWrapper~pskIdToSecret} pskIdToSecret
  * @returns {Promise<?Error>}
  */
 // jscs:enable jsDoc
@@ -556,9 +556,7 @@ function () {
         ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
         pskCallback: function (id) {
           return self.pskIdToSecret(id);
-        },
-        key: thaliConfig.BOGUS_KEY_PEM,
-        cert: thaliConfig.BOGUS_CERT_PEM
+        }
       };
       self.routerServer = https.createServer(options, self.expressApp)
         .listen(self.routerServerPort, listeningHandler);

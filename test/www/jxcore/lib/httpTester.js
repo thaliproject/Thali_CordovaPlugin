@@ -8,6 +8,8 @@ var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
+var urlsafeBase64 = require('urlsafe-base64');
+var thaliNotificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
 
 var gPskIdentity = 'I am me!';
 var gPskKey = new Buffer('I am a reasonable long string');
@@ -97,9 +99,7 @@ module.exports.getTestHttpsServer = function (expressApp,
 
     var options = {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-      pskCallback : pskCallback,
-      key: thaliConfig.BOGUS_KEY_PEM,
-      cert: thaliConfig.BOGUS_CERT_PEM
+      pskCallback : pskCallback
     };
 
     var expressServer = https.createServer(options, expressApp).
@@ -114,10 +114,10 @@ module.exports.getTestHttpsServer = function (expressApp,
   });
 };
 
-module.exports.pskGet = function(serverPort, path, pskId, pskKey) {
+module.exports.pskGet = function(serverPort, path, pskId, pskKey, host) {
   return new Promise(function (resolve, reject) {
     https.get({
-      hostname: '127.0.0.1',
+      hostname: host ? host : '127.0.0.1',
       path: path,
       port: serverPort,
       agent: false,
@@ -125,7 +125,9 @@ module.exports.pskGet = function(serverPort, path, pskId, pskKey) {
       pskKey: pskKey
     }, function (res) {
       if (res.statusCode !== 200) {
-        return reject(new Error('response code was ' + res.status));
+        var error = new Error('response code was ' + res.statusCode);
+        error.statusCode = res.statusCode;
+        return reject(error);
       }
       var response = '';
       res.on('data', function (chunk) {
@@ -141,4 +143,27 @@ module.exports.pskGet = function(serverPort, path, pskId, pskKey) {
       reject(err);
     });
   });
+};
+
+module.exports.getSeqDoc = function(dbName, serverPort, pskId, pskKey,
+                                    devicePublicKey, host) {
+  var path = '/db/' + dbName + '/_local/thali_' +
+    urlsafeBase64
+      .encode(thaliNotificationBeacons
+        .createPublicKeyHash(devicePublicKey));
+  return module.exports.pskGet(serverPort, path, pskId, pskKey, host)
+    .then(function (responseBody) {
+      return JSON.parse(responseBody);
+    });
+}
+
+module.exports.validateSeqNumber = function (t, dbName, serverPort, seq,
+                                             pskId, pskKey, devicePublicKey,
+                                             host) {
+  return module.exports.getSeqDoc(dbName, serverPort, pskId, pskKey,
+                                  devicePublicKey, host)
+    .then(function (pouchResponse) {
+      t.equal(pouchResponse.lastSyncedSequenceNumber, seq);
+      return pouchResponse;
+    });
 };

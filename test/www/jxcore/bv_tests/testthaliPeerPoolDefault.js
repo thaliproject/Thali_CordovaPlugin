@@ -151,9 +151,7 @@ test('#ThaliPeerPoolDefault - PSK Pool works', function (t) {
       t.equal(id, pskIdentity, 'Identity should match');
       gotPskCallBack = true;
       return pskKey;
-    },
-    key: thaliConfig.BOGUS_KEY_PEM,
-    cert: thaliConfig.BOGUS_CERT_PEM
+    }
   }, app));
 
   testServer.listen(0, function () {

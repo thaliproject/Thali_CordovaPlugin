@@ -9,6 +9,7 @@ var ThaliNotificationAction =
   require('thali/NextGeneration/notification/thaliNotificationAction');
 var ThaliMobile =
   require('thali/NextGeneration/thaliMobile');
+var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var ENTRY1 = 'entry1';
 var ENTRY2 = 'entry2';

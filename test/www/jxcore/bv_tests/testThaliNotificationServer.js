@@ -9,7 +9,7 @@ var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var ThaliPskMapCache =
   require('thali/NextGeneration/notification/thaliPskMapCache');
-var ThaliConfig =
+var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
@@ -72,7 +72,7 @@ GlobalVariables.prototype.init = function () {
       } else {
         self.TESTURL = 'http://' + '127.0.0.1' + ':' +
         self.expressServer.address().port +
-          ThaliConfig.NOTIFICATION_BEACON_PATH;
+          thaliConfig.NOTIFICATION_BEACON_PATH;
 
         makeIntoCloseAllServer(self.expressServer);
 
@@ -146,21 +146,21 @@ var test = tape({
 test('Test ThaliPskMapCache clean and expiration', function (t) {
 
   var cache = new ThaliPskMapCache(500);
-  var overFlow = ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE + 10;
+  var overFlow = thaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE + 10;
 
   for (var i = 0 ; i < overFlow ; i++) {
     cache.push({});
   }
 
   t.equal(cache._queue.length,
-    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE,
+    thaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE,
   'ThaliPskMapCache should not exceed' +
   ' MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE');
 
   cache.clean(true);
 
   t.equal(cache._queue.length,
-    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE-1,
+    thaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE-1,
     'ThaliPskMapCache should not exceed' +
     ' MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE-1');
 

@@ -240,16 +240,12 @@ module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
 };
 
-module.exports.getTestPouchDBInstance = function (name) {
-  return new LevelDownPouchDB(name);
-};
-
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
   var randomPouchDBName = randomString.generate({
     length: 40,
     charset: 'alphabetic'
   });
-  return module.exports.getTestPouchDBInstance(randomPouchDBName);
+  return new LevelDownPouchDB(randomPouchDBName);
 };
 
 
@@ -442,4 +438,30 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
     thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
       nonTCPAvailableHandler);
   });
+};
+
+module.exports.createPskPouchDBRemote = function(serverPort, dbName,
+                                                 pskId, pskKey, host) {
+  var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
+    '/db/' + dbName;
+  return new LevelDownPouchDB(serverUrl,
+    {
+      ajax: {
+        agentOptions: {
+          rejectUnauthorized: false,
+          pskIdentity: pskId,
+          pskKey: pskKey,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS
+        }
+      }
+    });
+};
+
+module.exports.validateCombinedResult = function(combinedResult) {
+  if (combinedResult.wifiResult !== null ||
+    combinedResult.nativeResult !== null) {
+    return Promise.reject(new Error('Had a failure in ThaliMobile.start - ' +
+      JSON.stringify(combinedResult)));
+  }
+  return Promise.resolve();
 };

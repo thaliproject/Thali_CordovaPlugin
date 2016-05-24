@@ -111,8 +111,8 @@ will de-activate themselves when run on the desktop. What is especially nice abo
 one can develop and debug directly in the Thali_CordovaPlugin directory. There is no need to do the kind of 
 copying and pasting that Cordova development normally requires.
 
-To set up your desktop environment for development go to Thali_CordovaPlugin/thali/install and run 
-`jx npm run setupDesktop`.
+To set up your desktop environment for development go to 
+Thali_CordovaPlugin/thali/install and run `jx npm run setupDesktop`.
 
 Sudo might be needed because this script installs a symbolic link into your global NPM directory. But if you can get 
 away without using it you will be much happier as using sudo for this (especially on OS/X) seems to cause permission 
@@ -138,8 +138,14 @@ the test definition, for example:
 +test.only('basic', function (t) {
 ```
 
-It is also possible to run one test file through the coordinator instead of
-all of the files using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`
+It is possible to run one test file through the coordinator instead of
+all of the files using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`.
+
+It is also possible to debug one of the participants in a coordinated test by
+starting the coordinated test from the command line but passing in the parameter
+`--waitForInstance`. The coordinator will then start one less instance when
+it runs with the assumption that one will then run `jx UnitTest_app.js` from
+inside an IDE to debug.
 
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.
