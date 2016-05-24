@@ -8,8 +8,8 @@ var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
-var urlsafeBase64 = require('urlsafe-base64');
 var thaliNotificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var urlSafeBase64 = require('urlsafe-base64');
 
 var gPskIdentity = 'I am me!';
 var gPskKey = new Buffer('I am a reasonable long string');
@@ -147,10 +147,8 @@ module.exports.pskGet = function(serverPort, path, pskId, pskKey, host) {
 
 module.exports.getSeqDoc = function(dbName, serverPort, pskId, pskKey,
                                     devicePublicKey, host) {
-  var path = '/db/' + dbName + '/_local/thali_' +
-    urlsafeBase64
-      .encode(thaliNotificationBeacons
-        .createPublicKeyHash(devicePublicKey));
+  var path = '/db/' + dbName + '/_local/' + thaliConfig.LOCAL_SEQ_POINT_PREFIX +
+      urlSafeBase64.encode(devicePublicKey);
   return module.exports.pskGet(serverPort, path, pskId, pskKey, host)
     .then(function (responseBody) {
       return JSON.parse(responseBody);

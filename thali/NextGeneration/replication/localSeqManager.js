@@ -3,8 +3,9 @@
 var logger = require('../../thalilogger')('localSeqManager');
 var Promise = require('lie');
 var thaliNotificationBeacons = require('../notification/thaliNotificationBeacons');
-var urlsafeBase64 = require('urlsafe-base64');
 var assert = require('assert');
+var urlSafeBase64 = require('urlsafe-base64');
+var thaliConfig = require('../thaliConfig');
 
 /**
  * Handles updating the remote sequence number for Thali's distributed
@@ -23,11 +24,11 @@ function LocalSeqManager(maximumUpdateInterval,
   this._maximumUpdateInterval = maximumUpdateInterval;
   this._remotePouchDB = remotePouchDB;
 
-  var ourPublicKeyHash =
-    urlsafeBase64.encode(
-      thaliNotificationBeacons.createPublicKeyHash(ourPublicKey));
+  var outBase64PublicKeyHash =
+    urlSafeBase64.encode(ourPublicKey);
 
-  this._localId = '_local/thali_' + ourPublicKeyHash;
+  this._localId = '_local/' + thaliConfig.LOCAL_SEQ_POINT_PREFIX +
+        outBase64PublicKeyHash;
 
   this._lastUpdateTime = 0;
   this._stopCalled = false;
