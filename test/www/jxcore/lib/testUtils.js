@@ -444,14 +444,38 @@ module.exports.createPskPouchDBRemote = function(serverPort, dbName,
                                                  pskId, pskKey, host) {
   var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
     '/db/' + dbName;
+
+  /**
+   * cert requires the use of key
+   * pfx caused a problem with serialize
+   * So I decided to use secureOptions with a string and that seems to work
+   *
+   * We can get collisions on agents a couple of ways. Originally I had just
+   * used the pskId but that won't work because if we discover the same
+   * peer over WiFi and Bluetooth they will have the same token with the same
+   * pskID/psk value. I could have used just the URL but that won't because
+   * if we are asking the same peer for beacons as well as pouchdb data then
+   * we can end up with the same address but two different pskId values. So
+   * the solutionw as to just use both.
+   *
+   * This all only works so long as securityOptions are ignored by the PSK
+   * code. So this is a hack but until PouchDB fixes their bug that they
+   * don't allow agent classes safely through options this is the only choice
+   * we have.
+   */
   return new LevelDownPouchDB(serverUrl,
     {
       ajax: {
+        agentClass: ForeverAgent.SSL,
         agentOptions: {
-          rejectUnauthorized: false,
+          keepAlive: true,
+          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+          maxSockets: Infinity,
+          maxFreeSockets: 256,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
           pskIdentity: pskId,
           pskKey: pskKey,
-          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS
+          secureOptions: pskId + serverUrl
         }
       }
     });

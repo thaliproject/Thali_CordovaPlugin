@@ -21,9 +21,6 @@ var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey = devicePublicPrivateKey.generateKeys();
 var TestPouchDB = testUtils.getLevelDownPouchDb();
 var router = null;
-var localSeqManager = null;
-
-return;
 
 if (!tape.coordinated) {
   return;
@@ -47,7 +44,6 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    localSeqManager.stop();
     thaliNotificationServer.stop()
       .then(function () {
         return thaliNotificationClient.stop();
@@ -192,6 +188,7 @@ test.only('Coordinated seq test', function (t) {
   runTestOnAllParticipants(t, router, thaliNotificationClient,
     thaliNotificationServer, ThaliMobile,
     function (notificationForUs) {
+      var localSeqManager;
       var lastSyncedSequenceNumber = null;
       return httpTester.getSeqDoc(dbName, notificationForUs.portNumber,
                            notificationForUs.pskIdentifyField,
@@ -223,9 +220,13 @@ test.only('Coordinated seq test', function (t) {
         })
         .then(function () {
           ++lastSyncedSequenceNumber;
-          localSeqManager.update(lastSyncedSequenceNumber);
+          var firstCall = localSeqManager.update(lastSyncedSequenceNumber);
           ++lastSyncedSequenceNumber;
-          return localSeqManager.update(lastSyncedSequenceNumber);
+          var secondCall = localSeqManager.update(lastSyncedSequenceNumber);
+          return firstCall
+            .then(function () {
+              return secondCall;
+            });
         })
         .then(function () {
           return httpTester
@@ -234,6 +235,19 @@ test.only('Coordinated seq test', function (t) {
                                notificationForUs.pskIdentifyField,
                                notificationForUs.psk, devicePublicKey,
                                notificationForUs.hostAddress);
+        })
+        .catch(function (err) {
+          localSeqManager.stop();
+          return Promise.reject(err);
+        })
+        .then(function () {
+          localSeqManager.stop();
         });
+    })
+    .catch(function (err) {
+      t.fail('We failed - ' + err);
+    })
+    .then(function () {
+      t.end();
     });
 });
