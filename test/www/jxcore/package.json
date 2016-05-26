@@ -36,7 +36,7 @@
     "node-uuid": "1.4.7",
     "pouchdb": "5.3.2",
     "proxyquire": "1.7.4",
-    "randomstring": "1.0.7",
+    "randomstring": "1.1.5",
     "request": "2.64.0",
     "request-promise": "0.4.3",
     "sinon": "1.17.3",
