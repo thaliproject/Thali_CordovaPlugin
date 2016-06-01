@@ -1,6 +1,6 @@
 #!/bin/sh
 
-###  START - JXcore Test Server --------.............................
+### START - JXcore Test Server --------.............................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -51,7 +51,7 @@ RUN_IN_CI=$?
 if [ $RUN_IN_CI == 0 ]
 then
   # Make sure build works with the latest cordova release
-  jx npm update -g cordova;ERROR_ABORT
+  #jx npm update -g cordova;ERROR_ABORT
 fi
 
 # Print the Cordova version for debugging purposes
