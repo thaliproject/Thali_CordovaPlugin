@@ -48,11 +48,11 @@ fi
 hash CIGIVEMEMYIP.sh 2>/dev/null
 RUN_IN_CI=$?
 
-#if [ $RUN_IN_CI == 0 ]
-#then
-#  #  Make sure build works with the latest cordova release
-#  jx npm update -g cordova;ERROR_ABORT
-#fi
+if [ $RUN_IN_CI == 0 ]
+then
+  # Make sure build works with the latest cordova release
+  jx npm update -g cordova;ERROR_ABORT
+fi
 
 # Print the Cordova version for debugging purposes
 # and to make sure Cordova is installed
@@ -65,7 +65,7 @@ echo "MC after setup desktop";ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
 #jx npm test;ERROR_ABORT
 #jx npm run test-meta;ERROR_ABORT
-#jx npm run test-coordinated;ERROR_ABORT
+jx npm run test-coordinated;ERROR_ABORT
 echo "MC after coordinated";ERROR_ABORT
 
 # Verify that docs can be generated
