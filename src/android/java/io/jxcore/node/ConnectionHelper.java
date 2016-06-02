@@ -31,7 +31,7 @@ public class ConnectionHelper
 
     public static final int NO_PORT_NUMBER = 0;
     private static final String SERVICE_TYPE = "Cordovap2p._tcp";
-    private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66"; // "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
+    private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
     private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
     private static final String BLUETOOTH_NAME = "Thali_Bluetooth";
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);

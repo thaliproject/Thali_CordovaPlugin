@@ -108,8 +108,7 @@ class StreamCopyingThread extends Thread {
         long totalNumberOfBytesWritten = 0;
 
         boolean isFlushing = false;
-        boolean isDone = false;
-        String errorMessage = null;
+        boolean isInputStreamDone = false;
 
         try {
             while (!mDoStop && (numberOfBytesRead = mInputStream.read(buffer)) != -1) {
@@ -132,18 +131,12 @@ class StreamCopyingThread extends Thread {
                     mListener.onStreamCopySucceeded(this, numberOfBytesRead);
                 }
             }
-
-            if (numberOfBytesRead == -1 && !mDoStop) {
-                Log.d(TAG, "The end of the stream has been reached (thread ID: "
-                        + getId() + ", thread name: " + mThreadName + ")");
-                isDone = true;
-            }
         } catch (IOException e) {
             if (!mDoStop) {
+                String errorMessage;
+
                 if (isFlushing) {
                     errorMessage = "Failed to flush the output stream";
-                } else if (numberOfBytesRead == -1) {
-                    errorMessage = "Failed to read from the input stream";
                 } else {
                     errorMessage = "Failed to write to the output stream";
                 }
@@ -151,15 +144,18 @@ class StreamCopyingThread extends Thread {
                 Log.e(TAG, errorMessage + " (thread ID: " + getId() + ", thread name: "
                         + mThreadName + "): " + e.getMessage());
                 errorMessage += ": " + e.getMessage();
+                mListener.onStreamCopyError(this, errorMessage);
             }
         }
 
-        if (isDone) {
-            mListener.onStreamCopyingThreadDone(this);
+        if (numberOfBytesRead == -1 && !mDoStop) {
+            Log.d(TAG, "The end of the input stream has been reached (thread ID: "
+                    + getId() + ", thread name: " + mThreadName + ")");
+            isInputStreamDone = true;
         }
 
-        if (errorMessage != null) {
-            mListener.onStreamCopyError(this, errorMessage);
+        if (isInputStreamDone) {
+            mListener.onStreamCopyingThreadDone(this);
         }
 
         Log.d(TAG, "Exiting thread (ID: " + getId() + ", name: " + mThreadName
@@ -169,18 +165,12 @@ class StreamCopyingThread extends Thread {
     }
 
     /**
-     * Stops the thread.
+     * Stops the thread and closes the streams, if not closed already.
      */
-    public void close() {
+    public synchronized void close() {
         Log.i(TAG, "close: Thread ID: " + getId());
         mDoStop = true;
-        closeStreams();
-    }
 
-    /**
-     * Closes the input and the output stream.
-     */
-    public synchronized void closeStreams() {
         if (!mIsClosed) {
             try {
                 mInputStream.close();
