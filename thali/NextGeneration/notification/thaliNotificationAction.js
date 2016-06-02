@@ -221,7 +221,7 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
  * function is called.
  *
  * It emits the event to listeners, aborts potentially ongoing
- * HTTP client request and resolves or rejects the promise
+ * HTTP client requests and resolves or rejects the promise
  * that was returned by the start function call.
  *
  * @private
@@ -244,7 +244,7 @@ ThaliNotificationAction.prototype._complete = function (resolution,
 
     // Sets our state to KILLED now that we are done
     ThaliNotificationAction.super_.prototype.kill.call(this);
-    
+
     this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
       this.getPeerIdentifier(), resolution, beaconDetails);
 

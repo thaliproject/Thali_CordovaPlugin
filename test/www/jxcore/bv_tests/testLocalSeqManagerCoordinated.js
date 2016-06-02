@@ -118,6 +118,7 @@ function runTestOnAllParticipants(t, router, thaliNotificationClient,
       }
 
       completed = true;
+      clearTimeout(timerCancel);
       resolve();
     }
 
@@ -129,9 +130,14 @@ function runTestOnAllParticipants(t, router, thaliNotificationClient,
       ++participantCount[publicKey];
       if (participantCount[publicKey] >= MAX_FAILURE) {
         completed = true;
+        clearTimeout(timerCancel);
         reject(err);
       }
     }
+
+    var timerCancel = setTimeout(function () {
+      reject(new Error('Test timed out'));
+    }, 5 * 60 * 1000);
 
     thaliNotificationClient.on(
       ThaliNotificationClient.Events.PeerAdvertisesDataForUs,

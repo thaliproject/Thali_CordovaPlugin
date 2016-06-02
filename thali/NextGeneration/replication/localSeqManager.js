@@ -107,7 +107,7 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
  * @param {boolean} immediate If true we should update the sequence number
  * immediately even if the normally required wait interval hasn't passed
  * @returns {Promise<Null|Error>} Returns null if the updated request is
- * succesfull otherwise an error.
+ * successful otherwise an error.
  */
 LocalSeqManager.prototype.update = function (seq, immediate) {
   var self = this;

@@ -11,9 +11,15 @@ var https = require('https');
 var logger = require('thali/thalilogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
-
+var expressPouchdb = require('express-pouchdb');
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var express = require('express');
+var fs = require('fs-extra-promise');
+
+var pskId = 'yo ho ho';
+var pskKey = new Buffer('Nothing going on here');
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
@@ -240,6 +246,7 @@ module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
 };
 
+
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
   var randomPouchDBName = randomString.generate({
     length: 40,
@@ -248,6 +255,17 @@ module.exports.getRandomlyNamedTestPouchDBInstance = function () {
   return new LevelDownPouchDB(randomPouchDBName);
 };
 
+module.exports.getPouchDBFactoryInRandomDirectory = function () {
+  var directory = path.join(dbPath, randomString.generate({
+    length: 20,
+    charset: 'alphabetic'
+  }));
+  fs.ensureDirSync(directory);
+  return PouchDB.defaults({
+    db: require('leveldown-mobile'),
+    prefix: directory
+  });
+};
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
   notificationBeacons.EXPIRATION_SIZE;
@@ -440,28 +458,14 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
   });
 };
 
-module.exports.createPskPouchDBRemote = function(serverPort, dbName,
+module.exports.createPskPouchDBRemote = function (serverPort, dbName,
                                                  pskId, pskKey, host) {
   var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
     '/db/' + dbName;
 
   /**
-   * cert requires the use of key
-   * pfx caused a problem with serialize
-   * So I decided to use secureOptions with a string and that seems to work
-   *
-   * We can get collisions on agents a couple of ways. Originally I had just
-   * used the pskId but that won't work because if we discover the same
-   * peer over WiFi and Bluetooth they will have the same token with the same
-   * pskID/psk value. I could have used just the URL but that won't because
-   * if we are asking the same peer for beacons as well as pouchdb data then
-   * we can end up with the same address but two different pskId values. So
-   * the solutionw as to just use both.
-   *
-   * This all only works so long as securityOptions are ignored by the PSK
-   * code. So this is a hack but until PouchDB fixes their bug that they
-   * don't allow agent classes safely through options this is the only choice
-   * we have.
+   * See the notes in thaliReplicationPeerAction.start for why the below
+   * is here and why it's wrong and should use agent instead but can't.
    */
   return new LevelDownPouchDB(serverUrl,
     {
@@ -481,11 +485,33 @@ module.exports.createPskPouchDBRemote = function(serverPort, dbName,
     });
 };
 
-module.exports.validateCombinedResult = function(combinedResult) {
+module.exports.validateCombinedResult = function (combinedResult) {
   if (combinedResult.wifiResult !== null ||
     combinedResult.nativeResult !== null) {
     return Promise.reject(new Error('Had a failure in ThaliMobile.start - ' +
       JSON.stringify(combinedResult)));
   }
   return Promise.resolve();
+};
+
+module.exports.setUpServer = function (testBody, appConfig) {
+  var app = express();
+  appConfig && appConfig(app);
+  app.use('/db', expressPouchdb(LevelDownPouchDB, {mode: 'minimumForPouchDB'}));
+  var testCloseAllServer = makeIntoCloseAllServer(https.createServer(
+    {
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskCallback : function (id) {
+        return id === pskId ? pskKey : null;
+      }
+    }, app));
+  testCloseAllServer.listen(0, function () {
+    var serverPort = testCloseAllServer.address().port;
+    var randomDBName = randomString.generate(30);
+    var remotePouchDB =
+      module.exports.createPskPouchDBRemote(serverPort, randomDBName, pskId,
+                                            pskKey);
+    testBody(serverPort, randomDBName, remotePouchDB);
+  });
+  return testCloseAllServer;
 };
