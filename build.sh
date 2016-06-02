@@ -48,11 +48,11 @@ fi
 hash CIGIVEMEMYIP.sh 2>/dev/null
 RUN_IN_CI=$?
 
-if [ $RUN_IN_CI == 0 ]
-then
-  # Make sure build works with the latest cordova release
-  jx npm update -g cordova;ERROR_ABORT
-fi
+#if [ $RUN_IN_CI == 0 ]
+#then
+#  # Make sure build works with the latest cordova release
+#  jx npm update -g cordova;ERROR_ABORT
+#fi
 
 # Print the Cordova version for debugging purposes
 # and to make sure Cordova is installed
