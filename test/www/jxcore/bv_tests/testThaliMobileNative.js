@@ -441,7 +441,7 @@ function getConnectionToOnePeerAndTest(t, connectTest) {
           runningTest = false;
           return;
         }
-        
+
         connectTest(connectionCallback.listeningPort, currentTestPeer);
       })
       .catch(function () {
@@ -678,8 +678,8 @@ test('Can shift large amounts of data', function (t) {
   });
 });
 
-function killSkeleton(t, createServerWriteSuccessHandler, 
-                      getMessageAndThenHandler, 
+function killSkeleton(t, createServerWriteSuccessHandler,
+                      getMessageAndThenHandler,
                       connectToListeningPortCloseHandler) {
   var testMessage = new Buffer('I am a test message!');
   var closeMessage = new Buffer('I am closing down now!');
@@ -726,7 +726,7 @@ function killSkeleton(t, createServerWriteSuccessHandler,
 
     connectToListeningPort.on('close', function () {
       t.ok(gotCloseMessage, 'We got the close message and we are closed');
-      connectToListeningPortCloseHandler(connection, testMessage, 
+      connectToListeningPortCloseHandler(connection, testMessage,
                                           closeMessage);
     });
   }
@@ -893,7 +893,13 @@ test('We do not emit peerAvailabilityChanged events until one of the start ' +
 function QuitSignal() {
   this.raised = false;
   this.timeOuts = [];
+  this.cancelCalls = [];
 }
+
+QuitSignal.prototype.addCancelCall = function (cancelCall) {
+  assert(!this.raised, 'No calling addCancelCall after signal is raised');
+  this.cancelCalls.push(cancelCall);
+};
 
 QuitSignal.prototype.addTimeout = function (timeOut, successCb) {
   assert(!this.raised, 'No calling addTimeout after signal is raised');
@@ -911,10 +917,16 @@ QuitSignal.prototype.removeTimeout = function (timeOut) {
 };
 
 QuitSignal.prototype.raiseSignal = function () {
+  if (this.raised) {
+    return;
+  }
   this.raised = true;
   this.timeOuts.forEach(function (timeOutStruct) {
     clearTimeout(timeOutStruct.timeOut);
     timeOutStruct.successCb(null, null);
+  });
+  this.cancelCalls.forEach(function (cancelCall) {
+    cancelCall();
   });
 };
 
@@ -1068,16 +1080,15 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
   });
 }
 
-function clientRound(t, roundNumber, boundListener) {
+function clientRound(t, roundNumber, boundListener, quitSignal) {
   var peersWeAreOrHaveResolved = {};
   var peersWeSucceededWith = [];
-  var quitSignal = new QuitSignal();
   return new Promise(function (resolve, reject) {
     boundListener.listener = function (peers) {
       if (peersWeSucceededWith.length === t.participants.length - 1) {
         return;
       }
-      
+
       var peerPromises = [];
       peers.forEach(function (peer) {
         if (peersWeAreOrHaveResolved[peer.peerIdentifier]) {
@@ -1152,9 +1163,12 @@ function validateRequest(t, roundNumber, parsedMessage) {
   return protocolResult.SUCCESS;
 }
 
-function serverRound(t, roundNumber, pretendLocalMux) {
+function serverRound(t, roundNumber, pretendLocalMux, quitSignal) {
   var validPeersForThisRound = [];
   return new Promise(function (resolve, reject) {
+    quitSignal.addCancelCall(function () {
+      reject();
+    });
     var connectionListener = function (socket) {
       connectionDiesClean(t, socket);
       getMessageByLength(socket, messageLength())
@@ -1167,6 +1181,7 @@ function serverRound(t, roundNumber, pretendLocalMux) {
             socket.end();
           });
           switch (validationResult) {
+            case protocolResult.WRONG_SYNTAX: // Usually connection died
             case protocolResult.WRONG_TEST:
             case protocolResult.WRONG_ME:
             case protocolResult.WRONG_GEN: {
@@ -1182,7 +1197,7 @@ function serverRound(t, roundNumber, pretendLocalMux) {
               });
               return;
             }
-            default: { // This includes WRONG_SYNTAX
+            default: {
               return reject(new Error('validationResult code ' +
                 validationResult));
             }
@@ -1223,6 +1238,8 @@ function setUpPretendLocalMux() {
 
 test('Test updating advertising and parallel data transfer', function (t) {
   var pretendLocalMux = setUpPretendLocalMux();
+  var clientQuitSignal = new QuitSignal();
+  var serverQuitSignal = new QuitSignal();
 
   /*
    * Lets us change our listeners for incoming peer events between rounds.
@@ -1232,17 +1249,28 @@ test('Test updating advertising and parallel data transfer', function (t) {
     listener: null
   };
 
-  Promise.all([clientRound(t, 0, boundListener),
-               serverRound(t, 0, pretendLocalMux)])
+  var timeoutId = setTimeout(function () {
+    clientQuitSignal.raiseSignal();
+    serverQuitSignal.raiseSignal();
+    t.fail('Test timed out');
+    t.end();
+  }, 60 * 1000);
+
+  Promise.all([clientRound(t, 0, boundListener, clientQuitSignal),
+               serverRound(t, 0, pretendLocalMux, serverQuitSignal)])
     .then(function () {
       logger.debug('We made it through round one');
-      return Promise.all([clientRound(t, 1, boundListener),
-                          serverRound(t, 1, pretendLocalMux)]);
+      clientQuitSignal = new QuitSignal();
+      serverQuitSignal = new QuitSignal();
+      return Promise.all([clientRound(t, 1, boundListener, clientQuitSignal),
+                          serverRound(t, 1, pretendLocalMux,
+                                      serverQuitSignal)]);
     })
     .catch(function (err) {
       t.fail('Got error ' + err);
     })
     .then(function () {
+      clearTimeout(timeoutId);
       t.end();
     });
 
