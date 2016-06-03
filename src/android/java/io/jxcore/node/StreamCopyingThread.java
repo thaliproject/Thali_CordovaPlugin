@@ -49,6 +49,7 @@ class StreamCopyingThread extends Thread {
     private final String mThreadName;
     private int mBufferSize = DEFAULT_BUFFER_SIZE;
     private boolean mNotifyStreamCopyingProgress = false;
+    private boolean mIsInputStreamDone = false;
     private boolean mDoStop = false;
     private boolean mIsClosed = false;
 
@@ -93,8 +94,15 @@ class StreamCopyingThread extends Thread {
     }
 
     /**
+     * @return True, if the input stream is done (the end of the stream was reached).
+     */
+    public boolean getIsDone() {
+        return mIsInputStreamDone;
+    }
+
+    /**
      * From Thread.
-     * <p/>
+     *
      * Keeps on copying the content of the input stream to the output stream.
      */
     @Override
@@ -108,7 +116,6 @@ class StreamCopyingThread extends Thread {
         long totalNumberOfBytesWritten = 0;
 
         boolean isFlushing = false;
-        boolean isInputStreamDone = false;
 
         try {
             while (!mDoStop && (numberOfBytesRead = mInputStream.read(buffer)) != -1) {
@@ -151,10 +158,10 @@ class StreamCopyingThread extends Thread {
         if (numberOfBytesRead == -1 && !mDoStop) {
             Log.d(TAG, "The end of the input stream has been reached (thread ID: "
                     + getId() + ", thread name: " + mThreadName + ")");
-            isInputStreamDone = true;
+            mIsInputStreamDone = true;
         }
 
-        if (isInputStreamDone) {
+        if (mIsInputStreamDone) {
             mListener.onStreamCopyingThreadDone(this);
         }
 
