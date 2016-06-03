@@ -66,7 +66,8 @@ util.inherits(ThaliReplicationPeerAction, ThaliPeerAction);
 /**
  * The actionType we will use when calling the base class's constructor.
  *
- * @private
+ * @public
+ * @readonly
  * @type {string}
  */
 ThaliReplicationPeerAction.actionType = 'ReplicationAction';
@@ -75,7 +76,8 @@ ThaliReplicationPeerAction.actionType = 'ReplicationAction';
  * The number of seconds we will wait for an existing live replication to have
  * no changes before we terminate it.
  *
- * @private
+ * @public
+ * @readonly
  * @type {number}
  */
 ThaliReplicationPeerAction.maxIdlePeriodSeconds = 30;
@@ -85,7 +87,8 @@ ThaliReplicationPeerAction.maxIdlePeriodSeconds = 30;
  * remote machine. See
  * http://thaliproject.org/ReplicationAcrossDiscoveryProtocol/.
  *
- * @private
+ * @public
+ * @readonly
  * @type {number}
  */
 ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds = 200;
@@ -127,6 +130,8 @@ ThaliReplicationPeerAction.prototype._complete =
     this._refreshTimerManager = null;
     this._cancelReplication && this._cancelReplication.cancel();
     this._cancelReplication = null;
+    this._localSeqManager && this._localSeqManager.stop();
+    this._localSeqManager = null;
     if (!errorArray || errorArray.length === 0) {
       return this._resolveStart();
     }
@@ -256,8 +261,6 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
             secureOptions: self.getPskIdentity() + remoteUrl
           }
         },
-        live: true,
-        retry: true,
         skip_setup: true// jscs:ignore requireCamelCaseOrUpperCaseIdentifiers
       };
 
@@ -269,9 +272,9 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
         self._resolveStart = resolve;
         self._rejectStart = reject;
         self._replicationTimer();
-        self._cancelReplication = remoteDB.replicate.to(self._dbName);
-        self._cancelReplication
-          .on('paused', function (err) {
+        self._cancelReplication = remoteDB.replicate.to(self._dbName, {
+          live: true
+        }).on('paused', function (err) {
             logger.debug('Got paused with ' + err);
           })
           .on('active', function () {

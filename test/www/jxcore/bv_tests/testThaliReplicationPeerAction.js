@@ -16,6 +16,7 @@ var httpTester = require('../lib/httpTester');
 var express = require('express');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/ThaliReplicationPeerAction');
 var thaliMobile = require('thali/NextGeneration/thaliMobile');
+var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey = devicePublicPrivateKey.generateKeys();
@@ -47,8 +48,6 @@ var test = tape({
   }
 });
 
-
-
 /*
   Replication Timer:
     Start a replication that does nothing and check that we time out in a
@@ -60,13 +59,12 @@ var test = tape({
     - Once replication has started, just kill the connection
     - Test connection failure after replication has successfully started sicne
       retry means we shouldn't see that error which is bad :(
+    - You need to force an ETIMEDOUT error on a connection because it seems to
+      be triggering an unhandledRejection in PouchDB.
 
     sequence manager
       Start a replication that replicates nothing and make sure we do not
         update
-      Start a replication that replicates something, confirm that update
-        is called for each record
-
  */
 
 function failedRequest(t, serverPort, catchHandler) {
@@ -168,7 +166,7 @@ Have a change detector to see docs come in and when we have them all end
 function createDocs(pouchDB, numberDocs) {
   var promises = [];
   var docs = [];
-  for(var i = 0; i < numberDocs; ++i) {
+  for (var i = 0; i < numberDocs; ++i) {
     var doc = {
       _id: '' + i,
       title: 'something ' + i
@@ -179,10 +177,10 @@ function createDocs(pouchDB, numberDocs) {
   return Promise.all(promises)
     .then(function () {
       return docs;
-    })
+    });
 }
 
-function matchDocsInChanges(pouchDB, docs) {
+function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
   if (docs.length <= 0) {
     throw new Error('bad docs length');
   }
@@ -191,7 +189,9 @@ function matchDocsInChanges(pouchDB, docs) {
     var cancel = pouchDB.changes({
       since: 'now',
       live: true,
+      // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
       include_docs: true
+      // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
     }).on('change', function (change) {
       if (change.doc._id !== docs[docsIndex]._id ||
           change.doc.title !== docs[docsIndex].title) {
@@ -200,23 +200,31 @@ function matchDocsInChanges(pouchDB, docs) {
       }
       ++docsIndex;
       if (docsIndex === docs.length) {
-        cancel.cancel();
-        resolve();
+        return cancel.cancel();
+      }
+
+      if (docsIndex > docs.length) {
+        reject('Bad count');
       }
     }).on('complete', function () {
-      // No action
+      // Give sequence updater time to run before killing everything
+      setTimeout(function () {
+        thaliPeerReplicationAction.kill();
+        resolve();
+      }, ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds);
     }).on ('error', function (err) {
       reject('got error ' + err);
     });
   });
 }
 
-test.only('Make sure docs replicate', function (t) {
+test('Make sure docs replicate', function (t) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
                                                        remotePouchDB) {
     var thaliReplicationPeerAction = null;
     var DifferentDirectoryPouch =
       testUtils.getPouchDBFactoryInRandomDirectory();
+    var localPouchDB = new DifferentDirectoryPouch(randomDBName);
     createDocs(remotePouchDB, 10)
       .then(function (docs) {
         var notificationForUs = {
@@ -234,18 +242,81 @@ test.only('Make sure docs replicate', function (t) {
             DifferentDirectoryPouch, randomDBName,
             devicePublicKey);
         promises.push(thaliReplicationPeerAction.start(httpAgentPool));
-        promises.push(matchDocsInChanges(
-          new DifferentDirectoryPouch(randomDBName), docs));
+        promises.push(matchDocsInChanges(localPouchDB, docs,
+                      thaliReplicationPeerAction));
         return Promise.all(promises);
       })
       .then(function () {
-        t.pass('all tests passed');
+        return remotePouchDB.info();
+      })
+      .then(function (info) {
+        return new Promise(function (resolve, reject) {
+          httpTester.validateSeqNumber(t, randomDBName, serverPort,
+            // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+            info.update_seq, pskId, pskKey, devicePublicKey)
+            // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+            .then(function () {
+              t.pass('All tests passed!');
+              resolve();
+            })
+            .catch(function (err) {
+              reject(err);
+            });
+        });
       })
       .catch(function (err) {
         t.fail('failed with ' + err);
       })
       .then(function () {
-        thaliReplicationPeerAction && thaliReplicationPeerAction.kill();
+        t.end();
+      });
+  });
+});
+
+test.only('Make sure we time out', function (t) {
+  testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName)
+  {
+    var thaliReplicationPeerAction = null;
+    var notificationForUs = {
+      keyId: new Buffer('abcdefg'),
+      portNumber: serverPort,
+      hostAddress: '127.0.0.1',
+      pskIdentifyField: pskId,
+      psk: pskKey,
+      suggestedTCPTimeout: 10000,
+      connectionType: thaliMobile.connectionTypes.TCP_NATIVE
+    };
+    // Using a different directory really shouldn't make any difference
+    // to this particular test but I'm being paranoid
+    var DifferentDirectoryPouch =
+      testUtils.getPouchDBFactoryInRandomDirectory();
+    var originalTimeout = ThaliReplicationPeerAction.maxIdlePeriodSeconds;
+    ThaliReplicationPeerAction.maxIdlePeriodSeconds = 2;
+    thaliReplicationPeerAction =
+      new ThaliReplicationPeerAction(notificationForUs,
+        DifferentDirectoryPouch, randomDBName,
+        devicePublicKey);
+    thaliReplicationPeerAction.start(httpAgentPool)
+      .then(function () {
+        t.fail('We should have failed with time out.');
+      })
+      .catch(function (err) {
+        t.equal(thaliReplicationPeerAction.getActionState(),
+                PeerAction.actionState.KILLED,
+                'action should be killed');
+        t.equal(err.message, 'No activity time out', 'Error should be timed ' +
+          'out');
+        return httpTester.getSeqDoc(randomDBName, serverPort, pskId, pskKey,
+                                    devicePublicKey);
+      })
+      .then(function () {
+        t.fail('The seq request should have failed');
+      })
+      .catch(function (err) {
+        t.equal(err.statusCode, 404, 'No doc found');
+      })
+      .then(function () {
+        ThaliReplicationPeerAction.maxIdlePeriodSeconds = originalTimeout;
         t.end();
       });
   });
