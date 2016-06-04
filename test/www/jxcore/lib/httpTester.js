@@ -153,15 +153,22 @@ module.exports.getSeqDoc = function(dbName, serverPort, pskId, pskKey,
     .then(function (responseBody) {
       return JSON.parse(responseBody);
     });
-}
+};
 
 module.exports.validateSeqNumber = function (t, dbName, serverPort, seq,
                                              pskId, pskKey, devicePublicKey,
-                                             host) {
+                                             host, retries) {
   return module.exports.getSeqDoc(dbName, serverPort, pskId, pskKey,
                                   devicePublicKey, host)
     .then(function (pouchResponse) {
       t.equal(pouchResponse.lastSyncedSequenceNumber, seq);
       return pouchResponse;
+    })
+    .catch(function (err) {
+      if (retries && retries > 0) {
+        return module.exports.validateSeqNumber(t, dbName, serverPort, seq,
+          pskId, pskKey, devicePublicKey, host, retries - 1);
+      }
+      return Promise.reject(err);
     });
 };

@@ -2,31 +2,25 @@
 
 var tape = require('../lib/thaliTape');
 var net = require('net');
-var thaliMobile = require('thali/NextGeneration/thaliMobile');
-var expressPouchdb = require('express-pouchdb');
 var crypto = require('crypto');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var Promise = require('lie');
 var testUtils = require('../lib/testUtils');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var https = require('https');
-var randomString = require('randomstring');
-var thaliNotificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var httpTester = require('../lib/httpTester');
-var express = require('express');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/ThaliReplicationPeerAction');
 var thaliMobile = require('thali/NextGeneration/thaliMobile');
 var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey = devicePublicPrivateKey.generateKeys();
-var TestPouchDB = testUtils.getLevelDownPouchDb();
 var testCloseAllServer = null;
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 var thaliReplicationPeerAction = null;
 
-// This is currently ignored for reasons explained
+// BUGBUG: This is currently ignored for reasons explained
 // in thaliReplicationPeerAction.start
 var httpAgentPool = null;
 
@@ -47,25 +41,6 @@ var test = tape({
       });
   }
 });
-
-/*
-  Replication Timer:
-    Start a replication that does nothing and check that we time out in a
-      reasonable amount of time.
-    Start a replication that replicates something, confirm that replicationTimer
-      is called for each record and that we eventually time out.
-
-  Complete
-    - Once replication has started, just kill the connection
-    - Test connection failure after replication has successfully started sicne
-      retry means we shouldn't see that error which is bad :(
-    - You need to force an ETIMEDOUT error on a connection because it seems to
-      be triggering an unhandledRejection in PouchDB.
-
-    sequence manager
-      Start a replication that replicates nothing and make sure we do not
-        update
- */
 
 function failedRequest(t, serverPort, catchHandler) {
   var notificationForUs = {
@@ -209,7 +184,7 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
     }).on('complete', function () {
       // Give sequence updater time to run before killing everything
       setTimeout(function () {
-        thaliPeerReplicationAction.kill();
+        thaliPeerReplicationAction && thaliPeerReplicationAction.kill();
         resolve();
       }, ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds);
     }).on ('error', function (err) {
@@ -250,19 +225,13 @@ test('Make sure docs replicate', function (t) {
         return remotePouchDB.info();
       })
       .then(function (info) {
-        return new Promise(function (resolve, reject) {
-          httpTester.validateSeqNumber(t, randomDBName, serverPort,
-            // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
-            info.update_seq, pskId, pskKey, devicePublicKey)
-            // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
-            .then(function () {
-              t.pass('All tests passed!');
-              resolve();
-            })
-            .catch(function (err) {
-              reject(err);
-            });
-        });
+        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+          // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+          info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
+        // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+      })
+      .then(function () {
+        t.pass('All tests passed!');
       })
       .catch(function (err) {
         t.fail('failed with ' + err);
@@ -273,7 +242,7 @@ test('Make sure docs replicate', function (t) {
   });
 });
 
-test.only('Make sure we time out', function (t) {
+test('Do nothing and make sure we time out', function (t) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName)
   {
     var thaliReplicationPeerAction = null;
@@ -320,4 +289,115 @@ test.only('Make sure we time out', function (t) {
         t.end();
       });
   });
+});
+
+test('Do something and make sure we time out', function (t) {
+  testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
+                                                       remotePouchDB) {
+    var thaliReplicationPeerAction = null;
+    var DifferentDirectoryPouch =
+      testUtils.getPouchDBFactoryInRandomDirectory();
+    var localPouchDB = new DifferentDirectoryPouch(randomDBName);
+    var thaliReplicationPeerActionStartOutput = null;
+    var originalTimeout = ThaliReplicationPeerAction.maxIdlePeriodSeconds;
+    ThaliReplicationPeerAction.maxIdlePeriodSeconds = 2;
+    createDocs(remotePouchDB, 10)
+      .then(function (docs) {
+        var notificationForUs = {
+          keyId: new Buffer('abcdefg'),
+          portNumber: serverPort,
+          hostAddress: '127.0.0.1',
+          pskIdentifyField: pskId,
+          psk: pskKey,
+          suggestedTCPTimeout: 10000,
+          connectionType: thaliMobile.connectionTypes.TCP_NATIVE
+        };
+        thaliReplicationPeerAction =
+          new ThaliReplicationPeerAction(notificationForUs,
+            DifferentDirectoryPouch, randomDBName,
+            devicePublicKey);
+        thaliReplicationPeerActionStartOutput =
+          thaliReplicationPeerAction.start(httpAgentPool);
+        thaliReplicationPeerActionStartOutput
+          .catch(function () {
+            // So we don't get an unhandled rejection due a failure
+            // in something else
+          });
+        return matchDocsInChanges(localPouchDB, docs);
+      })
+      .then(function () {
+        return remotePouchDB.info();
+      })
+      .then(function (info) {
+        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+          // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+          info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
+        // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+      })
+      .catch(function (err) {
+        return Promise.reject(err);
+      })
+      .then(function () {
+        return thaliReplicationPeerActionStartOutput;
+      })
+      .then(function () {
+        t.fail('Didn\'t get timeout');
+      })
+      .catch(function (err) {
+        t.equal(thaliReplicationPeerAction.getActionState(),
+          PeerAction.actionState.KILLED,
+          'action should be killed');
+        t.equal(err.message, 'No activity time out', 'Error should be timed ' +
+          'out');
+      })
+      .then(function () {
+        ThaliReplicationPeerAction.maxIdlePeriodSeconds = originalTimeout;
+        t.end();
+      });
+  });
+});
+
+test('Start replicating and then catch error when server goes', function (t) {
+  var requestCount = 0;
+  function killServer(app) {
+    app.use('*', function (req, res, next) {
+      requestCount += 1;
+      if (requestCount > 5) {
+        return res.connection.destroy();
+      }
+      next();
+    });
+  }
+  testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
+                                                       remotePouchDB) {
+    var thaliReplicationPeerAction = null;
+    var DifferentDirectoryPouch =
+      testUtils.getPouchDBFactoryInRandomDirectory();
+    createDocs(remotePouchDB, 10)
+      .then(function () {
+        var notificationForUs = {
+          keyId: new Buffer('abcdefg'),
+          portNumber: serverPort,
+          hostAddress: '127.0.0.1',
+          pskIdentifyField: pskId,
+          psk: pskKey,
+          suggestedTCPTimeout: 10000,
+          connectionType: thaliMobile.connectionTypes.TCP_NATIVE
+        };
+        thaliReplicationPeerAction =
+          new ThaliReplicationPeerAction(notificationForUs,
+            DifferentDirectoryPouch, randomDBName,
+            devicePublicKey);
+        return thaliReplicationPeerAction.start(httpAgentPool);
+      })
+      .then(function () {
+        t.fail('Start should have failed');
+      })
+      .catch(function (err) {
+        t.ok(err.message.indexOf('socket hang up') === 0, 'socket hung up');
+      })
+      .then(function () {
+        t.end();
+      });
+  }, killServer);
 });
