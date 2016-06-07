@@ -147,7 +147,7 @@ test('Client to server request locally', function (t) {
       globals.targetDeviceKeyExchangeObjects[0]);
 
   notificationClient.on(
-    ThaliNotificationClient.Events.PeerAdvertisesDataForUs, function ( res) {
+    notificationClient.Events.PeerAdvertisesDataForUs, function ( res) {
 
       var secret = getPskIdToSecret(res.pskIdentifyField);
       t.ok(secret.compare(res.psk) === 0, 'secrets are equal');

@@ -162,7 +162,7 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
   var docsIndex = 0;
   return new Promise(function (resolve, reject) {
     var cancel = pouchDB.changes({
-      since: 'now',
+      since: 0,
       live: true,
       // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
       include_docs: true

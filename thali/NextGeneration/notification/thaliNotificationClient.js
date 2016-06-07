@@ -98,6 +98,17 @@ function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
 util.inherits(ThaliNotificationClient, EventEmitter);
 
 /**
+ * Fired whenever we discover a peer who is looking for us.
+ *
+ * @public
+ * @event module:thaliNotificationClient.event:peerAdvertisesDataForUs
+ * @type {PeerAdvertisesDataForUs}
+ */
+ThaliNotificationClient.prototype.Events = {
+  PeerAdvertisesDataForUs: 'peerAdvertisesDataForUs'
+};
+
+/**
  * A dictionary used to track the state of peers we have received notifications
  * about from {@link module:thaliMobile}.
  *
@@ -318,7 +329,7 @@ ThaliNotificationClient.prototype._resolved =
           entry.notificationAction.getConnectionType()
         );
 
-        this.emit(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+        this.emit(this.Events.PeerAdvertisesDataForUs,
           peerAdvertises);
 
         break;
@@ -392,17 +403,6 @@ ThaliNotificationClient.prototype._resolved =
  */
 ThaliNotificationClient.RETRY_TIMEOUTS =
   [100, 300, 600, 1200, 2400 , 4800, 9600];
-
-/**
- * Fired whenever we discover a peer who is looking for us.
- *
- * @public
- * @event module:thaliNotificationClient.event:peerAdvertisesDataForUs
- * @type {PeerAdvertisesDataForUs}
- */
-ThaliNotificationClient.Events = {
-  PeerAdvertisesDataForUs: 'peerAdvertisesDataForUs'
-};
 
 ThaliNotificationClient.Errors = {
   PEERPOOL_NOT_NULL : 'thaliPeerPoolInterface must not be null',

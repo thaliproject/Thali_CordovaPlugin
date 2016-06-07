@@ -515,3 +515,133 @@ module.exports.setUpServer = function (testBody, appConfig) {
   });
   return testCloseAllServer;
 };
+
+var MAX_FAILURE = 10;
+
+module.exports.turnParticipantsIntoBufferArray = function (t, devicePublicKey) {
+  var publicKeys = [];
+  t.participants.forEach(function (participant) {
+    var publicKey = new Buffer(participant.data);
+    if (Buffer.compare(publicKey, devicePublicKey) !== 0) {
+      publicKeys.push(publicKey);
+    }
+  });
+  return publicKeys;
+};
+
+module.exports.runTestOnAllParticipants = function (t, router,
+                                                    thaliNotificationClient,
+                                                    thaliNotificationServer,
+                                                    ThaliMobile,
+                                                    devicePublicKey,
+                                                    testToRun) {
+  var publicKeys =
+    module.exports.turnParticipantsIntoBufferArray(t, devicePublicKey);
+
+  return new Promise(function (resolve, reject) {
+    var completed = false;
+    /*
+     Each participant is recorded via their public key
+     If the value is -1 then they are done
+     If the value is 0 then no test has completed
+     If the value is greater than 0 then that is how many failures there have
+     been.
+     */
+    var participantCount = {};
+
+    publicKeys.forEach(function (participantPublicKey) {
+      participantCount[participantPublicKey] = 0;
+    });
+
+    var participantTask = {};
+
+    publicKeys.forEach(function (participantPublicKey) {
+      participantTask[participantPublicKey] = Promise.resolve();
+    });
+
+    function success(publicKey) {
+      if (completed) {
+        return;
+      }
+
+      participantCount[publicKey] = -1;
+
+      var participantKeys =
+        Object.getOwnPropertyNames(participantCount);
+      for (var i = 0; i < participantKeys.length; ++i) {
+        if (participantCount[participantKeys[i]] !== -1) {
+          return;
+        }
+      }
+
+      completed = true;
+      clearTimeout(timerCancel);
+      resolve();
+    }
+
+    function fail(publicKey, err) {
+      logger.debug('Got an err - ' + JSON.stringify(err));
+      if (completed || participantCount[publicKey] === -1) {
+        return;
+      }
+      ++participantCount[publicKey];
+      if (participantCount[publicKey] >= MAX_FAILURE) {
+        completed = true;
+        clearTimeout(timerCancel);
+        reject(err);
+      }
+    }
+
+    var timerCancel = setTimeout(function () {
+      reject(new Error('Test timed out'));
+    }, 5 * 60 * 1000);
+
+    thaliNotificationClient.on(
+      thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+      function (notificationForUs) {
+        if (completed) {
+          return;
+        }
+        participantTask[notificationForUs.keyId]
+          .then(function () {
+            if (!completed) {
+              participantTask[notificationForUs.keyId] =
+                testToRun(notificationForUs)
+                  .then(function () {
+                    success(notificationForUs.keyId);
+                  })
+                  .catch(function (err) {
+                    fail(notificationForUs.keyId, err);
+                    return Promise.resolve();
+                  });
+              return participantTask[notificationForUs.keyId];
+            }
+          });
+      });
+
+    thaliNotificationClient.start(publicKeys);
+    return thaliNotificationServer.start(publicKeys)
+      .then(function () {
+        return ThaliMobile.start(router,
+          thaliNotificationServer.getPskIdToSecret());
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      })
+      .then(function () {
+        return ThaliMobile.startListeningForAdvertisements();
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      })
+      .then(function () {
+        return ThaliMobile.startUpdateAdvertisingAndListening();
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      })
+      .catch(function (err) {
+        reject(err);
+      });
+  });
+};

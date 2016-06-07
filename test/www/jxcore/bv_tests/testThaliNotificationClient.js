@@ -248,7 +248,7 @@ test('Resolves an action locally', function (t) {
 
   notificationClient.start([globals.sourcePublicKey]);
 
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
     function ( res) {
       t.equals(
         res.hostAddress,
@@ -294,7 +294,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
 
   notificationClient.start([globals.sourcePublicKey]);
 
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
     function ( res) {
       t.equals(
         res.hostAddress,
@@ -411,7 +411,7 @@ test('hostaddress is removed when the action is running. ', function (t) {
 
   notificationClient.start([globals.sourcePublicKey]);
 
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
     function () {
       t.fail('This should never happen when action is getting killed' +
         'because of the hostname is removed');

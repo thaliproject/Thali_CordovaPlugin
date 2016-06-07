@@ -104,7 +104,7 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
  * to true.
  *
  * @param {number} seq Value to update lastSyncedSequenceNumber to
- * @param {boolean} immediate If true we should update the sequence number
+ * @param {boolean} [immediate] If true we should update the sequence number
  * immediately even if the normally required wait interval hasn't passed
  * @returns {Promise<Null|Error>} Returns null if the updated request is
  * successful otherwise an error.

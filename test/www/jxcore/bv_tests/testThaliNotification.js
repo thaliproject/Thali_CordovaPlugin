@@ -244,7 +244,7 @@ test('Client to server request coordinated', function (t) {
   globals.expressRouter.get(HELLO_PATH,
     helloWorld);
 
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
       var msg = 'PeerAdvertisesDataForUs:' + res.connectionType +
         ', '+res.hostAddress+', ' + res.hostAddress + ', '+
