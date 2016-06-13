@@ -5,7 +5,7 @@ import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 
 public class ThaliTestRunner {
-    static boolean runTests() {
+    public static boolean runTests() {
         Result result = JUnitCore.runClasses(ThaliTestSuite.class);
 
         for (Failure failure: result.getFailures()) {

@@ -5,7 +5,9 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    MyTest.class
+    MyTest.class,
+    ConnectivityChangeListenerTest.class,
+    FileManagerTest.class
 })
 
 public class ThaliTestSuite {

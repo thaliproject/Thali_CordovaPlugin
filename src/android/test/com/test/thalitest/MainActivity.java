@@ -35,7 +35,7 @@ public class MainActivity extends CordovaActivity
         super.onCreate(savedInstanceState);
         // Set by <content src="index.html" /> in config.xml
         loadUrl(launchUrl);
-        boolean result = ThaliTestRunner.runTests();
-        System.out.println(result);
+        //boolean result = ThaliTestRunner.runTests();
+        //System.out.println(result);
     }
 }
