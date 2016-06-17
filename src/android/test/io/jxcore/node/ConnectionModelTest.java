@@ -1,16 +1,9 @@
 package io.jxcore.node;
 
-import android.bluetooth.BluetoothSocket;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -20,7 +13,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ConnectionModelTest {
 
-    ArrayList<String> closedThreadsIds;
     IncomingSocketThreadMock mIncomingSocketThreadMock;
     OutgoingSocketThreadMock mOutgoingSocketThreadMock;
     ListenerMock mListenerMock;
@@ -30,7 +22,6 @@ public class ConnectionModelTest {
 
     @Before
     public void setUp() throws Exception {
-        closedThreadsIds = new ArrayList<String>();
         mConnectionModel = new ConnectionModel();
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
@@ -117,7 +108,7 @@ public class ConnectionModelTest {
                 mConnectionModel.closeAndRemoveAllIncomingConnections(), is(equalTo(1)));
 
         assertThat("Thread is properly closed",
-                closedThreadsIds.contains("incoming"), is(true));
+                mIncomingSocketThreadMock.closeCalled, is(true));
 
         assertThat("Returns proper number of connections",
                 mConnectionModel.getNumberOfCurrentConnections(), is(equalTo(1)));
@@ -125,7 +116,7 @@ public class ConnectionModelTest {
         mConnectionModel.closeAndRemoveAllOutgoingConnections();
 
         assertThat("Thread is properly closed",
-                closedThreadsIds.contains("outgoing"), is(true));
+                mOutgoingSocketThreadMock.closeCalled, is(true));
 
         assertThat("Returns proper number of connections",
                 mConnectionModel.getNumberOfCurrentConnections(), is(equalTo(0)));
@@ -168,7 +159,7 @@ public class ConnectionModelTest {
                 mConnectionModel.closeAndRemoveIncomingConnectionThread(1L), is(true));
 
         assertThat("Thread is properly closed",
-                closedThreadsIds.contains("incoming"), is(true));
+                mIncomingSocketThreadMock.closeCalled, is(true));
 
         assertThat("Cannot close already closed IncommingConnectionThread",
                 mConnectionModel.closeAndRemoveIncomingConnectionThread(1L), is(false));
@@ -177,7 +168,7 @@ public class ConnectionModelTest {
                 mConnectionModel.closeAndRemoveIncomingConnectionThread(2L), is(true));
 
         assertThat("Thread is properly closed",
-                closedThreadsIds.contains("incoming2"), is(true));
+                incomingSocketThreadMock2.closeCalled, is(true));
 
         assertThat("All other connections are not removed",
                 mConnectionModel.getNumberOfCurrentConnections(), is(equalTo(1)));
@@ -226,7 +217,7 @@ public class ConnectionModelTest {
                 mConnectionModel.closeAndRemoveOutgoingConnectionThread("outgoing"), is(true));
 
         assertThat("Thread is properly closed",
-                closedThreadsIds.contains("outgoing"), is(true));
+                mOutgoingSocketThreadMock.closeCalled, is(true));
 
         assertThat("Proper callback is removed",
                 mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress("outgoing"),
@@ -243,7 +234,7 @@ public class ConnectionModelTest {
                 mConnectionModel.closeAndRemoveOutgoingConnectionThread("outgoing2"), is(true));
 
         assertThat("Thread is properly closed",
-                closedThreadsIds.contains("outgoing2"), is(true));
+                outgoingSocketThreadMock2.closeCalled, is(true));
 
         assertThat("Callback is removed",
                 mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress("outgoing2"),
@@ -280,82 +271,5 @@ public class ConnectionModelTest {
         assertThat("The callback2 is properly removed",
                 mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress("outgoing2"),
                 is(nullValue()));
-    }
-
-    class InputStreamMock extends InputStream {
-
-        @Override
-        public int read() throws IOException {
-            return 0;
-        }
-    }
-
-    class OutputStreamMock extends OutputStream {
-
-        @Override
-        public void write(int oneByte) throws IOException {
-
-        }
-    }
-
-    class IncomingSocketThreadMock extends IncomingSocketThread {
-        public Long threadId;
-
-        public IncomingSocketThreadMock(BluetoothSocket bluetoothSocket, Listener listener,
-                                        InputStream inputStream, OutputStream outputStream)
-                throws IOException {
-            super(bluetoothSocket, listener, inputStream, outputStream);
-        }
-
-        @Override
-        public void close() {
-            closedThreadsIds.add(this.getPeerProperties().getBluetoothMacAddress());
-        }
-
-        @Override
-        public long getId() {
-            return threadId;
-        }
-    }
-
-    class OutgoingSocketThreadMock extends OutgoingSocketThread {
-        public Long threadId;
-
-        public OutgoingSocketThreadMock(BluetoothSocket bluetoothSocket, Listener listener,
-                                        InputStream inputStream, OutputStream outputStream) throws IOException {
-            super(bluetoothSocket, listener, inputStream, outputStream);
-        }
-
-        @Override
-        public void close() {
-            closedThreadsIds.add(this.getPeerProperties().getBluetoothMacAddress());
-        }
-
-        @Override
-        public long getId() {
-            return threadId;
-        }
-    }
-
-    class ListenerMock implements SocketThreadBase.Listener {
-
-        @Override
-        public void onListeningForIncomingConnections(int portNumber) {
-
-        }
-
-        @Override
-        public void onDataTransferred(int numberOfBytes) {
-
-        }
-
-        @Override
-        public void onDisconnected(SocketThreadBase who, String errorMessage) {
-
-        }
-    }
-
-    class JXcoreThaliCallbackMock extends JXcoreThaliCallback {
-
     }
 }
