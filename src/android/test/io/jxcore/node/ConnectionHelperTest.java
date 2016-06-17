@@ -51,16 +51,11 @@ public class ConnectionHelperTest {
 
         mOutgoingSocketThreadMock = new OutgoingSocketThreadMock(null, mListenerMock,
                 mInputStreamMock, mOutputStreamMock);
-//        System.setProperty("dexmaker.dexcache",
-//               jxcore.activity.getBaseContext().getCacheDir().getPath());
-//        MockitoAnnotations.initMocks(this);
     }
 
     @After
     public void tearDown() throws Exception {
-//        mConnectionHelper.killAllConnections();
-//        mConnectionHelper.stop(false, null);
-//        mConnectionHelper.dispose();
+
     }
 
     @Test
@@ -114,13 +109,19 @@ public class ConnectionHelperTest {
         StartStopOperationHandler mStartStopOperationHandler =
                 (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
 
+
+
         assertThat("Check if DiscoveryManager state is equal to NOT_STARTED",
                 mDiscoveryManager.getState().toString(), is(equalTo("NOT_STARTED")));
         assertThat("Check if ConnectionManager state is equal to NOT_STARTED",
                 mConnectionManager.getState().toString(), is(equalTo("NOT_STARTED")));
+
+        Field fCurrentOperation = mStartStopOperationHandler.getClass().getField("mCurrentOperation");
+        fCurrentOperation.setAccessible(true);
+        StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mConnectionHelper);
+
         assertThat("CurrentOperation in StartStopOperationHandler is null value",
-                mStartStopOperationHandler.getCurrentOperation(), is(nullValue()));
-        //ConnectivityMonitor
+                mCurrentOperation, is(nullValue()));
     }
 
     @Test
@@ -327,7 +328,7 @@ public class ConnectionHelperTest {
                 (Integer) fMAXIMUM_NUMBER_OF_CONNECTIONS.get("mConnectionHelper");
 
         OutgoingSocketThreadMock mOutgoingSocketThreadMock2 =
-                new OutgoingSocketThreadMock(null,mListenerMock,mInputStreamMock,mOutputStreamMock);
+                new OutgoingSocketThreadMock(null, mListenerMock,mInputStreamMock,mOutputStreamMock);
         mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties("11:11:22:33:44:55"));
 
         mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock2);
@@ -340,6 +341,7 @@ public class ConnectionHelperTest {
     public void testConnect() throws Exception {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
         String bluetoothMacAddressOutgoing = "00:11:22:33:44:55";
+        JXcoreThaliCallbackMock callbackMock = new JXcoreThaliCallbackMock();
 
         mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties(bluetoothMacAddressOutgoing));
 
@@ -375,12 +377,16 @@ public class ConnectionHelperTest {
                 result, is(equalTo("Failed to add the callback for the connection")));
 
         mConnectionHelper.killAllConnections();
+        result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, callbackMock);
+        assertThat(result,is(nullValue()));
 
     }
 
     @Test
     public void testToggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber() throws Exception {
-
+        Field fContext = mConnectionHelper.getClass().getField("mContext");
+        fContext.setAccessible(true);
+        Context mContext = (Context) fContext.get(mConnectionHelper);
     }
 
     @Test
