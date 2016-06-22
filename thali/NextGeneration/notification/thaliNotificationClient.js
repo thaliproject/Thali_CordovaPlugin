@@ -12,7 +12,9 @@ var util = require('util');
 /** @module thaliNotificationClient */
 
 /**
- * @classdesc Data of peerAdvertisesDataForUs event
+ * @classdesc Data of peerAdvertisesDataForUs event. Note that if a peer
+ * has disappeared then all the values below but keyId and connectionType
+ * will be null.
  * @constructor
  * @param {Buffer} keyId The buffer contains the ECDH public key for the
  * peer.
@@ -77,6 +79,7 @@ function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._publicKeysToListen = [];
   this._publicKeysToListenHashes = [];
+  this._boundListener = this._peerAvailabilityChanged.bind(this);
 
   this._addressBookCallback = function (unencryptedKeyId) {
 
@@ -154,7 +157,7 @@ ThaliNotificationClient.prototype.start =
 
     if (!this.peerDictionary) {
       ThaliMobile.emitter.on('peerAvailabilityChanged',
-        this._peerAvailabilityChanged.bind(this));
+        this._boundListener);
     }
     this.peerDictionary = new PeerDictionary.PeerDictionary();
   };
@@ -171,7 +174,7 @@ ThaliNotificationClient.prototype.stop = function () {
 
   if (this.peerDictionary) {
     ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-      this._peerAvailabilityChanged);
+      this._boundListener);
 
     this.peerDictionary.removeAll();
     this.peerDictionary = null;
@@ -339,8 +342,7 @@ ThaliNotificationClient.prototype._resolved =
       {
         // This indicates a malfunctioning peer. We need to assume they are bad
         // all up and mark their entry as RESOLVED without taking any further
-        // action. This means we will ignore this peerIdentifier
-        // in the future.
+        // action. This means we will ignore this peerIdentifier in the future.
         entry.peerState = PeerDictionary.peerState.RESOLVED;
         this.peerDictionary.addUpdateEntry(peerId, entry);
         break;

@@ -111,8 +111,6 @@ test('#_doImmediateSeqUpdate - server always returns 500', function (t) {
   });
 });
 
-
-
 function validateRev(t, rev, lastSyncedSequenceNumber, randomDBName, serverPort)
 {
   return httpTester.validateSeqNumber(t, randomDBName, serverPort,
@@ -123,11 +121,13 @@ function validateRev(t, rev, lastSyncedSequenceNumber, randomDBName, serverPort)
 }
 
 test('#_doImmediateSeqUpdate - create new seq doc', function (t) {
-  testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
-                                             remotePouchDB) {
-    localSeqManager = new LocalSeqManager(100, remotePouchDB, devicePublicKey);
-    var lastSyncedSequenceNumber = 23;
-    localSeqManager._doImmediateSeqUpdate(lastSyncedSequenceNumber)
+  testCloseAllServer = testUtils.setUpServer(
+    function (serverPort, randomDBName, remotePouchDB) {
+      localSeqManager =
+        new LocalSeqManager(100, remotePouchDB, devicePublicKey);
+      var lastSyncedSequenceNumber = 23;
+
+      localSeqManager._doImmediateSeqUpdate(lastSyncedSequenceNumber)
       .then(function (rev) {
         return validateRev(t, rev, lastSyncedSequenceNumber, randomDBName,
                             serverPort);
@@ -138,7 +138,8 @@ test('#_doImmediateSeqUpdate - create new seq doc', function (t) {
       .then(function () {
         t.end();
       });
-  });
+    }
+  );
 });
 
 test('#_doImmediateSeqUpdate - doc exists, need to get rev and update',

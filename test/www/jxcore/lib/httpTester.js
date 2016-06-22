@@ -145,10 +145,15 @@ module.exports.pskGet = function(serverPort, path, pskId, pskKey, host) {
   });
 };
 
+module.exports.generateSeqDocPath = function (devicePublicKey) {
+  return '_local/' + thaliConfig.LOCAL_SEQ_POINT_PREFIX +
+    urlSafeBase64.encode(devicePublicKey);
+};
+
 module.exports.getSeqDoc = function(dbName, serverPort, pskId, pskKey,
                                     devicePublicKey, host) {
-  var path = '/db/' + dbName + '/_local/' + thaliConfig.LOCAL_SEQ_POINT_PREFIX +
-      urlSafeBase64.encode(devicePublicKey);
+  var path = '/db/' + dbName + '/' +
+    module.exports.generateSeqDocPath(devicePublicKey);
   return module.exports.pskGet(serverPort, path, pskId, pskKey, host)
     .then(function (responseBody) {
       return JSON.parse(responseBody);

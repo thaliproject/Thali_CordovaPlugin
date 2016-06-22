@@ -73,7 +73,7 @@ var test = tape({
   }
 });
 
-test.only('Coordinated replication action test', function (t) {
+test('Coordinated replication action test', function (t) {
   var localPouchDB = new TestPouchDB(DB_NAME);
   localPouchDB
     .put({_id: JSON.stringify(devicePublicKey.toJSON())})

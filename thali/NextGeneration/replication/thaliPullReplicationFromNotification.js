@@ -22,6 +22,15 @@ var ThaliNotificationClient = require('../notification/thaliNotificationClient')
  * fail on its own or succeed since notifications that peers have gone isn't
  * an exact science.
  *
+ * It is possible for us to discover the same peer over two different
+ * transports (say Bluetooth and WiFi). In that case we treat each transport
+ * separately. In other words, we treat the combination of transport and user
+ * ID as a single value so that if we simultaneously find the same peer over
+ * two transports then we will schedule two replications. It is up to the peer
+ * pool manager to detect when we are trying to do the same action type for
+ * the same peer over two different transports and to then pick which one it
+ * prefers (if any, maybe it wants both).
+ *
  * BUGBUG: In the interests of time we currently will only support replicating
  * data from a single remote database for all users. This is clearly silly and
  * we should move to a model where each user can have multiple databases
@@ -44,10 +53,26 @@ function ThaliPullReplicationFromNotification(PouchDB,
                                               ecdhForLocalDevice) {
   this._thaliNotificationClient =
     new ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice);
-
+  this._PouchDB = PouchDB;
+  this._dbName = dbName;
+  this._boundAdvertiser = this._PeerAdvertisesDataForUs.bind(this);
 }
 
 ThaliPullReplicationFromNotification.prototype._thaliNotificationClient = null;
+
+ThaliPullReplicationFromNotification.prototype._peerDictionary = {};
+
+ThaliPullReplicationFromNotification.prototype._peerDictionaryKey =
+  function(connectionType, keyId) {
+    return connectionType + '-' + keyId;
+  };
+
+ThaliPullReplicationFromNotification.prototype._PeerAdvertisesDataForUs =
+  function (peerAdvertisesDataForUs) {
+    if (peerAdvertisesDataForUs.por)
+  };
+
+ThaliPullReplicationFromNotification.prototype._boundAdvertiser = null;
 
 /**
  * Starts to listen for peer discovery events for interesting peers and
@@ -62,6 +87,9 @@ ThaliPullReplicationFromNotification.prototype._thaliNotificationClient = null;
  */
 ThaliPullReplicationFromNotification.prototype.start =
   function (prioritizedReplicationList) {
+    this._thaliNotificationClient.on(
+      this._thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+      this._PeerAdvertisesDataForUs.bind(this));
     return this._thaliNotificationClient.start(prioritizedReplicationList);
   };
 
@@ -72,6 +100,9 @@ ThaliPullReplicationFromNotification.prototype.start =
  * This method is idempotent.
  */
 ThaliPullReplicationFromNotification.prototype.stop = function () {
+  this._thaliNotificationClient.removeListener(
+    this._thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+    this._PeerAdvertisesDataForUs);
   return this._thaliNotificationClient.stop();
 };
 

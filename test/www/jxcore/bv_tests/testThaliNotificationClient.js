@@ -267,6 +267,7 @@ test('Resolves an action locally', function (t) {
         globals.TCPEvent.portNumber,
         'portNumber must match');
 
+      notificationClient.stop();
       t.end();
     });
 

@@ -84,8 +84,10 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
         return Promise.reject(error);
       }
       return self._remotePouchDB.put({
+          _id: self._localId,
+          _rev: rev,
           lastSyncedSequenceNumber: seq
-        }, self._localId, rev);
+        });
     })
     .then(function (putResponse) {
       self._seqDocRev = putResponse.rev;

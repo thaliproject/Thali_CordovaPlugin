@@ -3,7 +3,7 @@
 var logCallback;
 var os = require('os');
 var tmp = require('tmp');
-var PouchDB = require('pouchdb');
+var PouchDB = require('pouchdb-node');
 var path = require('path');
 var randomString = require('randomstring');
 var Promise = require('lie');
@@ -17,6 +17,8 @@ var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
+var extend = require('js-extend').extend;
+var inherits = require('inherits');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
@@ -233,19 +235,61 @@ module.exports.getOSVersion = function () {
   });
 };
 
+function levelDownPouchDBGenerator(defaultDirectory) {
+  // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/fb77927d2f14911478032884f1576b770815bcab/packages/pouchdb-core/src/setup.js#L108-L137
+  function PouchAlt(name, opts, callback) {
+    if (!(this instanceof PouchAlt)) {
+      return new PouchAlt(name, opts, callback);
+    }
+
+    if (typeof opts === 'function' || typeof opts === 'undefined') {
+      callback = opts;
+      opts = {};
+    }
+
+    if (name && typeof name === 'object') {
+      opts = name;
+      name = undefined;
+    }
+
+    opts = extend({}, opts);
+
+    if (name !== undefined && name.indexOf('http') !== 0) {
+      if (!opts.db) {
+        opts.db = require('leveldown-mobile');
+      }
+
+      if (!opts.prefix) {
+        opts.prefix = defaultDirectory;
+      }
+    }
+
+    PouchDB.call(this, name, opts, callback);
+  }
+
+  inherits(PouchAlt, PouchDB);
+
+  PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
+  Object.keys(PouchDB).forEach(function (key) {
+    if (!(key in PouchAlt)) {
+      PouchAlt[key] = PouchDB[key];
+    }
+  });
+
+  return PouchAlt;
+}
+
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
 // during other tests.
 var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-var LevelDownPouchDB = PouchDB.defaults({
-  db: require('leveldown-mobile'),
-  prefix: dbPath
-});
+fs.ensureDirSync(dbPath);
+
+var LevelDownPouchDB = levelDownPouchDBGenerator(dbPath);
 
 module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
 };
-
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
   var randomPouchDBName = randomString.generate({
@@ -261,10 +305,7 @@ module.exports.getPouchDBFactoryInRandomDirectory = function () {
     charset: 'alphabetic'
   }));
   fs.ensureDirSync(directory);
-  return PouchDB.defaults({
-    db: require('leveldown-mobile'),
-    prefix: directory
-  });
+  return levelDownPouchDBGenerator(directory);
 };
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
