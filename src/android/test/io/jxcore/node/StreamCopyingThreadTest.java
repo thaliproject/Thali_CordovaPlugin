@@ -28,6 +28,8 @@ public class StreamCopyingThreadTest {
     InputStream mInputStream;
     OutputStream mOutputStream;
     String mThreadName = "My test thread name";
+    String mText = "Lorem ipsum dolor sit amet, consectetur" +
+            " adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua";
     ByteArrayOutputStream boutputStream;
     ArrayList<Integer> notifications;
 
@@ -39,8 +41,7 @@ public class StreamCopyingThreadTest {
         mListener = new ListenerMock();
 
         boutputStream = new ByteArrayOutputStream();
-        mInputStream = new StreamCopyingThreadInputStream("Lorem ipsum dolor sit amet, consectetur" +
-                " adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua");
+        mInputStream = new StreamCopyingThreadInputStream(mText);
         mOutputStream = new StreamCopyingThreadOutputStream();
 
         mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
@@ -74,7 +75,7 @@ public class StreamCopyingThreadTest {
 
         assertThat("The the content of the input stream is equal to the output stream",
                 boutputStream.toString(),
-                is("teststring"));
+                is(mText));
     }
 
     @Test
@@ -86,7 +87,7 @@ public class StreamCopyingThreadTest {
 
         assertThat("The the content of the input stream is equal to the output stream",
                 boutputStream.toString(),
-                is("teststring"));
+                is(mText));
 
         assertThat("The stream copying progress notifications is properly updated",
                 notifications.size() > 0,
