@@ -146,14 +146,12 @@ ThaliNotificationClient.prototype.start =
     this._publicKeysToListen = [];
     this._publicKeysToListenHashes = [];
 
-    if (publicKeysToListen) {
-      this._publicKeysToListen = publicKeysToListen;
+    this._publicKeysToListen = publicKeysToListen;
 
-      publicKeysToListen.forEach(function (pubKy) {
-        self._publicKeysToListenHashes.push(
-          NotificationBeacons.createPublicKeyHash(pubKy));
-      });
-    }
+    publicKeysToListen.forEach(function (pubKy) {
+      self._publicKeysToListenHashes.push(
+        NotificationBeacons.createPublicKeyHash(pubKy));
+    });
 
     if (!this.peerDictionary) {
       ThaliMobile.emitter.on('peerAvailabilityChanged',

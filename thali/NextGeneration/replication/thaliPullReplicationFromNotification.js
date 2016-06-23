@@ -108,7 +108,7 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
 
     var removed = false;
     function removeFromDictionary(originalMethod) {
-      return function() {
+      return function () {
         if (!removed) {
           assert(self._peerDictionary[key], 'The entry should exist because ' +
             'this is the only place that can remove it');
