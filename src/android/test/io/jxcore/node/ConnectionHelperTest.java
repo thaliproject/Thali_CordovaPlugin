@@ -61,11 +61,11 @@ public class ConnectionHelperTest {
 
     @Test
     public void testConstructor() throws Exception {
-        Field fConnectionManager = mConnectionHelper.getClass().getField("mConnectionManager");
-        Field fDiscoveryManager = mConnectionHelper.getClass().getField("mDiscoveryManager");
+        Field fConnectionManager = mConnectionHelper.getClass().getDeclaredField("mConnectionManager");
+        Field fDiscoveryManager = mConnectionHelper.getClass().getDeclaredField("mDiscoveryManager");
         Field fDiscoveryManagerSettings = mConnectionHelper.getClass()
-                .getField("mDiscoveryManagerSettings");
-        Field fContext = mConnectionHelper.getClass().getField("mContext");
+                .getDeclaredField("mDiscoveryManagerSettings");
+        Field fContext = mConnectionHelper.getClass().getDeclaredField("mContext");
 
         fConnectionManager.setAccessible(true);
         fDiscoveryManager.setAccessible(true);
@@ -94,10 +94,10 @@ public class ConnectionHelperTest {
     public void testDispose() throws Exception {
         mConnectionHelper.dispose();
 
-        Field fDiscoveryManager = mConnectionHelper.getClass().getField("mDiscoveryManager");
-        Field fConnectionManager = mConnectionHelper.getClass().getField("mConnectionManager");
+        Field fDiscoveryManager = mConnectionHelper.getClass().getDeclaredField("mDiscoveryManager");
+        Field fConnectionManager = mConnectionHelper.getClass().getDeclaredField("mConnectionManager");
         Field fStartStopOperationHandler = mConnectionHelper.getClass()
-                .getField("mStartStopOperationHandler");
+                .getDeclaredField("mStartStopOperationHandler");
 
         fDiscoveryManager.setAccessible(true);
         fConnectionManager.setAccessible(true);
@@ -116,9 +116,11 @@ public class ConnectionHelperTest {
         assertThat("Check if ConnectionManager state is equal to NOT_STARTED",
                 mConnectionManager.getState().toString(), is(equalTo("NOT_STARTED")));
 
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getField("mCurrentOperation");
+        Field fCurrentOperation = mStartStopOperationHandler.getClass()
+                .getDeclaredField("mCurrentOperation");
         fCurrentOperation.setAccessible(true);
-        StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mConnectionHelper);
+        StartStopOperation mCurrentOperation =
+                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
         assertThat("CurrentOperation in StartStopOperationHandler is null value",
                 mCurrentOperation, is(nullValue()));
@@ -129,11 +131,11 @@ public class ConnectionHelperTest {
         assertThat("Start method returns true",
                 mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
 
-        Field fServerPortNumber = mConnectionHelper.getClass().getField("mServerPortNumber");
+        Field fServerPortNumber = mConnectionHelper.getClass().getDeclaredField("mServerPortNumber");
         Field fPowerUpBleDiscoveryTimer = mConnectionHelper.getClass()
-                .getField("mPowerUpBleDiscoveryTimer");
+                .getDeclaredField("mPowerUpBleDiscoveryTimer");
         Field fStartStopOperationHandler = mConnectionHelper.getClass()
-                .getField("mStartStopOperationHandler");
+                .getDeclaredField("mStartStopOperationHandler");
 
         fServerPortNumber.setAccessible(true);
         fPowerUpBleDiscoveryTimer.setAccessible(true);
@@ -150,22 +152,13 @@ public class ConnectionHelperTest {
         assertThat("StartStopOperation handler is not null value",
                 mStartStopOperationHandler, is(notNullValue()));
 
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getField("mCurrentOperation");
+        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
         fCurrentOperation.setAccessible(true);
         StartStopOperation mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
-        assertThat("CurrentOperation from mStartStopOperationHandler is not null value",
-                mCurrentOperation, is(notNullValue()));
-
-        Field fShouldStartOrStopListeningToAdvertisementsOnly = mCurrentOperation.getClass()
-                .getField("mShouldStartOrStopListeningToAdvertisementsOnly");
-        fShouldStartOrStopListeningToAdvertisementsOnly.setAccessible(true);
-        boolean mShouldStartOrStopListeningToAdvertisementsOnly =
-                (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mCurrentOperation);
-
-        assertThat("If second argument is false, should return false",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(false));
+        assertThat("CurrentOperation from mStartStopOperationHandler is null value",
+                mCurrentOperation, is(nullValue()));
 
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
 
@@ -178,7 +171,8 @@ public class ConnectionHelperTest {
         mStartStopOperationHandler =
                 (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
 
-        assertThat("Port number has a proper value", mServerPortNumber, is(equalTo(0)));
+        assertThat("Port number has a proper value, not changed because -1111 < 0",
+                mServerPortNumber, is(equalTo(1111)));
         assertThat("CountDownTimer is null value", mPowerUpBleDiscoveryTimer, is(nullValue()));
         assertThat("StartStopOperation handler is not null value",
                 mStartStopOperationHandler, is(notNullValue()));
@@ -186,14 +180,8 @@ public class ConnectionHelperTest {
         mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
-        assertThat("CurrentOperation from mStartStopOperationHandler is not null value",
-                mCurrentOperation, is(notNullValue()));
-
-        mShouldStartOrStopListeningToAdvertisementsOnly =
-                (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mCurrentOperation);
-
-        assertThat("If second argument is true, should return true",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(true));
+        assertThat("CurrentOperation from mStartStopOperationHandler is null value",
+                mCurrentOperation, is(nullValue()));
     }
 
     @Test
@@ -202,7 +190,7 @@ public class ConnectionHelperTest {
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
 
         Field fStartStopOperationHandler = mConnectionHelper.getClass()
-                .getField("mStartStopOperationHandler");
+                .getDeclaredField("mStartStopOperationHandler");
         fStartStopOperationHandler.setAccessible(true);
         StartStopOperationHandler mStartStopOperationHandler =
                 (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
@@ -213,14 +201,14 @@ public class ConnectionHelperTest {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
 
         Field fOutgoingSocketThreads = mConnectionModel.getClass()
-                .getField("mOutgoingSocketThreads");
+                .getDeclaredField("mOutgoingSocketThreads");
         fOutgoingSocketThreads.setAccessible(true);
         CopyOnWriteArrayList<OutgoingSocketThread> mOutgoingSocketThreads =
                 (CopyOnWriteArrayList<OutgoingSocketThread>)
-                        fOutgoingSocketThreads.get("mConnectionModel");
+                        fOutgoingSocketThreads.get(mConnectionModel);
 
         Field fOutgoingConnectionCallbacks = mConnectionModel.getClass()
-                .getField("mOutgoingConnectionCallbacks");
+                .getDeclaredField("mOutgoingConnectionCallbacks");
         fOutgoingConnectionCallbacks.setAccessible(true);
         HashMap<String, JXcoreThaliCallback> mOutgoingConnectionCallbacks =
                 (HashMap<String, JXcoreThaliCallback>) fOutgoingConnectionCallbacks.get(mConnectionModel);
@@ -233,7 +221,7 @@ public class ConnectionHelperTest {
                 mConnectionHelper.getConnectionModel()
                         .getNumberOfCurrentConnections(), is(equalTo(0)));
 
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getField("mCurrentOperation");
+        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
         fCurrentOperation.setAccessible(true);
         StartStopOperation mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
@@ -263,45 +251,65 @@ public class ConnectionHelperTest {
 
     @Test
     public void testIsRunning() throws Exception {
-        Field fConnectionManager = mConnectionHelper.getClass().getField("mConnectionManager");
-        Field fDiscoveryManager = mConnectionHelper.getClass().getField("mDiscoveryManager");
+        Field fConnectionManager = mConnectionHelper.getClass().getDeclaredField("mConnectionManager");
 
         fConnectionManager.setAccessible(true);
-        fDiscoveryManager.setAccessible(true);
 
         ConnectionManager mConnectionManager =
                 (ConnectionManager) fConnectionManager.get(mConnectionHelper);
+
+        assertThat("ConnectionManager state is NOT_STARTED", mConnectionManager.getState(),
+                is(equalTo(ConnectionManager.ConnectionManagerState.NOT_STARTED)));
+
+        assertThat("ConnectionManager state is not either WAITING_FOR_SERVICES_TO_BE_ENABLED or RUNNING",
+                mConnectionManager.getState(), is(not(anyOf(
+                        equalTo(ConnectionManager.ConnectionManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED),
+                        equalTo(ConnectionManager.ConnectionManagerState.RUNNING)))));
+
+        mConnectionManager.startListeningForIncomingConnections();
+
+        Field fDiscoveryManager = mConnectionHelper.getClass().getDeclaredField("mDiscoveryManager");
+        fDiscoveryManager.setAccessible(true);
         DiscoveryManager mDiscoveryManager =
                 (DiscoveryManager) fDiscoveryManager.get(mConnectionHelper);
 
         assertThat("ConnectionManager state is different than NOT_STARTED",
                 mConnectionManager.getState(),
                 is(not(equalTo(ConnectionManager.ConnectionManagerState.NOT_STARTED))));
+
         assertThat("ConnectionManager state can be either WAITING_FOR_SERVICES_TO_BE_ENABLED or RUNNING",
                 mConnectionManager.getState(),
                 is(anyOf(equalTo(ConnectionManager.ConnectionManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED),
                         equalTo(ConnectionManager.ConnectionManagerState.RUNNING))));
 
-        assertThat("isRunning return true", mDiscoveryManager.isRunning(), equalTo(true));
-        assertThat("isRunning not returns false", mDiscoveryManager.isRunning(), not(equalTo(false)));
+        Field fState = mDiscoveryManager.getClass().getDeclaredField("mState");
+        fState.setAccessible(true);
+        fState.set(mDiscoveryManager, DiscoveryManager.DiscoveryManagerState.RUNNING_BLE);
+
+        assertThat("mDiscoveryManager isRunning return true", mDiscoveryManager.isRunning(), is(true));
+        assertThat("mDiscoveryManager isRunning does not return false",
+                mDiscoveryManager.isRunning(), is(not(false)));
+
+        assertThat("IsRunning returns true", mConnectionHelper.isRunning(), is(true));
+        assertThat("IsRunning should not return false", mConnectionHelper.isRunning(), is(not(false)));
     }
 
     @Test
     public void testGetConnectivityMonitorGetDiscoveryManagerGetConnectionModelGetBluetoothName() throws Exception {
-        Field fConnectivityMonitor = mConnectionHelper.getClass().getField("mConnectivityMonitor");
-        Field fDiscoveryManager = mConnectionHelper.getClass().getField("mDiscoveryManager");
-        Field fConnectionModel = mConnectionHelper.getClass().getField("mConnectionModel");
+        Field fConnectivityMonitor = mConnectionHelper.getClass().getDeclaredField("mConnectivityMonitor");
+        Field fDiscoveryManager = mConnectionHelper.getClass().getDeclaredField("mDiscoveryManager");
+        Field fConnectionModel = mConnectionHelper.getClass().getDeclaredField("mConnectionModel");
 
         fConnectivityMonitor.setAccessible(true);
         fDiscoveryManager.setAccessible(true);
         fConnectionModel.setAccessible(true);
 
         ConnectivityMonitor mConnectivityMonitor =
-                (ConnectivityMonitor) fConnectivityMonitor.get("mConnectionHelper");
+                (ConnectivityMonitor) fConnectivityMonitor.get(mConnectionHelper);
         DiscoveryManager mDiscoveryManager =
-                (DiscoveryManager) fDiscoveryManager.get("mConnectionHelper");
+                (DiscoveryManager) fDiscoveryManager.get(mConnectionHelper);
         ConnectionModel mConnectionModel =
-                (ConnectionModel) fConnectionModel.get("mConnectionHelper");
+                (ConnectionModel) fConnectionModel.get(mConnectionHelper);
 
         assertThat("mConnectivityMonitor is equal to getConnectivityMonitor",
                 mConnectivityMonitor, is(equalTo(mConnectionHelper.getConnectivityMonitor())));
@@ -315,7 +323,8 @@ public class ConnectionHelperTest {
         if (bluetoothAdapter != null) {
             assertThat("bluetoothAdapter.getName() is equal to getBluetoothName",
                     bluetoothAdapter.getName(), is(equalTo(mConnectionHelper.getBluetoothName())));
-            assertThat("getBluetoothName is not null", mConnectionHelper.getBluetoothName(), is(notNullValue()));
+            assertThat("getBluetoothName is not null",
+                    mConnectionHelper.getBluetoothName(), is(notNullValue()));
         } else {
             assertThat("If bluetoothAdapter is null then getBluetoothName returns null",
                     mConnectionHelper.getBluetoothName(), is(nullValue()));
@@ -325,34 +334,31 @@ public class ConnectionHelperTest {
     @Test
     public void testDisconnectOutgoingConnection() throws Exception {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
-        mIncomingSocketThreadMock.setPeerProperties(new PeerProperties("00:11:22:33:44:55"));
+        String bluetoothMacAddress = "00:11:22:33:44:55";
+        PeerProperties mPeerProperties = new PeerProperties(bluetoothMacAddress);
+        mOutgoingSocketThreadMock.setPeerProperties(mPeerProperties);
 
-        mConnectionModel.addConnectionThread(mIncomingSocketThreadMock);
+        mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock);
 
         boolean result = mConnectionHelper.disconnectOutgoingConnection("randomString");
         assertThat("No connection with peerId = randomString, should return false",
                 result, is(false));
 
-        result = mConnectionHelper.disconnectOutgoingConnection(mIncomingSocketThreadMock
-                .getPeerProperties().toString());
+        result = mConnectionHelper.disconnectOutgoingConnection(mPeerProperties.getId());
 
         assertThat("Disconnect connection with proper peerId, should return true ",
                 result, is(true));
 
-        result = mConnectionHelper.disconnectOutgoingConnection(mIncomingSocketThreadMock
-                .getPeerProperties().toString());
+        result = mConnectionHelper.disconnectOutgoingConnection(mPeerProperties.getId());
 
-        assertThat("Connection with this peerId should be already removed, so now method should return false ",
+        assertThat("Connection with this peerId should be already removed, so now method " +
+                "should return false ",
                 result, is(false));
 
     }
 
     @Test
     public void testHasMaximumNumberOfConnections() throws Exception {
-        Field fMAXIMUM_NUMBER_OF_CONNECTIONS = mConnectionHelper.getClass()
-                .getField("MAXIMUM_NUMBER_OF_CONNECTIONS");
-        fMAXIMUM_NUMBER_OF_CONNECTIONS.setAccessible(true);
-
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
 
         OutgoingSocketThreadMock mOutgoingSocketThreadMock =
@@ -360,67 +366,82 @@ public class ConnectionHelperTest {
         mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties("00:11:22:33:44:55"));
 
         mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock);
-        assertThat("mOutgoingSocketThreads size should be 1, number of max connections = 30, then return false",
+        assertThat("mOutgoingSocketThreads size should be 1, number of max connections = 30, " +
+                "then return false",
                 mConnectionHelper.hasMaximumNumberOfConnections(), is(false));
 
-        fMAXIMUM_NUMBER_OF_CONNECTIONS.set(mConnectionHelper, 2);
+        ArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new ArrayList<OutgoingSocketThread>();
 
-        OutgoingSocketThreadMock mOutgoingSocketThreadMock2 =
-                new OutgoingSocketThreadMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
-        mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties("11:11:22:33:44:55"));
+        for(int i = 0; i < 30; i++){
+            mOutgoingSocketThreads.add(new OutgoingSocketThreadMock(
+                    null, mListenerMock, mInputStreamMock, mOutputStreamMock));
+            mOutgoingSocketThreads.get(i).setPeerProperties(
+                    new PeerProperties(i+10+":"+i+10+":"+i+10+":"+i+10+":"+i+10+":"+i+10));
+            mConnectionModel.addConnectionThread(mOutgoingSocketThreads.get(i));
+        }
 
-        mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock2);
-        assertThat("mOutgoingSocketThreads size should be 2, number of max connections also 2, return true",
+        assertThat("mOutgoingSocketThreads size should be 30, number of max connections also 30, return true",
                 mConnectionHelper.hasMaximumNumberOfConnections(), is(true));
 
     }
 
-    @Test
+    @Test(expected = NullPointerException.class)
     public void testConnect() throws Exception {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
         String bluetoothMacAddressOutgoing = "00:11:22:33:44:55";
-        JXcoreThaliCallbackMock callbackMock = new JXcoreThaliCallbackMock();
+        JXcoreThaliCallbackMock mJXcoreTHaliCallBack = new JXcoreThaliCallbackMock();
 
         mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties(bluetoothMacAddressOutgoing));
 
         mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock);
 
-        String result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, null);
+        String result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, mJXcoreTHaliCallBack);
         assertThat(result, is(equalTo("We already have an outgoing connection to peer with ID "
                 + bluetoothMacAddressOutgoing)));
 
         mConnectionHelper.killAllConnections();
+        ArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new ArrayList<OutgoingSocketThread>();
 
-        Field fMAXIMUM_NUMBER_OF_CONNECTIONS = mConnectionHelper.getClass().getField("MAXIMUM_NUMBER_OF_CONNECTIONS");
-        fMAXIMUM_NUMBER_OF_CONNECTIONS.setAccessible(true);
-        fMAXIMUM_NUMBER_OF_CONNECTIONS.set(mConnectionHelper, 1);
+        for(int i = 0; i < 30; i++){
+            mOutgoingSocketThreads.add(new OutgoingSocketThreadMock(
+                    null, mListenerMock, mInputStreamMock, mOutputStreamMock));
+            mOutgoingSocketThreads.get(i).setPeerProperties(
+                    new PeerProperties(i+10+":"+i+10+":"+i+10+":"+i+10+":"+i+10+":"+i+10));
+            mConnectionModel.addConnectionThread(mOutgoingSocketThreads.get(i));
+        }
 
-        result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, null);
+        result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, mJXcoreTHaliCallBack);
         assertThat("Maximum number of peer connections reached ",
                 result, is(equalTo("Maximum number of peer connections ("
                         + mConnectionModel.getNumberOfCurrentOutgoingConnections()
                         + ") reached, please try again after disconnecting a peer")));
 
-        fMAXIMUM_NUMBER_OF_CONNECTIONS.set(mConnectionHelper, 30);
-
         mConnectionHelper.killAllConnections();
-        result = mConnectionHelper.connect("abcd", null);
+        result = mConnectionHelper.connect("abcd", mJXcoreTHaliCallBack);
         assertThat("Invalid bluetooth MAC address",
                 result, is(equalTo("Invalid Bluetooth MAC address: abcd")));
 
         mConnectionHelper.killAllConnections();
-        result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, null);
-        assertThat("Failed to add null callback",
+        mConnectionHelper.connect(bluetoothMacAddressOutgoing, null);
+
+        mConnectionHelper.killAllConnections();
+        mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties(bluetoothMacAddressOutgoing));
+
+        mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock);
+        mConnectionModel.addOutgoingConnectionCallback(bluetoothMacAddressOutgoing, mJXcoreTHaliCallBack);
+
+        mConnectionHelper.connect(bluetoothMacAddressOutgoing, mJXcoreTHaliCallBack);
+        assertThat("Failed to add callback to the connection because such callback already exists",
                 result, is(equalTo("Failed to add the callback for the connection")));
 
         mConnectionHelper.killAllConnections();
-        result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, callbackMock);
+        result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, mJXcoreTHaliCallBack);
         assertThat(result, is(nullValue()));
     }
 
     @Test
     public void testToggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber() throws Exception {
-        Field fContext = mConnectionHelper.getClass().getField("mContext");
+        Field fContext = mConnectionHelper.getClass().getDeclaredField("mContext");
         fContext.setAccessible(true);
         Context mContext = (Context) fContext.get(mConnectionHelper);
 
@@ -440,15 +461,18 @@ public class ConnectionHelperTest {
 
     @Test
     public void testOnConnectionManagerStateChanged() throws Exception {
-        Field fStartStopOperationHandler = mConnectionHelper.getClass().getField("mStartStopOperationHandler");
+        mConnectionHelper.onConnectionManagerStateChanged(null);
+
+        Field fStartStopOperationHandler = mConnectionHelper.getClass().
+                getDeclaredField("mStartStopOperationHandler");
         fStartStopOperationHandler.setAccessible(true);
         StartStopOperationHandler mStartStopOperationHandler =
                 (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
 
         Field fCurrentOperation = mStartStopOperationHandler.getClass()
-                .getField("mCurrentOperation");
+                .getDeclaredField("mCurrentOperation");
         Field fOperationTimeoutTimer = mStartStopOperationHandler.getClass()
-                .getField("mOperationTimeoutTimer");
+                .getDeclaredField("mOperationTimeoutTimer");
 
         fCurrentOperation.setAccessible(true);
         fOperationTimeoutTimer.setAccessible(true);
@@ -464,56 +488,161 @@ public class ConnectionHelperTest {
 
     @Test
     public void testOnConnected() throws Exception {
-
     }
 
     @Test
     public void testOnConnectionTimeout() throws Exception {
+        String bluetoothMacAddress = "00:11:22:33:44:55";
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
 
+        ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
+        mConnectionModel.addOutgoingConnectionCallback(bluetoothMacAddress, mJXcoreThaliCallback);
+
+
+        Field fContext = mConnectionHelper.getClass().getDeclaredField("mContext");
+        fContext.setAccessible(true);
+        Context mContext = (Context) fContext.get(mConnectionHelper);
+        ConnectionManagerSettings settings = ConnectionManagerSettings.getInstance(mContext);
+        settings.setInsecureRfcommSocketPortNumber(
+                ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
+
+        assertThat("Check if peer has added connection callback, should return same mJXcoreThaliCallback ",
+                mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress),
+                is(equalTo(mJXcoreThaliCallback)));
+        mConnectionHelper.onConnectionTimeout(new PeerProperties(bluetoothMacAddress));
+
+        assertThat("After calling onConnectionTimeout, should remove added connection callback and" +
+                "return null",
+                mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress),
+                is(nullValue()));
+
+        assertThat("After calling onConnectionTimeout, " +
+                "toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber should be called",
+                settings.getInsecureRfcommSocketPortNumber(),
+                is(equalTo(ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT)));
     }
+
 
     @Test
     public void testOnConnectionFailed() throws Exception {
+        String bluetoothMacAddress = "00:11:22:33:44:55";
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        String errorMessage = "ErrorMessage";
+        PeerProperties mPeerProperties = new PeerProperties(bluetoothMacAddress);
 
+        Field fContext = mConnectionHelper.getClass().getDeclaredField("mContext");
+        fContext.setAccessible(true);
+        Context mContext = (Context) fContext.get(mConnectionHelper);
+
+        ConnectionManagerSettings settings = ConnectionManagerSettings.getInstance(mContext);
+
+        settings.setInsecureRfcommSocketPortNumber(
+                ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
+
+        ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
+        mConnectionModel.addOutgoingConnectionCallback(bluetoothMacAddress, mJXcoreThaliCallback);
+
+        assertThat("Check if callback was successfully added",
+                mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress),
+                is(equalTo(mJXcoreThaliCallback)));
+
+        mConnectionHelper.onConnectionFailed(mPeerProperties, errorMessage);
+
+        assertThat("After calling onConnectionFailed, added callback should be removed",
+                mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(bluetoothMacAddress),
+                is(nullValue()));
+
+        assertThat("Toggle method should be also called", settings.getInsecureRfcommSocketPortNumber(),
+                is(equalTo(ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT)));
     }
 
     @Test
     public void testOnPermissionCheckRequired() throws Exception {
-
+        assertThat(mConnectionHelper.onPermissionCheckRequired("Permision"), is(true));
     }
 
     @Test
     public void testOnDiscoveryManagerStateChanged() throws Exception {
+        mConnectionHelper.onDiscoveryManagerStateChanged(
+                DiscoveryManager.DiscoveryManagerState.NOT_STARTED, true, true);
 
+        Field fStartStopOperationHandler =
+                mConnectionHelper.getClass().getDeclaredField("mStartStopOperationHandler");
+        fStartStopOperationHandler.setAccessible(true);
+        StartStopOperationHandler mStartStopOperationHandler =
+                (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
+
+        Field fCurrentOperation =
+                mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
+        fCurrentOperation.setAccessible(true);
+        StartStopOperation mCurrentOperation =
+                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+
+        Field fOperationTimeoutTimer =
+                mStartStopOperationHandler.getClass().getDeclaredField("mOperationTimeoutTimer");
+        fOperationTimeoutTimer.setAccessible(true);
+        CountDownTimer mOperationTimeoutTimer =
+                (CountDownTimer) fOperationTimeoutTimer.get(mStartStopOperationHandler);
+
+        assertThat("mStartStopOperationHandled should not be null",
+                mStartStopOperationHandler, is(notNullValue()));
+        assertThat("mCurrentOperation in mStartStopHandler shot be null",
+                mCurrentOperation, is(nullValue()));
+        assertThat("mOperationTimeoutTimer should be also null",
+                mOperationTimeoutTimer, is(nullValue()));
+        //To do test for JXcoreExtension
     }
 
     @Test
     public void testOnPeerDiscovered() throws Exception {
-
+        //To do test for JXcoreExtension
     }
 
     @Test
     public void testOnPeerUpdated() throws Exception {
-
+        assertThat(true, is(true));
     }
 
     @Test
     public void testOnPeerLost() throws Exception {
+        ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
+        String bluetoothMacAddress = "00:11:22:33:44:55";
+        PeerProperties mPeerProperties = new PeerProperties(bluetoothMacAddress);
 
+        mIncomingSocketThreadMock.setPeerProperties(mPeerProperties);
+        mConnectionModel.addConnectionThread(mIncomingSocketThreadMock);
+
+        mConnectionHelper.onPeerLost(mPeerProperties);
+        DiscoveryManager mDiscoveryManager = mConnectionHelper.getDiscoveryManager();
+
+        assertThat(mDiscoveryManager.getPeerModel().getDiscoveredPeerByBluetoothMacAddress(bluetoothMacAddress),
+                is(equalTo(mPeerProperties)));
+
+        //To do test for JXcoreExtension
     }
 
-    @Test
+    @Test(expected = UnsupportedOperationException.class)
     public void testOnProvideBluetoothMacAddressRequest() throws Exception {
-
+        mConnectionHelper.onProvideBluetoothMacAddressRequest("1111");
     }
 
-    @Test
+    @Test(expected = UnsupportedOperationException.class)
     public void testOnPeerReadyToProvideBluetoothMacAddress() throws Exception {
+        mConnectionHelper.onPeerReadyToProvideBluetoothMacAddress();
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testOnBluetoothMacAddressResolved() throws Exception {
+        mConnectionHelper.onBluetoothMacAddressResolved("00:11:22:33:44:55");
+    }
+
+    @Test
+    public void testHandleOutgoingConnection() throws Exception {
 
     }
 
     @Test
-    public void testOnBluetoothMacAddressResolved() throws Exception {
+    public void testHandleIncomingConnection() throws Exception {
 
     }
 }
