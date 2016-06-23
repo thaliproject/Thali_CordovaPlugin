@@ -291,12 +291,15 @@ module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
 };
 
-module.exports.getRandomlyNamedTestPouchDBInstance = function () {
-  var randomPouchDBName = randomString.generate({
+module.exports.getRandomPouchDBName= function () {
+  return randomString.generate({
     length: 40,
     charset: 'alphabetic'
   });
-  return new LevelDownPouchDB(randomPouchDBName);
+};
+
+module.exports.getRandomlyNamedTestPouchDBInstance = function () {
+  return new LevelDownPouchDB(module.exports.getRandomPouchDBName());
 };
 
 module.exports.getPouchDBFactoryInRandomDirectory = function () {
