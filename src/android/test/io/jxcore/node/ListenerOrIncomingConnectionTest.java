@@ -30,7 +30,6 @@ public class ListenerOrIncomingConnectionTest {
 
     @After
     public void tearDown() throws Exception {
-
     }
 
     @Test
@@ -121,6 +120,7 @@ public class ListenerOrIncomingConnectionTest {
 
         mListenerOrIncomingConnection = new ListenerOrIncomingConnection(
                 listeningPortNumberSample, clientPortNumberSample, serverPortNumberSample);
+
         assertThat("ClientPortNumber should be 2222", mListenerOrIncomingConnection.getClientPortNumber(),
                 is(equalTo(clientPortNumberSample)));
     }
@@ -156,11 +156,11 @@ public class ListenerOrIncomingConnectionTest {
                 is(equalTo(0)));
 
         mListenerOrIncomingConnection.setServerPortNumber(serverPortNumberSample);
-        assertThat("ClientPortNumber should be 3333", mListenerOrIncomingConnection.getServerPortNumber(),
+        assertThat("ServerPortNumber should be 3333", mListenerOrIncomingConnection.getServerPortNumber(),
                 is(equalTo(serverPortNumberSample)));
 
-        mListenerOrIncomingConnection.setClientPortNumber(3030);
-        assertThat("ClientPortNumber should be 3030", mListenerOrIncomingConnection.getServerPortNumber(),
+        mListenerOrIncomingConnection.setServerPortNumber(3030);
+        assertThat("ServerPortNumber should be 3030", mListenerOrIncomingConnection.getServerPortNumber(),
                 is(equalTo(3030)));
     }
 
@@ -218,7 +218,6 @@ public class ListenerOrIncomingConnectionTest {
 
         JXcoreThaliCallback jx = new JXcoreThaliCallbackMock();
         jx.callOnConnectCallback("errorMessage", mListenerOrIncomingConnection);
-
     }
 
 }
