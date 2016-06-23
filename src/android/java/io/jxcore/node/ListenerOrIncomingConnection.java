@@ -56,7 +56,7 @@ class ListenerOrIncomingConnection {
     }
 
     public int getClientPortNumber() {
-        return mServerPortNumber;
+        return mClientPortNumber;
     }
 
     public void setClientPortNumber(int clientPortNumber) {
