@@ -573,6 +573,30 @@ module.exports.turnParticipantsIntoBufferArray = function (t, devicePublicKey) {
   return publicKeys;
 };
 
+module.exports.startServerInfrastructure =
+  function (thaliNotificationServer, publicKeys, ThaliMobile, router) {
+    return thaliNotificationServer.start(publicKeys)
+      .then(function () {
+        return ThaliMobile.start(router,
+          thaliNotificationServer.getPskIdToSecret());
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      })
+      .then(function () {
+        return ThaliMobile.startListeningForAdvertisements();
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      })
+      .then(function () {
+        return ThaliMobile.startUpdateAdvertisingAndListening();
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      });
+  };
+
 module.exports.runTestOnAllParticipants = function (t, router,
                                                     thaliNotificationClient,
                                                     thaliNotificationServer,
@@ -664,26 +688,9 @@ module.exports.runTestOnAllParticipants = function (t, router,
       });
 
     thaliNotificationClient.start(publicKeys);
-    return thaliNotificationServer.start(publicKeys)
-      .then(function () {
-        return ThaliMobile.start(router,
-          thaliNotificationServer.getPskIdToSecret());
-      })
-      .then(function (combinedResult) {
-        return module.exports.validateCombinedResult(combinedResult);
-      })
-      .then(function () {
-        return ThaliMobile.startListeningForAdvertisements();
-      })
-      .then(function (combinedResult) {
-        return module.exports.validateCombinedResult(combinedResult);
-      })
-      .then(function () {
-        return ThaliMobile.startUpdateAdvertisingAndListening();
-      })
-      .then(function (combinedResult) {
-        return module.exports.validateCombinedResult(combinedResult);
-      })
+    return module.exports.startServerInfrastructure(thaliNotificationServer,
+                                                    publicKeys,
+                                                    ThaliMobile, router)
       .catch(function (err) {
         reject(err);
       });

@@ -138,7 +138,7 @@ the test definition, for example:
 +test.only('basic', function (t) {
 ```
 
-It is possible to run one test file through the coordinator instead of
+It is possible to run one test file (rather than just a single test) through the coordinator instead of
 all of the files using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`.
 
 It is also possible to debug one of the participants in a coordinated test by

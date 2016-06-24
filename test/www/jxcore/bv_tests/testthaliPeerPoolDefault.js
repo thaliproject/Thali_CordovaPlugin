@@ -35,6 +35,7 @@ var test = tape({
         return t.fail(err);
       })
       .then(function () {
+        testServer = null;
         t.end();
       });
   }
@@ -165,3 +166,30 @@ test('#ThaliPeerPoolDefault - PSK Pool works', function (t) {
     });
   });
 });
+
+test('#ThaliPeerPoolDefault - stop', function (t) {
+  var testAction1 = new TestPeerAction(peerIdentifier, connectionType,
+    actionType, t);
+  var testAction2 = new TestPeerAction(peerIdentifier, connectionType,
+    actionType, t);
+
+  t.notOk(testThaliPeerPoolDefault.enqueue(testAction1), 'enqueue worked');
+  t.notOk(testThaliPeerPoolDefault.enqueue(testAction2),
+    'enqueue 2 worked');
+
+  testThaliPeerPoolDefault.stop();
+
+  t.equal(testAction1.getActionState(), PeerAction.actionState.KILLED,
+  'start action is killed');
+  t.equal(testAction2.getActionState(), PeerAction.actionState.KILLED,
+  'killed action is still killed');
+
+  t.equal(Object.getOwnPropertyNames(testThaliPeerPoolDefault._inQueue).length,
+    0, 'inQueue is empty');
+
+  t.equal(testThaliPeerPoolDefault.enqueue(testAction1).message,
+    'We are stopped', 'Make sure we won\t enqueue after stopping');
+
+  t.end();
+});
+
