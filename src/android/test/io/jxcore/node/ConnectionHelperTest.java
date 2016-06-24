@@ -129,7 +129,7 @@ public class ConnectionHelperTest {
     @Test
     public void testStart() throws Exception {
         assertThat("Start method returns true",
-                mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+                mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
 
         Field fServerPortNumber = mConnectionHelper.getClass().getDeclaredField("mServerPortNumber");
         Field fPowerUpBleDiscoveryTimer = mConnectionHelper.getClass()
@@ -157,8 +157,17 @@ public class ConnectionHelperTest {
         StartStopOperation mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
-        assertThat("CurrentOperation from mStartStopOperationHandler is null value",
-                mCurrentOperation, is(nullValue()));
+        if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
+            assertThat("CurrentOperation from mStartStopOperationHandler is null value",
+                    mCurrentOperation, is(nullValue()));
+            assertThat("DiscoveryManager isRunning should return false",
+                    mConnectionHelper.getDiscoveryManager().isRunning(), is(false));
+        } else{
+            assertThat("CurrentOperation from mStartStopOperationHandler is not null value",
+                    mCurrentOperation, is(notNullValue()));
+            assertThat("DiscoveryManager isRunning should return true",
+                    mConnectionHelper.getDiscoveryManager().isRunning(), is(true));
+        }
 
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
 
@@ -180,13 +189,22 @@ public class ConnectionHelperTest {
         mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
-        assertThat("CurrentOperation from mStartStopOperationHandler is null value",
-                mCurrentOperation, is(nullValue()));
+        if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
+            assertThat("CurrentOperation from mStartStopOperationHandler is null value",
+                    mCurrentOperation, is(nullValue()));
+            assertThat("DiscoveryManager isRunning should return false",
+                    mConnectionHelper.getDiscoveryManager().isRunning(), is(false));
+        } else{
+            assertThat("CurrentOperation from mStartStopOperationHandler is not null value",
+                    mCurrentOperation, is(notNullValue()));
+            assertThat("DiscoveryManager isRunning should return true",
+                    mConnectionHelper.getDiscoveryManager().isRunning(), is(true));
+        }
     }
 
     @Test
     public void testStop() throws Exception {
-
+        mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock);
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
 
         Field fStartStopOperationHandler = mConnectionHelper.getClass()
@@ -226,7 +244,11 @@ public class ConnectionHelperTest {
         StartStopOperation mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
-        assertThat("CurrentOperation should not be null", mConnectionModel, is(notNullValue()));
+        if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
+            assertThat("CurrentOperation should be null", mCurrentOperation, is(nullValue()));
+        } else{
+            assertThat("CurrentOperation should not be null", mCurrentOperation, is(notNullValue()));
+        }
     }
 
     @Test
@@ -252,9 +274,7 @@ public class ConnectionHelperTest {
     @Test
     public void testIsRunning() throws Exception {
         Field fConnectionManager = mConnectionHelper.getClass().getDeclaredField("mConnectionManager");
-
         fConnectionManager.setAccessible(true);
-
         ConnectionManager mConnectionManager =
                 (ConnectionManager) fConnectionManager.get(mConnectionHelper);
 
@@ -266,12 +286,19 @@ public class ConnectionHelperTest {
                         equalTo(ConnectionManager.ConnectionManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED),
                         equalTo(ConnectionManager.ConnectionManagerState.RUNNING)))));
 
-        mConnectionManager.startListeningForIncomingConnections();
-
         Field fDiscoveryManager = mConnectionHelper.getClass().getDeclaredField("mDiscoveryManager");
         fDiscoveryManager.setAccessible(true);
         DiscoveryManager mDiscoveryManager =
                 (DiscoveryManager) fDiscoveryManager.get(mConnectionHelper);
+
+        assertThat("mDiscoveryManager isRunning return false", mDiscoveryManager.isRunning(), is(false));
+        assertThat("mDiscoveryManager isRunning does not return true",
+                mDiscoveryManager.isRunning(), is(not(true)));
+
+        assertThat("IsRunning returns false", mConnectionHelper.isRunning(), is(false));
+        assertThat("IsRunning should not return true", mConnectionHelper.isRunning(), is(not(true)));
+
+        mConnectionManager.startListeningForIncomingConnections();
 
         assertThat("ConnectionManager state is different than NOT_STARTED",
                 mConnectionManager.getState(),
@@ -285,6 +312,8 @@ public class ConnectionHelperTest {
         Field fState = mDiscoveryManager.getClass().getDeclaredField("mState");
         fState.setAccessible(true);
         fState.set(mDiscoveryManager, DiscoveryManager.DiscoveryManagerState.RUNNING_BLE);
+
+        mDiscoveryManager =(DiscoveryManager) fDiscoveryManager.get(mConnectionHelper);
 
         assertThat("mDiscoveryManager isRunning return true", mDiscoveryManager.isRunning(), is(true));
         assertThat("mDiscoveryManager isRunning does not return false",
@@ -354,7 +383,6 @@ public class ConnectionHelperTest {
         assertThat("Connection with this peerId should be already removed, so now method " +
                 "should return false ",
                 result, is(false));
-
     }
 
     @Test
@@ -382,7 +410,6 @@ public class ConnectionHelperTest {
 
         assertThat("mOutgoingSocketThreads size should be 30, number of max connections also 30, return true",
                 mConnectionHelper.hasMaximumNumberOfConnections(), is(true));
-
     }
 
     @Test(expected = NullPointerException.class)
@@ -521,7 +548,6 @@ public class ConnectionHelperTest {
                 settings.getInsecureRfcommSocketPortNumber(),
                 is(equalTo(ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT)));
     }
-
 
     @Test
     public void testOnConnectionFailed() throws Exception {

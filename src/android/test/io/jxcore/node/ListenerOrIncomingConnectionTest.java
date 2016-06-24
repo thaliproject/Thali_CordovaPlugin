@@ -211,13 +211,4 @@ public class ListenerOrIncomingConnectionTest {
                 mJSONObject.toString(), is(equalTo(mJSONToString)));
     }
 
-    @Test
-    public void someTest() throws Exception {
-        mListenerOrIncomingConnection = new ListenerOrIncomingConnection(
-                listeningPortNumberSample, clientPortNumberSample, serverPortNumberSample);
-
-        JXcoreThaliCallback jx = new JXcoreThaliCallbackMock();
-        jx.callOnConnectCallback("errorMessage", mListenerOrIncomingConnection);
-    }
-
 }
