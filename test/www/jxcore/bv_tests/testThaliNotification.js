@@ -8,7 +8,7 @@ var ThaliNotificationClient =
   require('thali/NextGeneration/notification/thaliNotificationClient');
 var ThaliNotificationServer =
   require('thali/NextGeneration/notification/thaliNotificationServer');
-var ThaliMobile =
+var thaliMobile =
   require('thali/NextGeneration/thaliMobile');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
@@ -16,6 +16,7 @@ var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var logger = require('thali/thalilogger')('testThaliNotification');
+var testUtils = require('../lib/testUtils');
 
 var HELLO = 'Hello world';
 var HELLO_PATH = '/hello';
@@ -89,6 +90,7 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    thaliMobile.stop();
     // Clears timeout
     var summary =
       'Participants:' + globals.numberOfParticipants +
@@ -262,7 +264,7 @@ test('Client to server request coordinated', function (t) {
     if(checkSuccess() || ++intervalRounds > 24) {
       // Test has been completed successfully or we have hit the time limit
       clearInterval(globals.testInterval);
-      ThaliMobile.stopListeningForAdvertisements().then(function () {
+      thaliMobile.stopListeningForAdvertisements().then(function () {
         notificationClient.stop();
         notificationServer.stop().then(function () {
 
@@ -288,13 +290,14 @@ test('Client to server request coordinated', function (t) {
     }
   }, 5000);
 
-  ThaliMobile.start(globals.expressRouter,
+  thaliMobile.start(globals.expressRouter,
     notificationServer.getPskIdToSecret())
-  .then(function () {
+  .then(function (combinedResult) {
+    testUtils.verifyCombinedResultSuccess(t, combinedResult);
     return notificationServer.start(addressBook);
   }).then(function () {
     notificationClient.start(addressBook);
-    return ThaliMobile.startListeningForAdvertisements().then(function () {
+    return thaliMobile.startListeningForAdvertisements().then(function () {
       logger.info('startListeningForAdvertisements');
     });
   });

@@ -49,7 +49,7 @@ var test = tape({
         if (combinedResult.wifiResult !== null ||
           combinedResult.nativeResult !== null) {
           return Promise.reject(
-            new Error('Had a failure in ThaliMobile.start - ' +
+            new Error('Had a failure in ThaliMobile.stop - ' +
               JSON.stringify(combinedResult)));
         }
       })
@@ -71,7 +71,7 @@ function bufferIndexOf(bufferArray, entryToFind) {
   return -1;
 }
 
-test.only('Coordinated pull replication from notification test', function (t) {
+test('Coordinated pull replication from notification test', function (t) {
   var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
   var exited = false;
   function exit(err) {

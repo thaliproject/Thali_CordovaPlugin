@@ -218,6 +218,49 @@ test('TCP_NATIVE peer loses DNS', function (t) {
 
 });
 
+test('Received beacons with no values for us', function (t) {
+  var enqueue = function (action) {
+    var keepAliveAgent = httpTester.getTestAgent(
+      thaliConfig.BEACON_PSK_IDENTITY, thaliConfig.BEACON_KEY);
+    action.start(keepAliveAgent).then(function () {
+      setImmediate(function () {
+        var entry =
+          notificationClient.peerDictionary.get(globals.TCPEvent.peerIdentifier);
+        t.ok(entry, 'entry exists');
+        t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED, 'entry ' +
+          'is resolved');
+        notificationClient.stop();
+        t.end();
+      });
+    }).catch( function ( ) {
+      t.fail('This action should not fail!');
+      t.end();
+    });
+  };
+
+  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+
+  httpTester.runServer(globals.expressRouter,
+    thaliConfig.NOTIFICATION_BEACON_PATH,
+    200, globals.preambleAndBeacons, 1);
+
+  var notificationClient =
+    new ThaliNotificationClient(globals.peerPoolInterface,
+      globals.targetDeviceKeyExchangeObjects[0]);
+
+  var bogusPublicKey =
+    crypto.createECDH(thaliConfig.BEACON_CURVE).generateKeys();
+  notificationClient.start([bogusPublicKey]);
+
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
+    function () {
+      t.fail('We should not have gotten an event!');
+    });
+
+  // New peer with TCP connection
+  notificationClient._peerAvailabilityChanged(globals.TCPEvent);
+});
+
 test('Resolves an action locally', function (t) {
 
   // Scenario:
@@ -249,7 +292,7 @@ test('Resolves an action locally', function (t) {
   notificationClient.start([globals.sourcePublicKey]);
 
   notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
-    function ( res) {
+    function (res) {
       t.equals(
         res.hostAddress,
         globals.TCPEvent.hostAddress,

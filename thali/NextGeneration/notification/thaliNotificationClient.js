@@ -307,9 +307,17 @@ ThaliNotificationClient.prototype._resolved =
       case ThaliNotificationAction.ActionResolution
         .BEACONS_RETRIEVED_AND_PARSED:
       {
-        var connInfo = entry.notificationAction.getConnectionInformation();
         entry.peerState = PeerDictionary.peerState.RESOLVED;
         this.peerDictionary.addUpdateEntry(peerId, entry);
+
+        if (!beaconDetails) {
+          // This peerId has nothing for us, if that changes then the peer will
+          // generate a new peerId so we can safely ignore this peerId from
+          // now on.
+          break;
+        }
+
+        var connInfo = entry.notificationAction.getConnectionInformation();
 
         var pubKx = this._addressBookCallback(beaconDetails.unencryptedKeyId);
 

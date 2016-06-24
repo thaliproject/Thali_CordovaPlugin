@@ -235,6 +235,15 @@ module.exports.getOSVersion = function () {
   });
 };
 
+
+module.exports.verifyCombinedResultSuccess =
+  function (t, combinedResult, message) {
+    t.equal(combinedResult.wifiResult, null,
+      message || 'error should be null');
+    t.equal(combinedResult.nativeResult, null,
+      message || 'error should be null');
+  };
+
 function levelDownPouchDBGenerator(defaultDirectory) {
   // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/fb77927d2f14911478032884f1576b770815bcab/packages/pouchdb-core/src/setup.js#L108-L137
   function PouchAlt(name, opts, callback) {
@@ -648,7 +657,7 @@ module.exports.runTestOnAllParticipants = function (t, router,
     }
 
     function fail(publicKey, err) {
-      logger.debug('Got an err - ' + JSON.stringify(err));
+      logger.debug('Got an err - ' + err);
       if (completed || participantCount[publicKey] === -1) {
         return;
       }

@@ -12,10 +12,7 @@ var uuid = require('node-uuid');
 var nodessdp = require('node-ssdp');
 var randomstring = require('randomstring');
 
-var verifyCombinedResultSuccess = function (t, combinedResult, message) {
-  t.equal(combinedResult.wifiResult, null, message || 'error should be null');
-  t.equal(combinedResult.nativeResult, null, message || 'error should be null');
-};
+var verifyCombinedResultSuccess = testUtils.verifyCombinedResultSuccess;
 
 var test = tape({
   setup: function (t) {
