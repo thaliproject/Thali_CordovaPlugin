@@ -3,15 +3,13 @@ package io.jxcore.node;
 import android.content.Context;
 import android.os.CountDownTimer;
 
-import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
-import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -29,7 +27,6 @@ public class StartStopOperationHandlerTest {
     Context mContext;
     ConnectionManager mConnectionManager;
     DiscoveryManager mDiscoveryManager;
-    DiscoveryManagerSettings mDiscoveryManagerSettings;
     ConnectionHelper mConnectionHelper;
     StartStopOperationHandler mStartStopOperationHandler;
     JXcoreThaliCallback mJXcoreThaliCallback;
@@ -52,7 +49,6 @@ public class StartStopOperationHandlerTest {
         mContext = jxcore.activity.getBaseContext();
         mConnectionManager = new ConnectionManager(mContext, mConnectionHelper, SERVICE_UUID, BLUETOOTH_NAME);
         mDiscoveryManager = new DiscoveryManager(mContext, mConnectionHelper, BLE_SERVICE_UUID, SERVICE_TYPE);
-
         mStartStopOperationHandler =
                 new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
     }
@@ -77,12 +73,10 @@ public class StartStopOperationHandlerTest {
 
         assertThat("mStartStopOperationHandler should not be null", mStartStopOperationHandler,
                 is(notNullValue()));
-
         assertThat("mConnectionManager1 should not be null", mConnectionManager1,
                 is(notNullValue()));
         assertThat("mConnectionManager1 should be equal to mConnectionManager",
                 mConnectionManager1, is(equalTo(mConnectionManager)));
-
         assertThat("mDiscoveryManager1 should not be null", mDiscoveryManager1,
                 is(notNullValue()));
         assertThat("mDiscoveryManager1 should be equal to mDiscoveryManager",
@@ -116,12 +110,13 @@ public class StartStopOperationHandlerTest {
 
         Field fDiscoveryManager =
                 mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
+        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
+
         fDiscoveryManager.setAccessible(true);
+        fCurrentOperation.setAccessible(true);
+
         DiscoveryManager mDiscoveryManager1 =
                 (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
-
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
-        fCurrentOperation.setAccessible(true);
         StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
 
@@ -196,13 +191,13 @@ public class StartStopOperationHandlerTest {
         StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
         assertThat("mCurrentOperation is still not null", mCurrentOperation, is(notNullValue()));
 
-        Method executeCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredMethod("executeCurrentOperation", null);
+        Method executeCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredMethod("executeCurrentOperation");
         executeCurrentOperation.setAccessible(true);
-        executeCurrentOperation.invoke(mStartStopOperationHandler, null);
+        executeCurrentOperation.invoke(mStartStopOperationHandler);
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
-        mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
+        mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
         assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
     }
 }
