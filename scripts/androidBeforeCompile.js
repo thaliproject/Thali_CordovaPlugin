@@ -51,13 +51,6 @@ var replaceJXCoreExtension = function (appRoot) {
   }
 };
 
-// jscs:disable jsDoc
-/**
- * This function replaces jxcore.java with the modified version containing
- * execution of unit tests.
- * @param {Object} appRoot
- */
-// jscs:enable jsDoc
 var replaceJXCore = function (appRoot) {
   var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
     'android/test/io/jxcore/node/jxcore.java');
@@ -81,7 +74,6 @@ var copyAndroidTestClasses = function (appRoot) {
   'android/test/io/jxcore/node');
   var targetFile = path.join(appRoot, 'platforms/android/src/io/jxcore/node');
   try {
-    console.log("Copying test classes");
     fs.copySync(sourceFile, targetFile);
   } catch (err) {
     console.log(err);
@@ -139,14 +131,44 @@ var removeInstallFromPlatform = function (appRoot) {
   fs.removeSync(installDir);
 };
 
+// jscs:disable jsDoc
+/**
+ * In case of build with android unit test:
+ * 1. Replaces jxcore.java with the modified version containing execution of unit tests.
+ * 2. Copy unit test files
+ * 3. Copy test runner classes
+ * 4. Remove a file indicating UT build
+ * @param {Object} appRoot
+ */
+// jscs:enable jsDoc
+var copyTestFiles = function (appRoot) {
+  try {
+    var st = fs.lstatSync('platforms/android/unittests');
+    if (st.isFile()) {
+      console.log("Preparing UT test environment");
+      replaceJXCore(appRoot);
+      copyAndroidTestClasses(appRoot);
+      copyAndroidTestRunner(appRoot);
+      copyBuildExtrasGradle(appRoot);
+      try {
+        console.log("Removing UT flag");
+        fs.removeSync('platforms/android/unittests');
+      } catch (err) {
+        console.log(err);
+        console.log('Failed to remove the UT flag file, continuing anyway');
+      }
+    }
+  } catch (err) {
+    console.log('Not a test environment, continue normally.');
+  }
+};
+
+
 module.exports = function (context) {
   var appRoot = context.opts.projectRoot;
   updateAndroidSDKVersion(appRoot);
   replaceJXCoreExtension(appRoot);
   updateBtconnectorlibVersion(appRoot);
-  replaceJXCore(appRoot);
-  copyAndroidTestClasses(appRoot);
-  copyAndroidTestRunner(appRoot);
-  copyBuildExtrasGradle(appRoot);
+  copyTestFiles(appRoot);
   removeInstallFromPlatform(appRoot);
 };
