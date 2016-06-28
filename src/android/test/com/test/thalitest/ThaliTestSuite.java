@@ -8,7 +8,7 @@ import io.jxcore.node.ConnectionModelTest;
 import io.jxcore.node.ConnectivityMonitorTest;
 import io.jxcore.node.LifeCycleMonitorTest;
 import io.jxcore.node.ListenerOrIncomingConnectionTest;
-import io.jxcore.node.StartStopOperation;
+import io.jxcore.node.StartStopOperationTest;
 import io.jxcore.node.StreamCopyingThreadTest;
 
 @RunWith(Suite.class)
@@ -18,7 +18,7 @@ import io.jxcore.node.StreamCopyingThreadTest;
         ConnectivityMonitorTest.class,
         LifeCycleMonitorTest.class,
         ListenerOrIncomingConnectionTest.class,
-        StartStopOperation.class,
+        StartStopOperationTest.class,
         StreamCopyingThreadTest.class
 })
 
