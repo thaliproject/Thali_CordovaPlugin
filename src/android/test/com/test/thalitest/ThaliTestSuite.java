@@ -8,18 +8,24 @@ import io.jxcore.node.ConnectionModelTest;
 import io.jxcore.node.ConnectivityMonitorTest;
 import io.jxcore.node.LifeCycleMonitorTest;
 import io.jxcore.node.ListenerOrIncomingConnectionTest;
+import io.jxcore.node.OutgoingSocketThreadTest;
+import io.jxcore.node.SocketThreadBaseTest;
+import io.jxcore.node.StartStopOperationHandlerTest;
 import io.jxcore.node.StartStopOperationTest;
 import io.jxcore.node.StreamCopyingThreadTest;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-        ConnectionHelperTest.class,
-        ConnectionModelTest.class,
         ConnectivityMonitorTest.class,
+        ConnectionModelTest.class,
         LifeCycleMonitorTest.class,
         ListenerOrIncomingConnectionTest.class,
-        StartStopOperationTest.class,
         StreamCopyingThreadTest.class
+//        StartStopOperationTest.class,
+//        SocketThreadBaseTest.class,
+//        OutgoingSocketThreadTest.class,
+//        StartStopOperationHandlerTest.class,
+//        ConnectionHelperTest.class
 })
 
 public class ThaliTestSuite {
