@@ -1,5 +1,5 @@
 {
-  "build": "./build.sh UT",
+  "build": "./build.sh",
   "binary_path": {
     "ios": "ThaliTest.app",
     "android": "android-release-unsigned.apk"
