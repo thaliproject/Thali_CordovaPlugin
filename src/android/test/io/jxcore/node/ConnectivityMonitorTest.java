@@ -69,6 +69,8 @@ public class ConnectivityMonitorTest {
         mWifiDirectManager.setWifiEnabled(currentWifiState);
         mBluetoothManager.setBluetoothEnabled(currentBTState);
 
+        int btManagersize = ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size();
+
         // Start monitoring connectivity, Wi-Fi and Bluetooth state changes.
         mConnectivityMonitor.start();
 
@@ -81,8 +83,8 @@ public class ConnectivityMonitorTest {
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothManager.isBluetoothEnabled()));
 
         assertThat("The BT listener is binded",
-                ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
-                is(2));
+                ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size() > btManagersize,
+                is(true));
 
         // WIFI
         currentWifiState = !currentWifiState;
