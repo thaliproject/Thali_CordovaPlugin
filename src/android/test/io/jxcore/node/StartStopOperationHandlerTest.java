@@ -55,7 +55,17 @@ public class StartStopOperationHandlerTest {
 
     @After
     public void tearDown() throws Exception {
-
+        mConnectionHelper.stop(false, mJXcoreThaliCallback);
+        mConnectionHelper.dispose();
+        mConnectionHelper.getDiscoveryManager().stop();
+        mConnectionHelper.getDiscoveryManager().stopAdvertising();
+        mConnectionHelper.getDiscoveryManager().stopDiscovery();
+        mConnectionHelper.getDiscoveryManager().dispose();
+        mDiscoveryManager.stop();
+        mDiscoveryManager.stopDiscovery();
+        mDiscoveryManager.stopAdvertising();
+        mDiscoveryManager.dispose();
+        mConnectionManager.dispose();
     }
 
     @Test
@@ -140,6 +150,8 @@ public class StartStopOperationHandlerTest {
         mStartStopOperationHandler.executeStartOperation(true, mJXcoreThaliCallback);
         mStartStopOperationHandler.executeStopOperation(true, mJXcoreThaliCallback);
 
+        Thread.sleep(1000);
+
         Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
         Field fDiscoveryManager =
                 mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
@@ -158,11 +170,13 @@ public class StartStopOperationHandlerTest {
             assertThat("mCurrentOperation should not be null", mCurrentOperation, is(notNullValue()));
         }
 
-        assertThat("mDiscoveryManager1 state should not be NOT_STARTED", mDiscoveryManager1.getState(),
+        assertThat("mDiscoveryManager1 state should be NOT_STARTED", mDiscoveryManager1.getState(),
                 is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
 
         mStartStopOperationHandler.executeStartOperation(true, mJXcoreThaliCallback);
         mStartStopOperationHandler.executeStopOperation(false, mJXcoreThaliCallback);
+
+        Thread.sleep(1000);
 
         mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
         mDiscoveryManager1 =
@@ -175,7 +189,7 @@ public class StartStopOperationHandlerTest {
             assertThat("mCurrentOperation should not be null", mCurrentOperation, is(notNullValue()));
         }
 
-        assertThat("mDiscoveryManager1 state should be NOT_STARTED", mDiscoveryManager1.getState(),
+        assertThat("mDiscoveryManager state should be NOT_STARTED", mDiscoveryManager1.getState(),
                 is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
     }
 

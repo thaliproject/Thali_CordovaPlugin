@@ -1,11 +1,15 @@
 package io.jxcore.node;
 
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
@@ -54,7 +58,7 @@ public class ConnectivityMonitorTest {
         mDiscoveryManagerMock.dispose();
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testStartStop() throws Exception {
         boolean currentWifiState = mWifiDirectManager.isWifiEnabled();
         boolean currentBTState = mBluetoothManager.isBluetoothEnabled();
@@ -120,15 +124,21 @@ public class ConnectivityMonitorTest {
         assertThat("Proper state of BT is set when switched on",
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothManager.isBluetoothEnabled()));
 
-        // Stop monitoring connectivity, Wi-Fi and Bluetooth state changes.
-        // TODO add tests checking if the mWifiStateChangedAndConnectivityActionBroadcastReceiver
-        // is properly deregistered
+        Field fWifiStateChangedAndConnectivityActionBroadcastReceiver = mConnectivityMonitor.getClass()
+                .getDeclaredField("mWifiStateChangedAndConnectivityActionBroadcastReceiver");
+        fWifiStateChangedAndConnectivityActionBroadcastReceiver.setAccessible(true);
+        BroadcastReceiver mWifiStateChangedAndConnectivityActionBroadcastReceiver =
+                (BroadcastReceiver) fWifiStateChangedAndConnectivityActionBroadcastReceiver.get(mConnectivityMonitor);
+
         mConnectivityMonitor.stop();
 
         Thread.sleep(1000);
         assertThat("The BT listener is released",
                 ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
                 is(1));
+
+        Activity mActivity = jxcore.activity;
+        mActivity.unregisterReceiver(mWifiStateChangedAndConnectivityActionBroadcastReceiver);
     }
 
     @Test
@@ -265,8 +275,8 @@ public class ConnectivityMonitorTest {
                 mConnectivityMonitor.isWifiEnabled(), is(true));
 
     }
-
-    class DiscoveryManagerListenerMock implements DiscoveryManager.DiscoveryManagerListener {
+    
+    public class DiscoveryManagerListenerMock implements DiscoveryManager.DiscoveryManagerListener {
 
         @Override
         public boolean onPermissionCheckRequired(String s) {
@@ -310,7 +320,7 @@ public class ConnectivityMonitorTest {
         }
     }
 
-    class DiscoveryManagerMock extends DiscoveryManager {
+    public class DiscoveryManagerMock extends DiscoveryManager {
 
         boolean mockmBleMultipleAdvertisementSupported;
 
@@ -322,5 +332,6 @@ public class ConnectivityMonitorTest {
         public boolean isBleMultipleAdvertisementSupported() {
             return mockmBleMultipleAdvertisementSupported;
         }
+
     }
 }
