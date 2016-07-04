@@ -247,6 +247,13 @@ public class jxcore extends CordovaPlugin {
         else {
           System.out.println("Tests failed_00");
         }
+		
+		result = new PluginResult(Status.OK, "Total number of executed tests: " + ThaliTestRunner.result.getRunCount() +
+                "\nNumber of passed tests: " + (ThaliTestRunner.result.getRunCount() -
+                ThaliTestRunner.result.getFailureCount() - ThaliTestRunner.result.getIgnoreCount()) +
+                "\nNumber of failed tests: " + ThaliTestRunner.result.getFailureCount() +
+                "\nNumber of ignored tests: " + ThaliTestRunner.result.getIgnoreCount() +
+                "\nTotal duration: " + new Date(ThaliTestRunner.result.getRunTime()).getTime() + " ms");
       }
 
     } catch (Exception ex) {

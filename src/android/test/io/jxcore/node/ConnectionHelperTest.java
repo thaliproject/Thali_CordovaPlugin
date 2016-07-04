@@ -6,7 +6,9 @@ import android.os.CountDownTimer;
 import android.util.Log;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManagerSettings;
@@ -37,6 +39,12 @@ public class ConnectionHelperTest {
     InputStreamMock mInputStreamMock;
     OutputStreamMock mOutputStreamMock;
 
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        mConnectionHelper = new ConnectionHelper();
+        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
+    }
+	
     @Before
     public void setUp() throws Exception {
         outgoingThreadsIds = new ArrayList<String>();
@@ -48,6 +56,16 @@ public class ConnectionHelperTest {
 
     @After
     public void tearDown() throws Exception {
+        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        mConnectionHelper.dispose();
+        mConnectionHelper.getDiscoveryManager().stop();
+        mConnectionHelper.getDiscoveryManager().stopAdvertising();
+        mConnectionHelper.getDiscoveryManager().stopDiscovery();
+        mConnectionHelper.getDiscoveryManager().dispose();
+    }
+
+    @AfterClass
+    public static void tearDownAfterClass() throws InterruptedException {
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
         mConnectionHelper.dispose();
         mConnectionHelper.getDiscoveryManager().stop();
