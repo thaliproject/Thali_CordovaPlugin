@@ -3,6 +3,7 @@ package io.jxcore.node;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.os.CountDownTimer;
+import android.util.Log;
 
 import org.junit.After;
 import org.junit.Before;
@@ -28,23 +29,21 @@ import static org.hamcrest.core.IsNot.not;
 
 public class ConnectionHelperTest {
 
-    ConnectionHelper mConnectionHelper;
+    public static ConnectionHelper mConnectionHelper;
+    public static JXcoreThaliCallbackMock mJXcoreThaliCallbackMock;
     ArrayList<String> outgoingThreadsIds;
     ArrayList<String> incomingThreadsIds;
     ListenerMock mListenerMock;
     InputStreamMock mInputStreamMock;
     OutputStreamMock mOutputStreamMock;
-    JXcoreThaliCallbackMock mJXcoreThaliCallbackMock;
 
     @Before
     public void setUp() throws Exception {
-        mConnectionHelper = new ConnectionHelper();
         outgoingThreadsIds = new ArrayList<String>();
         incomingThreadsIds = new ArrayList<String>();
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();
-        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
     }
 
     @After
@@ -129,7 +128,7 @@ public class ConnectionHelperTest {
     @Test
     public void testStart() throws Exception {
         assertThat("Start method returns true",
-                mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+                mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
 
         Field fServerPortNumber = mConnectionHelper.getClass().getDeclaredField("mServerPortNumber");
         Field fPowerUpBleDiscoveryTimer = mConnectionHelper.getClass()
@@ -161,9 +160,10 @@ public class ConnectionHelperTest {
         }
 
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        mConnectionHelper.dispose();
 
         assertThat("Start method returns true",
-                mConnectionHelper.start(-1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+                mConnectionHelper.start(-1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
 
         mServerPortNumber = fServerPortNumber.getInt(mConnectionHelper);
         mPowerUpBleDiscoveryTimer =
@@ -188,7 +188,7 @@ public class ConnectionHelperTest {
 
     @Test
     public void testStop() throws Exception {
-        mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock);
+        mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock);
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
 
         Field fStartStopOperationHandler = mConnectionHelper.getClass()

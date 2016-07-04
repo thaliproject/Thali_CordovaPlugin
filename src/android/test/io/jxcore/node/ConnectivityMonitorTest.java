@@ -132,13 +132,13 @@ public class ConnectivityMonitorTest {
 
         mConnectivityMonitor.stop();
 
+        Activity mActivity = jxcore.activity;
+        mActivity.unregisterReceiver(mWifiStateChangedAndConnectivityActionBroadcastReceiver);
+
         Thread.sleep(1000);
         assertThat("The BT listener is released",
                 ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
                 is(1));
-
-        Activity mActivity = jxcore.activity;
-        mActivity.unregisterReceiver(mWifiStateChangedAndConnectivityActionBroadcastReceiver);
     }
 
     @Test
@@ -275,7 +275,7 @@ public class ConnectivityMonitorTest {
                 mConnectivityMonitor.isWifiEnabled(), is(true));
 
     }
-    
+
     public class DiscoveryManagerListenerMock implements DiscoveryManager.DiscoveryManagerListener {
 
         @Override
