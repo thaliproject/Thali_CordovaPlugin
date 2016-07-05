@@ -4,24 +4,24 @@ import org.apache.cordova.LOG;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
-
 import java.util.Date;
 
 public class ThaliTestRunner {
-    private static final String mTag = ThaliTestRunner.class.getName();
+    public static Result result;
     public static boolean runTests() {
-        Result result = JUnitCore.runClasses(ThaliTestSuite.class);
+        String thaliLogTag = "THALI UNIT TEST";
+        result = JUnitCore.runClasses(ThaliTestSuite.class);
 
-        for (Failure failure : result.getFailures()) {
+        for (Failure failure: result.getFailures()) {
             LOG.e(mTag, failure.getMessage());
         }
 
-        LOG.e(mTag, "Total number of executed tests: %s", result.getRunCount());
-        LOG.e(mTag, "Number of passed tests: %s",
+        LOG.e(thaliLogTag, "Total number of executed tests: %s", result.getRunCount());
+        LOG.e(thaliLogTag, "Number of passed tests: %s",
                 (result.getRunCount() - result.getFailureCount() - result.getIgnoreCount()));
-        LOG.e(mTag, "Number of failed tests:  %s", result.getFailureCount());
-        LOG.e(mTag, "Number of ignored tests: %s", result.getIgnoreCount());
-        LOG.e(mTag, "Total duration: %s ms", new Date(result.getRunTime()).getTime());
+        LOG.e(thaliLogTag, "Number of failed tests:  %s", result.getFailureCount());
+        LOG.e(thaliLogTag, "Number of ignored tests: %s", result.getIgnoreCount());
+        LOG.e(thaliLogTag, "Total duration: %s ms", new Date(result.getRunTime()).getTime());
 
         return result.wasSuccessful();
     }

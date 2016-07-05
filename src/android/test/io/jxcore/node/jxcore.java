@@ -239,21 +239,16 @@ public class jxcore extends CordovaPlugin {
       }
 
       if (action.equals("Test")) {
-        boolean resultTest = ThaliTestRunner.runTests();
+        Log.d(LOGTAG, "Running tests");
+        Result resultTest = ThaliTestRunner.runTests();
 
-        if(resultTest){
-          System.out.println("Tests succeed_00");
-        }
-        else {
-          System.out.println("Tests failed_00");
-        }
-		
-		result = new PluginResult(Status.OK, "Total number of executed tests: " + ThaliTestRunner.result.getRunCount() +
-                "\nNumber of passed tests: " + (ThaliTestRunner.result.getRunCount() -
-                ThaliTestRunner.result.getFailureCount() - ThaliTestRunner.result.getIgnoreCount()) +
-                "\nNumber of failed tests: " + ThaliTestRunner.result.getFailureCount() +
-                "\nNumber of ignored tests: " + ThaliTestRunner.result.getIgnoreCount() +
-                "\nTotal duration: " + new Date(ThaliTestRunner.result.getRunTime()).getTime() + " ms");
+        result = new PluginResult(Status.OK,
+                String.format("Total number of executed tests: %s", resultTest.getRunCount()) +
+                String.format("\nNumber of passed tests: %s", (resultTest.getRunCount() -
+                        resultTest.getFailureCount() - resultTest.getIgnoreCount())) +
+                String.format("\nNumber of failed tests: %s", resultTest.getFailureCount()) +
+                String.format("\nNumber of ignored tests: %s", resultTest.getIgnoreCount()) +
+                String.format("\nTotal duration: %s ms", new Date(resultTest.getRunTime()).getTime()));
       }
 
     } catch (Exception ex) {

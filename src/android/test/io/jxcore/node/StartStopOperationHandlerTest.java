@@ -2,8 +2,6 @@ package io.jxcore.node;
 
 import android.content.Context;
 import android.os.CountDownTimer;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
 import org.junit.After;
