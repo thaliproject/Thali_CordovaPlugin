@@ -3,6 +3,7 @@
 package io.jxcore.node;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.apache.cordova.PluginResult;
 import org.apache.cordova.PluginResult.Status;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.junit.runner.Result;
 
 import android.app.Activity;
 import android.content.Context;

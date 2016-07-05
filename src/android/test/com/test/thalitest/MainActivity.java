@@ -21,11 +21,6 @@ package com.test.thalitest;
 
 import android.os.Bundle;
 import org.apache.cordova.*;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
-
-import io.jxcore.node.ConnectionHelper;
 
 public class MainActivity extends CordovaActivity
 {
@@ -35,7 +30,5 @@ public class MainActivity extends CordovaActivity
         super.onCreate(savedInstanceState);
         // Set by <content src="index.html" /> in config.xml
         loadUrl(launchUrl);
-        //boolean result = ThaliTestRunner.runTests();
-        //System.out.println(result);
     }
 }
