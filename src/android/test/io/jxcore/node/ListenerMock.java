@@ -1,7 +1,5 @@
 package io.jxcore.node;
 
-import io.jxcore.node.SocketThreadBase;
-
 public class ListenerMock implements SocketThreadBase.Listener {
 
     @Override

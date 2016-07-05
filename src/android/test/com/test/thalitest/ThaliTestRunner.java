@@ -4,15 +4,15 @@ import org.apache.cordova.LOG;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
-
 import java.util.Date;
 
 public class ThaliTestRunner {
-    private static final String mTag = ThaliTestRunner.class.getName();
-    public static boolean runTests() {
-        Result result = JUnitCore.runClasses(ThaliTestSuite.class);
 
-        for (Failure failure : result.getFailures()) {
+    public static Result runTests() {
+        Result result = JUnitCore.runClasses(ThaliTestSuite.class);
+        String mTag = ThaliTestRunner.class.getName();
+
+        for (Failure failure: result.getFailures()) {
             LOG.e(mTag, failure.getMessage());
         }
 
@@ -23,6 +23,6 @@ public class ThaliTestRunner {
         LOG.e(mTag, "Number of ignored tests: %s", result.getIgnoreCount());
         LOG.e(mTag, "Total duration: %s ms", new Date(result.getRunTime()).getTime());
 
-        return result.wasSuccessful();
+        return result;
     }
 }

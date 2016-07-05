@@ -3,6 +3,7 @@
 package io.jxcore.node;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.apache.cordova.PluginResult;
 import org.apache.cordova.PluginResult.Status;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.junit.runner.Result;
 
 import android.app.Activity;
 import android.content.Context;
@@ -239,14 +241,16 @@ public class jxcore extends CordovaPlugin {
       }
 
       if (action.equals("Test")) {
-        boolean resultTest = ThaliTestRunner.runTests();
+        Log.d(LOGTAG, "Running tests");
+        Result resultTest = ThaliTestRunner.runTests();
 
-        if(resultTest){
-          System.out.println("Tests succeded_00");
-        }
-        else {
-          System.out.println("Tests failed_00");
-        }
+        result = new PluginResult(Status.OK,
+                String.format("Total number of executed tests: %s", resultTest.getRunCount()) +
+                String.format("\nNumber of passed tests: %s", (resultTest.getRunCount() -
+                        resultTest.getFailureCount() - resultTest.getIgnoreCount())) +
+                String.format("\nNumber of failed tests: %s", resultTest.getFailureCount()) +
+                String.format("\nNumber of ignored tests: %s", resultTest.getIgnoreCount()) +
+                String.format("\nTotal duration: %s ms", new Date(resultTest.getRunTime()).getTime()));
       }
 
     } catch (Exception ex) {

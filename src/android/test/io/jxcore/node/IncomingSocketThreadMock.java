@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import io.jxcore.node.IncomingSocketThread;
-
 public class IncomingSocketThreadMock extends IncomingSocketThread {
     public Long threadId;
     public boolean closeCalled = false;

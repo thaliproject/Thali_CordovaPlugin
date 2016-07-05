@@ -24,12 +24,12 @@ import static org.hamcrest.core.IsNot.not;
 
 public class StartStopOperationHandlerTest {
 
-    Context mContext;
-    ConnectionManager mConnectionManager;
-    DiscoveryManager mDiscoveryManager;
-    ConnectionHelper mConnectionHelper;
-    StartStopOperationHandler mStartStopOperationHandler;
-    JXcoreThaliCallback mJXcoreThaliCallback;
+    public static Context mContext;
+    public static ConnectionManager mConnectionManager;
+    public static DiscoveryManager mDiscoveryManager;
+    public static ConnectionHelper mConnectionHelper;
+    public static StartStopOperationHandler mStartStopOperationHandler;
+    public static JXcoreThaliCallbackMock mJXcoreThaliCallback;
 
     String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
     String BLUETOOTH_NAME = "Thali_Bluetooth";
@@ -51,11 +51,22 @@ public class StartStopOperationHandlerTest {
         mDiscoveryManager = new DiscoveryManager(mContext, mConnectionHelper, BLE_SERVICE_UUID, SERVICE_TYPE);
         mStartStopOperationHandler =
                 new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
+
     }
 
     @After
     public void tearDown() throws Exception {
-
+        mConnectionHelper.stop(false, mJXcoreThaliCallback);
+        mConnectionHelper.dispose();
+        mConnectionHelper.getDiscoveryManager().stop();
+        mConnectionHelper.getDiscoveryManager().stopAdvertising();
+        mConnectionHelper.getDiscoveryManager().stopDiscovery();
+        mConnectionHelper.getDiscoveryManager().dispose();
+        mDiscoveryManager.stop();
+        mDiscoveryManager.stopDiscovery();
+        mDiscoveryManager.stopAdvertising();
+        mDiscoveryManager.dispose();
+        mConnectionManager.dispose();
     }
 
     @Test
@@ -85,7 +96,6 @@ public class StartStopOperationHandlerTest {
 
     @Test
     public void testCancelCurrentOperation() throws Exception {
-        mStartStopOperationHandler.executeStartOperation(true, mJXcoreThaliCallback);
         mStartStopOperationHandler.cancelCurrentOperation();
 
         Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
@@ -137,8 +147,8 @@ public class StartStopOperationHandlerTest {
 
     @Test
     public void testExecuteStopOperation() throws Exception {
-        mStartStopOperationHandler.executeStartOperation(true, mJXcoreThaliCallback);
-        mStartStopOperationHandler.executeStopOperation(true, mJXcoreThaliCallback);
+        mStartStopOperationHandler.executeStartOperation(false, mJXcoreThaliCallback);
+        mStartStopOperationHandler.executeStopOperation(false, mJXcoreThaliCallback);
 
         Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
         Field fDiscoveryManager =
@@ -150,23 +160,6 @@ public class StartStopOperationHandlerTest {
         StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
         DiscoveryManager mDiscoveryManager1 =
               (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
-
-        if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
-            assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-
-        }else{
-            assertThat("mCurrentOperation should not be null", mCurrentOperation, is(notNullValue()));
-        }
-
-        assertThat("mDiscoveryManager1 state should not be NOT_STARTED", mDiscoveryManager1.getState(),
-                is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
-
-        mStartStopOperationHandler.executeStartOperation(true, mJXcoreThaliCallback);
-        mStartStopOperationHandler.executeStopOperation(false, mJXcoreThaliCallback);
-
-        mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-        mDiscoveryManager1 =
-                (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
 
         if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
             assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));

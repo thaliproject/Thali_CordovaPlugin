@@ -5,7 +5,9 @@ import android.content.Context;
 import android.os.CountDownTimer;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManagerSettings;
@@ -28,35 +30,47 @@ import static org.hamcrest.core.IsNot.not;
 
 public class ConnectionHelperTest {
 
-    ConnectionHelper mConnectionHelper;
+    public static ConnectionHelper mConnectionHelper;
+    public static JXcoreThaliCallbackMock mJXcoreThaliCallbackMock;
     ArrayList<String> outgoingThreadsIds;
     ArrayList<String> incomingThreadsIds;
-    IncomingSocketThreadMock mIncomingSocketThreadMock;
-    OutgoingSocketThreadMock mOutgoingSocketThreadMock;
     ListenerMock mListenerMock;
     InputStreamMock mInputStreamMock;
     OutputStreamMock mOutputStreamMock;
-    JXcoreThaliCallbackMock mJXcoreThaliCallbackMock;
 
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        mConnectionHelper = new ConnectionHelper();
+        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
+    }
+	
     @Before
     public void setUp() throws Exception {
-
-        mConnectionHelper = new ConnectionHelper();
         outgoingThreadsIds = new ArrayList<String>();
         incomingThreadsIds = new ArrayList<String>();
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();
-        mIncomingSocketThreadMock = new IncomingSocketThreadMock(null, mListenerMock,
-                mInputStreamMock, mOutputStreamMock);
-        mOutgoingSocketThreadMock = new OutgoingSocketThreadMock(null, mListenerMock,
-                mInputStreamMock, mOutputStreamMock);
-        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
     }
 
     @After
     public void tearDown() throws Exception {
+        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        mConnectionHelper.dispose();
+        mConnectionHelper.getDiscoveryManager().stop();
+        mConnectionHelper.getDiscoveryManager().stopAdvertising();
+        mConnectionHelper.getDiscoveryManager().stopDiscovery();
+        mConnectionHelper.getDiscoveryManager().dispose();
+    }
 
+    @AfterClass
+    public static void tearDownAfterClass() throws InterruptedException {
+        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        mConnectionHelper.dispose();
+        mConnectionHelper.getDiscoveryManager().stop();
+        mConnectionHelper.getDiscoveryManager().stopAdvertising();
+        mConnectionHelper.getDiscoveryManager().stopDiscovery();
+        mConnectionHelper.getDiscoveryManager().dispose();
     }
 
     @Test
@@ -123,12 +137,15 @@ public class ConnectionHelperTest {
 
         assertThat("CurrentOperation in StartStopOperationHandler is null value",
                 mCurrentOperation, is(nullValue()));
+
+        mDiscoveryManager.dispose();
+        mConnectionManager.dispose();
     }
 
     @Test
     public void testStart() throws Exception {
         assertThat("Start method returns true",
-                mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+                mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
 
         Field fServerPortNumber = mConnectionHelper.getClass().getDeclaredField("mServerPortNumber");
         Field fPowerUpBleDiscoveryTimer = mConnectionHelper.getClass()
@@ -140,7 +157,7 @@ public class ConnectionHelperTest {
         fPowerUpBleDiscoveryTimer.setAccessible(true);
         fStartStopOperationHandler.setAccessible(true);
 
-        int mServerPortNumber = (Integer) fServerPortNumber.get(mConnectionHelper);
+        int mServerPortNumber = fServerPortNumber.getInt(mConnectionHelper);
         CountDownTimer mPowerUpBleDiscoveryTimer =
                 (CountDownTimer) fPowerUpBleDiscoveryTimer.get(mConnectionHelper);
         StartStopOperationHandler mStartStopOperationHandler =
@@ -151,29 +168,21 @@ public class ConnectionHelperTest {
         assertThat("StartStopOperation handler is not null value",
                 mStartStopOperationHandler, is(notNullValue()));
 
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
-        fCurrentOperation.setAccessible(true);
-        StartStopOperation mCurrentOperation =
-                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-
         if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
-            assertThat("CurrentOperation from mStartStopOperationHandler is null value",
-                    mCurrentOperation, is(nullValue()));
-            assertThat("DiscoveryManager isRunning should return false",
+            assertThat("DiscoveryManager1 isRunning should return false",
                     mConnectionHelper.getDiscoveryManager().isRunning(), is(false));
         } else{
-            assertThat("CurrentOperation from mStartStopOperationHandler is not null value",
-                    mCurrentOperation, is(notNullValue()));
-            assertThat("DiscoveryManager isRunning should return true",
+            assertThat("DiscoveryManager1 isRunning should return true",
                     mConnectionHelper.getDiscoveryManager().isRunning(), is(true));
         }
 
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        mConnectionHelper.dispose();
 
         assertThat("Start method returns true",
-                mConnectionHelper.start(-1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+                mConnectionHelper.start(-1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
 
-        mServerPortNumber = (Integer) fServerPortNumber.get(mConnectionHelper);
+        mServerPortNumber = fServerPortNumber.getInt(mConnectionHelper);
         mPowerUpBleDiscoveryTimer =
                 (CountDownTimer) fPowerUpBleDiscoveryTimer.get(mConnectionHelper);
         mStartStopOperationHandler =
@@ -185,17 +194,10 @@ public class ConnectionHelperTest {
         assertThat("StartStopOperation handler is not null value",
                 mStartStopOperationHandler, is(notNullValue()));
 
-        mCurrentOperation =
-                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-
         if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
-            assertThat("CurrentOperation from mStartStopOperationHandler is null value",
-                    mCurrentOperation, is(nullValue()));
             assertThat("DiscoveryManager isRunning should return false",
                     mConnectionHelper.getDiscoveryManager().isRunning(), is(false));
         } else{
-            assertThat("CurrentOperation from mStartStopOperationHandler is not null value",
-                    mCurrentOperation, is(notNullValue()));
             assertThat("DiscoveryManager isRunning should return true",
                     mConnectionHelper.getDiscoveryManager().isRunning(), is(true));
         }
@@ -203,7 +205,7 @@ public class ConnectionHelperTest {
 
     @Test
     public void testStop() throws Exception {
-        mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock);
+        mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock);
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
 
         Field fStartStopOperationHandler = mConnectionHelper.getClass()
@@ -237,22 +239,13 @@ public class ConnectionHelperTest {
         assertThat("Number of current connections after executing stop method should be 0",
                 mConnectionHelper.getConnectionModel()
                         .getNumberOfCurrentConnections(), is(equalTo(0)));
-
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
-        fCurrentOperation.setAccessible(true);
-        StartStopOperation mCurrentOperation =
-                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-
-        if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
-            assertThat("CurrentOperation should be null", mCurrentOperation, is(nullValue()));
-        } else{
-            assertThat("CurrentOperation should not be null", mCurrentOperation, is(notNullValue()));
-        }
     }
 
     @Test
     public void testKillAllConnections() throws Exception {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
+        IncomingSocketThreadMock mIncomingSocketThreadMock = new IncomingSocketThreadMock(null, mListenerMock,
+                mInputStreamMock, mOutputStreamMock);
 
         mIncomingSocketThreadMock.setPeerProperties(new PeerProperties("incoming"));
         mIncomingSocketThreadMock.threadId = 1L;
@@ -261,7 +254,6 @@ public class ConnectionHelperTest {
 
         assertThat("Number of killed incoming connection should be 1",
                 mConnectionHelper.killAllConnections(), is(equalTo(1)));
-
         assertThat("Number of outgoing connection should be 0 after killAllConnections()",
                 mConnectionHelper.getConnectionModel().getNumberOfCurrentOutgoingConnections(),
                 is(equalTo(0)));
@@ -297,6 +289,7 @@ public class ConnectionHelperTest {
 
         mConnectionManager.startListeningForIncomingConnections();
 
+        mConnectionManager.cancelAllConnectionAttempts();
         assertThat("ConnectionManager state is different than NOT_STARTED",
                 mConnectionManager.getState(),
                 is(not(equalTo(ConnectionManager.ConnectionManagerState.NOT_STARTED))));
@@ -309,13 +302,17 @@ public class ConnectionHelperTest {
         fState.setAccessible(true);
         fState.set(mDiscoveryManager, DiscoveryManager.DiscoveryManagerState.RUNNING_BLE);
 
-        mDiscoveryManager =(DiscoveryManager) fDiscoveryManager.get(mConnectionHelper);
+        mDiscoveryManager =
+                (DiscoveryManager) fDiscoveryManager.get(mConnectionHelper);
 
         assertThat("mDiscoveryManager isRunning return true", mDiscoveryManager.isRunning(), is(true));
         assertThat("mDiscoveryManager isRunning does not return false",
                 mDiscoveryManager.isRunning(), is(not(false)));
         assertThat("IsRunning returns true", mConnectionHelper.isRunning(), is(true));
         assertThat("IsRunning should not return false", mConnectionHelper.isRunning(), is(not(false)));
+
+        mConnectionManager.dispose();
+        mDiscoveryManager.dispose();
     }
 
     @Test
@@ -360,6 +357,8 @@ public class ConnectionHelperTest {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
         String bluetoothMacAddress = "00:11:22:33:44:55";
         PeerProperties mPeerProperties = new PeerProperties(bluetoothMacAddress);
+        OutgoingSocketThreadMock mOutgoingSocketThreadMock =
+                new OutgoingSocketThreadMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
 
         mOutgoingSocketThreadMock.setPeerProperties(mPeerProperties);
         mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock);
@@ -412,6 +411,8 @@ public class ConnectionHelperTest {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
         String bluetoothMacAddressOutgoing = "00:11:22:33:44:55";
         JXcoreThaliCallbackMock mJXcoreTHaliCallBack = new JXcoreThaliCallbackMock();
+        OutgoingSocketThreadMock mOutgoingSocketThreadMock =
+                new OutgoingSocketThreadMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
 
         mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties(bluetoothMacAddressOutgoing));
         mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock);
@@ -458,7 +459,7 @@ public class ConnectionHelperTest {
 
         mConnectionHelper.killAllConnections();
         result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, mJXcoreTHaliCallBack);
-        assertThat(result, is(nullValue()));
+        assertThat("Result should be null",result, is(nullValue()));
     }
 
     @Test
@@ -473,11 +474,13 @@ public class ConnectionHelperTest {
                 ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
 
         mConnectionHelper.toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();
-        assertThat(settings.getInsecureRfcommSocketPortNumber(),
+        assertThat("getInsecureRfcommSocketPortNumber should be equal to SYSTEM_DECIDED_" +
+                "INSECURE_RFCOMM_SOCKET_PORT", settings.getInsecureRfcommSocketPortNumber(),
                 is(equalTo(ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT)));
 
         mConnectionHelper.toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();
-        assertThat(settings.getInsecureRfcommSocketPortNumber(),
+        assertThat("getInsecureRfcommSocketPortNumber should be equal to DEFAULT_ALTERNATIVE_" +
+                "INSECURE_RFCOMM_SOCKET_PORT", settings.getInsecureRfcommSocketPortNumber(),
                 is(equalTo(ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT)));
     }
 
@@ -504,8 +507,8 @@ public class ConnectionHelperTest {
         CountDownTimer mOperationTimeoutTimer =
                 (CountDownTimer) fOperationTimeoutTimer.get(mStartStopOperationHandler);
 
-        assertThat(mCurrentOperation, is(nullValue()));
-        assertThat(mOperationTimeoutTimer, is(nullValue()));
+        assertThat("mCurrentOperation should be null",mCurrentOperation, is(nullValue()));
+        assertThat("mOperationTimeoutTimer should be null",mOperationTimeoutTimer, is(nullValue()));
     }
 
     @Test
@@ -607,12 +610,10 @@ public class ConnectionHelperTest {
                 mCurrentOperation, is(nullValue()));
         assertThat("mOperationTimeoutTimer should be also null",
                 mOperationTimeoutTimer, is(nullValue()));
-        //TODO test for JXcoreExtension
     }
 
     @Test
     public void testOnPeerDiscovered() throws Exception {
-        //TODO test for JXcoreExtension
     }
 
     @Test
@@ -625,6 +626,8 @@ public class ConnectionHelperTest {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
         String bluetoothMacAddress = "00:11:22:33:44:55";
         PeerProperties mPeerProperties = new PeerProperties(bluetoothMacAddress);
+        IncomingSocketThreadMock mIncomingSocketThreadMock =
+                new IncomingSocketThreadMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
 
         mIncomingSocketThreadMock.setPeerProperties(mPeerProperties);
         mConnectionModel.addConnectionThread(mIncomingSocketThreadMock);
@@ -632,10 +635,9 @@ public class ConnectionHelperTest {
 
         DiscoveryManager mDiscoveryManager = mConnectionHelper.getDiscoveryManager();
 
-        assertThat(mDiscoveryManager.getPeerModel().getDiscoveredPeerByBluetoothMacAddress(bluetoothMacAddress),
+        assertThat("getPeerModel is equal to mPeeroProperties", mDiscoveryManager.getPeerModel()
+                .getDiscoveredPeerByBluetoothMacAddress(bluetoothMacAddress),
                 is(equalTo(mPeerProperties)));
-
-        //TODO test for JXcoreExtension
     }
 
     @Test(expected = UnsupportedOperationException.class)
