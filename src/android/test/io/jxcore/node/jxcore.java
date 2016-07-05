@@ -242,7 +242,7 @@ public class jxcore extends CordovaPlugin {
         boolean resultTest = ThaliTestRunner.runTests();
 
         if(resultTest){
-          System.out.println("Tests succeded_00");
+          System.out.println("Tests succeed_00");
         }
         else {
           System.out.println("Tests failed_00");

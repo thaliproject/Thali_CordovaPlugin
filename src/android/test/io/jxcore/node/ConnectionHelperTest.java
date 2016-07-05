@@ -288,7 +288,7 @@ public class ConnectionHelperTest {
         assertThat("IsRunning returns false", mConnectionHelper.isRunning(), is(false));
         assertThat("IsRunning should not return true", mConnectionHelper.isRunning(), is(not(true)));
 
-        mConnectionManager.startListeningForIncomingConnections(); //Przyjrzec sie co powoduje ta linijka
+        mConnectionManager.startListeningForIncomingConnections();
 
         mConnectionManager.cancelAllConnectionAttempts();
         assertThat("ConnectionManager state is different than NOT_STARTED",
