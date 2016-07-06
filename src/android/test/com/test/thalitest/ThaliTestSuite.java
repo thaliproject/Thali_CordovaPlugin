@@ -16,7 +16,8 @@ import io.jxcore.node.StartStopOperationTest;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-        ConnectionModelTest.class,
+        ConnectionModelTest.class
+        /*
         ConnectivityMonitorTest.class,
         LifeCycleMonitorTest.class,
         ListenerOrIncomingConnectionTest.class,
@@ -26,6 +27,7 @@ import io.jxcore.node.StartStopOperationTest;
         SocketThreadBaseTest.class,
         StartStopOperationHandlerTest.class,
         ConnectionHelperTest.class
+        */
 })
 
 public class ThaliTestSuite {
