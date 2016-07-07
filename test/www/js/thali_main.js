@@ -84,9 +84,8 @@
 
   function clbckFail(){
     logCallback("Tests failed");
-
   }
-  }
+  
   function nameCallback(name) {
     document.getElementById('nameTag').innerHTML = name;
   }
