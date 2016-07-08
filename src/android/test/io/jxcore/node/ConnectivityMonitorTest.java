@@ -97,7 +97,7 @@ public class ConnectivityMonitorTest {
         // Start monitoring connectivity, Wi-Fi and Bluetooth state changes.
         mConnectivityMonitor.start();
 
-        Thread.sleep(3000);
+        Thread.sleep(5000);
 
         assertThat("Proper state of WIFI is set during the start",
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiDirectManager.isWifiEnabled()));
@@ -113,7 +113,7 @@ public class ConnectivityMonitorTest {
         currentWifiState = !currentWifiState;
         mWifiDirectManager.setWifiEnabled(currentWifiState);
         // check the state. If the intent is registered the state should be updated;
-        Thread.sleep(3000);
+        Thread.sleep(5000);
 
         assertThat("Proper state of WIFI is set when switched off",
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiDirectManager.isWifiEnabled()));
@@ -122,7 +122,7 @@ public class ConnectivityMonitorTest {
         currentWifiState = !currentWifiState;
         mWifiDirectManager.setWifiEnabled(currentWifiState);
 
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         assertThat("Proper state of WIFI is set when switched on",
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiDirectManager.isWifiEnabled()));
 
@@ -130,7 +130,7 @@ public class ConnectivityMonitorTest {
         currentBTState = !currentBTState;
         mBluetoothManager.setBluetoothEnabled(currentBTState);
         // check the state. If the intent is registered the state should be updated;
-        Thread.sleep(3000);
+        Thread.sleep(5000);
 
         assertThat("Proper state of BT is set when switched on",
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothManager.isBluetoothEnabled()));
@@ -139,7 +139,7 @@ public class ConnectivityMonitorTest {
         currentBTState = !currentBTState;
         mBluetoothManager.setBluetoothEnabled(currentBTState);
 
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         assertThat("Proper state of BT is set when switched on",
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothManager.isBluetoothEnabled()));
 
@@ -154,7 +154,7 @@ public class ConnectivityMonitorTest {
         Activity mActivity = jxcore.activity;
         mActivity.unregisterReceiver(mWifiStateChangedAndConnectivityActionBroadcastReceiver);
 
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         assertThat("The BT listener is released",
                 ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
                 is(1));
@@ -196,7 +196,7 @@ public class ConnectivityMonitorTest {
             public void run() {
                 while (!mBluetoothManager.isBluetoothEnabled()) {
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -210,7 +210,7 @@ public class ConnectivityMonitorTest {
             public void run() {
                 while (mBluetoothManager.isBluetoothEnabled()) {
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -254,7 +254,7 @@ public class ConnectivityMonitorTest {
             public void run() {
                 while (!mWifiDirectManager.isWifiEnabled()) {
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -268,7 +268,7 @@ public class ConnectivityMonitorTest {
             public void run() {
                 while (mWifiDirectManager.isWifiEnabled()) {
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
