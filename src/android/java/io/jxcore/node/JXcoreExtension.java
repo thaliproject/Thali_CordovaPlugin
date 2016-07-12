@@ -3,6 +3,7 @@
  */
 package io.jxcore.node;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.wifi.WifiManager;
 import android.util.Log;
@@ -11,9 +12,13 @@ import io.jxcore.node.jxcore.JXcoreCallback;
 import java.util.ArrayList;
 import java.util.Date;
 import android.widget.Toast;
+
+import com.test.thalitest.ThaliTestRunner;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.runner.Result;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
@@ -107,23 +112,23 @@ public class JXcoreExtension {
         });
 
         lifeCycleMonitor.start();
-		
-		jxcore.RegisterMethod("ExecuteNativeTests", new JXcoreCallback() {
+
+        jxcore.RegisterMethod("ExecuteNativeTests", new JXcoreCallback() {
             @SuppressLint("NewApi")
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 Log.d("JXMOBILE", "Running tests");
                 Result resultTest = ThaliTestRunner.runTests();
 
-                String result = String.format("Total number of executed tests: %s", resultTest.getRunCount()) +
-                        String.format("\nNumber of passed tests: %s", (resultTest.getRunCount() -
-                                resultTest.getFailureCount() - resultTest.getIgnoreCount())) +
-                        String.format("\nNumber of failed tests: %s", resultTest.getFailureCount()) +
-                        String.format("\nNumber of ignored tests: %s", resultTest.getIgnoreCount()) +
-                        String.format("\nTotal duration: %s ms", new Date(resultTest.getRunTime()).getTime())+
-                        String.format("\nUT TESTS FINISHED");
+                String result = "\"Total number of executed tests: " + resultTest.getRunCount() +
+                        "\\nNumber of passed tests: " + (resultTest.getRunCount() -
+                                resultTest.getFailureCount() - resultTest.getIgnoreCount()) +
+                        "\\nNumber of failed tests: " + resultTest.getFailureCount() +
+                        "\\nNumber of ignored tests: " + resultTest.getIgnoreCount() +
+                        "\\nTotal duration: " + new Date(resultTest.getRunTime()).getTime()+
+                        "\\nUT TESTS FINISHED\"";
 
-                jxcore.CallJSMethod(callbackId, result);
+               jxcore.CallJSMethod(callbackId, result);
             }
         });
 
