@@ -72,18 +72,6 @@
     jxcore('setLogCallback').call(logCallback);
     document.getElementById('ClearLogButton').addEventListener('click', ClearLog);
     console.log('UIApp is all set and ready!');
-
-// @TODO This is temprorary sollution
-    cordova.exec(clbckSuc, clbckFail, 'JXcore', 'Test', []);
-    logCallback("Running tests");
-  }
-
-  function clbckSuc(result){
-    logCallback(result);
-  }
-
-  function clbckFail(){
-    logCallback("Tests failed");
   }
   
   function nameCallback(name) {
