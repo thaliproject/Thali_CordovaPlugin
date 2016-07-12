@@ -5,20 +5,26 @@ package io.jxcore.node;
 
 import android.content.Context;
 import android.net.wifi.WifiManager;
-import android.util.Log;
 import android.os.Build;
-import io.jxcore.node.jxcore.JXcoreCallback;
-import java.util.ArrayList;
-import java.util.Date;
+import android.util.Log;
 import android.widget.Toast;
+
+import com.test.thalitest.ThaliTestRunner;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.runner.Result;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothUtils;
 import org.thaliproject.p2p.btconnectorlib.utils.CommonUtils;
+
+import java.util.ArrayList;
+import java.util.Date;
+
+import io.jxcore.node.jxcore.JXcoreCallback;
 
 /**
  * Implements Thali native interface.
@@ -48,7 +54,8 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_CONNECT = "connect";
     private static final String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
     private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
-    
+    private static final String METHOD_EXECUTE_NATIVE_UNIT_TESTS = "ExecuteNativeTests";
+
     private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
     private static final String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
@@ -107,6 +114,35 @@ public class JXcoreExtension {
         });
 
         lifeCycleMonitor.start();
+
+        jxcore.RegisterMethod(METHOD_EXECUTE_NATIVE_UNIT_TESTS, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                Log.d("JXMOBILE", "Running tests");
+                Result resultTest = ThaliTestRunner.runTests();
+
+                JSONObject jsonObject = new JSONObject();
+                Boolean jsonObjectCreated = false;
+
+                try {
+                    jsonObject.put("Total number of executed tests", resultTest.getRunCount());
+                    jsonObject.put("Number of passed tests", resultTest.getRunCount() -
+                            resultTest.getFailureCount() - resultTest.getIgnoreCount());
+                    jsonObject.put("Number of failed tests", resultTest.getFailureCount());
+                    jsonObject.put("Number of ignored tests", resultTest.getIgnoreCount());
+                    jsonObject.put("Total duration", new Date(resultTest.getRunTime()).getTime());
+                    jsonObjectCreated = true;
+                } catch (JSONException e) {
+                    Log.e(TAG, "executeNativeTests: Failed to populate the JSON object: " + e.getMessage(), e);
+                }
+
+                if (jsonObjectCreated) {
+                    final String jsonObjectAsString = jsonObject.toString();
+
+                    jxcore.CallJSMethod(callbackId, jsonObjectAsString);
+                }
+            }
+        });
 
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
