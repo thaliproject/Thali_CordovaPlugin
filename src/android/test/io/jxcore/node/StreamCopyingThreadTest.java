@@ -20,8 +20,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class StreamCopyingThreadTest {
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
     StreamCopyingThread mStreamCopyingThread;
     StreamCopyingThread.Listener mListener;
     Context mContext;
@@ -33,6 +31,9 @@ public class StreamCopyingThreadTest {
     ByteArrayOutputStream boutputStream;
     ArrayList<Integer> notifications;
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+    
     @Before
     public void setUp() throws Exception {
         notifications = new ArrayList<Integer>();
@@ -50,7 +51,6 @@ public class StreamCopyingThreadTest {
 
     @Test
     public void testSetBufferSize() throws Exception {
-
         thrown.expect(IllegalArgumentException.class);
         mStreamCopyingThread.setBufferSize(0);
 
@@ -73,7 +73,7 @@ public class StreamCopyingThreadTest {
         runner.start();
         runner.join();
 
-        assertThat("The the content of the input stream is equal to the output stream",
+        assertThat("The content of the input stream is equal to the output stream",
                 boutputStream.toString(),
                 is(mText));
     }
@@ -85,7 +85,7 @@ public class StreamCopyingThreadTest {
         runner.start();
         runner.join();
 
-        assertThat("The the content of the input stream is equal to the output stream",
+        assertThat("The content of the input stream is equal to the output stream",
                 boutputStream.toString(),
                 is(mText));
 
@@ -95,7 +95,6 @@ public class StreamCopyingThreadTest {
 
         notifications.size();
     }
-
 
     class ListenerMock implements StreamCopyingThread.Listener {
 
@@ -130,7 +129,6 @@ public class StreamCopyingThreadTest {
     }
 
     class StreamCopyingThreadOutputStream extends OutputStream {
-
 
         @Override
         public void write(int oneByte) throws IOException {

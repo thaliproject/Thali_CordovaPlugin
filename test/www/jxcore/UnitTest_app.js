@@ -13,18 +13,17 @@ if (typeof Mobile === 'undefined') {
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
+var resultTest;
 
 function runUTtests(){
-    console.log('runUTtestsBefore');
     Mobile('ExecuteNativeTests').callNative(function(result) {
+        resultTest = result;
     });
 
     return new Promise(function(resolve, reject) {
-        if(true){
-            console.log('PromiseSuccess');
-            resolve("PromiseSuccess");
+        if(resultTest.indexOf("UT TESTS FINISHED") !== -1){
+            resolve("PromiseSucceed");
         } else{
-            console.log('PromiseFailed');
             reject("PromiseFailed");
         }
     });
@@ -50,11 +49,10 @@ ThaliMobile.getNetworkStatus()
           // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
           setImmediate(function () {
               require('./runTests.js');
-
           });
         });
       });
     });
   });
 
-console.log('Unit Test app is loadeded');
+console.log('Unit Test app is loaded');

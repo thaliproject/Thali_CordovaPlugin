@@ -1,6 +1,5 @@
 package io.jxcore.node;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
@@ -33,11 +32,6 @@ public class ConnectionModelTest {
                 mInputStreamMock, mOutputStreamMock);
     }
 
-    @After
-    public void tearDown() throws Exception {
-
-    }
-
     @Test
     public void constructorTest() {
         ConnectionModel cm = new ConnectionModel();
@@ -47,8 +41,10 @@ public class ConnectionModelTest {
     @Test
     public void testHasIncomingConnection() throws Exception {
         mIncomingSocketThreadMock.setPeerProperties(new PeerProperties("btmacaddress"));
+
         assertThat("Returns false if there are no incoming connections",
                 mConnectionModel.hasIncomingConnection("id"), is(false));
+
         mConnectionModel.addConnectionThread(mIncomingSocketThreadMock);
         assertThat("Returns true if there is incoming connection",
                 mConnectionModel.hasIncomingConnection("btmacaddress"), is(true));

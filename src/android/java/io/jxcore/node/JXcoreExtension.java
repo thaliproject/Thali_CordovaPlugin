@@ -9,12 +9,9 @@ import android.os.Build;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.test.thalitest.ThaliTestRunner;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.junit.runner.Result;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
@@ -28,25 +25,15 @@ import io.jxcore.node.jxcore.JXcoreCallback;
 
 /**
  * Implements Thali native interface.
- *
  * For the documentation, please see
  * https://github.com/thaliproject/Thali_CordovaPlugin/blob/vNext/thali/NextGeneration/thaliMobileNative.js
  */
 public class JXcoreExtension {
 
-    public enum RadioState {
-        ON, // The radio is on and available for use.
-        OFF, // The radio exists on the device but is turned off.
-        UNAVAILABLE, // The radio exists on the device and is on but for some reason the system won't let us use it.
-        NOT_HERE, // We depend on this radio type for this platform type but it doesn't appear to exist on this device.
-        DO_NOT_CARE // Thali doesn't use this radio type on this platform and so makes no effort to determine its state.
-    }
-
     // Common Thali methods and events
     public static final String CALLBACK_VALUE_LISTENING_ON_PORT_NUMBER = "listeningPort";
     public static final String CALLBACK_VALUE_CLIENT_PORT_NUMBER = "clientPort";
     public static final String CALLBACK_VALUE_SERVER_PORT_NUMBER = "serverPort";
-
     private static final String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
     private static final String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
     private static final String METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
@@ -54,15 +41,11 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_CONNECT = "connect";
     private static final String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
     private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
-    private static final String METHOD_EXECUTE_NATIVE_UNIT_TESTS = "ExecuteNativeTests";
-
     private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
     private static final String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
     private static final String EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
-
     private static final String METHOD_ARGUMENT_NETWORK_CHANGED = EVENT_NAME_NETWORK_CHANGED;
-
     private static final String EVENT_VALUE_PEER_ID = "peerIdentifier";
     private static final String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
     private static final String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
@@ -74,7 +57,6 @@ public class JXcoreExtension {
     private static final String EVENT_VALUE_CELLULAR = "cellular";
     private static final String EVENT_VALUE_BSSID_NAME = "bssidName";
     private static final String EVENT_VALUE_PORT_NUMBER = "portNumber";
-
     // Android specific methods and events
     private static final String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
     private static final String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
@@ -82,10 +64,8 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_GET_OS_VERSION = "getOSVersion";
     private static final String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
     private static final String METHOD_NAME_SHOW_TOAST = "showToast";
-
     private static final String TAG = JXcoreExtension.class.getName();
     private static final long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
-
     private static ConnectionHelper mConnectionHelper = null;
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
@@ -115,34 +95,13 @@ public class JXcoreExtension {
 
         lifeCycleMonitor.start();
 
-        jxcore.RegisterMethod(METHOD_EXECUTE_NATIVE_UNIT_TESTS, new JXcoreCallback() {
-            @Override
-            public void Receiver(ArrayList<Object> params, String callbackId) {
-                Log.d("JXMOBILE", "Running tests");
-                Result resultTest = ThaliTestRunner.runTests();
-
-                JSONObject jsonObject = new JSONObject();
-                Boolean jsonObjectCreated = false;
-
-                try {
-                    jsonObject.put("Total number of executed tests", resultTest.getRunCount());
-                    jsonObject.put("Number of passed tests", resultTest.getRunCount() -
-                            resultTest.getFailureCount() - resultTest.getIgnoreCount());
-                    jsonObject.put("Number of failed tests", resultTest.getFailureCount());
-                    jsonObject.put("Number of ignored tests", resultTest.getIgnoreCount());
-                    jsonObject.put("Total duration", new Date(resultTest.getRunTime()).getTime());
-                    jsonObjectCreated = true;
-                } catch (JSONException e) {
-                    Log.e(TAG, "executeNativeTests: Failed to populate the JSON object: " + e.getMessage(), e);
-                }
-
-                if (jsonObjectCreated) {
-                    final String jsonObjectAsString = jsonObject.toString();
-
-                    jxcore.CallJSMethod(callbackId, jsonObjectAsString);
-                }
-            }
-        });
+        try {
+            Class<?> clazz = Class.forName("io.jxcore.node.RegisterExecuteUTTests");
+            clazz.newInstance();
+            System.out.println("UT TESTS ON");
+        } catch (Exception e) {
+            System.out.println("UT TESTS OFF");
+        }
 
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
@@ -332,7 +291,7 @@ public class JXcoreExtension {
                     if (parameterObject instanceof String
                             && CommonUtils.isNonEmptyString((String) parameterObject)) {
                         String methodName = (String) parameterObject;
-                        
+
                         if (methodName.equals(METHOD_ARGUMENT_NETWORK_CHANGED)) {
                             mNetworkChangedRegistered = true;
                             mConnectionHelper.getConnectivityMonitor().updateConnectivityInfo(true); // Will call notifyNetworkChanged
@@ -741,5 +700,13 @@ public class JXcoreExtension {
         }
 
         return null;
+    }
+
+    public enum RadioState {
+        ON, // The radio is on and available for use.
+        OFF, // The radio exists on the device but is turned off.
+        UNAVAILABLE, // The radio exists on the device and is on but for some reason the system won't let us use it.
+        NOT_HERE, // We depend on this radio type for this platform type but it doesn't appear to exist on this device.
+        DO_NOT_CARE // Thali doesn't use this radio type on this platform and so makes no effort to determine its state.
     }
 }

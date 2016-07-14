@@ -1,7 +1,5 @@
 package io.jxcore.node;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
@@ -15,16 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNot.not;
 
 public class StartStopOperationTest {
-    @Before
-    public void setUp() throws Exception {
-
-    }
-
-    @After
-    public void tearDown() throws Exception {
-
-    }
-
+    
     @Test
     public void testCreateStartOperation() throws Exception {
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
@@ -158,7 +147,7 @@ public class StartStopOperationTest {
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation, is(notNullValue()));
         assertThat("isStartOperation should return true",
-               mStartStopOperation.isStartOperation(), is(true));
+                mStartStopOperation.isStartOperation(), is(true));
 
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         mStartStopOperation =
@@ -209,7 +198,7 @@ public class StartStopOperationTest {
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation, is(notNullValue()));
         assertThat("getOperationExecutedTime should return 0", mStartStopOperation.getOperationExecutedTime(),
-        is(equalTo(0L)));
+                is(equalTo(0L)));
 
         mStartStopOperation = StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
@@ -290,6 +279,4 @@ public class StartStopOperationTest {
         assertThat("Result should be Either the connection manager or the discovery manager is still running",
                 result, is(equalTo("Either the connection manager or the discovery manager is still running")));
     }
-
-
 }

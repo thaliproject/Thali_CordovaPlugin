@@ -1,7 +1,6 @@
 package io.jxcore.node;
 
 import org.json.JSONObject;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -28,12 +27,8 @@ public class ListenerOrIncomingConnectionTest {
         serverPortNumberSample = 3333;
     }
 
-    @After
-    public void tearDown() throws Exception {
-    }
-
     @Test
-    public void testDefaultConstructor() throws  Exception {
+    public void testDefaultConstructor() throws Exception {
         Field fListeningOnPortNumber =
                 mListenerOrIncomingConnection.getClass().getDeclaredField("mListeningOnPortNumber");
         Field fClientPortNumber =
@@ -207,5 +202,4 @@ public class ListenerOrIncomingConnectionTest {
         assertThat("mJSONObject.toString and mJOSNToString should be equal",
                 mJSONObject.toString(), is(equalTo(mJSONToString)));
     }
-
 }

@@ -5,9 +5,7 @@ import android.os.CountDownTimer;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 
@@ -39,9 +37,6 @@ public class StartStopOperationHandlerTest {
     UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
     UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     @Before
     public void setUp() throws Exception {
         mConnectionHelper = new ConnectionHelper();
@@ -51,11 +46,11 @@ public class StartStopOperationHandlerTest {
         mDiscoveryManager = new DiscoveryManager(mContext, mConnectionHelper, BLE_SERVICE_UUID, SERVICE_TYPE);
         mStartStopOperationHandler =
                 new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
-
     }
 
     @After
     public void tearDown() throws Exception {
+        mConnectionHelper.killAllConnections();
         mConnectionHelper.stop(false, mJXcoreThaliCallback);
         mConnectionHelper.dispose();
         mConnectionHelper.getDiscoveryManager().stop();
@@ -130,13 +125,13 @@ public class StartStopOperationHandlerTest {
         StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
 
-        if(!mDiscoveryManager1.isBleMultipleAdvertisementSupported()){
+        if (!mDiscoveryManager1.isBleMultipleAdvertisementSupported()) {
             assertThat("mDiscoveryManager1 state should be NOT_STARTED", mDiscoveryManager1.getState(),
                     is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
             assertThat("mDiscoveryManager1 should be not running", mDiscoveryManager1.isRunning(),
                     is(false));
             assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-        } else{
+        } else {
             assertThat("mDiscoveryManager1 state should not be NOT_STARTED", mDiscoveryManager1.getState(),
                     is(not(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED))));
             assertThat("mDiscoveryManager1 should be running", mDiscoveryManager1.isRunning(),
@@ -159,12 +154,12 @@ public class StartStopOperationHandlerTest {
 
         StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
         DiscoveryManager mDiscoveryManager1 =
-              (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
+                (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
 
-        if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
             assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
 
-        }else{
+        } else {
             assertThat("mCurrentOperation should not be null", mCurrentOperation, is(notNullValue()));
         }
 

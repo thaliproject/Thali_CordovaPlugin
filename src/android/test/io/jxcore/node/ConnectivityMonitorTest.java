@@ -5,10 +5,11 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
@@ -18,18 +19,20 @@ import java.lang.reflect.Field;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ConnectivityMonitorTest {
-
-
     static DiscoveryManagerListenerMock mDiscoveryManagerListenerMock;
     static DiscoveryManagerMock mDiscoveryManagerMock;
     static ConnectivityMonitor mConnectivityMonitor;
     static BluetoothManager mBluetoothManager;
     static WifiDirectManager mWifiDirectManager;
     static Context mContext;
+
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
@@ -73,11 +76,7 @@ public class ConnectivityMonitorTest {
         mWifiDirectManager = (WifiDirectManager) wifiDirectManagerField.get(mDiscoveryManagerMock);
     }
 
-    @After
-    public void tearDown() throws Exception {
-    }
-
-    @Test(expected = IllegalArgumentException.class)
+    @Test//(expected = IllegalArgumentException.class)
     public void testStartStop() throws Exception {
         boolean currentWifiState = mWifiDirectManager.isWifiEnabled();
         boolean currentBTState = mBluetoothManager.isBluetoothEnabled();
@@ -97,7 +96,7 @@ public class ConnectivityMonitorTest {
         // Start monitoring connectivity, Wi-Fi and Bluetooth state changes.
         mConnectivityMonitor.start();
 
-        Thread.sleep(5000);
+        Thread.sleep(3000);
 
         assertThat("Proper state of WIFI is set during the start",
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiDirectManager.isWifiEnabled()));
@@ -113,7 +112,7 @@ public class ConnectivityMonitorTest {
         currentWifiState = !currentWifiState;
         mWifiDirectManager.setWifiEnabled(currentWifiState);
         // check the state. If the intent is registered the state should be updated;
-        Thread.sleep(5000);
+        Thread.sleep(3000);
 
         assertThat("Proper state of WIFI is set when switched off",
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiDirectManager.isWifiEnabled()));
@@ -122,7 +121,7 @@ public class ConnectivityMonitorTest {
         currentWifiState = !currentWifiState;
         mWifiDirectManager.setWifiEnabled(currentWifiState);
 
-        Thread.sleep(5000);
+        Thread.sleep(3000);
         assertThat("Proper state of WIFI is set when switched on",
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiDirectManager.isWifiEnabled()));
 
@@ -130,7 +129,7 @@ public class ConnectivityMonitorTest {
         currentBTState = !currentBTState;
         mBluetoothManager.setBluetoothEnabled(currentBTState);
         // check the state. If the intent is registered the state should be updated;
-        Thread.sleep(5000);
+        Thread.sleep(3000);
 
         assertThat("Proper state of BT is set when switched on",
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothManager.isBluetoothEnabled()));
@@ -139,9 +138,16 @@ public class ConnectivityMonitorTest {
         currentBTState = !currentBTState;
         mBluetoothManager.setBluetoothEnabled(currentBTState);
 
-        Thread.sleep(5000);
+        Thread.sleep(3000);
         assertThat("Proper state of BT is set when switched on",
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothManager.isBluetoothEnabled()));
+
+        mConnectivityMonitor.stop();
+
+        Thread.sleep(3000);
+        assertThat("The BT listener is released",
+                ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
+                is(equalTo(1)));
 
         Field fWifiStateChangedAndConnectivityActionBroadcastReceiver = mConnectivityMonitor.getClass()
                 .getDeclaredField("mWifiStateChangedAndConnectivityActionBroadcastReceiver");
@@ -149,15 +155,12 @@ public class ConnectivityMonitorTest {
         BroadcastReceiver mWifiStateChangedAndConnectivityActionBroadcastReceiver =
                 (BroadcastReceiver) fWifiStateChangedAndConnectivityActionBroadcastReceiver.get(mConnectivityMonitor);
 
-        mConnectivityMonitor.stop();
-
         Activity mActivity = jxcore.activity;
-        mActivity.unregisterReceiver(mWifiStateChangedAndConnectivityActionBroadcastReceiver);
 
-        Thread.sleep(5000);
-        assertThat("The BT listener is released",
-                ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
-                is(1));
+        thrown.expect(IllegalArgumentException.class);
+        mActivity.unregisterReceiver(mWifiStateChangedAndConnectivityActionBroadcastReceiver);
+        // throws IllegalArgumentException if mWifiStateChangedAndConnectivityActionBroadcastReceiver
+        // was properly unregistered
     }
 
     @Test
@@ -176,7 +179,6 @@ public class ConnectivityMonitorTest {
 
         assertThat("Returns false as the device does not suppot the Bluetooth,",
                 mConnectivityMonitor.isBluetoothSupported(), is(true));
-
     }
 
     @Test
@@ -196,7 +198,7 @@ public class ConnectivityMonitorTest {
             public void run() {
                 while (!mBluetoothManager.isBluetoothEnabled()) {
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -210,7 +212,7 @@ public class ConnectivityMonitorTest {
             public void run() {
                 while (mBluetoothManager.isBluetoothEnabled()) {
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -243,7 +245,6 @@ public class ConnectivityMonitorTest {
 
         assertThat("Returns proper value of WIFI Direct support",
                 mConnectivityMonitor.isWifiDirectSupported(), is(supported));
-
     }
 
     @Test
@@ -254,12 +255,11 @@ public class ConnectivityMonitorTest {
             public void run() {
                 while (!mWifiDirectManager.isWifiEnabled()) {
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-
             }
         });
 
@@ -268,7 +268,7 @@ public class ConnectivityMonitorTest {
             public void run() {
                 while (mWifiDirectManager.isWifiEnabled()) {
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -293,7 +293,6 @@ public class ConnectivityMonitorTest {
 
         assertThat("Returns proper state of WIFI when switched on",
                 mConnectivityMonitor.isWifiEnabled(), is(true));
-
     }
 
     public static class DiscoveryManagerListenerMock implements DiscoveryManager.DiscoveryManagerListener {
@@ -352,6 +351,5 @@ public class ConnectivityMonitorTest {
         public boolean isBleMultipleAdvertisementSupported() {
             return mockmBleMultipleAdvertisementSupported;
         }
-
     }
 }

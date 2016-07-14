@@ -1,6 +1,5 @@
 package io.jxcore.node;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
@@ -28,15 +27,10 @@ public class SocketThreadBaseTest {
         mSocketThreadBaseMock = new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
     }
 
-    @After
-    public void tearDown() throws Exception {
-
-    }
-
     @Test
-    public void testGetListener() throws Exception{
+    public void testGetListener() throws Exception {
         assertThat("getListener() returns equal listener to mListenerMock",
-                mSocketThreadBaseMock.getListener(), is(equalTo((SocketThreadBase.Listener)mListenerMock)));
+                mSocketThreadBaseMock.getListener(), is(equalTo((SocketThreadBase.Listener) mListenerMock)));
     }
 
     @Test
@@ -69,6 +63,21 @@ public class SocketThreadBaseTest {
 
     @Test
     public void testGetLocalHostAddressAsString() throws Exception {
+        Field fLocalhostSocket = mSocketThreadBaseMock.getClass().getSuperclass().getDeclaredField("mLocalhostSocket");
+        fLocalhostSocket.setAccessible(true);
+        Socket mLocalhostSocket = (Socket) fLocalhostSocket.get(mSocketThreadBaseMock);
+
+        if (mLocalhostSocket == null || mLocalhostSocket.getInetAddress() == null) {
+            assertThat("getLocalHostAddressAsAstring should return null value if mLocalhostSocket or" +
+                            "mLocalhostSocket.getInetAddress return null",
+                    mSocketThreadBaseMock.getLocalHostAddressAsString(),
+                    is(nullValue()));
+        } else {
+            assertThat("getLocalHostAddressAsAstring should return value equal to " +
+                            "mLocalhostSocket.getInetAddress.toString()",
+                    mSocketThreadBaseMock.getLocalHostAddressAsString(),
+                    is(equalTo(mLocalhostSocket.getInetAddress().toString())));
+        }
     }
 
     @Test
@@ -109,10 +118,6 @@ public class SocketThreadBaseTest {
     }
 
     @Test
-    public void testStartStreamCopyingThreads() throws Exception {
-    }
-
-    @Test
     public void testCloseLocalSocketAndStreams() throws Exception {
         mSocketThreadBaseMock.mLocalInputStream = mInputStreamMock;
         mSocketThreadBaseMock.mLocalOutputStream = mOutputStreamMock;
@@ -148,6 +153,5 @@ public class SocketThreadBaseTest {
                 ((InputStreamMock) mSocketThreadBaseMock.mBluetoothInputStream).isClosed, is(true));
         assertThat("Output stream is closed",
                 ((OutputStreamMock) mSocketThreadBaseMock.mBluetoothOutputStream).isClosed, is(true));
-
     }
 }

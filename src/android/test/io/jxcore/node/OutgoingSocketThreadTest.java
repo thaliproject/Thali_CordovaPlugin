@@ -1,6 +1,5 @@
 package io.jxcore.node;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,11 +25,6 @@ public class OutgoingSocketThreadTest {
         mListenerMock = new ListenerMock();
         mOutgoingSocketThread =
                 new OutgoingSocketThread(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
-    }
-
-    @After
-    public void tearDown() throws Exception {
-
     }
 
     @Test
