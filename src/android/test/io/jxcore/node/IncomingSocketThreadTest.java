@@ -30,7 +30,8 @@ public class IncomingSocketThreadTest {
 
     @Test
     public void testConstructor() throws Exception {
-        assertThat("mIncomingSocketThread should not be null", mIncomingSocketThread, is(notNullValue()));
+        assertThat("mIncomingSocketThread should not be null", mIncomingSocketThread,
+                is(notNullValue()));
     }
 
     @Test
@@ -55,7 +56,8 @@ public class IncomingSocketThreadTest {
 
     @Test
     public void testGetLocalHostPort() throws Exception {
-        Field fLocalhostSocket = mIncomingSocketThread.getClass().getSuperclass().getDeclaredField("mLocalhostSocket");
+        Field fLocalhostSocket = mIncomingSocketThread.getClass().getSuperclass()
+                .getDeclaredField("mLocalhostSocket");
         fLocalhostSocket.setAccessible(true);
         Socket mLocalhostSocket = (Socket) fLocalhostSocket.get(mIncomingSocketThread);
 

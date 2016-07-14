@@ -15,7 +15,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class LifeCycleMonitorTest {
-    
+
     LifeCycleMonitor mLifeCycleMonitor;
     LifeCycleMonitor.LifeCycleMonitorListener mListener;
     Context mContext;
@@ -23,7 +23,7 @@ public class LifeCycleMonitorTest {
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
-    
+
     @Before
     public void setUp() throws Exception {
         mContext = jxcore.activity.getBaseContext();
@@ -126,7 +126,8 @@ public class LifeCycleMonitorTest {
 
     class LifeCycleMonitorListenerMock implements LifeCycleMonitor.LifeCycleMonitorListener {
         @Override
-        public void onActivityLifeCycleEvent(LifeCycleMonitor.ActivityLifeCycleEvent activityLifeCycleEvent) {
+        public void onActivityLifeCycleEvent(LifeCycleMonitor.ActivityLifeCycleEvent
+                                                             activityLifeCycleEvent) {
             lastEvent = activityLifeCycleEvent;
         }
     }

@@ -76,7 +76,7 @@ public class ConnectivityMonitorTest {
         mWifiDirectManager = (WifiDirectManager) wifiDirectManagerField.get(mDiscoveryManagerMock);
     }
 
-    @Test//(expected = IllegalArgumentException.class)
+    @Test
     public void testStartStop() throws Exception {
         boolean currentWifiState = mWifiDirectManager.isWifiEnabled();
         boolean currentBTState = mBluetoothManager.isBluetoothEnabled();
@@ -153,7 +153,8 @@ public class ConnectivityMonitorTest {
                 .getDeclaredField("mWifiStateChangedAndConnectivityActionBroadcastReceiver");
         fWifiStateChangedAndConnectivityActionBroadcastReceiver.setAccessible(true);
         BroadcastReceiver mWifiStateChangedAndConnectivityActionBroadcastReceiver =
-                (BroadcastReceiver) fWifiStateChangedAndConnectivityActionBroadcastReceiver.get(mConnectivityMonitor);
+                (BroadcastReceiver) fWifiStateChangedAndConnectivityActionBroadcastReceiver
+                        .get(mConnectivityMonitor);
 
         Activity mActivity = jxcore.activity;
 
@@ -177,13 +178,13 @@ public class ConnectivityMonitorTest {
 
         btAdapterField.set(mBluetoothManager, bta);
 
-        assertThat("Returns false as the device does not suppot the Bluetooth,",
+        assertThat("Returns false as the device does not support the Bluetooth,",
                 mConnectivityMonitor.isBluetoothSupported(), is(true));
     }
 
     @Test
     public void testIsBleMultipleAdvertisementSupported() throws Exception {
-        assertThat("Returns the proper value of BleMultipleAdvertisemenTupport",
+        assertThat("Returns the proper value of BleMultipleAdvertisementSupport",
                 mConnectivityMonitor.isBleMultipleAdvertisementSupported(),
                 is(mBluetoothManager.isBleMultipleAdvertisementSupported()));
     }
@@ -203,7 +204,6 @@ public class ConnectivityMonitorTest {
                         e.printStackTrace();
                     }
                 }
-
             }
         });
 
@@ -295,7 +295,8 @@ public class ConnectivityMonitorTest {
                 mConnectivityMonitor.isWifiEnabled(), is(true));
     }
 
-    public static class DiscoveryManagerListenerMock implements DiscoveryManager.DiscoveryManagerListener {
+    public static class DiscoveryManagerListenerMock implements
+            DiscoveryManager.DiscoveryManagerListener {
 
         @Override
         public boolean onPermissionCheckRequired(String s) {

@@ -25,7 +25,7 @@ import io.jxcore.node.StreamCopyingThreadTest;
         IncomingSocketThreadTest.class,
         OutgoingSocketThreadTest.class,
         SocketThreadBaseTest.class,
-		StreamCopyingThreadTest.class,
+        StreamCopyingThreadTest.class,
         StartStopOperationHandlerTest.class,
         ConnectionHelperTest.class
 })

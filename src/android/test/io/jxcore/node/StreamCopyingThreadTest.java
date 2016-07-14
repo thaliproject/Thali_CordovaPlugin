@@ -33,7 +33,7 @@ public class StreamCopyingThreadTest {
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
-    
+
     @Before
     public void setUp() throws Exception {
         notifications = new ArrayList<Integer>();

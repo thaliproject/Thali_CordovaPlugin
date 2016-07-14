@@ -21,11 +21,7 @@ function runUTtests(){
     });
 
     return new Promise(function(resolve, reject) {
-        if(true){ 
             resolve("PromiseSucceed");
-        } else{
-            reject("PromiseFailed");
-        }
     });
 }
 

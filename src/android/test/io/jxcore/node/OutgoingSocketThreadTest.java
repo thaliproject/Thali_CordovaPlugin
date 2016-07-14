@@ -29,7 +29,8 @@ public class OutgoingSocketThreadTest {
 
     @Test
     public void testConstructor() throws Exception {
-        assertThat("mIncomingSocketThread should not be null", mOutgoingSocketThread, is(notNullValue()));
+        assertThat("mIncomingSocketThread should not be null", mOutgoingSocketThread,
+                is(notNullValue()));
     }
 
     @Test

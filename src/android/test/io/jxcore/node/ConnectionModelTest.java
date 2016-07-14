@@ -83,7 +83,7 @@ public class ConnectionModelTest {
     }
 
     @Test
-    public void testCurrentConnections() throws Exception {
+    public void testGetNumberOfCurrentConnections() throws Exception {
         mIncomingSocketThreadMock.setPeerProperties(new PeerProperties("incoming"));
         mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties("outgoing"));
 
@@ -119,7 +119,7 @@ public class ConnectionModelTest {
     }
 
     @Test
-    public void testIncomingConnections() throws Exception {
+    public void testGetNumberOfCurrentIncomingConnections() throws Exception {
         mIncomingSocketThreadMock.setPeerProperties(new PeerProperties("incoming"));
         mIncomingSocketThreadMock.threadId = 1L;
 
@@ -127,8 +127,8 @@ public class ConnectionModelTest {
         OutputStreamMock outputStreamMock2 = new OutputStreamMock();
         ListenerMock listenerMock2 = new ListenerMock();
 
-        IncomingSocketThreadMock incomingSocketThreadMock2 = new IncomingSocketThreadMock(null, listenerMock2,
-                inputStreamMock2, outputStreamMock2);
+        IncomingSocketThreadMock incomingSocketThreadMock2 = new IncomingSocketThreadMock(null,
+                listenerMock2, inputStreamMock2, outputStreamMock2);
 
         incomingSocketThreadMock2.setPeerProperties(new PeerProperties("incoming2"));
         incomingSocketThreadMock2.threadId = 2L;
@@ -151,16 +151,16 @@ public class ConnectionModelTest {
         assertThat("Returns proper number of incoming connections",
                 mConnectionModel.getNumberOfCurrentIncomingConnections(), is(equalTo(2)));
 
-        assertThat("IncommingConnectionThread is closed",
+        assertThat("IncomingConnectionThread is closed",
                 mConnectionModel.closeAndRemoveIncomingConnectionThread(1L), is(true));
 
         assertThat("Thread is properly closed",
                 mIncomingSocketThreadMock.closeCalled, is(true));
 
-        assertThat("Cannot close already closed IncommingConnectionThread",
+        assertThat("Cannot close already closed IncomingConnectionThread",
                 mConnectionModel.closeAndRemoveIncomingConnectionThread(1L), is(false));
 
-        assertThat("IncommingConnectionThread is closed",
+        assertThat("IncomingConnectionThread is closed",
                 mConnectionModel.closeAndRemoveIncomingConnectionThread(2L), is(true));
 
         assertThat("Thread is properly closed",
@@ -171,7 +171,7 @@ public class ConnectionModelTest {
     }
 
     @Test
-    public void testOutgoingConnections() throws Exception {
+    public void testGetNumberOfCurrentOutgoingConnections() throws Exception {
         mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties("outgoing"));
         mOutgoingSocketThreadMock.threadId = 1L;
 
@@ -179,8 +179,8 @@ public class ConnectionModelTest {
         OutputStreamMock outputStreamMock2 = new OutputStreamMock();
         ListenerMock listenerMock2 = new ListenerMock();
 
-        OutgoingSocketThreadMock outgoingSocketThreadMock2 = new OutgoingSocketThreadMock(null, listenerMock2,
-                inputStreamMock2, outputStreamMock2);
+        OutgoingSocketThreadMock outgoingSocketThreadMock2 = new OutgoingSocketThreadMock(null,
+                listenerMock2,inputStreamMock2, outputStreamMock2);
 
         outgoingSocketThreadMock2.setPeerProperties(new PeerProperties("outgoing2"));
         outgoingSocketThreadMock2.threadId = 2L;
@@ -241,7 +241,7 @@ public class ConnectionModelTest {
     }
 
     @Test
-    public void testOutgoingConnectionCallback() throws Exception {
+    public void testGetOutgoingConnectionCallbackByBluetoothMacAddress() throws Exception {
         JXcoreThaliCallback jxCallback1 = new JXcoreThaliCallbackMock();
         JXcoreThaliCallback jxCallback2 = new JXcoreThaliCallbackMock();
 
