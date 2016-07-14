@@ -13,6 +13,7 @@ import io.jxcore.node.OutgoingSocketThreadTest;
 import io.jxcore.node.SocketThreadBaseTest;
 import io.jxcore.node.StartStopOperationHandlerTest;
 import io.jxcore.node.StartStopOperationTest;
+import io.jxcore.node.StreamCopyingThreadTest;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
