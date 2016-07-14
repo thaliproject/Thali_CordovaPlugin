@@ -18,7 +18,7 @@ public class RegisterExecuteUT {
             @SuppressLint("NewApi")
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-                Log.d("UTtests", "Running tests");
+                Log.d("RegisterExecuteUT", "Running tests");
                 Result resultTest = ThaliTestRunner.runTests();
 
                 JSONObject jsonObject = new JSONObject();
