@@ -70,6 +70,23 @@ public class JXcoreExtension {
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
 
+    private static void tryToRegisterUTExecuteMethod(){
+        try {
+            Class<?> clazz = Class.forName("io.jxcore.node.RegisterExecuteUT");
+            clazz.newInstance();
+            Log.d(TAG, "Unit Tests on");
+        } catch (ClassNotFoundException e) {
+            Log.e(TAG, "Unit Tests off");
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            Log.e(TAG, "Unit Tests off");
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            Log.e(TAG, "Unit Tests off");
+            e.printStackTrace();
+        }
+    }
+
     public static void LoadExtensions() {
         if (mConnectionHelper != null) {
             Log.e(TAG, "LoadExtensions: A connection helper instance already exists - this indicates that this method was called twice - disposing of the previous instance");
@@ -95,13 +112,7 @@ public class JXcoreExtension {
 
         lifeCycleMonitor.start();
 
-        try {
-            Class<?> clazz = Class.forName("io.jxcore.node.RegisterExecuteUTTests");
-            clazz.newInstance();
-            System.out.println("UT TESTS ON");
-        } catch (Exception e) {
-            System.out.println("UT TESTS OFF");
-        }
+        tryToRegisterUTExecuteMethod();
 
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override

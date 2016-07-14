@@ -12,8 +12,8 @@ import org.junit.runner.Result;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class RegisterExecuteUTTests {
-    public RegisterExecuteUTTests(){
+public class RegisterExecuteUT {
+    public RegisterExecuteUT(){
         jxcore.RegisterMethod("ExecuteNativeTests", new jxcore.JXcoreCallback() {
             @SuppressLint("NewApi")
             @Override
@@ -34,7 +34,7 @@ public class RegisterExecuteUTTests {
                     jsonObject.put("UT TESTS FINISHED", true);
                     jsonObjectCreated = true;
                 } catch (JSONException e) {
-                    Log.e("RegisterExecuteUTTests", "executeNativeTests: Failed to populate the JSON object: " + e.getMessage(), e);
+                    Log.e("RegisterExecuteUT", "executeNativeTests: Failed to populate the JSON object: " + e.getMessage(), e);
                 }
 
                 if (jsonObjectCreated) {
