@@ -70,20 +70,36 @@ public class JXcoreExtension {
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
 
-    private static void tryToRegisterUTExecuteMethod(){
+    /**
+     * Android native UT specific method.
+     *
+     * The method below is used to register the native UT executor;
+     * In case when the class RegisterExecuteUT is not found the test executor won't be registered
+     *
+     */
+
+    private static void RegisterUTExecuteMethod() {
+        Class<?> clazz = RetrieveRegisterUTClass();
+        if (clazz != null) {
+            try {
+                clazz.newInstance();
+                Log.d(TAG, "Unit Tests on");
+            } catch (InstantiationException e) {
+                Log.e(TAG, "RegisterUTExecuteMethod: Failed to register UT execute method: " + e.getMessage(), e);
+            } catch (IllegalAccessException e) {
+                Log.e(TAG, "RegisterUTExecuteMethod: Failed to register UT execute method: " + e.getMessage(), e);
+            }
+            return;
+        }
+        Log.d(TAG, "Unit Tests off");
+    }
+
+    private static Class<?> RetrieveRegisterUTClass() {
         try {
-            Class<?> clazz = Class.forName("io.jxcore.node.RegisterExecuteUT");
-            clazz.newInstance();
-            Log.d(TAG, "Unit Tests on");
-        } catch (ClassNotFoundException e) {
-            Log.e(TAG, "Unit Tests off");
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            Log.e(TAG, "Unit Tests off");
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            Log.e(TAG, "Unit Tests off");
-            e.printStackTrace();
+            return Class.forName("io.jxcore.node.RegisterExecuteUT");
+        } catch (ClassNotFoundException ex) {
+            // No UT, no need to do anything
+            return null;
         }
     }
 
@@ -112,7 +128,7 @@ public class JXcoreExtension {
 
         lifeCycleMonitor.start();
 
-        tryToRegisterUTExecuteMethod();
+        RegisterUTExecuteMethod();
 
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
