@@ -1,6 +1,5 @@
 package io.jxcore.node;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -28,14 +27,10 @@ public class OutgoingSocketThreadTest {
                 new OutgoingSocketThread(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
     }
 
-    @After
-    public void tearDown() throws Exception {
-
-    }
-
     @Test
     public void testConstructor() throws Exception {
-        assertThat("mIncomingSocketThread should not be null", mOutgoingSocketThread, is(notNullValue()));
+        assertThat("mIncomingSocketThread should not be null", mOutgoingSocketThread,
+                is(notNullValue()));
     }
 
     @Test

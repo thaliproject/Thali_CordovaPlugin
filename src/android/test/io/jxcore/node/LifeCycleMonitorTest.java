@@ -16,31 +16,31 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class LifeCycleMonitorTest {
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
     LifeCycleMonitor mLifeCycleMonitor;
     LifeCycleMonitor.LifeCycleMonitorListener mListener;
     Context mContext;
     LifeCycleMonitor.ActivityLifeCycleEvent lastEvent;
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     @Before
     public void setUp() throws Exception {
-
         mContext = jxcore.activity.getBaseContext();
         mListener = new LifeCycleMonitorListenerMock();
         mLifeCycleMonitor = new LifeCycleMonitor(mListener);
-
     }
 
     @Test
     public void constructor() throws Exception {
-        thrown.expect(NullPointerException.class);
-        LifeCycleMonitor lcm = new LifeCycleMonitor(null);
-        lcm = new LifeCycleMonitor(new LifeCycleMonitorListenerMock());
+        LifeCycleMonitor lcm = new LifeCycleMonitor(new LifeCycleMonitorListenerMock());
 
         assertThat("The object is properly created",
                 lcm,
                 is(notNullValue()));
+
+        thrown.expect(NullPointerException.class);
+        lcm = new LifeCycleMonitor(null); //Throws NullPointerException
     }
 
     @Test
@@ -50,7 +50,6 @@ public class LifeCycleMonitorTest {
 
         mLifeCycleMonitor.start();
 
-        // TODO: check how to test registerActivityLifecycleCallbacks
         assertThat("The mIsStarted flag is properly set",
                 mIsStartedField.getBoolean(mLifeCycleMonitor),
                 is(true));
@@ -60,7 +59,6 @@ public class LifeCycleMonitorTest {
         assertThat("The mIsStarted flag is properly set",
                 mIsStartedField.getBoolean(mLifeCycleMonitor),
                 is(false));
-
     }
 
     @Test
@@ -127,11 +125,10 @@ public class LifeCycleMonitorTest {
     }
 
     class LifeCycleMonitorListenerMock implements LifeCycleMonitor.LifeCycleMonitorListener {
-
         @Override
-        public void onActivityLifeCycleEvent(LifeCycleMonitor.ActivityLifeCycleEvent activityLifeCycleEvent) {
+        public void onActivityLifeCycleEvent(LifeCycleMonitor.ActivityLifeCycleEvent
+                                                             activityLifeCycleEvent) {
             lastEvent = activityLifeCycleEvent;
         }
     }
-
 }

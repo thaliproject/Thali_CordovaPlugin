@@ -1,7 +1,6 @@
 package io.jxcore.node;
 
 import org.json.JSONObject;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -28,12 +27,8 @@ public class ListenerOrIncomingConnectionTest {
         serverPortNumberSample = 3333;
     }
 
-    @After
-    public void tearDown() throws Exception {
-    }
-
     @Test
-    public void testDefaultConstructor() throws  Exception {
+    public void testDefaultConstructor() throws Exception {
         Field fListeningOnPortNumber =
                 mListenerOrIncomingConnection.getClass().getDeclaredField("mListeningOnPortNumber");
         Field fClientPortNumber =
@@ -78,12 +73,18 @@ public class ListenerOrIncomingConnectionTest {
 
         assertThat("mListenerOrIncomingConnection should not be null", mListenerOrIncomingConnection,
                 is(notNullValue()));
-        assertThat("mListeningOnPortNumber should be 1111", mListeningOnPortNumber, is(equalTo(listeningPortNumberSample)));
-        assertThat("mListeningOnPortNumber should not be 1010", mListeningOnPortNumber, is(not(equalTo(1010))));
-        assertThat("mClientPortNumber should be 2222", mClientPortNumber, is(equalTo(clientPortNumberSample)));
-        assertThat("mClientPortNumber should not be 2020", mClientPortNumber, is(not(equalTo(2020))));
-        assertThat("mServerPortNumber should be 3333", mServerPortNumber, is(equalTo(serverPortNumberSample)));
-        assertThat("mServerPortNumber should not be 3030", mServerPortNumber, is(not(equalTo(3030))));
+        assertThat("mListeningOnPortNumber should be 1111", mListeningOnPortNumber,
+                is(equalTo(listeningPortNumberSample)));
+        assertThat("mListeningOnPortNumber should not be 1010", mListeningOnPortNumber,
+                is(not(equalTo(1010))));
+        assertThat("mClientPortNumber should be 2222", mClientPortNumber,
+                is(equalTo(clientPortNumberSample)));
+        assertThat("mClientPortNumber should not be 2020", mClientPortNumber,
+                is(not(equalTo(2020))));
+        assertThat("mServerPortNumber should be 3333", mServerPortNumber,
+                is(equalTo(serverPortNumberSample)));
+        assertThat("mServerPortNumber should not be 3030", mServerPortNumber,
+                is(not(equalTo(3030))));
     }
 
     @Test
@@ -94,7 +95,8 @@ public class ListenerOrIncomingConnectionTest {
         mListenerOrIncomingConnection = new ListenerOrIncomingConnection(
                 listeningPortNumberSample, clientPortNumberSample, serverPortNumberSample);
         assertThat("getListeningOnPortNumber should return proper value",
-                mListenerOrIncomingConnection.getListeningOnPortNumber(), is(equalTo(listeningPortNumberSample)));
+                mListenerOrIncomingConnection.getListeningOnPortNumber(),
+                is(equalTo(listeningPortNumberSample)));
     }
 
     @Test
@@ -104,7 +106,8 @@ public class ListenerOrIncomingConnectionTest {
 
         mListenerOrIncomingConnection.setListeningOnPortNumber(listeningPortNumberSample);
         assertThat("ListeningOnPortNumber should be 1111",
-                mListenerOrIncomingConnection.getListeningOnPortNumber(), is(equalTo(listeningPortNumberSample)));
+                mListenerOrIncomingConnection.getListeningOnPortNumber(),
+                is(equalTo(listeningPortNumberSample)));
 
         mListenerOrIncomingConnection.setListeningOnPortNumber(1010);
         assertThat("ListeningOnPortNumber should be 1010",
@@ -113,52 +116,62 @@ public class ListenerOrIncomingConnectionTest {
 
     @Test
     public void testGetClientPortNumber() throws Exception {
-        assertThat("ClientPortNumber should be 0", mListenerOrIncomingConnection.getClientPortNumber(),
+        assertThat("ClientPortNumber should be 0",
+                mListenerOrIncomingConnection.getClientPortNumber(),
                 is(equalTo(0)));
 
         mListenerOrIncomingConnection = new ListenerOrIncomingConnection(
                 listeningPortNumberSample, clientPortNumberSample, serverPortNumberSample);
 
-        assertThat("ClientPortNumber should be 2222", mListenerOrIncomingConnection.getClientPortNumber(),
+        assertThat("ClientPortNumber should be 2222",
+                mListenerOrIncomingConnection.getClientPortNumber(),
                 is(equalTo(clientPortNumberSample)));
     }
 
     @Test
     public void testSetClientPortNumber() throws Exception {
-        assertThat("ClientPortNumber should be 0", mListenerOrIncomingConnection.getClientPortNumber(),
+        assertThat("ClientPortNumber should be 0",
+                mListenerOrIncomingConnection.getClientPortNumber(),
                 is(equalTo(0)));
 
         mListenerOrIncomingConnection.setClientPortNumber(clientPortNumberSample);
-        assertThat("ClientPortNumber should be 2222", mListenerOrIncomingConnection.getClientPortNumber(),
+        assertThat("ClientPortNumber should be 2222",
+                mListenerOrIncomingConnection.getClientPortNumber(),
                 is(equalTo(clientPortNumberSample)));
 
         mListenerOrIncomingConnection.setClientPortNumber(2020);
-        assertThat("ClientPortNumber should be 2020", mListenerOrIncomingConnection.getClientPortNumber(),
+        assertThat("ClientPortNumber should be 2020",
+                mListenerOrIncomingConnection.getClientPortNumber(),
                 is(equalTo(2020)));
     }
 
     @Test
     public void testGetServerPortNumber() throws Exception {
-        assertThat("ServerPortNumber should be 0", mListenerOrIncomingConnection.getServerPortNumber(),
+        assertThat("ServerPortNumber should be 0",
+                mListenerOrIncomingConnection.getServerPortNumber(),
                 is(equalTo(0)));
 
         mListenerOrIncomingConnection = new ListenerOrIncomingConnection(
                 listeningPortNumberSample, clientPortNumberSample, serverPortNumberSample);
-        assertThat("ServerPortNumber should be 3333", mListenerOrIncomingConnection.getServerPortNumber(),
+        assertThat("ServerPortNumber should be 3333",
+                mListenerOrIncomingConnection.getServerPortNumber(),
                 is(equalTo(serverPortNumberSample)));
     }
 
     @Test
     public void testSetServerPortNumber() throws Exception {
-        assertThat("ServerPortNumber should be 0", mListenerOrIncomingConnection.getServerPortNumber(),
+        assertThat("ServerPortNumber should be 0",
+                mListenerOrIncomingConnection.getServerPortNumber(),
                 is(equalTo(0)));
 
         mListenerOrIncomingConnection.setServerPortNumber(serverPortNumberSample);
-        assertThat("ServerPortNumber should be 3333", mListenerOrIncomingConnection.getServerPortNumber(),
+        assertThat("ServerPortNumber should be 3333",
+                mListenerOrIncomingConnection.getServerPortNumber(),
                 is(equalTo(serverPortNumberSample)));
 
         mListenerOrIncomingConnection.setServerPortNumber(3030);
-        assertThat("ServerPortNumber should be 3030", mListenerOrIncomingConnection.getServerPortNumber(),
+        assertThat("ServerPortNumber should be 3030",
+                mListenerOrIncomingConnection.getServerPortNumber(),
                 is(equalTo(3030)));
     }
 
@@ -190,9 +203,12 @@ public class ListenerOrIncomingConnectionTest {
                 mJSONObject.getInt(JXcoreExtension.CALLBACK_VALUE_SERVER_PORT_NUMBER);
 
         assertThat("mJSONObject should not be null", mJSONObject, is(notNullValue()));
-        assertThat("mListeningPortNumber should be 1111", mListeningPortNumber, is(equalTo(listeningPortNumberSample)));
-        assertThat("mClientPortNumber should be 2222", mClientPortNumber, is(equalTo(clientPortNumberSample)));
-        assertThat("mServerPortNumber should be 3333", mServerPortNumber, is(equalTo(serverPortNumberSample)));
+        assertThat("mListeningPortNumber should be 1111", mListeningPortNumber,
+                is(equalTo(listeningPortNumberSample)));
+        assertThat("mClientPortNumber should be 2222", mClientPortNumber,
+                is(equalTo(clientPortNumberSample)));
+        assertThat("mServerPortNumber should be 3333", mServerPortNumber,
+                is(equalTo(serverPortNumberSample)));
     }
 
     @Test
@@ -207,5 +223,4 @@ public class ListenerOrIncomingConnectionTest {
         assertThat("mJSONObject.toString and mJOSNToString should be equal",
                 mJSONObject.toString(), is(equalTo(mJSONToString)));
     }
-
 }

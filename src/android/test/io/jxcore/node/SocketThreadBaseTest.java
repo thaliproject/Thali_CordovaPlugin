@@ -1,6 +1,5 @@
 package io.jxcore.node;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
@@ -25,18 +24,15 @@ public class SocketThreadBaseTest {
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();
-        mSocketThreadBaseMock = new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
-    }
-
-    @After
-    public void tearDown() throws Exception {
-
+        mSocketThreadBaseMock =
+                new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
     }
 
     @Test
-    public void testGetListener() throws Exception{
+    public void testGetListener() throws Exception {
         assertThat("getListener() returns equal listener to mListenerMock",
-                mSocketThreadBaseMock.getListener(), is(equalTo((SocketThreadBase.Listener)mListenerMock)));
+                mSocketThreadBaseMock.getListener(),
+                is(equalTo((SocketThreadBase.Listener) mListenerMock)));
     }
 
     @Test
@@ -45,7 +41,8 @@ public class SocketThreadBaseTest {
                 is(nullValue()));
 
         PeerProperties pp = new PeerProperties("00:11:22:33:44:55");
-        Field fPeerProperties = mSocketThreadBaseMock.getClass().getSuperclass().getDeclaredField("mPeerProperties");
+        Field fPeerProperties = mSocketThreadBaseMock.getClass().getSuperclass()
+                .getDeclaredField("mPeerProperties");
         fPeerProperties.setAccessible(true);
         fPeerProperties.set(mSocketThreadBaseMock, pp);
 
@@ -69,6 +66,22 @@ public class SocketThreadBaseTest {
 
     @Test
     public void testGetLocalHostAddressAsString() throws Exception {
+        Field fLocalhostSocket = mSocketThreadBaseMock.getClass().getSuperclass()
+                .getDeclaredField("mLocalhostSocket");
+        fLocalhostSocket.setAccessible(true);
+        Socket mLocalhostSocket = (Socket) fLocalhostSocket.get(mSocketThreadBaseMock);
+
+        if (mLocalhostSocket == null || mLocalhostSocket.getInetAddress() == null) {
+            assertThat("getLocalHostAddressAsString should return null value if mLocalhostSocket" +
+                    " or mLocalhostSocket.getInetAddress return null",
+                    mSocketThreadBaseMock.getLocalHostAddressAsString(),
+                    is(nullValue()));
+        } else {
+            assertThat("getLocalHostAddressAsAstring should return value equal to " +
+                            "mLocalhostSocket.getInetAddress.toString()",
+                    mSocketThreadBaseMock.getLocalHostAddressAsString(),
+                    is(equalTo(mLocalhostSocket.getInetAddress().toString())));
+        }
     }
 
     @Test
@@ -109,10 +122,6 @@ public class SocketThreadBaseTest {
     }
 
     @Test
-    public void testStartStreamCopyingThreads() throws Exception {
-    }
-
-    @Test
     public void testCloseLocalSocketAndStreams() throws Exception {
         mSocketThreadBaseMock.mLocalInputStream = mInputStreamMock;
         mSocketThreadBaseMock.mLocalOutputStream = mOutputStreamMock;
@@ -138,16 +147,19 @@ public class SocketThreadBaseTest {
     @Test
     public void testCloseBluetoothSocketAndStreams() throws Exception {
         assertThat("Input stream is not closed",
-                ((InputStreamMock) mSocketThreadBaseMock.mBluetoothInputStream).isClosed, is(false));
+                ((InputStreamMock) mSocketThreadBaseMock.mBluetoothInputStream).isClosed,
+                is(false));
         assertThat("Output stream is not closed",
-                ((OutputStreamMock) mSocketThreadBaseMock.mBluetoothOutputStream).isClosed, is(false));
+                ((OutputStreamMock) mSocketThreadBaseMock.mBluetoothOutputStream).isClosed,
+                is(false));
 
         mSocketThreadBaseMock.closeBluetoothSocketAndStreams();
 
         assertThat("Input stream is closed",
-                ((InputStreamMock) mSocketThreadBaseMock.mBluetoothInputStream).isClosed, is(true));
+                ((InputStreamMock) mSocketThreadBaseMock.mBluetoothInputStream).isClosed,
+                is(true));
         assertThat("Output stream is closed",
-                ((OutputStreamMock) mSocketThreadBaseMock.mBluetoothOutputStream).isClosed, is(true));
-
+                ((OutputStreamMock) mSocketThreadBaseMock.mBluetoothOutputStream).isClosed,
+                is(true));
     }
 }

@@ -5,9 +5,7 @@ import android.os.CountDownTimer;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 
@@ -39,23 +37,22 @@ public class StartStopOperationHandlerTest {
     UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
     UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     @Before
     public void setUp() throws Exception {
         mConnectionHelper = new ConnectionHelper();
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         mContext = jxcore.activity.getBaseContext();
-        mConnectionManager = new ConnectionManager(mContext, mConnectionHelper, SERVICE_UUID, BLUETOOTH_NAME);
-        mDiscoveryManager = new DiscoveryManager(mContext, mConnectionHelper, BLE_SERVICE_UUID, SERVICE_TYPE);
+        mConnectionManager =
+                new ConnectionManager(mContext, mConnectionHelper, SERVICE_UUID, BLUETOOTH_NAME);
+        mDiscoveryManager =
+                new DiscoveryManager(mContext, mConnectionHelper, BLE_SERVICE_UUID, SERVICE_TYPE);
         mStartStopOperationHandler =
                 new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
-
     }
 
     @After
     public void tearDown() throws Exception {
+        mConnectionHelper.killAllConnections();
         mConnectionHelper.stop(false, mJXcoreThaliCallback);
         mConnectionHelper.dispose();
         mConnectionHelper.getDiscoveryManager().stop();
@@ -71,8 +68,10 @@ public class StartStopOperationHandlerTest {
 
     @Test
     public void testConstructor() throws Exception {
-        Field fConnectionManager = mStartStopOperationHandler.getClass().getDeclaredField("mConnectionManager");
-        Field fDiscoveryManager = mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
+        Field fConnectionManager = mStartStopOperationHandler.getClass()
+                .getDeclaredField("mConnectionManager");
+        Field fDiscoveryManager = mStartStopOperationHandler.getClass()
+                .getDeclaredField("mDiscoveryManager");
 
         fConnectionManager.setAccessible(true);
         fDiscoveryManager.setAccessible(true);
@@ -98,7 +97,8 @@ public class StartStopOperationHandlerTest {
     public void testCancelCurrentOperation() throws Exception {
         mStartStopOperationHandler.cancelCurrentOperation();
 
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
+        Field fCurrentOperation = mStartStopOperationHandler.getClass()
+                .getDeclaredField("mCurrentOperation");
         fCurrentOperation.setAccessible(true);
         StartStopOperation mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
@@ -120,28 +120,34 @@ public class StartStopOperationHandlerTest {
 
         Field fDiscoveryManager =
                 mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
+        Field fCurrentOperation = mStartStopOperationHandler.getClass()
+                .getDeclaredField("mCurrentOperation");
 
         fDiscoveryManager.setAccessible(true);
         fCurrentOperation.setAccessible(true);
 
         DiscoveryManager mDiscoveryManager1 =
                 (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
-        StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+        StartStopOperation mCurrentOperation =
+                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
 
-        if(!mDiscoveryManager1.isBleMultipleAdvertisementSupported()){
-            assertThat("mDiscoveryManager1 state should be NOT_STARTED", mDiscoveryManager1.getState(),
+        if (!mDiscoveryManager1.isBleMultipleAdvertisementSupported()) {
+            assertThat("mDiscoveryManager1 state should be NOT_STARTED",
+                    mDiscoveryManager1.getState(),
                     is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
-            assertThat("mDiscoveryManager1 should be not running", mDiscoveryManager1.isRunning(),
+            assertThat("mDiscoveryManager1 should be not running",
+                    mDiscoveryManager1.isRunning(),
                     is(false));
             assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-        } else{
-            assertThat("mDiscoveryManager1 state should not be NOT_STARTED", mDiscoveryManager1.getState(),
+        } else {
+            assertThat("mDiscoveryManager1 state should not be NOT_STARTED",
+                    mDiscoveryManager1.getState(),
                     is(not(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED))));
             assertThat("mDiscoveryManager1 should be running", mDiscoveryManager1.isRunning(),
                     is(true));
-            assertThat("mCurrentOperation should not be null", mCurrentOperation, is(notNullValue()));
+            assertThat("mCurrentOperation should not be null", mCurrentOperation,
+                    is(notNullValue()));
         }
     }
 
@@ -150,22 +156,25 @@ public class StartStopOperationHandlerTest {
         mStartStopOperationHandler.executeStartOperation(false, mJXcoreThaliCallback);
         mStartStopOperationHandler.executeStopOperation(false, mJXcoreThaliCallback);
 
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
+        Field fCurrentOperation = mStartStopOperationHandler.getClass()
+                .getDeclaredField("mCurrentOperation");
         Field fDiscoveryManager =
                 mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
 
         fCurrentOperation.setAccessible(true);
         fDiscoveryManager.setAccessible(true);
 
-        StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+        StartStopOperation mCurrentOperation =
+                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
         DiscoveryManager mDiscoveryManager1 =
-              (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
+                (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
 
-        if(!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()){
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
             assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
 
-        }else{
-            assertThat("mCurrentOperation should not be null", mCurrentOperation, is(notNullValue()));
+        } else {
+            assertThat("mCurrentOperation should not be null", mCurrentOperation,
+                    is(notNullValue()));
         }
 
         assertThat("mDiscoveryManager1 state should be NOT_STARTED", mDiscoveryManager1.getState(),
@@ -174,17 +183,20 @@ public class StartStopOperationHandlerTest {
 
     @Test
     public void testCheckCurrentOperationStatus() throws Exception {
-        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
+        Field fCurrentOperation = mStartStopOperationHandler.getClass()
+                .getDeclaredField("mCurrentOperation");
         fCurrentOperation.setAccessible(true);
         fCurrentOperation.set(mStartStopOperationHandler,
                 StartStopOperation.createStartOperation(true, mJXcoreThaliCallback));
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
 
-        StartStopOperation mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+        StartStopOperation mCurrentOperation =
+                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
         assertThat("mCurrentOperation is still not null", mCurrentOperation, is(notNullValue()));
 
-        Method executeCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredMethod("executeCurrentOperation");
+        Method executeCurrentOperation = mStartStopOperationHandler.getClass()
+                .getDeclaredMethod("executeCurrentOperation");
         executeCurrentOperation.setAccessible(true);
         executeCurrentOperation.invoke(mStartStopOperationHandler);
 
