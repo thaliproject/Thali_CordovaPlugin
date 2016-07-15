@@ -13,28 +13,28 @@ import java.util.Date;
 import io.jxcore.node.jxcore;
 
 public class RegisterExecuteUT {
-    public RegisterExecuteUT(){
+    public RegisterExecuteUT() {
         jxcore.RegisterMethod("ExecuteNativeTests", new jxcore.JXcoreCallback() {
-            @SuppressLint("NewApi")
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-                Log.d("UTtests", "Running tests");
+                String logtag = "ExecuteNativeTests";
+                Log.d(logtag, "Running unit tests");
                 Result resultTest = ThaliTestRunner.runTests();
 
                 JSONObject jsonObject = new JSONObject();
                 Boolean jsonObjectCreated = false;
 
                 try {
-                    jsonObject.put("Total number of executed tests", resultTest.getRunCount());
-                    jsonObject.put("Number of passed tests", resultTest.getRunCount() -
+                    jsonObject.put("total", resultTest.getRunCount());
+                    jsonObject.put("passed", resultTest.getRunCount() -
                             resultTest.getFailureCount() - resultTest.getIgnoreCount());
-                    jsonObject.put("Number of failed tests", resultTest.getFailureCount());
-                    jsonObject.put("Number of ignored tests", resultTest.getIgnoreCount());
-                    jsonObject.put("Total duration", new Date(resultTest.getRunTime()).getTime());
-                    jsonObject.put("UT TESTS FINISHED", true);
+                    jsonObject.put("failed", resultTest.getFailureCount());
+                    jsonObject.put("ignored", resultTest.getIgnoreCount());
+                    jsonObject.put("duration", new Date(resultTest.getRunTime()).getTime());
+                    jsonObject.put("executed", true);
                     jsonObjectCreated = true;
                 } catch (JSONException e) {
-                    Log.e("RegisterExecuteUT", "executeNativeTests: " +
+                    Log.e(logtag, "executeNativeTests: " +
                             "Failed to populate the JSON object: " + e.getMessage(), e);
                 }
 
