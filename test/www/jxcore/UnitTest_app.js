@@ -14,27 +14,47 @@ var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
 
+
 ThaliMobile.getNetworkStatus()
-.then(function (networkStatus) {
-  var promiseList = [];
-  if (networkStatus.wifi === 'off') {
-    promiseList.push(testUtils.toggleWifi(true));
-  }
-  if (networkStatus.bluetooth === 'off') {
-    promiseList.push(testUtils.toggleBluetooth(true));
-  }
-  Promise.all(promiseList)
-  .then(function () {
-    Mobile('GetDeviceName').callNative(function (name) {
-      console.log('My device name is: %s', name);
-      testUtils.setName(name);
-      // The setImmediate is to avoid this issue:
-      // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
-      setImmediate(function () {
-        require('./runTests.js');
+  .then(function (networkStatus) {
+    var promiseList = [];
+    if (networkStatus.wifi === 'off') {
+      promiseList.push(testUtils.toggleWifi(true));
+    }
+    if (networkStatus.bluetooth === 'off') {
+      promiseList.push(testUtils.toggleBluetooth(true));
+    }
+
+    new Promise(function (resolve, reject) {
+      Mobile('ExecuteNativeTests').callNative(function (result) {
+        resolve(result);
       });
-    });
+    })
+      .then(function (result) {
+        if (result && result.executed) {
+          console.log(result.executed);
+          console.log("Total number of executed tests: ", result.total);
+          console.log("Number of passed tests: ", result.passed);
+          console.log("Number of failed tests: ", result.failed);
+          console.log("Number of ignored tests: ", result.ignored);
+          console.log("Total duration: ", result.duration);
+        } else {
+          console.log("No UT executed.");
+        }
+
+        Promise.all(promiseList)
+          .then(function () {
+            Mobile('GetDeviceName').callNative(function (name) {
+              console.log('My device name is: %s', name);
+              testUtils.setName(name);
+              // The setImmediate is to avoid this issue:
+              // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
+              setImmediate(function () {
+                require('./runTests.js');
+              });
+            });
+          });
+      });
   });
-});
 
 console.log('Unit Test app is loaded');

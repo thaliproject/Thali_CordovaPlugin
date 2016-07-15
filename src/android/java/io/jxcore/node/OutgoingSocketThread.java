@@ -30,6 +30,22 @@ class OutgoingSocketThread extends SocketThreadBase {
         mTag = OutgoingSocketThread.class.getName();
     }
 
+    /**
+     * Constructor.
+     *
+     * @param bluetoothSocket The Bluetooth socket.
+     * @param listener        The listener.
+     * @param inputStream     The InputStream.
+     * @param outputStream    The OutputStream.
+     * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
+     */
+    public OutgoingSocketThread(BluetoothSocket bluetoothSocket, Listener listener,
+                                InputStream inputStream, OutputStream outputStream)
+            throws IOException {
+        super(bluetoothSocket, listener, inputStream, outputStream);
+        mTag = OutgoingSocketThread.class.getName();
+    }
+
     public int getListeningOnPortNumber() {
         return mListeningOnPortNumber;
     }
