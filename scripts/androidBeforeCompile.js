@@ -51,6 +51,65 @@ var replaceJXCoreExtension = function (appRoot) {
   }
 };
 
+var replaceJXCore = function (appRoot) {
+  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
+    'android/test/io/jxcore/node/jxcore.java');
+  var targetFile = path.join(appRoot, 'platforms/android/src/io/jxcore/node' +
+    '/jxcore.java');
+  try {
+    console.log("replace JXCore file");
+    var sourceContent = fs.readFileSync(sourceFile);
+    fs.writeFileSync(targetFile, sourceContent);
+  } catch (e) {
+    console.log(e);
+    console.log('Failed to update the jxcore.java file!');
+    console.log('Please make sure plugins org.thaliproject.p2p and ' +
+      'io.jxcore.node are installed.');
+    process.exit(-1);
+  }
+};
+
+var copyAndroidTestClasses = function (appRoot) {
+  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
+  'android/test/io/jxcore/node');
+  var targetFile = path.join(appRoot, 'platforms/android/src/io/jxcore/node');
+  try {
+    fs.copySync(sourceFile, targetFile);
+  } catch (err) {
+    console.log(err);
+    console.log('Failed to copy test classes');
+    process.exit(-1);
+  }
+};
+
+var copyAndroidTestRunner = function (appRoot) {
+  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
+  'android/test/com/test/thalitest');
+  var targetFile = path.join(appRoot, 'platforms/android/src/com/test/thalitest');
+  try {
+    console.log("Copying test runner");
+    fs.copySync(sourceFile, targetFile);
+  } catch (err) {
+    console.log(err);
+    console.log('Failed to copy test runner classes');
+    process.exit(-1);
+  }
+};
+
+var copyBuildExtrasGradle = function (appRoot) {
+  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
+  'android/test/build-extras.gradle');
+  var targetFile = path.join(appRoot, 'platforms/android/build-extras.gradle');
+  try {
+    console.log("Copying build-extras.gradle");
+    fs.copySync(sourceFile, targetFile);
+  } catch (err) {
+    console.log(err);
+    console.log('Failed to copy test runner classes');
+    process.exit(-1);
+  }
+};
+
 var updateBtconnectorlibVersion = function (appRoot) {
   var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/android/gradle.properties');
   var targetFile = path.join(appRoot, 'platforms/android/gradle.properties');
@@ -72,10 +131,44 @@ var removeInstallFromPlatform = function (appRoot) {
   fs.removeSync(installDir);
 };
 
+// jscs:disable jsDoc
+/**
+ * In case of build with android unit test:
+ * 1. Replaces jxcore.java with the modified version containing execution of unit tests.
+ * 2. Copy unit test files
+ * 3. Copy test runner classes
+ * 4. Remove a file indicating UT build
+ * @param {Object} appRoot
+ */
+// jscs:enable jsDoc
+var copyTestFiles = function (appRoot) {
+  try {
+    var st = fs.lstatSync('platforms/android/unittests');
+    if (st.isFile()) {
+      console.log("Preparing UT test environment");
+      replaceJXCore(appRoot);
+      copyAndroidTestClasses(appRoot);
+      copyAndroidTestRunner(appRoot);
+      copyBuildExtrasGradle(appRoot);
+      try {
+        console.log("Removing UT flag");
+        fs.removeSync('platforms/android/unittests');
+      } catch (err) {
+        console.log(err);
+        console.log('Failed to remove the UT flag file, continuing anyway');
+      }
+    }
+  } catch (err) {
+    console.log('Not a test environment, continue normally.');
+  }
+};
+
+
 module.exports = function (context) {
   var appRoot = context.opts.projectRoot;
   updateAndroidSDKVersion(appRoot);
   replaceJXCoreExtension(appRoot);
   updateBtconnectorlibVersion(appRoot);
+  copyTestFiles(appRoot);
   removeInstallFromPlatform(appRoot);
 };

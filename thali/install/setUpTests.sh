@@ -14,6 +14,8 @@ fi
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to
 # manually set the coordination server's address to.
+# The third argument is optional and if set causes copying of the android unit tests
+# to platforms/android
 
 cd `dirname $0`
 cd ../..
@@ -60,6 +62,18 @@ find . -name "*.gz" -delete
 find . -name "*.pem" -delete
 
 cp -v $1 app.js
+
+# In case of UT crete a file
+if [ $2 == "UT" ]; then
+  echo "UT files will be copied to the platform directory"
+  touch ../../platforms/android/unittests
+elif
+[ $3 == "UT" ]; then
+  echo "UT files will be copied to the platforms directory"
+  touch ../../platforms/android/unittests
+else
+  echo "UT files will be copied to the platforms directory"
+fi
 
 cordova build android --release --device
 
