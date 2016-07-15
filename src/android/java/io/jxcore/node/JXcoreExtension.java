@@ -96,7 +96,7 @@ public class JXcoreExtension {
 
     private static Class<?> RetrieveRegisterUTClass() {
         try {
-            return Class.forName("io.jxcore.node.RegisterExecuteUT");
+            return Class.forName("com.test.thalitest.RegisterExecuteUT");
         } catch (ClassNotFoundException ex) {
             // No UT, no need to do anything
             return null;

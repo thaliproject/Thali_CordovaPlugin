@@ -1,9 +1,7 @@
-package io.jxcore.node;
+package com.test.thalitest;
 
 import android.annotation.SuppressLint;
 import android.util.Log;
-
-import com.test.thalitest.ThaliTestRunner;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -12,13 +10,15 @@ import org.junit.runner.Result;
 import java.util.ArrayList;
 import java.util.Date;
 
+import io.jxcore.node.jxcore;
+
 public class RegisterExecuteUT {
     public RegisterExecuteUT(){
         jxcore.RegisterMethod("ExecuteNativeTests", new jxcore.JXcoreCallback() {
             @SuppressLint("NewApi")
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-                Log.d("RegisterExecuteUT", "Running tests");
+                Log.d("UTtests", "Running tests");
                 Result resultTest = ThaliTestRunner.runTests();
 
                 JSONObject jsonObject = new JSONObject();
