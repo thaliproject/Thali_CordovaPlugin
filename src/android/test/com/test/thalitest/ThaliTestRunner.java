@@ -1,6 +1,7 @@
 package com.test.thalitest;
 
-import org.apache.cordova.LOG;
+import android.util.Log;
+
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -13,15 +14,15 @@ public class ThaliTestRunner {
         String mTag = ThaliTestRunner.class.getName();
 
         for (Failure failure: result.getFailures()) {
-            LOG.e(mTag, failure.getMessage());
+            Log.e(mTag, failure.getMessage());
         }
 
-        LOG.e(mTag, "Total number of executed tests: %s", result.getRunCount());
-        LOG.e(mTag, "Number of passed tests: %s",
+        Log.d(mTag, "Total number of executed tests: " + result.getRunCount());
+        Log.d(mTag, "Number of passed tests: " +
                 (result.getRunCount() - result.getFailureCount() - result.getIgnoreCount()));
-        LOG.e(mTag, "Number of failed tests:  %s", result.getFailureCount());
-        LOG.e(mTag, "Number of ignored tests: %s", result.getIgnoreCount());
-        LOG.e(mTag, "Total duration: %s ms", new Date(result.getRunTime()).getTime());
+        Log.d(mTag, "Number of failed tests:  " + result.getFailureCount());
+        Log.d(mTag, "Number of ignored tests: " + result.getIgnoreCount());
+        Log.d(mTag, String.format("Total duration: %s ms", new Date(result.getRunTime()).getTime()));
 
         return result;
     }
