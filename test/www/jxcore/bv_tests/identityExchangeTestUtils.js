@@ -5,7 +5,7 @@ var express = require('express');
 var Promise = require('lie');
 var crypto = require('crypto');
 var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
-var testUtils = require('../../lib/testUtils');
+var testUtils = require('../lib/testUtils');
 
 exports.createThaliAppServer = function () {
   var app = express();
