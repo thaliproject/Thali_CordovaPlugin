@@ -5,7 +5,6 @@ import android.content.Context;
 import android.os.CountDownTimer;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -47,17 +46,6 @@ public class ConnectionHelperTest {
     public static void setUpBeforeClass() throws Exception {
         mConnectionHelper = new ConnectionHelper();
         mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
-    }
-
-    @AfterClass
-    public static void tearDownAfterClass() throws InterruptedException {
-        mConnectionHelper.killAllConnections();
-        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
-        mConnectionHelper.dispose();
-        mConnectionHelper.getDiscoveryManager().stop();
-        mConnectionHelper.getDiscoveryManager().stopAdvertising();
-        mConnectionHelper.getDiscoveryManager().stopDiscovery();
-        mConnectionHelper.getDiscoveryManager().dispose();
     }
 
     @Before
@@ -656,7 +644,6 @@ public class ConnectionHelperTest {
 
     @Test
     public void testOnPeerUpdated() throws Exception {
-        assertThat(true, is(true));
     }
 
     @Test

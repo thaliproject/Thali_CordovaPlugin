@@ -122,7 +122,10 @@ var removeInstallFromPlatform = function (appRoot) {
  * 1. Replaces jxcore.java with the modified version containing execution of unit tests.
  * 2. Copy unit test files
  * 3. Copy test runner classes
- * 4. Remove a file indicating UT build
+ * 4. Generate test suite
+ * 5. Update JXcoreExtension with UT executing method
+ * 6. Remove temporary file UTMethod, which contains definition of UT executing method
+ * 7. Remove a file indicating UT build
  * @param {Object} appRoot
  */
 // jscs:enable jsDoc
