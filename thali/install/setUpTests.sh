@@ -63,16 +63,10 @@ find . -name "*.pem" -delete
 
 cp -v $1 app.js
 
-# In case of UT crete a file
-if [ $2 == "UT" ]; then
+# In case of UT create a file
+if [ $2 == "UT" ] || [ $3 == "UT" ] ; then
   echo "UT files will be copied to the platform directory"
   touch ../../platforms/android/unittests
-elif
-[ $3 == "UT" ]; then
-  echo "UT files will be copied to the platforms directory"
-  touch ../../platforms/android/unittests
-else
-  echo "UT files will be copied to the platforms directory"
 fi
 
 cordova build android --release --device

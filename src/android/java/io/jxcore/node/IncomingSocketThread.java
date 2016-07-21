@@ -18,7 +18,7 @@ class IncomingSocketThread extends SocketThreadBase {
     private int mTcpPortNumber = 0;
 
     /**
-     * Constructor.
+     * Constructor for test purposes.
      *
      * @param bluetoothSocket The Bluetooth socket.
      * @param listener        The listener.

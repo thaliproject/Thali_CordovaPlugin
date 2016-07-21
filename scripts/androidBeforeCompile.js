@@ -51,63 +51,30 @@ var replaceJXCoreExtension = function (appRoot) {
   }
 };
 
-var replaceJXCore = function (appRoot) {
-  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
-    'android/test/io/jxcore/node/jxcore.java');
-  var targetFile = path.join(appRoot, 'platforms/android/src/io/jxcore/node' +
-    '/jxcore.java');
+var copyFiles = function(appRoot, source, target, message) {
+  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/android/test' + source);
+  var targetFile = path.join(appRoot, 'platforms/android' + target);
+
   try {
-    console.log("replace JXCore file");
-    var sourceContent = fs.readFileSync(sourceFile);
-    fs.writeFileSync(targetFile, sourceContent);
-  } catch (e) {
-    console.log(e);
-    console.log('Failed to update the jxcore.java file!');
-    console.log('Please make sure plugins org.thaliproject.p2p and ' +
-      'io.jxcore.node are installed.');
+    console.log('Copying ' + message);
+    fs.copySync(sourceFile, targetFile);
+  } catch (err) {
+    console.log(err);
+    console.log('Failed to copy ' + message);
     process.exit(-1);
   }
 };
 
 var copyAndroidTestClasses = function (appRoot) {
-  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
-  'android/test/io/jxcore/node');
-  var targetFile = path.join(appRoot, 'platforms/android/src/io/jxcore/node');
-  try {
-    fs.copySync(sourceFile, targetFile);
-  } catch (err) {
-    console.log(err);
-    console.log('Failed to copy test classes');
-    process.exit(-1);
-  }
+  copyFiles(appRoot, '/io/jxcore/node', '/src/io/jxcore/node', 'test classes')
 };
 
 var copyAndroidTestRunner = function (appRoot) {
-  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
-  'android/test/com/test/thalitest');
-  var targetFile = path.join(appRoot, 'platforms/android/src/com/test/thalitest');
-  try {
-    console.log("Copying test runner");
-    fs.copySync(sourceFile, targetFile);
-  } catch (err) {
-    console.log(err);
-    console.log('Failed to copy test runner classes');
-    process.exit(-1);
-  }
+  copyFiles(appRoot, '/com/test/thalitest', '/src/com/test/thalitest', 'test runner classes')
 };
 
 var copyBuildExtrasGradle = function (appRoot) {
-  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
-  'android/test/build-extras.gradle');
-  var targetFile = path.join(appRoot, 'platforms/android/build-extras.gradle');
-  try {
-    console.log("Copying build-extras.gradle");
-    fs.copySync(sourceFile, targetFile);
-  } catch (err) {
-    console.log(err);
-    console.log('Failed to copy test runner classes');
-    process.exit(-1);
-  }
+  copyFiles(appRoot, '/build-extras.gradle', '/build-extras.gradle', 'build-extras.gradle');
 };
 
 var updateBtconnectorlibVersion = function (appRoot) {
@@ -134,22 +101,26 @@ var removeInstallFromPlatform = function (appRoot) {
 // jscs:disable jsDoc
 /**
  * In case of build with android unit test:
- * 1. Replaces jxcore.java with the modified version containing execution of unit tests.
- * 2. Copy unit test files
- * 3. Copy test runner classes
- * 4. Remove a file indicating UT build
+ * 1. Copy unit test files
+ * 2. Copy test runner classes
+ * 3. Generate test suite
+ * 4. Update JXcoreExtension with UT executing method
+ * 5. Remove temporary file UTMethod, which contains definition of UT executing method
+ * 6. Remove a file indicating UT build
  * @param {Object} appRoot
  */
 // jscs:enable jsDoc
 var copyTestFiles = function (appRoot) {
+  var utFlag;
   try {
-    var st = fs.lstatSync('platforms/android/unittests');
-    if (st.isFile()) {
+    utFlag = fs.lstatSync('platforms/android/unittests');
+    if (utFlag.isFile()) {
       console.log("Preparing UT test environment");
-      replaceJXCore(appRoot);
       copyAndroidTestClasses(appRoot);
       copyAndroidTestRunner(appRoot);
       copyBuildExtrasGradle(appRoot);
+      updateTestSuite(appRoot);
+      updateJXCoreExtensionWithUTMethod(appRoot);
       try {
         console.log("Removing UT flag");
         fs.removeSync('platforms/android/unittests');
@@ -163,6 +134,67 @@ var copyTestFiles = function (appRoot) {
   }
 };
 
+// jscs:disable jsDoc
+/**
+ * Updates test suite with test classes found in the platforms/android/src/io/jxcore/node,
+ * adds required imports.
+ * @param {Object} appRoot
+ */
+// jscs:enable jsDoc
+var updateTestSuite = function (appRoot) {
+  try {
+    var i, testClassName;
+    var filesArray = fs.readdirSync(path.join(appRoot, 'platforms/android/src/io/jxcore/node'));
+    var content = 'package com.test.thalitest;\n' +
+      'import org.junit.runner.RunWith;\n' +
+      'import org.junit.runners.Suite;';
+    var filePath = path.join(appRoot, 'platforms/android/src/com/test/thalitest/ThaliTestSuite.java');
+    var runWithAndSuiteClasses = '\n\n@RunWith(Suite.class)\n@Suite.SuiteClasses({';
+
+    for (i = 0; i < filesArray.length; i++) {
+      if(filesArray[i].indexOf('Test.java') > -1) {
+        testClassName = filesArray[i].replace('.java', '');
+        content += '\nimport io.jxcore.node.' + testClassName + ";";
+        runWithAndSuiteClasses += testClassName + ".class,";
+      }
+    }
+
+    runWithAndSuiteClasses = runWithAndSuiteClasses.replace(/,\s*$/, "") + "})";
+
+    content = content + runWithAndSuiteClasses + '\n\npublic class ThaliTestSuite {\n}';
+    fs.writeFileSync(filePath, content, 'utf-8');
+  } catch (err) {
+    console.log(err);
+    console.log('Failed to update the test suite file');
+    process.exit(-1);
+  }
+};
+
+// jscs:disable jsDoc
+/**
+ * Updates JXcoreExtension with a method is used to register the native UT executor
+ * @param {Object} appRoot
+ */
+// jscs:enable jsDoc
+var updateJXCoreExtensionWithUTMethod = function (appRoot) {
+  var filePath = path.join(appRoot, 'platforms/android/src/io/jxcore/node/JXcoreExtension.java');
+  var content = fs.readFileSync(filePath, 'utf-8');
+  var codeToAttach = fs.readFileSync(
+    path.join(appRoot, 'platforms/android/src/com/test/thalitest/UTMethod'), 'utf-8');
+
+  content = content.replace("lifeCycleMonitor.start();", "lifeCycleMonitor.start();\nRegisterUTExecuteMethod();");
+
+  content = content.replace(/}\s*$/, codeToAttach) + "}";
+  fs.writeFileSync(filePath, content, 'utf-8');
+
+  try {
+    console.log("Removing UTMethod");
+    fs.removeSync('platforms/android/src/com/test/thalitest/UTMethod');
+  } catch (err) {
+    console.log(err);
+    console.log('Failed to remove the UTMethod file, continuing anyway');
+  }
+};
 
 module.exports = function (context) {
   var appRoot = context.opts.projectRoot;
