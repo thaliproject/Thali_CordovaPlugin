@@ -51,28 +51,10 @@ var replaceJXCoreExtension = function (appRoot) {
   }
 };
 
-var replaceJXCore = function (appRoot) {
-  var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
-    'android/test/io/jxcore/node/jxcore.java');
-  var targetFile = path.join(appRoot, 'platforms/android/src/io/jxcore/node' +
-    '/jxcore.java');
-  try {
-    console.log("replace JXCore file");
-    var sourceContent = fs.readFileSync(sourceFile);
-    fs.writeFileSync(targetFile, sourceContent);
-  } catch (e) {
-    console.log(e);
-    console.log('Failed to update the jxcore.java file!');
-    console.log('Please make sure plugins org.thaliproject.p2p and ' +
-      'io.jxcore.node are installed.');
-    process.exit(-1);
-  }
-};
-
 var copyFiles = function(appRoot, source, target, message) {
   var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/android/test' + source);
   var targetFile = path.join(appRoot, 'platforms/android' + target);
-  
+
   try {
     console.log('Copying ' + message);
     fs.copySync(sourceFile, targetFile);
@@ -119,22 +101,21 @@ var removeInstallFromPlatform = function (appRoot) {
 // jscs:disable jsDoc
 /**
  * In case of build with android unit test:
- * 1. Replaces jxcore.java with the modified version containing execution of unit tests.
- * 2. Copy unit test files
- * 3. Copy test runner classes
- * 4. Generate test suite
- * 5. Update JXcoreExtension with UT executing method
- * 6. Remove temporary file UTMethod, which contains definition of UT executing method
- * 7. Remove a file indicating UT build
+ * 1. Copy unit test files
+ * 2. Copy test runner classes
+ * 3. Generate test suite
+ * 4. Update JXcoreExtension with UT executing method
+ * 5. Remove temporary file UTMethod, which contains definition of UT executing method
+ * 6. Remove a file indicating UT build
  * @param {Object} appRoot
  */
 // jscs:enable jsDoc
 var copyTestFiles = function (appRoot) {
+  var utFlag;
   try {
-    var st = fs.lstatSync('platforms/android/unittests');
-    if (st.isFile()) {
+    utFlag = fs.lstatSync('platforms/android/unittests');
+    if (utFlag.isFile()) {
       console.log("Preparing UT test environment");
-      replaceJXCore(appRoot);
       copyAndroidTestClasses(appRoot);
       copyAndroidTestRunner(appRoot);
       copyBuildExtrasGradle(appRoot);
@@ -153,56 +134,66 @@ var copyTestFiles = function (appRoot) {
   }
 };
 
+// jscs:disable jsDoc
+/**
+ * Updates test suite with test classes found in the platforms/android/src/io/jxcore/node,
+ * adds required imports.
+ * @param {Object} appRoot
+ */
+// jscs:enable jsDoc
 var updateTestSuite = function (appRoot) {
-  var testClassesPath = path.join(appRoot, 'platforms/android/src/io/jxcore/node');
-  var filesArray = fs.readdirSync(testClassesPath);
-  var testFilesAsArray = [];
-  var testFilesAsString = '';
-  var packageStr = 'package com.test.thalitest;\n';
-  var importRunWith = '\nimport org.junit.runner.RunWith;';
-  var importSuite = '\nimport org.junit.runners.Suite;';
-  var importTemplate = '\nimport io.jxcore.node.';
-  var imports = '';
-  var filePath = path.join(appRoot, 'platforms/android/src/com/test/thalitest/ThaliTestSuite.java');
-  var publicClassThaliTestSuite = '\n\npublic class ThaliTestSuite {\n}';
-  var runWithAndSuiteClasses = '\n\n@RunWith(Suite.class)\n@Suite.SuiteClasses({';
+  try {
+    var i, testClassName;
+    var filesArray = fs.readdirSync(path.join(appRoot, 'platforms/android/src/io/jxcore/node'));
+    var content = 'package com.test.thalitest;\n' +
+      'import org.junit.runner.RunWith;\n' +
+      'import org.junit.runners.Suite;';
+    var filePath = path.join(appRoot, 'platforms/android/src/com/test/thalitest/ThaliTestSuite.java');
+    var runWithAndSuiteClasses = '\n\n@RunWith(Suite.class)\n@Suite.SuiteClasses({';
 
-  for(var i in filesArray){
-     if(filesArray[i].indexOf('Test') > -1){
-        testFilesAsArray.push(filesArray[i].replace('.java', ''));
-	   }
+    for (i = 0; i < filesArray.length; i++) {
+      if(filesArray[i].indexOf('Test.java') > -1) {
+        testClassName = filesArray[i].replace('.java', '');
+        content += '\nimport io.jxcore.node.' + testClassName + ";";
+        runWithAndSuiteClasses += testClassName + ".class,";
+      }
+    }
+
+    runWithAndSuiteClasses = runWithAndSuiteClasses.replace(/,\s*$/, "") + "})";
+
+    content = content + runWithAndSuiteClasses + '\n\npublic class ThaliTestSuite {\n}';
+    fs.writeFileSync(filePath, content, 'utf-8');
+  } catch (err) {
+    console.log(err);
+    console.log('Failed to update the test suite file');
+    process.exit(-1);
   }
-
-  for(var i in testFilesAsArray){
-	   if(i < testFilesAsArray.length - 1){
-	       testFilesAsString += '\n\t' + testFilesAsArray[i] + '.class,';
-	   } else{
-	       	testFilesAsString += '\n\t' + testFilesAsArray[i] + '.class';
-     }
-	   imports += importTemplate + testFilesAsArray[i] + ';';
-  }
-
-  var data = packageStr + importRunWith + importSuite + imports + runWithAndSuiteClasses + testFilesAsString + '})' + publicClassThaliTestSuite;
-  fs.writeFileSync(filePath, data, 'utf-8');
 };
 
+// jscs:disable jsDoc
+/**
+ * Updates JXcoreExtension with a method is used to register the native UT executor
+ * @param {Object} appRoot
+ */
+// jscs:enable jsDoc
 var updateJXCoreExtensionWithUTMethod = function (appRoot) {
   var filePath = path.join(appRoot, 'platforms/android/src/io/jxcore/node/JXcoreExtension.java');
-  var dataFromJXCoreExtension = fs.readFileSync(filePath, 'utf-8');
-  var lastIndex = dataFromJXCoreExtension.lastIndexOf('}');
-  var dataFromJXCoreExtensionWithoutLastBrace = dataFromJXCoreExtension.substring(0, lastIndex); 
-  var codeToAttach = fs.readFileSync(path.join(appRoot, 'platforms/android/src/com/test/thalitest/UTMethod'));
-  var result = dataFromJXCoreExtensionWithoutLastBrace + codeToAttach + '\n}';
-  
-  fs.writeFileSync(filePath, result, 'utf-8');
-  
+  var content = fs.readFileSync(filePath, 'utf-8');
+  var codeToAttach = fs.readFileSync(
+    path.join(appRoot, 'platforms/android/src/com/test/thalitest/UTMethod'), 'utf-8');
+
+  content = content.replace("lifeCycleMonitor.start();", "lifeCycleMonitor.start();\nRegisterUTExecuteMethod();");
+
+  content = content.replace(/}\s*$/, codeToAttach) + "}";
+  fs.writeFileSync(filePath, content, 'utf-8');
+
   try {
-        console.log("Removing UTMethod");
-        fs.removeSync('platforms/android/src/com/test/thalitest/UTMethod');
-      } catch (err) {
-        console.log(err);
-        console.log('Failed to remove the UTMethod file, continuing anyway');
-      }
+    console.log("Removing UTMethod");
+    fs.removeSync('platforms/android/src/com/test/thalitest/UTMethod');
+  } catch (err) {
+    console.log(err);
+    console.log('Failed to remove the UTMethod file, continuing anyway');
+  }
 };
 
 module.exports = function (context) {
