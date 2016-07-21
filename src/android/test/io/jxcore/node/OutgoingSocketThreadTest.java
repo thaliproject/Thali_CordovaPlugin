@@ -49,4 +49,29 @@ public class OutgoingSocketThreadTest {
 
         assertThat("mServerSocket should be null", mServerSocket, is(nullValue()));
     }
+
+    @Test
+    public void testRun() throws Exception {
+        System.out.println("Running OutgoingSocketThread");
+        mOutgoingSocketThread.start();
+
+        Thread.sleep(1000); //Wait for thread to start
+
+        Field fServerSocket = mOutgoingSocketThread.getClass().getDeclaredField("mServerSocket");
+        Field fListeningOnPortNumber = mOutgoingSocketThread.getClass()
+                .getDeclaredField("mListeningOnPortNumber");
+
+        fServerSocket.setAccessible(true);
+        fListeningOnPortNumber.setAccessible(true);
+
+        ServerSocket mServerSocket = (ServerSocket) fServerSocket.get(mOutgoingSocketThread);
+        int mListeningOnPortNumber = fListeningOnPortNumber.getInt(mOutgoingSocketThread);
+
+        assertThat("mServerSocket should not be null", mServerSocket, is(notNullValue()));
+        assertThat("mListeningOnPortNumber should be equal to mServerSocket.getLocalPort()",
+                mListeningOnPortNumber, is(equalTo(mServerSocket.getLocalPort())));
+        assertThat("mServerSocket.isBound should return true", mServerSocket.isBound(),
+                is(true));
+        //TODO Simulate incoming connection
+    }
 }

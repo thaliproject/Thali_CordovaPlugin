@@ -53,7 +53,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     }
 
     /**
-     * Constructor.
+     * Constructor for test purposes.
      *
      * @param bluetoothSocket The Bluetooth socket.
      * @param listener        The listener.

@@ -102,7 +102,7 @@ then
   # server may have different OS and CPU architecture than the build server
   # so modules need to be installed there separately (this is handled by the CI).
   rm -rf test/TestServer/node_modules;ERROR_ABORT
-  
+
   # A hack workround due to the fact that CI server doesn't allow relative paths outside
   # of the original parent folder as a path to the build output binaries.
   # https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
