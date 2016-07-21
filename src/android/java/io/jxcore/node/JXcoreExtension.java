@@ -70,39 +70,6 @@ public class JXcoreExtension {
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
 
-    /**
-     * Android native UT specific method.
-     *
-     * The method below is used to register the native UT executor;
-     * In case when the class RegisterExecuteUT is not found the test executor won't be registered
-     *
-     */
-
-    private static void RegisterUTExecuteMethod() {
-        Class<?> clazz = RetrieveRegisterUTClass();
-        if (clazz != null) {
-            try {
-                clazz.newInstance();
-                Log.d(TAG, "Unit Tests on");
-            } catch (InstantiationException e) {
-                Log.e(TAG, "RegisterUTExecuteMethod: Failed to register UT execute method: " + e.getMessage(), e);
-            } catch (IllegalAccessException e) {
-                Log.e(TAG, "RegisterUTExecuteMethod: Failed to register UT execute method: " + e.getMessage(), e);
-            }
-            return;
-        }
-        Log.d(TAG, "Unit Tests off");
-    }
-
-    private static Class<?> RetrieveRegisterUTClass() {
-        try {
-            return Class.forName("com.test.thalitest.RegisterExecuteUT");
-        } catch (ClassNotFoundException ex) {
-            // No UT, no need to do anything
-            return null;
-        }
-    }
-
     public static void LoadExtensions() {
         if (mConnectionHelper != null) {
             Log.e(TAG, "LoadExtensions: A connection helper instance already exists - this indicates that this method was called twice - disposing of the previous instance");
@@ -127,8 +94,6 @@ public class JXcoreExtension {
         });
 
         lifeCycleMonitor.start();
-
-        RegisterUTExecuteMethod();
 
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
