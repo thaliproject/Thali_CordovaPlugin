@@ -30,7 +30,7 @@ function compareFunctions(a, b) {
   function getPrototypeKeys(obj) {
     var keys = [];
     for (var key in obj.prototype) {
-      if (obj.prototype.hasOwnProperty(key)) {
+      if (obj.prototype.hasOwnProperty(key) && typeof obj.prototype[key] === 'function') {
         keys.push(key);
       }
     }
