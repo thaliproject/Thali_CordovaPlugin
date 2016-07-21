@@ -26,7 +26,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     // workaround start
     if (name !== undefined && name.indexOf('http') !== 0 && name.indexOf('https') !== 0) {
       if (! opts.db) {
-        opts.db = require(options.adapter);
+        opts.db = require(options.defaultAdapter);
       }
 
       if (! opts.prefix) {
@@ -53,7 +53,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 }
 
 PouchDBGenerator.defaults = {
-  adapter: 'leveldown-mobile'
+  defaultAdapter: 'leveldown'
 };
 
 module.exports = PouchDBGenerator;

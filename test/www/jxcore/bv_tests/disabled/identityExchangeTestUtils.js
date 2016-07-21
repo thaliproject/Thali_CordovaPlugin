@@ -13,7 +13,7 @@ var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtil
 exports.LevelDownPouchDB = function() {
   var dbPath = path.join(os.tmpdir(), 'dbPath');
   var adapter = process.platform === 'android' || process.platform === 'ios'? 'leveldown-mobile' : 'leveldown';
-  return PouchDBGenerator(PouchDB, dbPath, { adapter: adapter });
+  return PouchDBGenerator(PouchDB, dbPath, { defaultAdapter: adapter });
 };
 
 exports.createThaliAppServer = function() {
