@@ -103,10 +103,10 @@ var ThaliReplicationManager = require('thali/thalireplicationmanager');
 var IdentityExchange = require('thali/identityexchange');
 
 // Thali Express-PouchDB
+
 var dbPath = path.join(os.tmpdir(), 'dbPath');
-var LevelDownPouchDB = process.platform === 'android' || process.platform === 'ios' ?
-    PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath}) :
-    PouchDB.defaults({db: require('leveldown'), prefix: dbPath});
+var adapter = process.platform === 'android' || process.platform === 'ios'? 'leveldown-mobile' : 'leveldown';
+var LevelDownPouchDB = PouchDBGenerator(PouchDB, dbPath, { adapter: adapter });
 
 var app = express();
 app.use('/db', require('express-pouchdb')(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));

@@ -4,6 +4,7 @@ var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
+var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
 var randomString = require('randomstring');
 var Promise = require('lie');
@@ -237,10 +238,7 @@ module.exports.getOSVersion = function () {
 // will not interfere with any other databases that might be created
 // during other tests.
 var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-var LevelDownPouchDB = PouchDB.defaults({
-  db: require('leveldown-mobile'),
-  prefix: dbPath
-});
+var LevelDownPouchDB = PouchDBGenerator(PouchDB, dbPath);
 
 module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
@@ -261,10 +259,7 @@ module.exports.getPouchDBFactoryInRandomDirectory = function () {
     charset: 'alphabetic'
   }));
   fs.ensureDirSync(directory);
-  return PouchDB.defaults({
-    db: require('leveldown-mobile'),
-    prefix: directory
-  });
+  return PouchDBGenerator(PouchDB, directory);
 };
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +

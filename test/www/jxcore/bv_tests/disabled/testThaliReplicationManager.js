@@ -13,6 +13,7 @@ var uuid = require('uuid');
 var util = require('util');
 var express = require('express');
 var PouchDB = require('pouchdb');
+var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var bodyParser = require('body-parser');
 var randomstring = require('randomstring');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
@@ -21,7 +22,7 @@ var ThaliReplicationManager = require('thali/thalireplicationmanager');
 // will not interfere with any other databases that might be created
 // during other tests.
 var dbPath = path.join(testUtils.tmpDirectory(), 'pouch-for-replication-test');
-var LevelDownPouchDB = PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath});
+var LevelDownPouchDB = PouchDBGenerator(PouchDB, dbPath);
 
 // A variable accessible from the tests and from the setup/teardown functions
 // that can be used to make sure that replication managers created during

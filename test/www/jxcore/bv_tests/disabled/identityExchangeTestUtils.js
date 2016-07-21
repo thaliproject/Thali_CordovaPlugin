@@ -1,6 +1,7 @@
 'use strict';
 
 var PouchDB = require("pouchdb");
+var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require("path");
 var os = require("os");
 var ExpressPouchDB = require("express-pouchdb");
@@ -11,9 +12,8 @@ var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtil
 
 exports.LevelDownPouchDB = function() {
   var dbPath = path.join(os.tmpdir(), 'dbPath');
-  return process.platform === 'android' || process.platform === 'ios' ?
-    PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath}) :
-    PouchDB.defaults({db: require('leveldown'), prefix: dbPath});
+  var adapter = process.platform === 'android' || process.platform === 'ios'? 'leveldown-mobile' : 'leveldown';
+  return PouchDBGenerator(PouchDB, dbPath, { adapter: adapter });
 };
 
 exports.createThaliAppServer = function() {
