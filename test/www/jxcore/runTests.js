@@ -22,7 +22,6 @@ var loadFile = function (filePath) {
   try {
     require(filePath);
   } catch (error) {
-    console.error(error.stack);
     logger.error(error);
     throw new Error('Error when loading file ' + filePath + ': ' + error);
   }
