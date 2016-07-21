@@ -9,7 +9,7 @@ var testUtils = require('../lib/testUtils');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var https = require('https');
 var httpTester = require('../lib/httpTester');
-var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/ThaliReplicationPeerAction');
+var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 var thaliMobile = require('thali/NextGeneration/thaliMobile');
 var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
 
