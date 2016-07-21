@@ -39,7 +39,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
   }
 
   options = extend({}, PouchDBGenerator.defaults, options);
-  
+
   inherits(PouchAlt, PouchDB);
 
   PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
@@ -53,7 +53,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 }
 
 PouchDBGenerator.defaults = {
-  defaultAdapter: 'leveldown'
+  defaultAdapter: 'leveldown-mobile'
 };
 
 module.exports = PouchDBGenerator;
