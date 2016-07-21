@@ -35,7 +35,6 @@
     "multiplex": "6.7.0",
     "nock": "2.12.0",
     "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
-    "node-uuid": "1.4.7",
     "pouchdb-node": "5.4.4",
     "proxyquire": "1.7.4",
     "randomstring": "1.1.5",
@@ -50,7 +49,7 @@
     "thali": "*",
     "tmp": "0.0.28",
     "urlsafe-base64": "1.0.0",
-    "uuid": "2.0.0"
+    "uuid": "2.0.2"
   },
   "devDependencies": {}
 }

@@ -11,7 +11,10 @@ var salti = require('salti');
 var acl = require('salti/test/acl-block.1');
 
 /**
- * @classdesc This may look like a class but it really should only have one
+ * @classdesc This is a convenience class that handles all the work in setting
+ * up, running and stopping a Thali service.
+ * 
+ * Note: This may look like a class but it really should only have one
  * instance or bad stuff can happen.
  * @public
  * @param {expressPouchdb} expressPouchDB The express-pouchdb object we are
@@ -31,11 +34,11 @@ var acl = require('salti/test/acl-block.1');
  * app.
  * @constructor
  */
-function ThaliReplicationManager(expressPouchDB,
-                                 PouchDB,
-                                 dbName,
-                                 ecdhForLocalDevice,
-                                 thaliPeerPoolInterface) {
+function ThaliManager(expressPouchDB,
+                      PouchDB,
+                      dbName,
+                      ecdhForLocalDevice,
+                      thaliPeerPoolInterface) {
   this._router = express.Router();
 
   this._thaliSendNotificationBasedOnReplication =
@@ -55,10 +58,10 @@ function ThaliReplicationManager(expressPouchDB,
 
 }
 
-ThaliReplicationManager.prototype._thaliSendNotificationBasedOnReplication =
+ThaliManager.prototype._thaliSendNotificationBasedOnReplication =
   null;
 
-ThaliReplicationManager.prototype._thaliPullReplicationFromNotification = null;
+ThaliManager.prototype._thaliPullReplicationFromNotification = null;
 
 
 /**
@@ -75,7 +78,7 @@ ThaliReplicationManager.prototype._thaliPullReplicationFromNotification = null;
  * notifications of changes from.
  * @returns {Promise<?Error>}
  */
-ThaliReplicationManager.prototype.start =
+ThaliManager.prototype.start =
   function (arrayOfRemoteKeys) {
     var self = this;
     self._thaliPullReplicationFromNotification
@@ -113,10 +116,10 @@ ThaliReplicationManager.prototype.start =
  *
  * @returns {Promise<?Error>}
  */
-ThaliReplicationManager.prototype.stop = function () {
+ThaliManager.prototype.stop = function () {
   this._thaliPullReplicationFromNotification.stop();
   this._thaliSendNotificationBasedOnReplication.stop();
   return ThaliMobile.stop();
 };
 
-module.exports = ThaliReplicationManager;
+module.exports = ThaliManager;
