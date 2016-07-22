@@ -106,7 +106,7 @@ var IdentityExchange = require('thali/identityexchange');
 var dbPath = path.join(os.tmpdir(), 'dbPath');
 var LevelDownPouchDB = process.platform === 'android' || process.platform === 'ios' ?
     PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath}) :
-    PouchDB.defaults({db: require('leveldown'), prefix: dbPath}); 
+    PouchDB.defaults({db: require('leveldown'), prefix: dbPath});
 
 var app = express();
 app.use('/db', require('express-pouchdb')(LevelDownPouchDB, { mode: 'minimumForPouchDB'}));
