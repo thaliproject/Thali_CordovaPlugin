@@ -127,7 +127,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 {
   // Singleton instance.
   static THEAppContext * appContext = nil;
-    
+
   // If unallocated, allocate.
   if (!appContext)
   {
@@ -136,12 +136,12 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     {
       appContext = [[THEAppContext alloc] init];
     };
-        
+
     // Dispatch allocator once.
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, allocator);
   }
-    
+
   // Done.
   return appContext;
 }
@@ -170,6 +170,8 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   }
 }
 
+#pragma mark - Define methods
+
 // Defines methods.
 - (void)defineMethods
 {
@@ -179,7 +181,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   // Export the public API to node
 
   // startListeningForAdvertisements
-  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: startListeningForAdvertisements");
 
@@ -195,7 +197,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     else
     {
       NSLog(@"jxcore: startListeningForAdvertisements: failure");
-  
+
       @synchronized(self)
       {
         [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
@@ -204,7 +206,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   } withName:@"startListeningForAdvertisements"];
 
   // StopListeningForAdvertisements
-  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: stopListeningForAdvertisements");
 
@@ -220,7 +222,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     else
     {
       NSLog(@"jxcore: stopListeningForAdvertisements: failure");
-  
+
       @synchronized(self)
       {
         [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
@@ -230,7 +232,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 
 
   // StartUpdateAdvertisingAndListening
-  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: startUpdateAdvertisingAndListening");
 
@@ -243,7 +245,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
         [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
       }
     }
-    else 
+    else
     {
       if ([theApp startUpdateAdvertisingAndListening:(unsigned short)[params[0] intValue]])
       {
@@ -267,7 +269,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   } withName:@"startUpdateAdvertisingAndListening"];
 
   // StopUpdateAdvertisingAndListenForIncomingConnections
-  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
+  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: stopAdvertisingAndListening");
 
@@ -290,14 +292,14 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       }
     }
   } withName:@"stopAdvertisingAndListening"];
- 
+
   // Connect
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
     if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
     {
       NSLog(@"jxcore: connect: badParam");
-    
+
       @synchronized(self)
       {
         [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
@@ -306,7 +308,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     else
     {
       NSLog(@"jxcore: connect %@", params[0]);
-      ClientConnectCallback connectCallback = ^(NSString *errorMsg, NSDictionary *connection) 
+      ClientConnectCallback connectCallback = ^(NSString *errorMsg, NSDictionary *connection)
       {
         if (errorMsg == nil)
         {
@@ -385,6 +387,13 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     }
   } withName:@"didRegisterToNative"];
 
+
+  [self defineGetOSVersion];
+  [self defineExecuteNativeTests];
+}
+
+- (void)defineGetOSVersion
+{
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
    {
      NSString * const version = [[NSProcessInfo processInfo] operatingSystemVersionString];
@@ -393,6 +402,29 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
        [JXcore callEventCallback:callbackId withParams:@[version]];
      }
    } withName:@"getOSVersion"];
+}
+
+- (void)defineExecuteNativeTests
+{
+  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
+  {
+    if ([theApp respondsToSelector:@selector(executeNativeTests)])
+    {
+      NSString *result = [theApp executeNativeTests];
+
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[result]];
+      }
+    }
+    else
+    {
+      @synchronized(self)
+      {
+        [JXcore callEventCallback:callbackId withParams:@[@"Method not available"]];
+      }
+    }
+  } withName:@"executeNativeTests"];
 }
 
 @end

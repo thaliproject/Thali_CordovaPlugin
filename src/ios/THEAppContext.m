@@ -35,11 +35,13 @@
 #import "THEMultipeerManager.h"
 #import "THEThaliEventDelegate.h"
 
+#import "THETestRunner.h"
+
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal) <CBPeripheralManagerDelegate, CBCentralManagerDelegate>
 
 // ctor
-- (id)init;
+- (instancetype)init;
 
 // Fire peerAvailabilityChanged event
 - (void)firePeerAvailabilityChangedEvent:(NSDictionary *)peer;
@@ -185,11 +187,23 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   }
 }
 
+#pragma mark -
+
 #ifdef DEBUG
+
 - (void)setPeerIdentifier:(NSString *)peerIdentifier
 {
   _peerIdentifier = peerIdentifier;
 }
+
+- (NSString *)executeNativeTests
+{
+    THETestRunner *testRunner = [THETestRunner defaultRunner];
+    [testRunner runTest];
+
+    return testRunner.testRunResult.jsonString;
+}
+
 #endif
 
 - (void)didNotAcceptConnectionWithServerPort:(unsigned short)serverPort
@@ -200,6 +214,8 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 ///////////////////////////////////////////////////////////
 // THEAppContext (THEPeerBluetoothDelegate) implementation.
 ///////////////////////////////////////////////////////////
+
+#pragma mark - THEAppContext (THEPeerBluetoothDelegate) implementation
 
 // Receive notifications from the bluetooth stack about radio state
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth didUpdateState:(BOOL)bluetoothEnabled
@@ -272,6 +288,8 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   return self;
 }
 
+#pragma mark - Fire event delegate events
+
 - (void)fireIncomingConnectionToPortNumberFailed:(unsigned short)serverPort
 {
   [_eventDelegate incomingConnectionToPortNumberFailed:serverPort];
@@ -297,6 +315,8 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   }
 }
 
+#pragma mark - UIApplication notifications
+
 // UIApplicationWillResignActiveNotification callback.
 - (void)applicationWillResignActiveNotification:(NSNotification *)notification
 {
@@ -314,6 +334,8 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     [_eventDelegate appEnteredForeground];
   }
 }
+
+#pragma mark - CBPeripheralManagerDelegate
 
 - (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheral
 {

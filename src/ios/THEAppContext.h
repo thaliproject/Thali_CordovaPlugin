@@ -31,6 +31,8 @@
 #import "THEPeerDiscoveryDelegate.h"
 #import "THERemoteConnectionDelegate.h"
 
+#import "THETestRunnerResult.h"
+
 // Callback that will be called when the lower levels have established
 // a client relay in response to a connect
 typedef void(^ClientConnectCallback)(NSString *error, NSDictionary *connection);
@@ -65,9 +67,18 @@ typedef void(^ClientConnectCallback)(NSString *error, NSDictionary *connection);
 // Allow external component to force us to fire event
 - (void)fireNetworkChangedEvent;
 
-#ifdef DEBUG
+
+//
 // A set of functions which make testing a lot easier
+//
+#ifdef DEBUG
+
+//
 - (void)setPeerIdentifier:(NSString *)peerIdentifier;
+
+// Executes native tests
+- (NSString *)executeNativeTests;
+
 #endif
 
 @end
