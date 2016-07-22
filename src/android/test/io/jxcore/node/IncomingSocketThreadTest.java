@@ -35,26 +35,6 @@ public class IncomingSocketThreadTest {
     }
 
     @Test
-    public void testGetTcpPortNumber() throws Exception {
-        Field fTcpPortNumber = mIncomingSocketThread.getClass().getDeclaredField("mTcpPortNumber");
-        fTcpPortNumber.setAccessible(true);
-
-        int mTcpPortNumber = fTcpPortNumber.getInt(mIncomingSocketThread);
-
-        assertThat("mTcpPortNumber should be equal to getTcpPortNumber", mTcpPortNumber,
-                is(equalTo(mIncomingSocketThread.getTcpPortNumber())));
-    }
-
-    @Test
-    public void testSetTcpPortNumber() throws Exception {
-        int tcpPortNumberSample = 1111;
-        mIncomingSocketThread.setTcpPortNumber(tcpPortNumberSample);
-
-        assertThat("tcpPortNumber from get method should be equal to tcpPortNumberSample",
-                mIncomingSocketThread.getTcpPortNumber(), is(equalTo(tcpPortNumberSample)));
-    }
-
-    @Test
     public void testGetLocalHostPort() throws Exception {
         Field fLocalhostSocket = mIncomingSocketThread.getClass().getSuperclass()
                 .getDeclaredField("mLocalhostSocket");

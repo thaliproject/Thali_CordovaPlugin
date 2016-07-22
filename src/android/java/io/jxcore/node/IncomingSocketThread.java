@@ -46,14 +46,6 @@ class IncomingSocketThread extends SocketThreadBase {
         mTag = IncomingSocketThread.class.getName();
     }
 
-    public int getTcpPortNumber() {
-        return mTcpPortNumber;
-    }
-
-    public void setTcpPortNumber(int portNumber) {
-        mTcpPortNumber = portNumber;
-    }
-
     public int getLocalHostPort() {
         Socket copyOfLocalHostSocket = mLocalhostSocket;
         return copyOfLocalHostSocket == null ? ConnectionHelper.NO_PORT_NUMBER : copyOfLocalHostSocket.getPort();
