@@ -643,43 +643,22 @@ public class ConnectionHelperTest {
     }
 
     @Test
-    public void testOnPeerUpdated() throws Exception {
-    }
-
-    @Test
-    public void testOnPeerLost() throws Exception {
-        ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
-        String bluetoothMacAddress = "00:11:22:33:44:55";
-        PeerProperties mPeerProperties = new PeerProperties(bluetoothMacAddress);
-        IncomingSocketThreadMock mIncomingSocketThreadMock = new IncomingSocketThreadMock(
-                null, mListenerMock, mInputStreamMock, mOutputStreamMock);
-
-        mIncomingSocketThreadMock.setPeerProperties(mPeerProperties);
-        mConnectionModel.addConnectionThread(mIncomingSocketThreadMock);
-        mConnectionHelper.onPeerLost(mPeerProperties);
-
-        DiscoveryManager mDiscoveryManager = mConnectionHelper.getDiscoveryManager();
-
-        assertThat("getPeerModel is equal to mPeerProperties", mDiscoveryManager.getPeerModel()
-                        .getDiscoveredPeerByBluetoothMacAddress(bluetoothMacAddress),
-                is(equalTo(mPeerProperties)));
-    }
-
-    @Test
-    public void testOnProvideBluetoothMacAddressRequest() throws Exception {
+    public void testOnProvideBluetoothMacAddressRequest() {
         thrown.expect(UnsupportedOperationException.class);
         mConnectionHelper.onProvideBluetoothMacAddressRequest("1111");
     }
 
     @Test
-    public void testOnPeerReadyToProvideBluetoothMacAddress() throws Exception {
+    public void testOnPeerReadyToProvideBluetoothMacAddress() {
         thrown.expect(UnsupportedOperationException.class);
         mConnectionHelper.onPeerReadyToProvideBluetoothMacAddress();
     }
 
     @Test
-    public void testOnBluetoothMacAddressResolved() throws Exception {
+    public void testOnBluetoothMacAddressResolved() {
         thrown.expect(UnsupportedOperationException.class);
         mConnectionHelper.onBluetoothMacAddressResolved("00:11:22:33:44:55");
     }
+    
+    //TODO Write tests for onPeerDiscovered and onPeerLost
 }

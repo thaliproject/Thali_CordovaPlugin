@@ -18,7 +18,8 @@ var path = require('path');
  * out later.
  * @param {Object} appRoot
  */
-// jscs:enable jsDoc
+ // jscs:enable jsDoc
+
 var updateAndroidSDKVersion = function (appRoot) {
   var androidManifestLocation =
     path.join(appRoot, 'platforms/android/AndroidManifest.xml');
@@ -56,7 +57,6 @@ var copyFiles = function(appRoot, source, target, message) {
   var targetFile = path.join(appRoot, 'platforms/android' + target);
 
   try {
-    console.log('Copying ' + message);
     fs.copySync(sourceFile, targetFile);
   } catch (err) {
     console.log(err);
@@ -109,7 +109,8 @@ var removeInstallFromPlatform = function (appRoot) {
  * 6. Remove a file indicating UT build
  * @param {Object} appRoot
  */
-// jscs:enable jsDoc
+ // jscs:enable jsDoc
+
 var copyTestFiles = function (appRoot) {
   var utFlag;
   try {
@@ -134,13 +135,11 @@ var copyTestFiles = function (appRoot) {
   }
 };
 
-// jscs:disable jsDoc
 /**
  * Updates test suite with test classes found in the platforms/android/src/io/jxcore/node,
  * adds required imports.
  * @param {Object} appRoot
  */
-// jscs:enable jsDoc
 var updateTestSuite = function (appRoot) {
   try {
     var i, testClassName;
@@ -172,17 +171,21 @@ var updateTestSuite = function (appRoot) {
 
 // jscs:disable jsDoc
 /**
- * Updates JXcoreExtension with a method is used to register the native UT executor
+ * Updates JXcoreExtension with a method used to register the native UT executor.
+ * We are doing it because we don't want to mess our production code with our test code
+ * so we create a function that dynamically adds method executing tests only when we are
+ * actually testing. 
  * @param {Object} appRoot
  */
-// jscs:enable jsDoc
+ // jscs:enable jsDoc
+
 var updateJXCoreExtensionWithUTMethod = function (appRoot) {
   var filePath = path.join(appRoot, 'platforms/android/src/io/jxcore/node/JXcoreExtension.java');
   var content = fs.readFileSync(filePath, 'utf-8');
   var codeToAttach = fs.readFileSync(
     path.join(appRoot, 'platforms/android/src/com/test/thalitest/UTMethod'), 'utf-8');
 
-  content = content.replace("lifeCycleMonitor.start();", "lifeCycleMonitor.start();\nRegisterUTExecuteMethod();");
+  content = content.replace("lifeCycleMonitor.start();", "lifeCycleMonitor.start();\n\t\tRegisterUTExecuteMethod();");
 
   content = content.replace(/}\s*$/, codeToAttach) + "}";
   fs.writeFileSync(filePath, content, 'utf-8');
