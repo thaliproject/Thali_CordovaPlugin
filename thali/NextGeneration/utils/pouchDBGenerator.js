@@ -4,8 +4,26 @@ var inherits = require('inherits');
 var extend = require('js-extend').extend;
 
 
+/*
+ * Old PouchDB did care about database endpoint type before using prefix.
+ * If endpoint was remote ('http' or 'https') it did not use prefix.
+ * For example 5.3.0 https://github.com/pouchdb/pouchdb/blob/greenkeeper-chai-as-promised-5.3.0/src/constructor.js#L103
+ * New PouchDB just prepends prefix to endpoint before resolving adapter.
+ * For example 5.4.5 https://github.com/pouchdb/pouchdb/blob/5.4.5-branch/packages/pouchdb-core/src/constructor.js#L109
+ * We should use prefix only for local endpoints.
+ *
+ * This is a Factory that returns modified PouchDB class.
+ * Its instances will use specified prefix and adapter for local endpoint and use nothing for remote endpoint.
+ *
+ * @public
+ * @param {Object} PouchDB This is PouchDB class or something that inherits PouchDB that should be fixed.
+ * @param {string} defaultDirectory The prefix for local endpoint.
+ * @param {Object} [options={ defaultAdapter: 'leveldown-mobile' }] Options with adapter for local endpoint.
+ * @returns {PouchDB}
+ */
 function PouchDBGenerator(PouchDB, defaultDirectory, options) {
   // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/fb77927d2f14911478032884f1576b770815bcab/packages/pouchdb-core/src/setup.js#L108-L137
+  
   function PouchAlt(name, opts, callback) {
     if (!(this instanceof PouchAlt)) {
       return new PouchAlt(name, opts, callback);
@@ -22,18 +40,20 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     }
 
     opts = extend({}, opts);
-
-    // workaround start
+    
+    // If database endpoint is not remote we are using defaultDirectory as prefix and defaultAdapter as adapter for it.
     if (name !== undefined && name.indexOf('http') !== 0 && name.indexOf('https') !== 0) {
-      if (! opts.db) {
-        opts.db = require(options.defaultAdapter);
+      if (!opts.db) {
+        if (typeof options.defaultAdapter === 'string') {
+          opts.db = require(options.defaultAdapter);
+        } else {
+          opts.db = options.defaultAdapter;
+        }
       }
-
-      if (! opts.prefix) {
+      if (!opts.prefix) {
         opts.prefix = defaultDirectory;
       }
     }
-    // workaround end
 
     PouchDB.call(this, name, opts, callback);
   }
@@ -44,7 +64,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 
   PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
   Object.keys(PouchDB).forEach(function(key) {
-    if (! (key in PouchAlt) ) {
+    if (!(key in PouchAlt) ) {
       PouchAlt[key] = PouchDB[key];
     }
   });

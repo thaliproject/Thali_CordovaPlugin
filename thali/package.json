@@ -21,8 +21,7 @@
     "winston": "2.2.0"
   },
   "devDependencies": {
-    "jsdoc": "3.3.3",
-    "leveldown-mobile": "1.1.1"
+    "jsdoc": "3.3.3"
   },
   "thaliInstall": {
     "thali": {

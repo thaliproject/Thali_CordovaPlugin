@@ -23,7 +23,6 @@ out/
 # Testing
 test/TestServer/server-address.js
 test/www/jxcore/server-address.js
-test/www/jxcore/db
 
 # XCode user specific files
 *.xcuserdatad/
