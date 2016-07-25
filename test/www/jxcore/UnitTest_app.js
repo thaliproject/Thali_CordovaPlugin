@@ -25,16 +25,15 @@ Mobile('ExecuteNativeTests').callNative(function (result) {
     console.log("Number of ignored tests: ", result.ignored);
     console.log("Total duration: ", result.duration);
 
-    if(result.failed > 0){
-		console.log("****TEST_LOGGER:[PROCESS_ON_EXIT");
+    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT");
+
+    if (result.failed > 0) {
     	console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-    	navigator.app.exitApp();
     } else {
-		console.log("****TEST_LOGGER:[PROCESS_ON_EXIT");
     	console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-    	navigator.app.exitApp();
     }
-  } 
+    navigator.app.exitApp();
+  }
 });
 
 // Temporary solution for iOS devices.
