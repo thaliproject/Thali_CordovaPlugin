@@ -11,7 +11,7 @@ var ThaliNotificationServer = require('thali/NextGeneration/notification/thaliNo
 var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNotificationClient');
 var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var Promise = require('lie');
-var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/ThaliReplicationPeerAction');
+var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 
 var thaliNotificationServer = null;
 var thaliNotificationClient = null;
