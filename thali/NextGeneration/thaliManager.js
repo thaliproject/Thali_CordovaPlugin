@@ -1,14 +1,14 @@
 'use strict';
 
-var ThaliSendNotificationBasedOnReplication =
-  require('./replication/thaliSendNotificationBasedOnReplication');
-var ThaliPullReplicationFromNotification =
-  require('./replication/thaliPullReplicationFromNotification');
 var ThaliMobile = require('./thaliMobile');
-var express = require('express');
 var thaliConfig = require('./thaliConfig');
+var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
+var ThaliSendNotificationBasedOnReplication = require('./replication/thaliSendNotificationBasedOnReplication');
+var ThaliPullReplicationFromNotification = require('./replication/thaliPullReplicationFromNotification');
+
+var express = require('express');
+var leveldownMobile = require('leveldown-mobile');
 var salti = require('salti');
-var acl = require('salti/test/acl-block.1');
 
 /**
  * @classdesc This may look like a class but it really should only have one
@@ -27,38 +27,51 @@ var acl = require('salti/test/acl-block.1');
  * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} [thaliPeerPoolInterface]
  * If your app doesn't specify its own pool interface you will seriously
  * regret it as the default one has awful behavior. Building your own
- * thaliPeerPoolInterface is pretty much a requirement for a decent Thali
- * app.
+ * thaliPeerPoolInterface is pretty much a requirement for a decent Thali app.
+ * @param {Object} [acl={}] acl salti ACL data. The default role is for acl is 'public'.
  * @constructor
  */
 function ThaliReplicationManager(expressPouchDB,
                                  PouchDB,
                                  dbName,
                                  ecdhForLocalDevice,
-                                 thaliPeerPoolInterface) {
+                                 thaliPeerPoolInterface,
+                                 acl) {
+  PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
+    defaultAdapter: leveldownMobile
+  });
+
   this._router = express.Router();
+  this._router.all('*', function(req, res, next) {
+    if (!req.connection.pskRole) {
+      // default role is 'public'
+      req.connection.pskRole = 'public';
+    }
+    next();
+  });
+  this._router.all(thaliConfig.BASE_DB_PATH, salti(dbName, acl || {}, function () {}));
 
   this._thaliSendNotificationBasedOnReplication =
-    new ThaliSendNotificationBasedOnReplication(this._router,
-        ecdhForLocalDevice, thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE,
+    new ThaliSendNotificationBasedOnReplication(
+        this._router,
+        ecdhForLocalDevice,
+        thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE,
         new PouchDB(dbName));
 
   this._thaliPullReplicationFromNotification =
-    new ThaliPullReplicationFromNotification(PouchDB,
-                                             dbName,
-                                             thaliPeerPoolInterface,
-                                             ecdhForLocalDevice);
-
+    new ThaliPullReplicationFromNotification(
+        PouchDB,
+        dbName,
+        thaliPeerPoolInterface,
+        ecdhForLocalDevice);
+  
   this._router.use(thaliConfig.BASE_DB_PATH, expressPouchDB(PouchDB, {
     mode: 'minimumForPouchDB'
   }));
-
 }
 
-ThaliReplicationManager.prototype._thaliSendNotificationBasedOnReplication =
-  null;
-
-ThaliReplicationManager.prototype._thaliPullReplicationFromNotification = null;
+ThaliManager.prototype._thaliSendNotificationBasedOnReplication = null;
+ThaliManager.prototype._thaliPullReplicationFromNotification    = null;
 
 
 /**
@@ -75,13 +88,12 @@ ThaliReplicationManager.prototype._thaliPullReplicationFromNotification = null;
  * notifications of changes from.
  * @returns {Promise<?Error>}
  */
-ThaliReplicationManager.prototype.start =
-  function (arrayOfRemoteKeys) {
+ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
     var self = this;
-    self._thaliPullReplicationFromNotification
-          .start(arrayOfRemoteKeys);
-    return ThaliMobile.start(self._router,
-            self._thaliSendNotificationBasedOnReplication.getPskIdToSecret())
+    self._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
+    return ThaliMobile.start(
+      self._router,
+      self._thaliSendNotificationBasedOnReplication.getPskIdToSecret())
     .then(function () {
       /*
       Ideally we could call startListening and startUpdateAdvertising separately
@@ -103,8 +115,7 @@ ThaliReplicationManager.prototype.start =
     }).then(function () {
       return ThaliMobile.startUpdateAdvertisingAndListening();
     }).then(function () {
-      return self._thaliSendNotificationBasedOnReplication
-        .start(arrayOfRemoteKeys);
+      return self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
     });
   };
 
@@ -113,10 +124,10 @@ ThaliReplicationManager.prototype.start =
  *
  * @returns {Promise<?Error>}
  */
-ThaliReplicationManager.prototype.stop = function () {
+ThaliManager.prototype.stop = function () {
   this._thaliPullReplicationFromNotification.stop();
   this._thaliSendNotificationBasedOnReplication.stop();
   return ThaliMobile.stop();
 };
 
-module.exports = ThaliReplicationManager;
+module.exports = ThaliManager;
