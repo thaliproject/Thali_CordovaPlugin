@@ -2,8 +2,8 @@
 
 ### START - JXcore Test Server --------.............................
 ### Testing environment prepares separate packages for each node.
-### Package builder calls this script with each node's IP address
-### Make sure multiple calls to this script file compiles the application file
+### Package builder calls this script with each node's IP address.
+### Make sure multiple calls to this script file compiles the application file.
 
 NORMAL_COLOR='\033[0m'
 RED_COLOR='\033[0;31m'
