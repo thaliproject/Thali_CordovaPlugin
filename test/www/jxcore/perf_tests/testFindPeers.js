@@ -12,16 +12,15 @@ var ThaliEmitter = require('thali/thaliemitter');
 
 /*
 "jsonData": {
-    "count": Specifies the number of peers we would need to discover,
     "timeout": Specifies the timeout when we would end discovery (in case we have not found all needed peers yet)
     }
 */
 
-function testFindPeers(jsonData,name) {
+function testFindPeers(jsonData,name,dev) {
     var self = this;
     this.name = name;
     this.commandData = JSON.parse(jsonData);
-    this.toFindCount = this.commandData.count;
+    this.toFindCount = dev;
     this.foundPeers = {};
     this.startTime = new Date();
     this.endTime = new Date();
@@ -35,7 +34,10 @@ function testFindPeers(jsonData,name) {
             return;
         }
         console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
-        for (var peer in peers) {
+        //todo peers.forEach()
+        for (var i =0; i < peers.length; i++) {
+            var peer = peers[i];
+
             self.foundPeers[peer.peerIdentifier] = peer;
 
             if(!self.foundPeers[peer.peerIdentifier].foundTime){

@@ -13,10 +13,13 @@ if (path.basename(rootDirectory) == "Thali_CordovaPlugin") {
 var installDirectory = path.join(__dirname, 'install');
 exec('jx npm install --autoremove "*.gz"', { cwd: installDirectory}, function(error, stdout, stderr) {
    if (error) {
+       // In error cases, log all possible debug output
+       console.log(stdout);
+       console.log(stderr);
        console.log("Could not install dependencies for install directory. - " + error);
        process.exit(1);
-   } 
-   
+   }
+
    require(installDirectory)(function(err, data) {
        if (err) {
            console.log("Failed with - " + err);
