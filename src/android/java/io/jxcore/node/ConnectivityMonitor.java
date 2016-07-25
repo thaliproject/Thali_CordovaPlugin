@@ -132,6 +132,15 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
     }
 
     /**
+     * Called when Bluetooth is enabled or disabled.
+     *
+     * @param mode The new Bluetooth mode.
+     */@Override
+    public void onBluetoothAdapterStateChanged(int mode) {
+        updateConnectivityInfo(false);
+    }
+
+    /**
      * Checks the connectivity info and requests a listener to be notified, if the status has
      * essentially changed.
      *

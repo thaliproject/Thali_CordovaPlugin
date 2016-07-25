@@ -31,8 +31,8 @@ Mobile('ExecuteNativeTests').callNative(function (result) {
   }
 });
 
-//Temporary solution for iOS devices.
-if(!isUTExecuted){
+// Temporary solution for iOS devices.
+if (!isUTExecuted) {
   console.log("No UT executed.");
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
 }
