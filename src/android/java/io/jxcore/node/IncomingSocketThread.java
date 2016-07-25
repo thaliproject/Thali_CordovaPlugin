@@ -51,6 +51,14 @@ class IncomingSocketThread extends SocketThreadBase {
         return copyOfLocalHostSocket == null ? ConnectionHelper.NO_PORT_NUMBER : copyOfLocalHostSocket.getPort();
     }
 
+    public int getTcpPortNumber() {
+        return mTcpPortNumber;
+    }
+    
+    public void setTcpPortNumber(int portNumber) {
+        mTcpPortNumber = portNumber;
+    }
+
     /**
      * From Thread.
      */
