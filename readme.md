@@ -11,7 +11,7 @@ The Thali Cordova Plugin is layered on the [JXcore Cordova plugin](https://githu
 ### Android
 
 Download [Android Studio](http://developer.android.com/sdk/index.html)
-
+.
 Make sure to set your `ANDROID_HOME` environment variable:
 
 Mac OS X (put in your `~/.bash_profile` file):
