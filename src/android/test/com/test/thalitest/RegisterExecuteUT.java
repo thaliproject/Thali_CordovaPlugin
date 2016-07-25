@@ -1,6 +1,5 @@
 package com.test.thalitest;
 
-import android.annotation.SuppressLint;
 import android.util.Log;
 
 import org.json.JSONException;
@@ -14,6 +13,10 @@ import io.jxcore.node.jxcore;
 
 public class RegisterExecuteUT {
     public RegisterExecuteUT() {
+
+    }
+
+    public static void RegisterExecuteUT() {
         jxcore.RegisterMethod("ExecuteNativeTests", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {

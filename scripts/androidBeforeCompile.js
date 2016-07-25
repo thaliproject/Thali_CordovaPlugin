@@ -3,7 +3,7 @@
 var fs = require('fs-extra-promise');
 var path = require('path');
 
-// jscs:disable jsDoc
+// jscs:enable jsDoc
 /**
  * We've tried various strategies in plugin.xml to set the minimum sdk
  * in the Android manifest to an acceptable value such as uses-sdk in
@@ -18,7 +18,6 @@ var path = require('path');
  * out later.
  * @param {Object} appRoot
  */
- // jscs:enable jsDoc
 
 var updateAndroidSDKVersion = function (appRoot) {
   var androidManifestLocation =
@@ -98,7 +97,6 @@ var removeInstallFromPlatform = function (appRoot) {
   fs.removeSync(installDir);
 };
 
-// jscs:disable jsDoc
 /**
  * In case of build with android unit test:
  * 1. Copy unit test files
@@ -109,7 +107,6 @@ var removeInstallFromPlatform = function (appRoot) {
  * 6. Remove a file indicating UT build
  * @param {Object} appRoot
  */
- // jscs:enable jsDoc
 
 var copyTestFiles = function (appRoot) {
   var utFlag;
@@ -169,34 +166,21 @@ var updateTestSuite = function (appRoot) {
   }
 };
 
-// jscs:disable jsDoc
 /**
- * Updates JXcoreExtension with a method used to register the native UT executor.
+ * Updates JXcoreExtension with a method which is used to register the native UT executor.
  * We are doing it because we don't want to mess our production code with our test code
  * so we create a function that dynamically adds method executing tests only when we are
  * actually testing. 
  * @param {Object} appRoot
  */
- // jscs:enable jsDoc
 
 var updateJXCoreExtensionWithUTMethod = function (appRoot) {
   var filePath = path.join(appRoot, 'platforms/android/src/io/jxcore/node/JXcoreExtension.java');
   var content = fs.readFileSync(filePath, 'utf-8');
-  var codeToAttach = fs.readFileSync(
-    path.join(appRoot, 'platforms/android/src/com/test/thalitest/UTMethod'), 'utf-8');
 
-  content = content.replace("lifeCycleMonitor.start();", "lifeCycleMonitor.start();\n\t\tRegisterUTExecuteMethod();");
-
-  content = content.replace(/}\s*$/, codeToAttach) + "}";
+  content = content.replace("lifeCycleMonitor.start();", "lifeCycleMonitor.start();\n\t\tRegisterExecuteUT.RegisterExecuteUT();");
+  content = content.replace("package io.jxcore.node;", "package io.jxcore.node;\nimport com.test.thalitest.RegisterExecuteUT;");
   fs.writeFileSync(filePath, content, 'utf-8');
-
-  try {
-    console.log("Removing UTMethod");
-    fs.removeSync('platforms/android/src/com/test/thalitest/UTMethod');
-  } catch (err) {
-    console.log(err);
-    console.log('Failed to remove the UTMethod file, continuing anyway');
-  }
 };
 
 module.exports = function (context) {
