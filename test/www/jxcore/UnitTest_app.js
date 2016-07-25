@@ -24,17 +24,25 @@ Mobile('ExecuteNativeTests').callNative(function (result) {
     console.log("Number of failed tests: ", result.failed);
     console.log("Number of ignored tests: ", result.ignored);
     console.log("Total duration: ", result.duration);
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-  } else {
-    console.log("No UT executed.");
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-  }
+
+    if(result.failed > 0){
+		console.log("****TEST_LOGGER:[PROCESS_ON_EXIT");
+    	console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+    	navigator.app.exitApp();
+    } else {
+		console.log("****TEST_LOGGER:[PROCESS_ON_EXIT");
+    	console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    	navigator.app.exitApp();
+    }
+  } 
 });
 
 //Temporary solution for iOS devices.
 if(!isUTExecuted){
   console.log("No UT executed.");
+  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT");
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+  navigator.app.exitApp();
 }
 
 ThaliMobile.getNetworkStatus()
