@@ -64,7 +64,7 @@
 @private
   // the event delegate to which we'll deliver key events
   id<THEThaliEventDelegate> _eventDelegate;
- 
+
   // The reachability handler reference.
   id reachabilityHandlerReference;
 
@@ -74,20 +74,20 @@
 
   // Our current app level id
   NSString * _peerIdentifier;
-    
+
   // Peer Bluetooth.
   THEPeerBluetooth * _peerBluetooth;
- 
+
   // Let's us know the BT radio states
   CBPeripheralManager *_btPeripheralManager;
   CBCentralManager *_bleManager;
-  
+
   // The multipeer manager, co-ordinates client and server
   THEMultipeerManager *_multipeerManager;
 
   // The mutex used to protect access to things below.
   pthread_mutex_t _mutex;
-    
+
   // The peers dictionary.
   NSMutableDictionary * _peers;
 }
@@ -110,7 +110,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
   return result;
 }
 
-// Stops client components 
+// Stops client components
 - (BOOL)stopListeningForAdvertisements
 {
   BOOL result = [_multipeerManager stopListening];
@@ -131,7 +131,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 }
 
 // Connects to the peer server with the specified peer identifier.
-- (BOOL)connectToPeer:(NSString *)peerIdentifier 
+- (BOOL)connectToPeer:(NSString *)peerIdentifier
       connectCallback:(ClientConnectCallback)connectCallback
 {
   return [_multipeerManager connectToPeerWithPeerIdentifier:peerIdentifier
@@ -171,7 +171,7 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 
     }
   }*/
-  
+
   BOOL isWifi = !([[NPReachability sharedInstance] currentReachabilityFlags] & kSCNetworkReachabilityFlagsIsWWAN);
 
   networkStatus = @{
@@ -248,31 +248,31 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
 {
   // Initialize superclass.
   self = [super init];
-    
+
   // Handle errors.
   if (!self)
   {
     return nil;
   }
-    
+
   _peerIdentifier = [[[NSUUID alloc] init] UUIDString];
 
   // We don't really know yet, assume the worst, we'll get an update
-  // when we initialise the BT stack 
+  // when we initialise the BT stack
   _bluetoothEnabled = false;
-  
+
   NSDictionary<NSString *, id> *options = @{CBCentralManagerOptionShowPowerAlertKey:@0};
   _btPeripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:nil options:options];
-  
+
   _bleManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil];
-  
+
   _multipeerManager = [[THEMultipeerManager alloc] initWithServiceType:THALI_SERVICE_TYPE
                                                     withPeerIdentifier:_peerIdentifier
                                              withPeerDiscoveryDelegate:self
                                           withRemoteConnectionDelegate:self];
   // Get the default notification center.
   NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];
-    
+
   // Add our observers for application events.
   [notificationCenter addObserver:self
                          selector:@selector(applicationWillResignActiveNotification:)
@@ -301,7 +301,7 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
     @"discoveryActive" : [[NSNumber alloc] initWithBool:[_multipeerManager isListening]],
     @"advertisingActive" : [[NSNumber alloc] initWithBool:[_multipeerManager isAdvertising]]
   };
-  
+
   [_eventDelegate discoveryAdvertisingStateUpdate:stateUpdate];
 }
 
@@ -346,14 +346,14 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
       _bluetoothEnabled = true;
     }
     break;
-      
+
     default:
     {
       _bluetoothEnabled = false;
     }
     break;
   }
-  
+
   [self fireNetworkChangedEvent];
 }
 
@@ -363,11 +363,11 @@ didDisconnectPeerIdentifier:(NSString *)peerIdentifier
   {
     case CBCentralManagerStatePoweredOn:
       _bleEnabled = true;
-      
+
     default:
       _bleEnabled = false;
   }
-  
+
   [self fireNetworkChangedEvent];
 }
 

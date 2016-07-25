@@ -64,6 +64,7 @@ cp -v $1 app.js
 cordova build android --release --device
 
 if [ $runningInMinGw == false ]; then
+    cordova plugin add $repositoryRoot/plugins/tests-ios
     cordova build ios --device
 fi
 

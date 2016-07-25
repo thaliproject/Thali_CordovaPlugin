@@ -1,0 +1,23 @@
+{
+  "name": "ThaliTests",
+  "version": "0.0.1",
+  "description": "ThaliPlugin Tests",
+  "cordova": {
+    "id": "org.thaliproject.p2p-tests",
+    "platforms": [
+      "ios"
+    ]
+  },
+  "keywords": [
+    "cordova",
+    "jxcore",
+    "node.js",
+    "thali",
+    "test",
+    "cordova-ios"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "xcode": "git://github.com/kurtisf/node-xcode"
+  }
+}

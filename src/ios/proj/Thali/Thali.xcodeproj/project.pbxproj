@@ -7,10 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CCD81B1F1D4228B300592034 /* THETestRunner.m in Sources */ = {isa = PBXBuildFile; fileRef = CCD81B1E1D4228B300592034 /* THETestRunner.m */; };
-		CCD81B221D4228D700592034 /* THETestRunnerResult.m in Sources */ = {isa = PBXBuildFile; fileRef = CCD81B211D4228D700592034 /* THETestRunnerResult.m */; };
-		CCD81B2A1D4230A400592034 /* THETestRun.m in Sources */ = {isa = PBXBuildFile; fileRef = CCD81B291D4230A400592034 /* THETestRun.m */; };
-		CCD81B2E1D42325700592034 /* THETestRunFailure.m in Sources */ = {isa = PBXBuildFile; fileRef = CCD81B2D1D42325700592034 /* THETestRunFailure.m */; };
 		D43F82C81C59312C0055D44F /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D4553BD31C52B57E00AA8C30 /* SystemConfiguration.framework */; };
 		D43F82DA1C59330C0055D44F /* THEProtectedMutableDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */; };
 		D43F82DB1C59330C0055D44F /* THESessionDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B4605A1C51154000940B96 /* THESessionDictionary.m */; };
@@ -50,14 +46,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		CCD81B1D1D4228B300592034 /* THETestRunner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THETestRunner.h; path = ../../THETestRunner.h; sourceTree = "<group>"; };
-		CCD81B1E1D4228B300592034 /* THETestRunner.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THETestRunner.m; path = ../../THETestRunner.m; sourceTree = "<group>"; };
-		CCD81B201D4228D700592034 /* THETestRunnerResult.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THETestRunnerResult.h; path = ../../THETestRunnerResult.h; sourceTree = "<group>"; };
-		CCD81B211D4228D700592034 /* THETestRunnerResult.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THETestRunnerResult.m; path = ../../THETestRunnerResult.m; sourceTree = "<group>"; };
-		CCD81B281D4230A400592034 /* THETestRun.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THETestRun.h; path = ../../THETestRun.h; sourceTree = "<group>"; };
-		CCD81B291D4230A400592034 /* THETestRun.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THETestRun.m; path = ../../THETestRun.m; sourceTree = "<group>"; };
-		CCD81B2C1D42325700592034 /* THETestRunFailure.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = THETestRunFailure.h; path = ../../THETestRunFailure.h; sourceTree = "<group>"; };
-		CCD81B2D1D42325700592034 /* THETestRunFailure.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THETestRunFailure.m; path = ../../THETestRunFailure.m; sourceTree = "<group>"; };
 		D40172861C5114210072022A /* THEAppContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEAppContext.m; path = ../../THEAppContext.m; sourceTree = "<group>"; };
 		D40172871C5114210072022A /* THEPeerBluetooth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = THEPeerBluetooth.m; path = ../../THEPeerBluetooth.m; sourceTree = "<group>"; };
 		D401728A1C5114410072022A /* THEMultipeerClient.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = THEMultipeerClient.m; path = ../../MultipeerConnectivity/THEMultipeerClient.m; sourceTree = "<group>"; };
@@ -147,27 +135,11 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		CCD81B251D42293D00592034 /* TestsRunner */ = {
-			isa = PBXGroup;
-			children = (
-				CCD81B1D1D4228B300592034 /* THETestRunner.h */,
-				CCD81B1E1D4228B300592034 /* THETestRunner.m */,
-				CCD81B201D4228D700592034 /* THETestRunnerResult.h */,
-				CCD81B211D4228D700592034 /* THETestRunnerResult.m */,
-				CCD81B281D4230A400592034 /* THETestRun.h */,
-				CCD81B291D4230A400592034 /* THETestRun.m */,
-				CCD81B2C1D42325700592034 /* THETestRunFailure.h */,
-				CCD81B2D1D42325700592034 /* THETestRunFailure.m */,
-			);
-			name = TestsRunner;
-			sourceTree = "<group>";
-		};
 		CCD81B261D42294800592034 /* ThaliCore */ = {
 			isa = PBXGroup;
 			children = (
 				CCD81B231D42290200592034 /* MultipeerConnectivity */,
 				CCD81B271D42298F00592034 /* Bluetooth */,
-				CCD81B251D42293D00592034 /* TestsRunner */,
 				D4B460591C51154000940B96 /* THEProtectedMutableDictionary.m */,
 				D4B4605A1C51154000940B96 /* THESessionDictionary.m */,
 				D4B460561C51152F00940B96 /* GCDAsyncSocket.m */,
@@ -357,18 +329,14 @@
 				D43F82DF1C59330C0055D44F /* THEMultipeerClientSession.m in Sources */,
 				D43F82E01C59330C0055D44F /* THEMultipeerClientSocketRelay.m in Sources */,
 				D43F82E11C59330C0055D44F /* THEMultipeerManager.m in Sources */,
-				CCD81B2A1D4230A400592034 /* THETestRun.m in Sources */,
 				D43F82E21C59330C0055D44F /* THEMultipeerPeerSession.m in Sources */,
 				D43F82E31C59330C0055D44F /* THEMultipeerServer.m in Sources */,
-				CCD81B221D4228D700592034 /* THETestRunnerResult.m in Sources */,
-				CCD81B2E1D42325700592034 /* THETestRunFailure.m in Sources */,
 				D43F82E41C59330C0055D44F /* THEMultipeerServerSession.m in Sources */,
 				D43F82E51C59330C0055D44F /* THEMultipeerServerSocketRelay.m in Sources */,
 				D43F82E61C59330C0055D44F /* THEMultipeerSocketRelay.m in Sources */,
 				D43F82E71C59330C0055D44F /* THEAppContext.m in Sources */,
 				D43F82E81C59330C0055D44F /* THEPeerBluetooth.m in Sources */,
 				D4553BB21C52ADC700AA8C30 /* ViewController.m in Sources */,
-				CCD81B1F1D4228B300592034 /* THETestRunner.m in Sources */,
 				D4553BAF1C52ADC700AA8C30 /* AppDelegate.m in Sources */,
 				D4553BAC1C52ADC700AA8C30 /* main.m in Sources */,
 			);
@@ -420,10 +388,6 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
-				);
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = TestApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
@@ -439,10 +403,6 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
-				);
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = TestApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;

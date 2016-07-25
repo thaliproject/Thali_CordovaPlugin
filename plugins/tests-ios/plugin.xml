@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="org.thaliproject.p2p-tests"
+        version="0.0.1">
+
+    <name>ThaliTests</name>
+    <description>ThaliPlugin Tests</description>
+    <license>MIT</license>
+    <keywords>cordova,jxcore,node.js,thali,test</keywords>
+
+    <engines>
+        <engine name="cordova-ios" version=">=3.9.0" />
+    </engines>
+
+    <hook type="after_plugin_install" src="hooks/after_plugin_install.js" />
+
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+          <feature name="ThaliTests">
+               <param name="ios-package" value="ThaliTests" />
+           </feature>
+        </config-file>
+
+        <!-- <framework
+          src="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework"
+          arch="ARM"
+          target-dir="frameworks/iPhoneOS.platform"
+          custom="true"
+        /> -->
+        <framework
+            src="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework"
+            arch="x86"
+            target-dir="Frameworks/iPhoneSimulator.platform"
+            custom="true"
+            embed="true"
+        />
+
+        <header-file src="src/ios/THETestRun.h" />
+        <source-file src="src/ios/THETestRun.m" />
+        <header-file src="src/ios/THETestRunFailure.h" />
+        <source-file src="src/ios/THETestRunFailure.m" />
+        <header-file src="src/ios/THETestRunner.h" />
+        <source-file src="src/ios/THETestRunner.m" />
+        <header-file src="src/ios/THETestRunnerResult.h" />
+        <source-file src="src/ios/THETestRunnerResult.m" />
+
+    </platform>
+
+</plugin>
