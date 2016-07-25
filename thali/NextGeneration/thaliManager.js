@@ -2,7 +2,7 @@
 
 var ThaliMobile = require('./thaliMobile');
 var thaliConfig = require('./thaliConfig');
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
+var PouchDBGenerator = require('./utils/pouchDBGenerator');
 var ThaliSendNotificationBasedOnReplication = require('./replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification = require('./replication/thaliPullReplicationFromNotification');
 
@@ -28,15 +28,15 @@ var salti = require('salti');
  * If your app doesn't specify its own pool interface you will seriously
  * regret it as the default one has awful behavior. Building your own
  * thaliPeerPoolInterface is pretty much a requirement for a decent Thali app.
- * @param {Object} [acl={}] acl salti ACL data. The default role is for acl is 'public'.
+ * @param {Array} [acl=[]] acl salti ACL data. The default role is for acl is 'public'.
  * @constructor
  */
-function ThaliReplicationManager(expressPouchDB,
-                                 PouchDB,
-                                 dbName,
-                                 ecdhForLocalDevice,
-                                 thaliPeerPoolInterface,
-                                 acl) {
+function ThaliManager(expressPouchDB,
+                      PouchDB,
+                      dbName,
+                      ecdhForLocalDevice,
+                      thaliPeerPoolInterface,
+                      acl) {
   PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
     defaultAdapter: leveldownMobile
   });
@@ -49,7 +49,7 @@ function ThaliReplicationManager(expressPouchDB,
     }
     next();
   });
-  this._router.all(thaliConfig.BASE_DB_PATH, salti(dbName, acl || {}, function () {}));
+  this._router.all(thaliConfig.BASE_DB_PATH, salti(dbName, acl || [], function () {}));
 
   this._thaliSendNotificationBasedOnReplication =
     new ThaliSendNotificationBasedOnReplication(
@@ -69,10 +69,6 @@ function ThaliReplicationManager(expressPouchDB,
     mode: 'minimumForPouchDB'
   }));
 }
-
-ThaliManager.prototype._thaliSendNotificationBasedOnReplication = null;
-ThaliManager.prototype._thaliPullReplicationFromNotification    = null;
-
 
 /**
  * Starts up everything including listening for advertisements, sending out
