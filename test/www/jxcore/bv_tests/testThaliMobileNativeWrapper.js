@@ -690,7 +690,7 @@ test('We provide notification when a listener dies and we recreate it',
 
       function nonTCPAvailableHandler(record) {
         // TODO:
-        // There is a race condition when this test is ran on Android:
+        // There is a race condition when this test is run on Android:
         // This function is called just before recreatedHandler leading
         // to recreatedPort being null.
         // Re-enable the check below once #719 is fixed.
