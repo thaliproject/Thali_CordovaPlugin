@@ -48,6 +48,9 @@ test('test 1', function (t) {
   var thaliManager = new ThaliManager(expressPouchDB, PouchDB, "foo", ecdhForLocalDevice, new ThaliPeerPoolDefault(), acl)
   .start([publicKey])
   .then(function () {
+    return this.stop();
+  })
+  .then(function () {
     t.end();
   });
 });

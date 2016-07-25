@@ -7,7 +7,6 @@ var ThaliSendNotificationBasedOnReplication = require('./replication/thaliSendNo
 var ThaliPullReplicationFromNotification = require('./replication/thaliPullReplicationFromNotification');
 
 var express = require('express');
-var leveldownMobile = require('leveldown-mobile');
 var salti = require('salti');
 
 /**
@@ -38,7 +37,7 @@ function ThaliManager(expressPouchDB,
                       thaliPeerPoolInterface,
                       acl) {
   PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
-    defaultAdapter: leveldownMobile
+    defaultAdapter: thaliConfig.BASE_DB_ADAPTER
   });
 
   this._router = express.Router();
