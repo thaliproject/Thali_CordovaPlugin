@@ -13,6 +13,9 @@ var defaultDirectory = './db/';
 var test = tape({
   setup: function (t) {
     if (fs.existsSync(defaultDirectory)) {
+      // This directory can be not empty
+      // if previous test failed with system error
+      // PouchDB wont start if it's db dir is invalid
       fs_extra.emptyDirSync(defaultDirectory);
     } else {
       fs.mkdirSync(defaultDirectory);
