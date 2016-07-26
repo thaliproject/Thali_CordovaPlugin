@@ -12,7 +12,9 @@ var defaultDirectory = './db/';
 
 var test = tape({
   setup: function (t) {
-    if (!fs.existsSync(defaultDirectory)) {
+    if (fs.existsSync(defaultDirectory)) {
+      fs_extra.emptyDirSync(defaultDirectory);
+    } else {
       fs.mkdirSync(defaultDirectory);
     }
     t.end();
@@ -27,7 +29,9 @@ var test = tape({
 });
 
 test('test defaultDirectory', function (t) {
-  var LocalPouchDB = PouchDBGenerator(PouchDB, defaultDirectory);
+  var LocalPouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
+    defaultAdapter: leveldownMobile
+  });
 
   var db = LocalPouchDB('https://localhost:3000');
   t.equals(db.__opts.prefix, undefined);
