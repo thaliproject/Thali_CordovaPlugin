@@ -13,36 +13,30 @@ if (typeof Mobile === 'undefined') {
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
-var isUTExecuted = false;
+var utResult;
 
 Mobile('ExecuteNativeTests').callNative(function (result) {
-  isUTExecuted = true;
+  utResult = true;
   if (result && result.executed) {
-    console.log(result.executed);
     console.log("Total number of executed tests: ", result.total);
     console.log("Number of passed tests: ", result.passed);
     console.log("Number of failed tests: ", result.failed);
     console.log("Number of ignored tests: ", result.ignored);
     console.log("Total duration: ", result.duration);
-
-    console.log("****TEST_LOGGER:[PROCESS_ON_EXIT");
-
     if (result.failed > 0) {
-    	console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-    } else {
-    	console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+      utResult = false;
     }
-    navigator.app.exitApp();
   }
 });
 
-// Temporary solution for iOS devices.
-if (!isUTExecuted) {
-  console.log("No UT executed.");
-  console.log("****TEST_LOGGER:[PROCESS_ON_EXIT");
+if (!utResult) {
+  console.log("Failed to execute UT.");
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-  navigator.app.exitApp();
+  process.exit(1);
 }
+
+// Temporarily turn off node tests
+process.exit(0);
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
