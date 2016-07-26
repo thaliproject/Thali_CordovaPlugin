@@ -31,8 +31,6 @@
 #import "THEPeerDiscoveryDelegate.h"
 #import "THERemoteConnectionDelegate.h"
 
-#import "THETestRunnerResult.h"
-
 // Callback that will be called when the lower levels have established
 // a client relay in response to a connect
 typedef void(^ClientConnectCallback)(NSString *error, NSDictionary *connection);
