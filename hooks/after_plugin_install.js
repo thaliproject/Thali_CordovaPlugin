@@ -59,7 +59,7 @@ module.exports = function(context) {
         var targetUUID = xcodeProject.getFirstTarget().uuid;
 
         // Remove all of the frameworks because they were not embeded correctly.
-        var frameworkPath = context.opts.plugin.dir + "lib/ios/ThaliCore/";
+        var frameworkPath = context.opts.plugin.dir + "lib/ios/";
         xcodeProject.removeFramework(frameworkPath + "ThaliCore.framework");
 
         // First check to see if the Embed Framework node exists, if not, add it.
