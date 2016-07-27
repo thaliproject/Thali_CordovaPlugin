@@ -27,28 +27,23 @@ var salti = require('salti');
  * If your app doesn't specify its own pool interface you will seriously
  * regret it as the default one has awful behavior. Building your own
  * thaliPeerPoolInterface is pretty much a requirement for a decent Thali app.
- * @param {Array} [acl=[]] acl salti ACL data. The default role is for acl is 'public'.
  * @constructor
  */
 function ThaliManager(expressPouchDB,
                       PouchDB,
                       dbName,
                       ecdhForLocalDevice,
-                      thaliPeerPoolInterface,
-                      acl) {
+                      thaliPeerPoolInterface) {
   PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
     defaultAdapter: thaliConfig.BASE_DB_ADAPTER
   });
 
   this._router = express.Router();
   this._router.all('*', function(req, res, next) {
-    if (!req.connection.pskRole) {
-      // default role is 'public'
-      req.connection.pskRole = 'public';
-    }
+    console.log(req.connection.pskIdentity);
     next();
   });
-  this._router.all(thaliConfig.BASE_DB_PATH, salti(dbName, acl || [], function () {}));
+  this._router.all(thaliConfig.BASE_DB_PATH, salti(dbName, ThaliManager.acl || [], function () {}));
 
   this._thaliSendNotificationBasedOnReplication =
     new ThaliSendNotificationBasedOnReplication(
@@ -68,6 +63,59 @@ function ThaliManager(expressPouchDB,
     mode: 'minimumForPouchDB'
   }));
 }
+
+ThaliManager.acl = [{
+
+/*
+ * Below is a list of all the endpoints we know of in Express-PouchDB.
+ * The idea is to identify for each and everyone which we need
+ * to allow for Thali_Pull_Replication to work.
+ */
+
+  'role': 'replication',
+  'paths': [
+    {
+      'path': '/',
+      'verbs': ['GET']
+    },
+    {
+      'path': '/{:db}',
+      'verbs': ['GET']
+    },
+    {
+      'path': '/{:db}/_all_docs',
+      'verbs': ['GET', 'HEAD', 'POST']
+    },
+    {
+      'path': '/{:db}/_bulk_get',
+      'verbs': ['POST']
+    },
+    {
+      'path': '/{:db}/_changes',
+      'verbs': ['GET', 'POST']
+    },
+    {
+      'path': '/:db/_revs_diff',
+      'verbs': ['POST']
+    },
+    {
+      'path': '/:db/:id',
+      'verbs': ['GET']
+    },
+    {
+      'path': '/:db/:id/attachment',
+      'verbs': ['GET']
+    },
+    {
+      'path': '/{:db}/_local/{:id}',
+      'verbs': ['GET', 'PUT', 'DELETE']
+    },
+    {
+      'path': '/{:db}/_local/thali_{:id}',
+      'verbs': ['GET', 'PUT', 'DELETE']
+    }
+  ]
+}];
 
 /**
  * Starts up everything including listening for advertisements, sending out
