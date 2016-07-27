@@ -18,7 +18,7 @@ class OutgoingSocketThread extends SocketThreadBase {
     private int mListeningOnPortNumber = ConnectionHelper.NO_PORT_NUMBER;
 
     /**
-     * Constructor.
+     * Constructor for test purposes.
      *
      * @param bluetoothSocket The Bluetooth socket.
      * @param listener        The listener.
@@ -27,6 +27,22 @@ class OutgoingSocketThread extends SocketThreadBase {
     public OutgoingSocketThread(BluetoothSocket bluetoothSocket, Listener listener)
             throws IOException {
         super(bluetoothSocket, listener);
+        mTag = OutgoingSocketThread.class.getName();
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param bluetoothSocket The Bluetooth socket.
+     * @param listener        The listener.
+     * @param inputStream     The InputStream.
+     * @param outputStream    The OutputStream.
+     * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
+     */
+    public OutgoingSocketThread(BluetoothSocket bluetoothSocket, Listener listener,
+                                InputStream inputStream, OutputStream outputStream)
+            throws IOException {
+        super(bluetoothSocket, listener, inputStream, outputStream);
         mTag = OutgoingSocketThread.class.getName();
     }
 
@@ -75,12 +91,6 @@ class OutgoingSocketThread extends SocketThreadBase {
             } catch (IOException e) {
                 if (!mIsClosing) {
                     String errorMessage =  "Failed to create local streams: " + e.getMessage();
-                    Log.e(mTag, errorMessage, e);
-                    mListener.onDisconnected(this, errorMessage);
-                }
-            } catch (NullPointerException e) {
-                if (!mIsClosing) {
-                    String errorMessage = e.getMessage();
                     Log.e(mTag, errorMessage, e);
                     mListener.onDisconnected(this, errorMessage);
                 }

@@ -216,11 +216,6 @@ public class StartStopOperationHandler {
     private void updateBeaconAdExtraInformation() {
         DiscoveryManagerSettings discoveryManagerSettings = DiscoveryManagerSettings.getInstance(null);
         int extraInformation = discoveryManagerSettings.getBeaconAdExtraInformation() + 1;
-
-        if (extraInformation > 255) {
-            extraInformation = 1;
-        }
-
         Log.i(TAG, "updateBeaconAdExtraInformation: New value: " + extraInformation);
         discoveryManagerSettings.setBeaconAdExtraInformation(extraInformation);
     }
