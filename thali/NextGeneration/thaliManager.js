@@ -4,8 +4,10 @@ var logger = require('../thalilogger')('thaliManager');
 
 var ThaliMobile = require('./thaliMobile');
 var thaliConfig = require('./thaliConfig');
-var ThaliSendNotificationBasedOnReplication = require('./replication/thaliSendNotificationBasedOnReplication');
-var ThaliPullReplicationFromNotification = require('./replication/thaliPullReplicationFromNotification');
+var ThaliSendNotificationBasedOnReplication =
+  require('./replication/thaliSendNotificationBasedOnReplication');
+var ThaliPullReplicationFromNotification =
+  require('./replication/thaliPullReplicationFromNotification');
 
 var express = require('express');
 var salti = require('salti');
@@ -36,9 +38,9 @@ function ThaliManager(expressPouchDB,
                       ecdhForLocalDevice,
                       thaliPeerPoolInterface) {
   logger.debug("creating router instance");
-  
+
   this._router = express.Router();
-  this._router.all('*', function(req, res, next) {
+  this._router.all('*', function (req, res, next) {
     console.log(
       req.connection.authorized,
       req.connection.pskIdentity,
@@ -46,10 +48,13 @@ function ThaliManager(expressPouchDB,
     );
     next();
   });
-  this._router.all(thaliConfig.BASE_DB_PATH, salti(dbName, ThaliManager.acl, function () {}));
+  this._router.all(
+    thaliConfig.BASE_DB_PATH,
+    salti(dbName, ThaliManager.acl, function () {})
+  );
 
   logger.debug("creating ThaliSendNotificationBasedOnReplication instance");
-  
+
   this._thaliSendNotificationBasedOnReplication =
     new ThaliSendNotificationBasedOnReplication(
         this._router,
@@ -58,7 +63,7 @@ function ThaliManager(expressPouchDB,
         new PouchDB(dbName));
 
   logger.debug("creating ThaliPullReplicationFromNotification instance");
-  
+
   this._thaliPullReplicationFromNotification =
     new ThaliPullReplicationFromNotification(
         PouchDB,
@@ -146,15 +151,15 @@ ThaliManager.acl = [
  */
 ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
     var self = this;
-    
+
     logger.debug("starting thaliPullReplicationFromNotification");
     self._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
-    
+
     logger.debug("starting ThaliMobile");
     return ThaliMobile.start(
       self._router,
       self._thaliSendNotificationBasedOnReplication.getPskIdToSecret())
-    
+
     .then(function () {
       /*
       Ideally we could call startListening and startUpdateAdvertising separately
@@ -175,12 +180,12 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
       logger.debug("start listening for advertisements");
       return ThaliMobile.startListeningForAdvertisements();
     })
-    
+
     .then(function () {
       logger.debug("start update advertising and listening");
       return ThaliMobile.startUpdateAdvertisingAndListening();
     })
-    
+
     .then(function () {
       logger.debug("starting thaliSendNotificationBasedOnReplication");
       self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
@@ -194,23 +199,23 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
  */
 ThaliManager.prototype.stop = function () {
   var self = this;
-  
+
   logger.debug("stopping thaliSendNotificationBasedOnReplication");
   this._thaliSendNotificationBasedOnReplication.stop();
-  
+
   logger.debug("stopping advertising and listening");
   return ThaliMobile.stopAdvertisingAndListening()
-  
+
   .then(function () {
     logger.debug("stopping listening for advertisements");
     return ThaliMobile.stopListeningForAdvertisements();
   })
-  
+
   .then(function () {
     logger.debug("stopping ThaliMobile");
     return ThaliMobile.stop();
   })
-  
+
   .then(function () {
     logger.debug("stopping thaliPullReplicationFromNotification");
     self._thaliPullReplicationFromNotification.stop();

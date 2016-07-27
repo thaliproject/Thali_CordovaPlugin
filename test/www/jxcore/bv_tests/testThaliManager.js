@@ -14,7 +14,8 @@ var leveldownMobile = require('leveldown-mobile');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+var ThaliPeerPoolDefault =
+  require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 
 // DB defaultDirectory should be unique among all tests
 // and any instance of this test.
@@ -46,11 +47,11 @@ var test = tape({
 test('test 1', function (t) {
   var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var publicKey = ecdhForLocalDevice.generateKeys();
-  
+
   PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
     defaultAdapter: leveldownMobile
   });
-  
+
   var thaliManager = new ThaliManager(
     expressPouchDB,
     PouchDB,
