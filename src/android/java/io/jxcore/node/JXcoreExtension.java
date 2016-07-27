@@ -94,10 +94,10 @@ public class JXcoreExtension {
         });
 
         lifeCycleMonitor.start();
-		/*
-			This is the line where we are dynamically sticking execution of UT during build, so if you are 
-			editing this line, please check updateJXCoreExtensionWithUTMethod in androidBeforeCompile.js.
-		*/
+        /*
+            This is the line where we are dynamically sticking execution of UT during build, so if you are
+            editing this line, please check updateJXCoreExtensionWithUTMethod in androidBeforeCompile.js.
+        */
 
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
