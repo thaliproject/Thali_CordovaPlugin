@@ -30,13 +30,9 @@
 #import "THEAppContext.h"
 #import "THEPeerDiscoveryDelegate.h"
 #import "THERemoteConnectionDelegate.h"
-#import "THEMultipeerDiscoveryDelegate.h"
-#import "THEMultipeerSessionStateDelegate.h"
-#import "THEMultipeerServerConnectionDelegate.h"
 
 // Co-ordinates the actions of the MPCF client and server components
 @interface THEMultipeerManager : NSObject
-  <THEMultipeerDiscoveryDelegate, THEMultipeerServerConnectionDelegate, THEMultipeerSessionStateDelegate>
  
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType

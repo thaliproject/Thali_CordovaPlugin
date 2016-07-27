@@ -31,6 +31,14 @@
 #import "THEMultipeerClient.h"
 #import "THEMultipeerServer.h"
 
+#import "THEMultipeerDiscoveryDelegate.h"
+#import "THEMultipeerSessionStateDelegate.h"
+#import "THEMultipeerServerConnectionDelegate.h"
+
+@interface THEMultipeerManager () <THEMultipeerDiscoveryDelegate, THEMultipeerServerConnectionDelegate, THEMultipeerSessionStateDelegate>
+
+@end
+
 // THEMultipeerManager implementation.
 @implementation THEMultipeerManager
 {

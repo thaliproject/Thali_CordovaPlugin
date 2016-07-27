@@ -25,11 +25,9 @@
 //  JXcoreExtension.m
 //
 
+#import <ThaliCore/ThaliCore.h>
+
 #import "JXcore.h"
-#import "THEThreading.h"
-#import "JXcoreExtension.h"
-#import "THEAppContext.h"
-#import "THEThaliEventDelegate.h"
 
 // JXcoreExtension implementation.
 
@@ -170,7 +168,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   }
 }
 
-#pragma mark - Define methods
+#pragma mark - Define public API to node methods
 
 // Defines methods.
 - (void)defineMethods
@@ -179,8 +177,18 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   [theApp setThaliEventDelegate:self];
 
   // Export the public API to node
+  [self defineStartListeningForAdvertisements];
+  [self defineStopListeningForAdvertisements];
+  [self defineStartUpdateAdvertisingAndListening];
+  [self defineStopAdvertisingAndListening];
+  [self defineConnect];
+  [self defineKillConnections];
+  [self defineDidRegisterToNative];
+  [self defineGetOSVersion];
+  [self defineExecuteNativeTests];
+}
 
-  // startListeningForAdvertisements
+- (void)defineStartListeningForAdvertisements {
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: startListeningForAdvertisements");
@@ -204,8 +212,9 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       }
     }
   } withName:@"startListeningForAdvertisements"];
+}
 
-  // StopListeningForAdvertisements
+- (void)defineStopListeningForAdvertisements {
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: stopListeningForAdvertisements");
@@ -229,9 +238,9 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       }
     }
   } withName:@"stopListeningForAdvertisements"];
+}
 
-
-  // StartUpdateAdvertisingAndListening
+- (void)defineStartUpdateAdvertisingAndListening {
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: startUpdateAdvertisingAndListening");
@@ -267,8 +276,9 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       }
     }
   } withName:@"startUpdateAdvertisingAndListening"];
+}
 
-  // StopUpdateAdvertisingAndListenForIncomingConnections
+- (void)defineStopAdvertisingAndListening {
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: stopAdvertisingAndListening");
@@ -292,8 +302,9 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       }
     }
   } withName:@"stopAdvertisingAndListening"];
+}
 
-  // Connect
+- (void)defineConnect {
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
     if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
@@ -335,7 +346,9 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       [theApp connectToPeer:params[0] connectCallback:connectCallback];
     }
   } withName:@"connect"];
+}
 
+- (void)defineKillConnections {
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
     NSLog(@"jxcore: killConnections");
@@ -371,9 +384,11 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       }
     }
   } withName:@"killConnections"];
+}
 
-  // didRegisterToNative - Allow JXCore to inform us that someone registered
-  // a JS function to native
+// didRegisterToNative - Allow JXCore to inform us that someone registered
+// a JS function to native
+- (void)defineDidRegisterToNative {
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
     if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
@@ -386,10 +401,6 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       [self didRegisterToNative: params[0]];
     }
   } withName:@"didRegisterToNative"];
-
-
-  [self defineGetOSVersion];
-  [self defineExecuteNativeTests];
 }
 
 - (void)defineGetOSVersion
@@ -410,7 +421,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   {
     if ([theApp respondsToSelector:@selector(executeNativeTests)])
     {
-      NSString *result = [theApp executeNativeTests];
+      NSString *result = [theApp performSelector:@selector(executeNativeTests)];
 
       @synchronized(self)
       {

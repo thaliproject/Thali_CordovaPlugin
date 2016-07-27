@@ -32,6 +32,7 @@ if [ $runningInMinGw == true ]; then
     rm -rf $repositoryRoot/test/www/jxcore/node_modules/thali
     cp -R $repositoryRoot/test/www/ ThaliTest/
 else
+
     rsync -a --no-links $repositoryRoot/test/www/ ThaliTest/www
 fi
 
@@ -64,7 +65,6 @@ cp -v $1 app.js
 cordova build android --release --device
 
 if [ $runningInMinGw == false ]; then
-    cordova plugin add $repositoryRoot/plugins/tests-ios
     cordova build ios --device
 fi
 

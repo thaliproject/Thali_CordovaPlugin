@@ -35,8 +35,6 @@
 #import "THEMultipeerManager.h"
 #import "THEThaliEventDelegate.h"
 
-#import "THETestRunner.h"
-
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal) <CBPeripheralManagerDelegate, CBCentralManagerDelegate>
 
@@ -194,14 +192,6 @@ static NSString *const BLE_SERVICE_TYPE = @"72D83A8B-9BE7-474B-8D2E-556653063A5B
 - (void)setPeerIdentifier:(NSString *)peerIdentifier
 {
   _peerIdentifier = peerIdentifier;
-}
-
-- (NSString *)executeNativeTests
-{
-    THETestRunner *testRunner = [THETestRunner defaultRunner];
-    [testRunner runTest];
-
-    return testRunner.testRunResult.jsonString;
 }
 
 #endif

@@ -7,9 +7,10 @@
 //
 
 #import <XCTest/XCTest.h>
+#import <ThaliCore/ThaliCore.h>
+
 #import "TestEchoClient.h"
 #import "TestEchoServer.h"
-#import "../../../MultipeerConnectivity/THEMultipeerManager.h"
 
 @interface THETestDiscoveryEventHandler : NSObject <THEPeerDiscoveryDelegate>
 {

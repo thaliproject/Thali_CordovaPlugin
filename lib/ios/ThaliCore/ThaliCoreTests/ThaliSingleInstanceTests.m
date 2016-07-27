@@ -7,7 +7,7 @@
 //
 
 #import <XCTest/XCTest.h>
-#import "../../../THEAppContext.h"
+#import <ThaliCore/ThaliCore.h>
 
 @interface ThaliSingleInstanceTests : XCTestCase
 @end

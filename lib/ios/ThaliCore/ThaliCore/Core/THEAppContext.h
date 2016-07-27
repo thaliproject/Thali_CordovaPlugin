@@ -74,9 +74,6 @@ typedef void(^ClientConnectCallback)(NSString *error, NSDictionary *connection);
 //
 - (void)setPeerIdentifier:(NSString *)peerIdentifier;
 
-// Executes native tests
-- (NSString *)executeNativeTests;
-
 #endif
 
 @end

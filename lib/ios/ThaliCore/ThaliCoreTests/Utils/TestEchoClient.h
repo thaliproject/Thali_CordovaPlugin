@@ -1,6 +1,6 @@
 // Basic client for TestEchoServer
 
-#import "../../../GCDAsyncSocket/GCDAsyncSocket.h"
+#import "GCDAsyncSocket.h"
 
 @interface TestEchoClient : NSObject <GCDAsyncSocketDelegate>
 
