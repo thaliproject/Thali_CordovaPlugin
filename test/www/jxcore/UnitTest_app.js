@@ -32,11 +32,7 @@ Mobile('ExecuteNativeTests').callNative(function (result) {
 if (!utResult) {
   console.log("Failed to execute UT.");
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-  process.exit(1);
 }
-
-// Temporarily turn off node tests
-process.exit(0);
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
