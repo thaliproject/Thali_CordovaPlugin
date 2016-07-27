@@ -1,8 +1,9 @@
 'use strict';
 
+var logger = require('../thalilogger')('thaliManager');
+
 var ThaliMobile = require('./thaliMobile');
 var thaliConfig = require('./thaliConfig');
-var PouchDBGenerator = require('./utils/pouchDBGenerator');
 var ThaliSendNotificationBasedOnReplication = require('./replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification = require('./replication/thaliPullReplicationFromNotification');
 
@@ -34,17 +35,21 @@ function ThaliManager(expressPouchDB,
                       dbName,
                       ecdhForLocalDevice,
                       thaliPeerPoolInterface) {
-  PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
-    defaultAdapter: thaliConfig.BASE_DB_ADAPTER
-  });
-
+  logger.debug("creating router instance");
+  
   this._router = express.Router();
   this._router.all('*', function(req, res, next) {
-    console.log(req.connection.pskIdentity);
+    console.log(
+      req.connection.authorized,
+      req.connection.pskIdentity,
+      req.connection.pskRole
+    );
     next();
   });
-  this._router.all(thaliConfig.BASE_DB_PATH, salti(dbName, ThaliManager.acl || [], function () {}));
+  this._router.all(thaliConfig.BASE_DB_PATH, salti(dbName, ThaliManager.acl, function () {}));
 
+  logger.debug("creating ThaliSendNotificationBasedOnReplication instance");
+  
   this._thaliSendNotificationBasedOnReplication =
     new ThaliSendNotificationBasedOnReplication(
         this._router,
@@ -52,70 +57,78 @@ function ThaliManager(expressPouchDB,
         thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE,
         new PouchDB(dbName));
 
+  logger.debug("creating ThaliPullReplicationFromNotification instance");
+  
   this._thaliPullReplicationFromNotification =
     new ThaliPullReplicationFromNotification(
         PouchDB,
         dbName,
         thaliPeerPoolInterface,
         ecdhForLocalDevice);
-  
+
+  logger.debug("creating express pouchdb instance");
+
   this._router.use(thaliConfig.BASE_DB_PATH, expressPouchDB(PouchDB, {
     mode: 'minimumForPouchDB'
   }));
 }
 
-ThaliManager.acl = [{
-
-/*
- * Below is a list of all the endpoints we know of in Express-PouchDB.
- * The idea is to identify for each and everyone which we need
- * to allow for Thali_Pull_Replication to work.
- */
-
-  'role': 'replication',
-  'paths': [
-    {
-      'path': '/',
-      'verbs': ['GET']
-    },
-    {
-      'path': '/{:db}',
-      'verbs': ['GET']
-    },
-    {
-      'path': '/{:db}/_all_docs',
-      'verbs': ['GET', 'HEAD', 'POST']
-    },
-    {
-      'path': '/{:db}/_bulk_get',
-      'verbs': ['POST']
-    },
-    {
-      'path': '/{:db}/_changes',
-      'verbs': ['GET', 'POST']
-    },
-    {
-      'path': '/:db/_revs_diff',
-      'verbs': ['POST']
-    },
-    {
-      'path': '/:db/:id',
-      'verbs': ['GET']
-    },
-    {
-      'path': '/:db/:id/attachment',
-      'verbs': ['GET']
-    },
-    {
-      'path': '/{:db}/_local/{:id}',
-      'verbs': ['GET', 'PUT', 'DELETE']
-    },
-    {
-      'path': '/{:db}/_local/thali_{:id}',
-      'verbs': ['GET', 'PUT', 'DELETE']
-    }
-  ]
-}];
+ThaliManager.acl = [
+  {
+    'role': 'repl',
+    'paths': [
+      {
+        'path': '/',
+        'verbs': ['GET']
+      },
+      {
+        'path': '/{:db}',
+        'verbs': ['GET']
+      },
+      {
+        'path': '/{:db}/_all_docs',
+        'verbs': ['GET', 'HEAD', 'POST']
+      },
+      {
+        'path': '/{:db}/_bulk_get',
+        'verbs': ['POST']
+      },
+      {
+        'path': '/{:db}/_changes',
+        'verbs': ['GET', 'POST']
+      },
+      {
+        'path': '/:db/_revs_diff',
+        'verbs': ['POST']
+      },
+      {
+        'path': '/:db/:id',
+        'verbs': ['GET']
+      },
+      {
+        'path': '/:db/:id/attachment',
+        'verbs': ['GET']
+      },
+      {
+        'path': '/{:db}/_local/{:id}',
+        'verbs': ['GET', 'PUT', 'DELETE']
+      },
+      {
+        'path': '/{:db}/_local/thali_{:id}',
+        'verbs': ['GET', 'PUT', 'DELETE']
+      }
+    ]
+  },
+  {
+    'role': 'beacon',
+    'paths': [
+      {
+        'path': '/NotificationBeacons',
+        'verbs': ['GET']
+      }
+    ]
+  }
+];
 
 /**
  * Starts up everything including listening for advertisements, sending out
@@ -133,10 +146,15 @@ ThaliManager.acl = [{
  */
 ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
     var self = this;
+    
+    logger.debug("starting thaliPullReplicationFromNotification");
     self._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
+    
+    logger.debug("starting ThaliMobile");
     return ThaliMobile.start(
       self._router,
       self._thaliSendNotificationBasedOnReplication.getPskIdToSecret())
+    
     .then(function () {
       /*
       Ideally we could call startListening and startUpdateAdvertising separately
@@ -154,11 +172,18 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
       establish the MCSession with it. So in practice this means that in iOS
       everyone has to be both listening and advertising at the same time.
        */
+      logger.debug("start listening for advertisements");
       return ThaliMobile.startListeningForAdvertisements();
-    }).then(function () {
+    })
+    
+    .then(function () {
+      logger.debug("start update advertising and listening");
       return ThaliMobile.startUpdateAdvertisingAndListening();
-    }).then(function () {
-      return self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
+    })
+    
+    .then(function () {
+      logger.debug("starting thaliSendNotificationBasedOnReplication");
+      self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
     });
   };
 
@@ -168,9 +193,28 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
  * @returns {Promise<?Error>}
  */
 ThaliManager.prototype.stop = function () {
-  this._thaliPullReplicationFromNotification.stop();
+  var self = this;
+  
+  logger.debug("stopping thaliSendNotificationBasedOnReplication");
   this._thaliSendNotificationBasedOnReplication.stop();
-  return ThaliMobile.stop();
+  
+  logger.debug("stopping advertising and listening");
+  return ThaliMobile.stopAdvertisingAndListening()
+  
+  .then(function () {
+    logger.debug("stopping listening for advertisements");
+    return ThaliMobile.stopListeningForAdvertisements();
+  })
+  
+  .then(function () {
+    logger.debug("stopping ThaliMobile");
+    return ThaliMobile.stop();
+  })
+  
+  .then(function () {
+    logger.debug("stopping thaliPullReplicationFromNotification");
+    self._thaliPullReplicationFromNotification.stop();
+  });
 };
 
 module.exports = ThaliManager;
