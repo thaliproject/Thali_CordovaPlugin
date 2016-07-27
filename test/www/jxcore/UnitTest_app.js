@@ -34,6 +34,9 @@ if (!utResult) {
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
 }
 
+// finish testing here (the node part will be omitted)
+console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
   var promiseList = [];
