@@ -36,6 +36,9 @@
             embed="true"
         />
 
+        <header-file src="src/ios/THEAppContext+Tests.h" />
+        <source-file src="src/ios/THEAppContext+Tests.m" />
+
         <header-file src="src/ios/THETestRun.h" />
         <source-file src="src/ios/THETestRun.m" />
         <header-file src="src/ios/THETestRunFailure.h" />

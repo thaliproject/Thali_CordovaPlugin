@@ -56,9 +56,9 @@ cordova -v;ERROR_ABORT
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
-jx npm test;ERROR_ABORT
-jx npm run test-meta;ERROR_ABORT
-jx npm run test-coordinated;ERROR_ABORT
+# jx npm test;ERROR_ABORT
+# jx npm run test-meta;ERROR_ABORT
+# jx npm run test-coordinated;ERROR_ABORT
 
 # Verify that docs can be generated
 #cd $PROJECT_ROOT/thali/;ERROR_ABORT
@@ -95,7 +95,7 @@ then
   # server may have different OS and CPU architecture than the build server
   # so modules need to be installed there separately (this is handled by the CI).
   rm -rf test/TestServer/node_modules;ERROR_ABORT
-  
+
   # A hack workround due to the fact that CI server doesn't allow relative paths outside
   # of the original parent folder as a path to the build output binaries.
   # https://github.com/thaliproject/Thali_CordovaPlugin/issues/232

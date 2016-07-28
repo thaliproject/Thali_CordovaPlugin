@@ -1,9 +1,9 @@
 //
 //  TestAppTests.m
-//  TestAppTests
+//  ThaliCoreTests
 //
-//  Created by tobe on 22/01/2016.
-//  Copyright © 2016 Microsoft. All rights reserved.
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //
 
 #import <XCTest/XCTest.h>
