@@ -38,6 +38,7 @@ else
 fi
 
 cd ThaliTest
+# TODO Temporarily disabling ios build
 #cordova platform add ios
 cordova platform add android
 cd www/jxcore
@@ -71,6 +72,7 @@ fi
 
 cordova build android --release --device
 
+# TODO Temporarily disabling ios build
 #if [ $runningInMinGw == false ]; then
 #    cordova build ios --device
 #fi
