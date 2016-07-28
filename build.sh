@@ -108,6 +108,8 @@ then
   # https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
   rm -rf android-release-unsigned.apk;ERROR_ABORT
   cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk;ERROR_ABORT
-#  rm -rf ThaliTest.app;ERROR_ABORT
-#  cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
+  
+  # TODO Temporarily disabling ios build
+  #rm -rf ThaliTest.app;ERROR_ABORT
+  #cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
 fi
