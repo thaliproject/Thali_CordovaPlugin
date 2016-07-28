@@ -11,12 +11,13 @@ import java.util.Date;
 
 import io.jxcore.node.jxcore;
 
-public class RegisterExecuteUT {
-    public RegisterExecuteUT() {
+public final class RegisterExecuteUT {
+    private RegisterExecuteUT() throws Exception {
+        throw new Exception("Constructor should not be called.");
 
     }
 
-    public static void RegisterExecuteUT() {
+    public static void Register() {
         jxcore.RegisterMethod("ExecuteNativeTests", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
