@@ -34,6 +34,7 @@ public class JXcoreExtension {
     public static final String CALLBACK_VALUE_LISTENING_ON_PORT_NUMBER = "listeningPort";
     public static final String CALLBACK_VALUE_CLIENT_PORT_NUMBER = "clientPort";
     public static final String CALLBACK_VALUE_SERVER_PORT_NUMBER = "serverPort";
+
     private static final String METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS = "startListeningForAdvertisements";
     private static final String METHOD_NAME_STOP_LISTENING_FOR_ADVERTISEMENTS = "stopListeningForAdvertisements";
     private static final String METHOD_NAME_START_UPDATE_ADVERTISING_AND_LISTENING = "startUpdateAdvertisingAndListening";
@@ -41,11 +42,14 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_CONNECT = "connect";
     private static final String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
     private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
+
     private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
     private static final String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
     private static final String EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
+
     private static final String METHOD_ARGUMENT_NETWORK_CHANGED = EVENT_NAME_NETWORK_CHANGED;
+
     private static final String EVENT_VALUE_PEER_ID = "peerIdentifier";
     private static final String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
     private static final String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
@@ -65,9 +69,11 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_GET_OS_VERSION = "getOSVersion";
     private static final String METHOD_NAME_RECONNECT_WIFI_AP = "reconnectWifiAp";
     private static final String METHOD_NAME_SHOW_TOAST = "showToast";
+
     private static final String TAG = JXcoreExtension.class.getName();
     private static final String BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR = "-";
     private static final long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
+
     private static ConnectionHelper mConnectionHelper = null;
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
@@ -97,7 +103,7 @@ public class JXcoreExtension {
 
         lifeCycleMonitor.start();
 		/*
-			This is the line where we are dynamically sticking execution of UT during build, so if you are 
+			This is the line where we are dynamically sticking execution of UT during build, so if you are
 			editing this line, please check updateJXCoreExtensionWithUTMethod in androidBeforeCompile.js.
 		*/
 

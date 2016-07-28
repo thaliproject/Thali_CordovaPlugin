@@ -55,22 +55,6 @@ class ListenerOrIncomingConnection {
         mListeningOnPortNumber = listeningOnPortNumber;
     }
 
-    public int getClientPortNumber() {
-        return mClientPortNumber;
-    }
-
-    public void setClientPortNumber(int clientPortNumber) {
-        mClientPortNumber = clientPortNumber;
-    }
-
-    public int getServerPortNumber() {
-        return mServerPortNumber;
-    }
-
-    public void setServerPortNumber(int serverPortNumber) {
-        mServerPortNumber = serverPortNumber;
-    }
-
     public JSONObject toJsonObject() {
         try {
             JSONObject jsonObject = new JSONObject();
