@@ -170,7 +170,7 @@ var updateTestSuite = function (appRoot) {
  * Updates JXcoreExtension with a method which is used to register the native UT executor.
  * We are doing it because we don't want to mess our production code with our test code
  * so we create a function that dynamically adds method executing tests only when we are
- * actually testing. 
+ * actually testing.
  * @param {Object} appRoot
  */
 
@@ -178,7 +178,7 @@ var updateJXCoreExtensionWithUTMethod = function (appRoot) {
   var filePath = path.join(appRoot, 'platforms/android/src/io/jxcore/node/JXcoreExtension.java');
   var content = fs.readFileSync(filePath, 'utf-8');
 
-  content = content.replace("lifeCycleMonitor.start();", "lifeCycleMonitor.start();\n\t\tRegisterExecuteUT.RegisterExecuteUT();");
+  content = content.replace("lifeCycleMonitor.start();", "lifeCycleMonitor.start();\n\t\tRegisterExecuteUT.Register();");
   content = content.replace("package io.jxcore.node;", "package io.jxcore.node;\nimport com.test.thalitest.RegisterExecuteUT;");
   fs.writeFileSync(filePath, content, 'utf-8');
 };
