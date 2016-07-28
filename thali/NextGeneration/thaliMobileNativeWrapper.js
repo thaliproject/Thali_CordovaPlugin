@@ -242,6 +242,8 @@ module.exports.start = function (router, pskIdToSecret) {
     gRouterServer = https.createServer(options, gRouterExpress).listen(0,
       function () {
         gRouterServerPort = gRouterServer.address().port;
+        logger.debug('listening', gRouterServerPort);
+
         stopCreateAndStartServersManager()
           .then(function () {
             states.started = true;

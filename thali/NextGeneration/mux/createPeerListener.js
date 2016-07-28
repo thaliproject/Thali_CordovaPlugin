@@ -671,7 +671,11 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
       failedStartup(err);
     });
 
+    // listen(port, ...) port = 0 for random port
     server.listen(0, function () {
+      var port = server.address().port;
+      logger.debug('listening', port);
+
       logger.debug('pleaseConnect=', pleaseConnect);
 
       if (!pleaseConnect) {
