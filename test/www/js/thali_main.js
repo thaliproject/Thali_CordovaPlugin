@@ -54,7 +54,7 @@
   function loadMainFile() {
     jxcore('app.js').loadMainFile(function (ret, err) {
       if (err) {
-        console.log('App.js file failed to load : ' + JSON.stringify(err));
+        console.log('app.js file failed to load : ' + JSON.stringify(err));
         // This is an error scenario, which occurs in CI, but should not
         // be an issue with the app code so inform CI that this was a
         // success case. This can be made an error after this is fixed:

@@ -14,6 +14,8 @@ fi
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to
 # manually set the coordination server's address to.
+# The third argument is optional and if set causes copying of the android unit tests
+# to platforms/android
 
 cd `dirname $0`
 cd ../..
@@ -36,7 +38,8 @@ else
 fi
 
 cd ThaliTest
-cordova platform add ios
+# TODO Temporarily disabling ios build
+#cordova platform add ios
 cordova platform add android
 cd www/jxcore
 jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
@@ -61,10 +64,17 @@ find . -name "*.pem" -delete
 
 cp -v $1 app.js
 
+# In case of UT create a file
+if [ $2 == "UT" ] || [ $3 == "UT" ] ; then
+  echo "UT files will be copied to the platform directory"
+  touch ../../platforms/android/unittests
+fi
+
 cordova build android --release --device
 
-if [ $runningInMinGw == false ]; then
-    cordova build ios --device
-fi
+# TODO Temporarily disabling ios build
+#if [ $runningInMinGw == false ]; then
+#    cordova build ios --device
+#fi
 
 echo "Remember to start the test coordination server by running jx index.js"
