@@ -1,8 +1,30 @@
 'use strict';
 var spawn = require('child_process').spawn;
-var fs = require('fs-extra-promise');
+var exec = require('child_process').exec;
 var path = require('path');
-var Promise = require('lie');
+var http = require('http');
+var fs = require('fs'); // Will be overwritten by fs-extra-promise
+var Promise = null; // Wil be set below
+// We have dependencies on fs-extra-promise and lie, neither of which ship with
+// node. But this script is required to run before we have done a npm install
+// in the local directory so we load these dependencies manually.
+
+function getPackageJsonVersion(packageName) {
+  // If you can't trust your own file, who can you trust?
+  var packageJSON =
+    JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json')));
+  if (!packageJSON.dependencies || !packageJSON.dependencies[packageName]) {
+    throw new Error('No such packageName - ' + packageName);
+  }
+  return packageJSON.dependencies[packageName];
+}
+
+function installPackage(packageName, version, callback) {
+  exec('npm install ' + packageName + '@' + version, callback);
+}
+
+var pouchDBNodePackageName = 'pouchdb-node';
+var expressPouchDBPackageName = 'express-pouchdb';
 
 // This is stolen from install.js, I don't want to put it into a utility
 // file because I'm hoping this file will go away.
@@ -10,22 +32,17 @@ function childProcessExecPromise(commandString, currentWorkingDirectory) {
   return new Promise(function (resolve, reject) {
     var commandSplit = commandString.split(' ');
     var command = commandSplit.shift();
-    var stdErrData = false;
     var theProcess = spawn(command, commandSplit,
                             { cwd: currentWorkingDirectory});
     theProcess.stdout.on('data', function (data) {
       console.log('' + data);
     });
     theProcess.stderr.on('data', function (data) {
-      //stdErrData = true;
       console.log('' + data);
     });
     theProcess.on('close', function (code) {
       if (code !== 0) {
         return reject(code);
-      }
-      if (stdErrData) {
-        return reject(-1);
       }
       return resolve();
     });
@@ -60,12 +77,14 @@ function childProcessExecCommandLine(arrayOfCommandDirs) {
  * @param  {string} gitUrl
  * @param  {string} branchName
  * @param  {string} commitId
- * @param  {string} packageName
+ * @param  {string} packageName If specified only this package will be
+ * published. Otherwise all the packages will be published.
  * @param  {string} targetDirName
  */
 function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
                                       targetDirName) {
   var customPouchDirPath = path.join(__dirname, targetDirName);
+  var packagesDir = path.join(customPouchDirPath, 'packages');
   return fs.removeAsync(targetDirName)
     .then(function () {
       return childProcessExecCommandLine([
@@ -79,10 +98,40 @@ function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
         // only going to use pure Javascript output by these build process
         // it's not worth the effort.
         ['npm install', customPouchDirPath],
-        ['npm build', customPouchDirPath],
-        ['npm link ' + path.join(__dirname, targetDirName, 'packages',
-                                  packageName) , __dirname]
+        ['npm build', customPouchDirPath] // Probably not needed
       ]);
+    })
+    .then(function () {
+      if (packageName) {
+        return [packageName];
+      }
+      return fs.readdirAsync(packagesDir);
+    })
+    .then(function (dirs) {
+      var promises = [];
+      // The two repos we currently support use Lerna but unfortunately
+      // PouchDB's depo does not support Lerna's publish command so we
+      // have to install things manually.
+      dirs.forEach(function (dirName) {
+        var packageDir = path.join(packagesDir, dirName);
+        var packageJsonLocation = path.join(packageDir, 'package.json');
+        var publishPromise = fs.readJsonAsync(packageJsonLocation)
+          .then(function (packageJson) {
+            if (packageJson.private) {
+              return Promise.resolve();
+            }
+            return childProcessExecPromise('npm publish', packageDir)
+              .catch(function (err) {
+                // The actual error is usually just an int so we publish more
+                // here to make debugging easier
+                console.log('Ignoring install error - ' + err + ' for entry ' +
+                            packageDir);
+                return Promise.reject(err);
+            });
+          });
+        promises.push(publishPromise);
+      });
+      return Promise.all(promises);
     });
 }
 
@@ -95,17 +144,23 @@ function installNodePouchDB () {
   var gitUrl = 'https://github.com/pouchdb/pouchdb.git';
   var branch = 'master';
   var commitId = '8d2af9bd78';
-  var packageName = 'pouchdb-node';
   var targetDir = 'customPouchDir';
 
-  return installCustomMonoRepoPackage(gitUrl, branch, commitId, packageName,
+  return installCustomMonoRepoPackage(gitUrl, branch, commitId, null,
                                       targetDir);
 }
 
+/**
+ * Right now the PouchDB-Server repo we are using isn't a true mono-repo
+ * in the sense that the packages are cross connected. Instead the packages
+ * are just co-habitating. Furthermore other than the one change we made the
+ * contents of the packages are in NPM. So we just need to publish the one
+ * package we are using and can ignore the rest for now.
+ */
 function installExpressPouchDB () {
   var gitUrl = 'https://github.com/yaronyg/pouchdb-server.git';
-  var branch = '326-endless-polling';
-  var commitId = 'a012907';
+  var branch = 'thali-release';
+  var commitId = '6f40454';
   var packageName = 'express-pouchdb';
   var targetDir = 'customPouchServerDir';
 
@@ -113,15 +168,99 @@ function installExpressPouchDB () {
                                       targetDir);
 }
 
-function installAll() {
-  var promises = [];
-  promises.push(installNodePouchDB());
-  promises.push(installExpressPouchDB());
-  return Promise.all(promises)
-    .catch(function (err) {
-      console.log('ERROR DURING INSTALLCUSTOMPOUCHDB - ' + err);
-      process.exit(-1);
+function getNpmRegistryUrl() {
+  return new Promise(function (resolve, reject) {
+    exec('npm get registry', function (err, stdout, stderr) {
+      if (err) {
+        return reject(err);
+      }
+      if (stderr) {
+        return reject(stderr);
+      }
+      return resolve(stdout.trim());
     });
+  });
 }
 
-installAll();
+function versionExists(packageName, versionNumber, registryUrl) {
+  return new Promise(function (resolve, reject) {
+    var requestUrl = registryUrl + packageName + '/' + versionNumber;
+    var responseBody = '';
+    http.get(requestUrl)
+    .on('response', function (res) {
+      // Node won't exit if we don't read the response data, even if we get a 404
+      res.on('data', function (data) {
+        responseBody += data;
+      })
+      .on('end', function () {
+        // No, this isn't safe but since we are talking to our NPM server
+        // it seems bizarre to not trust what it says since it could hurt
+        // us in so many other ways.
+        var npmResponseObj = JSON.parse(responseBody);
+        resolve(npmResponseObj.version === versionNumber);
+      });
+      if (res.statusCode === 404) {
+        return resolve(false);
+      }
+      if (res.statusCode !== 200) {
+        return reject('bad status code ' + res.statusCode);
+      }
+    })
+    .on('error', function (err) {
+      reject('err - ' + err);
+    });
+  });
+}
+
+/**
+ * We check to see if the NPM registry (which we assume is sinopia) contains
+ * the magical verisons of PouchDB and Express-PouchDB that we currently
+ * require. If they exist (meaning we have previously built them on this
+ * machine) then we do nothing. If they don't then we have to pull down
+ * our custom repos, build all the code and publish all the projects to
+ * the NPM registry (that we assume someone has run npm adduser on this
+ * machine for).
+ */
+function installAll() {
+  var promises = [];
+  var registryUrl = null;
+  return getNpmRegistryUrl()
+  .then(function (foundRegistryUrl) {
+    registryUrl = foundRegistryUrl;
+    var pouchDBNodeVersion = getPackageJsonVersion(pouchDBNodePackageName);
+    return versionExists(pouchDBNodePackageName, pouchDBNodeVersion,
+                         registryUrl);
+  })
+  .then(function (pouchDBVersionExists) {
+    if (!pouchDBVersionExists) {
+      promises.push(installNodePouchDB());
+    }
+    var expressPouchDBVersion =
+      getPackageJsonVersion(expressPouchDBPackageName);
+    return versionExists(expressPouchDBPackageName, expressPouchDBVersion,
+                         registryUrl);
+  })
+  .then(function (expressPouchDBExists) {
+    if (!expressPouchDBExists) {
+      promises.push(installExpressPouchDB());
+    }
+    return Promise.all(promises);
+  })
+  .catch(function (err) {
+    console.log('ERROR DURING INSTALLCUSTOMPOUCHDB - ' + err);
+    process.exit(-1);
+  });
+}
+
+// This is where we manually load the two extra dependencies we need to make
+// this code work. As mentioned above we run this script before the general
+// NPM install so we can't be sure that our dependencies are loaded.
+var fsExtraPromiseVersion = getPackageJsonVersion('fs-extra-promise');
+installPackage('fs-extra-promise', fsExtraPromiseVersion, function () {
+  fs = require('fs-extra-promise');
+  var lieVersion = getPackageJsonVersion('lie');
+  installPackage('lie', lieVersion, function () {
+    Promise = require('lie');
+    installAll();
+  });
+});

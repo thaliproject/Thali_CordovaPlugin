@@ -39,6 +39,7 @@ cd ThaliTest
 cordova platform add ios
 cordova platform add android
 cd www/jxcore
+jx installCustomPouchDB.js
 jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
 
 if [ $runningInMinGw == true ]; then
