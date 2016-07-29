@@ -55,8 +55,8 @@
 
     <platform name="ios">
 
-        <hook type="before_plugin_install" src="hooks/before_plugin_install.js" />
-        <hook type="after_plugin_install" src="hooks/after_plugin_install.js" />
+        <hook type="before_plugin_install" src="thali/install/hooks/before_plugin_install.js" />
+        <hook type="after_plugin_install" src="thali/install/hooks/after_plugin_install.js" />
 
         <config-file target="config.xml" parent="/*">
           <feature name="ThaliPlugin">

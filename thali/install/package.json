@@ -8,7 +8,8 @@
     "jxc": "^1.0.14",
     "lie": "^3.0.1",
     "request": "^2.64.0",
-    "unzip": "^0.1.11"
+    "unzip": "^0.1.11",
+    "xcode": "^0.8.9"  
   },
   "scripts": {
     "setupUnit": "./setUpTests.sh UnitTest_app.js",

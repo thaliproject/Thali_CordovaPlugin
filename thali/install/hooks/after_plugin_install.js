@@ -28,6 +28,7 @@
 var fs = require("fs");
 var path = require("path");
 var child_process = require("child_process");
+var xcode = require("xcode");
 
 module.exports = function(context) {
 
@@ -40,7 +41,6 @@ module.exports = function(context) {
     var pluginDir = path.resolve(__dirname, "../");
 
     child_process.execSync("npm --prefix " + pluginDir + " install " + pluginDir);
-    var xcode = require("xcode");
 
     // Need a promise so that the install waits for us to complete our project modifications
     // before the plugin gets installed.
