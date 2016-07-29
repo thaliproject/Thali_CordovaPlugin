@@ -30,10 +30,10 @@ module.exports = function(context) {
     var frameworkOutputfolder = context.opts.plugin.dir + "/lib/ios";
     var projectFolder = context.opts.plugin.dir + "/lib/ios/ThaliCore";
     var projectName = "ThaliCore";
-    var projectScheme = "ThaliCore";
+    var projectScheme = "ThaliCoreCITests";
     var projectConfiguration = "Release";
     var sdk = "iphoneos";
-    var buildDir = projectFolder +"/build";
+    var buildDir = projectFolder + "/build";
 
     console.log("Building ThaliCore.framework");
     var buildCmd = "xcodebuild -project " +
