@@ -1,33 +1,15 @@
 //
-//  The MIT License (MIT)
-//
-//  Copyright (c) 2015 Microsoft
-//
-//  Permission is hereby granted, free of charge, to any person obtaining a copy
-//  of this software and associated documentation files (the "Software"), to deal
-//  in the Software without restriction, including without limitation the rights
-//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-//  copies of the Software, and to permit persons to whom the Software is
-//  furnished to do so, subject to the following conditions:
-//
-//  The above copyright notice and this permission notice shall be included in
-//  all copies or substantial portions of the Software.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-//  THE SOFTWARE.
-//
 //  Thali CordovaPlugin
 //  JXcoreExtension.m
+//
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //
 
 #import <ThaliCore/ThaliCore.h>
 
 #import "JXcore.h"
+#import "JXcoreExtension.h"
 
 // JXcoreExtension implementation.
 
@@ -173,27 +155,27 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 // Defines methods.
 - (void)defineMethods
 {
-  THEAppContext *theApp = [JXcoreExtension theAppContext];
-  [theApp setThaliEventDelegate:self];
+  THEAppContext *appContext = [JXcoreExtension theAppContext];
+  [appContext setThaliEventDelegate:self];
 
   // Export the public API to node
-  [self defineStartListeningForAdvertisements];
-  [self defineStopListeningForAdvertisements];
-  [self defineStartUpdateAdvertisingAndListening];
-  [self defineStopAdvertisingAndListening];
-  [self defineConnect];
-  [self defineKillConnections];
-  [self defineDidRegisterToNative];
-  [self defineGetOSVersion];
-  [self defineExecuteNativeTests];
+  [self defineStartListeningForAdvertisements:appContext];
+  [self defineStopListeningForAdvertisements:appContext];
+  [self defineStartUpdateAdvertisingAndListening:appContext];
+  [self defineStopAdvertisingAndListening:appContext];
+  [self defineConnect:appContext];
+  [self defineKillConnections:appContext];
+  [self defineDidRegisterToNative:appContext];
+  [self defineGetOSVersion:appContext];
+  [self defineExecuteNativeTests:appContext];
 }
 
-- (void)defineStartListeningForAdvertisements {
+- (void)defineStartListeningForAdvertisements:(THEAppContext *)appContext {
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: startListeningForAdvertisements");
 
-    if ([theApp startListeningForAdvertisements])
+    if ([appContext startListeningForAdvertisements])
     {
       NSLog(@"jxcore: startListeningForAdvertisements: success");
 
@@ -214,12 +196,12 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   } withName:@"startListeningForAdvertisements"];
 }
 
-- (void)defineStopListeningForAdvertisements {
+- (void)defineStopListeningForAdvertisements:(THEAppContext *)appContext {
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: stopListeningForAdvertisements");
 
-    if ([theApp stopListeningForAdvertisements])
+    if ([appContext stopListeningForAdvertisements])
     {
       NSLog(@"jxcore: stopListeningForAdvertisements: success");
 
@@ -240,12 +222,12 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   } withName:@"stopListeningForAdvertisements"];
 }
 
-- (void)defineStartUpdateAdvertisingAndListening {
+- (void)defineStartUpdateAdvertisingAndListening:(THEAppContext *)appContext {
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: startUpdateAdvertisingAndListening");
 
-    if ([params count] != 2 || ![params[0] isKindOfClass:[NSNumber class]])
+    if (params.count != 2 || ![params[0] isKindOfClass:[NSNumber class]])
     {
       NSLog(@"jxcore: startUpdateAdvertisingAndListening: bad arg");
 
@@ -256,7 +238,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     }
     else
     {
-      if ([theApp startUpdateAdvertisingAndListening:(unsigned short)[params[0] intValue]])
+      if ([appContext startUpdateAdvertisingAndListening:(unsigned short)[params[0] intValue]])
       {
         NSLog(@"jxcore: startUpdateAdvertisingAndListening: success");
 
@@ -278,12 +260,12 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   } withName:@"startUpdateAdvertisingAndListening"];
 }
 
-- (void)defineStopAdvertisingAndListening {
+- (void)defineStopAdvertisingAndListening:(THEAppContext *)appContext {
   [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
   {
     NSLog(@"jxcore: stopAdvertisingAndListening");
 
-    if ([theApp stopAdvertisingAndListening])
+    if ([appContext stopAdvertisingAndListening])
     {
       NSLog(@"jxcore: stopAdvertisingAndListening: success");
 
@@ -304,10 +286,10 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   } withName:@"stopAdvertisingAndListening"];
 }
 
-- (void)defineConnect {
+- (void)defineConnect:(THEAppContext *)appContext {
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
-    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
+    if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]])
     {
       NSLog(@"jxcore: connect: badParam");
 
@@ -343,17 +325,17 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
       };
 
       // We'll callback to the upper layer when the connect completes or fails
-      [theApp connectToPeer:params[0] connectCallback:connectCallback];
+      [appContext connectToPeer:params[0] connectCallback:connectCallback];
     }
   } withName:@"connect"];
 }
 
-- (void)defineKillConnections {
+- (void)defineKillConnections:(THEAppContext *)appContext {
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
     NSLog(@"jxcore: killConnections");
 
-    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
+    if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]])
     {
       NSLog(@"jxcore: killConnections: badParam");
 
@@ -364,7 +346,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     }
     else
     {
-      if ([theApp killConnections: params[0]])
+      if ([appContext killConnections: params[0]])
       {
         NSLog(@"jxcore: killConnections: success");
 
@@ -388,10 +370,10 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 
 // didRegisterToNative - Allow JXCore to inform us that someone registered
 // a JS function to native
-- (void)defineDidRegisterToNative {
+- (void)defineDidRegisterToNative:(THEAppContext *)appContext {
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
-    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
+    if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]])
     {
       NSLog(@"jxcore: didRegisterToNative: badParam");
     }
@@ -403,11 +385,11 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
   } withName:@"didRegisterToNative"];
 }
 
-- (void)defineGetOSVersion
+- (void)defineGetOSVersion:(THEAppContext *)appContext
 {
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
    {
-     NSString * const version = [[NSProcessInfo processInfo] operatingSystemVersionString];
+     NSString * const version = [NSProcessInfo processInfo].operatingSystemVersionString;
      @synchronized(self)
      {
        [JXcore callEventCallback:callbackId withParams:@[version]];
@@ -415,13 +397,13 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
    } withName:@"getOSVersion"];
 }
 
-- (void)defineExecuteNativeTests
+- (void)defineExecuteNativeTests:(THEAppContext *)appContext
 {
   [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
   {
-    if ([theApp respondsToSelector:@selector(executeNativeTests)])
+    if ([appContext respondsToSelector:@selector(executeNativeTests)])
     {
-      NSString *result = [theApp performSelector:@selector(executeNativeTests)];
+      NSString *result = [appContext performSelector:@selector(executeNativeTests)];
 
       @synchronized(self)
       {
