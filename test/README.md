@@ -41,6 +41,25 @@ configuration before finally completing and tearing down it's resources.
 
 ## Usage
 
+### Running your own NPM registry
+From time to time we run into bugs in PouchDB and Express-PouchDB that we can't
+get fixed and into the public NPM repo fast enough to not block our development.
+So we have written a script (installCustomPouchDB.js) that handles installing a
+custom verison of those packages if and when we need them. To make this work we
+depend on the developer running a local copy of a program called sinopia
+(although any private NPM repository server will do) and using that as a place
+to stage our custom releases. This requires the following manual steps:
+
+1. `npm install -g sinopia`
+2. Run the 'sinopia' command in a terminal window and leave it running, forever.
+3. `npm set registry http://localhost:4873` or whatever the address of the
+NPM registry server is
+4. `npm adduser --registry http://localhost:4873` this last command will require
+you to make up a name and password.
+
+These steps really only have to be done once. Our code will detect the registry
+and use it correctly.
+
 ### Mobile
 
 To run either unit or performance tests on mobile devices one first has to build a Cordova project and then launch

@@ -5,9 +5,9 @@ var path = require('path');
 var http = require('http');
 var fs = require('fs'); // Will be overwritten by fs-extra-promise
 var Promise = null; // Wil be set below
-// We have dependencies on fs-extra-promise and lie, neither of which ship with
-// node. But this script is required to run before we have done a npm install
-// in the local directory so we load these dependencies manually.
+
+var pouchDBNodePackageName = 'pouchdb-node';
+var expressPouchDBPackageName = 'express-pouchdb';
 
 function getPackageJsonVersion(packageName) {
   // If you can't trust your own file, who can you trust?
@@ -23,11 +23,10 @@ function installPackage(packageName, version, callback) {
   exec('npm install ' + packageName + '@' + version, callback);
 }
 
-var pouchDBNodePackageName = 'pouchdb-node';
-var expressPouchDBPackageName = 'express-pouchdb';
 
-// This is stolen from install.js, I don't want to put it into a utility
-// file because I'm hoping this file will go away.
+// This is stolen from install.js, I copy it here to simplify the work of
+// making this file function since as it is, it is run before we run
+// 'npm install'.
 function childProcessExecPromise(commandString, currentWorkingDirectory) {
   return new Promise(function (resolve, reject) {
     var commandSplit = commandString.split(' ');
@@ -71,14 +70,14 @@ function childProcessExecCommandLine(arrayOfCommandDirs) {
  * Deletes the targetDirName directory in the current working directory if any
  * and then downloads the specified branchName from the specified gitUrl and
  * then hard resets to the given commitId. It then installs and builds the
- * monorepo and links the identified package to the current working directory's
- * node_modules.
+ * monorepo and publishes to the NPM repository (we assume that Sinopia or
+ * equivalent has been set up locally but that is handled manually)
  *
  * @param  {string} gitUrl
  * @param  {string} branchName
  * @param  {string} commitId
  * @param  {string} packageName If specified only this package will be
- * published. Otherwise all the packages will be published.
+ * published. Otherwise all the packages in the repo will be published.
  * @param  {string} targetDirName
  */
 function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
@@ -96,7 +95,7 @@ function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
         // jxcore (only leveldown-mobile). There is probably a way to hack
         // the build to skip that part and let us use JXcore but since we are
         // only going to use pure Javascript output by these build process
-        // it's not worth the effort.
+        // but it's not worth the effort.
         ['npm install', customPouchDirPath],
         ['npm build', customPouchDirPath] // Probably not needed
       ]);
@@ -110,7 +109,7 @@ function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
     .then(function (dirs) {
       var promises = [];
       // The two repos we currently support use Lerna but unfortunately
-      // PouchDB's depo does not support Lerna's publish command so we
+      // PouchDB's repo does not support Lerna's publish command so we
       // have to install things manually.
       dirs.forEach(function (dirName) {
         var packageDir = path.join(packagesDir, dirName);
@@ -127,7 +126,7 @@ function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
                 console.log('Ignoring install error - ' + err + ' for entry ' +
                             packageDir);
                 return Promise.reject(err);
-            });
+              });
           });
         promises.push(publishPromise);
       });
@@ -151,11 +150,14 @@ function installNodePouchDB () {
 }
 
 /**
- * Right now the PouchDB-Server repo we are using isn't a true mono-repo
- * in the sense that the packages are cross connected. Instead the packages
- * are just co-habitating. Furthermore other than the one change we made the
- * contents of the packages are in NPM. So we just need to publish the one
- * package we are using and can ignore the rest for now.
+ * Express PouchDB has a bug that leaves setIntervals hanging around which eats
+ * memory, kills CPU and hobbles our tests. Until our fix makes it into the
+ * published version we need a custom version. Right now the PouchDB-Server repo
+ * we are using isn't a true mono-repo in the sense that the packages are cross
+ * connected. Instead the packages are just co-habitating. Furthermore other
+ * than the one change we made to the express-pouchdb package, the contents of
+ * the other packages are in NPM. So we just need to publish the one package we
+ * are using and can ignore the rest for now.
  */
 function installExpressPouchDB () {
   var gitUrl = 'https://github.com/yaronyg/pouchdb-server.git';
@@ -182,13 +184,21 @@ function getNpmRegistryUrl() {
   });
 }
 
+/**
+ * Detects if the NPM registry configured on the system has a copy of the
+ * version of a package we are looking for.
+ * @param {string} packageName
+ * @param {string} versionNumber
+ * @param {string} registryUrl
+ */
 function versionExists(packageName, versionNumber, registryUrl) {
   return new Promise(function (resolve, reject) {
     var requestUrl = registryUrl + packageName + '/' + versionNumber;
     var responseBody = '';
     http.get(requestUrl)
     .on('response', function (res) {
-      // Node won't exit if we don't read the response data, even if we get a 404
+      // Node won't exit if we don't read the response data,
+      // even if we get a 404
       res.on('data', function (data) {
         responseBody += data;
       })
@@ -214,12 +224,13 @@ function versionExists(packageName, versionNumber, registryUrl) {
 
 /**
  * We check to see if the NPM registry (which we assume is sinopia) contains
- * the magical verisons of PouchDB and Express-PouchDB that we currently
- * require. If they exist (meaning we have previously built them on this
- * machine) then we do nothing. If they don't then we have to pull down
- * our custom repos, build all the code and publish all the projects to
- * the NPM registry (that we assume someone has run npm adduser on this
- * machine for).
+ * versions of PouchDB and Express-PouchDB that we specify in the local
+ * project's package.json. If the versinos are published in the public NPM then
+ * we will detect them and do nothing. If they are our magical versions then we
+ * will see if they have already been put into the local NPM registry and if so
+ * we will do nothing. But if they aren't there then we will build and publish
+ * them. This code assumes that 'npm adduser' has already been used to enable
+ * this machine to publish to its local NPM registry.
  */
 function installAll() {
   var promises = [];
@@ -252,9 +263,10 @@ function installAll() {
   });
 }
 
-// This is where we manually load the two extra dependencies we need to make
-// this code work. As mentioned above we run this script before the general
-// NPM install so we can't be sure that our dependencies are loaded.
+// Two of the requires used by this package are not shipped with Node.js.
+// But we have to run this code before we run NPM install. So we manually
+// emulate 'npm install' for those two packages and then run our logic
+// once they are loaded.
 var fsExtraPromiseVersion = getPackageJsonVersion('fs-extra-promise');
 installPackage('fs-extra-promise', fsExtraPromiseVersion, function () {
   fs = require('fs-extra-promise');
