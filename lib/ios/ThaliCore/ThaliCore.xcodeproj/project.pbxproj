@@ -97,7 +97,7 @@
 		CCA572ED1D4B6E9600FBEC41 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
 		CCA572EF1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */; };
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA573101D4BA04B00FBEC41 /* THEAppContext+Tests.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA5730A1D4BA04B00FBEC41 /* THEAppContext+Tests.h */; };
+		CCA573101D4BA04B00FBEC41 /* THEAppContext+Tests.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA5730A1D4BA04B00FBEC41 /* THEAppContext+Tests.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730B1D4BA04B00FBEC41 /* THEAppContext+Tests.m */; };
 		CCA573121D4BA04B00FBEC41 /* TestRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730D1D4BA04B00FBEC41 /* TestRun.swift */; };
 		CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */; };
