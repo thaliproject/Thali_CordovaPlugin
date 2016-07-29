@@ -20,7 +20,15 @@ function getPackageJsonVersion(packageName) {
 }
 
 function installPackage(packageName, version, callback) {
-  exec('npm install ' + packageName + '@' + version, callback);
+  var packageVersion = packageName + '@' + version;
+  exec('npm install ' + packageVersion, function (error, stdout, stderr) {
+    if (error) {
+      console.log('npm install of ' + packageVersion + ' failed with error ' +
+        error + ', stdout: ' + stdout + ', stderr: ' + stderr);
+      return callback(error);
+    }
+    callback();
+  });
 }
 
 
@@ -272,11 +280,18 @@ function installAll() {
 // emulate 'npm install' for those two packages and then run our logic
 // once they are loaded.
 var fsExtraPromiseVersion = getPackageJsonVersion('fs-extra-promise');
-installPackage('fs-extra-promise', fsExtraPromiseVersion, function () {
-  fs = require('fs-extra-promise');
-  var lieVersion = getPackageJsonVersion('lie');
-  installPackage('lie', lieVersion, function () {
-    Promise = require('lie');
-    installAll();
+installPackage('fs-extra-promise', fsExtraPromiseVersion,
+  function (error) {
+    if (error) {
+      process.exit(-1);
+    }
+    fs = require('fs-extra-promise');
+    var lieVersion = getPackageJsonVersion('lie');
+    installPackage('lie', lieVersion, function (error) {
+      if (error) {
+        process.exit(-1);
+      }
+      Promise = require('lie');
+      installAll();
+    });
   });
-});
