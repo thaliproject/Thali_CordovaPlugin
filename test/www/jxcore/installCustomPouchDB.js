@@ -119,7 +119,11 @@ function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
             if (packageJson.private) {
               return Promise.resolve();
             }
-            return childProcessExecPromise('npm publish', packageDir)
+            return childProcessExecCommandLine([
+              // We can't ship gz files in Android so we have to delete them
+              ['find . -name \"*.gz\" -delete', packageDir],
+              ['npm publish', packageDir]
+            ])
               .catch(function (err) {
                 // The actual error is usually just an int so we publish more
                 // here to make debugging easier
