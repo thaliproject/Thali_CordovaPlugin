@@ -107,6 +107,11 @@ public class StreamCopyingThreadTest {
         public void onStreamCopySucceeded(StreamCopyingThread who, int numberOfBytes) {
             notifications.add(numberOfBytes);
         }
+
+        @Override
+        public void onStreamCopyingThreadDone(StreamCopyingThread who){
+
+        }
     }
 
     class StreamCopyingThreadInputStream extends InputStream {

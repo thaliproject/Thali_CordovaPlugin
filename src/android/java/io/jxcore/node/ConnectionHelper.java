@@ -36,6 +36,8 @@ public class ConnectionHelper
     private static final String BLUETOOTH_NAME = "Thali_Bluetooth";
     private static final UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
     private static final UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
+    private static final int MANUFACTURER_ID = 7413;
+    private static final long NOTIFY_DISCOVERY_ADVERTISING_STATE_DELAY_IN_MILLISECONDS = 500;
     private static final long POWER_UP_BLE_DISCOVERY_DELAY_IN_MILLISECONDS = 15000;
     private static final int MAXIMUM_NUMBER_OF_CONNECTIONS = 30; // TODO: Determine a way to figure out a proper value here, see issue #37
 
@@ -47,8 +49,13 @@ public class ConnectionHelper
     private final DiscoveryManagerSettings mDiscoveryManagerSettings;
     private final ConnectivityMonitor mConnectivityMonitor;
     private final StartStopOperationHandler mStartStopOperationHandler;
+    private CountDownTimer mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = NO_PORT_NUMBER;
+
+    // Uncomment the following to take the TestHelper into use.
+    // See the documentation in TestHelper.java for more information.
+    //private TestHelper mTestHelper = null;
 
     /**
      * Constructor.
@@ -77,9 +84,12 @@ public class ConnectionHelper
         mDiscoveryManagerSettings = DiscoveryManagerSettings.getInstance(mContext);
 
         if (mDiscoveryManagerSettings.setDiscoveryMode(DiscoveryManager.DiscoveryMode.BLE)) {
-            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
-            mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
-            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
+            mDiscoveryManagerSettings.setManufacturerId(MANUFACTURER_ID);
+
+            mDiscoveryManagerSettings.setAdvertiseScanModeAndTxPowerLevel(
+                    AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY,
+                    AdvertiseSettings.ADVERTISE_TX_POWER_HIGH,
+                    ScanSettings.SCAN_MODE_LOW_LATENCY);
         } else {
             Log.e(TAG, "Constructor: Bluetooth LE discovery mode is not supported");
         }
@@ -88,6 +98,11 @@ public class ConnectionHelper
         mConnectivityMonitor.start(); // Should be running as long as the app is alive
 
         mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
+
+        // Uncomment the following to take the TestHelper into use.
+        // See the documentation in TestHelper.java for more information.
+        /*mTestHelper = new TestHelper(this);
+        mTestHelper.startTest(TestHelper.TestType.REPETITIVE_CONNECT_AND_DISCONNECT);*/
     }
 
     /**
@@ -147,23 +162,35 @@ public class ConnectionHelper
         Log.i(TAG, "stop: "
                 + (stopOnlyListeningForAdvertisements
                     ? "Stopping only listening for advertisements"
-                    : "Stopping all activities and killing all connections"));
+                    : "Stopping all activities and killing connections"));
 
         if (!stopOnlyListeningForAdvertisements) {
-            mConnectionModel.closeAndRemoveAllOutgoingConnections();
+            killConnections(false);
+
+            if (mPowerUpBleDiscoveryTimer != null) {
+                mPowerUpBleDiscoveryTimer.cancel();
+                mPowerUpBleDiscoveryTimer = null;
+            }
         }
 
         mStartStopOperationHandler.executeStopOperation(stopOnlyListeningForAdvertisements, callback);
     }
 
     /**
-     * Kills all connections.
+     * Kills outgoing (and optionally incoming) connections.
      *
+     * @param killIncomingConnections If true, will kill incoming connections too if any exist.
      * @return The number of incoming connections killed.
      */
-    public synchronized int killAllConnections() {
+    public synchronized int killConnections(boolean killIncomingConnections) {
         mConnectionModel.closeAndRemoveAllOutgoingConnections();
-        return mConnectionModel.closeAndRemoveAllIncomingConnections();
+        int numberOfIncomingConnectionsKilled = 0;
+
+        if (killIncomingConnections) {
+            numberOfIncomingConnectionsKilled = mConnectionModel.closeAndRemoveAllIncomingConnections();
+        }
+
+        return numberOfIncomingConnectionsKilled;
     }
 
     /**
@@ -350,8 +377,12 @@ public class ConnectionHelper
             throw new RuntimeException("onConnected: Bluetooth socket is null");
         }
 
-        // Add the peer to the list, if was not discovered before
-        mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
+        if (mDiscoveryManager.getPeerModel()
+                .getDiscoveredPeerByBluetoothMacAddress(peerProperties.getBluetoothMacAddress()) == null) {
+            Log.i(TAG, "onConnected: This (" + peerProperties.toString()
+                    + ") is a new (undiscovered) peer - add it to the model");
+            mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
+        }
 
         if (isIncoming) {
             handleIncomingConnection(bluetoothSocket, peerProperties);
@@ -431,8 +462,34 @@ public class ConnectionHelper
         Log.i(TAG, "onDiscoveryManagerStateChanged: State: " + state
                 + ", is discovering: " + isDiscovering + ", is advertising: " + isAdvertising);
 
-        mStartStopOperationHandler.checkCurrentOperationStatus();
-        JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
+        // Since we may get more than one state changed events when starting/stopping the discovery
+        // manager, we use a timer to suppress excess notifications to Node layer
+
+        if (mNotifyDiscoveryAdvertisingStateUpdateNonTcp != null) {
+            // There was a pending notification - cancel it
+            mNotifyDiscoveryAdvertisingStateUpdateNonTcp.cancel();
+            mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
+        }
+
+        mNotifyDiscoveryAdvertisingStateUpdateNonTcp = new CountDownTimer(
+                NOTIFY_DISCOVERY_ADVERTISING_STATE_DELAY_IN_MILLISECONDS,
+                NOTIFY_DISCOVERY_ADVERTISING_STATE_DELAY_IN_MILLISECONDS) {
+            @Override
+            public void onTick(long l) {
+                // Not used
+            }
+
+            @Override
+            public void onFinish() {
+                Log.v(TAG, "Notifying discovery manager state change: is discovering: "
+                        + isDiscovering + ", is advertising: " + isAdvertising);
+
+                mStartStopOperationHandler.checkCurrentOperationStatus();
+                JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
+                mNotifyDiscoveryAdvertisingStateUpdateNonTcp.cancel();
+                mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
+            }
+        }.start();
     }
 
     /**
@@ -444,8 +501,8 @@ public class ConnectionHelper
     public void onPeerDiscovered(PeerProperties peerProperties) {
         Log.i(TAG, "onPeerDiscovered: " + peerProperties.toString()
                 + ", Bluetooth address: " + peerProperties.getBluetoothMacAddress()
-                + ", device name: " + peerProperties.getDeviceName()
-                + ", device address: " + peerProperties.getDeviceAddress());
+                + ", device name: '" + peerProperties.getDeviceName()
+                + "', device address: '" + peerProperties.getDeviceAddress() + "'");
 
         JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, true);
     }
@@ -458,8 +515,10 @@ public class ConnectionHelper
     @Override
     public void onPeerUpdated(PeerProperties peerProperties) {
         Log.i(TAG, "onPeerUpdated: " + peerProperties.toString()
-                + ", device name: " + peerProperties.getDeviceName()
-                + ", device address: " + peerProperties.getDeviceAddress());
+                + ", device name: '" + peerProperties.getDeviceName()
+                + "', device address: '" + peerProperties.getDeviceAddress() + "'");
+
+        JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, true);
     }
 
     /**
@@ -535,10 +594,20 @@ public class ConnectionHelper
                 }
 
                 @Override
+                public void onDone(SocketThreadBase who, boolean threadDoneWasSending) {
+                    Log.i(TAG, "onDone: Outgoing connection, peer "
+                            + who.getPeerProperties().toString() + " done, closing connection...");
+
+                    final String peerId = who.getPeerProperties().getId();
+                    mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
+                }
+
+                @Override
                 public void onDisconnected(SocketThreadBase who, String errorMessage) {
                     Log.w(TAG, "onDisconnected: Outgoing connection, peer "
                             + who.getPeerProperties().toString()
                             + " disconnected: " + errorMessage);
+
                     final String peerId = who.getPeerProperties().getId();
                     mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
                 }
@@ -562,20 +631,29 @@ public class ConnectionHelper
         }
 
         if (newOutgoingSocketThread != null) {
-            lowerBleDiscoveryPowerAndStartResetTimer();
+            if (mConnectionModel.addConnectionThread(newOutgoingSocketThread)) {
+                lowerBleDiscoveryPowerAndStartResetTimer();
 
-            newOutgoingSocketThread.setUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
-            newOutgoingSocketThread.setPeerProperties(peerProperties);
-            mConnectionModel.addConnectionThread(newOutgoingSocketThread);
+                newOutgoingSocketThread.setUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
+                newOutgoingSocketThread.setPeerProperties(peerProperties);
 
-            newOutgoingSocketThread.start();
+                newOutgoingSocketThread.start();
 
-            Log.i(TAG, "onConnected: Outgoing socket thread, for peer "
-                    + peerProperties + ", created successfully");
+                Log.i(TAG, "onConnected: Outgoing socket thread, for peer "
+                        + peerProperties + ", created successfully");
 
-            // Use the system decided port the next time, if we're not already using
-            ConnectionManagerSettings.getInstance(mContext).setInsecureRfcommSocketPortNumber(
-                    ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
+                // Use the system decided port the next time, if we're not already using
+                ConnectionManagerSettings.getInstance(mContext).setInsecureRfcommSocketPortNumber(
+                        ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
+            } else {
+                try {
+                    bluetoothSocket.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "handleOutgoingConnection: Failed to close the Bluetooth socket: " + e.getMessage(), e);
+                }
+
+                mConnectionModel.removeOutgoingConnectionCallback(finalPeerId);
+            }
         }
     }
 
@@ -606,6 +684,15 @@ public class ConnectionHelper
                 }
 
                 @Override
+                public void onDone(SocketThreadBase who, boolean threadDoneWasSending) {
+                    Log.i(TAG, "onDone: Incoming connection, peer "
+                            + who.getPeerProperties().toString() + " done, closing connection...");
+
+                    final IncomingSocketThread incomingSocketThread = (IncomingSocketThread) who;
+                    mConnectionModel.closeAndRemoveIncomingConnectionThread(incomingSocketThread.getId());
+                }
+
+                @Override
                 public void onDisconnected(SocketThreadBase who, String errorMessage) {
                     Log.w(TAG, "onDisconnected: Incoming connection, peer "
                             + who.getPeerProperties().toString()
@@ -613,7 +700,6 @@ public class ConnectionHelper
 
                     final IncomingSocketThread incomingSocketThread = (IncomingSocketThread) who;
                     mConnectionModel.closeAndRemoveIncomingConnectionThread(incomingSocketThread.getId());
-                    JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(incomingSocketThread.getTcpPortNumber());
                 }
             });
         } catch (IOException e) {
@@ -629,17 +715,24 @@ public class ConnectionHelper
         }
 
         if (newIncomingSocketThread != null) {
-            lowerBleDiscoveryPowerAndStartResetTimer();
+            if (mConnectionModel.addConnectionThread(newIncomingSocketThread)) {
+                lowerBleDiscoveryPowerAndStartResetTimer();
 
-            newIncomingSocketThread.setUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
-            newIncomingSocketThread.setPeerProperties(peerProperties);
-            newIncomingSocketThread.setTcpPortNumber(mServerPortNumber);
-            mConnectionModel.addConnectionThread(newIncomingSocketThread);
+                newIncomingSocketThread.setUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
+                newIncomingSocketThread.setPeerProperties(peerProperties);
+                newIncomingSocketThread.setTcpPortNumber(mServerPortNumber);
 
-            newIncomingSocketThread.start();
+                newIncomingSocketThread.start();
 
-            Log.i(TAG, "onConnected: Incoming socket thread, for peer "
-                    + peerProperties + ", created successfully");
+                Log.i(TAG, "onConnected: Incoming socket thread, for peer "
+                        + peerProperties + ", created successfully");
+            } else {
+                try {
+                    bluetoothSocket.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "handleIncomingConnection: Failed to close the Bluetooth socket: " + e.getMessage(), e);
+                }
+            }
         }
     }
 
@@ -694,9 +787,10 @@ public class ConnectionHelper
                 }
             };
 
-            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER);
-            mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_LOW);
-            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
+            mDiscoveryManagerSettings.setAdvertiseScanModeAndTxPowerLevel(
+                    AdvertiseSettings.ADVERTISE_MODE_LOW_POWER,
+                    AdvertiseSettings.ADVERTISE_TX_POWER_LOW,
+                    ScanSettings.SCAN_MODE_LOW_POWER);
 
             mPowerUpBleDiscoveryTimer.start();
         } else {
@@ -711,13 +805,17 @@ public class ConnectionHelper
      */
     private synchronized void restoreDefaultBleDiscoverySettings() {
         if (mPowerUpBleDiscoveryTimer != null) {
-            Log.i(TAG, "restoreDefaultBleDiscoverySettings: Powering the BLE discovery back up");
             mPowerUpBleDiscoveryTimer.cancel();
             mPowerUpBleDiscoveryTimer = null;
+        }
 
-            mDiscoveryManagerSettings.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
-            mDiscoveryManagerSettings.setAdvertiseTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
-            mDiscoveryManagerSettings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
+        if (mDiscoveryManagerSettings.getAdvertiseMode() == AdvertiseSettings.ADVERTISE_MODE_LOW_POWER) {
+            Log.i(TAG, "restoreDefaultBleDiscoverySettings: Powering the BLE discovery back up");
+
+            mDiscoveryManagerSettings.setAdvertiseScanModeAndTxPowerLevel(
+                    AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY,
+                    AdvertiseSettings.ADVERTISE_TX_POWER_HIGH,
+                    ScanSettings.SCAN_MODE_LOW_LATENCY);
         }
     }
 }

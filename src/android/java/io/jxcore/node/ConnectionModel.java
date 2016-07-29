@@ -144,22 +144,30 @@ public class ConnectionModel {
      * Adds the given connection thread to the collection.
      *
      * @param incomingSocketThread An incoming (connection) socket thread instance to add.
+     * @return True, if the thread was successfully added to the collection. False otherwise.
      */
-    public synchronized void addConnectionThread(IncomingSocketThread incomingSocketThread) {
+    public synchronized boolean addConnectionThread(IncomingSocketThread incomingSocketThread) {
         if (!mIncomingSocketThreads.addIfAbsent(incomingSocketThread)) {
             Log.e(TAG, "addConnectionThread: A matching thread for incoming connection already exists");
+            return false;
         }
+
+        return true;
     }
 
     /**
      * Adds the given connection thread to the collection.
      *
      * @param outgoingSocketThread An outgoing (connection) socket thread instance to add.
+     * @return True, if the thread was successfully added to the collection. False otherwise.
      */
-    public synchronized void addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
+    public synchronized boolean addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
         if (!mOutgoingSocketThreads.addIfAbsent(outgoingSocketThread)) {
             Log.e(TAG, "addConnectionThread: A matching thread for outgoing connection already exists");
+            return false;
         }
+
+        return true;
     }
 
     /**

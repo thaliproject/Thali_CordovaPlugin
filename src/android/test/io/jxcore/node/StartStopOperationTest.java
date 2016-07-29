@@ -266,50 +266,84 @@ public class StartStopOperationTest {
     public void testIsTargetState() throws Exception {
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         StartStopOperation mStartStopOperation =
-                StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
         String result = mStartStopOperation
-                .isTargetState(ConnectionManager.ConnectionManagerState.NOT_STARTED,
+            .isTargetState(ConnectionManager.ConnectionManagerState.NOT_STARTED,
                 DiscoveryManager.DiscoveryManagerState.NOT_STARTED, true, true);
 
         assertThat("Result should be Discovery manager not started", result,
-                is(equalTo("Discovery manager not started")));
+            is(equalTo("Discovery manager not started")));
 
         result = mStartStopOperation
-                .isTargetState(ConnectionManager.ConnectionManagerState.NOT_STARTED,
+            .isTargetState(ConnectionManager.ConnectionManagerState.NOT_STARTED,
                 DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, false, true);
 
-        assertThat("Result should be Is not discovering", result,
-                is(equalTo("Is not discovering")));
+        assertThat("Result should be Connection manager not started", result,
+            is(equalTo("Connection manager not started")));
 
         result = mStartStopOperation
-                .isTargetState(ConnectionManager.ConnectionManagerState.NOT_STARTED,
-                DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, true, true);
-
-        assertThat("Result should be Connection manager not started", result,
-                is(equalTo("Connection manager not started")));
-
-        result = mStartStopOperation.isTargetState(ConnectionManager.ConnectionManagerState.RUNNING,
+            .isTargetState(ConnectionManager.ConnectionManagerState.RUNNING,
                 DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, true, false);
 
         assertThat("Result should be Is not advertising", result,
-                is(equalTo("Is not advertising")));
+            is(equalTo("Is not advertising")));
 
         mStartStopOperation =
-                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+
         result = mStartStopOperation.isTargetState(ConnectionManager.ConnectionManagerState.RUNNING,
-                DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, true, false);
+            DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, false, false);
+
+        assertThat("Result should be Is not discovering", result,
+            is(equalTo("Is not discovering")));
+
+        mStartStopOperation =
+            StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+        result = mStartStopOperation.isTargetState(ConnectionManager.ConnectionManagerState.RUNNING,
+            DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, true, false);
 
         assertThat("Result should be 'Is discovering (listening to advertisements), " +
                 "but should not be'", result,
-                is(equalTo("Is discovering (listening to advertisements), but should not be")));
+            is(equalTo("Is discovering (listening to advertisements), but should not be")));
 
         mStartStopOperation =
-                StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
+            StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
         result = mStartStopOperation.isTargetState(ConnectionManager.ConnectionManagerState.RUNNING,
-                DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, true, false);
+            DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, true, false);
 
         assertThat("Result should be Either the connection manager or the discovery manager is " +
-                "still running", result, is(equalTo("Either the connection manager or the " +
-                "discovery manager is still running")));
+            "still running", result, is(equalTo("Either the connection manager or the " +
+            "discovery manager is still running")));
     }
+
+    @Test
+    public void testToString() {
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation startStopOperation =
+            StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
+        String result  = startStopOperation.toString();
+
+        assertThat("Result should be Start operation: Should start/stop everything",
+            result, is(equalTo("Start operation: Should start/stop everything")));
+
+        startStopOperation = StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+        result  = startStopOperation.toString();
+
+        assertThat("Result should be Start operation: Should affect listening to advertisements only",
+            result, is(equalTo("Start operation: Should affect listening to advertisements only")));
+
+        startStopOperation = StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
+        result  = startStopOperation.toString();
+
+        assertThat("Result should be Stop operation: Should start/stop everything",
+            result, is(equalTo("Stop operation: Should start/stop everything")));
+
+        startStopOperation = StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+        result  = startStopOperation.toString();
+
+        assertThat("Result should be Stop operation: Should affect listening to advertisements only",
+            result, is(equalTo("Stop operation: Should affect listening to advertisements only")));
+    }
+
+
 }

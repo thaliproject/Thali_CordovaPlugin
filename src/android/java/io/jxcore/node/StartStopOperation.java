@@ -108,18 +108,12 @@ public class StartStopOperation {
                 + ", discovery: " + discoveryManagerState
                 + ", is discovering: " + isDiscovering
                 + ", is advertising: " + isAdvertising
-                + " - " + (mIsStartOperation ? "Start" : "Stop" ) + " operation: "
-                + (mShouldStartOrStopListeningToAdvertisementsOnly
-                    ? "Should affect listening to advertisements only" : "Should start/stop everything"));
+                + " - " + toString());
 
         if (mIsStartOperation) {
-            // Discovery manager should always be running and we should be listening for advertisements
+            // Discovery manager should always be running
             if (discoveryManagerState == DiscoveryManagerState.NOT_STARTED) {
                 return "Discovery manager not started";
-            }
-
-            if (!isDiscovering) {
-                return "Is not discovering";
             }
 
             if (!mShouldStartOrStopListeningToAdvertisementsOnly) {
@@ -130,6 +124,11 @@ public class StartStopOperation {
 
                 if (!isAdvertising) {
                     return "Is not advertising";
+                }
+            } else {
+                // We should be listening for advertisements
+                if (!isDiscovering) {
+                    return "Is not discovering";
                 }
             }
         } else {
@@ -149,5 +148,12 @@ public class StartStopOperation {
         }
 
         return null;
+    }
+
+    @Override
+    public String toString() {
+        return (mIsStartOperation ? "Start" : "Stop" ) + " operation: "
+                + (mShouldStartOrStopListeningToAdvertisementsOnly
+                ? "Should affect listening to advertisements only" : "Should start/stop everything");
     }
 }
