@@ -52,8 +52,8 @@ module.exports = function(context) {
 
     var copyFrameworkCmd =
       "cp -R " +
-      " \"" + buildDir + "/" + projectConfiguration + "-" + sdk + "/" + projectName + ".framework" + "/" + "\"" +
-      " \"" + frameworkOutputfolder + "/" + "\"" ;
+      " \"" + buildDir + "/" + projectConfiguration + "-" + sdk + "/" + projectName + ".framework" + "\"" +
+      " \"" + frameworkOutputfolder + "\"" ;
 
     child_process.execSync(copyFrameworkCmd);
 
