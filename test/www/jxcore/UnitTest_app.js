@@ -15,7 +15,7 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
 var utResult;
 
-Mobile('ExecuteNativeTests').callNative(function (result) {
+Mobile('executeNativeTests').callNative(function (result) {
   utResult = true;
   if (result && result.executed) {
     console.log("Total number of executed tests: ", result.total);
@@ -40,27 +40,27 @@ if (process.platform != 'ios') {
   return;
 }
 
-ThaliMobile.getNetworkStatus()
-.then(function (networkStatus) {
-  var promiseList = [];
-  if (networkStatus.wifi === 'off') {
-    promiseList.push(testUtils.toggleWifi(true));
-  }
-  if (networkStatus.bluetooth === 'off') {
-    promiseList.push(testUtils.toggleBluetooth(true));
-  }
-  Promise.all(promiseList)
-  .then(function () {
-    Mobile('GetDeviceName').callNative(function (name) {
-      console.log('My device name is: %s', name);
-      testUtils.setName(name);
-      // The setImmediate is to avoid this issue:
-      // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
-      setImmediate(function () {
-        require('./runTests.js');
-      });
-    });
-  });
-});
+// ThaliMobile.getNetworkStatus()
+// .then(function (networkStatus) {
+//   var promiseList = [];
+//   if (networkStatus.wifi === 'off') {
+//     promiseList.push(testUtils.toggleWifi(true));
+//   }
+//   if (networkStatus.bluetooth === 'off') {
+//     promiseList.push(testUtils.toggleBluetooth(true));
+//   }
+//   Promise.all(promiseList)
+//   .then(function () {
+//     Mobile('GetDeviceName').callNative(function (name) {
+//       console.log('My device name is: %s', name);
+//       testUtils.setName(name);
+//       // The setImmediate is to avoid this issue:
+//       // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
+//       setImmediate(function () {
+//         require('./runTests.js');
+//       });
+//     });
+//   });
+// });
 
 console.log('Unit Test app is loaded');
