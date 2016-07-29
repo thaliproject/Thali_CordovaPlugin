@@ -16,4 +16,10 @@ public class ListenerMock implements SocketThreadBase.Listener {
     public void onDisconnected(SocketThreadBase who, String errorMessage) {
 
     }
+
+    @Override
+    public void onDone(SocketThreadBase who, boolean threadDoneWasSending){
+
+    }
+
 }

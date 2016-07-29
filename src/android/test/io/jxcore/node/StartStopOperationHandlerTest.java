@@ -52,7 +52,7 @@ public class StartStopOperationHandlerTest {
 
     @After
     public void tearDown() throws Exception {
-        mConnectionHelper.killAllConnections();
+        mConnectionHelper.killConnections(true);
         mConnectionHelper.stop(false, mJXcoreThaliCallback);
         mConnectionHelper.dispose();
         mConnectionHelper.getDiscoveryManager().stop();

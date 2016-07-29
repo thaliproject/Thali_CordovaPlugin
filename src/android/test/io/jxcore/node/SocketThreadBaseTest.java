@@ -123,43 +123,16 @@ public class SocketThreadBaseTest {
 
     @Test
     public void testCloseLocalSocketAndStreams() throws Exception {
-        mSocketThreadBaseMock.mLocalInputStream = mInputStreamMock;
-        mSocketThreadBaseMock.mLocalOutputStream = mOutputStreamMock;
         mSocketThreadBaseMock.mLocalhostSocket = new Socket();
 
-        assertThat("mLocalInputStream is not null", mSocketThreadBaseMock.mLocalInputStream,
-                is(notNullValue()));
-        assertThat("mLocalOutputStream is not null", mSocketThreadBaseMock.mLocalOutputStream,
-                is(notNullValue()));
         assertThat("mLocalhostSocket is not null", mSocketThreadBaseMock.mLocalhostSocket,
                 is(notNullValue()));
 
-        mSocketThreadBaseMock.closeLocalSocketAndStreams();
+        mSocketThreadBaseMock.close();
 
-        assertThat("mLocalInputStream is null", mSocketThreadBaseMock.mLocalInputStream,
-                is(nullValue()));
-        assertThat("mLocalOutputStream is null", mSocketThreadBaseMock.mLocalOutputStream,
-                is(nullValue()));
         assertThat("mLocalhostSocket is null", mSocketThreadBaseMock.mLocalhostSocket,
                 is(nullValue()));
     }
 
-    @Test
-    public void testCloseBluetoothSocketAndStreams() throws Exception {
-        assertThat("Input stream is not closed",
-                ((InputStreamMock) mSocketThreadBaseMock.mBluetoothInputStream).isClosed,
-                is(false));
-        assertThat("Output stream is not closed",
-                ((OutputStreamMock) mSocketThreadBaseMock.mBluetoothOutputStream).isClosed,
-                is(false));
 
-        mSocketThreadBaseMock.closeBluetoothSocketAndStreams();
-
-        assertThat("Input stream is closed",
-                ((InputStreamMock) mSocketThreadBaseMock.mBluetoothInputStream).isClosed,
-                is(true));
-        assertThat("Output stream is closed",
-                ((OutputStreamMock) mSocketThreadBaseMock.mBluetoothOutputStream).isClosed,
-                is(true));
-    }
 }

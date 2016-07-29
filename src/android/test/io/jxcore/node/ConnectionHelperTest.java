@@ -59,7 +59,7 @@ public class ConnectionHelperTest {
 
     @After
     public void tearDown() throws Exception {
-        mConnectionHelper.killAllConnections();
+        mConnectionHelper.killConnections(true);
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
         mConnectionHelper.dispose();
         mConnectionHelper.getDiscoveryManager().stop();
@@ -255,7 +255,7 @@ public class ConnectionHelperTest {
         mConnectionModel.addConnectionThread(mIncomingSocketThreadMock);
 
         assertThat("Number of killed incoming connection should be 1",
-                mConnectionHelper.killAllConnections(), is(equalTo(1)));
+                mConnectionHelper.killConnections(true), is(equalTo(1)));
         assertThat("Number of outgoing connection should be 0 after killAllConnections()",
                 mConnectionHelper.getConnectionModel().getNumberOfCurrentOutgoingConnections(),
                 is(equalTo(0)));
@@ -442,7 +442,7 @@ public class ConnectionHelperTest {
         assertThat(result, is(equalTo("We already have an outgoing connection to peer with ID "
                 + bluetoothMacAddressOutgoing)));
 
-        mConnectionHelper.killAllConnections();
+        mConnectionHelper.killConnections(true);
 
         ArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new ArrayList<OutgoingSocketThread>();
 
@@ -461,12 +461,12 @@ public class ConnectionHelperTest {
                         + mConnectionModel.getNumberOfCurrentOutgoingConnections()
                         + ") reached, please try again after disconnecting a peer")));
 
-        mConnectionHelper.killAllConnections();
+        mConnectionHelper.killConnections(true);
         result = mConnectionHelper.connect("abcd", mJXcoreTHaliCallBack);
         assertThat("Invalid bluetooth MAC address",
                 result, is(equalTo("Invalid Bluetooth MAC address: abcd")));
 
-        mConnectionHelper.killAllConnections();
+        mConnectionHelper.killConnections(true);
         mOutgoingSocketThreadMock
                 .setPeerProperties(new PeerProperties(bluetoothMacAddressOutgoing));
         mConnectionModel
@@ -476,11 +476,11 @@ public class ConnectionHelperTest {
         assertThat("Failed to add callback to the connection because such callback already exists",
                 result, is(equalTo("Failed to add the callback for the connection")));
 
-        mConnectionHelper.killAllConnections();
+        mConnectionHelper.killConnections(true);
         result = mConnectionHelper.connect(bluetoothMacAddressOutgoing, mJXcoreTHaliCallBack);
         assertThat("Result should be null", result, is(nullValue()));
 
-        mConnectionHelper.killAllConnections();
+        mConnectionHelper.killConnections(true);
 
         thrown.expect(NullPointerException.class);
         mConnectionHelper.connect(bluetoothMacAddressOutgoing, null); //Throws NullPointerException
@@ -659,6 +659,6 @@ public class ConnectionHelperTest {
         thrown.expect(UnsupportedOperationException.class);
         mConnectionHelper.onBluetoothMacAddressResolved("00:11:22:33:44:55");
     }
-    
+
     //TODO Write tests for onPeerDiscovered and onPeerLost
 }
