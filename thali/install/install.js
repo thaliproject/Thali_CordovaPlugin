@@ -369,7 +369,7 @@ module.exports = function (callback, appRootDirectory) {
             console.log('Adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
             return childProcessExecPromise('cordova plugins add ' +
-              thaliCordovaPluginUnZipResult.unzipedDirectory,
+              thaliCordovaPluginUnZipResult.unzipedDirectory + ' -d',
               appRootDirectory);
           }).then(function () {
             // The step below is required, because the Android after prepare
