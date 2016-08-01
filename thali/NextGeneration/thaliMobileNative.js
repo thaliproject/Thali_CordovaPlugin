@@ -140,32 +140,6 @@
  * set to the port the local Thali application should connect to and both
  * clientPort and serverPort MUST be 0.
  *
- * However, we also have to deal with a bug in iOS's multipeer connectivity
- * framework. Our original iOS design involved us having one MCSession that
- * connected peer A as a TCP/IP client to peer B and then a second MCSession
- * that connected peer B as a TCP/IP client to peer A. But there is apparently a
- * bug in iOS that if two peers have two MCSessions and if one moves around a
- * bunch of data then the connections become unstable and randomly fail.
- *
- * Our work around for this problem is that we will always form exactly one
- * MCSession between two peers. So let's say that peer A establishes a MCSession
- * with peer B. In that case peer A will create an output stream to peer B who
- * will then respond with an output stream to peer A. We will then marshal these
- * streams to TCP/IP by exposing peer A as a TCP/IP listener that peer A
- * connects to and sends data to peer B. Peer B will see the connection as an
- * incoming TCP/IP client that connects to Peer B's `portNumber`.
- *
- * Now imagine that Peer B issues a connect request to Peer A's
- * `peerIdentifier`. Ideally we would just create a new MCSession and do what we
- * described above in reverse. But we cannot because of the bug. So the work
- * around is that we will use this type to notify the caller that what they have
- * to do is to use the existing connection from Peer A to Peer B to send TCP/IP
- * connection requests back to Peer A. This involves magic at the mux layer. In
- * other words we are pushing an iOS bug up from the iOS native code into
- * Node.js and requiring us to solve it up in Node.js land. For all the gory
- * details on how this works see the [binding
- * spec](http://thaliproject.org/PresenceProtocolBindings/).
- *
  * We use the `clientPort` value below so that the mux layer can figure out
  * which of its connections is the one it needs to use to talk to the desired
  * peer.
@@ -227,20 +201,17 @@
  * consistent.
  *
  * If this method is called consecutively with the same peerIdentifier and a
- * connection is either in progress or already exists then an error MUST be
- * returned. Otherwise a new connection MUST be created.
+ * connection is either in progress or already exists then an error MUST
+ * be returned. Otherwise a new connection MUST be created.
  *
  * In the case of Android there MUST be at most one
  * Bluetooth client connection between this peer and the identified remote peer.
- * In the case of iOS there MUST be at most one MCSession between this peer and
- * the identified remote peer. In the case of iOS if this peer is lexically
- * smaller than the other peer then the iOS layer MUST try to establish a
- * MCSession with the remote peer as a signaling mechanism per the instructions
- * in the binding spec. If an incoming connection is created within a reasonable
- * time period from the lexically larger peer then the system MUST issue a
- * connect callback with listeningPort set to null and clientPort/serverPort set
- * based on the values used when establishing the incoming connection from the
- * remote peer.
+ *
+ * In the case of iOS it is possible to have multiple connections between 2
+ * peers. If one peer want to post data it creates and starts advertising
+ * MCSession with timeout. After all possible connections are established
+ * peers, peer-advertiser opens TCP/IP connection on 127.0.0.1 with specified
+ * port and pass this port to callback.
  *
  * The port created by a connect call MUST only accept a single TCP/IP
  * connection at a time. Any subsequent TCP/IP connections to the 127.0.0.1 port
@@ -256,8 +227,7 @@
  *
  *  - The TCP/IP connection to the 127.0.0.1 port is closed or half closed
  *  - No connection is made to the 127.0.0.1 port within a fixed period of
- *  time, typically 2 seconds (this only applies on Android and for lexically
- *  larger iOS peers)
+ *  time, typically 2 seconds (this only applies on Android)
  *  - If the non-TCP/IP connection should fail in whole or in part (e.g. some
  *  non-TCP/IP transports have the TCP/IP equivalent of a 1/2 closed connection)
  *
@@ -281,7 +251,7 @@
  * | startListeningForAdvertisements is not active | Go start it! |
  * | Already connect(ing/ed) | There already is a connection or a request to create one is already in process. |
  * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
- * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
+ * | Connection wait timed out | This is for the case where advertising peer and browsing peer don't establish a connection within a reasonable period of time. |
  * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
  * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
  * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
@@ -289,7 +259,7 @@
  *
  * @public
  * @function external:"Mobile('connect')".callNative
- * @param {string} peerIdentifier
+ * @param {string[]} peerIdentifiers
  * @param {module:thaliMobileNative~ConnectCallback} callback Returns an
  * error or the 127.0.0.1 port to connect to in order to get a connection to the
  * remote peer
@@ -346,16 +316,6 @@
  * into the background reducing the power to the BLE radio which can make the
  * peer seem to disappear. But Bluetooth would still be on full power so a
  * connect could still work. So this value can at best be treated as a hint.
- * @property {boolean} pleaseConnect If true then this means that a lexically
- * smaller peer wishes to establish a connection to this peer but requires this
- * peer to initiate the connection per the binding spec. If this peer already
- * has called {@link external:"Mobile('connect')".callNative} for the identified
- * peer then no action MUST be taken. Similarly if this peer already has a
- * connection to the remote peer then no action MUST be taken. Yes, there are
- * many race conditions here but the binding protocol calls for the other peer
- * to repeat its request a number of times so it should be o.k. If this value is
- * false then it either means that this isn't iOS or it means that the remote
- * peer is either lexically larger or not currently interested in connecting.
  */
 
 /**
