@@ -530,7 +530,7 @@
 				CCA5728F1D4A327E00FBEC41 /* Headers */,
 				CCA572901D4A327E00FBEC41 /* Resources */,
 				CCA5729C1D4A32E100FBEC41 /* SwiftLint */,
-				CCA572F01D4B89FE00FBEC41 /* Embedd XCTest Framework */,
+				CCA572F01D4B89FE00FBEC41 /* Embed XCTest.framework */,
 			);
 			buildRules = (
 			);
@@ -635,19 +635,19 @@
 			shellPath = /bin/sh;
 			shellScript = "if which swiftlint >/dev/null; then\n    swiftlint\nelse\n    echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
 		};
-		CCA572F01D4B89FE00FBEC41 /* Embedd XCTest Framework */ = {
+		CCA572F01D4B89FE00FBEC41 /* Embed XCTest.framework */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
 			);
-			name = "Embedd XCTest Framework";
+			name = "Embed XCTest.framework";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\nXCTEST_IPHONEOS_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework\nXCTEST_IPHONESIMULATOR_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework\n\n# Step 1. Define XCTEST_FRAMEWORK_PATH on current platform\nif [ \"${PLATFORM_NAME}\" == \"iphoneos\" ] ; then\n    XCTEST_FRAMEWORK_PATH=$XCTEST_IPHONEOS_PATH\nelif [ \"${PLATFORM_NAME}\" == \"iphonesimulator\" ] ; then\n    XCTEST_FRAMEWORK_PATH=$XCTEST_IPHONESIMULATOR_PATH\nfi\n\n# Step 2. Copy the framework structure into the product frameworks folder\nif [ ! -z \"${XCTEST_FRAMEWORK_PATH}\" ] ; then\n    cp -R \"${XCTEST_FRAMEWORK_PATH}\" \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\nfi\n";
+			shellScript = "\nXCTEST_IPHONEOS_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework\nXCTEST_IPHONESIMULATOR_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework\n\n# Step 1. Define XCTEST_FRAMEWORK_PATH on current platform\nif [ \"${PLATFORM_NAME}\" == \"iphoneos\" ] ; then\n    XCTEST_FRAMEWORK_PATH=$XCTEST_IPHONEOS_PATH\nelif [ \"${PLATFORM_NAME}\" == \"iphonesimulator\" ] ; then\n    XCTEST_FRAMEWORK_PATH=$XCTEST_IPHONESIMULATOR_PATH\nfi\n\n# Step 2. Copy the framework structure into the product frameworks folder\nif [ ! -z \"${XCTEST_FRAMEWORK_PATH}\" ] ; then\n    cp -R \"${XCTEST_FRAMEWORK_PATH}\" \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -955,6 +955,7 @@
 				CCA572991D4A327E00FBEC41 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
