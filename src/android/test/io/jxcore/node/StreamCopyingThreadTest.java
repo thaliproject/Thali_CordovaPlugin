@@ -33,6 +33,9 @@ public class StreamCopyingThreadTest {
     int bufferLength = 0;
     ByteArrayOutputStream bOutputStream;
     ArrayList<Integer> notifications;
+    boolean doThrowException = false;
+    String lastExceptionMessage = "";
+
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -92,6 +95,23 @@ public class StreamCopyingThreadTest {
     }
 
     @Test
+    public void testRunWithException() throws Exception {
+
+        doThrowException = true;
+        StreamCopyingThread streamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
+                mThreadName);
+        Thread runner = new Thread(streamCopyingThread);
+        runner.setName("thread test");
+        runner.start();
+        runner.join();
+
+        assertThat("The exception is properly handled.",
+                lastExceptionMessage,
+                is("Either failed to read from the output stream or write to the input stream: Test exception."));
+    }
+
+
+    @Test
     public void testRunNotify() throws Exception {
         mStreamCopyingThread.setNotifyStreamCopyingProgress(true);
         Thread runner = new Thread(mStreamCopyingThread);
@@ -113,7 +133,7 @@ public class StreamCopyingThreadTest {
 
         @Override
         public void onStreamCopyError(StreamCopyingThread who, String errorMessage) {
-
+            lastExceptionMessage = errorMessage;
         }
 
         @Override
