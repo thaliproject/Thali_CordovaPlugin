@@ -104,6 +104,8 @@ public class StreamCopyingThreadTest {
         runner.setName("thread test");
         runner.start();
         runner.join();
+        
+        doThrowException = false;
 
         assertThat("The exception is properly handled.",
                 lastExceptionMessage,
@@ -194,6 +196,9 @@ public class StreamCopyingThreadTest {
 
         @Override
         public void write(int oneByte) throws IOException {
+            if (doThrowException) {
+                throw new IOException("Test exception.");
+            }
             bOutputStream.write(oneByte);
         }
     }
