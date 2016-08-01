@@ -107,8 +107,13 @@ module.exports = function(context) {
         xcodeProject.addBuildProperty("LD_RUNPATH_SEARCH_PATHS", "\"$(inherited) @executable_path/Frameworks\"", "Debug");
         xcodeProject.addBuildProperty("LD_RUNPATH_SEARCH_PATHS", "\"$(inherited) @executable_path/Frameworks\"", "Release");
 
-        // Add the frameworks again.  This time they will have the code-sign option set so they get code signed when being deployed to devices.
+        // Add the frameworks again. This time they will have the code-sign option set so they get code signed when being deployed to devices.
         xcodeProject.addFramework(frameworkPath + "ThaliCore.framework", {customFramework: true, embed: true, link: true, sign: true});
+
+        // Add the frameworks again. This time they will have the code-sign option set so they get code signed when being deployed to devices.
+        var xcTestFrameworkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework";
+        // var xcTestFrameworkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework";
+        xcodeProject.addFramework(xcTestFrameworkPath, {customFramework: true, embed: true, link: true, sign: true});
 
         // Save the project file back to disk.
         fs.writeFileSync(projectPath, xcodeProject.writeSync(), "utf-8");

@@ -40,6 +40,7 @@ cd ThaliTest
 cordova platform add ios
 cordova platform add android
 cd www/jxcore
+cp -n $repositoryRoot/thali/install/hooks/after_plugin_install-tests.js $repositoryRoot/thali/install/hooks/after_plugin_install.js 
 jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
 
 if [ $runningInMinGw == true ]; then
