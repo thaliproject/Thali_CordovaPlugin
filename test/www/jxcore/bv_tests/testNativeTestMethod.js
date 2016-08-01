@@ -32,7 +32,7 @@ test('onPeerLost calls jxcore', function (t) {
   Mobile('testNativeMethod').callNative("onPeerLost", function (result) {
            console.log(result.Testing_);
            t.equal(callbackPeer.peerIdentifier, "11:22:33:22:11");
-           t.notOk(callbackPeer.peerAvailable, "onPeerLost: peerAvailable is true")
+           t.notOk(callbackPeer.peerAvailable, "onPeerLost: peerAvailable is false")
            t.end();
   });
 });
