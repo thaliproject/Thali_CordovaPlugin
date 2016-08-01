@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
 		CCA572081D47883C00FBEC41 /* THEPeerBluetooth.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571D91D47883C00FBEC41 /* THEPeerBluetooth.h */; };
@@ -709,6 +710,7 @@
 				CCA572D31D4A506E00FBEC41 /* NPReachability.m in Sources */,
 				CCA572CB1D4A4EF800FBEC41 /* THEMultipeerSocketRelay.m in Sources */,
 				CCA572C21D4A4EE100FBEC41 /* THEMultipeerServer.m in Sources */,
+				CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */,
 				CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */,
 				CCA572BE1D4A4ED800FBEC41 /* THEMultipeerManager.m in Sources */,
 			);
