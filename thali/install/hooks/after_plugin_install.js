@@ -82,9 +82,8 @@ module.exports = function(context) {
         var targetUUID = xcodeProject.getFirstTarget().uuid;
 
         // Update xcodeBuildConfiguration
-        var xcodeBuildConfiguration = xcodeProject.pbxXCBuildConfigurationSection();
-        xcodeBuildConfiguration.removeBuildProperty('EMBEDDED_CONTENT_CONTAINS_SWIFT');
-        xcodeBuildConfiguration.addBuildProperty('EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
+        xcodeProject.removeBuildProperty('EMBEDDED_CONTENT_CONTAINS_SWIFT');
+        xcodeProject.addBuildProperty('EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
 
         // Remove all of the frameworks because they were not embeded correctly.
         var frameworkPath = context.opts.plugin.dir + "/lib/ios/";
