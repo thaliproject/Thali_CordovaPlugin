@@ -86,8 +86,8 @@ cordova build android --release --device
   # updates Xcode project for CI stuff
   jx $SETUP_XCODE_TESTS_SCRIPT_PATH "${TEST_PROJECT_PATH}" "${FRAMEWORK_PROJECT_FOLDER_PATH}"
 
-  #
-#    cordova build ios --device
+  # build iOS
+  cordova build ios --device
 #fi
 
 echo "Remember to start the test coordination server by running jx index.js"
