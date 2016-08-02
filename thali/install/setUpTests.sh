@@ -69,11 +69,15 @@ cp -v $1 app.js
 cordova build android --release --device
 
 if [ $runningInMinGw == false ]; then
-    # updates Xcode project for CI stuff
-    jx $repositoryRoot/thali/install/setupXcodeProjectTests.js "${repositoryRoot}/../${TEST_PROJECT_NAME}/platforms/ios/${TEST_PROJECT_NAME}.xcodeproj" "${repositoryRoot}/../${TEST_PROJECT_NAME}/plugins/org.thaliproject.p2p/lib/ios/ThaliCore"
+  SETUP_XCODE_TESTS_SCRIPT_PATH=$repositoryRoot/thali/install/setupXcodeProjectTests.js
+  TEST_PROJECT_PATH=$repositoryRoot/../$TEST_PROJECT_NAME/platforms/ios/$TEST_PROJECT_NAME.xcodeproj
+  FRAMEWORK_PROJECT_FOLDER_PATH=$repositoryRoot/../$TEST_PROJECT_NAME/plugins/org.thaliproject.p2p/lib/ios/ThaliCore
 
-    #
-    cordova build ios --device
+  # updates Xcode project for CI stuff
+  jx $SETUP_XCODE_TESTS_SCRIPT_PATH "${TEST_PROJECT_PATH}" "${FRAMEWORK_PROJECT_FOLDER_PATH}"
+
+  #
+  cordova build ios --device
 fi
 
 echo "Remember to start the test coordination server by running jx index.js"
