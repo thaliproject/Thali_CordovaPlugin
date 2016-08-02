@@ -410,7 +410,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 
       @synchronized(self)
       {
-        [JXcore callEventCallback:callbackId withParams:@[result]];
+        [JXcore callEventCallback:callbackId withJSON:result];
       }
     }
     else
