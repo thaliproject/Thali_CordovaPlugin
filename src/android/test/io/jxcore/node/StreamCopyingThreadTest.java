@@ -87,7 +87,7 @@ public class StreamCopyingThreadTest {
 
         Thread.sleep(2000);
 
-        mStreamCopyingThread.doStop();
+        mStreamCopyingThread.close();
 
         assertThat("The content of the input stream is equal to the output stream",
                 bOutputStream.toString(),
@@ -109,7 +109,7 @@ public class StreamCopyingThreadTest {
 
         assertThat("The exception is properly handled.",
                 lastExceptionMessage,
-                is("Either failed to read from the output stream or write to the input stream: Test exception."));
+                is("Failed to write to the output stream: Test exception."));
     }
 
 
@@ -141,6 +141,11 @@ public class StreamCopyingThreadTest {
         @Override
         public void onStreamCopySucceeded(StreamCopyingThread who, int numberOfBytes) {
             notifications.add(numberOfBytes);
+        }
+
+        @Override
+        public void onStreamCopyingThreadDone(StreamCopyingThread who){
+
         }
     }
 
