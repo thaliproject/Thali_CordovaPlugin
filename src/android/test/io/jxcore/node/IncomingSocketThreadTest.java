@@ -137,8 +137,8 @@ public class IncomingSocketThreadTest {
 
         try {
             mOutgoingSocketThread.mServerSocket.close();
-            mIncomingSocketThread.closeLocalSocketAndStreams();
-            mOutgoingSocketThread.closeLocalSocketAndStreams();
+            mIncomingSocketThread.close();
+            mOutgoingSocketThread.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
