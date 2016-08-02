@@ -65,6 +65,10 @@ cp -v $1 app.js
 cordova build android --release --device
 
 if [ $runningInMinGw == false ]; then
+    # updates Xcode project for CI stuff
+    jx $repositoryRoot/thali/install/setupXcodeProjectTests.js "platforms/ios/ThaliTest.xcodeproj" "plugins/org.thaliproject.p2p/lib/ios/ThaliCore"
+
+    #
     cordova build ios --device
 fi
 

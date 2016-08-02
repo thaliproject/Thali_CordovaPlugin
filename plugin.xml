@@ -55,8 +55,7 @@
 
     <platform name="ios">
 
-        <hook type="before_plugin_install" src="thali/install/hooks/before_plugin_install.js" />
-        <hook type="after_plugin_install" src="thali/install/hooks/after_plugin_install.js" />
+        <hook type="after_plugin_install" src="thali/install/cordova-hooks/after_plugin_install.js" />
 
         <config-file target="config.xml" parent="/*">
           <feature name="ThaliPlugin">
@@ -64,7 +63,7 @@
           </feature>
         </config-file>
 
-        <framework src="lib/ios/ThaliCore.framework" custom="true" embed="true" />
+        <!-- <framework src="lib/ios/ThaliCore.framework" custom="true" embed="true" /> -->
 
         <source-file src="src/ios/JXcoreExtension.m" compiler-flags="-Werror"/>
 
