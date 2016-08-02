@@ -11,6 +11,10 @@ if [ "$(uname -s | cut -c 1-5)" == "MINGW" ]; then
     runningInMinGw=true
 fi
 
+# Set variables
+
+TEST_PROJECT_NAME=ThaliTest
+
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to
 # manually set the coordination server's address to.
@@ -22,21 +26,21 @@ cd test/TestServer
 jx npm install
 # jx generateServerAddress.js $2
 cd $repositoryRoot/..
-cordova create ThaliTest com.test.thalitest ThaliTest
-mkdir -p ThaliTest/thaliDontCheckIn/localdev
+cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
+mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
 if [ $runningInMinGw == true ]; then
     # The thali package might be installed as link and there will
     # be troubles later on if this link is tried to be copied so
     # remove it here.
     rm -rf $repositoryRoot/test/www/jxcore/node_modules/thali
-    cp -R $repositoryRoot/test/www/ ThaliTest/
+    cp -R $repositoryRoot/test/www/ $TEST_PROJECT_NAME/
 else
 
-    rsync -a --no-links $repositoryRoot/test/www/ ThaliTest/www
+    rsync -a --no-links $repositoryRoot/test/www/ $TEST_PROJECT_NAME/www
 fi
 
-cd ThaliTest
+cd $TEST_PROJECT_NAME
 cordova platform add ios
 cordova platform add android
 cd www/jxcore
@@ -66,7 +70,7 @@ cordova build android --release --device
 
 if [ $runningInMinGw == false ]; then
     # updates Xcode project for CI stuff
-    jx $repositoryRoot/thali/install/setupXcodeProjectTests.js "platforms/ios/ThaliTest.xcodeproj" "plugins/org.thaliproject.p2p/lib/ios/ThaliCore"
+    jx $repositoryRoot/thali/install/setupXcodeProjectTests.js "${$repositoryRoot}/../${TEST_PROJECT_NAME}/platforms/ios/${TEST_PROJECT_NAME}.xcodeproj" "${$repositoryRoot}/../${TEST_PROJECT_NAME}/plugins/org.thaliproject.p2p/lib/ios/ThaliCore"
 
     #
     cordova build ios --device

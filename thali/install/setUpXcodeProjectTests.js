@@ -5,7 +5,10 @@ var Promise = require('lie');
 var thaliCoreFramework = require("./ios/prepareThaliCoreFramework.js");
 
 
-var thaliProjectFolder = process.argv[0];
-var projectPath = process.argv[1]; // path.join(projectRoot, "platforms", "ios", cfg.name() + ".xcodeproj");
+var projectPath = process.argv[2];
+var thaliProjectFolder = process.argv[3];
 
-thaliCoreFramework.addFramework(projectPath, thaliProjectFolder, true);
+thaliCoreFramework.addFramework(projectPath, thaliProjectFolder, true)
+  .catch(function(reason) {
+    console.log(reason);
+  });
