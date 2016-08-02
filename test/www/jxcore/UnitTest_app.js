@@ -26,9 +26,8 @@ if (process.platform === 'android' || process.platform === 'ios') {
       console.log('Total duration: ', result.duration);
     // if (result.failed > 0) {
     //   utResult = false;
-    // }
-  
-  });
+     }
+ });
 
 
 ThaliMobile.getNetworkStatus()

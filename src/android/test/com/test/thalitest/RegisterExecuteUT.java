@@ -19,7 +19,6 @@ import io.jxcore.node.jxcore;
 public final class RegisterExecuteUT {
     private RegisterExecuteUT() throws Exception {
         throw new Exception("Constructor should not be called.");
-
     }
 
     static String TAG = "RegisterExecuteUT";
@@ -42,7 +41,9 @@ public final class RegisterExecuteUT {
             } catch (InvocationTargetException e) {
                 e.printStackTrace();
             }
-        }        jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
+        }       
+
+        jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
                 String methodToTest = "";
@@ -98,4 +99,3 @@ public final class RegisterExecuteUT {
             }
         });
     }
-}
