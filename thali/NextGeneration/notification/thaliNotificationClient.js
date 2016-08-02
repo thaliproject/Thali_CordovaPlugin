@@ -12,12 +12,14 @@ var util = require('util');
 /** @module thaliNotificationClient */
 
 /**
- * @classdesc Data of peerAdvertisesDataForUs event
+ * @classdesc Data of peerAdvertisesDataForUs event. Note that if a peer
+ * has disappeared then all the values below but keyId and connectionType
+ * will be null.
  * @constructor
- * @param {buffer} keyId The buffer contains the ECDH public key for the
+ * @param {Buffer} keyId The buffer contains the ECDH public key for the
  * peer.
  * @param {string} pskIdentifyField
- * @param {buffer} psk This is the calculated pre-shared key that will be
+ * @param {Buffer} psk This is the calculated pre-shared key that will be
  * needed to establish a TLS PSK connection.
  * @param {string} hostAddress The IP/DNS address of the peer
  * @param {number} portNumber The TCP/IP port at the hostAddress the peer
@@ -77,6 +79,7 @@ function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._publicKeysToListen = [];
   this._publicKeysToListenHashes = [];
+  this._boundListener = this._peerAvailabilityChanged.bind(this);
 
   this._addressBookCallback = function (unencryptedKeyId) {
 
@@ -96,6 +99,17 @@ function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
 }
 
 util.inherits(ThaliNotificationClient, EventEmitter);
+
+/**
+ * Fired whenever we discover a peer who is looking for us.
+ *
+ * @public
+ * @event module:thaliNotificationClient.event:peerAdvertisesDataForUs
+ * @type {PeerAdvertisesDataForUs}
+ */
+ThaliNotificationClient.prototype.Events = {
+  PeerAdvertisesDataForUs: 'peerAdvertisesDataForUs'
+};
 
 /**
  * A dictionary used to track the state of peers we have received notifications
@@ -132,18 +146,16 @@ ThaliNotificationClient.prototype.start =
     this._publicKeysToListen = [];
     this._publicKeysToListenHashes = [];
 
-    if (publicKeysToListen) {
-      this._publicKeysToListen = publicKeysToListen;
+    this._publicKeysToListen = publicKeysToListen;
 
-      publicKeysToListen.forEach(function (pubKy) {
-        self._publicKeysToListenHashes.push(
-          NotificationBeacons.createPublicKeyHash(pubKy));
-      });
-    }
+    publicKeysToListen.forEach(function (pubKy) {
+      self._publicKeysToListenHashes.push(
+        NotificationBeacons.createPublicKeyHash(pubKy));
+    });
 
     if (!this.peerDictionary) {
       ThaliMobile.emitter.on('peerAvailabilityChanged',
-        this._peerAvailabilityChanged.bind(this));
+        this._boundListener);
     }
     this.peerDictionary = new PeerDictionary.PeerDictionary();
   };
@@ -160,7 +172,7 @@ ThaliNotificationClient.prototype.stop = function () {
 
   if (this.peerDictionary) {
     ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-      this._peerAvailabilityChanged);
+      this._boundListener);
 
     this.peerDictionary.removeAll();
     this.peerDictionary = null;
@@ -295,9 +307,17 @@ ThaliNotificationClient.prototype._resolved =
       case ThaliNotificationAction.ActionResolution
         .BEACONS_RETRIEVED_AND_PARSED:
       {
-        var connInfo = entry.notificationAction.getConnectionInformation();
         entry.peerState = PeerDictionary.peerState.RESOLVED;
         this.peerDictionary.addUpdateEntry(peerId, entry);
+
+        if (!beaconDetails) {
+          // This peerId has nothing for us, if that changes then the peer will
+          // generate a new peerId so we can safely ignore this peerId from
+          // now on.
+          break;
+        }
+
+        var connInfo = entry.notificationAction.getConnectionInformation();
 
         var pubKx = this._addressBookCallback(beaconDetails.unencryptedKeyId);
 
@@ -318,7 +338,7 @@ ThaliNotificationClient.prototype._resolved =
           entry.notificationAction.getConnectionType()
         );
 
-        this.emit(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+        this.emit(this.Events.PeerAdvertisesDataForUs,
           peerAdvertises);
 
         break;
@@ -328,8 +348,7 @@ ThaliNotificationClient.prototype._resolved =
       {
         // This indicates a malfunctioning peer. We need to assume they are bad
         // all up and mark their entry as RESOLVED without taking any further
-        // action. This means we will ignore this peerIdentifier
-        // in the future.
+        // action. This means we will ignore this peerIdentifier in the future.
         entry.peerState = PeerDictionary.peerState.RESOLVED;
         this.peerDictionary.addUpdateEntry(peerId, entry);
         break;
@@ -392,17 +411,6 @@ ThaliNotificationClient.prototype._resolved =
  */
 ThaliNotificationClient.RETRY_TIMEOUTS =
   [100, 300, 600, 1200, 2400 , 4800, 9600];
-
-/**
- * Fired whenever we discover a peer who is looking for us.
- *
- * @public
- * @event module:thaliNotificationClient.event:peerAdvertisesDataForUs
- * @type {PeerAdvertisesDataForUs}
- */
-ThaliNotificationClient.Events = {
-  PeerAdvertisesDataForUs: 'peerAdvertisesDataForUs'
-};
 
 ThaliNotificationClient.Errors = {
   PEERPOOL_NOT_NULL : 'thaliPeerPoolInterface must not be null',

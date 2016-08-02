@@ -77,23 +77,22 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
     if (publicKeysToNotify.length > 0) {
       publicKeysToNotify.forEach(function (publicKey) {
         if (typeof publicKey !== 'object' || publicKey.length === 0) {
-          return reject( new Error('bad public keys'));
+          return reject(new Error('bad public keys'));
         }
       });
       try {
-
         var beaconStreamAndSecrets =
-        NotificationBeacons.generateBeaconStreamAndSecrets(
-          publicKeysToNotify,
-          self._ecdhForLocalDevice,
-          self._millisecondsUntilExpiration);
+          NotificationBeacons.generateBeaconStreamAndSecrets(
+            publicKeysToNotify,
+            self._ecdhForLocalDevice,
+            self._millisecondsUntilExpiration);
 
         self._preambleAndBeacons =
           beaconStreamAndSecrets.beaconStreamWithPreAmble;
 
         if (!self._secrets) {
-          self._secrets = new ThaliPskMapCache(
-            self._millisecondsUntilExpiration);
+          self._secrets =
+            new ThaliPskMapCache(self._millisecondsUntilExpiration);
         }
         self._secrets.push(beaconStreamAndSecrets.keyAndSecret);
 
@@ -116,7 +115,6 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
     // startUpdateAdvertisingAndListening when the last two
     // start calls have had publicKeysToNotify as an empty array ([]).
     if (self._preambleAndBeacons || previousPreambleAndBeacons ) {
-
       ThaliMobile.startUpdateAdvertisingAndListening()
       .then(function () {
         return resolve();
@@ -171,11 +169,10 @@ ThaliNotificationServer.prototype.stop = function () {
 ThaliNotificationServer.prototype._registerNotificationPath = function () {
   var self = this;
   var getBeaconNotifications = function (req, res) {
-
     if (self._preambleAndBeacons) {
       res.set('Content-Type', 'application/octet-stream');
       res.setHeader('Cache-Control', 'no-cache');
-      res.send(self._preambleAndBeacons);
+      res.status(200).send(self._preambleAndBeacons);
     } else {
       res.status(204).send();
     }
@@ -214,11 +211,9 @@ ThaliNotificationServer.prototype._registerNotificationPath = function () {
 ThaliNotificationServer.prototype.getPskIdToSecret = function () {
   var self = this;
   return function (id) {
-    if (!self._secrets) {
-      return null;
-    }
-    return id === thaliConfig.BEACON_PSK_IDENTITY ?
-      thaliConfig.BEACON_KEY : self._secrets.getSecret(id);
+    return !self._secrets ? null :
+                   id === thaliConfig.BEACON_PSK_IDENTITY ?
+                     thaliConfig.BEACON_KEY : self._secrets.getSecret(id);
   };
 };
 

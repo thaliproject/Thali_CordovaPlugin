@@ -16,8 +16,9 @@ import io.jxcore.node.ConnectionHelper;
 import io.jxcore.node.ConnectionHelperTest;
 import io.jxcore.node.jxcore;
 
-public class RegisterExecuteUT {
-    public RegisterExecuteUT() {
+public final class RegisterExecuteUT {
+    private RegisterExecuteUT() throws Exception {
+        throw new Exception("Constructor should not be called.");
 
     }
 
@@ -41,10 +42,7 @@ public class RegisterExecuteUT {
             } catch (InvocationTargetException e) {
                 e.printStackTrace();
             }
-        }
-
-    public static void RegisterExecuteUT() {
-        jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
+        }        jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
                 String methodToTest = "";

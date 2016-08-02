@@ -41,6 +41,25 @@ configuration before finally completing and tearing down it's resources.
 
 ## Usage
 
+### Running your own NPM registry
+From time to time we run into bugs in PouchDB and Express-PouchDB that we can't
+get fixed and into the public NPM repo fast enough to not block our development.
+So we have written a script (installCustomPouchDB.js) that handles installing a
+custom verison of those packages if and when we need them. To make this work we
+depend on the developer running a local copy of a program called sinopia
+(although any private NPM repository server will do) and using that as a place
+to stage our custom releases. This requires the following manual steps:
+
+1. `npm install -g sinopia`
+2. Run the 'sinopia' command in a terminal window and leave it running, forever.
+3. `npm set registry http://localhost:4873` or whatever the address of the
+NPM registry server is
+4. `npm adduser --registry http://localhost:4873` this last command will require
+you to make up a name and password.
+
+These steps really only have to be done once. Our code will detect the registry
+and use it correctly.
+
 ### Mobile
 
 To run either unit or performance tests on mobile devices one first has to build a Cordova project and then launch
@@ -111,8 +130,8 @@ will de-activate themselves when run on the desktop. What is especially nice abo
 one can develop and debug directly in the Thali_CordovaPlugin directory. There is no need to do the kind of 
 copying and pasting that Cordova development normally requires.
 
-To set up your desktop environment for development go to Thali_CordovaPlugin/thali/install and run 
-`jx npm run setupDesktop`.
+To set up your desktop environment for development go to 
+Thali_CordovaPlugin/thali/install and run `jx npm run setupDesktop`.
 
 Sudo might be needed because this script installs a symbolic link into your global NPM directory. But if you can get 
 away without using it you will be much happier as using sudo for this (especially on OS/X) seems to cause permission 
@@ -138,8 +157,14 @@ the test definition, for example:
 +test.only('basic', function (t) {
 ```
 
-It is also possible to run one test file through the coordinator instead of
-all of the files using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`
+It is possible to run one test file (rather than just a single test) through the coordinator instead of
+all of the files using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`.
+
+It is also possible to debug one of the participants in a coordinated test by
+starting the coordinated test from the command line but passing in the parameter
+`--waitForInstance`. The coordinator will then start one less instance when
+it runs with the assumption that one will then run `jx UnitTest_app.js` from
+inside an IDE to debug.
 
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.
