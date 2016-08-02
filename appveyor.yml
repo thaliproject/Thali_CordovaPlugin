@@ -1,7 +1,7 @@
 os: Visual Studio 2015
 clone_folder: C:\Thali_CordovaPlugin
 install:
-- npm install -g cordova
+- npm install -g cordova@6.1.0
 - appveyor DownloadFile http://jxcore.azureedge.net/jxcore/0312/release/jx_win64v8.zip
 - jar xf jx_win64v8.zip
 - SET PATH=%PATH%;C:\Thali_CordovaPlugin\jx_win64v8

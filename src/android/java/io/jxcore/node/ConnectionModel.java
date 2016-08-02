@@ -4,6 +4,7 @@
 package io.jxcore.node;
 
 import android.util.Log;
+
 import java.util.HashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -143,22 +144,30 @@ public class ConnectionModel {
      * Adds the given connection thread to the collection.
      *
      * @param incomingSocketThread An incoming (connection) socket thread instance to add.
+     * @return True, if the thread was successfully added to the collection. False otherwise.
      */
-    public synchronized void addConnectionThread(IncomingSocketThread incomingSocketThread) {
+    public synchronized boolean addConnectionThread(IncomingSocketThread incomingSocketThread) {
         if (!mIncomingSocketThreads.addIfAbsent(incomingSocketThread)) {
             Log.e(TAG, "addConnectionThread: A matching thread for incoming connection already exists");
+            return false;
         }
+
+        return true;
     }
 
     /**
      * Adds the given connection thread to the collection.
      *
      * @param outgoingSocketThread An outgoing (connection) socket thread instance to add.
+     * @return True, if the thread was successfully added to the collection. False otherwise.
      */
-    public synchronized void addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
+    public synchronized boolean addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
         if (!mOutgoingSocketThreads.addIfAbsent(outgoingSocketThread)) {
             Log.e(TAG, "addConnectionThread: A matching thread for outgoing connection already exists");
+            return false;
         }
+
+        return true;
     }
 
     /**
@@ -259,20 +268,24 @@ public class ConnectionModel {
      * @return The socket thread or null if not found.
      */
     private synchronized SocketThreadBase findSocketThread(final String peerId, final boolean isIncoming) {
+        SocketThreadBase foundThread = null;
+
         if (isIncoming) {
             for (IncomingSocketThread incomingSocketThread : mIncomingSocketThreads) {
                 if (incomingSocketThread != null && incomingSocketThread.getPeerProperties().getId().equalsIgnoreCase(peerId)) {
-                    return incomingSocketThread;
+                    foundThread = incomingSocketThread;
+                    break;
                 }
             }
         } else {
             for (OutgoingSocketThread outgoingSocketThread : mOutgoingSocketThreads) {
                 if (outgoingSocketThread != null && outgoingSocketThread.getPeerProperties().getId().equalsIgnoreCase(peerId)) {
-                    return outgoingSocketThread;
+                    foundThread = outgoingSocketThread;
+                    break;
                 }
             }
         }
 
-        return null;
+        return foundThread;
     }
 }

@@ -7,6 +7,7 @@ import android.os.CountDownTimer;
 import android.util.Log;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
+import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
 import java.util.Date;
 
 /**
@@ -92,6 +93,15 @@ public class StartStopOperationHandler {
                 mOperationTimeoutTimer = null;
             }
 
+            /*jxcore.coreThread.handler.postDelayed(new Runnable() {
+                final StartStopOperation operation = mCurrentOperation;
+
+                @Override
+                public void run() {
+                    operation.getCallback().callOnStartStopCallback(null);
+                }
+            }, 2000);*/
+
             mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
         }
@@ -106,6 +116,11 @@ public class StartStopOperationHandler {
             return;
         }
 
+        if (mCurrentOperation.isStartOperation()
+                && !mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly()) {
+            updateBeaconAdExtraInformation();
+        }
+
         if (isTargetState(mCurrentOperation) == null) {
             // The current state already matches the desired outcome of this operation so it is
             // pointless to execute this
@@ -113,28 +128,31 @@ public class StartStopOperationHandler {
             mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
         } else {
+            Log.v(TAG, "executeCurrentOperation: Executing: " + mCurrentOperation.toString());
+            final boolean shouldStartOrStopListeningToAdvertisementsOnly =
+                    mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly();
+
             if (mCurrentOperation.isStartOperation()) {
-                // Discovery manager should always be started, advertising depends on the operation parameter
+                // Connection manager shouldn't be started if we want to listen to *advertisements* only
+                if (!shouldStartOrStopListeningToAdvertisementsOnly
+                        && !mConnectionManager.startListeningForIncomingConnections()) {
+                    final String errorMessage = "Failed to start the connection manager (Bluetooth connection listener)";
+                    Log.e(TAG, "executeCurrentOperation: " + errorMessage);
+                    mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
+                    mCurrentOperation = null;
+                }
+
                 if (!mDiscoveryManager.start(
-                        true, !mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly())) {
+                        shouldStartOrStopListeningToAdvertisementsOnly,
+                        !shouldStartOrStopListeningToAdvertisementsOnly)) {
                     final String errorMessage = "Failed to start the discovery manager";
                     Log.e(TAG, "executeCurrentOperation: " + errorMessage);
                     mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
                     mCurrentOperation = null;
-                } else {
-                    // Starting of the discovery manager initiated successfully (or was already running)
-                    // Connection manager shouldn't be started if we want to listen to *advertisements* only
-                    if (!mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly()
-                            && !mConnectionManager.startListeningForIncomingConnections()) {
-                        final String errorMessage = "Failed to start the connection manager (Bluetooth connection listener)";
-                        Log.e(TAG, "executeCurrentOperation: " + errorMessage);
-                        mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
-                        mCurrentOperation = null;
-                    }
                 }
             } else {
                 // Is stop operation
-                if (mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly()) {
+                if (shouldStartOrStopListeningToAdvertisementsOnly) {
                     // Should only stop listening to advertisements
                     mDiscoveryManager.stopDiscovery();
                 } else {
@@ -189,5 +207,19 @@ public class StartStopOperationHandler {
                 mDiscoveryManager.getState(),
                 mDiscoveryManager.isDiscovering(),
                 mDiscoveryManager.isAdvertising());
+    }
+
+    /**
+     * Updates the extra information of the beacon advertisement to notify the listeners that we
+     * have new information. This affects the peer ID given to the node layer.
+     */
+    private void updateBeaconAdExtraInformation() {
+        DiscoveryManagerSettings discoveryManagerSettings = DiscoveryManagerSettings.getInstance(null);
+        int extraInformation = discoveryManagerSettings.getBeaconAdExtraInformation() + 1;
+        if (extraInformation > 255) {
+            extraInformation = 0;
+        }
+        Log.i(TAG, "updateBeaconAdExtraInformation: New value: " + extraInformation);
+        discoveryManagerSettings.setBeaconAdExtraInformation(extraInformation);
     }
 }

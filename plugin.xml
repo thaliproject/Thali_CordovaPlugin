@@ -35,6 +35,7 @@
         <source-file src="src/android/java/io/jxcore/node/StartStopOperation.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StartStopOperationHandler.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/TestHelper.java" target-dir="src/io/jxcore/node/" />
 
         <!-- ThaliPermissions -->
         <config-file target="config.xml" parent="/*">

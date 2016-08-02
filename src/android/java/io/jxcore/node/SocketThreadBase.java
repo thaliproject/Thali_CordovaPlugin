@@ -20,11 +20,20 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
         void onDataTransferred(int numberOfBytes);
 
+        /**
+         * Called when either the sending or the receiving thread is done.
+         *
+         * @param who The associated SocketThreadBase instance (this).
+         * @param threadDoneWasSending If true, the sending thread is done. If false, the receiving thread is done.
+         */
+        void onDone(SocketThreadBase who, boolean threadDoneWasSending);
+
         void onDisconnected(SocketThreadBase who, String errorMessage);
     }
 
     private static final String SENDING_THREAD_NAME = "Sender";
     private static final String RECEIVING_THREAD_NAME = "Receiver";
+    private static final int STREAM_COPYING_THREAD_BUFFER_SIZE = 1024 * 4;
 
     protected final BluetoothSocket mBluetoothSocket;
     protected final Listener mListener;
@@ -48,10 +57,24 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     public SocketThreadBase(BluetoothSocket bluetoothSocket, Listener listener)
             throws IOException {
-        mBluetoothSocket = bluetoothSocket;
+        this(bluetoothSocket, listener, bluetoothSocket.getInputStream(),
+                bluetoothSocket.getOutputStream());
+    }
+
+    /**
+     * Constructor for test purposes.
+     *
+     * @param bluetoothSocket The Bluetooth socket.
+     * @param listener        The listener.
+     * @param inputStream     The InputStream.
+     * @param outputStream    The OutputStream.
+     */
+    public SocketThreadBase(BluetoothSocket bluetoothSocket, Listener listener,
+                            InputStream inputStream, OutputStream outputStream) {
+        mBluetoothInputStream = inputStream;
+        mBluetoothOutputStream = outputStream;
         mListener = listener;
-        mBluetoothInputStream = mBluetoothSocket.getInputStream();
-        mBluetoothOutputStream = mBluetoothSocket.getOutputStream();
+        mBluetoothSocket = bluetoothSocket;
     }
 
     public Listener getListener() {
@@ -83,21 +106,39 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     public synchronized void close() {
         mIsClosing = true;
-        closeBluetoothSocketAndStreams();
 
         if (mReceivingThread != null) {
-            Log.d(mTag, "close: Stopping receiving thread...");
-            mReceivingThread.doStop();
+            Log.v(mTag, "close: Stopping receiving thread...");
+            mReceivingThread.close();
             mReceivingThread = null;
         }
 
         if (mSendingThread != null) {
-            Log.d(mTag, "close: Stopping sending thread...");
-            mSendingThread.doStop();
+            Log.v(mTag, "close: Stopping sending thread...");
+            mSendingThread.close();
             mSendingThread = null;
         }
 
-        closeLocalSocketAndStreams();
+        if (mBluetoothSocket != null) {
+            try {
+                Log.v(mTag, "close: Closing the Bluetooth socket...");
+                mBluetoothSocket.close();
+            } catch (IOException e) {
+                Log.e(mTag, "close: Failed to close the Bluetooth socket: " + e.getMessage(), e);
+            }
+        }
+
+        if (mLocalhostSocket != null) {
+            try {
+                Log.v(mTag, "close: Closing the localhost socket...");
+                mLocalhostSocket.close();
+            } catch (IOException e) {
+                Log.e(mTag, "close: Failed to close the localhost socket: " + e.getMessage(), e);
+            }
+
+            mLocalhostSocket = null;
+        }
+
         Log.i(mTag, "close: Complete (thread ID: " + getId() + ")");
     }
 
@@ -120,6 +161,35 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         }
 
         return false;
+    }
+
+    /**
+     *
+     * @param who The StreamCopyingThread that is done.
+     */
+    @Override
+    public void onStreamCopyingThreadDone(final StreamCopyingThread who) {
+        if (who == mReceivingThread) {
+            Log.i(mTag, "The receiving thread is done");
+        } else if (who == mSendingThread) {
+            Log.i(mTag, "The sending thread is done");
+        } else {
+            Log.i(mTag, "Unidentified stream copying thread done");
+        }
+
+        final SocketThreadBase socketThreadBase = this;
+
+        /*jxcore.coreThread.handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mListener.onDone(socketThreadBase, (who == mSendingThread));
+            }
+        }, 1000);*/
+
+        if (mReceivingThread.getIsDone() && mSendingThread.getIsDone()) {
+            Log.i(mTag, "Both threads are done, notifying the listener...");
+            mListener.onDone(socketThreadBase, (who == mSendingThread));
+        }
     }
 
     /**
@@ -176,100 +246,32 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 || mLocalInputStream == null
                 || mBluetoothOutputStream == null
                 || mLocalOutputStream == null
-                || mLocalhostSocket == null
-                || mBluetoothSocket == null) {
+                || mLocalhostSocket == null) {
             Log.e(mTag, "startStreamCopyingThreads: Cannot start since at least one of the streams is null");
             mListener.onDisconnected(this, "Cannot start stream copying threads since at least one of the streams is null");
         } else {
-            mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, SENDING_THREAD_NAME);
+            String[] temp = mTag.split("\\.");
+            String shortName;
+
+            if (temp.length > 0) {
+                shortName = temp[temp.length - 1];
+            } else {
+                shortName = mTag;
+            }
+
+            mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, shortName + "/" + SENDING_THREAD_NAME);
             mSendingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
-            mSendingThread.setBufferSize(1024 * 8);
+            mSendingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
             mSendingThread.setNotifyStreamCopyingProgress(true);
             mSendingThread.start();
 
-            mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, RECEIVING_THREAD_NAME);
+            mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, shortName + "/" + RECEIVING_THREAD_NAME);
             mReceivingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
-            mReceivingThread.setBufferSize(1024 * 8);
+            mReceivingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
             mReceivingThread.setNotifyStreamCopyingProgress(true);
             mReceivingThread.start();
 
             Log.i(mTag, "startStreamCopyingThreads: OK (thread ID: " + getId() + ")");
-        }
-    }
-
-    /**
-     * Closes the local socket and streams.
-     */
-    protected synchronized void closeLocalSocketAndStreams() {
-        if (mLocalhostSocket == null && mLocalInputStream == null && mLocalOutputStream == null) {
-            Log.d(mTag, "closeLocalSocketAndStreams: Nothing to close (thread ID: " + getId() + ")");
-        } else {
-            Log.d(mTag, "closeLocalSocketAndStreams: Closing... (thread ID: " + getId() + ")");
-        }
-
-        if (mLocalInputStream != null) {
-            try {
-                //Log.v(mTag, "closeLocalSocketAndStreams: Closing the local input stream...");
-                mLocalInputStream.close();
-            } catch (IOException e) {
-                Log.e(mTag, "closeLocalSocketAndStreams: Failed to close the local input stream: " + e.getMessage(), e);
-            }
-
-            mLocalInputStream = null;
-        }
-
-        if (mLocalOutputStream != null) {
-            try {
-                //Log.v(mTag, "closeLocalSocketAndStreams: Closing the local output stream...");
-                mLocalOutputStream.close();
-            } catch (IOException e) {
-                Log.e(mTag, "closeLocalSocketAndStreams: Failed to close the local output stream: " + e.getMessage(), e);
-            }
-
-            mLocalOutputStream = null;
-        }
-
-        if (mLocalhostSocket != null) {
-            try {
-                //Log.v(mTag, "closeLocalSocketAndStreams: Closing the localhost socket...");
-                mLocalhostSocket.close();
-            } catch (IOException e) {
-                Log.e(mTag, "closeLocalSocketAndStreams: Failed to close the localhost socket: " + e.getMessage(), e);
-            }
-
-            mLocalhostSocket = null;
-        }
-    }
-
-    /**
-     * Closes the Bluetooth socket and streams.
-     */
-    protected synchronized void closeBluetoothSocketAndStreams() {
-        Log.d(mTag, "closeBluetoothSocketAndStreams: Closing... (thread ID: " + getId() + ")");
-
-        if (mBluetoothInputStream != null) {
-            try {
-                mBluetoothInputStream.close();
-            } catch (IOException e) {
-                Log.e(mTag, "closeBluetoothSocketAndStreams: Failed to close the input stream: " + e.getMessage(), e);
-            }
-        }
-
-        if (mBluetoothOutputStream != null) {
-            try {
-                mBluetoothOutputStream.close();
-            } catch (IOException e) {
-                Log.e(mTag, "closeBluetoothSocketAndStreams: Failed to close the output stream: " + e.getMessage(), e);
-            }
-        }
-
-        if (mBluetoothSocket != null) {
-            try {
-                mBluetoothSocket.close();
-                Log.d(mTag, "closeBluetoothSocketAndStreams: Bluetooth socket closed");
-            } catch (IOException e) {
-                Log.e(mTag, "closeBluetoothSocketAndStreams: Failed to close the Bluetooth socket: " + e.getMessage(), e);
-            }
         }
     }
 }

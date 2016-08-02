@@ -24,6 +24,13 @@ ERROR_ABORT() {
     exit -1
   fi
 }
+
+UT=$1
+if [[ $UT == "UT" ]]
+then
+  LOG $GREEN_COLOR "Android native UT files will be copied to the platform folder\n"
+fi
+
 ### END - JXcore Test Server   --------
 
 # The build has sometimes failed with the default value of maximum open
@@ -87,7 +94,7 @@ TEST_TYPE="UnitTest_app.js"
 # The line below is really supposed to be 'jx npm run setupUnit -- $SERVER_ADDRESS' but getting the last argument
 # passed through npm run and then into sh script seems to be a step too far. Eventually we could use an
 # intermediary node.js script to fix this but for now we'll just hack it.
-thali/install/setUpTests.sh $TEST_TYPE $SERVER_ADDRESS;ERROR_ABORT
+thali/install/setUpTests.sh $TEST_TYPE $SERVER_ADDRESS $UT;ERROR_ABORT
 
 if [ $RUN_IN_CI == 0 ]
 then
@@ -101,6 +108,8 @@ then
   # https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
   rm -rf android-release-unsigned.apk;ERROR_ABORT
   cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk;ERROR_ABORT
-  rm -rf ThaliTest.app;ERROR_ABORT
-  cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
+  
+  # TODO Temporarily disabling ios build
+  #rm -rf ThaliTest.app;ERROR_ABORT
+  #cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
 fi
