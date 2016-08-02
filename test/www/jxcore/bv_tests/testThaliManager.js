@@ -3,12 +3,10 @@
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 
-var inherits = require('inherits');
-var fs = require('fs');
+var fs = require('fs-extra-promise');
+var extend = require('js-extend').extend;
 var path = require('path');
-var del = require('del');
 var crypto = require('crypto');
-var Promise = require('lie');
 var PouchDB = require('pouchdb');
 var expressPouchDB = require('express-pouchdb');
 var LeveldownMobile = require('leveldown-mobile');
@@ -21,7 +19,7 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 
-var thaliMobile = require('thali/NextGeneration/thaliMobile');
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliSendNotificationBasedOnReplication =
   require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification =
@@ -45,19 +43,12 @@ ecdhForLocalDevice.generateKeys();
 
 var test = tape({
   setup: function (t) {
-    if (!fs.existsSync(defaultDirectory)) {
-      fs.mkdirSync(defaultDirectory);
-    }
+    fs.ensureDirSync(defaultDirectory);
     t.end();
   },
   teardown: function (t) {
-    if (fs.existsSync(defaultDirectory)) {
-      del(defaultDirectory, { force: true }).then(function () {
-        t.end();
-      });
-    } else {
-      t.end();
-    }
+    fs.removeSync(defaultDirectory);
+    t.end();
   }
 });
 
@@ -66,54 +57,52 @@ test('test thali manager mock', function (t) {
     defaultAdapter: LeveldownMobile
   });
 
+  // All objects should be cloned in order to prevent
+  // 'already wrapped' error by 'sinon.spy'.
+
   var spyExpressPouchDB = sinon.spy(expressPouchDB);
   var spyPouchDB        = sinon.spy(PouchDB);
 
-  var spyMobileStart =
-  thaliMobile.start = sinon.spy(thaliMobile.start);
+  var ThaliMobileClone = extend({}, ThaliMobile);
 
-  var spyMobileStop =
-  thaliMobile.stop = sinon.spy(thaliMobile.stop);
+  var spyMobileStart = sinon.spy(ThaliMobileClone, 'start');
+  var spyMobileStop  = sinon.spy(ThaliMobileClone, 'stop');
 
-  var spyMobileStartLA =
-  thaliMobile.startListeningForAdvertisements =
-    sinon.spy(thaliMobile.startListeningForAdvertisements);
+  var spyMobileStartLA = sinon.spy(
+    ThaliMobileClone, 'startListeningForAdvertisements'
+  );
+  var spyMobileStopLA = sinon.spy(
+    ThaliMobileClone, 'stopListeningForAdvertisements'
+  );
 
-  var spyMobileStartUAA =
-  thaliMobile.startUpdateAdvertisingAndListening =
-    sinon.spy(thaliMobile.startUpdateAdvertisingAndListening);
+  var spyMobileStartUAA = sinon.spy(
+    ThaliMobileClone, 'startUpdateAdvertisingAndListening'
+  );
+  var spyMobileStopUAA = sinon.spy(
+    ThaliMobileClone, 'stopAdvertisingAndListening'
+  );
 
-  var spyMobileStopLA =
-  thaliMobile.stopListeningForAdvertisements =
-    sinon.spy(thaliMobile.stopListeningForAdvertisements);
+  ThaliSendNotificationBasedOnReplication.prototype = extend(
+    {},
+    ThaliSendNotificationBasedOnReplication.prototype
+  );
+  var spyNotificationStart = sinon.spy(
+    ThaliSendNotificationBasedOnReplication.prototype, 'start'
+  );
+  var spyNotificationStop = sinon.spy(
+    ThaliSendNotificationBasedOnReplication.prototype, 'stop'
+  );
 
-  var spyMobileStopUAA =
-  thaliMobile.stopAdvertisingAndListening =
-    sinon.spy(thaliMobile.stopAdvertisingAndListening);
-
-  var spyNotificationStart =
-  ThaliSendNotificationBasedOnReplication.prototype.start =
-    sinon.spy(
-      ThaliSendNotificationBasedOnReplication.prototype.start
-    );
-
-  var spyNotificationStop =
-  ThaliSendNotificationBasedOnReplication.prototype.stop =
-    sinon.spy(
-      ThaliSendNotificationBasedOnReplication.prototype.stop
-    );
-
-  var spyReplicationStart =
-  ThaliPullReplicationFromNotification.prototype.start =
-    sinon.spy(
-      ThaliPullReplicationFromNotification.prototype.start
-    );
-
-  var spyReplicationStop =
-  ThaliPullReplicationFromNotification.prototype.stop =
-    sinon.spy(
-      ThaliPullReplicationFromNotification.prototype.stop
-    );
+  ThaliPullReplicationFromNotification.prototype = extend(
+    {},
+    ThaliPullReplicationFromNotification.prototype
+  );
+  var spyReplicationStart = sinon.spy(
+    ThaliPullReplicationFromNotification.prototype, 'start'
+  );
+  var spyReplicationStop = sinon.spy(
+    ThaliPullReplicationFromNotification.prototype, 'stop'
+  );
 
   var dbName = testUtils.getRandomPouchDBName();
 
@@ -123,7 +112,7 @@ test('test thali manager mock', function (t) {
         ThaliSendNotificationBasedOnReplication,
       './replication/thaliPullReplicationFromNotification':
         ThaliPullReplicationFromNotification,
-      './thaliMobile': thaliMobile
+      './thaliMobile': ThaliMobileClone
     });
 
   var thaliManager = new ThaliManagerProxyquired(
@@ -172,25 +161,41 @@ test('test thali manager mock', function (t) {
     t.ok(spyMobileStop.called,     'thaliMobile.stop has called');
     t.ok(spyMobileStop.calledOnce, 'thaliMobile.stop has called once');
 
-    t.ok(spyMobileStartLA.called,
-      'thaliMobile.startListeningForAdvertisements has called');
-    t.ok(spyMobileStartLA.calledOnce,
-      'thaliMobile.startListeningForAdvertisements has called once');
+    t.ok(
+      spyMobileStartLA.called,
+      'thaliMobile.startListeningForAdvertisements has called'
+    );
+    t.ok(
+      spyMobileStartLA.calledOnce,
+      'thaliMobile.startListeningForAdvertisements has called once'
+    );
 
-    t.ok(spyMobileStartUAA.called,
-      'thaliMobile.startUpdateAdvertisingAndListening has called');
-    t.ok(spyMobileStartUAA.calledOnce,
-      'thaliMobile.startUpdateAdvertisingAndListening has called once');
+    t.ok(
+      spyMobileStartUAA.called,
+      'thaliMobile.startUpdateAdvertisingAndListening has called'
+    );
+    t.ok(
+      spyMobileStartUAA.calledOnce,
+      'thaliMobile.startUpdateAdvertisingAndListening has called once'
+    );
 
-    t.ok(spyMobileStopLA.called,
-      'thaliMobile.stopListeningForAdvertisements has called');
-    t.ok(spyMobileStopLA.calledOnce,
-      'thaliMobile.stopListeningForAdvertisements has called once');
+    t.ok(
+      spyMobileStopLA.called,
+      'thaliMobile.stopListeningForAdvertisements has called'
+    );
+    t.ok(
+      spyMobileStopLA.calledOnce,
+      'thaliMobile.stopListeningForAdvertisements has called once'
+    );
 
-    t.ok(spyMobileStopUAA.called,
-      'thaliMobile.stopAdvertisingAndListening has called');
-    t.ok(spyMobileStopUAA.calledOnce,
-      'thaliMobile.stopAdvertisingAndListening has called once');
+    t.ok(
+      spyMobileStopUAA.called,
+      'thaliMobile.stopAdvertisingAndListening has called'
+    );
+    t.ok(
+      spyMobileStopUAA.calledOnce,
+      'thaliMobile.stopAdvertisingAndListening has called once'
+    );
 
     t.end();
   });

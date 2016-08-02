@@ -1,7 +1,7 @@
 'use strict';
 
 var inherits = require('inherits');
-var objectAssign = require('object-assign');
+var extend = require('js-extend').extend;
 
 
 /**
@@ -45,7 +45,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
       name = undefined;
     }
 
-    opts = objectAssign({}, opts);
+    opts = extend({}, opts);
 
     // If database endpoint is not remote we are using defaultDirectory as
     // prefix and defaultAdapter as adapter for it.
@@ -62,7 +62,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     PouchDB.call(this, name, opts, callback);
   }
 
-  options = objectAssign({}, PouchDBGenerator.defaults, options);
+  options = extend({}, options);
 
   inherits(PouchAlt, PouchDB);
 
@@ -75,9 +75,5 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 
   return PouchAlt;
 }
-
-PouchDBGenerator.defaults = {
-  defaultAdapter: undefined
-};
 
 module.exports = PouchDBGenerator;

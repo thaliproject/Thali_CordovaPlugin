@@ -2,8 +2,8 @@
 
 var logger = require('../thalilogger')('thaliManager');
 
-var thaliMobile = require('./thaliMobile');
 var thaliConfig = require('./thaliConfig');
+var ThaliMobile = require('./thaliMobile');
 var ThaliSendNotificationBasedOnReplication =
   require('./replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification =
@@ -143,8 +143,8 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
     logger.debug("starting thaliPullReplicationFromNotification");
     self._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
 
-    logger.debug("starting thaliMobile");
-    return thaliMobile.start(self._router, this._getPskIdToSecret)
+    logger.debug("starting ThaliMobile");
+    return ThaliMobile.start(self._router, this._getPskIdToSecret)
 
     .then(function () {
       /*
@@ -164,11 +164,11 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
       everyone has to be both listening and advertising at the same time.
        */
       logger.debug("start listening for advertisements");
-      return thaliMobile.startListeningForAdvertisements();
+      return ThaliMobile.startListeningForAdvertisements();
     })
     .then(function () {
       logger.debug("start update advertising and listening");
-      return thaliMobile.startUpdateAdvertisingAndListening();
+      return ThaliMobile.startUpdateAdvertisingAndListening();
     })
     .then(function () {
       logger.debug("starting thaliSendNotificationBasedOnReplication");
@@ -188,15 +188,15 @@ ThaliManager.prototype.stop = function () {
   this._thaliSendNotificationBasedOnReplication.stop();
 
   logger.debug("stopping advertising and listening");
-  return thaliMobile.stopAdvertisingAndListening()
+  return ThaliMobile.stopAdvertisingAndListening()
   
   .then(function () {
     logger.debug("stopping listening for advertisements");
-    return thaliMobile.stopListeningForAdvertisements();
+    return ThaliMobile.stopListeningForAdvertisements();
   })
   .then(function () {
-    logger.debug("stopping thaliMobile");
-    return thaliMobile.stop();
+    logger.debug("stopping ThaliMobile");
+    return ThaliMobile.stop();
   })
   .then(function () {
     logger.debug("stopping thaliPullReplicationFromNotification");

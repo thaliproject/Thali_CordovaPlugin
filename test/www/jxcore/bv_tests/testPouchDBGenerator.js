@@ -3,9 +3,8 @@
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 
-var fs = require('fs');
+var fs = require('fs-extra-promise');
 var path = require('path');
-var del = require('del');
 var PouchDB = require('pouchdb');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var leveldownMobile = require('leveldown-mobile');
@@ -20,19 +19,12 @@ var defaultDirectory = path.join(
 
 var test = tape({
   setup: function (t) {
-    if (!fs.existsSync(defaultDirectory)) {
-      fs.mkdirSync(defaultDirectory);
-    }
+    fs.ensureDirSync(defaultDirectory);
     t.end();
   },
   teardown: function (t) {
-    if (fs.existsSync(defaultDirectory)) {
-      del(defaultDirectory, { force: true }).then(function () {
-        t.end();
-      });
-    } else {
-      t.end();
-    }
+    fs.removeSync(defaultDirectory);
+    t.end();
   }
 });
 
