@@ -23,6 +23,56 @@ cd `dirname $0`
 cd ../..
 REPO_ROOT_PATH=$(pwd)
 
+setup_project() {
+  cd test/TestServer
+  jx npm install
+  # jx generateServerAddress.js $2
+  cd $REPO_ROOT_PATH/..
+  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
+  mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
+
+  if [ $runningInMinGw == true ]; then
+      # The thali package might be installed as link and there will
+      # be troubles later on if this link is tried to be copied so
+      # remove it here.
+      rm -rf $REPO_ROOT_PATH/test/www/jxcore/node_modules/thali
+      cp -R $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/
+  else
+      rsync -a --no-links $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/www
+  fi
+
+  cd $TEST_PROJECT_NAME
+  cordova platform add ios
+  cordova platform add android
+  cd www/jxcore
+  jx npm install $REPO_ROOT_PATH/thali --save --no-optional --autoremove "*.gz"
+
+  if [ $runningInMinGw == true ]; then
+      # On Windows the package.json file will contain an invalid local file URI for Thali,
+      # which needs to be replaced with a valid value. Otherwise the build process
+      # will be aborted. Restore write permission after running sed in case
+      # Windows security settings removed it.
+      sed -i 's/"thali": ".*"/"thali": "*"/g' package.json
+      chmod 644 package.json
+  fi
+
+  # SuperTest which is used by some of the BVTs include a PEM file (for private
+  # keys) that makes Android unhappy so we remove it below in addition to the gz
+  # files.
+  jx npm install --no-optional --autoremove "*.gz,*.pem"
+
+  # In case autoremove fails to delete the files, delete them explicitly.
+  find . -name "*.gz" -delete
+  find . -name "*.pem" -delete
+
+  cp -v $1 app.js
+
+  # In case of UT create a file
+  if [ $2 == "UT" ] || [ $3 == "UT" ] ; then
+    echo "UT files will be copied to the platform directory"
+    touch ../../platforms/android/unittests
+  fi
+}
 
 build_ios() {
   if [ $runningInMinGw == false ]; then
@@ -42,55 +92,7 @@ build_android() {
   cordova build android --release --device
 }
 
-cd test/TestServer
-jx npm install
-# jx generateServerAddress.js $2
-cd $REPO_ROOT_PATH/..
-cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
-mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
-
-if [ $runningInMinGw == true ]; then
-    # The thali package might be installed as link and there will
-    # be troubles later on if this link is tried to be copied so
-    # remove it here.
-    rm -rf $REPO_ROOT_PATH/test/www/jxcore/node_modules/thali
-    cp -R $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/
-else
-    rsync -a --no-links $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/www
-fi
-
-cd $TEST_PROJECT_NAME
-cordova platform add ios
-cordova platform add android
-cd www/jxcore
-jx npm install $REPO_ROOT_PATH/thali --save --no-optional --autoremove "*.gz"
-
-if [ $runningInMinGw == true ]; then
-    # On Windows the package.json file will contain an invalid local file URI for Thali,
-    # which needs to be replaced with a valid value. Otherwise the build process
-    # will be aborted. Restore write permission after running sed in case
-    # Windows security settings removed it.
-    sed -i 's/"thali": ".*"/"thali": "*"/g' package.json
-    chmod 644 package.json
-fi
-
-# SuperTest which is used by some of the BVTs include a PEM file (for private
-# keys) that makes Android unhappy so we remove it below in addition to the gz
-# files.
-jx npm install --no-optional --autoremove "*.gz,*.pem"
-
-# In case autoremove fails to delete the files, delete them explicitly.
-find . -name "*.gz" -delete
-find . -name "*.pem" -delete
-
-cp -v $1 app.js
-
-# In case of UT create a file
-if [ $2 == "UT" ] || [ $3 == "UT" ] ; then
-  echo "UT files will be copied to the platform directory"
-  touch ../../platforms/android/unittests
-fi
-
+setup_project $1 $2 $3
 build_android
 build_ios
 
