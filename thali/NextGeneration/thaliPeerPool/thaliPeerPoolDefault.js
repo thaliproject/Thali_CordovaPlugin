@@ -5,6 +5,7 @@ var ThaliPeerPoolInterface = require('./thaliPeerPoolInterface');
 var thaliConfig = require('../thaliConfig');
 var ForeverAgent = require('forever-agent');
 var logger = require('../../thalilogger')('thaliPeerPoolDefault');
+var Utils = require('../utils/common.js');
 
 /** @module thaliPeerPoolDefault */
 
@@ -101,7 +102,7 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   // cleanup code gets called regardless of how the action ended.
   peerAction.start(actionAgent)
     .catch(function (err) {
-      logger.debug('Got err ' + err);
+      logger.debug('Got err ', Utils.serializePouchError(err));
     })
     .then(function () {
       peerAction.kill();

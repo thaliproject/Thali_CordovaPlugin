@@ -3,19 +3,29 @@
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 
+var inherits = require('inherits');
 var fs = require('fs');
 var path = require('path');
 var del = require('del');
 var crypto = require('crypto');
+var Promise = require('lie');
 var PouchDB = require('pouchdb');
 var expressPouchDB = require('express-pouchdb');
-var leveldownMobile = require('leveldown-mobile');
+var LeveldownMobile = require('leveldown-mobile');
+
+var sinon = require('sinon');
+var proxyquire = require('proxyquire').noCallThru();
 
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
-var ThaliManager = require('thali/NextGeneration/thaliManager');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+
+var thaliMobile = require('thali/NextGeneration/thaliMobile');
+var ThaliSendNotificationBasedOnReplication =
+  require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
+var ThaliPullReplicationFromNotification =
+  require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
 
 // DB defaultDirectory should be unique among all tests
 // and any instance of this test.
@@ -24,7 +34,14 @@ var defaultDirectory = path.join(
   testUtils.getPouchDBTestDirectory(),
   'thali-manager-db-' + testUtils.getUniqueRandomName()
 );
+// Thali manager will use defaultDirectory as db prefix.
 thaliConfig.BASE_DB_PREFIX = defaultDirectory;
+
+// Public base64 key for local device should be passed
+// to the tape 'setup' as 'tape.data'.
+// This is required for tape.coordinated server to generate participants.
+var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
+ecdhForLocalDevice.generateKeys();
 
 var test = tape({
   setup: function (t) {
@@ -44,26 +61,137 @@ var test = tape({
   }
 });
 
-test('test 1', function (t) {
-  var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
-  var publicKey = ecdhForLocalDevice.generateKeys();
-
+test('test thali manager mock', function (t) {
   PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
-    defaultAdapter: leveldownMobile
+    defaultAdapter: LeveldownMobile
   });
 
-  var thaliManager = new ThaliManager(
-    expressPouchDB,
-    PouchDB,
-    testUtils.getUniqueRandomName(),
+  var spyExpressPouchDB = sinon.spy(expressPouchDB);
+  var spyPouchDB        = sinon.spy(PouchDB);
+
+  var spyMobileStart =
+  thaliMobile.start = sinon.spy(thaliMobile.start);
+
+  var spyMobileStop =
+  thaliMobile.stop = sinon.spy(thaliMobile.stop);
+
+  var spyMobileStartLA =
+  thaliMobile.startListeningForAdvertisements =
+    sinon.spy(thaliMobile.startListeningForAdvertisements);
+
+  var spyMobileStartUAA =
+  thaliMobile.startUpdateAdvertisingAndListening =
+    sinon.spy(thaliMobile.startUpdateAdvertisingAndListening);
+
+  var spyMobileStopLA =
+  thaliMobile.stopListeningForAdvertisements =
+    sinon.spy(thaliMobile.stopListeningForAdvertisements);
+
+  var spyMobileStopUAA =
+  thaliMobile.stopAdvertisingAndListening =
+    sinon.spy(thaliMobile.stopAdvertisingAndListening);
+
+  var spyNotificationStart =
+  ThaliSendNotificationBasedOnReplication.prototype.start =
+    sinon.spy(
+      ThaliSendNotificationBasedOnReplication.prototype.start
+    );
+
+  var spyNotificationStop =
+  ThaliSendNotificationBasedOnReplication.prototype.stop =
+    sinon.spy(
+      ThaliSendNotificationBasedOnReplication.prototype.stop
+    );
+
+  var spyReplicationStart =
+  ThaliPullReplicationFromNotification.prototype.start =
+    sinon.spy(
+      ThaliPullReplicationFromNotification.prototype.start
+    );
+
+  var spyReplicationStop =
+  ThaliPullReplicationFromNotification.prototype.stop =
+    sinon.spy(
+      ThaliPullReplicationFromNotification.prototype.stop
+    );
+
+  var dbName = testUtils.getRandomPouchDBName();
+
+  var ThaliManagerProxyquired =
+    proxyquire('thali/NextGeneration/thaliManager', {
+      './replication/thaliSendNotificationBasedOnReplication':
+        ThaliSendNotificationBasedOnReplication,
+      './replication/thaliPullReplicationFromNotification':
+        ThaliPullReplicationFromNotification,
+      './thaliMobile': thaliMobile
+    });
+
+  var thaliManager = new ThaliManagerProxyquired(
+    spyExpressPouchDB,
+    spyPouchDB,
+    dbName,
     ecdhForLocalDevice,
     new ThaliPeerPoolDefault()
   );
-  thaliManager.start([publicKey])
+
+  thaliManager.start([])
   .then(function () {
     return thaliManager.stop();
   })
   .then(function () {
+    t.ok(spyExpressPouchDB.called,     'expressPouchDB has called');
+    t.ok(spyExpressPouchDB.calledOnce, 'expressPouchDB has called once');
+    var spyExpressPouchDBArgs = spyExpressPouchDB.getCalls()[0].args;
+    t.ok(
+      spyExpressPouchDBArgs.length >= 1,
+      'expressPouchDB has called with >= 1 arguments'
+    );
+    t.equals(
+      spyExpressPouchDBArgs[0],
+      spyPouchDB,
+      'expressPouchDB has called with PouchDB as 1-st argument'
+    );
+
+    t.ok(spyPouchDB.called,     'PouchDB has called');
+    t.ok(spyPouchDB.calledOnce, 'PouchDB has called once');
+    var spyPouchDBArgs = spyPouchDB.getCalls()[0].args;
+    t.equals(
+      spyPouchDBArgs.length,
+      1,
+      'PouchDB has called with 1 argument'
+    );
+    t.equals(
+      spyPouchDBArgs[0],
+      dbName,
+      'PouchDB has called with dbName as 1-st argument'
+    );
+
+    t.ok(spyMobileStart.called,     'thaliMobile.start has called');
+    t.ok(spyMobileStart.calledOnce, 'thaliMobile.start has called once');
+
+    t.ok(spyMobileStop.called,     'thaliMobile.stop has called');
+    t.ok(spyMobileStop.calledOnce, 'thaliMobile.stop has called once');
+
+    t.ok(spyMobileStartLA.called,
+      'thaliMobile.startListeningForAdvertisements has called');
+    t.ok(spyMobileStartLA.calledOnce,
+      'thaliMobile.startListeningForAdvertisements has called once');
+
+    t.ok(spyMobileStartUAA.called,
+      'thaliMobile.startUpdateAdvertisingAndListening has called');
+    t.ok(spyMobileStartUAA.calledOnce,
+      'thaliMobile.startUpdateAdvertisingAndListening has called once');
+
+    t.ok(spyMobileStopLA.called,
+      'thaliMobile.stopListeningForAdvertisements has called');
+    t.ok(spyMobileStopLA.calledOnce,
+      'thaliMobile.stopListeningForAdvertisements has called once');
+
+    t.ok(spyMobileStopUAA.called,
+      'thaliMobile.stopAdvertisingAndListening has called');
+    t.ok(spyMobileStopUAA.calledOnce,
+      'thaliMobile.stopAdvertisingAndListening has called once');
+
     t.end();
   });
 });

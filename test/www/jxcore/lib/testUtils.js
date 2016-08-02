@@ -268,7 +268,8 @@ var getUniqueRandomName = function () {
   time = time[0] * Math.pow(10, 9) + time[1];
   return time.toString(36);
 }
-module.exports.getUniqueRandomName = getUniqueRandomName;
+module.exports.getUniqueRandomName  = getUniqueRandomName;
+module.exports.getRandomPouchDBName = getUniqueRandomName;
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
   return new LevelDownPouchDB(getUniqueRandomName());

@@ -45,7 +45,7 @@ var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');
  * @param {PouchDB} PouchDB The factory we will use to create the database we
  * will replicate all changes to.
  * @param {string} dbName The name of the DB. The name of the remote DB MUST be
- * http://[host from discovery]:[port from discovery]/db/[name] where name is
+ * http://[host from discovery]:[port from discovery]/[BASE_DB_PATH]/[name] where name is
  * taken from pouchDB.info's db_name field.
  * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} thaliPeerPoolInterface
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized

@@ -2,6 +2,7 @@
 
 var Promise = require('lie');
 var util = require('util');
+var path = require('path');
 var ThaliPeerAction = require('../thaliPeerPool/thaliPeerAction');
 var actionState = ThaliPeerAction.actionState;
 var assert = require('assert');
@@ -10,6 +11,7 @@ var logger = require('../../thalilogger')('thaliReplicationPeerAction');
 var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
+var Utils = require('../utils/common.js');
 
 /** @module thaliReplicationPeerAction */
 
@@ -25,7 +27,7 @@ var RefreshTimerManager = require('./utilities').RefreshTimerManager;
  * use.
  * @param {string} dbName The name of the DB we will use both for local use as
  * well as remote use. Note that we will get the name for the remote database by
- * taking dbName and appending it to http://[hostAddress]:[portNumber]/db/
+ * taking dbName and appending it to http://[hostAddress]:[portNumber]/[BASE_DB_PATH]/
  * [name] where hostAddress and portNumber are from the peerAdvertisesDataForUs
  * argument.
  * @param {Buffer} ourPublicKey The buffer containing our ECDH public key
@@ -245,7 +247,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
       it seems to work.
        */
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
-        ':' + self._peerAdvertisesDataForUs.portNumber + '/db/' + self._dbName;
+        ':' + self._peerAdvertisesDataForUs.portNumber + path.join(thaliConfig.BASE_DB_PATH, self._dbName);
       var ajaxOptions = {
         ajax : {
           agentClass: ForeverAgent.SSL,
@@ -275,20 +277,29 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
         self._cancelReplication = remoteDB.replicate.to(self._dbName, {
           live: true
         }).on('paused', function (err) {
-            logger.debug('Got paused with ' + err);
+            logger.debug(
+              'Got paused with - ',
+              Utils.serializePouchError(err)
+            );
           })
           .on('active', function () {
             logger.debug('Replication resumed');
           })
           .on('denied', function (err) {
-            logger.warn('We got denied on a PouchDB access, this really should ' +
-              'not happen - ' + err);
+            logger.warn(
+              'We got denied on a PouchDB access, this really should ' +
+              'not happen - ',
+              Utils.serializePouchError(err)
+            );
           })
           .on('complete', function (info) {
             self._complete(info.errors);
           })
           .on('error', function (err) {
-            logger.debug('Got error on replication - ' + err);
+            logger.debug(
+              'Got error on replication - ',
+              Utils.serializePouchError(err)
+            );
             self._complete([err]);
           })
           .on('change', function (info) {
@@ -297,8 +308,11 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
             self._localSeqManager
               .update(info.last_seq)
               .catch(function (err) {
-                logger.debug('Got error in update, waiting for main loop to ' +
-                  'detect and handle - ' + err);
+                logger.debug(
+                  'Got error in update, waiting for main loop to ' +
+                  'detect and handle - ',
+                  Utils.serializePouchError(err)
+                );
               });
             // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
           });
