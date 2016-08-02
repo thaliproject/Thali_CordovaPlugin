@@ -11,8 +11,6 @@ if [ "$(uname -s | cut -c 1-5)" == "MINGW" ]; then
     runningInMinGw=true
 fi
 
-# Set variables
-
 TEST_PROJECT_NAME=ThaliTest
 
 # The first argument must be the name of the test file to make into the app.js
@@ -23,11 +21,31 @@ TEST_PROJECT_NAME=ThaliTest
 
 cd `dirname $0`
 cd ../..
-repositoryRoot=$(pwd)
+REPO_ROOT_PATH=$(pwd)
+
+
+build_ios() {
+  if [ $runningInMinGw == false ]; then
+    SETUP_XCODE_TESTS_SCRIPT_PATH=$REPO_ROOT_PATH/thali/install/setupXcodeProjectTests.js
+    TEST_PROJECT_PATH=$REPO_ROOT_PATH/../$TEST_PROJECT_NAME/platforms/ios/$TEST_PROJECT_NAME.xcodeproj
+    FRAMEWORK_PROJECT_FOLDER_PATH=$REPO_ROOT_PATH/../$TEST_PROJECT_NAME/plugins/org.thaliproject.p2p/lib/ios/ThaliCore
+
+    # updates Xcode project for CI stuff
+    jx $SETUP_XCODE_TESTS_SCRIPT_PATH "${TEST_PROJECT_PATH}" "${FRAMEWORK_PROJECT_FOLDER_PATH}"
+
+    # build iOS
+    cordova build ios --device
+  fi
+}
+
+build_android() {
+  cordova build android --release --device
+}
+
 cd test/TestServer
 jx npm install
 # jx generateServerAddress.js $2
-cd $repositoryRoot/..
+cd $REPO_ROOT_PATH/..
 cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
 mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
@@ -35,19 +53,17 @@ if [ $runningInMinGw == true ]; then
     # The thali package might be installed as link and there will
     # be troubles later on if this link is tried to be copied so
     # remove it here.
-    rm -rf $repositoryRoot/test/www/jxcore/node_modules/thali
-    cp -R $repositoryRoot/test/www/ $TEST_PROJECT_NAME/
+    rm -rf $REPO_ROOT_PATH/test/www/jxcore/node_modules/thali
+    cp -R $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/
 else
-
-    rsync -a --no-links $repositoryRoot/test/www/ $TEST_PROJECT_NAME/www
+    rsync -a --no-links $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/www
 fi
 
 cd $TEST_PROJECT_NAME
-# TODO Temporarily disabling ios build
-#cordova platform add ios
+cordova platform add ios
 cordova platform add android
 cd www/jxcore
-jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
+jx npm install $REPO_ROOT_PATH/thali --save --no-optional --autoremove "*.gz"
 
 if [ $runningInMinGw == true ]; then
     # On Windows the package.json file will contain an invalid local file URI for Thali,
@@ -75,19 +91,7 @@ if [ $2 == "UT" ] || [ $3 == "UT" ] ; then
   touch ../../platforms/android/unittests
 fi
 
-cordova build android --release --device
-
-# TODO Temporarily disabling ios build
-#if [ $runningInMinGw == false ]; then
-  SETUP_XCODE_TESTS_SCRIPT_PATH=$repositoryRoot/thali/install/setupXcodeProjectTests.js
-  TEST_PROJECT_PATH=$repositoryRoot/../$TEST_PROJECT_NAME/platforms/ios/$TEST_PROJECT_NAME.xcodeproj
-  FRAMEWORK_PROJECT_FOLDER_PATH=$repositoryRoot/../$TEST_PROJECT_NAME/plugins/org.thaliproject.p2p/lib/ios/ThaliCore
-
-  # updates Xcode project for CI stuff
-  jx $SETUP_XCODE_TESTS_SCRIPT_PATH "${TEST_PROJECT_PATH}" "${FRAMEWORK_PROJECT_FOLDER_PATH}"
-
-  # build iOS
-  cordova build ios --device
-#fi
+build_android
+build_ios
 
 echo "Remember to start the test coordination server by running jx index.js"
