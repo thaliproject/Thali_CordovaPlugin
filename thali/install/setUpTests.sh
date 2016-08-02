@@ -68,7 +68,7 @@ setup_project() {
   cp -v $1 app.js
 
   # In case of UT create a file
-  if [ $2 == "UT" ] || [ $3 == "UT" ] ; then
+  if [[ $2 == "UT" ]] || [[ $3 == "UT" ]] ; then
     echo "UT files will be copied to the platform directory"
     touch ../../platforms/android/unittests
   fi
