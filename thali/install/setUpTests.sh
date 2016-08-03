@@ -68,13 +68,11 @@ setup_project() {
   cp -v $1 app.js
 
   # In case of UT create a file
-  if [[ $2 == "UT" ]] || [[ $3 == "UT" ]] ; then
+  if [[ $2 == "UT" ]] || [[ $3 == "U T" ]] ; then
     echo "UT files will be copied to the platform directory"
     touch ../../platforms/android/unittests
   fi
-}
 
-build_ios() {
   if [ $runningInMinGw == false ]; then
     SETUP_XCODE_TESTS_SCRIPT_PATH=$REPO_ROOT_PATH/thali/install/setupXcodeProjectTests.js
     TEST_PROJECT_PATH=$REPO_ROOT_PATH/../$TEST_PROJECT_NAME/platforms/ios/$TEST_PROJECT_NAME.xcodeproj
@@ -82,8 +80,11 @@ build_ios() {
 
     # updates Xcode project for CI stuff
     jx $SETUP_XCODE_TESTS_SCRIPT_PATH "${TEST_PROJECT_PATH}" "${FRAMEWORK_PROJECT_FOLDER_PATH}"
+  fi
+}
 
-    # build iOS
+build_ios() {
+  if [ $runningInMinGw == false ]; then
     cordova build ios --device
   fi
 }
