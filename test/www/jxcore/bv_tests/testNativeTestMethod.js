@@ -29,7 +29,7 @@ var test = tape({
 });
 
 test('onPeerLost calls jxcore', function (t) {
-  Mobile('testNativeMethod').callNative("onPeerLost", function (result) {
+  Mobile('TestNativeMethod').callNative("onPeerLost", function (result) {
            console.log(result.Testing_);
            t.equal(callbackPeer.peerIdentifier, "11:22:33:22:11");
            t.notOk(callbackPeer.peerAvailable, "onPeerLost: peerAvailable is false")
@@ -38,7 +38,7 @@ test('onPeerLost calls jxcore', function (t) {
 });
 
 test('onPeerDiscovered calls jxcore', function (t) {
-  Mobile('testNativeMethod').callNative("onPeerDiscovered", function (result) {
+  Mobile('TestNativeMethod').callNative("onPeerDiscovered", function (result) {
            console.log(result.Testing_);
            t.notEqual(callbackPeer.peerIdentifier, "33:44:55:44:33");
            t.ok(callbackPeer.peerAvailable, "onPeerDiscovered: peerAvailable is true")

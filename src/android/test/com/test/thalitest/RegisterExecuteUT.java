@@ -42,10 +42,10 @@ public final class RegisterExecuteUT {
                 e.printStackTrace();
             }
         }       
-
-        jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
+    public static void Register() {
+        jxcore.RegisterMethod("TestNativeMethod", new jxcore.JXcoreCallback() {
             @Override
-            public void Receiver(ArrayList<Object> params, final String callbackId) {
+            public void Receiver(ArrayList<Object> params, String callbackId) {
                 String methodToTest = "";
 
                 if (params.size() == 0) {
@@ -99,3 +99,4 @@ public final class RegisterExecuteUT {
             }
         });
     }
+}
