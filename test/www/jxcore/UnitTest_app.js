@@ -28,7 +28,7 @@ if (process.platform === 'android' || process.platform === 'ios') {
     //   utResult = false;
      }
  });
-
+}
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
