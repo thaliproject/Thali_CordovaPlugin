@@ -7,14 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
-		CCA5724E1D4789A600FBEC41 /* TestEchoClient.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572491D4789A600FBEC41 /* TestEchoClient.m */; };
-		CCA5724F1D4789A600FBEC41 /* TestEchoServer.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA5724B1D4789A600FBEC41 /* TestEchoServer.m */; };
-		CCA572DD1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572DB1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m */; };
-		CCA572ED1D4B6E9600FBEC41 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
-		CCA572EF1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */; };
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA573101D4BA04B00FBEC41 /* THEAppContext+Tests.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA5730A1D4BA04B00FBEC41 /* THEAppContext+Tests.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730B1D4BA04B00FBEC41 /* THEAppContext+Tests.m */; };
@@ -23,18 +17,7 @@
 		CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */; };
 		D352A0211D50A8D100948136 /* AppContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0201D50A8D100948136 /* AppContext.swift */; };
 		D352A0221D50A8D100948136 /* AppContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0201D50A8D100948136 /* AppContext.swift */; };
-		D352A0251D50A91A00948136 /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0231D50A91A00948136 /* Advertiser.swift */; };
-		D352A0261D50A91A00948136 /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0231D50A91A00948136 /* Advertiser.swift */; };
-		D352A0271D50A91A00948136 /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0241D50A91A00948136 /* Browser.swift */; };
-		D352A0281D50A91A00948136 /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0241D50A91A00948136 /* Browser.swift */; };
-		D352A02C1D50A92700948136 /* MultipeerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0291D50A92700948136 /* MultipeerManager.swift */; };
-		D352A02D1D50A92700948136 /* MultipeerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0291D50A92700948136 /* MultipeerManager.swift */; };
-		D352A02E1D50A92700948136 /* StreamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A02A1D50A92700948136 /* StreamService.swift */; };
-		D352A02F1D50A92700948136 /* StreamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A02A1D50A92700948136 /* StreamService.swift */; };
-		D352A0301D50A92700948136 /* SocketRealy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A02B1D50A92700948136 /* SocketRealy.swift */; };
-		D352A0311D50A92700948136 /* SocketRealy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A02B1D50A92700948136 /* SocketRealy.swift */; };
-		D352A0331D50AEC500948136 /* NetworkStatusOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0321D50AEC500948136 /* NetworkStatusOption.swift */; };
-		D352A0341D50AEC500948136 /* NetworkStatusOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0321D50AEC500948136 /* NetworkStatusOption.swift */; };
+		D37E88BE1D5209B0009243EE /* AppContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* AppContextTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,10 +41,7 @@
 		CCA5724B1D4789A600FBEC41 /* TestEchoServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestEchoServer.m; sourceTree = "<group>"; };
 		CCA572511D478C1000FBEC41 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CCA572921D4A327E00FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		CCA572DB1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThaliMultipleInstanceTests.m; sourceTree = "<group>"; };
 		CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Bridging-Header.h"; sourceTree = "<group>"; };
-		CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimpleTestCase.swift; sourceTree = "<group>"; };
-		CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThaliSingleInstanceTests.swift; sourceTree = "<group>"; };
 		CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
 		CCA573071D4B9F1B00FBEC41 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CCA5730A1D4BA04B00FBEC41 /* THEAppContext+Tests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "THEAppContext+Tests.h"; sourceTree = "<group>"; };
@@ -70,12 +50,7 @@
 		CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRunner.swift; sourceTree = "<group>"; };
 		CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TheTestRunner.swift; sourceTree = "<group>"; };
 		D352A0201D50A8D100948136 /* AppContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppContext.swift; sourceTree = "<group>"; };
-		D352A0231D50A91A00948136 /* Advertiser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Advertiser.swift; sourceTree = "<group>"; };
-		D352A0241D50A91A00948136 /* Browser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Browser.swift; sourceTree = "<group>"; };
-		D352A0291D50A92700948136 /* MultipeerManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipeerManager.swift; sourceTree = "<group>"; };
-		D352A02A1D50A92700948136 /* StreamService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamService.swift; sourceTree = "<group>"; };
-		D352A02B1D50A92700948136 /* SocketRealy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketRealy.swift; sourceTree = "<group>"; };
-		D352A0321D50AEC500948136 /* NetworkStatusOption.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkStatusOption.swift; sourceTree = "<group>"; };
+		D37E88BD1D5209B0009243EE /* AppContextTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppContextTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -138,12 +113,10 @@
 		CCA571CA1D4787A900FBEC41 /* ThaliCoreTests */ = {
 			isa = PBXGroup;
 			children = (
-				CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */,
-				CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */,
-				CCA572DB1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m */,
 				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
 				CCA572471D4789A600FBEC41 /* Utils */,
 				CCA572501D478C1000FBEC41 /* Supporting Files */,
+				D37E88BD1D5209B0009243EE /* AppContextTests.swift */,
 			);
 			path = ThaliCoreTests;
 			sourceTree = "<group>";
@@ -159,11 +132,7 @@
 		CCA571DC1D47883C00FBEC41 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				D352A0291D50A92700948136 /* MultipeerManager.swift */,
-				D352A02A1D50A92700948136 /* StreamService.swift */,
-				D352A02B1D50A92700948136 /* SocketRealy.swift */,
 				D352A0201D50A8D100948136 /* AppContext.swift */,
-				D352A0321D50AEC500948136 /* NetworkStatusOption.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -171,8 +140,6 @@
 		CCA571E51D47883C00FBEC41 /* MultipeerConnectivity */ = {
 			isa = PBXGroup;
 			children = (
-				D352A0231D50A91A00948136 /* Advertiser.swift */,
-				D352A0241D50A91A00948136 /* Browser.swift */,
 			);
 			path = MultipeerConnectivity;
 			sourceTree = "<group>";
@@ -282,7 +249,7 @@
 				CCA571C21D4787A900FBEC41 /* Sources */,
 				CCA571C31D4787A900FBEC41 /* Frameworks */,
 				CCA571C41D4787A900FBEC41 /* Resources */,
-				CCA572A01D4A345700FBEC41 /* SwiftLint */,
+				D3D308141D52128500943EED /* SwiftLint */,
 			);
 			buildRules = (
 			);
@@ -394,20 +361,6 @@
 			shellPath = /bin/sh;
 			shellScript = "if which swiftlint >/dev/null; then\n    swiftlint\nelse\n    echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
 		};
-		CCA572A01D4A345700FBEC41 /* SwiftLint */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = SwiftLint;
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if which swiftlint >/dev/null; then\n    swiftlint\nelse\n    echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
-		};
 		CCA572F01D4B89FE00FBEC41 /* Embed XCTest.framework */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -422,6 +375,20 @@
 			shellPath = /bin/sh;
 			shellScript = "\nXCTEST_IPHONEOS_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework\nXCTEST_IPHONESIMULATOR_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework\n\n# Step 1. Define XCTEST_FRAMEWORK_PATH on current platform\nif [ \"${PLATFORM_NAME}\" == \"iphoneos\" ] ; then\n    XCTEST_FRAMEWORK_PATH=$XCTEST_IPHONEOS_PATH\nelif [ \"${PLATFORM_NAME}\" == \"iphonesimulator\" ] ; then\n    XCTEST_FRAMEWORK_PATH=$XCTEST_IPHONESIMULATOR_PATH\nfi\n\n# Step 2. Copy the framework structure into the product frameworks folder\nif [ ! -z \"${XCTEST_FRAMEWORK_PATH}\" ] ; then\n    cp -R \"${XCTEST_FRAMEWORK_PATH}\" \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/\"\nfi\n";
 		};
+		D3D308141D52128500943EED /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\nswiftlint\nelse\necho \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -429,13 +396,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D352A0271D50A91A00948136 /* Browser.swift in Sources */,
-				D352A02E1D50A92700948136 /* StreamService.swift in Sources */,
-				D352A0301D50A92700948136 /* SocketRealy.swift in Sources */,
-				D352A02C1D50A92700948136 /* MultipeerManager.swift in Sources */,
-				D352A0251D50A91A00948136 /* Advertiser.swift in Sources */,
 				D352A0211D50A8D100948136 /* AppContext.swift in Sources */,
-				D352A0331D50AEC500948136 /* NetworkStatusOption.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -443,11 +404,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CCA572DD1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m in Sources */,
-				CCA5724F1D4789A600FBEC41 /* TestEchoServer.m in Sources */,
-				CCA572ED1D4B6E9600FBEC41 /* SimpleTestCase.swift in Sources */,
-				CCA572EF1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift in Sources */,
-				CCA5724E1D4789A600FBEC41 /* TestEchoClient.m in Sources */,
+				D37E88BE1D5209B0009243EE /* AppContextTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -455,17 +412,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D352A0281D50A91A00948136 /* Browser.swift in Sources */,
 				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
-				D352A0311D50A92700948136 /* SocketRealy.swift in Sources */,
 				D352A0221D50A8D100948136 /* AppContext.swift in Sources */,
-				D352A0261D50A91A00948136 /* Advertiser.swift in Sources */,
 				CCA573121D4BA04B00FBEC41 /* TestRun.swift in Sources */,
-				D352A0341D50AEC500948136 /* NetworkStatusOption.swift in Sources */,
 				CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */,
-				D352A02F1D50A92700948136 /* StreamService.swift in Sources */,
-				D352A02D1D50A92700948136 /* MultipeerManager.swift in Sources */,
-				CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */,
 				CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
