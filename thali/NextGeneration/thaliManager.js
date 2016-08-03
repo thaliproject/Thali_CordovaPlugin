@@ -70,6 +70,7 @@ function ThaliManager(expressPouchDB,
          * to get to _Local.
          */
         req.connection.pskRole = 'replication';
+        req.connection.prefix  = thaliConfig.BASE_DB_PATH;
       } else {
         // Default role. It is usually unused.
         req.connection.pskRole = 'public';
@@ -82,9 +83,9 @@ function ThaliManager(expressPouchDB,
     next();
   });
 
-  this._router.all(thaliConfig.BASE_DB_PATH, salti(
+  this._router.all('*', salti(
     dbName,
-    ThaliManager._replicationAcl,
+    ThaliManager._acl,
     function (thaliId, req) {
       /*
        * In the case of an id that begins with te string [LOCAL_SEQ_POINT_PREFIX] we MUST enforce
@@ -95,8 +96,6 @@ function ThaliManager(expressPouchDB,
     },
     { prefix: thaliConfig.BASE_DB_PATH }
   ));
-
-  this._router.all('/', salti(dbName, ThaliManager._beaconAcl, function () {}));
 
   logger.debug("creating ThaliSendNotificationBasedOnReplication instance");
 
@@ -208,7 +207,7 @@ ThaliManager.prototype.stop = function () {
   });
 };
 
-ThaliManager._replicationAcl = [
+ThaliManager._acl = [
   {
     'role': 'replication',
     'paths': [
@@ -222,6 +221,10 @@ ThaliManager._replicationAcl = [
       },
       {
         'path': '/{:db}/_all_docs',
+        'verbs': ['GET', 'HEAD', 'POST']
+      },
+      {
+        'path': '/{:db}/_bulk_docs',
         'verbs': ['GET', 'HEAD', 'POST']
       },
       {
@@ -253,9 +256,7 @@ ThaliManager._replicationAcl = [
         'verbs': ['GET', 'PUT', 'DELETE']
       }
     ]
-  }
-];
-ThaliManager._beaconAcl = [
+  },
   {
     'role': 'beacon',
     'paths': [

@@ -9,7 +9,6 @@ var testUtils = require('../lib/testUtils.js');
 
 var fs = require('fs-extra-promise');
 var path = require('path');
-var del = require('del');
 var crypto = require('crypto');
 var Promise = require('lie');
 var PouchDB = require('pouchdb');
@@ -90,14 +89,12 @@ test('test notifications', function (t) {
       ThaliSendNotificationBasedOnReplication
   });
 
-  // testUtils.getRandomPouchDBName()
-
-  new ThaliManagerProxyquired(
+  var thaliManager = new ThaliManagerProxyquired(
     ExpressPouchDB,
     PouchDB,
-    "asd",
+    'ThaliManagerCoordinated',
     ecdhForLocalDevice,
     new ThaliPeerPoolDefault()
-  )
-  .start(addressBook);
+  );
+  thaliManager.start(addressBook);
 });
