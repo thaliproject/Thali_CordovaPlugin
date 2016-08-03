@@ -32,35 +32,36 @@ Mobile('executeNativeTests').callNative(function (result) {
 if (!utResult) {
   console.log("Failed to execute UT.");
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-}
-
-if (process.platform != 'ios') {
-  // finish testing here (the node part will be omitted)
-  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   return;
 }
 
-// ThaliMobile.getNetworkStatus()
-// .then(function (networkStatus) {
-//   var promiseList = [];
-//   if (networkStatus.wifi === 'off') {
-//     promiseList.push(testUtils.toggleWifi(true));
-//   }
-//   if (networkStatus.bluetooth === 'off') {
-//     promiseList.push(testUtils.toggleBluetooth(true));
-//   }
-//   Promise.all(promiseList)
-//   .then(function () {
-//     Mobile('GetDeviceName').callNative(function (name) {
-//       console.log('My device name is: %s', name);
-//       testUtils.setName(name);
-//       // The setImmediate is to avoid this issue:
-//       // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
-//       setImmediate(function () {
-//         require('./runTests.js');
-//       });
-//     });
-//   });
-// });
+if (process.platform != 'ios') {
+// TODO finish testing here (the node part will be omitted)
+console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+return;
+}
+
+ThaliMobile.getNetworkStatus()
+.then(function (networkStatus) {
+  var promiseList = [];
+  if (networkStatus.wifi === 'off') {
+    promiseList.push(testUtils.toggleWifi(true));
+  }
+  if (networkStatus.bluetooth === 'off') {
+    promiseList.push(testUtils.toggleBluetooth(true));
+  }
+  Promise.all(promiseList)
+  .then(function () {
+    Mobile('GetDeviceName').callNative(function (name) {
+      console.log('My device name is: %s', name);
+      testUtils.setName(name);
+      // The setImmediate is to avoid this issue:
+      // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
+      setImmediate(function () {
+        require('./runTests.js');
+      });
+    });
+  });
+});
 
 console.log('Unit Test app is loaded');

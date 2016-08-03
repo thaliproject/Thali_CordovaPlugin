@@ -36,7 +36,7 @@ var test = tape({
 
 test('Now do an identity Exchange with the real live system!', function(t) {
   if (!jxcore.utils.OSInfo().isMobile) {
-    t.comment("Skipping test because we aren't running on a mobile platform");
+    t.pass(("Skipping test because we aren't running on a mobile platform");
     t.end();
     return;
   }
@@ -48,14 +48,14 @@ test('Now do an identity Exchange with the real live system!', function(t) {
   var identityExchange = new IdentityExchange(thaliApp, thaliServer.address().port, thaliReplicationManager,
     dbName);
   thaliReplicationManager._emitter.on(ThaliEmitter.events.PEER_AVAILABILITY_CHANGED, function(peer) {
-    t.comment("We found a peer - " + JSON.stringify(peer));
+    t.pass(("We found a peer - " + JSON.stringify(peer));
   });
   var peerIdentityExchangeHandler = function(peer) {
-    t.comment("We got a peer to do identity exchange with! - " + JSON.stringify(peer));
+    t.pass(("We got a peer to do identity exchange with! - " + JSON.stringify(peer));
     if (peer.peerAvailable) {
       identityExchange.removeListener(IdentityExchange.Events.PeerIdentityExchange,
         peerIdentityExchangeHandler);
-      t.comment("We are going to try and do an identity exchange with the peer");
+      t.pass(("We are going to try and do an identity exchange with the peer");
       identityExchange.executeIdentityExchange(peer.peerIdentifier, peer.peerName, function(err, code) {
         t.notOk(err, "Did we get an error on executeIdentityExchange?");
         identityExchangeTestUtils.checkCode(t, code);

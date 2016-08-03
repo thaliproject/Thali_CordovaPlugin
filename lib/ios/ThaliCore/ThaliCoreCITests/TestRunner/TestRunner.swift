@@ -46,7 +46,6 @@ final class TestRunner: NSObject {
         let duration = self.testSuite.testRun?.totalDuration ?? 0
 
         for run in testRuns {
-
             if run.failures.count != 0 {
                 failureCount += 1
             } else {
@@ -63,7 +62,17 @@ final class TestRunner: NSObject {
     }
 
     func runTest() {
+        // Test observers can only be registered and unregistered on the main thread.
+        dispatch_sync(dispatch_get_main_queue()) {
+            self.testObservationCenter.addTestObserver(self)
+        }
+
         testSuite.runTest()
+
+        // Test observers can only be registered and unregistered on the main thread.
+        dispatch_sync(dispatch_get_main_queue()) {
+            self.testObservationCenter.removeTestObserver(self)
+        }
     }
 }
 
