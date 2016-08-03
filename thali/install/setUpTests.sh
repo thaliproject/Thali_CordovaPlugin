@@ -22,7 +22,7 @@ cd ../..
 repositoryRoot=$(pwd)
 cd test/TestServer
 jx npm install
-jx generateServerAddress.js $2
+jx generateServerAddress.js
 cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest
 mkdir -p ThaliTest/thaliDontCheckIn/localdev
