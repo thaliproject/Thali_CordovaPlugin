@@ -10,6 +10,7 @@ var logger = require('../../thaliLogger')('thaliReplicationPeerAction');
 var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
+var thaliConfig = require('../thaliConfig');
 
 /** @module thaliReplicationPeerAction */
 
@@ -25,9 +26,9 @@ var RefreshTimerManager = require('./utilities').RefreshTimerManager;
  * use.
  * @param {string} dbName The name of the DB we will use both for local use as
  * well as remote use. Note that we will get the name for the remote database by
- * taking dbName and appending it to http://[hostAddress]:[portNumber]/db/
- * [name] where hostAddress and portNumber are from the peerAdvertisesDataForUs
- * argument.
+ * taking dbName and appending it to http://[hostAddress]:[portNumber] / +
+ * thaliConfig.BASE_DB_PATH + / [name] where hostAddress and portNumber are from
+ * the peerAdvertisesDataForUs argument.
  * @param {Buffer} ourPublicKey The buffer containing our ECDH public key
  * @constructor
  */
@@ -245,7 +246,8 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
       it seems to work.
        */
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
-        ':' + self._peerAdvertisesDataForUs.portNumber + '/db/' + self._dbName;
+        ':' + self._peerAdvertisesDataForUs.portNumber +
+        thaliConfig.BASE_DB_PATH +'/' + self._dbName;
       var ajaxOptions = {
         ajax : {
           agentClass: ForeverAgent.SSL,
