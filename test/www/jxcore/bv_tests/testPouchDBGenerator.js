@@ -2,32 +2,31 @@
 
 var tape = require('../lib/thaliTape');
 
-var fs = require('fs');
-var fs_extra = require('fs-extra');
+var fs = require('fs-extra-promise');
 var PouchDB = require('pouchdb');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var leveldownMobile = require('leveldown-mobile');
 
-var defaultDirectory = './db/';
+// DB defaultDirectory should be unique among all tests
+// and any instance of this test.
+// This is especially required for tape.coordinated.
+var defaultDirectory = './pouch-db-generator-db' + Date.now() + '/';
 
 var test = tape({
   setup: function (t) {
-    if (!fs.existsSync(defaultDirectory)) {
-      fs.mkdirSync(defaultDirectory);
-    }
+    fs.ensureDirSync(defaultDirectory);
     t.end();
   },
   teardown: function (t) {
-    if (fs.existsSync(defaultDirectory)) {
-      fs_extra.emptyDirSync(defaultDirectory);
-      fs.rmdirSync(defaultDirectory);
-    }
+    fs.removeSync(defaultDirectory);
     t.end();
   }
 });
 
 test('test defaultDirectory', function (t) {
-  var LocalPouchDB = PouchDBGenerator(PouchDB, defaultDirectory);
+  var LocalPouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
+    defaultAdapter: leveldownMobile
+  });
 
   var db = LocalPouchDB('https://localhost:3000');
   t.equals(db.__opts.prefix, undefined);

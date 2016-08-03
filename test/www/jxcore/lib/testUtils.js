@@ -251,7 +251,9 @@ module.exports.verifyCombinedResultSuccess =
 var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
 fs.ensureDirSync(dbPath);
 
-var LevelDownPouchDB = PouchDBGenerator(PouchDB, dbPath);
+var LevelDownPouchDB = PouchDBGenerator(PouchDB, dbPath, {
+  defaultAdapter: require('leveldown-mobile')
+});
 
 module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
