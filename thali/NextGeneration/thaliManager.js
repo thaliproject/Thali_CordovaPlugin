@@ -82,10 +82,10 @@ function ThaliManager(expressPouchDB,
     next();
   });
 
-  this._router.all('*', salti(
+  this._router.all(thaliConfig.BASE_DB_PATH, salti(
     dbName,
-    ThaliManager._acl,
-    function(thaliId, req) {
+    ThaliManager._replicationAcl,
+    function (thaliId, req) {
       /*
        * In the case of an id that begins with te string [LOCAL_SEQ_POINT_PREFIX] we MUST enforce
        * that the value of the :id EXACTLY matches the hashed public key of the
@@ -96,6 +96,8 @@ function ThaliManager(expressPouchDB,
     { prefix: thaliConfig.BASE_DB_PATH }
   ));
 
+  this._router.all('/', salti(dbName, ThaliManager._beaconAcl, function () {}));
+
   logger.debug("creating ThaliSendNotificationBasedOnReplication instance");
 
   this._thaliSendNotificationBasedOnReplication =
@@ -104,8 +106,10 @@ function ThaliManager(expressPouchDB,
         ecdhForLocalDevice,
         thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE,
         new PouchDB(dbName));
-  this._getPskIdToSecret    = self._thaliSendNotificationBasedOnReplication.getPskIdToSecret();
-  this._getPskIdToPublicKey = self._thaliSendNotificationBasedOnReplication.getPskIdToPublicKey();
+  this._getPskIdToSecret =
+    self._thaliSendNotificationBasedOnReplication.getPskIdToSecret();
+  this._getPskIdToPublicKey =
+    self._thaliSendNotificationBasedOnReplication.getPskIdToPublicKey();
 
   logger.debug("creating ThaliPullReplicationFromNotification instance");
 
@@ -189,7 +193,7 @@ ThaliManager.prototype.stop = function () {
 
   logger.debug("stopping advertising and listening");
   return ThaliMobile.stopAdvertisingAndListening()
-  
+
   .then(function () {
     logger.debug("stopping listening for advertisements");
     return ThaliMobile.stopListeningForAdvertisements();
@@ -204,7 +208,7 @@ ThaliManager.prototype.stop = function () {
   });
 };
 
-ThaliManager._acl = [
+ThaliManager._replicationAcl = [
   {
     'role': 'replication',
     'paths': [
@@ -249,7 +253,9 @@ ThaliManager._acl = [
         'verbs': ['GET', 'PUT', 'DELETE']
       }
     ]
-  },
+  }
+];
+ThaliManager._beaconAcl = [
   {
     'role': 'beacon',
     'paths': [
