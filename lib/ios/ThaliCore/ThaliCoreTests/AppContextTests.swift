@@ -58,7 +58,7 @@ class AppContextTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        app = AppContext()
+        app = AppContext(serviceName: "testContext")
     }
     
     override func tearDown() {

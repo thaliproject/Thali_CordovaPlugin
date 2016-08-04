@@ -82,6 +82,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 @objc public final class AppContext: NSObject {
     /// delegate for AppContext's events
     public var delegate: AppContextDelegate?
+    private let serviceName: String
 
     @objc private func applicationWillResignActiveNotification(notification: NSNotification) {
         delegate?.appWillEnterBackground(self)
@@ -103,7 +104,8 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
                                        object: nil)
     }
 
-    override public init() {
+    required public init(serviceName: String) {
+        self.serviceName = serviceName
         super.init()
         subscribeAppStateNotifications()
     }
