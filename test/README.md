@@ -50,7 +50,7 @@ depend on the developer running a local copy of a program called sinopia
 (although any private NPM repository server will do) and using that as a place
 to stage our custom releases. This requires the following manual steps:
 
-1. `npm install -g sinopia`. If you get some errors, try to install via
+1. `npm install -g sinopia`. If you get errors, try to install via
 `npm install -g sinopia --no-optional --no-shrinkwrap`
 2. Run the 'sinopia' command in a terminal window and leave it running, forever.
 3. `npm set registry http://localhost:4873` or whatever the address of the
