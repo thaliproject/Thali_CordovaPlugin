@@ -299,7 +299,7 @@ NSString * const JXcoreKillConnectionsJSMethodName = @"killConnections";
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
 
-    if ([appContext respondsToSelector:@selector(executeNativeTests)]) {
+    if (![appContext respondsToSelector:@selector(executeNativeTests)]) {
       return;
     }
 
