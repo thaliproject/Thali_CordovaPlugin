@@ -10,7 +10,7 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliNotificationServer = require('thali/NextGeneration/notification/thaliNotificationServer');
 var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var Promise = require('lie');
-var ThaliPullReplicationFromNotification = require('thali/NextGeneration/replication/ThaliPullReplicationFromNotification');
+var ThaliPullReplicationFromNotification = require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
 
 var thaliNotificationServer = null;
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);

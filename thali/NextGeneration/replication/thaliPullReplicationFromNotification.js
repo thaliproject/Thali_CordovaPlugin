@@ -1,7 +1,7 @@
 'use strict';
 
 var ThaliNotificationClient = require('../notification/thaliNotificationClient');
-var logger = require('../../thalilogger')('thaliPullReplicationFromNotification');
+var logger = require('../../thaliLogger')('thaliPullReplicationFromNotification');
 var assert = require('assert');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');

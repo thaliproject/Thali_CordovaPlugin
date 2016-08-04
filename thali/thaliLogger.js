@@ -10,7 +10,7 @@ var Thalilogger = function () {
 
 util.inherits(Thalilogger, EventEmitter);
 
-Thalilogger.prototype.name = 'thalilogger';
+Thalilogger.prototype.name = 'thaliLogger';
 
 Thalilogger.prototype.log = function (level, msg, meta, callback) {
   jxcore.utils.console.log(level.toUpperCase() + ' ' + meta.tag + ': ' + msg);

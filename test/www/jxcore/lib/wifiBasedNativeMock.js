@@ -7,7 +7,7 @@ var express = require('express');
 var assert = require('assert');
 var net = require('net');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thalilogger')('wifiBasedNativeMock');
+var logger = require('thali/thaliLogger')('wifiBasedNativeMock');
 
 var proxyquire = require('proxyquire');
 proxyquire.noPreserveCache();
@@ -319,7 +319,7 @@ function (portNumber, callback) {
         incomingConnectionsServer.address().port;
       doStart();
     });
-    
+
     incomingConnectionsServer.on('error', function (err) {
       logger.debug('got error on incoming connection server ' + err);
     });
@@ -512,20 +512,20 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
   if (!startListeningForAdvertisementsIsActive) {
     return callback('startListeningForAdvertisements is not active');
   }
-  
+
   function returnSuccessfulConnectResponse() {
     var server = peerProxyServers[peerIdentifier];
-    
+
     if (!server || !server.address())  {
       return callback('Server was either closed or is not yet listening');
     }
-    
+
     callback(null, JSON.stringify({
       listeningPort: peerProxyServers[peerIdentifier].address().port,
       clientPort: 0,
       serverPort: 0
     }));
-    
+
     setTimeout(function () {
       if (!peerProxySockets[peerIdentifier]) {
         // Either the code that called connect didn't connect within the allowed
@@ -534,7 +534,7 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
       }
     }, 2000);
   }
-  
+
   var cleanProxyServerCalled = false;
   function cleanProxyServer() {
     if (cleanProxyServerCalled) {
@@ -626,7 +626,7 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
       cleanProxyServer();
     });
   });
-  
+
   peerProxyServers[peerIdentifier].on('close', function () {
     cleanProxyServer();
   });
@@ -721,14 +721,14 @@ var setupListeners = function (thaliWifiInfrastructure) {
       if (peerAvailabilityChangedCallback === null) {
         return;
       }
-      
+
       // No sending events until at least one of the two start methods is
       // running.
       if (!startListeningForAdvertisementsIsActive &&
           !startUpdateAdvertisingAndListeningIsActive) {
         return;
       }
-      
+
       var peerAvailable = !!wifiPeer.hostAddress;
       if (peerAvailable) {
         peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
