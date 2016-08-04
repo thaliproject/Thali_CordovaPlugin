@@ -90,7 +90,7 @@ test('#_doImmediateSeqUpdate - server accepts & closes connection',
     });
   });
 
-test('#_doImmediateSeqUpdate - server always returns 500', function (t) {
+test.skip('#_doImmediateSeqUpdate - server always returns 500', function (t) {
   var options = {
     ciphers : thaliConfig.SUPPORTED_PSK_CIPHERS,
     pskCallback : function (id) {
