@@ -18,6 +18,7 @@ var LeveldownMobile = require('leveldown-mobile');
 var sinon = require('sinon');
 var proxyquire = require('proxyquire').noCallThru();
 
+var salti = require('salti');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliPeerPoolDefault =
@@ -83,18 +84,57 @@ test('test notifications', function (t) {
     })
   );
 
+  var dbName = 'ThaliManagerCoordinated';
+
+  var spySalti = sinon.spy(function () {
+    var saltiFilter = salti.apply(this, arguments);
+
+    // We will wait untill all these requests will be done
+    return function (req) {
+      if (req.path === '/NotificationBeacons') {
+        ;
+      }
+        req.path === thaliConfig.BASE_DB_PATH + '/' + dbName + '/_changes' ||
+        req.path === thaliConfig.BASE_DB_PATH + '/' + dbName + '/_bulk_docs' ||
+        req.path.indexOf(thaliConfig.BASE_DB_PATH + '/' + dbName + '/_local') === 0
+      ) {
+        requestsCount--;
+        if (requestsCount === 0) {
+          console.log('ololo');
+        }
+      }
+      return saltiFilter.apply(this, arguments);
+    };
+  });
+
   var ThaliManagerProxyquired =
   proxyquire('thali/NextGeneration/thaliManager', {
     './replication/thaliSendNotificationBasedOnReplication':
-      ThaliSendNotificationBasedOnReplication
+      ThaliSendNotificationBasedOnReplication,
+    'salti': spySalti
   });
 
   var thaliManager = new ThaliManagerProxyquired(
     ExpressPouchDB,
     PouchDB,
-    'ThaliManagerCoordinated',
+    dbName,
     ecdhForLocalDevice,
     new ThaliPeerPoolDefault()
   );
-  thaliManager.start(addressBook);
+  thaliManager.start(addressBook)
+
+  .then(function () {
+    t.ok(spySalti.called, 'salti has called');
+    spySalti.getCalls().forEach(function (data) {
+      t.equals(
+        data.args[0], dbName,
+        'salti has called with dbName as a first argument'
+      );
+    });
+
+    // setInterval(function () {
+    //   expectCalls(spySaltiFilter.getCalls(), );
+    //   console.log(.length);
+    // }, 1000);
+  });
 });
