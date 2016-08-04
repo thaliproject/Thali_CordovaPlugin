@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
+		CC4A41541D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */; };
+		CC4A41551D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
 		CCA572081D47883C00FBEC41 /* THEPeerBluetooth.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571D91D47883C00FBEC41 /* THEPeerBluetooth.h */; };
@@ -116,6 +118,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimpleTestCaseNumberTwo.swift; sourceTree = "<group>"; };
 		CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA571BF1D4787A900FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
 		CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThaliCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -245,6 +248,7 @@
 			isa = PBXGroup;
 			children = (
 				CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */,
+				CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */,
 				CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */,
 				CCA572DB1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m */,
 				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
@@ -680,6 +684,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCA5723D1D47887A00FBEC41 /* GCDAsyncSocket.m in Sources */,
+				CC4A41551D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */,
 				CCA572DD1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m in Sources */,
 				CCA5724F1D4789A600FBEC41 /* TestEchoServer.m in Sources */,
 				CCA572ED1D4B6E9600FBEC41 /* SimpleTestCase.swift in Sources */,
@@ -711,6 +716,7 @@
 				CCA572CB1D4A4EF800FBEC41 /* THEMultipeerSocketRelay.m in Sources */,
 				CCA572C21D4A4EE100FBEC41 /* THEMultipeerServer.m in Sources */,
 				CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */,
+				CC4A41541D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */,
 				CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */,
 				CCA572BE1D4A4ED800FBEC41 /* THEMultipeerManager.m in Sources */,
 			);

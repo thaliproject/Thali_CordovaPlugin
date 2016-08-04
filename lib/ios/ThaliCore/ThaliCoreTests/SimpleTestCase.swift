@@ -13,4 +13,8 @@ class SimpleTestCase: XCTestCase {
     func testExample() {
         XCTAssert(true)
     }
+
+    func testThatFails() {
+        XCTAssert(false)
+    }
 }
