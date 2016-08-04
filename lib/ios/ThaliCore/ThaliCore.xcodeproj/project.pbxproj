@@ -10,6 +10,7 @@
 		CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
 		CC4A41541D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */; };
 		CC4A41551D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */; };
+		CC4A416E1D53B32900FCF5D1 /* ThaliSingleInstanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
 		CCA572081D47883C00FBEC41 /* THEPeerBluetooth.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571D91D47883C00FBEC41 /* THEPeerBluetooth.h */; };
@@ -98,11 +99,9 @@
 		CCA572D31D4A506E00FBEC41 /* NPReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572391D47887A00FBEC41 /* NPReachability.m */; };
 		CCA572DD1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572DB1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m */; };
 		CCA572ED1D4B6E9600FBEC41 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
-		CCA572EF1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */; };
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA573101D4BA04B00FBEC41 /* THEAppContext+Tests.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA5730A1D4BA04B00FBEC41 /* THEAppContext+Tests.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730B1D4BA04B00FBEC41 /* THEAppContext+Tests.m */; };
-		CCA573121D4BA04B00FBEC41 /* TestRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730D1D4BA04B00FBEC41 /* TestRun.swift */; };
 		CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */; };
 		CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */; };
 /* End PBXBuildFile section */
@@ -179,7 +178,6 @@
 		CCA573071D4B9F1B00FBEC41 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CCA5730A1D4BA04B00FBEC41 /* THEAppContext+Tests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "THEAppContext+Tests.h"; sourceTree = "<group>"; };
 		CCA5730B1D4BA04B00FBEC41 /* THEAppContext+Tests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "THEAppContext+Tests.m"; sourceTree = "<group>"; };
-		CCA5730D1D4BA04B00FBEC41 /* TestRun.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRun.swift; sourceTree = "<group>"; };
 		CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRunner.swift; sourceTree = "<group>"; };
 		CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TheTestRunner.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -409,7 +407,6 @@
 		CCA5730C1D4BA04B00FBEC41 /* TestRunner */ = {
 			isa = PBXGroup;
 			children = (
-				CCA5730D1D4BA04B00FBEC41 /* TestRun.swift */,
 				CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */,
 				CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */,
 			);
@@ -688,7 +685,7 @@
 				CCA572DD1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m in Sources */,
 				CCA5724F1D4789A600FBEC41 /* TestEchoServer.m in Sources */,
 				CCA572ED1D4B6E9600FBEC41 /* SimpleTestCase.swift in Sources */,
-				CCA572EF1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift in Sources */,
+				CC4A416E1D53B32900FCF5D1 /* ThaliSingleInstanceTests.swift in Sources */,
 				CCA5724E1D4789A600FBEC41 /* TestEchoClient.m in Sources */,
 				CCA572421D47887A00FBEC41 /* NPReachability.m in Sources */,
 			);
@@ -704,7 +701,6 @@
 				CCA572C01D4A4EDC00FBEC41 /* THEMultipeerPeerSession.m in Sources */,
 				CCA572C51D4A4EE900FBEC41 /* THEMultipeerServerSession.m in Sources */,
 				CCA572D11D4A506700FBEC41 /* GCDAsyncSocket.m in Sources */,
-				CCA573121D4BA04B00FBEC41 /* TestRun.swift in Sources */,
 				CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */,
 				CCA572C71D4A4EEE00FBEC41 /* THEMultipeerServerSocketRelay.m in Sources */,
 				CCA572B61D4A4EC100FBEC41 /* THEMultipeerClient.m in Sources */,

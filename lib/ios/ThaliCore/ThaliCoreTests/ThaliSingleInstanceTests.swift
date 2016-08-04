@@ -43,12 +43,12 @@ final class ThaliSingleInstanceTests: XCTestCase {
     }
 
     func testStopAdvertisingIsNotAnError() {
-        XCTAssertTrue(app?.stopAdvertisingAndListening])
+        XCTAssertTrue(app?.stopAdvertisingAndListening())
     }
 
     func testStartAdvertisingTwiceIsNotAnError() {
-    XCTAssertTrue(app?.startUpdateAdvertisingAndListening(4242))
-    XCTAssertTrue(app?.startUpdateAdvertisingAndListening(4242))
+        XCTAssertTrue(app?.startUpdateAdvertisingAndListening(4242))
+        XCTAssertTrue(app?.startUpdateAdvertisingAndListening(4242))
     }
 
     func testInviteContextLength() {
