@@ -50,11 +50,14 @@ depend on the developer running a local copy of a program called sinopia
 (although any private NPM repository server will do) and using that as a place
 to stage our custom releases. This requires the following manual steps:
 
-1. `npm install -g sinopia`
+1. `npm install -g sinopia`. If you get some errors, try to install via
+`npm install -g sinopia --no-optional --no-shrinkwrap`
 2. Run the 'sinopia' command in a terminal window and leave it running, forever.
 3. `npm set registry http://localhost:4873` or whatever the address of the
-NPM registry server is
-4. `npm adduser --registry http://localhost:4873` this last command will require
+NPM registry server is. 
+4. `jx npm get registry`. There should be http://localhost:4873 or the other address from the previous point.
+Otherwise run `jx npm set registry http://localhost:4873`
+5. `npm adduser --registry http://localhost:4873` this last command will require
 you to make up a name and password.
 
 These steps really only have to be done once. Our code will detect the registry
