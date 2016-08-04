@@ -1,5 +1,4 @@
 'use strict';
-var child_process = require('child_process');
 var path = require("path");
 var Promise = require('lie');
 var thaliCoreFramework = require("./ios/prepareThaliCoreFramework.js");

@@ -22,7 +22,7 @@
 // SOFTWARE.
 //
 //
-// this code was taken from https://github.com/Justin-Credible/cordova-plugin-braintree/blob/master/hooks/after_plugin_install.js
+// this code was adapted from https://github.com/Justin-Credible/cordova-plugin-braintree/blob/master/hooks/after_plugin_install.js
 //
 
 var child_process = require('child_process');
@@ -30,11 +30,6 @@ var path = require("path");
 var thaliCoreFramework = require("../ios/prepareThaliCoreFramework.js");
 
 module.exports = function(context) {
-
-    // Only bother if we're on macOS
-    if (process.platform != "darwin") {
-        deferred.resolve();
-    }
 
     // Temporary hack to run npm install on this plugin's package.json dependencies.
     var pluginDir = path.resolve(__dirname, "../");
@@ -45,6 +40,12 @@ module.exports = function(context) {
     // before the plugin gets installed.
     var Q = context.requireCordovaModule("q");
     var deferral = new Q.defer();
+
+    // Only bother if we're on macOS
+    if (process.platform != "darwin") {
+        deferred.resolve();
+        return deferral.promise;
+    }
 
     var platforms = context.opts.cordova.platforms;
 

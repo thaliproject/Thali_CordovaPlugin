@@ -34,7 +34,7 @@ REPO_ROOT_PATH=$(pwd)
 #
 cd test/TestServer
 jx npm install
-# jx generateServerAddress.js $2
+jx generateServerAddress.js $2
 cd $REPO_ROOT_PATH/..
 cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
 mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev

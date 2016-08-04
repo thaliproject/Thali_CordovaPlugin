@@ -1,4 +1,5 @@
 'use strict';
+var childProcessExecPromise = require('../utils.js').childProcessExecPromise;
 var exec = require('child_process').exec;
 var fs = require('fs-extra-promise');
 var path = require("path");
@@ -67,25 +68,6 @@ module.exports.addFramework = function(projectPath, thaliCoreFrameworkProjectFol
       });
     });
 };
-
-// I tried child-process-promise but it failed without errors and I just don't
-// have time to fight with it right now.
-function childProcessExecPromise(command, currentWorkingDirectory) {
-  return new Promise(function (resolve, reject) {
-    exec(command, { cwd: currentWorkingDirectory },
-      function (error, stdout, stderr) {
-        if (error) {
-          reject(error);
-          return;
-        }
-        // Log output even if command doesn't exit with an error,
-        // because otherwise useful debugging information might get lost.
-        if (stdout) { console.log(stdout); }
-        if (stderr) { console.log(stderr); }
-        resolve();
-      });
-  });
-}
 
 function buildThaliCoreFramework(projectFolder, outputFolder, includeTests) {
   var projectName = "ThaliCore";

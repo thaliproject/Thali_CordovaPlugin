@@ -64,8 +64,6 @@
           </feature>
         </config-file>
 
-        <!-- <framework src="lib/ios/ThaliCore.framework" custom="true" embed="true" /> -->
-
         <source-file src="src/ios/JXcoreExtension.m" compiler-flags="-Werror"/>
 
     </platform>
