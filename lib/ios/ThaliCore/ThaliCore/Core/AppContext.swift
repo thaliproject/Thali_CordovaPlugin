@@ -32,12 +32,12 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
     /**
-     Notifies about context's peer chagnges
+     Notifies about context's peer changes
      
      - parameter peers:   array of changed peers
      - parameter context: related AppContext
      */
-    func peerAviabilityChanged(peers: Array<[String : AnyObject]>, inContext context: AppContext)
+    func peerAvailabilityChanged(peers: Array<[String : AnyObject]>, inContext context: AppContext)
     
     /**
      Notifies about network status changes
@@ -115,7 +115,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     /**
      Start the client components
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func startListeningForAdvertisements() -> Bool {
         return false
@@ -124,7 +124,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     /**
      Stop the client components
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func stopListeningForAdvertisements() -> Bool {
         return false
@@ -134,7 +134,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
      Start the server components
 
      - parameter port: server port to listen
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func startUpdateAdvertisingAndListening(withServerPort port: UInt16) -> Bool {
         return false
@@ -143,7 +143,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     /**
      Stop the client components
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func stopListening() -> Bool {
         return false
@@ -152,7 +152,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     /**
      Stop the server components
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func stopAdvertising() -> Bool {
         return false
@@ -164,7 +164,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 
      - parameter peerIdentifier: identifier of peer to kill connection
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func killConnection(peerIdentifier: String) -> Bool {
         return false
