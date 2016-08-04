@@ -43,7 +43,7 @@ public class RegisterExecuteUT {
             }
         }
 
-    public static void RegisterExecuteUT() {
+    public static void Register() {
         jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
