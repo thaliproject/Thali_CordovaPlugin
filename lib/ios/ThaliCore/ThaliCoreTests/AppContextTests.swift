@@ -32,7 +32,7 @@ class ContextDelegateMock: NSObject, AppContextDelegate {
     var willEnterBackgroundCalled: Bool = false
     var didEnterForegroundCalled: Bool = false
     
-    func peerAviabilityChanged(peers: Array<[String : AnyObject]>, inContext context: AppContext) {
+    func peerAvailabilityChanged(peers: Array<[String : AnyObject]>, inContext context: AppContext) {
     }
     
     func networkStatusChanged(status: [String : AnyObject], inContext context: AppContext) {
