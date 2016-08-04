@@ -296,31 +296,30 @@ NSString * const JXcoreKillConnectionsJSMethodName = @"killConnections";
 }
 
 - (void)defineExecuteNativeTests:(THEAppContext *)appContext {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
+
+    if ([appContext respondsToSelector:@selector(executeNativeTests)]) {
+      return;
+    }
+
     NSString *methodName = JXcoreExecuteNativeTestsJSMethodName;
 
     [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundeclared-selector"
-        if ([appContext respondsToSelector:@selector(executeNativeTests)]) {
-            NSString *result = [appContext performSelector:@selector(executeNativeTests)];
+        NSString *result = [appContext performSelector:@selector(executeNativeTests)];
 #pragma clang diagnostic pop
 
-            if (result) {
-                NSLog(@"jxcore: %@: success", methodName);
+        if (result) {
+            NSLog(@"jxcore: %@: success", methodName);
 
-                @synchronized(self) {
-                    [JXcore callEventCallback:callbackId withJSON:result];
-                }
-            } else {
-                NSLog(@"jxcore: %@: fail", methodName);
-
-                @synchronized(self) {
-                    [JXcore callEventCallback:callbackId withParams:@[@"Tests results are empty"]];
-                }
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withJSON:result];
             }
         } else {
+            NSLog(@"jxcore: %@: fail", methodName);
+
             @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[@"Method not available"]];
+                [JXcore callEventCallback:callbackId withParams:@[@"Tests results are empty"]];
             }
         }
     } withName:methodName];
