@@ -1,6 +1,6 @@
 'use strict';
 
-var logger = require('../../thalilogger')('localSeqManager');
+var logger = require('../../thaliLogger')('localSeqManager');
 var Promise = require('lie');
 var thaliNotificationBeacons = require('../notification/thaliNotificationBeacons');
 var assert = require('assert');
