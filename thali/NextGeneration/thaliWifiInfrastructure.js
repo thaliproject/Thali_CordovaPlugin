@@ -197,7 +197,8 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     try {
       validations.ensureValidPort(portNumber);
     } catch (error) {
-      logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
+      logger.warn('Failed to parse a valid port number from location: %s',
+        data.LOCATION);
       return false;
     }
     peer.hostAddress = parsedLocation.hostname;
@@ -335,6 +336,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
   });
 };
 
+// jscs:disable maximumLineLength
 /**
  * This will start the local Wi-Fi Infrastructure Mode discovery mechanism
  * (currently SSDP). Calling this method will trigger {@link
@@ -354,6 +356,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  *
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
 function () {
   var self = this;
@@ -407,7 +410,7 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.listening.target = false;
   }
-  var action = function (resolve, reject) {
+  var action = function (resolve) {
     if (!self.states.listening.current) {
       return resolve();
     }
@@ -424,6 +427,7 @@ function (skipPromiseQueue, changeTarget) {
   }
 };
 
+// jscs:disable maximumLineLength
 /**
  * This method will start advertising the peer's presence over the local Wi-Fi
  * Infrastructure Mode discovery mechanism (currently SSDP). When creating the
@@ -479,6 +483,7 @@ function (skipPromiseQueue, changeTarget) {
  *
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening =
 function () {
   var self = this;
@@ -591,7 +596,7 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.advertising.target = false;
   }
-  var action = function (resolve, reject) {
+  var action = function (resolve) {
     if (!self.states.advertising.current) {
       return resolve();
     }
@@ -649,6 +654,7 @@ function (skipPromiseQueue, changeTarget) {
  * to the peer
  */
 
+// jscs:disable maximumLineLength
 /**
  * For the definition of this event please see {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
@@ -672,6 +678,7 @@ function (skipPromiseQueue, changeTarget) {
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
+// jscs:enable maximumLineLength
 
 /**
  * [NOT IMPLEMENTED]
