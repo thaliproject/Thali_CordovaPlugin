@@ -73,6 +73,8 @@ var test = tape({
   }
 });
 
+return;
+
 test('Coordinated replication action test', function (t) {
   var localPouchDB = new TestPouchDB(DB_NAME);
   localPouchDB
