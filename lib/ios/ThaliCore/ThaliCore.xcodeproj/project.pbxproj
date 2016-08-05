@@ -15,17 +15,25 @@
 		CCA573121D4BA04B00FBEC41 /* TestRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730D1D4BA04B00FBEC41 /* TestRun.swift */; };
 		CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */; };
 		CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */; };
-		D352A0211D50A8D100948136 /* AppContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0201D50A8D100948136 /* AppContext.swift */; };
-		D352A0221D50A8D100948136 /* AppContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0201D50A8D100948136 /* AppContext.swift */; };
-		D37E88BE1D5209B0009243EE /* AppContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* AppContextTests.swift */; };
-		D3D308181D521DCE00943EED /* StreamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D308171D521DCE00943EED /* StreamService.swift */; };
-		D3D3081A1D522C2300943EED /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D308191D522C2300943EED /* SessionManager.swift */; };
-		D3D3081B1D523FF000943EED /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D308191D522C2300943EED /* SessionManager.swift */; };
-		FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
-		FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
+		D300C47B1D54C0EA00A9D97D /* PeerIdentifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */; };
 		D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */; };
+		FAADD0F9E7314D00CE9FE432 /* MultipeerServiceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDCA159BF9B0735202450 /* MultipeerServiceType.swift */; };
+		FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
+		FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
 		FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
 		FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
+		FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */; };
+		FAADD65D7FB58F275462A8A5 /* MultipeerServiceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDCA159BF9B0735202450 /* MultipeerServiceType.swift */; };
+		FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7119C663364132D5C36 /* BrowserManager.swift */; };
+		FAADD705CAB9E45559605B8F /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0A063AF85E1634DB500 /* Browser.swift */; };
+		FAADD7B9451F32511828885E /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0A063AF85E1634DB500 /* Browser.swift */; };
+		FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */; };
+		FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
+		FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
+		FAADDB8B09BB5791DF1715A7 /* MultipeerContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDBB4C6D0D2C69E3C64E6 /* MultipeerContext.swift */; };
+		FAADDCAEDCB8C0F827E4420B /* MultipeerContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD004A596218F07245CCF /* MultipeerContextTests.swift */; };
+		FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7119C663364132D5C36 /* BrowserManager.swift */; };
+		FAADDE8CD200F4316DE4917F /* MultipeerContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDBB4C6D0D2C69E3C64E6 /* MultipeerContext.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,10 +51,6 @@
 		CCA571BF1D4787A900FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
 		CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThaliCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA571D71D47883100FBEC41 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		CCA572481D4789A600FBEC41 /* TestEchoClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestEchoClient.h; sourceTree = "<group>"; };
-		CCA572491D4789A600FBEC41 /* TestEchoClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestEchoClient.m; sourceTree = "<group>"; };
-		CCA5724A1D4789A600FBEC41 /* TestEchoServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestEchoServer.h; sourceTree = "<group>"; };
-		CCA5724B1D4789A600FBEC41 /* TestEchoServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestEchoServer.m; sourceTree = "<group>"; };
 		CCA572511D478C1000FBEC41 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CCA572921D4A327E00FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Bridging-Header.h"; sourceTree = "<group>"; };
@@ -57,12 +61,16 @@
 		CCA5730D1D4BA04B00FBEC41 /* TestRun.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRun.swift; sourceTree = "<group>"; };
 		CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRunner.swift; sourceTree = "<group>"; };
 		CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TheTestRunner.swift; sourceTree = "<group>"; };
-		D352A0201D50A8D100948136 /* AppContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppContext.swift; sourceTree = "<group>"; };
-		D37E88BD1D5209B0009243EE /* AppContextTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppContextTests.swift; sourceTree = "<group>"; };
-		D3D308171D521DCE00943EED /* StreamService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamService.swift; sourceTree = "<group>"; };
-		D3D308191D522C2300943EED /* SessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
-		FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Advertiser.swift; sourceTree = "<group>"; };
+		D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerIdentifierTests.swift; sourceTree = "<group>"; };
 		D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManagerTests.swift; sourceTree = "<group>"; };
+		FAADD004A596218F07245CCF /* MultipeerContextTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipeerContextTests.swift; sourceTree = "<group>"; };
+		FAADD0A063AF85E1634DB500 /* Browser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Browser.swift; sourceTree = "<group>"; };
+		FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserManager.swift; sourceTree = "<group>"; };
+		FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Advertiser.swift; sourceTree = "<group>"; };
+		FAADD7119C663364132D5C36 /* BrowserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserManager.swift; sourceTree = "<group>"; };
+		FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerIdentifier.swift; sourceTree = "<group>"; };
+		FAADDBB4C6D0D2C69E3C64E6 /* MultipeerContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipeerContext.swift; sourceTree = "<group>"; };
+		FAADDCA159BF9B0735202450 /* MultipeerServiceType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipeerServiceType.swift; sourceTree = "<group>"; };
 		FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -127,9 +135,10 @@
 			isa = PBXGroup;
 			children = (
 				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
-				CCA572471D4789A600FBEC41 /* Utils */,
 				CCA572501D478C1000FBEC41 /* Supporting Files */,
 				D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */,
+				D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */,
+				FAADD004A596218F07245CCF /* MultipeerContextTests.swift */,
 			);
 			path = ThaliCoreTests;
 			sourceTree = "<group>";
@@ -146,6 +155,8 @@
 			isa = PBXGroup;
 			children = (
 				FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */,
+				FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */,
+				FAADDBB4C6D0D2C69E3C64E6 /* MultipeerContext.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -153,22 +164,13 @@
 		CCA571E51D47883C00FBEC41 /* MultipeerConnectivity */ = {
 			isa = PBXGroup;
 			children = (
-				D3D308171D521DCE00943EED /* StreamService.swift */,
 				FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */,
-				D3D308191D522C2300943EED /* SessionManager.swift */,
+				FAADD0A063AF85E1634DB500 /* Browser.swift */,
+				FAADDCA159BF9B0735202450 /* MultipeerServiceType.swift */,
+				FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */,
+				FAADD7119C663364132D5C36 /* BrowserManager.swift */,
 			);
 			path = MultipeerConnectivity;
-			sourceTree = "<group>";
-		};
-		CCA572471D4789A600FBEC41 /* Utils */ = {
-			isa = PBXGroup;
-			children = (
-				CCA572481D4789A600FBEC41 /* TestEchoClient.h */,
-				CCA572491D4789A600FBEC41 /* TestEchoClient.m */,
-				CCA5724A1D4789A600FBEC41 /* TestEchoServer.h */,
-				CCA5724B1D4789A600FBEC41 /* TestEchoServer.m */,
-			);
-			path = Utils;
 			sourceTree = "<group>";
 		};
 		CCA572501D478C1000FBEC41 /* Supporting Files */ = {
@@ -412,11 +414,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D352A0211D50A8D100948136 /* AppContext.swift in Sources */,
-				D3D308181D521DCE00943EED /* StreamService.swift in Sources */,
-				D3D3081A1D522C2300943EED /* SessionManager.swift in Sources */,
 				FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */,
 				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
+				FAADD7B9451F32511828885E /* Browser.swift in Sources */,
+				FAADD65D7FB58F275462A8A5 /* MultipeerServiceType.swift in Sources */,
+				FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */,
+				FAADDB8B09BB5791DF1715A7 /* MultipeerContext.swift in Sources */,
+				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
+				FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -424,7 +429,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D300C47B1D54C0EA00A9D97D /* PeerIdentifierTests.swift in Sources */,
 				D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */,
+				FAADDCAEDCB8C0F827E4420B /* MultipeerContextTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -437,8 +444,13 @@
 				CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */,
 				CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */,
 				FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */,
-				D3D3081B1D523FF000943EED /* SessionManager.swift in Sources */,
+				FAADD705CAB9E45559605B8F /* Browser.swift in Sources */,
 				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
+				FAADD0F9E7314D00CE9FE432 /* MultipeerServiceType.swift in Sources */,
+				FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */,
+				FAADDE8CD200F4316DE4917F /* MultipeerContext.swift in Sources */,
+				FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */,
+				FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
