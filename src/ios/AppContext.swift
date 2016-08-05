@@ -1,43 +1,24 @@
 //
-//  The MIT License (MIT)
-//
-//  Copyright (c) 2016 Microsoft
-//
-//  Permission is hereby granted, free of charge, to any person obtaining a copy
-//  of this software and associated documentation files (the "Software"), to deal
-//  in the Software without restriction, including without limitation the rights
-//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-//  copies of the Software, and to permit persons to whom the Software is
-//  furnished to do so, subject to the following conditions:
-//
-//  The above copyright notice and this permission notice shall be included in
-//  all copies or substantial portions of the Software.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-//  THE SOFTWARE.
-//
 //  Thali CordovaPlugin
 //  AppContext.swift
 //
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//
 
 import Foundation
-import UIKit
+import ThaliCore
 
 public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
     /**
-     Notifies about context's peer chagnges
+     Notifies about context's peer changes
      
      - parameter peers:   array of changed peers
      - parameter context: related AppContext
      */
-    func peerAviabilityChanged(peers: Array<[String : AnyObject]>, inContext context: AppContext)
+    func peerAvailabilityChanged(peers: Array<[String : AnyObject]>, inContext context: AppContext)
     
     /**
      Notifies about network status changes
@@ -81,33 +62,24 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 /// Interface for communication between native and cross-platform parts
 @objc public final class AppContext: NSObject {
     /// delegate for AppContext's events
-    public var delegate: AppContextDelegate?
-    private let serviceName: String
+    private weak var delegate: AppContextDelegate?
+    private let appNotificationsManager: ApplicationStateNotificationsManager
 
-    @objc private func applicationWillResignActiveNotification(notification: NSNotification) {
-        delegate?.appWillEnterBackground(self)
-    }
-
-    @objc private func applicationDidBecomeActiveNotification(notification: NSNotification) {
-        delegate?.appDidEnterForeground(self)
-    }
-
-    private func subscribeAppStateNotifications() {
-        let notificationCenter = NSNotificationCenter.defaultCenter()
-        notificationCenter.addObserver(self,
-                                       selector: #selector(applicationWillResignActiveNotification(_:)),
-                                       name: UIApplicationWillResignActiveNotification,
-                                       object: nil)
-        notificationCenter.addObserver(self,
-                                       selector: #selector(applicationDidBecomeActiveNotification(_:)),
-                                       name: UIApplicationDidBecomeActiveNotification,
-                                       object: nil)
-    }
-
-    required public init(serviceName: String) {
-        self.serviceName = serviceName
+    public init(delegate: AppContextDelegate?) {
+        appNotificationsManager = ApplicationStateNotificationsManager()
         super.init()
-        subscribeAppStateNotifications()
+        appNotificationsManager.didEnterForegroundHandler = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.delegate?.appDidEnterForeground(strongSelf)
+        }
+        appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.delegate?.appWillEnterBackground(strongSelf)
+        }
     }
 
     deinit {
@@ -117,7 +89,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     /**
      Start the client components
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func startListeningForAdvertisements() -> Bool {
         return false
@@ -126,7 +98,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     /**
      Stop the client components
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func stopListeningForAdvertisements() -> Bool {
         return false
@@ -136,7 +108,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
      Start the server components
 
      - parameter port: server port to listen
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func startUpdateAdvertisingAndListening(withServerPort port: UInt16) -> Bool {
         return false
@@ -145,7 +117,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     /**
      Stop the client components
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func stopListening() -> Bool {
         return false
@@ -154,7 +126,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     /**
      Stop the server components
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func stopAdvertising() -> Bool {
         return false
@@ -166,7 +138,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 
      - parameter peerIdentifier: identifier of peer to kill connection
 
-     - returns: true if succeed
+     - returns: true if successful
      */
     public func killConnection(peerIdentifier: String) -> Bool {
         return false

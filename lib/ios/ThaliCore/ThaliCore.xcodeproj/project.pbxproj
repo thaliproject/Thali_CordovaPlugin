@@ -23,6 +23,9 @@
 		D3D3081B1D523FF000943EED /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D308191D522C2300943EED /* SessionManager.swift */; };
 		FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
 		FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
+		D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */; };
+		FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
+		FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +62,8 @@
 		D3D308171D521DCE00943EED /* StreamService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamService.swift; sourceTree = "<group>"; };
 		D3D308191D522C2300943EED /* SessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
 		FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Advertiser.swift; sourceTree = "<group>"; };
+		D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManagerTests.swift; sourceTree = "<group>"; };
+		FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,7 +129,7 @@
 				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
 				CCA572471D4789A600FBEC41 /* Utils */,
 				CCA572501D478C1000FBEC41 /* Supporting Files */,
-				D37E88BD1D5209B0009243EE /* AppContextTests.swift */,
+				D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */,
 			);
 			path = ThaliCoreTests;
 			sourceTree = "<group>";
@@ -140,7 +145,7 @@
 		CCA571DC1D47883C00FBEC41 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				D352A0201D50A8D100948136 /* AppContext.swift */,
+				FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -411,6 +416,7 @@
 				D3D308181D521DCE00943EED /* StreamService.swift in Sources */,
 				D3D3081A1D522C2300943EED /* SessionManager.swift in Sources */,
 				FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */,
+				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -418,7 +424,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D37E88BE1D5209B0009243EE /* AppContextTests.swift in Sources */,
+				D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -427,12 +433,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
-				D352A0221D50A8D100948136 /* AppContext.swift in Sources */,
 				CCA573121D4BA04B00FBEC41 /* TestRun.swift in Sources */,
 				CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */,
 				CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */,
 				FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */,
 				D3D3081B1D523FF000943EED /* SessionManager.swift in Sources */,
+				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
