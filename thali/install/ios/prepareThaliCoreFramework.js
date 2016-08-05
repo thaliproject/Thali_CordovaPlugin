@@ -1,14 +1,13 @@
 'use strict';
 var childProcessExecPromise = require('../utils.js').childProcessExecPromise;
-var exec = require('child_process').exec;
 var fs = require('fs-extra-promise');
-var path = require("path");
+var path = require('path');
 var Promise = require('lie');
-var xcode = require("xcode");
+var xcode = require('xcode');
 
 module.exports.addFramework = function(projectPath, thaliCoreFrameworkProjectFolder, includeTests) {
   // We need to build ThaliCore.framework before embedding it into the project
-  var thaliFrameworkOutputFolder = path.join(thaliCoreFrameworkProjectFolder, "framework");
+  var thaliFrameworkOutputFolder = path.join(thaliCoreFrameworkProjectFolder, 'framework');
   return buildThaliCoreFramework(thaliCoreFrameworkProjectFolder, thaliFrameworkOutputFolder, includeTests)
     .then(function() {
       var pbxProjectPath = path.join(projectPath, "project.pbxproj");
@@ -63,9 +62,9 @@ module.exports.addFramework = function(projectPath, thaliCoreFrameworkProjectFol
 
             // Add the frameworks again. This time they will have the code-sign option set so they get code signed when being deployed to devices.
             if (includeTests) {
-              console.log("Adding XCTest.framework");
-              var xcTestFrameworkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework";
-              // var xcTestFrameworkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework";
+              console.log('Adding XCTest.framework');
+              var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework';
+              // var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework';
               xcodeProject.addFramework(xcTestFrameworkPath, {customFramework: true, embed: true, link: true, sign: true});
             }
 
@@ -74,7 +73,7 @@ module.exports.addFramework = function(projectPath, thaliCoreFrameworkProjectFol
       })
       .then(function(xcodeProject) {
         // Save the project file back to disk.
-        return fs.writeFileAsync(pbxProjectPath, xcodeProject.writeSync(), "utf-8");
+        return fs.writeFileAsync(pbxProjectPath, xcodeProject.writeSync(), 'utf-8');
       });
     });
 };
@@ -99,20 +98,21 @@ function buildThaliCoreFramework(projectFolder, outputFolder, includeTests) {
     " -sdk " + sdk +
     " ONLY_ACTIVE_ARCH=NO " +
     " BUILD_DIR=" + "\"" + buildDir + "\"" +
+    " CODE_SIGN_IDENTITY=''" +
     " clean build";
 
-  console.log("Building ThaliCore.framework");
+  console.log('Building ThaliCore.framework');
 
-  return childProcessExecPromise(buildCmd, "")
+  return childProcessExecPromise(buildCmd, '')
     .then(function () {
-      return childProcessExecPromise("mkdir -p " + "\"" + outputFolder + "\"", "");
+      return childProcessExecPromise('mkdir -p ' + '\"' + outputFolder + '\"', '');
     })
     .then(function () {
-      var frameworkInputPath = path.join(buildDir, projectConfiguration + "-" + sdk, projectName + ".framework");
+      var frameworkInputPath = path.join(buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
       var copyFrameworkCmd =
-        "cp -R " +
-        " \"" + frameworkInputPath + "\"" +
-        " \"" + outputFolder + "\"" ;
+        'cp -R ' +
+        ' \"' + frameworkInputPath + '\"' +
+        ' \"' + outputFolder + '\"' ;
 
       return childProcessExecPromise(copyFrameworkCmd, "");
     });

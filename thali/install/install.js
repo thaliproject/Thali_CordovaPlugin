@@ -1,6 +1,5 @@
 'use strict';
 var childProcessExecPromise = require('./utils.js').childProcessExecPromise;
-var exec = require('child_process').exec;
 var spawn = require('child_process').spawn;
 var path = require('path');
 var https = require('https');

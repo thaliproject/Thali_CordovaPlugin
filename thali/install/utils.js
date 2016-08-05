@@ -19,4 +19,4 @@ module.exports.childProcessExecPromise = function(command, currentWorkingDirecto
         resolve();
       });
   });
-}
+};

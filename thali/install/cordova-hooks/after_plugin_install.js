@@ -25,29 +25,29 @@
 // this code was adapted from https://github.com/Justin-Credible/cordova-plugin-braintree/blob/master/hooks/after_plugin_install.js
 //
 
-var child_process = require('child_process');
-var path = require("path");
-var thaliCoreFramework = require("../ios/prepareThaliCoreFramework.js");
+'use strict';
+var path = require('path');
+var thaliCoreFramework = require('../ios/prepareThaliCoreFramework.js');
 
 module.exports = function(context) {
 
     // Need a promise so that the install waits for us to complete our project modifications
     // before the plugin gets installed.
-    var Q = context.requireCordovaModule("q");
-    var deferral = new Q.defer();
+    var Q = context.requireCordovaModule('q');
+    var deferred = new Q.defer();
 
     // Only bother if we're on macOS
-    if (process.platform != "darwin") {
+    if (process.platform !== 'darwin') {
         deferred.resolve();
-        return deferral.promise;
+        return deferred.promise;
     }
 
     var platforms = context.opts.cordova.platforms;
 
     // We can bail out if the iOS platform isn't present.
-    if (platforms.indexOf("ios") === -1) {
-        deferral.resolve();
-        return deferral.promise;
+    if (platforms.indexOf('ios') === -1) {
+        deferred.resolve();
+        return deferred.promise;
     }
 
     // We need to build ThaliCore.framework before embedding it into the project
