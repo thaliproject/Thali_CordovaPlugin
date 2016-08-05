@@ -29,8 +29,16 @@ module.exports.addFramework = function(projectPath, thaliCoreFrameworkProjectFol
 
             // We need to tell to Xcode project that we use Swift in our framework
             // I believe that this line of code will be removed in the future
+            console.log("Adding Build Properties");
+
             xcodeProject.removeBuildProperty('EMBEDDED_CONTENT_CONTAINS_SWIFT');
             xcodeProject.addBuildProperty('EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
+
+            xcodeProject.removeBuildProperty('OTHER_SWIFT_FLAGS');
+            xcodeProject.addBuildProperty('OTHER_SWIFT_FLAGS', '-DTEST');
+
+            xcodeProject.removeBuildProperty('GCC_PREPROCESSOR_DEFINITIONS');
+            xcodeProject.updateBuildProperty('GCC_PREPROCESSOR_DEFINITIONS', ['$(inherited)', 'TEST=1']);
 
             // First check to see if the Embed Framework node exists, if not, add it.
             // This is all we need to do as they are added to the embedded section by default.
@@ -50,10 +58,12 @@ module.exports.addFramework = function(projectPath, thaliCoreFrameworkProjectFol
             xcodeProject.addBuildProperty("LD_RUNPATH_SEARCH_PATHS", "\"$(inherited) @executable_path/Frameworks\"", "Release");
 
             // Add the frameworks again.  This time they will have the code-sign option set so they get code signed when being deployed to devices.
+            console.log("Adding ThaliCore.framework");
             xcodeProject.addFramework(path.join(thaliFrameworkOutputFolder, "ThaliCore.framework"), {customFramework: true, embed: true, link: true, sign: true});
 
             // Add the frameworks again. This time they will have the code-sign option set so they get code signed when being deployed to devices.
             if (includeTests) {
+              console.log("Adding XCTest.framework");
               var xcTestFrameworkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework";
               // var xcTestFrameworkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework";
               xcodeProject.addFramework(xcTestFrameworkPath, {customFramework: true, embed: true, link: true, sign: true});
@@ -96,8 +106,6 @@ function buildThaliCoreFramework(projectFolder, outputFolder, includeTests) {
 
   return childProcessExecPromise(buildCmd, "")
     .then(function () {
-      console.log("Copying ThaliCore.framework");
-
       return childProcessExecPromise("mkdir -p " + "\"" + outputFolder + "\"", "");
     })
     .then(function () {

@@ -87,7 +87,10 @@ NSString * const JXcoreKillConnectionsJSMethodName = @"killConnections";
     [self defineConnect:appContext];
     [self defineKillConnections:appContext];
     [self defineGetOSVersion:appContext];
+
+#ifdef TEST
     [self defineExecuteNativeTests:appContext];
+#endif
 }
 
 #pragma mark - JavaScript Callbacks
@@ -295,6 +298,10 @@ NSString * const JXcoreKillConnectionsJSMethodName = @"killConnections";
     } withName:methodName];
 }
 
+#pragma mark Methods only available for testing
+
+#ifdef TEST
+
 - (void)defineExecuteNativeTests:(THEAppContext *)appContext {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
@@ -324,6 +331,8 @@ NSString * const JXcoreKillConnectionsJSMethodName = @"killConnections";
         }
     } withName:methodName];
 }
+
+#endif
 
 #pragma mark - Helper Methods
 
