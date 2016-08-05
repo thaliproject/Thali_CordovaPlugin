@@ -14,6 +14,8 @@ var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWr
 var validations = require('thali/validations');
 var tape = require('../lib/thaliTape');
 
+return;
+
 var test = tape({
   setup: function (t) {
     // Make sure right handlers are registered in case

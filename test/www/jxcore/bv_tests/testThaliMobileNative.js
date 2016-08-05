@@ -52,6 +52,8 @@ test('Can call start/stopListeningForAdvertisements', function (t) {
   });
 });
 
+return;
+
 test('Calling startListeningForAdvertisements twice is NOT an error',
 function (t) {
   Mobile('startListeningForAdvertisements').callNative(function (err) {
@@ -128,36 +130,36 @@ if (!tape.coordinated) {
   return;
 }
 
-//test('peerAvailabilityChange is called', function (t) {
-//  var complete = false;
-//  Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-//    if (!complete)
-//    {
-//      t.ok(peers instanceof Array, 'peers must be an array');
-//      t.ok(peers.length !== 0, 'peers must not be zero-length');
-//
-//      t.ok(peers[0].hasOwnProperty('peerIdentifier'),
-//        'peer must have peerIdentifier');
-//      t.ok(typeof peers[0].peerIdentifier === 'string',
-//        'peerIdentifier must be a string');
-//
-//      t.ok(peers[0].hasOwnProperty('peerAvailable'),
-//        'peer must have peerAvailable');
-//      t.ok(peers[0].hasOwnProperty('pleaseConnect'),
-//        'peer must have pleaseConnect');
-//
-//      complete = true;
-//      t.end();
-//    }
-//  });
-//
-//  Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
-//    t.notOk(err, 'Can call startUpdateAdvertisingAndListeningwithout error');
-//    Mobile('startListeningForAdvertisements').callNative(function (err) {
-//      t.notOk(err, 'Can call startListeningForAdvertisements without error');
-//    });
-//  });
-//});
+test('peerAvailabilityChange is called', function (t) {
+  var complete = false;
+  Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
+    if (!complete)
+    {
+      t.ok(peers instanceof Array, 'peers must be an array');
+      t.ok(peers.length !== 0, 'peers must not be zero-length');
+
+      t.ok(peers[0].hasOwnProperty('peerIdentifier'),
+        'peer must have peerIdentifier');
+      t.ok(typeof peers[0].peerIdentifier === 'string',
+        'peerIdentifier must be a string');
+
+      t.ok(peers[0].hasOwnProperty('peerAvailable'),
+        'peer must have peerAvailable');
+      t.ok(peers[0].hasOwnProperty('pleaseConnect'),
+        'peer must have pleaseConnect');
+
+      complete = true;
+      t.end();
+    }
+  });
+
+  Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListeningwithout error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    });
+  });
+});
 
 function getMessageByLength(socket, lengthOfMessage) {
   return new Promise(function (resolve, reject) {
