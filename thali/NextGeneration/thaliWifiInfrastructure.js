@@ -556,7 +556,9 @@ function () {
         ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
         pskCallback: function (id) {
           return self.pskIdToSecret(id);
-        }
+        },
+        key: thaliConfig.BOGUS_KEY_PEM,
+        cert: thaliConfig.BOGUS_CERT_PEM
       };
       self.routerServer = https.createServer(options, self.expressApp)
         .listen(self.routerServerPort, listeningHandler);
