@@ -35,10 +35,10 @@ module.exports.addFramework = function(projectPath, thaliCoreFrameworkProjectFol
             xcodeProject.addBuildProperty('EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
 
             xcodeProject.removeBuildProperty('OTHER_SWIFT_FLAGS');
-            xcodeProject.addBuildProperty('OTHER_SWIFT_FLAGS', '-DTEST');
+            xcodeProject.addBuildProperty('OTHER_SWIFT_FLAGS', '\"-DTEST\"');
 
             xcodeProject.removeBuildProperty('GCC_PREPROCESSOR_DEFINITIONS');
-            xcodeProject.updateBuildProperty('GCC_PREPROCESSOR_DEFINITIONS', ['$(inherited)', 'TEST=1']);
+            xcodeProject.updateBuildProperty('GCC_PREPROCESSOR_DEFINITIONS', ['\"$(inherited)\"', '\"TEST=1\"']);
 
             // First check to see if the Embed Framework node exists, if not, add it.
             // This is all we need to do as they are added to the embedded section by default.
