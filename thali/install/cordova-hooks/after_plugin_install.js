@@ -31,11 +31,6 @@ var thaliCoreFramework = require("../ios/prepareThaliCoreFramework.js");
 
 module.exports = function(context) {
 
-    // Temporary hack to run npm install on this plugin's package.json dependencies.
-    var pluginDir = path.resolve(__dirname, "../");
-
-    child_process.execSync("npm --prefix " + pluginDir + " install " + pluginDir);
-
     // Need a promise so that the install waits for us to complete our project modifications
     // before the plugin gets installed.
     var Q = context.requireCordovaModule("q");
