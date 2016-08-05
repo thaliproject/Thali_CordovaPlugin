@@ -132,7 +132,7 @@ PskTestPeerAction.prototype.start = function (httpAgentPool) {
 };
 
 
-test.skip('#ThaliPeerPoolDefault - PSK Pool works', function (t) {
+test('#ThaliPeerPoolDefault - PSK Pool works', function (t) {
   /*
   Set up a server like thaliMobile and make sure it is listening on PSK
   Then set up a default route for 'return10' that returns the number 10

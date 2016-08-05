@@ -121,15 +121,15 @@ function returnErrorCode(t, statusCode) {
   });
 }
 
-test.skip('Server always returns 500', function (t) {
+test('Server always returns 500', function (t) {
   return returnErrorCode(t, 500);
 });
 
-test.skip('Server always returns 401', function (t) {
+test('Server always returns 401', function (t) {
   return returnErrorCode(t, 401);
 });
 
-test.skip('Server always returns 403', function (t) {
+test('Server always returns 403', function (t) {
   return returnErrorCode(t, 403);
 });
 
