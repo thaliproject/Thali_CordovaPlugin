@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import UIKit
+import ThaliCore
 
 public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 
@@ -62,31 +62,24 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 /// Interface for communication between native and cross-platform parts
 @objc public final class AppContext: NSObject {
     /// delegate for AppContext's events
-    public var delegate: AppContextDelegate?
+    private weak var delegate: AppContextDelegate?
+    private let appNotificationsManager: ApplicationStateNotificationsManager
 
-    @objc private func applicationWillResignActiveNotification(notification: NSNotification) {
-        delegate?.appWillEnterBackground(self)
-    }
-
-    @objc private func applicationDidBecomeActiveNotification(notification: NSNotification) {
-        delegate?.appDidEnterForeground(self)
-    }
-
-    private func subscribeAppStateNotifications() {
-        let notificationCenter = NSNotificationCenter.defaultCenter()
-        notificationCenter.addObserver(self,
-                                       selector: #selector(applicationWillResignActiveNotification(_:)),
-                                       name: UIApplicationWillResignActiveNotification,
-                                       object: nil)
-        notificationCenter.addObserver(self,
-                                       selector: #selector(applicationDidBecomeActiveNotification(_:)),
-                                       name: UIApplicationDidBecomeActiveNotification,
-                                       object: nil)
-    }
-
-    override public init() {
+    public init(delegate: AppContextDelegate?) {
+        appNotificationsManager = ApplicationStateNotificationsManager()
         super.init()
-        subscribeAppStateNotifications()
+        appNotificationsManager.didEnterForegroundHandler = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.delegate?.appDidEnterForeground(strongSelf)
+        }
+        appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.delegate?.appWillEnterBackground(strongSelf)
+        }
     }
 
     deinit {

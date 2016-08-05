@@ -15,9 +15,9 @@
 		CCA573121D4BA04B00FBEC41 /* TestRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730D1D4BA04B00FBEC41 /* TestRun.swift */; };
 		CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */; };
 		CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */; };
-		D352A0211D50A8D100948136 /* AppContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0201D50A8D100948136 /* AppContext.swift */; };
-		D352A0221D50A8D100948136 /* AppContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352A0201D50A8D100948136 /* AppContext.swift */; };
-		D37E88BE1D5209B0009243EE /* AppContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* AppContextTests.swift */; };
+		D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */; };
+		FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
+		FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,8 +49,8 @@
 		CCA5730D1D4BA04B00FBEC41 /* TestRun.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRun.swift; sourceTree = "<group>"; };
 		CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRunner.swift; sourceTree = "<group>"; };
 		CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TheTestRunner.swift; sourceTree = "<group>"; };
-		D352A0201D50A8D100948136 /* AppContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppContext.swift; sourceTree = "<group>"; };
-		D37E88BD1D5209B0009243EE /* AppContextTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppContextTests.swift; sourceTree = "<group>"; };
+		D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManagerTests.swift; sourceTree = "<group>"; };
+		FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,7 +116,7 @@
 				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
 				CCA572471D4789A600FBEC41 /* Utils */,
 				CCA572501D478C1000FBEC41 /* Supporting Files */,
-				D37E88BD1D5209B0009243EE /* AppContextTests.swift */,
+				D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */,
 			);
 			path = ThaliCoreTests;
 			sourceTree = "<group>";
@@ -132,7 +132,7 @@
 		CCA571DC1D47883C00FBEC41 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				D352A0201D50A8D100948136 /* AppContext.swift */,
+				FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -396,7 +396,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D352A0211D50A8D100948136 /* AppContext.swift in Sources */,
+				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -404,7 +404,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D37E88BE1D5209B0009243EE /* AppContextTests.swift in Sources */,
+				D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -413,10 +413,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
-				D352A0221D50A8D100948136 /* AppContext.swift in Sources */,
 				CCA573121D4BA04B00FBEC41 /* TestRun.swift in Sources */,
 				CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */,
 				CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */,
+				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
