@@ -41,8 +41,7 @@ thaliConfig.BASE_DB_PREFIX = defaultDirectory;
 // to the tape 'setup' as 'tape.data'.
 // This is required for tape.coordinated server to generate participants.
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
-ecdhForLocalDevice.generateKeys();
-var publicBase64KeyForLocalDevice = ecdhForLocalDevice.getPublicKey('base64');
+var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
 
 // PouchDB name should be the same between peers.
 var DB_NAME = 'ThaliManagerCoordinated';
@@ -51,7 +50,7 @@ var testCloseAllServer = null;
 
 var test = tape({
   setup: function (t) {
-    t.data = publicBase64KeyForLocalDevice;
+    t.data = publicKeyForLocalDevice.toJSON();
     fs.ensureDirSync(defaultDirectory);
     t.end();
   },
@@ -62,18 +61,6 @@ var test = tape({
 });
 
 test('test bump update_seq', function (t) {
-  var addressBook = [];
-
-  if (t.participants) {
-    t.participants.forEach(function (participant) {
-      if (participant.data !== publicBase64KeyForLocalDevice) {
-        addressBook.push(
-          new Buffer(participant.data, 'base64')
-        );
-      }
-    });
-  }
-
   PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
     defaultAdapter: LeveldownMobile
   });
@@ -134,7 +121,9 @@ test('test bump update_seq', function (t) {
     ecdhForLocalDevice,
     new ThaliPeerPoolDefault()
   );
-  thaliManager.start(addressBook)
+  // This function will return all participant's public keys except local 'publicKeyForLocalDevice' one.
+  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(t, publicKeyForLocalDevice);
+  thaliManager.start(partnerKeys)
 
   .then(function () {
     t.ok(spySalti.called, 'salti has called');

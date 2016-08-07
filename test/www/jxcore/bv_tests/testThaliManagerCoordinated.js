@@ -16,7 +16,6 @@ var ExpressPouchDB = require('express-pouchdb');
 var LeveldownMobile = require('leveldown-mobile');
 
 var sinon = require('sinon');
-var proxyquire = require('proxyquire').noCallThru();
 
 var salti = require('salti');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
@@ -24,10 +23,6 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-var ThaliSendNotificationBasedOnReplication =
-  require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
-var ThaliReplicationPeerAction =
-  require('thali/NextGeneration/replication/ThaliReplicationPeerAction');
 
 // DB defaultDirectory should be unique among all tests
 // and any instance of this test.
@@ -53,7 +48,7 @@ var testCloseAllServer = null;
 
 var test = tape({
   setup: function (t) {
-    t.data = publicBase64KeyForLocalDevice;
+    t.data = publicKeyForLocalDevice.toJSON();
     fs.ensureDirSync(defaultDirectory);
     t.end();
   },
@@ -62,104 +57,6 @@ var test = tape({
     t.end();
   }
 });
-
-/*
-test('test bump update_seq', function (t) {
-  var addressBook = [];
-
-  if (t.participants) {
-    t.participants.forEach(function (participant) {
-      if (participant.data !== publicBase64KeyForLocalDevice) {
-        addressBook.push(
-          new Buffer(participant.data, 'base64')
-        );
-      }
-    });
-  }
-
-  PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
-    defaultAdapter: LeveldownMobile
-  });
-
-  // We can return '1' instead of 'update_seq' in order to force
-  // '/NotificationBeacons', '/{:db}/_changes', '/{:db}/_bulk_docs',
-  // '/{:db}/_local/something'
-  sinon.stub(
-    ThaliSendNotificationBasedOnReplication.prototype,
-    "_findSequenceNumber"
-  )
-  .returns(
-    Promise.resolve().then(function (result) {
-      return 1;
-    })
-  );
-
-  var spySalti;
-  var allRequestsStarted = new Promise(function (resolve) {
-    spySalti = sinon.spy(function () {
-      var saltiFilter = salti.apply(this, arguments);
-
-      // We will wait untill all these requests will be done.
-      var dbPrefix = thaliConfig.BASE_DB_PATH + '/' + DB_NAME + '/';
-      var done = 0;
-      return function (req) {
-        if (req.path === '/NotificationBeacons') {
-          done |= 1;
-        } else if (req.path === dbPrefix + '_changes') {
-          done |= 1 << 1;
-        } else if (req.path === dbPrefix + '_bulk_docs') {
-          done |= 1 << 2;
-        } else if (req.path.indexOf(dbPrefix + '_local') === 0) {
-          done |= 1 << 3;
-        }
-        if (done === 0xf) {
-          done = -1;
-          // Give sequence updater time to run before killing everything
-          setTimeout(function () {
-            resolve();
-          }, ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds);
-        }
-        return saltiFilter.apply(this, arguments);
-      };
-    });
-  });
-
-  var ThaliManagerProxyquired =
-  proxyquire('thali/NextGeneration/thaliManager', {
-    './replication/thaliSendNotificationBasedOnReplication':
-      ThaliSendNotificationBasedOnReplication,
-    'salti': spySalti
-  });
-
-  var thaliManager = new ThaliManagerProxyquired(
-    ExpressPouchDB,
-    PouchDB,
-    DB_NAME,
-    ecdhForLocalDevice,
-    new ThaliPeerPoolDefault()
-  );
-  thaliManager.start(addressBook)
-
-  .then(function () {
-    t.ok(spySalti.called, 'salti has called');
-    spySalti.getCalls().forEach(function (data) {
-      t.equals(
-        data.args[0], DB_NAME,
-        'salti has called with DB_NAME as a first argument'
-      );
-    });
-  })
-  .then(function () {
-    return allRequestsStarted;
-  })
-  .then(function () {
-    return thaliManager.stop();
-  })
-  .then(function () {
-    t.end();
-  });
-});
-*/
 
 test('test repeat write', function (t) {
   PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
