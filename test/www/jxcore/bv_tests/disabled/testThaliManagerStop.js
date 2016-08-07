@@ -1,11 +1,11 @@
 'use strict';
 
-var tape = require('../lib/thaliTape');
+var tape = require('../../lib/thaliTape');
 if (!tape.coordinated) {
   return;
 }
 
-var testUtils = require('../lib/testUtils.js');
+var testUtils = require('../../lib/testUtils.js');
 
 var fs = require('fs-extra-promise');
 var path = require('path');
@@ -26,8 +26,6 @@ var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var ThaliSendNotificationBasedOnReplication =
   require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
-var ThaliReplicationPeerAction =
-  require('thali/NextGeneration/replication/ThaliReplicationPeerAction');
 
 // DB defaultDirectory should be unique among all tests
 // and any instance of this test.
@@ -43,7 +41,7 @@ thaliConfig.BASE_DB_PREFIX = defaultDirectory;
 // to the tape 'setup' as 'tape.data'.
 // This is required for tape.coordinated server to generate participants.
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
-var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
+ecdhForLocalDevice.generateKeys();
 var publicBase64KeyForLocalDevice = ecdhForLocalDevice.getPublicKey('base64');
 
 // PouchDB name should be the same between peers.
@@ -63,7 +61,6 @@ var test = tape({
   }
 });
 
-/*
 test('test bump update_seq', function (t) {
   var addressBook = [];
 
@@ -83,7 +80,7 @@ test('test bump update_seq', function (t) {
 
   // We can return '1' instead of 'update_seq' in order to force
   // '/NotificationBeacons', '/{:db}/_changes', '/{:db}/_bulk_docs',
-  // '/{:db}/_local/something'
+  // '/{:db}/_local/something'.
   sinon.stub(
     ThaliSendNotificationBasedOnReplication.prototype,
     "_findSequenceNumber"
@@ -99,7 +96,7 @@ test('test bump update_seq', function (t) {
     spySalti = sinon.spy(function () {
       var saltiFilter = salti.apply(this, arguments);
 
-      // We will wait untill all these requests will be done.
+      // We will wait untill all these requests will be started.
       var dbPrefix = thaliConfig.BASE_DB_PATH + '/' + DB_NAME + '/';
       var done = 0;
       return function (req) {
@@ -114,10 +111,9 @@ test('test bump update_seq', function (t) {
         }
         if (done === 0xf) {
           done = -1;
-          // Give sequence updater time to run before killing everything
-          setTimeout(function () {
+          setImmediate(function () {
             resolve();
-          }, ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds);
+          });
         }
         return saltiFilter.apply(this, arguments);
       };
@@ -157,63 +153,5 @@ test('test bump update_seq', function (t) {
   })
   .then(function () {
     t.end();
-  });
-});
-*/
-
-test('test repeat write', function (t) {
-  PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
-    defaultAdapter: LeveldownMobile
-  });
-  // We are creating a local db for each participant.
-  var pouchDB = new PouchDB(DB_NAME);
-
-  var thaliManager;
-  // We are adding a simple test doc to a local db for each participant.
-  // It consist of it's public key and test string.
-  pouchDB.put({
-    _id: publicBase64KeyForLocalDevice,
-    test1: true
-  })
-  .then(function () {
-    return new Promise(function (resolve, reject) {
-      // We are registering for DB changes.
-      // Our task is to validate a single doc and exit.
-      var changesFeed = pouchDB.changes({
-        since: 0,
-        live: true,
-        include_docs: true
-      })
-      .on('change', function (change) {
-        if (
-          change.doc._id   === publicBase64KeyForLocalDevice &&
-          change.doc.test1 === true
-        ) {
-          // The doc is valid.
-          // We should turn 'changesFeed' off and call 'resolve' now.
-          changesFeed.cancel();
-        } else {
-          reject('bad doc');
-        }
-      })
-      .on('complete', function () {
-        resolve();
-      })
-      .on('error', function (err) {
-        reject('got error ' + err);
-      });
-    })
-  })
-  .then(function () {
-    thaliManager = new ThaliManager(
-      ExpressPouchDB,
-      PouchDB,
-      DB_NAME,
-      ecdhForLocalDevice,
-      new ThaliPeerPoolDefault()
-    );
-    // This function will return all participant's public keys except local 'publicKeyForLocalDevice' one.
-    var partnerKeys = testUtils.turnParticipantsIntoBufferArray(t, publicKeyForLocalDevice);
-    return thaliManager.start(partnerKeys);
   });
 });

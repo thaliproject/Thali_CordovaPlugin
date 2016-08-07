@@ -278,7 +278,9 @@ module.exports.getRandomlyNamedTestPouchDBInstance = function () {
 module.exports.getPouchDBFactoryInRandomDirectory = function () {
   var directory = path.join(pouchDBTestDirectory, getUniqueRandomName());
   fs.ensureDirSync(directory);
-  return PouchDBGenerator(PouchDB, directory);
+  return PouchDBGenerator(PouchDB, directory, {
+    defaultAdapter: require('leveldown-mobile')
+  });
 };
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
