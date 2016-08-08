@@ -94,6 +94,8 @@ fi
 
 # update Xcode project for CI stuff
 if [ $IS_DARWIN_PLATFORM == true ]; then
+  echo "Integrating ThaliCore.framework into Xcode project for testing"
+
   SETUP_XCODE_TESTS_SCRIPT_PATH=$REPO_ROOT_PATH/thali/install/setupXcodeProjectTests.js
   TEST_PROJECT_PATH=$REPO_ROOT_PATH/../$TEST_PROJECT_NAME/platforms/ios/$TEST_PROJECT_NAME.xcodeproj
   FRAMEWORK_PROJECT_FOLDER_PATH=$REPO_ROOT_PATH/../$TEST_PROJECT_NAME/plugins/org.thaliproject.p2p/lib/ios/ThaliCore
