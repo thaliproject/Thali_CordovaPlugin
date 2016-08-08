@@ -236,7 +236,9 @@ module.exports.start = function (router, pskIdToSecret) {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskCallback : function (id) {
         return pskIdToSecret(id);
-      }
+      },
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
     };
     gRouterServer = https.createServer(options, gRouterExpress).listen(0,
       function () {

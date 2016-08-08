@@ -556,7 +556,9 @@ module.exports.setUpServer = function (testBody, appConfig) {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskCallback : function (id) {
         return id === pskId ? pskKey : null;
-      }
+      },
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
     }, app));
   testCloseAllServer.listen(0, function () {
     var serverPort = testCloseAllServer.address().port;

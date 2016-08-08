@@ -99,6 +99,8 @@ module.exports.getTestHttpsServer = function (expressApp,
 
     var options = {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM,
       pskCallback : pskCallback
     };
 

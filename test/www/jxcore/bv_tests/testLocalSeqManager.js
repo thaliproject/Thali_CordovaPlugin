@@ -95,7 +95,9 @@ test('#_doImmediateSeqUpdate - server always returns 500', function (t) {
     ciphers : thaliConfig.SUPPORTED_PSK_CIPHERS,
     pskCallback : function (id) {
       return id === pskId ? pskKey : null;
-    }
+    },
+    key: thaliConfig.BOGUS_KEY_PEM,
+    cert: thaliConfig.BOGUS_CERT_PEM
   };
   testCloseAllServer = makeIntoCloseAllServer(
     https.createServer(options, function (req, res) {
