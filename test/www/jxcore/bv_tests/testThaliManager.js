@@ -15,6 +15,7 @@ var LeveldownMobile = require('leveldown-mobile');
 var sinon = require('sinon');
 var proxyquire = require('proxyquire').noCallThru();
 
+var Salti = require('salti');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliPeerPoolDefault =
@@ -113,13 +114,16 @@ function getMocks() {
     spyReplication.prototype, 'stop'
   );
 
+  var spySalti = sinon.spy(Salti);
+
   var spyThaliManager =
     proxyquire('thali/NextGeneration/thaliManager', {
       './replication/thaliSendNotificationBasedOnReplication':
         spyNotification,
       './replication/thaliPullReplicationFromNotification':
         spyReplication,
-      './thaliMobile': spyThaliMobile
+      './thaliMobile': spyThaliMobile,
+      'salti': spySalti
     });
 
   return {
@@ -140,6 +144,8 @@ function getMocks() {
     replication: spyReplication,
     replicationStart: spyReplicationStart,
     replicationStop: spyReplicationStop,
+
+    salti: spySalti,
 
     ThaliManager: spyThaliManager
   };
@@ -324,6 +330,7 @@ function checkNotificationStart(t, mocks, remoteKeys) {
     'ThaliSendNotificationBasedOnReplication.prototype.start ' +
     'has called with >= 1 arguments'
   );
+  
   var foundRemoteKeys = false;
   args.forEach(function (arg) {
     if (arg === remoteKeys) {
@@ -393,6 +400,23 @@ function checkMobileStop(t, mocks) {
   );
 }
 
+function checkSalti(t, mocks, dbName) {
+  // Testing that 'Salti' has called properly.
+  t.ok(mocks.salti.called, 'Salti has called');
+  t.ok(mocks.salti.calledOnce, 'Salti has called once');
+
+  var args = mocks.salti.getCalls()[0].args;
+  t.ok(args.length >= 1, 'Salti has called with >= 1 arguments');
+  
+  var foundDBName = false;
+  args.forEach(function (arg) {
+    if (arg === dbName) {
+      foundDBName = true;
+    }
+  });
+  t.ok(foundDBName, 'Salti has called with \'dbName\' argument');
+}
+
 test('test thali manager spies', function (t) {
   var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
 
@@ -424,6 +448,7 @@ test('test thali manager spies', function (t) {
   checkPouchDB(t, mocks, dbName);
   checkNotification(t, mocks, ecdhForLocalDevice);
   checkReplication(t, mocks, dbName, peerPool, ecdhForLocalDevice);
+  checkSalti(t, mocks, dbName);
 
   thaliManager.start(partnerKeys)
   .then(function () {
@@ -474,6 +499,7 @@ test('test thali manager multiple starts and stops', function (t) {
   checkPouchDB(t, mocks, dbName);
   checkNotification(t, mocks, ecdhForLocalDevice);
   checkReplication(t, mocks, dbName, peerPool, ecdhForLocalDevice);
+  checkSalti(t, mocks, dbName);
 
   // Multiple parallel starts.
   Promise.all([
