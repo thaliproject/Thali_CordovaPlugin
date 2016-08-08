@@ -14,7 +14,7 @@ enum PeerIdentifierError: String, ErrorType {
 }
 
 ///Peer identifier for with generations
-struct PeerIdentifier {
+public struct PeerIdentifier {
     ///UUID identifier of peer
     let uuid: String
     ///generation of peer.
@@ -30,7 +30,7 @@ struct PeerIdentifier {
         self.generation = generation
     }
 
-    init(stringValue: String) throws {
+    public init(stringValue: String) throws {
         let parts = stringValue.characters.split {
              $0 == ":"
              }.map(String.init)
@@ -53,8 +53,13 @@ struct PeerIdentifier {
     }
 }
 
+///Multipeer connectivity specific functions
 extension PeerIdentifier {
     var mcPeer: MCPeerID {
         return MCPeerID(displayName: uuid)
+    }
+
+    init(mcPeer peer: MCPeerID) throws {
+        try self.init(stringValue: peer.displayName)
     }
 }

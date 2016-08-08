@@ -63,10 +63,12 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 @objc public final class AppContext: NSObject {
     /// delegate for AppContext's events
     private weak var delegate: AppContextDelegate?
+    private let serviceType: String
     private let appNotificationsManager: ApplicationStateNotificationsManager
 
-    public init(delegate: AppContextDelegate?) {
+    public init(serviceType: String, delegate: AppContextDelegate?) {
         appNotificationsManager = ApplicationStateNotificationsManager()
+        self.serviceType = serviceType
         super.init()
         appNotificationsManager.didEnterForegroundHandler = { [weak self] in
             guard let strongSelf = self else {

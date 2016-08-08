@@ -17,13 +17,12 @@
 		CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */; };
 		D300C47B1D54C0EA00A9D97D /* PeerIdentifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */; };
 		D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */; };
-		FAADD0F9E7314D00CE9FE432 /* MultipeerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDCA159BF9B0735202450 /* MultipeerService.swift */; };
+		FAADD1280FB61689CEA2246C /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD2984D08AD0DD6CABC6A /* SessionManager.swift */; };
 		FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
 		FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
 		FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
 		FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
 		FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */; };
-		FAADD65D7FB58F275462A8A5 /* MultipeerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDCA159BF9B0735202450 /* MultipeerService.swift */; };
 		FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7119C663364132D5C36 /* BrowserManager.swift */; };
 		FAADD705CAB9E45559605B8F /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0A063AF85E1634DB500 /* Browser.swift */; };
 		FAADD7B9451F32511828885E /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0A063AF85E1634DB500 /* Browser.swift */; };
@@ -31,6 +30,7 @@
 		FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
 		FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
 		FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7119C663364132D5C36 /* BrowserManager.swift */; };
+		FAADDF2C009D8B9C54DE849D /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD2984D08AD0DD6CABC6A /* SessionManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,9 +63,9 @@
 		FAADD0A063AF85E1634DB500 /* Browser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Browser.swift; sourceTree = "<group>"; };
 		FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserManager.swift; sourceTree = "<group>"; };
 		FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Advertiser.swift; sourceTree = "<group>"; };
+		FAADD2984D08AD0DD6CABC6A /* SessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
 		FAADD7119C663364132D5C36 /* BrowserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserManager.swift; sourceTree = "<group>"; };
 		FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerIdentifier.swift; sourceTree = "<group>"; };
-		FAADDCA159BF9B0735202450 /* MultipeerService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipeerService.swift; sourceTree = "<group>"; };
 		FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -159,9 +159,9 @@
 			children = (
 				FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */,
 				FAADD0A063AF85E1634DB500 /* Browser.swift */,
-				FAADDCA159BF9B0735202450 /* MultipeerService.swift */,
 				FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */,
 				FAADD7119C663364132D5C36 /* BrowserManager.swift */,
+				FAADD2984D08AD0DD6CABC6A /* SessionManager.swift */,
 			);
 			path = MultipeerConnectivity;
 			sourceTree = "<group>";
@@ -410,10 +410,10 @@
 				FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */,
 				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
 				FAADD7B9451F32511828885E /* Browser.swift in Sources */,
-				FAADD65D7FB58F275462A8A5 /* MultipeerService.swift in Sources */,
 				FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */,
 				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
 				FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */,
+				FAADD1280FB61689CEA2246C /* SessionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -437,10 +437,10 @@
 				FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */,
 				FAADD705CAB9E45559605B8F /* Browser.swift in Sources */,
 				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
-				FAADD0F9E7314D00CE9FE432 /* MultipeerService.swift in Sources */,
 				FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */,
 				FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */,
 				FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */,
+				FAADDF2C009D8B9C54DE849D /* SessionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
