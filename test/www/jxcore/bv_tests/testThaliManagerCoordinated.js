@@ -78,7 +78,7 @@ var test = tape({
   }
 });
 
-function validateDocs(pouchDB, docs, keys, options) {
+function validateDocs(pouchDB, docs, keys) {
   var allDocsFound = false;
   // We can just stringify our doc with defined keys, it wont be circular.
   var docStrings = [];
@@ -116,19 +116,22 @@ function validateDocs(pouchDB, docs, keys, options) {
       }
     })
     .on('complete', function () {
-      resolve(); 
+      resolve();
     })
     .on('error', function (err) {
       reject('got error ' + err);
     });
-  })
+  });
 }
 
 test('test write', function (t) {
   var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
 
-  // This function will return all participant's public keys except local 'publicKeyForLocalDevice' one.
-  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(t, publicKeyForLocalDevice);
+  // This function will return all participant's public keys
+  // except local 'publicKeyForLocalDevice' one.
+  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+    t, publicKeyForLocalDevice
+  );
 
   // We are creating a local db for each participant.
   var pouchDB = new PouchDB(DB_NAME);
@@ -142,7 +145,8 @@ test('test write', function (t) {
   var docs = [localDoc];
   pouchDB.put(localDoc)
   .then(function (response) {
-    // Doc and its revision is an object that could be updated and deleted later.
+    // Doc and its revision is an object
+    // that could be updated and deleted later.
     localDoc._rev = response.rev;
   })
   .then(function () {
@@ -169,20 +173,21 @@ test('test write', function (t) {
       });
     });
     // Lets check that all imaginary docs has been replicated to our local db.
-    // We can't predict what '_rev' remote doc will have, so we shouldn't check '_rev' here.
+    // We can't predict what '_rev' remote doc will have,
+    // so we shouldn't check '_rev' here.
     return validateDocs(pouchDB, docs, ['_id', 'test1']);
   })
   .then(function () {
     // Lets update our doc with new boolean.
     localDoc.test2 = true;
     return pouchDB.put(localDoc)
-      .then(function(response) {
+      .then(function (response) {
         localDoc._rev = response.rev;
       });
   })
   .then(function () {
     // Our partners should update its docs the same way.
-    docs.slice(1).forEach(function(doc) {
+    docs.slice(1).forEach(function (doc) {
       doc.test2 = true;
     });
     return validateDocs(pouchDB, docs, ['_id', 'test1', 'test2']);
@@ -196,26 +201,20 @@ test('test repeat write', function (t) {
   // We will make a cleanup after this test.
   thisWasTheLastTest = true;
 
-  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT, function (error) {
-    Promise.resolve()
-    .then(function () {
-      if (thaliManager) {
-        return thaliManager.stop();
-      }
-    })
-    .then(function () {
-      fs.removeSync(defaultDirectory);
-    });
-  });
+  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
 
-  // This function will return all participant's public keys except local 'publicKeyForLocalDevice' one.
-  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(t, publicKeyForLocalDevice);
+  // This function will return all participant's public keys
+  // except local 'publicKeyForLocalDevice' one.
+  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+    t, publicKeyForLocalDevice
+  );
 
   // We are using an old db for each participant.
   var pouchDB = new PouchDB(DB_NAME);
-  
+
   // We are getting our previous doc from a local db.
-  // It should consist of it's public key (base64 representation) and 2 test booleans.
+  // It should consist of it's public key (base64 representation)
+  // and 2 test booleans.
   var localDoc;
   pouchDB.get(publicBase64KeyForLocalDevice)
   .then(function (response) {
@@ -225,7 +224,7 @@ test('test repeat write', function (t) {
     // Lets update our doc with new boolean.
     localDoc.test3 = true;
     return pouchDB.put(localDoc)
-      .then(function(response) {
+      .then(function (response) {
         localDoc._rev = response.rev;
       });
   })

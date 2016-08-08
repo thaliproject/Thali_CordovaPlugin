@@ -152,7 +152,7 @@ function checkExpressPouchDB(t, mocks) {
 
   var args = mocks.expressPouchDB.getCalls()[0].args;
   t.ok(args.length >= 1, 'expressPouchDB has called with >= 1 arguments');
-  
+
   var foundPouchDB = false;
   args.forEach(function (arg) {
     if (arg === mocks.PouchDB) {
@@ -169,7 +169,7 @@ function checkPouchDB(t, mocks, dbName) {
 
   var args = mocks.PouchDB.getCalls()[0].args;
   t.ok(args.length >= 1, 'PouchDB has called with >= 1 arguments');
-  
+
   var foundDBName = false;
   args.forEach(function (arg) {
     if (arg === dbName) {
@@ -181,7 +181,7 @@ function checkPouchDB(t, mocks, dbName) {
 
 function checkNotification(t, mocks, ecdhForLocalDevice) {
   // Testing that 'ThaliSendNotificationBasedOnReplication' has called properly.
-  t.ok(mocks.notification.called, 
+  t.ok(mocks.notification.called,
     'ThaliSendNotificationBasedOnReplication has called');
   t.ok(mocks.notification.calledOnce,
     'ThaliSendNotificationBasedOnReplication has called once');
@@ -191,7 +191,7 @@ function checkNotification(t, mocks, ecdhForLocalDevice) {
     args.length >= 1,
     'ThaliSendNotificationBasedOnReplication has called with >= 1 arguments'
   );
-  
+
   var foundEcdhForLocalDevice = false;
   args.forEach(function (arg) {
     if (arg === ecdhForLocalDevice) {
@@ -200,13 +200,14 @@ function checkNotification(t, mocks, ecdhForLocalDevice) {
   });
   t.ok(
     foundEcdhForLocalDevice,
-    'ThaliSendNotificationBasedOnReplication has called with \'ecdhForLocalDevice\' argument'
+    'ThaliSendNotificationBasedOnReplication has called ' +
+    'with \'ecdhForLocalDevice\' argument'
   );
 }
 
 function checkReplication(t, mocks, dbName, peerPool, ecdhForLocalDevice) {
   // Testing that 'ThaliPullReplicationFromNotification' has called properly.
-  t.ok(mocks.replication.called, 
+  t.ok(mocks.replication.called,
     'ThaliPullReplicationFromNotification has called');
   t.ok(mocks.replication.calledOnce,
     'ThaliPullReplicationFromNotification has called once');
@@ -216,25 +217,29 @@ function checkReplication(t, mocks, dbName, peerPool, ecdhForLocalDevice) {
     args.length >= 4,
     'ThaliPullReplicationFromNotification has called with >= 4 arguments'
   );
-  
+
   var foundPouchDB = false;
   var foundDBName = false;
   var foundThaliPeerPoolInterface = false;
   var foundEcdhForLocalDevice = false;
   args.forEach(function (arg) {
-    switch(arg) {
-      case mocks.PouchDB:
+    switch (arg) {
+      case mocks.PouchDB: {
         foundPouchDB = true;
         break;
-      case dbName:
+      }
+      case dbName: {
         foundDBName = true;
         break;
-      case peerPool:
+      }
+      case peerPool: {
         foundThaliPeerPoolInterface = true;
         break;
-      case ecdhForLocalDevice:
+      }
+      case ecdhForLocalDevice: {
         foundEcdhForLocalDevice = true;
         break;
+      }
     }
   });
   t.ok(
@@ -247,16 +252,19 @@ function checkReplication(t, mocks, dbName, peerPool, ecdhForLocalDevice) {
   );
   t.ok(
     foundThaliPeerPoolInterface,
-    'ThaliPullReplicationFromNotification has called with \'thaliPeerPoolInterface\' argument'
+    'ThaliPullReplicationFromNotification has called ' +
+    'with \'thaliPeerPoolInterface\' argument'
   );
   t.ok(
     foundEcdhForLocalDevice,
-    'ThaliPullReplicationFromNotification has called with \'ecdhForLocalDevice\' argument'
+    'ThaliPullReplicationFromNotification has called ' +
+    'with \'ecdhForLocalDevice\' argument'
   );
 }
 
 function checkReplicationStart(t, mocks, remoteKeys) {
-  // Testing that 'ThaliPullReplicationFromNotification.prototype.start' has called properly.
+  // Testing that 'ThaliPullReplicationFromNotification.prototype.start'
+  // has called properly.
   t.ok(
     mocks.replicationStart.called,
     'ThaliPullReplicationFromNotification.prototype.start has called'
@@ -269,9 +277,10 @@ function checkReplicationStart(t, mocks, remoteKeys) {
   var args = mocks.replicationStart.getCalls()[0].args;
   t.ok(
     args.length >= 1,
-    'ThaliPullReplicationFromNotification.prototype.start has called with >= 1 arguments'
+    'ThaliPullReplicationFromNotification.prototype.start ' +
+    'has called with >= 1 arguments'
   );
-  
+
   var foundRemoteKeys = false;
   args.forEach(function (arg) {
     if (arg === remoteKeys) {
@@ -280,11 +289,13 @@ function checkReplicationStart(t, mocks, remoteKeys) {
   });
   t.ok(
     foundRemoteKeys,
-    'ThaliPullReplicationFromNotification.prototype.start has called with \'remoteKeys\' argument'
+    'ThaliPullReplicationFromNotification.prototype.start ' +
+    'has called with \'remoteKeys\' argument'
   );
 }
 function checkReplicationStop(t, mocks) {
-  // Testing that 'ThaliPullReplicationFromNotification.prototype.stop' has called properly.
+  // Testing that 'ThaliPullReplicationFromNotification.prototype.stop'
+  // has called properly.
   t.ok(
     mocks.replicationStop.called,
     'ThaliPullReplicationFromNotification.prototype.stop has called'
@@ -296,7 +307,8 @@ function checkReplicationStop(t, mocks) {
 }
 
 function checkNotificationStart(t, mocks, remoteKeys) {
-  // Testing that 'ThaliSendNotificationBasedOnReplication.prototype.start' has called properly.
+  // Testing that 'ThaliSendNotificationBasedOnReplication.prototype.start'
+  // has called properly.
   t.ok(
     mocks.notificationStart.called,
     'ThaliSendNotificationBasedOnReplication.prototype.start has called'
@@ -309,7 +321,8 @@ function checkNotificationStart(t, mocks, remoteKeys) {
   var args = mocks.notificationStart.getCalls()[0].args;
   t.ok(
     args.length >= 1,
-    'ThaliSendNotificationBasedOnReplication.prototype.start has called with >= 1 arguments'
+    'ThaliSendNotificationBasedOnReplication.prototype.start ' +
+    'has called with >= 1 arguments'
   );
   var foundRemoteKeys = false;
   args.forEach(function (arg) {
@@ -319,11 +332,13 @@ function checkNotificationStart(t, mocks, remoteKeys) {
   });
   t.ok(
     foundRemoteKeys,
-    'ThaliSendNotificationBasedOnReplication.prototype.start has called with \'remoteKeys\' argument'
+    'ThaliSendNotificationBasedOnReplication.prototype.start ' +
+    'has called with \'remoteKeys\' argument'
   );
 }
 function checkNotificationStop(t, mocks) {
-  // Testing that 'ThaliSendNotificationBasedOnReplication.prototype.stop' has called properly.
+  // Testing that 'ThaliSendNotificationBasedOnReplication.prototype.stop'
+  // has called properly.
   t.ok(
     mocks.notificationStop.called,
     'ThaliSendNotificationBasedOnReplication.prototype.stop has called'
@@ -345,7 +360,8 @@ function checkMobileStart(t, mocks) {
     'ThaliMobile.startListeningForAdvertisements has called once'
   );
 
-  // Testing that 'Mobile.startUpdateAdvertisingAndListening' has called properly.
+  // Testing that 'Mobile.startUpdateAdvertisingAndListening'
+  // has called properly.
   t.ok(
     mocks.mobileStartUAA.called,
     'ThaliMobile.startUpdateAdvertisingAndListening has called'
@@ -380,10 +396,13 @@ function checkMobileStop(t, mocks) {
 test('test thali manager spies', function (t) {
   var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
 
-  // This function will return all participant's public keys except local 'publicKeyForLocalDevice' one.
+  // This function will return all participant's public keys
+  // except local 'publicKeyForLocalDevice' one.
   var partnerKeys;
   if (t.coordinated) {
-    partnerKeys = testUtils.turnParticipantsIntoBufferArray(t, publicKeyForLocalDevice);
+    partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+      t, publicKeyForLocalDevice
+    );
   } else {
     partnerKeys = [];
   }
@@ -427,10 +446,13 @@ test('test thali manager spies', function (t) {
 test('test thali manager multiple starts and stops', function (t) {
   var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
 
-  // This function will return all participant's public keys except local 'publicKeyForLocalDevice' one.
+  // This function will return all participant's public keys
+  // except local 'publicKeyForLocalDevice' one.
   var partnerKeys;
   if (t.coordinated) {
-    partnerKeys = testUtils.turnParticipantsIntoBufferArray(t, publicKeyForLocalDevice);
+    partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+      t, publicKeyForLocalDevice
+    );
   } else {
     partnerKeys = [];
   }
@@ -517,5 +539,5 @@ test('test thali manager multiple starts and stops', function (t) {
   })
   .then(function () {
     exit();
-  })
+  });
 });

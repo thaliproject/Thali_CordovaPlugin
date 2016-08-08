@@ -100,7 +100,7 @@ function ThaliManager(expressPouchDB,
     { dbPrefix: thaliConfig.BASE_DB_PATH }
   ));
 
-  logger.debug("creating ThaliSendNotificationBasedOnReplication instance");
+  logger.debug('creating ThaliSendNotificationBasedOnReplication instance');
 
   this._thaliSendNotificationBasedOnReplication =
     new ThaliSendNotificationBasedOnReplication(
@@ -113,7 +113,7 @@ function ThaliManager(expressPouchDB,
   this._getPskIdToPublicKey =
     self._thaliSendNotificationBasedOnReplication.getPskIdToPublicKey();
 
-  logger.debug("creating ThaliPullReplicationFromNotification instance");
+  logger.debug('creating ThaliPullReplicationFromNotification instance');
 
   this._thaliPullReplicationFromNotification =
     new ThaliPullReplicationFromNotification(
@@ -122,7 +122,7 @@ function ThaliManager(expressPouchDB,
         thaliPeerPoolInterface,
         ecdhForLocalDevice);
 
-  logger.debug("creating express pouchdb instance");
+  logger.debug('creating express pouchdb instance');
 
   this._router.use(thaliConfig.BASE_DB_PATH, expressPouchDB(PouchDB, {
     mode: 'minimumForPouchDB'
@@ -159,22 +159,25 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
   // Can we start now?
   var args = arguments;
   switch (this.state) {
-    case ThaliManager.STATES.STARTING:
+    case ThaliManager.STATES.STARTING: {
       return this.startingPromise;
-    case ThaliManager.STATES.STARTED:
+    }
+    case ThaliManager.STATES.STARTED: {
       return Promise.resolve();
-    case ThaliManager.STATES.STOPPING:
+    }
+    case ThaliManager.STATES.STOPPING: {
       return this.stoppingPromise
-        .then(function() {
+        .then(function () {
           return self.start.apply(self, args);
         });
+    }
   }
   this.state = ThaliManager.STATES.STARTING;
 
-  logger.debug("starting thaliPullReplicationFromNotification");
+  logger.debug('starting thaliPullReplicationFromNotification');
   this._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
 
-  logger.debug("starting ThaliMobile");
+  logger.debug('starting ThaliMobile');
   this.startingPromise = ThaliMobile.start(this._router, this._getPskIdToSecret)
 
   .then(function () {
@@ -194,15 +197,15 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
     establish the MCSession with it. So in practice this means that in iOS
     everyone has to be both listening and advertising at the same time.
     */
-    logger.debug("start listening for advertisements");
+    logger.debug('start listening for advertisements');
     return ThaliMobile.startListeningForAdvertisements();
   })
   .then(function () {
-    logger.debug("start update advertising and listening");
+    logger.debug('start update advertising and listening');
     return ThaliMobile.startUpdateAdvertisingAndListening();
   })
   .then(function () {
-    logger.debug("starting thaliSendNotificationBasedOnReplication");
+    logger.debug('starting thaliSendNotificationBasedOnReplication');
     self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
 
     self.state = ThaliManager.STATES.STARTED;
@@ -223,34 +226,38 @@ ThaliManager.prototype.stop = function () {
   // Can we stop now?
   var args = arguments;
   switch (this.state) {
-    case ThaliManager.STATES.STOPPING:
-      return this.stoppingPromise;
-    case ThaliManager.STATES.STOPPED:
+    case ThaliManager.STATES.CREATED:
+    case ThaliManager.STATES.STOPPED: {
       return Promise.resolve();
-    case ThaliManager.STATES.STARTING:
+    }
+    case ThaliManager.STATES.STOPPING: {
+      return this.stoppingPromise;
+    }
+    case ThaliManager.STATES.STARTING: {
       return this.startingPromise
-        .then(function() {
+        .then(function () {
           return self.stop.apply(self, args);
         });
+    }
   }
   this.state = ThaliManager.STATES.STOPPING;
 
-  logger.debug("stopping thaliSendNotificationBasedOnReplication");
+  logger.debug('stopping thaliSendNotificationBasedOnReplication');
   this._thaliSendNotificationBasedOnReplication.stop();
 
-  logger.debug("stopping advertising and listening");
+  logger.debug('stopping advertising and listening');
   this.stoppingPromise = ThaliMobile.stopAdvertisingAndListening()
 
   .then(function () {
-    logger.debug("stopping listening for advertisements");
+    logger.debug('stopping listening for advertisements');
     return ThaliMobile.stopListeningForAdvertisements();
   })
   .then(function () {
-    logger.debug("stopping ThaliMobile");
+    logger.debug('stopping ThaliMobile');
     return ThaliMobile.stop();
   })
   .then(function () {
-    logger.debug("stopping thaliPullReplicationFromNotification");
+    logger.debug('stopping thaliPullReplicationFromNotification');
     self._thaliPullReplicationFromNotification.stop();
 
     self.state = ThaliManager.STATES.STOPPED;
