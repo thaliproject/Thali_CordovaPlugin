@@ -1,5 +1,5 @@
 'use strict';
-var childProcessExecPromise = require('../utils.js').childProcessExecPromise;
+var exec = require('child-process-promise').exec;
 var fs = require('fs-extra-promise');
 var path = require('path');
 var Promise = require('lie');
@@ -103,9 +103,9 @@ function buildThaliCoreFramework(projectFolder, outputFolder, includeTests) {
 
   console.log('Building ThaliCore.framework');
 
-  return childProcessExecPromise(buildCmd, { maxBuffer: 200*1024 } )
+  return exec(buildCmd, { maxBuffer: 200*1024 } )
     .then(function () {
-      return childProcessExecPromise('mkdir -p ' + '\"' + outputFolder + '\"');
+      return exec('mkdir -p ' + '\"' + outputFolder + '\"');
     })
     .then(function () {
       var frameworkInputPath = path.join(buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
@@ -114,6 +114,6 @@ function buildThaliCoreFramework(projectFolder, outputFolder, includeTests) {
         ' \"' + frameworkInputPath + '\"' +
         ' \"' + outputFolder + '\"' ;
 
-      return childProcessExecPromise(copyFrameworkCmd);
+      return exec(copyFrameworkCmd);
     });
 }

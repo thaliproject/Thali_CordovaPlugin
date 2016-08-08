@@ -1,5 +1,5 @@
 'use strict';
-var childProcessExecPromise = require('./utils.js').childProcessExecPromise;
+var exec = require('child-process-promise').exec;
 var spawn = require('child_process').spawn;
 var path = require('path');
 var https = require('https');
@@ -209,7 +209,7 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     }
     console.log('Trying to remove previously installed Thali Cordova plugin');
     var pluginRemoveCommand = 'cordova plugin remove org.thaliproject.p2p';
-    return childProcessExecPromise(pluginRemoveCommand, { cwd: appRootDirectory })
+    return exec(pluginRemoveCommand, { cwd: appRootDirectory })
     .catch(function (err) {
       console.log('Ignoring a non-critical error: ' + err);
       // Resolve the promise even if plugin removal fails, because it is
@@ -349,7 +349,7 @@ module.exports = function (callback, appRootDirectory) {
           .then(function () {
             console.log('Adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
-            return childProcessExecPromise('cordova plugins add ' +
+            return exec('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory + ' -d',
               {cwd : appRootDirectory });
           }).then(function () {
@@ -357,7 +357,7 @@ module.exports = function (callback, appRootDirectory) {
             // Cordova hook depends on external node modules that need to be
             // installed.
             console.log('Running jx npm install in: ' + appScriptsFolder);
-            return childProcessExecPromise('jx npm install --autoremove "*.gz"',
+            return exec('jx npm install --autoremove "*.gz"',
                                            { cwd:  appScriptsFolder });
           }).then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
