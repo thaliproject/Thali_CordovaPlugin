@@ -46,7 +46,7 @@ var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
 // PouchDB name should be the same between peers.
 var DB_NAME = 'ThaliManagerCoordinated';
 
-var testCloseAllServer = null;
+var thaliManager;
 
 var test = tape({
   setup: function (t) {
@@ -55,8 +55,15 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    fs.removeSync(defaultDirectory);
-    t.end();
+    Promise.resolve()
+    .then(function () {
+      if (thaliManager) {
+        return thaliManager.stop();
+      }
+    })
+    .then(function () {
+      fs.removeSync(defaultDirectory);
+    });
   }
 });
 
@@ -70,10 +77,10 @@ test('test bump update_seq', function (t) {
   // '/{:db}/_local/something'.
   sinon.stub(
     ThaliSendNotificationBasedOnReplication.prototype,
-    "_findSequenceNumber"
+    '_findSequenceNumber'
   )
   .returns(
-    Promise.resolve().then(function (result) {
+    Promise.resolve().then(function () {
       return 1;
     })
   );
@@ -114,15 +121,18 @@ test('test bump update_seq', function (t) {
     'salti': spySalti
   });
 
-  var thaliManager = new ThaliManagerProxyquired(
+  thaliManager = new ThaliManagerProxyquired(
     ExpressPouchDB,
     PouchDB,
     DB_NAME,
     ecdhForLocalDevice,
     new ThaliPeerPoolDefault()
   );
-  // This function will return all participant's public keys except local 'publicKeyForLocalDevice' one.
-  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(t, publicKeyForLocalDevice);
+  // This function will return all participant's public keys
+  // except local 'publicKeyForLocalDevice' one.
+  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+    t, publicKeyForLocalDevice
+  );
   thaliManager.start(partnerKeys)
 
   .then(function () {
@@ -136,9 +146,6 @@ test('test bump update_seq', function (t) {
   })
   .then(function () {
     return allRequestsStarted;
-  })
-  .then(function () {
-    return thaliManager.stop();
   })
   .then(function () {
     t.end();
