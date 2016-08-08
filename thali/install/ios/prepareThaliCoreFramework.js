@@ -98,13 +98,14 @@ function buildThaliCoreFramework(projectFolder, outputFolder, includeTests) {
     " -sdk " + sdk +
     " ONLY_ACTIVE_ARCH=NO " +
     " BUILD_DIR=" + "\"" + buildDir + "\"" +
-    " clean build";
+    " clean build"
+    " > /dev/null";
 
   console.log('Building ThaliCore.framework');
 
-  return childProcessExecPromise(buildCmd, '')
+  return childProcessExecPromise(buildCmd, { maxBuffer: 200*1024 } )
     .then(function () {
-      return childProcessExecPromise('mkdir -p ' + '\"' + outputFolder + '\"', '');
+      return childProcessExecPromise('mkdir -p ' + '\"' + outputFolder + '\"');
     })
     .then(function () {
       var frameworkInputPath = path.join(buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
@@ -113,6 +114,6 @@ function buildThaliCoreFramework(projectFolder, outputFolder, includeTests) {
         ' \"' + frameworkInputPath + '\"' +
         ' \"' + outputFolder + '\"' ;
 
-      return childProcessExecPromise(copyFrameworkCmd, "");
+      return childProcessExecPromise(copyFrameworkCmd);
     });
 }

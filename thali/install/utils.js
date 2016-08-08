@@ -4,9 +4,9 @@ var Promise = require('lie');
 
 // I tried child-process-promise but it failed without errors and I just don't
 // have time to fight with it right now.
-module.exports.childProcessExecPromise = function(command, currentWorkingDirectory) {
+module.exports.childProcessExecPromise = function(command, options) {
   return new Promise(function (resolve, reject) {
-    exec(command, { cwd: currentWorkingDirectory },
+    exec(command, options,
       function (error, stdout, stderr) {
         // TODO: remove the lines below. Only for CI debugging.
         if (stdout) { console.log(stdout); }
@@ -24,6 +24,7 @@ module.exports.childProcessExecPromise = function(command, currentWorkingDirecto
         // because otherwise useful debugging information might get lost.
         if (stdout) { console.log(stdout); }
         if (stderr) { console.log(stderr); }
+
         resolve();
       });
   });

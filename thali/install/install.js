@@ -209,7 +209,7 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     }
     console.log('Trying to remove previously installed Thali Cordova plugin');
     var pluginRemoveCommand = 'cordova plugin remove org.thaliproject.p2p';
-    return childProcessExecPromise(pluginRemoveCommand, appRootDirectory)
+    return childProcessExecPromise(pluginRemoveCommand, { cwd: appRootDirectory })
     .catch(function (err) {
       console.log('Ignoring a non-critical error: ' + err);
       // Resolve the promise even if plugin removal fails, because it is
@@ -351,14 +351,14 @@ module.exports = function (callback, appRootDirectory) {
               thaliCordovaPluginUnZipResult.unzipedDirectory);
             return childProcessExecPromise('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory + ' -d',
-              appRootDirectory);
+              {cwd : appRootDirectory });
           }).then(function () {
             // The step below is required, because the Android after prepare
             // Cordova hook depends on external node modules that need to be
             // installed.
             console.log('Running jx npm install in: ' + appScriptsFolder);
             return childProcessExecPromise('jx npm install --autoremove "*.gz"',
-                                           appScriptsFolder);
+                                           { cwd:  appScriptsFolder });
           }).then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
           });
