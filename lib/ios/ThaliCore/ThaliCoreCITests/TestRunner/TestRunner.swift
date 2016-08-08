@@ -32,6 +32,12 @@ final class TestRunner: NSObject {
     }
 
     var runResult: RunResult {
+        // This case isn't abvious, but this is how XCTest.framework is done
+        // The reason I see is because XCTest.framework is build on Objective-C
+        // when Objective-C doesn't have e.g. generics
+        //
+        // XCTest has property testRun, when XCTestSuite inherits XCTest
+        // so testRun of XCTestSuite can be casted into XCTestSuiteRun accordingly
         guard let testSuiteRun = testSuite.testRun as? XCTestSuiteRun else {
             return TestRunner.RunResult(
                 executedCount: 0,
