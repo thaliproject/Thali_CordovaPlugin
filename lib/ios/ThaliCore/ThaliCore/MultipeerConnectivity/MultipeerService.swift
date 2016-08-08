@@ -1,6 +1,6 @@
 //
 //  Thali CordovaPlugin
-//  MultipeerServiceType.swift
+//  MultipeerService.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
@@ -9,7 +9,7 @@
 import Foundation
 
 //Protocol describes common interface for Browser and Advertiser
-public protocol MultipeerServiceType: class {
+public protocol MultipeerService: class {
     var peerIdentifier: PeerIdentifier { get }
     
     /**

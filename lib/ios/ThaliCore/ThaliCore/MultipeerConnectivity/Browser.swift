@@ -14,7 +14,7 @@ public protocol BrowserDelegate: class {
     func browser(browser: Browser, didLosePeer peer: String)
 }
 
-final public class Browser: NSObject, MultipeerServiceType {
+final public class Browser: NSObject, MultipeerService {
     public weak var delegate: BrowserDelegate?
     private let browser: MCNearbyServiceBrowser
     public let peerIdentifier: PeerIdentifier

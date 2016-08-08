@@ -9,12 +9,11 @@
 import Foundation
 import MultipeerConnectivity
 
-public class Advertiser: NSObject, MultipeerServiceType {
+public class Advertiser: NSObject, MultipeerService {
     public let peerIdentifier: PeerIdentifier
     private let advertiser: MCNearbyServiceAdvertiser
 
     required public init(peerIdentifier: PeerIdentifier, serviceType: String) {
-        //todo add discovery info parameter
         advertiser = MCNearbyServiceAdvertiser(peer: peerIdentifier.mcPeer,
                                                discoveryInfo:nil, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
@@ -35,22 +34,10 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
 
     public func advertiser(advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID,
                     withContext context: NSData?, invitationHandler: (Bool, MCSession) -> Void) {
-        
+
         //todo call timer callback
-        
-        do {
-            let _ = try MultipeerContext(data:context)
-            
-            //todo call update for peer
-//            guard self.localPeerIdentifier == localPeerIdentifier else {
-//                // Remote is trying to connect to a previous generation of us, reject
-//                invitationHandler(false, sessionManager.session)
-//                return
-//            }
-            //todo create tcp connection and accept MPC connection
-        } catch let error {
-            print(error)
-        }
+        //todo call update for peer
+        //todo create tcp connection and accept MPC connection
     }
     
     public func advertiser(advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: NSError) {
