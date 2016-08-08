@@ -9,18 +9,18 @@
 import Foundation
 import MultipeerConnectivity
 
-public enum PeerIdentifierError: String, ErrorType {
+enum PeerIdentifierError: String, ErrorType {
     case WrongDataFormat
 }
 
 ///Peer identifier for with generations
-public struct PeerIdentifier {
+struct PeerIdentifier {
     ///UUID identifier of peer
-    public let uuid: String
+    let uuid: String
     ///generation of peer.
-    public let generation: Int
+    let generation: Int
 
-    public init() {
+    init() {
         uuid = NSUUID().UUIDString
         generation = 0
     }
@@ -30,7 +30,7 @@ public struct PeerIdentifier {
         self.generation = generation
     }
 
-    public init(stringValue: String) throws {
+    init(stringValue: String) throws {
         let parts = stringValue.characters.split {
              $0 == ":"
              }.map(String.init)
@@ -44,11 +44,11 @@ public struct PeerIdentifier {
         self.generation = generation
     }
 
-    public func nextGenerationPeer() -> PeerIdentifier {
+    func nextGenerationPeer() -> PeerIdentifier {
         return PeerIdentifier(uuidIdentifier: uuid, generation: generation + 1)
     }
 
-    public var stringValue: String {
+    var stringValue: String {
         return "\(uuid):\(String(generation, radix: 16))"
     }
 }

@@ -9,13 +9,13 @@
 import Foundation
 
 //class for managing Thali advertiser's logic
-@objc class AdvertiserManager: NSObject {
+@objc public class AdvertiserManager: NSObject {
 
-    override init() {
-        super.init()
+    public func startAdvertisingAndListeningToPort(port: UInt16) {
+
     }
 
-    func startAdvertisingAndListeningToPort(port: UInt16) {
+    public func stopAdvertisingAndListening() {
 
     }
 }

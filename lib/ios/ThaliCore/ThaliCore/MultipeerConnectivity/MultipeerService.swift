@@ -9,7 +9,7 @@
 import Foundation
 
 //Protocol describes common interface for Browser and Advertiser
-public protocol MultipeerService: class {
+protocol MultipeerService: class {
     var peerIdentifier: PeerIdentifier { get }
     
     /**

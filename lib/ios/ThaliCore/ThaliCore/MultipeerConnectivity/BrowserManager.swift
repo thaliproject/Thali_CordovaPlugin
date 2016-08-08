@@ -9,6 +9,12 @@
 import Foundation
 
 //class for managing Thali browser's logic
-@objc class BrowserManager: NSObject {
+@objc public class BrowserManager: NSObject {
+    public func startListeningForAdvertisements() {
 
+    }
+
+    public func stopListeningForAdvertisements() {
+
+    }
 }

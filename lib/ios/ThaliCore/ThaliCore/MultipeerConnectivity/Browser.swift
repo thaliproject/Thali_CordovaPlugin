@@ -9,41 +9,41 @@
 import Foundation
 import MultipeerConnectivity
 
-public protocol BrowserDelegate: class {
+protocol BrowserDelegate: class {
     func browser(browser: Browser, didFindPeer peer: String)
     func browser(browser: Browser, didLosePeer peer: String)
 }
 
-final public class Browser: NSObject, MultipeerService {
-    public weak var delegate: BrowserDelegate?
+final class Browser: NSObject, MultipeerService {
+    weak var delegate: BrowserDelegate?
     private let browser: MCNearbyServiceBrowser
-    public let peerIdentifier: PeerIdentifier
+    let peerIdentifier: PeerIdentifier
 
-    required public init(peerIdentifier: PeerIdentifier, serviceType: String) {
+    required init(peerIdentifier: PeerIdentifier, serviceType: String) {
         browser = MCNearbyServiceBrowser(peer: peerIdentifier.mcPeer, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
         super.init()
         browser.delegate = self
     }
     
-    public func start() {
+    func start() {
     }
     
-    public func stop() {
+    func stop() {
     }
 }
 
 extension Browser: MCNearbyServiceBrowserDelegate {
 
-    public func browser(browser: MCNearbyServiceBrowser,
+    func browser(browser: MCNearbyServiceBrowser,
                         foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
     }
 
-    public func browser(browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
+    func browser(browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         delegate?.browser(self, didLosePeer: peerID.displayName)
     }
 
-    public func browser(browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: NSError) {
+    func browser(browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: NSError) {
         print("didNotStartingBrowsingForPeers")
     }
 }

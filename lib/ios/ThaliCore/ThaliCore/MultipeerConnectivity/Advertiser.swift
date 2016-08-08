@@ -9,11 +9,11 @@
 import Foundation
 import MultipeerConnectivity
 
-public class Advertiser: NSObject, MultipeerService {
-    public let peerIdentifier: PeerIdentifier
+class Advertiser: NSObject, MultipeerService {
+    let peerIdentifier: PeerIdentifier
     private let advertiser: MCNearbyServiceAdvertiser
 
-    required public init(peerIdentifier: PeerIdentifier, serviceType: String) {
+    required init(peerIdentifier: PeerIdentifier, serviceType: String) {
         advertiser = MCNearbyServiceAdvertiser(peer: peerIdentifier.mcPeer,
                                                discoveryInfo:nil, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
@@ -21,22 +21,22 @@ public class Advertiser: NSObject, MultipeerService {
         advertiser.delegate = self
     }
     
-    public func start() {
+    func start() {
         advertiser.startAdvertisingPeer()
     }
     
-    public func stop() {
+    func stop() {
         advertiser.stopAdvertisingPeer()
     }
 }
 
 extension Advertiser: MCNearbyServiceAdvertiserDelegate {
 
-    public func advertiser(advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID,
+    func advertiser(advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID,
                     withContext context: NSData?, invitationHandler: (Bool, MCSession) -> Void) {
     }
     
-    public func advertiser(advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: NSError) {
+    func advertiser(advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: NSError) {
         print("WARNING: server didNotStartAdvertisingPeer")
     }
 }

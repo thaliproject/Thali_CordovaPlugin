@@ -7,7 +7,7 @@
 //
 
 import XCTest
-import ThaliCore
+@testable import ThaliCore
 
 class PeerIdentifierTests: XCTestCase {
 
