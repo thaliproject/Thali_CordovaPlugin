@@ -22,7 +22,7 @@ public struct PeerIdentifier {
 
     public init() {
         uuid = NSUUID().UUIDString
-        generation = 1
+        generation = 0
     }
 
     private init(uuidIdentifier: String, generation: Int) {
@@ -37,7 +37,7 @@ public struct PeerIdentifier {
         guard parts.count == 2 else {
             throw PeerIdentifierError.WrongDataFormat
         }
-        guard let generation = Int(parts[1]) else {
+        guard let generation = Int(parts[1], radix: 16) else {
             throw PeerIdentifierError.WrongDataFormat
         }
         self.uuid = parts[0]
@@ -49,7 +49,7 @@ public struct PeerIdentifier {
     }
 
     public var stringValue: String {
-        return "\(uuid):\(generation)"
+        return "\(uuid):\(String(generation, radix: 16))"
     }
 }
 
