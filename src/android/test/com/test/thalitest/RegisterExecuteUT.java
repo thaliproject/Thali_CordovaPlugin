@@ -5,6 +5,7 @@ import android.util.Log;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.runner.Result;
+import org.junit.runner.notification.Failure;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 import java.lang.reflect.InvocationTargetException;
@@ -83,8 +84,17 @@ public class RegisterExecuteUT {
 
                 JSONObject jsonObject = new JSONObject();
                 Boolean jsonObjectCreated = false;
+                String failures = "";
+
+                for (Failure failure: resultTest.getFailures()) {
+                    failures += failure.getMessage() + "\n";
+                }
 
                 try {
+                    if(!failures.equals("")){
+                        jsonObject.put("failures", failures);
+                    }
+
                     jsonObject.put("total", resultTest.getRunCount());
                     jsonObject.put("passed", resultTest.getRunCount() -
                             resultTest.getFailureCount() - resultTest.getIgnoreCount());
