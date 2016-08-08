@@ -82,10 +82,6 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
         }
     }
 
-    deinit {
-        NSNotificationCenter.defaultCenter().removeObserver(self)
-    }
-
     /**
      Start the client components
 
