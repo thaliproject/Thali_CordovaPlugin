@@ -41,6 +41,6 @@ import Foundation
         guard let currentBrowser = self.currentBrowser where currentBrowser.isListening else {
             assert(false, "there is no active listener")
         }
-        currentBrowser.connectToPeer(withIdentifier: PeerIdentifier)
+        currentBrowser.connectToPeer(withIdentifier: identifier, port: port)
     }
 }

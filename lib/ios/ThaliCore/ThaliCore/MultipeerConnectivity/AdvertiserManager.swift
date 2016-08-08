@@ -22,8 +22,8 @@ import Foundation
         //todo stop and dispose advertiser after 30 sec
     }
 
-    private func createAndRunAdvertiserWith(identifier: PeerIdentifier) -> Advertiser {
-        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType)
+    private func createAndRunAdvertiserWith(identifier: PeerIdentifier, port: UInt16) -> Advertiser {
+        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType, port: port)
         advertiser.start()
         return advertiser
     }
@@ -33,9 +33,9 @@ import Foundation
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
             addAdvertiserToDisposeQueue(currentAdvertiser)
-            self.currentAdvertiser = createAndRunAdvertiserWith(peerIdentifier)
+            self.currentAdvertiser = createAndRunAdvertiserWith(peerIdentifier, port: port)
         } else {
-            self.currentAdvertiser = Advertiser(peerIdentifier: PeerIdentifier(), serviceType: serviceType)
+            self.currentAdvertiser = createAndRunAdvertiserWith(PeerIdentifier(), port: port)
         }
 
         assert(self.currentAdvertiser != nil, "we should have initialized advertiser after calling this function")

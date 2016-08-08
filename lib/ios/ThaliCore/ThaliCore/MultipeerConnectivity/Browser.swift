@@ -14,7 +14,7 @@ protocol BrowserDelegate: class {
     func browser(browser: Browser, didLosePeer peer: String)
 }
 
-final class Browser: NSObject, MultipeerService {
+final class Browser: NSObject {
     weak var delegate: BrowserDelegate?
     private let browser: MCNearbyServiceBrowser
     let peerIdentifier: PeerIdentifier
@@ -30,8 +30,11 @@ final class Browser: NSObject, MultipeerService {
         browser.delegate = self
     }
 
-    func connectToPeer(withIdentifier identifier: PeerIdentifier) {
-
+    func connectToPeer(withIdentifier identifier: PeerIdentifier, port: UInt16) {
+        if canConnectToPeer(peerIdentifier) {
+            let session = SessionManager(peer: identifier.mcPeer)
+            session.connectToPort(port)
+        }
     }
     
     func startListening() {
@@ -49,11 +52,8 @@ extension Browser: MCNearbyServiceBrowserDelegate {
     func browser(browser: MCNearbyServiceBrowser,
                         foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
         do {
-            let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
-//            if canConnectToPeer(peerIdentifier) {
-//                let session = SessionManager(peer: peerID)
-//                session.connectToPort(port)
-//            }
+            let _ = try PeerIdentifier(mcPeer: peerID)
+            //todo notify about peer connection
         } catch let error {
             print("cannot connect to peer \"\(peerID.displayName)\" because of error: \(error)")
         }
