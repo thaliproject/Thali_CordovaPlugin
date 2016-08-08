@@ -12,6 +12,7 @@ var ThaliPullReplicationFromNotification =
 var express = require('express');
 var salti = require('salti');
 var path = require('path');
+var Promise = require('lie');
 
 /**
  * @classdesc This may look like a class but it really should only have one
@@ -126,7 +127,17 @@ function ThaliManager(expressPouchDB,
   this._router.use(thaliConfig.BASE_DB_PATH, expressPouchDB(PouchDB, {
     mode: 'minimumForPouchDB'
   }));
+
+  this.state = ThaliManager.STATES.CREATED;
 }
+
+ThaliManager.STATES = {
+  CREATED: 1,
+  STARTING: 2,
+  STARTED: 3,
+  STOPPING: 4,
+  STOPPED: 5
+};
 
 /**
  * Starts up everything including listening for advertisements, sending out
@@ -143,43 +154,63 @@ function ThaliManager(expressPouchDB,
  * @returns {Promise<?Error>}
  */
 ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
-    var self = this;
+  var self = this;
 
-    logger.debug("starting thaliPullReplicationFromNotification");
-    self._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
+  // Can we start now?
+  var args = arguments;
+  switch (this.state) {
+    case ThaliManager.STATES.STARTING:
+      return this.startingPromise;
+    case ThaliManager.STATES.STARTED:
+      return Promise.resolve();
+    case ThaliManager.STATES.STOPPING:
+      return this.stoppingPromise
+        .then(function() {
+          return self.start.apply(self, args);
+        });
+  }
+  this.state = ThaliManager.STATES.STARTING;
 
-    logger.debug("starting ThaliMobile");
-    return ThaliMobile.start(self._router, this._getPskIdToSecret)
+  logger.debug("starting thaliPullReplicationFromNotification");
+  this._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
 
-    .then(function () {
-      /*
-      Ideally we could call startListening and startUpdateAdvertising separately
-      but this causes problems in iOS. The issue is that we deal with the
-      restriction that there can only be one MCSession between two devices by
-      having a leader election where one device will always form the session.
-      Imagine that there is device A and B. B is advertising. A hears the
-      advertisement and wants to connect but it can't start the session. So what
-      it has to do is send an invite to B, who will reject the invite but then
-      respond with its own invite to A. For this to work however B has to be
-      listening for advertisements (not just making them) because otherwise
-      there is no way in iOS for A to ask B for a session (that will be
-      refused). Simultaneously A must be listening for advertisements (or it
-      wouldn't have heard B) and it must be advertising itself or B couldn't
-      establish the MCSession with it. So in practice this means that in iOS
-      everyone has to be both listening and advertising at the same time.
-       */
-      logger.debug("start listening for advertisements");
-      return ThaliMobile.startListeningForAdvertisements();
-    })
-    .then(function () {
-      logger.debug("start update advertising and listening");
-      return ThaliMobile.startUpdateAdvertisingAndListening();
-    })
-    .then(function () {
-      logger.debug("starting thaliSendNotificationBasedOnReplication");
-      self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
-    });
-  };
+  logger.debug("starting ThaliMobile");
+  this.startingPromise = ThaliMobile.start(this._router, this._getPskIdToSecret)
+
+  .then(function () {
+    /*
+    Ideally we could call startListening and startUpdateAdvertising separately
+    but this causes problems in iOS. The issue is that we deal with the
+    restriction that there can only be one MCSession between two devices by
+    having a leader election where one device will always form the session.
+    Imagine that there is device A and B. B is advertising. A hears the
+    advertisement and wants to connect but it can't start the session. So what
+    it has to do is send an invite to B, who will reject the invite but then
+    respond with its own invite to A. For this to work however B has to be
+    listening for advertisements (not just making them) because otherwise
+    there is no way in iOS for A to ask B for a session (that will be
+    refused). Simultaneously A must be listening for advertisements (or it
+    wouldn't have heard B) and it must be advertising itself or B couldn't
+    establish the MCSession with it. So in practice this means that in iOS
+    everyone has to be both listening and advertising at the same time.
+    */
+    logger.debug("start listening for advertisements");
+    return ThaliMobile.startListeningForAdvertisements();
+  })
+  .then(function () {
+    logger.debug("start update advertising and listening");
+    return ThaliMobile.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    logger.debug("starting thaliSendNotificationBasedOnReplication");
+    self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
+
+    self.state = ThaliManager.STATES.STARTED;
+    self.startingPromise = undefined;
+  });
+
+  return this.startingPromise;
+};
 
 /**
  * Shuts down the radios and deactivates all replications.
@@ -189,11 +220,26 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
 ThaliManager.prototype.stop = function () {
   var self = this;
 
+  // Can we stop now?
+  var args = arguments;
+  switch (this.state) {
+    case ThaliManager.STATES.STOPPING:
+      return this.stoppingPromise;
+    case ThaliManager.STATES.STOPPED:
+      return Promise.resolve();
+    case ThaliManager.STATES.STARTING:
+      return this.startingPromise
+        .then(function() {
+          return self.stop.apply(self, args);
+        });
+  }
+  this.state = ThaliManager.STATES.STOPPING;
+
   logger.debug("stopping thaliSendNotificationBasedOnReplication");
   this._thaliSendNotificationBasedOnReplication.stop();
 
   logger.debug("stopping advertising and listening");
-  return ThaliMobile.stopAdvertisingAndListening()
+  this.stoppingPromise = ThaliMobile.stopAdvertisingAndListening()
 
   .then(function () {
     logger.debug("stopping listening for advertisements");
@@ -206,7 +252,12 @@ ThaliManager.prototype.stop = function () {
   .then(function () {
     logger.debug("stopping thaliPullReplicationFromNotification");
     self._thaliPullReplicationFromNotification.stop();
+
+    self.state = ThaliManager.STATES.STOPPED;
+    self.stoppingPromise = undefined;
   });
+
+  return this.stoppingPromise;
 };
 
 ThaliManager._acl = [

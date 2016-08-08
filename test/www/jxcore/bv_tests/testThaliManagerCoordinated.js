@@ -34,9 +34,8 @@ var defaultDirectory = path.join(
 // Thali manager will use defaultDirectory as db prefix.
 thaliConfig.BASE_DB_PREFIX = defaultDirectory;
 
-// Public base64 key for local device should be passed
+// Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
-// This is required for tape.coordinated server to generate participants.
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
 var publicBase64KeyForLocalDevice = ecdhForLocalDevice.getPublicKey('base64');
@@ -44,8 +43,15 @@ var publicBase64KeyForLocalDevice = ecdhForLocalDevice.getPublicKey('base64');
 // PouchDB name should be the same between peers.
 var DB_NAME = 'ThaliManagerCoordinated';
 
-var testCloseAllServer = null;
+PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
+  defaultAdapter: LeveldownMobile
+});
 
+var thaliManager;
+
+var TEST_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+var thisWasTheLastTest = false;
 var test = tape({
   setup: function (t) {
     t.data = publicKeyForLocalDevice.toJSON();
@@ -53,12 +59,26 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    fs.removeSync(defaultDirectory);
-    t.end();
+    // We are not removing defaultDirectory.
+    // Tests should resolve it by itself.
+    // fs.removeSync(defaultDirectory);
+    if (thisWasTheLastTest) {
+      Promise.resolve()
+      .then(function () {
+        if (thaliManager) {
+          return thaliManager.stop();
+        }
+      })
+      .then(function () {
+        fs.removeSync(defaultDirectory);
+      });
+    } else {
+      t.end();
+    }
   }
 });
 
-function validateDocs(pouchDB, docs, keys) {
+function validateDocs(pouchDB, docs, keys, options) {
   var allDocsFound = false;
   // We can just stringify our doc with defined keys, it wont be circular.
   var docStrings = [];
@@ -93,8 +113,6 @@ function validateDocs(pouchDB, docs, keys) {
           // We should turn 'changesFeed' off and call 'resolve' now.
           changesFeed.cancel();
         }
-      } else {
-        reject('bad doc');
       }
     })
     .on('complete', function () {
@@ -106,17 +124,15 @@ function validateDocs(pouchDB, docs, keys) {
   })
 }
 
-test('test repeat write', function (t) {
+test('test write', function (t) {
+  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
+
   // This function will return all participant's public keys except local 'publicKeyForLocalDevice' one.
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(t, publicKeyForLocalDevice);
 
-  PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
-    defaultAdapter: LeveldownMobile
-  });
   // We are creating a local db for each participant.
   var pouchDB = new PouchDB(DB_NAME);
 
-  var thaliManager;
   // We are adding a simple test doc to a local db.
   // It consist of it's public key (base64 representation) and test boolean.
   var localDoc = {
@@ -161,20 +177,72 @@ test('test repeat write', function (t) {
     localDoc.test2 = true;
     return pouchDB.put(localDoc)
       .then(function(response) {
-        docs[0]._rev = response.rev;
+        localDoc._rev = response.rev;
       });
   })
   .then(function () {
     // Our partners should update its docs the same way.
-    docs.forEach(function(doc) {
+    docs.slice(1).forEach(function(doc) {
       doc.test2 = true;
     });
-    return validateDocs(pouchDB, docs, ['_id', 'test1']);
+    return validateDocs(pouchDB, docs, ['_id', 'test1', 'test2']);
   })
   .then(function () {
-    thaliManager.stop();
+    exit();
+  });
+});
+
+test('test repeat write', function (t) {
+  // We will make a cleanup after this test.
+  thisWasTheLastTest = true;
+
+  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT, function (error) {
+    Promise.resolve()
+    .then(function () {
+      if (thaliManager) {
+        return thaliManager.stop();
+      }
+    })
+    .then(function () {
+      fs.removeSync(defaultDirectory);
+    });
+  });
+
+  // This function will return all participant's public keys except local 'publicKeyForLocalDevice' one.
+  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(t, publicKeyForLocalDevice);
+
+  // We are using an old db for each participant.
+  var pouchDB = new PouchDB(DB_NAME);
+  
+  // We are getting our previous doc from a local db.
+  // It should consist of it's public key (base64 representation) and 2 test booleans.
+  var localDoc;
+  pouchDB.get(publicBase64KeyForLocalDevice)
+  .then(function (response) {
+    localDoc = response;
   })
   .then(function () {
-    t.end();
+    // Lets update our doc with new boolean.
+    localDoc.test3 = true;
+    return pouchDB.put(localDoc)
+      .then(function(response) {
+        localDoc._rev = response.rev;
+      });
+  })
+  .then(function () {
+    // Our partners should update its docs the same way.
+    var docs = [];
+    partnerKeys.forEach(function (partnerKey) {
+      docs.push({
+        _id: partnerKey.toString('base64'),
+        test1: true,
+        test2: true,
+        test3: true
+      });
+    });
+    return validateDocs(pouchDB, docs, ['_id', 'test1', 'test2', 'test3']);
+  })
+  .then(function () {
+    exit();
   });
 });

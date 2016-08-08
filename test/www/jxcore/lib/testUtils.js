@@ -668,3 +668,18 @@ module.exports.runTestOnAllParticipants = function (t, router,
       });
   });
 };
+
+module.exports.exitWithTimeout = function (t, timeout) {
+  var exited = false;
+  function exit(error) {
+    if (!exited) {
+      exited = true;
+      clearTimeout(timer);
+      t.end(error);
+    }
+  }
+  var timer = setTimeout(function () {
+    exit(new Error('test timed out'));
+  }, timeout);
+  return exit;
+}
