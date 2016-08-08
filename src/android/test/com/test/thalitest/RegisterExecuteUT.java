@@ -28,11 +28,11 @@ public class RegisterExecuteUT {
         try {
                 if(methodName.equals("onPeerLost")){
                     Method onPeerLostMethod = ConnectionHelperTest.mConnectionHelper.getClass().getMethod(methodName, PeerProperties.class);
-                    onPeerLostMethod.invoke(ConnectionHelperTest.mConnectionHelper, new PeerProperties("11:22:33:22:11"));
+                    onPeerLostMethod.invoke(ConnectionHelperTest.mConnectionHelper, new PeerProperties("11:22:33:22:11:00"));
                 }
                 if(methodName.equals("onPeerDiscovered")){
                     Method onPeerDiscoveredMethod = ConnectionHelperTest.mConnectionHelper.getClass().getMethod(methodName, PeerProperties.class);
-                    onPeerDiscoveredMethod.invoke(ConnectionHelperTest.mConnectionHelper, new PeerProperties("33:44:55:44:33"));
+                    onPeerDiscoveredMethod.invoke(ConnectionHelperTest.mConnectionHelper, new PeerProperties("33:44:55:44:33:22"));
                 }
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
@@ -44,7 +44,7 @@ public class RegisterExecuteUT {
         }
 
     public static void Register() {
-        jxcore.RegisterMethod(“TestNativeMethod", new jxcore.JXcoreCallback() {
+        jxcore.RegisterMethod("TestNativeMethod", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
                 String methodToTest = "";
@@ -54,6 +54,12 @@ public class RegisterExecuteUT {
                 } else {
                     methodToTest = params.get(0).toString();
                     FireTestedMethod(methodToTest);
+                }
+
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
 
                 JSONObject jsonObject = new JSONObject();

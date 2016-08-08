@@ -28,7 +28,7 @@ var test = tape({
   }
 });
 
-test('onPeerLost properly calls jxcore', function (t) {
+test('onPeerLost calls jxcore', function (t) {
    setImmediate(function () {
        Mobile('TestNativeMethod').callNative('onPeerLost', function (result) {
            console.log(result.Testing_);
@@ -41,7 +41,7 @@ test('onPeerLost properly calls jxcore', function (t) {
   t.end();
 });
 
-test('onPeerDiscovered properly calls jxcore', function (t) {
+test('onPeerDiscovered calls jxcore', function (t) {
   setImmediate(function () {
          Mobile('TestNativeMethod').callNative('onPeerDiscovered', function (result) {
              console.log(result.Testing_);
