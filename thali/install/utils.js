@@ -9,6 +9,9 @@ module.exports.childProcessExecPromise = function(command, currentWorkingDirecto
     exec(command, { cwd: currentWorkingDirectory },
       function (error, stdout, stderr) {
         if (error) {
+          error.stdout = stdout;
+          error.stderr = stderr;
+
           reject(error);
           return;
         }
