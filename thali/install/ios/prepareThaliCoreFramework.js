@@ -98,8 +98,7 @@ function buildThaliCoreFramework(projectFolder, outputFolder, includeTests) {
     ' -sdk ' + sdk +
     ' ONLY_ACTIVE_ARCH=NO ' +
     ' BUILD_DIR=' + '\"' + buildDir + '\"' +
-    ' clean build' +
-    ' > /dev/null';
+    ' clean build';
 
   console.log('Building ThaliCore.framework');
 
