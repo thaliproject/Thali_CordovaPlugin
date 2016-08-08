@@ -61,6 +61,16 @@ if [ $IS_DARWIN_PLATFORM == true ]; then
   cordova platform add ios
 fi
 
+# In case of UT create a file
+if [[ $2 == "UT" ]] || [[ $3 == "UT" ]] ; then
+  echo "UT files will be copied to the platform directory"
+  touch platforms/android/unittests
+
+  if [ $IS_DARWIN_PLATFORM == true ]; then
+    touch platforms/ios/unittests
+  fi
+fi
+
 # run Thali install
 #
 cd www/jxcore
@@ -85,24 +95,6 @@ find . -name "*.gz" -delete
 find . -name "*.pem" -delete
 
 cp -v $1 app.js
-
-# In case of UT create a file
-if [[ $2 == "UT" ]] || [[ $3 == "UT" ]] ; then
-  echo "UT files will be copied to the platform directory"
-  touch ../../platforms/android/unittests
-fi
-
-# update Xcode project for CI stuff
-if [ $IS_DARWIN_PLATFORM == true ]; then
-  echo "Integrating ThaliCore.framework into Xcode project for testing"
-
-  SETUP_XCODE_TESTS_SCRIPT_PATH=$REPO_ROOT_PATH/thali/install/setupXcodeProjectTests.js
-  TEST_PROJECT_PATH=$REPO_ROOT_PATH/../$TEST_PROJECT_NAME/platforms/ios/$TEST_PROJECT_NAME.xcodeproj
-  FRAMEWORK_PROJECT_FOLDER_PATH=$REPO_ROOT_PATH/../$TEST_PROJECT_NAME/plugins/org.thaliproject.p2p/lib/ios/ThaliCore
-
-  # actually update Xcode project for CI stuff
-  jx $SETUP_XCODE_TESTS_SCRIPT_PATH "${TEST_PROJECT_PATH}" "${FRAMEWORK_PROJECT_FOLDER_PATH}"
-fi
 
 # build Android
 cordova build android --release --device

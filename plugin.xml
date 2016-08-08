@@ -49,14 +49,14 @@
         </js-module>
         <source-file src="src/android/java/org/thaliproject/p2p/ThaliPermissions.java" target-dir="src/org/thaliproject/p2p/" />
 
-        <hook type="before_compile" src="scripts/androidBeforeCompile.js" />
+        <hook type="before_compile" src="scripts/android/before_compile.js" />
     </platform>
 
     <!-- iOS -->
 
     <platform name="ios">
 
-        <hook type="after_plugin_install" src="thali/install/cordova-hooks/after_plugin_install.js" />
+        <hook type="after_plugin_install" src="scripts/ios/after_plugin_install.js" />
 
         <config-file target="config.xml" parent="/*">
           <feature name="ThaliPlugin">
