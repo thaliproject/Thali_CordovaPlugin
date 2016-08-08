@@ -8,6 +8,10 @@ module.exports.childProcessExecPromise = function(command, currentWorkingDirecto
   return new Promise(function (resolve, reject) {
     exec(command, { cwd: currentWorkingDirectory },
       function (error, stdout, stderr) {
+        // TODO: remove the lines below. Only for CI debugging.
+        if (stdout) { console.log(stdout); }
+        if (stderr) { console.log(stderr); }
+
         if (error) {
           error.stdout = stdout;
           error.stderr = stderr;
@@ -15,6 +19,7 @@ module.exports.childProcessExecPromise = function(command, currentWorkingDirecto
           reject(error);
           return;
         }
+
         // Log output even if command doesn't exit with an error,
         // because otherwise useful debugging information might get lost.
         if (stdout) { console.log(stdout); }
