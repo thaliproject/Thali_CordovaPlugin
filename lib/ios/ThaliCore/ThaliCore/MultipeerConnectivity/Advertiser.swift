@@ -34,10 +34,6 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
 
     public func advertiser(advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID,
                     withContext context: NSData?, invitationHandler: (Bool, MCSession) -> Void) {
-
-        //todo call timer callback
-        //todo call update for peer
-        //todo create tcp connection and accept MPC connection
     }
     
     public func advertiser(advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: NSError) {
