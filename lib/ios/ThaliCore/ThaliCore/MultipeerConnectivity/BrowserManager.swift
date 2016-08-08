@@ -9,7 +9,7 @@
 import Foundation
 
 //class for managing Thali browser's logic
-@objc public class BrowserManager: NSObject {
+@objc public final class BrowserManager: NSObject {
     private var currentBrowser: Browser?
     let serviceType: String
 

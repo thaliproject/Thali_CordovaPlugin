@@ -9,7 +9,7 @@
 import Foundation
 
 //class for managing Thali advertiser's logic
-@objc public class AdvertiserManager: NSObject {
+@objc public final class AdvertiserManager: NSObject {
     private var advertisers: [Advertiser] = []
     private var currentAdvertiser: Advertiser? = nil
     private let serviceType: String

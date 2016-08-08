@@ -9,7 +9,7 @@
 import Foundation
 import MultipeerConnectivity
 
-class Advertiser: NSObject {
+final class Advertiser: NSObject {
     let peerIdentifier: PeerIdentifier
     let serviceType: String
     let port: UInt16

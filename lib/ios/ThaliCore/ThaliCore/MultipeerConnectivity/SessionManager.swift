@@ -9,7 +9,7 @@ import Foundation
 import MultipeerConnectivity
 
 ///Opening TCP/IP listener and bind it to input and output streams
-class SessionManager {
+final class SessionManager {
     let session: MCSession
 
     init(peer: MCPeerID) {
