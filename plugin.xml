@@ -8,8 +8,9 @@
     <license>MIT</license>
     <keywords>cordova,jxcore,node.js,thali</keywords>
     <engines>
-        <engine name="cordova-android" version=">=3.2.0" />
-        <engine name="android-sdk" version=">=19" />
+        <engine name="cordova-android" version=">=5.0.0" />
+        <engine name="cordova-ios" version=">=3.9.0" />
+        <engine name="android-sdk" version=">=23" />
     </engines>
 
     <!-- Android -->
@@ -21,16 +22,33 @@
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
         </config-file>
         <framework src="src/android/JXcore.gradle" custom="true" type="gradleReference" />
-        <source-file src="src/android/java/io/jxcore/node/BtToRequestSocket.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/BtToServerSocket.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/BtToSocketBase.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/BtConnectorHelper.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/ConnectionHelper.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/ConnectionModel.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ConnectivityMonitor.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/IncomingSocketThread.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/JXcoreThaliCallback.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/LifeCycleMonitor.java" target-dir="src/io/jxcore/node/" />
-        <source-file src="src/android/java/io/jxcore/node/BtSocketDisconnectedCallBack.java" target-dir="src/io/jxcore/node/" />
-        <hook type="after_prepare" src="scripts/androidAfterPrepare.js"/>
-        <!--<hook type="after_platform_add" src="scripts/androidAfterPlatformAdd.js"/>-->
+        <source-file src="src/android/java/io/jxcore/node/ListenerOrIncomingConnection.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/OutgoingSocketThread.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/SocketThreadBase.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/StartStopOperation.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/StartStopOperationHandler.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/TestHelper.java" target-dir="src/io/jxcore/node/" />
+        
+        <!-- ThaliPermissions -->
+        <config-file target="config.xml" parent="/*">
+          <feature name="ThaliPermissions" >
+            <param name="android-package" value="org.thaliproject.p2p.ThaliPermissions"/>
+          </feature>
+        </config-file>
+    
+        <js-module src="www/android/thaliPermissions.js" name="ThaliPermissions">
+            <clobbers target="window.ThaliPermissions" />
+        </js-module>
+        <source-file src="src/android/java/org/thaliproject/p2p/ThaliPermissions.java" target-dir="src/org/thaliproject/p2p/" />
+
+        <hook type="before_compile" src="scripts/androidBeforeCompile.js" />
     </platform>
 
     <!-- iOS -->
@@ -40,14 +58,14 @@
         <framework src="MultipeerConnectivity.framework" />
         <framework src="CoreBluetooth.framework" />
         <framework src="SystemConfiguration.framework" />
+        <header-file src="src/ios/THEThaliEventDelegate.h"
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/THERemoteConnectionDelegate.h"
+          compiler-flags="-Werror"/>
         <source-file src="src/ios/JXcoreExtension.m"
           compiler-flags="-Werror"/>
         <header-file src="src/ios/Utility/THEThreading.h"
           compiler-flags="-Werror" />
-        <header-file src="src/ios/Utility/THEAtomicFlag.h"
-          compiler-flags="-Werror" />
-        <source-file src="src/ios/Utility/THEAtomicFlag.m" 
-          compiler-flags="-Werror"/>
         <header-file src="src/ios/NPReachability/NPReachability.h" 
           compiler-flags="-Werror"/>
         <source-file src="src/ios/NPReachability/NPReachability.m" 
@@ -56,21 +74,23 @@
           compiler-flags="-Werror"/>
         <source-file src="src/ios/THEAppContext.m" 
           compiler-flags="-Werror"/>
-        <header-file src="src/ios/THEPeer.h" 
-          compiler-flags="-Werror"/>
-        <source-file src="src/ios/THEPeer.m" 
-          compiler-flags="-Werror"/>
         <header-file src="src/ios/THEPeerBluetoothDelegate.h" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/THEPeerBluetooth.h" 
           compiler-flags="-Werror"/>
         <source-file src="src/ios/THEPeerBluetooth.m" 
           compiler-flags="-Werror"/>
-        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSession.h" 
+        <header-file src="src/ios/THEPeerDiscoveryDelegate.h" 
           compiler-flags="-Werror"/>
-        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerSession.m" 
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerConnectionDelegate.h" 
           compiler-flags="-Werror"/>
-        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSessionDelegate.h" 
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerDiscoveryDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerSessionStateDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerManager.h" 
+          compiler-flags="-Werror"/>
+        <source-file src="src/ios/MultipeerConnectivity/THEMultipeerManager.m" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClient.h" 
           compiler-flags="-Werror"/>
@@ -101,6 +121,8 @@
         <source-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSocketRelay.m" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerClientSocketRelayDelegate.h" 
+          compiler-flags="-Werror"/>
+        <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSocketRelayDelegate.h" 
           compiler-flags="-Werror"/>
         <header-file src="src/ios/MultipeerConnectivity/THEMultipeerServerSocketRelay.h" 
           compiler-flags="-Werror"/>

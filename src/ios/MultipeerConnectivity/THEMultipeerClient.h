@@ -27,30 +27,44 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
 #import "THEAppContext.h"
+#import "THEMultipeerDiscoveryDelegate.h"
+#import "THEMultipeerSessionStateDelegate.h"
+#import "THEMultipeerServerConnectionDelegate.h"
 
 // Encapsulates the local client functionality such as discovering and 
 // connecting to remote servers.
-@interface THEMultipeerClient : NSObject <MCNearbyServiceBrowserDelegate>
+@interface THEMultipeerClient : NSObject <MCNearbyServiceBrowserDelegate, THEMultipeerServerConnectionDelegate>
 
 // Service type here is what we're looking for, not what we may be advertising 
 // (although they'll usually be the same)
-- (id)initWithPeerId:(MCPeerID *)peerId
-  withPeerIdentifier:(NSString *)peerIdentifier
-     withServiceType:(NSString *)serviceType 
-    withPeerNetworkingDelegate:(id<THEMultipeerSessionDelegate>)multipeerSessionDelegate;
+
+- (instancetype)initWithPeerId:(MCPeerID *)peerId
+                 withServiceType:(NSString *)serviceType
+              withPeerIdentifier:(NSString *)peerIdentifier
+             withSessionDelegate:(id<THEMultipeerSessionStateDelegate>)sessionDelegate
+  withMultipeerDiscoveryDelegate:(id<THEMultipeerDiscoveryDelegate>)discoveryDelegate;
 
 // Start and stop the client (i.e. the peer discovery process)
 - (void)start;
 - (void)stop;
 
-// Connect to a remote peer identified by the application level identifier,
-- (BOOL) connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier 
-                    withConnectCallback:(ConnectCallback)connectCallback;
+// Restart browsing without killing existing sessions
+- (void)restart;
 
-// Disconnect to a remote peer identified by the application level identifier
-- (BOOL)disconnectFromPeerWithPeerIdentifier:(NSString *)peerIdentifier;
+// Connect to a remote peer identified by the application level identifier,
+- (BOOL)connectToPeerWithPeerIdentifier:(NSString *)peerIdentifier
+                    withConnectCallback:(ClientConnectCallback)connectCallback;
 
 // Kill connection for testing purposes
-- (BOOL)killConnection:(NSString *)peerIdentifier;
+- (BOOL)killConnections:(NSString *)peerIdentifier;
 
+- (const THEMultipeerClientSession *)sessionForUUID:(NSString *)peerUUID;
+
+- (void)updateLocalPeerIdentifier:(NSString *)localPeerIdentifier;
+
+// The server component is telling us it just completed a connection, it may be one
+// we initiated.
+- (void)didCompleteReverseConnection:(NSString *)peerIdentifier
+                      withClientPort:(unsigned short)clientPort
+                      withServerPort:(unsigned short)serverPort;
 @end

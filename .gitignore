@@ -12,8 +12,20 @@ gradlew.bat
 # Nodejs
 node_modules
 npm-debug.log
+
 # Cordova
 out/
 
 # VS Code
 .settings/
+.vscode/
+
+# Testing
+test/TestServer/server-address.js
+test/www/jxcore/server-address.js
+
+# XCode user specific files
+*.xcuserdatad/
+
+# Misc
+thali/readme.md

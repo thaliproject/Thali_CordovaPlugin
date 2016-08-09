@@ -3,20 +3,26 @@
 
 @implementation THEMultipeerServerSocketRelay
 {
-  uint _serverPort;
+  // The server port we'll connect to
+  unsigned short _serverPort;
+  
+  // Delegate we inform when we connect or fail
+  id<THEMultipeerServerSocketRelayDelegate> _delegate;
+  
   GCDAsyncSocket *_connectingSocket;
 }
 
--(instancetype)initWithServerPort:(uint)serverPort
+-(instancetype)initWithServerPort:(unsigned short)serverPort withDelegate:(id<THEMultipeerServerSocketRelayDelegate>)delegate;
 {
   self = [super initWithRelayType:@"server"];
   if (!self)
   {
     return nil;
   }
-    
+  
+  _delegate = delegate;
   _serverPort = serverPort;
-    
+
   return self;
 }
 
@@ -46,11 +52,23 @@
 
 #pragma mark - GCDAsyncSocketDelegate
 
--(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
+- (void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
 {
   NSLog(@"server relay: connected (to port: %d)", port);
   [self didCreateSocket:sock];
+  [_delegate didConnectWithClientPort:[sock localPort] withServerPort:port];
   _connectingSocket = nil;
+}
+
+- (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
+{
+  if (_connectingSocket)
+  {
+    // Connection attempt has failed
+    [_delegate didNotConnectWithServerPort:_serverPort];
+  }
+  
+  [super socketDidDisconnect:sock withError:err];
 }
 
 @end

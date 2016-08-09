@@ -106,7 +106,7 @@ ThaliReplicationManager.prototype.getDeviceIdentity = function (cb) {
  * The device-id is obtained using the cryptomanager's API.
  * @param {Number} port the port number used for synchronization.
  * @param {String} dbName the name of the database.
- * @param {String} deviceName the name to advertise for the device
+ * @param {String} [deviceName] the optional name to advertise for the device
  */
 ThaliReplicationManager.prototype.start = function (port, dbName, deviceName) {
   validations.ensureValidPort(port);

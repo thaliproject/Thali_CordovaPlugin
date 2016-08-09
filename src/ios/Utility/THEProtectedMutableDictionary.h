@@ -25,6 +25,8 @@
 //  THEProtectedMutableDictionary.h
 //
 
+#import <Foundation/Foundation.h>
+
 // A thread-safe dictionary that allows common operations to be executed under lock 
 @interface THEProtectedMutableDictionary : NSObject
 

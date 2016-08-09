@@ -1,93 +1,69 @@
 /*
-* This file needs to be renamed as app.js when we want to run performance tests
-* in order this to get loaded by the jxcore ready event.
-* This efectively acts as main entry poin to the performance test app
- */
-(function () {
+ * This file needs to be renamed as app.js when we want to run performance tests
+ * in order this to get loaded by the jxcore ready event.
+ * This effectively acts as main entry point to the performance test app
+*/
 
-  var CoordinatorConnector = require('./lib/CoordinatorConnector');
-  var TestFrameworkClient = require('./lib/PerfTestFramework');
+'use strict';
 
-  /*----------------------------------------------------------------------------------
-   code for connecting to the coordinator server
-   -----------------------------------------------------------------------------------*/
-  fs = require('fs');
-  var parsedJSON = require('serveraddress.json');
-  var myName = "DEV" + Math.round((Math.random() * (10000)));
+var testUtils = require('./lib/testUtils');
+var TestFrameworkClient = require('./perf_tests/PerfTestFrameworkClient');
 
-  console.log('my name is : ' + myName);
-  console.log('Connect to  address : ' + parsedJSON[0].address + ' type: ' + parsedJSON[0].name);
+/*------------------------------------------------------------------------------
+ code for connecting to the coordinator server
+ -----------------------------------------------------------------------------*/
 
-  var Coordinator = new CoordinatorConnector();
-  Coordinator.init(parsedJSON[0].address, 3000);
-  console.log('attempting to connect to test coordinator');
+function getDeviceCharacteristics(cb) {
 
-  Coordinator.on('error', function (data) {
-    var errData = JSON.parse(data);
-    console.log('Error:' + data + ' : ' + errData.type +  ' : ' + errData.data);
-    logMessageToScreen('Client error: ' + errData.type);
-  });
-
-  /*----------------------------------------------------------------------------------
-   code for handling test communications
-   -----------------------------------------------------------------------------------*/
-  var TestFramework = new TestFrameworkClient(myName);
-  TestFramework.on('done', function (data) {
-    console.log('done, sending data to server');
-    Coordinator.sendData(data);
-  });
-  TestFramework.on('debug', function (data) {
-    logMessageToScreen(data);
-  });
-
-  Coordinator.on('connect', function () {
-    console.log('Client has connected to the server!');
-    logMessageToScreen('connected to server');
-    Coordinator.identify(myName);
-  });
-
-  Coordinator.on('command', function (data) {
-    console.log('command received : ' + data);
-    TestFramework.handleCommand(data);
-  });
-
-  // Add a disconnect listener
-  Coordinator.on('disconnect', function () {
-    console.log('The client has disconnected!');
-    //we need to stop & close any tests we are runnign here
-    TestFramework.stopAllTests(false);
-    logMessageToScreen('disconnected');
-  });
-
-  /***************************************************************************************
-   functions for Cordova side application, used for showing debug logs
-   ***************************************************************************************/
-
-  function isFunction(functionToCheck) {
-    var getType = {};
-    return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+  if (typeof jxcore === 'undefined') {
+    cb('PERF_TEST-' + Math.random(), null);
   }
-
-  var LogCallback;
-
-  function logMessageToScreen(message) {
-    if (isFunction(LogCallback)) {
-      LogCallback(message);
-    } else {
-      console.log("LogCallback not set !!!!");
-    }
+  else if (jxcore.utils.OSInfo().isAndroid) {
+    Mobile('GetBluetoothAddress').callNative(
+      function (bluetoothAddressError, bluetoothAddress) {
+      Mobile('GetBluetoothName').callNative(
+        function (bluetoothNameError, bluetoothName) {
+        Mobile('GetDeviceName').callNative(
+          function (deviceName) {
+          console.log('Received device characteristics:\n' +
+                      'Bluetooth address: ' + bluetoothAddress + '\n' +
+                      'Bluetooth name: ' + bluetoothName + '\n' +
+                      'Device name: ' + deviceName);
+          // In case of Android, the name used is first checked from the
+          // Bluetooth name, because that is one that user can set. If that is
+          // not set, the returned device name is used. The device name is not
+          // guaranteed to be unique, because it is concatenated from device
+          // manufacturer and model and will thus be the same in case of
+          // identical devices.
+          var myName = bluetoothName || deviceName;
+          if (!myName || !bluetoothAddress) {
+            console.log('An error while getting the device characteristics!');
+          }
+          testUtils.setName(myName);
+          cb(myName, bluetoothAddress);
+        });
+      });
+    });
+  } else {
+    Mobile('GetDeviceName').callNative(function (deviceName) {
+      // In case of iOS, the device name is used directly, because
+      // the one returned in the one that user can set.
+      testUtils.setName(deviceName);
+      cb(deviceName, null);
+    });
   }
+}
 
-  Mobile('setLogCallback').registerAsync(function (callback) {
-    LogCallback = callback;
+/*------------------------------------------------------------------------------
+ code for handling test communications
+ -----------------------------------------------------------------------------*/
+
+var testFramework;
+getDeviceCharacteristics(function (deviceName, bluetoothAddress) {
+  // The test framework client will coordinate everything from here..
+  process.nextTick(function () {
+    testFramework = new TestFrameworkClient(deviceName, bluetoothAddress);
   });
+});
 
-  Mobile('getMyName').registerAsync(function (callback) {
-    callback(myName);
-  });
-
-  // Log that the app.js file was loaded.
-  console.log('Test app app.js loaded');
-})();
-
-
+console.log('Perf Test app is loaded');
