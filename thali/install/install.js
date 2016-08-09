@@ -1,3 +1,5 @@
+console.log('abc2')
+
 'use strict';
 var exec = require('child-process-promise').exec;
 var spawn = require('child_process').spawn;
@@ -351,7 +353,7 @@ module.exports = function (callback, appRootDirectory) {
               thaliCordovaPluginUnZipResult.unzipedDirectory);
             return exec('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory + ' -d',
-              {cwd : appRootDirectory });
+              { cwd : appRootDirectory });
           }).then(function () {
             // The step below is required, because the Android after prepare
             // Cordova hook depends on external node modules that need to be

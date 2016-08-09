@@ -14,6 +14,8 @@
         <engine name="android-sdk" version=">=23" />
     </engines>
 
+    <hook type="before_plugin_install" src="scripts/before_plugin_install.js" />
+
     <!-- Android -->
     <platform name="android">
         <config-file target="AndroidManifest.xml" parent="/*">
