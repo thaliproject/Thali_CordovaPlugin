@@ -56,19 +56,15 @@ cd $TEST_PROJECT_NAME
 # add Android platform
 cordova platform add android
 
+# A file that identifies the current build as a UT build, which results in copying native UT files to the platform folder
+touch platforms/android/unittests
+
 # add iOS platform
 if [ $IS_DARWIN_PLATFORM == true ]; then
   cordova platform add ios
-fi
 
-# In case of UT create a file
-if [[ $2 == "UT" ]] || [[ $3 == "UT" ]] ; then
-  echo "UT files will be copied to the platform directory"
-  touch platforms/android/unittests
-
-  if [ $IS_DARWIN_PLATFORM == true ]; then
-    touch platforms/ios/unittests
-  fi
+  # A file that identifies the current build as a UT build
+  touch platforms/ios/unittests
 fi
 
 # run Thali install
