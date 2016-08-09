@@ -38,9 +38,11 @@ else
 fi
 
 cd ThaliTest
+# TODO Temporarily disabling ios build
 #cordova platform add ios
 cordova platform add android
 cd www/jxcore
+jx installCustomPouchDB.js
 jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
 
 if [ $runningInMinGw == true ]; then
@@ -63,14 +65,12 @@ find . -name "*.pem" -delete
 
 cp -v $1 app.js
 
-# In case of UT create a file
-if [ $2 == "UT" ] || [ $3 == "UT" ] ; then
-  echo "UT files will be copied to the platform directory"
-  touch ../../platforms/android/unittests
-fi
+# A file that identifies the current build as a UT build, which results in copying Android native UT files to the platform folder
+touch ../../platforms/android/unittests
 
 cordova build android --release --device
 
+# TODO Temporarily disabling ios build
 #if [ $runningInMinGw == false ]; then
 #    cordova build ios --device
 #fi

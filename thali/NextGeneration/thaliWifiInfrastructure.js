@@ -10,7 +10,7 @@ var express = require('express');
 var validations = require('../validations');
 var thaliConfig = require('./thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-var logger = require('../thalilogger')('thaliWifiInfrastructure');
+var logger = require('../thaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var https = require('https');
 
@@ -271,7 +271,7 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
  * express-pouchdb is a router object) that the caller wants the WiFi
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately.
- * @param {module:thaliMobileNativeWrapper~pskIdToSecret pskIdToSecret} pskIdToSecret
+ * @param {module:thaliMobileNativeWrapper~pskIdToSecret} pskIdToSecret
  * @returns {Promise<?Error>}
  */
 // jscs:enable jsDoc
@@ -430,7 +430,7 @@ function (skipPromiseQueue, changeTarget) {
  * UDP socket for SSDP the socket MUST be "udp4". When socket.bind is called to
  * bind the socket the SSDP multicast address 239.255.255.250 and port 1900 MUST
  * be chosen as they are the reserved address and port for SSDP.
- * 
+ *
  * __OPEN ISSUE:__ What happens on Android or iOS or the desktop OS's for that
  * matter if multiple apps all try to bind to the same UDP multicast address?
  * It should be fine. But it's important to find out so that other apps can't
