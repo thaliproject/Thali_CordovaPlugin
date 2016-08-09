@@ -9,14 +9,12 @@ var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var ThaliPskMapCache =
   require('thali/NextGeneration/notification/thaliPskMapCache');
-var ThaliConfig =
+var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var ThaliHttpTester = require('../lib/httpTester');
-
-var SECP256K1 = 'secp256k1';
 
 var globalVariables = {};
 
@@ -27,7 +25,7 @@ var globalVariables = {};
  */
 var GlobalVariables = function () {
 
-  this.sourceKeyExchangeObject = crypto.createECDH(SECP256K1);
+  this.sourceKeyExchangeObject = crypto.createECDH(thaliConfig.BEACON_CURVE);
   this.sourcePublicKey = this.sourceKeyExchangeObject.generateKeys();
   this.sourcePublicKeyHash =
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
@@ -74,7 +72,7 @@ GlobalVariables.prototype.init = function () {
       } else {
         self.TESTURL = 'http://' + '127.0.0.1' + ':' +
         self.expressServer.address().port +
-          ThaliConfig.NOTIFICATION_BEACON_PATH;
+          thaliConfig.NOTIFICATION_BEACON_PATH;
 
         makeIntoCloseAllServer(self.expressServer);
 
@@ -115,9 +113,9 @@ GlobalVariables.prototype.createPublicKeysToNotify = function () {
   this.publicKeysToNotify = [];
   this.targetDeviceKeyExchangeObjects = [];
 
-  var device1 = crypto.createECDH(SECP256K1);
+  var device1 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device1Key = device1.generateKeys();
-  var device2 = crypto.createECDH(SECP256K1);
+  var device2 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device2Key = device2.generateKeys();
 
   this.publicKeysToNotify.push(device1Key, device2Key);
@@ -148,21 +146,21 @@ var test = tape({
 test('Test ThaliPskMapCache clean and expiration', function (t) {
 
   var cache = new ThaliPskMapCache(500);
-  var overFlow = ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE + 10;
+  var overFlow = thaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE + 10;
 
   for (var i = 0 ; i < overFlow ; i++) {
     cache.push({});
   }
 
   t.equal(cache._queue.length,
-    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE,
+    thaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE,
   'ThaliPskMapCache should not exceed' +
   ' MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE');
 
   cache.clean(true);
 
   t.equal(cache._queue.length,
-    ThaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE-1,
+    thaliConfig.MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE-1,
     'ThaliPskMapCache should not exceed' +
     ' MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE-1');
 
@@ -213,10 +211,10 @@ test('Test ThaliPskMapCache multiple entries', function (t) {
 
   var cache = new ThaliPskMapCache(2000);
 
-  var keyExchangeObject1 = crypto.createECDH(SECP256K1);
+  var keyExchangeObject1 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   keyExchangeObject1.generateKeys();
 
-  var keyExchangeObject2 = crypto.createECDH(SECP256K1);
+  var keyExchangeObject2 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   keyExchangeObject2.generateKeys();
 
   var publicKeysToNotify = globalVariables.createPublicKeysToNotify();

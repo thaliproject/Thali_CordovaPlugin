@@ -11,6 +11,7 @@ var assert = require('assert');
 var compareBufferArrays = require('./utilities').compareBufferArrays;
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
 var TransientState = require('./utilities').TransientState;
+var thaliConfig = require('../thaliConfig');
 
 /** @module thaliSendNotificationBasedOnReplication */
 
@@ -97,20 +98,9 @@ ThaliSendNotificationBasedOnReplication.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 10;
  */
 ThaliSendNotificationBasedOnReplication.calculateSeqPointKeyId =
   function (ecdhPublicKey) {
-    return ThaliSendNotificationBasedOnReplication.LOCAL_SEQ_POINT_PREFIX +
+    return thaliConfig.LOCAL_SEQ_POINT_PREFIX +
       urlsafeBase64.encode(ecdhPublicKey);
   };
-
-
-/**
- * Defines the prefix used for IDs in _Local to record seq point records in the
- * Thali protocol.
- *
- * @public
- * @readonly
- * @type {string}
- */
-ThaliSendNotificationBasedOnReplication.LOCAL_SEQ_POINT_PREFIX = 'thali';
 
 // Values created by the constructor and invariant for the life of the object,
 // including across starts and stops.
@@ -139,6 +129,16 @@ var stateEnum = {
 ThaliSendNotificationBasedOnReplication.prototype._state = stateEnum.STOPPED;
 
 ThaliSendNotificationBasedOnReplication.prototype._transientState = null;
+
+ThaliSendNotificationBasedOnReplication.prototype.getPskIdToSecret =
+  function () {
+    return this._thaliNotificationServer.getPskIdToSecret();
+  };
+
+ThaliSendNotificationBasedOnReplication.prototype.getPskIdToPublicKey =
+  function () {
+    return this._thaliNotificationServer.getPskIdToPublicKey();
+  };
 
 /**
  * Will start monitoring the submitted pouchDB and updating the notification

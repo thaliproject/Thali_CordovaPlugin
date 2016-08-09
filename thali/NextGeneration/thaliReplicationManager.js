@@ -1,16 +1,27 @@
 'use strict';
 
 var ThaliSendNotificationBasedOnReplication =
-  require('thali/NextGeneration/thaliSendNotificationBasedOnReplication');
+  require('./replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification =
-  require('thali/NextGeneration/thaliPullReplicationFromNotification');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  require('./replication/thaliPullReplicationFromNotification');
+var ThaliMobile = require('./thaliMobile');
+var express = require('express');
+var thaliConfig = require('./thaliConfig');
+var salti = require('salti');
+var acl = require('salti/test/acl-block.1');
 
 /**
  * @classdesc This may look like a class but it really should only have one
  * instance or bad stuff can happen.
  * @public
- * @param {PouchDB} pouchDB pouchDB database we are tracking changes on.
+ * @param {expressPouchdb} expressPouchDB The express-pouchdb object we are
+ * supposed to use to create the router.
+ * @param {PouchDB} PouchDB PouchDB object we are supposed to use to create
+ * dbs. Typically this should have PouchDB.defaults set with db to
+ * require('leveldown-mobile') and prefix to the path where the application
+ * wishes to store the DB.
+ * @param {string} dbName Name of the db, both locally and remotely that we are
+ * interacting with.
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized with
  * the local device's public and private keys.
  * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} [thaliPeerPoolInterface]
@@ -20,19 +31,28 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
  * app.
  * @constructor
  */
-function ThaliReplicationManager(pouchDB,
+function ThaliReplicationManager(expressPouchDB,
+                                 PouchDB,
+                                 dbName,
                                  ecdhForLocalDevice,
                                  thaliPeerPoolInterface) {
+  this._router = express.Router();
+
   this._thaliSendNotificationBasedOnReplication =
-    new ThaliSendNotificationBasedOnReplication(router,
-                                                ecdhForLocalDevice,
-                                                secondsUntilExpiration,
-                                                pouchDB);
+    new ThaliSendNotificationBasedOnReplication(this._router,
+        ecdhForLocalDevice, thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE,
+        new PouchDB(dbName));
 
   this._thaliPullReplicationFromNotification =
-    new ThaliPullReplicationFromNotification(pouchDB,
+    new ThaliPullReplicationFromNotification(PouchDB,
+                                             dbName,
                                              thaliPeerPoolInterface,
                                              ecdhForLocalDevice);
+
+  this._router.use(thaliConfig.BASE_DB_PATH, expressPouchDB(PouchDB, {
+    mode: 'minimumForPouchDB'
+  }));
+
 }
 
 ThaliReplicationManager.prototype._thaliSendNotificationBasedOnReplication =
@@ -60,7 +80,9 @@ ThaliReplicationManager.prototype.start =
     var self = this;
     self._thaliPullReplicationFromNotification
           .start(arrayOfRemoteKeys);
-    return ThaliMobile.start().then(function () {
+    return ThaliMobile.start(self._router,
+            self._thaliSendNotificationBasedOnReplication.getPskIdToSecret())
+    .then(function () {
       /*
       Ideally we could call startListening and startUpdateAdvertising separately
       but this causes problems in iOS. The issue is that we deal with the

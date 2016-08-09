@@ -27,8 +27,6 @@ var pskIdToSecret = function (id) {
   return id === thaliConfig.BEACON_PSK_IDENTITY ? thaliConfig.BEACON_KEY : null;
 };
 
-var SECP256K1 = 'secp256k1';
-
 var globals = {};
 
 /**
@@ -41,7 +39,7 @@ var GlobalVariables = function () {
   this.expressApp = express();
   this.expressRouter = express.Router();
 
-  this.sourceKeyExchangeObject = crypto.createECDH(SECP256K1);
+  this.sourceKeyExchangeObject = crypto.createECDH(thaliConfig.BEACON_CURVE);
   this.sourcePublicKey = this.sourceKeyExchangeObject.generateKeys();
   this.sourcePublicKeyHash =
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
@@ -97,11 +95,11 @@ GlobalVariables.prototype.createPublicKeysToNotifyAndPreamble = function () {
   this.targetDeviceKeyExchangeObjects = [];
   this.preambleAndBeacons = {};
 
-  var device1 = crypto.createECDH(SECP256K1);
+  var device1 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device1Key = device1.generateKeys();
   var device1KeyHash = NotificationBeacons.createPublicKeyHash(device1Key);
 
-  var device2 = crypto.createECDH(SECP256K1);
+  var device2 = crypto.createECDH(thaliConfig.BEACON_CURVE);
   var device2Key = device2.generateKeys();
   var device2KeyHash = NotificationBeacons.createPublicKeyHash(device2Key);
 
@@ -220,6 +218,49 @@ test('TCP_NATIVE peer loses DNS', function (t) {
 
 });
 
+test('Received beacons with no values for us', function (t) {
+  var enqueue = function (action) {
+    var keepAliveAgent = httpTester.getTestAgent(
+      thaliConfig.BEACON_PSK_IDENTITY, thaliConfig.BEACON_KEY);
+    action.start(keepAliveAgent).then(function () {
+      setImmediate(function () {
+        var entry =
+          notificationClient.peerDictionary.get(globals.TCPEvent.peerIdentifier);
+        t.ok(entry, 'entry exists');
+        t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED, 'entry ' +
+          'is resolved');
+        notificationClient.stop();
+        t.end();
+      });
+    }).catch( function ( ) {
+      t.fail('This action should not fail!');
+      t.end();
+    });
+  };
+
+  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+
+  httpTester.runServer(globals.expressRouter,
+    thaliConfig.NOTIFICATION_BEACON_PATH,
+    200, globals.preambleAndBeacons, 1);
+
+  var notificationClient =
+    new ThaliNotificationClient(globals.peerPoolInterface,
+      globals.targetDeviceKeyExchangeObjects[0]);
+
+  var bogusPublicKey =
+    crypto.createECDH(thaliConfig.BEACON_CURVE).generateKeys();
+  notificationClient.start([bogusPublicKey]);
+
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
+    function () {
+      t.fail('We should not have gotten an event!');
+    });
+
+  // New peer with TCP connection
+  notificationClient._peerAvailabilityChanged(globals.TCPEvent);
+});
+
 test('Resolves an action locally', function (t) {
 
   // Scenario:
@@ -250,8 +291,8 @@ test('Resolves an action locally', function (t) {
 
   notificationClient.start([globals.sourcePublicKey]);
 
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
-    function ( res) {
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
+    function (res) {
       t.equals(
         res.hostAddress,
         globals.TCPEvent.hostAddress,
@@ -269,6 +310,7 @@ test('Resolves an action locally', function (t) {
         globals.TCPEvent.portNumber,
         'portNumber must match');
 
+      notificationClient.stop();
       t.end();
     });
 
@@ -296,7 +338,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
 
   notificationClient.start([globals.sourcePublicKey]);
 
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
     function ( res) {
       t.equals(
         res.hostAddress,
@@ -413,7 +455,7 @@ test('hostaddress is removed when the action is running. ', function (t) {
 
   notificationClient.start([globals.sourcePublicKey]);
 
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
     function () {
       t.fail('This should never happen when action is getting killed' +
         'because of the hostname is removed');

@@ -42,7 +42,7 @@ function makeIntoCloseAllServer(server, eatNotRunning) {
       if (index === -1) {
         assert('socket not found from the list of connections');
       }
-      connections = connections.splice(index, 1);
+      connections.splice(index, 1);
     });
   });
 
