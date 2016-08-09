@@ -110,11 +110,6 @@ var spawnTestInstance = function (instanceId) {
   var instanceArgs = [argv.test];
   if (argv.filter) {
     instanceArgs.push(argv.filter);
-  } if (argv._) {
-    // Any argument that didn't have an option
-    // associated with it can be bypassed.
-    // This adds an ability to run single test.
-    instanceArgs = instanceArgs.concat(argv._);
   }
   var testInstance = spawn('jx', instanceArgs);
   setListeners(testInstance, instanceId);

@@ -34,15 +34,13 @@ var defaultDirectory = path.join(
   testUtils.getPouchDBTestDirectory(),
   'thali-manager-db-' + testUtils.getUniqueRandomName()
 );
-// Thali manager will use 'defaultDirectory' as db prefix.
-thaliConfig.BASE_DB_PREFIX = defaultDirectory;
 
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
 
-PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
+PouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
   defaultAdapter: LeveldownMobile
 });
 
@@ -60,361 +58,244 @@ var test = tape({
   }
 });
 
-function getMocks() {
+function Mocks(t) {
   // All objects should be cloned in order to prevent
   // 'already wrapped' error by 'sinon.spy'.
 
-  var spyExpressPouchDB = sinon.spy(expressPouchDB);
-  var spyPouchDB        = sinon.spy(PouchDB);
+  this.t = t;
+  
+  this.expressPouchDB = sinon.spy(expressPouchDB);
+  this.PouchDB        = sinon.spy(PouchDB);
 
-  var spyThaliMobile = extend({}, ThaliMobile);
+  this.ThaliMobile = extend({}, ThaliMobile);
 
-  var spyMobileStart = sinon.spy(spyThaliMobile, 'start');
-  var spyMobileStop  = sinon.spy(spyThaliMobile, 'stop');
+  this.MobileStart = sinon.spy(this.ThaliMobile, 'start');
+  this.MobileStop  = sinon.spy(this.ThaliMobile, 'stop');
 
-  var spyMobileStartLA = sinon.spy(
-    spyThaliMobile, 'startListeningForAdvertisements'
+  this.MobileStartLA = sinon.spy(
+    this.ThaliMobile, 'startListeningForAdvertisements'
   );
-  var spyMobileStopLA = sinon.spy(
-    spyThaliMobile, 'stopListeningForAdvertisements'
-  );
-
-  var spyMobileStartUAA = sinon.spy(
-    spyThaliMobile, 'startUpdateAdvertisingAndListening'
-  );
-  var spyMobileStopUAA = sinon.spy(
-    spyThaliMobile, 'stopAdvertisingAndListening'
+  this.MobileStopLA = sinon.spy(
+    this.ThaliMobile, 'stopListeningForAdvertisements'
   );
 
-  var spyNotification = sinon.spy(
+  this.MobileStartUAA = sinon.spy(
+    this.ThaliMobile, 'startUpdateAdvertisingAndListening'
+  );
+  this.MobileStopUAA = sinon.spy(
+    this.ThaliMobile, 'stopAdvertisingAndListening'
+  );
+
+  this.Notification = sinon.spy(
     ThaliSendNotificationBasedOnReplication
   );
-  spyNotification.prototype = extend(
+  this.Notification.prototype = extend(
     {},
     ThaliSendNotificationBasedOnReplication.prototype
   );
-  var spyNotificationStart = sinon.spy(
-    spyNotification.prototype, 'start'
+  this.NotificationStart = sinon.spy(
+    this.Notification.prototype, 'start'
   );
-  var spyNotificationStop = sinon.spy(
-    spyNotification.prototype, 'stop'
+  this.NotificationStop = sinon.spy(
+    this.Notification.prototype, 'stop'
   );
 
-  var spyReplication = sinon.spy(
+  this.Replication = sinon.spy(
     ThaliPullReplicationFromNotification
   );
-  spyReplication.prototype = extend(
+  this.Replication.prototype = extend(
     {},
     ThaliPullReplicationFromNotification.prototype
   );
-  var spyReplicationStart = sinon.spy(
-    spyReplication.prototype, 'start'
+  this.ReplicationStart = sinon.spy(
+    this.Replication.prototype, 'start'
   );
-  var spyReplicationStop = sinon.spy(
-    spyReplication.prototype, 'stop'
+  this.ReplicationStop = sinon.spy(
+    this.Replication.prototype, 'stop'
   );
 
-  var spySalti = sinon.spy(Salti);
+  this.Salti = sinon.spy(Salti);
 
-  var spyThaliManager =
+  this.ThaliManager =
     proxyquire('thali/NextGeneration/thaliManager', {
       './replication/thaliSendNotificationBasedOnReplication':
-        spyNotification,
+        this.Notification,
       './replication/thaliPullReplicationFromNotification':
-        spyReplication,
-      './thaliMobile': spyThaliMobile,
-      'salti': spySalti
+        this.Replication,
+      './thaliMobile': this.ThaliMobile,
+      'salti': this.Salti
     });
-
-  return {
-    expressPouchDB: spyExpressPouchDB,
-    PouchDB: spyPouchDB,
-
-    mobileStart: spyMobileStart,
-    mobileStop: spyMobileStop,
-    mobileStartLA: spyMobileStartLA,
-    mobileStopLA: spyMobileStopLA,
-    mobileStartUAA: spyMobileStartUAA,
-    mobileStopUAA: spyMobileStopUAA,
-
-    notification: spyNotification,
-    notificationStart: spyNotificationStart,
-    notificationStop: spyNotificationStop,
-
-    replication: spyReplication,
-    replicationStart: spyReplicationStart,
-    replicationStop: spyReplicationStop,
-
-    salti: spySalti,
-
-    ThaliManager: spyThaliManager
-  };
 }
 
-function checkExpressPouchDB(t, mocks) {
-  // Testing that 'expressPouchDB' has called properly.
-  t.ok(mocks.expressPouchDB.called, 'expressPouchDB has called');
-  t.ok(mocks.expressPouchDB.calledOnce, 'expressPouchDB has called once');
-
-  var args = mocks.expressPouchDB.getCalls()[0].args;
-  t.ok(args.length >= 1, 'expressPouchDB has called with >= 1 arguments');
-
-  var foundPouchDB = false;
-  args.forEach(function (arg) {
-    if (arg === mocks.PouchDB) {
-      foundPouchDB = true;
-    }
-  });
-  t.ok(foundPouchDB, 'expressPouchDB has called with \'PouchDB\' argument');
+Mocks.prototype.checkInit = function(dbName, ecdh, peerPool) {
+  this.checkExpressPouchDB();
+  this.checkPouchDB(dbName);
+  this.checkNotification(ecdh);
+  this.checkReplication(dbName, peerPool, ecdh);
+  this.checkSalti(dbName);
+}
+Mocks.prototype.checkStart = function(partnerKeys) {
+  this.checkMobileStart();
+  this.checkMobileStartLA();
+  this.checkMobileStartUAA();
+  this.checkNotificationStart(partnerKeys);
+  this.checkReplicationStart(partnerKeys);
+}
+Mocks.prototype.checkStop = function() {
+  this.checkMobileStop();
+  this.checkMobileStopLA();
+  this.checkMobileStopUAA();
+  this.checkNotificationStop();
+  this.checkReplicationStop();
 }
 
-function checkPouchDB(t, mocks, dbName) {
-  // Testing that 'PouchDB' has called properly.
-  t.ok(mocks.PouchDB.called, 'PouchDB has called');
-  t.ok(mocks.PouchDB.calledOnce, 'PouchDB has called once');
-
-  var args = mocks.PouchDB.getCalls()[0].args;
-  t.ok(args.length >= 1, 'PouchDB has called with >= 1 arguments');
-
-  var foundDBName = false;
-  args.forEach(function (arg) {
-    if (arg === dbName) {
-      foundDBName = true;
-    }
-  });
-  t.ok(foundDBName, 'PouchDB has called with \'dbName\' argument');
-}
-
-function checkNotification(t, mocks, ecdhForLocalDevice) {
-  // Testing that 'ThaliSendNotificationBasedOnReplication' has called properly.
-  t.ok(mocks.notification.called,
-    'ThaliSendNotificationBasedOnReplication has called');
-  t.ok(mocks.notification.calledOnce,
-    'ThaliSendNotificationBasedOnReplication has called once');
-
-  var args = mocks.notification.getCalls()[0].args;
-  t.ok(
-    args.length >= 1,
-    'ThaliSendNotificationBasedOnReplication has called with >= 1 arguments'
-  );
-
-  var foundEcdhForLocalDevice = false;
-  args.forEach(function (arg) {
-    if (arg === ecdhForLocalDevice) {
-      foundEcdhForLocalDevice = true;
-    }
-  });
-  t.ok(
-    foundEcdhForLocalDevice,
-    'ThaliSendNotificationBasedOnReplication has called ' +
-    'with \'ecdhForLocalDevice\' argument'
+Mocks.prototype.checkExpressPouchDB = function() {
+  testUtils.checkArgs(
+    this.t, this.expressPouchDB, 'expressPouchDB',
+    [
+      {
+        value: this.PouchDB,
+        description: 'PouchDB'
+      },
+      null
+    ]
   );
 }
 
-function checkReplication(t, mocks, dbName, peerPool, ecdhForLocalDevice) {
-  // Testing that 'ThaliPullReplicationFromNotification' has called properly.
-  t.ok(mocks.replication.called,
-    'ThaliPullReplicationFromNotification has called');
-  t.ok(mocks.replication.calledOnce,
-    'ThaliPullReplicationFromNotification has called once');
-
-  var args = mocks.replication.getCalls()[0].args;
-  t.ok(
-    args.length >= 4,
-    'ThaliPullReplicationFromNotification has called with >= 4 arguments'
+Mocks.prototype.checkPouchDB = function(dbName) {
+  testUtils.checkArgs(
+    this.t, this.PouchDB, 'PouchDB',
+    [{
+      value: dbName,
+      description: 'dbName'
+    }]
   );
+}
 
-  var foundPouchDB = false;
-  var foundDBName = false;
-  var foundThaliPeerPoolInterface = false;
-  var foundEcdhForLocalDevice = false;
-  args.forEach(function (arg) {
-    switch (arg) {
-      case mocks.PouchDB: {
-        foundPouchDB = true;
-        break;
+Mocks.prototype.checkReplication = function(dbName, peerPool, ecdh) {
+  testUtils.checkArgs(
+    this.t, this.Replication, 'ThaliPullReplicationFromNotification',
+    [
+      {
+        value: this.PouchDB,
+        description: 'PouchDB'
+      },
+      {
+        value: dbName,
+        description: 'dbName'
+      },
+      {
+        value: peerPool,
+        description: 'thaliPeerPoolInterface'
+      },
+      {
+        value: ecdh,
+        description: 'ecdhForLocalDevice'
       }
-      case dbName: {
-        foundDBName = true;
-        break;
-      }
-      case peerPool: {
-        foundThaliPeerPoolInterface = true;
-        break;
-      }
-      case ecdhForLocalDevice: {
-        foundEcdhForLocalDevice = true;
-        break;
-      }
-    }
-  });
-  t.ok(
-    foundPouchDB,
-    'ThaliPullReplicationFromNotification has called with \'PouchDB\' argument'
+    ]
   );
-  t.ok(
-    foundDBName,
-    'ThaliPullReplicationFromNotification has called with \'dbName\' argument'
+}
+Mocks.prototype.checkReplicationStart = function(remoteKeys) {
+  testUtils.checkArgs(
+    this.t, this.ReplicationStart,
+    'ThaliPullReplicationFromNotification.prototype.start',
+    [{
+      value: remoteKeys,
+      description: 'remoteKeys'
+    }]
   );
-  t.ok(
-    foundThaliPeerPoolInterface,
-    'ThaliPullReplicationFromNotification has called ' +
-    'with \'thaliPeerPoolInterface\' argument'
-  );
-  t.ok(
-    foundEcdhForLocalDevice,
-    'ThaliPullReplicationFromNotification has called ' +
-    'with \'ecdhForLocalDevice\' argument'
+}
+Mocks.prototype.checkReplicationStop = function() {
+  testUtils.checkArgs(
+    this.t, this.ReplicationStop,
+    'ThaliPullReplicationFromNotification.prototype.stop',
+    []
   );
 }
 
-function checkReplicationStart(t, mocks, remoteKeys) {
-  // Testing that 'ThaliPullReplicationFromNotification.prototype.start'
-  // has called properly.
-  t.ok(
-    mocks.replicationStart.called,
-    'ThaliPullReplicationFromNotification.prototype.start has called'
-  );
-  t.ok(
-    mocks.replicationStart.calledOnce,
-    'ThaliPullReplicationFromNotification.prototype.start has called once'
-  );
-
-  var args = mocks.replicationStart.getCalls()[0].args;
-  t.ok(
-    args.length >= 1,
-    'ThaliPullReplicationFromNotification.prototype.start ' +
-    'has called with >= 1 arguments'
-  );
-
-  var foundRemoteKeys = false;
-  args.forEach(function (arg) {
-    if (arg === remoteKeys) {
-      foundRemoteKeys = true;
-    }
-  });
-  t.ok(
-    foundRemoteKeys,
-    'ThaliPullReplicationFromNotification.prototype.start ' +
-    'has called with \'remoteKeys\' argument'
+Mocks.prototype.checkNotification = function(ecdh) {
+  testUtils.checkArgs(
+    this.t, this.Notification, 'ThaliSendNotificationBasedOnReplication',
+    [
+      null,
+      {
+        value: ecdh,
+        description: 'ecdhForLocalDevice'
+      },
+      null, null
+    ]
   );
 }
-function checkReplicationStop(t, mocks) {
-  // Testing that 'ThaliPullReplicationFromNotification.prototype.stop'
-  // has called properly.
-  t.ok(
-    mocks.replicationStop.called,
-    'ThaliPullReplicationFromNotification.prototype.stop has called'
+Mocks.prototype.checkNotificationStart = function(remoteKeys) {
+  testUtils.checkArgs(
+    this.t, this.NotificationStart,
+    'ThaliSendNotificationBasedOnReplication.prototype.start',
+    [{
+      value: remoteKeys,
+      description: 'remoteKeys'
+    }]
   );
-  t.ok(
-    mocks.replicationStop.calledOnce,
-    'ThaliPullReplicationFromNotification.prototype.stop has called once'
+}
+Mocks.prototype.checkNotificationStop = function() {
+  testUtils.checkArgs(
+    this.t, this.NotificationStop,
+    'ThaliSendNotificationBasedOnReplication.prototype.stop',
+    []
   );
 }
 
-function checkNotificationStart(t, mocks, remoteKeys) {
-  // Testing that 'ThaliSendNotificationBasedOnReplication.prototype.start'
-  // has called properly.
-  t.ok(
-    mocks.notificationStart.called,
-    'ThaliSendNotificationBasedOnReplication.prototype.start has called'
-  );
-  t.ok(
-    mocks.notificationStart.calledOnce,
-    'ThaliSendNotificationBasedOnReplication.prototype.start has called once'
-  );
-
-  var args = mocks.notificationStart.getCalls()[0].args;
-  t.ok(
-    args.length >= 1,
-    'ThaliSendNotificationBasedOnReplication.prototype.start ' +
-    'has called with >= 1 arguments'
-  );
-  
-  var foundRemoteKeys = false;
-  args.forEach(function (arg) {
-    if (arg === remoteKeys) {
-      foundRemoteKeys = true;
-    }
-  });
-  t.ok(
-    foundRemoteKeys,
-    'ThaliSendNotificationBasedOnReplication.prototype.start ' +
-    'has called with \'remoteKeys\' argument'
+Mocks.prototype.checkMobileStart = function() {
+  testUtils.checkArgs(
+    this.t, this.MobileStart, 'ThaliMobile.start', [null, null]
   );
 }
-function checkNotificationStop(t, mocks) {
-  // Testing that 'ThaliSendNotificationBasedOnReplication.prototype.stop'
-  // has called properly.
-  t.ok(
-    mocks.notificationStop.called,
-    'ThaliSendNotificationBasedOnReplication.prototype.stop has called'
+Mocks.prototype.checkMobileStartLA = function() {
+  testUtils.checkArgs(
+    this.t, this.MobileStartLA,
+    'ThaliMobile.startListeningForAdvertisements',
+    []
   );
-  t.ok(
-    mocks.notificationStop.calledOnce,
-    'ThaliSendNotificationBasedOnReplication.prototype.stop has called once'
+}
+Mocks.prototype.checkMobileStartUAA = function() {
+  testUtils.checkArgs(
+    this.t, this.MobileStartUAA,
+    'ThaliMobile.startUpdateAdvertisingAndListening',
+    []
   );
 }
 
-function checkMobileStart(t, mocks) {
-  // Testing that 'Mobile.startListeningForAdvertisements' has called properly.
-  t.ok(
-    mocks.mobileStartLA.called,
-    'ThaliMobile.startListeningForAdvertisements has called'
-  );
-  t.ok(
-    mocks.mobileStartLA.calledOnce,
-    'ThaliMobile.startListeningForAdvertisements has called once'
-  );
-
-  // Testing that 'Mobile.startUpdateAdvertisingAndListening'
-  // has called properly.
-  t.ok(
-    mocks.mobileStartUAA.called,
-    'ThaliMobile.startUpdateAdvertisingAndListening has called'
-  );
-  t.ok(
-    mocks.mobileStartUAA.calledOnce,
-    'ThaliMobile.startUpdateAdvertisingAndListening has called once'
+Mocks.prototype.checkMobileStop = function() {
+  testUtils.checkArgs(
+    this.t, this.MobileStop, 'ThaliMobile.stop', []
   );
 }
-function checkMobileStop(t, mocks) {
-  // Testing that 'Mobile.stopListeningForAdvertisements' has called properly.
-  t.ok(
-    mocks.mobileStopLA.called,
-    'ThaliMobile.stopListeningForAdvertisements has called'
+Mocks.prototype.checkMobileStopLA = function() {
+  testUtils.checkArgs(
+    this.t, this.MobileStopLA,
+    'ThaliMobile.stopListeningForAdvertisements',
+    []
   );
-  t.ok(
-    mocks.mobileStopLA.calledOnce,
-    'ThaliMobile.stopListeningForAdvertisements has called once'
-  );
-
-  // Testing that 'Mobile.stopAdvertisingAndListening' has called properly.
-  t.ok(
-    mocks.mobileStopUAA.called,
-    'ThaliMobile.stopAdvertisingAndListening has called'
-  );
-  t.ok(
-    mocks.mobileStopUAA.calledOnce,
-    'ThaliMobile.stopAdvertisingAndListening has called once'
+}
+Mocks.prototype.checkMobileStopUAA = function() {
+  testUtils.checkArgs(
+    this.t, this.MobileStopUAA,
+    'ThaliMobile.stopAdvertisingAndListening',
+    []
   );
 }
 
-function checkSalti(t, mocks, dbName) {
-  // Testing that 'Salti' has called properly.
-  t.ok(mocks.salti.called, 'Salti has called');
-  t.ok(mocks.salti.calledOnce, 'Salti has called once');
-
-  var args = mocks.salti.getCalls()[0].args;
-  t.ok(args.length >= 1, 'Salti has called with >= 1 arguments');
-  
-  var foundDBName = false;
-  args.forEach(function (arg) {
-    if (arg === dbName) {
-      foundDBName = true;
-    }
-  });
-  t.ok(foundDBName, 'Salti has called with \'dbName\' argument');
+Mocks.prototype.checkSalti = function(dbName) {
+  testUtils.checkArgs(
+    this.t, this.Salti,
+    'ThaliMobile.stopAdvertisingAndListening',
+    [
+      {
+        value: dbName,
+        description: 'dbName'
+      },
+      null, null, null
+    ]
+  );
 }
 
 test('test thali manager spies', function (t) {
@@ -431,7 +312,7 @@ test('test thali manager spies', function (t) {
     partnerKeys = [];
   }
 
-  var mocks = getMocks();
+  var mocks = new Mocks(t);
 
   // Creating thali manager with mocks.
   var dbName = testUtils.getRandomPouchDBName();
@@ -443,27 +324,17 @@ test('test thali manager spies', function (t) {
     ecdhForLocalDevice,
     peerPool
   );
-
-  checkExpressPouchDB(t, mocks);
-  checkPouchDB(t, mocks, dbName);
-  checkNotification(t, mocks, ecdhForLocalDevice);
-  checkReplication(t, mocks, dbName, peerPool, ecdhForLocalDevice);
-  checkSalti(t, mocks, dbName);
+  mocks.checkInit(dbName, ecdhForLocalDevice, peerPool);
 
   thaliManager.start(partnerKeys)
   .then(function () {
-    checkMobileStart(t, mocks);
-    checkNotificationStart(t, mocks, partnerKeys);
-    checkReplicationStart(t, mocks, partnerKeys);
+    mocks.checkStart(partnerKeys);
   })
   .then(function () {
     return thaliManager.stop();
   })
   .then(function () {
-    checkMobileStop(t, mocks);
-    checkNotificationStop(t, mocks);
-    checkReplicationStop(t, mocks);
-
+    mocks.checkStop();
     exit();
   });
 });
@@ -482,7 +353,7 @@ test('test thali manager multiple starts and stops', function (t) {
     partnerKeys = [];
   }
 
-  var mocks = getMocks();
+  var mocks = new Mocks(t);
 
   // Creating thali manager with mocks.
   var dbName = testUtils.getRandomPouchDBName();
@@ -494,12 +365,7 @@ test('test thali manager multiple starts and stops', function (t) {
     ecdhForLocalDevice,
     peerPool
   );
-
-  checkExpressPouchDB(t, mocks);
-  checkPouchDB(t, mocks, dbName);
-  checkNotification(t, mocks, ecdhForLocalDevice);
-  checkReplication(t, mocks, dbName, peerPool, ecdhForLocalDevice);
-  checkSalti(t, mocks, dbName);
+  mocks.checkInit(dbName, ecdhForLocalDevice, peerPool);
 
   // Multiple parallel starts.
   Promise.all([
@@ -515,9 +381,7 @@ test('test thali manager multiple starts and stops', function (t) {
     return thaliManager.start(partnerKeys);
   })
   .then(function () {
-    checkMobileStart(t, mocks);
-    checkNotificationStart(t, mocks, partnerKeys);
-    checkReplicationStart(t, mocks, partnerKeys);
+    mocks.checkStart(partnerKeys);
   })
 
   // Multiple parallel stops.
@@ -536,9 +400,7 @@ test('test thali manager multiple starts and stops', function (t) {
     return thaliManager.stop();
   })
   .then(function () {
-    checkMobileStop(t, mocks);
-    checkNotificationStop(t, mocks);
-    checkReplicationStop(t, mocks);
+    mocks.checkStop();
   })
 
   // Multiple parallel starts and stops.

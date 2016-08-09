@@ -17,7 +17,6 @@ var LeveldownMobile = require('leveldown-mobile');
 
 var sinon = require('sinon');
 
-var salti = require('salti');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
@@ -31,8 +30,6 @@ var defaultDirectory = path.join(
   testUtils.getPouchDBTestDirectory(),
   'thali-manager-db-' + testUtils.getUniqueRandomName()
 );
-// Thali manager will use defaultDirectory as db prefix.
-thaliConfig.BASE_DB_PREFIX = defaultDirectory;
 
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
@@ -43,7 +40,7 @@ var publicBase64KeyForLocalDevice = ecdhForLocalDevice.getPublicKey('base64');
 // PouchDB name should be the same between peers.
 var DB_NAME = 'ThaliManagerCoordinated';
 
-PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
+PouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
   defaultAdapter: LeveldownMobile
 });
 
@@ -59,9 +56,6 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    // We are not removing defaultDirectory.
-    // Tests should resolve it by itself.
-    // fs.removeSync(defaultDirectory);
     if (thisWasTheLastTest) {
       Promise.resolve()
       .then(function () {
@@ -110,7 +104,6 @@ function validateDocs(pouchDB, docs, keys) {
     .on('change', function (change) {
       if (findDoc(change.doc)) {
         if (allDocsFound) {
-          // We should turn 'changesFeed' off and call 'resolve' now.
           changesFeed.cancel();
         }
       }

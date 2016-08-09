@@ -683,3 +683,25 @@ module.exports.exitWithTimeout = function (t, timeout) {
   }, timeout);
   return exit;
 }
+
+module.exports.checkArgs = function (t, spy, description, args) {
+  t.ok(spy.calledOnce, description + ' was called once');
+
+  var currentArgs = spy.getCalls()[0].args;
+  t.equals(
+    args.length, currentArgs.length,
+    description + ' was called with ' + currentArgs.length + ' arguments'
+  );
+
+  args.forEach(function (arg, index) {
+    // If arg is not defined we wont check it.
+    if (arg) {
+      var currentArg = currentArgs[index];
+      t.equals(
+        currentArg, arg.value,
+        description + ' was called with \'' + arg.description +
+          '\' as ' + (index + 1) + '-st argument'
+      );
+    }
+  });
+}

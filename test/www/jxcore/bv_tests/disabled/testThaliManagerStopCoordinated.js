@@ -34,8 +34,6 @@ var defaultDirectory = path.join(
   testUtils.getPouchDBTestDirectory(),
   'thali-manager-db-' + testUtils.getUniqueRandomName()
 );
-// Thali manager will use defaultDirectory as db prefix.
-thaliConfig.BASE_DB_PREFIX = defaultDirectory;
 
 // Public base64 key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
@@ -45,6 +43,10 @@ var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
 
 // PouchDB name should be the same between peers.
 var DB_NAME = 'ThaliManagerCoordinated';
+
+PouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
+  defaultAdapter: LeveldownMobile
+});
 
 var thaliManager;
 
@@ -68,10 +70,6 @@ var test = tape({
 });
 
 test('test bump update_seq', function (t) {
-  PouchDB = PouchDBGenerator(PouchDB, thaliConfig.BASE_DB_PREFIX, {
-    defaultAdapter: LeveldownMobile
-  });
-
   // We can return '1' instead of 'update_seq' in order to force
   // '/NotificationBeacons', '/{:db}/_changes', '/{:db}/_bulk_docs',
   // '/{:db}/_local/something'.
