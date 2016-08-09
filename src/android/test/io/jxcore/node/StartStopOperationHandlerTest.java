@@ -1,6 +1,5 @@
 package io.jxcore.node;
 
-import android.content.Context;
 import android.os.CountDownTimer;
 
 import org.junit.After;
