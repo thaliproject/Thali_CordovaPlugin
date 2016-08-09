@@ -187,7 +187,7 @@ public class StartStopOperationHandlerTest {
                 .getDeclaredField("mCurrentOperation");
         fCurrentOperation.setAccessible(true);
         fCurrentOperation.set(mStartStopOperationHandler,
-                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback));
+                StartStopOperation.createStartOperation(false, mJXcoreThaliCallback));
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
 
