@@ -67,6 +67,7 @@
         <!-- <framework src="lib/ios/ThaliCore.framework" custom="true" embed="true" /> -->
 
         <source-file src="src/ios/JXcoreExtension.m" compiler-flags="-Werror"/>
+        <source-file src="src/ios/AppContext.swift" compiler-flags="-Werror"/>
 
     </platform>
 </plugin>
