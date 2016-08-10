@@ -10,10 +10,10 @@ var logger = require('../../thaliLogger')('thaliReplicationPeerAction');
 var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
-var thaliConfig = require('../thaliConfig');
 
 /** @module thaliReplicationPeerAction */
 
+// jscs:disable maximumLineLength
 /**
  * @classdesc Manages replicating information with a peer we have discovered
  * via notifications.
@@ -32,6 +32,7 @@ var thaliConfig = require('../thaliConfig');
  * @param {Buffer} ourPublicKey The buffer containing our ECDH public key
  * @constructor
  */
+// jscs:enable maximumLineLength
 function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
                                     PouchDB,
                                     dbName,
@@ -111,7 +112,7 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
   }
   self._refreshTimerManager = new RefreshTimerManager(
     ThaliReplicationPeerAction.maxIdlePeriodSeconds * 1000,
-    function() {
+    function () {
       self._complete([new Error('No activity time out')]);
     });
   self._refreshTimerManager.start();
@@ -136,7 +137,7 @@ ThaliReplicationPeerAction.prototype._complete =
     if (!errorArray || errorArray.length === 0) {
       return this._resolveStart();
     }
-    for(var i = 0; i < errorArray.length; ++i) {
+    for (var i = 0; i < errorArray.length; ++i) {
       if (errorArray[i].message === 'connect ECONNREFUSED') {
         return this._rejectStart(
           new Error('Could not establish TCP connection'));
@@ -150,6 +151,7 @@ ThaliReplicationPeerAction.prototype._complete =
     this._rejectStart(errorArray[0]);
   };
 
+// jscs:disable maximumLineLength
 /**
  * When start is called we will start a replication with the remote peer using
  * the settings specified below. We will need to create the URL using the
@@ -209,6 +211,7 @@ ThaliReplicationPeerAction.prototype._complete =
  * the PSK related settings are specified.
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   var self = this;
 
@@ -283,8 +286,8 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
             logger.debug('Replication resumed');
           })
           .on('denied', function (err) {
-            logger.warn('We got denied on a PouchDB access, this really should ' +
-              'not happen - ' + err);
+            logger.warn('We got denied on a PouchDB access, this really ' +
+              'should not happen - ' + err);
           })
           .on('complete', function (info) {
             self._complete(info.errors);

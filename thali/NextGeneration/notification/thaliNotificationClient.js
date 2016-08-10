@@ -103,6 +103,12 @@ util.inherits(ThaliNotificationClient, EventEmitter);
 /**
  * Fired whenever we discover a peer who is looking for us.
  *
+ * Note: This value should be static but we have made it a value on the
+ * prototype because otherwise we would have to require thaliNotificationClient
+ * in our mobile mock to get to this value. Requiring this file causes certain
+ * state changes that screw up testing. So I decided to simplify my life and
+ * just put this on the prototype.
+ *
  * @public
  * @event module:thaliNotificationClient.event:peerAdvertisesDataForUs
  * @type {PeerAdvertisesDataForUs}

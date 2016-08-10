@@ -38,25 +38,21 @@ var test = tape({
 });
 
 test('Make sure peerDictionaryKey is reasonable', function (t) {
-  var thaliPullReplicationFromNotification =
-    new ThaliPullReplicationFromNotification(LevelDownPouchDB,
-      testUtils.getRandomPouchDBName(), {}, devicePublicPrivateKey);
-
   var key1 =
-    thaliPullReplicationFromNotification._peerDictionaryKey('foo',
+    ThaliPullReplicationFromNotification._peerDictionaryKey('foo',
                                                       new Buffer('3'));
   var key2 =
-    thaliPullReplicationFromNotification._peerDictionaryKey('foo',
+    ThaliPullReplicationFromNotification._peerDictionaryKey('foo',
                                                       new Buffer('3'));
   t.equal(key1, key2, 'equal keys');
 
   var key3 =
-    thaliPullReplicationFromNotification._peerDictionaryKey('bar',
+    ThaliPullReplicationFromNotification._peerDictionaryKey('bar',
                                                        new Buffer('3'));
   t.notEqual(key1, key3, 'not equal connection type');
 
   var key4 =
-    thaliPullReplicationFromNotification._peerDictionaryKey('foo',
+    ThaliPullReplicationFromNotification._peerDictionaryKey('foo',
                                                         new Buffer('4'));
 
   t.notEqual(key1, key4, 'same connection type, different buffer');
@@ -186,7 +182,7 @@ test('Make sure stop works', function (t) {
 function matchEntryInDictionary(t, thaliPullReplicationFromNotification, fakeAd,
                                 spyAction) {
   var actionKey =
-    thaliPullReplicationFromNotification._peerDictionaryKey(
+    ThaliPullReplicationFromNotification._peerDictionaryKey(
       fakeAd.connectionType,
       fakeAd.keyId);
 
