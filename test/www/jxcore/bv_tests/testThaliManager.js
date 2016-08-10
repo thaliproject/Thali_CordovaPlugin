@@ -9,6 +9,7 @@ var path = require('path');
 var crypto = require('crypto');
 var Promise = require('lie');
 var PouchDB = require('pouchdb');
+var express = require('express');
 var expressPouchDB = require('express-pouchdb');
 var LeveldownMobile = require('leveldown-mobile');
 
@@ -26,6 +27,8 @@ var ThaliSendNotificationBasedOnReplication =
   require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification =
   require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
+var ThaliNotificationServer =
+  require('thali/NextGeneration/notification/thaliNotificationServer');
 
 // DB 'defaultDirectory' should be unique among all tests
 // and any instance of this test.
@@ -64,6 +67,7 @@ function Mocks(t) {
 
   this.t = t;
   
+  this.express        = sinon.spy(express);
   this.expressPouchDB = sinon.spy(expressPouchDB);
   this.PouchDB        = sinon.spy(PouchDB);
 
@@ -115,7 +119,6 @@ function Mocks(t) {
   );
 
   this.Salti = sinon.spy(Salti);
-
   this.ThaliManager =
     proxyquire('thali/NextGeneration/thaliManager', {
       './replication/thaliSendNotificationBasedOnReplication':
@@ -123,8 +126,26 @@ function Mocks(t) {
       './replication/thaliPullReplicationFromNotification':
         this.Replication,
       './thaliMobile': this.ThaliMobile,
+      'express': this.express,
       'salti': this.Salti
     });
+}
+
+Mocks.prototype.resetStartStop = function() {
+  this.MobileStart.reset();
+  this.MobileStop.reset();
+
+  this.MobileStartLA.reset();
+  this.MobileStopLA.reset();
+
+  this.MobileStartUAA.reset();
+  this.MobileStopUAA.reset();
+
+  this.NotificationStart.reset();
+  this.NotificationStop.reset();
+
+  this.ReplicationStart.reset();
+  this.ReplicationStop.reset();
 }
 
 Mocks.prototype.checkInit = function(dbName, ecdh, peerPool) {
@@ -150,14 +171,24 @@ Mocks.prototype.checkStop = function() {
 }
 
 Mocks.prototype.checkExpressPouchDB = function() {
+  var self = this;
   testUtils.checkArgs(
     this.t, this.expressPouchDB, 'expressPouchDB',
     [
       {
-        value: this.PouchDB,
-        description: 'PouchDB'
+        description: 'PouchDB',
+        compare: function (arg) {
+          return typeof arg === 'function' &&
+            arg === self.PouchDB;
+        }
       },
-      null
+      {
+        description: 'expressPouchDB options',
+        compare: function (arg) {
+          return typeof arg === 'object' &&
+            arg.mode === 'minimumForPouchDB';
+        }
+      }
     ]
   );
 }
@@ -166,31 +197,48 @@ Mocks.prototype.checkPouchDB = function(dbName) {
   testUtils.checkArgs(
     this.t, this.PouchDB, 'PouchDB',
     [{
-      value: dbName,
-      description: 'dbName'
+      description: 'dbName',
+      compare: function (arg) {
+        return typeof arg === 'string' &&
+          arg === dbName;
+      }
     }]
   );
 }
 
 Mocks.prototype.checkReplication = function(dbName, peerPool, ecdh) {
+  var self = this;
   testUtils.checkArgs(
     this.t, this.Replication, 'ThaliPullReplicationFromNotification',
     [
       {
-        value: this.PouchDB,
-        description: 'PouchDB'
+        description: 'PouchDB',
+        compare: function (arg) {
+          return typeof arg === 'function' &&
+            arg === self.PouchDB;
+        }
       },
       {
-        value: dbName,
-        description: 'dbName'
+        description: 'dbName',
+        compare: function (arg) {
+          return typeof arg === 'string' &&
+            arg === dbName;
+        }
       },
       {
-        value: peerPool,
-        description: 'thaliPeerPoolInterface'
+        description: 'ThaliPeerPoolInterface instance',
+        compare: function (arg) {
+          return typeof arg === 'object' &&
+            arg instanceof ThaliPeerPoolDefault &&
+            arg === peerPool;
+        }
       },
       {
-        value: ecdh,
-        description: 'ecdhForLocalDevice'
+        description: 'ecdhForLocalDevice',
+        compare: function (arg) {
+          return typeof arg === 'object' &&
+            arg === ecdh;
+        }
       }
     ]
   );
@@ -200,8 +248,11 @@ Mocks.prototype.checkReplicationStart = function(remoteKeys) {
     this.t, this.ReplicationStart,
     'ThaliPullReplicationFromNotification.prototype.start',
     [{
-      value: remoteKeys,
-      description: 'remoteKeys'
+      description: 'remoteKeys',
+      compare: function (arg) {
+        return Array.isArray(arg) &&
+          arg === remoteKeys;
+      }
     }]
   );
 }
@@ -214,15 +265,40 @@ Mocks.prototype.checkReplicationStop = function() {
 }
 
 Mocks.prototype.checkNotification = function(ecdh) {
+  var self = this;
   testUtils.checkArgs(
     this.t, this.Notification, 'ThaliSendNotificationBasedOnReplication',
     [
-      null,
       {
-        value: ecdh,
-        description: 'ecdhForLocalDevice'
+        description: 'express.Router instance',
+        compare: function (arg) {
+          return typeof arg === 'function' &&
+            // This is not possible to check instanceof express.Router.
+            typeof arg.__proto__ === 'function' &&
+            arg.__proto__ === self.express.Router;
+        }
       },
-      null, null
+      {
+        description: 'ecdhForLocalDevice',
+        compare: function (arg) {
+          return typeof arg === 'object' &&
+            arg === ecdh;
+        }
+      },
+      {
+        description: 'thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE',
+        compare: function (arg) {
+          return typeof arg === 'number' &&
+            arg === thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE;
+        }
+      },
+      {
+        description: 'PouchDB instance',
+        compare: function (arg) {
+          return typeof arg === 'object' &&
+            arg instanceof PouchDB;
+        }
+      }
     ]
   );
 }
@@ -231,8 +307,11 @@ Mocks.prototype.checkNotificationStart = function(remoteKeys) {
     this.t, this.NotificationStart,
     'ThaliSendNotificationBasedOnReplication.prototype.start',
     [{
-      value: remoteKeys,
-      description: 'remoteKeys'
+      description: 'remoteKeys',
+      compare: function (arg) {
+        return Array.isArray(arg) &&
+          arg === remoteKeys;
+      }
     }]
   );
 }
@@ -245,8 +324,27 @@ Mocks.prototype.checkNotificationStop = function() {
 }
 
 Mocks.prototype.checkMobileStart = function() {
+  var self = this;
   testUtils.checkArgs(
-    this.t, this.MobileStart, 'ThaliMobile.start', [null, null]
+    this.t, this.MobileStart, 'ThaliMobile.start',
+    [
+      {
+        description: 'express.Router instance',
+        compare: function (arg) {
+          return typeof arg === 'function' &&
+            // This is not possible to check instanceof express.Router.
+            typeof arg.__proto__ === 'function' &&
+            arg.__proto__ === self.express.Router;
+        }
+      },
+      {
+        description: 'getPskIdToSecret',
+        compare: function (arg) {
+          return typeof arg === 'function' &&
+            arg.toString() === ThaliNotificationServer.prototype.getPskIdToSecret().toString();
+        }
+      }
+    ]
   );
 }
 Mocks.prototype.checkMobileStartLA = function() {
@@ -285,15 +383,37 @@ Mocks.prototype.checkMobileStopUAA = function() {
 }
 
 Mocks.prototype.checkSalti = function(dbName) {
+  var self = this;
   testUtils.checkArgs(
-    this.t, this.Salti,
-    'ThaliMobile.stopAdvertisingAndListening',
+    this.t, this.Salti, 'Salti',
     [
       {
-        value: dbName,
-        description: 'dbName'
+        description: 'dbName',
+        compare: function (arg) {
+          return typeof arg === 'string' &&
+            arg === dbName;
+        }
       },
-      null, null, null
+      {
+        description: 'acl',
+        compare: function (arg) {
+          return typeof arg === 'object' &&
+            arg === self.ThaliManager._acl;
+        }
+      },
+      {
+        description: 'thaliIdCallback',
+        compare: function (arg) {
+          return typeof arg === 'function';
+        }
+      },
+      {
+        description: 'options',
+        compare: function (arg) {
+          return typeof arg === 'object' &&
+            arg.dbPrefix === thaliConfig.BASE_DB_PATH;
+        }
+      }
     ]
   );
 }
@@ -404,7 +524,6 @@ test('test thali manager multiple starts and stops', function (t) {
   })
 
   // Multiple parallel starts and stops.
-  // We shouldn't obtain any exception.
   .then(function () {
     return Promise.all([
       thaliManager.start(partnerKeys),
@@ -424,6 +543,17 @@ test('test thali manager multiple starts and stops', function (t) {
       thaliManager.stop(),
       thaliManager.stop()
     ]);
+  })
+
+  .then(function () {
+    mocks.resetStartStop();
+    return thaliManager.start(partnerKeys);
+  })
+  .then(function () {
+    mocks.checkStart(partnerKeys);
+  })
+  .then(function () {
+    return thaliManager.stop();
   })
   .then(function () {
     exit();

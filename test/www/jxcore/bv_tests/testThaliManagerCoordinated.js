@@ -7,6 +7,7 @@ if (!tape.coordinated) {
 
 var testUtils = require('../lib/testUtils.js');
 
+var extend = require('js-extend').extend;
 var fs = require('fs-extra-promise');
 var path = require('path');
 var crypto = require('crypto');
@@ -56,35 +57,68 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    if (thisWasTheLastTest) {
-      Promise.resolve()
-      .then(function () {
-        if (thaliManager) {
-          return thaliManager.stop();
-        }
-      })
-      .then(function () {
+    Promise.resolve()
+    .then(function () {
+      // We can't stop thali manager after each test
+      // because of issue #838.
+      if (thisWasTheLastTest && thaliManager) {
+      // if (thaliManager) {
+        return thaliManager.stop();
+      }
+    })
+    .then(function () {
+      if (thisWasTheLastTest) {
         fs.removeSync(defaultDirectory);
-      });
-    } else {
+      }
       t.end();
-    }
+    });
   }
 });
 
-function validateDocs(pouchDB, docs, keys) {
+// We have 'localDoc' and 'oldRemoteDocs' already in DB.
+// We are waiting until 'newRemoteDocs' will appears in DB.
+// We are waiting for confirmation that 'localDoc' is in DB too.
+// Our changes handler should receive 'localDoc' and
+// 'newRemoteDocs' only once.
+// It can receive 'oldRemoteDocs' once or never.
+function waitForRemoteDocs(
+  pouchDB, localDoc, oldRemoteDocs, newRemoteDocs, ignoreRev
+) {
   var allDocsFound = false;
-  // We can just stringify our doc with defined keys, it wont be circular.
-  var docStrings = [];
-  docs.forEach(function (doc) {
-    docStrings.push(JSON.stringify(doc, keys));
-  });
+
+  // We can remove '_rev' key from compared values.
+  // We can just stringify docs, they wont be circular.
+  function toString(doc) {
+    var keys = Object.keys(doc);
+    var keyIndex = keys.indexOf('_rev');
+    if (keyIndex !== -1) {
+      keys.splice(keyIndex, 1);
+    }
+    return JSON.stringify(doc, keys.sort());
+  }
+
+  var localDocString = toString(localDoc);
+  var oldRemoteDocStrings = oldRemoteDocs.map(toString);
+  var newRemoteDocStrings = newRemoteDocs.map(toString);
+
   function findDoc(doc) {
-    var docStringIndex = docStrings.indexOf(JSON.stringify(doc, keys));
-    if (docStringIndex !== -1) {
-      // Doc should be unique.
-      docStrings.splice(docStringIndex, 1);
-      if (docStrings.length === 0) {
+    var docString = toString(doc);
+
+    var oldIndex = oldRemoteDocStrings.indexOf(docString);
+    var newIndex = newRemoteDocStrings.indexOf(docString);
+    if (localDocString && docString === localDocString) {
+      localDocString = undefined;
+      if (newRemoteDocStrings.length === 0) {
+        allDocsFound = true;
+      }
+      return true;
+    }
+    else if (oldIndex !== - 1) {
+      oldRemoteDocStrings.splice(oldIndex, 1);
+      return true;
+    } else if (newIndex !== -1) {
+      newRemoteDocStrings.splice(newIndex, 1);
+      if (newRemoteDocStrings.length === 0) {
         allDocsFound = true;
       }
       return true;
@@ -94,8 +128,6 @@ function validateDocs(pouchDB, docs, keys) {
   }
 
   return new Promise(function (resolve, reject) {
-    // We are registering for DB changes.
-    // Our task is to validate docs and exit.
     var changesFeed = pouchDB.changes({
       since: 0,
       live: true,
@@ -106,6 +138,9 @@ function validateDocs(pouchDB, docs, keys) {
         if (allDocsFound) {
           changesFeed.cancel();
         }
+      } else {
+        changesFeed.cancel();
+        reject('inalid doc');
       }
     })
     .on('complete', function () {
@@ -135,7 +170,7 @@ test('test write', function (t) {
     _id: publicBase64KeyForLocalDevice,
     test1: true
   };
-  var docs = [localDoc];
+  var docs;
   pouchDB.put(localDoc)
   .then(function (response) {
     // Doc and its revision is an object
@@ -144,7 +179,7 @@ test('test write', function (t) {
   })
   .then(function () {
     // Our local DB should have this doc.
-    return validateDocs(pouchDB, docs, ['_id', 'test1', '_rev']);
+    return waitForRemoteDocs(pouchDB, localDoc, [], [], false);
   })
   .then(function () {
     // Starting Thali Manager.
@@ -159,16 +194,16 @@ test('test write', function (t) {
   })
   .then(function () {
     // We can imagine what docs our partners will create.
-    partnerKeys.forEach(function (partnerKey) {
-      docs.push({
+    docs = partnerKeys.map(function (partnerKey) {
+      return {
         _id: partnerKey.toString('base64'),
         test1: true
-      });
+      };
     });
     // Lets check that all imaginary docs has been replicated to our local db.
     // We can't predict what '_rev' remote doc will have,
     // so we shouldn't check '_rev' here.
-    return validateDocs(pouchDB, docs, ['_id', 'test1']);
+    return waitForRemoteDocs(pouchDB, localDoc, [], docs, true);
   })
   .then(function () {
     // Lets update our doc with new boolean.
@@ -180,10 +215,15 @@ test('test write', function (t) {
   })
   .then(function () {
     // Our partners should update its docs the same way.
-    docs.slice(1).forEach(function (doc) {
+    var newDocs = docs.map(function (doc) {
+      doc = extend({}, doc);
       doc.test2 = true;
+      return doc;
     });
-    return validateDocs(pouchDB, docs, ['_id', 'test1', 'test2']);
+    return waitForRemoteDocs(pouchDB, localDoc, docs, newDocs, true)
+      .then(function () {
+        docs = newDocs;
+      });
   })
   .then(function () {
     exit();
@@ -209,7 +249,10 @@ test('test repeat write', function (t) {
   // It should consist of it's public key (base64 representation)
   // and 2 test booleans.
   var localDoc;
-  pouchDB.get(publicBase64KeyForLocalDevice)
+  thaliManager.start(partnerKeys)
+  .then(function () {
+    return pouchDB.get(publicBase64KeyForLocalDevice);
+  })
   .then(function (response) {
     localDoc = response;
   })
@@ -223,16 +266,22 @@ test('test repeat write', function (t) {
   })
   .then(function () {
     // Our partners should update its docs the same way.
-    var docs = [];
-    partnerKeys.forEach(function (partnerKey) {
-      docs.push({
+    var oldDocs = partnerKeys.map(function (partnerKey) {
+      return {
+        _id: partnerKey.toString('base64'),
+        test1: true, 
+        test2: true
+      };
+    });
+    var newDocs = partnerKeys.map(function (partnerKey) {
+      return {
         _id: partnerKey.toString('base64'),
         test1: true,
         test2: true,
         test3: true
-      });
+      };
     });
-    return validateDocs(pouchDB, docs, ['_id', 'test1', 'test2', 'test3']);
+    return waitForRemoteDocs(pouchDB, localDoc, oldDocs, newDocs, true);
   })
   .then(function () {
     exit();

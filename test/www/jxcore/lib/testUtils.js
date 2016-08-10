@@ -684,7 +684,7 @@ module.exports.exitWithTimeout = function (t, timeout) {
   return exit;
 }
 
-module.exports.checkArgs = function (t, spy, description, args) {
+var checkArgs = function (t, spy, description, args) {
   t.ok(spy.calledOnce, description + ' was called once');
 
   var currentArgs = spy.getCalls()[0].args;
@@ -694,14 +694,21 @@ module.exports.checkArgs = function (t, spy, description, args) {
   );
 
   args.forEach(function (arg, index) {
-    // If arg is not defined we wont check it.
-    if (arg) {
-      var currentArg = currentArgs[index];
-      t.equals(
-        currentArg, arg.value,
-        description + ' was called with \'' + arg.description +
-          '\' as ' + (index + 1) + '-st argument'
-      );
-    }
+    var argDescription = description + ' was called with \'' +
+      arg.description + '\' as ' + (index + 1) + '-st argument';
+    t.ok(arg.compare(currentArgs[index]), argDescription);
   });
 }
+
+checkArgs.compareObjects = function (object1, object2) {
+  for (var key in object2) {
+    if (object2.hasOwnProperty(key)) {
+      if (object1[key] !== object2[key]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+module.exports.checkArgs = checkArgs;
