@@ -39,7 +39,7 @@ fi
 
 cd ThaliTest
 # TODO Temporarily disabling ios build
-cordova platform add ios
+#cordova platform add ios
 cordova platform add android
 cd www/jxcore
 jx installCustomPouchDB.js
@@ -71,8 +71,8 @@ touch ../../platforms/android/unittests
 cordova build android --release --device
 
 # TODO Temporarily disabling ios build
-if [ $runningInMinGw == false ]; then
-    cordova build ios --device
-fi
+#if [ $runningInMinGw == false ]; then
+#    cordova build ios --device
+#fi
 
 echo "Remember to start the test coordination server by running jx index.js"
