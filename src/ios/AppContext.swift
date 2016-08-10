@@ -154,6 +154,8 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
      Ask context to update its network status variables
      */
     public func updateNetworkStatus() {
+        //todo put actual network status
+        delegate?.context(self, didChangeNetworkStatus: [:])
     }
 
     public func getIOSVersion() -> String {

@@ -9,7 +9,6 @@
 import Foundation
 import XCTest
 
-@objc
 public final class TestRunner: NSObject {
     struct RunResult {
         let executedCount: Int
