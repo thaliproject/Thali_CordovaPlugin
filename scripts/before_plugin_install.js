@@ -29,7 +29,7 @@ module.exports = function (context) {
 
       deferred.resolve();
     };
-    exec("npm install", { cwd: hooksDir }, execCallback);
+    exec('jx npm install --autoremove "*.gz"', { cwd: hooksDir }, execCallback);
 
     return deferred.promise;
   };
