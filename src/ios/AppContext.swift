@@ -160,11 +160,11 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
         return NSProcessInfo().operatingSystemVersionString
     }
 
-#if DEBUG
+#if TEST
     func executeNativeTests() -> String {
-        let runner = TestRunner()
+        let runner = TestRunner.`default`
         runner.runTest()
-        return runner.runResult.jsonString ?? ""
+        return runner.resultDescription ?? ""
     }
 #endif
 

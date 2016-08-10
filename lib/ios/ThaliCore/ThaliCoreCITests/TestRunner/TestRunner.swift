@@ -25,14 +25,18 @@ public final class TestRunner: NSObject {
         self.testSuite = testSuite
     }
 
-    static let `default`: TestRunner = TestRunner.createDefaultRunner()
+    public static let `default`: TestRunner = TestRunner.createDefaultRunner()
 
     private static func createDefaultRunner() -> TestRunner {
         return TestRunner(testSuite: XCTestSuite.defaultTestSuite())
     }
+    
+    public var resultDescription: String? {
+        return runResult.jsonString
+    }
 
     var runResult: RunResult {
-        // This case isn't abvious, but this is how XCTest.framework is done
+        // This case isn't obvious, but this is how XCTest.framework is done
         // The reason I see is because XCTest.framework is build on Objective-C
         // when Objective-C doesn't have e.g. generics
         //
@@ -68,7 +72,7 @@ public final class TestRunner: NSObject {
         )
     }
 
-    func runTest() {
+    public func runTest() {
         // Test must only be run on the main thread.
         dispatch_sync(dispatch_get_main_queue()) {
             self.testSuite.runTest()
