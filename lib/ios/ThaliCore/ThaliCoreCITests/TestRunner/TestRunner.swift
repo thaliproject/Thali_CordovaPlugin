@@ -16,116 +16,63 @@ final class TestRunner: NSObject {
         let succeededCount: Int
         let failureCount: Int
         let duration: NSTimeInterval
+        let executed: Bool
     }
 
     private let testSuite: XCTestSuite
-    private let testObservationCenter: XCTestObservationCenter
-
-    private var runningTestSuite: XCTestSuite?
-    private var runningTestCase: XCTestCase?
-    private var runningTestCaseFailures: [TestRun.Failure] = []
-
-    private(set) var testRuns: [TestRun] = []
-
-    private init(testSuite: XCTestSuite, testObservationCenter: XCTestObservationCenter) {
+    
+    private init(testSuite: XCTestSuite) {
         self.testSuite = testSuite
-        self.testObservationCenter = testObservationCenter
     }
 
     static let `default`: TestRunner = TestRunner.createDefaultRunner()
 
     private static func createDefaultRunner() -> TestRunner {
-        return TestRunner(testSuite: XCTestSuite.defaultTestSuite(),
-                          testObservationCenter: XCTestObservationCenter.sharedTestObservationCenter())
+        return TestRunner(testSuite: XCTestSuite.defaultTestSuite())
     }
 
     var runResult: RunResult {
-        let executedCount = self.testRuns.count
+        // This case isn't abvious, but this is how XCTest.framework is done
+        // The reason I see is because XCTest.framework is build on Objective-C
+        // when Objective-C doesn't have e.g. generics
+        //
+        // XCTest has property testRun, when XCTestSuite inherits XCTest
+        // so testRun of XCTestSuite can be casted into XCTestSuiteRun accordingly
+        guard let testSuiteRun = testSuite.testRun as? XCTestSuiteRun else {
+            return TestRunner.RunResult(
+                executedCount: 0,
+                succeededCount: 0,
+                failureCount: 0,
+                duration: 0,
+                executed: false
+            )
+        }
+
+        var executedCount = 0
         var succeededCount = 0
         var failureCount = 0
-        let duration = self.testSuite.testRun?.totalDuration ?? 0
+        let duration = testSuite.testRun?.totalDuration ?? 0
 
-        for run in testRuns {
-            if run.failures.count != 0 {
-                failureCount += 1
-            } else {
-                succeededCount += 1
-            }
+        for testRun in testSuiteRun.testRuns {
+            executedCount += Int(testRun.executionCount)
+            failureCount += Int(testRun.failureCount)
+            succeededCount += Int(testRun.executionCount - testRun.failureCount)
         }
 
         return TestRunner.RunResult(
             executedCount: executedCount,
             succeededCount: succeededCount,
             failureCount: failureCount,
-            duration: duration
+            duration: duration,
+            executed: true
         )
     }
 
     func runTest() {
-        // Test observers can only be registered and unregistered on the main thread.
+        // Test must only be run on the main thread.
         dispatch_sync(dispatch_get_main_queue()) {
-            self.testObservationCenter.addTestObserver(self)
+            self.testSuite.runTest()
         }
-
-        testSuite.runTest()
-
-        // Test observers can only be registered and unregistered on the main thread.
-        dispatch_sync(dispatch_get_main_queue()) {
-            self.testObservationCenter.removeTestObserver(self)
-        }
-    }
-}
-
-// MARK: XCTestObservation
-
-extension TestRunner: XCTestObservation {
-    func testBundleWillStart(testBundle: NSBundle) {
-    }
-
-    func testBundleDidFinish(testBundle: NSBundle) {
-    }
-
-    func testSuiteWillStart(testSuite: XCTestSuite) {
-        runningTestSuite = testSuite
-        testRuns = []
-    }
-
-    func testSuite(testSuite: XCTestSuite, didFailWithDescription description: String, inFile filePath: String?,
-                   atLine lineNumber: UInt) {
-    }
-
-    func testSuiteDidFinish(testSuite: XCTestSuite) {
-        runningTestSuite = nil
-    }
-
-    func testCaseWillStart(testCase: XCTestCase) {
-        runningTestCase = testCase
-        runningTestCaseFailures = []
-    }
-
-    func testCase(testCase: XCTestCase, didFailWithDescription description: String, inFile filePath: String?,
-                  atLine lineNumber: UInt) {
-        runningTestCaseFailures.append(
-            TestRun.Failure(failureDescription: description, filePath: filePath, line: lineNumber)
-        )
-    }
-
-    func testCaseDidFinish(testCase: XCTestCase) {
-        if let
-            runningTestSuite = self.runningTestSuite,
-            runningTestCase = self.runningTestCase {
-
-            let runName = "\(runningTestSuite.name)/\(runningTestCase.name)"
-
-            testRuns.append(
-                TestRun(name: runName, failures: runningTestCaseFailures)
-            )
-        } else {
-            assertionFailure()
-        }
-
-        runningTestCase = testCase
-        runningTestCaseFailures = []
     }
 }
 
@@ -136,10 +83,10 @@ extension TestRunner.RunResult {
         let jsonDictionary = [
             "total": executedCount,
             "passed": succeededCount,
-            "failed": self.failureCount,
+            "failed": failureCount,
             "ignored": 0,
-            "duration": self.duration,
-            "executed": true
+            "duration": duration,
+            "executed": executed
         ]
 
         do {

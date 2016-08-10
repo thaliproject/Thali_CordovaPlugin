@@ -3,7 +3,6 @@
 var fs = require('fs-extra-promise');
 var path = require('path');
 
-// jscs:enable jsDoc
 /**
  * We've tried various strategies in plugin.xml to set the minimum sdk
  * in the Android manifest to an acceptable value such as uses-sdk in

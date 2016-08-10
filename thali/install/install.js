@@ -1,5 +1,7 @@
+console.log('abc2')
+
 'use strict';
-var exec = require('child_process').exec;
+var exec = require('child-process-promise').exec;
 var spawn = require('child_process').spawn;
 var path = require('path');
 var https = require('https');
@@ -13,25 +15,6 @@ var FILE_NOT_FOUND = 'ENOENT';
 // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
 // project to this Cordova project.
 var MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT = 'localdev';
-
-// I tried child-process-promise but it failed without errors and I just don't
-// have time to fight with it right now.
-function childProcessExecPromise(command, currentWorkingDirectory) {
-  return new Promise(function (resolve, reject) {
-    exec(command, { cwd: currentWorkingDirectory },
-      function (error, stdout, stderr) {
-        if (error) {
-          reject(error);
-          return;
-        }
-        // Log output even if command doesn't exit with an error,
-        // because otherwise useful debugging information might get lost.
-        if (stdout) { console.log(stdout); }
-        if (stderr) { console.log(stderr); }
-        resolve();
-      });
-  });
-}
 
 // Unfortunately the obvious library, request-promise, doesn't handle streams
 // well so it would take the multi-megabyte ZIP response file and turn it into
@@ -228,7 +211,7 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     }
     console.log('Trying to remove previously installed Thali Cordova plugin');
     var pluginRemoveCommand = 'cordova plugin remove org.thaliproject.p2p';
-    return childProcessExecPromise(pluginRemoveCommand, appRootDirectory)
+    return exec(pluginRemoveCommand, { cwd: appRootDirectory })
     .catch(function (err) {
       console.log('Ignoring a non-critical error: ' + err);
       // Resolve the promise even if plugin removal fails, because it is
@@ -368,16 +351,16 @@ module.exports = function (callback, appRootDirectory) {
           .then(function () {
             console.log('Adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
-            return childProcessExecPromise('cordova plugins add ' +
+            return exec('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory + ' -d',
-              appRootDirectory);
+              { cwd : appRootDirectory });
           }).then(function () {
             // The step below is required, because the Android after prepare
             // Cordova hook depends on external node modules that need to be
             // installed.
             console.log('Running jx npm install in: ' + appScriptsFolder);
-            return childProcessExecPromise('jx npm install --autoremove "*.gz"',
-                                           appScriptsFolder);
+            return exec('jx npm install --autoremove "*.gz"',
+                                           { cwd:  appScriptsFolder });
           }).then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
           });

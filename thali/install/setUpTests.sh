@@ -3,12 +3,18 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Check if we are running in MinGW
-runningInMinGw=false
+# Check the platform we are running
+IS_MINIGW_PLATFORM=false
+IS_DARWIN_PLATFORM=false
 
-if [ "$(uname -s | cut -c 1-5)" == "MINGW" ]; then
-    echo "Running in MinGW"
-    runningInMinGw=true
+if test x"$(uname -s | cut -c 1-5)" == xMINGW ; then
+  echo "Running in MinGW"
+
+  IS_MINIGW_PLATFORM=true
+elif test x"`uname`" = xDarwin ; then
+  echo "Running in macOS"
+
+  IS_DARWIN_PLATFORM=true
 fi
 
 TEST_PROJECT_NAME=ThaliTest
@@ -23,77 +29,75 @@ cd `dirname $0`
 cd ../..
 REPO_ROOT_PATH=$(pwd)
 
-setup_project() {
-  cd test/TestServer
-  jx npm install
-  # jx generateServerAddress.js $2
-  cd $REPO_ROOT_PATH/..
-  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
-  mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
-  if [ $runningInMinGw == true ]; then
-      # The thali package might be installed as link and there will
-      # be troubles later on if this link is tried to be copied so
-      # remove it here.
-      rm -rf $REPO_ROOT_PATH/test/www/jxcore/node_modules/thali
-      cp -R $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/
-  else
-      rsync -a --no-links $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/www
-  fi
+# Begin setting up the project
+#
+cd test/TestServer
+jx npm install
+jx generateServerAddress.js $2
+cd $REPO_ROOT_PATH/..
+cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
+mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
-  cd $TEST_PROJECT_NAME
+if [ $IS_MINIGW_PLATFORM == true ]; then
+    # The thali package might be installed as link and there will
+    # be troubles later on if this link is tried to be copied so
+    # remove it here.
+    rm -rf $REPO_ROOT_PATH/test/www/jxcore/node_modules/thali
+    cp -R $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/
+else
+    rsync -a --no-links $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/www
+fi
+
+# Begin adding platforms
+#
+cd $TEST_PROJECT_NAME
+
+# add Android platform
+cordova platform add android
+
+# A file that identifies the current build as a UT build, which results in copying native UT files to the platform folder
+touch platforms/android/unittests
+
+# add iOS platform
+if [ $IS_DARWIN_PLATFORM == true ]; then
   cordova platform add ios
-  cordova platform add android
-  cd www/jxcore
-  jx npm install $REPO_ROOT_PATH/thali --save --no-optional --autoremove "*.gz"
 
-  if [ $runningInMinGw == true ]; then
-      # On Windows the package.json file will contain an invalid local file URI for Thali,
-      # which needs to be replaced with a valid value. Otherwise the build process
-      # will be aborted. Restore write permission after running sed in case
-      # Windows security settings removed it.
-      sed -i 's/"thali": ".*"/"thali": "*"/g' package.json
-      chmod 644 package.json
-  fi
+  # A file that identifies the current build as a UT build
+  touch platforms/ios/unittests
+fi
 
-  # SuperTest which is used by some of the BVTs include a PEM file (for private
-  # keys) that makes Android unhappy so we remove it below in addition to the gz
-  # files.
-  jx npm install --no-optional --autoremove "*.gz,*.pem"
+# run Thali install
+#
+cd www/jxcore
+jx npm install $REPO_ROOT_PATH/thali --save --no-optional --autoremove "*.gz"
 
-  # In case autoremove fails to delete the files, delete them explicitly.
-  find . -name "*.gz" -delete
-  find . -name "*.pem" -delete
+if [ $IS_MINIGW_PLATFORM == true ]; then
+    # On Windows the package.json file will contain an invalid local file URI for Thali,
+    # which needs to be replaced with a valid value. Otherwise the build process
+    # will be aborted. Restore write permission after running sed in case
+    # Windows security settings removed it.
+    sed -i 's/"thali": ".*"/"thali": "*"/g' package.json
+    chmod 644 package.json
+fi
 
-  cp -v $1 app.js
+# SuperTest which is used by some of the BVTs include a PEM file (for private
+# keys) that makes Android unhappy so we remove it below in addition to the gz
+# files.
+jx npm install --no-optional --autoremove "*.gz,*.pem"
 
-  # In case of UT create a file
-  if [[ $2 == "UT" ]] || [[ $3 == "UT" ]] ; then
-    echo "UT files will be copied to the platform directory"
-    touch ../../platforms/android/unittests
-  fi
-}
+# In case autoremove fails to delete the files, delete them explicitly.
+find . -name "*.gz" -delete
+find . -name "*.pem" -delete
 
-build_ios() {
-  if [ $runningInMinGw == false ]; then
-    SETUP_XCODE_TESTS_SCRIPT_PATH=$REPO_ROOT_PATH/thali/install/setupXcodeProjectTests.js
-    TEST_PROJECT_PATH=$REPO_ROOT_PATH/../$TEST_PROJECT_NAME/platforms/ios/$TEST_PROJECT_NAME.xcodeproj
-    FRAMEWORK_PROJECT_FOLDER_PATH=$REPO_ROOT_PATH/../$TEST_PROJECT_NAME/plugins/org.thaliproject.p2p/lib/ios/ThaliCore
+cp -v $1 app.js
 
-    # updates Xcode project for CI stuff
-    jx $SETUP_XCODE_TESTS_SCRIPT_PATH "${TEST_PROJECT_PATH}" "${FRAMEWORK_PROJECT_FOLDER_PATH}"
+# build Android
+cordova build android --release --device
 
-    # build iOS
-    cordova build ios --device
-  fi
-}
-
-build_android() {
-  cordova build android --release --device
-}
-
-setup_project $1 $2 $3
-build_android
-build_ios
+# build iOS
+if [ $IS_DARWIN_PLATFORM == true ]; then
+  cordova build ios --device
+fi
 
 echo "Remember to start the test coordination server by running jx index.js"
