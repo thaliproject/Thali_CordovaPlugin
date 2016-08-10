@@ -29,7 +29,7 @@ function UnitTestFramework(testConfig, _logger)
     function (platform) {
       logger.info(
         'Require %d %s devices',
-        self.requiredDevices[platform], platform
+        self.requiredDevices[platform] || 0, platform
       );
       return self.requiredDevices[platform];
     }
