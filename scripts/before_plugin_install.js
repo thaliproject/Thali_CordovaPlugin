@@ -11,6 +11,8 @@ var path = require('path');
 
 module.exports = function (context) {
 
+    console.log('Installing dependencies required for Cordova hooks');
+
     var Q = context.requireCordovaModule('q');
     var deferred = new Q.defer();
 

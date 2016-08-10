@@ -35,8 +35,6 @@ module.exports = function (context) {
 
     var isTestEnvironment = loadIsTestEnvironment();
 
-    console.log(context);
-
     // Need a promise so that
     // the install waits for us to complete our project modifications
     // before the plugin gets installed.
