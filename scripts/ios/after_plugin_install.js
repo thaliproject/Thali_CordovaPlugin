@@ -18,7 +18,8 @@ function loadIsTestEnvironment() {
 
     try {
       console.log('Removing UT flag');
-      fs.removeSync(utFlatFilePath);
+
+      fs.unlinkSync(utFlatFilePath);
     } catch (err) {
       console.log(err);
       console.log('Failed to remove the UT flag file, continuing anyway');
@@ -34,8 +35,6 @@ function loadIsTestEnvironment() {
 module.exports = function (context) {
 
     var isTestEnvironment = loadIsTestEnvironment();
-
-    console.log(context);
 
     // Need a promise so that
     // the install waits for us to complete our project modifications

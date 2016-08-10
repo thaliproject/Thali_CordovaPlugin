@@ -1,6 +1,5 @@
-console.log('abc2')
-
 'use strict';
+
 var exec = require('child-process-promise').exec;
 var spawn = require('child_process').spawn;
 var path = require('path');
@@ -332,7 +331,8 @@ module.exports = function (callback, appRootDirectory) {
         return installGitHubZip(thaliProjectName, thaliDepotName,
                                 thaliBranchName, thaliDontCheckIn);
       }
-    }).then(function(thaliCordovaPluginUnZipResult){
+    })
+    .then(function(thaliCordovaPluginUnZipResult) {
       // This step is used to prepare the gradle.properties file
       // containing the btconnectorlib2 version
       var projectDir = createUnzippedDirectoryPath(thaliDepotName, thaliBranchName, thaliDontCheckIn);
@@ -347,21 +347,34 @@ module.exports = function (callback, appRootDirectory) {
     .then(function (thaliCordovaPluginUnZipResult) {
       if (thaliCordovaPluginUnZipResult.directoryUpdated) {
         var weAddedPluginsFile = path.join(thaliDontCheckIn, 'weAddedPlugins');
+
         return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
           .then(function () {
             console.log('Adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
+
             return exec('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory + ' -d',
-              { cwd : appRootDirectory });
-          }).then(function () {
-            // The step below is required, because the Android after prepare
-            // Cordova hook depends on external node modules that need to be
-            // installed.
-            console.log('Running jx npm install in: ' + appScriptsFolder);
-            return exec('jx npm install --autoremove "*.gz"',
-                                           { cwd:  appScriptsFolder });
-          }).then(function () {
+                { cwd : appRootDirectory })
+              .then(function (result) {
+                if (result.stdout) {
+                  console.log('Added Thali Cordova plugin successfully\n');
+                  console.log(result.stdout);
+                }
+
+                if (result.stderr) {
+                  console.log('Added Thali Cordova plugin with errors\n');
+                  console.log(result.stderr);
+                }
+
+                return;
+              })
+              .catch(function (error) {
+                  console.log('Failed adding Thali Cordova plugin\n');
+                  console.log(error);
+              });
+          })
+          .then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
           });
       }

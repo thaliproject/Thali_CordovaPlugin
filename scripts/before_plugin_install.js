@@ -25,9 +25,25 @@ module.exports = function (context) {
         return;
       }
 
+      if (stdout) {
+        console.log(
+          'Install dependencies for Thali Cordova plugin hooks success');
+        console.log(stdout);
+      }
+
+      if (stderr) {
+        console.log(
+          'Install dependencies for Thali Cordova plugin hooks with errors');
+        console.log(stderr);
+      }
+
       deferred.resolve();
     };
-    exec("npm install", { cwd: hooksDir }, execCallback);
+
+    console.log(
+      'Installing dependencies for Thali Cordova plugin hooks in ' +
+      hooksDir);
+    exec('jx npm install --autoremove "*.gz"', { cwd: hooksDir }, execCallback);
 
     return deferred.promise;
   };
