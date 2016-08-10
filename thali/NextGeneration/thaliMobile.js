@@ -707,13 +707,9 @@ peerWatchers[connectionTypes.TCP_NATIVE] = {};
 var addWatcherToPeer = function (peer) {
   var connectionType = peer.connectionType;
   var peerId = peer.peerIdentifier;
+  var interval = peer.suggestedTCPTimeout;
 
-  var threshold =
-    connectionType === connectionTypes.TCP_NATIVE ?
-    ThaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
-    ThaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
-
-  peerWatchers[connectionType][peerId] = setInterval(watchForPeer, threshold, peer);
+  peerWatchers[connectionType][peerId] = setInterval(watchForPeer, interval, peer);
 }
 
 var isWatcherForPeerExist = function (peer) {
@@ -724,13 +720,22 @@ var isWatcherForPeerExist = function (peer) {
 }
 
 var removeAllWatchersFromPeers = function () {
-  Object.keys(peerWatchers).forEach(removeAllWatchersFromPeersByConnectionType);
+  Object.keys(peerWatchers)
+    .forEach(removeAllWatchersFromPeersByConnectionType);
 }
 
 var removeAllWatchersFromPeersByConnectionType = function (connectionType) {
   var peersByConnectionType = peerWatchers[connectionType];
 
-  Object.keys(peersByConnectionType).forEach(removeWatcherFromPeer);
+  Object.keys(peersByConnectionType)
+    .forEach(function (peerIdentifier) {
+      var assumingPeer = {
+        peerIdentifier: peerIdentifier,
+        connectionType: connectionType
+      };
+
+      removeWatcherFromPeer(assumingPeer);
+    });
 }
 
 var removeWatcherFromPeer = function (peer) {
@@ -740,15 +745,18 @@ var removeWatcherFromPeer = function (peer) {
   var interval = peerWatchers[connectionType][peerId];
 
   clearInterval(interval);
+  delete peerWatchers[connectionType][peerId];
 }
 
 var watchForPeer = function (peer) {
   var now = Date.now();
 
-  if(peer.availableSince + peer.suggestedTCPTimeout < now) {
-    changeCachedPeerUnavailable(peer);
-    emitPeerUnavailable(peerIdentifier, connectionType);
+  if(peer.availableSince + peer.suggestedTCPTimeout > now) {
+    return;
   }
+
+  changeCachedPeerUnavailable(peer);
+  emitPeerUnavailable(peer.peerIdentifier, peer.connectionType);
 }
 
 /**
