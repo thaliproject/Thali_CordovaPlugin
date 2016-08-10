@@ -659,6 +659,4 @@ public class ConnectionHelperTest {
         thrown.expect(UnsupportedOperationException.class);
         mConnectionHelper.onBluetoothMacAddressResolved("00:11:22:33:44:55");
     }
-
-    //TODO Write tests for onPeerDiscovered and onPeerLost
 }
