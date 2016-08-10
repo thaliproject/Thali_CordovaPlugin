@@ -319,7 +319,7 @@ ThaliTcpServersManager.prototype.terminateOutgoingConnection =
  * Notifies the listener of a failed connection attempt. This is mostly used to
  * determine when we have hit the local maximum connection limit but it's used
  * any time there is a connection error since the only other hint that a
- * connection is failed is that the TCP/IP connection to the 127.0.0.1 port will
+ * connection has failed is that the TCP/IP connection to the 127.0.0.1 port will
  * fail.
  *
  * In the case that this error is generated from a callback to the

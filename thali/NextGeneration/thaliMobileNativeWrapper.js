@@ -54,24 +54,29 @@ module.exports._isStarted = function () {
  *
  * This is the primary interface for those wishing to talk directly to the
  * native layer. All the methods defined in this file are asynchronous. However,
- * with the exception of {@link module:thaliMobileNativeWrapper.emitter} and
- * {@link module:thaliMobileNativeWrapper.connect}, any time a method is called
- * the invocation will immediately return but the request will actually be put
- * on a queue and all incoming requests will be run out of that queue. This
- * means that if one calls two start methods on say advertising or discovery
- * then the first start method will execute, call back its promise and only then
- * will the second start method start running. This restriction is in place to
- * simplify the state model and reduce testing.
+ * with the exception of {@link module:thaliMobileNativeWrapper.emitter}, {@link
+ * module:thaliMobileNativeWrapper.connect}, {@link
+ * module:thaliMobileNativeWrapper.multiConnect}, {@link
+ * module:thaliMObileNativeWrapper.disconnect), any time a method is called the
+ * invocation will immediately return but the request will actually be put on a
+ * queue and all incoming requests will be run out of that queue. This means
+ * that if one calls two start methods on say advertising or discovery then the
+ * first start method will execute, call back its promise and only then will the
+ * second start method start running. This restriction is in place to simplify
+ * the state model and reduce testing.
+ *
+ * A similar sort of queue exists for the connect/disconnect methods but it only
+ * applies to calls with the same peerID.
  *
  * ## Why not just call {@link module:thaliMobileNative} directly?
  *
  * Our contract in {@link module:thaliMobileNative} stipulates some behaviors
  * that have to be enforced at the node.js layer. For example, we can only issue
- * a single outstanding non-connect Mobile().callNative command at a time. We
- * also want to change the callbacks from callbacks to promises as well as
- * change registerToNative calls into Node.js events. All of that is handled
- * here. So as a general rule nobody but this module should ever call {@link
- * module:thaliMobileNative}. Anyone who wants to use the {@link
+ * a single outstanding non-connect/multi-connect/disconnect Mobile().callNative
+ * command at a time. We also want to change the callbacks from callbacks to
+ * promises as well as change registerToNative calls into Node.js events. All of
+ * that is handled here. So as a general rule nobody but this module should ever
+ * call {@link module:thaliMobileNative}. Anyone who wants to use the {@link
  * module:thaliMobileNative} functionality should be calling this module.
  */
 
@@ -189,13 +194,20 @@ function stopCreateAndStartServersManager() {
  * - create a TCP server (which MUST use {@link
  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) on a random port and
  * host the router on that server.
+ *
+ * On `multiConnect` platforms (read: iOS) we will also do the following:
+ * - listen for the {@link
+ * thaliMobileNative~incomingConnectionToPortNumberFailed} event which will then
+ * cause us to fire a {@link event:incomingConnectionToPortNumberFailed}.
+ *
+ * On `connect` platforms (read: Android) we will also do the following:
  * - create a {@link module:tcpServersManager}.
  * - listen for the {@link module:tcpServersManager~failedConnection} event and
  * then repeat it.
  * - listen for the {@link module:tcpServersManager~routerPortConnectionFailed}
- * event which we will then cause us to fire a {@link
+ * event which will then cause us to fire a {@link
  * event:incomingConnectionToPortNumberFailed}.
- * - call start on the {@link module:tcpServersManager} object and record the
+ *  * - call start on the {@link module:tcpServersManager} object and record the
  * returned port.
  *
  * We MUST register for the native layer handlers exactly once.
@@ -207,8 +219,8 @@ function stopCreateAndStartServersManager() {
  *
  * This method can be called after stop since this is a singleton object.
  *
- * If the given router can't be used as express router, a "Bad Router"
- * error MUST be returned.
+ * If the given router can't be used as an express router, a "Bad Router" error
+ * MUST be returned.
  *
  * @public
  * @param {Object} router This is an Express Router object (for example,
@@ -304,7 +316,8 @@ function stop() {
 
 /**
  * This method will call all the stop methods, call stop on the {@link
- * module:tcpServersManager} object and close the TCP server hosting the router.
+ * module:tcpServersManager} object (if we are on a `connect` platform) and
+ * close the TCP server hosting the router.
  *
  * Once called the object is in stop state.
  *
@@ -412,7 +425,8 @@ module.exports.stopListeningForAdvertisements = function () {
  *
  * Therefore the purpose of this method is just to raise the "state changed"
  * flag. Each time it is called a new event will be generated that will tell
- * listeners that the system has changed state since the last call. Therefore
+ * listeners that the system has changed state since the last call. This
+ * usually translates to a change in the peer's generation counter. Therefore
  * this method is not idempotent since each call causes a state change.
  *
  * Once an advertisement is sent out as a result of calling this method
@@ -422,7 +436,7 @@ module.exports.stopListeningForAdvertisements = function () {
  *
  * ## Incoming Connections
  *
- * By default all incoming TCP connections generated by {@link
+ * On `connect` platforms all incoming TCP connections generated by {@link
  * external:"Mobile('startUpdateAdvertisingAndListening')".callNative} MUST be
  * passed through a multiplex layer. The details of how this layer works are
  * given in {@link module:TCPServersManager}. This method will pass the port
@@ -431,7 +445,11 @@ module.exports.stopListeningForAdvertisements = function () {
  *
  * If the TCP connection established by the native layer to the previously
  * specified port is terminated by the server for any reason then the native
- * layer MUST tear down the associated Bluetooth socket or MPCF mcSession.
+ * layer MUST tear down the associated non-TCP connection.
+ *
+ * On `multiConnect` platforms all incoming TCP connections are sent directly to
+ * the router started by {@link module:TCPServersManager.start} since we have
+ * no need for {@link module:TCPServersManager} on these platforms.
  *
  * ## Repeated calls
  *
@@ -628,17 +646,24 @@ module.exports.killConnections = function () {
  * event:nonTCPPeerAvailabilityChangedEvent} with peerIdentifier set to the
  * value in the peer object and portNumber set to null.
  *
- * If a peer's peerAvailable is set to true then we MUST call {@link
- * module:tcpServersManager.createPeerListener}. If an error is returned then
- * the error MUST be logged and we MUST treat this as if we received the value
- * with peerAvailable equal to false. If the call is a success then we MUST
- * issue a {@link event:nonTCPPeerAvailabilityChangedEvent} with peerIdentifier
- * set to the value in the peer object and portNumber set to the returned value.
+ * On a `connect` platform if a peer's peerAvailable is set to true then we MUST
+ * call {@link module:tcpServersManager.createPeerListener}. If an error is
+ * returned then the error MUST be logged and we MUST treat this as if we
+ * received the value with peerAvailable equal to false. If the call is a
+ * success then we MUST issue a {@link event:nonTCPPeerAvailabilityChangedEvent}
+ * with peerIdentifier set to the value in the peer object and portNumber set to
+ * the returned value.
+ *
+ * On a 'multiConnect' platform if a peer's peerAvailable is set to true then we
+ * can just forward the port up the stack since that port is what is to be used
+ * to connect to the remote peer via TCP.
  *
  * @public
  * @typedef {Object} nonTCPPeerAvailabilityChanged
  * @property {string} peerIdentifier See {@link
  * module:thaliMobileNative~peer.peerIdentifier}.
+ * @property {number} generation An integer which counts changes in the peer's
+ * database. On Android this integer has only 8 bytes and so will roll over.
  * @property {?number} portNumber If this value is null then the system is
  * advertising that it no longer believes this peer is available. If this value
  * is non-null then it is a port on 127.0.0.1 at which the local peer can

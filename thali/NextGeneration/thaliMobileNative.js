@@ -29,13 +29,49 @@
  * Note that callbacks rather than promises are specified below because that
  * is required by the JXcore native API.
  *
- * ## Request processing model
+ * ## Request processing model for non-connect related methods
  *
- * With the exception of `connect` the `callNative` methods defined in this
- * file MUST only be called serially. That is, once a `callNative` method other
- * than `connect` is called no other `callNative` methods but `connect` can be
- * called until the first `callNative`'s callback has been called. If this
- * prohibition is violated then the system will enter an undefined state.
+ * With the exception of methods discussed in the next section the `callNative`
+ * methods defined in this file MUST only be called serially. That is, once a
+ * `callNative` method other than the methods in the next section are called no
+ * other `callNative` methods but those in the next section can be called until
+ * the first `callNative`'s callback has been called. If this prohibition is
+ * violated then the system will enter an undefined state.
+ *
+ * ## Request processing model for connect related methods
+ *
+ * TODO: Eventually we need to define a `disconnectIncoming` method to let the
+ * peer policy manager terminate incoming connections to get back bandwidth. But
+ * that is a V1 feature so we'll worry about it later. This is issue 849
+ *
+ * We will discuss the details of `connect` and `multiConnect`/`disconnect`
+ * later. But for processing model purposes a native layer MUST either
+ * support `connect` or `multiConnect`/`disconnect` but not both.
+ *
+ * On `connect` supporting platforms (Android) it is legal to call `connect` at
+ * any time and to have multiple `connect` methods outstanding. However the node
+ * layer MUST NOT issue multiple parallel `connect` methods for the same peerID.
+ * If the Node layer has fired off a `connect` for a particular peerID it MUST
+ * wait until it gets a response before firing off another `connect` for the
+ * same peerID.
+ *
+ * On `multiConnect`/`disconnect` platforms (iOS) it is legal to call `connect`
+ * and `disconnect` at any time and to have multiple `multiConnect` and
+ * `disconnect` methods outstanding at the same time. However the Node layer
+ * MUST NOT have multiple outstanding `multiConnect` or `disconnect` methods
+ * for the same peerID at the same time. In other words if there is either a
+ * `multiConnect` or `disconnect` method outstanding for a peerID then the
+ * Node layer MUST NOT issue a `multiConnect` or `disconnect` for that peerID
+ * until it gets a response to the previous request. For example, if the Node
+ * layer fires off a `multiConnect` for a PeerID foo and then changes its
+ * mind and wants to fire off a `disconnect`, it cannot issue the `disconnect`
+ * for the peerID until the `multiConnect` for that peerID has returned.
+ *
+ * In both the `multiConnect`\`disconnect` and `connect` cases the restriction
+ * on having multiple outstanding methods is intended to provide a simpler
+ * native layer. If the performance implications of this limitation (especially
+ * for `disconnect`) prove too be too much then we may have to relax our
+ * restrictions.
  *
  * ## Idempotent calls
  *
@@ -46,6 +82,11 @@
  * has not yet been called. The default start state is "stop" so calling a stop
  * method before calling its start method pair just means to stay in the stop
  * state.
+ *
+ * `connect`, `multiConnect` and `disconnect` are also idempotent. Calling any
+ * of them with the same arguments several times in a row (without an
+ * intervening method such as calling `multiConnect`, `disconnect` and then
+ * `multiConnect` on the same peerID) MUST NOT cause a state change.
  *
  * ## Initial system state When a Thali app starts up and before any of the
  * APIs defined here are called the initial state of the system MUST be:
@@ -101,14 +142,6 @@
 /**
  * Please see the definition of
  * {@link module:thaliMobileNativeWrapper.startUpdateAdvertisingAndListening}.
- *
- * However, in addition to what is written there, when the system receives an
- * incoming connection it will do so by initiating a single TCP/IP connection to
- * the port given below in `portNumber`. If the non-TCP connection from which
- * the content in the TCP/IP connection is sourced should terminate for any
- * reason then the TCP/IP connection MUST also be terminated. If the TCP
- * connection to `portNumber` is terminated for any reason then the associated
- * non-TCP connection MUST be terminated.
  *
  * @public
  * @function external:"Mobile('startUpdateAdvertisingAndListening')".callNative
@@ -338,6 +371,8 @@
  * non-TCP/IP transports work it is completely possible for the same remote peer
  * to have many different peerIdentifiers assigned to them. So the only purpose
  * of this value is to use it in a connect call not to uniquely identify a peer.
+ * @property {number} generation An integer which counts changes in the peer's
+ * database. On Android this integer has only 8 bytes and so will roll over.
  * @property {boolean} peerAvailable If true this indicates that the peer is
  * available for connectivity. If false it means that the peer can no longer be
  * connected to. For too many reasons to count it's perfectly possible to never
@@ -346,16 +381,6 @@
  * into the background reducing the power to the BLE radio which can make the
  * peer seem to disappear. But Bluetooth would still be on full power so a
  * connect could still work. So this value can at best be treated as a hint.
- * @property {boolean} pleaseConnect If true then this means that a lexically
- * smaller peer wishes to establish a connection to this peer but requires this
- * peer to initiate the connection per the binding spec. If this peer already
- * has called {@link external:"Mobile('connect')".callNative} for the identified
- * peer then no action MUST be taken. Similarly if this peer already has a
- * connection to the remote peer then no action MUST be taken. Yes, there are
- * many race conditions here but the binding protocol calls for the other peer
- * to repeat its request a number of times so it should be o.k. If this value is
- * false then it either means that this isn't iOS or it means that the remote
- * peer is either lexically larger or not currently interested in connecting.
  */
 
 /**
