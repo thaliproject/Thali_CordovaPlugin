@@ -104,6 +104,7 @@ public class ConnectionHelperTest {
     @Test
     public void testDispose() throws Exception {
         mConnectionHelper.dispose();
+        Thread.sleep(5000); //Wait for connectionHelper to dispose
 
         Field fDiscoveryManager = mConnectionHelper.getClass()
                 .getDeclaredField("mDiscoveryManager");
@@ -146,6 +147,8 @@ public class ConnectionHelperTest {
         assertThat("Start method returns true",
                 mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
 
+        Thread.sleep(5000); //Wait for connectionHelper to start
+
         Field fServerPortNumber = mConnectionHelper.getClass()
                 .getDeclaredField("mServerPortNumber");
         Field fPowerUpBleDiscoveryTimer = mConnectionHelper.getClass()
@@ -179,6 +182,8 @@ public class ConnectionHelperTest {
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
         mConnectionHelper.dispose();
 
+        Thread.sleep(5000); //Wait for connectionHelper to stop
+
         assertThat("Start method returns true",
                 mConnectionHelper.start(-1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
 
@@ -207,7 +212,9 @@ public class ConnectionHelperTest {
     @Test
     public void testStop() throws Exception {
         mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock);
+        Thread.sleep(5000); //Wait for connectionHelper to start
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        Thread.sleep(5000); //Wait for connectionHelper to stop
 
         Field fStartStopOperationHandler = mConnectionHelper.getClass()
                 .getDeclaredField("mStartStopOperationHandler");
