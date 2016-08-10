@@ -18,7 +18,8 @@ function loadIsTestEnvironment() {
 
     try {
       console.log('Removing UT flag');
-      fs.removeSync(utFlatFilePath);
+
+      fs.unlinkSync(utFlatFilePath);
     } catch (err) {
       console.log(err);
       console.log('Failed to remove the UT flag file, continuing anyway');

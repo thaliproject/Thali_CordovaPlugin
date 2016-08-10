@@ -11,8 +11,6 @@ var path = require('path');
 
 module.exports = function (context) {
 
-    console.log('Installing dependencies required for Cordova hooks');
-
     var Q = context.requireCordovaModule('q');
     var deferred = new Q.defer();
 
@@ -27,8 +25,24 @@ module.exports = function (context) {
         return;
       }
 
+      if (stdout) {
+        console.log(
+          'Install dependencies for Thali Cordova plugin hooks success');
+        console.log(stdout);
+      }
+
+      if (stderr) {
+        console.log(
+          'Install dependencies for Thali Cordova plugin hooks with errors');
+        console.log(stderr);
+      }
+
       deferred.resolve();
     };
+
+    console.log(
+      'Installing dependencies for Thali Cordova plugin hooks in ' +
+      hooksDir);
     exec('jx npm install --autoremove "*.gz"', { cwd: hooksDir }, execCallback);
 
     return deferred.promise;
