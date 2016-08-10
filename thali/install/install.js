@@ -1,5 +1,3 @@
-console.log('abc2')
-
 'use strict';
 var exec = require('child-process-promise').exec;
 var spawn = require('child_process').spawn;
