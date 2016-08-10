@@ -24,7 +24,7 @@ import Foundation
 
     private func createAndRunAdvertiserWith(identifier: PeerIdentifier, port: UInt16) -> Advertiser {
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType, port: port)
-        advertiser.start()
+        advertiser.startAdvertising()
         return advertiser
     }
 
@@ -42,6 +42,9 @@ import Foundation
     }
 
     public func stopAdvertisingAndListening() {
-
+        guard let currentAdvertiser = self.currentAdvertiser where currentAdvertiser.isAdvertising else {
+            assert(false, "there is no active listener")
+        }
+        currentAdvertiser.stopAdvertising()
     }
 }

@@ -21,11 +21,16 @@ import Foundation
         return true
     }
 
+    private func foundPeerWithIdentifier(identifier: PeerIdentifier) {
+
+    }
+
     public func startListeningForAdvertisements() {
         if let currentBrowser = currentBrowser {
             currentBrowser.stopListening()
         }
-        let browser = Browser(peerIdentifier: PeerIdentifier(), serviceType: serviceType, canConnectToPeer: canConnectToPeer)
+        let browser = Browser(peerIdentifier: PeerIdentifier(), serviceType: serviceType,
+                canConnectToPeer: canConnectToPeer, foundPeerWithIdentifier: foundPeerWithIdentifier)
         browser.startListening()
         self.currentBrowser = browser
     }

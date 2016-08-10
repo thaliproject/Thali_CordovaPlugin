@@ -15,17 +15,20 @@ protocol BrowserDelegate: class {
 }
 
 final class Browser: NSObject {
-    weak var delegate: BrowserDelegate?
     private let browser: MCNearbyServiceBrowser
-    let peerIdentifier: PeerIdentifier
     private var activeSessions: [SessionManager] = []
     private let canConnectToPeer: (PeerIdentifier) -> Bool
-    var isListening: Bool = false
+    private let foundPeerWithIdentifier: (PeerIdentifier) -> Void
 
-    required init(peerIdentifier: PeerIdentifier, serviceType: String, canConnectToPeer: (PeerIdentifier) -> Bool) {
+    let peerIdentifier: PeerIdentifier
+    internal private(set) var isListening: Bool = false
+    weak var delegate: BrowserDelegate?
+
+    required init(peerIdentifier: PeerIdentifier, serviceType: String, canConnectToPeer: (PeerIdentifier) -> Bool, foundPeerWithIdentifier: (PeerIdentifier) -> Void) {
         browser = MCNearbyServiceBrowser(peer: peerIdentifier.mcPeer, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
         self.canConnectToPeer = canConnectToPeer
+        self.foundPeerWithIdentifier = foundPeerWithIdentifier
         super.init()
         browser.delegate = self
     }
@@ -52,8 +55,8 @@ extension Browser: MCNearbyServiceBrowserDelegate {
     func browser(browser: MCNearbyServiceBrowser,
                         foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
         do {
-            let _ = try PeerIdentifier(mcPeer: peerID)
-            //todo notify about peer connection
+            let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
+            foundPeerWithIdentifier(peerIdentifier)
         } catch let error {
             print("cannot connect to peer \"\(peerID.displayName)\" because of error: \(error)")
         }
@@ -64,6 +67,7 @@ extension Browser: MCNearbyServiceBrowserDelegate {
     }
 
     func browser(browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: NSError) {
+        isListening = false
         print("didNotStartingBrowsingForPeers")
     }
 }
