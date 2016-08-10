@@ -1,37 +1,29 @@
 'use strict';
 
-var PouchDB = require("pouchdb");
-var path = require("path");
-var os = require("os");
-var ExpressPouchDB = require("express-pouchdb");
-var Express = require("express");
+var expressPouchDB = require('express-pouchdb');
+var express = require('express');
 var Promise = require('lie');
 var crypto = require('crypto');
 var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
+var testUtils = require('../../lib/testUtils');
 
-exports.LevelDownPouchDB = function() {
-  var dbPath = path.join(os.tmpdir(), 'dbPath');
-  return process.platform === 'android' || process.platform === 'ios' ?
-    PouchDB.defaults({db: require('leveldown-mobile'), prefix: dbPath}) :
-    PouchDB.defaults({db: require('leveldown'), prefix: dbPath});
-};
+exports.createThaliAppServer = function () {
+  var app = express();
 
-exports.createThaliAppServer = function() {
-  var app = Express();
+  app.use('/db', expressPouchDB(testUtils.getLevelDownPouchDb(),
+    { mode: 'minimumForPouchDB'}));
 
-  app.use('/db', ExpressPouchDB(exports.LevelDownPouchDB(), { mode: 'minimumForPouchDB'}));
-
-  return new Promise(function(resolve, reject) {
-    app.listen(0, function() {
-      this.on('error', function(err) {
-        console.log("Server got error event: " + JSON.stringify(err));
+  return new Promise(function (resolve) {
+    app.listen(0, function () {
+      this.on('error', function (err) {
+        console.log('Server got error event: ' + JSON.stringify(err));
       });
       resolve({ app: app, server: this });
-    })
+    });
   });
 };
 
-exports.createSmallAndBigHash = function() {
+exports.createSmallAndBigHash = function () {
   var random1 = crypto.randomBytes(identityExchangeUtils.pkBufferLength);
   var random2 = crypto.randomBytes(identityExchangeUtils.pkBufferLength);
   if (identityExchangeUtils.compareEqualSizeBuffers(random1, random2) > 0) {
@@ -41,6 +33,7 @@ exports.createSmallAndBigHash = function() {
   }
 };
 
-exports.checkCode = function(t, code) {
-  t.ok(typeof code === "number" && code >= 0 && code < 1000000, "We got a code, did it check out?");
-}
+exports.checkCode = function (t, code) {
+  t.ok(typeof code === 'number' && code >= 0 && code < 1000000,
+    'We got a code, did it check out?');
+};

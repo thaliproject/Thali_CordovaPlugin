@@ -4,11 +4,11 @@
   "description": "Used to handle installing the Thali NPM package correctly into Cordova",
   "main": "install.js",
   "dependencies": {
-    "fs-extra-promise": "^0.2.0",
-    "jxc": "^1.0.14",
-    "lie": "^3.0.1",
-    "request": "^2.64.0",
-    "unzip": "^0.1.11"
+    "fs-extra-promise": "0.2.0",
+    "jxc": "1.0.14",
+    "lie": "3.0.4",
+    "request": "2.64.0",
+    "unzip": "0.1.11"
   },
   "scripts": {
     "setupUnit": "./setUpTests.sh UnitTest_app.js",

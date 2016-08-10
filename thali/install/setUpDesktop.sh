@@ -19,4 +19,6 @@ cd install
 jx npm install
 cd ../../test/www/jxcore
 jx npm link thali
+jx installCustomPouchDB.js
 jx npm install --no-optional
+

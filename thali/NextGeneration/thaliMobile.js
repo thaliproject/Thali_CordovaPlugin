@@ -2,9 +2,9 @@
 
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
-var logger = require('../thalilogger')('thaliMobile');
+var logger = require('../thaliLogger')('thaliMobile');
 
-var ThaliConfig = require('./thaliConfig');
+var thaliConfig = require('./thaliConfig');
 
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 
@@ -158,11 +158,6 @@ module.exports.start = function (router, pskIdToSecret) {
       return reject(new Error('Call Stop!'));
     }
     thaliMobileStates.started = true;
-    /* TODO remove commented code */
-    // peerAvailabilityWatcherInterval = setInterval(
-    //   peerAvailabilityWatcher,
-    //   ThaliConfig.PEER_AVAILABILITY_WATCHER_INTERVAL
-    // );
     module.exports.emitter.on('networkChanged', handleNetworkChanged);
     Promise.all([
       promiseResultSuccessOrFailure(
@@ -191,10 +186,11 @@ module.exports.start = function (router, pskIdToSecret) {
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
     thaliMobileStates = getInitialStates();
+
     removeAllWatchersFromPeers();
-    /* TODO remove commented code */
-    //clearInterval(peerAvailabilityWatcherInterval);
-    module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
+    module.exports.emitter
+      .removeListener('networkChanged', handleNetworkChanged);
+
     Promise.all([
       promiseResultSuccessOrFailure(
         thaliWifiInfrastructure.stop()
@@ -651,11 +647,11 @@ var updateAndCheckChanges = function (peer) {
 var getExtendedPeer = function (peer, connectionType) {
   var timeout = null;
   if (connectionType === connectionTypes.TCP_NATIVE) {
-    timeout = ThaliConfig.TCP_TIMEOUT_WIFI;
+    timeout = thaliConfig.TCP_TIMEOUT_WIFI;
   } else if (connectionType === connectionTypes.BLUETOOTH) {
-    timeout = ThaliConfig.TCP_TIMEOUT_BLUETOOTH;
+    timeout = thaliConfig.TCP_TIMEOUT_BLUETOOTH;
   } else if (connectionType === connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK) {
-    timeout = ThaliConfig.TCP_TIMEOUT_MPCF;
+    timeout = thaliConfig.TCP_TIMEOUT_MPCF;
   }
   assert(timeout !== null, 'timeout value must have been set');
   return {
@@ -747,15 +743,9 @@ var removeWatcherFromPeer = function (peer) {
 }
 
 var watchForPeer = function (peer) {
-  var connectionType = peer.connectionType;
-
   var now = Date.now();
-  var threshold =
-    connectionType === connectionTypes.TCP_NATIVE ?
-    ThaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
-    ThaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
 
-  if(peer.availableSince + threshold < now) {
+  if(peer.availableSince + peer.suggestedTCPTimeout < now) {
     changeCachedPeerUnavailable(peer);
     emitPeerUnavailable(peerIdentifier, connectionType);
   }

@@ -15,29 +15,27 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
 var utResult;
 
-Mobile('ExecuteNativeTests').callNative(function (result) {
-  utResult = true;
-  if (result && result.executed) {
-    console.log("Total number of executed tests: ", result.total);
-    console.log("Number of passed tests: ", result.passed);
-    console.log("Number of failed tests: ", result.failed);
-    console.log("Number of ignored tests: ", result.ignored);
-    console.log("Total duration: ", result.duration);
-    if (result.failed > 0) {
-      utResult = false;
+if (process.platform === 'android' || process.platform === 'ios') {
+  Mobile('ExecuteNativeTests').callNative(function (result) {
+    utResult = true;
+    if (result && result.executed) {
+      console.log('Total number of executed tests: ', result.total);
+      console.log('Number of passed tests: ', result.passed);
+      console.log('Number of failed tests: ', result.failed);
+      console.log('Number of ignored tests: ', result.ignored);
+      console.log('Total duration: ', result.duration);
+      if (result.failed > 0) {
+        utResult = false;
+      }
     }
+  });
+
+  if (!utResult) {
+    console.log('Failed to execute UT.');
+    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+    return;
   }
-});
-
-if (!utResult) {
-  console.log("Failed to execute UT.");
-  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-  return;
 }
-
-// TODO finish testing here (the node part will be omitted)
-console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-return;
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
