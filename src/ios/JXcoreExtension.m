@@ -8,7 +8,7 @@
 
 #import "JXcore.h"
 #import "JXcoreExtension.h"
-#import "Thali_CordovaPlugin-swift.h"
+#import "ThaliTest-swift.h"
 
 // JXcoreExtension implementation.
 @interface JXcoreExtension (Internal) <AppContextDelegate>
@@ -42,7 +42,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 {
     // Singleton instance.
     static AppContext * appContext = nil;
-    
+
     // If unallocated, allocate.
     if (!appContext)
     {
@@ -51,12 +51,12 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
         {
             appContext = [[AppContext alloc] init];
         };
-        
+
         // Dispatch allocator once.
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, allocator);
     }
-    
+
     // Done.
     return appContext;
 }
@@ -68,12 +68,12 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
                       [NSJSONSerialization dataWithJSONObject:object options:0 error:&err]
                                            encoding:NSUTF8StringEncoding
                       ];
-    
+
     if (err != nil)
     {
         @throw err;
     }
-    
+
     return json;
 }
 
@@ -92,7 +92,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 {
     AppContext *appContext = [JXcoreExtension appContext];
     appContext.delegate = self;
-    
+
     // Export the public API to node
     [self defineStartListeningForAdvertisements:appContext];
     [self defineStopListeningForAdvertisements:appContext];
@@ -109,11 +109,11 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
      {
          NSLog(@"jxcore: startListeningForAdvertisements");
-         
+
          if ([appContext startListeningForAdvertisements])
          {
              NSLog(@"jxcore: startListeningForAdvertisements: success");
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
@@ -122,7 +122,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
          else
          {
              NSLog(@"jxcore: startListeningForAdvertisements: failure");
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
@@ -135,11 +135,11 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
      {
          NSLog(@"jxcore: stopListeningForAdvertisements");
-         
+
          if ([appContext stopListeningForAdvertisements])
          {
              NSLog(@"jxcore: stopListeningForAdvertisements: success");
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
@@ -148,7 +148,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
          else
          {
              NSLog(@"jxcore: stopListeningForAdvertisements: failure");
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
@@ -161,11 +161,11 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
      {
          NSLog(@"jxcore: startUpdateAdvertisingAndListening");
-         
+
          if (params.count != 2 || ![params[0] isKindOfClass:[NSNumber class]])
          {
              NSLog(@"jxcore: startUpdateAdvertisingAndListening: bad arg");
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
@@ -176,7 +176,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
              if ([appContext startUpdateAdvertisingAndListeningWithServerPort:(unsigned short)[params[0] intValue]])
              {
                  NSLog(@"jxcore: startUpdateAdvertisingAndListening: success");
-                 
+
                  @synchronized(self)
                  {
                      [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
@@ -185,7 +185,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
              else
              {
                  NSLog(@"jxcore: startUpdateAdvertisingAndListening: failure");
-                 
+
                  @synchronized(self)
                  {
                      [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
@@ -199,11 +199,11 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId)
      {
          NSLog(@"jxcore: stopAdvertisingAndListening");
-         
+
          if ([appContext stopAdvertisingAndListening])
          {
              NSLog(@"jxcore: stopAdvertisingAndListening: success");
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
@@ -212,7 +212,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
          else
          {
              NSLog(@"jxcore: stopAdvertisingAndListening: failure");
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
@@ -227,7 +227,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
          if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]])
          {
              NSLog(@"jxcore: connect: badParam");
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
@@ -236,12 +236,12 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
          else
          {
              NSLog(@"jxcore: connect %@", params[0]);
-             ClientConnectCallback connectCallback = ^(NSString *errorMsg, NSDictionary *connection)
+             void (^connectCallback)(NSString *, NSDictionary *) = ^(NSString *errorMsg, NSDictionary *connection)
              {
                  if (errorMsg == nil)
                  {
                      NSLog(@"jxcore: connect: success");
-                     
+
                      @synchronized(self)
                      {
                          [JXcore callEventCallback:callbackId withParams:
@@ -251,14 +251,14 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
                  else
                  {
                      NSLog(@"jxcore: connect: fail: %@", errorMsg);
-                     
+
                      @synchronized(self)
                      {
                          [JXcore callEventCallback:callbackId withParams:@[errorMsg, [NSNull null]]];
                      }
                  }
              };
-             
+
              // We'll callback to the upper layer when the connect completes or fails
              [appContext connectToPeer:params[0] callback:connectCallback];
          }
@@ -269,11 +269,11 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
      {
          NSLog(@"jxcore: killConnections");
-         
+
          if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]])
          {
              NSLog(@"jxcore: killConnections: badParam");
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
@@ -284,7 +284,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
              if ([appContext killConnection: params[0]])
              {
                  NSLog(@"jxcore: killConnections: success");
-                 
+
                  @synchronized(self)
                  {
                      [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
@@ -293,7 +293,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
              else
              {
                  NSLog(@"jxcore: killConnections: fail");
-                 
+
                  @synchronized(self)
                  {
                      [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
@@ -324,7 +324,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
      {
-         NSString * const version = [[JXcore appContext] getIOSVersion];
+         NSString * const version = [appContext getIOSVersion];
          @synchronized(self)
          {
              [JXcore callEventCallback:callbackId withParams:@[version]];
@@ -342,7 +342,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
          {
              NSString *result = [appContext performSelector:@selector(executeNativeTests)];
 #pragma clang diagnostic pop
-             
+
              @synchronized(self)
              {
                  [JXcore callEventCallback:callbackId withJSON:result];
@@ -391,7 +391,7 @@ NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToP
 - (void)context:(AppContext * _Nonnull)context didFailIncomingConnectionToPort:(uint16_t)port {
     @synchronized(self)
     {
-        [JXcore callEventCallback:kIncomingConnectionToPortNumberFailed withParams:@[@(serverPort)]];
+        [JXcore callEventCallback:kIncomingConnectionToPortNumberFailed withParams:@[@(port)]];
     }
 }
 

@@ -8,9 +8,6 @@
 
 import Foundation
 import ThaliCore
-#if DEBUG
-import TThaliCoreCITests
-#endif
 
 public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 
@@ -130,15 +127,15 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     public func stopAdvertisingAndListening() -> Bool {
         return false
     }
-    
+
     /**
      try to establish connection with peer and open TCP listener
-     
+
      - parameter peer: identifier of peer to connect
      - parameter callback: callback with connection results.
      */
     public func connectToPeer(peer: String, callback:ClientConnectCallback) {
-        
+
     }
 
     /**
@@ -170,6 +167,5 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
         return runner.runResult.jsonString ?? ""
     }
 #endif
-    
+
 }
-    
