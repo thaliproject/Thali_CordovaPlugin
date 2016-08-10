@@ -700,15 +700,4 @@ var checkArgs = function (t, spy, description, args) {
   });
 }
 
-checkArgs.compareObjects = function (object1, object2) {
-  for (var key in object2) {
-    if (object2.hasOwnProperty(key)) {
-      if (object1[key] !== object2[key]) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 module.exports.checkArgs = checkArgs;
