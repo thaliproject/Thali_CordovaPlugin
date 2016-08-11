@@ -42,6 +42,7 @@ public class StreamCopyingThreadTest {
 
     @Before
     public void setUp() throws Exception {
+        System.out.println("Running UT from: StreamCopyingThreadTest");
         mResult = "Lorem ipsum dolor sit.";
         notifications = new ArrayList<Integer>();
 

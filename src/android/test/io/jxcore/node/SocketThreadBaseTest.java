@@ -21,6 +21,7 @@ public class SocketThreadBaseTest {
 
     @Before
     public void setUp() throws Exception {
+        System.out.println("Running UT from: SocketThreadBaseTest");
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();

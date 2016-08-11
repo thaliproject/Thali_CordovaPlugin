@@ -21,6 +21,7 @@ public class ConnectionModelTest {
 
     @Before
     public void setUp() throws Exception {
+        System.out.println("Running UT from: ConnectionModelTest");
         mConnectionModel = new ConnectionModel();
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();

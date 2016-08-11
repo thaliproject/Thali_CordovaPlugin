@@ -28,6 +28,7 @@ public class StartStopOperationHandlerTest {
 
     @Before
     public void setUp() throws Exception {
+        System.out.println("Running UT from: StartStopOperationHandlerTest");
         mConnectionHelper = new ConnectionHelper();
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
 

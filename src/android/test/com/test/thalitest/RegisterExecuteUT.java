@@ -82,6 +82,7 @@ public final class RegisterExecuteUT {
                 String logtag = "ExecuteNativeTests";
                 Log.d(logtag, "Running unit tests");
                 Result resultTest = ThaliTestRunner.runTests();
+                Log.d(logtag, "Finished unit test run");
 
                 JSONObject jsonObject = new JSONObject();
                 Boolean jsonObjectCreated = false;

@@ -39,6 +39,7 @@ public class IncomingSocketThreadTest {
 
     @Before
     public void setUp() throws Exception {
+        System.out.println("Running UT from: IncomingSocketThreadTest");
         outgoingOutputStream = new ByteArrayOutputStream();
         incomingOutputStream = new ByteArrayOutputStream();
 

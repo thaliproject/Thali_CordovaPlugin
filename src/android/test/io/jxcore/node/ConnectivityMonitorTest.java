@@ -60,6 +60,7 @@ public class ConnectivityMonitorTest {
 
     @Before
     public void setUp() throws Exception {
+        System.out.println("Running UT from: ConnectivityMonitorTest");
         mDiscoveryManagerListenerMock = new DiscoveryManagerListenerMock();
         mContext = jxcore.activity.getBaseContext();
         mDiscoveryManagerMock = new DiscoveryManagerMock(mContext, mDiscoveryManagerListenerMock,

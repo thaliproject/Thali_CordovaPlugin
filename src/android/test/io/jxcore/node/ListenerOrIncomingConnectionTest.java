@@ -21,6 +21,7 @@ public class ListenerOrIncomingConnectionTest {
 
     @Before
     public void setUp() throws Exception {
+        System.out.println("Running UT from: ListenerOrIncomingConnectionTest");
         mListenerOrIncomingConnection = new ListenerOrIncomingConnection();
         listeningPortNumberSample = 1111;
         clientPortNumberSample = 2222;

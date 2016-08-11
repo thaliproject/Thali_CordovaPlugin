@@ -50,6 +50,7 @@ public class ConnectionHelperTest {
 
     @Before
     public void setUp() throws Exception {
+        System.out.println("Running UT from: ConnectionHelperTest");
         outgoingThreadsIds = new ArrayList<String>();
         incomingThreadsIds = new ArrayList<String>();
         mInputStreamMock = new InputStreamMock();
