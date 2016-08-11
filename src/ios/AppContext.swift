@@ -65,6 +65,12 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     public weak var delegate: AppContextDelegate?
     private let serviceType: String
     private let appNotificationsManager: ApplicationStateNotificationsManager
+    private var networkChangedRegistered: Bool = false
+    
+    private func updateNetworkStatus() {
+        //todo put actual network status
+        delegate?.context(self, didChangeNetworkStatus: [:])
+    }
 
     public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
@@ -152,17 +158,16 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
         return false
     }
 
-    /**
-     Ask context to update its network status variables
-     */
-    public func updateNetworkStatus() {
-        //todo put actual network status
-        delegate?.context(self, didChangeNetworkStatus: [:])
-    }
-
     public func getIOSVersion() -> String {
         return NSProcessInfo().operatingSystemVersionString
     }
+    
+    public func didRegisterToNative(function: String) {
+        if function == AppContext.networkChanged() {
+            updateNetworkStatus()
+        }
+    }
+    
 
 #if TEST
     func executeNativeTests() -> String {
@@ -171,5 +176,71 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
         return runner.resultDescription ?? ""
     }
 #endif
+
+}
+
+/// Node functions names
+extension AppContext {
+    @objc public class func networkChanged() -> String {
+        return "networkChanged"
+    }
+
+    @objc public class func peerAvailabilityChanged() -> String {
+        return "peerAvailabilityChanged"
+    }
+
+    @objc public class func appEnteringBackground() -> String {
+        return "appEnteringBackground"
+    }
+
+    @objc public class func appEnteredForeground() -> String {
+        return "appEnteredForeground"
+    }
+
+    @objc public class func discoveryAdvertisingStateUpdateNonTCP() -> String {
+        return "discoveryAdvertisingStateUpdateNonTCP"
+    }
+
+    @objc public class func incomingConnectionToPortNumberFailed() -> String {
+        return "incomingConnectionToPortNumberFailed"
+    }
+
+    @objc public class func executeNativeTests() -> String {
+        return "executeNativeTests"
+    }
+
+    @objc public class func getOSVersion() -> String {
+        return "getOSVersion"
+    }
+
+    @objc public class func didRegisterToNative() -> String {
+        return "didRegisterToNative"
+    }
+
+    @objc public class func killConnections() -> String {
+        return "killConnections"
+    }
+
+    @objc public class func connect() -> String {
+        return "connect"
+    }
+
+    @objc public class func stopAdvertisingAndListening() -> String {
+        return "stopAdvertisingAndListening"
+    }
+
+    @objc public class func startUpdateAdvertisingAndListening() -> String {
+        return "startUpdateAdvertisingAndListening"
+    }
+
+    @objc public class func stopListeningForAdvertisements() -> String {
+        return "stopListeningForAdvertisements"
+    }
+
+    @objc public class func startListeningForAdvertisements() -> String {
+        return "startListeningForAdvertisements"
+    }
+
+
 
 }
