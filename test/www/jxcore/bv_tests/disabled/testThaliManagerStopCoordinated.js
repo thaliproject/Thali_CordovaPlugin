@@ -24,8 +24,6 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-var ThaliSendNotificationBasedOnReplication =
-  require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
 
 // DB defaultDirectory should be unique among all tests
 // and any instance of this test.
@@ -40,6 +38,7 @@ var defaultDirectory = path.join(
 // This is required for tape.coordinated server to generate participants.
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
+var publicBase64KeyForLocalDevice = ecdhForLocalDevice.getPublicKey('base64');
 
 // PouchDB name should be the same between peers.
 var DB_NAME = 'ThaliManagerCoordinated';
@@ -48,8 +47,6 @@ PouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
   defaultAdapter: LeveldownMobile
 });
 
-var thaliManager;
-
 var test = tape({
   setup: function (t) {
     t.data = publicKeyForLocalDevice.toJSON();
@@ -57,32 +54,12 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    Promise.resolve()
-    .then(function () {
-      if (thaliManager) {
-        return thaliManager.stop();
-      }
-    })
-    .then(function () {
-      fs.removeSync(defaultDirectory);
-    });
+    fs.removeSync(defaultDirectory);
+    t.end();
   }
 });
 
-test('test bump update_seq', function (t) {
-  // We can return '1' instead of 'update_seq' in order to force
-  // '/NotificationBeacons', '/{:db}/_changes', '/{:db}/_bulk_docs',
-  // '/{:db}/_local/something'.
-  sinon.stub(
-    ThaliSendNotificationBasedOnReplication.prototype,
-    '_findSequenceNumber'
-  )
-  .returns(
-    Promise.resolve().then(function () {
-      return 1;
-    })
-  );
-
+test('test uncaught exception', function (t) {
   var spySalti;
   var allRequestsStarted = new Promise(function (resolve) {
     spySalti = sinon.spy(function () {
@@ -114,38 +91,36 @@ test('test bump update_seq', function (t) {
 
   var ThaliManagerProxyquired =
   proxyquire('thali/NextGeneration/thaliManager', {
-    './replication/thaliSendNotificationBasedOnReplication':
-      ThaliSendNotificationBasedOnReplication,
     'salti': spySalti
   });
 
-  thaliManager = new ThaliManagerProxyquired(
+  var thaliManager = new ThaliManagerProxyquired(
     ExpressPouchDB,
     PouchDB,
     DB_NAME,
     ecdhForLocalDevice,
     new ThaliPeerPoolDefault()
   );
+
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
     t, publicKeyForLocalDevice
   );
-  thaliManager.start(partnerKeys)
 
+  // We are creating a local db for each participant.
+  var pouchDB = new PouchDB(DB_NAME);
+
+  pouchDB.put({
+    _id: publicBase64KeyForLocalDevice
+  })
   .then(function () {
-    t.ok(spySalti.called, 'salti has called');
-    spySalti.getCalls().forEach(function (data) {
-      t.equals(
-        data.args[0], DB_NAME,
-        'salti has called with DB_NAME as a first argument'
-      );
-    });
+    return thaliManager.start(partnerKeys);
   })
   .then(function () {
     return allRequestsStarted;
   })
   .then(function () {
-    t.end();
-  });
+    return thaliManager.stop();
+  })
 });
