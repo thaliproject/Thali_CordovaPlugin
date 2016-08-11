@@ -1,0 +1,12 @@
+os: Visual Studio 2015
+clone_folder: C:\Thali_CordovaPlugin
+install:
+- npm install -g cordova@6.1.0
+- appveyor DownloadFile http://jxcore.azureedge.net/jxcore/0312/release/jx_win64v8.zip
+- jar xf jx_win64v8.zip
+- SET PATH=%PATH%;C:\Thali_CordovaPlugin\jx_win64v8
+- SET NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
+- SET JX_NPM_JXB=jxb311
+build_script:
+- '"C:\Program Files\Git\bin\sh.exe" --login -c "./build.sh"'
+test: off

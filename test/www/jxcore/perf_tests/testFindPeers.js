@@ -12,20 +12,20 @@ var ThaliEmitter = require('thali/thaliemitter');
 
 /*
 "jsonData": {
-    "count": Specifies the number of peers we would need to discover,
     "timeout": Specifies the timeout when we would end discovery (in case we have not found all needed peers yet)
     }
 */
 
-function testFindPeers(jsonData,name) {
+function testFindPeers(jsonData, name, addressList) {
     var self = this;
     this.name = name;
-    this.commandData = JSON.parse(jsonData);
-    this.toFindCount = this.commandData.count;
+    this.bluetoothAddressList = addressList;
+    this.commandData = jsonData;
+    this.toFindCount = addressList ? addressList.length : 0;
     this.foundPeers = {};
     this.startTime = new Date();
     this.endTime = new Date();
-    this.endReason ="";
+    this.endReason = '';
     this.emitter = new ThaliEmitter();
 
     console.log('testFindPeers created ' + jsonData);
@@ -35,7 +35,7 @@ function testFindPeers(jsonData,name) {
             return;
         }
         console.log('peerAvailabilityChanged ' + JSON.stringify(peers));
-        for (var peer in peers) {
+        peers.forEach(function(peer) {
             self.foundPeers[peer.peerIdentifier] = peer;
 
             if(!self.foundPeers[peer.peerIdentifier].foundTime){
@@ -47,7 +47,7 @@ function testFindPeers(jsonData,name) {
                 self.emit('debug', "Found peer : " + peer.peerIdentifier + ", Available: " + peer.peerAvailable);
                 console.log("Found peer : " + peer.peerIdentifier + ", peerAvailable: " + peer.peerAvailable);
             }
-        }
+        });
 
         var howManyWeDiscoveredAlready = 0;
         for (var foundPeer in self.foundPeers) {
