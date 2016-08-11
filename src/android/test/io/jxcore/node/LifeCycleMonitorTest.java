@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Bundle;
 
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -24,8 +25,14 @@ public class LifeCycleMonitorTest {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        Thread.sleep(5000);
+    }
+
     @Before
     public void setUp() throws Exception {
+
         mContext = jxcore.activity.getBaseContext();
         mListener = new LifeCycleMonitorListenerMock();
         mLifeCycleMonitor = new LifeCycleMonitor(mListener);

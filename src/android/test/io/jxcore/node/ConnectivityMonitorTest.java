@@ -37,6 +37,7 @@ public class ConnectivityMonitorTest {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
+        Thread.sleep(5000);
         mDiscoveryManagerListenerMock = new DiscoveryManagerListenerMock();
         mContext = jxcore.activity.getBaseContext();
         mDiscoveryManagerMock = new DiscoveryManagerMock(mContext, mDiscoveryManagerListenerMock,
@@ -60,6 +61,7 @@ public class ConnectivityMonitorTest {
 
     @Before
     public void setUp() throws Exception {
+
         mDiscoveryManagerListenerMock = new DiscoveryManagerListenerMock();
         mContext = jxcore.activity.getBaseContext();
         mDiscoveryManagerMock = new DiscoveryManagerMock(mContext, mDiscoveryManagerListenerMock,
@@ -199,38 +201,40 @@ public class ConnectivityMonitorTest {
 
     @Test
     public void testIsBluetoothEnabled() throws Exception {
-        System.out.println("IsBluetoothEnabled");
-        mConnectivityMonitor.isBluetoothEnabled();
+        //System.out.println("IsBluetoothEnabled");
+        //mConnectivityMonitor.isBluetoothEnabled();
 
-        Thread checkEnabled = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (!mBluetoothManager.isBluetoothEnabled()) {
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-
-        Thread checkDisabled = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (mBluetoothManager.isBluetoothEnabled()) {
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
+//        Thread checkEnabled = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                while (!mBluetoothManager.isBluetoothEnabled()) {
+//                    try {
+//                        Thread.sleep(2000);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        });
+//
+//        Thread checkDisabled = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                while (mBluetoothManager.isBluetoothEnabled()) {
+//                    try {
+//                        Thread.sleep(2000);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        });
 
         mBluetoothManager.setBluetoothEnabled(false);
-        checkDisabled.start();
-        checkDisabled.join();
+        Thread.sleep(2000); //Wait for bluetooth to turn off
+
+//        checkDisabled.start();
+//        checkDisabled.join();
 
         mConnectivityMonitor.updateConnectivityInfo(false);
 
@@ -238,9 +242,10 @@ public class ConnectivityMonitorTest {
                 mConnectivityMonitor.isBluetoothEnabled(), is(false));
 
         mBluetoothManager.setBluetoothEnabled(true);
+        Thread.sleep(2000); //Wait for bluetooth to turn on
 
-        checkEnabled.start();
-        checkEnabled.join();
+//        checkEnabled.start();
+//        checkEnabled.join();
         mConnectivityMonitor.updateConnectivityInfo(false);
 
         assertThat("Returns proper state of BT when switched on",

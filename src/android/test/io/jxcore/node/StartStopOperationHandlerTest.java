@@ -4,6 +4,7 @@ import android.os.CountDownTimer;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
@@ -26,8 +27,14 @@ public class StartStopOperationHandlerTest {
     private StartStopOperationHandler mStartStopOperationHandler;
     private JXcoreThaliCallbackMock mJXcoreThaliCallback;
 
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        Thread.sleep(5000);
+    }
+
     @Before
     public void setUp() throws Exception {
+
         mConnectionHelper = new ConnectionHelper();
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
 
@@ -101,7 +108,7 @@ public class StartStopOperationHandlerTest {
         CountDownTimer mOperationTimeoutTimer =
                 (CountDownTimer) fOperationTimeoutTimer.get(mStartStopOperationHandler);
 
-        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
+        assertThat("mCurrentOperation should be null3", mCurrentOperation, is(nullValue()));
         assertThat("mOperationTimeoutTimer should be null", mOperationTimeoutTimer,
                 is(nullValue()));
     }
@@ -124,7 +131,7 @@ public class StartStopOperationHandlerTest {
         StartStopOperation mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
-        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
+        assertThat("mCurrentOperation should be null2", mCurrentOperation, is(nullValue()));
 
 
         if (!mDiscoveryManager1.isBleMultipleAdvertisementSupported()) {
@@ -178,20 +185,22 @@ public class StartStopOperationHandlerTest {
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
 
-        StartStopOperation mCurrentOperation =
-                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-        assertThat("mCurrentOperation is still not null", mCurrentOperation, is(notNullValue()));
-
         Method executeCurrentOperation = mStartStopOperationHandler.getClass()
                 .getDeclaredMethod("executeCurrentOperation");
         executeCurrentOperation.setAccessible(true);
         executeCurrentOperation.invoke(mStartStopOperationHandler);
 
-        Thread.sleep(3000); //After 3s mCurrentOperation should be null
+        Thread.sleep(3000);
+        fCurrentOperation.set(mStartStopOperationHandler, StartStopOperation.createStartOperation(false, mJXcoreThaliCallback));
+
+        StartStopOperation mCurrentOperation =
+                (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+
+        assertThat("mCurrentOperation should not be null1", mCurrentOperation, is(notNullValue()));
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
 
         mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
+        assertThat("mCurrentOperation should be null1", mCurrentOperation, is(nullValue()));
     }
 }

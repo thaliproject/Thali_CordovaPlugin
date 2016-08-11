@@ -44,12 +44,14 @@ public class ConnectionHelperTest {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
+        Thread.sleep(5000);
         mConnectionHelper = new ConnectionHelper();
         mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
     }
 
     @Before
     public void setUp() throws Exception {
+
         outgoingThreadsIds = new ArrayList<String>();
         incomingThreadsIds = new ArrayList<String>();
         mInputStreamMock = new InputStreamMock();

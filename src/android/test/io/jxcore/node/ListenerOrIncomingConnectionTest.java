@@ -2,6 +2,7 @@ package io.jxcore.node;
 
 import org.json.JSONObject;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -19,8 +20,14 @@ public class ListenerOrIncomingConnectionTest {
     int clientPortNumberSample;
     int serverPortNumberSample;
 
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        Thread.sleep(5000);
+    }
+
     @Before
     public void setUp() throws Exception {
+
         mListenerOrIncomingConnection = new ListenerOrIncomingConnection();
         listeningPortNumberSample = 1111;
         clientPortNumberSample = 2222;
