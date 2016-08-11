@@ -612,10 +612,10 @@ var changeCachedPeerAvailable = function (peer) {
   cachedPeer.availableSince = Date.now();
   peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
 
-  var watcherDoesNotExist = !isAvailabilityWatcherForPeerExist(peer);
+  var watcherDoesNotExist = !isAvailabilityWatcherForPeerExist(cachedPeer);
 
   if(watcherDoesNotExist) {
-    addAvailabilityWatcherToPeer(peer);
+    addAvailabilityWatcherToPeer(cachedPeer);
   }
 };
 
@@ -761,7 +761,7 @@ var watchForPeerAvailability = function (peer) {
 
   // If the time from the latest availability advertisement doesn't
   // exceed the threshold, no need to do anything.
-  if(peer.availableSince + peer.unavailabilityThreshold > now) {
+  if(peer.availableSince + unavailabilityThreshold > now) {
     return;
   }
 
