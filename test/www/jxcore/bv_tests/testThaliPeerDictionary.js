@@ -7,8 +7,8 @@ var PeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
 var ThaliNotificationAction =
   require('thali/NextGeneration/notification/thaliNotificationAction');
-var ThaliMobile =
-  require('thali/NextGeneration/thaliMobile');
+var ThaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var ENTRY1 = 'entry1';
@@ -33,7 +33,7 @@ function createEntry(name, state) {
 
   var connectionInfo =
     new PeerDictionary.PeerConnectionInformation(
-      ThaliMobile.connectionTypes.TCP_NATIVE, '127.0.0.1', 3001, 10);
+      ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE, '127.0.0.1', 3001, 10);
 
   var myPublicKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
   myPublicKey.generateKeys();
@@ -115,11 +115,11 @@ function verifyEntries(dictionary, baseString, start, end) {
 test('Test PeerConnectionInformation basics', function (t) {
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
-    ThaliMobile.connectionTypes.TCP_NATIVE,
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     '127.0.0.1', 123, 10);
 
   t.equals( connInfo.getConnectionType(),
-    ThaliMobile.connectionTypes.TCP_NATIVE, 'connection type works');
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE, 'connection type works');
 
   t.equals( connInfo.getHostAddress(),
     '127.0.0.1', 'getHostAddress works');

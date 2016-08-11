@@ -7,6 +7,7 @@ var logger = require('../thaliLogger')('thaliMobile');
 var thaliConfig = require('./thaliConfig');
 
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
+var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 
 var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
 var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
@@ -188,7 +189,7 @@ module.exports.start = function (router, pskIdToSecret) {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stop = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates = getInitialStates();
     clearInterval(peerAvailabilityWatcherInterval);
     module.exports.emitter
@@ -264,7 +265,7 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopListeningForAdvertisements = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates.listening = false;
     Promise.all([
       promiseResultSuccessOrFailure(
@@ -327,7 +328,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopAdvertisingAndListening = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates.advertising = false;
     Promise.all([
       promiseResultSuccessOrFailure(
@@ -357,7 +358,7 @@ module.exports.stopAdvertisingAndListening = function () {
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
 module.exports.getNetworkStatus = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return promiseQueue.enqueue(function (resolve) {
     ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
     .then(function (nonTCPNetworkStatus) {
       resolve(nonTCPNetworkStatus);
@@ -368,19 +369,6 @@ module.exports.getNetworkStatus = function () {
 /*
         EVENTS
  */
-
-/**
- * Enum to define the types of connections
- *
- * @readonly
- * @enum {string}
- */
-var connectionTypes = {
-  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
-  BLUETOOTH: 'AndroidBluetooth',
-  TCP_NATIVE: 'tcp'
-};
-module.exports.connectionTypes = connectionTypes;
 
 /**
  * It is the job of this module to provide the most reliable guesses (and that
@@ -577,11 +565,12 @@ module.exports.connectionTypes = connectionTypes;
  * @property {number} suggestedTCPTimeout Provides a hint to what time out to
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
- * @property {connectionTypes} connectionType Defines the kind of connection
- * that the request will eventually go over. This information is needed so that
- * we can better manage how we use the different transport types available to
- * us.
+ * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * Defines the kind of connection that the request will eventually go over. This
+ * information is needed so that we can better manage how we use the different
+ * transport types available to us.
  */
+
 
 var emitPeerUnavailable = function (peerIdentifier, connectionType) {
   module.exports.emitter.emit('peerAvailabilityChanged',
@@ -612,11 +601,12 @@ var changeCachedPeerAvailable = function (peer) {
 };
 
 var changePeersUnavailable = function (connectionType) {
-  Object.keys(peerAvailabilities[connectionType]).forEach(function (peerIdentifier) {
-    changeCachedPeerUnavailable(peerAvailabilities[connectionType]
-      [peerIdentifier]);
-    emitPeerUnavailable(peerIdentifier, connectionType);
-  });
+  Object.keys(peerAvailabilities[connectionType]).forEach(
+    function (peerIdentifier) {
+      changeCachedPeerUnavailable(peerAvailabilities[connectionType]
+        [peerIdentifier]);
+      emitPeerUnavailable(peerIdentifier, connectionType);
+    });
 };
 
 var updateAndCheckChanges = function (peer) {

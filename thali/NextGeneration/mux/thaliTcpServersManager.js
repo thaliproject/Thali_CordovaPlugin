@@ -19,79 +19,39 @@ var createPeerListener = require('./createPeerListener');
  * also send TCP/IP connections down the incoming connection (reverse the
  * polarity as it were).
  *
- * When dealing with discovered peers we like to advertise a port that the
- * Thali Application can connect to in order to talk to that peer. But for perf
+ * When dealing with discovered peers we like to advertise a port that the Thali
+ * Application can connect to in order to talk to that peer. But for perf
  * reasons that port is typically not connected to anything at the native layer
- * (with the exception of a lexically smaller peer) until someone connects to
- * the port. The reason for this design (thanks Ville!) is to make non-TCP and
- * TCP peers look the same. There is an address (in this case 127.0.0.1) and a
- * port and you connect and there you go. This file defines all the magic needed
- * to create the illusion that a non-TCP peer is actually available over TCP.
+ * until someone connects to the port. The reason for this design (thanks
+ * Ville!) is to make non-TCP and TCP peers look the same. There is an address
+ * (in this case 127.0.0.1) and a port and you connect and there you go. This
+ * file defines all the magic needed to create the illusion that a non-TCP peer
+ * is actually available over TCP.
  *
- * There are three different scenarios where multiplex objects can get
- * created:
- *
- * Android
- * - We get an incoming connection from the native layer to the portNumber we
+ * A multiplex object will be created when we:
+ * - get an incoming connection from the native layer to the portNumber we
  * submitted to startUpdateAdvertisingAndListening
  *  - We create a mux that pipes to the incoming TCP/IP connection.
- * - We get a peerAvailabilityChanged Event
+ * - get a peerAvailabilityChanged Event
  *  - We create a local listener and advertise nonTCPPeerAvailabilityChanged.
  *  When we get a connection to that listener then we call native connect,
  *  create a connection to the native connect port, hook the mux to that
  *  connection on one end and the incoming listener to the mux on the other end.
- *
- * iOS - Lexically Smaller Peer
- * - We get an incoming connection from the native layer to the portNumber we
- * submitted to startUpdateAdvertisingAndListening
- *  - We create a mux that pipes to the incoming TCP/IP connection. We keep
- *  track of this mux because we might need it in the next entry. Remember, we
- *  don't know which peer made the incoming connection.
- * - We get a peerAvailabilityChanged Event
- *  - Because we are lexically smaller this event will have pleaseConnect set
- *  to false. So we create a port and advertise it on
- *  nonTCPPeerAvailabilityChanged. When we get a connection we call connect. If
- *  there is already an incoming connection then the connect will return with
- *  the clientPort/serverPort and we will re-use the existing mux If there is no
- *  existing incoming connection then the system will wait to trigger the
- *  lexically larger peer to create it and once it is created and properly
- *  terminated (per the previous section) then we will find the mux via
- *  clientPort/ServerPort.
- *
- * iOS - Lexically Larger Peer
- * - We get an incoming connection from the native layer to the portNumber we
- * submitted to startUpdateAdvertisingAndListening
- *  - It isn't possible.
- * - We get a peerAvailabilityChanged Event
- *  - If the peerAvailabilityChanged Event has pleaseConnect set to true then
- *  baring any limitation on available resources we should immediately issue a
- *  connect and hook in the mux to it configured to handling incoming
- *  connections and then create a TCP listener and have it use createStream with
- *  the mux for any incoming connections. Obviously if we already have a
- *  connection to the identified peer then we can ignore the pleaseConnect
- *  value.
- *  - If the peerAvailabilityChanged Event has pleaseConnect set to false
- *  then we will set up a TCP listener and advertise the port but we won't
- *  create the mux or call connect until the first connection to the TCP
- *  listener comes in.
  *
  *  We have two basic kinds of listeners. One type is for incoming
  *  connections from remote peers. In that case we will have a TCP connection
  *  from the native layer connecting to us which we will then connect to a
  *  multiplex object. The other listener is for connections from a Thali App to
  *  a remote peer. In that case we will create a TCP connection to a native
- *  listener and hook our TCP connection into a multiplex object. And of course
- *  with the iOS situation sometimes it all gets mixed up.
+ *  listener and hook our TCP connection into a multiplex object.
  *
- *  But the point is that each listener has at its root a TCP connection
- *  either going out to or coming in from the native layer. Because keeping
- *  native connections open eats battery (although this is probably a much less
- *  significant issue with iOS due to its UDP based design) we don't want to let
- *  connections hang open unused. This is why we put a timeout on the TCP
- *  connection under the multiplex. That connection sees all traffic in both
- *  directions (e.g. even in the iOS case where we mux connections both ways)
- *  and so it knows if anything is happening. If all is quiet then it knows it
- *  can kill the connection.
+ *  But the point is that each listener has at its root a TCP connection either
+ *  going out to or coming in from the native layer. Because keeping native
+ *  connections open eats battery we don't want to let connections hang open
+ *  unused. This is why we put a timeout on the TCP connection under the
+ *  multiplex. That connection sees all traffic in both directions (e.g. even in
+ *  the iOS case where we mux connections both ways) and so it knows if anything
+ *  is happening. If all is quiet then it knows it can kill the connection.
  *
  *  We also need to deal with cleaning things up when they go wrong.
  *  Typically we will focus the cleanup code on the multiplex object. It will
@@ -319,12 +279,8 @@ ThaliTcpServersManager.prototype.terminateOutgoingConnection =
  * Notifies the listener of a failed connection attempt. This is mostly used to
  * determine when we have hit the local maximum connection limit but it's used
  * any time there is a connection error since the only other hint that a
- * connection has failed is that the TCP/IP connection to the 127.0.0.1 port will
- * fail.
- *
- * In the case that this error is generated from a callback to the
- * {@link external:"Mobile('connect')".callNative} method then the error
- * returned by connect MUST be returned in this event.
+ * connection has failed is that the TCP/IP connection to the 127.0.0.1 port
+ * will fail.
  *
  * @public
  * @event failedConnection

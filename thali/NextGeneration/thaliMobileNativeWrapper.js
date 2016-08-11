@@ -56,7 +56,7 @@ module.exports._isStarted = function () {
  * native layer. All the methods defined in this file are asynchronous. However,
  * with the exception of {@link module:thaliMobileNativeWrapper.emitter}, {@link
  * module:thaliMobileNativeWrapper.connect}, {@link
- * module:thaliMobileNativeWrapper.multiConnect}, {@link
+ * module:thaliMobileNativeWrapper.multiConnect} and {@link
  * module:thaliMObileNativeWrapper.disconnect), any time a method is called the
  * invocation will immediately return but the request will actually be put on a
  * queue and all incoming requests will be run out of that queue. This means
@@ -545,8 +545,11 @@ module.exports.getNonTCPNetworkStatus = function () {
 
 // jscs:disable jsDoc
 /**
- * This is used for native connections and calls through to
- * ThaliTcpServersManager.
+ * This is used on `connect` platforms for native connections and calls through
+ * to ThaliTcpServersManager.
+ *
+ * If called on a non-`connect` platform then a 'Not connect platform' error
+ * MUST be returned.
  *
  * @param {Object} incomingConnectionId
  * @returns {Promise<?Error>}
@@ -565,12 +568,16 @@ module.exports.terminateConnection = function (incomingConnectionId) {
 };
 
 /**
- * Terminates a server listening for connections to be sent to a remote device.
+ * Used on `connect` platforms to terminate a TCP/IP listener waiting for
+ * connections to be sent to a remote device.
  *
  * It is NOT an error to terminate a listener that has already been terminated.
  *
  * This method MUST be idempotent so multiple calls with the same value MUST NOT
  * cause an error or a state change.
+ *
+ * If called on a non-`connect` platform then a 'Not connect platform' error
+ * MUST be returned.
  *
  * @param {string} peerIdentifier
  * @param {number} port
@@ -628,6 +635,40 @@ module.exports.killConnections = function () {
 
 /*
         EVENTS
+ */
+
+/**
+ * Enum to define the types of connections
+ *
+ * @readonly
+ * @enum {string}
+ */
+var connectionTypes = {
+  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
+  BLUETOOTH: 'AndroidBluetooth',
+  TCP_NATIVE: 'tcp'
+};
+module.exports.connectionTypes = connectionTypes;
+
+/**
+ *
+ * @public
+ * @typedef {Object} failedNativeConnection
+ * @property {Error} error
+ * @property {string} peerIdentifier
+ * @property {connectionTypes} connectionType
+ */
+
+/**
+ * Fired when a native connection is lost. This event is fired either as a
+ * result of {@link module:ThaliTcpServersManager.event:failedConnection} or
+ * as a result of
+ * {@link module:ThaliMobileNative.event:multiConnectionConnectionFailure}.
+
+ * @public
+ * @event failedNativeConnectionEvent
+ * @type {Object}
+ * @property {failedNativeConnection} failedConnection
  */
 
 /**
@@ -697,7 +738,7 @@ module.exports.killConnections = function () {
  * @public
  * @event nonTCPPeerAvailabilityChangedEvent
  * @type {Object}
- * @property {module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} peer
+ * @property {nonTCPPeerAvailabilityChanged} peer
  */
 // jscs:enable maximumLineLength
 var peerAvailabilityChangedQueue = new PromiseQueue();
@@ -820,7 +861,7 @@ module.exports.routerFailureReason = {
  * @fires event:networkChangedNonTCP
  * @fires event:incomingConnectionToPortNumberFailed
  * @fires event:discoveryAdvertisingStateUpdateNonTCP
- * @fires module:TCPServersManager~failedConnection We repeat these events
+ * @fires event:failedNativeConnectionEvent
  * @fires module:TCPServersManager~incomingConnectionState we repeat these
  * events.
  */
