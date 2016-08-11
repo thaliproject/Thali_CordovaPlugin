@@ -14,59 +14,59 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
     /**
      Notifies about context's peer changes
-     
+
      - parameter peers:   array of changed peers
      - parameter context: related AppContext
      */
-    func peerAvailabilityChanged(peers: Array<[String : AnyObject]>, inContext context: AppContext)
-    
+    func context(context: AppContext, didChangePeerAvailability peers: Array<[String : AnyObject]>)
+
     /**
      Notifies about network status changes
-     
+
      - parameter status:  dictionary with current network availability status
      - parameter context: related AppContext
      */
-    func networkStatusChanged(status: [String : AnyObject], inContext context: AppContext)
-    
+    func context(context: AppContext, didChangeNetworkStatus status: [String : AnyObject])
+
     /**
      Notifies about peer advertisement update
-     
+
      - parameter discoveryAdvertisingState: dictionary with information about peer's state
      - parameter context:                   related AppContext
      */
-    func discoveryAdvertisingStateUpdate(discoveryAdvertisingState: [String : AnyObject], inContext context: AppContext)
-    
+    func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: [String : AnyObject])
+
     /**
      Notifies about failing connection to port
-     
+
      - parameter port:      port failed to connect
      - parameter context: related AppContext
      */
-    func incomingConnectionFailed(toPort port: UInt16, inContext context: AppContext)
-    
+    func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16)
+
     /**
      Notifies about entering background
-     
+
      - parameter context: related AppContext
      */
-    func appWillEnterBackground(context: AppContext)
-    
+    func appWillEnterBackground(withContext context: AppContext)
+
     /**
      Notifies about entering foreground
-     
+
      - parameter context: related AppContext
      */
-    func appDidEnterForeground(context: AppContext)
+    func appDidEnterForeground(withContext context: AppContext)
 }
 
 /// Interface for communication between native and cross-platform parts
 @objc public final class AppContext: NSObject {
     /// delegate for AppContext's events
-    private weak var delegate: AppContextDelegate?
+    public weak var delegate: AppContextDelegate?
     private let serviceType: String
     private let appNotificationsManager: ApplicationStateNotificationsManager
 
-    public init(serviceType: String, delegate: AppContextDelegate?) {
+    public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
         super.init()
@@ -74,18 +74,14 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.delegate?.appDidEnterForeground(strongSelf)
+            strongSelf.delegate?.appDidEnterForeground(withContext: strongSelf)
         }
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.delegate?.appWillEnterBackground(strongSelf)
+            strongSelf.delegate?.appWillEnterBackground(withContext: strongSelf)
         }
-    }
-
-    deinit {
-        NSNotificationCenter.defaultCenter().removeObserver(self)
     }
 
     /**
@@ -130,8 +126,18 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 
      - returns: true if successful
      */
-    public func stopAdvertising() -> Bool {
+    public func stopAdvertisingAndListening() -> Bool {
         return false
+    }
+
+    /**
+     try to establish connection with peer and open TCP listener
+
+     - parameter peer: identifier of peer to connect
+     - parameter callback: callback with connection results.
+     */
+    public func connectToPeer(peer: String, callback:ClientConnectCallback) {
+
     }
 
     /**
@@ -150,5 +156,20 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
      Ask context to update its network status variables
      */
     public func updateNetworkStatus() {
+        //todo put actual network status
+        delegate?.context(self, didChangeNetworkStatus: [:])
     }
+
+    public func getIOSVersion() -> String {
+        return NSProcessInfo().operatingSystemVersionString
+    }
+
+#if TEST
+    func executeNativeTests() -> String {
+        let runner = TestRunner.`default`
+        runner.runTest()
+        return runner.resultDescription ?? ""
+    }
+#endif
+
 }
