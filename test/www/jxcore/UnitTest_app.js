@@ -15,30 +15,30 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
 var utResult;
 
-if (process.platform === 'android' || process.platform === 'ios') {
-  console.log('Running unit tests');
-  Mobile('ExecuteNativeTests').callNative(function (result) {
-    console.log('Finished unit tests');
-    utResult = true;
-    if (result && result.executed) {
-      console.log('Total number of executed tests: ', result.total);
-      console.log('Number of passed tests: ', result.passed);
-      console.log('Number of failed tests: ', result.failed);
-      console.log('Number of ignored tests: ', result.ignored);
-      console.log('Total duration: ', result.duration);
-      if (result.failed > 0) {
-        console.log('Failures: \n', result.failures);
-        utResult = false;
-      }
-    }
-  });
-
-  if (!utResult) {
-    console.log('Failed to execute UT.');
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-    return;
-  }
-}
+//if (process.platform === 'android' || process.platform === 'ios') {
+//  console.log('Running unit tests');
+//  Mobile('ExecuteNativeTests').callNative(function (result) {
+//    console.log('Finished unit tests');
+//    utResult = true;
+//    if (result && result.executed) {
+//      console.log('Total number of executed tests: ', result.total);
+//      console.log('Number of passed tests: ', result.passed);
+//      console.log('Number of failed tests: ', result.failed);
+//      console.log('Number of ignored tests: ', result.ignored);
+//      console.log('Total duration: ', result.duration);
+//      if (result.failed > 0) {
+//        console.log('Failures: \n', result.failures);
+//        utResult = false;
+//      }
+//    }
+//  });
+//
+//  if (!utResult) {
+//    console.log('Failed to execute UT.');
+//    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+//    return;
+//  }
+//}
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
