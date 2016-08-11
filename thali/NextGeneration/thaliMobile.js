@@ -698,7 +698,6 @@ peerAvailabilityWatchers[connectionTypes.BLUETOOTH] = {};
 peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
 
 var addAvailabilityWatcherToPeer = function (peer) {
-
   var connectionType = peer.connectionType;
   var peerId = peer.peerIdentifier;
   var unavailabilityThreshold =
