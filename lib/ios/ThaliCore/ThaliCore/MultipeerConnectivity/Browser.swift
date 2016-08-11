@@ -9,26 +9,22 @@
 import Foundation
 import MultipeerConnectivity
 
-protocol BrowserDelegate: class {
-    func browser(browser: Browser, didFindPeer peer: String)
-    func browser(browser: Browser, didLosePeer peer: String)
-}
-
 final class Browser: NSObject {
     private let browser: MCNearbyServiceBrowser
     private var activeSessions: [SessionManager] = []
     private let canConnectToPeer: (PeerIdentifier) -> Bool
-    private let foundPeerWithIdentifier: (PeerIdentifier) -> Void
+    private let foundPeer: (PeerIdentifier) -> Void
 
     let peerIdentifier: PeerIdentifier
     internal private(set) var isListening: Bool = false
-    weak var delegate: BrowserDelegate?
 
-    required init(peerIdentifier: PeerIdentifier, serviceType: String, canConnectToPeer: (PeerIdentifier) -> Bool, foundPeerWithIdentifier: (PeerIdentifier) -> Void) {
+    required init(peerIdentifier: PeerIdentifier, serviceType: String, canConnectToPeer: (PeerIdentifier) -> Bool,
+                  foundPeer: (PeerIdentifier) -> Void,
+                  lostPeer: (PeerIdentifier) -> Void) {
         browser = MCNearbyServiceBrowser(peer: peerIdentifier.mcPeer, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
         self.canConnectToPeer = canConnectToPeer
-        self.foundPeerWithIdentifier = foundPeerWithIdentifier
+        self.foundPeer = foundPeer
         super.init()
         browser.delegate = self
     }
@@ -56,14 +52,19 @@ extension Browser: MCNearbyServiceBrowserDelegate {
                         foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
         do {
             let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
-            foundPeerWithIdentifier(peerIdentifier)
+            foundPeer(peerIdentifier)
         } catch let error {
-            print("cannot connect to peer \"\(peerID.displayName)\" because of error: \(error)")
+            print("cannot parse identifier \"\(peerID.displayName)\" because of error: \(error)")
         }
     }
 
     func browser(browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
-        delegate?.browser(self, didLosePeer: peerID.displayName)
+        do {
+            let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
+            foundPeer(peerIdentifier)
+        } catch let error {
+            print("cannot parse identifier \"\(peerID.displayName)\" because of error: \(error)")
+        }
     }
 
     func browser(browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: NSError) {

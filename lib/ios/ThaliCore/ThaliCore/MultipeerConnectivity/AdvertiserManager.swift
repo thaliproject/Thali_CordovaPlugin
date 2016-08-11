@@ -28,7 +28,7 @@ import Foundation
         return advertiser
     }
 
-    public func startAdvertisingAndListeningToPort(port: UInt16) {
+    public func startAdvertisingAndListening(port: UInt16) {
 
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
@@ -44,7 +44,12 @@ import Foundation
     public func stopAdvertisingAndListening() {
         guard let currentAdvertiser = self.currentAdvertiser where currentAdvertiser.isAdvertising else {
             assert(false, "there is no active listener")
+            return
         }
         currentAdvertiser.stopAdvertising()
+    }
+    
+    public func startUpdateAdvertisingAndListening(port: UInt16) {
+        
     }
 }

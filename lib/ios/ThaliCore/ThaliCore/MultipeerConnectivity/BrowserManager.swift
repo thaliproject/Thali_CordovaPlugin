@@ -8,21 +8,32 @@
 
 import Foundation
 
+public struct PeerAvailability {
+    public let peerIdentifier: PeerIdentifier
+    public let available: Bool
+}
+
 //class for managing Thali browser's logic
-@objc public final class BrowserManager: NSObject {
+public final class BrowserManager: NSObject {
     private var currentBrowser: Browser?
     let serviceType: String
+    private let peersAvailabilityChanged: ([PeerAvailability]) -> Void
 
-    init(serviceType: String) {
+    public init(serviceType: String, peersAvailabilityChanged: ([PeerAvailability]) -> Void) {
         self.serviceType = serviceType
+        self.peersAvailabilityChanged = peersAvailabilityChanged
     }
 
     private func canConnectToPeer(identifier: PeerIdentifier) -> Bool {
         return true
     }
 
-    private func foundPeerWithIdentifier(identifier: PeerIdentifier) {
+    private func foundPeer(withIdentifier identifier: PeerIdentifier) {
+        peersAvailabilityChanged([PeerAvailability(peerIdentifier: identifier, available: true)])
+    }
 
+    private func lostPeer(withIdentifier identifier: PeerIdentifier) {
+        peersAvailabilityChanged([PeerAvailability(peerIdentifier: identifier, available: false)])
     }
 
     public func startListeningForAdvertisements() {
@@ -30,7 +41,7 @@ import Foundation
             currentBrowser.stopListening()
         }
         let browser = Browser(peerIdentifier: PeerIdentifier(), serviceType: serviceType,
-                canConnectToPeer: canConnectToPeer, foundPeerWithIdentifier: foundPeerWithIdentifier)
+                canConnectToPeer: canConnectToPeer, foundPeer: foundPeer, lostPeer: lostPeer)
         browser.startListening()
         self.currentBrowser = browser
     }
@@ -38,6 +49,7 @@ import Foundation
     public func stopListeningForAdvertisements() {
         guard let currentBrowser = self.currentBrowser where currentBrowser.isListening else {
             assert(false, "there is no active listener")
+            return
         }
         currentBrowser.stopListening()
     }
@@ -45,6 +57,7 @@ import Foundation
     public func connectToPeer(identifier: PeerIdentifier, withPort port: UInt16) {
         guard let currentBrowser = self.currentBrowser where currentBrowser.isListening else {
             assert(false, "there is no active listener")
+            return
         }
         currentBrowser.connectToPeer(withIdentifier: identifier, port: port)
     }
