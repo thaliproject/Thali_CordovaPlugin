@@ -109,6 +109,7 @@ public class StartStopOperationHandlerTest {
     @Test
     public void testExecuteStartOperation() throws Exception {
         mStartStopOperationHandler.executeStartOperation(false, mJXcoreThaliCallback);
+        Thread.sleep(3000); //After 3s mCurrentOperation should be null
 
         Field fDiscoveryManager =
                 mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
@@ -122,6 +123,8 @@ public class StartStopOperationHandlerTest {
                 (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
         StartStopOperation mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+
+        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
 
 
         if (!mDiscoveryManager1.isBleMultipleAdvertisementSupported()) {
@@ -131,15 +134,12 @@ public class StartStopOperationHandlerTest {
             assertThat("mDiscoveryManager1 should be not running",
                     mDiscoveryManager1.isRunning(),
                     is(false));
-            assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
         } else {
             assertThat("mDiscoveryManager1 state should not be NOT_STARTED",
                     mDiscoveryManager1.getState(),
                     is(not(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED))));
             assertThat("mDiscoveryManager1 should be running", mDiscoveryManager1.isRunning(),
                     is(true));
-            assertThat("mCurrentOperation should not be null", mCurrentOperation,
-                    is(notNullValue()));
         }
     }
 
@@ -147,6 +147,7 @@ public class StartStopOperationHandlerTest {
     public void testExecuteStopOperation() throws Exception {
         mStartStopOperationHandler.executeStartOperation(false, mJXcoreThaliCallback);
         mStartStopOperationHandler.executeStopOperation(false, mJXcoreThaliCallback);
+        Thread.sleep(3000); //After 3s mCurrentOperation should be null
 
         Field fCurrentOperation = mStartStopOperationHandler.getClass()
                 .getDeclaredField("mCurrentOperation");
@@ -161,13 +162,7 @@ public class StartStopOperationHandlerTest {
         DiscoveryManager mDiscoveryManager1 =
                 (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
 
-        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
-            assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-
-        } else {
-            assertThat("mCurrentOperation should not be null", mCurrentOperation,
-                    is(notNullValue()));
-        }
+        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
 
         assertThat("mDiscoveryManager1 state should be NOT_STARTED", mDiscoveryManager1.getState(),
                 is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
@@ -192,7 +187,7 @@ public class StartStopOperationHandlerTest {
         executeCurrentOperation.setAccessible(true);
         executeCurrentOperation.invoke(mStartStopOperationHandler);
 
-        Thread.sleep(5000);
+        Thread.sleep(3000); //After 3s mCurrentOperation should be null
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
 

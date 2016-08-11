@@ -135,6 +135,8 @@ public class StartStopOperationTest {
         StartStopOperation mStartStopOperation =
                 StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
+        Thread.sleep(1000);
+
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
                 is(notNullValue()));
         assertThat("getCallback should be equal to mJXcoreThaliCallback",
@@ -143,6 +145,8 @@ public class StartStopOperationTest {
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         mStartStopOperation =
                 StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+
+        Thread.sleep(1000);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
                 is(notNullValue()));
@@ -344,6 +348,4 @@ public class StartStopOperationTest {
         assertThat("Result should be Stop operation: Should affect listening to advertisements only",
             result, is(equalTo("Stop operation: Should affect listening to advertisements only")));
     }
-
-
 }
