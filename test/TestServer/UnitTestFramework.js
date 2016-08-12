@@ -108,7 +108,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       'Aborting unit test run for %s. At least 2 devices needed, having %d device(s)',
       platform, this.devices[platform].length
     );
-    self.abortRun(devices, platform, tests, results);
+    this.abortRun(devices, platform, tests, results);
   }
 
   logger.info(
