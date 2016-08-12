@@ -149,7 +149,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
   if (buildWithTests) {
     projectScheme = 'ThaliCoreCITests';
   }
- 
+
   var projectConfiguration = 'Release';
   var sdk = 'iphoneos';
   var projectPath = path.join(projectDir, projectName + '.xcodeproj');
