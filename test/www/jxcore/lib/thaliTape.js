@@ -299,6 +299,12 @@ thaliTape.begin = function (version, hasRequiredHardware) {
     }
   });
 
+  testServer.once('aborted', function () {
+    testUtils.logMessageToScreen('Tests aborted');
+    complete = true;
+    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+  });
+
   // Only used for testing purposes..
   thaliTape._testServer = testServer;
 };
