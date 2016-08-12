@@ -109,6 +109,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       platform, this.devices[platform].length
     );
     this.abortRun(devices, platform, tests, results);
+    return;
   }
 
   logger.info(
