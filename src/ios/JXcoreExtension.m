@@ -24,23 +24,6 @@
     return nil;
 }
 
-+ (AppContext *)appContext {
-    // Singleton instance.
-    static AppContext * appContext = nil;
-
-    // If unallocated, allocate.
-    if (!appContext) {
-        // Dispatch allocator once.
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            appContext = [[AppContext alloc] init];
-        });
-    }
-
-    // Done.
-    return appContext;
-}
-
 + (NSString *)objectToJSON:(NSObject *)object {
     NSError *err = nil;
     NSString *json = [[NSString alloc] initWithData:
@@ -59,7 +42,14 @@
 
 // Defines methods.
 - (void)defineMethods {
-    AppContext *appContext = [JXcoreExtension appContext];
+    static AppContext * appContext = nil;
+    
+    if (!appContext) {
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            appContext = [[AppContext alloc] init];
+        });
+    }
     appContext.delegate = self;
 
     // Export the public API to node
