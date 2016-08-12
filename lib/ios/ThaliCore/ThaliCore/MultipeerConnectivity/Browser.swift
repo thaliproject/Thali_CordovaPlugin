@@ -31,8 +31,7 @@ final class Browser: NSObject {
 
     func connectToPeer(withIdentifier identifier: PeerIdentifier, port: UInt16) {
         if canConnectToPeer(peerIdentifier) {
-            let session = SessionManager(peer: identifier.mcPeer)
-            session.connectToPort(port)
+//            browser.invitePeer(identifier.mcPeer, toSession: session, withContext: nil, timeout: 30)
         }
     }
     

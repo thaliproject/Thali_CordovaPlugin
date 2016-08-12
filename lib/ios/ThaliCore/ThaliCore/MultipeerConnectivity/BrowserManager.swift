@@ -17,11 +17,10 @@ public struct PeerAvailability {
 public final class BrowserManager: NSObject {
     private var currentBrowser: Browser?
     let serviceType: String
-    private let peersAvailabilityChanged: ([PeerAvailability]) -> Void
+    public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil
 
-    public init(serviceType: String, peersAvailabilityChanged: ([PeerAvailability]) -> Void) {
+    public init(serviceType: String) {
         self.serviceType = serviceType
-        self.peersAvailabilityChanged = peersAvailabilityChanged
     }
 
     private func canConnectToPeer(identifier: PeerIdentifier) -> Bool {
@@ -29,11 +28,11 @@ public final class BrowserManager: NSObject {
     }
 
     private func foundPeer(withIdentifier identifier: PeerIdentifier) {
-        peersAvailabilityChanged([PeerAvailability(peerIdentifier: identifier, available: true)])
+        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
     }
 
     private func lostPeer(withIdentifier identifier: PeerIdentifier) {
-        peersAvailabilityChanged([PeerAvailability(peerIdentifier: identifier, available: false)])
+        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
     }
 
     public func startListeningForAdvertisements() {

@@ -23,7 +23,7 @@ class AppContextTests: XCTestCase {
             @objc func appDidEnterForeground(withContext context: AppContext) {}
         }
 
-        let context = AppContext()
+        let context = AppContext(serviceType: "thalitest")
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
         context.didRegisterToNative(AppContext.networkChanged())

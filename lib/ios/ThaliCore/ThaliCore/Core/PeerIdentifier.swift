@@ -48,7 +48,7 @@ public struct PeerIdentifier {
         return PeerIdentifier(uuidIdentifier: uuid, generation: generation + 1)
     }
 
-    var stringValue: String {
+    public var stringValue: String {
         return "\(uuid):\(String(generation, radix: 16))"
     }
 }

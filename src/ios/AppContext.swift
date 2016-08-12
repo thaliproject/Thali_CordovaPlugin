@@ -9,7 +9,7 @@
 import Foundation
 import ThaliCore
 
-public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
+public typealias ClientConnectCallback = (error: String, info: [String : AnyObject]) -> Void
 
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
     /**
@@ -66,27 +66,43 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     private let serviceType: String
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
+    private let browserManager: BrowserManager
+    private let advertiserManager: AdvertiserManager
     
     private func updateNetworkStatus() {
         //todo put actual network status
         delegate?.context(self, didChangeNetworkStatus: [:])
     }
+    
+    private func willEnterBackground() {
+        delegate?.appWillEnterBackground(withContext: self)
+    }
+    
+    private func didEnterForeground() {
+        delegate?.appDidEnterForeground(withContext: self)
+    }
+    
+    private func peersAvailabilityChanged(peers: [PeerAvailability]) {
+        let mappedPeers = peers.map {
+            $0.dictionaryValue
+        }
+        delegate?.context(self, didChangePeerAvailability: mappedPeers)
+    }
 
     public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
+        browserManager = BrowserManager(serviceType: serviceType)
+        advertiserManager = AdvertiserManager(serviceType: serviceType)
         super.init()
-        appNotificationsManager.didEnterForegroundHandler = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.delegate?.appDidEnterForeground(withContext: strongSelf)
+        browserManager.peersAvailabilityChanged = { [weak self] peers in
+            self?.peersAvailabilityChanged(peers)
+        }
+        appNotificationsManager.didEnterForegroundHandler = {[weak self] in
+            self?.willEnterBackground()
         }
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.delegate?.appWillEnterBackground(withContext: strongSelf)
+            self?.willEnterBackground()
         }
     }
 
@@ -96,7 +112,8 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
      - returns: true if successful
      */
     public func startListeningForAdvertisements() -> Bool {
-        return false
+        browserManager.startListeningForAdvertisements()
+        return true
     }
 
     /**
@@ -105,7 +122,8 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
      - returns: true if successful
      */
     public func stopListeningForAdvertisements() -> Bool {
-        return false
+        browserManager.stopListeningForAdvertisements()
+        return true
     }
 
     /**
@@ -115,16 +133,8 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
      - returns: true if successful
      */
     public func startUpdateAdvertisingAndListening(withServerPort port: UInt16) -> Bool {
-        return false
-    }
-
-    /**
-     Stop the client components
-
-     - returns: true if successful
-     */
-    public func stopListening() -> Bool {
-        return false
+        advertiserManager.startUpdateAdvertisingAndListening(port)
+        return true
     }
 
     /**
@@ -133,7 +143,8 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
      - returns: true if successful
      */
     public func stopAdvertisingAndListening() -> Bool {
-        return false
+        advertiserManager.stopAdvertisingAndListening()
+        return true
     }
 
     /**
@@ -143,7 +154,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
      - parameter callback: callback with connection results.
      */
     public func connectToPeer(peer: String, callback:ClientConnectCallback) {
-
+        
     }
 
     /**
@@ -167,7 +178,6 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
             updateNetworkStatus()
         }
     }
-    
 
 #if TEST
     func executeNativeTests() -> String {
@@ -240,7 +250,12 @@ extension AppContext {
     @objc public class func startListeningForAdvertisements() -> String {
         return "startListeningForAdvertisements"
     }
+}
 
-
-
+extension PeerAvailability {
+    var dictionaryValue: [String : AnyObject] {
+        return ["peerIdentifier" : peerIdentifier.stringValue,
+                "peerAvailable" : available
+            ]
+    }
 }

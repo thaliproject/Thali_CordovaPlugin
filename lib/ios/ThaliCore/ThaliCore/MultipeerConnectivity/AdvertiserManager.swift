@@ -13,13 +13,21 @@ import Foundation
     private var advertisers: [Advertiser] = []
     private var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
+    private let disposeQueue = NSOperationQueue()
 
-    init(serviceType: String) {
+    public init(serviceType: String) {
         self.serviceType = serviceType
     }
 
     func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
-        //todo stop and dispose advertiser after 30 sec
+        let disposeOperation = NSBlockOperation() {
+            advertiser.stopAdvertising()
+        }
+
+        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(30 * Double(NSEC_PER_SEC)))
+        dispatch_after(delayTime, dispatch_get_main_queue()) {
+            self.disposeQueue.addOperation(disposeOperation)
+        }
     }
 
     private func createAndRunAdvertiserWith(identifier: PeerIdentifier, port: UInt16) -> Advertiser {
