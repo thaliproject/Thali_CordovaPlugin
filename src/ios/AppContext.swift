@@ -88,6 +88,13 @@ public typealias ClientConnectCallback = (error: String, info: [String : AnyObje
         }
         delegate?.context(self, didChangePeerAvailability: mappedPeers)
     }
+    
+    private func updateListeningAdvertisingState() {
+        delegate?.context(self, didUpdateDiscoveryAdvertisingState: [
+                "discoveryActive" : browserManager.isListening,
+                "advertisingActive" : advertiserManager.isAdvertising
+            ])
+    }
 
     public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
@@ -113,6 +120,7 @@ public typealias ClientConnectCallback = (error: String, info: [String : AnyObje
      */
     public func startListeningForAdvertisements() -> Bool {
         browserManager.startListeningForAdvertisements()
+        updateListeningAdvertisingState()
         return true
     }
 
@@ -123,6 +131,7 @@ public typealias ClientConnectCallback = (error: String, info: [String : AnyObje
      */
     public func stopListeningForAdvertisements() -> Bool {
         browserManager.stopListeningForAdvertisements()
+        updateListeningAdvertisingState()
         return true
     }
 

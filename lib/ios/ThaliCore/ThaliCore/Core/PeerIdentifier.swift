@@ -14,7 +14,7 @@ enum PeerIdentifierError: String, ErrorType {
 }
 
 ///Peer identifier for with generations
-public struct PeerIdentifier {
+public struct PeerIdentifier: Hashable {
     ///UUID identifier of peer
     let uuid: String
     ///generation of peer.
@@ -51,15 +51,23 @@ public struct PeerIdentifier {
     public var stringValue: String {
         return "\(uuid):\(String(generation, radix: 16))"
     }
+    
+    public var hashValue: Int {
+        return stringValue.hashValue
+    }
 }
 
 ///Multipeer connectivity specific functions
 extension PeerIdentifier {
     var mcPeer: MCPeerID {
-        return MCPeerID(displayName: uuid)
+        return MCPeerID(displayName: stringValue)
     }
 
     init(mcPeer peer: MCPeerID) throws {
         try self.init(stringValue: peer.displayName)
     }
+}
+
+public func == (lhs: PeerIdentifier, rhs: PeerIdentifier) -> Bool {
+    return lhs.stringValue == rhs.stringValue
 }

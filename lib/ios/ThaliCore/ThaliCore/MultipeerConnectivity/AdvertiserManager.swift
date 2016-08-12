@@ -10,34 +10,57 @@ import Foundation
 
 //class for managing Thali advertiser's logic
 @objc public final class AdvertiserManager: NSObject {
-    private var advertisers: [Advertiser] = []
-    private var currentAdvertiser: Advertiser? = nil
+    internal private (set) var advertisers: [Advertiser] = []
+    internal private (set) var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
     private let disposeQueue = NSOperationQueue()
+    private var disposeOperations: [PeerIdentifier : NSOperation] = [:]
+    internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
+    
+    public var isAdvertising: Bool {
+        return currentAdvertiser?.isAdvertising ?? false
+    }
+    
+    private func advertiserIdentifier(advertiserPeer: PeerIdentifier, receivedInvitationFromPeer peer: PeerIdentifier) {
+        // cancel disposing advertiser on timeout
+        if let operation = disposeOperations[advertiserPeer] {
+            operation.cancel()
+            disposeOperations.removeValueForKey(advertiserPeer)
+        }
+    }
 
     public init(serviceType: String) {
         self.serviceType = serviceType
     }
 
+    //dispose advertiser after 30 sec to ensure that it has no pending invitations
     func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
         let disposeOperation = NSBlockOperation() {
             advertiser.stopAdvertising()
+            if let index = self.advertisers.indexOf(advertiser) {
+                self.advertisers.removeAtIndex(index)
+            }
+            self.didRemoveAdvertiserWithIdentifierHandler?(advertiser.peerIdentifier)
         }
 
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(30 * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
             self.disposeQueue.addOperation(disposeOperation)
         }
+        disposeOperations[advertiser.peerIdentifier] = disposeOperation
     }
 
     private func createAndRunAdvertiserWith(identifier: PeerIdentifier, port: UInt16) -> Advertiser {
-        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType, port: port)
+        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
+                                    port: port, receivedInvitationHandler: { [weak self] receivedIdentifier in
+            self?.advertiserIdentifier(identifier, receivedInvitationFromPeer: receivedIdentifier)
+        })
         advertiser.startAdvertising()
+        self.advertisers.append(advertiser)
         return advertiser
     }
 
     public func startAdvertisingAndListening(port: UInt16) {
-
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
             addAdvertiserToDisposeQueue(currentAdvertiser)
@@ -50,11 +73,11 @@ import Foundation
     }
 
     public func stopAdvertisingAndListening() {
-        guard let currentAdvertiser = self.currentAdvertiser where currentAdvertiser.isAdvertising else {
-            assert(false, "there is no active listener")
-            return
+        advertisers.forEach {
+            $0.stopAdvertising()
         }
-        currentAdvertiser.stopAdvertising()
+        advertisers.removeAll()
+        currentAdvertiser = nil
     }
     
     public func startUpdateAdvertisingAndListening(port: UInt16) {

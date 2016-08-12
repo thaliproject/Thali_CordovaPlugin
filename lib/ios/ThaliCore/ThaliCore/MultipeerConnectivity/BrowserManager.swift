@@ -15,9 +15,12 @@ public struct PeerAvailability {
 
 //class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
-    private var currentBrowser: Browser?
+    internal private (set) var currentBrowser: Browser?
     let serviceType: String
     public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil
+    public var isListening: Bool {
+        return currentBrowser?.isListening ?? false
+    }
 
     public init(serviceType: String) {
         self.serviceType = serviceType
@@ -51,6 +54,7 @@ public final class BrowserManager: NSObject {
             return
         }
         currentBrowser.stopListening()
+        self.currentBrowser = nil
     }
 
     public func connectToPeer(identifier: PeerIdentifier, withPort port: UInt16) {

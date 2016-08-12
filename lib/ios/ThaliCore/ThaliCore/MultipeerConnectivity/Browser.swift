@@ -11,7 +11,6 @@ import MultipeerConnectivity
 
 final class Browser: NSObject {
     private let browser: MCNearbyServiceBrowser
-    private var activeSessions: [SessionManager] = []
     private let canConnectToPeer: (PeerIdentifier) -> Bool
     private let foundPeer: (PeerIdentifier) -> Void
 

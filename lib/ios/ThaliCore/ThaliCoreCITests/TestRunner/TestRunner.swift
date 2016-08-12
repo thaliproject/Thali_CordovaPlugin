@@ -59,7 +59,7 @@ public final class TestRunner: NSObject {
         for testRun in testSuiteRun.testRuns {
             executedCount += Int(testRun.executionCount)
             failureCount += Int(testRun.failureCount)
-            succeededCount += Int(testRun.executionCount - testRun.failureCount)
+            succeededCount += 0//Int(testRun.executionCount - testRun.failureCount)
         }
 
         return TestRunner.RunResult(
