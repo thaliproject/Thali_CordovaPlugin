@@ -38,7 +38,7 @@ var xcode = require('xcode');
 
 function addFramework(
   projectPath, frameworkProjectDir, frameworkOutputDir, buildWithTests) {
-
+ 
   // We need to build ThaliCore.framework before embedding it into the project
   return buildFramework(
     frameworkProjectDir, frameworkOutputDir, buildWithTests)
