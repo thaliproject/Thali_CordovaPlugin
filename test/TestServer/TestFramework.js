@@ -132,6 +132,11 @@ TestFramework.prototype.addDevice = function (device) {
             deviceCandidate.deviceName);
           deviceCandidate.socket.emit('disqualify');
           return false;
+        } else if (deviceCandidate.nativeUTFailed) {
+          logger.info('Disqualifying device on which native unit tests failed: %s',
+                      deviceCandidate.deviceName);
+          deviceCandidate.socket.emit('disqualify');
+          return false;
         }
         return true;
       }

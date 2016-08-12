@@ -199,7 +199,7 @@ var platform =
   'android' :
   'ios';
 
-thaliTape.begin = function (version, hasRequiredHardware) {
+thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
 
   var serverOptions = {
     transports: ['websocket']
@@ -232,6 +232,7 @@ thaliTape.begin = function (version, hasRequiredHardware) {
       os: platform,
       version: version,
       supportedHardware: hasRequiredHardware,
+      nativeUTFailed: nativeUTFailed,
       name: testUtils.getName(),
       uuid: thaliTape.uuid,
       type: 'unittest',

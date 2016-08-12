@@ -40,6 +40,9 @@ var utResult;
 //  }
 //}
 
+// TODO add nativeUTFailed !!!!!!!!!!!!
+global.nativeUTFailed = true;
+
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
   var promiseList = [];
