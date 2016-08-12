@@ -140,7 +140,7 @@ function waitForRemoteDocs(
         }
       } else {
         changesFeed.cancel();
-        reject('inalid doc');
+        reject('invalid doc');
       }
     })
     .on('complete', function () {
