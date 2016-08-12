@@ -14,29 +14,34 @@ var createPeerListener = require('./createPeerListener');
  * module:thaliMobileNativeWrapper}. We have broken this functionality out here
  * in order to make the code more maintainable and easier to follow.
  *
- * When dealing with incoming connections this code creates a multiplex object
- * to handle de-multiplexing the incoming connections and in the iOS case to
- * also send TCP/IP connections down the incoming connection (reverse the
- * polarity as it were).
+ * This code is for 'connect' platforms only.
  *
- * When dealing with discovered peers we like to advertise a port that the Thali
- * Application can connect to in order to talk to that peer. But for perf
- * reasons that port is typically not connected to anything at the native layer
- * until someone connects to the port. The reason for this design (thanks
- * Ville!) is to make non-TCP and TCP peers look the same. There is an address
- * (in this case 127.0.0.1) and a port and you connect and there you go. This
- * file defines all the magic needed to create the illusion that a non-TCP peer
- * is actually available over TCP.
+ * When dealing with incoming connections this code creates a multiplex object
+ * to handle de-multiplexing the incoming connections.
+ *
+ * In our original design we would advertise a TCP/IP server as soon as we
+ * discovered a peer and then connect to Bluetooth when someone connected to
+ * the TCP/IP server. This enabled us to create an experience just like WiFi
+ * were we could advertise ports and users could connect when they wanted. And
+ * if they didn't connect then all we wasted was a TCP/IP listener that wasn't
+ * doing anything. But due to the needs of the 'multiConnect' platform we
+ * switched to a model where users have to explicitly ask for addresses and
+ * ports to connect to a peer. This would have let us simplify this design so
+ * that we would first call connect at the native layer and only once that
+ * worked would we set up the TCP/IP listener. This would have been a simpler
+ * approach. But the existing code, which first sets up the TCP/IP listener and
+ * then creates the Bluetooth connection is fully tested so it's not worth the
+ * time to change it to a simpler design.
  *
  * A multiplex object will be created when we:
  * - get an incoming connection from the native layer to the portNumber we
  * submitted to startUpdateAdvertisingAndListening
  *  - We create a mux that pipes to the incoming TCP/IP connection.
- * - get a peerAvailabilityChanged Event
- *  - We create a local listener and advertise nonTCPPeerAvailabilityChanged.
- *  When we get a connection to that listener then we call native connect,
- *  create a connection to the native connect port, hook the mux to that
- *  connection on one end and the incoming listener to the mux on the other end.
+ * - get a call from getPort
+ *  - We create a local listener and return the port. When we get a connection
+ *  to that listener then we call native connect, create a connection to the
+ *  native connect port, hook the mux to that connection on one end and the
+ *  incoming listener to the mux on the other end.
  *
  *  We have two basic kinds of listeners. One type is for incoming
  *  connections from remote peers. In that case we will have a TCP connection
@@ -52,6 +57,10 @@ var createPeerListener = require('./createPeerListener');
  *  multiplex. That connection sees all traffic in both directions (e.g. even in
  *  the iOS case where we mux connections both ways) and so it knows if anything
  *  is happening. If all is quiet then it knows it can kill the connection.
+ *
+ *  Note that the connection killing behavior is probably not a good idea and
+ *  at some point we should change it, please see
+ *  https://github.com/thaliproject/Thali_CordovaPlugin/issues/859.
  *
  *  We also need to deal with cleaning things up when they go wrong.
  *  Typically we will focus the cleanup code on the multiplex object. It will
@@ -221,17 +230,11 @@ ThaliTcpServersManager.prototype._createNativeListener = function () {
 /**
  * @public
  * @param {string} peerIdentifier
- * @param {boolean} [pleaseConnect] If set to true this indicates that a
- * lexically smaller peer asked for a connection so the lexically larger peer
- * (the local device) will immediately call {@link
- * external:"Mobile('connect')".callNative} to create a connection. If false
- * then the call to {@link external:"Mobile('connect')".callNative} will only
- * happen on the first incoming connection to the TCP server.
  * @returns {Promise<number|Error>}
  */
-ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
-                                                                pleaseConnect) {
-  return createPeerListener(this, peerIdentifier, pleaseConnect);
+ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier)
+{
+  return createPeerListener(this, peerIdentifier);
 };
 
 /**

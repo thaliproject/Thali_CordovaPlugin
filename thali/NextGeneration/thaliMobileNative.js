@@ -213,6 +213,12 @@
  * but we enforce it on Android as well in order to keep the platform
  * consistent.
  *
+ * As defined in {@link peer} the peerIdentifier maps to the Bluetooth MAC for
+ * the remote peer. If a TCP/IP Android listener is already associated with that
+ * Bluetooth MAC then that listener's port MUST be returned. Otherwise a new
+ * TCP/IP Android listener MUST be created, associated with the Bluetooth MAC
+ * and the new port returned.
+ *
  * The node layer is responsible for making sure there is not more than a single
  * outstanding `connect` method call at a time for any given peerID. If that
  * restriction is violated then the system enters an unknown state.
@@ -254,11 +260,11 @@
  * |--------------|-------------|
  * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
  * | startListeningForAdvertisements is not active | Go start it! |
- * | Already connect(ing/ed) | There already is a connection or a request to create one is already in process. |
  * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
  * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
  * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
  * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
+ * | No available TCP ports | There are no TCP ports available to listen on. |
  * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
  * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
  * | Platform does not support connect | The platform doesn't support the connect method. |
@@ -271,6 +277,43 @@
  * remote peer
  */
 // jscs:enable maximumLineLength
+
+/**
+ * If the MCSession could not be formed then error MUST NOT be null and MUST
+ * contain a description of the problem while port MUST be null. If the
+ * MCSession could be formed then error MUST be null and port MUST contain an
+ * integer with the localhost port where the native code is listening for TCP/IP
+ * connections it is to bridge to the MCSession.
+ *
+ * Note that it is possi
+ *
+ * * | Error String | Description |
+ * |--------------|-------------|
+ * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
+ * | startListeningForAdvertisements is not active | Go start it! |
+ * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
+ * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
+ * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
+ * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
+ * | No available TCP ports | There are no TCP ports available to listen on. |
+ * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
+ * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
+ * | Platform does not support `multiConnect` | The platform doesn't support the `multiConnect` method. |
+ *
+ * @public
+ * @callback multiConnectResolvedCallback
+ * @property {string} syncValue
+ * @property {?string} error
+ * @property {?number} port
+ */
+
+/**
+ * Every call to `multiConnect` MUST produced exactly one callback of this type.
+ *
+ * @public
+ * @external "Mobile('multiConnectResolved')"
+ * @param {module:thaliMobileNative~multiConnectResolvedCallback} callback
+ */
 
 /**
  * @external "Mobile('multiConnect')"
@@ -293,13 +336,33 @@
  * peerID. If that restriction is violated then the system enters an unknown
  * state.
  *
+ * A call to `multiConnect` will immediately return with no information other
+ * than a confirmation that the request was received. A separate {@link
+ * multiConnectResolve} asynchronous callback will be fired with the actual
+ * result of the method call.
+ *
+ * The submitted peerIdentifier only contains a value mapped to the UUID part
+ * of the remote peer's MCPeerID.
+ *
+ * If there already exists a MCSession to the
+ * identifier UUID then the {@link multiConnectResolved} MUST be fired
+ * and have its port set to the TCP/IP listener associated with that MCSession.
+ * Yes, in theory we could have returned the port in the synchronous response to
+ * the `multiConnect` method but it's more consistent to always have the true
+ * response come in the {@link multiConnectResolved}.
+ *
+ * If there is no existing MCSession for the associated UUID then the iOS code
+ * MUST pick the highest generation advertised for that UUID and try to create
+ * a MCSession with that peer. If the MCSession can't be formed then the
+ * `Connection could not be established` error MUST be returned in the
+ * {@link multiConnectResolved} error value. If the MCSession can be formed
+ * then the iOS code MUST create a TCP/IP native listener (that it will then
+ * relay connections to the MCSession using virtual sockets) and return the port
+ * of that listener in the {@link multiConnectResolved}.
+ *
  * The port created by the connect call MUST accept an arbitrary number of
  * TCP/IP connections and forward them to the remote peer over the non-TCP/IP
  * transport.
- *
- * It is implementation dependent if the non-TCP/IP connection that the
- * 127.0.0.1 port will be bound to is created before the callback is called or
- * only when the TCP/IP port is first connected to.
  *
  * A race condition exists that can cause something called a "channel binding
  * problem". This race condition occurs when a callback to this method is
@@ -315,25 +378,15 @@
  * talking. But if TLS can't be used then some equivalent mechanism must be or
  * an impersonation attack becomes possible.
  *
- * | Error String | Description |
- * |--------------|-------------|
- * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
- * | startListeningForAdvertisements is not active | Go start it! |
- * | Already connect(ing/ed) | There already is a connection or a request to create one is already in process. |
- * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
- * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
- * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
- * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
- * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
- * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
- * | Platform does not support `multiConnect` | The platform doesn't support the `multiConnect` method. |
- *
  * @public
  * @function external:"Mobile('multiConnect')".callNative
  * @param {string} peerIdentifier
- * @param {module:thaliMobileNative~ConnectCallback} callback Returns an
- * error or the 127.0.0.1 port to connect to in order to get a connection to the
- * remote peer
+ * @param {string} syncValue This is an opaque string that MUST be passed back
+ * on the correlated {@link multiConnectResolved} callback for the result of
+ * this particular method call.
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback The err value
+ * MUST be null. Any real errors will be returned in the {@link
+ * multiConnectResolved} callback.
  */
 // jscs:enable maximumLineLength
 
@@ -421,6 +474,8 @@
  */
 
 /**
+ * Fires the multiConnectConnectionFailureCallback if a multiConnect connection
+ * fails for a reason other than a call to {@link disconnect}.
  *
  * @public
  * @function external:"Mobile(`multiConnectConnectionFailure`)".registerToNative
@@ -436,6 +491,11 @@
  * non-TCP/IP transports work it is completely possible for the same remote peer
  * to have many different peerIdentifiers assigned to them. So the only purpose
  * of this value is to use it in a connect call not to uniquely identify a peer.
+ * Although it is up to the native layers as to exactly what they return here,
+ * nevertheless on iOS this value MUST map to the UUID part of the MCPeerID
+ * and not to the generation (which is returned below). Similarly on Android
+ * the peerIdentifier MUST map to the Bluetooth MAC and not to the current
+ * generation.
  * @property {number} generation An integer which counts changes in the peer's
  * database. On Android this integer has only 8 bytes and so will roll over.
  * @property {boolean} peerAvailable If true this indicates that the peer is
