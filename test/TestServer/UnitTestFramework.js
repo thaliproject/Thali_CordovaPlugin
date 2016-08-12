@@ -103,7 +103,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
 
-  if (devices.length < 3) {
+  if (devices.length < 2) {
     logger.warn(
       'Aborting unit test run for %s. At least 2 devices needed, having %d device(s)',
       platform, this.devices[platform].length
