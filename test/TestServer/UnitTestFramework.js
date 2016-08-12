@@ -95,8 +95,12 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
   var results = {};
 
   if (!tests) {
-    // Default to all tests named by first device
-    tests = this.devices[platform][0].tests;
+    if (this.devices[platform].length) {
+      // Default to all tests named by first device
+      tests = this.devices[platform][0].tests;
+    } else {
+      tests = [];
+    }
   }
 
   // Copy arrays
