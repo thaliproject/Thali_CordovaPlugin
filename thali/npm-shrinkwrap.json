@@ -520,8 +520,7 @@
     },
     "minimatch": {
       "version": "3.0.3",
-      "from": "minimatch@>=2.0.0 <3.0.0||>=3.0.0 <4.0.0",
-      "resolved": "http://localhost:4873/minimatch/-/minimatch-3.0.3.tgz"
+      "from": "minimatch@>=2.0.0 <3.0.0||>=3.0.0 <4.0.0"
     },
     "minimist": {
       "version": "0.0.8",

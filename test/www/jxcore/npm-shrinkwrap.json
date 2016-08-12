@@ -1328,7 +1328,6 @@
     "memdown": {
       "version": "1.1.2",
       "from": "memdown@1.1.2",
-      "resolved": "http://localhost:4873/memdown/-/memdown-1.1.2.tgz",
       "dependencies": {
         "abstract-leveldown": {
           "version": "2.6.0",
@@ -1376,8 +1375,7 @@
     },
     "minimatch": {
       "version": "3.0.3",
-      "from": "minimatch@>=3.0.2 <4.0.0",
-      "resolved": "http://localhost:4873/minimatch/-/minimatch-3.0.3.tgz"
+      "from": "minimatch@>=3.0.2 <4.0.0"
     },
     "minimist": {
       "version": "1.2.0",
@@ -1672,8 +1670,7 @@
         },
         "pouchdb-collections": {
           "version": "5.5.0-prerelease",
-          "from": "pouchdb-collections@5.5.0-prerelease",
-          "resolved": "http://localhost:4873/pouchdb-collections/-/pouchdb-collections-5.5.0-prerelease.tgz"
+          "from": "pouchdb-collections@5.5.0-prerelease"
         },
         "pouchdb-promise": {
           "version": "5.5.0-prerelease",
@@ -1711,8 +1708,7 @@
       "dependencies": {
         "pouchdb-collections": {
           "version": "5.5.0-prerelease",
-          "from": "pouchdb-collections@5.5.0-prerelease",
-          "resolved": "http://localhost:4873/pouchdb-collections/-/pouchdb-collections-5.5.0-prerelease.tgz"
+          "from": "pouchdb-collections@5.5.0-prerelease"
         }
       }
     },
@@ -1835,8 +1831,7 @@
       "dependencies": {
         "pouchdb-collections": {
           "version": "5.5.0-prerelease",
-          "from": "pouchdb-collections@5.5.0-prerelease",
-          "resolved": "http://localhost:4873/pouchdb-collections/-/pouchdb-collections-5.5.0-prerelease.tgz"
+          "from": "pouchdb-collections@5.5.0-prerelease"
         },
         "pouchdb-promise": {
           "version": "5.5.0-prerelease",
@@ -1951,8 +1946,7 @@
       "dependencies": {
         "pouchdb-collections": {
           "version": "5.5.0-prerelease",
-          "from": "pouchdb-collections@5.5.0-prerelease",
-          "resolved": "http://localhost:4873/pouchdb-collections/-/pouchdb-collections-5.5.0-prerelease.tgz"
+          "from": "pouchdb-collections@5.5.0-prerelease"
         },
         "pouchdb-promise": {
           "version": "5.5.0-prerelease",
@@ -2126,8 +2120,7 @@
       "dependencies": {
         "pouchdb-collections": {
           "version": "5.5.0-prerelease",
-          "from": "pouchdb-collections@5.5.0-prerelease",
-          "resolved": "http://localhost:4873/pouchdb-collections/-/pouchdb-collections-5.5.0-prerelease.tgz"
+          "from": "pouchdb-collections@5.5.0-prerelease"
         },
         "pouchdb-promise": {
           "version": "5.5.0-prerelease",
@@ -2605,8 +2598,7 @@
         },
         "delayed-stream": {
           "version": "0.0.5",
-          "from": "delayed-stream@0.0.5",
-          "resolved": "http://localhost:4873/delayed-stream/-/delayed-stream-0.0.5.tgz"
+          "from": "delayed-stream@0.0.5"
         },
         "extend": {
           "version": "1.2.1",
@@ -3236,8 +3228,7 @@
         },
         "minimatch": {
           "version": "3.0.3",
-          "from": "minimatch@>=2.0.0 <3.0.0||>=3.0.0 <4.0.0",
-          "resolved": "http://localhost:4873/minimatch/-/minimatch-3.0.3.tgz"
+          "from": "minimatch@>=2.0.0 <3.0.0||>=3.0.0 <4.0.0"
         },
         "minimist": {
           "version": "0.0.8",
