@@ -45,51 +45,149 @@ function TestThaliPeerPool() {
 inherits(TestThaliPeerPool, ThaliPeerPoolInterface);
 
 test('#ThaliPeerPoolInterface - bad enqueues', function (t) {
-  var error = testThaliPeerPool.enqueue(null);
-  t.equal(error.message, ThaliPeerPoolInterface.BAD_PEER_ACTION,
-    'null arg');
-  error = testThaliPeerPool.enqueue(testThaliPeerPool);
-  t.equal(error.message, ThaliPeerPoolInterface.BAD_PEER_ACTION,
-    'wrong arg type');
+  t.throws(
+    function () {
+      testThaliPeerPool.enqueue(null);
+    },
+    ThaliPeerPoolInterface.BAD_PEER_ACTION, 'null arg'
+  );
+  t.throws(
+    function () {
+      testThaliPeerPool.enqueue(testThaliPeerPool);
+    },
+    ThaliPeerPoolInterface.BAD_PEER_ACTION, 'wrong arg type'
+  );
+
   testPeerAction.start();
-  error = testThaliPeerPool.enqueue(testPeerAction);
-  t.equal(error.message, ThaliPeerPoolInterface.OBJECT_NOT_IN_CREATED,
-    'wrong state');
+  t.throws(
+    function () {
+      testThaliPeerPool.enqueue(testPeerAction);
+    },
+    ThaliPeerPoolInterface.OBJECT_NOT_IN_CREATED, 'wrong arg type'
+  );
+
   t.end();
 });
 
 test('#ThaliPeerPoolInterface - do not allow same object type', function (t) {
-  t.equal(testThaliPeerPool.enqueue(testPeerAction), null, 'good enqueue');
-  var error = testThaliPeerPool.enqueue(testPeerAction);
-  t.equal(error.message, ThaliPeerPoolInterface.OBJECT_ALREADY_ENQUEUED);
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPool.enqueue(testPeerAction);
+    },
+    'good enqueue'
+  );
+  t.throws(
+    function () {
+      testThaliPeerPool.enqueue(testPeerAction);
+    },
+    ThaliPeerPoolInterface.OBJECT_ALREADY_ENQUEUED, 'already enqueued'
+  );
+
   t.end();
 });
 
-test('#ThaliPeerPoolInterface - make sure we catch kill and dequeue',
+test(
+  '#ThaliPeerPoolInterface - make sure we catch kill and dequeue',
   function (t) {
-    var testPeerAction2 =
-      new TestPeerAction(peerIdentifier, connectionType, actionType);
+    var testPeerAction2 = new TestPeerAction(
+      peerIdentifier, connectionType, actionType
+    );
     var killSpy = sinon.spy(testPeerAction, 'kill');
-    t.equal(testThaliPeerPool.enqueue(testPeerAction), null, 'good enqueue');
-    t.equal(testThaliPeerPool.enqueue(testPeerAction2), null,
-      '2nd good enqueue');
-    t.equal(testThaliPeerPool._inQueue[testPeerAction.getId()], testPeerAction,
-      'we are in the pool');
-    testPeerAction.kill();
-    t.notOk(testThaliPeerPool._inQueue.hasOwnProperty(testPeerAction.getId()),
-      'We are out of the pool');
-    t.equal(testPeerAction.getActionState(), PeerAction.actionState.KILLED,
-      'Action was killed');
-    t.ok(killSpy.calledOnce, 'The original kill was called too');
-    t.equal(testThaliPeerPool._inQueue[testPeerAction2.getId()],
-      testPeerAction2, 'second item is still in queue');
-    t.end();
-  });
+    t.doesNotThrow(
+      function () {
+        testThaliPeerPool.enqueue(testPeerAction);
+      },
+      'good enqueue'
+    );
+    t.doesNotThrow(
+      function () {
+        testThaliPeerPool.enqueue(testPeerAction2);
+      },
+      '2nd good enqueue'
+    );
 
-test('#ThaliPeerPoolInterface - make sure our changes to the action leave ' +
-  'kill as idempotent', function (t) {
-  t.equal(testThaliPeerPool.enqueue(testPeerAction), null, 'good enqueue');
-  t.equal(testPeerAction.kill(), null, 'first kill');
-  t.equal(testPeerAction.kill(), null, 'second NOOP kill');
-  t.end();
-});
+    t.equal(
+      testThaliPeerPool._inQueue[testPeerAction.getId()],
+      testPeerAction, 'we are in the pool'
+    );
+    testPeerAction.kill();
+    t.notOk(
+      testThaliPeerPool._inQueue.hasOwnProperty(testPeerAction.getId()),
+      'We are out of the pool'
+    );
+
+    t.equal(
+      testPeerAction.getActionState(),
+      PeerAction.actionState.KILLED, 'Action was killed'
+    );
+    t.ok(killSpy.calledOnce, 'The original kill was called too');
+    t.equal(
+      testThaliPeerPool._inQueue[testPeerAction2.getId()],
+      testPeerAction2, 'second item is still in queue'
+    );
+
+    t.end();
+  }
+);
+
+test(
+  '#ThaliPeerPoolInterface - make sure our changes to the action leave ' +
+  'kill as idempotent',
+  function (t) {
+    t.doesNotThrow(
+      function () {
+        testThaliPeerPool.enqueue(testPeerAction);
+      },
+      'good enqueue'
+    );
+    t.equal(testPeerAction.kill(), null, 'first kill');
+    t.equal(testPeerAction.kill(), null, 'second NOOP kill');
+    t.end();
+  }
+);
+
+test(
+  '#ThaliPeerPoolInterface - make sure that stop removes all actions',
+  function (t) {
+    var testPeerAction2 = new TestPeerAction(
+      peerIdentifier, connectionType, actionType
+    );
+    t.doesNotThrow(
+      function () {
+        testThaliPeerPool.enqueue(testPeerAction);
+      },
+      '1st good enqueue'
+    );
+    t.doesNotThrow(
+      function () {
+        testThaliPeerPool.enqueue(testPeerAction2);
+      },
+      '2nd good enqueue'
+    );
+
+    t.equal(
+      testThaliPeerPool._inQueue[testPeerAction.getId()],
+      testPeerAction, '1st action is in the pool'
+    );
+    t.equal(
+      testThaliPeerPool._inQueue[testPeerAction2.getId()],
+      testPeerAction2, '2nd action is in the pool'
+    );
+
+    testThaliPeerPool.stop();
+    t.notOk(
+      testThaliPeerPool._inQueue.hasOwnProperty(testPeerAction.getId()),
+      '1st action is out of the pool'
+    );
+    t.notOk(
+      testThaliPeerPool._inQueue.hasOwnProperty(testPeerAction2.getId()),
+      '2st action is out of the pool'
+    );
+    t.equal(
+      Object.getOwnPropertyNames(testThaliPeerPool._inQueue).length,
+      0, 'pool is empty'
+    );
+
+    t.end();
+  }
+);
