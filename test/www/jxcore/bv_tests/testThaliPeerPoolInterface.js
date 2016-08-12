@@ -49,13 +49,13 @@ test('#ThaliPeerPoolInterface - bad enqueues', function (t) {
     function () {
       testThaliPeerPool.enqueue(null);
     },
-    ThaliPeerPoolInterface.BAD_PEER_ACTION, 'null arg'
+    new RegExp(ThaliPeerPoolInterface.prototype.ERRORS.BAD_PEER_ACTION), 'null arg'
   );
   t.throws(
     function () {
       testThaliPeerPool.enqueue(testThaliPeerPool);
     },
-    ThaliPeerPoolInterface.BAD_PEER_ACTION, 'wrong arg type'
+    new RegExp(ThaliPeerPoolInterface.prototype.ERRORS.BAD_PEER_ACTION), 'wrong arg type'
   );
 
   testPeerAction.start();
@@ -63,7 +63,7 @@ test('#ThaliPeerPoolInterface - bad enqueues', function (t) {
     function () {
       testThaliPeerPool.enqueue(testPeerAction);
     },
-    ThaliPeerPoolInterface.OBJECT_NOT_IN_CREATED, 'wrong arg type'
+    new RegExp(ThaliPeerPoolInterface.prototype.ERRORS.OBJECT_NOT_IN_CREATED), 'wrong arg type'
   );
 
   t.end();
@@ -80,7 +80,7 @@ test('#ThaliPeerPoolInterface - do not allow same object type', function (t) {
     function () {
       testThaliPeerPool.enqueue(testPeerAction);
     },
-    ThaliPeerPoolInterface.OBJECT_ALREADY_ENQUEUED, 'already enqueued'
+    new RegExp(ThaliPeerPoolInterface.prototype.ERRORS.OBJECT_ALREADY_ENQUEUED), 'already enqueued'
   );
 
   t.end();

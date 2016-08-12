@@ -72,14 +72,14 @@ ThaliPeerPoolInterface.prototype._inQueue = null;
  */
 ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
   if (!peerAction || !(peerAction instanceof PeerAction)) {
-    throw ThaliPeerPoolInterface.BAD_PEER_ACTION;
+    throw new Error(ThaliPeerPoolInterface.prototype.ERRORS.BAD_PEER_ACTION);
   }
   if (peerAction.getActionState() !== PeerAction.actionState.CREATED) {
-    throw ThaliPeerPoolInterface.OBJECT_NOT_IN_CREATED;
+    throw new Error(ThaliPeerPoolInterface.prototype.ERRORS.OBJECT_NOT_IN_CREATED);
   }
   var peerActionId = peerAction.getId();
   if (this._inQueue[peerActionId]) {
-    throw ThaliPeerPoolInterface.OBJECT_ALREADY_ENQUEUED;
+    throw new Error(ThaliPeerPoolInterface.prototype.ERRORS.OBJECT_ALREADY_ENQUEUED);
   }
 
   this._inQueue[peerActionId] = peerAction;
@@ -113,28 +113,16 @@ ThaliPeerPoolInterface.prototype._onPeerActionKilled = function (peerAction) {
 }
 
 /**
- * Error message for invalid peer action.
+ * Error messages.
  * @public
- * @type {string}
+ * @enum {string}
  * @readonly
  */
-ThaliPeerPoolInterface.BAD_PEER_ACTION = new Error('Bad peerAction');
-
-/**
- * Error message for peer action that is already used in the queue.
- * @public
- * @type {string}
- * @readonly
- */
-ThaliPeerPoolInterface.OBJECT_ALREADY_ENQUEUED = new Error('Object already in use');
-
-/**
- * Error message for peer action that is not in CREATED state.
- * @type {string}
- * @readonly
- * @public
- */
-ThaliPeerPoolInterface.OBJECT_NOT_IN_CREATED = new Error('Object not in created');
+ThaliPeerPoolInterface.prototype.ERRORS = {
+  BAD_PEER_ACTION: 'Bad peerAction',
+  OBJECT_ALREADY_ENQUEUED: 'Object already in use',
+  OBJECT_NOT_IN_CREATED: 'Object not in created'
+};
 
 /**
  * Kills all peer actions in the queue.

@@ -68,8 +68,12 @@ TestPeerAction.prototype.start = function (httpAgentPool) {
 test('#ThaliPeerPoolDefault - single action', function (t) {
   var testPeerAction = new TestPeerAction(peerIdentifier, connectionType,
     actionType, t);
-  t.equal(testThaliPeerPoolDefault.enqueue(testPeerAction), null,
-    'enqueue is fine');
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testPeerAction);
+    },
+    'enqueue is fine'
+  );
   testPeerAction.startPromise.then(function () {
     t.equal(Object.getOwnPropertyNames(
           testThaliPeerPoolDefault._inQueue).length, 0,
@@ -86,10 +90,18 @@ test('#ThaliPeerPoolDefault - multiple actions', function (t) {
     actionType, t);
   var testPeerAction2 = new TestPeerAction(peerIdentifier, connectionType,
     actionType, t);
-  t.equal(testThaliPeerPoolDefault.enqueue(testPeerAction1), null, '' +
-    'first enqueue is fine');
-  t.equal(testThaliPeerPoolDefault.enqueue(testPeerAction2), null,
-    'second enqueue is fine');
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testPeerAction1);
+    },
+    'first enqueue is fine'
+  );
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testPeerAction2);
+    },
+    'second enqueue is fine'
+  );
   testPeerAction1.startPromise.then(function () {
     return testPeerAction2.startPromise;
   }).then(function () {
@@ -158,8 +170,12 @@ test('#ThaliPeerPoolDefault - PSK Pool works', function (t) {
   testServer.listen(0, function () {
     var pskTestPeerAction =
       new PskTestPeerAction(t, testServer.address().port);
-    t.equal(testThaliPeerPoolDefault.enqueue(pskTestPeerAction), null,
-      'good enqueue');
+    t.doesNotThrow(
+      function () {
+        testThaliPeerPoolDefault.enqueue(pskTestPeerAction);
+      },
+      'good enqueue'
+    );
     pskTestPeerAction.startPromise.then(function () {
       t.ok(gotPskCallBack, 'Got psk call back');
       t.end();
@@ -173,9 +189,18 @@ test('#ThaliPeerPoolDefault - stop', function (t) {
   var testAction2 = new TestPeerAction(peerIdentifier, connectionType,
     actionType, t);
 
-  t.notOk(testThaliPeerPoolDefault.enqueue(testAction1), 'enqueue worked');
-  t.notOk(testThaliPeerPoolDefault.enqueue(testAction2),
-    'enqueue 2 worked');
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testAction1);
+    },
+    'enqueue worked'
+  );
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testAction2);
+    },
+    'enqueue 2 worked'
+  );
 
   testThaliPeerPoolDefault.stop();
 
@@ -187,9 +212,13 @@ test('#ThaliPeerPoolDefault - stop', function (t) {
   t.equal(Object.getOwnPropertyNames(testThaliPeerPoolDefault._inQueue).length,
     0, 'inQueue is empty');
 
-  t.equal(testThaliPeerPoolDefault.enqueue(testAction1).message,
-    'We are stopped', 'Make sure we won\t enqueue after stopping');
+  t.throws(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testAction1);
+    },
+    new RegExp(ThaliPeerPoolDefault.prototype.STOPPED_ERROR),
+    'Make sure we won\'t enqueue after stopping'
+  );
 
   t.end();
 });
-

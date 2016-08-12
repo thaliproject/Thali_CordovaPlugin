@@ -214,23 +214,23 @@ ThaliManager.prototype.stop = function () {
   );
   this.state = ThaliManager.STATES.STOPPING;
 
-  logger.debug('stopping thaliSendNotificationBasedOnReplication');
-  this._thaliSendNotificationBasedOnReplication.stop();
+  logger.debug('stopping thaliPullReplicationFromNotification');
+  this._thaliPullReplicationFromNotification.stop();
 
-  logger.debug('stopping advertising and listening');
-  this._stoppingPromise = ThaliMobile.stopAdvertisingAndListening()
+  logger.debug('stopping listening for advertisements');
+  this._stoppingPromise = ThaliMobile.stopListeningForAdvertisements()
 
   .then(function () {
-    logger.debug('stopping listening for advertisements');
-    return ThaliMobile.stopListeningForAdvertisements();
+    logger.debug('stopping advertising and listening');
+    return ThaliMobile.stopAdvertisingAndListening();
   })
   .then(function () {
     logger.debug('stopping ThaliMobile');
     return ThaliMobile.stop();
   })
   .then(function () {
-    logger.debug('stopping thaliPullReplicationFromNotification');
-    self._thaliPullReplicationFromNotification.stop();
+    logger.debug('stopping thaliSendNotificationBasedOnReplication');
+    self._thaliSendNotificationBasedOnReplication.stop();
   })
   .then(function () {
     self.state = ThaliManager.STATES.STOPPED;
@@ -245,13 +245,13 @@ ThaliManager.prototype.stop = function () {
  * @private
  * @param {object} request
  * @param {object} response
- * @param {Function} next
+ * @param {Function} nextHandler
  * @returns {boolean}
  */
-ThaliManager.prototype._connectionFilter = function (request, response, next) {
+ThaliManager.prototype._connectionFilter = function (request, response, nextHandler) {
   logger.debug(
-    'connected pskIdentity', req.connection.pskIdentity,
-    'for path', req.path
+    'connected pskIdentity', request.connection.pskIdentity,
+    'for path', request.path
   );
 
   assert(
@@ -259,8 +259,8 @@ ThaliManager.prototype._connectionFilter = function (request, response, next) {
     'ThaliManager is not ready to accept any connection when state is ' + this.state
   );
 
-  if (req.connection.authorized) {
-    var secret = this._getPskIdToSecret(req.connection.pskIdentity);
+  if (request.connection.authorized) {
+    var secret = this._getPskIdToSecret(request.connection.pskIdentity);
     if (secret === thaliConfig.BEACON_KEY) {
       /*
         * When folks want to access the beacon they need to connect via TLS with a
@@ -270,7 +270,7 @@ ThaliManager.prototype._connectionFilter = function (request, response, next) {
         * The current magic PSK identity value is 'beacons' and the secret is a binary
         * array consisting of 16 zero bytes in a row.
         */
-      req.connection.pskRole = 'beacon';
+      request.connection.pskRole = 'beacon';
     } else if (secret) {
       /*
         * In this role the user connected over TLS using a PSK that we can associate
@@ -281,20 +281,20 @@ ThaliManager.prototype._connectionFilter = function (request, response, next) {
         * will include paths/methods needed for pull replication as well as the ability
         * to get to _Local.
         */
-      req.connection.pskRole = 'replication';
+      request.connection.pskRole = 'replication';
     } else {
       // Default role. It is usually unused.
-      req.connection.pskRole = 'public';
+      request.connection.pskRole = 'public';
     }
   } else {
     logger.debug('connected pskIdentity is not authorized');
-    return res.status(401).send({
+    return response.status(401).send({
       success: false,
       message: 'Unauthorized'
     });
   }
 
-  next();
+  nextHandler();
 }
 
 /**

@@ -65,27 +65,23 @@ var Utils = require('../utils/common.js');
  */
 function ThaliPeerPoolDefault() {
   ThaliPeerPoolDefault.super_.call(this);
-  this.stopped = false;
+  this._stopped = false;
 }
 
 util.inherits(ThaliPeerPoolDefault, ThaliPeerPoolInterface);
 
-ThaliPeerPoolDefault.prototype.stopped = null;
+ThaliPeerPoolDefault.prototype._stopped = null;
+ThaliPeerPoolDefault.prototype.STOPPED_ERROR = 'We are stopped';
 
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
-  if (this.stopped) {
-    return new Error('We are stopped');
+  if (this._stopped) {
+    throw new Error(ThaliPeerPoolDefault.prototype.STOPPED_ERROR);
   }
 
-  // Right now we will just allow everything to run parallel
+  // Right now we will just allow everything to run parallel.
 
-  var enqueueResult =
-    ThaliPeerPoolDefault.super_.prototype
-      .enqueue.call(this, peerAction);
-
-  if (enqueueResult) {
-    return enqueueResult;
-  }
+  var result =
+    ThaliPeerPoolDefault.super_.prototype.enqueue.apply(this, arguments);
 
   var actionAgent = new ForeverAgent.SSL({
     keepAlive: true,
@@ -108,7 +104,7 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
       peerAction.kill();
     });
 
-  return null;
+  return result;
 };
 
 /**
@@ -119,15 +115,12 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
  */
 ThaliPeerPoolDefault.prototype.stop = function () {
   var self = this;
-  if (self.stopped) {
+  if (self._stopped) {
     return;
   }
+  self._stopped = true;
 
-  self.stopped = true;
-
-  Object.getOwnPropertyNames(self._inQueue).forEach(function (actionId) {
-    self._inQueue[actionId].kill();
-  });
+  return ThaliPeerPoolDefault.super_.prototype.stop.apply(this, arguments);
 };
 
 module.exports = ThaliPeerPoolDefault;
