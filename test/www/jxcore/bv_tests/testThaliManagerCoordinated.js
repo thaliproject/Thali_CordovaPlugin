@@ -61,8 +61,7 @@ var test = tape({
     .then(function () {
       // We can't stop thali manager after each test
       // because of issue #838.
-      if (thisWasTheLastTest && thaliManager) {
-      // if (thaliManager) {
+      if (thaliManager) {
         return thaliManager.stop();
       }
     })

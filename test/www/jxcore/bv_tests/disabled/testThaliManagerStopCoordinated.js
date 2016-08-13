@@ -47,6 +47,8 @@ PouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
   defaultAdapter: LeveldownMobile
 });
 
+var thaliManager;
+
 var test = tape({
   setup: function (t) {
     t.data = publicKeyForLocalDevice.toJSON();
@@ -54,8 +56,11 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    fs.removeSync(defaultDirectory);
-    t.end();
+    thaliManager.stop()
+    .then(function () {
+      fs.removeSync(defaultDirectory);
+      t.end();
+    });
   }
 });
 
@@ -94,7 +99,7 @@ test('test uncaught exception', function (t) {
     'salti': spySalti
   });
 
-  var thaliManager = new ThaliManagerProxyquired(
+  thaliManager = new ThaliManagerProxyquired(
     ExpressPouchDB,
     PouchDB,
     DB_NAME,
@@ -121,6 +126,6 @@ test('test uncaught exception', function (t) {
     return allRequestsStarted;
   })
   .then(function () {
-    return thaliManager.stop();
+    t.end();
   })
 });

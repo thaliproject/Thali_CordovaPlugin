@@ -212,12 +212,13 @@ test('#ThaliPeerPoolDefault - stop', function (t) {
   t.equal(Object.getOwnPropertyNames(testThaliPeerPoolDefault._inQueue).length,
     0, 'inQueue is empty');
 
-  t.throws(
+  var testAction3 = new TestPeerAction(peerIdentifier, connectionType,
+    actionType, t);
+  t.doesNotThrow(
     function () {
-      testThaliPeerPoolDefault.enqueue(testAction1);
+      testThaliPeerPoolDefault.enqueue(testAction3);
     },
-    new RegExp(ThaliPeerPoolDefault.prototype.STOPPED_ERROR),
-    'Make sure we won\'t enqueue after stopping'
+    'Make sure we will enqueue after stopping'
   );
 
   t.end();

@@ -65,19 +65,11 @@ var Utils = require('../utils/common.js');
  */
 function ThaliPeerPoolDefault() {
   ThaliPeerPoolDefault.super_.call(this);
-  this._stopped = false;
 }
 
 util.inherits(ThaliPeerPoolDefault, ThaliPeerPoolInterface);
 
-ThaliPeerPoolDefault.prototype._stopped = null;
-ThaliPeerPoolDefault.prototype.STOPPED_ERROR = 'We are stopped';
-
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
-  if (this._stopped) {
-    throw new Error(ThaliPeerPoolDefault.prototype.STOPPED_ERROR);
-  }
-
   // Right now we will just allow everything to run parallel.
 
   var result =
@@ -115,10 +107,6 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
  */
 ThaliPeerPoolDefault.prototype.stop = function () {
   var self = this;
-  if (self._stopped) {
-    return;
-  }
-  self._stopped = true;
 
   return ThaliPeerPoolDefault.super_.prototype.stop.apply(this, arguments);
 };

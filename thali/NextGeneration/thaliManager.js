@@ -217,24 +217,28 @@ ThaliManager.prototype.stop = function () {
   logger.debug('stopping thaliPullReplicationFromNotification');
   this._thaliPullReplicationFromNotification.stop();
 
-  logger.debug('stopping listening for advertisements');
-  this._stoppingPromise = ThaliMobile.stopListeningForAdvertisements()
+  this._stoppingPromise = new Promise(function (resolve) {
+    setTimeout(function () {
+      logger.debug('stopping thaliSendNotificationBasedOnReplication');
+      self._thaliSendNotificationBasedOnReplication.stop();
 
-  .then(function () {
-    logger.debug('stopping advertising and listening');
-    return ThaliMobile.stopAdvertisingAndListening();
-  })
-  .then(function () {
-    logger.debug('stopping ThaliMobile');
-    return ThaliMobile.stop();
-  })
-  .then(function () {
-    logger.debug('stopping thaliSendNotificationBasedOnReplication');
-    self._thaliSendNotificationBasedOnReplication.stop();
-  })
-  .then(function () {
-    self.state = ThaliManager.STATES.STOPPED;
-    self._stoppingPromise = undefined;
+      logger.debug('stopping listening for advertisements');
+      ThaliMobile.stopListeningForAdvertisements()
+
+      .then(function () {
+        logger.debug('stopping advertising and listening');
+        return ThaliMobile.stopAdvertisingAndListening();
+      })
+      .then(function () {
+        logger.debug('stopping ThaliMobile');
+        return ThaliMobile.stop();
+      })
+      .then(function () {
+        self.state = ThaliManager.STATES.STOPPED;
+        self._stoppingPromise = undefined;
+        resolve();
+      });
+    }, 5000);
   });
 
   return this._stoppingPromise;
@@ -254,8 +258,13 @@ ThaliManager.prototype._connectionFilter = function (request, response, nextHand
     'for path', request.path
   );
 
+  // We need to let connections passing through the connection filter
+  // in starting, started and stopping state in order to let peer actions be
+  // properly started and stopped.
   assert(
-    this.state === ThaliManager.STATES.STARTED,
+    this.state === ThaliManager.STATES.STARTING ||
+    this.state === ThaliManager.STATES.STARTED ||
+    this.state === ThaliManager.STATES.STOPPING,
     'ThaliManager is not ready to accept any connection when state is ' + this.state
   );
 
@@ -333,7 +342,7 @@ ThaliManager._acl = [
     'role': 'replication',
     'paths': [
       {
-        'path': '/',
+        'path': thaliConfig.BASE_DB_PATH,
         'verbs': ['GET']
       },
       {
