@@ -120,11 +120,26 @@ function waitForRemoteDocs(
       }
       return true;
     } else {
+      console.log('ololo', docString);
       return false;
     }
   }
 
   return new Promise(function (resolve, reject) {
+    var error;
+    var completed = false;
+    function complete () {
+      if (completed) {
+        return;
+      }
+      completed = true;
+
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    }
     var changesFeed = pouchDB.changes({
       since: 0,
       live: true,
@@ -136,14 +151,19 @@ function waitForRemoteDocs(
           changesFeed.cancel();
         }
       } else {
-        throw new Error('invalid doc');
+        error = new Error('invalid doc');
+        changesFeed.cancel();
       }
     })
-    .on('complete', function () {
-      resolve();
+    .on('complete', function (info) {
+      if (info.errors && info.errors.length > 0) {
+        error = info.errors[0];
+      }
+      complete();
     })
     .on('error', function (err) {
-      reject('got error ' + err);
+      error = err;
+      complete();
     });
   });
 }
@@ -160,8 +180,6 @@ test('test write', function (t) {
   // We are creating a local db for each participant.
   var pouchDB = new PouchDB(DB_NAME);
 
-  // We are adding a simple test doc to a local db.
-  // It consist of it's public key (base64 representation) and test boolean.
   var localDoc = {
     _id: publicBase64KeyForLocalDevice,
     test1: true
@@ -202,6 +220,32 @@ test('test write', function (t) {
     return waitForRemoteDocs(pouchDB, localDoc, [], docs, true);
   })
   .then(function () {
+    exit();
+  });
+});
+
+test('test repeat write 1', function (t) {
+  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
+
+  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+    t, publicKeyForLocalDevice
+  );
+
+  // We are using an old db for each participant.
+  var pouchDB = new PouchDB(DB_NAME);
+
+  // We are getting our previous doc from a local db.
+  // It should consist of it's public key (base64 representation)
+  // and 1 test boolean.
+  var localDoc;
+  thaliManager.start(partnerKeys)
+  .then(function () {
+    return pouchDB.get(publicBase64KeyForLocalDevice);
+  })
+  .then(function (response) {
+    localDoc = response;
+  })
+  .then(function () {
     // Lets update our doc with new boolean.
     localDoc.test2 = true;
     return pouchDB.put(localDoc)
@@ -211,29 +255,32 @@ test('test write', function (t) {
   })
   .then(function () {
     // Our partners should update its docs the same way.
-    var newDocs = docs.map(function (doc) {
-      doc = extend({}, doc);
-      doc.test2 = true;
-      return doc;
+    var oldDocs = partnerKeys.map(function (partnerKey) {
+      return {
+        _id: partnerKey.toString('base64'),
+        test1: true
+      };
     });
-    return waitForRemoteDocs(pouchDB, localDoc, docs, newDocs, true)
-      .then(function () {
-        docs = newDocs;
-      });
+    var newDocs = partnerKeys.map(function (partnerKey) {
+      return {
+        _id: partnerKey.toString('base64'),
+        test1: true,
+        test2: true
+      };
+    });
+    return waitForRemoteDocs(pouchDB, localDoc, oldDocs, newDocs, true);
   })
   .then(function () {
     exit();
   });
 });
 
-test('test repeat write', function (t) {
+test('test repeat write 2', function (t) {
   // We will make a cleanup after this test.
   thisWasTheLastTest = true;
 
   var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
 
-  // This function will return all participant's public keys
-  // except local 'publicKeyForLocalDevice' one.
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
     t, publicKeyForLocalDevice
   );

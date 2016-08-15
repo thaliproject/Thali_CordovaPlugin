@@ -73,6 +73,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     }
   });
 
+  // This is a woraround for #870
   PouchAlt.prototype.info = function () {
     var self = this;
     return PouchAlt.super_.prototype.info.apply(this, arguments)
