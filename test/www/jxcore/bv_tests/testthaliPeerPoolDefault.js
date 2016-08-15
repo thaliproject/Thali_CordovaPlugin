@@ -68,6 +68,7 @@ TestPeerAction.prototype.start = function (httpAgentPool) {
 test('#ThaliPeerPoolDefault - single action', function (t) {
   var testPeerAction = new TestPeerAction(peerIdentifier, connectionType,
     actionType, t);
+  testThaliPeerPoolDefault.start();
   t.doesNotThrow(
     function () {
       testThaliPeerPoolDefault.enqueue(testPeerAction);
@@ -90,6 +91,7 @@ test('#ThaliPeerPoolDefault - multiple actions', function (t) {
     actionType, t);
   var testPeerAction2 = new TestPeerAction(peerIdentifier, connectionType,
     actionType, t);
+  testThaliPeerPoolDefault.start();
   t.doesNotThrow(
     function () {
       testThaliPeerPoolDefault.enqueue(testPeerAction1);
@@ -152,6 +154,8 @@ test('#ThaliPeerPoolDefault - PSK Pool works', function (t) {
   Make a get request to the server when calling start
    */
 
+  testThaliPeerPoolDefault.start();
+
   var app = express();
   app.get('/return10', function (req, res) {
     res.send('10');
@@ -188,6 +192,7 @@ test('#ThaliPeerPoolDefault - stop', function (t) {
     actionType, t);
   var testAction2 = new TestPeerAction(peerIdentifier, connectionType,
     actionType, t);
+  testThaliPeerPoolDefault.start();
 
   t.doesNotThrow(
     function () {
@@ -202,24 +207,24 @@ test('#ThaliPeerPoolDefault - stop', function (t) {
     'enqueue 2 worked'
   );
 
-  testThaliPeerPoolDefault.stop();
+  testThaliPeerPoolDefault.stop()
+  .then(function () {
+    t.throws(
+      function () {
+        testThaliPeerPoolDefault.enqueue(testAction1);
+      },
+      new RegExp(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED),
+      'enqueue is not available when stopped'
+    );
 
-  t.equal(testAction1.getActionState(), PeerAction.actionState.KILLED,
-  'start action is killed');
-  t.equal(testAction2.getActionState(), PeerAction.actionState.KILLED,
-  'killed action is still killed');
+    t.equal(testAction1.getActionState(), PeerAction.actionState.KILLED,
+    'start action is killed');
+    t.equal(testAction2.getActionState(), PeerAction.actionState.KILLED,
+    'killed action is still killed');
 
-  t.equal(Object.getOwnPropertyNames(testThaliPeerPoolDefault._inQueue).length,
-    0, 'inQueue is empty');
+    t.equal(Object.getOwnPropertyNames(testThaliPeerPoolDefault._inQueue).length,
+      0, 'inQueue is empty');
 
-  var testAction3 = new TestPeerAction(peerIdentifier, connectionType,
-    actionType, t);
-  t.doesNotThrow(
-    function () {
-      testThaliPeerPoolDefault.enqueue(testAction3);
-    },
-    'Make sure we will enqueue after stopping'
-  );
-
-  t.end();
+    t.end();
+  })
 });

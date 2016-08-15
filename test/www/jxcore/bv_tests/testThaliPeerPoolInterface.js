@@ -66,9 +66,10 @@ test(
       new RegExp(ThaliPeerPoolInterface.ERRORS.QUEUE_IS_NOT_EMPTY),
       'queue is not empty'
     );
-    testThaliPeerPool.stop();
-
-    t.end();
+    testThaliPeerPool.stop()
+    .then(function () {
+      t.end();
+    });
   }
 );
 
@@ -207,20 +208,22 @@ test(
       testPeerAction2, '2nd action is in the pool'
     );
 
-    testThaliPeerPool.stop();
-    t.notOk(
-      testThaliPeerPool._inQueue.hasOwnProperty(testPeerAction.getId()),
-      '1st action is out of the pool'
-    );
-    t.notOk(
-      testThaliPeerPool._inQueue.hasOwnProperty(testPeerAction2.getId()),
-      '2st action is out of the pool'
-    );
-    t.equal(
-      Object.getOwnPropertyNames(testThaliPeerPool._inQueue).length,
-      0, 'pool is empty'
-    );
+    testThaliPeerPool.stop()
+    .then(function () {
+      t.notOk(
+        testThaliPeerPool._inQueue.hasOwnProperty(testPeerAction.getId()),
+        '1st action is out of the pool'
+      );
+      t.notOk(
+        testThaliPeerPool._inQueue.hasOwnProperty(testPeerAction2.getId()),
+        '2st action is out of the pool'
+      );
+      t.equal(
+        Object.getOwnPropertyNames(testThaliPeerPool._inQueue).length,
+        0, 'pool is empty'
+      );
 
-    t.end();
+      t.end();
+    });
   }
 );

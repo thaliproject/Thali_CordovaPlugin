@@ -39,26 +39,37 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    thaliPullReplicationFromNotification &&
-      thaliPullReplicationFromNotification.stop();
-    thaliNotificationServer.stop()
-      .then(function () {
-        return ThaliMobile.stop();
-      })
-      .then(function (combinedResult) {
-        if (combinedResult.wifiResult !== null ||
-          combinedResult.nativeResult !== null) {
-          return Promise.reject(
-            new Error('Had a failure in ThaliMobile.stop - ' +
-              JSON.stringify(combinedResult)));
-        }
-      })
-      .catch(function (err) {
-        t.fail('Got error in teardown - ' + JSON.stringify(err));
-      })
-      .then(function () {
-        t.end();
-      });
+    Promise.resolve()
+    .then(function () {
+      if (thaliPullReplicationFromNotification) {
+        var promise = thaliPullReplicationFromNotification.stop();
+        thaliPullReplicationFromNotification = null;
+        return promise;
+      }
+    })
+    .then(function () {
+      return thaliNotificationServer.stop();
+    })
+    .then(function () {
+      return ThaliMobile.stop();
+    })
+    .then(function (combinedResult) {
+      if (combinedResult.wifiResult !== null ||
+        combinedResult.nativeResult !== null) {
+        return Promise.reject(
+          new Error(
+            'Had a failure in ThaliMobile.stop - ' +
+            JSON.stringify(combinedResult)
+          )
+        );
+      }
+    })
+    .catch(function (err) {
+      t.fail('Got error in teardown - ' + JSON.stringify(err));
+    })
+    .then(function () {
+      t.end();
+    });
   }
 });
 
@@ -81,9 +92,11 @@ test('Coordinated pull replication from notification test', function (t) {
     exited = true;
     changes && changes.cancel();
     cancelTimer && clearTimeout(cancelTimer);
-    thaliPeerPoolDefault.stop();
-    err ? t.fail('failed with ' + err) : t.pass('all tests passed');
-    t.end();
+    thaliPeerPoolDefault.stop()
+    .then(function () {
+      err ? t.fail('failed with ' + err) : t.pass('all tests passed');
+      t.end();
+    });
   }
 
   var cancelTimer = setTimeout(function () {

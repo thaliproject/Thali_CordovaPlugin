@@ -76,16 +76,15 @@ function ThaliPullReplicationFromNotification(PouchDB,
 
 /**
  * This is a list of states for ThaliPullReplicationFromNotification.
- * This doesn't include 'starting' or 'stopping' because
- * these calls are synchronous.
  * @public
  * @readonly
  * @enum {string}
  */
 ThaliPullReplicationFromNotification.STATES = {
-  CREATED: 'created',
-  STARTED: 'started',
-  STOPPED: 'stopped'
+  CREATED:  'created',
+  STARTED:  'started',
+  STOPPING: 'stopping',
+  STOPPED:  'stopped'
 };
 
 /**
@@ -202,9 +201,19 @@ ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictiona
  */
 ThaliPullReplicationFromNotification.prototype.start =
   function (prioritizedReplicationList) {
+    var self = this;
+
     // Can we start now?
-    if (this.state === ThaliPullReplicationFromNotification.STATES.STARTED) {
-      return;
+    var args = arguments;
+    switch(this.state) {
+      case ThaliPullReplicationFromNotification.STATES.STARTED: {
+        return Promise.resolve();
+      }
+      case ThaliPullReplicationFromNotification.STATES.STOPPING: {
+        return this._stoppingPromise.then(function () {
+          return self.start.apply(self, args);
+        });
+      }
     }
     assert(
       this.state === ThaliPullReplicationFromNotification.STATES.CREATED ||
@@ -212,7 +221,6 @@ ThaliPullReplicationFromNotification.prototype.start =
       'ThaliPullReplicationFromNotification state should be ' +
       '\'CREATED\' or \'STOPPED\' for start'
     );
-    // This call is synchronous.
     this.state = ThaliPullReplicationFromNotification.STATES.STARTED;
 
     this._thaliNotificationClient.on(
@@ -220,28 +228,34 @@ ThaliPullReplicationFromNotification.prototype.start =
       this._boundAdvertiser
     );
     this._thaliNotificationClient.start(prioritizedReplicationList);
+    this._thaliPeerPoolInterface.start();
+    return Promise.resolve();
   };
 
 /**
  * Stops listening for new peer discovery and shuts down all replication actions.
  *
- * This method is idempotent and synchronous.
+ * This method is idempotent.
  * @public
  */
 ThaliPullReplicationFromNotification.prototype.stop = function () {
+  var self = this;
+
   // Can we stop now?
   switch (this.state) {
     case ThaliPullReplicationFromNotification.STATES.CREATED:
     case ThaliPullReplicationFromNotification.STATES.STOPPED: {
-      return;
+      return Promise.resolve();
+    }
+    case ThaliPullReplicationFromNotification.STATES.STOPPING: {
+      return this._stoppingPromise;
     }
   }
   assert(
     this.state === ThaliPullReplicationFromNotification.STATES.STARTED,
     'ThaliPullReplicationFromNotification state should be \'STARTED\' for stop'
   );
-  // This call is synchronous.
-  this.state = ThaliPullReplicationFromNotification.STATES.STOPPED;
+  this.state = ThaliPullReplicationFromNotification.STATES.STOPPING;
 
   this._thaliNotificationClient.removeListener(
     this._thaliNotificationClient.Events.PeerAdvertisesDataForUs,
@@ -252,7 +266,12 @@ ThaliPullReplicationFromNotification.prototype.stop = function () {
   // '_thaliPeerPoolInterface' will kill all actions.
   // We can just make peerDictionary empty.
   this._peerDictionary = {};
-  this._thaliPeerPoolInterface.stop();
+  this._stoppingPromise = this._thaliPeerPoolInterface.stop()
+  .then(function () {
+    self.state = ThaliPullReplicationFromNotification.STATES.STOPPED;
+    self._stoppingPromise = undefined;
+  })
+  return this._stoppingPromise;
 };
 
 /**

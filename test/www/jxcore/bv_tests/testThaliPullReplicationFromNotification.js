@@ -27,16 +27,28 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    thaliReplicationPeerAction && thaliReplicationPeerAction.kill();
-    (testCloseAllServer ? testCloseAllServer.closeAllPromise() :
-      Promise.resolve())
-      .catch(function (err) {
-        t.fail('Got error in teardown ' + err);
-      })
-      .then(function () {
+    Promise.resolve()
+    .then(function () {
+      if (thaliReplicationPeerAction) {
+        thaliReplicationPeerAction.kill();
+        var promise = thaliReplicationPeerAction.waitUntilKilled();
+        thaliReplicationPeerAction = null;
+        return promise;
+      }
+    })
+    .then(function () {
+      if (testCloseAllServer) {
+        var promise = testCloseAllServer.closeAllPromise();
         testCloseAllServer = null;
-        t.end();
-      });
+        return promise;
+      }
+    })
+    .catch(function (err) {
+      t.fail('Got error in teardown ' + err);
+    })
+    .then(function () {
+      t.end();
+    });
   }
 });
 
@@ -98,19 +110,21 @@ test('Make sure start works', function (t) {
   thaliPullReplicationFromNotification._thaliNotificationClient =
     thaliNotificationClient;
 
-  thaliPullReplicationFromNotification.start(bufferArray);
+  thaliPullReplicationFromNotification.start(bufferArray)
+  .then(function () {
+    t.doesNotThrow(
+      mockThaliNotificationClient.verify.bind(mockThaliNotificationClient),
+      'First start and on called correctly'
+    );
 
-  t.doesNotThrow(
-    mockThaliNotificationClient.verify.bind(mockThaliNotificationClient),
-    'First start and on called correctly');
+    // Call start again to make sure we do nothing
+    thaliPullReplicationFromNotification._thaliNotificationClient = {};
 
-  // Call start again to make sure we do nothing
-  thaliPullReplicationFromNotification._thaliNotificationClient =
-    {};
-
-  thaliPullReplicationFromNotification.start(bufferArray);
-
-  t.end();
+    return thaliPullReplicationFromNotification.start(bufferArray);
+  })
+  .then(function () {
+    t.end();
+  });
 });
 
 test('Make sure stop works', function (t) {
@@ -125,96 +139,106 @@ test('Make sure stop works', function (t) {
   // First call does nothing as we haven't called start
   thaliPullReplicationFromNotification._thaliNotificationClient = {};
 
-  thaliPullReplicationFromNotification.stop();
+  var bufferArray;
+  var thaliNotificationClient;
+  var mockThaliNotificationClient;
+  var actionSpy1;
+  var actionSpy2;
+  thaliPullReplicationFromNotification.stop()
+  .then(function () {
+    t.equal(
+      Object.getOwnPropertyNames(
+        thaliPullReplicationFromNotification._peerDictionary).length, 0,
+      'second cleared dictionary');
 
-  t.equal(
-    Object.getOwnPropertyNames(
-      thaliPullReplicationFromNotification._peerDictionary).length, 0,
-    'second cleared dictionary');
+    bufferArray = [new Buffer('foo')];
+    thaliNotificationClient =
+      new ThaliNotificationClient({}, devicePublicPrivateKey);
+    mockThaliNotificationClient = sinon.mock(thaliNotificationClient);
+    mockThaliNotificationClient
+      .expects('start').exactly(1).withArgs(bufferArray);
+    mockThaliNotificationClient.expects('on').exactly(1)
+      .withArgs(thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+        thaliPullReplicationFromNotification._boundAdvertiser);
 
-  var bufferArray = [new Buffer('foo')];
-  var thaliNotificationClient =
-    new ThaliNotificationClient({}, devicePublicPrivateKey);
-  var mockThaliNotificationClient = sinon.mock(thaliNotificationClient);
-  mockThaliNotificationClient
-    .expects('start').exactly(1).withArgs(bufferArray);
-  mockThaliNotificationClient.expects('on').exactly(1)
-    .withArgs(thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-      thaliPullReplicationFromNotification._boundAdvertiser);
+    thaliPullReplicationFromNotification._thaliNotificationClient =
+      thaliNotificationClient;
 
-  thaliPullReplicationFromNotification._thaliNotificationClient =
-    thaliNotificationClient;
+    return thaliPullReplicationFromNotification.start(bufferArray);
+  })
+  .then(function () {
+    t.doesNotThrow(
+      mockThaliNotificationClient.verify.bind(mockThaliNotificationClient),
+      'First start and on called correctly'
+    );
 
-  thaliPullReplicationFromNotification.start(bufferArray);
+    thaliNotificationClient =
+      new ThaliNotificationClient({}, devicePublicPrivateKey);
+    mockThaliNotificationClient = sinon.mock(thaliNotificationClient);
+    mockThaliNotificationClient
+      .expects('stop').exactly(1);
+    mockThaliNotificationClient.expects('removeListener').exactly(1)
+      .withArgs(thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+        thaliPullReplicationFromNotification._boundAdvertiser);
 
-  t.doesNotThrow(
-    mockThaliNotificationClient.verify.bind(mockThaliNotificationClient),
-    'First start and on called correctly');
+    thaliPullReplicationFromNotification._thaliNotificationClient =
+      thaliNotificationClient;
 
-  thaliNotificationClient =
-    new ThaliNotificationClient({}, devicePublicPrivateKey);
-  mockThaliNotificationClient = sinon.mock(thaliNotificationClient);
-  mockThaliNotificationClient
-    .expects('stop').exactly(1);
-  mockThaliNotificationClient.expects('removeListener').exactly(1)
-    .withArgs(thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-      thaliPullReplicationFromNotification._boundAdvertiser);
+    var action1 = new PeerAction();
+    actionSpy1 = sinon.spy(action1, 'kill');
 
-  thaliPullReplicationFromNotification._thaliNotificationClient =
-    thaliNotificationClient;
+    var action2 = new PeerAction();
+    actionSpy2 = sinon.spy(action2, 'kill');
 
-  var action1 = new PeerAction();
-  var actionSpy1 = sinon.spy(action1, 'kill');
+    thaliPullReplicationFromNotification._peerDictionary.foo = action1;
+    thaliPullReplicationFromNotification._peerDictionary.bar = action2;
 
-  var action2 = new PeerAction();
-  var actionSpy2 = sinon.spy(action2, 'kill');
+    thaliPullReplicationFromNotification._thaliPeerPoolInterface.enqueue(action1);
+    thaliPullReplicationFromNotification._thaliPeerPoolInterface.enqueue(action2);
 
-  thaliPullReplicationFromNotification._peerDictionary.foo = action1;
-  thaliPullReplicationFromNotification._peerDictionary.bar = action2;
+    return thaliPullReplicationFromNotification.stop();
+  })
+  .then(function () {
+    t.doesNotThrow(
+      mockThaliNotificationClient.verify.bind(mockThaliNotificationClient),
+      'First stop and removeListener called correctly'
+    );
+    t.ok(actionSpy1.calledOnce, 'first action kill called');
+    t.ok(actionSpy2.calledOnce, 'second action kill called');
+    t.equal(
+      Object.getOwnPropertyNames(
+        thaliPullReplicationFromNotification._peerDictionary
+      ).length,
+      0, 'first cleared dictionary'
+    );
+    t.equal(
+      Object.getOwnPropertyNames(
+        thaliPullReplicationFromNotification._thaliPeerPoolInterface._inQueue
+      ).length,
+      0, 'first cleared pool'
+    );
 
-  thaliPullReplicationFromNotification._thaliPeerPoolInterface.enqueue(action1);
-  thaliPullReplicationFromNotification._thaliPeerPoolInterface.enqueue(action2);
+    // Call stop again, make sure we do nothing
+    thaliPullReplicationFromNotification._thaliNotificationClient = {};
 
-  thaliPullReplicationFromNotification.stop();
+    return thaliPullReplicationFromNotification.stop();
+  })
+  .then(function () {
+    t.equal(
+      Object.getOwnPropertyNames(
+        thaliPullReplicationFromNotification._peerDictionary
+      ).length,
+      0, 'second cleared dictionary'
+    );
+    t.equal(
+      Object.getOwnPropertyNames(
+        thaliPullReplicationFromNotification._thaliPeerPoolInterface._inQueue
+      ).length,
+      0, 'second cleared pool'
+    );
 
-  t.doesNotThrow(
-    mockThaliNotificationClient.verify.bind(mockThaliNotificationClient),
-    'First stop and removeListener called correctly'
-  );
-  t.ok(actionSpy1.calledOnce, 'first action kill called');
-  t.ok(actionSpy2.calledOnce, 'second action kill called');
-  t.equal(
-    Object.getOwnPropertyNames(
-      thaliPullReplicationFromNotification._peerDictionary
-    ).length,
-    0, 'first cleared dictionary'
-  );
-  t.equal(
-    Object.getOwnPropertyNames(
-      thaliPullReplicationFromNotification._thaliPeerPoolInterface._inQueue
-    ).length,
-    0, 'first cleared pool'
-  );
-
-  // Call stop again, make sure we do nothing
-  thaliPullReplicationFromNotification._thaliNotificationClient = {};
-
-  thaliPullReplicationFromNotification.stop();
-
-  t.equal(
-    Object.getOwnPropertyNames(
-      thaliPullReplicationFromNotification._peerDictionary
-    ).length,
-    0, 'second cleared dictionary'
-  );
-  t.equal(
-    Object.getOwnPropertyNames(
-      thaliPullReplicationFromNotification._thaliPeerPoolInterface._inQueue
-    ).length,
-    0, 'second cleared pool'
-  );
-
-  t.end();
+    t.end();
+  });
 });
 
 function matchEntryInDictionary(t, thaliPullReplicationFromNotification, fakeAd,
@@ -247,9 +271,10 @@ function checkPeerCreation(t, dictionaryEntries,
 }
 
 test('Simple peer event', function (t) {
-  var enqueueSpy = sinon.spy();
   var fakePool = {
-    enqueue: enqueueSpy
+    enqueue: sinon.spy(),
+    start: sinon.spy(),
+    stop: sinon.spy()
   };
 
   var listener = null;
@@ -322,88 +347,88 @@ test('Simple peer event', function (t) {
   thaliPullReplicationFromNotification._thaliNotificationClient =
     fakeNotification;
 
-  thaliPullReplicationFromNotification.start([]);
-
-  var fakeAd = {
-    keyId: new Buffer('foo'),
-    pskIdentityField: 'bar',
-    psk: new Buffer('blah'),
-    hostAddress: '127.0.0.1',
-    portNumber: 33,
-    suggestedTCPTimeout: 10,
-    connectionType: 'something'
-  };
-
-  t.ok(listener, 'listener has been set');
-  listener(fakeAd);
-  var firstAction = peerActions[0];
-  checkPeerCreation(t, 1,
-    thaliPullReplicationFromNotification, enqueueSpy.getCall(0), firstAction,
-    fakeAd, fakeDbName);
-
-  // Start second action just to make sure it gets added
-  var fakeAd2 = {
-    keyId: new Buffer('foo'),
-    pskIdentityField: 'bar',
-    psk: new Buffer('blah'),
-    hostAddress: '127.0.0.1',
-    portNumber: 33,
-    suggestedTCPTimeout: 10,
-    connectionType: 'somethingElse'
-  };
-
-  listener(fakeAd2);
-  var secondAction = peerActions[1];
-  checkPeerCreation(t, 2, thaliPullReplicationFromNotification,
-    enqueueSpy.getCall(1), secondAction, fakeAd2, fakeDbName);
-
-  // Start first action and make sure we remove it from dictionary
-  enqueueSpy.firstCall.args[0].start()
+  thaliPullReplicationFromNotification.start([])
   .then(function () {
-    t.ok(firstAction.startSpy.calledOnce, 'start called once');
-    t.equal(firstAction.killSpy.callCount, 0, 'kill never called');
-    t.equal(
-      Object.getOwnPropertyNames(
-        thaliPullReplicationFromNotification._peerDictionary
-      ).length,
-      1, 'One entry left'
-    );
-    matchEntryInDictionary(t, thaliPullReplicationFromNotification, fakeAd2,
-                          enqueueSpy.getCall(1));
-
-    // Kill second action and make sure we remove it from dictionary
-    enqueueSpy.secondCall.args[0].kill();
-
-    t.equal(secondAction.startSpy.callCount, 0, 'Start never called');
-    t.ok(secondAction.killSpy.calledOnce, 'Kill called once');
-    t.equal(Object.getOwnPropertyNames(
-      thaliPullReplicationFromNotification._peerDictionary).length, 0,
-      'no entries left');
-
-    // Call kill again just to show it doesn't do any harm
-    enqueueSpy.secondCall.args[0].kill();
-
-    // Add peer and update with matching peer to show we replace
-    listener(fakeAd2);
-
-    var fakeAd3 = {
+    var fakeAd = {
       keyId: new Buffer('foo'),
       pskIdentityField: 'bar',
       psk: new Buffer('blah'),
-      hostAddress: '128.0.0.1',
+      hostAddress: '127.0.0.1',
+      portNumber: 33,
+      suggestedTCPTimeout: 10,
+      connectionType: 'something'
+    };
+
+    t.ok(listener, 'listener has been set');
+    listener(fakeAd);
+    var firstAction = peerActions[0];
+    checkPeerCreation(t, 1,
+      thaliPullReplicationFromNotification, fakePool.enqueue.getCall(0), firstAction,
+      fakeAd, fakeDbName);
+
+    // Start second action just to make sure it gets added
+    var fakeAd2 = {
+      keyId: new Buffer('foo'),
+      pskIdentityField: 'bar',
+      psk: new Buffer('blah'),
+      hostAddress: '127.0.0.1',
       portNumber: 33,
       suggestedTCPTimeout: 10,
       connectionType: 'somethingElse'
     };
-    listener(fakeAd3);
 
-    var thirdAction = peerActions[2];
-    t.equal(thirdAction.killSpy.callCount, 1, 'Third action is dead');
+    listener(fakeAd2);
+    var secondAction = peerActions[1];
+    checkPeerCreation(t, 2, thaliPullReplicationFromNotification,
+      fakePool.enqueue.getCall(1), secondAction, fakeAd2, fakeDbName);
 
-    var fourthAction = peerActions[3];
-    checkPeerCreation(t, 1, thaliPullReplicationFromNotification,
-      enqueueSpy.getCall(3), fourthAction, fakeAd3, fakeDbName);
+    // Start first action and make sure we remove it from dictionary
+    fakePool.enqueue.firstCall.args[0].start()
+    .then(function () {
+      t.ok(firstAction.startSpy.calledOnce, 'start called once');
+      t.equal(
+        Object.getOwnPropertyNames(
+          thaliPullReplicationFromNotification._peerDictionary
+        ).length,
+        1, 'One entry left'
+      );
+      matchEntryInDictionary(t, thaliPullReplicationFromNotification, fakeAd2,
+                            fakePool.enqueue.getCall(1));
 
-    t.end();
+      // Kill second action and make sure we remove it from dictionary
+      fakePool.enqueue.secondCall.args[0].kill();
+
+      t.equal(secondAction.startSpy.callCount, 0, 'Start never called');
+      t.ok(secondAction.killSpy.calledOnce, 'Kill called once');
+      t.equal(Object.getOwnPropertyNames(
+        thaliPullReplicationFromNotification._peerDictionary).length, 0,
+        'no entries left');
+
+      // Call kill again just to show it doesn't do any harm
+      fakePool.enqueue.secondCall.args[0].kill();
+
+      // Add peer and update with matching peer to show we replace
+      listener(fakeAd2);
+
+      var fakeAd3 = {
+        keyId: new Buffer('foo'),
+        pskIdentityField: 'bar',
+        psk: new Buffer('blah'),
+        hostAddress: '128.0.0.1',
+        portNumber: 33,
+        suggestedTCPTimeout: 10,
+        connectionType: 'somethingElse'
+      };
+      listener(fakeAd3);
+
+      var thirdAction = peerActions[2];
+      t.equal(thirdAction.killSpy.callCount, 1, 'Third action is dead');
+
+      var fourthAction = peerActions[3];
+      checkPeerCreation(t, 1, thaliPullReplicationFromNotification,
+        fakePool.enqueue.getCall(3), fourthAction, fakeAd3, fakeDbName);
+
+      t.end();
+    });
   });
 });

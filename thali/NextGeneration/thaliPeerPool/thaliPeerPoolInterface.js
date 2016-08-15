@@ -2,6 +2,7 @@
 
 var PeerAction = require('./thaliPeerAction');
 var assert = require('assert');
+var Promise = require('lie');
 
 /** @module thaliPeerPoolInterface */
 
@@ -139,14 +140,19 @@ ThaliPeerPoolInterface.prototype.start = function () {
 ThaliPeerPoolInterface.prototype.stop = function () {
   var self = this;
 
+  var promises = [];
   Object.getOwnPropertyNames(this._inQueue)
   .forEach(function (peerActionId) {
-    self._inQueue[peerActionId].kill();
+    var peerAction = self._inQueue[peerActionId];
+    peerAction.kill();
+    promises.push(peerAction.waitUntilKilled());
   });
   assert(
     Object.getOwnPropertyNames(this._inQueue).length === 0,
     ThaliPeerPoolInterface.ERRORS.QUEUE_IS_NOT_EMPTY
   );
+
+  return Promise.all(promises);
 }
 
 module.exports = ThaliPeerPoolInterface;
