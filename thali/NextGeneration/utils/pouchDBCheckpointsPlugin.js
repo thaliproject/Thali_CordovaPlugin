@@ -1,17 +1,10 @@
 'use strict';
 
-// TODO It probably should be in a separated config file
-var customPouchDBEvents = {
-  CHECK_POINT_REACHED: 'checkpointReached'
-};
-
 module.exports = {
-  on: function (event, handler) {
+  onCheckpointReached: function (handler) {
     checkpoints = this.__opts.checkpoints || [];
 
-    if (event === customPouchDBEvents.CHECK_POINT_REACHED) {
-      addEventHandlerForCheckpointReached.bind(this)(handler);
-    }
+    addEventHandlerForCheckpointReached.bind(this)(handler);
   }
 };
 
@@ -30,7 +23,7 @@ var addEventHandlerForCheckpointReached = function (handler) {
 
   var db = this;
   function checkDBSize () {
-    db.info()
+    return db.info()
       .then(function (response) {
         var reachedCheckpoint;
         var dbSize = response.disk_size;
@@ -44,6 +37,9 @@ var addEventHandlerForCheckpointReached = function (handler) {
         if (reachedCheckpoint) {
           handler(reachedCheckpoint);
         }
+      })
+      .catch(function (error) {
+        console.log('Error while fetching db info: ', error);
       });
   }
 
@@ -55,6 +51,10 @@ var initializeDBEvents = function () {
     live: true,
     since: 'now'
   });
+
+  this.on('destroyed', function () {
+    events.cancel();
+  });
 }
 
 var initializeSizeWrapper = function () {
@@ -63,4 +63,5 @@ var initializeSizeWrapper = function () {
   }
 
   this.installSizeWrapper();
+  console.log('pouchdb-size plugin installed');
 }
