@@ -61,6 +61,7 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
   this._resolveStart = null;
   this._rejectStart = null;
   this._refreshTimerManager = null;
+  this._completed = false;
 }
 
 util.inherits(ThaliReplicationPeerAction, ThaliPeerAction);
@@ -117,39 +118,6 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
     });
   self._refreshTimerManager.start();
 };
-
-/**
- * @param {Array.<Error>} errorArray
- * @private
- */
-ThaliReplicationPeerAction.prototype._complete =
-  function (errorArray) {
-    if (this.getActionState() === actionState.KILLED) {
-      return;
-    }
-    ThaliReplicationPeerAction.super_.prototype.kill.call(this);
-    this._refreshTimerManager && this._refreshTimerManager.stop();
-    this._refreshTimerManager = null;
-    this._cancelReplication && this._cancelReplication.cancel();
-    this._cancelReplication = null;
-    this._localSeqManager && this._localSeqManager.stop();
-    this._localSeqManager = null;
-    if (!errorArray || errorArray.length === 0) {
-      return this._resolveStart();
-    }
-    for(var i = 0; i < errorArray.length; ++i) {
-      if (errorArray[i].message === 'connect ECONNREFUSED') {
-        return this._rejectStart(
-          new Error('Could not establish TCP connection'));
-      }
-      if (errorArray[i].message === 'socket hang up') {
-        return this._rejectStart(
-          new Error(
-            'Could establish TCP connection but couldn\'t keep it running'));
-      }
-    }
-    this._rejectStart(errorArray[0]);
-  };
 
 /**
  * When start is called we will start a replication with the remote peer using
@@ -270,7 +238,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
       self._localSeqManager = new LocalSeqManager(
         ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds,
         remoteDB, self._ourPublicKey);
-      return new Promise(function (resolve, reject) {
+      self._replicationPromise = new Promise(function (resolve, reject) {
         self._resolveStart = resolve;
         self._rejectStart = reject;
         self._replicationTimer();
@@ -317,6 +285,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
             // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
           });
       });
+      return self._replicationPromise;
     });
 };
 
@@ -326,7 +295,67 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
  *
  */
 ThaliReplicationPeerAction.prototype.kill = function () {
-  this._complete();
+  if (this.getActionState() === actionState.KILLED) {
+    return;
+  }
+  ThaliReplicationPeerAction.super_.prototype.kill.call(this);
+
+  if (this._refreshTimerManager) {
+    this._refreshTimerManager.stop();
+    this._refreshTimerManager = null;
+  }
+  if (this._cancelReplication) {
+    this._cancelReplication.cancel();
+  }
+  if (this._localSeqManager) {
+    this._localSeqManager.stop();
+  }
 };
+
+/**
+ * @param {Array.<Error>} errorArray
+ * @private
+ */
+ThaliReplicationPeerAction.prototype._complete =
+  function (errorArray) {
+    if (this._completed) {
+      return;
+    }
+    this._completed = true;
+
+    this.kill();
+
+    if (!errorArray || errorArray.length === 0) {
+      return this._resolveStart();
+    }
+    for(var i = 0; i < errorArray.length; ++i) {
+      if (errorArray[i].message === 'connect ECONNREFUSED') {
+        return this._rejectStart(
+          new Error('Could not establish TCP connection')
+        );
+      }
+      if (errorArray[i].message === 'socket hang up') {
+        return this._rejectStart(
+          new Error('Could establish TCP connection but couldn\'t keep it running')
+        );
+      }
+    }
+    this._rejectStart(errorArray[0]);
+  };
+
+ThaliReplicationPeerAction.prototype.waitUntilKilled = function () {
+  var promises = [];
+  if (this._replicationPromise) {
+    promises.push(
+      this._replicationPromise.catch(function () {
+        // We don't care if the current replication ended in an error.
+      })
+    );
+  }
+  if (this._localSeqManager) {
+    promises.push(this._localSeqManager.waitUntilStopped());
+  }
+  return Promise.all(promises);
+}
 
 module.exports = ThaliReplicationPeerAction;
