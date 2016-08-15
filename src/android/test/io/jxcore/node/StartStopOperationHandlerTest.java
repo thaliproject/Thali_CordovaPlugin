@@ -199,8 +199,13 @@ public class StartStopOperationHandlerTest {
         assertThat("mCurrentOperation should not be null1", mCurrentOperation, is(notNullValue()));
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
-
+        
+        Thread.sleep(3000);
+        fCurrentOperation = mStartStopOperationHandler.getClass()
+                .getDeclaredField("mCurrentOperation");
+        fCurrentOperation.setAccessible(true);
         mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+        
         assertThat("mCurrentOperation should be null1", mCurrentOperation, is(nullValue()));
     }
 }
