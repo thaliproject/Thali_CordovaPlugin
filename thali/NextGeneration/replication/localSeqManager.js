@@ -202,21 +202,39 @@ LocalSeqManager.prototype.update = function (seq, immediate) {
 LocalSeqManager.prototype.stop = function () {
   this._stopCalled = true;
   clearTimeout(this._cancelTimeoutToken);
+  if (this._timerReject) {
+    this._timerReject(new Error('Timer Cancelled'));
+  }
 };
 
 LocalSeqManager.prototype.waitUntilStopped = function () {
-  var request;
+  var promises = [];
   if (this._blockedUpdateRequest) {
-    request = this._blockedUpdateRequest;
+    promises.push(
+      this._blockedUpdateRequest
+      .catch(function () {
+        // We don't care if the current request ended in an error.
+      })
+    );
   } else if (this._currentUpdateRequest) {
-    request = this._currentUpdateRequest;
-  } else {
-    request = Promise.resolve();
+    promises.push(
+      this._currentUpdateRequest
+      .catch(function () {
+        // We don't care if the current request ended in an error.
+      })
+    );
   }
 
-  return request.catch(function () {
-    // We don't care if the current request ended in an error.
-  });
+  if (this._timerPromise) {
+    promises.push(
+      this._timerPromise
+      .catch(function () {
+        // We don't care if the current request ended in an error.
+      })
+    );
+  }
+
+  return Promise.all(promises);
 }
 
 module.exports = LocalSeqManager;

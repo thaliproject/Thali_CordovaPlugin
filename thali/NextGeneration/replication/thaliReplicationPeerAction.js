@@ -180,6 +180,7 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   var self = this;
+  this._completed = false;
 
   return ThaliReplicationPeerAction.super_.prototype.start
     .call(this, httpAgentPool)
@@ -325,6 +326,9 @@ ThaliReplicationPeerAction.prototype._complete =
 
     this.kill();
 
+    assert(this._resolveStart, 'resolveStart should exist');
+    assert(this._rejectStart, 'rejectStart should exist');
+
     if (!errorArray || errorArray.length === 0) {
       return this._resolveStart();
     }
@@ -348,7 +352,7 @@ ThaliReplicationPeerAction.prototype.waitUntilKilled = function () {
   if (this._replicationPromise) {
     promises.push(
       this._replicationPromise.catch(function () {
-        // We don't care if the current replication ended in an error.
+        // We don't care if the current changes listener ended with an error.
       })
     );
   }

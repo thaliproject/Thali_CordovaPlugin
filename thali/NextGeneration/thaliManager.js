@@ -228,13 +228,13 @@ ThaliManager.prototype.stop = function () {
   })
 
   .then(function () {
-    logger.debug('stopping listening for advertisements');
-    return ThaliMobile.stopListeningForAdvertisements();
+    logger.debug('stopping advertising and listening');
+    return ThaliMobile.stopAdvertisingAndListening();
   })
 
   .then(function () {
-    logger.debug('stopping advertising and listening');
-    return ThaliMobile.stopAdvertisingAndListening();
+    logger.debug('stopping listening for advertisements');
+    return ThaliMobile.stopListeningForAdvertisements();
   })
 
   .then(function () {

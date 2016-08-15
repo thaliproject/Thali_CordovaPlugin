@@ -136,7 +136,7 @@ function waitForRemoteDocs(
           changesFeed.cancel();
         }
       } else {
-        reject('invalid doc');
+        throw new Error('invalid doc');
       }
     })
     .on('complete', function () {
