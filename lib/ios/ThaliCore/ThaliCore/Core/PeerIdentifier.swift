@@ -16,7 +16,7 @@ enum PeerIdentifierError: String, ErrorType {
 ///Peer identifier for with generations
 public struct PeerIdentifier: Hashable {
     ///UUID identifier of peer
-    let uuid: String
+    public let uuid: String
     ///generation of peer.
     let generation: Int
 
@@ -48,7 +48,7 @@ public struct PeerIdentifier: Hashable {
         return PeerIdentifier(uuidIdentifier: uuid, generation: generation + 1)
     }
 
-    public var stringValue: String {
+    var stringValue: String {
         return "\(uuid):\(String(generation, radix: 16))"
     }
     
