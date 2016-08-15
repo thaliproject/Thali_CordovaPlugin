@@ -348,12 +348,13 @@ ThaliReplicationPeerAction.prototype._complete =
   };
 
 ThaliReplicationPeerAction.prototype.waitUntilKilled = function () {
+  // We have just killed all requests.
+  // We don't care if any request will end with an error.
+
   var promises = [];
   if (this._replicationPromise) {
     promises.push(
-      this._replicationPromise.catch(function () {
-        // We don't care if the current changes listener ended with an error.
-      })
+      this._replicationPromise.catch(function () {})
     );
   }
   if (this._localSeqManager) {

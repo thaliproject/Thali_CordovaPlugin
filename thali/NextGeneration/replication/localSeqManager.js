@@ -208,29 +208,26 @@ LocalSeqManager.prototype.stop = function () {
 };
 
 LocalSeqManager.prototype.waitUntilStopped = function () {
+  // We have just killed all requests.
+  // We don't care if any request will end with an error.
+
   var promises = [];
   if (this._blockedUpdateRequest) {
     promises.push(
       this._blockedUpdateRequest
-      .catch(function () {
-        // We don't care if the current request ended in an error.
-      })
+      .catch(function () {})
     );
   } else if (this._currentUpdateRequest) {
     promises.push(
       this._currentUpdateRequest
-      .catch(function () {
-        // We don't care if the current request ended in an error.
-      })
+      .catch(function () {})
     );
   }
 
   if (this._timerPromise) {
     promises.push(
       this._timerPromise
-      .catch(function () {
-        // We don't care if the current request ended in an error.
-      })
+      .catch(function () {})
     );
   }
 

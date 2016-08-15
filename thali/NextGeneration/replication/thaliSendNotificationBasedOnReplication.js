@@ -558,14 +558,14 @@ ThaliSendNotificationBasedOnReplication.prototype.stop = function () {
         self._transientState.cleanUp();
         self._transientState = null;
 
+        // We have just killed replication request.
+        // We don't care if this request will end with an error.
         Promise.all([
           Promise.resolve()
           .then(function () {
             if (self._replicationPromise) {
               return self._replicationPromise
-              .catch(function () {
-                // We don't care if the current changes listener ended with an error.
-              });
+              .catch(function () {});
             }
           }),
           self._thaliNotificationServer.stop()
