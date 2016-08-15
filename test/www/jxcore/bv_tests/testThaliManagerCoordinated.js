@@ -59,8 +59,6 @@ var test = tape({
   teardown: function (t) {
     Promise.resolve()
     .then(function () {
-      // We can't stop thali manager after each test
-      // because of issue #838.
       if (thaliManager) {
         return thaliManager.stop();
       }
@@ -138,7 +136,6 @@ function waitForRemoteDocs(
           changesFeed.cancel();
         }
       } else {
-        changesFeed.cancel();
         reject('invalid doc');
       }
     })

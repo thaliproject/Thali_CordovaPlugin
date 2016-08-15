@@ -142,10 +142,12 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
   this.state = ThaliManager.STATES.STARTING;
 
   logger.debug('starting thaliPullReplicationFromNotification');
-  this._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
+  this._startingPromise = this._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys)
 
-  logger.debug('starting ThaliMobile');
-  this._startingPromise = ThaliMobile.start(this._router, this._getPskIdToSecret)
+  .then(function () {
+    logger.debug('starting ThaliMobile');
+    return ThaliMobile.start(self._router, self._getPskIdToSecret);
+  })
 
   .then(function () {
     /*
@@ -167,14 +169,17 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
     logger.debug('start listening for advertisements');
     return ThaliMobile.startListeningForAdvertisements();
   })
+
   .then(function () {
     logger.debug('start update advertising and listening');
     return ThaliMobile.startUpdateAdvertisingAndListening();
   })
+
   .then(function () {
     logger.debug('starting thaliSendNotificationBasedOnReplication');
-    self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
+    return self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
   })
+
   .then(function () {
     self.state = ThaliManager.STATES.STARTED;
     self._startingPromise = undefined;
@@ -215,30 +220,31 @@ ThaliManager.prototype.stop = function () {
   this.state = ThaliManager.STATES.STOPPING;
 
   logger.debug('stopping thaliPullReplicationFromNotification');
-  this._thaliPullReplicationFromNotification.stop();
+  this._stoppingPromise = this._thaliPullReplicationFromNotification.stop()
 
-  this._stoppingPromise = new Promise(function (resolve) {
-    setTimeout(function () {
-      logger.debug('stopping thaliSendNotificationBasedOnReplication');
-      self._thaliSendNotificationBasedOnReplication.stop();
+  .then(function () {
+    logger.debug('stopping thaliSendNotificationBasedOnReplication');
+    return self._thaliSendNotificationBasedOnReplication.stop();
+  })
 
-      logger.debug('stopping listening for advertisements');
-      ThaliMobile.stopListeningForAdvertisements()
+  .then(function () {
+    logger.debug('stopping listening for advertisements');
+    return ThaliMobile.stopListeningForAdvertisements();
+  })
 
-      .then(function () {
-        logger.debug('stopping advertising and listening');
-        return ThaliMobile.stopAdvertisingAndListening();
-      })
-      .then(function () {
-        logger.debug('stopping ThaliMobile');
-        return ThaliMobile.stop();
-      })
-      .then(function () {
-        self.state = ThaliManager.STATES.STOPPED;
-        self._stoppingPromise = undefined;
-        resolve();
-      });
-    }, 5000);
+  .then(function () {
+    logger.debug('stopping advertising and listening');
+    return ThaliMobile.stopAdvertisingAndListening();
+  })
+
+  .then(function () {
+    logger.debug('stopping ThaliMobile');
+    return ThaliMobile.stop();
+  })
+
+  .then(function () {
+    self.state = ThaliManager.STATES.STOPPED;
+    self._stoppingPromise = undefined;
   });
 
   return this._stoppingPromise;
