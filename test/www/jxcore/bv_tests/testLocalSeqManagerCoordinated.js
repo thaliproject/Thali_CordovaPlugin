@@ -123,10 +123,14 @@ test('Coordinated seq test', function (t) {
         })
         .catch(function (err) {
           localSeqManager.stop();
-          return Promise.reject(err);
+          return localSeqManager.waitUntilStopped()
+          .then(function () {
+            return Promise.reject(err);
+          });
         })
         .then(function () {
           localSeqManager.stop();
+          return localSeqManager.waitUntilStopped();
         });
     })
     .catch(function (err) {

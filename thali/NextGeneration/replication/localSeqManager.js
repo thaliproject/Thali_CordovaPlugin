@@ -57,7 +57,7 @@ function LocalSeqManager(maximumUpdateInterval,
 LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
   var self = this;
 
-  if (self._stopCalled) {
+  if (this._stopCalled) {
     return Promise.reject(new Error('Stop Called'));
   }
 
@@ -114,6 +114,10 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
 LocalSeqManager.prototype.update = function (seq, immediate) {
   var self = this;
 
+  if (this._stopCalled) {
+    return Promise.reject(new Error('Stop Called'));
+  }
+
   function cancelTimer(reject) {
     clearTimeout(self._cancelTimeoutToken);
     self._cancelTimeoutToken = null;
@@ -146,10 +150,6 @@ LocalSeqManager.prototype.update = function (seq, immediate) {
     });
     return self._blockedUpdateRequest ? self._blockedUpdateRequest :
             self._currentUpdateRequest;
-  }
-
-  if (self._stopCalled) {
-    return Promise.reject(new Error('Stop Called'));
   }
 
   if (seq <= self._nextSeqValueToSend) {
@@ -203,5 +203,20 @@ LocalSeqManager.prototype.stop = function () {
   this._stopCalled = true;
   clearTimeout(this._cancelTimeoutToken);
 };
+
+LocalSeqManager.prototype.waitUntilStopped = function () {
+  var request;
+  if (this._blockedUpdateRequest) {
+    request = this._blockedUpdateRequest;
+  } else if (this._currentUpdateRequest) {
+    request = this._currentUpdateRequest;
+  } else {
+    request = Promise.resolve();
+  }
+
+  return request.catch(function () {
+    // We don't care if the current request ended in an error.
+  });
+}
 
 module.exports = LocalSeqManager;
