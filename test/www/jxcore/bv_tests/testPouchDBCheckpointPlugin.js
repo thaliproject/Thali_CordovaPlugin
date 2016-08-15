@@ -14,12 +14,11 @@ var PouchDB = require('pouchdb')
 // DB defaultDirectory should be unique among all tests
 // and any instance of this test.
 // This is especially required for tape.coordinated.
-var dbName = 'pouchdb-' + Date.now();
-var checkpoints = [100, 200];
-var dbOptions = {
-  checkpoints: checkpoints
-};
 var db;
+var dbName = 'pouchdb-' + Date.now();
+var dbOptions = {
+  checkpoints: [100, 200]
+};
 
 var test = tape({
   setup: function (t) {
@@ -33,8 +32,7 @@ var test = tape({
 });
 
 var doc = {
-  _id: Date.now().toString(),
-  data: 'data'
+  _id: Date.now().toString()
 };
 
 test('onCheckpointReached callback calling', function (t) {
@@ -44,8 +42,7 @@ test('onCheckpointReached callback calling', function (t) {
 
   db.put(doc)
     .then(function () {
-      // Small letency is need
-      // because calculating of database size is a hard work
+      // Small latency is needed to calculate database size
       setTimeout(function () {
         t.ok(spy.calledOnce, 'checkpointReached handler should be called once');
         t.end();

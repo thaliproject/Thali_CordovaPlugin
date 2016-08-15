@@ -63,5 +63,4 @@ var initializeSizeWrapper = function () {
   }
 
   this.installSizeWrapper();
-  console.log('pouchdb-size plugin installed');
 }
