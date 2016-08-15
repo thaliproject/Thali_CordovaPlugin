@@ -37,8 +37,10 @@ var test = tape({
       new ThaliNotificationServer(router, devicePublicPrivateKey,
                                   60 * 60 * 1000);
 
+    var peerPool = new ThaliPeerPoolDefault();
+    peerPool.start();
     thaliNotificationClient =
-      new ThaliNotificationClient(new ThaliPeerPoolDefault(),
+      new ThaliNotificationClient(peerPool,
                                   devicePublicPrivateKey);
     t.end();
   },

@@ -45,7 +45,9 @@ var GlobalVariables = function () {
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
 
   this.peerPoolInterface = new ThaliPeerPoolDefault();
+  this.peerPoolInterface.start();
   this.peerPoolInterfaceStub = new ThaliPeerPoolDefault();
+  this.peerPoolInterfaceStub.start();
 
   this.TCPEvent = {
     peerIdentifier: 'id124',
@@ -328,6 +330,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
   // Action is getting resolved ok
 
   var peerPool = new ThaliPeerPoolDefault();
+  peerPool.start();
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
