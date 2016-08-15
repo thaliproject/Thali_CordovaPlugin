@@ -44,18 +44,47 @@ function TestThaliPeerPool() {
 
 inherits(TestThaliPeerPool, ThaliPeerPoolInterface);
 
+test(
+  '#ThaliPeerPoolInterface - make sure that start verifies queue length',
+  function (t) {
+    t.doesNotThrow(
+      function () {
+        testThaliPeerPool.start();
+      },
+      'good start'
+    );
+    t.doesNotThrow(
+      function () {
+        testThaliPeerPool.enqueue(testPeerAction);
+      },
+      'good enqueue'
+    );
+    t.throws(
+      function () {
+        testThaliPeerPool.start();
+      },
+      new RegExp(ThaliPeerPoolInterface.ERRORS.QUEUE_IS_NOT_EMPTY),
+      'queue is not empty'
+    );
+    testThaliPeerPool.stop();
+
+    t.end();
+  }
+);
+
 test('#ThaliPeerPoolInterface - bad enqueues', function (t) {
+  testThaliPeerPool.start();
   t.throws(
     function () {
       testThaliPeerPool.enqueue(null);
     },
-    new RegExp(ThaliPeerPoolInterface.prototype.ERRORS.BAD_PEER_ACTION), 'null arg'
+    new RegExp(ThaliPeerPoolInterface.ERRORS.BAD_PEER_ACTION), 'null arg'
   );
   t.throws(
     function () {
       testThaliPeerPool.enqueue(testThaliPeerPool);
     },
-    new RegExp(ThaliPeerPoolInterface.prototype.ERRORS.BAD_PEER_ACTION), 'wrong arg type'
+    new RegExp(ThaliPeerPoolInterface.ERRORS.BAD_PEER_ACTION), 'wrong arg type'
   );
 
   testPeerAction.start();
@@ -63,13 +92,14 @@ test('#ThaliPeerPoolInterface - bad enqueues', function (t) {
     function () {
       testThaliPeerPool.enqueue(testPeerAction);
     },
-    new RegExp(ThaliPeerPoolInterface.prototype.ERRORS.OBJECT_NOT_IN_CREATED), 'wrong arg type'
+    new RegExp(ThaliPeerPoolInterface.ERRORS.OBJECT_NOT_IN_CREATED), 'wrong arg type'
   );
 
   t.end();
 });
 
 test('#ThaliPeerPoolInterface - do not allow same object type', function (t) {
+  testThaliPeerPool.start();
   t.doesNotThrow(
     function () {
       testThaliPeerPool.enqueue(testPeerAction);
@@ -80,7 +110,7 @@ test('#ThaliPeerPoolInterface - do not allow same object type', function (t) {
     function () {
       testThaliPeerPool.enqueue(testPeerAction);
     },
-    new RegExp(ThaliPeerPoolInterface.prototype.ERRORS.OBJECT_ALREADY_ENQUEUED), 'already enqueued'
+    new RegExp(ThaliPeerPoolInterface.ERRORS.OBJECT_ALREADY_ENQUEUED), 'already enqueued'
   );
 
   t.end();
@@ -89,6 +119,7 @@ test('#ThaliPeerPoolInterface - do not allow same object type', function (t) {
 test(
   '#ThaliPeerPoolInterface - make sure we catch kill and dequeue',
   function (t) {
+    testThaliPeerPool.start();
     var testPeerAction2 = new TestPeerAction(
       peerIdentifier, connectionType, actionType
     );
@@ -134,6 +165,7 @@ test(
   '#ThaliPeerPoolInterface - make sure our changes to the action leave ' +
   'kill as idempotent',
   function (t) {
+    testThaliPeerPool.start();
     t.doesNotThrow(
       function () {
         testThaliPeerPool.enqueue(testPeerAction);
@@ -149,6 +181,7 @@ test(
 test(
   '#ThaliPeerPoolInterface - make sure that stop removes all actions',
   function (t) {
+    testThaliPeerPool.start();
     var testPeerAction2 = new TestPeerAction(
       peerIdentifier, connectionType, actionType
     );

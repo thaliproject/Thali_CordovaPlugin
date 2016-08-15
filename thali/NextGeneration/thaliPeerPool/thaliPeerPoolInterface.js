@@ -72,14 +72,14 @@ ThaliPeerPoolInterface.prototype._inQueue = null;
  */
 ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
   if (!peerAction || !(peerAction instanceof PeerAction)) {
-    throw new Error(ThaliPeerPoolInterface.prototype.ERRORS.BAD_PEER_ACTION);
+    throw new Error(ThaliPeerPoolInterface.ERRORS.BAD_PEER_ACTION);
   }
   if (peerAction.getActionState() !== PeerAction.actionState.CREATED) {
-    throw new Error(ThaliPeerPoolInterface.prototype.ERRORS.OBJECT_NOT_IN_CREATED);
+    throw new Error(ThaliPeerPoolInterface.ERRORS.OBJECT_NOT_IN_CREATED);
   }
   var peerActionId = peerAction.getId();
   if (this._inQueue[peerActionId]) {
-    throw new Error(ThaliPeerPoolInterface.prototype.ERRORS.OBJECT_ALREADY_ENQUEUED);
+    throw new Error(ThaliPeerPoolInterface.ERRORS.OBJECT_ALREADY_ENQUEUED);
   }
 
   this._inQueue[peerActionId] = peerAction;
@@ -118,11 +118,19 @@ ThaliPeerPoolInterface.prototype._onPeerActionKilled = function (peerAction) {
  * @enum {string}
  * @readonly
  */
-ThaliPeerPoolInterface.prototype.ERRORS = {
+ThaliPeerPoolInterface.ERRORS = {
   BAD_PEER_ACTION: 'Bad peerAction',
   OBJECT_ALREADY_ENQUEUED: 'Object already in use',
-  OBJECT_NOT_IN_CREATED: 'Object not in created'
+  OBJECT_NOT_IN_CREATED: 'Object not in created',
+  QUEUE_IS_NOT_EMPTY: 'Queue should be empty before start'
 };
+
+ThaliPeerPoolInterface.prototype.start = function () {
+  assert(
+    Object.getOwnPropertyNames(this._inQueue).length === 0,
+    ThaliPeerPoolInterface.ERRORS.QUEUE_IS_NOT_EMPTY
+  );
+}
 
 /**
  * Kills all peer actions in the queue.
@@ -137,7 +145,7 @@ ThaliPeerPoolInterface.prototype.stop = function () {
   });
   assert(
     Object.getOwnPropertyNames(this._inQueue).length === 0,
-    'Queue should be empty when all peer actions was killed'
+    ThaliPeerPoolInterface.ERRORS.QUEUE_IS_NOT_EMPTY
   );
 }
 
