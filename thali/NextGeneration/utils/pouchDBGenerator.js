@@ -73,6 +73,14 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     }
   });
 
+  PouchAlt.prototype.info = function () {
+    var self = this;
+    return PouchAlt.super_.prototype.info.apply(this, arguments)
+    .catch(function () {
+      return { update_seq: 0 };
+    });
+  }
+
   return PouchAlt;
 }
 
