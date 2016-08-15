@@ -74,15 +74,10 @@ var test = tape({
 
 // We have 'localDoc' and 'oldRemoteDocs' already in DB.
 // We are waiting until 'newRemoteDocs' will appears in DB.
-// We are waiting for confirmation that 'localDoc' is in DB too.
-// Our changes handler should receive 'localDoc' and
-// 'newRemoteDocs' only once.
-// It can receive 'oldRemoteDocs' once or never.
+// We are waiting for confirmation that 'localDoc' and 'oldRemoteDocs' is in DB too.
 function waitForRemoteDocs(
   pouchDB, localDoc, oldRemoteDocs, newRemoteDocs, ignoreRev
 ) {
-  var allDocsFound = false;
-
   // We can remove '_rev' key from compared values.
   // We can just stringify docs, they wont be circular.
   function toString(doc) {
@@ -98,6 +93,14 @@ function waitForRemoteDocs(
   var oldRemoteDocStrings = oldRemoteDocs.map(toString);
   var newRemoteDocStrings = newRemoteDocs.map(toString);
 
+  function allDocsFound() {
+    return (
+      !localDocString &&
+      newRemoteDocStrings.length === 0 &&
+      oldRemoteDocStrings.length === 0
+    );
+  }
+
   function findDoc(doc) {
     var docString = toString(doc);
 
@@ -105,22 +108,17 @@ function waitForRemoteDocs(
     var newIndex = newRemoteDocStrings.indexOf(docString);
     if (localDocString && docString === localDocString) {
       localDocString = undefined;
-      if (newRemoteDocStrings.length === 0) {
-        allDocsFound = true;
-      }
       return true;
     }
     else if (oldIndex !== - 1) {
       oldRemoteDocStrings.splice(oldIndex, 1);
       return true;
-    } else if (newIndex !== -1) {
+    }
+    else if (newIndex !== -1) {
       newRemoteDocStrings.splice(newIndex, 1);
-      if (newRemoteDocStrings.length === 0) {
-        allDocsFound = true;
-      }
       return true;
-    } else {
-      console.log('ololo', docString);
+    }
+    else {
       return false;
     }
   }
@@ -147,7 +145,7 @@ function waitForRemoteDocs(
     })
     .on('change', function (change) {
       if (findDoc(change.doc)) {
-        if (allDocsFound) {
+        if (allDocsFound()) {
           changesFeed.cancel();
         }
       } else {
