@@ -8,21 +8,22 @@ var PouchDB = require('pouchdb')
   .plugin(require('pouchdb-size'))
   .plugin(require('thali/NextGeneration/utils/pouchDBCheckpointsPlugin'))
   .defaults({
-    defaultAdapter: require('leveldown-mobile');
-  });
+     db: require('leveldown-mobile')
+   });
 
 // DB defaultDirectory should be unique among all tests
 // and any instance of this test.
 // This is especially required for tape.coordinated.
 var dbName = 'pouchdb-' + Date.now();
-var checkpoints = [10, 20, 30];
+var checkpoints = [100, 200];
 var dbOptions = {
   checkpoints: checkpoints
 };
+var db;
 
 var test = tape({
   setup: function (t) {
-    fs.ensureDirSync(dbName);
+    db = new PouchDB(dbName, dbOptions);
     t.end();
   },
   teardown: function (t) {
@@ -31,22 +32,26 @@ var test = tape({
   }
 });
 
-var uniqDocument = {
-  _id: Date.now().toString()
+var doc = {
+  _id: Date.now().toString(),
+  data: 'data'
 };
 
-test('checkPointReached event emission', function (t) {
-  var db = new PouchDB(dbName, dbOptions);
+test('onCheckpointReached callback calling', function (t) {
   var spy = sinon.spy();
 
-  db.on('sizeCheckPointReached', spy);
+  db.onCheckpointReached(spy);
 
-  db.put(uniqDocument)
+  db.put(doc)
     .then(function () {
-      t.ok(spy.calledOnce, 'checkPointReached event should be once emitted')
-      t.end();
+      // Small letency is need
+      // because calculating of database size is a hard work
+      setTimeout(function () {
+        t.ok(spy.calledOnce, 'checkpointReached handler should be called once');
+        t.end();
+      }, 100);
     })
     .catch(function (error) {
-      t.fail('Should not get here', error);
+      t.fail(error);
     });
 });
