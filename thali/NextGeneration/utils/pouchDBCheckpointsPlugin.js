@@ -23,7 +23,7 @@ var addEventHandlerForCheckpointReached = function (handler) {
 
   var db = this;
   function checkDBSize () {
-    return db.info()
+    db.info()
       .then(function (response) {
         var reachedCheckpoint;
         var dbSize = response.disk_size;
