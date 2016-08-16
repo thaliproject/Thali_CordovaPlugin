@@ -439,8 +439,7 @@ public class ConnectionHelperTest {
 
         String result = mConnectionHelper
                 .connect(bluetoothMacAddressOutgoing, mJXcoreTHaliCallBack);
-        assertThat(result, is(equalTo("We already have an outgoing connection to peer with ID "
-                + bluetoothMacAddressOutgoing)));
+        assertThat(result, is(equalTo("Already connect(ing/ed)")));
 
         mConnectionHelper.killConnections(true);
 

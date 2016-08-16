@@ -196,11 +196,11 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
   retries--;
   Mobile('connect').callNative(peer.peerIdentifier, function (err, connection) {
     if (quitSignal && quitSignal.raised) {
-      successCb(null, null);
+      successCb(null, null, peer);
     }
     if (err == null) {
       // Connected successfully..
-      successCb(err, connection);
+      successCb(err, connection, peer);
     } else {
       logger.info('Connect returned an error: ' + err);
 
@@ -216,7 +216,7 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
         if (failureCb) {
           logger.warn('Too many connect retries!');
           // Exceeded retries..
-          failureCb(err, connection);
+          failureCb(err, connection, peer);
         }
       }
     }
@@ -699,7 +699,7 @@ function killSkeleton(t, createServerWriteSuccessHandler,
   pretendLocalMux = makeIntoCloseAllServer(pretendLocalMux);
   serverToBeClosed = pretendLocalMux;
 
-  function onConnectSuccess(err, connection) {
+  function onConnectSuccess(err, connection, peer) {
     connection = JSON.parse(connection);
     var gotCloseMessage = false;
     if (connection.listeningPort === 0) {
@@ -727,7 +727,7 @@ function killSkeleton(t, createServerWriteSuccessHandler,
     connectToListeningPort.on('close', function () {
       t.ok(gotCloseMessage, 'We got the close message and we are closed');
       connectToListeningPortCloseHandler(connection, testMessage,
-                                          closeMessage);
+                                          closeMessage, peer);
     });
   }
 
@@ -751,7 +751,7 @@ function killRemote(t, end) {
       socket[end ? 'end' : 'destroy']();
     },
     function () {},
-    function (connection) {
+    function (connection, testMessage, closeMessage, peer) {
       // Confirm that nobody is listening on the port
       var secondConnectionToListeningPort =
         net.connect(connection.listeningPort, function () {
@@ -760,7 +760,15 @@ function killRemote(t, end) {
         });
       secondConnectionToListeningPort.on('error', function (err) {
         t.ok(err, 'We got an error which is what we wanted');
-        t.end();
+        connectToPeer(
+          peer, 1,
+          function (err) {
+            t.end();
+          },
+          function (err) {
+            t.end();
+          }
+        );
       });
     });
 }
@@ -786,7 +794,7 @@ function killLocal(t, end) {
     function (connectToListeningPort) {
       connectToListeningPort[end ? 'end' : 'destroy']();
     },
-    function (connection, testMessage, closeMessage) {
+    function (connection, testMessage, closeMessage, peer) {
       // Confirm that nobody is listening on the port
       var secondConnectionToListeningPort =
         net.connect(connection.listeningPort, function () {
@@ -805,7 +813,15 @@ function killLocal(t, end) {
         t.ok(err, 'We got an error which is what we wanted');
       });
       secondConnectionToListeningPort.on('close', function () {
-        t.end();
+        connectToPeer(
+          peer, 1,
+          function (err) {
+            t.end();
+          },
+          function (err) {
+            t.end();
+          }
+        );
       });
     });
 }
