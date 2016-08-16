@@ -57,6 +57,7 @@ public class ConnectivityMonitorTest {
         mWifiDirectManager = (WifiDirectManager) wifiDirectManagerField.get(mDiscoveryManagerMock);
 
         mWifiDirectManager.setWifiEnabled(true);
+        Thread.sleep(5000);
     }
 
     @Before
