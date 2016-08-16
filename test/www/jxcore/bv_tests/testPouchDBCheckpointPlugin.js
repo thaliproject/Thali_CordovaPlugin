@@ -105,6 +105,9 @@ test('onCheckpointReached callback calling after database shrinks', function (t)
       return db.compact();
     })
     .then(function () {
+      db.put(new Doc());
+    })
+    .then(function () {
       // A small latency is needed to calculate database size after put
       setTimeout(function () {
         t.ok(spu.calledTwice, 'checkpointReached reached handler should be called twice');
