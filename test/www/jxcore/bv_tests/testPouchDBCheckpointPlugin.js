@@ -59,6 +59,27 @@ test('onCheckpointReached callback calling on a single change', function (t) {
     });
 });
 
+test('onCheckpointReached multiple callbacks calling on a single change', function (t) {
+  var spy = sinon.spy();
+  var anotherSpy = sinon.spy();
+
+  db.onCheckpointReached(spy);
+  db.onCheckpointReached(anotherSpy);
+
+  db.put(new Doc())
+    .then(function () {
+      // A small latency is needed to calculate database size after put
+      setTimeout(function () {
+        t.ok(spy.calledOnce, 'checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
+        t.ok(anotherSpy.calledOnce, 'checkpointReached handler should be called once. Called ' + anotherSpy.callCount + ' time(s)');
+        t.end();
+      }, checkpointPluginDelay + 300);
+    })
+    .catch(function (error) {
+      t.fail(error);
+    });
+});
+
 test('onCheckpointReached callback calling on multiple changes' +
 'that are in checkpoints plugin delay interval', function (t) {
     var spy = sinon.spy();
