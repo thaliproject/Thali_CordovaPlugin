@@ -191,8 +191,7 @@ public typealias ClientConnectCallback = (error: String, info: [String : AnyObje
 #if TEST
     func executeNativeTests() -> String {
         let runner = TestRunner.`default`
-        runner.runTest()
-        return runner.resultDescription ?? ""
+        return runner.runTest() ?? ""
     }
 #endif
 
@@ -263,7 +262,7 @@ extension AppContext {
 
 extension PeerAvailability {
     var dictionaryValue: [String : AnyObject] {
-        return ["peerIdentifier" : peerIdentifier.stringValue,
+        return ["peerIdentifier" : peerIdentifier.uuid,
                 "peerAvailable" : available
             ]
     }

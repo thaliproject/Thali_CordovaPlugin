@@ -11,27 +11,26 @@ import MultipeerConnectivity
 
 final class Browser: NSObject {
     private let browser: MCNearbyServiceBrowser
-    private let canConnectToPeer: (PeerIdentifier) -> Bool
     private let foundPeer: (PeerIdentifier) -> Void
+    private let lostPeer: (PeerIdentifier) -> Void
+    var listeningStateChanged: ((Bool) -> Void)?
 
     let peerIdentifier: PeerIdentifier
-    internal private(set) var isListening: Bool = false
+    internal private(set) var isListening: Bool = false {
+        didSet {
+            listeningStateChanged?(isListening)
+        }
+    }
 
-    required init(peerIdentifier: PeerIdentifier, serviceType: String, canConnectToPeer: (PeerIdentifier) -> Bool,
+    required init(peerIdentifier: PeerIdentifier, serviceType: String,
                   foundPeer: (PeerIdentifier) -> Void,
                   lostPeer: (PeerIdentifier) -> Void) {
         browser = MCNearbyServiceBrowser(peer: peerIdentifier.mcPeer, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
-        self.canConnectToPeer = canConnectToPeer
         self.foundPeer = foundPeer
+        self.lostPeer = lostPeer
         super.init()
         browser.delegate = self
-    }
-
-    func connectToPeer(withIdentifier identifier: PeerIdentifier, port: UInt16) {
-        if canConnectToPeer(peerIdentifier) {
-//            browser.invitePeer(identifier.mcPeer, toSession: session, withContext: nil, timeout: 30)
-        }
     }
     
     func startListening() {
@@ -59,7 +58,7 @@ extension Browser: MCNearbyServiceBrowserDelegate {
     func browser(browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         do {
             let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
-            foundPeer(peerIdentifier)
+            lostPeer(peerIdentifier)
         } catch let error {
             print("cannot parse identifier \"\(peerID.displayName)\" because of error: \(error)")
         }
@@ -67,6 +66,6 @@ extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: NSError) {
         isListening = false
-        print("didNotStartingBrowsingForPeers")
+        print("didNotStartingBrowsingForPeers \(error)")
     }
 }

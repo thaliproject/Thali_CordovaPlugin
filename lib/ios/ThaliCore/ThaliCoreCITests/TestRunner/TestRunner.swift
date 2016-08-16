@@ -71,12 +71,15 @@ public final class TestRunner: NSObject {
         )
     }
 
-    public func runTest() {
+    public func runTest() -> String? {
         // Test must only be run on the main thread.
+//        NSRunLoop.mainRunLoop().performSelector(#selector(_runTest), target: self, argument: nil, order: 0, modes: [NSRunLoopCommonModes])
         dispatch_sync(dispatch_get_main_queue()) {
             self.testSuite.runTest()
         }
+        return runResult.jsonString
     }
+    
 }
 
 // MARK:

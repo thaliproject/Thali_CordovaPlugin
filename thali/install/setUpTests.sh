@@ -54,10 +54,10 @@ fi
 cd $TEST_PROJECT_NAME
 
 # add Android platform
-cordova platform add android
+# cordova platform add android
 
 # A file that identifies the current build as a UT build, which results in copying native UT files to the platform folder
-touch platforms/android/unittests
+# touch platforms/android/unittests
 
 # add iOS platform
 if [ $IS_DARWIN_PLATFORM == true ]; then
@@ -93,7 +93,7 @@ find . -name "*.pem" -delete
 cp -v $1 app.js
 
 # build Android
-cordova build android --release --device
+# cordova build android --release --device
 
 # build iOS
 if [ $IS_DARWIN_PLATFORM == true ]; then

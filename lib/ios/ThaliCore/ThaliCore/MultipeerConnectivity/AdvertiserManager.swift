@@ -13,8 +13,6 @@ import Foundation
     internal private (set) var advertisers: [Advertiser] = []
     internal private (set) var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
-    private let disposeQueue = NSOperationQueue()
-    private var disposeOperations: [PeerIdentifier : NSOperation] = [:]
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
     
     public var isAdvertising: Bool {
@@ -22,11 +20,6 @@ import Foundation
     }
     
     private func advertiserIdentifier(advertiserPeer: PeerIdentifier, receivedInvitationFromPeer peer: PeerIdentifier) {
-        // cancel disposing advertiser on timeout
-        if let operation = disposeOperations[advertiserPeer] {
-            operation.cancel()
-            disposeOperations.removeValueForKey(advertiserPeer)
-        }
     }
 
     public init(serviceType: String) {
@@ -35,19 +28,16 @@ import Foundation
 
     //dispose advertiser after 30 sec to ensure that it has no pending invitations
     func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
-        let disposeOperation = NSBlockOperation() {
-            advertiser.stopAdvertising()
-            if let index = self.advertisers.indexOf(advertiser) {
-                self.advertisers.removeAtIndex(index)
-            }
-            self.didRemoveAdvertiserWithIdentifierHandler?(advertiser.peerIdentifier)
-        }
-
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(30 * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
-            self.disposeQueue.addOperation(disposeOperation)
+            sync(self) {
+                advertiser.stopAdvertising()
+                if let index = self.advertisers.indexOf(advertiser) {
+                    self.advertisers.removeAtIndex(index)
+                }
+                self.didRemoveAdvertiserWithIdentifierHandler?(advertiser.peerIdentifier)
+            }
         }
-        disposeOperations[advertiser.peerIdentifier] = disposeOperation
     }
 
     private func createAndRunAdvertiserWith(identifier: PeerIdentifier, port: UInt16) -> Advertiser {
@@ -60,18 +50,6 @@ import Foundation
         return advertiser
     }
 
-    public func startAdvertisingAndListening(port: UInt16) {
-        if let currentAdvertiser = currentAdvertiser {
-            let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
-            addAdvertiserToDisposeQueue(currentAdvertiser)
-            self.currentAdvertiser = createAndRunAdvertiserWith(peerIdentifier, port: port)
-        } else {
-            self.currentAdvertiser = createAndRunAdvertiserWith(PeerIdentifier(), port: port)
-        }
-
-        assert(self.currentAdvertiser != nil, "we should have initialized advertiser after calling this function")
-    }
-
     public func stopAdvertisingAndListening() {
         advertisers.forEach {
             $0.stopAdvertising()
@@ -81,6 +59,24 @@ import Foundation
     }
     
     public func startUpdateAdvertisingAndListening(port: UInt16) {
+        if let currentAdvertiser = currentAdvertiser {
+            let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
+            addAdvertiserToDisposeQueue(currentAdvertiser)
+            self.currentAdvertiser = createAndRunAdvertiserWith(peerIdentifier, port: port)
+        } else {
+            self.currentAdvertiser = createAndRunAdvertiserWith(PeerIdentifier(), port: port)
+        }
         
+        assert(self.currentAdvertiser != nil, "we should have initialized advertiser after calling this function")
+    }
+    
+    func lastGenerationAdvertiserForIdentifier(identifier: PeerIdentifier) -> Advertiser? {
+        return advertisers
+            .filter {
+                $0.peerIdentifier.uuid == identifier.uuid
+            }
+            .maxElement {
+                $0.0.peerIdentifier.generation < $0.1.peerIdentifier.generation
+            }
     }
 }

@@ -12,11 +12,17 @@
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */; };
 		D300C47B1D54C0EA00A9D97D /* PeerIdentifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */; };
-		D3217E311D5E01580068390B /* AdvertiserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* AdvertiserTests.swift */; };
+		D3217E311D5E01580068390B /* PeerDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */; };
 		D3217E341D5E0D980068390B /* PeerIdentifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */; };
 		D3217E351D5E0D990068390B /* ApplicationStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */; };
+		D34882F51D62060E0052A3EA /* AdvertiserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34882F41D62060E0052A3EA /* AdvertiserManagerTests.swift */; };
+		D34882F71D62064B0052A3EA /* String+Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34882F61D62064B0052A3EA /* String+Random.swift */; };
+		D375BDEA1D6313E30059805F /* AdvertiserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34882F41D62060E0052A3EA /* AdvertiserManagerTests.swift */; };
+		D375BDEC1D6313F70059805F /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */; };
+		D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */; };
 		D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */; };
-		D3CBCCE51D5DD44A00F1591A /* AdvertiserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* AdvertiserTests.swift */; };
+		D3CBCCE51D5DD44A00F1591A /* PeerDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */; };
+		D3E380D41D6303F50040DF58 /* Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E380D31D6303F50040DF58 /* Sync.swift */; };
 		FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
 		FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
 		FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
@@ -53,8 +59,12 @@
 		CCA573071D4B9F1B00FBEC41 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRunner.swift; sourceTree = "<group>"; };
 		D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerIdentifierTests.swift; sourceTree = "<group>"; };
+		D34882F41D62060E0052A3EA /* AdvertiserManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserManagerTests.swift; sourceTree = "<group>"; };
+		D34882F61D62064B0052A3EA /* String+Random.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "String+Random.swift"; sourceTree = "<group>"; };
+		D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserManagerTests.swift; sourceTree = "<group>"; };
 		D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManagerTests.swift; sourceTree = "<group>"; };
-		D3CBCCE41D5DD44A00F1591A /* AdvertiserTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserTests.swift; sourceTree = "<group>"; };
+		D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerDiscoveryTests.swift; sourceTree = "<group>"; };
+		D3E380D31D6303F50040DF58 /* Sync.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Sync.swift; sourceTree = "<group>"; };
 		FAADD0A063AF85E1634DB500 /* Browser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Browser.swift; sourceTree = "<group>"; };
 		FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserManager.swift; sourceTree = "<group>"; };
 		FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Advertiser.swift; sourceTree = "<group>"; };
@@ -123,11 +133,14 @@
 		CCA571CA1D4787A900FBEC41 /* ThaliCoreTests */ = {
 			isa = PBXGroup;
 			children = (
+				D34882F81D6206510052A3EA /* Utils */,
 				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
 				CCA572501D478C1000FBEC41 /* Supporting Files */,
 				D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */,
 				D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */,
-				D3CBCCE41D5DD44A00F1591A /* AdvertiserTests.swift */,
+				D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */,
+				D34882F41D62060E0052A3EA /* AdvertiserManagerTests.swift */,
+				D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */,
 			);
 			path = ThaliCoreTests;
 			sourceTree = "<group>";
@@ -145,6 +158,7 @@
 			children = (
 				FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */,
 				FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */,
+				D3E380D31D6303F50040DF58 /* Sync.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -200,6 +214,14 @@
 				CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */,
 			);
 			path = TestRunner;
+			sourceTree = "<group>";
+		};
+		D34882F81D6206510052A3EA /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				D34882F61D62064B0052A3EA /* String+Random.swift */,
+			);
+			name = Utils;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -415,6 +437,7 @@
 				FAADD7B9451F32511828885E /* Browser.swift in Sources */,
 				FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */,
 				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
+				D3E380D41D6303F50040DF58 /* Sync.swift in Sources */,
 				FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -423,9 +446,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D34882F71D62064B0052A3EA /* String+Random.swift in Sources */,
 				D300C47B1D54C0EA00A9D97D /* PeerIdentifierTests.swift in Sources */,
 				D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */,
-				D3CBCCE51D5DD44A00F1591A /* AdvertiserTests.swift in Sources */,
+				D34882F51D62060E0052A3EA /* AdvertiserManagerTests.swift in Sources */,
+				D375BDEC1D6313F70059805F /* BrowserManagerTests.swift in Sources */,
+				D3CBCCE51D5DD44A00F1591A /* PeerDiscoveryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -440,8 +466,10 @@
 				FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */,
 				D3217E341D5E0D980068390B /* PeerIdentifierTests.swift in Sources */,
 				FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */,
-				D3217E311D5E01580068390B /* AdvertiserTests.swift in Sources */,
+				D3217E311D5E01580068390B /* PeerDiscoveryTests.swift in Sources */,
 				FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */,
+				D375BDEA1D6313E30059805F /* AdvertiserManagerTests.swift in Sources */,
+				D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */,
 				D3217E351D5E0D990068390B /* ApplicationStateNotificationsManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -589,6 +617,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = "ThaliCoreTests/Supporting Files/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCoreTests;
@@ -602,6 +631,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = "ThaliCoreTests/Supporting Files/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCoreTests;

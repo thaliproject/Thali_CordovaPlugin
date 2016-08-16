@@ -26,10 +26,6 @@ public final class BrowserManager: NSObject {
         self.serviceType = serviceType
     }
 
-    private func canConnectToPeer(identifier: PeerIdentifier) -> Bool {
-        return true
-    }
-
     private func foundPeer(withIdentifier identifier: PeerIdentifier) {
         peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
     }
@@ -43,7 +39,7 @@ public final class BrowserManager: NSObject {
             currentBrowser.stopListening()
         }
         let browser = Browser(peerIdentifier: PeerIdentifier(), serviceType: serviceType,
-                canConnectToPeer: canConnectToPeer, foundPeer: foundPeer, lostPeer: lostPeer)
+                              foundPeer: foundPeer, lostPeer: lostPeer)
         browser.startListening()
         self.currentBrowser = browser
     }
@@ -55,13 +51,5 @@ public final class BrowserManager: NSObject {
         }
         currentBrowser.stopListening()
         self.currentBrowser = nil
-    }
-
-    public func connectToPeer(identifier: PeerIdentifier, withPort port: UInt16) {
-        guard let currentBrowser = self.currentBrowser where currentBrowser.isListening else {
-            assert(false, "there is no active listener")
-            return
-        }
-        currentBrowser.connectToPeer(withIdentifier: identifier, port: port)
     }
 }
