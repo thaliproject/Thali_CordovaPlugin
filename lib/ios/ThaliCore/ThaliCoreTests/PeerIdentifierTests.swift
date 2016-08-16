@@ -22,7 +22,7 @@ class PeerIdentifierTests: XCTestCase {
         let uuid = "uuid"
         let gen = 0
         let string = "\(uuid):\(String(gen, radix: 16))"
-        let peer = try! PeerIdentifier(stringValue: string)
+        let peer = (try? PeerIdentifier(stringValue: string))!
         XCTAssertEqual(uuid, peer.uuid)
         XCTAssertEqual(gen, peer.generation)
     }
