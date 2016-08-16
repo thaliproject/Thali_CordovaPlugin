@@ -4,7 +4,6 @@ import android.os.CountDownTimer;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
@@ -26,11 +25,6 @@ public class StartStopOperationHandlerTest {
     private ConnectionHelper mConnectionHelper;
     private StartStopOperationHandler mStartStopOperationHandler;
     private JXcoreThaliCallbackMock mJXcoreThaliCallback;
-    
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Thread.sleep(5000);
-    }
     
     @Before
     public void setUp() throws Exception {

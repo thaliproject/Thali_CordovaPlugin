@@ -1,7 +1,6 @@
 package io.jxcore.node;
 
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
@@ -19,11 +18,6 @@ public class SocketThreadBaseTest {
     InputStreamMock mInputStreamMock;
     OutputStreamMock mOutputStreamMock;
     SocketThreadBaseMock mSocketThreadBaseMock;
-
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Thread.sleep(5000);
-    }
 
     @Before
     public void setUp() throws Exception {

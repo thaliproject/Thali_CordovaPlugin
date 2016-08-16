@@ -1,6 +1,5 @@
 package io.jxcore.node;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
@@ -14,11 +13,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNot.not;
 
 public class StartStopOperationTest {
-
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Thread.sleep(5000);
-    }
 
     @Test
     public void testCreateStartOperation() throws Exception {

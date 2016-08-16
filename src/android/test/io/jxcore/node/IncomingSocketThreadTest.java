@@ -1,7 +1,6 @@
 package io.jxcore.node;
 
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -37,11 +36,6 @@ public class IncomingSocketThreadTest {
     String textIncoming = "Nullam in massa. Vivamus elit odio, in neque ut congue quis, venenatis" +
             " placerat, nulla ornare suscipit, erat urna, pellentesque dapibus vel, lorem. Sed " +
             "egestas non, dolor. Aliquam hendrerit sollicitudin sed.";
-
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Thread.sleep(5000);
-    }
 
     @Before
     public void setUp() throws Exception {
