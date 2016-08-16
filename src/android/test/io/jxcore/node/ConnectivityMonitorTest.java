@@ -161,6 +161,8 @@ public class ConnectivityMonitorTest {
         currentBTState = !currentBTState;
         mBluetoothManager.setBluetoothEnabled(currentBTState);
         
+        Thread.sleep(5000);
+        
         assertThat("Proper state of BT is set when switched on",
                    mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothManager.isBluetoothEnabled()));
         
