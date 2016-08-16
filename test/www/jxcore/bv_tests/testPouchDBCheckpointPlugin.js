@@ -4,7 +4,6 @@ var tape = require('../lib/thaliTape');
 var sinon = require('sinon');
 
 var fs = require('fs-extra-promise');
-var Promise = require('lie');
 var PouchDB = require('pouchdb')
   .plugin(require('pouchdb-size'))
   .plugin(require('thali/NextGeneration/utils/pouchDBCheckpointsPlugin'))
