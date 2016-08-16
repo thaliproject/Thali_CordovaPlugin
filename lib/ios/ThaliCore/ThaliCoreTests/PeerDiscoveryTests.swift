@@ -9,7 +9,7 @@
 import XCTest
 @testable import ThaliCore
 
-class AdvertiserTests: XCTestCase {
+class PeerDiscoveryTests: XCTestCase {
     var browser: BrowserManager!
     var advertiser: AdvertiserManager!
 
