@@ -11,11 +11,11 @@ import XCTest
 import ThaliCore
 
 class AppContextTests: XCTestCase {
-    
+
     override func setUp() {
         super.setUp()
     }
-    
+
     override func tearDown() {
         super.tearDown()
     }
@@ -29,7 +29,7 @@ class AppContextTests: XCTestCase {
         NSNotificationCenter.defaultCenter().postNotificationName(UIApplicationWillResignActiveNotification, object: nil)
         XCTAssertTrue(willEnterBackgroundCalled)
     }
-    
+
     func testDidEnterForeground() {
         var didEnterForegroundCalled: Bool = false
         let c = ApplicationStateNotificationsManager()

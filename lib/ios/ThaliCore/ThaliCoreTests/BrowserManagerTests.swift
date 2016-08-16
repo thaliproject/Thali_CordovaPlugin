@@ -11,16 +11,16 @@ import XCTest
 
 class BrowserManagerTests: XCTestCase {
     var browser: BrowserManager!
-    
+
     override func setUp() {
         let serviceType = String.randomStringWithLength(7)
         browser = BrowserManager(serviceType: serviceType)
     }
-    
+
     override func tearDown() {
         browser = nil
     }
-    
+
     func testStopBrowsing() {
         browser.startListeningForAdvertisements()
         XCTAssertNotNil(browser.currentBrowser)

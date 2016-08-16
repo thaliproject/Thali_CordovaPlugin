@@ -12,7 +12,7 @@ extension String {
     static func randomStringWithLength(len: Int) -> String {
         let letters: String = "abcdefghkmnopqrstuvxyzABCDEFGHKLMNOPQRSTUXYZ"
         var randomString = ""
-        
+
         for _ in 0..<len {
             let length = UInt32(letters.characters.count)
             let rand = Int(arc4random_uniform(length))

@@ -32,12 +32,12 @@ final class Browser: NSObject {
         super.init()
         browser.delegate = self
     }
-    
+
     func startListening() {
         browser.startBrowsingForPeers()
         isListening = true
     }
-    
+
     func stopListening() {
         isListening = false
     }

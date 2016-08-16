@@ -17,7 +17,7 @@ class PeerIdentifierTests: XCTestCase {
         XCTAssertEqual(peer.uuid, nextGenPeer.uuid)
         XCTAssertEqual(peer.generation, nextGenPeer.generation - 1)
     }
-    
+
     func testInitWithString() {
         let uuid = "uuid"
         let gen = 0
@@ -26,7 +26,7 @@ class PeerIdentifierTests: XCTestCase {
         XCTAssertEqual(uuid, peer.uuid)
         XCTAssertEqual(gen, peer.generation)
     }
-    
+
     func testWrongFormatString() {
         let string = "eqwer:asdf:aasdf"
         var parsingError: PeerIdentifierError?
@@ -37,7 +37,7 @@ class PeerIdentifierTests: XCTestCase {
         } catch _ {
         }
         XCTAssertEqual(parsingError, .WrongDataFormat)
-        
+
         let string2 = "eqwer:not_a_number"
         parsingError = nil
         do {

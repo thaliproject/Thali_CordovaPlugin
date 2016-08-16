@@ -29,12 +29,12 @@ final class Advertiser: NSObject {
         super.init()
         advertiser.delegate = self
     }
-    
+
     func startAdvertising() {
         advertiser.startAdvertisingPeer()
         isAdvertising = true
     }
-    
+
     func stopAdvertising() {
         advertiser.stopAdvertisingPeer()
         isAdvertising = false
@@ -52,7 +52,7 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
             print("\(error) wrong peer format")
         }
     }
-    
+
     func advertiser(advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: NSError) {
         isAdvertising = false
         print("WARNING: server didNotStartAdvertisingPeer")

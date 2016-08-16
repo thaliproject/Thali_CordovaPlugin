@@ -51,7 +51,7 @@ public struct PeerIdentifier: Hashable {
     var stringValue: String {
         return "\(uuid):\(String(generation, radix: 16))"
     }
-    
+
     public var hashValue: Int {
         return stringValue.hashValue
     }

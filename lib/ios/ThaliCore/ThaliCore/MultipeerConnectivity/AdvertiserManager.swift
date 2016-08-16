@@ -14,11 +14,11 @@ import Foundation
     internal private (set) var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
-    
+
     public var isAdvertising: Bool {
         return currentAdvertiser?.isAdvertising ?? false
     }
-    
+
     private func advertiserIdentifier(advertiserPeer: PeerIdentifier, receivedInvitationFromPeer peer: PeerIdentifier) {
     }
 
@@ -57,7 +57,7 @@ import Foundation
         advertisers.removeAll()
         currentAdvertiser = nil
     }
-    
+
     public func startUpdateAdvertisingAndListening(port: UInt16) {
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
@@ -66,10 +66,10 @@ import Foundation
         } else {
             self.currentAdvertiser = createAndRunAdvertiserWith(PeerIdentifier(), port: port)
         }
-        
+
         assert(self.currentAdvertiser != nil, "we should have initialized advertiser after calling this function")
     }
-    
+
     func lastGenerationAdvertiserForIdentifier(identifier: PeerIdentifier) -> Advertiser? {
         return advertisers
             .filter {
