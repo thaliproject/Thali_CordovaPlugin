@@ -763,10 +763,11 @@ function killRemote(t, end) {
         connectToPeer(
           peer, 1,
           function (err) {
+            t.notOk(err, 'We should be able to reconnect');
             t.end();
           },
           function (err) {
-            t.end();
+            t.fail('We should be able to reconnect ' + err);
           }
         );
       });
@@ -809,19 +810,30 @@ function killLocal(t, end) {
               t.end();
             });
         });
-      secondConnectionToListeningPort.on('error', function (err) {
-        t.ok(err, 'We got an error which is what we wanted');
-      });
-      secondConnectionToListeningPort.on('close', function () {
-        connectToPeer(
-          peer, 1,
-          function (err) {
-            t.end();
-          },
-          function (err) {
-            t.end();
-          }
-        );
+
+      new Promise(function (resolve, reject) {
+        secondConnectionToListeningPort.on('error', function (err) {
+          t.ok(err, 'We got an error which is what we wanted');
+          connectToPeer(
+            peer, 1,
+            function (err) {
+              resolve(err);
+            },
+            function (err) {
+              reject(err);
+            }
+          );
+        });
+        secondConnectionToListeningPort.on('close', function () {
+          resolve();
+        });
+      })
+      .then(function (err) {
+        t.notOk(err, 'We should be able to reconnect');
+        t.end();
+      })
+      .catch(function (err) {
+        t.fail("We should be able to reconnect" + err);
       });
     });
 }
