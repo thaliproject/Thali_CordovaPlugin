@@ -16,9 +16,10 @@ var PouchDB = require('pouchdb')
 var db;
 var dbName = 'pouchdb-uuid:' + Math.random();
 var dbOptions = {
-  checkpoint: 900
+  checkpoint: 500
 };
-var checkpointPluginDelay = 500;
+var DEFAULT_DELAY = 200;
+var CALCULATING_DEALY = 100;
 
 var test = tape({
   setup: function (t) {
@@ -41,25 +42,25 @@ var Doc = function () {
   this._id = Date.now().toString()
 };
 
-test('onCheckpointReached callback calling on a single change', function (t) {
+test('Call of onCheckpointReached handler on a single db change', function (t) {
   var spy = sinon.spy();
 
   db.onCheckpointReached(spy);
 
   db.put(new Doc())
     .then(function () {
-      // A small latency is needed to calculate database size after put
+      // A small delay is needed to calculate database size after put
       setTimeout(function () {
         t.ok(spy.calledOnce, 'checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
         t.end();
-      }, checkpointPluginDelay + 300);
+      }, DEFAULT_DELAY + CALCULATING_DEALY);
     })
     .catch(function (error) {
       t.fail(error);
     });
 });
 
-test('onCheckpointReached multiple callbacks calling on a single change', function (t) {
+test('Call of multiple onCheckpointReached handlers on a single db change', function (t) {
   var spy = sinon.spy();
   var anotherSpy = sinon.spy();
 
@@ -68,20 +69,20 @@ test('onCheckpointReached multiple callbacks calling on a single change', functi
 
   db.put(new Doc())
     .then(function () {
-      // A small latency is needed to calculate database size after put
+      // A small delay is needed to calculate database size after put
       setTimeout(function () {
-        t.ok(spy.calledOnce, 'checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
-        t.ok(anotherSpy.calledOnce, 'checkpointReached handler should be called once. Called ' + anotherSpy.callCount + ' time(s)');
+        t.ok(spy.calledOnce, 'The checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
+        t.ok(anotherSpy.calledOnce, 'The checkpointReached handler should be called once. Called ' + anotherSpy.callCount + ' time(s)');
         t.end();
-      }, checkpointPluginDelay + 300);
+      }, DEFAULT_DELAY + CALCULATING_DEALY);
     })
     .catch(function (error) {
       t.fail(error);
     });
 });
 
-test('onCheckpointReached callback calling on multiple changes' +
-'that are in checkpoints plugin delay interval', function (t) {
+test('Call of onCheckpointReached handler on multiple db changes' +
+'that are in the checkpoints plugin delay interval', function (t) {
     var spy = sinon.spy();
 
     db.onCheckpointReached(spy);
@@ -95,11 +96,11 @@ test('onCheckpointReached callback calling on multiple changes' +
         return db.put(new Doc());
       })
       .then(function () {
-        // A small latency is needed to calculate database size after put
+        // A small delay is needed to calculate database size after put
         setTimeout(function () {
-          t.ok(spy.calledOnce, 'checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
+          t.ok(spy.calledOnce, 'the checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
           t.end();
-        }, checkpointPluginDelay + 300);
+        }, DEFAULT_DELAY + CALCULATING_DEALY);
       })
       .catch(function (error) {
         t.fail(error);
@@ -109,7 +110,7 @@ test('onCheckpointReached callback calling on multiple changes' +
 //  TODO Investigate how to force PouchDB to shrink database size
 //  Atfer that test can be enabled
 /*
-test('onCheckpointReached callback calling after database shrinks', function (t) {
+test('Call of onCheckpointReached handler after database shrinks', function (t) {
   var spy = sinon.spy();
   var doc = new Doc();
 
@@ -126,14 +127,21 @@ test('onCheckpointReached callback calling after database shrinks', function (t)
       return db.compact();
     })
     .then(function () {
-      return db.put(new Doc());
-    })
-    .then(function () {
-      // A small latency is needed to calculate database size after put
+      // Get first handler call
       setTimeout(function () {
-        t.ok(spu.calledTwice, 'checkpointReached reached handler should be called twice');
-        t.end();
-      }, 200)
+        db.put(new Doc())
+          .then(function () {
+            // Get second handler call
+            setTimeout(function () {
+              t.ok(spy.calledTwice, 'The checkpointReached handler should be called twice');
+              t.end();
+            }, DEFAULT_DELAY + CALCULATING_DEALY)
+          })
+          .catch(function (error) {
+            t.fail(error);
+          });
+      }, DEFAULT_DELAY + CALCULATING_DEALY);
+
     })
     .catch(function (error) {
       t.fail(error);
