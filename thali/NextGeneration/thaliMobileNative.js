@@ -285,8 +285,6 @@
  * integer with the localhost port where the native code is listening for TCP/IP
  * connections it is to bridge to the MCSession.
  *
- * Note that it is possi
- *
  * * | Error String | Description |
  * |--------------|-------------|
  * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
@@ -418,6 +416,9 @@
  * A failed call to disconnect means that the connection to the remote peer
  * is now in an unknown state.
  *
+ * If disconnect is called on a non-multiConnect platform then a
+ * 'Not multiConnect platform' error MUST be returned.
+ *
  * @public
  * @function external:"Mobile('disconnect')".callNative
  * @param {string} peerIdentifier
@@ -463,9 +464,10 @@
 
 /**
  * Identifies the peerID of the peer with whom a `multiConnect` initiated
- * connection failed. This method MUST be fired when the connection fails even
- * if it is just because of a call to `disconnect`. If this event is fired
- * in direct response to a `disconnect` then error MUST be null.
+ * connection (read: MCSession) failed. This method MUST be fired when the
+ * connection fails even if it is just because of a call to `disconnect`. If
+ * this event is fired in direct response to a `disconnect` then error MUST be
+ * null.
  *
  * @public
  * @callback multiConnectConnectionFailureCallback

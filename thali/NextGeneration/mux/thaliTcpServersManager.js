@@ -123,8 +123,8 @@ util.inherits(ThaliTcpServersManager, EventEmitter);
  *
  * @public
  * @returns {Promise<number|Error>} Returns the port to be passed to {@link
- * external:"Mobile('startUpdateAdvertisingAndListening')".ca
- * llNative} when the system is ready to receive external incoming connections.
+ * external:"Mobile('startUpdateAdvertisingAndListening')".callNative} when the
+ * system is ready to receive external incoming connections.
  */
 ThaliTcpServersManager.prototype.start = function () {
   var self = this;

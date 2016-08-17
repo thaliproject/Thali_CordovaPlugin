@@ -426,19 +426,12 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
  * is piped to then destroy MUST be called on that TCP socket.
  *
  * @public
- * @param {module:thaliTcpServersManager~ThaliTcpServersManager} self the
- * this object from tcpServersManager.
+ * @param {module:thaliTcpServersManager~ThaliTcpServersManager} self the this
+ * object from tcpServersManager.
  * @param {string} peerIdentifier
- * @param {boolean} [pleaseConnect] If set to true this indicates that a
- * lexically smaller peer asked for a connection so the lexically larger peer
- * (the local device) who will immediately call {@link
- * external:"Mobile('connect')".callNative} to create a connection. If false
- * (the default value) then the call to {@link
- * external:"Mobile('connect')".callNative} will only happen on the first
- * incoming connection to the TCP server.
  * @returns {Promise<number|Error>}
  */
-module.exports = function (self, peerIdentifier, pleaseConnect) {
+module.exports = function (self, peerIdentifier) {
 
   // This section manages a server that accepts incoming connections
   // from the application. The first connection causes the p2p link to

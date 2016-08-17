@@ -468,9 +468,16 @@ function (skipPromiseQueue, changeTarget) {
  * retrieve. No details will be provided about the peer on who the changes are
  * for. All that is provided is a flag just indicating that something has
  * changed. It is up to other peer to connect and retrieve details on what has
- * changed if they are interested.
+ * changed if they are interested. The way this flag MUST be implemented is by
+ * creating a UUID the first time startUpdateAdvertisingAndListening is called
+ * and maintaining that UUID until stopAdvertisingAndListening is called. When
+ * the UUID is created a generation counter MUST be set to 0. Every subsequent
+ * call to startUpdateAdvertisingAndListening until the counter is reset MUST
+ * increment the counter by 1. The USN set by a call to
+ * startUpdateAdvertisingAndListening MUST be of the form `data:` + uuid.v4() +
+ * `:` + generation.
  *
- * * By design this method is intended to be called multiple times without
+ * By design this method is intended to be called multiple times without
  * calling stop as each call causes the currently notification flag to change.
  *
  * | Error String | Description |
@@ -649,10 +656,11 @@ function (skipPromiseQueue, changeTarget) {
  * @event wifiPeerAvailabilityChanged
  * @public
  * @type {Object}
- * @property {string} peerIdentifier This is the USN value
- * @property {string} hostAddress This can be either an IP address or a DNS
+ * @property {string} peerIdentifier This is the UUID part of the USN value
+ * @property {number} generation This is the generation part of the USN value
+ * @property {?string} hostAddress This can be either an IP address or a DNS
  * address encoded as a string
- * @property {number} portNumber The port on the hostAddress to use to connect
+ * @property {?number} portNumber The port on the hostAddress to use to connect
  * to the peer
  */
 

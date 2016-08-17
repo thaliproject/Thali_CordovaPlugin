@@ -130,7 +130,7 @@ function routerPortConnectionFailedHandler(failedRouterPort) {
     });
 }
 
-function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
+function  listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
   if (!states.started) {
     // We aren't supposed to emit events when we aren't started
     return;
@@ -755,9 +755,16 @@ module.exports.connectionTypes = connectionTypes;
  * @typedef {Object} nonTCPPeerAvailabilityChanged
  * @property {string} peerIdentifier See {@link
  * module:thaliMobileNative~peer.peerIdentifier}.
- * @property {number} generation An integer which counts changes in the peer's
+ * @property {boolean} peerAvailable If false then the system is advertising
+ * that it no longer believes this peer is available.
+ * @property {?number} generation An integer which counts changes in the peer's
  * database. On Android this integer has only 8 bytes and so will roll over.
- * @property {boolean} peerAvailable
+ * This value MUST be null if peerAvailable is set to false.
+ * @property {?number} portNumber This value MUST be null if peerAvailable is
+ * false. If this value is non-null then it is a port on 127.0.0.1 at which the
+ * local peer can connect in order to establish a TCP/IP connection to the
+ * remote peer. This value will only be set on `connect` platforms, it will
+ * always be null for `multiConnect`.
  */
 
 // jscs:disable maximumLineLength
