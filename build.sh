@@ -24,6 +24,7 @@ ERROR_ABORT() {
     exit -1
   fi
 }
+
 ### END - JXcore Test Server   --------
 
 # The build has sometimes failed with the default value of maximum open
@@ -48,12 +49,6 @@ fi
 hash CIGIVEMEMYIP.sh 2>/dev/null
 RUN_IN_CI=$?
 
-if [ $RUN_IN_CI == 0 ]
-then
-  # Make sure build works with the latest cordova release
-  jx npm update -g cordova;ERROR_ABORT
-fi
-
 # Print the Cordova version for debugging purposes
 # and to make sure Cordova is installed
 echo "Cordova version:";ERROR_ABORT
@@ -62,9 +57,9 @@ cordova -v;ERROR_ABORT
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
-jx npm test;ERROR_ABORT
-jx npm run test-meta;ERROR_ABORT
-jx npm run test-coordinated;ERROR_ABORT
+#jx npm test;ERROR_ABORT
+#jx npm run test-meta;ERROR_ABORT
+#jx npm run test-coordinated;ERROR_ABORT
 
 # Verify that docs can be generated
 #cd $PROJECT_ROOT/thali/;ERROR_ABORT
@@ -101,12 +96,14 @@ then
   # server may have different OS and CPU architecture than the build server
   # so modules need to be installed there separately (this is handled by the CI).
   rm -rf test/TestServer/node_modules;ERROR_ABORT
-  
+
   # A hack workround due to the fact that CI server doesn't allow relative paths outside
   # of the original parent folder as a path to the build output binaries.
   # https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
   rm -rf android-release-unsigned.apk;ERROR_ABORT
   cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk;ERROR_ABORT
-  rm -rf ThaliTest.app;ERROR_ABORT
-  cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
+
+  # TODO Temporarily disabling ios build
+  #rm -rf ThaliTest.app;ERROR_ABORT
+  #cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
 fi

@@ -53,6 +53,10 @@ public class ConnectionHelper
     private CountDownTimer mPowerUpBleDiscoveryTimer = null;
     private int mServerPortNumber = NO_PORT_NUMBER;
 
+    // Uncomment the following to take the TestHelper into use.
+    // See the documentation in TestHelper.java for more information.
+    //private TestHelper mTestHelper = null;
+
     /**
      * Constructor.
      */
@@ -94,6 +98,11 @@ public class ConnectionHelper
         mConnectivityMonitor.start(); // Should be running as long as the app is alive
 
         mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
+
+        // Uncomment the following to take the TestHelper into use.
+        // See the documentation in TestHelper.java for more information.
+        /*mTestHelper = new TestHelper(this);
+        mTestHelper.startTest(TestHelper.TestType.REPETITIVE_CONNECT_AND_DISCONNECT);*/
     }
 
     /**
@@ -272,8 +281,9 @@ public class ConnectionHelper
         String errorMessage = null;
 
         if (mConnectionModel.hasOutgoingConnection(bluetoothMacAddress)) {
-            Log.e(TAG, "connect: We already have an outgoing connection to peer with ID " + bluetoothMacAddress);
-            errorMessage = "Already connect(ing/ed)";
+            errorMessage = "We already have an outgoing connection to peer with ID "
+                    + bluetoothMacAddress;
+            Log.e(TAG, "connect: " + errorMessage);
             return errorMessage;
         }
 

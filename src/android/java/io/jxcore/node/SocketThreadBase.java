@@ -57,10 +57,24 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     public SocketThreadBase(BluetoothSocket bluetoothSocket, Listener listener)
             throws IOException {
-        mBluetoothSocket = bluetoothSocket;
+        this(bluetoothSocket, listener, bluetoothSocket.getInputStream(),
+                bluetoothSocket.getOutputStream());
+    }
+
+    /**
+     * Constructor for test purposes.
+     *
+     * @param bluetoothSocket The Bluetooth socket.
+     * @param listener        The listener.
+     * @param inputStream     The InputStream.
+     * @param outputStream    The OutputStream.
+     */
+    public SocketThreadBase(BluetoothSocket bluetoothSocket, Listener listener,
+                            InputStream inputStream, OutputStream outputStream) {
+        mBluetoothInputStream = inputStream;
+        mBluetoothOutputStream = outputStream;
         mListener = listener;
-        mBluetoothInputStream = mBluetoothSocket.getInputStream();
-        mBluetoothOutputStream = mBluetoothSocket.getOutputStream();
+        mBluetoothSocket = bluetoothSocket;
     }
 
     public Listener getListener() {
@@ -165,12 +179,17 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
         final SocketThreadBase socketThreadBase = this;
 
-        jxcore.coreThread.handler.postDelayed(new Runnable() {
+        /*jxcore.coreThread.handler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 mListener.onDone(socketThreadBase, (who == mSendingThread));
             }
-        }, 1000);
+        }, 1000);*/
+
+        if (mReceivingThread.getIsDone() && mSendingThread.getIsDone()) {
+            Log.i(mTag, "Both threads are done, notifying the listener...");
+            mListener.onDone(socketThreadBase, (who == mSendingThread));
+        }
     }
 
     /**
@@ -227,8 +246,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 || mLocalInputStream == null
                 || mBluetoothOutputStream == null
                 || mLocalOutputStream == null
-                || mLocalhostSocket == null
-                || mBluetoothSocket == null) {
+                || mLocalhostSocket == null) {
             Log.e(mTag, "startStreamCopyingThreads: Cannot start since at least one of the streams is null");
             mListener.onDisconnected(this, "Cannot start stream copying threads since at least one of the streams is null");
         } else {

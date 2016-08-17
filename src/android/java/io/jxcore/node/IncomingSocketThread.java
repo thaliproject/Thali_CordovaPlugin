@@ -18,7 +18,7 @@ class IncomingSocketThread extends SocketThreadBase {
     private int mTcpPortNumber = 0;
 
     /**
-     * Constructor.
+     * Constructor for test purposes.
      *
      * @param bluetoothSocket The Bluetooth socket.
      * @param listener        The listener.
@@ -30,17 +30,33 @@ class IncomingSocketThread extends SocketThreadBase {
         mTag = IncomingSocketThread.class.getName();
     }
 
-    public int getTcpPortNumber() {
-        return mTcpPortNumber;
-    }
-
-    public void setTcpPortNumber(int portNumber) {
-        mTcpPortNumber = portNumber;
+    /**
+     * Constructor.
+     *
+     * @param bluetoothSocket The Bluetooth socket.
+     * @param listener        The listener.
+     * @param inputStream     The InputStream.
+     * @param outputStream    The OutputStream.
+     * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
+     */
+    public IncomingSocketThread(BluetoothSocket bluetoothSocket, Listener listener,
+                                InputStream inputStream, OutputStream outputStream)
+            throws IOException {
+        super(bluetoothSocket, listener, inputStream, outputStream);
+        mTag = IncomingSocketThread.class.getName();
     }
 
     public int getLocalHostPort() {
         Socket copyOfLocalHostSocket = mLocalhostSocket;
         return copyOfLocalHostSocket == null ? ConnectionHelper.NO_PORT_NUMBER : copyOfLocalHostSocket.getPort();
+    }
+
+    public int getTcpPortNumber() {
+        return mTcpPortNumber;
+    }
+    
+    public void setTcpPortNumber(int portNumber) {
+        mTcpPortNumber = portNumber;
     }
 
     /**

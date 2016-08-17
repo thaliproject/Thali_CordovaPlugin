@@ -5,12 +5,10 @@ package io.jxcore.node;
 
 import android.content.Context;
 import android.net.wifi.WifiManager;
-import android.util.Log;
 import android.os.Build;
-import io.jxcore.node.jxcore.JXcoreCallback;
-import java.util.ArrayList;
-import java.util.Date;
+import android.util.Log;
 import android.widget.Toast;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,21 +18,17 @@ import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothUtils;
 import org.thaliproject.p2p.btconnectorlib.utils.CommonUtils;
 
+import java.util.ArrayList;
+import java.util.Date;
+
+import io.jxcore.node.jxcore.JXcoreCallback;
+
 /**
  * Implements Thali native interface.
- *
  * For the documentation, please see
  * https://github.com/thaliproject/Thali_CordovaPlugin/blob/vNext/thali/NextGeneration/thaliMobileNative.js
  */
 public class JXcoreExtension {
-
-    public enum RadioState {
-        ON, // The radio is on and available for use.
-        OFF, // The radio exists on the device but is turned off.
-        UNAVAILABLE, // The radio exists on the device and is on but for some reason the system won't let us use it.
-        NOT_HERE, // We depend on this radio type for this platform type but it doesn't appear to exist on this device.
-        DO_NOT_CARE // Thali doesn't use this radio type on this platform and so makes no effort to determine its state.
-    }
 
     // Common Thali methods and events
     public static final String CALLBACK_VALUE_LISTENING_ON_PORT_NUMBER = "listeningPort";
@@ -48,7 +42,7 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_CONNECT = "connect";
     private static final String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
     private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
-    
+
     private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
     private static final String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
@@ -67,7 +61,6 @@ public class JXcoreExtension {
     private static final String EVENT_VALUE_CELLULAR = "cellular";
     private static final String EVENT_VALUE_BSSID_NAME = "bssidName";
     private static final String EVENT_VALUE_PORT_NUMBER = "portNumber";
-
     // Android specific methods and events
     private static final String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
     private static final String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
@@ -109,6 +102,10 @@ public class JXcoreExtension {
         });
 
         lifeCycleMonitor.start();
+		/*
+			This is the line where we are dynamically sticking execution of UT during build, so if you are
+			editing this line, please check updateJXCoreExtensionWithUTMethod in androidBeforeCompile.js.
+		*/
 
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
@@ -316,7 +313,7 @@ public class JXcoreExtension {
                     if (parameterObject instanceof String
                             && CommonUtils.isNonEmptyString((String) parameterObject)) {
                         String methodName = (String) parameterObject;
-                        
+
                         if (methodName.equals(METHOD_ARGUMENT_NETWORK_CHANGED)) {
                             mNetworkChangedRegistered = true;
                             mConnectionHelper.getConnectivityMonitor().updateConnectivityInfo(true); // Will call notifyNetworkChanged
@@ -738,5 +735,13 @@ public class JXcoreExtension {
         }
 
         return null;
+    }
+
+    public enum RadioState {
+        ON, // The radio is on and available for use.
+        OFF, // The radio exists on the device but is turned off.
+        UNAVAILABLE, // The radio exists on the device and is on but for some reason the system won't let us use it.
+        NOT_HERE, // We depend on this radio type for this platform type but it doesn't appear to exist on this device.
+        DO_NOT_CARE // Thali doesn't use this radio type on this platform and so makes no effort to determine its state.
     }
 }
