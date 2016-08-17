@@ -1,7 +1,7 @@
 'use strict';
 
 var crypto = require('crypto');
-var ThaliReplicationManager = require('../thalireplicationmanager');
+var ThaliReplicationManager = require('../thaliReplicationManager');
 var Promise = require('lie');
 var urlSafeBase64 = require('urlsafe-base64');
 

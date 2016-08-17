@@ -24,7 +24,7 @@ import org.thaliproject.p2p.btconnectorlib.utils.CommonUtils;
  * Implements Thali native interface.
  *
  * For the documentation, please see
- * https://github.com/thaliproject/Thali_CordovaPlugin/blob/vNext/thali/NextGeneration/thaliMobileNative.js
+ * https://github.com/thaliproject/Thali_CordovaPlugin/blob/vNext/thali/Runtime/thaliMobileNative.js
  */
 public class JXcoreExtension {
 

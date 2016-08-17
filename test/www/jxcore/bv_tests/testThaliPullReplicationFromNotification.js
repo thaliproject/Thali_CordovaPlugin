@@ -3,14 +3,14 @@
 
 var tape = require('../lib/thaliTape');
 var crypto = require('crypto');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 var Promise = require('lie');
 var testUtils = require('../lib/testUtils');
-var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
-var ThaliPullReplicationFromNotification = require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
+var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
+var ThaliPullReplicationFromNotification = require('thali/Runtime/replication/thaliPullReplicationFromNotification');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
-var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNotificationClient');
+var ThaliNotificationClient = require('thali/Runtime/notification/thaliNotificationClient');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 devicePublicPrivateKey.generateKeys();
@@ -236,7 +236,7 @@ test('Simple peer event', function (t) {
   var peerActions = [];
   var ProxiesPullReplication = proxyquire.noCallThru()
     .load(
-      'thali/NextGeneration/replication/thaliPullReplicationFromNotification',
+      'thali/Runtime/replication/thaliPullReplicationFromNotification',
       {
         './thaliReplicationPeerAction': function () {
           var startSpy = sinon.spy();

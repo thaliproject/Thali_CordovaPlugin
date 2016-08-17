@@ -8,20 +8,20 @@ var http = require('http');
 var httpTester = require('../lib/httpTester.js');
 
 var ThaliPeerDictionary =
-  require('thali/NextGeneration/notification/thaliPeerDictionary');
+  require('thali/Runtime/notification/thaliPeerDictionary');
 var ThaliNotificationClient =
-  require('thali/NextGeneration/notification/thaliNotificationClient');
+  require('thali/Runtime/notification/thaliNotificationClient');
 var ThaliMobile =
-  require('thali/NextGeneration/thaliMobile');
+  require('thali/Runtime/thaliMobile');
 
 var ThaliPeerPoolDefault =
-  require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+  require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 
 var NotificationBeacons =
-  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+  require('thali/Runtime/notification/thaliNotificationBeacons');
 
 var thaliConfig =
-  require('thali/NextGeneration/thaliConfig');
+  require('thali/Runtime/thaliConfig');
 
 var pskIdToSecret = function (id) {
   return id === thaliConfig.BEACON_PSK_IDENTITY ? thaliConfig.BEACON_KEY : null;

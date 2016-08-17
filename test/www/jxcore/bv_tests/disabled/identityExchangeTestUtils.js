@@ -4,7 +4,7 @@ var expressPouchDB = require('express-pouchdb');
 var express = require('express');
 var Promise = require('lie');
 var crypto = require('crypto');
-var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
+var identityExchangeUtils = require('thali/Runtime/identityExchange/identityExchangeUtils');
 var testUtils = require('../../lib/testUtils');
 
 exports.createThaliAppServer = function () {

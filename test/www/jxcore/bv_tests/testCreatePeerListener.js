@@ -5,10 +5,10 @@ var mockMobile = require('../lib/MockMobile');
 var net = require('net');
 var multiplex = require('multiplex');
 var tape = require('../lib/thaliTape');
-var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersManager');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var ThaliTCPServersManager = require('thali/Runtime/mux/thaliTcpServersManager');
+var makeIntoCloseAllServer = require('thali/Runtime/makeIntoCloseAllServer');
 var Promise = require('lie');
-var logger = require('thali/thalilogger')('testCreatePeerListener');
+var logger = require('thali/Runtime/utils/thaliLogger')('testCreatePeerListener');
 
 // Every call to Mobile trips this warning
 /* jshint -W064 */

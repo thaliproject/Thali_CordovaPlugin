@@ -5,11 +5,11 @@ var http = require('http');
 var request = require('request');
 var requestPromise = require('request-promise');
 var tape = require('../lib/thaliTape');
-var identityExchangeEndpoint = require('thali/identityExchange/identityexchangeendpoint');
+var identityExchangeEndpoint = require('thali/Runtime/identityExchange/identityexchangeendpoint');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');
-var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
-var IdentityExchange = require('thali/identityExchange/identityexchange');
+var identityExchangeUtils = require('thali/Runtime/identityExchange/identityExchangeUtils');
+var IdentityExchange = require('thali/Runtime/identityExchange/identityexchange');
 var Promise = require('lie');
 var testUtils = require('../../lib/testUtils');
 

@@ -7,10 +7,10 @@ var ip = require('ip');
 var uuid = require('node-uuid');
 var url = require('url');
 var express = require('express');
-var validations = require('../validations');
+var validations = require('./utils/validations');
 var thaliConfig = require('./thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-var logger = require('../thalilogger')('thaliWifiInfrastructure');
+var logger = require('./utils/thaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var https = require('https');
 

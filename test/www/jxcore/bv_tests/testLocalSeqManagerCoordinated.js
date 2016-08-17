@@ -1,16 +1,16 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var LocalSeqManager = require('thali/NextGeneration/replication/localSeqManager');
+var LocalSeqManager = require('thali/Runtime/replication/localSeqManager');
 var crypto = require('crypto');
 var testUtils = require('../lib/testUtils');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
 var express = require('express');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var ThaliNotificationServer = require('thali/NextGeneration/notification/thaliNotificationServer');
-var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNotificationClient');
-var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+var ThaliMobile = require('thali/Runtime/thaliMobile');
+var ThaliNotificationServer = require('thali/Runtime/notification/thaliNotificationServer');
+var ThaliNotificationClient = require('thali/Runtime/notification/thaliNotificationClient');
+var ThaliPeerPoolDefault = require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 var httpTester = require('../lib/httpTester');
 var Promise = require('lie');
 

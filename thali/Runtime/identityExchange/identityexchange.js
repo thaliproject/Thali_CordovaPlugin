@@ -7,8 +7,8 @@ var ConnectionTable = require('./connectionTable');
 var identityExchangeUtils = require('./identityExchangeUtils');
 var LargerHashStateMachine = require('./LargerHashStateMachine');
 var SmallerHashStateMachine = require('./SmallerHashStateMachine');
-var ThaliEmitter = require('../thaliemitter');
-var logger = require('../thalilogger')('identityExchange');
+var ThaliEmitter = require('../utils/thaliEmitter');
+var logger = require('../utils/thaliLogger')('identityExchange');
 var urlSafeBase64 = require('urlsafe-base64');
 
 inherits(IdentityExchange, EventEmitter);

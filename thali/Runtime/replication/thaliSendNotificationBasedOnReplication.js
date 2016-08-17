@@ -5,7 +5,7 @@ var ThaliNotificationServer =
   require('../notification/thaliNotificationServer');
 var PromiseQueue = require('./../promiseQueue');
 var logger =
-  require('../../thalilogger')('thaliSendNotificationBasedOnReplication');
+  require('../utils/thaliLogger')('thaliSendNotificationBasedOnReplication');
 var urlsafeBase64 = require('urlsafe-base64');
 var assert = require('assert');
 var compareBufferArrays = require('./utilities').compareBufferArrays;

@@ -1,4 +1,4 @@
-var ThaliEmitter = require('thali/thaliemitter');
+var ThaliEmitter = require('thali/Runtime/utils/thaliEmitter');
 
 function testNewFindPeers(testData, name, peerCount, bluetoothAddresses) {
   this.deviceName = name;

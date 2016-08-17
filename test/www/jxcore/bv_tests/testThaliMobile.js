@@ -1,12 +1,12 @@
 'use strict';
 
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var ThaliMobile = require('thali/Runtime/thaliMobile');
+var ThaliMobileNativeWrapper = require('thali/Runtime/thaliMobileNativeWrapper');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var express = require('express');
-var validations = require('thali/validations');
+var validations = require('thali/Runtime/utils/validations');
 var sinon = require('sinon');
 var uuid = require('node-uuid');
 var nodessdp = require('node-ssdp');

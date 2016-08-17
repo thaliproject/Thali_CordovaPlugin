@@ -6,7 +6,7 @@ var fs = require('fs-extra-promise');
 var path = require('path');
 var crypto = require('crypto');
 var tape = require('../lib/thaliTape');
-var cryptomanager = require('thali/thalicryptomanager');
+var cryptomanager = require('thali/Runtime/utils/thaliCryptoManager');
 var testUtils = require('../lib/testUtils.js');
 
 // get the values needed for running the tests

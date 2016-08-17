@@ -7,17 +7,17 @@ var testUtils = require('../lib/testUtils.js');
 var httpTester = require('../lib/httpTester.js');
 
 var ThaliMobile =
-  require('thali/NextGeneration/thaliMobile');
+  require('thali/Runtime/thaliMobile');
 var NotificationAction =
-  require('thali/NextGeneration/notification/thaliNotificationAction');
+  require('thali/Runtime/notification/thaliNotificationAction');
 var PeerDictionary =
-  require('thali/NextGeneration/notification/thaliPeerDictionary');
+  require('thali/Runtime/notification/thaliPeerDictionary');
 var NotificationBeacons =
-  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+  require('thali/Runtime/notification/thaliNotificationBeacons');
 var ThaliPeerAction =
-  require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
+  require('thali/Runtime/thaliPeerPool/thaliPeerAction');
 var thaliConfig =
-  require('thali/NextGeneration/thaliConfig');
+  require('thali/Runtime/thaliConfig');
 
 var globals = {};
 

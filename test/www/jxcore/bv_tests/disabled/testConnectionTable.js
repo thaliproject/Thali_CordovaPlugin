@@ -1,7 +1,7 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var ConnectionTable = require('thali/identityExchange/connectionTable');
+var ConnectionTable = require('thali/Runtime/identityExchange/connectionTable');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;

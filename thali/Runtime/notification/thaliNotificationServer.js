@@ -4,7 +4,7 @@ var NotificationBeacons = require('./thaliNotificationBeacons');
 var ThaliPskMapCache = require('./thaliPskMapCache');
 var PromiseQueue = require('../promiseQueue');
 var ThaliMobile = require('../thaliMobile');
-var logger = require('../../thalilogger')('thaliNotificationServer');
+var logger = require('../utils/thaliLogger')('thaliNotificationServer');
 var thaliConfig = require('../thaliConfig');
 /** @module thaliNotificationServer */
 

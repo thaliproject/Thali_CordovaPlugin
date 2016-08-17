@@ -24,7 +24,7 @@ var crypto = require('crypto');
 var express = require('express');
 var bodyParser = require('body-parser');
 
-var logger = require('../thalilogger')('largerHash');
+var logger = require('../utils/thaliLogger')('largerHash');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var identityExchangeUtils = require('./identityExchangeUtils');

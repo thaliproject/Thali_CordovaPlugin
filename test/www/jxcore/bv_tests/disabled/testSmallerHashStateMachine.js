@@ -1,13 +1,13 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var SmallerHashStateMachine = require('thali/identityExchange/SmallerHashStateMachine');
-var LargerHashStateMachine = require('thali/identityExchange/LargerHashStateMachine');
+var SmallerHashStateMachine = require('thali/Runtime/identityExchange/SmallerHashStateMachine');
+var LargerHashStateMachine = require('thali/Runtime/identityExchange/LargerHashStateMachine');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var nock = require('nock');
 var crypto = require('crypto');
-var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
+var identityExchangeUtils = require('thali/Runtime/identityExchange/identityExchangeUtils');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
 var urlSafeBase64 = require('urlsafe-base64');

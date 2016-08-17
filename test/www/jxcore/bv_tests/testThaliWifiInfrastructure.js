@@ -1,8 +1,8 @@
 'use strict';
 
-var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
-var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var ThaliWifiInfrastructure = require('thali/Runtime/thaliWifiInfrastructure');
+var ThaliMobileNativeWrapper = require('thali/Runtime/thaliMobileNativeWrapper');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var nodessdp = require('node-ssdp');

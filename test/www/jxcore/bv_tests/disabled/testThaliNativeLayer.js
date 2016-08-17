@@ -6,7 +6,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
 
 var net = require('net');
 var randomstring = require('randomstring');
-var ThaliEmitter = require('thali/thaliemitter');
+var ThaliEmitter = require('thali/Runtime/utils/thaliEmitter');
 var tape = require('../lib/thaliTape');
 
 function newPeerIdentifier() {

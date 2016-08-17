@@ -1,10 +1,10 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var IdentityExchange = require('thali/identityExchange/identityexchange');
+var IdentityExchange = require('thali/Runtime/identityExchange/identityexchange');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
-var ThaliEmitter = require('thali/thaliemitter');
+var ThaliEmitter = require('thali/Runtime/utils/thaliEmitter');
 var testUtils = require('../../lib/testUtils');
 
 var thaliApp = null;

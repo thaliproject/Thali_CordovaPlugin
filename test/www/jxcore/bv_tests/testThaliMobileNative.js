@@ -3,8 +3,8 @@
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thalilogger')('testThaliMobileNative');
+var makeIntoCloseAllServer = require('thali/Runtime/makeIntoCloseAllServer');
+var logger = require('thali/Runtime/utils/thaliLogger')('testThaliMobileNative');
 var Promise = require('lie');
 var assert = require('assert');
 

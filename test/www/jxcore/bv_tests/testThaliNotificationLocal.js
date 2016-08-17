@@ -8,13 +8,13 @@ var httpTester = require('../lib/httpTester.js');
 var proxyquire = require('proxyquire').noCallThru();
 
 var ThaliNotificationClient =
-  require('thali/NextGeneration/notification/thaliNotificationClient');
+  require('thali/Runtime/notification/thaliNotificationClient');
 var ThaliMobile =
-  require('thali/NextGeneration/thaliMobile');
+  require('thali/Runtime/thaliMobile');
 var ThaliPeerPoolDefault =
-  require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+  require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 var thaliConfig =
-  require('thali/NextGeneration/thaliConfig');
+  require('thali/Runtime/thaliConfig');
 
 var globals = {};
 
@@ -30,7 +30,7 @@ var GlobalVariables = function () {
   // Creates a proxyquired ThaliNotificationServer class.
   var MockThaliMobile = { };
   this.ThaliNotificationServerProxyquired =
-    proxyquire('thali/NextGeneration/notification/thaliNotificationServer',
+    proxyquire('thali/Runtime/notification/thaliNotificationServer',
       { '../thaliMobile':
       MockThaliMobile});
 

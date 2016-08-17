@@ -1,19 +1,19 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
+var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
 var inherits = require('util').inherits;
 var connectionTypes =
-  require('thali/NextGeneration/thaliMobile').connectionTypes;
-var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+  require('thali/Runtime/thaliMobile').connectionTypes;
+var ThaliPeerPoolDefault = require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 var Agent = require('http').Agent;
 var testUtils = require('../lib/testUtils');
 var express = require('express');
 var https = require('https');
 var Promise = require('lie');
 var makeIntoCloseAllServer =
-  require('thali/NextGeneration/makeIntoCloseAllServer');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+  require('thali/Runtime/makeIntoCloseAllServer');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 
 var peerIdentifier = 'foo';
 var connectionType = connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;

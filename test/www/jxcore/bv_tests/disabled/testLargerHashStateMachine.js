@@ -1,8 +1,8 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var LargerHashStateMachine = require('thali/identityExchange/LargerHashStateMachine');
-var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
+var LargerHashStateMachine = require('thali/Runtime/identityExchange/LargerHashStateMachine');
+var identityExchangeUtils = require('thali/Runtime/identityExchange/identityExchangeUtils');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');
 var request = require('supertest-as-promised');
 var crypto = require('crypto');

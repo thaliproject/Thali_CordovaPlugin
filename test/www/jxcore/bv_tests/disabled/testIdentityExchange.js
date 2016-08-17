@@ -1,11 +1,11 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var IdentityExchange = require('thali/identityExchange/identityexchange');
+var IdentityExchange = require('thali/Runtime/identityExchange/identityexchange');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');
-var ThaliEmitter = require('thali/thaliemitter');
+var ThaliEmitter = require('thali/Runtime/utils/thaliEmitter');
 var request = require('supertest-as-promised');
-var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
+var identityExchangeUtils = require('thali/Runtime/identityExchange/identityExchangeUtils');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var ThaliReplicationManager = require('thali/thalireplicationmanager');

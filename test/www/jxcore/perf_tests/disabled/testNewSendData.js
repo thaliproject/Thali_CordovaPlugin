@@ -1,7 +1,7 @@
 var net = require('net');
 var inherits = require('util').inherits;
 var randomstring = require('randomstring');
-var ThaliEmitter = require('thali/thaliemitter');
+var ThaliEmitter = require('thali/Runtime/utils/thaliEmitter');
 var EventEmitter = require('events').EventEmitter;
 
 function testSendData2(testConfig, deviceName, addressList) {
