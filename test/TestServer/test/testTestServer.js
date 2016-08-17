@@ -15,7 +15,7 @@ test("test server - starts and stops", function(t) {
     server.kill('SIGINT');
   });
   server.on('exit', function(code, signal) {
-    t.equal(code, 130, "SIGINT handler should have terminated server");
+    t.equal(signal, 'SIGINT', "SIGINT handler should have terminated server");
     t.end();
   });
 });
@@ -53,7 +53,8 @@ function presentDevice(client, name, uuid, os, type, tests) {
     "name": name,
     "type": type,
     "tests": tests,
-    "uuid": uuid
+    "uuid": uuid,
+    "supportedHardware": true
   }));
 }
 
@@ -91,7 +92,7 @@ test("test server - perf test framework", function(t) {
     var client = io('http://127.0.0.1:3000/',
       { transports:['websocket'], 'force new connection': true } 
     );
- 
+
     client.deviceName = clients.length;
     client.uuid = uuid.v4();
     clients.push(client);
@@ -412,4 +413,3 @@ test("test server - perf test framework handles server timeout", function(t) {
     });
   }
 });
-
