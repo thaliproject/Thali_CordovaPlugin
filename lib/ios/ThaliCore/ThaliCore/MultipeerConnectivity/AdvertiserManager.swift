@@ -69,14 +69,4 @@ import Foundation
 
         assert(self.currentAdvertiser != nil, "we should have initialized advertiser after calling this function")
     }
-
-    func lastGenerationAdvertiserForIdentifier(identifier: PeerIdentifier) -> Advertiser? {
-        return advertisers
-            .filter {
-                $0.peerIdentifier.uuid == identifier.uuid
-            }
-            .maxElement {
-                $0.0.peerIdentifier.generation < $0.1.peerIdentifier.generation
-            }
-    }
 }

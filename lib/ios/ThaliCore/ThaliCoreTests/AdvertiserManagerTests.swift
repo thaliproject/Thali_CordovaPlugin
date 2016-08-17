@@ -23,15 +23,6 @@ class AdvertiserManagerTests: XCTestCase {
         advertiserManager = nil
     }
 
-    func testPickLatestGenerationAdvertiser() {
-        advertiserManager.startUpdateAdvertisingAndListening(42)
-        let identifier: PeerIdentifier! = advertiserManager.currentAdvertiser?.peerIdentifier
-        advertiserManager.startUpdateAdvertisingAndListening(43)
-        let advertiser = advertiserManager.lastGenerationAdvertiserForIdentifier(identifier)
-
-        XCTAssertEqual(1, advertiser?.peerIdentifier.generation)
-    }
-
     func testStopAdvertising() {
         advertiserManager.startUpdateAdvertisingAndListening(42)
         XCTAssertEqual(advertiserManager.advertisers.count, 1)

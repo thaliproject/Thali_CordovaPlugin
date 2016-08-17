@@ -18,6 +18,7 @@ public final class BrowserManager: NSObject {
     internal private (set) var currentBrowser: Browser?
     let serviceType: String
     public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil
+    internal private(set) var availablePeers: [PeerIdentifier] = []
     public var isListening: Bool {
         return currentBrowser?.isListening ?? false
     }
@@ -28,10 +29,14 @@ public final class BrowserManager: NSObject {
 
     private func foundPeer(withIdentifier identifier: PeerIdentifier) {
         peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
+        availablePeers.append(identifier)
     }
 
     private func lostPeer(withIdentifier identifier: PeerIdentifier) {
         peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
+        if let index = availablePeers.indexOf(identifier) {
+            availablePeers.removeAtIndex(index)
+        }
     }
 
     public func startListeningForAdvertisements() {
@@ -51,5 +56,15 @@ public final class BrowserManager: NSObject {
         }
         currentBrowser.stopListening()
         self.currentBrowser = nil
+    }
+
+    func lastGenerationPeerForIdentifier(identifier: PeerIdentifier) -> PeerIdentifier? {
+        return availablePeers
+            .filter {
+                $0.uuid == identifier.uuid
+            }
+            .maxElement {
+                $0.0.generation < $0.1.generation
+        }
     }
 }

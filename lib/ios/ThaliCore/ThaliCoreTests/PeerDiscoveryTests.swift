@@ -90,4 +90,26 @@ class PeerDiscoveryTests: XCTestCase {
         XCTAssertEqual(advertiserIdentifier, advertiserPeerAvailability?.peerIdentifier)
     }
 
+    func testPickLatestGenerationAdvertiser() {
+        let found2AdvertisersExpectation = expectationWithDescription("found 2 advertisers")
+        advertiser.startUpdateAdvertisingAndListening(42)
+        let identifier: PeerIdentifier! = advertiser.currentAdvertiser?.peerIdentifier
+        advertiser.startUpdateAdvertisingAndListening(43)
+        browser.startListeningForAdvertisements()
+        var advertisersCount = 0
+        browser.peersAvailabilityChanged = { peerAvailability in
+            if let availability = peerAvailability.first where availability.peerIdentifier.uuid == identifier.uuid {
+                advertisersCount += 1
+                if advertisersCount == 2 {
+                    found2AdvertisersExpectation.fulfill()
+                }
+            }
+        }
+
+        waitForExpectationsWithTimeout(10, handler: nil)
+        let lastGenerationIdentifier = browser.lastGenerationPeerForIdentifier(identifier)
+
+        XCTAssertEqual(1, lastGenerationIdentifier?.generation)
+    }
+
 }
