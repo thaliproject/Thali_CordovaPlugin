@@ -14,19 +14,16 @@ final class Browser: NSObject {
     private let foundPeer: (PeerIdentifier) -> Void
     private let lostPeer: (PeerIdentifier) -> Void
     var listeningStateChanged: ((Bool) -> Void)?
-
-    let peerIdentifier: PeerIdentifier
     internal private(set) var isListening: Bool = false {
         didSet {
             listeningStateChanged?(isListening)
         }
     }
 
-    required init(peerIdentifier: PeerIdentifier, serviceType: String,
+    required init(serviceType: String,
                   foundPeer: (PeerIdentifier) -> Void,
                   lostPeer: (PeerIdentifier) -> Void) {
-        browser = MCNearbyServiceBrowser(peer: peerIdentifier.mcPeer, serviceType: serviceType)
-        self.peerIdentifier = peerIdentifier
+        browser = MCNearbyServiceBrowser(peer: MCPeerID(displayName: NSUUID().UUIDString), serviceType: serviceType)
         self.foundPeer = foundPeer
         self.lostPeer = lostPeer
         super.init()

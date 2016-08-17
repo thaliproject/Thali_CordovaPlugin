@@ -43,7 +43,7 @@ public final class BrowserManager: NSObject {
         if let currentBrowser = currentBrowser {
             currentBrowser.stopListening()
         }
-        let browser = Browser(peerIdentifier: PeerIdentifier(), serviceType: serviceType,
+        let browser = Browser(serviceType: serviceType,
                               foundPeer: foundPeer, lostPeer: lostPeer)
         browser.startListening()
         self.currentBrowser = browser
