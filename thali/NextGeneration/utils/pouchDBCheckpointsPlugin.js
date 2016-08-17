@@ -1,107 +1,109 @@
 'use strict';
 
 module.exports.onCheckpointReached = function (handler) {
-  if (!this.__checkpointPlugin) {
-    initializeCheckpointPluginData.bind(this)();
-  }
-
-  addHandlerForCheckpointReached.bind(this)(handler);
-};
-
-var initializeCheckpointPluginData = function () {
-  var plugin = this.__checkpointPlugin = {};
-
-  plugin.delay = 500;
-  plugin.handlers = [];
-  plugin.callbacksAreNotified = false;
-
-  initializeCheckpoint.bind(this)();
-  initializeDBEvents.bind(this)();
-  initializeSizeWrapper.bind(this)();
-}
-
-var addHandlerForCheckpointReached = function (handler) {
-  var plugin = this.__checkpointPlugin;
-
-  plugin.handlers.push(handler);
-};
-
-var initializeCheckpoint = function () {
-  var plugin = this.__checkpointPlugin;
-
-  plugin.checkpoint = this.__opts.checkpoint;
-}
-
-var initializeDBEvents = function () {
-  var plugin = this.__checkpointPlugin;
-  var delay = plugin.delay;
-
-  plugin.events = this.changes({
-    live: true,
-    since: 'now'
-  });
-
-  plugin.events
-    .on('change', callOnceAfterDelay(checkDBSize.bind(this), delay));
-
-  this
-    .on('destroyed', function () {
-      plugin.events.cancel();
-  });
-};
-
-var initializeSizeWrapper = function () {
-  if (!this.installSizeWrapper) {
-    throw new Error('This plugin depends on pouchdb-size plugin. Please add pouchdb-size plugin befor this one.');
-  }
-
-  this.installSizeWrapper();
-
-  var plugin = this.__checkpointPlugin;
-  plugin.sizeWrapperIsInitialized = true;
-};
-
-var checkDBSize = function () {
   var db = this;
-  var plugin = this.__checkpointPlugin;
+  var plugin = db.__checkpointPlugin;
 
-  return db.info()
-    .then(function (response) {
-      var dbSize = response.disk_size;
-      var checkpoint = plugin.checkpoint;
-      var callbacksAreCalled = plugin.callbacksAreCalled;
+  if (!plugin) {
+    plugin = db.__checkpointPlugin = new CheckpointPlugin(db);
+  }
 
-      // If a database shrinks after a callback has been already called
-      // the callback should be called again when reaching a checkpoint
-      if(callbacksAreCalled && dbSize < checkpoint) {
-        plugin.callbacksAreCalled = false;
-      }
-      // Callback should be called only once
-      // after the first reaching of a checkpoint
-      if (!callbacksAreCalled && dbSize >= checkpoint) {
-        plugin.handlers
-          .forEach(function (handler) {
-            handler(checkpoint);
-          });
+  plugin.registerHandler(handler);
+};
 
-        plugin.callbacksAreCalled = true;
-      }
-    })
-    .catch(function (error) {
-      db.emit('error', error);
-      console.log('Error while fetching db info: ', error);
+var DEFAULT_DELAY = 200;
+
+var CheckpointPlugin = function (_db) {
+  // Private data
+  var db = _db;
+  var checkpoint = db.__opts.checkpoint;
+  var delay = db.__opts.checkpointDelay || DEFAULT_DELAY;
+  var events = null;
+  var handlers = [];
+  var handlersAreNotified = false;
+
+  // Private methods
+  function setupSizePlugin () {
+    if (!db.installSizeWrapper) {
+      throw new Error('This plugin depends on pouchdb-size plugin. Please add pouchdb-size plugin befor this one.');
+    }
+
+    db.installSizeWrapper();
+  }
+
+  function setupDBEvents () {
+    events = db.changes({
+      live: true,
+      since: 'now'
     });
-}
 
-var callOnceAfterDelay = function (fn, delay) {
+    events.on('change', executeOnce(checkDBSize.bind(this), delay));
+
+    db.on('destroyed', function () {
+      events.cancel();
+    });
+  }
+
+  function checkDBSize () {
+    return db.info()
+      .then(function (response) {
+        var dbSize = response.disk_size;
+        // If a database shrinks after a handlers have been already called
+        // the handlers should be called again when reaching a checkpoint
+        if(handlersAreNotified && dbSize < checkpoint) {
+          handlersAreNotified = false;
+        }
+        // Handlers should be called only once
+        // after the first reaching of a checkpoint
+        if (!handlersAreNotified && dbSize >= checkpoint) {
+          handlers
+            .forEach(function (handler) {
+              // It might be better for performance
+              // to execute handlers asynchronously
+              executeAsync(handler)(checkpoint);
+            });
+          handlersAreNotified = true;
+        }
+      })
+      .catch(function (error) {
+        db.emit('error', error);
+        console.log('Error while fetching db info: ', error);
+      });
+  }
+
+  // Public constructor
+  function CheckpointPlugin () {
+    setupSizePlugin();
+    setupDBEvents();
+  }
+
+  // Public methods
+  CheckpointPlugin.prototype.registerHandler = function (handler) {
+    handlers.push(handler);
+  };
+
+  return new CheckpointPlugin();
+};
+
+var executeOnce = function (fn, delay) {
   var timeout = null;
   return function () {
+    var args = arguments;
     if (!timeout) {
       timeout = setTimeout(function () {
-        fn();
+        fn.apply(null, args);
         clearTimeout(timeout);
         timeout = null;
       }, delay);
     }
+  }
+}
+
+var executeAsync = function (fn) {
+  return function () {
+    var args = arguments;
+    setTimeout(function () {
+      fn.apply(null, args);
+    });
   }
 }
