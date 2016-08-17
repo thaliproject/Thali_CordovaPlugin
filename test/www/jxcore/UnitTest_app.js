@@ -16,6 +16,7 @@ var Promise = require('lie');
 var utResult;
 
 if (process.platform === 'android' || process.platform === 'ios') {
+  console.log('Running unit tests');
   Mobile('ExecuteNativeTests').callNative(function (result) {
     utResult = true;
     if (result && result.executed) {
@@ -25,6 +26,7 @@ if (process.platform === 'android' || process.platform === 'ios') {
       console.log('Number of ignored tests: ', result.ignored);
       console.log('Total duration: ', result.duration);
       if (result.failed > 0) {
+        console.log('Failures: \n', result.failures);
         utResult = false;
       }
     }
