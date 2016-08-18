@@ -16,10 +16,10 @@ final class Advertiser: NSObject {
     let serviceType: String
     let port: UInt16
     internal private(set) var isAdvertising: Bool = false
-    private let receivedInvitationHandler: (peer: PeerIdentifier) -> Void
+    private let receivedInvitationHandler: (session: Session) -> Void
 
     required init(peerIdentifier: PeerIdentifier, serviceType: String, port: UInt16,
-                  receivedInvitationHandler: (peer: PeerIdentifier) -> Void) {
+                  receivedInvitationHandler: (session: Session) -> Void) {
         advertiser = MCNearbyServiceAdvertiser(peer: peerIdentifier.mcPeer,
                                                discoveryInfo:nil, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
@@ -45,12 +45,10 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
 
     func advertiser(advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID,
                     withContext context: NSData?, invitationHandler: (Bool, MCSession) -> Void) {
-        do {
-            let peer = try PeerIdentifier(mcPeer: peerID)
-            receivedInvitationHandler(peer: peer)
-        } catch let error {
-            print("\(error) wrong peer format")
-        }
+        let mcSession = MCSession(peer: advertiser.myPeerID, securityIdentity: nil, encryptionPreference: .None)
+        let session = Session(session: mcSession, identifier: peerID.displayName)
+        invitationHandler(true, mcSession)
+        receivedInvitationHandler(session: session)
     }
 
     func advertiser(advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: NSError) {

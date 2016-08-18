@@ -57,7 +57,7 @@
     [self defineStopListeningForAdvertisements:appContext];
     [self defineStartUpdateAdvertisingAndListening:appContext];
     [self defineStopAdvertisingAndListening:appContext];
-    [self defineConnect:appContext];
+    [self defineMulticonnect:appContext];
     [self defineKillConnections:appContext];
     [self defineDidRegisterToNative:appContext];
     [self defineGetOSVersion:appContext];
@@ -159,7 +159,7 @@
      } withName:[AppContext stopAdvertisingAndListening]];
 }
 
-- (void)defineConnect:(AppContext *)appContext {
+- (void)defineMulticonnect:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
          if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]]) {
              NSLog(@"jxcore: connect: badParam");
@@ -189,9 +189,9 @@
              };
 
              // We'll callback to the upper layer when the connect completes or fails
-             [appContext connectToPeer:params[0] callback:connectCallback];
+             [appContext multiconnectToPeer:params[0] callback:connectCallback];
          }
-     } withName:[AppContext connect]];
+     } withName:[AppContext multiconnect]];
 }
 
 - (void)defineKillConnections:(AppContext *)appContext {

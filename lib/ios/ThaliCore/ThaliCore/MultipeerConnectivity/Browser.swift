@@ -23,7 +23,9 @@ final class Browser: NSObject {
     required init(serviceType: String,
                   foundPeer: (PeerIdentifier) -> Void,
                   lostPeer: (PeerIdentifier) -> Void) {
-        browser = MCNearbyServiceBrowser(peer: MCPeerID(displayName: NSUUID().UUIDString), serviceType: serviceType)
+        let peerId = MCPeerID(displayName: NSUUID().UUIDString)
+        browser = MCNearbyServiceBrowser(peer: peerId, serviceType: serviceType)
+
         self.foundPeer = foundPeer
         self.lostPeer = lostPeer
         super.init()
@@ -37,6 +39,20 @@ final class Browser: NSObject {
 
     func stopListening() {
         isListening = false
+    }
+
+    /**
+     transforms PeerIdentifier to MCPeerID and invites it to MCSession
+
+     - parameter peerIdentifier: peer identifier to invite
+
+     - returns: Session object for managing multipeer session between devices
+     */
+    func invitePeerToConnect(peerIdentifier: PeerIdentifier) -> Session {
+        let mcSession = MCSession(peer: browser.myPeerID, securityIdentity: nil, encryptionPreference: .None)
+        let session = Session(session: mcSession, identifier: peerIdentifier.stringValue)
+        browser.invitePeer(peerIdentifier.mcPeer, toSession: mcSession, withContext: nil, timeout: 30)
+        return session
     }
 }
 

@@ -162,8 +162,8 @@ public typealias ClientConnectCallback = (error: String, info: [String : AnyObje
      - parameter peer: identifier of peer to connect
      - parameter callback: callback with connection results.
      */
-    public func connectToPeer(peer: String, callback:ClientConnectCallback) {
-        
+    public func multiconnectToPeer(peer: String, callback:ClientConnectCallback) {
+        browserManager.connectToPeer
     }
 
     /**
@@ -241,6 +241,18 @@ extension AppContext {
 
     @objc public class func connect() -> String {
         return "connect"
+    }
+    
+    @objc public class func multiconnect() -> String {
+        return "multiConnect"
+    }
+
+    @objc public class func multiconnectResolved() -> String {
+        return "multiConnectResolved"
+    }
+    
+    @objc public class func multiconnectResolved() -> String {
+        return "multiConnectConnectionFailure"
     }
 
     @objc public class func stopAdvertisingAndListening() -> String {
