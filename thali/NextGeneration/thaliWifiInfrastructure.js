@@ -656,7 +656,7 @@ function (skipPromiseQueue, changeTarget) {
  * @event wifiPeerAvailabilityChanged
  * @public
  * @type {Object}
- * @property {string} peerIdentifier This is the UUID part of the USN value
+ * @property {string} peerIdentifier This is the UUID part of the USN value.
  * @property {number} generation This is the generation part of the USN value
  * @property {?string} hostAddress This can be either an IP address or a DNS
  * address encoded as a string

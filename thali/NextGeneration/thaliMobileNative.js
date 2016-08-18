@@ -279,41 +279,6 @@
 // jscs:enable maximumLineLength
 
 /**
- * If the MCSession could not be formed then error MUST NOT be null and MUST
- * contain a description of the problem while port MUST be null. If the
- * MCSession could be formed then error MUST be null and port MUST contain an
- * integer with the localhost port where the native code is listening for TCP/IP
- * connections it is to bridge to the MCSession.
- *
- * * | Error String | Description |
- * |--------------|-------------|
- * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
- * | startListeningForAdvertisements is not active | Go start it! |
- * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
- * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
- * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
- * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
- * | No available TCP ports | There are no TCP ports available to listen on. |
- * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
- * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
- * | Platform does not support `multiConnect` | The platform doesn't support the `multiConnect` method. |
- *
- * @public
- * @callback multiConnectResolvedCallback
- * @property {string} syncValue
- * @property {?string} error
- * @property {?number} port
- */
-
-/**
- * Every call to `multiConnect` MUST produced exactly one callback of this type.
- *
- * @public
- * @external "Mobile('multiConnectResolved')"
- * @param {module:thaliMobileNative~multiConnectResolvedCallback} callback
- */
-
-/**
  * @external "Mobile('multiConnect')"
  * @public
  */
@@ -342,12 +307,12 @@
  * The submitted peerIdentifier only contains a value mapped to the UUID part
  * of the remote peer's MCPeerID.
  *
- * If there already exists a MCSession to the
- * identifier UUID then the {@link multiConnectResolved} MUST be fired
- * and have its port set to the TCP/IP listener associated with that MCSession.
- * Yes, in theory we could have returned the port in the synchronous response to
- * the `multiConnect` method but it's more consistent to always have the true
- * response come in the {@link multiConnectResolved}.
+ * If there already exists a MCSession for the identifier UUID then the {@link
+ * multiConnectResolved} MUST be fired and have its port set to the TCP/IP
+ * listener associated with that MCSession. Yes, in theory we could have
+ * returned the port in the synchronous response to the `multiConnect` method
+ * but it's more consistent to always have the true response come in the {@link
+ * multiConnectResolved}.
  *
  * If there is no existing MCSession for the associated UUID then the iOS code
  * MUST pick the highest generation advertised for that UUID and try to create
@@ -456,6 +421,45 @@
 
 /*
               registerToNative Methods
+ */
+
+/**
+ * @external "Mobile('multiConnectResolved')"
+ */
+
+/**
+ * If the MCSession could not be formed then error MUST NOT be null and MUST
+ * contain a description of the problem while port MUST be null. If the
+ * MCSession could be formed then error MUST be null and port MUST contain an
+ * integer with the localhost port where the native code is listening for TCP/IP
+ * connections it is to bridge to the MCSession.
+ *
+ * * | Error String | Description |
+ * |--------------|-------------|
+ * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
+ * | startListeningForAdvertisements is not active | Go start it! |
+ * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
+ * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
+ * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
+ * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
+ * | No available TCP ports | There are no TCP ports available to listen on. |
+ * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
+ * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
+ * | Platform does not support multiConnect | The platform doesn't support the `multiConnect` method. |
+ *
+ * @public
+ * @callback multiConnectResolvedCallback
+ * @property {string} syncValue
+ * @property {?string} error
+ * @property {?number} port
+ */
+
+/**
+ * Every call to `multiConnect` MUST produced exactly one callback of this type.
+ *
+ * @public
+ * @function external:"Mobile('multiConnectResolved')".registerToNative
+ * @param {module:thaliMobileNative~multiConnectResolvedCallback} callback
  */
 
 /**

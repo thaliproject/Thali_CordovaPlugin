@@ -416,6 +416,7 @@ module.exports.getNetworkStatus = function () {
  * set based on the values in the availability cache and the suggestedTCPTimeout
  * set per thaliConfig.
  *
+ * @public
  * @property {string} peerIdentifier This is exclusively used to detect if
  * this is a repeat announcement or if a peer has gone to correlate it to the
  * announcement of the peer's presence. But this value is not used to establish
@@ -430,6 +431,21 @@ module.exports.getAddressPort = function(peerIdentifier, connectionType) {
   return Promise.reject('not implemented');
 };
 
+/**
+ * Requests that the outgoing session with the identifier peerIdentifier on the
+ * specified connectionType be terminated.
+ *
+ * On Android and iOS this calls down to disconnect on thaliMobileNativeWrapper.
+ * For Wifi this method MUST return a 'Wifi does not support disconnect' error.
+ *
+ * @public
+ * @property {string} peerIdentifier Value from peerAvailabilityChanged event.
+ * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * @returns {Promise<?Error>}
+ */
+module.exports.disconnect = function(peerIdentifier, connectionType) {
+  return Promise.reject('not implement');
+};
 /*
         EVENTS
  */

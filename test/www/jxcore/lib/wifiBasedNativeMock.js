@@ -943,9 +943,6 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
  * replace it with this object. In general this object won't exist on the
  * desktop.
  *
- * If we are simulating iOS then we MUST add the /ConnectToMeForMock and
- * /IConnectedMock endpoints as described above to the router object.
- *
  * @public
  * @constructor
  * @param {platformChoice} platform

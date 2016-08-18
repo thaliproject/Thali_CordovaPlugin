@@ -130,7 +130,7 @@ function routerPortConnectionFailedHandler(failedRouterPort) {
     });
 }
 
-function  listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
+function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
   if (!states.started) {
     // We aren't supposed to emit events when we aren't started
     return;
@@ -191,7 +191,9 @@ function stopCreateAndStartServersManager() {
  * This method MUST be called before any other method here other than
  * registering for events on the emitter or calling {@link
  * module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}. This method will
- * cause us to: - create a TCP server (which MUST use {@link
+ * cause us to:
+ *
+ * - create a TCP server (which MUST use {@link
  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) on a random port and
  * host the router on that server.
  *
@@ -231,6 +233,7 @@ function stopCreateAndStartServersManager() {
  *
  * If the given router can't be used as an express router, a "Bad Router"
  * error MUST be returned.
+ *
  * @public
  * @param {Object} router This is an Express Router object (for example,
  * express-pouchdb is a router object) that the caller wants the non-TCP
@@ -614,11 +617,12 @@ module.exports.getPort = function (peerIdentifier) {
  * If called on a non-`connect` platform then a 'Not connect platform' error
  * MUST be returned.
  *
+ * @private
  * @param {Object} incomingConnectionId
  * @returns {Promise<?Error>}
  */
 // jscs:enable jsDoc
-module.exports.terminateConnection = function (incomingConnectionId) {
+module.exports._terminateConnection = function (incomingConnectionId) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateConnection(incomingConnectionId)
     .then(function () {
@@ -629,6 +633,39 @@ module.exports.terminateConnection = function (incomingConnectionId) {
     });
   });
 };
+
+/**
+ * This calls the native disconnect method. This code is responsible for
+ * honoring the restrictions placed on calls to multiConnect/disconnect in terms
+ * of parallel calls with the same ID as described in the _multiConnect command.
+ *
+ * @private
+ * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
+ * event.
+ * @returns {Promise<?Error>} Unless something bad happens (in which case a
+ * reject with an Error will be returned) the response will be a resolve with
+ * a null result.
+ */
+module.exports._disconnect = function (peerIdentifier) {
+  return Promise.reject(new Error('Not yet implemented'));
+};
+
+/**
+ * Terminates a connection with the named peer. If there is no such connection
+ * then the method will still return success.
+ *
+ * On 'connect' platforms this calls _terminateConnection method and on
+ * `multiConnect` platforms this calls _disconnect.
+ *
+ * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
+ * event.
+ * @returns {Promise<?Error>} Unless something bad happens (in which case a
+ * reject with an Error will be returned) the response will be a resolve with
+ * a null result.
+ */
+module.exports.disconnect = function(peerIdentifier) {
+  return Promise.reject(new Error('Not yet implemented'));
+}
 
 /**
  * Used on `connect` platforms to terminate a TCP/IP listener waiting for
@@ -726,7 +763,7 @@ module.exports.connectionTypes = connectionTypes;
  * Fired when a native connection is lost. This event is fired either as a
  * result of {@link module:ThaliTcpServersManager.event:failedConnection} or
  * as a result of
- * {@link module:ThaliMobileNative.event:multiConnectionConnectionFailure}.
+ * {@link module:ThaliMobileNative.event:multiConnectConnectionFailure}.
 
  * @public
  * @event failedNativeConnectionEvent
