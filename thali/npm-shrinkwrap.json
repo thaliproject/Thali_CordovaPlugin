@@ -654,7 +654,7 @@
     },
     "taffydb": {
       "version": "2.6.2",
-      "from": "https://github.com/hegemonic/taffydb/tarball/7d100bcee0e997ee4977e273cdce60bd8933050e"
+      "from": "taffydb@2.6.2"
     },
     "through": {
       "version": "2.3.8",
