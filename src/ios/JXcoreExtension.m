@@ -52,131 +52,70 @@
 #endif
 }
 
+- (void)handleCallback:(NSString *)callback error:(NSError *)error {
+    @synchronized(self) {
+        if (error == nil) {
+            [JXcore callEventCallback:callback withParams:@[[NSNull null]]];
+        } else {
+            [JXcore callEventCallback:callback withParams:@[error.localizedDescription]];
+        }
+    }
+}
+
 - (void)defineStartListeningForAdvertisements:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        if ([appContext startListeningForAdvertisements]) {
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-            }
-        }
-        else {
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
-            }
-        }
+        NSError *error = nil;
+        [appContext startListeningForAdvertisementsAndReturnError:&error];
+        [self handleCallback:callbackId error:error];
     } withName:[AppContext startListeningForAdvertisements]];
 }
 
 - (void)defineStopListeningForAdvertisements:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        if ([appContext stopListeningForAdvertisements]) {
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-            }
-        }
-        else {
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
-            }
-        }
+        NSError *error = nil;
+        [appContext stopListeningForAdvertisementsAndReturnError:&error];
+        [self handleCallback:callbackId error:error];
     } withName:[AppContext stopListeningForAdvertisements]];
 }
 
 - (void)defineStartUpdateAdvertisingAndListening:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        if (params.count != 2 || ![params[0] isKindOfClass:[NSNumber class]]) {
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-            }
-        }
-        else {
-            if ([appContext startUpdateAdvertisingAndListeningWithServerPort:(unsigned short)[params[0] intValue]]) {
-                @synchronized(self) {
-                    [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-                }
-            }
-            else {
-                @synchronized(self)
-                {
-                    [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
-                }
-            }
-        }
+        NSError *error = nil;
+        [appContext startUpdateAdvertisingAndListeningWithParameters:params error:&error];
+        [self handleCallback:callbackId error:error];
     } withName:[AppContext startUpdateAdvertisingAndListening]];
 }
 
 - (void)defineStopAdvertisingAndListening:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        if ([appContext stopAdvertisingAndListening]) {
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-            }
-        }
-        else {
-            @synchronized(self)
-            {
-                [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
-            }
-        }
+        NSError *error = nil;
+        [appContext stopAdvertisingAndListeningAndReturnError:&error];
+        [self handleCallback:callbackId error:error];
     } withName:[AppContext stopAdvertisingAndListening]];
 }
 
 - (void)defineConnect:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
-        if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]]) {
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-            }
-        }
-        else {
-            void (^connectCallback)(NSString *, NSString *) = ^(NSString *errorMsg, NSString *connection) {
-                if (errorMsg == nil) {
-                    @synchronized(self) {
-                        [JXcore callEventCallback:callbackId withParams:
-                         @[[NSNull null], connection]];
-                    }
-                }
-                else {
-                    @synchronized(self) {
-                        [JXcore callEventCallback:callbackId withParams:@[errorMsg, [NSNull null]]];
-                    }
-                }
-            };
-            
-            [appContext connectToPeer:params[0] callback:connectCallback];
-        }
+        NSError *error = nil;
+        [appContext multiConnectToPeer:params error:&error];
+        [self handleCallback:callbackId error:error];
     } withName:[AppContext connect]];
 }
 
 - (void)defineKillConnections:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
-        if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]]) {
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-            }
-        }
-        else {
-            if ([appContext killConnection: params[0]]) {
-                @synchronized(self) {
-                    [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-                }
-            }
-            else {
-                @synchronized(self) {
-                    [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
-                }
-            }
-        }
+        NSError *error = nil;
+        [appContext killConnection:params error:&error];
+        [self handleCallback:callbackId error:error];
     } withName:[AppContext killConnections]];
 }
 
 - (void)defineDidRegisterToNative:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
-        if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]]) {
-        }
-        else {
-            [appContext didRegisterToNative: params[0]];
-        }
+        NSError *error = nil;
+        [appContext didRegisterToNative: params error:&error];
+        [self handleCallback:callbackId error:error];
+        
     } withName:[AppContext didRegisterToNative]];
 }
 

@@ -16,6 +16,11 @@ func jsonValue(object: AnyObject) throws -> String? {
 
 public typealias ClientConnectCallback = (String, String) -> Void
 
+@objc public enum AppContextError: Int, ErrorType{
+    case BadParameters
+    case UnknownError
+}
+
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
     /**
      Notifies about context's peer changes
@@ -70,7 +75,7 @@ public typealias ClientConnectCallback = (String, String) -> Void
     public weak var delegate: AppContextDelegate?
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
-    
+
     private func updateNetworkStatus() {
         //todo put actual network status
         do {
@@ -96,84 +101,44 @@ public typealias ClientConnectCallback = (String, String) -> Void
         }
     }
 
-    /**
-     Start the client components
-
-     - returns: true if successful
-     */
-    public func startListeningForAdvertisements() -> Bool {
-        return false
+    public func startListeningForAdvertisements() throws {
     }
 
-    /**
-     Stop the client components
-
-     - returns: true if successful
-     */
-    public func stopListeningForAdvertisements() -> Bool {
-        return false
+    public func stopListeningForAdvertisements() throws {
     }
 
-    /**
-     Start the server components
-
-     - parameter port: server port to listen
-     - returns: true if successful
-     */
-    public func startUpdateAdvertisingAndListening(withServerPort port: UInt16) -> Bool {
-        return false
+    public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
+        guard let _ = (parameters.first as? NSNumber)?.unsignedShortValue where parameters.count == 2 else {
+            throw AppContextError.BadParameters
+        }
     }
 
-    /**
-     Stop the client components
-
-     - returns: true if successful
-     */
-    public func stopListening() -> Bool {
-        return false
+    public func stopListening() throws {
     }
 
-    /**
-     Stop the server components
-
-     - returns: true if successful
-     */
-    public func stopAdvertisingAndListening() -> Bool {
-        return false
+    public func stopAdvertisingAndListening() throws {
     }
 
-    /**
-     try to establish connection with peer and open TCP listener
-
-     - parameter peer: identifier of peer to connect
-     - parameter callback: callback with connection results.
-     */
-    public func connectToPeer(peer: String, callback:ClientConnectCallback) {
+    public func multiConnectToPeer(parameters: [AnyObject]) throws {
 
     }
 
-    /**
-
-     Kill connection without cleanup - Testing only !!
-
-     - parameter peerIdentifier: identifier of peer to kill connection
-
-     - returns: true if successful
-     */
-    public func killConnection(peerIdentifier: String) -> Bool {
-        return false
+    public func killConnection(parameters: [AnyObject]) throws {
     }
 
     public func getIOSVersion() -> String {
         return NSProcessInfo().operatingSystemVersionString
     }
-    
-    public func didRegisterToNative(function: String) {
-        if function == AppContext.networkChanged() {
+
+    public func didRegisterToNative(parameters: [AnyObject]) throws {
+        guard let functionName = parameters.first as? String where parameters.count == 2 else {
+            throw AppContextError.BadParameters
+        }
+        if functionName == AppContext.networkChanged() {
             updateNetworkStatus()
         }
     }
-    
+
 
 #if TEST
     func executeNativeTests() -> String {
@@ -246,7 +211,4 @@ extension AppContext {
     @objc public class func startListeningForAdvertisements() -> String {
         return "startListeningForAdvertisements"
     }
-
-
-
 }
