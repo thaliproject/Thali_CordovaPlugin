@@ -61,7 +61,9 @@
     [self defineKillConnections:appContext];
     [self defineDidRegisterToNative:appContext];
     [self defineGetOSVersion:appContext];
+#ifdef TEST
     [self defineExecuteNativeTests:appContext];
+#endif
 }
 
 - (void)defineStartListeningForAdvertisements:(AppContext *)appContext {
@@ -225,8 +227,7 @@
 }
 
 - (void)defineDidRegisterToNative:(AppContext *)appContext {
-    [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
-     {
+    [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
          if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]]) {
              NSLog(@"jxcore: didRegisterToNative: badParam");
          }
@@ -239,15 +240,14 @@
 - (void)defineGetOSVersion:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
          NSString * const version = [appContext getIOSVersion];
-         @synchronized(self)
-         {
+         @synchronized(self) {
              [JXcore callEventCallback:callbackId withParams:@[version]];
          }
      } withName:[AppContext getOSVersion]];
 }
 
-- (void)defineExecuteNativeTests:(AppContext *)appContext
-{
+#ifdef TEST
+- (void)defineExecuteNativeTests:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
@@ -266,6 +266,7 @@
          }
      } withName:[AppContext executeNativeTests]];
 }
+#endif
 
 @end
 
