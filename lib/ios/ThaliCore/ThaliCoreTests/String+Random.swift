@@ -13,8 +13,8 @@ extension String {
         let letters: String = "abcdefghkmnopqrstuvxyzABCDEFGHKLMNOPQRSTUXYZ"
         var randomString = ""
 
+        let length = UInt32(letters.characters.count)
         for _ in 0..<len {
-            let length = UInt32(letters.characters.count)
             let rand = Int(arc4random_uniform(length))
             let char = letters[letters.startIndex.advancedBy(rand)]
             randomString.append(char)
