@@ -9,8 +9,18 @@
 import XCTest
 
 class AppContextTests: XCTestCase {
+    var context: AppContext! = nil
+
+    override func setUp() {
+        context = AppContext()
+    }
+
+    override func tearDown() {
+        context = nil
+    }
+
     func testUpdateNetworkStatus() {
-        
+
         class AppContextDelegateMock: NSObject, AppContextDelegate {
             var networkStatusUpdated = false
             @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
@@ -23,10 +33,31 @@ class AppContextTests: XCTestCase {
             @objc func appDidEnterForeground(withContext context: AppContext) {}
         }
 
-        let context = AppContext()
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
         let _ = try? context.didRegisterToNative([AppContext.networkChanged(), NSNull()])
         XCTAssertTrue(delegateMock.networkStatusUpdated, "network status is not updated")
+    }
+
+    func testDidRegisterToNative() {
+        var error: ErrorType?
+        do {
+            try context.didRegisterToNative(["test", "test"])
+        } catch let err {
+            error = err
+        }
+        XCTAssertNil(error)
+        var contextError: AppContextError?
+        do {
+            try context.didRegisterToNative(["test"])
+        } catch let err as AppContextError{
+            contextError = err
+        } catch _ {
+        }
+        XCTAssertEqual(contextError, .BadParameters)
+    }
+
+    func testGetIOSVersion() {
+        XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
     }
 }
