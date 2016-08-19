@@ -9,32 +9,37 @@
 import Foundation
 import ThaliCore
 
-public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
+func jsonValue(object: AnyObject) throws -> String? {
+    let data = try NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0))
+    return String(data: data, encoding: NSUTF8StringEncoding)
+}
+
+public typealias ClientConnectCallback = (String, String) -> Void
 
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
     /**
      Notifies about context's peer changes
 
-     - parameter peers:   array of changed peers
+     - parameter peers:   json with data about changed peers
      - parameter context: related AppContext
      */
-    func context(context: AppContext, didChangePeerAvailability peers: Array<[String : AnyObject]>)
+    func context(context: AppContext, didChangePeerAvailability peers: String)
 
     /**
      Notifies about network status changes
 
-     - parameter status:  dictionary with current network availability status
+     - parameter status:  json string with network availability status
      - parameter context: related AppContext
      */
-    func context(context: AppContext, didChangeNetworkStatus status: [String : AnyObject])
+    func context(context: AppContext, didChangeNetworkStatus status: String)
 
     /**
      Notifies about peer advertisement update
 
-     - parameter discoveryAdvertisingState: dictionary with information about peer's state
+     - parameter discoveryAdvertisingState: json with information about peer's state
      - parameter context:                   related AppContext
      */
-    func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: [String : AnyObject])
+    func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
 
     /**
      Notifies about failing connection to port
@@ -68,7 +73,10 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     
     private func updateNetworkStatus() {
         //todo put actual network status
-        delegate?.context(self, didChangeNetworkStatus: [:])
+        do {
+            delegate?.context(self, didChangeNetworkStatus: try jsonValue([:])!)
+        } catch _ {
+        }
     }
 
     public override init() {

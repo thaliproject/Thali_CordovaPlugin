@@ -24,20 +24,6 @@
     return nil;
 }
 
-+ (NSString *)objectToJSON:(NSObject *)object {
-    NSError *err = nil;
-    NSString *json = [[NSString alloc] initWithData:
-                      [NSJSONSerialization dataWithJSONObject:object options:0 error:&err]
-                                           encoding:NSUTF8StringEncoding
-                      ];
-
-    if (err != nil) {
-        @throw err;
-    }
-
-    return json;
-}
-
 #pragma mark - Define public API to node methods
 
 // Defines methods.
@@ -172,13 +158,13 @@
          }
          else {
              NSLog(@"jxcore: connect %@", params[0]);
-             void (^connectCallback)(NSString *, NSDictionary *) = ^(NSString *errorMsg, NSDictionary *connection) {
+             void (^connectCallback)(NSString *, NSString *) = ^(NSString *errorMsg, NSString *connection) {
                  if (errorMsg == nil) {
                      NSLog(@"jxcore: connect: success");
 
                      @synchronized(self) {
                          [JXcore callEventCallback:callbackId withParams:
-                          @[[NSNull null], [JXcoreExtension objectToJSON:connection]]];
+                          @[[NSNull null], connection]];
                      }
                  }
                  else {
@@ -272,24 +258,24 @@
 
 @implementation JXcoreExtension(AppContextDelegate)
 
-- (void)context:(AppContext * _Nonnull)context didChangePeerAvailability:(NSArray<NSDictionary<NSString *, id> *> * _Nonnull)peers {
+- (void)context:(AppContext * _Nonnull)context didChangePeerAvailability:(NSString * _Nonnull)peers {
     @synchronized(self) {
         [JXcore callEventCallback:[AppContext peerAvailabilityChanged]
-                         withJSON:[JXcoreExtension objectToJSON:peers]];
+                         withJSON:peers];
     }
 }
 
-- (void)context:(AppContext * _Nonnull)context didChangeNetworkStatus:(NSDictionary<NSString *, id> * _Nonnull)status {
+- (void)context:(AppContext * _Nonnull)context didChangeNetworkStatus:(NSString * _Nonnull)status {
     @synchronized(self) {
         [JXcore callEventCallback:[AppContext networkChanged]
-                         withJSON:[JXcoreExtension objectToJSON:status]];
+                         withJSON:status];
     }
 }
 
-- (void)context:(AppContext * _Nonnull)context didUpdateDiscoveryAdvertisingState:(NSDictionary<NSString *, id> * _Nonnull)discoveryAdvertisingState {
+- (void)context:(AppContext * _Nonnull)context didUpdateDiscoveryAdvertisingState:(NSString * _Nonnull)discoveryAdvertisingState {
     @synchronized(self) {
         [JXcore callEventCallback:[AppContext discoveryAdvertisingStateUpdateNonTCP] 
-                         withJSON:[JXcoreExtension objectToJSON:discoveryAdvertisingState]];
+                         withJSON:discoveryAdvertisingState];
     }
 }
 

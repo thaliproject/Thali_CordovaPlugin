@@ -13,11 +13,11 @@ class AppContextTests: XCTestCase {
         
         class AppContextDelegateMock: NSObject, AppContextDelegate {
             var networkStatusUpdated = false
-            @objc func context(context: AppContext, didChangePeerAvailability peers: Array<[String : AnyObject]>) {}
-            @objc func context(context: AppContext, didChangeNetworkStatus status: [String : AnyObject]) {
+            @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
+            @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
                 networkStatusUpdated = true
             }
-            @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: [String : AnyObject]) {}
+            @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
             @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
             @objc func appWillEnterBackground(withContext context: AppContext) {}
             @objc func appDidEnterForeground(withContext context: AppContext) {}
