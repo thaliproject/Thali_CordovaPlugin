@@ -33,9 +33,10 @@ process.on('uncaughtException', function (err) {
   process.exit(1);
 });
 
-process.on('unhandledRejection', function (err) {
-  testUtils.logMessageToScreen('Uncaught Promise Rejection: ' + JSON.stringify(err));
+process.on('unhandledRejection', function (err, p) {
+  testUtils.logMessageToScreen('Uncaught Promise Rejection: ' + err);
   console.trace(err);
+  console.log(err.stack);
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 });
