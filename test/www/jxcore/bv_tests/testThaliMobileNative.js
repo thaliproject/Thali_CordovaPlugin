@@ -1084,7 +1084,9 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
               return reject(error);
             }
             case validateResponse.OK: {
-              peersWeSucceededWith.push(parsedMessage.uuid);
+              // 'parsedMessage.uuid' may be already in 'peersWeSucceededWith'.
+              // We are just ignoring this case.
+              peersWeSucceededWith[parsedMessage.uuid] = true;
               resolve();
               logger.debug('Response validated, calling connection.end');
               connection.end();
@@ -1108,13 +1110,25 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
   });
 }
 
+// We want to know whether all remote participants are sitting in `hashTable`.
+function verifyPeers(t, hashTable) {
+  var notFoundParticipants = t.participants.filter(function (participant) {
+    return !hashTable[participant.uuid];
+  });
+  // Current local participant should be ignored.
+  return (
+    notFoundParticipants.length === 1 &&
+    notFoundParticipants[0].uuid === tape.uuid
+  );
+}
+
 function clientRound(t, roundNumber, boundListener, quitSignal) {
   var peersWeAreOrHaveResolved = {};
-  var peersWeSucceededWith = [];
+  var peersWeSucceededWith = {};
   return new Promise(function (resolve, reject) {
     boundListener.listener = function (peers) {
-      if (peersWeSucceededWith.length === t.participants.length - 1) {
-        return;
+      if (verifyPeers(t, peersWeSucceededWith)) {
+        return
       }
 
       var peerPromises = [];
@@ -1157,7 +1171,7 @@ function clientRound(t, roundNumber, boundListener, quitSignal) {
       });
       Promise.all(peerPromises)
         .then(function () {
-          if (peersWeSucceededWith.length === t.participants.length - 1) {
+          if (verifyPeers(t, peersWeSucceededWith)) {
             quitSignal.raiseSignal();
             resolve();
           }
