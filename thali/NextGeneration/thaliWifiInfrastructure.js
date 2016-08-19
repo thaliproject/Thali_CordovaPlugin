@@ -10,7 +10,7 @@ var express = require('express');
 var validations = require('../validations');
 var thaliConfig = require('./thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-var logger = require('../thalilogger')('thaliWifiInfrastructure');
+var logger = require('../thaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var https = require('https');
 
@@ -197,7 +197,8 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     try {
       validations.ensureValidPort(portNumber);
     } catch (error) {
-      logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
+      logger.warn('Failed to parse a valid port number from location: %s',
+        data.LOCATION);
       return false;
     }
     peer.hostAddress = parsedLocation.hostname;
@@ -271,7 +272,7 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
  * express-pouchdb is a router object) that the caller wants the WiFi
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately.
- * @param {module:thaliMobileNativeWrapper~pskIdToSecret pskIdToSecret} pskIdToSecret
+ * @param {module:thaliMobileNativeWrapper~pskIdToSecret} pskIdToSecret
  * @returns {Promise<?Error>}
  */
 // jscs:enable jsDoc
@@ -335,6 +336,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
   });
 };
 
+// jscs:disable maximumLineLength
 /**
  * This will start the local Wi-Fi Infrastructure Mode discovery mechanism
  * (currently SSDP). Calling this method will trigger {@link
@@ -354,6 +356,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  *
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
 function () {
   var self = this;
@@ -407,7 +410,7 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.listening.target = false;
   }
-  var action = function (resolve, reject) {
+  var action = function (resolve) {
     if (!self.states.listening.current) {
       return resolve();
     }
@@ -424,13 +427,14 @@ function (skipPromiseQueue, changeTarget) {
   }
 };
 
+// jscs:disable maximumLineLength
 /**
  * This method will start advertising the peer's presence over the local Wi-Fi
  * Infrastructure Mode discovery mechanism (currently SSDP). When creating the
  * UDP socket for SSDP the socket MUST be "udp4". When socket.bind is called to
  * bind the socket the SSDP multicast address 239.255.255.250 and port 1900 MUST
  * be chosen as they are the reserved address and port for SSDP.
- * 
+ *
  * __OPEN ISSUE:__ What happens on Android or iOS or the desktop OS's for that
  * matter if multiple apps all try to bind to the same UDP multicast address?
  * It should be fine. But it's important to find out so that other apps can't
@@ -479,6 +483,7 @@ function (skipPromiseQueue, changeTarget) {
  *
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening =
 function () {
   var self = this;
@@ -593,7 +598,7 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.advertising.target = false;
   }
-  var action = function (resolve, reject) {
+  var action = function (resolve) {
     if (!self.states.advertising.current) {
       return resolve();
     }
@@ -651,6 +656,7 @@ function (skipPromiseQueue, changeTarget) {
  * to the peer
  */
 
+// jscs:disable maximumLineLength
 /**
  * For the definition of this event please see {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
@@ -674,6 +680,7 @@ function (skipPromiseQueue, changeTarget) {
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
+// jscs:enable maximumLineLength
 
 /**
  * [NOT IMPLEMENTED]

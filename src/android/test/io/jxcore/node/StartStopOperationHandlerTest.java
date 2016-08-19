@@ -1,6 +1,5 @@
 package io.jxcore.node;
 
-import android.content.Context;
 import android.os.CountDownTimer;
 
 import org.junit.After;
@@ -11,7 +10,6 @@ import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.UUID;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -22,32 +20,27 @@ import static org.hamcrest.core.IsNot.not;
 
 public class StartStopOperationHandlerTest {
 
-    public static Context mContext;
-    public static ConnectionManager mConnectionManager;
-    public static DiscoveryManager mDiscoveryManager;
-    public static ConnectionHelper mConnectionHelper;
-    public static StartStopOperationHandler mStartStopOperationHandler;
-    public static JXcoreThaliCallbackMock mJXcoreThaliCallback;
-
-    String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";
-    String BLUETOOTH_NAME = "Thali_Bluetooth";
-    String SERVICE_TYPE = "Cordovap2p._tcp";
-    String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";
-
-    UUID SERVICE_UUID = UUID.fromString(SERVICE_UUID_AS_STRING);
-    UUID BLE_SERVICE_UUID = UUID.fromString(BLE_SERVICE_UUID_AS_STRING);
+    private ConnectionManager mConnectionManager;
+    private DiscoveryManager mDiscoveryManager;
+    private ConnectionHelper mConnectionHelper;
+    private StartStopOperationHandler mStartStopOperationHandler;
+    private JXcoreThaliCallbackMock mJXcoreThaliCallback;
 
     @Before
     public void setUp() throws Exception {
+        System.out.println("Running UT from: StartStopOperationHandlerTest");
         mConnectionHelper = new ConnectionHelper();
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
-        mContext = jxcore.activity.getBaseContext();
-        mConnectionManager =
-                new ConnectionManager(mContext, mConnectionHelper, SERVICE_UUID, BLUETOOTH_NAME);
-        mDiscoveryManager =
-                new DiscoveryManager(mContext, mConnectionHelper, BLE_SERVICE_UUID, SERVICE_TYPE);
-        mStartStopOperationHandler =
-                new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
+
+        mDiscoveryManager = mConnectionHelper.getDiscoveryManager();
+
+        Field fConnectionManager = mConnectionHelper.getClass().getDeclaredField("mConnectionManager");
+        fConnectionManager.setAccessible(true);
+        mConnectionManager = (ConnectionManager) fConnectionManager.get(mConnectionHelper);
+
+        Field fStartStopOperationHandler = mConnectionHelper.getClass().getDeclaredField("mStartStopOperationHandler");
+        fStartStopOperationHandler.setAccessible(true);
+        mStartStopOperationHandler = (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
     }
 
     @After
@@ -187,7 +180,7 @@ public class StartStopOperationHandlerTest {
                 .getDeclaredField("mCurrentOperation");
         fCurrentOperation.setAccessible(true);
         fCurrentOperation.set(mStartStopOperationHandler,
-                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback));
+                StartStopOperation.createStartOperation(false, mJXcoreThaliCallback));
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
 
@@ -199,6 +192,8 @@ public class StartStopOperationHandlerTest {
                 .getDeclaredMethod("executeCurrentOperation");
         executeCurrentOperation.setAccessible(true);
         executeCurrentOperation.invoke(mStartStopOperationHandler);
+
+        Thread.sleep(5000);
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
 

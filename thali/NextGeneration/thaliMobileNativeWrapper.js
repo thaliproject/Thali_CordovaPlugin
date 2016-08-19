@@ -3,7 +3,7 @@
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var EventEmitter = require('events').EventEmitter;
-var logger = require('../thalilogger')('thaliMobileNativeWrapper');
+var logger = require('../thaliLogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
@@ -173,7 +173,7 @@ function stopCreateAndStartServersManager() {
  * Takes a PSK ID as input and returns either null if the ID is not supported or
  * a Buffer with the pre-shared secret associated with that identity if it
  * is supported.
- * 
+ *
  * @public
  * @callback pskIdToSecret
  * @param {string} id
@@ -240,7 +240,7 @@ module.exports.start = function (router, pskIdToSecret) {
       key: thaliConfig.BOGUS_KEY_PEM,
       cert: thaliConfig.BOGUS_CERT_PEM
     };
-    gRouterServer = https.createServer(options, gRouterExpress).listen(0, 
+    gRouterServer = https.createServer(options, gRouterExpress).listen(0,
       function () {
         gRouterServerPort = gRouterServer.address().port;
         stopCreateAndStartServersManager()
@@ -804,7 +804,7 @@ module.exports.emitter = new EventEmitter();
 /**
  * Function to register event handler functions
  * for events emitted from the native side.
- * 
+ *
  * Exported only so that it can be used from automated
  * tests to make sure right functions are registered
  * certain tests are executed.

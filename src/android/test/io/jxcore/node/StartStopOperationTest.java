@@ -1,5 +1,6 @@
 package io.jxcore.node;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
@@ -13,6 +14,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNot.not;
 
 public class StartStopOperationTest {
+
+    @Before
+    public void setUp() throws Exception {
+        System.out.println("Running UT from: StreamCopyingThreadTest");
+    }
 
     @Test
     public void testCreateStartOperation() throws Exception {

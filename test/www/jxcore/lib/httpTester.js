@@ -8,6 +8,8 @@ var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
+var thaliNotificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var urlSafeBase64 = require('urlsafe-base64');
 
 var gPskIdentity = 'I am me!';
 var gPskKey = new Buffer('I am a reasonable long string');
@@ -38,7 +40,7 @@ module.exports.runTest = function (url, handler) {
 };
 
 /**
- * This function registers new path to the incoming express router object.
+ * This function registers a new path to the incoming express router object.
  * This service can be used to test different HTTP client scenarios
  * such as connecting to a delayed service.
  *
@@ -69,11 +71,11 @@ module.exports.runServer = function (router, path, responseCode, body, times,
   router.get(path, delayCallback, requestHandler);
 };
 
-module.exports.getTestAgent = function (pskIdentity, pskKey ) {
+module.exports.getTestAgent = function (pskIdentity, pskKey) {
 
   pskIdentity = pskIdentity || gPskIdentity;
   pskKey = pskKey || gPskKey;
-  
+
   return new ForeverAgent.SSL({
     keepAlive: true,
     keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
@@ -97,9 +99,9 @@ module.exports.getTestHttpsServer = function (expressApp,
 
     var options = {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-      pskCallback : pskCallback,
       key: thaliConfig.BOGUS_KEY_PEM,
-      cert: thaliConfig.BOGUS_CERT_PEM
+      cert: thaliConfig.BOGUS_CERT_PEM,
+      pskCallback : pskCallback
     };
 
     var expressServer = https.createServer(options, expressApp).
@@ -112,4 +114,68 @@ module.exports.getTestHttpsServer = function (expressApp,
       }
     });
   });
+};
+
+module.exports.pskGet = function(serverPort, path, pskId, pskKey, host) {
+  return new Promise(function (resolve, reject) {
+    https.get({
+      hostname: host ? host : '127.0.0.1',
+      path: path,
+      port: serverPort,
+      agent: false,
+      pskIdentity: pskId,
+      pskKey: pskKey
+    }, function (res) {
+      if (res.statusCode !== 200) {
+        var error = new Error('response code was ' + res.statusCode);
+        error.statusCode = res.statusCode;
+        return reject(error);
+      }
+      var response = '';
+      res.on('data', function (chunk) {
+        response += chunk;
+      });
+      res.on('end', function () {
+        resolve(response);
+      });
+      res.on('error', function (err) {
+        reject(err);
+      });
+    }).on('error', function (err) {
+      reject(err);
+    });
+  });
+};
+
+module.exports.generateSeqDocPath = function (devicePublicKey) {
+  return '_local/' + thaliConfig.LOCAL_SEQ_POINT_PREFIX +
+    urlSafeBase64.encode(devicePublicKey);
+};
+
+module.exports.getSeqDoc = function(dbName, serverPort, pskId, pskKey,
+                                    devicePublicKey, host) {
+  var path = thaliConfig.BASE_DB_PATH + '/' + dbName + '/' +
+    module.exports.generateSeqDocPath(devicePublicKey);
+  return module.exports.pskGet(serverPort, path, pskId, pskKey, host)
+    .then(function (responseBody) {
+      return JSON.parse(responseBody);
+    });
+};
+
+module.exports.validateSeqNumber = function (t, dbName, serverPort, seq,
+                                             pskId, pskKey, devicePublicKey,
+                                             host, retries) {
+  return module.exports.getSeqDoc(dbName, serverPort, pskId, pskKey,
+                                  devicePublicKey, host)
+    .then(function (pouchResponse) {
+      t.equal(pouchResponse.lastSyncedSequenceNumber, seq);
+      return pouchResponse;
+    })
+    .catch(function (err) {
+      if (retries && retries > 0) {
+        return module.exports.validateSeqNumber(t, dbName, serverPort, seq,
+          pskId, pskKey, devicePublicKey, host, retries - 1);
+      }
+      return Promise.reject(err);
+    });
 };

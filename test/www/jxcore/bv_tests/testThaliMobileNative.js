@@ -4,7 +4,7 @@ var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thalilogger')('testThaliMobileNative');
+var logger = require('thali/thaliLogger')('testThaliMobileNative');
 var Promise = require('lie');
 var assert = require('assert');
 
@@ -51,6 +51,8 @@ test('Can call start/stopListeningForAdvertisements', function (t) {
     });
   });
 });
+
+return;
 
 test('Calling startListeningForAdvertisements twice is NOT an error',
 function (t) {

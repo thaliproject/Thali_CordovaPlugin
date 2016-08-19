@@ -9,8 +9,8 @@ var ThaliNotificationAction =
   require('thali/NextGeneration/notification/thaliNotificationAction');
 var ThaliMobile =
   require('thali/NextGeneration/thaliMobile');
+var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
-var SECP256K1 = 'secp256k1';
 var ENTRY1 = 'entry1';
 var ENTRY2 = 'entry2';
 
@@ -35,7 +35,7 @@ function createEntry(name, state) {
     new PeerDictionary.PeerConnectionInformation(
       ThaliMobile.connectionTypes.TCP_NATIVE, '127.0.0.1', 3001, 10);
 
-  var myPublicKey = crypto.createECDH(SECP256K1);
+  var myPublicKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
   myPublicKey.generateKeys();
 
   // JSON.parse(JSON.stringify()) doesn't properly handle callback functions

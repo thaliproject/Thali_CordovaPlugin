@@ -33,9 +33,10 @@ process.on('uncaughtException', function (err) {
   process.exit(1);
 });
 
-process.on('unhandledRejection', function (err) {
-  testUtils.logMessageToScreen('Uncaught Promise Rejection: ' + JSON.stringify(err));
+process.on('unhandledRejection', function (err, p) {
+  testUtils.logMessageToScreen('Uncaught Promise Rejection: ' + err);
   console.trace(err);
+  console.log(err.stack);
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 });
@@ -198,7 +199,7 @@ var platform =
   'android' :
   'ios';
 
-thaliTape.begin = function (version, hasRequiredHardware) {
+thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
 
   var serverOptions = {
     transports: ['websocket']
@@ -231,6 +232,7 @@ thaliTape.begin = function (version, hasRequiredHardware) {
       os: platform,
       version: version,
       supportedHardware: hasRequiredHardware,
+      nativeUTFailed: nativeUTFailed,
       name: testUtils.getName(),
       uuid: thaliTape.uuid,
       type: 'unittest',
@@ -296,6 +298,12 @@ thaliTape.begin = function (version, hasRequiredHardware) {
     } else {
       console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
     }
+  });
+
+  testServer.once('aborted', function () {
+    testUtils.logMessageToScreen('Tests aborted');
+    complete = true;
+    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   });
 
   // Only used for testing purposes..
