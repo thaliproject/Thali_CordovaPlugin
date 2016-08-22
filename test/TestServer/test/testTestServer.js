@@ -23,7 +23,7 @@ test("test server - starts and stops", function(t) {
 function startServer(t, testConfig) {
 
   if (!testConfig) {
-    testConfig = "./TestPerfTestConfig.js";
+    testConfig = "./test/config/perfTest1.js";
   }
 
   var server = spawn(
@@ -339,7 +339,7 @@ test("test server - perf test framework handles disconnects", function(t) {
 test("test server - perf test framework handles server timeout", function(t) {
 
   var time = 0;
-  var server = startServer(t, "./TestPerfTestConfig2.js");
+  var server = startServer(t, "./test/config/perfTest2.js");
 
   var numTests = 0; 
   var numDevices = 4;
