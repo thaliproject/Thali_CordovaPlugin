@@ -38,7 +38,7 @@ function UnitTestFramework(testConfig, _logger)
 
 util.inherits(UnitTestFramework, TestFramework);
 
-+UnitTestFramework.prototype.abortRun =
+UnitTestFramework.prototype.abortRun =
   function (devices, platform, tests, results) {
 
     // Tests on all devices are aborted
