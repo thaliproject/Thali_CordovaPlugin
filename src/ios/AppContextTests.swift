@@ -35,7 +35,7 @@ class AppContextTests: XCTestCase {
 
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
-        let _ = try? context.didRegisterToNative([AppContext.networkChanged(), NSNull()])
+        let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
         XCTAssertTrue(delegateMock.networkStatusUpdated, "network status is not updated")
     }
 

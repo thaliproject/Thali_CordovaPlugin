@@ -76,11 +76,12 @@ public typealias ClientConnectCallback = (String, String) -> Void
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
 
-    private func updateNetworkStatus() {
+    private func notifyOnDidUpdateNetworkStatus() {
         //todo put actual network status
         do {
             delegate?.context(self, didChangeNetworkStatus: try jsonValue([:])!)
-        } catch _ {
+        } catch let error {
+            assert(false, "\(error)")
         }
     }
 
@@ -134,8 +135,8 @@ public typealias ClientConnectCallback = (String, String) -> Void
         guard let functionName = parameters.first as? String where parameters.count == 2 else {
             throw AppContextError.BadParameters
         }
-        if functionName == AppContext.networkChanged() {
-            updateNetworkStatus()
+        if functionName == AppContextJSEvent.networkChanged {
+            notifyOnDidUpdateNetworkStatus()
         }
     }
 
@@ -151,64 +152,20 @@ public typealias ClientConnectCallback = (String, String) -> Void
 }
 
 /// Node functions names
-extension AppContext {
-    @objc public class func networkChanged() -> String {
-        return "networkChanged"
-    }
-
-    @objc public class func peerAvailabilityChanged() -> String {
-        return "peerAvailabilityChanged"
-    }
-
-    @objc public class func appEnteringBackground() -> String {
-        return "appEnteringBackground"
-    }
-
-    @objc public class func appEnteredForeground() -> String {
-        return "appEnteredForeground"
-    }
-
-    @objc public class func discoveryAdvertisingStateUpdateNonTCP() -> String {
-        return "discoveryAdvertisingStateUpdateNonTCP"
-    }
-
-    @objc public class func incomingConnectionToPortNumberFailed() -> String {
-        return "incomingConnectionToPortNumberFailed"
-    }
-
-    @objc public class func executeNativeTests() -> String {
-        return "executeNativeTests"
-    }
-
-    @objc public class func getOSVersion() -> String {
-        return "getOSVersion"
-    }
-
-    @objc public class func didRegisterToNative() -> String {
-        return "didRegisterToNative"
-    }
-
-    @objc public class func killConnections() -> String {
-        return "killConnections"
-    }
-
-    @objc public class func connect() -> String {
-        return "connect"
-    }
-
-    @objc public class func stopAdvertisingAndListening() -> String {
-        return "stopAdvertisingAndListening"
-    }
-
-    @objc public class func startUpdateAdvertisingAndListening() -> String {
-        return "startUpdateAdvertisingAndListening"
-    }
-
-    @objc public class func stopListeningForAdvertisements() -> String {
-        return "stopListeningForAdvertisements"
-    }
-
-    @objc public class func startListeningForAdvertisements() -> String {
-        return "startListeningForAdvertisements"
-    }
+@objc public class AppContextJSEvent: NSObject {
+    @objc public static let networkChanged: String = "networkChanged"
+    @objc public static let peerAvailabilityChanged: String = "peerAvailabilityChanged"
+    @objc public static let appEnteringBackground: String = "appEnteringBackground"
+    @objc public static let appEnteredForeground: String = "appEnteredForeground"
+    @objc public static let discoveryAdvertisingStateUpdateNonTCP: String = "discoveryAdvertisingStateUpdateNonTCP"
+    @objc public static let incomingConnectionToPortNumberFailed: String = "incomingConnectionToPortNumberFailed"
+    @objc public static let executeNativeTests: String = "executeNativeTests"
+    @objc public static let getOSVersion: String = "getOSVersion"
+    @objc public static let didRegisterToNative: String = "didRegisterToNative"
+    @objc public static let killConnections: String = "killConnections"
+    @objc public static let connect: String = "connect"
+    @objc public static let stopAdvertisingAndListening: String = "stopAdvertisingAndListening"
+    @objc public static let startUpdateAdvertisingAndListening: String = "startUpdateAdvertisingAndListening"
+    @objc public static let stopListeningForAdvertisements: String = "stopListeningForAdvertisements"
+    @objc public static let startListeningForAdvertisements: String = "startListeningForAdvertisements"
 }
