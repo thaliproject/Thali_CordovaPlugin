@@ -855,19 +855,25 @@ module.exports.disconnect = function () {
  * sessions SHOULD be terminated and a new call to {@link getPeerHostInfo} SHOULD
  * be made to find the new address/port.
  */
-
+var PeerAvailabilityStatus = function (peer, connectionType, newAddressPort) {
+  this.peerIdentifier = peer.peerIdentifier;
+  this.peerAvailable = peer.peerAvailable;
+  if (this.peerAvailable) {
+    this.generation = peer.generation;
+    this.newAddressPort = newAddressPort;
+  }
+  this.connectionType = connectionType;
+};
 
 var emitPeerUnavailable = function (peerIdentifier, connectionType) {
-  module.exports.emitter.emit('peerAvailabilityChanged',
-    getExtendedPeer(
-      {
-        peerIdentifier: peerIdentifier,
-        hostAddress: null,
-        portNumber: null
-      },
-      connectionType
-    )
-  );
+  var peer = {
+    peerIdentifier: peerIdentifier,
+    peerAvailable: false
+  };
+  var unavailable =
+    new PeerAvailabilityStatus(peer, connectionType);
+
+  module.exports.emitter.emit('peerAvailabilityChanged', unavailable);
 };
 
 var peerAvailabilities = {};
@@ -943,7 +949,8 @@ var handlePeer = function (peer, connectionType) {
   } else {
     changeCachedPeerAvailable(peer);
   }
-  module.exports.emitter.emit('peerAvailabilityChanged', peer);
+  var availible = new PeerAvailabilityStatus(peer)
+  module.exports.emitter.emit('peerAvailabilityChanged', availible);
 };
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
