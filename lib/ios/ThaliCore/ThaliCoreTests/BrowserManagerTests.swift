@@ -13,7 +13,7 @@ class BrowserManagerTests: XCTestCase {
     var browser: BrowserManager!
 
     override func setUp() {
-        let serviceType = String.randomStringWithLength(7)
+        let serviceType = String.random(length: 7)
         browser = BrowserManager(serviceType: serviceType)
     }
 
