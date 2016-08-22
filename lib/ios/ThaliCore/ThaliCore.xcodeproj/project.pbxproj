@@ -20,6 +20,8 @@
 		D375BDEA1D6313E30059805F /* AdvertiserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34882F41D62060E0052A3EA /* AdvertiserManagerTests.swift */; };
 		D375BDEC1D6313F70059805F /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */; };
 		D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */; };
+		D377C4F51D6B257500916A7B /* String+Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34882F61D62064B0052A3EA /* String+Random.swift */; };
+		D377C4F61D6B25AA00916A7B /* Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E380D31D6303F50040DF58 /* Sync.swift */; };
 		D37E88BE1D5209B0009243EE /* AppStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* AppStateNotificationsManagerTests.swift */; };
 		D3CBCCE51D5DD44A00F1591A /* PeerDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */; };
 		D3E380D41D6303F50040DF58 /* Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E380D31D6303F50040DF58 /* Sync.swift */; };
@@ -465,11 +467,13 @@
 				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
 				FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */,
 				D3217E341D5E0D980068390B /* PeerIdentifierTests.swift in Sources */,
+				D377C4F51D6B257500916A7B /* String+Random.swift in Sources */,
 				FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */,
 				D3217E311D5E01580068390B /* PeerDiscoveryTests.swift in Sources */,
 				FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */,
 				D375BDEA1D6313E30059805F /* AdvertiserManagerTests.swift in Sources */,
 				D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */,
+				D377C4F61D6B25AA00916A7B /* Sync.swift in Sources */,
 				D3217E351D5E0D990068390B /* AppStateNotificationsManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
