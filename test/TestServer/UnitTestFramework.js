@@ -29,7 +29,7 @@ function UnitTestFramework(testConfig, _logger)
     function (platform) {
       logger.info(
         'Require %d %s devices',
-        self.requiredDevices[platform], platform
+        self.requiredDevices[platform] || 0, platform
       );
       return self.requiredDevices[platform];
     }
@@ -37,6 +37,31 @@ function UnitTestFramework(testConfig, _logger)
 }
 
 util.inherits(UnitTestFramework, TestFramework);
+
++UnitTestFramework.prototype.abortRun =
+  function (devices, platform, tests, results) {
+
+    // Tests on all devices are aborted
+    logger.info('Test run on %s aborted', platform);
+
+    // Log test results from the server
+    this.testReport(platform, tests, results);
+
+    // Signal devices to quit
+    devices.forEach(function (device) {
+      device.socket.emit('aborted');
+    });
+
+    // We're done running for this platform
+    this.runningTests = this.runningTests.filter(function (p) {
+      return p !== platform;
+    });
+
+    // There may be other platforms still running
+    if (this.runningTests.length === 0) {
+      this.emit('completed');
+    }
+  };
 
 UnitTestFramework.prototype.finishRun =
   function (devices, platform, tests, results) {
@@ -70,13 +95,26 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
   var results = {};
 
   if (!tests) {
-    // Default to all tests named by first device
-    tests = this.devices[platform][0].tests;
+    if (this.devices[platform].length) {
+      // Default to all tests named by first device
+      tests = this.devices[platform][0].tests;
+    } else {
+      tests = [];
+    }
   }
 
   // Copy arrays
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
+
+  if (devices.length < 2) {
+    logger.warn(
+      'Aborting unit test run for %s. At least 2 devices needed, having %d device(s)',
+      platform, this.devices[platform].length
+    );
+    this.abortRun(devices, platform, tests, results);
+    return;
+  }
 
   logger.info(
     'Starting unit test run on %d %s devices',
