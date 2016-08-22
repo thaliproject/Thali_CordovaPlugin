@@ -385,7 +385,11 @@ module.exports.getNetworkStatus = function () {
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
  */
-
+var AddressPortInfo = function (peer) {
+  this.hostAddress = peer.hostAddress;
+  this.portNumber = peer.portNumber;
+  this.suggestedTCPTimeout = peer.suggestedTCPTimeout;
+};
 /**
  * If the peer identifier and connection type is not in the availability cache
  * (see the peerAvailabilityChanged tome below) then a 'peer not available'
@@ -436,9 +440,66 @@ module.exports.getNetworkStatus = function () {
  * transport types available to us.
  * @returns {Promise<peerHostInfo | Error>}
  */
-module.exports.getPeerHostInfo = function () {
-  return Promise.reject('not implemented');
+module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
+  var peersByConnectionType = peerAvailabilities[connectionType];
+  if (!peersByConnectionType) {
+    return Promise.reject(new Error('Unsupported connection type ' +
+      connectionType));
+  }
+
+  var peer = peersByConnectionType[peerIdentifier];
+  if (!peer) {
+    return Promise.reject(new Error('Peer is not available'));
+  }
+
+  var getAddressPortInfo = getAddressPortStarategies[connectionType];
+  if (!getAddressPortInfo) {
+    return Promise.reject(new Error('getAddressPort is not implemented for ' + connectionType));
+  }
+
+  return getAddressPortInfo(peer);
 };
+
+var getAddressPortStarategies = {};
+getAddressPortStarategies[connectionTypes.BLUETOOTH] = getBluetoothAddressPortInfo;
+getAddressPortStarategies[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = getMPCFAddressPortInfo;
+getAddressPortStarategies[connectionTypes.TCP_NATIVE] = getWifiAddressPortInfo;
+
+var getBluetoothAddressPortInfo = fucntion (peer) {
+  var portInfo = new AddressPortInfo({
+    hostAddress: '127.0.0.1',
+    portNumber: peer.portNumber,
+    suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_BLUETOOTH
+  });
+  return Promise.resolve(portInfo);
+}
+
+var getMPCFAddressPortInfo = fucntion (peer) {
+  return new Promise(function (resolve, reject) {
+    Mobile('multiConnect')
+      .registerToNative(function (???) {
+          if (???) {
+            var portInfo = new AddressPortInfo({
+              hostAddress: '127.0.0.1',
+              portNumber: portNumber,
+              suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_MPCF
+            });
+            resolve(portInfo);
+          } else {
+            reject(error);
+          }
+      });
+  });
+}
+
+var getWifiAddressPortInfo = fucntion (peer) {
+  var portInfo = new AddressPortInfo({
+    hostAddress: peer.hostAddress,
+    portNumber: peer.portNumber,
+    suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_WIFI
+  });
+  return Promise.resolve(portInfo);
+}
 
 /**
  * Requests that the outgoing session with the identifier peerIdentifier on the
