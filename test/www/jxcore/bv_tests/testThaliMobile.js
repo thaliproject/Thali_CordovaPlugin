@@ -330,6 +330,8 @@ test('wifi peer is marked unavailable if announcements stop',
       if (peer.peerIdentifier !== testPeerIdentifier) {
         return;
       }
+
+      // TODO
       spy();
       if (spy.calledOnce) {
         t.equal(peer.peerAvailable, true, 'peer should be available');
