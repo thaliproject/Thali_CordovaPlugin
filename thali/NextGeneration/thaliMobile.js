@@ -367,7 +367,7 @@ module.exports.getNetworkStatus = function () {
 
 /**
  * @public
- * @typedef addressPortInfo
+ * @typedef peerHostInfo
  * @property {string} hostAddress The IP/DNS address to connect to or null if
  * this is an announcement that the peer is no longer available.
  * @property {number} portNumber The port to connect to on the given
@@ -398,7 +398,7 @@ module.exports.getNetworkStatus = function () {
  *
  * ## Android
  *
- * We MUST return an addressPortInfo object with the hostAddress set to
+ * We MUST return a peerHostInfo object with the hostAddress set to
  * 127.0.0.1 and portNumber set to the values in the availability cache.
  * suggestedTCPTimeout MUST be set per thaliConfig.
  *
@@ -412,7 +412,7 @@ module.exports.getNetworkStatus = function () {
  *
  * ## WiFi
  *
- * We MUST return an addressPortInfo object with the hostAddress and portNumber
+ * We MUST return a peerHostInfo object with the hostAddress and portNumber
  * set based on the values in the availability cache and the suggestedTCPTimeout
  * set per thaliConfig.
  *
@@ -425,9 +425,9 @@ module.exports.getNetworkStatus = function () {
  * Defines the kind of connection that the request will eventually go over. This
  * information is needed so that we can better manage how we use the different
  * transport types available to us.
- * @returns {Promise<addressPortInfo | Error>}
+ * @returns {Promise<peerHostInfo | Error>}
  */
-module.exports.getAddressPort = function(peerIdentifier, connectionType) {
+module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
   return Promise.reject('not implemented');
 };
 
@@ -550,7 +550,7 @@ module.exports.disconnect = function(peerIdentifier, connectionType) {
  * going to get a peerAvailable === false. So it's up to us to decide when the
  * peer has disappeared.
  *
- * To do this when we get a successful response to a getAddressPort call for
+ * To do this when we get a successful response to a getPeerHostInfo call for
  * an Android peer we MUST record in the availability cache the fact that there
  * is an active session with that peer. In addition if there is a timer running
  * (see below) then we MUST cancel that timer.
@@ -664,7 +664,7 @@ module.exports.disconnect = function(peerIdentifier, connectionType) {
  * get ready to advertise a newAddressPort = true event but first a real
  * peerAvailability = false event could come up from the native layer. This
  * would trick the upper layers into thinking the peer is available when they
- * are not. But in that case the call to getAddressPort would fail because the
+ * are not. But in that case the call to getPeerHostInfo would fail because the
  * peer wouldn't be in the available cache anymore.
  *
  * ### Handling networkChanged events
@@ -812,7 +812,7 @@ module.exports.disconnect = function(peerIdentifier, connectionType) {
  * @property {?boolean} newAddressPort This value is only relevant if
  * peerAvailable is set to true. If set to true then this announcement means
  * that the peer has changed either its address or port and any existing
- * sessions SHOULD be terminated and a new call to {@link getAddressPort} SHOULD
+ * sessions SHOULD be terminated and a new call to {@link getPeerHostInfo} SHOULD
  * be made to find the new address/port.
  */
 
