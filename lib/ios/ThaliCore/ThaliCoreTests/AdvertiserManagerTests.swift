@@ -14,7 +14,7 @@ class AdvertiserManagerTests: XCTestCase {
     var advertiserManager: AdvertiserManager!
 
     override func setUp() {
-        let serviceType = String.randomStringWithLength(7)
+        let serviceType = String.random(length: 7)
         advertiserManager = AdvertiserManager(serviceType: serviceType)
     }
 
