@@ -1,14 +1,14 @@
 'use strict';
 
 var Promise = require('lie');
-var PromiseQueue = require('./promiseQueue');
+var PromiseQueue = require('../promiseQueue');
 var EventEmitter = require('events').EventEmitter;
-var logger = require('./utils/thaliLogger')('thaliMobileNativeWrapper');
-var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
+var logger = require('../utils/thaliLogger')('thaliMobileNativeWrapper');
+var makeIntoCloseAllServer = require('../makeIntoCloseAllServer');
 var express = require('express');
-var TCPServersManager = require('./mux/thaliTcpServersManager');
+var TCPServersManager = require('../mux/thaliTcpServersManager');
 var https = require('https');
-var thaliConfig = require('./thaliConfig');
+var thaliConfig = require('../thaliConfig');
 
 var states = {
   started: false

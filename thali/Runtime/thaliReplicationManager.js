@@ -4,7 +4,7 @@ var ThaliSendNotificationBasedOnReplication =
   require('./replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification =
   require('./replication/thaliPullReplicationFromNotification');
-var ThaliMobile = require('./thaliMobile');
+var ThaliMobile = require('./networking/thaliMobile');
 var express = require('express');
 var thaliConfig = require('./thaliConfig');
 var salti = require('salti');

@@ -10,7 +10,7 @@ var proxyquire = require('proxyquire').noCallThru();
 var ThaliNotificationClient =
   require('thali/Runtime/notification/thaliNotificationClient');
 var ThaliMobile =
-  require('thali/Runtime/thaliMobile');
+  require('thali/Runtime/networking/thaliMobile');
 var ThaliPeerPoolDefault =
   require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 var thaliConfig =
@@ -31,7 +31,7 @@ var GlobalVariables = function () {
   var MockThaliMobile = { };
   this.ThaliNotificationServerProxyquired =
     proxyquire('thali/Runtime/notification/thaliNotificationServer',
-      { '../thaliMobile':
+      { '../networking/thaliMobile':
       MockThaliMobile});
 
   // Mocks ThaliMobile.startUpdateAdvertisingAndListening function

@@ -3,7 +3,7 @@
 var tape = require('../lib/thaliTape');
 var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
 var connectionTypes =
-  require('thali/Runtime/thaliMobile').connectionTypes;
+  require('thali/Runtime/networking/thaliMobile').connectionTypes;
 var inherits = require('util').inherits;
 var ThaliPeerPoolInterface = require('thali/Runtime/thaliPeerPool/thaliPeerPoolInterface');
 var sinon = require('sinon');

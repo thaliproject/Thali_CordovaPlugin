@@ -4,7 +4,7 @@ var tape = require('../lib/thaliTape');
 var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
 var inherits = require('util').inherits;
 var connectionTypes =
-  require('thali/Runtime/thaliMobile').connectionTypes;
+  require('thali/Runtime/networking/thaliMobile').connectionTypes;
 var ThaliPeerPoolDefault = require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 var Agent = require('http').Agent;
 var testUtils = require('../lib/testUtils');

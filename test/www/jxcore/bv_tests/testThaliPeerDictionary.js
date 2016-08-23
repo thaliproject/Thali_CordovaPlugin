@@ -8,7 +8,7 @@ var PeerDictionary =
 var ThaliNotificationAction =
   require('thali/Runtime/notification/thaliNotificationAction');
 var ThaliMobile =
-  require('thali/Runtime/thaliMobile');
+  require('thali/Runtime/networking/thaliMobile');
 var thaliConfig = require('thali/Runtime/thaliConfig');
 
 var ENTRY1 = 'entry1';

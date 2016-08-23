@@ -7,15 +7,15 @@ var ip = require('ip');
 var uuid = require('node-uuid');
 var url = require('url');
 var express = require('express');
-var validations = require('./utils/validations');
-var thaliConfig = require('./thaliConfig');
+var validations = require('../utils/validations');
+var thaliConfig = require('../thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-var logger = require('./utils/thaliLogger')('thaliWifiInfrastructure');
-var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
+var logger = require('../utils/thaliLogger')('thaliWifiInfrastructure');
+var makeIntoCloseAllServer = require('../makeIntoCloseAllServer');
 var https = require('https');
 
 var Promise = require('lie');
-var PromiseQueue = require('./promiseQueue');
+var PromiseQueue = require('../promiseQueue');
 var promiseQueue = new PromiseQueue();
 
 var promiseResultSuccessOrFailure = function (promise) {

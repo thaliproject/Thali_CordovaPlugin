@@ -206,7 +206,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // we can require the test utils also from an environment
   // where Mobile isn't defined (which is a requirement when
   // thaliMobile is required).
-  var ThaliMobile = require('thali/Runtime/thaliMobile');
+  var ThaliMobile = require('thali/Runtime/networking/thaliMobile');
   // Check that network status is as expected and
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
@@ -383,7 +383,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
                                                 selectedPeerId) {
   // We don't load thaliMobileNativeWrapper until after the tests have started
   // running so we pick up the right version of mobile
-  var thaliMobileNativeWrapper = require('thali/Runtime/thaliMobileNativeWrapper');
+  var thaliMobileNativeWrapper = require('thali/Runtime/networking/thaliMobileNativeWrapper');
   return new Promise(function (resolve, reject) {
     var retryCount = 0;
     var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 30 * 2;

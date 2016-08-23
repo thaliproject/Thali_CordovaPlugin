@@ -7,7 +7,7 @@ var testUtils = require('../lib/testUtils.js');
 var httpTester = require('../lib/httpTester.js');
 
 var ThaliMobile =
-  require('thali/Runtime/thaliMobile');
+  require('thali/Runtime/networking/thaliMobile');
 var NotificationAction =
   require('thali/Runtime/notification/thaliNotificationAction');
 var PeerDictionary =

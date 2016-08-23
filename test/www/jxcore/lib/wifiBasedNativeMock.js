@@ -47,7 +47,7 @@ var getCurrentNetworkStatus = function () {
 };
 
 var ThaliWifiInfrastructure =
-proxyquire('thali/Runtime/thaliWifiInfrastructure',
+proxyquire('thali/Runtime/networking/thaliWifiInfrastructure',
   {
     './thaliMobileNativeWrapper': {
       emitter: mockEmitter,

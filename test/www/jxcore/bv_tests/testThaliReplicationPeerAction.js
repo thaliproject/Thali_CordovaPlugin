@@ -10,7 +10,7 @@ var makeIntoCloseAllServer = require('thali/Runtime/makeIntoCloseAllServer');
 var https = require('https');
 var httpTester = require('../lib/httpTester');
 var ThaliReplicationPeerAction = require('thali/Runtime/replication/thaliReplicationPeerAction');
-var thaliMobile = require('thali/Runtime/thaliMobile');
+var thaliMobile = require('thali/Runtime/networking/thaliMobile');
 var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);

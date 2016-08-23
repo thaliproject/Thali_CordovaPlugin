@@ -12,7 +12,7 @@ var ThaliPeerDictionary =
 var ThaliNotificationClient =
   require('thali/Runtime/notification/thaliNotificationClient');
 var ThaliMobile =
-  require('thali/Runtime/thaliMobile');
+  require('thali/Runtime/networking/thaliMobile');
 
 var ThaliPeerPoolDefault =
   require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
