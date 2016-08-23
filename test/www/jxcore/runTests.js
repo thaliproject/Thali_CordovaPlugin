@@ -49,7 +49,7 @@ module.exports.run = function () {
         return thaliTape.begin(version, hasRequiredHardware);
       });
     });
-}
+};
 
 // If running this script from CLI
 // http://thlorenz.com/blog/how-to-detect-if-a-nodejs-module-is-run-as-a-script/

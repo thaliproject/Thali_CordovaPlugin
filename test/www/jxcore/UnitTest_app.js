@@ -73,7 +73,7 @@ ThaliMobile.getNetworkStatus()
       testUtils.setName(name);
 
       networkTypes.reduce(function (sequence, networkType) {
-        return sequence.
+        return sequence
           .then(function () {
             console.log('Running for ' + networkType + ' network type');
             global.NETWORK_TYPE = networkType;
