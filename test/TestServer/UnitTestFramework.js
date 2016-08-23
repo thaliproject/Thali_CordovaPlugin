@@ -40,42 +40,29 @@ util.inherits(UnitTestFramework, TestFramework);
 
 UnitTestFramework.prototype.abortRun =
   function (devices, platform, tests, results) {
-
     // Tests on all devices are aborted
     logger.info('Test run on %s aborted', platform);
+
+    this.finalizeRun(devices, platform, tests, results, 'aborted');
+  };
+
+UnitTestFramework.prototype.finishRun =
+  function (devices, platform, tests, results) {
+    // All devices have completed all their tests
+    logger.info('Test run on %s complete', platform);
+
+    this.finalizeRun(devices, platform, tests, results, 'complete');
+  };
+
+UnitTestFramework.prototype.finalizeRun =
+  function (devices, platform, tests, results, finalizeMessage) {
 
     // Log test results from the server
     this.testReport(platform, tests, results);
 
     // Signal devices to quit
     devices.forEach(function (device) {
-      device.socket.emit('aborted');
-    });
-
-    // We're done running for this platform
-    this.runningTests = this.runningTests.filter(function (p) {
-      return p !== platform;
-    });
-
-    // There may be other platforms still running
-    if (this.runningTests.length === 0) {
-      this.emit('completed');
-    }
-  };
-
-UnitTestFramework.prototype.finishRun =
-  function (devices, platform, tests, results) {
-
-    // All devices have completed all their tests
-    logger.info('Test run on %s complete', platform);
-
-    // The whole point !! Log test results from the
-    // server
-    this.testReport(platform, tests, results);
-
-    // Signal devices to quit
-    devices.forEach(function (device) {
-      device.socket.emit('complete');
+      device.socket.emit(finalizeMessage);
     });
 
     // We're done running for this platform..

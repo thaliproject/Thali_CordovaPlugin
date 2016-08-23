@@ -309,16 +309,17 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   thaliTape._testServer = testServer;
 };
 
+var objectToExport;
 if (typeof jxcore === 'undefined' ||
     typeof Mobile !== 'undefined') {
   // On mobile, or outside of jxcore (some dev scenarios) we use
   // the server-coordinated thaliTape
-  exports = thaliTape;
-  exports.coordinated = true;
+  objectToExport = thaliTape;
+  objectToExport.coordinated = true;
 } else {
   // On desktop we just use simple non-coordinated tape
-  exports = require('./simpleTape');
-  exports.coordinated = false;
+  objectToExport = require('./simpleTape');
+  objectToExport.coordinated = false;
 }
 
-module.exports = exports;
+module.exports = exports = objectToExport;
