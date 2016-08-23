@@ -19,7 +19,7 @@ var dbOptions = {
   checkpoint: 500
 };
 var DEFAULT_DELAY = 200;
-var CALCULATING_DEALY = 100;
+var CALCULATING_DELAY = 100;
 
 var test = tape({
   setup: function (t) {
@@ -53,7 +53,7 @@ test('Call of onCheckpointReached handler on a single db change', function (t) {
       setTimeout(function () {
         t.ok(spy.calledOnce, 'checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
         t.end();
-      }, DEFAULT_DELAY + CALCULATING_DEALY);
+      }, DEFAULT_DELAY + CALCULATING_DELAY);
     })
     .catch(function (error) {
       t.fail(error);
@@ -74,7 +74,7 @@ test('Call of multiple onCheckpointReached handlers on a single db change', func
         t.ok(spy.calledOnce, 'The checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
         t.ok(anotherSpy.calledOnce, 'The checkpointReached handler should be called once. Called ' + anotherSpy.callCount + ' time(s)');
         t.end();
-      }, DEFAULT_DELAY + CALCULATING_DEALY);
+      }, DEFAULT_DELAY + CALCULATING_DELAY);
     })
     .catch(function (error) {
       t.fail(error);
@@ -100,7 +100,7 @@ test('Call of onCheckpointReached handler on multiple db changes' +
         setTimeout(function () {
           t.ok(spy.calledOnce, 'the checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
           t.end();
-        }, DEFAULT_DELAY + CALCULATING_DEALY);
+        }, DEFAULT_DELAY + CALCULATING_DELAY);
       })
       .catch(function (error) {
         t.fail(error);
@@ -135,12 +135,12 @@ test('Call of onCheckpointReached handler after database shrinks', function (t) 
             setTimeout(function () {
               t.ok(spy.calledTwice, 'The checkpointReached handler should be called twice');
               t.end();
-            }, DEFAULT_DELAY + CALCULATING_DEALY)
+            }, DEFAULT_DELAY + CALCULATING_DELAY)
           })
           .catch(function (error) {
             t.fail(error);
           });
-      }, DEFAULT_DELAY + CALCULATING_DEALY);
+      }, DEFAULT_DELAY + CALCULATING_DELAY);
 
     })
     .catch(function (error) {
