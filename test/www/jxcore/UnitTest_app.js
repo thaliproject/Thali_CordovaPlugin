@@ -34,8 +34,7 @@ console.log("Is Android: ", isAndroid);
 
 if (!utResult && isAndroid) {
   console.log("Failed to execute UT.");
-  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-  return;
+  global.nativeUTFailed = true;
 }
 
 // TODO finish testing here (the node part will be omitted)
