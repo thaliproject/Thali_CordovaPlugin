@@ -2,10 +2,8 @@
 
 // Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMoblie');
-if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-    global.NETWORK_TYPE === ThaliMobile.networkTypes.BOTH) {
-  // keep going
-} else {
+if (global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI &&
+    global.NETWORK_TYPE !== ThaliMobile.networkTypes.BOTH) {
   return;
 }
 
