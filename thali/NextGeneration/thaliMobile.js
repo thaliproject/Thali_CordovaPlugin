@@ -43,40 +43,25 @@ var networkTypes = {
 };
 module.exports.networkTypes = networkTypes;
 
-var getWifiMethodByNetworkType = function (method, networkType) {
-  if (!thaliWifiInfrastructure[method]) {
-    throw new Error('ThaliWifiInfrastructure has no method named ' +
+var getMethodByNetworkType = function (target, method, networktype) {
+  if (!target[method]) {
+    throw new Error(target + ' has no method named ' +
       method);
   }
   return function () {
     var args = arguments;
     return Promise.resolve(
       promiseResultSuccessOrFailure(
-        thaliWifiInfrastructure[method].apply(thaliWifiInfrastructure, args)
+        target[method].apply(target, args)
       )
     );
   }
-}
-
-var getNativeMethodByNetworkType = function (method, networkType) {
-  if (!ThaliMobileNativeWrapper[method]) {
-    throw new Error('ThaliMobileNativeWrapper has no method named ' +
-      method);
-  }
-  return function () {
-    var args = arguments;
-    return Promise.resolve(
-      promiseResultSuccessOrFailure(
-        ThaliMobileNativeWrapper[method].apply(ThaliMobileNativeWrapper, args)
-      )
-    );
-  }
-}
+};
 
 var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
   if (networkType === networkTypes.BOTH) {
-    var wifiMethod = getWifiMethodByNetworkType(method, networkType);
-    var nativeMethod = getNativeMethodByNetworkType(method, networkType);
+    var wifiMethod = getMethodByNetworkType(thaliWifiInfrastructure, method, networkType);
+    var nativeMethod = getMethodByNetworkType(ThaliMobileNativeWrapper, method, networkType);
     return function() {
       var args = arguments;
       return Promise.all([
@@ -86,13 +71,13 @@ var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
         .then(getCombinedResult);
     }
   } else if (networkType === networkTypes.WIFI) {
-    return getWifiMethodByNetworkType(method, networkType);
+    return getMethodByNetworkType(thaliWifiInfrastructure, method, networkType);
   } else if (networkType === networkTypes.NATIVE) {
-    return getNativeMethodByNetworkType(method, networkType);
+    return getMethodByNetworkType(ThaliMobileNativeWrapper, method, networkType);
   } else {
     throw new Error('Unsupported network type ' + networkType);
   }
-}
+};
 
 var getInitialStates = function () {
   return {
@@ -230,7 +215,7 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
     );
     module.exports.emitter.on('networkChanged', handleNetworkChanged);
 
-    start = getWifiOrNativeMethodByNetworkType('start',
+    var start = getWifiOrNativeMethodByNetworkType('start',
      thaliMobileStates.networkType);
     start(router, pskIdToSecret)
       .then(resolve);
@@ -254,7 +239,7 @@ module.exports.stop = function () {
     clearInterval(peerAvailabilityWatcherInterval);
     module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
 
-    stop = getWifiOrNativeMethodByNetworkType('stop',
+    var stop = getWifiOrNativeMethodByNetworkType('stop',
      thaliMobileStates.networkType);
     stop()
       .then(resolve);
@@ -296,7 +281,7 @@ module.exports.startListeningForAdvertisements = function () {
     }
     thaliMobileStates.listening = true;
 
-    startListeningForAdvertisements =
+    var startListeningForAdvertisements =
       getWifiOrNativeMethodByNetworkType('startListeningForAdvertisements',
        thaliMobileStates.networkType);
     startListeningForAdvertisements()
@@ -318,7 +303,7 @@ module.exports.stopListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
     thaliMobileStates.listening = false;
 
-    stopListeningForAdvertisements =
+    var stopListeningForAdvertisements =
       getWifiOrNativeMethodByNetworkType('stopListeningForAdvertisements',
        thaliMobileStates.networkType);
     stopListeningForAdvertisements()
@@ -350,7 +335,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
     }
     thaliMobileStates.advertising = true;
 
-    startUpdateAdvertisingAndListening =
+    var startUpdateAdvertisingAndListening =
       getWifiOrNativeMethodByNetworkType('startUpdateAdvertisingAndListening',
        thaliMobileStates.networkType);
     startUpdateAdvertisingAndListening()
@@ -373,7 +358,7 @@ module.exports.stopAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
     thaliMobileStates.advertising = false;
 
-    stopAdvertisingAndListening =
+    var stopAdvertisingAndListening =
       getWifiOrNativeMethodByNetworkType('stopAdvertisingAndListening',
        thaliMobileStates.networkType);
     stopAdvertisingAndListening()
