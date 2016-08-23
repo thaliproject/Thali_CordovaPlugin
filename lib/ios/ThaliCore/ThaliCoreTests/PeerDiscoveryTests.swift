@@ -107,7 +107,7 @@ class PeerDiscoveryTests: XCTestCase {
         }
 
         waitForExpectationsWithTimeout(10, handler: nil)
-        let lastGenerationIdentifier = browser.lastGenerationPeerForIdentifier(identifier)
+        let lastGenerationIdentifier = browser.lastGenerationPeer(for: identifier)
 
         XCTAssertEqual(1, lastGenerationIdentifier?.generation)
     }
