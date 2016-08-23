@@ -5,13 +5,14 @@
 'use strict';
 
 function TestDevice(deviceSocket, name, uuid, platform, testType,
-                    tests, supportedHardware, bluetoothAddress) {
+                    tests, supportedHardware, nativeUTFailed, bluetoothAddress) {
   this.socket = deviceSocket;
   this.deviceName = name;
   this.uuid = uuid;
   this.platform = platform;
   this.type = testType;
   this.supportedHardware = supportedHardware;
+  this.nativeUTFailed = nativeUTFailed;
   this.tests = tests;
   this.btAddress = bluetoothAddress;
 }
