@@ -41,10 +41,19 @@ if (hasJavaScriptSuffix(testsToRun)) {
   });
 }
 
-testUtils.hasRequiredHardware()
-.then(function (hasRequiredHardware) {
-  testUtils.getOSVersion()
-  .then(function (version) {
-    thaliTape.begin(version, hasRequiredHardware);
-  });
-});
+module.exports.run = function () {
+  return testUtils.hasRequiredHardware()
+    .then(function (hasRequiredHardware) {
+      testUtils.getOSVersion()
+      .then(function (version) {
+        return thaliTape.begin(version, hasRequiredHardware);
+      });
+    });
+}
+
+// If running this script from CLI
+// http://thlorenz.com/blog/how-to-detect-if-a-nodejs-module-is-run-as-a-script/
+// than execute immediatly
+if (!module.parent) {
+  module.exports.run();
+}
