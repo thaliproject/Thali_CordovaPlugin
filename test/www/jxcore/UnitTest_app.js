@@ -10,6 +10,7 @@ if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 
+var testRunner = require('./runTests.js');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
@@ -39,6 +40,21 @@ if (!utResult) {
 console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
 return;
 
+// Issue #914
+var networkTypes = [];
+if (process.platform === 'android') {
+  networkTypes = [
+    ThaliMobile.networkTypes.WIFI,
+    ThaliMobile.networkTypes.NATIVE,
+    ThaliMobile.networkTypes.BOTH
+  ];
+} else if (process.platform === 'ios') {
+  networkTypes = [
+    ThaliMobile.networkTypes.NATIVE,
+    ThaliMobile.networkTypes.BOTH
+  ];
+}
+
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
   var promiseList = [];
@@ -53,11 +69,15 @@ ThaliMobile.getNetworkStatus()
     Mobile('GetDeviceName').callNative(function (name) {
       console.log('My device name is: %s', name);
       testUtils.setName(name);
-      // The setImmediate is to avoid this issue:
-      // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
-      setImmediate(function () {
-        require('./runTests.js');
-      });
+
+      networkTypes.reduce(function (sequence, networkType) {
+        return sequence.
+          .then(function () {
+            console.log('Running for ' + networkType + ' network type');
+            global.NETWORK_TYPE = networkType;
+            return testRunner.run();
+          });
+      }, Promise.resolve());
     });
   });
 });
