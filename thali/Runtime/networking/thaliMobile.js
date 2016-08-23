@@ -12,7 +12,7 @@ var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
 var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
 
 var Promise = require('lie');
-var PromiseQueue = require('../promiseQueue');
+var PromiseQueue = require('../utils/promiseQueue');
 var promiseQueue = new PromiseQueue();
 
 var promiseResultSuccessOrFailure = function (promise) {

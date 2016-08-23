@@ -13,7 +13,7 @@ var logger = require('thali/Runtime/utils/thaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/Runtime/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
-var makeIntoCloseAllServer = require('thali/Runtime/makeIntoCloseAllServer');
+var makeIntoCloseAllServer = require('thali/Runtime/utils/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/Runtime/notification/thaliNotificationBeacons');
 var express = require('express');

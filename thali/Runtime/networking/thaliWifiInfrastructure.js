@@ -11,11 +11,11 @@ var validations = require('../utils/validations');
 var thaliConfig = require('../thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 var logger = require('../utils/thaliLogger')('thaliWifiInfrastructure');
-var makeIntoCloseAllServer = require('../makeIntoCloseAllServer');
+var makeIntoCloseAllServer = require('../utils/makeIntoCloseAllServer');
 var https = require('https');
 
 var Promise = require('lie');
-var PromiseQueue = require('../promiseQueue');
+var PromiseQueue = require('../utils/promiseQueue');
 var promiseQueue = new PromiseQueue();
 
 var promiseResultSuccessOrFailure = function (promise) {

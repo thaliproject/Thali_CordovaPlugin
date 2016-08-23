@@ -12,7 +12,7 @@ var express = require('express');
 var https = require('https');
 var Promise = require('lie');
 var makeIntoCloseAllServer =
-  require('thali/Runtime/makeIntoCloseAllServer');
+  require('thali/Runtime/utils/makeIntoCloseAllServer');
 var thaliConfig = require('thali/Runtime/thaliConfig');
 
 var peerIdentifier = 'foo';

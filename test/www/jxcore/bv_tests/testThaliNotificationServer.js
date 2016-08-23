@@ -12,7 +12,7 @@ var ThaliPskMapCache =
 var thaliConfig =
   require('thali/Runtime/thaliConfig');
 var makeIntoCloseAllServer =
-  require('thali/Runtime/makeIntoCloseAllServer');
+  require('thali/Runtime/utils/makeIntoCloseAllServer');
 
 var ThaliHttpTester = require('../lib/httpTester');
 

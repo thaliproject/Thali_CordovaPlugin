@@ -1,6 +1,6 @@
 'use strict';
 var tape = require('../lib/thaliTape');
-var PromiseQueue = require('thali/Runtime/promiseQueue');
+var PromiseQueue = require('thali/Runtime/utils/promiseQueue');
 var Promise = require('lie');
 
 var currentUnhandledRejectionHandler = null;

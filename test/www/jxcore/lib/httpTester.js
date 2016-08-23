@@ -7,7 +7,7 @@ var Promise = require('lie');
 var thaliConfig =
   require('thali/Runtime/thaliConfig');
 var makeIntoCloseAllServer =
-  require('thali/Runtime/makeIntoCloseAllServer');
+  require('thali/Runtime/utils/makeIntoCloseAllServer');
 var thaliNotificationBeacons = require('thali/Runtime/notification/thaliNotificationBeacons');
 var urlSafeBase64 = require('urlsafe-base64');
 

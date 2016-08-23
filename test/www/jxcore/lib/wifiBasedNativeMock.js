@@ -6,7 +6,7 @@ var uuid = require('node-uuid');
 var express = require('express');
 var assert = require('assert');
 var net = require('net');
-var makeIntoCloseAllServer = require('thali/Runtime/makeIntoCloseAllServer');
+var makeIntoCloseAllServer = require('thali/Runtime/utils/makeIntoCloseAllServer');
 var logger = require('thali/Runtime/utils/thaliLogger')('wifiBasedNativeMock');
 
 var proxyquire = require('proxyquire');

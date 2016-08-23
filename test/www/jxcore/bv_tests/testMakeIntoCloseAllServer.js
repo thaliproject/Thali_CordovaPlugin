@@ -2,7 +2,7 @@
 
 var net = require('net');
 var tape = require('../lib/thaliTape');
-var makeIntoCloseAllServer = require('thali/Runtime/makeIntoCloseAllServer');
+var makeIntoCloseAllServer = require('thali/Runtime/utils/makeIntoCloseAllServer');
 
 var test = tape({
   setup: function (t) {

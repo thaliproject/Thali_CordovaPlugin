@@ -3,7 +3,7 @@
 var Promise = require('lie');
 var ThaliNotificationServer =
   require('../notification/thaliNotificationServer');
-var PromiseQueue = require('./../promiseQueue');
+var PromiseQueue = require('../utils/promiseQueue');
 var logger =
   require('../utils/thaliLogger')('thaliSendNotificationBasedOnReplication');
 var urlsafeBase64 = require('urlsafe-base64');
