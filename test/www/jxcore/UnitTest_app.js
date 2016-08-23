@@ -29,7 +29,10 @@ Mobile('ExecuteNativeTests').callNative(function (result) {
   }
 });
 
-if (!utResult) {
+var isAndroid = process && process.platform === 'android';
+console.log("Is Android: ", isAndroid);
+
+if (!utResult && isAndroid) {
   console.log("Failed to execute UT.");
   global.nativeUTFailed = true;
 }
