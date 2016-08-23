@@ -1,5 +1,14 @@
 'use strict';
 
+// Issue #419
+var ThaliMobile = require('thali/NextGeneration/thaliMoblie');
+if (global.NETWORK_TYPE === ThaliMobile.networkTypes.NATIVE ||
+    global.NETWORK_TYPE === ThaliMobile.networkTypes.BOTH) {
+  // keep going
+} else {
+  return;
+}
+
 var express = require('express');
 var net = require('net');
 var Promise = require('lie');
