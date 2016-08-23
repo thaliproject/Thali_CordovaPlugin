@@ -25,6 +25,7 @@ var uuid = require('node-uuid');
 var tape = require('tape-catch');
 var io = require('socket.io-client');
 var testUtils = require('./testUtils');
+var Promise = require('lie');
 
 process.on('uncaughtException', function (err) {
   testUtils.logMessageToScreen('Uncaught Exception: ' + err);
@@ -199,7 +200,6 @@ var platform =
   'ios';
 
 thaliTape.begin = function (version, hasRequiredHardware) {
-
   var serverOptions = {
     transports: ['websocket']
   };
@@ -300,6 +300,16 @@ thaliTape.begin = function (version, hasRequiredHardware) {
 
   // Only used for testing purposes..
   thaliTape._testServer = testServer;
+
+  return new Promise(function (resolve, reject) {
+    testServer.once('complete', function () {
+      if (allSuccess) {
+        resolve('Successfully completed');
+      } else {
+        reject('Completed with errors');
+      }
+    });
+  });
 };
 
 if (typeof jxcore === 'undefined' ||
