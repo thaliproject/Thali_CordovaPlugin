@@ -404,7 +404,8 @@ module.exports.getNetworkStatus = function () {
  *
  * ## iOS
  *
- * We MUST call {@link external:"Mobile('multiConnect')".registerToNative}. If
+ * We MUST call {@link
+ * module:thaliMobileNativeWrapper~ThaliMobileNativeWrapper._multiConnect}. If
  * we receive an error then we MUST forward the error as the response to this
  * method. If we receive a port then the hostAddress MUST be 127.0.0.1, the
  * portNumber MUST be set to the returned port and the suggestedTCPTimeout MUST
