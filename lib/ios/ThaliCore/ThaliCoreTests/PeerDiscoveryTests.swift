@@ -14,7 +14,7 @@ class PeerDiscoveryTests: XCTestCase {
     var advertiser: AdvertiserManager!
 
     override func setUp() {
-        let serviceType = String.randomStringWithLength(7)
+        let serviceType = String.random(length: 7)
         browser = BrowserManager(serviceType: serviceType)
         advertiser = AdvertiserManager(serviceType: serviceType)
     }
