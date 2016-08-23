@@ -43,12 +43,14 @@ return;
 // Issue #914
 var networkTypes = [];
 if (process.platform === 'android') {
+  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
   networkTypes = [
     ThaliMobile.networkTypes.WIFI,
     ThaliMobile.networkTypes.NATIVE,
     ThaliMobile.networkTypes.BOTH
   ];
 } else if (process.platform === 'ios') {
+  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
   networkTypes = [
     ThaliMobile.networkTypes.NATIVE,
     ThaliMobile.networkTypes.BOTH
