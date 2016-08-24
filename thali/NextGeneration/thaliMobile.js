@@ -475,21 +475,16 @@ var getBluetoothAddressPortInfo = fucntion (peer) {
 }
 
 var getMPCFAddressPortInfo = fucntion (peer) {
-  return new Promise(function (resolve, reject) {
-    Mobile('multiConnect')
-      .registerToNative(function (???) {
-          if (???) {
-            var portInfo = new AddressPortInfo({
-              hostAddress: '127.0.0.1',
-              portNumber: portNumber,
-              suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_MPCF
-            });
-            resolve(portInfo);
-          } else {
-            reject(error);
-          }
+  return thaliMobileNativeWrapper
+    ._multiConnect(peer.peerIdentifier)
+    .then(function (portNumber) {
+      var portInfo = new AddressPortInfo({
+        hostAddress: '127.0.0.1',
+        portNumber: portNumber,
+        suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_MPCF
       });
-  });
+      return portInfo;
+    });
 }
 
 var getWifiAddressPortInfo = fucntion (peer) {
