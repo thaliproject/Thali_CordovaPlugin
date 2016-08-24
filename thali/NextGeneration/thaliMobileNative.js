@@ -29,13 +29,49 @@
  * Note that callbacks rather than promises are specified below because that
  * is required by the JXcore native API.
  *
- * ## Request processing model
+ * ## Request processing model for non-connect related methods
  *
- * With the exception of `connect` the `callNative` methods defined in this
- * file MUST only be called serially. That is, once a `callNative` method other
- * than `connect` is called no other `callNative` methods but `connect` can be
- * called until the first `callNative`'s callback has been called. If this
- * prohibition is violated then the system will enter an undefined state.
+ * With the exception of methods discussed in the next section the `callNative`
+ * methods defined in this file MUST only be called serially. That is, once a
+ * `callNative` method other than the methods in the next section are called no
+ * other `callNative` methods but those in the next section can be called until
+ * the first `callNative`'s callback has been called. If this prohibition is
+ * violated then the system will enter an undefined state.
+ *
+ * ## Request processing model for connect related methods
+ *
+ * TODO: Eventually we need to define a `disconnectIncoming` method to let the
+ * peer policy manager terminate incoming connections to get back bandwidth. But
+ * that is a V1 feature so we'll worry about it later. This is issue 849
+ *
+ * We will discuss the details of `connect` and `multiConnect`/`disconnect`
+ * later. But for processing model purposes a native layer MUST either
+ * support `connect` or `multiConnect`/`disconnect` but not both.
+ *
+ * On `connect` supporting platforms (Android) it is legal to call `connect` at
+ * any time and to have multiple `connect` methods outstanding. However the node
+ * layer MUST NOT issue multiple parallel `connect` methods for the same peerID.
+ * If the Node layer has fired off a `connect` for a particular peerID it MUST
+ * wait until it gets a response before firing off another `connect` for the
+ * same peerID.
+ *
+ * On `multiConnect`/`disconnect` platforms (iOS) it is legal to call `connect`
+ * and `disconnect` at any time and to have multiple `multiConnect` and
+ * `disconnect` methods outstanding at the same time. However the Node layer
+ * MUST NOT have multiple outstanding `multiConnect` or `disconnect` methods
+ * for the same peerID at the same time. In other words if there is either a
+ * `multiConnect` or `disconnect` method outstanding for a peerID then the
+ * Node layer MUST NOT issue a `multiConnect` or `disconnect` for that peerID
+ * until it gets a response to the previous request. For example, if the Node
+ * layer fires off a `multiConnect` for a PeerID foo and then changes its
+ * mind and wants to fire off a `disconnect`, it cannot issue the `disconnect`
+ * for the peerID until the `multiConnect` for that peerID has returned.
+ *
+ * In both the `multiConnect`\`disconnect` and `connect` cases the restriction
+ * on having multiple outstanding methods is intended to provide a simpler
+ * native layer. If the performance implications of this limitation (especially
+ * for `disconnect`) prove too be too much then we may have to relax our
+ * restrictions.
  *
  * ## Idempotent calls
  *
@@ -46,6 +82,11 @@
  * has not yet been called. The default start state is "stop" so calling a stop
  * method before calling its start method pair just means to stay in the stop
  * state.
+ *
+ * `connect`, `multiConnect` and `disconnect` are also idempotent. Calling any
+ * of them with the same arguments several times in a row (without an
+ * intervening method such as calling `multiConnect`, `disconnect` and then
+ * `multiConnect` on the same peerID) MUST NOT cause a state change.
  *
  * ## Initial system state When a Thali app starts up and before any of the
  * APIs defined here are called the initial state of the system MUST be:
@@ -102,14 +143,6 @@
  * Please see the definition of
  * {@link module:thaliMobileNativeWrapper.startUpdateAdvertisingAndListening}.
  *
- * However, in addition to what is written there, when the system receives an
- * incoming connection it will do so by initiating a single TCP/IP connection to
- * the port given below in `portNumber`. If the non-TCP connection from which
- * the content in the TCP/IP connection is sourced should terminate for any
- * reason then the TCP/IP connection MUST also be terminated. If the TCP
- * connection to `portNumber` is terminated for any reason then the associated
- * non-TCP connection MUST be terminated.
- *
  * @public
  * @function external:"Mobile('startUpdateAdvertisingAndListening')".callNative
  * @param {number} portNumber The port on 127.0.0.1 that any incoming
@@ -131,62 +164,16 @@
  */
 
 /**
- * When we are asked to connect to a remote peer the way we normally handle
- * this is by opening a port on 127.0.0.1 and listening for an incoming
- * connection. When we get the incoming connection we then bridge it to the
- * remote peer.
- *
- * When we are using our normal behavior the listeningPort parameter will be
- * set to the port the local Thali application should connect to and both
- * clientPort and serverPort MUST be 0.
- *
- * However, we also have to deal with a bug in iOS's multipeer connectivity
- * framework. Our original iOS design involved us having one MCSession that
- * connected peer A as a TCP/IP client to peer B and then a second MCSession
- * that connected peer B as a TCP/IP client to peer A. But there is apparently a
- * bug in iOS that if two peers have two MCSessions and if one moves around a
- * bunch of data then the connections become unstable and randomly fail.
- *
- * Our work around for this problem is that we will always form exactly one
- * MCSession between two peers. So let's say that peer A establishes a MCSession
- * with peer B. In that case peer A will create an output stream to peer B who
- * will then respond with an output stream to peer A. We will then marshal these
- * streams to TCP/IP by exposing peer A as a TCP/IP listener that peer A
- * connects to and sends data to peer B. Peer B will see the connection as an
- * incoming TCP/IP client that connects to Peer B's `portNumber`.
- *
- * Now imagine that Peer B issues a connect request to Peer A's
- * `peerIdentifier`. Ideally we would just create a new MCSession and do what we
- * described above in reverse. But we cannot because of the bug. So the work
- * around is that we will use this type to notify the caller that what they have
- * to do is to use the existing connection from Peer A to Peer B to send TCP/IP
- * connection requests back to Peer A. This involves magic at the mux layer. In
- * other words we are pushing an iOS bug up from the iOS native code into
- * Node.js and requiring us to solve it up in Node.js land. For all the gory
- * details on how this works see the [binding
- * spec](http://thaliproject.org/PresenceProtocolBindings/).
- *
- * We use the `clientPort` value below so that the mux layer can figure out
- * which of its connections is the one it needs to use to talk to the desired
- * peer.
- *
- * We use the `serverPort` to indicate which 127.0.0.1 port we connected to.
- * The reason we include it here is because there is a potential race condition
- * where between the time we created the response to the connect request and
- * when it was actually sent to Node.js in theory we could have received a stop
- * and start that switched us to a different `portNumber`. So by including
- * `serverPort` we can catch those race conditions.
+ * For `connect` platforms when we are asked to connect to a remote peer the way
+ * we handle this is by opening a port hosted by the native layer on 127.0.0.1
+ * and listening for an incoming connection. When we get the incoming connection
+ * we then bridge it to the remote peer using the non-TCP/IP transport.
  *
  * @public
  * @typedef {Object} ListenerOrIncomingConnection
  * @property {number} listeningPort The port on which the native layer is
  * listening on 127.0.0.1 for an incoming TCP/IP connection that the native
  * layer will then relay to the remote peer.
- * @property {number} clientPort The port that the native layer's TCP/IP
- * client uses to connect to the `portNumber` submitted by the Thali
- * application.
- * @property {number} serverPort The port that the native layer's TCP/IP
- * client connected to.
  */
 
 // jscs:disable maximumLineLength
@@ -216,31 +203,25 @@
 
 // jscs:disable maximumLineLength
 /**
- * This method tells the native layer to establish a non-TCP/IP connection to
- * the identified peer and to then create a TCP/IP bridge on top of that
- * connection which can be accessed locally by opening a TCP/IP connection to
- * the port returned in the callback.
+ * On platforms that support `connect`, this method tells the native layer to
+ * establish a non-TCP/IP connection to the identified peer and to then create a
+ * TCP/IP bridge on top of that connection which can be accessed locally by
+ * opening a TCP/IP connection to the port returned in the callback.
  *
  * This method MUST return an error if called while start listening for
  * advertisements is not active. This restriction is really only needed for iOS
  * but we enforce it on Android as well in order to keep the platform
  * consistent.
  *
- * If this method is called consecutively with the same peerIdentifier and a
- * connection is either in progress or already exists then an error MUST be
- * returned. Otherwise a new connection MUST be created.
+ * As defined in {@link peer} the peerIdentifier maps to the Bluetooth MAC for
+ * the remote peer. If a TCP/IP Android listener is already associated with that
+ * Bluetooth MAC then that listener's port MUST be returned. Otherwise a new
+ * TCP/IP Android listener MUST be created, associated with the Bluetooth MAC
+ * and the new port returned.
  *
- * In the case of Android there MUST be at most one
- * Bluetooth client connection between this peer and the identified remote peer.
- * In the case of iOS there MUST be at most one MCSession between this peer and
- * the identified remote peer. In the case of iOS if this peer is lexically
- * smaller than the other peer then the iOS layer MUST try to establish a
- * MCSession with the remote peer as a signaling mechanism per the instructions
- * in the binding spec. If an incoming connection is created within a reasonable
- * time period from the lexically larger peer then the system MUST issue a
- * connect callback with listeningPort set to null and clientPort/serverPort set
- * based on the values used when establishing the incoming connection from the
- * remote peer.
+ * The node layer is responsible for making sure there is not more than a single
+ * outstanding `connect` method call at a time for any given peerID. If that
+ * restriction is violated then the system enters an unknown state.
  *
  * The port created by a connect call MUST only accept a single TCP/IP
  * connection at a time. Any subsequent TCP/IP connections to the 127.0.0.1 port
@@ -279,13 +260,14 @@
  * |--------------|-------------|
  * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
  * | startListeningForAdvertisements is not active | Go start it! |
- * | Already connect(ing/ed) | There already is a connection or a request to create one is already in process. |
  * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
  * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
  * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
  * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
+ * | No available TCP ports | There are no TCP ports available to listen on. |
  * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
  * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
+ * | Platform does not support connect | The platform doesn't support the connect method. |
  *
  * @public
  * @function external:"Mobile('connect')".callNative
@@ -295,6 +277,118 @@
  * remote peer
  */
 // jscs:enable maximumLineLength
+
+/**
+ * @external "Mobile('multiConnect')"
+ * @public
+ */
+
+// jscs:disable maximumLineLength
+/**
+ * Platforms that support `multiConnect` are able to bridge from a non-TCP
+ * transport to a native TCP listener that can accept arbitrary numbers of
+ * connections. This is different than `connect` platforms whose native
+ * TCP listener can handle exactly one connection at a time and therefore need
+ * to use a multiplex layer in Node.
+ *
+ * This method MUST return an error if called while start listening for
+ * advertisements is not active.
+ *
+ * The node layer is responsible for making sure there is not more than a single
+ * outstanding `connect` or 'disconnect' method call at a time for any given
+ * peerID. If that restriction is violated then the system enters an unknown
+ * state.
+ *
+ * A call to `multiConnect` will immediately return with no information other
+ * than a confirmation that the request was received. A separate {@link
+ * multiConnectResolve} asynchronous callback will be fired with the actual
+ * result of the method call.
+ *
+ * The submitted peerIdentifier only contains a value mapped to the UUID part
+ * of the remote peer's MCPeerID.
+ *
+ * If there already exists a MCSession for the identifier UUID then the {@link
+ * multiConnectResolved} MUST be fired and have its port set to the TCP/IP
+ * listener associated with that MCSession. Yes, in theory we could have
+ * returned the port in the synchronous response to the `multiConnect` method
+ * but it's more consistent to always have the true response come in the {@link
+ * multiConnectResolved}.
+ *
+ * If there is no existing MCSession for the associated UUID then the iOS code
+ * MUST pick the highest generation advertised for that UUID and try to create
+ * a MCSession with that peer. If the MCSession can't be formed then the
+ * `Connection could not be established` error MUST be returned in the
+ * {@link multiConnectResolved} error value. If the MCSession can be formed
+ * then the iOS code MUST create a TCP/IP native listener (that it will then
+ * relay connections to the MCSession using virtual sockets) and return the port
+ * of that listener in the {@link multiConnectResolved}.
+ *
+ * The port created by the connect call MUST accept an arbitrary number of
+ * TCP/IP connections and forward them to the remote peer over the non-TCP/IP
+ * transport.
+ *
+ * A race condition exists that can cause something called a "channel binding
+ * problem". This race condition occurs when a callback to this method is
+ * received with a port but before the port can be used it gets closed and
+ * re-assign to someone else. The conditions under which this occur typically
+ * involve interactions with the native system and other parallel
+ * threads/processes. But if this happens then the client code can think that a
+ * certain port represents a particular peer when it may not.
+ *
+ * Typically we use TLS to address this problem for connections run on the
+ * multiplexer layer that sits on top of the port returned by this method. TLS
+ * allows us to authenticate that we are talking with whom we think we are
+ * talking. But if TLS can't be used then some equivalent mechanism must be or
+ * an impersonation attack becomes possible.
+ *
+ * @public
+ * @function external:"Mobile('multiConnect')".callNative
+ * @param {string} peerIdentifier
+ * @param {string} syncValue This is an opaque string that MUST be passed back
+ * on the correlated {@link multiConnectResolved} callback for the result of
+ * this particular method call.
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback The err value
+ * MUST be null. Any real errors will be returned in the {@link
+ * multiConnectResolved} callback.
+ */
+// jscs:enable maximumLineLength
+
+/**
+ * @external "Mobile('disconnect')"
+ * @public
+ */
+
+/**
+ * Platforms that support `multiConnect` MUST also support `disconnect`. The
+ * `disconnect` method is needed because otherwise there is no way for the Node
+ * layer to tell the native layer that a connection to a remote peer is no
+ * longer needed. This allows the connection to be closed and frees up more
+ * connections for use as well as potentially reducing bandwidth wasted on
+ * connections that aren't doing anything useful.
+ *
+ * The node layer is responsible for making sure there is not more than a single
+ * outstanding `connect` or 'disconnect' method call at a time for any given
+ * peerID. If that restriction is violated then the system enters an unknown
+ * state.
+ *
+ * A successful `disconnect` MUST result in the non-TCP/IP connections, the
+ * TCP/IP sockets to the native TCP/IP listener from the Node layer as well as
+ * the native TCP/IP listener itself all being closed.
+ *
+ * A request to disconnect from a peer with whom there is no connection MUST
+ * be treated as a success in the callback.
+ *
+ * A failed call to disconnect means that the connection to the remote peer
+ * is now in an unknown state.
+ *
+ * If disconnect is called on a non-multiConnect platform then a
+ * 'Not multiConnect platform' error MUST be returned.
+ *
+ * @public
+ * @function external:"Mobile('disconnect')".callNative
+ * @param {string} peerIdentifier
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback
+ */
 
 /**
  * @external "Mobile('didRegisterToNative')"
@@ -330,6 +424,71 @@
  */
 
 /**
+ * @external "Mobile('multiConnectResolved')"
+ */
+
+/**
+ * If the MCSession could not be formed then error MUST NOT be null and MUST
+ * contain a description of the problem while port MUST be null. If the
+ * MCSession could be formed then error MUST be null and port MUST contain an
+ * integer with the localhost port where the native code is listening for TCP/IP
+ * connections it is to bridge to the MCSession.
+ *
+ * * | Error String | Description |
+ * |--------------|-------------|
+ * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
+ * | startListeningForAdvertisements is not active | Go start it! |
+ * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
+ * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
+ * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
+ * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
+ * | No available TCP ports | There are no TCP ports available to listen on. |
+ * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
+ * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
+ * | Platform does not support multiConnect | The platform doesn't support the `multiConnect` method. |
+ *
+ * @public
+ * @callback multiConnectResolvedCallback
+ * @property {string} syncValue
+ * @property {?string} error
+ * @property {?number} port
+ */
+
+/**
+ * Every call to `multiConnect` MUST produced exactly one callback of this type.
+ *
+ * @public
+ * @function external:"Mobile('multiConnectResolved')".registerToNative
+ * @param {module:thaliMobileNative~multiConnectResolvedCallback} callback
+ */
+
+/**
+ * @external "Mobile('multiConnectConnectionFailure')"
+ */
+
+/**
+ * Identifies the peerID of the peer with whom a `multiConnect` initiated
+ * connection (read: MCSession) failed. This method MUST be fired when the
+ * connection fails even if it is just because of a call to `disconnect`. If
+ * this event is fired in direct response to a `disconnect` then error MUST be
+ * null.
+ *
+ * @public
+ * @callback multiConnectConnectionFailureCallback
+ * @property {string} peerIdentifier
+ * @property {string} error
+ */
+
+/**
+ * Fires the multiConnectConnectionFailureCallback if a multiConnect connection
+ * fails for a reason other than a call to {@link disconnect}.
+ *
+ * @public
+ * @function external:"Mobile(`multiConnectConnectionFailure`)".registerToNative
+ * @param {module:thaliMobileNative~multiConnectConnectionFailureCallback} callback
+ */
+
+/**
  * This object defines peerAvailabilityChanged information about a single peer.
  *
  * @typedef {Object} peer
@@ -338,6 +497,13 @@
  * non-TCP/IP transports work it is completely possible for the same remote peer
  * to have many different peerIdentifiers assigned to them. So the only purpose
  * of this value is to use it in a connect call not to uniquely identify a peer.
+ * Although it is up to the native layers as to exactly what they return here,
+ * nevertheless on iOS this value MUST map to the UUID part of the MCPeerID
+ * and not to the generation (which is returned below). Similarly on Android
+ * the peerIdentifier MUST map to the Bluetooth MAC and not to the current
+ * generation.
+ * @property {number} generation An integer which counts changes in the peer's
+ * database. On Android this integer has only 8 bytes and so will roll over.
  * @property {boolean} peerAvailable If true this indicates that the peer is
  * available for connectivity. If false it means that the peer can no longer be
  * connected to. For too many reasons to count it's perfectly possible to never
@@ -346,16 +512,6 @@
  * into the background reducing the power to the BLE radio which can make the
  * peer seem to disappear. But Bluetooth would still be on full power so a
  * connect could still work. So this value can at best be treated as a hint.
- * @property {boolean} pleaseConnect If true then this means that a lexically
- * smaller peer wishes to establish a connection to this peer but requires this
- * peer to initiate the connection per the binding spec. If this peer already
- * has called {@link external:"Mobile('connect')".callNative} for the identified
- * peer then no action MUST be taken. Similarly if this peer already has a
- * connection to the remote peer then no action MUST be taken. Yes, there are
- * many race conditions here but the binding protocol calls for the other peer
- * to repeat its request a number of times so it should be o.k. If this value is
- * false then it either means that this isn't iOS or it means that the remote
- * peer is either lexically larger or not currently interested in connecting.
  */
 
 /**
@@ -373,7 +529,7 @@
 
 /**
  * Please see the definition of
- * {@link module:thaliMobileNativeWrapper~peerAvailabilityChanged}
+ * {@link module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged}
  *
  * In addition to what is written there the following applies to the native
  * implementation: The native layer MUST NOT send peerAvailabilityChanged
