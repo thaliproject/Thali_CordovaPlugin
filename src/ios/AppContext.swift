@@ -152,7 +152,7 @@ public typealias ClientConnectCallback = (error: String, info: [String : AnyObje
      - returns: true if successful
      */
     public func stopAdvertisingAndListening() -> Bool {
-        advertiserManager.stopAdvertisingAndListening()
+        advertiserManager.stopAdvertising()
         return true
     }
 

@@ -20,7 +20,7 @@ public final class BrowserManager: NSObject {
     public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil
     internal private(set) var availablePeers: [PeerIdentifier] = []
     public var isListening: Bool {
-        return currentBrowser?.isListening ?? false
+        return currentBrowser?.listening ?? false
     }
 
     public init(serviceType: String) {
@@ -50,7 +50,7 @@ public final class BrowserManager: NSObject {
     }
 
     public func stopListeningForAdvertisements() {
-        guard let currentBrowser = self.currentBrowser where currentBrowser.isListening else {
+        guard let currentBrowser = self.currentBrowser where currentBrowser.listening else {
             assert(false, "there is no active listener")
             return
         }

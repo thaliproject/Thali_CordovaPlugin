@@ -13,10 +13,10 @@ final class Browser: NSObject {
     private let browser: MCNearbyServiceBrowser
     private let foundPeer: (PeerIdentifier) -> Void
     private let lostPeer: (PeerIdentifier) -> Void
-    var listeningStateChanged: ((Bool) -> Void)?
-    internal private(set) var isListening: Bool = false {
+    var listeningDidChangeHandler: ((Bool) -> Void)?
+    internal private(set) var listening: Bool = false {
         didSet {
-            listeningStateChanged?(isListening)
+            listeningDidChangeHandler?(listening)
         }
     }
 
@@ -32,11 +32,11 @@ final class Browser: NSObject {
 
     func startListening() {
         browser.startBrowsingForPeers()
-        isListening = true
+        listening = true
     }
 
     func stopListening() {
-        isListening = false
+        listening = false
     }
 }
 
@@ -62,7 +62,7 @@ extension Browser: MCNearbyServiceBrowserDelegate {
     }
 
     func browser(browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: NSError) {
-        isListening = false
+        listening = false
         print("didNotStartingBrowsingForPeers \(error)")
     }
 }

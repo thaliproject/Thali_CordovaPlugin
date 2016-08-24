@@ -16,7 +16,7 @@ import Foundation
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
 
     public var isAdvertising: Bool {
-        return currentAdvertiser?.isAdvertising ?? false
+        return currentAdvertiser?.advertising ?? false
     }
 
     private func advertiserIdentifier(advertiserPeer: PeerIdentifier, receivedInvitationFromPeer peer: PeerIdentifier) {
@@ -40,7 +40,7 @@ import Foundation
         }
     }
 
-    private func createAndRunAdvertiserWith(identifier: PeerIdentifier, port: UInt16) -> Advertiser {
+    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16) -> Advertiser {
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
                                     port: port, receivedInvitationHandler: { [weak self] receivedIdentifier in
             self?.advertiserIdentifier(identifier, receivedInvitationFromPeer: receivedIdentifier)
@@ -50,7 +50,7 @@ import Foundation
         return advertiser
     }
 
-    public func stopAdvertisingAndListening() {
+    public func stopAdvertising() {
         advertisers.forEach {
             $0.stopAdvertising()
         }
@@ -62,9 +62,9 @@ import Foundation
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
             addAdvertiserToDisposeQueue(currentAdvertiser)
-            self.currentAdvertiser = createAndRunAdvertiserWith(peerIdentifier, port: port)
+            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port)
         } else {
-            self.currentAdvertiser = createAndRunAdvertiserWith(PeerIdentifier(), port: port)
+            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port)
         }
 
         assert(self.currentAdvertiser != nil, "we should have initialized advertiser after calling this function")

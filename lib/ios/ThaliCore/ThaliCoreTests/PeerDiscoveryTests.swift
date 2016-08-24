@@ -20,7 +20,7 @@ class PeerDiscoveryTests: XCTestCase {
     }
 
     override func tearDown() {
-        advertiser.stopAdvertisingAndListening()
+        advertiser.stopAdvertising()
         browser = nil
         advertiser = nil
     }
@@ -83,7 +83,7 @@ class PeerDiscoveryTests: XCTestCase {
 
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(2 * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
-            self.advertiser.stopAdvertisingAndListening()
+            self.advertiser.stopAdvertising()
         }
 
         waitForExpectationsWithTimeout(20, handler: nil)

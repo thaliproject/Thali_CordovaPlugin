@@ -19,7 +19,7 @@ class AdvertiserManagerTests: XCTestCase {
     }
 
     override func tearDown() {
-        advertiserManager.stopAdvertisingAndListening()
+        advertiserManager.stopAdvertising()
         advertiserManager = nil
     }
 
@@ -27,7 +27,7 @@ class AdvertiserManagerTests: XCTestCase {
         advertiserManager.startUpdateAdvertisingAndListening(42)
         XCTAssertEqual(advertiserManager.advertisers.count, 1)
         XCTAssertTrue(advertiserManager.isAdvertising)
-        advertiserManager.stopAdvertisingAndListening()
+        advertiserManager.stopAdvertising()
         XCTAssertEqual(advertiserManager.advertisers.count, 0)
         XCTAssertFalse(advertiserManager.isAdvertising)
     }
