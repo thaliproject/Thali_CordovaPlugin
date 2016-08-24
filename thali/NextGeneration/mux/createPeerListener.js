@@ -241,7 +241,7 @@ function handleReverseConnection(self, incoming, server,
   return true;
 }
 
-function connectToRemotePeer(self, incoming, peerIdentifier, server)
+function connectToRemotePeer(self, incoming, peerIdentifier, server,)
 {
   return new Promise(function (resolve, reject) {
     assert(server._firstConnection, 'We should only get called once');
@@ -259,40 +259,8 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server)
           return reject(error);
         }
         var listenerOrIncomingConnection = JSON.parse(unParsedConnection);
-        if (listenerOrIncomingConnection.listeningPort === 0) {
-          // So this is annoying.. there's no guarantee on the order of the
-          // server running it's onConnection handler and us getting here.
-          // So we don't always find a mux when handling a reverse
-          // connection. Handle that here.
-
-          if (findMuxForReverseConnection(self._nativeServer,
-              listenerOrIncomingConnection.clientPort)) {
-            handleReverseConnection(self, incoming, server,
-                                    listenerOrIncomingConnection);
-            return resolve();
-          }
-          else {
-            // Record the pending connection, give it a second to turn up
-            self._pendingReverseConnections[
-              listenerOrIncomingConnection.clientPort] = {
-              handleReverseConnection : function () {
-                handleReverseConnection(self, incoming, server,
-                                        listenerOrIncomingConnection);
-                resolve();
-              },
-              timerCancel: setTimeout(function () {
-                logger.debug('timed out waiting for incoming connection');
-                handleReverseConnection(self, incoming, server,
-                                        listenerOrIncomingConnection);
-                resolve();
-              }, thaliConfig.MILLISECONDS_TO_WAIT_FOR_REVERSE_CONNECTION)
-            };
-          }
-        }
-        else {
-          handleForwardConnection(self, listenerOrIncomingConnection, server,
+        handleForwardConnection(self, listenerOrIncomingConnection, server,
                                   resolve, reject);
-        }
       });
   });
 }
