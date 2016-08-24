@@ -607,7 +607,15 @@ module.exports.getNonTCPNetworkStatus = function () {
  * the localhost port to connect to or an Error object.
  */
 module.exports._multiConnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('multiConnect')
+      .callNative(function (errorMessage) {
+        if (errorMessage) {
+          return reject(new Error(errorMessage));
+        }
+        resolve();
+      });
+  });
 };
 
 // jscs:disable jsDoc
