@@ -15,7 +15,7 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
 var utResult;
 
-Mobile('ExecuteNativeTests').callNative(function (result) {
+Mobile('executeNativeTests').callNative(function (result) {
   utResult = true;
   if (result && result.executed) {
     console.log("Total number of executed tests: ", result.total);
