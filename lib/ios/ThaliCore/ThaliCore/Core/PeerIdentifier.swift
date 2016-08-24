@@ -60,12 +60,14 @@ public struct PeerIdentifier: Hashable {
 ///Multipeer connectivity specific functions
 extension PeerIdentifier {
 
-    func mcPeer() -> MCPeerID {
-        return MCPeerID(displayName: stringValue)
-    }
-
     init(mcPeer peer: MCPeerID) throws {
         try self.init(stringValue: peer.displayName)
+    }
+}
+
+extension MCPeerID {
+    convenience init(peerIdentifier: PeerIdentifier) {
+        self.init(displayName: peerIdentifier.stringValue)
     }
 }
 

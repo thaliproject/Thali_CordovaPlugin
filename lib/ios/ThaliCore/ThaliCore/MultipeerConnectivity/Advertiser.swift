@@ -20,7 +20,7 @@ final class Advertiser: NSObject {
 
     required init(peerIdentifier: PeerIdentifier, serviceType: String, port: UInt16,
                   receivedInvitationHandler: (session: Session) -> Void) {
-        advertiser = MCNearbyServiceAdvertiser(peer: peerIdentifier.mcPeer(),
+        advertiser = MCNearbyServiceAdvertiser(peer: MCPeerID(peerIdentifier: peerIdentifier),
                                                discoveryInfo:nil, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
         self.serviceType = serviceType
