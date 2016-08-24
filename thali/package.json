@@ -17,7 +17,8 @@
     "salti": "0.2.0",
     "uuid": "2.0.2",
     "urlsafe-base64": "1.0.0",
-    "winston": "2.2.0"
+    "winston": "2.2.0",
+    "js-extend": "1.0.1"
   },
   "devDependencies": {
     "jsdoc": "3.3.3"
