@@ -19,7 +19,7 @@ cd `dirname $0`
 cd ../..
 repositoryRoot=$(pwd)
 cd test/TestServer
-jx npm install
+jx npm install --no-optional
 jx generateServerAddress.js $2
 cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest

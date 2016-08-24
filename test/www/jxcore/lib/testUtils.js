@@ -3,7 +3,7 @@
 var logCallback;
 var os = require('os');
 var tmp = require('tmp');
-var PouchDB = require('pouchdb-node');
+var PouchDB = require('pouchdb');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
 var randomString = require('randomstring');
@@ -276,7 +276,8 @@ module.exports.getPouchDBFactoryInRandomDirectory = function () {
     charset: 'alphabetic'
   }));
   fs.ensureDirSync(directory);
-  return PouchDBGenerator(PouchDB, directory);
+  return PouchDBGenerator(PouchDB, directory,
+          {defaultAdapter: require('leveldown-mobile')});
 };
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
