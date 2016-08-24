@@ -241,7 +241,7 @@ function handleReverseConnection(self, incoming, server,
   return true;
 }
 
-function connectToRemotePeer(self, incoming, peerIdentifier, server,)
+function connectToRemotePeer(self, incoming, peerIdentifier, server)
 {
   return new Promise(function (resolve, reject) {
     assert(server._firstConnection, 'We should only get called once');
