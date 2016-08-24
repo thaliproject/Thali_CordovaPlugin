@@ -11,12 +11,12 @@ import MultipeerConnectivity
 
 final class Browser: NSObject {
     private let browser: MCNearbyServiceBrowser
-    private let foundPeer: (PeerIdentifier) -> Void
-    private let lostPeer: (PeerIdentifier) -> Void
-    var listeningDidChangeHandler: ((Bool) -> Void)?
+    private let didFindPeer: (PeerIdentifier) -> Void
+    private let didLosePeer: (PeerIdentifier) -> Void
+    var didChangeListeningHandler: ((Bool) -> Void)?
     internal private(set) var listening: Bool = false {
         didSet {
-            listeningDidChangeHandler?(listening)
+            didChangeListeningHandler?(listening)
         }
     }
 
@@ -24,8 +24,8 @@ final class Browser: NSObject {
                   foundPeer: (PeerIdentifier) -> Void,
                   lostPeer: (PeerIdentifier) -> Void) {
         browser = MCNearbyServiceBrowser(peer: MCPeerID(displayName: NSUUID().UUIDString), serviceType: serviceType)
-        self.foundPeer = foundPeer
-        self.lostPeer = lostPeer
+        self.didFindPeer = foundPeer
+        self.didLosePeer = lostPeer
         super.init()
         browser.delegate = self
     }
@@ -46,7 +46,7 @@ extension Browser: MCNearbyServiceBrowserDelegate {
                         foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
         do {
             let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
-            foundPeer(peerIdentifier)
+            didFindPeer(peerIdentifier)
         } catch let error {
             print("cannot parse identifier \"\(peerID.displayName)\" because of error: \(error)")
         }
@@ -55,7 +55,7 @@ extension Browser: MCNearbyServiceBrowserDelegate {
     func browser(browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         do {
             let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
-            lostPeer(peerIdentifier)
+            didLosePeer(peerIdentifier)
         } catch let error {
             print("cannot parse identifier \"\(peerID.displayName)\" because of error: \(error)")
         }
