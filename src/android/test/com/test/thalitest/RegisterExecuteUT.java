@@ -18,7 +18,7 @@ public final class RegisterExecuteUT {
     }
 
     public static void Register() {
-        jxcore.RegisterMethod("ExecuteNativeTests", new jxcore.JXcoreCallback() {
+        jxcore.RegisterMethod("executeNativeTests", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 String logtag = "ExecuteNativeTests";
