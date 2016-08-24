@@ -146,7 +146,7 @@ test('initial peer discovery', function (t) {
       'We have received peers we expected'
     );
 
-    Mobile('peerAvailabilityChanged').registerToNative(null);
+    Mobile('peerAvailabilityChanged').registerToNative(function () {});
 
     // Copying received peers to the global peers hash table.
     peersReceived.forEach(function (uuid) {
@@ -191,7 +191,7 @@ test('initial peer discovery', function (t) {
         'We have received peers we expected'
       );
 
-      Mobile('peerAvailabilityChanged').registerToNative(null);
+      Mobile('peerAvailabilityChanged').registerToNative(function () {});
 
       // Copying received peers to the global peers hash table.
       peersReceived.forEach(function (uuid) {
@@ -233,7 +233,7 @@ test('check latest peer discovery', function (t) {
         'We have received peers we expected'
       );
 
-      Mobile('peerAvailabilityChanged').registerToNative(null);
+      Mobile('peerAvailabilityChanged').registerToNative(function () {});
 
       var samePeers = peersReceived.every(function (uuid) {
         return latestPeers[uuid];
