@@ -14,7 +14,7 @@ import Foundation
     internal private (set) var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
-    internal private(set) var activeSessions: [PeerIdentifier: Session] = [:]
+    private var activeSessions: [AdvertiserSessionManager] = []
 
     public var isAdvertising: Bool {
         return currentAdvertiser?.isAdvertising ?? false
@@ -24,8 +24,9 @@ import Foundation
         self.serviceType = serviceType
     }
 
-    private func receivedInvitationHandler(peerIdentifier: PeerIdentifier, session: Session) {
-
+    private func receivedInvitationHandler(session: Session) {
+        let sessionManager = AdvertiserSessionManager(session: session)
+        self.activeSessions.append(sessionManager)
     }
 
     //dispose advertiser after 30 sec to ensure that it has no pending invitations
@@ -44,15 +45,7 @@ import Foundation
 
     private func createAndRunAdvertiserWith(identifier: PeerIdentifier, port: UInt16) -> Advertiser {
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
-                                    port: port, receivedInvitationHandler: { [weak self] session in
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        sync(strongSelf) {
-                                            session.startListening(onPort: port)
-                                            strongSelf.activeSessions[identifier] = session
-                                        }
-        })
+                                    port: port, receivedInvitationHandler: receivedInvitationHandler)
         advertiser.startAdvertising()
         self.advertisers.append(advertiser)
         return advertiser

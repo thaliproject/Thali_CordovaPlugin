@@ -24,7 +24,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "CCA571BB1D4787A900FBEC41"
-               BuildableName = "ThaliCore.framework"
+               BuildableName = "ThaliCore"
                BlueprintName = "ThaliCore"
                ReferencedContainer = "container:ThaliCore.xcodeproj">
             </BuildableReference>

@@ -11,13 +11,13 @@ import MultipeerConnectivity
 
 /// Class for managing session between peers
 class Session: NSObject {
-    private enum SessionState {
+    enum SessionState {
         case Initial
         case Connecting
         case Connected
         case NotConnected
         
-        init(sessionState: MCSessionState) {
+        private init(sessionState: MCSessionState) {
             switch sessionState {
             case .Connected:
                 self = .Connected
@@ -28,15 +28,24 @@ class Session: NSObject {
             }
         }
     }
-    
+
     private let session: MCSession
     private let identifier: String
-    private var sessionState: SessionState = .Initial {
+    var sessionStateChangesHandler: ((SessionState) -> Void)?
+    var didReceiveInputStream: ((NSInputStream, String) -> Void)?
+    internal private(set) var inputStreams: [NSInputStream] = []
+    internal private(set) var outputStreams: [NSOutputStream] = []
+    internal private(set) var sessionState: SessionState = .Initial {
         didSet {
-            stateChangesHandler?(sessionState)
+            self.sessionStateChangesHandler?(sessionState)
         }
     }
-    private var stateChangesHandler: ((SessionState) -> Void)? = nil
+
+    func createOutputStream(name: String) throws -> NSOutputStream {
+        let stream = try session.startStreamWithName(name, toPeer: MCPeerID(displayName: identifier))
+        outputStreams.append(stream)
+        return stream
+    }
 
     init(session: MCSession, identifier: String) {
         self.session = session
@@ -47,23 +56,6 @@ class Session: NSObject {
 
     func disconnect() {
         session.disconnect()
-    }
-
-    func startListening(onPort port: UInt16, connectionCallback: ((ErrorType?) -> Void)){
-        stateChangesHandler = { state in
-            switch state {
-            case .NotConnected:
-                connectionCallback(NSError(domain: "asd", code: 0, userInfo: nil))
-            case .Connected:
-                connectionCallback(nil)
-            default:
-                break
-            }
-        }
-        //sync issue
-        if sessionState != .Initial {
-            stateChangesHandler?(sessionState)
-        }
     }
 }
 
@@ -78,6 +70,10 @@ extension Session: MCSessionDelegate {
 
     func session(session: MCSession, didReceiveStream stream: NSInputStream,
                  withName streamName: String, fromPeer peerID: MCPeerID) {
+        guard identifier == peerID.displayName else {
+            return
+        }
+        didReceiveInputStream?(stream, streamName)
     }
 
     func session(session: MCSession, didReceiveData data: NSData, fromPeer peerID: MCPeerID) {}

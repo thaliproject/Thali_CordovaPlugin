@@ -15,7 +15,7 @@ public struct PeerAvailability {
 
 //class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
-    private var activeSessions: [PeerIdentifier: Session] = [:]
+    private var activeSessions: [PeerIdentifier: BrowserSessionManager] = [:]
 
     internal private (set) var currentBrowser: Browser?
     internal private(set) var availablePeers: [PeerIdentifier] = []
@@ -69,7 +69,8 @@ public final class BrowserManager: NSObject {
                 return false
             }
             let session = currentBrowser.invitePeerToConnect(lastGenerationIdentifier)
-            self.activeSessions[identifier] = session
+            let browserSession = BrowserSessionManager(session: session)
+            self.activeSessions[identifier] = browserSession
             return true
         }
 
