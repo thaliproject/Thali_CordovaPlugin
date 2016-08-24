@@ -9,7 +9,7 @@
     "forever-agent": "0.6.1",
     "ip": "^1.0.1",
     "javascript-state-machine": "^2.3.5",
-    "lie": "^3.0.2",
+    "lie": "^3.1.0",
     "long": "^3.0.3",
     "multiplex": "^6.7.0",
     "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
@@ -25,7 +25,7 @@
     "thali": {
       "projectName": "thaliproject",
       "depotName": "Thali_CordovaPlugin",
-      "branchName": "npmv2.1.0"
+      "branchName": "vNext_ilya_771"
     },
     "btconnectorlib2": "0.3.2",
     "jxcore-cordova": "0.1.2b",

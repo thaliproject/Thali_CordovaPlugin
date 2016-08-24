@@ -3,13 +3,21 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Check if we are running in MinGW
-runningInMinGw=false
+# Check the platform we are running
+IS_MINIGW_PLATFORM=false
+IS_DARWIN_PLATFORM=false
 
-if [ "$(uname -s | cut -c 1-5)" == "MINGW" ]; then
-    echo "Running in MinGW"
-    runningInMinGw=true
+if test x"$(uname -s | cut -c 1-5)" == xMINGW ; then
+  echo "Running in MinGW"
+
+  IS_MINIGW_PLATFORM=true
+elif test x"`uname`" = xDarwin ; then
+  echo "Running in macOS"
+
+  IS_DARWIN_PLATFORM=true
 fi
+
+TEST_PROJECT_NAME=ThaliTest
 
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to
@@ -19,32 +27,52 @@ fi
 
 cd `dirname $0`
 cd ../..
-repositoryRoot=$(pwd)
+REPO_ROOT_PATH=$(pwd)
+
+
+# Begin setting up the project
+#
 cd test/TestServer
 jx npm install
 jx generateServerAddress.js $2
-cd $repositoryRoot/..
-cordova create ThaliTest com.test.thalitest ThaliTest
-mkdir -p ThaliTest/thaliDontCheckIn/localdev
+cd $REPO_ROOT_PATH/..
+cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
+mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
-if [ $runningInMinGw == true ]; then
+if [ $IS_MINIGW_PLATFORM == true ]; then
     # The thali package might be installed as link and there will
     # be troubles later on if this link is tried to be copied so
     # remove it here.
-    rm -rf $repositoryRoot/test/www/jxcore/node_modules/thali
-    cp -R $repositoryRoot/test/www/ ThaliTest/
+    rm -rf $REPO_ROOT_PATH/test/www/jxcore/node_modules/thali
+    cp -R $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/
 else
-    rsync -a --no-links $repositoryRoot/test/www/ ThaliTest/www
+    rsync -a --no-links $REPO_ROOT_PATH/test/www/ $TEST_PROJECT_NAME/www
 fi
 
-cd ThaliTest
-# TODO Temporarily disabling ios build
-#cordova platform add ios
-cordova platform add android
-cd www/jxcore
-jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
+# Begin adding platforms
+#
+cd $TEST_PROJECT_NAME
 
-if [ $runningInMinGw == true ]; then
+# add Android platform
+cordova platform add android
+
+# A file that identifies the current build as a UT build, which results in copying native UT files to the platform folder
+touch platforms/android/unittests
+
+# add iOS platform
+if [ $IS_DARWIN_PLATFORM == true ]; then
+  cordova platform add ios
+
+  # A file that identifies the current build as a UT build
+  touch platforms/ios/unittests
+fi
+
+# run Thali install
+#
+cd www/jxcore
+jx npm install $REPO_ROOT_PATH/thali --save --no-optional --autoremove "*.gz"
+
+if [ $IS_MINIGW_PLATFORM == true ]; then
     # On Windows the package.json file will contain an invalid local file URI for Thali,
     # which needs to be replaced with a valid value. Otherwise the build process
     # will be aborted. Restore write permission after running sed in case
@@ -64,14 +92,12 @@ find . -name "*.pem" -delete
 
 cp -v $1 app.js
 
-# A file that identifies the current build as a UT build, which results in copying Android native UT files to the platform folder
-touch ../../platforms/android/unittests
-
+# build Android
 cordova build android --release --device
 
-# TODO Temporarily disabling ios build
-#if [ $runningInMinGw == false ]; then
-#    cordova build ios --device
-#fi
+# build iOS
+if [ $IS_DARWIN_PLATFORM == true ]; then
+  cordova build ios --device
+fi
 
 echo "Remember to start the test coordination server by running jx index.js"
