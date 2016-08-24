@@ -6,11 +6,11 @@ var fs = require('fs-extra-promise');
 var path = require('path');
 var crypto = require('crypto');
 var tape = require('../lib/thaliTape');
-var cryptomanager = require('thali/Runtime/thalicryptomanager');
+var cryptoManager = require('thali/Runtime/security/thaliCryptoManager');
 var testUtils = require('../lib/testUtils.js');
 
 // get the values needed for running the tests
-var configValues = cryptomanager.getConfigValuesForTestingOnly();
+var configValues = cryptoManager.getConfigValuesForTestingOnly();
 
 var fileLocation = path.join(testUtils.tmpDirectory(), './pkcs12folder');
 
@@ -34,7 +34,7 @@ test('successfully create a new pkcs12 file and return hash value',
 
     Mobile.setGetDocumentsPathReturnValues(errorMessage, fileLocation);
 
-    cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
+    cryptoManager.getPublicKeyHash(function (err, publicKeyHash) {
       t.equal(err, null);
 
       var file = path.join(fileLocation, configValues.pkcs12FileName);
@@ -44,7 +44,7 @@ test('successfully create a new pkcs12 file and return hash value',
           var publicKey = crypto.pkcs12.
               extractPublicKey(configValues.password, pkcs12Content);
           t.ok(publicKey && publicKey.length > 0);
-          t.equal(publicKeyHash, cryptomanager.
+          t.equal(publicKeyHash, cryptoManager.
               generateSlicedSHA256Hash(
                 publicKey,
                 configValues.hashSizeInBytes));
@@ -71,9 +71,9 @@ test('successfully read a previous pkcs12 file and return hash value',
       var publicKey = crypto.pkcs12.
           extractPublicKey(configValues.password, pkcs12Content);
       t.ok(publicKey && publicKey.length > 0);
-      cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
+      cryptoManager.getPublicKeyHash(function (err, publicKeyHash) {
         t.equal(err, null);
-        t.equal(publicKeyHash, cryptomanager.
+        t.equal(publicKeyHash, cryptoManager.
             generateSlicedSHA256Hash(publicKey, configValues.hashSizeInBytes));
         t.end();
       });
@@ -90,7 +90,7 @@ test('failed to extract public key because of corrupt pkcs12 file',
 
   Mobile.setGetDocumentsPathReturnValues(errorMessage, badFileLocation);
 
-  cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
+  cryptoManager.getPublicKeyHash(function (err, publicKeyHash) {
     t.equal(err.message, cryptoErrorMessage);
     t.end();
   });
@@ -100,7 +100,7 @@ test('failed to get mobile documents path', function(t) {
   var errorMessage = 'GetDocumentsPath error',
       noFileLocation = null;
   Mobile.setGetDocumentsPathReturnValues(errorMessage, noFileLocation);
-  cryptomanager.getPublicKeyHash(function (err, publicKeyHash) {
+  cryptoManager.getPublicKeyHash(function (err, publicKeyHash) {
     t.equal(err, errorMessage);
     t.end();
   });
