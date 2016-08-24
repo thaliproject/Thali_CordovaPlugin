@@ -59,23 +59,27 @@ var getMethodByNetworkType = function (target, method, networktype) {
 };
 
 var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
-  if (networkType === networkTypes.BOTH) {
-    var wifiMethod = getMethodByNetworkType(thaliWifiInfrastructure, method, networkType);
-    var nativeMethod = getMethodByNetworkType(ThaliMobileNativeWrapper, method, networkType);
-    return function() {
-      var args = arguments;
-      return Promise.all([
+  switch (networkType) {
+    case networkTypes.BOTH:
+      var wifiMethod = getMethodByNetworkType(thaliWifiInfrastructure,
+        method, networkType);
+      var nativeMethod = getMethodByNetworkType(ThaliMobileNativeWrapper,
+        method, networkType);
+      return function() {
+        var args = arguments;
+        return Promise.all([
           wifiMethod.apply(null, args),
           nativeMethod.apply(null, args)
         ])
         .then(getCombinedResult);
-    }
-  } else if (networkType === networkTypes.WIFI) {
-    return getMethodByNetworkType(thaliWifiInfrastructure, method, networkType);
-  } else if (networkType === networkTypes.NATIVE) {
-    return getMethodByNetworkType(ThaliMobileNativeWrapper, method, networkType);
-  } else {
-    throw new Error('Unsupported network type ' + networkType);
+      };
+    case networkTypes.WIFI:
+      return getMethodByNetworkType(thaliWifiInfrastructure, method,
+         networkType);
+    case networkTypes.NATIVE:
+      return getMethodByNetworkType(ThaliMobileNativeWrapper, method,
+         networkType);
+    default: throw new Error('Unsupported network type ' + networkType);
   }
 };
 
@@ -215,9 +219,8 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
     );
     module.exports.emitter.on('networkChanged', handleNetworkChanged);
 
-    var start = getWifiOrNativeMethodByNetworkType('start',
-     thaliMobileStates.networkType);
-    start(router, pskIdToSecret)
+    getWifiOrNativeMethodByNetworkType('start',
+      thaliMobileStates.networkType)(router, pskIdToSecret)
       .then(resolve);
   });
 };
@@ -239,9 +242,7 @@ module.exports.stop = function () {
     clearInterval(peerAvailabilityWatcherInterval);
     module.exports.emitter.removeListener('networkChanged', handleNetworkChanged);
 
-    var stop = getWifiOrNativeMethodByNetworkType('stop',
-     thaliMobileStates.networkType);
-    stop()
+    getWifiOrNativeMethodByNetworkType('stop', thaliMobileStates.networkType)()
       .then(resolve);
   });
 };
@@ -281,10 +282,8 @@ module.exports.startListeningForAdvertisements = function () {
     }
     thaliMobileStates.listening = true;
 
-    var startListeningForAdvertisements =
-      getWifiOrNativeMethodByNetworkType('startListeningForAdvertisements',
-       thaliMobileStates.networkType);
-    startListeningForAdvertisements()
+    getWifiOrNativeMethodByNetworkType('startListeningForAdvertisements',
+       thaliMobileStates.networkType)()
       .then(resolve);
   });
 };
@@ -303,10 +302,8 @@ module.exports.stopListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
     thaliMobileStates.listening = false;
 
-    var stopListeningForAdvertisements =
-      getWifiOrNativeMethodByNetworkType('stopListeningForAdvertisements',
-       thaliMobileStates.networkType);
-    stopListeningForAdvertisements()
+    getWifiOrNativeMethodByNetworkType('stopListeningForAdvertisements',
+       thaliMobileStates.networkType)()
       .then(resolve);
   });
 };
@@ -335,10 +332,8 @@ module.exports.startUpdateAdvertisingAndListening = function () {
     }
     thaliMobileStates.advertising = true;
 
-    var startUpdateAdvertisingAndListening =
-      getWifiOrNativeMethodByNetworkType('startUpdateAdvertisingAndListening',
-       thaliMobileStates.networkType);
-    startUpdateAdvertisingAndListening()
+    getWifiOrNativeMethodByNetworkType('startUpdateAdvertisingAndListening',
+       thaliMobileStates.networkType)()
       .then(resolve);
   });
 };
@@ -358,10 +353,8 @@ module.exports.stopAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
     thaliMobileStates.advertising = false;
 
-    var stopAdvertisingAndListening =
-      getWifiOrNativeMethodByNetworkType('stopAdvertisingAndListening',
-       thaliMobileStates.networkType);
-    stopAdvertisingAndListening()
+    getWifiOrNativeMethodByNetworkType('stopAdvertisingAndListening',
+       thaliMobileStates.networkType)()
       .then(resolve);
   });
 };
@@ -383,16 +376,19 @@ module.exports.stopAdvertisingAndListening = function () {
 module.exports.getNetworkStatus = function () {
   var networkType = thaliMobileStates.networkType;
   return promiseQueue.enqueue(function (resolve, reject) {
-    if (networkType === networkTypes.NATIVE ||
-    networkType === networkTypes.BOTH) {
-      ThaliMobileNativeWrapper
-        .getNonTCPNetworkStatus()
-        .then(resolve);
-    } else if (networkType === networkTypes.WIFI) {
-      reject(new Error('Native stack is not on'));
-    } else {
-      throw new Error('Unable to execute getNetworkStatus with network type ' +
-        networkType);
+    switch (networkType) {
+      case networkTypes.NATIVE:
+      case networkTypes.BOTH:
+         ThaliMobileNativeWrapper
+          .getNonTCPNetworkStatus()
+          .then(resolve);
+         break;
+      case networkTypes.WIFI:
+        reject(new Error('Native stack is not on'));
+        break;
+      default:
+        throw new Error('Unable to execute getNetworkStatus with ' +
+          'network type ' + networkType);
     }
   });
 };
