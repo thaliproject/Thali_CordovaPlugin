@@ -189,7 +189,7 @@
              };
 
              // We'll callback to the upper layer when the connect completes or fails
-             [appContext multiconnectToPeer:params[0] callback:connectCallback];
+             [appContext multiconnectToPeer:params[0] error:nil callback:connectCallback];
          }
      } withName:[AppContext multiconnect]];
 }

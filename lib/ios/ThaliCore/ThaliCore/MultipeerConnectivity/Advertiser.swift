@@ -20,7 +20,7 @@ final class Advertiser: NSObject {
 
     required init(peerIdentifier: PeerIdentifier, serviceType: String, port: UInt16,
                   receivedInvitationHandler: (session: Session) -> Void) {
-        advertiser = MCNearbyServiceAdvertiser(peer: peerIdentifier.mcPeer,
+        advertiser = MCNearbyServiceAdvertiser(peer: peerIdentifier.mcPeer(),
                                                discoveryInfo:nil, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
         self.serviceType = serviceType
@@ -46,7 +46,7 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
     func advertiser(advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID,
                     withContext context: NSData?, invitationHandler: (Bool, MCSession) -> Void) {
         let mcSession = MCSession(peer: advertiser.myPeerID, securityIdentity: nil, encryptionPreference: .None)
-        let session = Session(session: mcSession, identifier: peerID.displayName)
+        let session = Session(session: mcSession, identifier: peerID)
         invitationHandler(true, mcSession)
         receivedInvitationHandler(session: session)
     }

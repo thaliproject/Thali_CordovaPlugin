@@ -162,7 +162,18 @@ public typealias ClientConnectCallback = (error: String, info: [String : AnyObje
      - parameter peer: identifier of peer to connect
      - parameter callback: callback with connection results.
      */
-    public func multiconnectToPeer(peer: String, callback:ClientConnectCallback) {
+    public func multiconnectToPeer(parameters: [AnyObject], callback:ClientConnectCallback) throws {
+        guard parameters.count == 3 else {
+            //throw error
+            return
+        }
+        guard let identifierString = parameters[0] as? String, _ = parameters[1] as? String else {
+            //throw error
+            return
+        }
+        let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
+        browserManager.connectToPeer(peerIdentifier) { port, error in
+        }
     }
 
     /**

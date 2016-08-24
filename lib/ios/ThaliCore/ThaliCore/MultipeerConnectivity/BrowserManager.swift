@@ -13,6 +13,18 @@ public struct PeerAvailability {
     public let available: Bool
 }
 
+public enum MultiСonnectError: ErrorType {
+    case IllegalPeerID
+    case StartListeningNotActive
+    case ConnectionFailed
+    case ConnectionTimedOut
+    case MaxConnectionsReached
+    case NoNativeNonTCPSupport
+    case NoAvailableTCPPorts
+    case RadioTurnedOff
+    case UnspecifiedRadioError
+}
+
 //class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
     private var activeSessions: [PeerIdentifier: BrowserSessionManager] = [:]
@@ -62,16 +74,20 @@ public final class BrowserManager: NSObject {
         self.currentBrowser = nil
     }
 
-    public func connectToPeer(identifier: PeerIdentifier) -> Bool {
+    public func connectToPeer(identifier: PeerIdentifier, completion: (UInt16?, ErrorType?) -> Void) {
         return sync(self) {
             guard let lastGenerationIdentifier = self.lastGenerationPeerForIdentifier(identifier),
                 let currentBrowser = self.currentBrowser else {
-                return false
+                    return
             }
-            let session = currentBrowser.invitePeerToConnect(lastGenerationIdentifier)
-            let browserSession = BrowserSessionManager(session: session)
-            self.activeSessions[identifier] = browserSession
-            return true
+            do {
+                let session = try currentBrowser.invitePeerToConnect(lastGenerationIdentifier)
+                let browserSession = BrowserSessionManager(session: session) { _ in
+                }
+                self.activeSessions[identifier] = browserSession
+            } catch let error {
+                completion(nil, error)
+            }
         }
 
     }

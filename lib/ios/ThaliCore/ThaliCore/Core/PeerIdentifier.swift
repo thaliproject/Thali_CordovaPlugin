@@ -59,7 +59,8 @@ public struct PeerIdentifier: Hashable {
 
 ///Multipeer connectivity specific functions
 extension PeerIdentifier {
-    var mcPeer: MCPeerID {
+
+    func mcPeer() -> MCPeerID {
         return MCPeerID(displayName: stringValue)
     }
 

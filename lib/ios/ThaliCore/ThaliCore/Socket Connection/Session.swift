@@ -12,11 +12,10 @@ import MultipeerConnectivity
 /// Class for managing session between peers
 class Session: NSObject {
     enum SessionState {
-        case Initial
         case Connecting
         case Connected
         case NotConnected
-        
+
         private init(sessionState: MCSessionState) {
             switch sessionState {
             case .Connected:
@@ -30,24 +29,24 @@ class Session: NSObject {
     }
 
     private let session: MCSession
-    private let identifier: String
+    private let identifier: MCPeerID
     var sessionStateChangesHandler: ((SessionState) -> Void)?
     var didReceiveInputStream: ((NSInputStream, String) -> Void)?
     internal private(set) var inputStreams: [NSInputStream] = []
     internal private(set) var outputStreams: [NSOutputStream] = []
-    internal private(set) var sessionState: SessionState = .Initial {
+    internal private(set) var sessionState: SessionState = .NotConnected {
         didSet {
             self.sessionStateChangesHandler?(sessionState)
         }
     }
 
     func createOutputStream(name: String) throws -> NSOutputStream {
-        let stream = try session.startStreamWithName(name, toPeer: MCPeerID(displayName: identifier))
+        let stream = try session.startStreamWithName(name, toPeer: identifier)
         outputStreams.append(stream)
         return stream
     }
 
-    init(session: MCSession, identifier: String) {
+    init(session: MCSession, identifier: MCPeerID) {
         self.session = session
         self.identifier = identifier
         super.init()
@@ -62,7 +61,7 @@ class Session: NSObject {
 extension Session: MCSessionDelegate {
     func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {
         //in current version we can have only one peer to communicate
-        guard identifier == peerID.displayName else {
+        guard identifier.displayName == peerID.displayName else {
             return
         }
         self.sessionState = SessionState(sessionState: state)
@@ -70,7 +69,8 @@ extension Session: MCSessionDelegate {
 
     func session(session: MCSession, didReceiveStream stream: NSInputStream,
                  withName streamName: String, fromPeer peerID: MCPeerID) {
-        guard identifier == peerID.displayName else {
+        //in current version we can have only one peer to communicate
+        guard identifier.displayName == peerID.displayName else {
             return
         }
         didReceiveInputStream?(stream, streamName)
