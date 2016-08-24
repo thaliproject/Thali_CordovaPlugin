@@ -33,8 +33,7 @@ Mobile('executeNativeTests').callNative(function (result) {
 
 if (!utResult) {
   console.log("Failed to execute UT.");
-  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-  return;
+  global.nativeUTFailed = true;
 }
 
 // finish tests if we're running on iOS
