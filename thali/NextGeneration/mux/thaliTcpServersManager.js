@@ -232,9 +232,9 @@ ThaliTcpServersManager.prototype._createNativeListener = function () {
  * @param {string} peerIdentifier
  * @returns {Promise<number|Error>}
  */
-ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier)
-{
-  return createPeerListener(this, peerIdentifier);
+ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
+                                                                pleaseConnect) {
+  return createPeerListener(this, peerIdentifier, pleaseConnect);
 };
 
 /**
@@ -275,7 +275,7 @@ ThaliTcpServersManager.prototype.terminateIncomingConnection =
  */
 ThaliTcpServersManager.prototype.terminateOutgoingConnection =
   function (peerIdentifier, port) {
-
+    return Promise.reject('Not yet implemented');
   };
 
 /**

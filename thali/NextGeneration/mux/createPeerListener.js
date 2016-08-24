@@ -431,7 +431,7 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
  * @param {string} peerIdentifier
  * @returns {Promise<number|Error>}
  */
-module.exports = function (self, peerIdentifier) {
+module.exports = function (self, peerIdentifier, pleaseConnect) {
 
   // This section manages a server that accepts incoming connections
   // from the application. The first connection causes the p2p link to
