@@ -39,17 +39,11 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    Promise.resolve()
-    .then(function () {
-      if (thaliPullReplicationFromNotification) {
-        var promise = thaliPullReplicationFromNotification.stop();
-        thaliPullReplicationFromNotification = null;
-        return promise;
-      }
-    })
-    .then(function () {
-      return thaliNotificationServer.stop();
-    })
+    if (thaliPullReplicationFromNotification) {
+      thaliPullReplicationFromNotification.stop();
+      thaliPullReplicationFromNotification = null;
+    }
+    thaliNotificationServer.stop()
     .then(function () {
       return ThaliMobile.stop();
     })
@@ -85,16 +79,28 @@ function bufferIndexOf(bufferArray, entryToFind) {
 test('Coordinated pull replication from notification test', function (t) {
   var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
   var exited = false;
-  function exit(err) {
+  function exit(error) {
     if (exited) {
       return;
     }
     exited = true;
     changes && changes.cancel();
     cancelTimer && clearTimeout(cancelTimer);
+
+    var isPassed = true;
     thaliPeerPoolDefault.stop()
+    .catch(function (error) {
+      t.fail('failed with ' + error);
+      isPassed = false;
+    })
     .then(function () {
-      err ? t.fail('failed with ' + err) : t.pass('all tests passed');
+      if (error) {
+        t.fail('failed with ' + error);
+        isPassed = false;
+      }
+      if (isPassed) {
+        t.pass('all tests passed');
+      }
       t.end();
     });
   }
@@ -135,11 +141,10 @@ test('Coordinated pull replication from notification test', function (t) {
   localPouchDB
     .put({_id: JSON.stringify(devicePublicKey.toJSON())})
     .then(function () {
-      return thaliPullReplicationFromNotification.start(partnerKeys);
-    })
-    .then(function () {
-      return testUtils.startServerInfrastructure(thaliNotificationServer,
-        partnerKeys, ThaliMobile, router);
+      thaliPullReplicationFromNotification.start(partnerKeys);
+      return testUtils.startServerInfrastructure(
+        thaliNotificationServer, partnerKeys, ThaliMobile, router
+      );
     })
     .catch(function (err) {
       exit(err);

@@ -81,10 +81,9 @@ function ThaliPullReplicationFromNotification(PouchDB,
  * @enum {string}
  */
 ThaliPullReplicationFromNotification.STATES = {
-  CREATED:  'created',
-  STARTED:  'started',
-  STOPPING: 'stopping',
-  STOPPED:  'stopped'
+  CREATED: 'created',
+  STARTED: 'started',
+  STOPPED: 'stopped'
 };
 
 /**
@@ -201,19 +200,9 @@ ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictiona
  */
 ThaliPullReplicationFromNotification.prototype.start =
   function (prioritizedReplicationList) {
-    var self = this;
-
     // Can we start now?
-    var args = arguments;
-    switch(this.state) {
-      case ThaliPullReplicationFromNotification.STATES.STARTED: {
-        return Promise.resolve();
-      }
-      case ThaliPullReplicationFromNotification.STATES.STOPPING: {
-        return this._stoppingPromise.then(function () {
-          return self.start.apply(self, args);
-        });
-      }
+    if (this.state === ThaliPullReplicationFromNotification.STATES.STARTED) {
+      return;
     }
     assert(
       this.state === ThaliPullReplicationFromNotification.STATES.CREATED ||
@@ -228,8 +217,9 @@ ThaliPullReplicationFromNotification.prototype.start =
       this._boundAdvertiser
     );
     this._thaliNotificationClient.start(prioritizedReplicationList);
+
+    logger.debug('starting thaliPeerPoolInterface');
     this._thaliPeerPoolInterface.start();
-    return Promise.resolve();
   };
 
 /**
@@ -239,23 +229,18 @@ ThaliPullReplicationFromNotification.prototype.start =
  * @public
  */
 ThaliPullReplicationFromNotification.prototype.stop = function () {
-  var self = this;
-
   // Can we stop now?
-  switch (this.state) {
-    case ThaliPullReplicationFromNotification.STATES.CREATED:
-    case ThaliPullReplicationFromNotification.STATES.STOPPED: {
-      return Promise.resolve();
-    }
-    case ThaliPullReplicationFromNotification.STATES.STOPPING: {
-      return this._stoppingPromise;
-    }
+  if (
+    this.state === ThaliPullReplicationFromNotification.STATES.CREATED ||
+    this.state === ThaliPullReplicationFromNotification.STATES.STOPPED
+  ) {
+    return;
   }
   assert(
     this.state === ThaliPullReplicationFromNotification.STATES.STARTED,
     'ThaliPullReplicationFromNotification state should be \'STARTED\' for stop'
   );
-  this.state = ThaliPullReplicationFromNotification.STATES.STOPPING;
+  this.state = ThaliPullReplicationFromNotification.STATES.STOPPED;
 
   this._thaliNotificationClient.removeListener(
     this._thaliNotificationClient.Events.PeerAdvertisesDataForUs,
@@ -266,12 +251,6 @@ ThaliPullReplicationFromNotification.prototype.stop = function () {
   // '_thaliPeerPoolInterface' will kill all actions.
   // We can just make peerDictionary empty.
   this._peerDictionary = {};
-  this._stoppingPromise = this._thaliPeerPoolInterface.stop()
-  .then(function () {
-    self.state = ThaliPullReplicationFromNotification.STATES.STOPPED;
-    self._stoppingPromise = undefined;
-  })
-  return this._stoppingPromise;
 };
 
 /**

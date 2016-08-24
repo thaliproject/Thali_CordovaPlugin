@@ -77,6 +77,7 @@ function ThaliManager(expressPouchDB,
         dbName,
         thaliPeerPoolInterface,
         ecdhForLocalDevice);
+  this._thaliPeerPoolInterface = thaliPeerPoolInterface;
 
   logger.debug('creating express pouchdb instance');
 
@@ -142,12 +143,10 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
   this.state = ThaliManager.STATES.STARTING;
 
   logger.debug('starting thaliPullReplicationFromNotification');
-  this._startingPromise = this._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys)
+  this._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys)
 
-  .then(function () {
-    logger.debug('starting ThaliMobile');
-    return ThaliMobile.start(self._router, self._getPskIdToSecret);
-  })
+  logger.debug('starting ThaliMobile');
+  this._startingPromise = ThaliMobile.start(self._router, self._getPskIdToSecret)
 
   .then(function () {
     /*
@@ -220,7 +219,10 @@ ThaliManager.prototype.stop = function () {
   this.state = ThaliManager.STATES.STOPPING;
 
   logger.debug('stopping thaliPullReplicationFromNotification');
-  this._stoppingPromise = this._thaliPullReplicationFromNotification.stop()
+  this._thaliPullReplicationFromNotification.stop()
+
+  logger.debug('stopping thaliPeerPoolInterface');
+  this._stoppingPromise = this._thaliPeerPoolInterface.stop()
 
   .then(function () {
     logger.debug('stopping thaliSendNotificationBasedOnReplication');
