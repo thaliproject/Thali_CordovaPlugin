@@ -241,8 +241,7 @@ function handleReverseConnection(self, incoming, server,
   return true;
 }
 
-function connectToRemotePeer(self, incoming, peerIdentifier, server,
-                             pleaseConnect)
+function connectToRemotePeer(self, incoming, peerIdentifier, server)
 {
   return new Promise(function (resolve, reject) {
     assert(server._firstConnection, 'We should only get called once');
@@ -261,12 +260,6 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
         }
         var listenerOrIncomingConnection = JSON.parse(unParsedConnection);
         if (listenerOrIncomingConnection.listeningPort === 0) {
-          if (pleaseConnect) {
-            logger.warn('was expecting a forward connection to be made');
-            closeServer(self, server, new Error('Cannot Connect To Peer'),
-                        true);
-            return reject(new Error('Unexpected Reverse Connection'));
-          }
           // So this is annoying.. there's no guarantee on the order of the
           // server running it's onConnection handler and us getting here.
           // So we don't always find a mux when handling a reverse
@@ -462,9 +455,9 @@ module.exports = function (self, peerIdentifier) {
   function _do(resolve, reject) {
     function onNewConnection(incoming) {
       // Handle a new connection from the app to the server
-      if (!pleaseConnect && server._firstConnection) {
+      if (server._firstConnection) {
         server.muxPromise = connectToRemotePeer(self, incoming, peerIdentifier,
-                                                server, pleaseConnect);
+                                                server);
       }
 
       server.muxPromise
@@ -605,22 +598,15 @@ module.exports = function (self, peerIdentifier) {
     });
 
     server.listen(0, function () {
-      logger.debug('pleaseConnect=', pleaseConnect);
-
-      if (!pleaseConnect) {
-        successfulStartup();
-      }
-      else {
-        // We're being asked to connect to by a lower sorted peer
-        server.muxPromise = connectToRemotePeer(self, null, peerIdentifier,
-                                                server, pleaseConnect)
-          .then(function () {
-            successfulStartup();
-          })
-          .catch(function (err) {
-            failedStartup(err);
-          });
-      }
+      // We're being asked to connect to by a lower sorted peer
+      server.muxPromise =
+        connectToRemotePeer(self, null, peerIdentifier, server)
+        .then(function () {
+          successfulStartup();
+        })
+        .catch(function (err) {
+          failedStartup(err);
+        });
     });
   }
 
