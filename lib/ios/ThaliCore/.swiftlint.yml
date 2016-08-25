@@ -90,6 +90,8 @@ variable_name:
     warning: 45
     error: 60
   excluded:
+     - lhs
+     - rhs
      - url
      - app
 vertical_whitespace: warning
