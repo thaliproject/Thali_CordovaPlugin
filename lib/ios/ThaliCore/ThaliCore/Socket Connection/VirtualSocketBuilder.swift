@@ -1,6 +1,6 @@
 //
 //  Thali CordovaPlugin
-//  SessionManager.swift
+//  VirtualSocketBuilder.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
@@ -8,14 +8,14 @@
 
 import Foundation
 
-class SessionManager {
+class VirtualSocketBuilder {
     private var outputStream: NSOutputStream? = nil
     private var inputStream: NSInputStream? = nil
     private let didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void
     private let disconnectedHandler: () -> Void
     let session: Session
 
-    init(session: Session, didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void, disconnectedHandler: () -> Void) {
+    required init(session: Session, didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void, disconnectedHandler: () -> Void) {
         self.session = session
         self.didCreateSocketHandler = didCreateSocketHandler
         self.disconnectedHandler = disconnectedHandler
@@ -39,7 +39,7 @@ class SessionManager {
     }
 }
 
-class BrowserSessionManager: SessionManager {
+class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
     private var outputStreamName: String? = nil
 
     override func didReceive(inputStream: NSInputStream, name: String) {
@@ -48,6 +48,8 @@ class BrowserSessionManager: SessionManager {
         }
         self.inputStream = inputStream
         didCreateSocketHandler(outputStream!, inputStream)
+        session.didReceiveInputStream = nil
+        session.sessionStateChangesHandler = nil
     }
 
     override func sessionStateChanged(state: Session.SessionState) {
@@ -67,7 +69,7 @@ class BrowserSessionManager: SessionManager {
     }
 }
 
-class AdvertiserSessionManager: SessionManager {
+class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
 
     override func didReceive(inputStream: NSInputStream, name: String) {
         self.inputStream = inputStream
@@ -78,6 +80,8 @@ class AdvertiserSessionManager: SessionManager {
             let outputStream = try session.createOutputStream(name)
             self.outputStream = outputStream
             didCreateSocketHandler(outputStream, inputStream)
+            session.didReceiveInputStream = nil
+            session.sessionStateChangesHandler = nil
         } catch let error {
             print(error)
         }

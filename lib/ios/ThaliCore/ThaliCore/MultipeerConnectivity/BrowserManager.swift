@@ -27,11 +27,10 @@ public enum MultiСonnectError: ErrorType {
 
 //class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
-    private var activeSessions: [PeerIdentifier: BrowserSessionManager] = [:]
+    private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>()
 
     internal private (set) var currentBrowser: Browser?
     internal private(set) var availablePeers: [PeerIdentifier] = []
-    internal private(set) var activeSockets: [PeerIdentifier: (NSOutputStream, NSInputStream)] = [:]
 
     internal let serviceType: String
 
@@ -56,29 +55,6 @@ public final class BrowserManager: NSObject {
         }
     }
     
-    private func disconnectSessionIfNeeded(with identifier: PeerIdentifier) {
-        synchronized(self) {
-            guard let session = activeSessions[identifier] where activeSockets[identifier] == nil else {
-                return
-            }
-            session.disconnect()
-            activeSessions.removeValueForKey(identifier)
-        }
-    }
-    
-    private func addToDiscardQueue(session: BrowserSessionManager, with identifier: PeerIdentifier, timeout: Double = 5) {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(timeout * Double(NSEC_PER_SEC)))
-        dispatch_after(delayTime, dispatch_get_main_queue()) { [weak self] in
-            self?.disconnectSessionIfNeeded(with: identifier)
-        }
-    }
-
-    private func handleDidReceive(socket socket: (NSOutputStream, NSInputStream), for identifier: PeerIdentifier) {
-        synchronized(self) {
-            self.activeSockets[identifier] = socket
-        }
-    }
-
     public func startListeningForAdvertisements() {
         if let currentBrowser = currentBrowser {
             currentBrowser.stopListening()
@@ -107,13 +83,7 @@ public final class BrowserManager: NSObject {
             }
             do {
                 let session = try currentBrowser.invitePeerToConnect(lastGenerationIdentifier)
-                let browserSession = BrowserSessionManager(session: session, didCreateSocketHandler: { [weak self] socket in
-                        self?.handleDidReceive(socket: socket, for: identifier)
-                    }, disconnectedHandler: {
-                        completion(nil, MultiСonnectError.ConnectionFailed)
-                })
-                self.activeSessions[identifier] = browserSession
-                addToDiscardQueue(browserSession, with: identifier)
+                socketRelay.createSocket(with: session, completion: completion)
             } catch let error {
                 completion(nil, error)
             }

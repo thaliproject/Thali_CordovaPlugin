@@ -14,7 +14,7 @@ import Foundation
     internal private (set) var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
-    internal private(set) var activeSessions: [AdvertiserSessionManager] = []
+    internal private(set) var activeSessions: [AdvertiserVirtualSocketBuilder] = []
 
     public var advertising: Bool {
         return currentAdvertiser?.advertising ?? false
@@ -25,8 +25,11 @@ import Foundation
     }
 
     private func receivedInvitationHandler(session: Session) {
-        let sessionManager = AdvertiserSessionManager(session: session) { _ in
-        }
+        let sessionManager = AdvertiserVirtualSocketBuilder(session: session, didCreateSocketHandler: { socket in
+                //todo store session
+            }, disconnectedHandler: {
+                //todo notify about disconnect
+            })
         self.activeSessions.append(sessionManager)
     }
 

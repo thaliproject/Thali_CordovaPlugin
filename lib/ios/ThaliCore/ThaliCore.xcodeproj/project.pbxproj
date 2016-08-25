@@ -11,6 +11,7 @@
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */; };
+		D30051691D6F269E0001E85F /* SocketRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDB0E92AB65796641015A /* SocketRelay.swift */; };
 		D300C47B1D54C0EA00A9D97D /* PeerIdentifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */; };
 		D3217E311D5E01580068390B /* PeerDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */; };
 		D3217E341D5E0D980068390B /* PeerIdentifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */; };
@@ -22,12 +23,12 @@
 		D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */; };
 		D377C4FC1D6B58EF00916A7B /* Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E380D31D6303F50040DF58 /* Sync.swift */; };
 		D377C4FD1D6B58F800916A7B /* String+Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34882F61D62064B0052A3EA /* String+Random.swift */; };
-		D377C5021D6D9C1600916A7B /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* SessionManager.swift */; };
-		D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */; };
+		D377C5021D6D9C1600916A7B /* VirtualSocketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */; };
+		D37E88BE1D5209B0009243EE /* AppStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* AppStateNotificationsManagerTests.swift */; };
 		D3CBCCE51D5DD44A00F1591A /* PeerDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */; };
 		D3E380D41D6303F50040DF58 /* Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E380D31D6303F50040DF58 /* Sync.swift */; };
 		FAADD04D8930DF3297562D09 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD342AF116FCE3B46A03D /* Session.swift */; };
-		FAADD16070404F0C249AF956 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* SessionManager.swift */; };
+		FAADD16070404F0C249AF956 /* VirtualSocketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */; };
 		FAADD1775D396DBAD50F2C36 /* MultiConnectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD87110881950482ECFF9 /* MultiConnectTests.swift */; };
 		FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
 		FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
@@ -41,6 +42,7 @@
 		FAADD95E916CC41331AA1613 /* MultiConnectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD87110881950482ECFF9 /* MultiConnectTests.swift */; };
 		FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
 		FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
+		FAADDC1C4A7942B159C0B09F /* SocketRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDB0E92AB65796641015A /* SocketRelay.swift */; };
 		FAADDD566FA7D3F34C6C4581 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD342AF116FCE3B46A03D /* Session.swift */; };
 		FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7119C663364132D5C36 /* BrowserManager.swift */; };
 /* End PBXBuildFile section */
@@ -78,9 +80,10 @@
 		FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Advertiser.swift; sourceTree = "<group>"; };
 		FAADD342AF116FCE3B46A03D /* Session.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		FAADD7119C663364132D5C36 /* BrowserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserManager.swift; sourceTree = "<group>"; };
-		FAADD76EB1071AB28B6EB247 /* SessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
+		FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VirtualSocketBuilder.swift; sourceTree = "<group>"; };
 		FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerIdentifier.swift; sourceTree = "<group>"; };
 		FAADD87110881950482ECFF9 /* MultiConnectTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiConnectTests.swift; sourceTree = "<group>"; };
+		FAADDB0E92AB65796641015A /* SocketRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketRelay.swift; sourceTree = "<group>"; };
 		FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -241,7 +244,8 @@
 			isa = PBXGroup;
 			children = (
 				FAADD342AF116FCE3B46A03D /* Session.swift */,
-				FAADD76EB1071AB28B6EB247 /* SessionManager.swift */,
+				FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */,
+				FAADDB0E92AB65796641015A /* SocketRelay.swift */,
 			);
 			path = "Socket Connection";
 			sourceTree = "<group>";
@@ -405,20 +409,6 @@
 			shellPath = /bin/sh;
 			shellScript = "if which swiftlint >/dev/null; then\n    swiftlint\nelse\n    echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
 		};
-		CCA572F01D4B89FE00FBEC41 /* Embed XCTest.framework */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "Embed XCTest.framework";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\nXCTEST_IPHONEOS_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework\nXCTEST_IPHONESIMULATOR_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework\n\n# Step 1. Define XCTEST_FRAMEWORK_PATH on current platform\nif [ \"${PLATFORM_NAME}\" == \"iphoneos\" ] ; then\n    XCTEST_FRAMEWORK_PATH=$XCTEST_IPHONEOS_PATH\nelif [ \"${PLATFORM_NAME}\" == \"iphonesimulator\" ] ; then\n    XCTEST_FRAMEWORK_PATH=$XCTEST_IPHONESIMULATOR_PATH\nfi\n\n# Step 2. Copy the framework structure into the product frameworks folder\nif [ ! -z \"${XCTEST_FRAMEWORK_PATH}\" ] ; then\n    cp -R \"${XCTEST_FRAMEWORK_PATH}\" \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/\"\nfi\n";
-		};
 		D3217E581D5E10610068390B /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -457,11 +447,12 @@
 				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
 				FAADD7B9451F32511828885E /* Browser.swift in Sources */,
 				FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */,
+				D30051691D6F269E0001E85F /* SocketRelay.swift in Sources */,
 				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
 				D3E380D41D6303F50040DF58 /* Sync.swift in Sources */,
 				FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */,
 				FAADD04D8930DF3297562D09 /* Session.swift in Sources */,
-				FAADD16070404F0C249AF956 /* SessionManager.swift in Sources */,
+				FAADD16070404F0C249AF956 /* VirtualSocketBuilder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -484,7 +475,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
-				D377C5021D6D9C1600916A7B /* SessionManager.swift in Sources */,
+				D377C5021D6D9C1600916A7B /* VirtualSocketBuilder.swift in Sources */,
 				FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */,
 				FAADD705CAB9E45559605B8F /* Browser.swift in Sources */,
 				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
@@ -496,10 +487,11 @@
 				FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */,
 				D375BDEA1D6313E30059805F /* AdvertiserManagerTests.swift in Sources */,
 				D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */,
-				D3217E351D5E0D990068390B /* ApplicationStateNotificationsManagerTests.swift in Sources */,
+				D3217E351D5E0D990068390B /* AppStateNotificationsManagerTests.swift in Sources */,
 				D377C4FC1D6B58EF00916A7B /* Sync.swift in Sources */,
 				FAADDD566FA7D3F34C6C4581 /* Session.swift in Sources */,
 				FAADD95E916CC41331AA1613 /* MultiConnectTests.swift in Sources */,
+				FAADDC1C4A7942B159C0B09F /* SocketRelay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

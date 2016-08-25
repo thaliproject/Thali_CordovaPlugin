@@ -42,5 +42,9 @@ class BrowserManagerTests: XCTestCase {
         waitForExpectationsWithTimeout(5, handler: nil)
         XCTAssertEqual(connectError, .StartListeningNotActive)
     }
+    
+    func testMaxConnectionsReached() {
+        XCTAssert(false, "not implemented")
+    }
 
 }

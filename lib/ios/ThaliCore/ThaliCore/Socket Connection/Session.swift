@@ -1,6 +1,6 @@
 //
 //  Thali CordovaPlugin
-//  SessionManager.swift
+//  VirtualSocketBuilder.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
@@ -9,7 +9,7 @@
 import Foundation
 import MultipeerConnectivity
 
-/// Class for managing session between peers
+/// Class for managing MCSession: subscribing for incoming streams and creating output streams
 class Session: NSObject {
     enum SessionState {
         case Connecting
