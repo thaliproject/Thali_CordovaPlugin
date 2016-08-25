@@ -12,7 +12,7 @@ import XCTest
 class AdvertiserSessionManagerTests: XCTestCase {
 
     func testCreateSocket() {
-        let serviceType = String.randomStringWithLength(7)
+        let serviceType = String.random(length: 7)
         var peerIdentifier: PeerIdentifier? = nil
         var browserStreams, advertiserStreams: (NSOutputStream, NSInputStream)?
 

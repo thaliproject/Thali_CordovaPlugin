@@ -16,8 +16,6 @@ func jsonValue(object: AnyObject) -> String {
     return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
 }
 
-public typealias ClientConnectCallback = (String, String) -> Void
-
 @objc public enum AppContextError: Int, ErrorType{
     case BadParameters
     case UnknownError
@@ -157,12 +155,11 @@ extension PeerAvailability {
     public func stopAdvertisingAndListening() throws {
     }
 
-    public func multiConnectToPeer(parameters: [AnyObject]) throws {
-
+    /**
      - parameter peer: identifier of peer to connect
      - parameter callback: callback with connection results.
      */
-    public func multiconnectToPeer(parameters: [AnyObject], callback:ClientConnectCallback) throws {
+    public func multiConnectToPeer(parameters: [AnyObject]) throws {
         guard parameters.count == 3 else {
             //throw error
             return

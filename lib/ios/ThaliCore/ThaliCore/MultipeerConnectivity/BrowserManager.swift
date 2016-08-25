@@ -74,10 +74,9 @@ public final class BrowserManager: NSObject {
         self.currentBrowser = nil
     }
 
-    func lastGenerationPeer(for identifier: PeerIdentifier) -> PeerIdentifier? {
     public func connectToPeer(identifier: PeerIdentifier, completion: (UInt16?, ErrorType?) -> Void) {
-        return sync(self) {
-            guard let lastGenerationIdentifier = self.lastGenerationPeerForIdentifier(identifier),
+        return synchronized(self) {
+            guard let lastGenerationIdentifier = self.lastGenerationPeer(for: identifier),
                 let currentBrowser = self.currentBrowser else {
                     return
             }
