@@ -73,9 +73,8 @@ public final class TestRunner: NSObject {
 
     public func runTest() {
         // Test must only be run on the main thread.
-        dispatch_sync(dispatch_get_main_queue()) {
-            self.testSuite.runTest()
-        }
+        // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
+        testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
     }
 }
 

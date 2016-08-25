@@ -1,8 +1,8 @@
 'use strict';
 
 var exec = require('child-process-promise').exec;
-var spawn = require('child_process').spawn;
 var path = require('path');
+var spawn = require('child_process').spawn;
 var https = require('https');
 var unzip = require('unzip');
 var Promise = require('lie');

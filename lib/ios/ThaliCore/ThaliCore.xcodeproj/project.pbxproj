@@ -250,7 +250,6 @@
 				CCA5728F1D4A327E00FBEC41 /* Headers */,
 				CCA572901D4A327E00FBEC41 /* Resources */,
 				CCA5729C1D4A32E100FBEC41 /* SwiftLint */,
-				CCA572F01D4B89FE00FBEC41 /* Embed XCTest.framework */,
 			);
 			buildRules = (
 			);
