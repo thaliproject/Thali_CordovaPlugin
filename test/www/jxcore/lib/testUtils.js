@@ -3,10 +3,9 @@
 var logCallback;
 var os = require('os');
 var tmp = require('tmp');
-var PouchDB = require('pouchdb');
+var PouchDB = require('pouchdb-node');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
-var randomString = require('randomstring');
 var Promise = require('lie');
 var https = require('https');
 var logger = require('thali/thaliLogger')('testUtils');
@@ -248,10 +247,13 @@ module.exports.verifyCombinedResultSuccess =
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
 // during other tests.
-var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-fs.ensureDirSync(dbPath);
+var pouchDBTestDirectory = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
+fs.ensureDirSync(pouchDBTestDirectory);
+module.exports.getPouchDBTestDirectory = function () {
+  return pouchDBTestDirectory;
+};
 
-var LevelDownPouchDB = PouchDBGenerator(PouchDB, dbPath, {
+var LevelDownPouchDB = PouchDBGenerator(PouchDB, pouchDBTestDirectory, {
   defaultAdapter: require('leveldown-mobile')
 });
 
@@ -259,25 +261,26 @@ module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
 };
 
-module.exports.getRandomPouchDBName= function () {
-  return randomString.generate({
-    length: 40,
-    charset: 'alphabetic'
-  });
-};
+// Short, random and globally unique name can be obtained from current timestamp.
+// For example '1w8ueaswm1'
+var getUniqueRandomName = function () {
+  var time = process.hrtime();
+  time = time[0] * Math.pow(10, 9) + time[1];
+  return time.toString(36);
+}
+module.exports.getUniqueRandomName  = getUniqueRandomName;
+module.exports.getRandomPouchDBName = getUniqueRandomName;
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
-  return new LevelDownPouchDB(module.exports.getRandomPouchDBName());
+  return new LevelDownPouchDB(getUniqueRandomName());
 };
 
 module.exports.getPouchDBFactoryInRandomDirectory = function () {
-  var directory = path.join(dbPath, randomString.generate({
-    length: 20,
-    charset: 'alphabetic'
-  }));
+  var directory = path.join(pouchDBTestDirectory, getUniqueRandomName());
   fs.ensureDirSync(directory);
-  return PouchDBGenerator(PouchDB, directory,
-          {defaultAdapter: require('leveldown-mobile')});
+  return PouchDBGenerator(PouchDB, directory, {
+    defaultAdapter: require('leveldown-mobile')
+  });
 };
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
@@ -516,13 +519,11 @@ module.exports.setUpServer = function (testBody, appConfig) {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskCallback : function (id) {
         return id === pskId ? pskKey : null;
-      },
-      key: thaliConfig.BOGUS_KEY_PEM,
-      cert: thaliConfig.BOGUS_CERT_PEM
+      }
     }, app));
   testCloseAllServer.listen(0, function () {
     var serverPort = testCloseAllServer.address().port;
-    var randomDBName = randomString.generate(30);
+    var randomDBName = getUniqueRandomName();
     var remotePouchDB =
       module.exports.createPskPouchDBRemote(serverPort, randomDBName, pskId,
                                             pskKey);
@@ -667,3 +668,33 @@ module.exports.runTestOnAllParticipants = function (t, router,
       });
   });
 };
+
+// We doesn't want our test to run infinite time.
+// We will replace t.end with custom exit function.
+module.exports.testTimeout = function (t, timeout) {
+  var timer = setTimeout(function () {
+    t.fail('test timeout');
+    t.end();
+  }, timeout);
+  var oldEnd = t.end;
+  t.end = function () {
+    clearTimeout(timer);
+    return oldEnd.apply(this, arguments);
+  }
+}
+
+module.exports.checkArgs = function (t, spy, description, args) {
+  t.ok(spy.calledOnce, description + ' was called once');
+
+  var currentArgs = spy.getCalls()[0].args;
+  t.equals(
+    args.length, currentArgs.length,
+    description + ' was called with ' + currentArgs.length + ' arguments'
+  );
+
+  args.forEach(function (arg, index) {
+    var argDescription = description + ' was called with \'' +
+      arg.description + '\' as ' + (index + 1) + '-st argument';
+    t.ok(arg.compare(currentArgs[index]), argDescription);
+  });
+}

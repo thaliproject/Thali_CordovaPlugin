@@ -549,6 +549,8 @@ function () {
       };
       var listeningHandler = function () {
         self.routerServerPort = self.routerServer.address().port;
+        logger.debug('listening', self.routerServerPort);
+
         self._server.setUSN(self.usn);
         // We need to update the location string, because the port
         // may have changed when we re-start the router server.

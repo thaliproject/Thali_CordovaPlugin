@@ -29,16 +29,26 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    thaliReplicationPeerAction && thaliReplicationPeerAction.kill();
-    (testCloseAllServer ? testCloseAllServer.closeAllPromise() :
-      Promise.resolve())
-      .catch(function (err) {
-        t.fail('Got error in teardown ' + err);
-      })
-      .then(function () {
+    Promise.resolve()
+    .then(function () {
+      if (thaliReplicationPeerAction) {
+        thaliReplicationPeerAction.kill();
+        return thaliReplicationPeerAction.waitUntilKilled();
+      }
+    })
+    .then(function () {
+      if (testCloseAllServer) {
+        var promise = testCloseAllServer.closeAllPromise();
         testCloseAllServer = null;
-        t.end();
-      });
+        return promise;
+      }
+    })
+    .catch(function (err) {
+      t.fail('Got error in teardown ' + err);
+    })
+    .then(function () {
+      t.end();
+    });
   }
 });
 
@@ -186,8 +196,14 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
     }).on('complete', function () {
       // Give sequence updater time to run before killing everything
       setTimeout(function () {
-        thaliPeerReplicationAction && thaliPeerReplicationAction.kill();
-        resolve();
+        Promise.resolve()
+        .then(function () {
+          if (thaliPeerReplicationAction) {
+            thaliPeerReplicationAction.kill();
+            return thaliPeerReplicationAction.waitUntilKilled();
+          }
+        })
+        .then(resolve);
       }, ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds);
     }).on ('error', function (err) {
       reject('got error ' + err);
