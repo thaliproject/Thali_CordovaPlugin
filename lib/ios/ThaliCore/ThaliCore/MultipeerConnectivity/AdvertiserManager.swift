@@ -15,7 +15,7 @@ import Foundation
     private let serviceType: String
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
 
-    public var isAdvertising: Bool {
+    public var advertising: Bool {
         return currentAdvertiser?.advertising ?? false
     }
 
