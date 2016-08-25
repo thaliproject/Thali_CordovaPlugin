@@ -419,7 +419,7 @@ Mocks.prototype.checkSalti = function(dbName) {
 }
 
 test('test thali manager spies', function (t) {
-  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
+  testUtils.testTimeout(t, TEST_TIMEOUT);
 
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
@@ -455,12 +455,12 @@ test('test thali manager spies', function (t) {
   })
   .then(function () {
     mocks.checkStop();
-    exit();
+    t.end();
   });
 });
 
 test('test thali manager multiple starts and stops', function (t) {
-  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
+  testUtils.testTimeout(t, TEST_TIMEOUT);
 
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
@@ -556,6 +556,6 @@ test('test thali manager multiple starts and stops', function (t) {
     return thaliManager.stop();
   })
   .then(function () {
-    exit();
+    t.end();
   });
 });

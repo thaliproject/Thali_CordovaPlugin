@@ -167,7 +167,7 @@ function waitForRemoteDocs(
 }
 
 test('test write', function (t) {
-  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
+  testUtils.testTimeout(t, TEST_TIMEOUT);
 
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
@@ -218,12 +218,12 @@ test('test write', function (t) {
     return waitForRemoteDocs(pouchDB, localDoc, [], docs, true);
   })
   .then(function () {
-    exit();
+    t.end();
   });
 });
 
 test('test repeat write 1', function (t) {
-  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
+  testUtils.testTimeout(t, TEST_TIMEOUT);
 
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
     t, publicKeyForLocalDevice
@@ -269,7 +269,7 @@ test('test repeat write 1', function (t) {
     return waitForRemoteDocs(pouchDB, localDoc, oldDocs, newDocs, true);
   })
   .then(function () {
-    exit();
+    t.end();
   });
 });
 
@@ -277,7 +277,7 @@ test('test repeat write 2', function (t) {
   // We will make a cleanup after this test.
   thisWasTheLastTest = true;
 
-  var exit = testUtils.exitWithTimeout(t, TEST_TIMEOUT);
+  testUtils.testTimeout(t, TEST_TIMEOUT);
 
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
     t, publicKeyForLocalDevice
@@ -325,6 +325,6 @@ test('test repeat write 2', function (t) {
     return waitForRemoteDocs(pouchDB, localDoc, oldDocs, newDocs, true);
   })
   .then(function () {
-    exit();
+    t.end();
   });
 });

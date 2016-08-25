@@ -668,3 +668,33 @@ module.exports.runTestOnAllParticipants = function (t, router,
       });
   });
 };
+
+// We doesn't want our test to run infinite time.
+// We will replace t.end with custom exit function.
+module.exports.testTimeout = function (t, timeout) {
+  var timer = setTimeout(function () {
+    t.fail('test timeout');
+    t.end();
+  }, timeout);
+  var oldEnd = t.end;
+  t.end = function () {
+    clearTimeout(timer);
+    return oldEnd.apply(this, arguments);
+  }
+}
+
+module.exports.checkArgs = function (t, spy, description, args) {
+  t.ok(spy.calledOnce, description + ' was called once');
+
+  var currentArgs = spy.getCalls()[0].args;
+  t.equals(
+    args.length, currentArgs.length,
+    description + ' was called with ' + currentArgs.length + ' arguments'
+  );
+
+  args.forEach(function (arg, index) {
+    var argDescription = description + ' was called with \'' +
+      arg.description + '\' as ' + (index + 1) + '-st argument';
+    t.ok(arg.compare(currentArgs[index]), argDescription);
+  });
+}
