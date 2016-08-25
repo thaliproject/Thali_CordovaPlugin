@@ -377,7 +377,7 @@ module.exports.getNetworkStatus = function () {
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
  */
-var AddressPortInfo = function (peer) {
+var AddressHostInfo = function (peer) {
   this.hostAddress = peer.hostAddress;
   this.portNumber = peer.portNumber;
   this.suggestedTCPTimeout = peer.suggestedTCPTimeout;
@@ -446,7 +446,7 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
 
   var getAddressPortInfo = getAddressPortStarategies[connectionType];
   if (!getAddressPortInfo) {
-    return Promise.reject(new Error('getAddressPort is not implemented for ' + connectionType));
+    return Promise.reject(new Error('getPeerHostInfo is not implemented for ' + connectionType));
   }
 
   return getAddressPortInfo(peer);
@@ -457,7 +457,7 @@ getAddressPortStarategies[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = g
 getAddressPortStarategies[connectionTypes.TCP_NATIVE] = getWifiAddressPortInfo;
 
 var getBluetoothAddressPortInfo = fucntion (peer) {
-  var portInfo = new AddressPortInfo({
+  var portInfo = new AddressHostInfo({
     hostAddress: '127.0.0.1',
     portNumber: peer.portNumber,
     suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_BLUETOOTH
@@ -469,7 +469,7 @@ var getMPCFAddressPortInfo = fucntion (peer) {
   return ThaliMobileNativeWrapper
     ._multiConnect(peer.peerIdentifier)
     .then(function (portNumber) {
-      var portInfo = new AddressPortInfo({
+      var portInfo = new AddressHostInfo({
         hostAddress: '127.0.0.1',
         portNumber: portNumber,
         suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_MPCF
@@ -479,7 +479,7 @@ var getMPCFAddressPortInfo = fucntion (peer) {
 }
 
 var getWifiAddressPortInfo = fucntion (peer) {
-  var portInfo = new AddressPortInfo({
+  var portInfo = new AddressHostInfo({
     hostAddress: peer.hostAddress,
     portNumber: peer.portNumber,
     suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_WIFI
