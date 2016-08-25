@@ -37,7 +37,7 @@ class PeerIdentifierTests: XCTestCase {
             parsingError = peerErr
         } catch _ {
         }
-        XCTAssertEqual(parsingError, .WrongDataFormat)
+        XCTAssertEqual(parsingError, .IllegalPeerID)
 
         let string2 = "eqwer:not_a_number"
         parsingError = nil
@@ -47,6 +47,6 @@ class PeerIdentifierTests: XCTestCase {
             parsingError = peerErr
         } catch _ {
         }
-        XCTAssertEqual(parsingError, .WrongDataFormat)
+        XCTAssertEqual(parsingError, .IllegalPeerID)
     }
 }

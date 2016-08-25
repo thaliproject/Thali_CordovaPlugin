@@ -15,7 +15,8 @@ class VirtualSocketBuilder {
     private let disconnectedHandler: () -> Void
     let session: Session
 
-    required init(session: Session, didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void, disconnectedHandler: () -> Void) {
+    required init(session: Session, didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void,
+                  disconnectedHandler: () -> Void) {
         self.session = session
         self.didCreateSocketHandler = didCreateSocketHandler
         self.disconnectedHandler = disconnectedHandler
@@ -24,7 +25,7 @@ class VirtualSocketBuilder {
     }
 
     func didReceive(inputStream: NSInputStream, name: String) {}
-    
+
     func disconnect() {
         session.disconnect()
     }

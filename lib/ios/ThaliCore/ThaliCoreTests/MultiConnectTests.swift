@@ -7,6 +7,7 @@
 //
 
 import XCTest
+import MultipeerConnectivity
 @testable import ThaliCore
 
 class MultiConnectTests: XCTestCase {
@@ -23,9 +24,9 @@ class MultiConnectTests: XCTestCase {
             }, lostPeer: { _ in })
         browser.startListening()
         let advertiser = Advertiser(peerIdentifier: PeerIdentifier(), serviceType: serviceType, port: 0) { (session) in
-            let _ = AdvertiserSessionManager(session: session, didCreateSocketHandler: { socket in
+            let _ = AdvertiserVirtualSocketBuilder(session: session, didCreateSocketHandler: { socket in
                 advertiserStreams = socket
-            })
+            }) { _ in}
         }
         advertiser.startAdvertising()
 
@@ -39,28 +40,41 @@ class MultiConnectTests: XCTestCase {
         do {
             let session = try browser.invitePeerToConnect(identifier)
             let socketCreatedExpectation = expectationWithDescription("socket created")
-            let _ = BrowserSessionManager(session: session) { [weak socketCreatedExpectation] socket in
-                browserStreams = socket
-                socketCreatedExpectation?.fulfill()
-            }
+            let _ = BrowserVirtualSocketBuilder(session: session,
+                                                didCreateSocketHandler: { [weak socketCreatedExpectation] socket in
+                                                    browserStreams = socket
+                                                    socketCreatedExpectation?.fulfill()
+            }) { _ in }
             waitForExpectationsWithTimeout(30, handler: nil)
 
             XCTAssertNotNil(browserStreams)
             XCTAssertNotNil(advertiserStreams)
-
         } catch let error {
             XCTAssertNil(error)
         }
     }
 
     func testLostConnection() {
-        
+        XCTAssert(false, "not implemented")
     }
-    
-    func testDisconnect() {
 
+    func testDisconnect() {
+        XCTAssert(false, "not implemented")
     }
 
     func test5secTimeout() {
+        let relay = SocketRelay<BrowserVirtualSocketBuilder>()
+        let peerID = MCPeerID(displayName: "test")
+        let mcSession = MCSession(peer: peerID)
+        let session = Session(session: mcSession, identifier: peerID)
+        let timeout: Double = 3.0
+        let expectation = expectationWithDescription("got connection timed out")
+        var error: MultiСonnectError?
+        relay.createSocket(with: session, timeout: timeout) { port, err in
+            error = err as? MultiСonnectError
+            expectation.fulfill()
+        }
+        waitForExpectationsWithTimeout(timeout + 1, handler: nil)
+        XCTAssertEqual(error, .ConnectionTimedOut)
     }
 }

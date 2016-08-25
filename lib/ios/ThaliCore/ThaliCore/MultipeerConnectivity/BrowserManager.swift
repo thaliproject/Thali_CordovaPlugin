@@ -54,7 +54,7 @@ public final class BrowserManager: NSObject {
             availablePeers.removeAtIndex(index)
         }
     }
-    
+
     public func startListeningForAdvertisements() {
         if let currentBrowser = currentBrowser {
             currentBrowser.stopListening()
