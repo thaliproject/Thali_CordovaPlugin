@@ -452,40 +452,42 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
     return Promise.reject(new Error('Peer is not available'));
   }
 
-  var getAddressPortInfo = getAddressPortStarategies[connectionType];
-  if (!getAddressPortInfo) {
+  var getPeerHostInfo = getPeerHostInfoStarategies[connectionType];
+  if (!getPeerHostInfo) {
     return Promise.reject(new Error('getPeerHostInfo is not implemented for ' + connectionType));
   }
 
-  return getAddressPortInfo(peer);
+  return getPeerHostInfo(peer);
 };
 
-var getAddressPortStarategies = {};
-getAddressPortStarategies[connectionTypes.BLUETOOTH] = getBluetoothAddressPortInfo;
-getAddressPortStarategies[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = getMPCFAddressPortInfo;
-getAddressPortStarategies[connectionTypes.TCP_NATIVE] = getWifiAddressPortInfo;
+var getPeerHostInfoStarategies = {};
+getPeerHostInfoStarategies[connectionTypes.BLUETOOTH] = getBluetoothAddressPortInfo;
+getPeerHostInfoStarategies[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = getMPCFAddressPortInfo;
+getPeerHostInfoStarategies[connectionTypes.TCP_NATIVE] = getWifiAddressPortInfo;
+
+var LOCALHOST = '127.0.0.1';
 
 var getBluetoothAddressPortInfo = fucntion (peer) {
   var portInfo = new AddressHostInfo({
-    hostAddress: '127.0.0.1',
+    hostAddress: LOCALHOST,
     portNumber: peer.portNumber,
     suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_BLUETOOTH
   });
   return Promise.resolve(portInfo);
-}
+};
 
 var getMPCFAddressPortInfo = fucntion (peer) {
   return ThaliMobileNativeWrapper
     ._multiConnect(peer.peerIdentifier)
     .then(function (portNumber) {
       var portInfo = new AddressHostInfo({
-        hostAddress: '127.0.0.1',
+        hostAddress: LOCALHOST,
         portNumber: portNumber,
         suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_MPCF
       });
       return portInfo;
     });
-}
+};
 
 var getWifiAddressPortInfo = fucntion (peer) {
   var portInfo = new AddressHostInfo({
@@ -494,7 +496,7 @@ var getWifiAddressPortInfo = fucntion (peer) {
     suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_WIFI
   });
   return Promise.resolve(portInfo);
-}
+};
 
 /**
  * Requests that the outgoing session with the identifier peerIdentifier on the
