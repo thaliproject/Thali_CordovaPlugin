@@ -1,6 +1,11 @@
 disabled_rules: # rule identifiers to exclude from running
 
 opt_in_rules: # some rules are only opt-in
+  - conditional_returns_on_newline
+  - cyclomatic_complexity
+  - empty_count
+  - force_unwrapping: warning
+  - missing_docs
 
 included: # paths to include during linting. `--path` is ignored if present.
   - ThaliCore
@@ -14,6 +19,15 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Pods
 
 # configurable rules can be customized from this configuration file
+
+# opt-in - conditional_returns_on_newline
+# opt-in cyclomatic_complexity: # limit the number of entries inside an enum or struct.
+#  warning: 3
+#  error: 6
+# opt-in empty_count
+# opt-in force_unwrapping: warning
+# opt-in missing_docs: warning
+
 closing_brace: warning
 colon: warning
 comma: warning
