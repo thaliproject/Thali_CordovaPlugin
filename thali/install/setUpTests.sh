@@ -28,11 +28,13 @@ TEST_PROJECT_NAME=ThaliTest
 cd `dirname $0`
 cd ../..
 REPO_ROOT_DIR=$(pwd)
-TEST_PROJECT_ROOT_DIR=$(readlink -f ${REPO_ROOT_DIR}/../${TEST_PROJECT_NAME})
+TEST_PROJECT_ROOT_DIR=${REPO_ROOT_DIR}/../${TEST_PROJECT_NAME}
 
 # Prepares test project
 prepare_project()
 {
+  echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
+
   cd $REPO_ROOT_DIR/test/TestServer
   jx npm install
   jx generateServerAddress.js $2
@@ -54,6 +56,8 @@ prepare_project()
 # Installs Thali
 install_thali()
 {
+  echo "Installing Thali into ${TEST_PROJECT_NAME}"
+
   cd $TEST_PROJECT_ROOT_DIR/www/jxcore
   jx npm install $REPO_ROOT_DIR/thali --save --no-optional --autoremove "*.gz"
 
@@ -80,6 +84,8 @@ install_thali()
 
 add_android_platform()
 {
+  echo "Adding Android platform into ${TEST_PROJECT_NAME}"
+
   cd $TEST_PROJECT_ROOT_DIR
 
   cordova platform add android
@@ -91,6 +97,8 @@ add_android_platform()
 # Prepares and builds Android app
 build_android()
 {
+  echo "Building Android app"
+
   cd $TEST_PROJECT_ROOT_DIR
 
   cordova build android --release --device
@@ -99,6 +107,8 @@ build_android()
 add_ios_platform_if_possible()
 {
   if [ $IS_DARWIN_PLATFORM == true ]; then
+    echo "Adding iOS platform into ${TEST_PROJECT_NAME}"
+
     cd $TEST_PROJECT_ROOT_DIR
 
     cordova platform add ios
@@ -112,6 +122,8 @@ add_ios_platform_if_possible()
 build_ios_if_possible()
 {
   if [ $IS_DARWIN_PLATFORM == true ]; then
+    echo "Building iOS app"
+
     cd $TEST_PROJECT_ROOT_DIR
 
     # cordova really doesn't have any flexibility in making builds via CLAIM
