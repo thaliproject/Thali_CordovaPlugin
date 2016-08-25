@@ -18,7 +18,11 @@ var utResult = false;
 if (process.platform === 'android' || process.platform === 'ios') {
   Mobile('executeNativeTests').callNative(function (result) {
     if (result) {
-      if (result.executed) {
+      if (!result.executed) {
+        console.log('*Native tests were not executed*');
+
+        utResult = false;
+      } else {
         console.log('*Native tests were executed*');
 
         if (result.failed > 0) {
@@ -26,10 +30,6 @@ if (process.platform === 'android' || process.platform === 'ios') {
         } else {
           utResult = true;
         }
-      } else {
-        console.log('*Native tests were not executed*');
-
-        utResult = false;
       }
 
       console.log('Total number of executed tests: ', result.total);
