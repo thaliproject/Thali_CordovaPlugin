@@ -432,6 +432,42 @@ module.exports.getPeerHostInfo = function () {
   return Promise.reject('not implemented');
 };
 
+var getAddressPortStarategies = {};
+getAddressPortStarategies[connectionTypes.BLUETOOTH] = getBluetoothAddressPortInfo;
+getAddressPortStarategies[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = getMPCFAddressPortInfo;
+getAddressPortStarategies[connectionTypes.TCP_NATIVE] = getWifiAddressPortInfo;
+
+var getBluetoothAddressPortInfo = function (peer) {
+  var portInfo = new AddressPortInfo({
+    hostAddress: '127.0.0.1',
+    portNumber: peer.portNumber,
+    suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_BLUETOOTH
+  });
+  return Promise.resolve(portInfo);
+}
+
+var getMPCFAddressPortInfo = function (peer) {
+  return ThaliMobileNativeWrapper
+    ._multiConnect(peer.peerIdentifier)
+    .then(function (portNumber) {
+      var portInfo = new AddressPortInfo({
+        hostAddress: '127.0.0.1',
+        portNumber: portNumber,
+        suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_MPCF
+      });
+      return portInfo;
+    });
+}
+
+var getWifiAddressPortInfo = function (peer) {
+  var portInfo = new AddressPortInfo({
+    hostAddress: peer.hostAddress,
+    portNumber: peer.portNumber,
+    suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_WIFI
+  });
+  return Promise.resolve(portInfo);
+}
+
 /**
  * Requests that the outgoing session with the identifier peerIdentifier on the
  * specified connectionType be terminated.
