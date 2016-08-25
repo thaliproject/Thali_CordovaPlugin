@@ -9,9 +9,11 @@
 import Foundation
 import ThaliCore
 
-func jsonValue(object: AnyObject) throws -> String? {
-    let data = try NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0))
-    return String(data: data, encoding: NSUTF8StringEncoding)
+func jsonValue(object: AnyObject) -> String {
+    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0)) else {
+        return ""
+    }
+    return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
 }
 
 public typealias ClientConnectCallback = (String, String) -> Void
@@ -19,6 +21,14 @@ public typealias ClientConnectCallback = (String, String) -> Void
 @objc public enum AppContextError: Int, ErrorType{
     case BadParameters
     case UnknownError
+}
+
+extension PeerAvailability {
+    var dictionaryValue: [String : AnyObject] {
+        return ["peerIdentifier" : peerIdentifier.uuid,
+                "peerAvailable" : available
+        ]
+    }
 }
 
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
@@ -81,11 +91,7 @@ public typealias ClientConnectCallback = (String, String) -> Void
 
     private func notifyOnDidUpdateNetworkStatus() {
         //todo put actual network status
-        do {
-            delegate?.context(self, didChangeNetworkStatus: try jsonValue([:])!)
-        } catch let error {
-            assert(false, "\(error)")
-        }
+        delegate?.context(self, didChangeNetworkStatus: jsonValue([:]))
     }
 
     private func willEnterBackground() {
@@ -100,14 +106,15 @@ public typealias ClientConnectCallback = (String, String) -> Void
         let mappedPeers = peers.map {
             $0.dictionaryValue
         }
-        delegate?.context(self, didChangePeerAvailability: mappedPeers)
+        delegate?.context(self, didChangePeerAvailability: jsonValue(mappedPeers))
     }
 
     private func updateListeningAdvertisingState() {
-        delegate?.context(self, didUpdateDiscoveryAdvertisingState: [
-                "discoveryActive" : browserManager.isListening,
-                "advertisingActive" : advertiserManager.isAdvertising
-            ])
+        let newState = [
+            "discoveryActive" : browserManager.isListening,
+            "advertisingActive" : advertiserManager.advertising
+        ]
+        delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))
     }
 
     public init(serviceType: String) {

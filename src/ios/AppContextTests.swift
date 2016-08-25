@@ -12,7 +12,7 @@ class AppContextTests: XCTestCase {
     var context: AppContext! = nil
 
     override func setUp() {
-        context = AppContext()
+        context = AppContext(serviceType: "thaliTest")
     }
 
     override func tearDown() {
@@ -33,7 +33,6 @@ class AppContextTests: XCTestCase {
             @objc func appDidEnterForeground(withContext context: AppContext) {}
         }
 
-        let context = AppContext(serviceType: "thalitest")
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
         let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
