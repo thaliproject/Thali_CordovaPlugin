@@ -4,7 +4,7 @@ var tape = require('../lib/thaliTape');
 var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
 var inherits = require('util').inherits;
 var connectionTypes =
-  require('thali/NextGeneration/thaliMobile').connectionTypes;
+  require('thali/NextGeneration/thaliMobileNativeWrapper').connectionTypes;
 var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var Agent = require('http').Agent;
 var testUtils = require('../lib/testUtils');
@@ -168,7 +168,9 @@ test('#ThaliPeerPoolDefault - PSK Pool works', function (t) {
       t.equal(id, pskIdentity, 'Identity should match');
       gotPskCallBack = true;
       return pskKey;
-    }
+    },
+    key: thaliConfig.BOGUS_KEY_PEM,
+    cert: thaliConfig.BOGUS_CERT_PEM
   }, app));
 
   testServer.listen(0, function () {

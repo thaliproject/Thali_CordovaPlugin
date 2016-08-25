@@ -2,7 +2,7 @@
 
 var net = require('net');
 var Promise = require('lie');
-var logger = require('../../thalilogger')('createNativeListener');
+var logger = require('../../thaliLogger')('createNativeListener');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
 var multiplex = require('multiplex');
 var thaliConfig = require('../thaliConfig');

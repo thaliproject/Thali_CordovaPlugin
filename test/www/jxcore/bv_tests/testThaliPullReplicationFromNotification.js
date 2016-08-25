@@ -111,6 +111,7 @@ test('Make sure start works', function (t) {
     thaliNotificationClient;
 
   thaliPullReplicationFromNotification.start(bufferArray);
+
   t.doesNotThrow(
     mockThaliNotificationClient.verify.bind(mockThaliNotificationClient),
     'First start and on called correctly'

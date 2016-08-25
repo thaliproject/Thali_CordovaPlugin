@@ -668,36 +668,3 @@ module.exports.runTestOnAllParticipants = function (t, router,
       });
   });
 };
-
-module.exports.exitWithTimeout = function (t, timeout) {
-  var exited = false;
-  function exit(error) {
-    if (!exited) {
-      exited = true;
-      clearTimeout(timer);
-      t.end(error);
-    }
-  }
-  var timer = setTimeout(function () {
-    exit(new Error('test timed out'));
-  }, timeout);
-  return exit;
-}
-
-var checkArgs = function (t, spy, description, args) {
-  t.ok(spy.calledOnce, description + ' was called once');
-
-  var currentArgs = spy.getCalls()[0].args;
-  t.equals(
-    args.length, currentArgs.length,
-    description + ' was called with ' + currentArgs.length + ' arguments'
-  );
-
-  args.forEach(function (arg, index) {
-    var argDescription = description + ' was called with \'' +
-      arg.description + '\' as ' + (index + 1) + '-st argument';
-    t.ok(arg.compare(currentArgs[index]), argDescription);
-  });
-}
-
-module.exports.checkArgs = checkArgs;

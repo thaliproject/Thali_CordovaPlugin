@@ -14,12 +14,14 @@ fi
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to
 # manually set the coordination server's address to.
+# The third argument is optional and if set causes copying of the android unit tests
+# to platforms/android
 
 cd `dirname $0`
 cd ../..
 repositoryRoot=$(pwd)
 cd test/TestServer
-jx npm install
+jx npm install --no-optional
 jx generateServerAddress.js $2
 cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest
@@ -36,9 +38,11 @@ else
 fi
 
 cd ThaliTest
-cordova platform add ios
+# TODO Temporarily disabling ios build
+#cordova platform add ios
 cordova platform add android
 cd www/jxcore
+jx installCustomPouchDB.js
 jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
 
 if [ $runningInMinGw == true ]; then
@@ -61,10 +65,14 @@ find . -name "*.pem" -delete
 
 cp -v $1 app.js
 
+# A file that identifies the current build as a UT build, which results in copying Android native UT files to the platform folder
+touch ../../platforms/android/unittests
+
 cordova build android --release --device
 
-if [ $runningInMinGw == false ]; then
-    cordova build ios --device
-fi
+# TODO Temporarily disabling ios build
+#if [ $runningInMinGw == false ]; then
+#    cordova build ios --device
+#fi
 
 echo "Remember to start the test coordination server by running jx index.js"
