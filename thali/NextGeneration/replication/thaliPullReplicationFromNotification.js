@@ -1,7 +1,7 @@
 'use strict';
 
 var ThaliNotificationClient = require('../notification/thaliNotificationClient');
-var logger = require('../../thalilogger')('thaliPullReplicationFromNotification');
+var logger = require('../../thaliLogger')('thaliPullReplicationFromNotification');
 var assert = require('assert');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');
@@ -71,16 +71,16 @@ function ThaliPullReplicationFromNotification(PouchDB,
   this._started = false;
 }
 
+ThaliPullReplicationFromNotification._peerDictionaryKey =
+  function(connectionType, keyId) {
+    return connectionType + '-' + keyId;
+  };
+
 ThaliPullReplicationFromNotification.prototype._started = null;
 
 ThaliPullReplicationFromNotification.prototype._thaliNotificationClient = null;
 
 ThaliPullReplicationFromNotification.prototype._peerDictionary = null;
-
-ThaliPullReplicationFromNotification.prototype._peerDictionaryKey =
-  function(connectionType, keyId) {
-    return connectionType + '-' + keyId;
-  };
 
 ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
   function (peerAdvertisesDataForUs) {
@@ -91,8 +91,8 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
       return;
     }
 
-    var key = self._peerDictionaryKey(peerAdvertisesDataForUs.connectionType,
-                                      peerAdvertisesDataForUs.keyId);
+    var key = ThaliPullReplicationFromNotification._peerDictionaryKey(
+      peerAdvertisesDataForUs.connectionType, peerAdvertisesDataForUs.keyId);
     var existingAction = self._peerDictionary[key];
     if (existingAction) {
       assert(existingAction.getActionState() ===

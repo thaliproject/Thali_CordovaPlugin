@@ -3,7 +3,7 @@
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var EventEmitter = require('events').EventEmitter;
-var logger = require('../thalilogger')('thaliMobileNativeWrapper');
+var logger = require('../thaliLogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
@@ -51,28 +51,34 @@ module.exports._isStarted = function () {
 
 /**
  * @file
- *
  * This is the primary interface for those wishing to talk directly to the
- * native layer. All the methods defined in this file are asynchronous. However,
- * with the exception of {@link module:thaliMobileNativeWrapper.emitter} and
- * {@link module:thaliMobileNativeWrapper.connect}, any time a method is called
+ * native layer. All the methods defined in this file are asynchronous.
+ * However, with the exception of {@link
+ * module:thaliMobileNativeWrapper.emitter}, {@link
+ * module:thaliMobileNativeWrapper.connect}, {@link
+ * module:thaliMobileNativeWrapper.multiConnect} and {@link
+ * module:thaliMObileNativeWrapper.disconnect), any time a method is called
  * the invocation will immediately return but the request will actually be put
  * on a queue and all incoming requests will be run out of that queue. This
  * means that if one calls two start methods on say advertising or discovery
- * then the first start method will execute, call back its promise and only then
- * will the second start method start running. This restriction is in place to
- * simplify the state model and reduce testing.
+ * then the first start method will execute, call back its promise and only
+ * then will the second start method start running. This restriction is in
+ * place to simplify the state model and reduce testing.
+ *
+ * A similar sort of queue exists for the connect/disconnect methods but it
+ * only applies to calls with the same peerID.
  *
  * ## Why not just call {@link module:thaliMobileNative} directly?
  *
  * Our contract in {@link module:thaliMobileNative} stipulates some behaviors
- * that have to be enforced at the node.js layer. For example, we can only issue
- * a single outstanding non-connect Mobile().callNative command at a time. We
- * also want to change the callbacks from callbacks to promises as well as
- * change registerToNative calls into Node.js events. All of that is handled
- * here. So as a general rule nobody but this module should ever call {@link
- * module:thaliMobileNative}. Anyone who wants to use the {@link
- * module:thaliMobileNative} functionality should be calling this module.
+ * that have to be enforced at the node.js layer. For example, we can only
+ * issue a single outstanding non-connect/multi-connect/disconnect
+ * Mobile().callNative command at a time. We also want to change the callbacks
+ * from callbacks to promises as well as change registerToNative calls into
+ * Node.js events. All of that is handled here. So as a general rule nobody
+ * but this module should ever call {@link module:thaliMobileNative}. Anyone
+ * who wants to use the {@link module:thaliMobileNative} functionality should
+ * be calling this module.
  */
 
 /*
@@ -183,20 +189,38 @@ function stopCreateAndStartServersManager() {
 // jscs:disable jsDoc
 /**
  * This method MUST be called before any other method here other than
- * registering for events on the emitter or calling
- * {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}.
- * This method will cause us to:
+ * registering for events on the emitter or calling {@link
+ * module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}. This method will
+ * cause us to:
+ *
  * - create a TCP server (which MUST use {@link
  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) on a random port and
  * host the router on that server.
+ *
+ * On `multiConnect` platforms (read: iOS) we will also do the following:
+ *
+ * - listen for the {@link
+ * thaliMobileNative~incomingConnectionToPortNumberFailed} callback which will
+ * then cause us to fire a {@link event:incomingConnectionToPortNumberFailed}.
+ *
+ * - listen for the {@link thaliMobileNative~multiConnectResolved} callback
+ * which will then cause us to fire a {@link event:multiConnectResolvedEvent}.
+ * Note however that this event is only consumed within thaliMobileNativeWrapper
+ * and is not intended for external use.
+ *
+ * On `connect` platforms (read: Android) we will also do the following:
+ *
  * - create a {@link module:tcpServersManager}.
- * - listen for the {@link module:tcpServersManager~failedConnection} event and
- * then repeat it.
+ *
+ * - listen for the {@link
+ * module:tcpServersManager~failedConnection} event and then repeat it.
+ *
  * - listen for the {@link module:tcpServersManager~routerPortConnectionFailed}
- * event which we will then cause us to fire a {@link
- * event:incomingConnectionToPortNumberFailed}.
- * - call start on the {@link module:tcpServersManager} object and record the
- * returned port.
+ * event which will then cause us to fire a {@link
+ * event:incomingConnectionToPortNumberFailed}. *
+ *
+ * - call start on the {@link
+ * module:tcpServersManager} object and record the returned port.
  *
  * We MUST register for the native layer handlers exactly once.
  *
@@ -207,7 +231,7 @@ function stopCreateAndStartServersManager() {
  *
  * This method can be called after stop since this is a singleton object.
  *
- * If the given router can't be used as express router, a "Bad Router"
+ * If the given router can't be used as an express router, a "Bad Router"
  * error MUST be returned.
  *
  * @public
@@ -236,7 +260,9 @@ module.exports.start = function (router, pskIdToSecret) {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskCallback : function (id) {
         return pskIdToSecret(id);
-      }
+      },
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
     };
     gRouterServer = https.createServer(options, gRouterExpress).listen(0,
       function () {
@@ -302,7 +328,8 @@ function stop() {
 
 /**
  * This method will call all the stop methods, call stop on the {@link
- * module:tcpServersManager} object and close the TCP server hosting the router.
+ * module:tcpServersManager} object (if we are on a `connect` platform) and
+ * close the TCP server hosting the router.
  *
  * Once called the object is in stop state.
  *
@@ -410,7 +437,8 @@ module.exports.stopListeningForAdvertisements = function () {
  *
  * Therefore the purpose of this method is just to raise the "state changed"
  * flag. Each time it is called a new event will be generated that will tell
- * listeners that the system has changed state since the last call. Therefore
+ * listeners that the system has changed state since the last call. This
+ * usually translates to a change in the peer's generation counter. Therefore
  * this method is not idempotent since each call causes a state change.
  *
  * Once an advertisement is sent out as a result of calling this method
@@ -420,7 +448,7 @@ module.exports.stopListeningForAdvertisements = function () {
  *
  * ## Incoming Connections
  *
- * By default all incoming TCP connections generated by {@link
+ * On `connect` platforms all incoming TCP connections generated by {@link
  * external:"Mobile('startUpdateAdvertisingAndListening')".callNative} MUST be
  * passed through a multiplex layer. The details of how this layer works are
  * given in {@link module:TCPServersManager}. This method will pass the port
@@ -429,7 +457,11 @@ module.exports.stopListeningForAdvertisements = function () {
  *
  * If the TCP connection established by the native layer to the previously
  * specified port is terminated by the server for any reason then the native
- * layer MUST tear down the associated Bluetooth socket or MPCF mcSession.
+ * layer MUST tear down the associated non-TCP connection.
+ *
+ * On `multiConnect` platforms all incoming TCP connections are sent directly to
+ * the router started by {@link module:TCPServersManager.start} since we have
+ * no need for {@link module:TCPServersManager} on these platforms.
  *
  * ## Repeated calls
  *
@@ -523,18 +555,76 @@ module.exports.getNonTCPNetworkStatus = function () {
   });
 };
 
+/**
+ * This calls the native multiConnect method. This code is responsible for
+ * honoring the restrictions placed on calls to multiConnect. Which is that
+ * there cannot be more than one call waiting for an async response to
+ * multiConnect or disconnect for the same peerIdentifier at any one time.
+ * If we receive multiple calls for the same peerIdentifier then we must
+ * queue them up in the same way we queue up requests to calls like
+ * startListeningForAdvertisements.
+ *
+ * This call is also responsible for connecting together the multiConnect call
+ * with its eventual multiConnectResolved callback response. This means that
+ * when we call multiConnect we MUST generate a unique identifier (a counter
+ * would work fine) to pass in as the syncValue and then we MUST listen on the
+ * multiConnectResolved callback waiting to hear that same syncValue and then
+ * return the result to the caller of this method.
+ *
+ * @private
+ * @param  {string} peerIdentifier The value taken from a
+ * peerAvailabilityChanged event.
+ * @return {Promise<number|Error} The promise will either return an integer with
+ * the localhost port to connect to or an Error object.
+ */
+module.exports._multiConnect = function (peerIdentifier) {
+  return Promise.reject(new Error('Not yet implemented'));
+};
+
+/**
+ * This function attempts to obtain a port that Node code can use to open TCP/IP
+ * connections to a remote peer.
+ *
+ * If this function is called either for a peer for which there has been no
+ * nonTCPPeerAvailabilityChanged with peerAvailable set to true or for a peer
+ * whose last nonTCPPeerAvailabilityChanged event had peerAvailable set to false
+ * then this method MUST return a "peer not available" error.
+ *
+ * If the peerIdentifier identifies a peer for which the last
+ * nonTCPPeerAvailabilityChanged event advertised peerAvaiable set to true then
+ * the behavior depends on our platform:
+ *
+ * On a 'connect' platform this call MUST call
+ * {@link module:tcpServersManager.createPeerListener} and forward the result of
+ * the call.
+ *
+ * On a 'multiConnect' platform this call MUST call _multiConnect and forward
+ * the result of the call.
+ *
+ * @public
+ * @param {string} peerIdentifier
+ * @returns {Promise<number|Error>}
+ */
+module.exports.getPort = function (peerIdentifier) {
+  return Promise.reject(new Error('Not Yet Implemented'));
+};
+
 // jscs:disable jsDoc
 /**
- * This is used for native connections and calls through to
- * ThaliTcpServersManager.
+ * This is used on `connect` platforms for native connections and calls through
+ * to ThaliTcpServersManager.
  *
+ * If called on a non-`connect` platform then a 'Not connect platform' error
+ * MUST be returned.
+ *
+ * @private
  * @param {Object} incomingConnectionId
  * @returns {Promise<?Error>}
  */
 // jscs:enable jsDoc
-module.exports.terminateConnection = function (incomingConnectionId) {
+module.exports._terminateConnection = function (incomingConnectionId) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    gServersManager.terminateConnection(incomingConnectionId)
+    gServersManager.terminateIncomingConnection(incomingConnectionId)
     .then(function () {
       resolve();
     })
@@ -545,12 +635,49 @@ module.exports.terminateConnection = function (incomingConnectionId) {
 };
 
 /**
- * Terminates a server listening for connections to be sent to a remote device.
+ * This calls the native disconnect method. This code is responsible for
+ * honoring the restrictions placed on calls to multiConnect/disconnect in terms
+ * of parallel calls with the same ID as described in the _multiConnect command.
+ *
+ * @private
+ * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
+ * event.
+ * @returns {Promise<?Error>} Unless something bad happens (in which case a
+ * reject with an Error will be returned) the response will be a resolve with
+ * a null result.
+ */
+module.exports._disconnect = function (peerIdentifier) {
+  return Promise.reject(new Error('Not yet implemented'));
+};
+
+/**
+ * Terminates a connection with the named peer. If there is no such connection
+ * then the method will still return success.
+ *
+ * On 'connect' platforms this calls _terminateConnection method and on
+ * `multiConnect` platforms this calls _disconnect.
+ *
+ * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
+ * event.
+ * @returns {Promise<?Error>} Unless something bad happens (in which case a
+ * reject with an Error will be returned) the response will be a resolve with
+ * a null result.
+ */
+module.exports.disconnect = function(peerIdentifier) {
+  return Promise.reject(new Error('Not yet implemented'));
+}
+
+/**
+ * Used on `connect` platforms to terminate a TCP/IP listener waiting for
+ * connections to be sent to a remote device.
  *
  * It is NOT an error to terminate a listener that has already been terminated.
  *
  * This method MUST be idempotent so multiple calls with the same value MUST NOT
  * cause an error or a state change.
+ *
+ * If called on a non-`connect` platform then a 'Not connect platform' error
+ * MUST be returned.
  *
  * @param {string} peerIdentifier
  * @param {number} port
@@ -611,6 +738,40 @@ module.exports.killConnections = function () {
  */
 
 /**
+ * Enum to define the types of connections
+ *
+ * @readonly
+ * @enum {string}
+ */
+var connectionTypes = {
+  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
+  BLUETOOTH: 'AndroidBluetooth',
+  TCP_NATIVE: 'tcp'
+};
+module.exports.connectionTypes = connectionTypes;
+
+/**
+ *
+ * @public
+ * @typedef {Object} failedNativeConnection
+ * @property {Error} error
+ * @property {string} peerIdentifier
+ * @property {connectionTypes} connectionType
+ */
+
+/**
+ * Fired when a native connection is lost. This event is fired either as a
+ * result of {@link module:ThaliTcpServersManager.event:failedConnection} or
+ * as a result of
+ * {@link module:ThaliMobileNative.event:multiConnectConnectionFailure}.
+
+ * @public
+ * @event failedNativeConnectionEvent
+ * @type {Object}
+ * @property {failedNativeConnection} failedConnection
+ */
+
+/**
  * When a {@link module:thaliMobileNative~peerAvailabilityChangedCallback}
  * occurs each peer MUST be placed into a queue. Each peer in the queue MUST be
  * processed as given below and only once all processing related to that peer
@@ -624,23 +785,23 @@ module.exports.killConnections = function () {
  * peerAvailable = false for that peer. But when the system decides to issue a
  * peer not available event it MUST issue a {@link
  * event:nonTCPPeerAvailabilityChangedEvent} with peerIdentifier set to the
- * value in the peer object and portNumber set to null.
- *
- * If a peer's peerAvailable is set to true then we MUST call {@link
- * module:tcpServersManager.createPeerListener}. If an error is returned then
- * the error MUST be logged and we MUST treat this as if we received the value
- * with peerAvailable equal to false. If the call is a success then we MUST
- * issue a {@link event:nonTCPPeerAvailabilityChangedEvent} with peerIdentifier
- * set to the value in the peer object and portNumber set to the returned value.
+ * value in the peer object, the generation set as in the event and
+ * peerAvailable set to false.
  *
  * @public
  * @typedef {Object} nonTCPPeerAvailabilityChanged
  * @property {string} peerIdentifier See {@link
  * module:thaliMobileNative~peer.peerIdentifier}.
- * @property {?number} portNumber If this value is null then the system is
- * advertising that it no longer believes this peer is available. If this value
- * is non-null then it is a port on 127.0.0.1 at which the local peer can
- * connect in order to establish a TCP/IP connection to the remote peer.
+ * @property {boolean} peerAvailable If false then the system is advertising
+ * that it no longer believes this peer is available.
+ * @property {?number} generation An integer which counts changes in the peer's
+ * database. On Android this integer has only 8 bytes and so will roll over.
+ * This value MUST be null if peerAvailable is set to false.
+ * @property {?number} portNumber This value MUST be null if peerAvailable is
+ * false. If this value is non-null then it is a port on 127.0.0.1 at which the
+ * local peer can connect in order to establish a TCP/IP connection to the
+ * remote peer. This value will only be set on `connect` platforms, it will
+ * always be null for `multiConnect`.
  */
 
 // jscs:disable maximumLineLength
@@ -663,14 +824,10 @@ module.exports.killConnections = function () {
  * module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} for details on
  * how to process each peer.
  *
- * If we receive a {@link module:tcpServersManager~failedConnection} then we
- * MUST treat that as the equivalent of having received a peer for
- * nonTCPPeerAvailabilityChanged with peerAvailable set to false.
- *
  * @public
  * @event nonTCPPeerAvailabilityChangedEvent
  * @type {Object}
- * @property {module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} peer
+ * @property {nonTCPPeerAvailabilityChanged} peer
  */
 // jscs:enable maximumLineLength
 var peerAvailabilityChangedQueue = new PromiseQueue();
@@ -786,6 +943,18 @@ module.exports.routerFailureReason = {
  */
 
 /**
+ * Repeats multiConnectResolved callbacks. This is only used internally within
+ * this file and is not intended to be exposed externally.
+ *
+ * @public
+ * @event multiConnectResolvedEvent
+ * @type {Object}
+ * @property {string} syncValue
+ * @property {?string} error
+ * @property {?number} port
+ */
+
+/**
  * Use this emitter to subscribe to events.
  *
  * @public
@@ -793,7 +962,7 @@ module.exports.routerFailureReason = {
  * @fires event:networkChangedNonTCP
  * @fires event:incomingConnectionToPortNumberFailed
  * @fires event:discoveryAdvertisingStateUpdateNonTCP
- * @fires module:TCPServersManager~failedConnection We repeat these events
+ * @fires event:failedNativeConnectionEvent
  * @fires module:TCPServersManager~incomingConnectionState we repeat these
  * events.
  */

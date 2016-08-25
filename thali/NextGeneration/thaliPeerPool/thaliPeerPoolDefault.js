@@ -64,15 +64,15 @@ var logger = require('../../thalilogger')('thaliPeerPoolDefault');
  */
 function ThaliPeerPoolDefault() {
   ThaliPeerPoolDefault.super_.call(this);
-  this.stopped = false;
+  this._stopped = false;
 }
 
 util.inherits(ThaliPeerPoolDefault, ThaliPeerPoolInterface);
 
-ThaliPeerPoolDefault.prototype.stopped = null;
+ThaliPeerPoolDefault.prototype._stopped = null;
 
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
-  if (this.stopped) {
+  if (this._stopped) {
     return new Error('We are stopped');
   }
 
@@ -118,11 +118,11 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
  */
 ThaliPeerPoolDefault.prototype.stop = function () {
   var self = this;
-  if (self.stopped) {
+  if (self._stopped) {
     return;
   }
 
-  self.stopped = true;
+  self._stopped = true;
 
   Object.getOwnPropertyNames(self._inQueue).forEach(function (actionId) {
     self._inQueue[actionId].kill();

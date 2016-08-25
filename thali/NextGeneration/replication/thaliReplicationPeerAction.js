@@ -6,13 +6,14 @@ var ThaliPeerAction = require('../thaliPeerPool/thaliPeerAction');
 var actionState = ThaliPeerAction.actionState;
 var assert = require('assert');
 var thaliConfig = require('../thaliConfig');
-var logger = require('../../thalilogger')('thaliReplicationPeerAction');
+var logger = require('../../thaliLogger')('thaliReplicationPeerAction');
 var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
 
 /** @module thaliReplicationPeerAction */
 
+// jscs:disable maximumLineLength
 /**
  * @classdesc Manages replicating information with a peer we have discovered
  * via notifications.
@@ -25,12 +26,13 @@ var RefreshTimerManager = require('./utilities').RefreshTimerManager;
  * use.
  * @param {string} dbName The name of the DB we will use both for local use as
  * well as remote use. Note that we will get the name for the remote database by
- * taking dbName and appending it to http://[hostAddress]:[portNumber]/db/
- * [name] where hostAddress and portNumber are from the peerAdvertisesDataForUs
- * argument.
+ * taking dbName and appending it to http://[hostAddress]:[portNumber] / +
+ * thaliConfig.BASE_DB_PATH + / [name] where hostAddress and portNumber are from
+ * the peerAdvertisesDataForUs argument.
  * @param {Buffer} ourPublicKey The buffer containing our ECDH public key
  * @constructor
  */
+// jscs:enable maximumLineLength
 function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
                                     PouchDB,
                                     dbName,
@@ -110,7 +112,7 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
   }
   self._refreshTimerManager = new RefreshTimerManager(
     ThaliReplicationPeerAction.maxIdlePeriodSeconds * 1000,
-    function() {
+    function () {
       self._complete([new Error('No activity time out')]);
     });
   self._refreshTimerManager.start();
@@ -135,7 +137,7 @@ ThaliReplicationPeerAction.prototype._complete =
     if (!errorArray || errorArray.length === 0) {
       return this._resolveStart();
     }
-    for(var i = 0; i < errorArray.length; ++i) {
+    for (var i = 0; i < errorArray.length; ++i) {
       if (errorArray[i].message === 'connect ECONNREFUSED') {
         return this._rejectStart(
           new Error('Could not establish TCP connection'));
@@ -149,6 +151,7 @@ ThaliReplicationPeerAction.prototype._complete =
     this._rejectStart(errorArray[0]);
   };
 
+// jscs:disable maximumLineLength
 /**
  * When start is called we will start a replication with the remote peer using
  * the settings specified below. We will need to create the URL using the
@@ -208,6 +211,7 @@ ThaliReplicationPeerAction.prototype._complete =
  * the PSK related settings are specified.
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   var self = this;
 
@@ -245,7 +249,8 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
       it seems to work.
        */
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
-        ':' + self._peerAdvertisesDataForUs.portNumber + '/db/' + self._dbName;
+        ':' + self._peerAdvertisesDataForUs.portNumber +
+        thaliConfig.BASE_DB_PATH +'/' + self._dbName;
       var ajaxOptions = {
         ajax : {
           agentClass: ForeverAgent.SSL,
@@ -281,8 +286,8 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
             logger.debug('Replication resumed');
           })
           .on('denied', function (err) {
-            logger.warn('We got denied on a PouchDB access, this really should ' +
-              'not happen - ' + err);
+            logger.warn('We got denied on a PouchDB access, this really ' +
+              'should not happen - ' + err);
           })
           .on('complete', function (info) {
             self._complete(info.errors);

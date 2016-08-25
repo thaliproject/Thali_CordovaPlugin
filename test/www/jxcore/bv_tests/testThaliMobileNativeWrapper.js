@@ -304,7 +304,9 @@ test('all services are stopped when we call stop', function (t) {
 var verifyCallWithArguments = function (t, callName, parameters) {
   var mockServersManager = {};
   var spy = sinon.spy();
-  mockServersManager[callName] = function () {
+  var serversManagerEquivalentCallName = callName === '_terminateConnection' ?
+    'terminateIncomingConnection' : callName;
+  mockServersManager[serversManagerEquivalentCallName] = function () {
     spy.apply(this, arguments);
     return Promise.resolve();
   };
@@ -323,7 +325,7 @@ var verifyCallWithArguments = function (t, callName, parameters) {
 };
 
 test('make sure terminateConnection is properly hooked up', function (t) {
-  verifyCallWithArguments(t, 'terminateConnection', ['connection-id']);
+  verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
 });
 
 test('make sure terminateListener is properly hooked up', function (t) {
