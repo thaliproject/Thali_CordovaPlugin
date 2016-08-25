@@ -27,12 +27,12 @@ public final class BrowserManager: NSObject {
         self.serviceType = serviceType
     }
 
-    private func foundPeer(with identifier: PeerIdentifier) {
+    private func handleFoundPeer(with identifier: PeerIdentifier) {
         peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
         availablePeers.append(identifier)
     }
 
-    private func lostPeer(with identifier: PeerIdentifier) {
+    private func handleLostPeer(with identifier: PeerIdentifier) {
         peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
         if let index = availablePeers.indexOf(identifier) {
             availablePeers.removeAtIndex(index)
@@ -44,7 +44,7 @@ public final class BrowserManager: NSObject {
             currentBrowser.stopListening()
         }
         let browser = Browser(serviceType: serviceType,
-                              foundPeer: foundPeer, lostPeer: lostPeer)
+                              foundPeer: handleFoundPeer, lostPeer: handleLostPeer)
         browser.startListening()
         self.currentBrowser = browser
     }
