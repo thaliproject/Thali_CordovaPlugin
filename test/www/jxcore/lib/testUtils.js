@@ -8,7 +8,7 @@ var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
 var Promise = require('lie');
 var https = require('https');
-var logger = require('thali/thalilogger')('testUtils');
+var logger = require('thali/thaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
@@ -477,7 +477,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
 module.exports.createPskPouchDBRemote = function (serverPort, dbName,
                                                  pskId, pskKey, host) {
   var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
-    '/db/' + dbName;
+    thaliConfig.BASE_DB_PATH + '/' + dbName;
 
   /**
    * See the notes in thaliReplicationPeerAction.start for why the below
@@ -513,7 +513,7 @@ module.exports.validateCombinedResult = function (combinedResult) {
 module.exports.setUpServer = function (testBody, appConfig) {
   var app = express();
   appConfig && appConfig(app);
-  app.use('/db', expressPouchdb(LevelDownPouchDB, {mode: 'minimumForPouchDB'}));
+  app.use(thaliConfig.BASE_DB_PATH, expressPouchdb(LevelDownPouchDB, {mode: 'minimumForPouchDB'}));
   var testCloseAllServer = makeIntoCloseAllServer(https.createServer(
     {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,

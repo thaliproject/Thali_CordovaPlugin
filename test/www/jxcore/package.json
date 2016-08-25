@@ -50,7 +50,7 @@
     "thali": "*",
     "tmp": "0.0.28",
     "urlsafe-base64": "1.0.0",
-    "uuid": "2.0.0",
+    "uuid": "2.0.2",
     "salti": "https://github.com/thaliproject/salti.git#master",
     "longjohn": "0.2.11"
   },
