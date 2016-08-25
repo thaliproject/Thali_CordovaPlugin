@@ -224,15 +224,15 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
     }
 
     ThaliMobile
-      .getAddressPort(peerStatus.peerIdentifier, peerStatus.connectionType)
-      .then(function (portAddressInfo) {
+      .getPeerHostInfo(peerStatus.peerIdentifier, peerStatus.connectionType)
+      .then(function (peerHostInfo) {
         assert(!this.peerDictionary.exists(peerStatus.peerIdentifier),
           'peerAvailabilityChanged event with the same peerId'+
           ' should not occur. peerIdentifier:' + peerStatus.peerIdentifier);
 
         var peerConnectionInfo = new PeerDictionary.PeerConnectionInformation(
-          peerStatus.connectionType, portAddressInfo.hostAddress,
-          portAddressInfo.portNumber, portAddressInfo.suggestedTCPTimeout);
+          peerStatus.connectionType, peerHostInfo.hostAddress,
+          peerHostInfo.portNumber, peerHostInfo.suggestedTCPTimeout);
 
         var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
           PeerDictionary.peerState.CONTROLLED_BY_POOL);
