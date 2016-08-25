@@ -331,7 +331,7 @@ test('wifi peer is marked unavailable if announcements stop',
         return;
       }
 
-      // TODO
+      // TODO Apply changes from #904 to tests
       spy();
       if (spy.calledOnce) {
         t.equal(peer.peerAvailable, true, 'peer should be available');
