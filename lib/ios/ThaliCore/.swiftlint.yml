@@ -56,6 +56,7 @@ nesting: warning
 opening_brace: error
 operator_whitespace: error
 private_outlet: warning
+#private_unit_test:
 return_arrow_whitespace: error
 statement_position:
   #statement_mode: default
@@ -77,6 +78,9 @@ type_name:
     warning: 45
     error: 60
   excluded:
+    - URL
+    - id
+    - API
 valid_docs: warning
 variable_name:
   min_length:
@@ -85,6 +89,9 @@ variable_name:
   max_length:
     warning: 45
     error: 60
+  excluded:
+     - url
+     - app
 vertical_whitespace: warning
 
 # opt-in ?
