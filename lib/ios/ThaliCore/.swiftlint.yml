@@ -15,4 +15,40 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Pods
 
 # configurable rules can be customized from this configuration file
-line_length: 130
+closing_brace: warning
+colon: warning
+comma: warning
+control_statement: warning
+file_length: warning
+force_cast: warning
+force_try: warning
+function_body_length: warning
+leading_whitespace: warning
+legacy_cggeometry_functions: warning
+legacy_constant: warning
+legacy_constructor: warning
+legacy_nsgeometry_functions: warning
+line_length: warning
+mark: warning
+nesting: warning
+opening_brace: warning
+operator_whitespace: warning
+private_outlet: warning
+return_arrow_whitespace: warning
+statement_position: warning
+todo: warning
+trailing_newline: warning
+trailing_semicolon: warning
+trailing_whitespace: warning
+type_body_length: warning
+type_name: warning
+valid_docs: warning
+variable_name: warning
+vertical_whitespace: warning
+
+# opt-in ?
+conditional_returns_on_newline: warning
+cyclomatic_complexity: warning
+empty_count: warning
+force_unwrapping: warning
+missing_docs: warning
