@@ -59,7 +59,7 @@ public final class TestRunner: NSObject {
         for testRun in testSuiteRun.testRuns {
             executedCount += Int(testRun.executionCount)
             failureCount += Int(testRun.failureCount)
-            succeededCount += 0//Int(testRun.executionCount - testRun.failureCount)
+            succeededCount += Int(testRun.executionCount - testRun.failureCount)
         }
 
         return TestRunner.RunResult(
@@ -73,12 +73,10 @@ public final class TestRunner: NSObject {
 
     public func runTest() -> String? {
         // Test must only be run on the main thread.
-        dispatch_sync(dispatch_get_main_queue()) {
-            self.testSuite.runTest()
-        }
-        return runResult.jsonString
+        // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
+        testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
     }
-    
+
 }
 
 // MARK:
