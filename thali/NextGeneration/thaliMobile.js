@@ -475,7 +475,7 @@ var getBluetoothAddressPortInfo = fucntion (peer) {
 }
 
 var getMPCFAddressPortInfo = fucntion (peer) {
-  return thaliMobileNativeWrapper
+  return ThaliMobileNativeWrapper
     ._multiConnect(peer.peerIdentifier)
     .then(function (portNumber) {
       var portInfo = new AddressPortInfo({
