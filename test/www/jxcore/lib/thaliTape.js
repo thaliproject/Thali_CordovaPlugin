@@ -202,7 +202,7 @@ var platform =
   'android' :
   'ios';
 
-thaliTape.begin = function (version, hasRequiredHardware) {
+thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
 
   var serverOptions = {
     transports: ['websocket']
@@ -235,6 +235,7 @@ thaliTape.begin = function (version, hasRequiredHardware) {
       os: platform,
       version: version,
       supportedHardware: hasRequiredHardware,
+      nativeUTFailed: nativeUTFailed,
       name: testUtils.getName(),
       uuid: thaliTape.uuid,
       type: 'unittest',
@@ -302,20 +303,27 @@ thaliTape.begin = function (version, hasRequiredHardware) {
     }
   });
 
+  testServer.once('aborted', function () {
+    testUtils.logMessageToScreen('Tests aborted');
+    complete = true;
+    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+  });
+
   // Only used for testing purposes..
   thaliTape._testServer = testServer;
 };
 
+var objectToExport;
 if (typeof jxcore === 'undefined' ||
     typeof Mobile !== 'undefined') {
   // On mobile, or outside of jxcore (some dev scenarios) we use
   // the server-coordinated thaliTape
-  exports = thaliTape;
-  exports.coordinated = true;
+  objectToExport = thaliTape;
+  objectToExport.coordinated = true;
 } else {
   // On desktop we just use simple non-coordinated tape
-  exports = require('./simpleTape');
-  exports.coordinated = false;
+  objectToExport = require('./simpleTape');
+  objectToExport.coordinated = false;
 }
 
-module.exports = exports;
+module.exports = exports = objectToExport;

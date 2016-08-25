@@ -31,12 +31,12 @@ if (process.platform === 'android' || process.platform === 'ios') {
       }
     }
   });
-
-  if (!utResult) {
-    console.log('Failed to execute UT.');
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-    return;
   }
+});
+
+if (!utResult) {
+  console.log("Failed to execute UT.");
+  global.nativeUTFailed = true;
 }
 
 ThaliMobile.getNetworkStatus()
