@@ -9,7 +9,7 @@ var nodessdp = require('node-ssdp');
 var express = require('express');
 var https = require('https');
 var net = require('net');
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 var sinon = require('sinon');
 var randomstring = require('randomstring');
 

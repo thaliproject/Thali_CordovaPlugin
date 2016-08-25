@@ -1256,23 +1256,26 @@ test('Test updating advertising and parallel data transfer', function (t) {
     t.end();
   }, 60 * 1000);
 
-  Promise.all([clientRound(t, 0, boundListener, clientQuitSignal),
-               serverRound(t, 0, pretendLocalMux, serverQuitSignal)])
-    .then(function () {
-      logger.debug('We made it through round one');
-      clientQuitSignal = new QuitSignal();
-      serverQuitSignal = new QuitSignal();
-      return Promise.all([clientRound(t, 1, boundListener, clientQuitSignal),
-                          serverRound(t, 1, pretendLocalMux,
-                                      serverQuitSignal)]);
-    })
-    .catch(function (err) {
-      t.fail('Got error ' + err);
-    })
-    .then(function () {
-      clearTimeout(timeoutId);
-      t.end();
-    });
+  Promise.all([
+    clientRound(t, 0, boundListener, clientQuitSignal),
+    serverRound(t, 0, pretendLocalMux, serverQuitSignal)
+  ])
+  .then(function () {
+    logger.debug('We made it through round one');
+    clientQuitSignal = new QuitSignal();
+    serverQuitSignal = new QuitSignal();
+    return Promise.all([
+      clientRound(t, 1, boundListener, clientQuitSignal),
+      serverRound(t, 1, pretendLocalMux, serverQuitSignal)
+    ]);
+  })
+  .catch(function (err) {
+    t.fail('Got error ' + err);
+  })
+  .then(function () {
+    clearTimeout(timeoutId);
+    t.end();
+  });
 
   startAndListen(t, pretendLocalMux, function (peers) {
     boundListener.listener(peers);

@@ -2,7 +2,6 @@
 
 var logger = require('../utils/thaliLogger')('localSeqManager');
 var Promise = require('lie');
-var thaliNotificationBeacons = require('../notification/thaliNotificationBeacons');
 var assert = require('assert');
 var urlSafeBase64 = require('urlsafe-base64');
 var thaliConfig = require('../thaliConfig');
@@ -57,13 +56,16 @@ function LocalSeqManager(maximumUpdateInterval,
 LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
   var self = this;
 
-  if (self._stopCalled) {
+  if (this._stopCalled) {
     return Promise.reject(new Error('Stop Called'));
   }
 
   self._lastUpdateTime = Date.now();
 
-  function getRevOrNull() {
+  function getLocalIdRevOrNull() {
+    if (self._seqDocRev) {
+      return Promise.resolve(self._seqDocRev);
+    }
     return self._remotePouchDB.get(self._localId)
       .then(function (response) {
         return response._rev;
@@ -76,7 +78,7 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
       });
   }
 
-  return (self._seqDocRev ? Promise.resolve(self._seqDocRev) : getRevOrNull())
+  return getLocalIdRevOrNull()
     .then(function (rev) {
       if (self._stopCalled) {
         var error = new Error('Stop Called');
@@ -103,7 +105,11 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
  * Instructs the system to update lastSyncedSequenceNumber on the remote
  * machine. By default we will only push out an update no more than every
  * maximumUpdateInterval as provided on the constructor unless immediate is set
- * to true.
+ * to true. We also won't push out an update until we get confirmation that
+ * any previous updates have been processed, this prevents race conditions
+ * where the sequence number can end up wrong along with the rev we have
+ * to track for the remote doc (we have to have that rev in order to push an
+ * update).
  *
  * @param {number} seq Value to update lastSyncedSequenceNumber to
  * @param {boolean} [immediate] If true we should update the sequence number
@@ -113,6 +119,10 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
  */
 LocalSeqManager.prototype.update = function (seq, immediate) {
   var self = this;
+
+  if (this._stopCalled) {
+    return Promise.reject(new Error('Stop Called'));
+  }
 
   function cancelTimer(reject) {
     clearTimeout(self._cancelTimeoutToken);
@@ -146,10 +156,6 @@ LocalSeqManager.prototype.update = function (seq, immediate) {
     });
     return self._blockedUpdateRequest ? self._blockedUpdateRequest :
             self._currentUpdateRequest;
-  }
-
-  if (self._stopCalled) {
-    return Promise.reject(new Error('Stop Called'));
   }
 
   if (seq <= self._nextSeqValueToSend) {
@@ -202,6 +208,36 @@ LocalSeqManager.prototype.update = function (seq, immediate) {
 LocalSeqManager.prototype.stop = function () {
   this._stopCalled = true;
   clearTimeout(this._cancelTimeoutToken);
+  if (this._timerReject) {
+    this._timerReject(new Error('Timer Cancelled'));
+  }
 };
+
+LocalSeqManager.prototype.waitUntilStopped = function () {
+  // We have just killed all requests.
+  // We don't care if any request will end with an error.
+
+  var promises = [];
+  if (this._blockedUpdateRequest) {
+    promises.push(
+      this._blockedUpdateRequest
+      .catch(function () {})
+    );
+  } else if (this._currentUpdateRequest) {
+    promises.push(
+      this._currentUpdateRequest
+      .catch(function () {})
+    );
+  }
+
+  if (this._timerPromise) {
+    promises.push(
+      this._timerPromise
+      .catch(function () {})
+    );
+  }
+
+  return Promise.all(promises);
+}
 
 module.exports = LocalSeqManager;

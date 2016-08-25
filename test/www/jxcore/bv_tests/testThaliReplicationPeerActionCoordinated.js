@@ -42,34 +42,44 @@ var test = tape({
       new ThaliNotificationServer(router, devicePublicPrivateKey,
         60 * 60 * 1000);
 
+    var peerPool = new ThaliPeerPoolDefault();
+    peerPool.start();
     thaliNotificationClient =
-      new ThaliNotificationClient(new ThaliPeerPoolDefault(),
+      new ThaliNotificationClient(peerPool,
         devicePublicPrivateKey);
     t.end();
   },
   teardown: function (t) {
-    thaliReplicationPeerAction && thaliReplicationPeerAction.kill();
-    thaliNotificationServer.stop()
-      .then(function () {
-        return thaliNotificationClient.stop();
-      })
-      .then(function () {
-        return ThaliMobile.stop();
-      })
-      .then(function (combinedResult) {
-        if (combinedResult.wifiResult !== null ||
-          combinedResult.nativeResult !== null) {
-          return Promise.reject(
-            new Error('Had a failure in ThaliMobile.start - ' +
-              JSON.stringify(combinedResult)));
-        }
-      })
-      .catch(function (err) {
-        t.fail('Got error in teardown - ' + JSON.stringify(err));
-      })
-      .then(function () {
-        t.end();
-      });
+    Promise.resolve()
+    .then(function () {
+      if (thaliReplicationPeerAction) {
+        thaliReplicationPeerAction.kill();
+        return thaliReplicationPeerAction.waitUntilKilled();
+      }
+    })
+    .then(function () {
+      return thaliNotificationServer.stop();
+    })
+    .then(function () {
+      return thaliNotificationClient.stop();
+    })
+    .then(function () {
+      return ThaliMobile.stop();
+    })
+    .then(function (combinedResult) {
+      if (combinedResult.wifiResult !== null ||
+        combinedResult.nativeResult !== null) {
+        return Promise.reject(
+          new Error('Had a failure in ThaliMobile.start - ' +
+            JSON.stringify(combinedResult)));
+      }
+    })
+    .catch(function (err) {
+      t.fail('Got error in teardown - ' + JSON.stringify(err));
+    })
+    .then(function () {
+      t.end();
+    });
   }
 });
 
@@ -92,8 +102,17 @@ test('Coordinated replication action test', function (t) {
               }
               exited = true;
               changes && changes.cancel();
-              thaliReplicationPeerAction && thaliReplicationPeerAction.kill();
-              return err ? reject(err) : resolve();
+
+              return Promise.resolve()
+              .then(function () {
+                if (thaliReplicationPeerAction) {
+                  thaliReplicationPeerAction.kill();
+                  return thaliReplicationPeerAction.waitUntilKilled();
+                }
+              })
+              .then(function () {
+                return err ? reject(err) : resolve();
+              });
             }
             changes = localPouchDB.changes({
               since: 0,

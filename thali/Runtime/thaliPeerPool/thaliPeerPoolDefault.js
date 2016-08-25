@@ -64,27 +64,23 @@ var logger = require('../utils/thaliLogger')('thaliPeerPoolDefault');
  */
 function ThaliPeerPoolDefault() {
   ThaliPeerPoolDefault.super_.call(this);
-  this.stopped = false;
+  this._stopped = true;
 }
 
 util.inherits(ThaliPeerPoolDefault, ThaliPeerPoolInterface);
+ThaliPeerPoolDefault.ERRORS = ThaliPeerPoolInterface.ERRORS;
 
-ThaliPeerPoolDefault.prototype.stopped = null;
+ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
 
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
-  if (this.stopped) {
-    return new Error('We are stopped');
+  if (this._stopped) {
+    throw new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
 
-  // Right now we will just allow everything to run parallel
+  // Right now we will just allow everything to run parallel.
 
-  var enqueueResult =
-    ThaliPeerPoolDefault.super_.prototype
-      .enqueue.call(this, peerAction);
-
-  if (enqueueResult) {
-    return enqueueResult;
-  }
+  var result =
+    ThaliPeerPoolDefault.super_.prototype.enqueue.apply(this, arguments);
 
   var actionAgent = new ForeverAgent.SSL({
     keepAlive: true,
@@ -101,14 +97,21 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   // cleanup code gets called regardless of how the action ended.
   peerAction.start(actionAgent)
     .catch(function (err) {
-      logger.debug('Got err ' + err);
+      logger.debug('Got err ', Utils.serializePouchError(err));
     })
     .then(function () {
       peerAction.kill();
     });
 
-  return null;
+  return result;
 };
+
+ThaliPeerPoolDefault.prototype.start = function () {
+  var self = this;
+  this._stopped = false;
+
+  return ThaliPeerPoolDefault.super_.prototype.start.apply(this, arguments);
+}
 
 /**
  * This function is used primarily for cleaning up after tests and will
@@ -118,15 +121,9 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
  */
 ThaliPeerPoolDefault.prototype.stop = function () {
   var self = this;
-  if (self.stopped) {
-    return;
-  }
+  this._stopped = true;
 
-  self.stopped = true;
-
-  Object.getOwnPropertyNames(self._inQueue).forEach(function (actionId) {
-    self._inQueue[actionId].kill();
-  });
+  return ThaliPeerPoolDefault.super_.prototype.stop.apply(this, arguments);
 };
 
 module.exports = ThaliPeerPoolDefault;

@@ -9,8 +9,8 @@ var proxyquire = require('proxyquire').noCallThru();
 
 var ThaliNotificationClient =
   require('thali/Runtime/notification/thaliNotificationClient');
-var ThaliMobile =
-  require('thali/Runtime/networking/thaliMobile');
+var ThaliMobileNativeWrapper =
+  require('thali/Runtime/networking/thaliMobileNativeWrapper');
 var ThaliPeerPoolDefault =
   require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 var thaliConfig =
@@ -48,7 +48,7 @@ var GlobalVariables = function () {
     peerIdentifier: 'id123',
     hostAddress: '127.0.0.1',
     portNumber: 0,
-    connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
+    connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     suggestedTCPTimeout: 10000
   };
 

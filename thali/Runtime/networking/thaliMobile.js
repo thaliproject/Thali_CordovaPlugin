@@ -7,6 +7,7 @@ var logger = require('../utils/thaliLogger')('thaliMobile');
 var thaliConfig = require('../thaliConfig');
 
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
+var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 
 var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
 var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
@@ -188,7 +189,7 @@ module.exports.start = function (router, pskIdToSecret) {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stop = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates = getInitialStates();
     clearInterval(peerAvailabilityWatcherInterval);
     module.exports.emitter
@@ -210,20 +211,19 @@ module.exports.stop = function () {
  * This method calls the underlying startListeningForAdvertisements
  * functions.
  *
- * Note that once this method is called
- * it is giving explicit permission to this code to call this method
- * on a radio stack that is currently disabled when the method is called but is
- * later re-enabled due to a network changed event. In other words if {@link
- * module:thaliMobile.start} is called and say WiFi doesn't work. Then this
- * method is called and so advertising is only started for the non-TCP
- * transport. Then a network changed event happens indicating that WiFi is
- * available. Since we are still in start state this code will automatically
- * call {@link module:ThaliWifiInfrastructure~ThaliWifiInfrastructure#start} and
- * then will call {@link
- * module:ThaliWifiInfrastructure.startListeningForAdvertisements} because we
- * haven't yet called {@link module:thaliMobile.stopListeningForAdvertisements}.
- * If any of the calls triggered by the network event fail then the results MUST
- * be logged.
+ * Note that once this method is called it is giving explicit permission to this
+ * code to call this method on a radio stack that is currently disabled when the
+ * method is called but is later re-enabled due to a network changed event. In
+ * other words if {@link module:thaliMobile.start} is called and say WiFi
+ * doesn't work. Then this method is called and so advertising is only started
+ * for the non-TCP transport. Then a network changed event happens indicating
+ * that WiFi is available. Since we are still in start state this code will
+ * automatically call {@link
+ * module:ThaliWifiInfrastructure~ThaliWifiInfrastructure#start} and then will
+ * call {@link module:ThaliWifiInfrastructure.startListeningForAdvertisements}
+ * because we haven't yet called {@link
+ * module:thaliMobile.stopListeningForAdvertisements}. If any of the calls
+ * triggered by the network event fail then the results MUST be logged.
  *
  * This method is idempotent so multiple consecutive calls without an
  * intervening call to stop will not cause a state change.
@@ -264,7 +264,7 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopListeningForAdvertisements = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates.listening = false;
     Promise.all([
       promiseResultSuccessOrFailure(
@@ -327,7 +327,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopAdvertisingAndListening = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates.advertising = false;
     Promise.all([
       promiseResultSuccessOrFailure(
@@ -357,7 +357,7 @@ module.exports.stopAdvertisingAndListening = function () {
  * @returns {Promise<module:thaliMobileNative~networkChanged>}
  */
 module.exports.getNetworkStatus = function () {
-  return promiseQueue.enqueue(function (resolve, reject) {
+  return promiseQueue.enqueue(function (resolve) {
     ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
     .then(function (nonTCPNetworkStatus) {
       resolve(nonTCPNetworkStatus);
@@ -365,22 +365,91 @@ module.exports.getNetworkStatus = function () {
   });
 };
 
-/*
-        EVENTS
+/**
+ * @public
+ * @typedef peerHostInfo
+ * @property {string} hostAddress The IP/DNS address to connect to or null if
+ * this is an announcement that the peer is no longer available.
+ * @property {number} portNumber The port to connect to on the given
+ * hostAddress or null if this is an announcement that the peer is no longer
+ * available.
+ * @property {number} suggestedTCPTimeout Provides a hint to what time out to
+ * put on the TCP connection. For some transports a handshake can take quite a
+ * long time.
  */
 
 /**
- * Enum to define the types of connections
+ * If the peer identifier and conntection type is not in the availability cache
+ * (see the peerAvailabilityChanged tome below) then a 'peer not available'
+ * error MUST be returned.
  *
- * @readonly
- * @enum {string}
+ * Since this function is asynchronous it is possible that between the time it
+ * is called and when it is ready to return that a peer not available event
+ * could have occurred. It is explicitly NOT this function's problem to deal
+ * with his eventuality. Once it starts going the function MUST complete as
+ * given below without regard for any unavailability events.
+ *
+ * If an error is returned from this function other than 'peer not available'
+ * then it is up to the caller to decide if they wish to call the method again
+ * but doing so MUST NOT cause any harm to the system's state.
+ *
+ * The sections below all assume that the requested peer is in the peer
+ * availability cache.
+ *
+ * ## Android
+ *
+ * We MUST return a peerHostInfo object with the hostAddress set to
+ * 127.0.0.1 and portNumber set to the values in the availability cache.
+ * suggestedTCPTimeout MUST be set per thaliConfig.
+ *
+ * ## iOS
+ *
+ * We MUST call {@link
+ * module:thaliMobileNativeWrapper~ThaliMobileNativeWrapper._multiConnect}. If
+ * we receive an error then we MUST forward the error as the response to this
+ * method. If we receive a port then the hostAddress MUST be 127.0.0.1, the
+ * portNumber MUST be set to the returned port and the suggestedTCPTimeout MUST
+ * be set as given in thaliConfig.
+ *
+ * ## WiFi
+ *
+ * We MUST return a peerHostInfo object with the hostAddress and portNumber
+ * set based on the values in the availability cache and the suggestedTCPTimeout
+ * set per thaliConfig.
+ *
+ * @public
+ * @property {string} peerIdentifier This is exclusively used to detect if
+ * this is a repeat announcement or if a peer has gone to correlate it to the
+ * announcement of the peer's presence. But this value is not used to establish
+ * a connection to the peer, the hostAddress and portNumber handle that.
+ * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * Defines the kind of connection that the request will eventually go over. This
+ * information is needed so that we can better manage how we use the different
+ * transport types available to us.
+ * @returns {Promise<peerHostInfo | Error>}
  */
-var connectionTypes = {
-  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
-  BLUETOOTH: 'AndroidBluetooth',
-  TCP_NATIVE: 'tcp'
+module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
+  return Promise.reject('not implemented');
 };
-module.exports.connectionTypes = connectionTypes;
+
+/**
+ * Requests that the outgoing session with the identifier peerIdentifier on the
+ * specified connectionType be terminated.
+ *
+ * On Android and iOS this calls down to disconnect on thaliMobileNativeWrapper.
+ * For Wifi this method MUST return a 'Wifi does not support disconnect' error.
+ *
+ * @public
+ * @property {string} peerIdentifier Value from peerAvailabilityChanged event.
+ * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * @returns {Promise<?Error>}
+ */
+module.exports.disconnect = function(peerIdentifier, connectionType) {
+  return Promise.reject('not implement');
+};
+/*
+        EVENTS
+ */
 
 /**
  * It is the job of this module to provide the most reliable guesses (and that
@@ -392,11 +461,10 @@ module.exports.connectionTypes = connectionTypes;
  * module:thaliMobileNative}) that once it has fired a peerAvailabilityChanged
  * event for a specific peerIdentifier + connectionType combination that it will
  * not fire another peerAvailabilityChanged event for that peerIdentifier +
- * connectionType combination unless the combination has a new hostAddress or
- * portNumber. If the hostAddress or portNumber changes, there must first
- * be an event emitted with null values to mark that peer becomes unavailable
- * in the old location and only after that an event with the updated hostAddress
- * and portNumber.
+ * connectionType combination unless the combination has a new hostAddress,
+ * portNumber or generation. The newAddressPort boolean on the
+ * peerAvailabilityChanged event will flag when a peer moves its address or
+ * port.
  *
  * Note that this code explicitly does not do any kind of duplicate detection
  * for the same peerIdentifier across different connectionTypes. This is because
@@ -406,42 +474,109 @@ module.exports.connectionTypes = connectionTypes;
  * the various sources it is listening to about the same peerIdentifier and
  * connectionType combination then it must silently discard the duplicates.
  *
+ * ## Peer availability cache
+ *
+ * The code is based on a model where we have a cache we use to track which
+ * peers are currently available and we use that cache to store additional
+ * information. The details for different transports are given below.
+ *
+ * It is assumed that peers in the availability cache are indexed by a
+ * combination of their peer identifier (but not their generation) as well as
+ * their connection type. So if in the Android section we say a peer is in the
+ * availability cache we mean an entry with the same peer identifier and the
+ * Android connection type.
+ *
+ * The availability cache MUST make sure that its size is not allowed to grow
+ * without bound. Each connection type MUST have its own limit. Generally
+ * speaking the limit should be generous enough that under any circumstance but
+ * a direct DOS attack we shouldn't violate that limit. Therefore if adding a
+ * peer would cause the limit to be violated then we MUST ignore the peer and
+ * fire a discoveryDOS event and leave it to whomever is listening to that event
+ * to respond appropriately.
+ *
  * ## Android + BLE + Bluetooth
  *
- * When dealing with announcing that a peer has disappeared it is up to this
- * code to apply relevant heuristics. For example, in the case of Android it is
- * possible for a Thali app to go into the background. When this happens we
- * lower the power of the BLE status announcements but we don't change the
- * Bluetooth power. This means that a peer can seem to disappear when in fact
- * they are still in range of Bluetooth. This behavior is necessary to preserve
- * battery. This complicates things because the Android BLE stack never actually
- * says a peer is gone. Rather it sends a steady stream of announcements that
- * the peer is available and then stops when it doesn't see the peer anymore. So
- * this code has to notice those announcements and decide at what point after
- * they have stopped to declare the peer gone. In general we should experiment
- * with values like 30 seconds before deciding that a peer is gone. But why not
- * even longer?
+ * ### Handling nonTCPPeerAvailabilityChanged events
  *
- * __Open Issue:__ How long should we wait after we don't hear any updates on
- * a peer being available over Android before we declare them gone?
+ * In this section we will walk through different possible scenarios when we
+ * receive a nonTCPPeerAvailabilityChanged event in Android
  *
- * __Open Issue:__ A really obvious optimization would be to hook this code
- * into the {@link module:tcpServersManager} so it could see if we have a
- * Bluetooth or MPCF connection running with a particular peer. If we do then
- * obviously we wouldn't want to declare them gone even if we don't see them on
- * BLE or if MPCF told us they were gone.
+ * #### peerAvailable === true
  *
- * If an attempt to connect to a peer via Bluetooth whose presence we have
- * previously advertised via peerAvailabilityChanged should fail then we MUST
- * use our own heuristics to decide if we should mark the peer as no longer
- * available. Generally speaking if we still see the peer via BLE then we should
- * continue to mark them as available. Note that available doesn't mean
- * reachable. It is very easy for a peer to get overwhelmed with Bluetooth
- * requests and so be near but not able to accept a request.
+ * If the peer is not in the availability cache then we MUST put the peer's
+ * identifier, generation, portNumber and the current milliseconds since the
+ * epoch into the availability cache and issue a peerAvailabilityChanged event
+ * with the given peerIdentifier and connectionType, peerAvailable set to true,
+ * generation set as in the nonTCPPeerAvailabilityChanged event and
+ * newAddressPort set to false.
+ *
+ * If the peer is in the availability cache then we MUST compare the generation
+ * and portNumber in the event against the same values in the availability
+ * cache. If either value is different then we will issue a new
+ * peerAvailabilityChanged event as given below. If the generation values are
+ * the same but the time that has elapsed since the availability entry was
+ * recorded is >= thaliConfig.minimumUpdateWindow * 255 (which is the minimum
+ * time it would take for the 1 byte Android beacon to wrap around) then we MUST
+ * treat the generation is if it had changed.
+ *
+ * If we are to issue a new peerAvailabilityChanged event per the previous
+ * paragraph then we MUST update the availability cache with the new portNumber
+ * (if any) and the new generation. If this was a case where the two generation
+ * numbers actually matched but we decided to update because of the time check
+ * then we MUST update the time in the availability cache to the current time in
+ * milliseconds since the last epoch. The issued peerAvailabilityChanged event
+ * MUST have its peerIdentifier, connectionType and generation set as per the
+ * new event. It MUST set peerAvailable to true. If the portNumber in the event
+ * was different than the value in the availability cache then newAdressPort
+ * MUST be set to true.
+ *
+ * #### peerAvailable === false
+ *
+ * At the moment it is not possible for us to get a peerAvailable === false
+ * result. The reason is that Android didn't introduce the
+ * CALLBACK_TYPE_MATCH_LOST result (telling us that a peer we had previously
+ * seen is no longer available) until API 23 which we don't currently support.
+ * This will be fixed in
+ * https://github.com/thaliproject/Thali_CordovaPlugin_BtLibrary/issues/84 but
+ * that will only work for Marshmallow and higher devices. And anyway it isn't
+ * clear if 84 is even worth fixing. There are lots of reasons why a peer might
+ * disappear off BLE but still be around on Bluetooth. Most likely we won't
+ * really care about peerAvailable === false until we have the GATT server
+ * working over BLE and we can get a definitive 'I'm powering down' message.
+ *
+ * ### Heuristics for marking peers as not available
+ *
+ * When we get a nonTCPPeerAvailabilityChanged event with peerAvailable === true
+ * we have to realize, as explained in the previous section, that we aren't ever
+ * going to get a peerAvailable === false. So it's up to us to decide when the
+ * peer has disappeared.
+ *
+ * To do this when we get a successful response to a getPeerHostInfo call for
+ * an Android peer we MUST record in the availability cache the fact that there
+ * is an active session with that peer. In addition if there is a timer running
+ * (see below) then we MUST cancel that timer.
+ *
+ * If we receive a peerAvailable === true event and if there is no open session
+ * recorded in the availability cache for that peer then we MUST create a timer
+ * that will go off after thaliConfig.WAIT_UNTIL_ANDROID_PEER_GONE_MS.
+ *
+ * If we receive a failedConnection event from createPeerListener for a peer who
+ * is in the availability cache then we MUST mark the peer's session as closed
+ * in the availability cache and set the timer to go off after
+ * thaliConfig.WAIT_UNTIL_ANDROID_PEER_GONE_MS.
+ *
+ * If the timer goes off and if the peer is still in the availability cache
+ * (which is should be since there isn't another way to pull a peer out of the
+ * cache) then the peer MUST be removed the availability cache and a
+ * peerAvailabilityChanged event with the given peerIdentifier and
+ * connectionType but with peerAvailable set to false and generation and
+ * newAddressPort set to null.
+ *
+ * ### Handling networkChanged events
  *
  * If we have been notified via a networkChanged event that either BLE or
- * Bluetooth is no longer available then we MUST mark all peers discovered via
- * BLE as no longer being present and send peerAvailabilityChanged events
+ * Bluetooth is no longer available then we MUST remove all peers discovered via
+ * BLE from the availability cache and send peerAvailabilityChanged events
  * reporting this status change. In theory we could make things more complex by
  * specifying that if BLE is turned off and Bluetooth isn't then we could
  * continue to say that the Bluetooth peers are there. But in practical terms it
@@ -449,13 +584,16 @@ module.exports.connectionTypes = connectionTypes;
  * off Bluetooth, not sub-select between BLE and Bluetooth) and second it's more
  * complexity than we really need at this point.
  *
+ * ### Handling discoveryAdvertisingStatus events
+ *
  * If we have been notified via a discoveryAdvertisingStatus event that
  * discovery is no longer available then we MUST treat existing discovered
- * Bluetooth peers as no longer being available and send peerAvailabilityChanged
- * events reporting this fact. Eventually we might get more flexible here and
- * allow Bluetooth peers to remain "available" and just use the connection
- * heuristics described previously to mark them as absent when necessary. But
- * for now let's keep things simple.
+ * Bluetooth peers as no longer being available, remove them from the
+ * availability cache and send peerAvailabilityChanged events reporting this
+ * fact. Eventually we might get more flexible here and allow Bluetooth peers to
+ * remain "available" and just use the connection heuristics described
+ * previously to mark them as absent when necessary. But for now let's keep
+ * things simple.
  *
  * If we have been notified via a discoveryAdvertisingStatus event that
  * advertising is no longer available this should not cause any change in our
@@ -463,12 +601,42 @@ module.exports.connectionTypes = connectionTypes;
  *
  * ## iOS + MPCF
  *
- * In the case of the MPCF the native layer has an explicit lostPeer message.
- * But we aren't completely sure if it's totally reliable. So we either can
- * immediately declare the peer gone when we get lostPeer or we can take note of
- * the lostPeer message and then wait a bit before declaring the peer gone. Note
- * that we would only see this at the Node.js layer via a {@link
- * module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} event.
+ * ### Handling nonTCPPeerAvailabilityChanged events
+ *
+ * In this section we will walk through different possible scenarios when we
+ * receive a nonTCPPeerAvailabilityChanged event in iOS.
+ *
+ * Note that portNumber isn't set in nonTCPPeerAvailabilityChanged events in
+ * iOS.
+ *
+ * #### peerAvailable === true
+ *
+ * If the peer is not in the availability cache then we MUST put the peer's
+ * identifier and generation into the availability cache and issue a
+ * peerAvailabilityChanged event with the given peerIdentifier and
+ * connectionType, peerAvailable set to true, generation set as in the
+ * nonTCPPeerAvailabilityChanged event and newAddressPort set to false.
+ *
+ * If the peer is in the availability cache then we MUST compare the generation
+ * in the event against the same value in the availability cache. If the
+ * generation in the nonTCPPeerAvailabilityChanged event is equal to or less
+ * than the generation in the availability cache then the event MUST be ignored.
+ * If the generation in the event is greater than the value in the availability
+ * cache then we MUST issue a peerAvailabilityChanged event with the
+ * peerIdentifier and generation set as per the nonTCPPeerAvailabilityChanged
+ * event. The connectionType set to MPCF. peerAvailable set to true and
+ * newAddressPort set to false.
+ *
+ * #### peerAvailable === false
+ *
+ * If the peer is not in the availability cache (this shouldn't be possible,
+ * because in iOS we should only be removing peers when we get an unavailable
+ * event) then the nonTCPPeerAvailabilityChanged event MUST be ignored.
+ *
+ * If the peer is in the availability cache then we MUST remove the peer from
+ * the availability cache and issue a peerAvailabilityChanged event with the
+ * given peerIdentifier and connectionType but with peerAvailable set to false
+ * and generation and newAddressPort set to null.
  *
  * __Open Issue:__ How does MPCF deal with peers who have gone out of range?
  * Do they regularly send foundPeer messages or do they send one foundPeer
@@ -481,11 +649,26 @@ module.exports.connectionTypes = connectionTypes;
  * make this concrete since we have to decide if we are going to put this
  * suspicion into our code.
  *
- * If an attempt to connect to a peer via MPCF whose presence we have previously
- * advertised via peerAvailabilityChanged should fail we MUST use our own
- * heuristics to decide if we should mark the peer as no longer available.
- * Typically we should allow several failed connection attempts before we decide
- * to mark the peer as no longer present.
+ * ### Handling multiConnectConnectionFailure events
+ *
+ * If the peer identified in the event is not in the availability cache (which
+ * is theoretically possible given certain race conditions) then we MUST ignore
+ * this event.
+ *
+ * If the peer is in the availability cache then we MUST issue a
+ * peerAvailabilityChanged event with the peerIdentifier and connectionType
+ * defined as given, peerAvailable set to true, generation set as in the cache
+ * and newAddressPort set to true.
+ *
+ * Note that automatically issuing a newAddresPort = true
+ * peerAvailabilityChanged event can cause fun race conditions where we could
+ * get ready to advertise a newAddressPort = true event but first a real
+ * peerAvailability = false event could come up from the native layer. This
+ * would trick the upper layers into thinking the peer is available when they
+ * are not. But in that case the call to getPeerHostInfo would fail because the
+ * peer wouldn't be in the available cache anymore.
+ *
+ * ### Handling networkChanged events
  *
  * If we have been notified via a networkChanged event that one of Bluetooth or
  * Wifi are no longer available but not both then this should not cause any
@@ -496,6 +679,8 @@ module.exports.connectionTypes = connectionTypes;
  * Bluetooth and Wifi are no longer available then we MUST mark all peers that
  * we have previously advertised as available as now being unavailable and
  * advertise this change via the peerAvailabilityChanged event.
+ *
+ * ### Handling discoveryAdvertisingStatus events
  *
  * If we have been notified via a discoveryAdvertisingStatus event that
  * discovery is no longer available then we MUST change the availability of
@@ -514,25 +699,85 @@ module.exports.connectionTypes = connectionTypes;
  *
  * ## Wifi
  *
- * In the case of Wifi SSDP supports sending both announcements of
- * availability as well as announcements that one is going off line. If we
- * receive an announcement that a peer is going away then we can trust that
- * since it means the peer is deactivating its SSDP stack. But we can't rely on
- * receiving such an announcement since obviously if a peer just walks away
- * nothing will be said. So we MUST set a timer after receiving a SSDP
- * announcement for a peer (we will receive this via a {@link
- * module:ThaliWifiInfrastructure~wifiPeerAvailabilityChanged} event) and if we
- * don't hear an announcement that they are gone then we MUST automatically
- * generate such an announcement ourselves.
+ * ### Handling wifiPeerAvailabilityChanged
  *
- * Unlike the non-TCP transports, we do not use a proxy architecture with Wifi
- * and therefore do not know if an attempted connection succeeded or not. This
- * is why there is no equivalent requirement here to the ones above specifying
- * that failed connections should cause us to mark a peer as not available.
+ * #### hostAddress & portNumber !== null
+ *
+ * If the peer is not in the availability cache then we MUST put the peer's
+ * identifier, generation, hostAddress and portNumber into the cache and
+ * generate a peerAvailabilityChanged event with the given peerIdentifier and
+ * connectionType, peerAvailable set to true, generation set as in the
+ * wifiPeerAvailabilityChanged event and newAddressPort set to false.
+ *
+ * If the peer is in the availability cache then we MUST compare the generation,
+ * hostAddress and portNumber. If only the generation has changed and if the
+ * generation is <= to the generation in the availability cache then the
+ * wifiPeerAvailabilityChanged event MUST be ignored. If the generation in the
+ * event is greater than the value in the cache and/or either hostAddress or
+ * portNumber in the event are different than the cache then a new
+ * peerAvailabilityChanged event MUST be issued as defined below.
+ *
+ * The new peerAvailabilityChanged event as required in the previous paragraph
+ * will have the peerIdentifier and generation set based on the values in the
+ * wifiPeerAvailabilityChanged event. connectionType will be set to wifi.
+ * peerAvailable will be set to true. If either the hostAddress or portNumber
+ * in the wifiPeerAvailabilityChanged event is different than either of those
+ * values in the availability cache then newAddressPort MUST be set to true.
+ * The availability cache MUST also be updated with the generation, hostAddress
+ * and portNumber from the wifiPeerAvailabilityChanged event.
+ *
+ * #### hostAddress or portNumber !== null
+ *
+ * Note that if either is null both MUST be null but we should trigger this
+ * behavior if either is null.
+ *
+ * If the peer is not in the availability cache (which can happen thanks to our
+ * heuristics) then we MUST ignore the wifiPeerAvailabilityChanged event.
+ *
+ * If the peer is in our cache then we MUST remove the peer from the
+ * availability cache and issue a peerAvailabilityChanged event with the given
+ * peerIdentifier and connectionType but with peerAvailable set to false and
+ * generation and newAddressPort set to null.
+ *
+ * #### Peer availability timer
+ *
+ * Although SSDP supports an explicit 'byebye' message to indicate that the
+ * network stack is shutting down we are not guaranteed to get a 'byebye'
+ * message as the device might simple go out of range.
+ *
+ * To handle this we will create a timer but it's behavior is different than the
+ * Android timer because we can get the equivalent of peerAvailable === false
+ * and we do not have any way (since we aren't going to introduce a TCP proxy
+ * just for this) to track if the sessions between the local peer and the remote
+ * peer are still running.
+ *
+ * When we get a hostAddress or portNumber !== null and if the peer is not in
+ * the availability cache then as part of putting it into the cache we MUST set
+ * a timer to go off after thaliConfig.WAIT_UNTIL_WIFI_PEER_GONE_MS. Any time we
+ * get another hostAddress or portNumber !== null for a peer that is in the
+ * availability cache we MUST restart its timer.
+ *
+ * If we receive a hostAddress or portNumber === null for a peer who is in the
+ * availability cache then we MUST disable the timer along with the other
+ * behavior specified previously for this event.
+ *
+ * If the timer goes off then we MUST remove the associated peer from the
+ * availability cache and we MUST issue a peerAvailabilityChanged event with the
+ * given peerIdentifier and connectionType but with peerAvailable set to false and
+ * generation and newAddressPort set to null.
+ *
+ * Note that having the timer go off could theoretically mean we announce a peer
+ * who we are in the middle of talking to as being gone but this is highly unlikely.
+ * The SSDP announcements go over the same channel as the TCP connections and
+ * SSDP is quite chatty.
+ *
+ * ### Handling networkChanged events
  *
  * If we have been notified via a networkChanged event that Wifi is no longer
  * available then all peers discovered via Wifi MUST be marked as not present
- * and this fact advertised via peerAvailabilityChanged.
+ * and this fact advertised via peerAvailabilityChanged as previously specified.
+ *
+ * ### Handling discoveryAdvertisingStatus events
  *
  * If we have been notified via a discoveryAdvertisingStatus event that
  * discovery is no longer available then we MUST change the availability of
@@ -547,21 +792,6 @@ module.exports.connectionTypes = connectionTypes;
  * advertising is no longer available then this should not cause any change in
  * our peer status.
  *
- * ## General guidelines on handling nonTCPPeerAvailabilityChanged and
- * wifiPeerAvailabilityChanged events
- *
- * If we receive a {@link
- * module:thaliMobileNativeWrapper~nonTCPPeerAvailabilityChanged} event then all
- * we have to do is return the arguments below as taken from the event with the
- * exception of setting hostAddress to 127.0.0.1 unless the peer is not
- * available in which case we should set both hostAddress and portNumber to
- * null.
- *
- * If we receive a {@link
- * module:ThaliWifiInfrastructure~wifiPeerAvailabilityChanged} event then all we
- * have to do is return the arguments below as taken from the event with the
- * exception of setting something reasonable for the suggestedTCPTimeout.
- *
  * @public
  * @event module:thaliMobile.event:peerAvailabilityChanged
  * @typedef {Object} peerAvailabilityStatus
@@ -569,19 +799,24 @@ module.exports.connectionTypes = connectionTypes;
  * this is a repeat announcement or if a peer has gone to correlate it to the
  * announcement of the peer's presence. But this value is not used to establish
  * a connection to the peer, the hostAddress and portNumber handle that.
- * @property {string} hostAddress The IP/DNS address to connect to or null if
- * this is an announcement that the peer is no longer available.
- * @property {number} portNumber The port to connect to on the given
- * hostAddress or null if this is an announcement that the peer is no longer
- * available.
- * @property {number} suggestedTCPTimeout Provides a hint to what time out to
- * put on the TCP connection. For some transports a handshake can take quite a
- * long time.
- * @property {connectionTypes} connectionType Defines the kind of connection
- * that the request will eventually go over. This information is needed so that
- * we can better manage how we use the different transport types available to
- * us.
+ * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * Defines the kind of connection that the request will eventually go over. This
+ * information is needed so that we can better manage how we use the different
+ * transport types available to us.
+ * @property {boolean} peerAvailable
+ * @property {?number} generation This value is only relevant if peerAvailable is
+ * set to true. This identifies the current generation for the peer. This
+ * indicates that the state of the associated peer has changed. In general one
+ * can use the differences in generation count to tell how many changes have
+ * occurred to the peer but note that Android currently rolls over its counter
+ * which is only 1 byte long.
+ * @property {?boolean} newAddressPort This value is only relevant if
+ * peerAvailable is set to true. If set to true then this announcement means
+ * that the peer has changed either its address or port and any existing
+ * sessions SHOULD be terminated and a new call to {@link getPeerHostInfo} SHOULD
+ * be made to find the new address/port.
  */
+
 
 var emitPeerUnavailable = function (peerIdentifier, connectionType) {
   module.exports.emitter.emit('peerAvailabilityChanged',
@@ -612,11 +847,12 @@ var changeCachedPeerAvailable = function (peer) {
 };
 
 var changePeersUnavailable = function (connectionType) {
-  Object.keys(peerAvailabilities[connectionType]).forEach(function (peerIdentifier) {
-    changeCachedPeerUnavailable(peerAvailabilities[connectionType]
-      [peerIdentifier]);
-    emitPeerUnavailable(peerIdentifier, connectionType);
-  });
+  Object.keys(peerAvailabilities[connectionType]).forEach(
+    function (peerIdentifier) {
+      changeCachedPeerUnavailable(peerAvailabilities[connectionType]
+        [peerIdentifier]);
+      emitPeerUnavailable(peerIdentifier, connectionType);
+    });
 };
 
 var updateAndCheckChanges = function (peer) {
@@ -856,11 +1092,25 @@ ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', emitNetworkChanged);
 thaliWifiInfrastructure.on('networkChangedWifi', emitNetworkChanged);
 
 /**
+ * Fired when we get more peer discoveries than we have allocated space to
+ * store. This is pretty much guaranteed to be an attack so we expect whomever
+ * is listening to this event to shut everything down but it's up to them. We do
+ * expect that the response to a discoveryDOS event will be immediate so we
+ * aren't going to try and rate limit how many times we fire this event as the
+ * system should be shut down before more than a few can fire.
+ *
+ * @public
+ * @event module:thaliMobile.event:discoveryDOS
+ * @type {Object}
+ */
+
+/**
  * Use this emitter to subscribe to events
  *
  * @public
  * @fires module:thaliMobile.event:peerAvailabilityChanged
  * @fires module:thaliMobile.event:discoveryAdvertisingStateUpdate
  * @fires module:thaliMobile.event:networkChanged
+ * @fires module:thaliMobile.event:discoveryDOS
  */
 module.exports.emitter = new EventEmitter();

@@ -2,7 +2,7 @@
 
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
-var ThaliReplicationManager = require('../thaliReplicationManager');
+var ThaliReplicationManager = require('../thalireplicationmanager');
 
 inherits(ConnectionTable, EventEmitter);
 

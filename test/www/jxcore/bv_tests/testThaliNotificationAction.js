@@ -6,8 +6,8 @@ var Promise = require('lie');
 var testUtils = require('../lib/testUtils.js');
 var httpTester = require('../lib/httpTester.js');
 
-var ThaliMobile =
-  require('thali/Runtime/networking/thaliMobile');
+var ThaliMobileNativeWrapper =
+  require('thali/Runtime/networking/thaliMobileNativeWrapper');
 var NotificationAction =
   require('thali/Runtime/notification/thaliNotificationAction');
 var PeerDictionary =
@@ -123,7 +123,7 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
     200, globals.preambleAndBeacons, 1);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
-    ThaliMobile.connectionTypes.TCP_NATIVE,
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     '127.0.0.1',
     globals.expressServer.address().port,
     2000);
@@ -155,7 +155,7 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
 
   act.start(globals.actionAgent).then(function (res) {
     t.equals(res, null, 'must return null after successful call');
-    t.equals(act.getActionState(), ThaliPeerAction.actionState.KILLED, 
+    t.equals(act.getActionState(), ThaliPeerAction.actionState.KILLED,
       'Once start returns the action should be in KILLED state');
   })
   .catch(function (failure) {
@@ -170,7 +170,7 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
     thaliConfig.NOTIFICATION_BEACON_PATH, 503, 'hello', 1);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
-    ThaliMobile.connectionTypes.TCP_NATIVE,
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     '127.0.0.1',
     globals.expressServer.address().port,
     2000);
@@ -197,7 +197,7 @@ test('Test NETWORK_PROBLEM locally', function (t) {
   t.plan(2);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
-    ThaliMobile.connectionTypes.TCP_NATIVE,
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     'address_that_cant_exists', 100, 2000);
 
   var act = new NotificationAction(
@@ -233,7 +233,7 @@ test('Call the start two times', function (t) {
     200, globals.preambleAndBeacons, 1);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
-    ThaliMobile.connectionTypes.TCP_NATIVE,
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     '127.0.0.1',
     globals.expressServer.address().port, 2000);
 
@@ -268,7 +268,7 @@ test('Call the kill before calling the start', function (t) {
   t.plan(2);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation('127.0.0.1',
-    ThaliMobile.connectionTypes.TCP_NATIVE,
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     5000, 2000);
 
   var act = new NotificationAction('hello',
@@ -296,7 +296,7 @@ test('Call the kill immediately after the start', function (t) {
     'hello', 1, 2000);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
-    ThaliMobile.connectionTypes.TCP_NATIVE,
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     '127.0.0.1',
     globals.expressServer.address().port, 1);
 
@@ -332,7 +332,7 @@ test('Call the kill while waiting a response from the server', function (t) {
 
   // Sets 10000 milliseconds TCP timeout.
   var connInfo = new PeerDictionary.PeerConnectionInformation(
-    ThaliMobile.connectionTypes.TCP_NATIVE,
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     '127.0.0.1',
     globals.expressServer.address().port, 10000);
 
@@ -380,7 +380,7 @@ test('Test to exceed the max content size locally', function (t) {
     200, buffer, 1+NotificationAction.MAX_CONTENT_SIZE_IN_BYTES/1024);
 
   var connInfo = new PeerDictionary.PeerConnectionInformation(
-    ThaliMobile.connectionTypes.TCP_NATIVE,
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     '127.0.0.1',
     globals.expressServer.address().port, 10000);
 
@@ -414,7 +414,7 @@ test('Close the server socket while the client is waiting a response ' +
 
     // Sets 10000 milliseconds TCP timeout.
     var connInfo = new PeerDictionary.PeerConnectionInformation(
-      ThaliMobile.connectionTypes.TCP_NATIVE,
+      ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
       '127.0.0.1',
       globals.expressServer.address().port,
       10000);
@@ -464,7 +464,7 @@ test('Close the client socket while the client is waiting a response ' +
 
     // Sets 10000 milliseconds TCP timeout.
     var connInfo = new PeerDictionary.PeerConnectionInformation(
-      ThaliMobile.connectionTypes.TCP_NATIVE,
+      ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
       '127.0.0.1',
       globals.expressServer.address().port, 10000);
 

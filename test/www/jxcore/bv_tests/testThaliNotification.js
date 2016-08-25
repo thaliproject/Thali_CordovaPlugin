@@ -210,6 +210,7 @@ test('Client to server request coordinated', function (t) {
   }
 
   var peerPool = new ThaliPeerPoolDefault();
+  peerPool.start();
 
   // Initialize the ThaliNotificationClient
   var notificationClient =

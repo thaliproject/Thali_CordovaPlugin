@@ -3,7 +3,7 @@
 var tape = require('../lib/thaliTape');
 var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
 var connectionTypes =
-  require('thali/Runtime/networking/thaliMobile').connectionTypes;
+  require('thali/Runtime/networking/thaliMobileNativeWrapper').connectionTypes;
 var inherits = require('util').inherits;
 var globalAgent = require('http').globalAgent;
 

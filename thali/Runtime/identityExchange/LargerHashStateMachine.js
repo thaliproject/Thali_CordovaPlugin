@@ -24,7 +24,7 @@ var crypto = require('crypto');
 var express = require('express');
 var bodyParser = require('body-parser');
 
-var logger = require('../utils/thaliLogger')('largerHash');
+var logger = require('../thaliLogger')('largerHash');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var identityExchangeUtils = require('./identityExchangeUtils');
@@ -272,7 +272,7 @@ LargerHashStateMachine.prototype.exchangeIdentity = function(
   if (identityExchangeUtils.compareEqualSizeBuffers(
     this.myPkHashBuffer,
     this.otherPkHashBuffer) < 0) {
-      
+
     this.largerHashStateMachine.desiredPeerHasLargerHash();
   } else {
     this.largerHashStateMachine.waitForCb();

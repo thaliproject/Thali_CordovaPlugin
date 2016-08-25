@@ -8,7 +8,7 @@ var testUtils = require('../lib/testUtils.js');
 var express = require('express');
 var validations = require('thali/Runtime/utils/validations');
 var sinon = require('sinon');
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 var nodessdp = require('node-ssdp');
 var randomstring = require('randomstring');
 
@@ -48,12 +48,12 @@ var checkPeer = function (t, peer, available) {
   t.ok(peer.connectionType,
     'peer should have a connection type');
   var connectionTypeKey;
-  for (var key in ThaliMobile.connectionTypes) {
-    if (peer.connectionType === ThaliMobile.connectionTypes[key]) {
+  for (var key in ThaliMobileNativeWrapper.connectionTypes) {
+    if (peer.connectionType === ThaliMobileNativeWrapper.connectionTypes[key]) {
       connectionTypeKey = key;
     }
   }
-  t.equals(peer.connectionType, ThaliMobile.connectionTypes[connectionTypeKey],
+  t.equals(peer.connectionType, ThaliMobileNativeWrapper.connectionTypes[connectionTypeKey],
     'connection type should match one of the pre-defined types');
 };
 
@@ -545,7 +545,7 @@ test('can get data from all participants', function (t) {
     // Try to get data only from non-TCP peers so that the test
     // works the same way on desktop on CI where Wifi is blocked
     // between peers.
-    if (peer.connectionType === ThaliMobile.connectionTypes.TCP_NATIVE) {
+    if (peer.connectionType === ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
       return;
     }
     testUtils.get(

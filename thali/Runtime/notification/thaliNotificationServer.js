@@ -114,7 +114,7 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
     // Following if clause ensures that we don't call
     // startUpdateAdvertisingAndListening when the last two
     // start calls have had publicKeysToNotify as an empty array ([]).
-    if (self._preambleAndBeacons || previousPreambleAndBeacons ) {
+    if (self._preambleAndBeacons || previousPreambleAndBeacons) {
       ThaliMobile.startUpdateAdvertisingAndListening()
       .then(function () {
         return resolve();
