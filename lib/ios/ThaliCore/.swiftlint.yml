@@ -29,48 +29,48 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
 # opt-in missing_docs: warning
 
 closing_brace: error
-colon: error
-comma: error
+colon: error                # let s : String >> let s: String
+comma: error                # k,v >> k, v
 control_statement: error
-file_length:
+file_length:                # max number of lines per file
   warning: 500
   error: 1000
-force_cast: warning
-force_try: warning
-function_body_length:
+force_cast: warning         # as!
+force_try: warning          # try!
+function_body_length:       # max length of function body
   warning: 50
   error: 150
 function_parameter_count:
   warning: 5
   error: 8
-leading_whitespace: error
+leading_whitespace: error     # empty lines with whitespaces only
 legacy_cggeometry_functions: error
 legacy_constant: error
-legacy_constructor: error
+legacy_constructor: error     # e.g CGPointMake(...) >>> CGPoint(x: ..., y: ...)
 legacy_nsgeometry_functions: error
-line_length:
+line_length:                  # max length of a line
   warning: 120
   error: 140
 mark: warning
 nesting: warning
-opening_brace: error
+opening_brace: error          # [].map(){ ... } >>> [].map() { ... }
 operator_whitespace: error
 private_outlet: warning
 #private_unit_test:
-return_arrow_whitespace: error
-statement_position:
+return_arrow_whitespace: error  # func thing()->Bool >>> func thing() -> Bool
+statement_position:             # }else if { >>> } else if {
   #statement_mode: default
   severity: error
 todo: warning
-trailing_newline: error
-trailing_semicolon: error
-trailing_whitespace:
+trailing_newline: error       # new line at the end of a file
+trailing_semicolon: error     # no ;
+trailing_whitespace:          # no trailing whitespaced
   ignores_empty_lines: false
   severity: error
-type_body_length:
+type_body_length:             # max body length
   warning: 200
   error: 350
-type_name:
+type_name:                    # types should start with a capital letter
   min_length:
     warning: 3
     error: 1
@@ -81,8 +81,8 @@ type_name:
     - URL
     - id
     - API
-valid_docs: warning
-variable_name:
+valid_docs: warning       # docs should match the method signature
+variable_name:            # variables should start with a lower case character or a capitalized one if `static`.
   min_length:
     warning: 4
     error: 2
@@ -95,10 +95,3 @@ variable_name:
      - url
      - app
 vertical_whitespace: warning
-
-# opt-in ?
-conditional_returns_on_newline: warning
-cyclomatic_complexity: warning
-empty_count: warning
-force_unwrapping: warning
-missing_docs: warning
