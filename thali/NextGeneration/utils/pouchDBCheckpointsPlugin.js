@@ -102,7 +102,7 @@ var executeOnce = function (fn, delay) {
 var executeAsync = function (fn) {
   return function () {
     var args = arguments;
-    setTimeout(function () {
+    setImmediate(function () {
       fn.apply(null, args);
     });
   }
