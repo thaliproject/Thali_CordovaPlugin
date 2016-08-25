@@ -18,13 +18,14 @@ class PeerIdentifierTests: XCTestCase {
         XCTAssertEqual(peer.generation, nextGenPeer.generation - 1)
     }
 
-    func testInitWithString() {
-        let uuid = "uuid"
-        let gen = 0
-        let string = "\(uuid):\(String(gen, radix: 16))"
-        let peer = (try? PeerIdentifier(stringValue: string))!
-        XCTAssertEqual(uuid, peer.uuid)
-        XCTAssertEqual(gen, peer.generation)
+    func testEBNF() {
+        for i in 0...0xF {
+            let uuid = NSUUID().UUIDString
+            let string = "\(uuid):\(String(i, radix: 16))"
+            let peer = try? PeerIdentifier(stringValue: string)
+            XCTAssertEqual(peer?.uuid, uuid)
+            XCTAssertEqual(peer?.generation, i)
+        }
     }
 
     func testWrongFormatString() {

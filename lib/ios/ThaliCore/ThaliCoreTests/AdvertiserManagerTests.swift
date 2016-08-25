@@ -14,21 +14,21 @@ class AdvertiserManagerTests: XCTestCase {
     var advertiserManager: AdvertiserManager!
 
     override func setUp() {
-        let serviceType = String.randomStringWithLength(7)
+        let serviceType = String.random(length: 7)
         advertiserManager = AdvertiserManager(serviceType: serviceType)
     }
 
     override func tearDown() {
-        advertiserManager.stopAdvertisingAndListening()
+        advertiserManager.stopAdvertising()
         advertiserManager = nil
     }
 
     func testStopAdvertising() {
         advertiserManager.startUpdateAdvertisingAndListening(42)
         XCTAssertEqual(advertiserManager.advertisers.count, 1)
-        XCTAssertTrue(advertiserManager.isAdvertising)
-        advertiserManager.stopAdvertisingAndListening()
+        XCTAssertTrue(advertiserManager.advertising)
+        advertiserManager.stopAdvertising()
         XCTAssertEqual(advertiserManager.advertisers.count, 0)
-        XCTAssertFalse(advertiserManager.isAdvertising)
+        XCTAssertFalse(advertiserManager.advertising)
     }
 }

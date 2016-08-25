@@ -1,6 +1,6 @@
 //
 //  Thali CordovaPlugin
-//  ApplicationStateNotificationsManagerTests.swift
+//  AppStateNotificationsManagerTests.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
@@ -10,7 +10,7 @@
 import XCTest
 import ThaliCore
 
-class ApplicationStateNotificationsManagerTests: XCTestCase {
+class AppStateNotificationsManagerTests: XCTestCase {
 
     override func setUp() {
         super.setUp()

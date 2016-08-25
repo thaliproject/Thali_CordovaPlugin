@@ -36,19 +36,19 @@ public final class BrowserManager: NSObject {
 
     public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil
     public var isListening: Bool {
-        return currentBrowser?.isListening ?? false
+        return currentBrowser?.listening ?? false
     }
 
     public init(serviceType: String) {
         self.serviceType = serviceType
     }
 
-    private func foundPeer(withIdentifier identifier: PeerIdentifier) {
+    private func handleFoundPeer(with identifier: PeerIdentifier) {
         peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
         availablePeers.append(identifier)
     }
 
-    private func lostPeer(withIdentifier identifier: PeerIdentifier) {
+    private func handleLostPeer(with identifier: PeerIdentifier) {
         peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
         if let index = availablePeers.indexOf(identifier) {
             availablePeers.removeAtIndex(index)
@@ -60,13 +60,13 @@ public final class BrowserManager: NSObject {
             currentBrowser.stopListening()
         }
         let browser = Browser(serviceType: serviceType,
-                              foundPeer: foundPeer, lostPeer: lostPeer)
+                              foundPeer: handleFoundPeer, lostPeer: handleLostPeer)
         browser.startListening()
         self.currentBrowser = browser
     }
 
     public func stopListeningForAdvertisements() {
-        guard let currentBrowser = self.currentBrowser where currentBrowser.isListening else {
+        guard let currentBrowser = self.currentBrowser where currentBrowser.listening else {
             assert(false, "there is no active listener")
             return
         }
@@ -74,6 +74,7 @@ public final class BrowserManager: NSObject {
         self.currentBrowser = nil
     }
 
+    func lastGenerationPeer(for identifier: PeerIdentifier) -> PeerIdentifier? {
     public func connectToPeer(identifier: PeerIdentifier, completion: (UInt16?, ErrorType?) -> Void) {
         return sync(self) {
             guard let lastGenerationIdentifier = self.lastGenerationPeerForIdentifier(identifier),
@@ -92,7 +93,7 @@ public final class BrowserManager: NSObject {
 
     }
 
-    func lastGenerationPeerForIdentifier(identifier: PeerIdentifier) -> PeerIdentifier? {
+    func lastGenerationPeer(for identifier: PeerIdentifier) -> PeerIdentifier? {
         return availablePeers
             .filter {
                 $0.uuid == identifier.uuid

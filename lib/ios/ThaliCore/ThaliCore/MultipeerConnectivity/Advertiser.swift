@@ -15,7 +15,7 @@ final class Advertiser: NSObject {
     let peerIdentifier: PeerIdentifier
     let serviceType: String
     let port: UInt16
-    internal private(set) var isAdvertising: Bool = false
+    internal private(set) var advertising: Bool = false
     private let receivedInvitationHandler: (session: Session) -> Void
 
     required init(peerIdentifier: PeerIdentifier, serviceType: String, port: UInt16,
@@ -32,12 +32,12 @@ final class Advertiser: NSObject {
 
     func startAdvertising() {
         advertiser.startAdvertisingPeer()
-        isAdvertising = true
+        advertising = true
     }
 
     func stopAdvertising() {
         advertiser.stopAdvertisingPeer()
-        isAdvertising = false
+        advertising = false
     }
 }
 
@@ -52,7 +52,7 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
     }
 
     func advertiser(advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: NSError) {
-        isAdvertising = false
+        advertising = false
         print("WARNING: server didNotStartAdvertisingPeer")
     }
 }

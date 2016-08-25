@@ -14,13 +14,13 @@ class PeerDiscoveryTests: XCTestCase {
     var advertiser: AdvertiserManager!
 
     override func setUp() {
-        let serviceType = String.randomStringWithLength(7)
+        let serviceType = String.random(length: 7)
         browser = BrowserManager(serviceType: serviceType)
         advertiser = AdvertiserManager(serviceType: serviceType)
     }
 
     override func tearDown() {
-        advertiser.stopAdvertisingAndListening()
+        advertiser.stopAdvertising()
         browser = nil
         advertiser = nil
     }
@@ -83,7 +83,7 @@ class PeerDiscoveryTests: XCTestCase {
 
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(2 * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
-            self.advertiser.stopAdvertisingAndListening()
+            self.advertiser.stopAdvertising()
         }
 
         waitForExpectationsWithTimeout(20, handler: nil)
@@ -107,7 +107,7 @@ class PeerDiscoveryTests: XCTestCase {
         }
 
         waitForExpectationsWithTimeout(10, handler: nil)
-        let lastGenerationIdentifier = browser.lastGenerationPeerForIdentifier(identifier)
+        let lastGenerationIdentifier = browser.lastGenerationPeer(for: identifier)
 
         XCTAssertEqual(1, lastGenerationIdentifier?.generation)
     }

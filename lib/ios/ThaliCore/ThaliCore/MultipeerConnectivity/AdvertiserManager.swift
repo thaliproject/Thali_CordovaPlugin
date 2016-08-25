@@ -16,8 +16,8 @@ import Foundation
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
     internal private(set) var activeSessions: [AdvertiserSessionManager] = []
 
-    public var isAdvertising: Bool {
-        return currentAdvertiser?.isAdvertising ?? false
+    public var advertising: Bool {
+        return currentAdvertiser?.advertising ?? false
     }
 
     public init(serviceType: String) {
@@ -34,7 +34,7 @@ import Foundation
     func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(30 * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
-            sync(self) {
+            synchronized(self) {
                 advertiser.stopAdvertising()
                 if let index = self.advertisers.indexOf(advertiser) {
                     self.advertisers.removeAtIndex(index)
@@ -44,7 +44,7 @@ import Foundation
         }
     }
 
-    private func createAndRunAdvertiserWith(identifier: PeerIdentifier, port: UInt16) -> Advertiser {
+    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16) -> Advertiser {
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
                                     port: port, receivedInvitationHandler: receivedInvitationHandler)
         advertiser.startAdvertising()
@@ -52,7 +52,7 @@ import Foundation
         return advertiser
     }
 
-    public func stopAdvertisingAndListening() {
+    public func stopAdvertising() {
         advertisers.forEach {
             $0.stopAdvertising()
         }
@@ -64,9 +64,9 @@ import Foundation
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
             addAdvertiserToDisposeQueue(currentAdvertiser)
-            self.currentAdvertiser = createAndRunAdvertiserWith(peerIdentifier, port: port)
+            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port)
         } else {
-            self.currentAdvertiser = createAndRunAdvertiserWith(PeerIdentifier(), port: port)
+            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port)
         }
 
         assert(self.currentAdvertiser != nil, "we should have initialized advertiser after calling this function")
