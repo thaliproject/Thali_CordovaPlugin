@@ -8,13 +8,12 @@ Latest version of spec https://github.com/thaliproject/thali/blob/gh-pages/pages
 var crypto = require('crypto');
 var Long = require('long');
 var HKDF = require('./../security/hkdf');
-var Promise = require('lie');
 var urlSafeBase64 = require('urlsafe-base64');
 var assert = require('assert');
+var thaliConfig = require('../thaliConfig');
 
 // Constants
 module.exports.SHA256 = 'sha256';
-module.exports.SECP256K1 = 'secp256k1';
 module.exports.ONE_DAY = 1000 * 60 * 60 * 24;
 
 /*
@@ -163,7 +162,7 @@ function generatePreambleAndBeacons (publicKeysToNotify,
 
   var beacons = [];
 
-  var ke = crypto.createECDH(module.exports.SECP256K1);
+  var ke = crypto.createECDH(thaliConfig.BEACON_CURVE);
 
   // Generate preamble
   var pubKe = ke.generateKeys();

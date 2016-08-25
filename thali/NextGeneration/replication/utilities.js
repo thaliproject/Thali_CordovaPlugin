@@ -92,13 +92,13 @@ RefreshTimerManager.prototype.stop = function () {
   }
 };
 
+module.exports.RefreshTimerManager = RefreshTimerManager;
+
 function TransientState(prioritizedPeersToNotifyOfChanges) {
   assert.notEqual(prioritizedPeersToNotifyOfChanges, null, 'Not Null');
   assert(Array.isArray(prioritizedPeersToNotifyOfChanges), 'Must be array');
   this.prioritizedPeersToNotifyOfChanges = prioritizedPeersToNotifyOfChanges;
 }
-
-module.exports.RefreshTimerManager = RefreshTimerManager;
 
 /**
  * @type {Buffer[]}
