@@ -609,7 +609,56 @@ module.exports.getNonTCPNetworkStatus = function () {
  * the localhost port to connect to or an Error object.
  */
 module.exports._multiConnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    var originalSyncValue = guid();
+
+    Mobile('multiConnect')
+      .callNative(peerIdentidier, originalSyncValue, function (error) {
+        if (error) {
+          return reject(new Error(error));
+        }
+
+        Mobile('multiConnectResolved')
+          .registerToNative(function (syncValue, error, portNumber) {
+            if(originalSyncValue !== syncValue) {
+              return;
+            }
+            if (error) {
+              return reject(new Error(error));
+            }
+            resolve(portNumber);
+          });
+      });
+  });
+};
+
+/**
+ * This function attempts to obtain a port that Node code can use to open TCP/IP
+ * connections to a remote peer.
+ *
+ * If this function is called either for a peer for which there has been no
+ * nonTCPPeerAvailabilityChanged with peerAvailable set to true or for a peer
+ * whose last nonTCPPeerAvailabilityChanged event had peerAvailable set to false
+ * then this method MUST return a "peer not available" error.
+ *
+ * If the peerIdentifier identifies a peer for which the last
+ * nonTCPPeerAvailabilityChanged event advertised peerAvaiable set to true then
+ * the behavior depends on our platform:
+ *
+ * On a 'connect' platform this call MUST call
+ * {@link module:tcpServersManager.createPeerListener} and forward the result of
+ * the call.
+ *
+ * On a 'multiConnect' platform this call MUST call _multiConnect and forward
+ * the result of the call.
+ *
+ * @public
+ * @param {string} peerIdentifier
+ * @returns {Promise<number|Error>}
+ */
+module.exports.getPort = function (peerIdentifier) {
+  return Promise.reject(new Error('Not Yet Implemented'));
 };
 
 // jscs:disable jsDoc
