@@ -29,4 +29,18 @@ class BrowserManagerTests: XCTestCase {
         XCTAssertNil(browser.currentBrowser)
         XCTAssertFalse(browser.isListening)
     }
+
+    func testStartListeningNotActive() {
+        let expectation = expectationWithDescription("got startListening not active error")
+        var connectError: MultiСonnectError?
+        browser.connectToPeer(PeerIdentifier()) { [weak expectation] port, error in
+            if let error = error as? MultiСonnectError {
+                connectError = error
+                expectation?.fulfill()
+            }
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        XCTAssertEqual(connectError, .StartListeningNotActive)
+    }
+
 }

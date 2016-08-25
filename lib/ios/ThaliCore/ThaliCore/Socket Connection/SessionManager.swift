@@ -11,24 +11,28 @@ import Foundation
 class SessionManager {
     private var outputStream: NSOutputStream? = nil
     private var inputStream: NSInputStream? = nil
-    private let didCreateSocket: (NSOutputStream, NSInputStream) -> Void
+    private let didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void
+    private let disconnectedHandler: () -> Void
     let session: Session
 
-    init(session: Session, didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void) {
+    init(session: Session, didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void, disconnectedHandler: () -> Void) {
         self.session = session
-        self.didCreateSocket = didCreateSocketHandler
+        self.didCreateSocketHandler = didCreateSocketHandler
+        self.disconnectedHandler = disconnectedHandler
         session.didReceiveInputStream = didReceive
         session.sessionStateChangesHandler = sessionStateChanged
     }
 
     func didReceive(inputStream: NSInputStream, name: String) {}
+    
+    func disconnect() {
+        session.disconnect()
+    }
 
     func sessionStateChanged(state: Session.SessionState) {
-        print(state)
         switch state {
         case .NotConnected:
-            //todo notify about session disconnection
-            break
+            disconnectedHandler()
         default:
             break
         }
@@ -43,7 +47,7 @@ class BrowserSessionManager: SessionManager {
             return
         }
         self.inputStream = inputStream
-        didCreateSocket(outputStream!, inputStream)
+        didCreateSocketHandler(outputStream!, inputStream)
     }
 
     override func sessionStateChanged(state: Session.SessionState) {
@@ -73,7 +77,7 @@ class AdvertiserSessionManager: SessionManager {
             }
             let outputStream = try session.createOutputStream(name)
             self.outputStream = outputStream
-            didCreateSocket(outputStream, inputStream)
+            didCreateSocketHandler(outputStream, inputStream)
         } catch let error {
             print(error)
         }

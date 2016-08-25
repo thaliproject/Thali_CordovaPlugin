@@ -1,6 +1,6 @@
 //
 //  Thali CordovaPlugin
-//  AdvertiserSessionManagerTests.swift
+//  MultiConnectTests.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
@@ -9,7 +9,7 @@
 import XCTest
 @testable import ThaliCore
 
-class AdvertiserSessionManagerTests: XCTestCase {
+class MultiConnectTests: XCTestCase {
 
     func testCreateSocket() {
         let serviceType = String.random(length: 7)
@@ -51,5 +51,16 @@ class AdvertiserSessionManagerTests: XCTestCase {
         } catch let error {
             XCTAssertNil(error)
         }
+    }
+
+    func testLostConnection() {
+        
+    }
+    
+    func testDisconnect() {
+
+    }
+
+    func test5secTimeout() {
     }
 }

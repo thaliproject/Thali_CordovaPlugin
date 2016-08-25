@@ -161,15 +161,15 @@ extension PeerAvailability {
      */
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
         guard parameters.count == 3 else {
-            //throw error
-            return
+            throw AppContextError.BadParameters
         }
-        guard let identifierString = parameters[0] as? String, _ = parameters[1] as? String else {
-            //throw error
-            return
+        guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String else {
+            throw AppContextError.BadParameters
         }
         let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
         browserManager.connectToPeer(peerIdentifier) { port, error in
+            print(syncValue)
+            //todo call multiconnectResolved with port or error
         }
     }
 

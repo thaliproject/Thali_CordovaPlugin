@@ -14,7 +14,6 @@ public struct PeerAvailability {
 }
 
 public enum MultiСonnectError: ErrorType {
-    case IllegalPeerID
     case StartListeningNotActive
     case ConnectionFailed
     case ConnectionTimedOut
@@ -23,6 +22,7 @@ public enum MultiСonnectError: ErrorType {
     case NoAvailableTCPPorts
     case RadioTurnedOff
     case UnspecifiedRadioError
+    case IllegalPeerID
 }
 
 //class for managing Thali browser's logic
@@ -31,6 +31,7 @@ public final class BrowserManager: NSObject {
 
     internal private (set) var currentBrowser: Browser?
     internal private(set) var availablePeers: [PeerIdentifier] = []
+    internal private(set) var activeSockets: [PeerIdentifier: (NSOutputStream, NSInputStream)] = [:]
 
     internal let serviceType: String
 
@@ -52,6 +53,29 @@ public final class BrowserManager: NSObject {
         peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
         if let index = availablePeers.indexOf(identifier) {
             availablePeers.removeAtIndex(index)
+        }
+    }
+    
+    private func disconnectSessionIfNeeded(with identifier: PeerIdentifier) {
+        synchronized(self) {
+            guard let session = activeSessions[identifier] where activeSockets[identifier] == nil else {
+                return
+            }
+            session.disconnect()
+            activeSessions.removeValueForKey(identifier)
+        }
+    }
+    
+    private func addToDiscardQueue(session: BrowserSessionManager, with identifier: PeerIdentifier, timeout: Double = 5) {
+        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(timeout * Double(NSEC_PER_SEC)))
+        dispatch_after(delayTime, dispatch_get_main_queue()) { [weak self] in
+            self?.disconnectSessionIfNeeded(with: identifier)
+        }
+    }
+
+    private func handleDidReceive(socket socket: (NSOutputStream, NSInputStream), for identifier: PeerIdentifier) {
+        synchronized(self) {
+            self.activeSockets[identifier] = socket
         }
     }
 
@@ -78,13 +102,18 @@ public final class BrowserManager: NSObject {
         return synchronized(self) {
             guard let lastGenerationIdentifier = self.lastGenerationPeer(for: identifier),
                 let currentBrowser = self.currentBrowser else {
+                    completion(nil, MultiСonnectError.StartListeningNotActive)
                     return
             }
             do {
                 let session = try currentBrowser.invitePeerToConnect(lastGenerationIdentifier)
-                let browserSession = BrowserSessionManager(session: session) { _ in
-                }
+                let browserSession = BrowserSessionManager(session: session, didCreateSocketHandler: { [weak self] socket in
+                        self?.handleDidReceive(socket: socket, for: identifier)
+                    }, disconnectedHandler: {
+                        completion(nil, MultiСonnectError.ConnectionFailed)
+                })
                 self.activeSessions[identifier] = browserSession
+                addToDiscardQueue(browserSession, with: identifier)
             } catch let error {
                 completion(nil, error)
             }
