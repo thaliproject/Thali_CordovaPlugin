@@ -645,7 +645,7 @@ module.exports.getPort = function (peerIdentifier) {
 // jscs:enable jsDoc
 module.exports._terminateConnection = function (incomingConnectionId) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    gServersManager.terminateConnection(incomingConnectionId)
+    gServersManager.terminateIncomingConnection(incomingConnectionId)
     .then(function () {
       resolve();
     })

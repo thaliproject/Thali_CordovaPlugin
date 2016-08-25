@@ -21,6 +21,7 @@ public class SocketThreadBaseTest {
 
     @Before
     public void setUp() throws Exception {
+
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();
