@@ -9,7 +9,7 @@ var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
 var https = require('https');
 var thaliConfig = require('./thaliConfig');
-var guid = require('./utils/guide');
+var guid = require('./utils/guid');
 
 var states = {
   started: false
