@@ -13,22 +13,30 @@ if (typeof Mobile === 'undefined') {
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
-var utResult;
+var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
   Mobile('executeNativeTests').callNative(function (result) {
-    utResult = true;
+    if (result) {
+      if (!result.executed) {
+        console.log('*Native tests were not executed*');
 
-    if (result && result.executed) {
+        utResult = false;
+      } else {
+        console.log('*Native tests were executed*');
+
+        utResult = result.failed <= 0;
+      }
+
       console.log('Total number of executed tests: ', result.total);
       console.log('Number of passed tests: ', result.passed);
       console.log('Number of failed tests: ', result.failed);
       console.log('Number of ignored tests: ', result.ignored);
       console.log('Total duration: ', result.duration);
+    } else {
+      console.log('*Native tests results are empty*');
 
-      if (result.failed > 0) {
-        utResult = false;
-      }
+      utResult = false;
     }
   });
 

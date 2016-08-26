@@ -29,7 +29,7 @@ public final class TestRunner: NSObject {
     private static func createDefaultRunner() -> TestRunner {
         return TestRunner(testSuite: XCTestSuite.defaultTestSuite())
     }
-    
+
     public var resultDescription: String? {
         return runResult.jsonString
     }
