@@ -8,7 +8,7 @@
 'use strict';
 
 var events = require('events');
-var ThaliEmitter = require('thali/thaliemitter');
+var ThaliEmitter = require('thali/Runtime/utils/thaliEmitter');
 
 /*
 "jsonData": {

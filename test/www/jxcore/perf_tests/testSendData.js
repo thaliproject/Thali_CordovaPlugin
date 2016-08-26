@@ -20,7 +20,7 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
-var ThaliEmitter = require('thali/thaliemitter');
+var ThaliEmitter = require('thali/Runtime/utils/thaliEmitter');
 
 var SendDataTCPServer = require('./SendDataTCPServer');
 var SendDataConnector = require('./SendDataConnector');

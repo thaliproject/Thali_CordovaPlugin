@@ -5,17 +5,17 @@ var crypto = require('crypto');
 var https = require('https');
 
 var ThaliNotificationClient =
-  require('thali/NextGeneration/notification/thaliNotificationClient');
+  require('thali/Runtime/notification/thaliNotificationClient');
 var ThaliNotificationServer =
-  require('thali/NextGeneration/notification/thaliNotificationServer');
+  require('thali/Runtime/notification/thaliNotificationServer');
 var thaliMobile =
-  require('thali/NextGeneration/thaliMobile');
+  require('thali/Runtime/networking/thaliMobile');
 var ThaliPeerPoolDefault =
-  require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+  require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 var NotificationBeacons =
-  require('thali/NextGeneration/notification/thaliNotificationBeacons');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var logger = require('thali/thaliLogger')('testThaliNotification');
+  require('thali/Runtime/notification/thaliNotificationBeacons');
+var thaliConfig = require('thali/Runtime/thaliConfig');
+var logger = require('thali/Runtime/utils/thaliLogger')('testThaliNotification');
 var testUtils = require('../lib/testUtils');
 
 var HELLO = 'Hello world';

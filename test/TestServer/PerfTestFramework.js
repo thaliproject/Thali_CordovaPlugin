@@ -137,35 +137,40 @@ PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
 
     // Let the devices know we're completely finished
     var acksReceived = devices.length;
-    devices.forEach(function(device) {
+    if (acksReceived === 0) {
+      logger.info("Server terminating normally");
+      process.exit(0)
+    } else {
+      devices.forEach(function(device) {
 
-      // Send 'end' and wait for 'end_ack'
+        // Send 'end' and wait for 'end_ack'
 
-      device.socket.once("end_ack", function() {
-        if (--acksReceived == 0) {
+        device.socket.once("end_ack", function() {
+          if (--acksReceived == 0) {
 
-          // Record we've completed this platform's run
-          self.platforms[platform].state = "completed";
+            // Record we've completed this platform's run
+            self.platforms[platform].state = "completed";
 
-          // Are all platforms now complete ?
-          var completed = true;
-          for (var p in self.platforms) {
-            logger.debug("state: %s %s", p, self.platforms[p].state);
-            if (self.platforms[p].state != "completed") {
-              completed = false;
+            // Are all platforms now complete ?
+            var completed = true;
+            for (var p in self.platforms) {
+              logger.debug("state: %s %s", p, self.platforms[p].state);
+              if (self.platforms[p].state != "completed") {
+                completed = false;
+              }
+            }
+
+            if (completed) {
+              logger.info("Server terminating normally");
+              process.exit(0);
             }
           }
+        });
 
-          if (completed) {
-            logger.info("Server terminating normally");
-            process.exit(0);
-          }
-        }
+        logger.debug("end to %s", device.deviceName);
+        device.socket.emit("end", device.deviceName);
       });
-
-      logger.debug("end to %s", device.deviceName);
-      device.socket.emit("end", device.deviceName);
-    });
+    }
   } else {
     logger.info("Remaining tests: %s", this.testsToRun[platform]);
   }

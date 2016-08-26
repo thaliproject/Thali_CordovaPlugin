@@ -6,7 +6,7 @@ var testUtils = require('../lib/testUtils.js');
 var fs = require('fs-extra-promise');
 var path = require('path');
 var PouchDB = require('pouchdb');
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
+var PouchDBGenerator = require('thali/Runtime/utils/pouchDBGenerator');
 var leveldownMobile = require('leveldown-mobile');
 
 // DB defaultDirectory should be unique among all tests

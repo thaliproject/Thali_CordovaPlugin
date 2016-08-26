@@ -15,7 +15,7 @@ test("test server - starts and stops", function(t) {
     server.kill('SIGINT');
   });
   server.on('exit', function(code, signal) {
-    t.equal(code, 130, "SIGINT handler should have terminated server");
+    t.equal(signal, 'SIGINT', "SIGINT handler should have terminated server");
     t.end();
   });
 });
@@ -23,7 +23,7 @@ test("test server - starts and stops", function(t) {
 function startServer(t, testConfig) {
 
   if (!testConfig) {
-    testConfig = "./TestPerfTestConfig.js";
+    testConfig = "./test/config/perfTest1.js";
   }
 
   var server = spawn(
@@ -53,7 +53,8 @@ function presentDevice(client, name, uuid, os, type, tests) {
     "name": name,
     "type": type,
     "tests": tests,
-    "uuid": uuid
+    "uuid": uuid,
+    "supportedHardware": true
   }));
 }
 
@@ -91,7 +92,7 @@ test("test server - perf test framework", function(t) {
     var client = io('http://127.0.0.1:3000/',
       { transports:['websocket'], 'force new connection': true } 
     );
- 
+
     client.deviceName = clients.length;
     client.uuid = uuid.v4();
     clients.push(client);
@@ -338,7 +339,7 @@ test("test server - perf test framework handles disconnects", function(t) {
 test("test server - perf test framework handles server timeout", function(t) {
 
   var time = 0;
-  var server = startServer(t, "./TestPerfTestConfig2.js");
+  var server = startServer(t, "./test/config/perfTest2.js");
 
   var numTests = 0; 
   var numDevices = 4;
@@ -412,4 +413,3 @@ test("test server - perf test framework handles server timeout", function(t) {
     });
   }
 });
-

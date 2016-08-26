@@ -19,11 +19,11 @@ var sinon = require('sinon');
 var proxyquire = require('proxyquire').noCallThru();
 
 var salti = require('salti');
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var ThaliManager = require('thali/NextGeneration/thaliManager');
+var PouchDBGenerator = require('thali/Runtime/utils/pouchDBGenerator');
+var thaliConfig = require('thali/Runtime/thaliConfig');
+var ThaliManager = require('thali/Runtime/thaliManager');
 var ThaliPeerPoolDefault =
-  require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+  require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 
 // DB defaultDirectory should be unique among all tests
 // and any instance of this test.
@@ -95,7 +95,7 @@ test('test uncaught exception', function (t) {
   });
 
   var ThaliManagerProxyquired =
-  proxyquire('thali/NextGeneration/thaliManager', {
+  proxyquire('thali/Runtime/thaliManager', {
     'salti': spySalti
   });
 

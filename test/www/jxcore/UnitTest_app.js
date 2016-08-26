@@ -11,7 +11,7 @@ if (typeof Mobile === 'undefined') {
 }
 
 var testUtils = require('./lib/testUtils');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var ThaliMobile = require('thali/Runtime/networking/thaliMobile');
 var Promise = require('lie');
 var utResult = false;
 

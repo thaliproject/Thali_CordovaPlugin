@@ -11,7 +11,7 @@
 'use strict';
 
 var events = require('events');
-var ThaliEmitter = require('thali/thaliemitter');
+var ThaliEmitter = require('thali/Runtime/utils/thaliEmitter');
 
 var ReConnectTCPServer = require('./ReConnectTCPServer');
 var ReConnectConnector = require('./ReConnectConnector');

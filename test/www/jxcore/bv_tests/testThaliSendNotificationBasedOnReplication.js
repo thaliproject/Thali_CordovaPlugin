@@ -4,18 +4,18 @@ var tape = require('../lib/thaliTape');
 var getRandomlyNamedTestPouchDBInstance =
   require('../lib/testUtils.js').getRandomlyNamedTestPouchDBInstance;
 var ThaliNotificationServer =
-  require('thali/NextGeneration/notification/thaliNotificationServer');
+  require('thali/Runtime/notification/thaliNotificationServer');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 var express = require('express');
 var crypto = require('crypto');
 var Promise = require('lie');
 var ThaliSendNotificationBasedOnReplication =
-  require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
+  require('thali/Runtime/replication/thaliSendNotificationBasedOnReplication');
 var urlsafeBase64 = require('urlsafe-base64');
 var RefreshTimerManager =
-  require('thali/NextGeneration/replication/utilities').RefreshTimerManager;
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+  require('thali/Runtime/replication/utilities').RefreshTimerManager;
+var thaliConfig = require('thali/Runtime/thaliConfig');
 
 var test = tape({
   setup: function (t) {
@@ -135,7 +135,7 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
 
       var ThaliSendNotificationBasedOnReplicationProxyquired =
         proxyquire(
-          'thali/NextGeneration/replication/' +
+          'thali/Runtime/replication/' +
           'thaliSendNotificationBasedOnReplication',
           { '../notification/thaliNotificationServer':
             MockThaliNotificationServer,

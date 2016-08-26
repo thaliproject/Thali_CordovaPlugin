@@ -6,8 +6,8 @@ var uuid = require('node-uuid');
 var express = require('express');
 var assert = require('assert');
 var net = require('net');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thaliLogger')('wifiBasedNativeMock');
+var makeIntoCloseAllServer = require('thali/Runtime/utils/makeIntoCloseAllServer');
+var logger = require('thali/Runtime/utils/thaliLogger')('wifiBasedNativeMock');
 
 var proxyquire = require('proxyquire');
 proxyquire.noPreserveCache();
@@ -47,7 +47,7 @@ var getCurrentNetworkStatus = function () {
 };
 
 var ThaliWifiInfrastructure =
-proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
+proxyquire('thali/Runtime/networking/thaliWifiInfrastructure',
   {
     './thaliMobileNativeWrapper': {
       emitter: mockEmitter,

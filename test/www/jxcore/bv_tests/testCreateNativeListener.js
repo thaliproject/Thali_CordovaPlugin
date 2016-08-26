@@ -3,8 +3,8 @@
 var net = require('net');
 var multiplex = require('multiplex');
 var tape = require('../lib/thaliTape');
-var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersManager');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var ThaliTCPServersManager = require('thali/Runtime/mux/thaliTcpServersManager');
+var makeIntoCloseAllServer = require('thali/Runtime/utils/makeIntoCloseAllServer');
 var Promise = require('lie');
 
 // Every call to Mobile trips this warning

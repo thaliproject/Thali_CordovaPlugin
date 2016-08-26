@@ -4,12 +4,12 @@ var crypto = require('crypto');
 var sinon = require('sinon');
 
 var PeerDictionary =
-  require('thali/NextGeneration/notification/thaliPeerDictionary');
+  require('thali/Runtime/notification/thaliPeerDictionary');
 var ThaliNotificationAction =
-  require('thali/NextGeneration/notification/thaliNotificationAction');
+  require('thali/Runtime/notification/thaliNotificationAction');
 var ThaliMobileNativeWrapper =
-  require('thali/NextGeneration/thaliMobileNativeWrapper');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+  require('thali/Runtime/networking/thaliMobileNativeWrapper');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 
 var ENTRY1 = 'entry1';
 var ENTRY2 = 'entry2';
@@ -277,6 +277,3 @@ test('When CONTROLLED_BY_POOL entry is removed and kill is called.',
 
     t.end();
   });
-
-
-

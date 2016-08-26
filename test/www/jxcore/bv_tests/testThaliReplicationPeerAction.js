@@ -3,15 +3,16 @@
 var tape = require('../lib/thaliTape');
 var net = require('net');
 var crypto = require('crypto');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 var Promise = require('lie');
 var testUtils = require('../lib/testUtils');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var makeIntoCloseAllServer = require('thali/Runtime/utils/makeIntoCloseAllServer');
 var https = require('https');
 var httpTester = require('../lib/httpTester');
-var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
-var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
-var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
+var ThaliReplicationPeerAction = require('thali/Runtime/replication/thaliReplicationPeerAction');
+var ThaliMobileNativeWrapper =
+  require('thali/Runtime/networking/thaliMobileNativeWrapper');
+var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey = devicePublicPrivateKey.generateKeys();
@@ -60,7 +61,7 @@ function failedRequest(t, serverPort, catchHandler) {
     pskIdentifyField: pskId,
     psk: pskKey,
     suggestedTCPTimeout: 10000,
-    connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+    connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
   };
   thaliReplicationPeerAction =
     new ThaliReplicationPeerAction(notificationForUs,
@@ -227,7 +228,7 @@ test('Make sure docs replicate', function (t) {
           pskIdentifyField: pskId,
           psk: pskKey,
           suggestedTCPTimeout: 10000,
-          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+          connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
         };
         var promises = [];
         thaliReplicationPeerAction =
@@ -271,7 +272,7 @@ test('Do nothing and make sure we time out', function (t) {
       pskIdentifyField: pskId,
       psk: pskKey,
       suggestedTCPTimeout: 10000,
-      connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+      connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
     };
     // Using a different directory really shouldn't make any difference
     // to this particular test but I'm being paranoid
@@ -328,7 +329,7 @@ test('Do something and make sure we time out', function (t) {
           pskIdentifyField: pskId,
           psk: pskKey,
           suggestedTCPTimeout: 10000,
-          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+          connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
         };
         thaliReplicationPeerAction =
           new ThaliReplicationPeerAction(notificationForUs,
@@ -400,7 +401,7 @@ test('Start replicating and then catch error when server goes', function (t) {
           pskIdentifyField: pskId,
           psk: pskKey,
           suggestedTCPTimeout: 10000,
-          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+          connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
         };
         thaliReplicationPeerAction =
           new ThaliReplicationPeerAction(notificationForUs,

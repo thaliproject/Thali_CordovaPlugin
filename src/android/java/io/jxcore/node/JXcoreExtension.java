@@ -25,8 +25,9 @@ import io.jxcore.node.jxcore.JXcoreCallback;
 
 /**
  * Implements Thali native interface.
+ *
  * For the documentation, please see
- * https://github.com/thaliproject/Thali_CordovaPlugin/blob/vNext/thali/NextGeneration/thaliMobileNative.js
+ * https://github.com/thaliproject/Thali_CordovaPlugin/blob/vNext/thali/Runtime/networking/thaliMobileNative.js
  */
 public class JXcoreExtension {
 
@@ -61,6 +62,7 @@ public class JXcoreExtension {
     private static final String EVENT_VALUE_CELLULAR = "cellular";
     private static final String EVENT_VALUE_BSSID_NAME = "bssidName";
     private static final String EVENT_VALUE_PORT_NUMBER = "portNumber";
+
     // Android specific methods and events
     private static final String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
     private static final String METHOD_NAME_GET_BLUETOOTH_ADDRESS = "getBluetoothAddress";
