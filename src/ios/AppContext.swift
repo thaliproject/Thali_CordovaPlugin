@@ -90,8 +90,24 @@ extension PeerAvailability {
     private let advertiserManager: AdvertiserManager
 
     private func notifyOnDidUpdateNetworkStatus() {
-        //todo put actual network status
-        delegate?.context(self, didChangeNetworkStatus: jsonValue([:]))
+        //TODO: update with real values from hardware
+        let wifiIsPowered =  false
+        let bluetoothIsPowered = false
+        let bluetoothLEIsPowered = false
+
+        let networkStatus = [
+            "wifi"              :   wifiIsPowered ? "on" : "off",
+            "bluetooth"         :   bluetoothIsPowered ? "on" : "off",
+            "bluetoothLowEnergy":   bluetoothLEIsPowered ? "on" : "off",
+            "cellular"          :   "doNotCare"
+        ]
+
+
+        do {
+            delegate?.context(self, didChangeNetworkStatus: try jsonValue(networkStatus)!)
+        } catch let error {
+            assert(false, "\(error)")
+        }
     }
 
     private func willEnterBackground() {
