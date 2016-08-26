@@ -10,7 +10,6 @@ if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 
-var testRunner = require('./runTests.js');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
@@ -47,14 +46,12 @@ if (!utResult) {
 //return;
 
 // Issue #914
-var networkTypes = [];
-if (process.platform === 'android' || process.platform === 'ios') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
-  networkTypes = [
-    ThaliMobile.networkTypes.WIFI,
-    ThaliMobile.networkTypes.NATIVE,
-    ThaliMobile.networkTypes.BOTH
-  ];
+var networkTypes = [ThaliMobile.networkTypes.BOTH];
+if (process.platform === 'ios') {
+  networkTypes = [ThaliMobile.networkTypes.WIFI];
+}
+if (process.platform === 'android') {
+  networkTypes = [ThaliMobile.networkTypes.NATIVE];
 }
 
 ThaliMobile.getNetworkStatus()
@@ -74,12 +71,16 @@ ThaliMobile.getNetworkStatus()
 
       networkTypes.reduce(function (sequence, networkType) {
         return sequence
-          .then(function () {
+          .then(function (res) {
             console.log('Running for ' + networkType + ' network type');
             global.NETWORK_TYPE = networkType;
+            var testRunner = require('./runTests.js');
             return testRunner.run();
           });
-      }, Promise.resolve());
+      }, Promise.resolve())
+      .catch(function (error) {
+        console.log(error);
+      });
     });
   });
 });
