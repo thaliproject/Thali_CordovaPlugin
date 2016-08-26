@@ -164,7 +164,7 @@ build_ios_if_possible()
       build \
       CONFIGURATION_BUILD_DIR="${TEST_PROJECT_DIR}/build/device" \
       SHARED_PRECOMPS_DIR="${TEST_PROJECT_DIR}/build/sharedpch" \
-    );ERROR_ABORT
+    )
 
   fi
 }
