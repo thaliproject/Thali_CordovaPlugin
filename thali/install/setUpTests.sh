@@ -153,7 +153,7 @@ build_ios_if_possible()
 
     echo "Building project: ${TEST_PROJECT_PATH}"
 
-    $(\
+    (\
     cd $TEST_PROJECT_DIR && \
     xcodebuild \
       -xcconfig $REPO_ROOT_DIR/thali/install/ios/build-ci.xcconfig \
