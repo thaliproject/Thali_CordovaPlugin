@@ -134,7 +134,7 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
         if ([AppContextJSEvent respondsToSelector:@selector(executeNativeTests)]) {
-            NSString *result = [AppContextJSEvent performSelector:@selector(executeNativeTests)];
+            NSString *result = [appContext performSelector:@selector(executeNativeTests)];
 #pragma clang diagnostic pop
             
             @synchronized(self) {
