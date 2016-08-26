@@ -3,6 +3,13 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+ERROR_ABORT()
+{
+  if [[ $? != 0 ]]; then
+    exit -1
+  fi
+}
+
 # Check the platform we are running
 IS_MINIGW_PLATFORM=false
 IS_DARWIN_PLATFORM=false
@@ -99,7 +106,7 @@ build_android()
 
   cd $TEST_PROJECT_ROOT_DIR
 
-  cordova build android --release --device ; ERROR_ABORT
+  cordova build android --release --device;ERROR_ABORT
 }
 
 # Adds iOS platform when we're running on macOS
@@ -139,14 +146,14 @@ build_ios_if_possible()
     # it's a shortcut for `cordova prepare` + `cordova compile`
     # so we have to run cordova prepare and xcodebuild then
 
-    cordova prepare ios --device ; ERROR_ABORT
+    cordova prepare ios --device;ERROR_ABORT
 
     TEST_PROJECT_DIR=$TEST_PROJECT_ROOT_DIR/platforms/ios
     TEST_PROJECT_PATH=$TEST_PROJECT_DIR/$TEST_PROJECT_NAME.xcodeproj
 
     echo "Building project: ${TEST_PROJECT_PATH}"
 
-    $(\
+    (\
     cd $TEST_PROJECT_DIR && \
     xcodebuild \
       -xcconfig $REPO_ROOT_DIR/thali/install/ios/build-ci.xcconfig \
@@ -157,7 +164,7 @@ build_ios_if_possible()
       build \
       CONFIGURATION_BUILD_DIR="${TEST_PROJECT_DIR}/build/device" \
       SHARED_PRECOMPS_DIR="${TEST_PROJECT_DIR}/build/sharedpch" \
-    ) ; ERROR_ABORT
+    )
 
   fi
 }
