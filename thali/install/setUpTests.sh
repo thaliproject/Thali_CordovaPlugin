@@ -153,7 +153,7 @@ build_ios_if_possible()
 
     echo "Building project: ${TEST_PROJECT_PATH}"
 
-    $(\
+    (\
     cd $TEST_PROJECT_DIR && \
     xcodebuild \
       -xcconfig $REPO_ROOT_DIR/thali/install/ios/build-ci.xcconfig \
@@ -164,7 +164,7 @@ build_ios_if_possible()
       build \
       CONFIGURATION_BUILD_DIR="${TEST_PROJECT_DIR}/build/device" \
       SHARED_PRECOMPS_DIR="${TEST_PROJECT_DIR}/build/sharedpch" \
-    ) ; ERROR_ABORT
+    )
 
   fi
 }
