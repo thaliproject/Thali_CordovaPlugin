@@ -112,18 +112,8 @@ extension PeerAvailability {
     private var bluetoothManager: CBCentralManager?
 
     private func notifyOnDidUpdateNetworkStatus() {
-
-        //TODO: update with real values from hardware
-        var wifiIsPowered =  false
         
-        do {
-            let reachability = try Reachability.reachabilityForLocalWiFi()
-            wifiIsPowered = reachability.isReachableViaWiFi()
-        } catch {
-            wifiIsPowered = false
-        }
-
-        
+        let wifiIsPowered = NetworkReachability().isWiFiEnabled()
         let bluetoothIsPowered = false
         let bluetoothLEIsPowered = false
 
