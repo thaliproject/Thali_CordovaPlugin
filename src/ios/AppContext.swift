@@ -83,16 +83,7 @@ public typealias ClientConnectCallback = (String, String) -> Void
     
     private func notifyOnDidUpdateNetworkStatus() {
         
-        var wifiIsPowered =  false
-        
-        do {
-            let reachability = try Reachability.reachabilityForLocalWiFi()
-            wifiIsPowered = reachability.isReachableViaWiFi()
-        } catch {
-            wifiIsPowered = false
-        }
-
-        
+        let wifiIsPowered = NetworkReachability().isWiFiEnabled()
         let bluetoothIsPowered = false
         let bluetoothLEIsPowered = false
         
