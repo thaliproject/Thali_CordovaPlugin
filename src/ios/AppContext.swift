@@ -76,12 +76,12 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
         //TODO: update with real values from hardware
         var wifiIsPowered =  false
 
-        do {
-            let reachability = try Reachability.reachabilityForLocalWiFi()
-            wifiIsPowered = reachability.isReachableViaWiFi()
-        } catch {
-            wifiIsPowered = false
-        }
+//        do {
+//            let reachability = try Reachability.reachabilityForLocalWiFi()
+//            wifiIsPowered = reachability.isReachableViaWiFi()
+//        } catch {
+//            wifiIsPowered = false
+//        }
 
         let networkStatus = [
             "wifi"              :   wifiIsPowered ? "on" : "off",
