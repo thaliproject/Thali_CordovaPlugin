@@ -14,7 +14,6 @@ var test = tape({
       return {
         'callNative': function () {
           var cb = arguments[arguments.length - 1];
-          var args = Array.prototype.slice.call(arguments, 0, - 1);
 
           if(typeof cb !== 'function') {
             throw new Error('The last argument of the Mobile callNative ' +
@@ -27,7 +26,7 @@ var test = tape({
             }, 100);
           } else {
             setTimeout(function () {
-              cb.apply(null, args);
+              cb(null);
             }, 100);
           }
         },
