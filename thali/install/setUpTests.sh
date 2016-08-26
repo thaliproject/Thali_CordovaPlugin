@@ -3,6 +3,13 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+ERROR_ABORT()
+{
+  if [[ $? != 0 ]]; then
+    exit -1
+  fi
+}
+
 # Check the platform we are running
 IS_MINIGW_PLATFORM=false
 IS_DARWIN_PLATFORM=false
