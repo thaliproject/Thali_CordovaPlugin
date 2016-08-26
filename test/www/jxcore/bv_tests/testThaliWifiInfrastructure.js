@@ -1,5 +1,11 @@
 'use strict';
 
+// Issue #419
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+if (global.NETWORK_TYPE === ThaliMobile.networkTypes.NATIVE) {
+  return;
+}
+
 var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var ThaliConfig = require('thali/NextGeneration/thaliConfig');
