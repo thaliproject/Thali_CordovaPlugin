@@ -6,6 +6,7 @@
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //
 
+import CoreBluetooth
 import Foundation
 import ThaliCore
 
@@ -89,6 +90,10 @@ extension PeerAvailability {
     private let browserManager: BrowserManager
     private let advertiserManager: AdvertiserManager
 
+    private var bluetoothIsPowered = false
+    private var bluetoothLEIsPowered = false
+    private var bluetoothManager: CBCentralManager?
+    
     private func notifyOnDidUpdateNetworkStatus() {
         //TODO: update with real values from hardware
         var wifiIsPowered =  false
@@ -157,6 +162,8 @@ extension PeerAvailability {
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
             self?.willEnterBackground()
         }
+        
+        bluetoothManager = CBCentralManager(delegate: self, queue: nil)
     }
 
     public func startListeningForAdvertisements() throws {
@@ -211,6 +218,20 @@ extension PeerAvailability {
     }
 #endif
 
+}
+
+// MARK: CBCentralManagerDelegate
+extension AppContext: CBCentralManagerDelegate {
+    public func centralManagerDidUpdateState(central: CBCentralManager) {
+        switch central.state {
+        case .PoweredOn:
+            bluetoothIsPowered = true
+            bluetoothLEIsPowered = true
+        default:
+            bluetoothIsPowered = false
+            bluetoothLEIsPowered = false
+        }
+    }
 }
 
 /// Node functions names
