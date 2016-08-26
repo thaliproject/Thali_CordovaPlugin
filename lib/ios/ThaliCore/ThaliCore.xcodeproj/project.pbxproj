@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1C33671C1D703C1400143BCF /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C33671B1D703C1400143BCF /* Reachability.swift */; };
-		1C33671D1D703C1400143BCF /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C33671B1D703C1400143BCF /* Reachability.swift */; };
+		1C3367201D703EE900143BCF /* NetworkReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C33671E1D703EE900143BCF /* NetworkReachability.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1C3367211D703EE900143BCF /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C33671F1D703EE900143BCF /* NetworkReachability.m */; };
+		1C3367221D70407B00143BCF /* NetworkReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C33671E1D703EE900143BCF /* NetworkReachability.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1C3367231D70407E00143BCF /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C33671F1D703EE900143BCF /* NetworkReachability.m */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -52,7 +54,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		1C33671B1D703C1400143BCF /* Reachability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Reachability.swift; path = Utils/Reachability/Reachability.swift; sourceTree = "<group>"; };
+		1C33671E1D703EE900143BCF /* NetworkReachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetworkReachability.h; path = Utils/NetworkReachability/NetworkReachability.h; sourceTree = "<group>"; };
+		1C33671F1D703EE900143BCF /* NetworkReachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NetworkReachability.m; path = Utils/NetworkReachability/NetworkReachability.m; sourceTree = "<group>"; };
 		CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA571BF1D4787A900FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
 		CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThaliCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -107,17 +110,18 @@
 		1C3367191D703BAC00143BCF /* Utils */ = {
 			isa = PBXGroup;
 			children = (
-				1C33671A1D703C0300143BCF /* Reachability */,
+				1C33671A1D703C0300143BCF /* NetworkReachability */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
 		};
-		1C33671A1D703C0300143BCF /* Reachability */ = {
+		1C33671A1D703C0300143BCF /* NetworkReachability */ = {
 			isa = PBXGroup;
 			children = (
-				1C33671B1D703C1400143BCF /* Reachability.swift */,
+				1C33671E1D703EE900143BCF /* NetworkReachability.h */,
+				1C33671F1D703EE900143BCF /* NetworkReachability.m */,
 			);
-			name = Reachability;
+			name = NetworkReachability;
 			sourceTree = "<group>";
 		};
 		CCA571B21D4787A900FBEC41 = {
@@ -253,6 +257,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1C3367201D703EE900143BCF /* NetworkReachability.h in Headers */,
 				CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -261,6 +266,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1C3367221D70407B00143BCF /* NetworkReachability.h in Headers */,
 				CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -461,6 +467,7 @@
 				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
 				D3E380D41D6303F50040DF58 /* Sync.swift in Sources */,
 				FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */,
+				1C3367211D703EE900143BCF /* NetworkReachability.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -496,6 +503,7 @@
 				D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */,
 				D377C4F61D6B25AA00916A7B /* Sync.swift in Sources */,
 				D3217E351D5E0D990068390B /* AppStateNotificationsManagerTests.swift in Sources */,
+				1C3367231D70407E00143BCF /* NetworkReachability.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
