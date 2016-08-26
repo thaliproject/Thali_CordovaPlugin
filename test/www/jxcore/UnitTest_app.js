@@ -25,11 +25,7 @@ if (process.platform === 'android' || process.platform === 'ios') {
       } else {
         console.log('*Native tests were executed*');
 
-        if (result.failed > 0) {
-          utResult = false;
-        } else {
-          utResult = true;
-        }
+        utResult = result.failed <= 0;
       }
 
       console.log('Total number of executed tests: ', result.total);
