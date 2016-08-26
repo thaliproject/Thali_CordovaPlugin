@@ -17,7 +17,7 @@ var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
   console.log('Running unit tests');
-  Mobile('ExecuteNativeTests').callNative(function (result) {
+  Mobile('executeNativeTests').callNative(function (result) {
     utResult = true;
     if (result && result.executed) {
       console.log('Total number of executed tests: ', result.total);
