@@ -3,7 +3,7 @@
 var logCallback;
 var os = require('os');
 var tmp = require('tmp');
-var PouchDB = require('pouchdb-node');
+var PouchDB = require('pouchdb');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
 var Promise = require('lie');

@@ -31,11 +31,10 @@ if (process.platform === 'android' || process.platform === 'ios') {
       }
     }
   });
-  }
-});
+}
 
 if (!utResult) {
-  console.log("Failed to execute UT.");
+  console.log('Failed to execute UT.');
   global.nativeUTFailed = true;
 }
 
