@@ -52,10 +52,6 @@ class Session: NSObject {
         super.init()
         self.session.delegate = self
     }
-
-    func disconnect() {
-        session.disconnect()
-    }
 }
 
 extension Session: MCSessionDelegate {

@@ -24,13 +24,9 @@ class VirtualSocketBuilder {
         session.sessionStateChangesHandler = sessionStateChanged
     }
 
-    func didReceive(inputStream: NSInputStream, name: String) {}
+    private func didReceive(inputStream: NSInputStream, name: String) {}
 
-    func disconnect() {
-        session.disconnect()
-    }
-
-    func sessionStateChanged(state: Session.SessionState) {
+    private func sessionStateChanged(state: Session.SessionState) {
         switch state {
         case .NotConnected:
             disconnectedHandler()
@@ -43,7 +39,7 @@ class VirtualSocketBuilder {
 class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
     private var outputStreamName: String? = nil
 
-    override func didReceive(inputStream: NSInputStream, name: String) {
+    override private func didReceive(inputStream: NSInputStream, name: String) {
         super.didReceive(inputStream, name: name)
         guard let outputStreamName = outputStreamName where name == outputStreamName else {
             return
@@ -51,12 +47,10 @@ class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
         self.inputStream = inputStream
         if let outputStream = outputStream {
             completionHandler((outputStream, inputStream), nil)
-            session.didReceiveInputStream = nil
-            session.sessionStateChangesHandler = nil
         }
     }
 
-    override func sessionStateChanged(state: Session.SessionState) {
+    override private func sessionStateChanged(state: Session.SessionState) {
         super.sessionStateChanged(state)
         do {
             switch state {
@@ -75,7 +69,7 @@ class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 
 class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
 
-    override func didReceive(inputStream: NSInputStream, name: String) {
+    override private func didReceive(inputStream: NSInputStream, name: String) {
         super.didReceive(inputStream, name: name)
         self.inputStream = inputStream
         do {
@@ -85,14 +79,12 @@ class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
             let outputStream = try session.createOutputStream(name)
             self.outputStream = outputStream
             completionHandler((outputStream, inputStream), nil)
-            session.didReceiveInputStream = nil
-            session.sessionStateChangesHandler = nil
         } catch let error {
             completionHandler(nil, error)
         }
     }
 
-    override func sessionStateChanged(state: Session.SessionState) {
+    override private func sessionStateChanged(state: Session.SessionState) {
         super.sessionStateChanged(state)
     }
 }

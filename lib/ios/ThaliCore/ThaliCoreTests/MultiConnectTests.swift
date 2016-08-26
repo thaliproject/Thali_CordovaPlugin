@@ -12,41 +12,47 @@ import MultipeerConnectivity
 
 class MultiConnectTests: XCTestCase {
 
-    func testCreateSocket() {
+    private func createMCPFConnection(advertiserIdentifier: PeerIdentifier, advertiserSessionHandler: (Session) -> Void,
+                                      completion: () -> Void) -> (Advertiser, Browser) {
         let serviceType = String.random(length: 7)
-        var peerIdentifier: PeerIdentifier? = nil
-        var browserStreams, advertiserStreams: (NSOutputStream, NSInputStream)?
 
-        let foundPeerExpectation = expectationWithDescription("found peer")
-        let browser = Browser(serviceType: serviceType, foundPeer: { [weak foundPeerExpectation] identifier in
-                peerIdentifier = identifier
-                foundPeerExpectation?.fulfill()
+        let browser = Browser(serviceType: serviceType, foundPeer: { identifier in
+            completion()
             }, lostPeer: { _ in })
         browser.startListening()
-        let advertiser = Advertiser(peerIdentifier: PeerIdentifier(), serviceType: serviceType, port: 0) { (session) in
-            let _ = AdvertiserVirtualSocketBuilder(session: session, didCreateSocketHandler: { socket in
-                advertiserStreams = socket
-            }) { _ in}
-        }
+        let advertiser = Advertiser(peerIdentifier: advertiserIdentifier,
+                                    serviceType: serviceType, receivedInvitationHandler: advertiserSessionHandler)
         advertiser.startAdvertising()
 
-        waitForExpectationsWithTimeout(10, handler: nil)
-        XCTAssertNotNil(peerIdentifier)
+        return (advertiser, browser)
+    }
 
-        guard let identifier = peerIdentifier else {
-            XCTAssert(false, "peer identifier not found")
-            return
+    func testCreateSocket() {
+        let foundPeerExpectation = expectationWithDescription("found peer")
+        let peerIdentifier = PeerIdentifier()
+        var browserStreams, advertiserStreams: (NSOutputStream, NSInputStream)?
+
+        let (advertiser, browser) = createMCPFConnection(peerIdentifier, advertiserSessionHandler: { session in
+            let _ = AdvertiserVirtualSocketBuilder(session: session, completionHandler: { socket, error in
+                advertiserStreams = socket
+                }, disconnectedHandler: {
+            })
+        }) { [weak foundPeerExpectation] in
+            foundPeerExpectation?.fulfill()
         }
+        waitForExpectationsWithTimeout(5, handler: nil)
+
         do {
-            let session = try browser.invitePeerToConnect(identifier)
+            let session = try browser.invitePeerToConnect(peerIdentifier)
             let socketCreatedExpectation = expectationWithDescription("socket created")
             let _ = BrowserVirtualSocketBuilder(session: session,
-                                                didCreateSocketHandler: { [weak socketCreatedExpectation] socket in
+                                                completionHandler: { [weak socketCreatedExpectation] socket, error in
                                                     browserStreams = socket
                                                     socketCreatedExpectation?.fulfill()
             }) { _ in }
-            waitForExpectationsWithTimeout(30, handler: nil)
+            waitForExpectationsWithTimeout(10, handler: nil)
 
+            XCTAssertNotNil(advertiser)
             XCTAssertNotNil(browserStreams)
             XCTAssertNotNil(advertiserStreams)
         } catch let error {
@@ -54,15 +60,21 @@ class MultiConnectTests: XCTestCase {
         }
     }
 
-    func testLostConnection() {
-        XCTAssert(false, "not implemented")
+    func testSessionDisconnected() {
+        let disconnectedExpectation = expectationWithDescription("found peer")
+        let mcSession = MCSession(peer: MCPeerID(displayName: String.random(length: 5)))
+        let peerID = MCPeerID(displayName: String.random(length: 5))
+        let session = Session(session: mcSession, identifier: peerID)
+        let _ = VirtualSocketBuilder(session: session, completionHandler: { data in },
+                                     disconnectedHandler: { [weak disconnectedExpectation] in
+            disconnectedExpectation?.fulfill()
+        })
+        //dirty hack to check flow
+        mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .NotConnected)
+        waitForExpectationsWithTimeout(2, handler: nil)
     }
 
-    func testDisconnect() {
-        XCTAssert(false, "not implemented")
-    }
-
-    func test5secTimeout() {
+    func testSocketCreateTimeout() {
         let relay = SocketRelay<BrowserVirtualSocketBuilder>()
         let peerID = MCPeerID(displayName: "test")
         let mcSession = MCSession(peer: peerID)
