@@ -1,10 +1,10 @@
-'use strict';
+ 'use strict';
 
 var fs = require('fs-extra-promise');
 var path = require('path');
 var thaliTape = require('./lib/thaliTape');
 var testUtils = require('./lib/testUtils');
-var logger = require('thali/thalilogger')('runTests');
+var logger = require('thali/thaliLogger')('runTests');
 
 // The global.Mobile object is replaced here after thaliTape
 // has been required so that thaliTape can pick up the right
@@ -33,7 +33,7 @@ if (hasJavaScriptSuffix(testsToRun)) {
   loadFile(path.join(__dirname, testsToRun));
 } else {
   fs.readdirSync(path.join(__dirname, testsToRun)).forEach(function (fileName) {
-    if ((fileName.indexOf('test') === 0) &&
+    if ((fileName.indexOf('testNativeMethod') === 0) && //to enable all tests change 'testNativeMethod' to 'test'
          hasJavaScriptSuffix(fileName)) {
       var filePath = path.join(__dirname, testsToRun, fileName);
       loadFile(filePath);

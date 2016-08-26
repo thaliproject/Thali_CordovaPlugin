@@ -34,10 +34,6 @@ if (!utResult) {
   global.nativeUTFailed = true;
 }
 
-// TODO finish testing here (the node part will be omitted)
-console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-return;
-
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
   var promiseList = [];

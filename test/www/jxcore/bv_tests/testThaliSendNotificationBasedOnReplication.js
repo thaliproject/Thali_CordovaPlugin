@@ -15,6 +15,7 @@ var ThaliSendNotificationBasedOnReplication =
 var urlsafeBase64 = require('urlsafe-base64');
 var RefreshTimerManager =
   require('thali/NextGeneration/replication/utilities').RefreshTimerManager;
+var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var test = tape({
   setup: function (t) {
@@ -657,7 +658,7 @@ test('test calculateSeqPointKeyId', function (t) {
   var publicKey = crypto.createECDH('secp521r1').generateKeys();
   var keyId = ThaliSendNotificationBasedOnReplication
     .calculateSeqPointKeyId(publicKey);
-  var thaliPrefix = 'thali';
+  var thaliPrefix = thaliConfig.LOCAL_SEQ_POINT_PREFIX;
   t.equal(keyId.indexOf(thaliPrefix), 0);
   t.equal(urlsafeBase64.decode(keyId.substr(thaliPrefix.length))
     .compare(publicKey), 0);

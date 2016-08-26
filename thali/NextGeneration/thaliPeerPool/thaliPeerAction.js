@@ -27,7 +27,7 @@ var peerActionCounter = 0;
  * @param {module:thaliMobile.connectionTypes} connectionType
  * @param {string} actionType
  * @param {string} pskIdentity
- * @param {buffer} pskKey
+ * @param {Buffer} pskKey
  */
 function PeerAction (peerIdentifier, connectionType, actionType, pskIdentity,
                       pskKey)
@@ -118,7 +118,7 @@ PeerAction.prototype.getPskIdentity = function () {
 /**
  * The buffer to use as our pre-shared key, we need this to initialize the
  * pool agent
- * @type {buffer}
+ * @type {Buffer}
  * @private
  */
 PeerAction.prototype._pskKey = null;
@@ -144,13 +144,9 @@ PeerAction.prototype.getId = function () {
  * returned promise resolves then the pool MUST stop tracking this action.
  * Errors from the promise results SHOULD be logged.
  *
- * Start is idempotent so multiple calls MUST NOT directly cause a state change.
- * That is, if the action hasn't started then the first call to start will
- * start it and further calls will accomplish nothing more than just returning
- * the same promise that the original call returned.
- *
- * If start is called on an action that is already started then a
- * 'Only call start once' error MUST be returned.
+ * Start is not idempotent. The first call to start will start the action and
+ * any further calls to start if start has not yet finished MUST return a 'Only
+ * call start once' error.
  *
  * If start is called on an action that has completed, successfully or not, then
  * the returned promised must be resolved with an error object MUST with the
