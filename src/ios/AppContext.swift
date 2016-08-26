@@ -24,46 +24,46 @@ public typealias ClientConnectCallback = (String, String) -> Void
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
     /**
      Notifies about context's peer changes
-
+     
      - parameter peers:   json with data about changed peers
      - parameter context: related AppContext
      */
     func context(context: AppContext, didChangePeerAvailability peers: String)
-
+    
     /**
      Notifies about network status changes
-
+     
      - parameter status:  json string with network availability status
      - parameter context: related AppContext
      */
     func context(context: AppContext, didChangeNetworkStatus status: String)
-
+    
     /**
      Notifies about peer advertisement update
-
+     
      - parameter discoveryAdvertisingState: json with information about peer's state
      - parameter context:                   related AppContext
      */
     func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
-
+    
     /**
      Notifies about failing connection to port
-
+     
      - parameter port:      port failed to connect
      - parameter context: related AppContext
      */
     func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16)
-
+    
     /**
      Notifies about entering background
-
+     
      - parameter context: related AppContext
      */
     func appWillEnterBackground(withContext context: AppContext)
-
+    
     /**
      Notifies about entering foreground
-
+     
      - parameter context: related AppContext
      */
     func appDidEnterForeground(withContext context: AppContext)
@@ -75,16 +75,29 @@ public typealias ClientConnectCallback = (String, String) -> Void
     public weak var delegate: AppContextDelegate?
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
-
+    
     private func notifyOnDidUpdateNetworkStatus() {
-        //todo put actual network status
+        
+        //TODO: update with real values from hardware
+        let wifiIsPowered =  false
+        let bluetoothIsPowered = false
+        let bluetoothLEIsPowered = false
+        
+        let networkStatus = [
+            "wifi"              :   wifiIsPowered ? "on" : "off",
+            "bluetooth"         :   bluetoothIsPowered ? "on" : "off",
+            "bluetoothLowEnergy":   bluetoothLEIsPowered ? "on" : "off",
+            "cellular"          :   "doNotCare"
+        ]
+        
+        
         do {
-            delegate?.context(self, didChangeNetworkStatus: try jsonValue([:])!)
+            delegate?.context(self, didChangeNetworkStatus: try jsonValue(networkStatus)!)
         } catch let error {
             assert(false, "\(error)")
         }
     }
-
+    
     public override init() {
         appNotificationsManager = ApplicationStateNotificationsManager()
         super.init()
@@ -101,36 +114,36 @@ public typealias ClientConnectCallback = (String, String) -> Void
             strongSelf.delegate?.appWillEnterBackground(withContext: strongSelf)
         }
     }
-
+    
     public func startListeningForAdvertisements() throws {
     }
-
+    
     public func stopListeningForAdvertisements() throws {
     }
-
+    
     public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
         guard let _ = (parameters.first as? NSNumber)?.unsignedShortValue where parameters.count == 2 else {
             throw AppContextError.BadParameters
         }
     }
-
+    
     public func stopListening() throws {
     }
-
+    
     public func stopAdvertisingAndListening() throws {
     }
-
+    
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
-
+        
     }
-
+    
     public func killConnection(parameters: [AnyObject]) throws {
     }
-
+    
     public func getIOSVersion() -> String {
         return NSProcessInfo().operatingSystemVersionString
     }
-
+    
     public func didRegisterToNative(parameters: [AnyObject]) throws {
         guard let functionName = parameters.first as? String where parameters.count == 2 else {
             throw AppContextError.BadParameters
