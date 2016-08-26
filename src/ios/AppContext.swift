@@ -6,6 +6,7 @@
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //
 
+import CoreBluetooth
 import Foundation
 import ThaliCore
 
@@ -76,9 +77,12 @@ public typealias ClientConnectCallback = (String, String) -> Void
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
     
+    private var bluetoothIsPowered = false
+    private var bluetoothLEIsPowered = false
+    private var bluetoothManager: CBCentralManager?
+    
     private func notifyOnDidUpdateNetworkStatus() {
         
-        //TODO: update with real values from hardware
         var wifiIsPowered =  false
         
         do {
@@ -122,6 +126,8 @@ public typealias ClientConnectCallback = (String, String) -> Void
             }
             strongSelf.delegate?.appWillEnterBackground(withContext: strongSelf)
         }
+        
+        bluetoothManager = CBCentralManager(delegate: self, queue: nil)
     }
     
     public func startListeningForAdvertisements() throws {
@@ -171,6 +177,20 @@ public typealias ClientConnectCallback = (String, String) -> Void
     }
 #endif
 
+}
+
+// MARK: CBCentralManagerDelegate
+extension AppContext: CBCentralManagerDelegate {
+    public func centralManagerDidUpdateState(central: CBCentralManager) {
+        switch central.state {
+        case .PoweredOn:
+            bluetoothIsPowered = true
+            bluetoothLEIsPowered = true
+        default:
+            bluetoothIsPowered = false
+            bluetoothLEIsPowered = false
+        }
+    }
 }
 
 /// Node functions names
