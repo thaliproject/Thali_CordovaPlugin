@@ -2,12 +2,12 @@
 
 var tape = require('../lib/thaliTape');
 var notificationBeacons =
-  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+  require('thali/Runtime/notification/thaliNotificationBeacons');
 var crypto = require('crypto');
 var long = require('long');
 var urlSafeBase64 = require('urlsafe-base64');
 var testUtils = require('../lib/testUtils.js');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 
 var test = tape({
   setup: function (t) {

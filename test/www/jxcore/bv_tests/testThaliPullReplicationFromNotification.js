@@ -3,17 +3,17 @@
 
 var tape = require('../lib/thaliTape');
 var crypto = require('crypto');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 var inherits = require('util').inherits;
 var Promise = require('lie');
 var testUtils = require('../lib/testUtils');
-var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
-var ThaliPullReplicationFromNotification = require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
-var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/ThaliReplicationPeerAction');
-var ThaliPeerPoolInterface = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolInterface');
+var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
+var ThaliPullReplicationFromNotification = require('thali/Runtime/replication/thaliPullReplicationFromNotification');
+var ThaliReplicationPeerAction = require('thali/Runtime/replication/ThaliReplicationPeerAction');
+var ThaliPeerPoolInterface = require('thali/Runtime/thaliPeerPool/thaliPeerPoolInterface');
 var proxyquire = require('proxyquire');
 var sinon = require('sinon');
-var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNotificationClient');
+var ThaliNotificationClient = require('thali/Runtime/notification/thaliNotificationClient');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 devicePublicPrivateKey.generateKeys();
@@ -335,7 +335,7 @@ test('Simple peer event', function (t) {
 
   var ProxiesPullReplication = proxyquire.noCallThru()
     .load(
-      'thali/NextGeneration/replication/thaliPullReplicationFromNotification',
+      'thali/Runtime/replication/thaliPullReplicationFromNotification',
       {
         './thaliReplicationPeerAction': MockThaliReplicationPeerAction
       }

@@ -6,13 +6,13 @@ var sinon = require('sinon');
 var Promise = require('lie');
 var proxyquire = require('proxyquire').noCallThru();
 var NotificationBeacons =
-  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+  require('thali/Runtime/notification/thaliNotificationBeacons');
 var ThaliPskMapCache =
-  require('thali/NextGeneration/notification/thaliPskMapCache');
+  require('thali/Runtime/notification/thaliPskMapCache');
 var thaliConfig =
-  require('thali/NextGeneration/thaliConfig');
+  require('thali/Runtime/thaliConfig');
 var makeIntoCloseAllServer =
-  require('thali/NextGeneration/makeIntoCloseAllServer');
+  require('thali/Runtime/makeIntoCloseAllServer');
 
 var ThaliHttpTester = require('../lib/httpTester');
 
@@ -36,7 +36,7 @@ var GlobalVariables = function () {
   // Creates a proxyquired ThaliNotificationServer class.
   var MockThaliMobile = { };
   this.ThaliNotificationServerProxyquired =
-    proxyquire('thali/NextGeneration/notification/thaliNotificationServer',
+    proxyquire('thali/Runtime/notification/thaliNotificationServer',
       { '../thaliMobile':
       MockThaliMobile});
 

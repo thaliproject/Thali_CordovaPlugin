@@ -1,9 +1,9 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
+var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
 var connectionTypes =
-  require('thali/NextGeneration/thaliMobileNativeWrapper').connectionTypes;
+  require('thali/Runtime/thaliMobileNativeWrapper').connectionTypes;
 var inherits = require('util').inherits;
 var globalAgent = require('http').globalAgent;
 

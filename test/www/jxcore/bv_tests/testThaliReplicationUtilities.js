@@ -2,11 +2,11 @@
 
 var tape = require('../lib/thaliTape');
 var compareBufferArrays =
-  require('thali/NextGeneration/replication/utilities').compareBufferArrays;
+  require('thali/Runtime/replication/utilities').compareBufferArrays;
 var RefreshTimerManager =
-  require('thali/NextGeneration/replication/utilities').RefreshTimerManager;
+  require('thali/Runtime/replication/utilities').RefreshTimerManager;
 var TransientState =
-  require('thali/NextGeneration/replication/utilities').TransientState;
+  require('thali/Runtime/replication/utilities').TransientState;
 
 var test = tape({
   setup: function (t) {

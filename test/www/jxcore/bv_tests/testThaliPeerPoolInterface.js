@@ -1,11 +1,11 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
+var PeerAction = require('thali/Runtime/thaliPeerPool/thaliPeerAction');
 var connectionTypes =
-  require('thali/NextGeneration/thaliMobileNativeWrapper').connectionTypes;
+  require('thali/Runtime/thaliMobileNativeWrapper').connectionTypes;
 var inherits = require('util').inherits;
-var ThaliPeerPoolInterface = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolInterface');
+var ThaliPeerPoolInterface = require('thali/Runtime/thaliPeerPool/thaliPeerPoolInterface');
 var sinon = require('sinon');
 
 var testPeerAction = null;

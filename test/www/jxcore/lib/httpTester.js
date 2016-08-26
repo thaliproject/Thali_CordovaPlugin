@@ -5,10 +5,10 @@ var https = require('https');
 var ForeverAgent = require('forever-agent');
 var Promise = require('lie');
 var thaliConfig =
-  require('thali/NextGeneration/thaliConfig');
+  require('thali/Runtime/thaliConfig');
 var makeIntoCloseAllServer =
-  require('thali/NextGeneration/makeIntoCloseAllServer');
-var thaliNotificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
+  require('thali/Runtime/makeIntoCloseAllServer');
+var thaliNotificationBeacons = require('thali/Runtime/notification/thaliNotificationBeacons');
 var urlSafeBase64 = require('urlsafe-base64');
 
 var gPskIdentity = 'I am me!';

@@ -10,7 +10,7 @@ if (typeof Mobile === 'undefined') {
   return;
 }
 
-var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+var thaliMobileNativeWrapper = require('thali/Runtime/thaliMobileNativeWrapper');
 var validations = require('thali/validations');
 var tape = require('../lib/thaliTape');
 

@@ -4,17 +4,17 @@ var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
+var PouchDBGenerator = require('thali/Runtime/utils/pouchDBGenerator');
 var path = require('path');
 var Promise = require('lie');
 var https = require('https');
 var logger = require('thali/thaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var makeIntoCloseAllServer = require('thali/Runtime/makeIntoCloseAllServer');
 var notificationBeacons =
-  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+  require('thali/Runtime/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
 var extend = require('js-extend').extend;
@@ -205,7 +205,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // we can require the test utils also from an environment
   // where Mobile isn't defined (which is a requirement when
   // thaliMobile is required).
-  var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  var ThaliMobile = require('thali/Runtime/thaliMobile');
   // Check that network status is as expected and
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
@@ -387,7 +387,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
                                                 selectedPeerId) {
   // We don't load thaliMobileNativeWrapper until after the tests have started
   // running so we pick up the right version of mobile
-  var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+  var thaliMobileNativeWrapper = require('thali/Runtime/thaliMobileNativeWrapper');
   return new Promise(function (resolve, reject) {
     var retryCount = 0;
     var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 30 * 2;

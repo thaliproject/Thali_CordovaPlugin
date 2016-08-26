@@ -5,7 +5,7 @@ var net = require('net');
 var url = require('url');
 
 var testUtils = require('./../../lib/testUtils.js');
-var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
+var ThaliWifiInfrastructure = require('thali/Runtime/thaliWifiInfrastructure');
 
 var randomSuffix = '' + Math.round((Math.random() * 10000))
 var randomDeviceName = 'device-' + randomSuffix;

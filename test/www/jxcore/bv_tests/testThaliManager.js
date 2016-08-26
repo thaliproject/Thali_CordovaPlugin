@@ -17,18 +17,18 @@ var sinon = require('sinon');
 var proxyquire = require('proxyquire').noCallThru();
 
 var Salti = require('salti');
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var PouchDBGenerator = require('thali/Runtime/utils/pouchDBGenerator');
+var thaliConfig = require('thali/Runtime/thaliConfig');
 var ThaliPeerPoolDefault =
-  require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+  require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var ThaliMobile = require('thali/Runtime/thaliMobile');
 var ThaliSendNotificationBasedOnReplication =
-  require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
+  require('thali/Runtime/replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification =
-  require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
+  require('thali/Runtime/replication/thaliPullReplicationFromNotification');
 var ThaliNotificationServer =
-  require('thali/NextGeneration/notification/thaliNotificationServer');
+  require('thali/Runtime/notification/thaliNotificationServer');
 
 // DB 'defaultDirectory' should be unique among all tests
 // and any instance of this test.
@@ -120,7 +120,7 @@ function Mocks(t) {
 
   this.Salti = sinon.spy(Salti);
   this.ThaliManager =
-    proxyquire('thali/NextGeneration/thaliManager', {
+    proxyquire('thali/Runtime/thaliManager', {
       './replication/thaliSendNotificationBasedOnReplication':
         this.Notification,
       './replication/thaliPullReplicationFromNotification':
