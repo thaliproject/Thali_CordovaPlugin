@@ -29,7 +29,7 @@
 // Defines methods.
 - (void)defineMethods {
     static AppContext * appContext = nil;
-    
+
     if (!appContext) {
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
@@ -37,7 +37,7 @@
         });
     }
     appContext.delegate = self;
-    
+
     // Export the public API to node
     [self defineStartListeningForAdvertisements:appContext];
     [self defineStopListeningForAdvertisements:appContext];
@@ -115,7 +115,7 @@
         NSError *error = nil;
         [appContext didRegisterToNative: params error:&error];
         [self handleCallback:callbackId error:error];
-        
+
     } withName:[AppContextJSEvent didRegisterToNative]];
 }
 
@@ -133,10 +133,10 @@
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
-        if ([AppContextJSEvent respondsToSelector:@selector(executeNativeTests)]) {
-            NSString *result = [AppContextJSEvent performSelector:@selector(executeNativeTests)];
+        if ([appContext respondsToSelector:@selector(executeNativeTests)]) {
+            NSString *result = [appContext performSelector:@selector(executeNativeTests)];
 #pragma clang diagnostic pop
-            
+
             @synchronized(self) {
                 [JXcore callEventCallback:callbackId withJSON:result];
             }
