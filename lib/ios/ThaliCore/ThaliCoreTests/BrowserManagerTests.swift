@@ -42,9 +42,18 @@ class BrowserManagerTests: XCTestCase {
         waitForExpectationsWithTimeout(5, handler: nil)
         XCTAssertEqual(connectError, .StartListeningNotActive)
     }
-    
-    func testMaxConnectionsReached() {
-        XCTAssert(false, "not implemented")
-    }
 
+    func testIllegalPeer() {
+        let expectation = expectationWithDescription("got Illegal Peer")
+        var connectError: MultiСonnectError?
+        browser.startListeningForAdvertisements()
+        browser.connectToPeer(PeerIdentifier()) { [weak expectation] port, error in
+            if let error = error as? MultiСonnectError {
+                connectError = error
+                expectation?.fulfill()
+            }
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+        XCTAssertEqual(connectError, .IllegalPeerID)
+    }
 }

@@ -10,6 +10,7 @@ import Foundation
 
 //class for managing Thali advertiser's logic
 @objc public final class AdvertiserManager: NSObject {
+    let socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>()
     internal private (set) var advertisers: [Advertiser] = []
     internal private (set) var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
@@ -24,13 +25,9 @@ import Foundation
         self.serviceType = serviceType
     }
 
-    private func receivedInvitationHandler(session: Session) {
-        let sessionManager = AdvertiserVirtualSocketBuilder(session: session, didCreateSocketHandler: { socket in
-                //todo store session
-            }, disconnectedHandler: {
-                //todo notify about disconnect
-            })
-        self.activeSessions.append(sessionManager)
+    private func handle(session: Session, withPort port: UInt16) {
+        socketRelay.createSocket(with: session, onPort: port) { port, error in
+        }
     }
 
     //dispose advertiser after 30 sec to ensure that it has no pending invitations
@@ -48,8 +45,9 @@ import Foundation
     }
 
     private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16) -> Advertiser {
-        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
-                                    port: port, receivedInvitationHandler: receivedInvitationHandler)
+        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType) { [weak self] session in
+            self?.handle(session, withPort: port)
+        }
         advertiser.startAdvertising()
         self.advertisers.append(advertiser)
         return advertiser

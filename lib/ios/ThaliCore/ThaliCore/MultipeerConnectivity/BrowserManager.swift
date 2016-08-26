@@ -76,10 +76,14 @@ public final class BrowserManager: NSObject {
 
     public func connectToPeer(identifier: PeerIdentifier, completion: (UInt16?, ErrorType?) -> Void) {
         return synchronized(self) {
-            guard let lastGenerationIdentifier = self.lastGenerationPeer(for: identifier),
-                let currentBrowser = self.currentBrowser else {
-                    completion(nil, MultiСonnectError.StartListeningNotActive)
-                    return
+            //todo check reachability status
+            guard let currentBrowser = self.currentBrowser else {
+                completion(nil, MultiСonnectError.StartListeningNotActive)
+                return
+            }
+            guard let lastGenerationIdentifier = self.lastGenerationPeer(for: identifier) else {
+                completion(nil, MultiСonnectError.IllegalPeerID)
+                return
             }
             do {
                 let session = try currentBrowser.invitePeerToConnect(lastGenerationIdentifier)

@@ -14,17 +14,15 @@ final class Advertiser: NSObject {
 
     let peerIdentifier: PeerIdentifier
     let serviceType: String
-    let port: UInt16
     internal private(set) var advertising: Bool = false
     private let receivedInvitationHandler: (session: Session) -> Void
 
-    required init(peerIdentifier: PeerIdentifier, serviceType: String, port: UInt16,
+    required init(peerIdentifier: PeerIdentifier, serviceType: String,
                   receivedInvitationHandler: (session: Session) -> Void) {
         advertiser = MCNearbyServiceAdvertiser(peer: MCPeerID(peerIdentifier: peerIdentifier),
                                                discoveryInfo:nil, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
         self.serviceType = serviceType
-        self.port = port
         self.receivedInvitationHandler = receivedInvitationHandler
         super.init()
         advertiser.delegate = self

@@ -9,8 +9,8 @@
 import Foundation
 
 class VirtualSocketBuilder {
-    private var outputStream: NSOutputStream? = nil
-    private var inputStream: NSInputStream? = nil
+    private var outputStream: NSOutputStream?
+    private var inputStream: NSInputStream?
     private let didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void
     private let disconnectedHandler: () -> Void
     let session: Session
@@ -44,6 +44,7 @@ class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
     private var outputStreamName: String? = nil
 
     override func didReceive(inputStream: NSInputStream, name: String) {
+        super.didReceive(inputStream, name: name)
         guard let outputStreamName = outputStreamName where name == outputStreamName else {
             return
         }
@@ -65,6 +66,7 @@ class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
                 break
             }
         } catch let error {
+            //todo handle error
             print(error)
         }
     }
@@ -73,6 +75,7 @@ class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
 
     override func didReceive(inputStream: NSInputStream, name: String) {
+        super.didReceive(inputStream, name: name)
         self.inputStream = inputStream
         do {
             guard session.sessionState == .Connected else {
@@ -84,6 +87,7 @@ class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
             session.didReceiveInputStream = nil
             session.sessionStateChangesHandler = nil
         } catch let error {
+            //todo handle error
             print(error)
         }
     }
