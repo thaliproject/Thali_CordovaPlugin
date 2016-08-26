@@ -11,25 +11,27 @@ var nativeInstaller = require('../../thali/install/ios/nativeInstaller');
 var path = require('path');
 
 function loadIsTestEnvironment() {
-  var utFlatFilePath = 'platforms/ios/unittests';
+  var utFlagFilePath = 'platforms/ios/unittests';
 
   try {
-    var utFlag = fs.lstatSync(utFlatFilePath);
+    var utFlag = fs.lstatSync(utFlagFilePath);
 
     try {
       console.log('Removing UT flag');
 
-      fs.unlinkSync(utFlatFilePath);
-    } catch (err) {
-      console.log(err);
+      fs.unlinkSync(utFlagFilePath);
+    } catch (error) {
+      console.log(error);
       console.log('Failed to remove the UT flag file, continuing anyway');
     }
 
     return utFlag.isFile();
-  } catch (err) {
+  } catch (error) {
+    console.log(error);
     console.log('Not a test environment, continue normally.');
-    return false;
   }
+
+  return false;
 };
 
 module.exports = function (context) {

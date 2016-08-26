@@ -53,7 +53,6 @@ prepare_project()
   fi
 }
 
-# Installs Thali
 install_thali()
 {
   echo "Installing Thali into ${TEST_PROJECT_NAME}"
@@ -94,7 +93,6 @@ add_android_platform()
   touch platforms/android/unittests
 }
 
-# Prepares and builds Android app
 build_android()
 {
   echo "Building Android app"
@@ -104,6 +102,7 @@ build_android()
   cordova build android --release --device
 }
 
+# Adds iOS platform when we're running on macOS
 add_ios_platform_if_possible()
 {
   if [ $IS_DARWIN_PLATFORM == true ]; then
@@ -118,7 +117,7 @@ add_ios_platform_if_possible()
   fi
 }
 
-# Prepares and builds iOS app
+# Builds iOS platform when we're running on macOS
 build_ios_if_possible()
 {
   if [ $IS_DARWIN_PLATFORM == true ]; then

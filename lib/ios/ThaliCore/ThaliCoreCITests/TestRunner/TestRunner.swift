@@ -32,7 +32,7 @@ final class TestRunner: NSObject {
     }
 
     var runResult: RunResult {
-        // This case isn't abvious, but this is how XCTest.framework is done
+        // This case isn't obvious, but this is how XCTest.framework is done
         // The reason I see is because XCTest.framework is build on Objective-C
         // when Objective-C doesn't have e.g. generics
         //
@@ -69,8 +69,13 @@ final class TestRunner: NSObject {
     }
 
     func runTest() {
-        // Test must only be run on the main thread.
-        // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
+        // Tests must only be run on the main thread.
+        //
+        // Please note that it's important not using GCD here.
+        // XCTest.framework uses NSRunLoop for async testing
+        // so async testing won't work as expected
+        // in case of running tests in CGD main queue
+
         testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
     }
 }
