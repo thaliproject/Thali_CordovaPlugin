@@ -1,16 +1,15 @@
 //
+//  Thali CordovaPlugin
 //  TestRunner.swift
-//  ThaliCore
 //
-//  Created by Ilya Laryionau on 7/28/16.
-//  Copyright © 2016 Thali. All rights reserved.
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
 import XCTest
 
-@objc
-final class TestRunner: NSObject {
+public final class TestRunner: NSObject {
     struct RunResult {
         let executedCount: Int
         let succeededCount: Int
@@ -25,10 +24,14 @@ final class TestRunner: NSObject {
         self.testSuite = testSuite
     }
 
-    static let `default`: TestRunner = TestRunner.createDefaultRunner()
+    public static let `default`: TestRunner = TestRunner.createDefaultRunner()
 
     private static func createDefaultRunner() -> TestRunner {
         return TestRunner(testSuite: XCTestSuite.defaultTestSuite())
+    }
+
+    public var resultDescription: String? {
+        return runResult.jsonString
     }
 
     var runResult: RunResult {
@@ -68,14 +71,9 @@ final class TestRunner: NSObject {
         )
     }
 
-    func runTest() {
-        // Tests must only be run on the main thread.
-        //
-        // Please note that it's important not using GCD here.
-        // XCTest.framework uses NSRunLoop for async testing
-        // so async testing won't work as expected
-        // in case of running tests in CGD main queue
-
+    public func runTest() {
+        // Test must only be run on the main thread.
+        // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
         testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
     }
 }

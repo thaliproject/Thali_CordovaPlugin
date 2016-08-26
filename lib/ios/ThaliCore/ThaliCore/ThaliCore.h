@@ -14,7 +14,3 @@ FOUNDATION_EXPORT double ThaliCoreVersionNumber;
 //! Project version string for ThaliCore.
 FOUNDATION_EXPORT const unsigned char ThaliCoreVersionString[];
 
-#import <ThaliCore/THEAppContext.h>
-#import <ThaliCore/THEThaliEventDelegate.h>
-#import <ThaliCore/THEThreading.h>
-#import <ThaliCore/THEMultipeerManager.h>

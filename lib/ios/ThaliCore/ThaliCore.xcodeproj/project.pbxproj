@@ -7,103 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
-		CC4A41541D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */; };
-		CC4A41551D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */; };
-		CC4A416E1D53B32900FCF5D1 /* ThaliSingleInstanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
-		CCA572081D47883C00FBEC41 /* THEPeerBluetooth.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571D91D47883C00FBEC41 /* THEPeerBluetooth.h */; };
-		CCA572091D47883C00FBEC41 /* THEPeerBluetooth.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571DA1D47883C00FBEC41 /* THEPeerBluetooth.m */; };
-		CCA5720A1D47883C00FBEC41 /* THEPeerBluetoothDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571DB1D47883C00FBEC41 /* THEPeerBluetoothDelegate.h */; };
-		CCA5720B1D47883C00FBEC41 /* THEAppContext.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571DD1D47883C00FBEC41 /* THEAppContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA5720C1D47883C00FBEC41 /* THEAppContext.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571DE1D47883C00FBEC41 /* THEAppContext.m */; };
-		CCA5720D1D47883C00FBEC41 /* THEPeerDiscoveryDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571DF1D47883C00FBEC41 /* THEPeerDiscoveryDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA5720E1D47883C00FBEC41 /* THERemoteConnectionDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571E01D47883C00FBEC41 /* THERemoteConnectionDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA5720F1D47883C00FBEC41 /* THEThaliEventDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571E11D47883C00FBEC41 /* THEThaliEventDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA572121D47883C00FBEC41 /* THEMultipeerClient.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571E61D47883C00FBEC41 /* THEMultipeerClient.h */; };
-		CCA572131D47883C00FBEC41 /* THEMultipeerClient.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571E71D47883C00FBEC41 /* THEMultipeerClient.m */; };
-		CCA572141D47883C00FBEC41 /* THEMultipeerClientSession.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571E81D47883C00FBEC41 /* THEMultipeerClientSession.h */; };
-		CCA572151D47883C00FBEC41 /* THEMultipeerClientSession.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571E91D47883C00FBEC41 /* THEMultipeerClientSession.m */; };
-		CCA572161D47883C00FBEC41 /* THEMultipeerClientSocketRelay.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571EA1D47883C00FBEC41 /* THEMultipeerClientSocketRelay.h */; };
-		CCA572171D47883C00FBEC41 /* THEMultipeerClientSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571EB1D47883C00FBEC41 /* THEMultipeerClientSocketRelay.m */; };
-		CCA572181D47883C00FBEC41 /* THEMultipeerClientSocketRelayDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571EC1D47883C00FBEC41 /* THEMultipeerClientSocketRelayDelegate.h */; };
-		CCA572191D47883C00FBEC41 /* THEMultipeerDiscoveryDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571ED1D47883C00FBEC41 /* THEMultipeerDiscoveryDelegate.h */; };
-		CCA5721A1D47883C00FBEC41 /* THEMultipeerManager.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571EE1D47883C00FBEC41 /* THEMultipeerManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA5721B1D47883C00FBEC41 /* THEMultipeerManager.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571EF1D47883C00FBEC41 /* THEMultipeerManager.m */; };
-		CCA5721C1D47883C00FBEC41 /* THEMultipeerPeerSession.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F01D47883C00FBEC41 /* THEMultipeerPeerSession.h */; };
-		CCA5721D1D47883C00FBEC41 /* THEMultipeerPeerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571F11D47883C00FBEC41 /* THEMultipeerPeerSession.m */; };
-		CCA5721E1D47883C00FBEC41 /* THEMultipeerServer.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F21D47883C00FBEC41 /* THEMultipeerServer.h */; };
-		CCA5721F1D47883C00FBEC41 /* THEMultipeerServer.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571F31D47883C00FBEC41 /* THEMultipeerServer.m */; };
-		CCA572201D47883C00FBEC41 /* THEMultipeerServerConnectionDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F41D47883C00FBEC41 /* THEMultipeerServerConnectionDelegate.h */; };
-		CCA572211D47883C00FBEC41 /* THEMultipeerServerSession.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F51D47883C00FBEC41 /* THEMultipeerServerSession.h */; };
-		CCA572221D47883C00FBEC41 /* THEMultipeerServerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571F61D47883C00FBEC41 /* THEMultipeerServerSession.m */; };
-		CCA572231D47883C00FBEC41 /* THEMultipeerServerSocketRelay.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F71D47883C00FBEC41 /* THEMultipeerServerSocketRelay.h */; };
-		CCA572241D47883C00FBEC41 /* THEMultipeerServerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571F81D47883C00FBEC41 /* THEMultipeerServerSocketRelay.m */; };
-		CCA572251D47883C00FBEC41 /* THEMultipeerServerSocketRelayDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F91D47883C00FBEC41 /* THEMultipeerServerSocketRelayDelegate.h */; };
-		CCA572261D47883C00FBEC41 /* THEMultipeerSessionStateDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571FA1D47883C00FBEC41 /* THEMultipeerSessionStateDelegate.h */; };
-		CCA572271D47883C00FBEC41 /* THEMultipeerSocketRelay.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571FB1D47883C00FBEC41 /* THEMultipeerSocketRelay.h */; };
-		CCA572281D47883C00FBEC41 /* THEMultipeerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571FC1D47883C00FBEC41 /* THEMultipeerSocketRelay.m */; };
-		CCA5722D1D47883C00FBEC41 /* THEProtectedMutableDictionary.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572031D47883C00FBEC41 /* THEProtectedMutableDictionary.h */; };
-		CCA5722E1D47883C00FBEC41 /* THEProtectedMutableDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572041D47883C00FBEC41 /* THEProtectedMutableDictionary.m */; };
-		CCA5722F1D47883C00FBEC41 /* THESessionDictionary.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572051D47883C00FBEC41 /* THESessionDictionary.h */; };
-		CCA572301D47883C00FBEC41 /* THESessionDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572061D47883C00FBEC41 /* THESessionDictionary.m */; };
-		CCA572311D47883C00FBEC41 /* THEThreading.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572071D47883C00FBEC41 /* THEThreading.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA5723B1D47887A00FBEC41 /* GCDAsyncSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572341D47887A00FBEC41 /* GCDAsyncSocket.h */; };
-		CCA5723C1D47887A00FBEC41 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572351D47887A00FBEC41 /* GCDAsyncSocket.m */; };
-		CCA5723D1D47887A00FBEC41 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572351D47887A00FBEC41 /* GCDAsyncSocket.m */; };
-		CCA572401D47887A00FBEC41 /* NPReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572381D47887A00FBEC41 /* NPReachability.h */; };
-		CCA572411D47887A00FBEC41 /* NPReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572391D47887A00FBEC41 /* NPReachability.m */; };
-		CCA572421D47887A00FBEC41 /* NPReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572391D47887A00FBEC41 /* NPReachability.m */; };
-		CCA5724E1D4789A600FBEC41 /* TestEchoClient.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572491D4789A600FBEC41 /* TestEchoClient.m */; };
-		CCA5724F1D4789A600FBEC41 /* TestEchoServer.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA5724B1D4789A600FBEC41 /* TestEchoServer.m */; };
-		CCA572A81D4A4E7100FBEC41 /* THEPeerBluetoothDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571DB1D47883C00FBEC41 /* THEPeerBluetoothDelegate.h */; };
-		CCA572A91D4A4E7300FBEC41 /* THEPeerBluetooth.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571D91D47883C00FBEC41 /* THEPeerBluetooth.h */; };
-		CCA572AA1D4A4E7700FBEC41 /* THEPeerBluetooth.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571DA1D47883C00FBEC41 /* THEPeerBluetooth.m */; };
-		CCA572AB1D4A4E7A00FBEC41 /* THEAppContext.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571DD1D47883C00FBEC41 /* THEAppContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA572AC1D4A4E7C00FBEC41 /* THEAppContext.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571DE1D47883C00FBEC41 /* THEAppContext.m */; };
-		CCA572AD1D4A4E7E00FBEC41 /* THEPeerDiscoveryDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571DF1D47883C00FBEC41 /* THEPeerDiscoveryDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA572AE1D4A4E8700FBEC41 /* THERemoteConnectionDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571E01D47883C00FBEC41 /* THERemoteConnectionDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA572AF1D4A4E8900FBEC41 /* THEThaliEventDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571E11D47883C00FBEC41 /* THEThaliEventDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA572B01D4A4EAD00FBEC41 /* THEProtectedMutableDictionary.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572031D47883C00FBEC41 /* THEProtectedMutableDictionary.h */; };
-		CCA572B11D4A4EAF00FBEC41 /* THEProtectedMutableDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572041D47883C00FBEC41 /* THEProtectedMutableDictionary.m */; };
-		CCA572B21D4A4EB200FBEC41 /* THESessionDictionary.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572051D47883C00FBEC41 /* THESessionDictionary.h */; };
-		CCA572B31D4A4EB400FBEC41 /* THESessionDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572061D47883C00FBEC41 /* THESessionDictionary.m */; };
-		CCA572B41D4A4EB600FBEC41 /* THEThreading.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572071D47883C00FBEC41 /* THEThreading.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA572B51D4A4EBE00FBEC41 /* THEMultipeerClient.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571E61D47883C00FBEC41 /* THEMultipeerClient.h */; };
-		CCA572B61D4A4EC100FBEC41 /* THEMultipeerClient.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571E71D47883C00FBEC41 /* THEMultipeerClient.m */; };
-		CCA572B71D4A4EC300FBEC41 /* THEMultipeerClientSession.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571E81D47883C00FBEC41 /* THEMultipeerClientSession.h */; };
-		CCA572B81D4A4EC600FBEC41 /* THEMultipeerClientSession.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571E91D47883C00FBEC41 /* THEMultipeerClientSession.m */; };
-		CCA572B91D4A4EC800FBEC41 /* THEMultipeerClientSocketRelay.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571EA1D47883C00FBEC41 /* THEMultipeerClientSocketRelay.h */; };
-		CCA572BA1D4A4ECC00FBEC41 /* THEMultipeerClientSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571EB1D47883C00FBEC41 /* THEMultipeerClientSocketRelay.m */; };
-		CCA572BB1D4A4ECE00FBEC41 /* THEMultipeerClientSocketRelayDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571EC1D47883C00FBEC41 /* THEMultipeerClientSocketRelayDelegate.h */; };
-		CCA572BC1D4A4ED200FBEC41 /* THEMultipeerDiscoveryDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571ED1D47883C00FBEC41 /* THEMultipeerDiscoveryDelegate.h */; };
-		CCA572BD1D4A4ED400FBEC41 /* THEMultipeerManager.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571EE1D47883C00FBEC41 /* THEMultipeerManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA572BE1D4A4ED800FBEC41 /* THEMultipeerManager.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571EF1D47883C00FBEC41 /* THEMultipeerManager.m */; };
-		CCA572BF1D4A4EDA00FBEC41 /* THEMultipeerPeerSession.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F01D47883C00FBEC41 /* THEMultipeerPeerSession.h */; };
-		CCA572C01D4A4EDC00FBEC41 /* THEMultipeerPeerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571F11D47883C00FBEC41 /* THEMultipeerPeerSession.m */; };
-		CCA572C11D4A4EDF00FBEC41 /* THEMultipeerServer.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F21D47883C00FBEC41 /* THEMultipeerServer.h */; };
-		CCA572C21D4A4EE100FBEC41 /* THEMultipeerServer.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571F31D47883C00FBEC41 /* THEMultipeerServer.m */; };
-		CCA572C31D4A4EE400FBEC41 /* THEMultipeerServerConnectionDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F41D47883C00FBEC41 /* THEMultipeerServerConnectionDelegate.h */; };
-		CCA572C41D4A4EE700FBEC41 /* THEMultipeerServerSession.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F51D47883C00FBEC41 /* THEMultipeerServerSession.h */; };
-		CCA572C51D4A4EE900FBEC41 /* THEMultipeerServerSession.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571F61D47883C00FBEC41 /* THEMultipeerServerSession.m */; };
-		CCA572C61D4A4EEC00FBEC41 /* THEMultipeerServerSocketRelay.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F71D47883C00FBEC41 /* THEMultipeerServerSocketRelay.h */; };
-		CCA572C71D4A4EEE00FBEC41 /* THEMultipeerServerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571F81D47883C00FBEC41 /* THEMultipeerServerSocketRelay.m */; };
-		CCA572C81D4A4EF100FBEC41 /* THEMultipeerServerSocketRelayDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571F91D47883C00FBEC41 /* THEMultipeerServerSocketRelayDelegate.h */; };
-		CCA572C91D4A4EF300FBEC41 /* THEMultipeerSessionStateDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571FA1D47883C00FBEC41 /* THEMultipeerSessionStateDelegate.h */; };
-		CCA572CA1D4A4EF500FBEC41 /* THEMultipeerSocketRelay.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571FB1D47883C00FBEC41 /* THEMultipeerSocketRelay.h */; };
-		CCA572CB1D4A4EF800FBEC41 /* THEMultipeerSocketRelay.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA571FC1D47883C00FBEC41 /* THEMultipeerSocketRelay.m */; };
-		CCA572D01D4A506400FBEC41 /* GCDAsyncSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572341D47887A00FBEC41 /* GCDAsyncSocket.h */; };
-		CCA572D11D4A506700FBEC41 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572351D47887A00FBEC41 /* GCDAsyncSocket.m */; };
-		CCA572D21D4A506C00FBEC41 /* NPReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572381D47887A00FBEC41 /* NPReachability.h */; };
-		CCA572D31D4A506E00FBEC41 /* NPReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572391D47887A00FBEC41 /* NPReachability.m */; };
-		CCA572DD1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA572DB1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m */; };
-		CCA572ED1D4B6E9600FBEC41 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA573101D4BA04B00FBEC41 /* THEAppContext+Tests.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA5730A1D4BA04B00FBEC41 /* THEAppContext+Tests.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730B1D4BA04B00FBEC41 /* THEAppContext+Tests.m */; };
 		CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */; };
-		CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */; };
+		D34EF8511D5B41E8006481DE /* ApplicationStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */; };
+		D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */; };
+		FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
+		FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -117,69 +28,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimpleTestCaseNumberTwo.swift; sourceTree = "<group>"; };
 		CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA571BF1D4787A900FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
 		CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThaliCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA571D71D47883100FBEC41 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		CCA571D91D47883C00FBEC41 /* THEPeerBluetooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEPeerBluetooth.h; sourceTree = "<group>"; };
-		CCA571DA1D47883C00FBEC41 /* THEPeerBluetooth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEPeerBluetooth.m; sourceTree = "<group>"; };
-		CCA571DB1D47883C00FBEC41 /* THEPeerBluetoothDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEPeerBluetoothDelegate.h; sourceTree = "<group>"; };
-		CCA571DD1D47883C00FBEC41 /* THEAppContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEAppContext.h; sourceTree = "<group>"; };
-		CCA571DE1D47883C00FBEC41 /* THEAppContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEAppContext.m; sourceTree = "<group>"; };
-		CCA571DF1D47883C00FBEC41 /* THEPeerDiscoveryDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEPeerDiscoveryDelegate.h; sourceTree = "<group>"; };
-		CCA571E01D47883C00FBEC41 /* THERemoteConnectionDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THERemoteConnectionDelegate.h; sourceTree = "<group>"; };
-		CCA571E11D47883C00FBEC41 /* THEThaliEventDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEThaliEventDelegate.h; sourceTree = "<group>"; };
-		CCA571E61D47883C00FBEC41 /* THEMultipeerClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerClient.h; sourceTree = "<group>"; };
-		CCA571E71D47883C00FBEC41 /* THEMultipeerClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEMultipeerClient.m; sourceTree = "<group>"; };
-		CCA571E81D47883C00FBEC41 /* THEMultipeerClientSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerClientSession.h; sourceTree = "<group>"; };
-		CCA571E91D47883C00FBEC41 /* THEMultipeerClientSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEMultipeerClientSession.m; sourceTree = "<group>"; };
-		CCA571EA1D47883C00FBEC41 /* THEMultipeerClientSocketRelay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerClientSocketRelay.h; sourceTree = "<group>"; };
-		CCA571EB1D47883C00FBEC41 /* THEMultipeerClientSocketRelay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEMultipeerClientSocketRelay.m; sourceTree = "<group>"; };
-		CCA571EC1D47883C00FBEC41 /* THEMultipeerClientSocketRelayDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerClientSocketRelayDelegate.h; sourceTree = "<group>"; };
-		CCA571ED1D47883C00FBEC41 /* THEMultipeerDiscoveryDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerDiscoveryDelegate.h; sourceTree = "<group>"; };
-		CCA571EE1D47883C00FBEC41 /* THEMultipeerManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerManager.h; sourceTree = "<group>"; };
-		CCA571EF1D47883C00FBEC41 /* THEMultipeerManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEMultipeerManager.m; sourceTree = "<group>"; };
-		CCA571F01D47883C00FBEC41 /* THEMultipeerPeerSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerPeerSession.h; sourceTree = "<group>"; };
-		CCA571F11D47883C00FBEC41 /* THEMultipeerPeerSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEMultipeerPeerSession.m; sourceTree = "<group>"; };
-		CCA571F21D47883C00FBEC41 /* THEMultipeerServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerServer.h; sourceTree = "<group>"; };
-		CCA571F31D47883C00FBEC41 /* THEMultipeerServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEMultipeerServer.m; sourceTree = "<group>"; };
-		CCA571F41D47883C00FBEC41 /* THEMultipeerServerConnectionDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerServerConnectionDelegate.h; sourceTree = "<group>"; };
-		CCA571F51D47883C00FBEC41 /* THEMultipeerServerSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerServerSession.h; sourceTree = "<group>"; };
-		CCA571F61D47883C00FBEC41 /* THEMultipeerServerSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEMultipeerServerSession.m; sourceTree = "<group>"; };
-		CCA571F71D47883C00FBEC41 /* THEMultipeerServerSocketRelay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerServerSocketRelay.h; sourceTree = "<group>"; };
-		CCA571F81D47883C00FBEC41 /* THEMultipeerServerSocketRelay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEMultipeerServerSocketRelay.m; sourceTree = "<group>"; };
-		CCA571F91D47883C00FBEC41 /* THEMultipeerServerSocketRelayDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerServerSocketRelayDelegate.h; sourceTree = "<group>"; };
-		CCA571FA1D47883C00FBEC41 /* THEMultipeerSessionStateDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerSessionStateDelegate.h; sourceTree = "<group>"; };
-		CCA571FB1D47883C00FBEC41 /* THEMultipeerSocketRelay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEMultipeerSocketRelay.h; sourceTree = "<group>"; };
-		CCA571FC1D47883C00FBEC41 /* THEMultipeerSocketRelay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEMultipeerSocketRelay.m; sourceTree = "<group>"; };
-		CCA572031D47883C00FBEC41 /* THEProtectedMutableDictionary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEProtectedMutableDictionary.h; sourceTree = "<group>"; };
-		CCA572041D47883C00FBEC41 /* THEProtectedMutableDictionary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEProtectedMutableDictionary.m; sourceTree = "<group>"; };
-		CCA572051D47883C00FBEC41 /* THESessionDictionary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THESessionDictionary.h; sourceTree = "<group>"; };
-		CCA572061D47883C00FBEC41 /* THESessionDictionary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THESessionDictionary.m; sourceTree = "<group>"; };
-		CCA572071D47883C00FBEC41 /* THEThreading.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEThreading.h; sourceTree = "<group>"; };
-		CCA572341D47887A00FBEC41 /* GCDAsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GCDAsyncSocket.h; sourceTree = "<group>"; };
-		CCA572351D47887A00FBEC41 /* GCDAsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GCDAsyncSocket.m; sourceTree = "<group>"; };
-		CCA572371D47887A00FBEC41 /* LICENSE.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
-		CCA572381D47887A00FBEC41 /* NPReachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NPReachability.h; sourceTree = "<group>"; };
-		CCA572391D47887A00FBEC41 /* NPReachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NPReachability.m; sourceTree = "<group>"; };
-		CCA5723A1D47887A00FBEC41 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		CCA572481D4789A600FBEC41 /* TestEchoClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestEchoClient.h; sourceTree = "<group>"; };
-		CCA572491D4789A600FBEC41 /* TestEchoClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestEchoClient.m; sourceTree = "<group>"; };
-		CCA5724A1D4789A600FBEC41 /* TestEchoServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestEchoServer.h; sourceTree = "<group>"; };
-		CCA5724B1D4789A600FBEC41 /* TestEchoServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestEchoServer.m; sourceTree = "<group>"; };
 		CCA572511D478C1000FBEC41 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CCA572921D4A327E00FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		CCA572DB1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ThaliMultipleInstanceTests.m; sourceTree = "<group>"; };
 		CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Bridging-Header.h"; sourceTree = "<group>"; };
-		CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimpleTestCase.swift; sourceTree = "<group>"; };
-		CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThaliSingleInstanceTests.swift; sourceTree = "<group>"; };
 		CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
 		CCA573071D4B9F1B00FBEC41 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		CCA5730A1D4BA04B00FBEC41 /* THEAppContext+Tests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "THEAppContext+Tests.h"; sourceTree = "<group>"; };
-		CCA5730B1D4BA04B00FBEC41 /* THEAppContext+Tests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "THEAppContext+Tests.m"; sourceTree = "<group>"; };
 		CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRunner.swift; sourceTree = "<group>"; };
-		CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TheTestRunner.swift; sourceTree = "<group>"; };
+		D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManagerTests.swift; sourceTree = "<group>"; };
+		FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -211,7 +71,6 @@
 		CCA571B21D4787A900FBEC41 = {
 			isa = PBXGroup;
 			children = (
-				CCA572321D47887A00FBEC41 /* Externals */,
 				CCA571BE1D4787A900FBEC41 /* ThaliCore */,
 				CCA571CA1D4787A900FBEC41 /* ThaliCoreTests */,
 				CCA572F71D4B9E5300FBEC41 /* ThaliCoreCITests */,
@@ -232,10 +91,8 @@
 		CCA571BE1D4787A900FBEC41 /* ThaliCore */ = {
 			isa = PBXGroup;
 			children = (
-				CCA571D81D47883C00FBEC41 /* Bluetooth */,
 				CCA571DC1D47883C00FBEC41 /* Core */,
 				CCA571E51D47883C00FBEC41 /* MultipeerConnectivity */,
-				CCA572021D47883C00FBEC41 /* Utility */,
 				CCA571D61D47883100FBEC41 /* Supporting Files */,
 				CCA571BF1D4787A900FBEC41 /* ThaliCore.h */,
 			);
@@ -245,13 +102,10 @@
 		CCA571CA1D4787A900FBEC41 /* ThaliCoreTests */ = {
 			isa = PBXGroup;
 			children = (
-				CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */,
-				CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */,
-				CCA572EE1D4B6EC900FBEC41 /* ThaliSingleInstanceTests.swift */,
-				CCA572DB1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m */,
 				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
 				CCA572471D4789A600FBEC41 /* Utils */,
 				CCA572501D478C1000FBEC41 /* Supporting Files */,
+				D37E88BD1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift */,
 			);
 			path = ThaliCoreTests;
 			sourceTree = "<group>";
@@ -264,24 +118,10 @@
 			path = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		CCA571D81D47883C00FBEC41 /* Bluetooth */ = {
-			isa = PBXGroup;
-			children = (
-				CCA571D91D47883C00FBEC41 /* THEPeerBluetooth.h */,
-				CCA571DA1D47883C00FBEC41 /* THEPeerBluetooth.m */,
-				CCA571DB1D47883C00FBEC41 /* THEPeerBluetoothDelegate.h */,
-			);
-			path = Bluetooth;
-			sourceTree = "<group>";
-		};
 		CCA571DC1D47883C00FBEC41 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				CCA571DD1D47883C00FBEC41 /* THEAppContext.h */,
-				CCA571DE1D47883C00FBEC41 /* THEAppContext.m */,
-				CCA571DF1D47883C00FBEC41 /* THEPeerDiscoveryDelegate.h */,
-				CCA571E01D47883C00FBEC41 /* THERemoteConnectionDelegate.h */,
-				CCA571E11D47883C00FBEC41 /* THEThaliEventDelegate.h */,
+				FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -289,81 +129,13 @@
 		CCA571E51D47883C00FBEC41 /* MultipeerConnectivity */ = {
 			isa = PBXGroup;
 			children = (
-				CCA571E61D47883C00FBEC41 /* THEMultipeerClient.h */,
-				CCA571E71D47883C00FBEC41 /* THEMultipeerClient.m */,
-				CCA571E81D47883C00FBEC41 /* THEMultipeerClientSession.h */,
-				CCA571E91D47883C00FBEC41 /* THEMultipeerClientSession.m */,
-				CCA571EA1D47883C00FBEC41 /* THEMultipeerClientSocketRelay.h */,
-				CCA571EB1D47883C00FBEC41 /* THEMultipeerClientSocketRelay.m */,
-				CCA571EC1D47883C00FBEC41 /* THEMultipeerClientSocketRelayDelegate.h */,
-				CCA571ED1D47883C00FBEC41 /* THEMultipeerDiscoveryDelegate.h */,
-				CCA571EE1D47883C00FBEC41 /* THEMultipeerManager.h */,
-				CCA571EF1D47883C00FBEC41 /* THEMultipeerManager.m */,
-				CCA571F01D47883C00FBEC41 /* THEMultipeerPeerSession.h */,
-				CCA571F11D47883C00FBEC41 /* THEMultipeerPeerSession.m */,
-				CCA571F21D47883C00FBEC41 /* THEMultipeerServer.h */,
-				CCA571F31D47883C00FBEC41 /* THEMultipeerServer.m */,
-				CCA571F41D47883C00FBEC41 /* THEMultipeerServerConnectionDelegate.h */,
-				CCA571F51D47883C00FBEC41 /* THEMultipeerServerSession.h */,
-				CCA571F61D47883C00FBEC41 /* THEMultipeerServerSession.m */,
-				CCA571F71D47883C00FBEC41 /* THEMultipeerServerSocketRelay.h */,
-				CCA571F81D47883C00FBEC41 /* THEMultipeerServerSocketRelay.m */,
-				CCA571F91D47883C00FBEC41 /* THEMultipeerServerSocketRelayDelegate.h */,
-				CCA571FA1D47883C00FBEC41 /* THEMultipeerSessionStateDelegate.h */,
-				CCA571FB1D47883C00FBEC41 /* THEMultipeerSocketRelay.h */,
-				CCA571FC1D47883C00FBEC41 /* THEMultipeerSocketRelay.m */,
 			);
 			path = MultipeerConnectivity;
-			sourceTree = "<group>";
-		};
-		CCA572021D47883C00FBEC41 /* Utility */ = {
-			isa = PBXGroup;
-			children = (
-				CCA572031D47883C00FBEC41 /* THEProtectedMutableDictionary.h */,
-				CCA572041D47883C00FBEC41 /* THEProtectedMutableDictionary.m */,
-				CCA572051D47883C00FBEC41 /* THESessionDictionary.h */,
-				CCA572061D47883C00FBEC41 /* THESessionDictionary.m */,
-				CCA572071D47883C00FBEC41 /* THEThreading.h */,
-			);
-			path = Utility;
-			sourceTree = "<group>";
-		};
-		CCA572321D47887A00FBEC41 /* Externals */ = {
-			isa = PBXGroup;
-			children = (
-				CCA572331D47887A00FBEC41 /* GCDAsyncSocket */,
-				CCA572361D47887A00FBEC41 /* NPReachability */,
-			);
-			path = Externals;
-			sourceTree = "<group>";
-		};
-		CCA572331D47887A00FBEC41 /* GCDAsyncSocket */ = {
-			isa = PBXGroup;
-			children = (
-				CCA572341D47887A00FBEC41 /* GCDAsyncSocket.h */,
-				CCA572351D47887A00FBEC41 /* GCDAsyncSocket.m */,
-			);
-			path = GCDAsyncSocket;
-			sourceTree = "<group>";
-		};
-		CCA572361D47887A00FBEC41 /* NPReachability */ = {
-			isa = PBXGroup;
-			children = (
-				CCA572371D47887A00FBEC41 /* LICENSE.txt */,
-				CCA572381D47887A00FBEC41 /* NPReachability.h */,
-				CCA572391D47887A00FBEC41 /* NPReachability.m */,
-				CCA5723A1D47887A00FBEC41 /* README.md */,
-			);
-			path = NPReachability;
 			sourceTree = "<group>";
 		};
 		CCA572471D4789A600FBEC41 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
-				CCA572481D4789A600FBEC41 /* TestEchoClient.h */,
-				CCA572491D4789A600FBEC41 /* TestEchoClient.m */,
-				CCA5724A1D4789A600FBEC41 /* TestEchoServer.h */,
-				CCA5724B1D4789A600FBEC41 /* TestEchoServer.m */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -398,8 +170,6 @@
 		CCA573091D4BA04B00FBEC41 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				CCA5730A1D4BA04B00FBEC41 /* THEAppContext+Tests.h */,
-				CCA5730B1D4BA04B00FBEC41 /* THEAppContext+Tests.m */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -408,7 +178,6 @@
 			isa = PBXGroup;
 			children = (
 				CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */,
-				CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */,
 			);
 			path = TestRunner;
 			sourceTree = "<group>";
@@ -420,32 +189,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CCA5720B1D47883C00FBEC41 /* THEAppContext.h in Headers */,
-				CCA5720D1D47883C00FBEC41 /* THEPeerDiscoveryDelegate.h in Headers */,
-				CCA5720E1D47883C00FBEC41 /* THERemoteConnectionDelegate.h in Headers */,
-				CCA5721A1D47883C00FBEC41 /* THEMultipeerManager.h in Headers */,
-				CCA5720F1D47883C00FBEC41 /* THEThaliEventDelegate.h in Headers */,
-				CCA572231D47883C00FBEC41 /* THEMultipeerServerSocketRelay.h in Headers */,
-				CCA572311D47883C00FBEC41 /* THEThreading.h in Headers */,
-				CCA572271D47883C00FBEC41 /* THEMultipeerSocketRelay.h in Headers */,
-				CCA572121D47883C00FBEC41 /* THEMultipeerClient.h in Headers */,
-				CCA572401D47887A00FBEC41 /* NPReachability.h in Headers */,
-				CCA572161D47883C00FBEC41 /* THEMultipeerClientSocketRelay.h in Headers */,
-				CCA572141D47883C00FBEC41 /* THEMultipeerClientSession.h in Headers */,
-				CCA572201D47883C00FBEC41 /* THEMultipeerServerConnectionDelegate.h in Headers */,
-				CCA572191D47883C00FBEC41 /* THEMultipeerDiscoveryDelegate.h in Headers */,
-				CCA5721C1D47883C00FBEC41 /* THEMultipeerPeerSession.h in Headers */,
-				CCA572261D47883C00FBEC41 /* THEMultipeerSessionStateDelegate.h in Headers */,
-				CCA5722F1D47883C00FBEC41 /* THESessionDictionary.h in Headers */,
-				CCA572211D47883C00FBEC41 /* THEMultipeerServerSession.h in Headers */,
-				CCA572181D47883C00FBEC41 /* THEMultipeerClientSocketRelayDelegate.h in Headers */,
-				CCA5721E1D47883C00FBEC41 /* THEMultipeerServer.h in Headers */,
-				CCA5722D1D47883C00FBEC41 /* THEProtectedMutableDictionary.h in Headers */,
-				CCA5720A1D47883C00FBEC41 /* THEPeerBluetoothDelegate.h in Headers */,
 				CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */,
-				CCA5723B1D47887A00FBEC41 /* GCDAsyncSocket.h in Headers */,
-				CCA572251D47883C00FBEC41 /* THEMultipeerServerSocketRelayDelegate.h in Headers */,
-				CCA572081D47883C00FBEC41 /* THEPeerBluetooth.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -453,33 +197,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CCA572B01D4A4EAD00FBEC41 /* THEProtectedMutableDictionary.h in Headers */,
-				CCA572BB1D4A4ECE00FBEC41 /* THEMultipeerClientSocketRelayDelegate.h in Headers */,
-				CCA572B41D4A4EB600FBEC41 /* THEThreading.h in Headers */,
-				CCA572C81D4A4EF100FBEC41 /* THEMultipeerServerSocketRelayDelegate.h in Headers */,
-				CCA572C91D4A4EF300FBEC41 /* THEMultipeerSessionStateDelegate.h in Headers */,
-				CCA572C31D4A4EE400FBEC41 /* THEMultipeerServerConnectionDelegate.h in Headers */,
-				CCA572C61D4A4EEC00FBEC41 /* THEMultipeerServerSocketRelay.h in Headers */,
-				CCA572D01D4A506400FBEC41 /* GCDAsyncSocket.h in Headers */,
-				CCA572C11D4A4EDF00FBEC41 /* THEMultipeerServer.h in Headers */,
-				CCA572B91D4A4EC800FBEC41 /* THEMultipeerClientSocketRelay.h in Headers */,
-				CCA572AB1D4A4E7A00FBEC41 /* THEAppContext.h in Headers */,
-				CCA572AE1D4A4E8700FBEC41 /* THERemoteConnectionDelegate.h in Headers */,
-				CCA572AF1D4A4E8900FBEC41 /* THEThaliEventDelegate.h in Headers */,
-				CCA572B51D4A4EBE00FBEC41 /* THEMultipeerClient.h in Headers */,
-				CCA572AD1D4A4E7E00FBEC41 /* THEPeerDiscoveryDelegate.h in Headers */,
-				CCA572A81D4A4E7100FBEC41 /* THEPeerBluetoothDelegate.h in Headers */,
-				CCA573101D4BA04B00FBEC41 /* THEAppContext+Tests.h in Headers */,
-				CCA572B71D4A4EC300FBEC41 /* THEMultipeerClientSession.h in Headers */,
-				CCA572BC1D4A4ED200FBEC41 /* THEMultipeerDiscoveryDelegate.h in Headers */,
-				CCA572A91D4A4E7300FBEC41 /* THEPeerBluetooth.h in Headers */,
-				CCA572D21D4A506C00FBEC41 /* NPReachability.h in Headers */,
-				CCA572BF1D4A4EDA00FBEC41 /* THEMultipeerPeerSession.h in Headers */,
-				CCA572C41D4A4EE700FBEC41 /* THEMultipeerServerSession.h in Headers */,
-				CCA572CA1D4A4EF500FBEC41 /* THEMultipeerSocketRelay.h in Headers */,
-				CCA572BD1D4A4ED400FBEC41 /* THEMultipeerManager.h in Headers */,
 				CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */,
-				CCA572B21D4A4EB200FBEC41 /* THESessionDictionary.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -511,7 +229,7 @@
 				CCA571C21D4787A900FBEC41 /* Sources */,
 				CCA571C31D4787A900FBEC41 /* Frameworks */,
 				CCA571C41D4787A900FBEC41 /* Resources */,
-				CCA572A01D4A345700FBEC41 /* SwiftLint */,
+				D3D308141D52128500943EED /* SwiftLint */,
 			);
 			buildRules = (
 			);
@@ -622,7 +340,7 @@
 			shellPath = /bin/sh;
 			shellScript = "if which swiftlint >/dev/null; then\n    swiftlint\nelse\n    echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
 		};
-		CCA572A01D4A345700FBEC41 /* SwiftLint */ = {
+		D3D308141D52128500943EED /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -634,7 +352,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if which swiftlint >/dev/null; then\n    swiftlint\nelse\n    echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
+			shellScript = "if which swiftlint >/dev/null; then\nswiftlint\nelse\necho \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -643,21 +361,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CCA5721B1D47883C00FBEC41 /* THEMultipeerManager.m in Sources */,
-				CCA572241D47883C00FBEC41 /* THEMultipeerServerSocketRelay.m in Sources */,
-				CCA572221D47883C00FBEC41 /* THEMultipeerServerSession.m in Sources */,
-				CCA5721F1D47883C00FBEC41 /* THEMultipeerServer.m in Sources */,
-				CCA572171D47883C00FBEC41 /* THEMultipeerClientSocketRelay.m in Sources */,
-				CCA572281D47883C00FBEC41 /* THEMultipeerSocketRelay.m in Sources */,
-				CCA5722E1D47883C00FBEC41 /* THEProtectedMutableDictionary.m in Sources */,
-				CCA572091D47883C00FBEC41 /* THEPeerBluetooth.m in Sources */,
-				CCA5721D1D47883C00FBEC41 /* THEMultipeerPeerSession.m in Sources */,
-				CCA572151D47883C00FBEC41 /* THEMultipeerClientSession.m in Sources */,
-				CCA572301D47883C00FBEC41 /* THESessionDictionary.m in Sources */,
-				CCA572131D47883C00FBEC41 /* THEMultipeerClient.m in Sources */,
-				CCA5723C1D47887A00FBEC41 /* GCDAsyncSocket.m in Sources */,
-				CCA5720C1D47883C00FBEC41 /* THEAppContext.m in Sources */,
-				CCA572411D47887A00FBEC41 /* NPReachability.m in Sources */,
+				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -665,14 +369,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CCA5723D1D47887A00FBEC41 /* GCDAsyncSocket.m in Sources */,
-				CC4A41551D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */,
-				CCA572DD1D4A57E600FBEC41 /* ThaliMultipleInstanceTests.m in Sources */,
-				CCA5724F1D4789A600FBEC41 /* TestEchoServer.m in Sources */,
-				CCA572ED1D4B6E9600FBEC41 /* SimpleTestCase.swift in Sources */,
-				CC4A416E1D53B32900FCF5D1 /* ThaliSingleInstanceTests.swift in Sources */,
-				CCA5724E1D4789A600FBEC41 /* TestEchoClient.m in Sources */,
-				CCA572421D47887A00FBEC41 /* NPReachability.m in Sources */,
+				D37E88BE1D5209B0009243EE /* ApplicationStateNotificationsManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -680,26 +377,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CCA572B31D4A4EB400FBEC41 /* THESessionDictionary.m in Sources */,
+				D34EF8511D5B41E8006481DE /* ApplicationStateNotificationsManagerTests.swift in Sources */,
 				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
-				CCA572B81D4A4EC600FBEC41 /* THEMultipeerClientSession.m in Sources */,
-				CCA572C01D4A4EDC00FBEC41 /* THEMultipeerPeerSession.m in Sources */,
-				CCA572C51D4A4EE900FBEC41 /* THEMultipeerServerSession.m in Sources */,
-				CCA572D11D4A506700FBEC41 /* GCDAsyncSocket.m in Sources */,
-				CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */,
-				CCA572C71D4A4EEE00FBEC41 /* THEMultipeerServerSocketRelay.m in Sources */,
-				CCA572B61D4A4EC100FBEC41 /* THEMultipeerClient.m in Sources */,
-				CCA572AC1D4A4E7C00FBEC41 /* THEAppContext.m in Sources */,
-				CCA572B11D4A4EAF00FBEC41 /* THEProtectedMutableDictionary.m in Sources */,
-				CCA572BA1D4A4ECC00FBEC41 /* THEMultipeerClientSocketRelay.m in Sources */,
-				CCA572AA1D4A4E7700FBEC41 /* THEPeerBluetooth.m in Sources */,
-				CCA572D31D4A506E00FBEC41 /* NPReachability.m in Sources */,
-				CCA572CB1D4A4EF800FBEC41 /* THEMultipeerSocketRelay.m in Sources */,
-				CCA572C21D4A4EE100FBEC41 /* THEMultipeerServer.m in Sources */,
-				CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */,
-				CC4A41541D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */,
-				CCA573141D4BA04B00FBEC41 /* TheTestRunner.swift in Sources */,
-				CCA572BE1D4A4ED800FBEC41 /* THEMultipeerManager.m in Sources */,
+				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -752,12 +432,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 2.3;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -796,10 +475,9 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 2.3;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -810,28 +488,33 @@
 		CCA571D11D4787A900FBEC41 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "ThaliCore/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCore;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
 		CCA571D21D4787A900FBEC41 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "ThaliCore/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCore;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -879,6 +562,7 @@
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/ThaliCoreCITests/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCoreCITests;
 				PRODUCT_NAME = ThaliCore;
@@ -902,6 +586,7 @@
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/ThaliCoreCITests/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCoreCITests;
 				PRODUCT_NAME = ThaliCore;
