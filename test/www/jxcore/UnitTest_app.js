@@ -13,7 +13,7 @@ if (typeof Mobile === 'undefined') {
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
-var utResult;
+var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
   console.log('Running unit tests');
@@ -31,6 +31,9 @@ if (process.platform === 'android' || process.platform === 'ios') {
       }
     }
   });
+} else {
+  // We aren't on a device so we can't run those tests anyway
+  utResult = true;
 }
 
 if (!utResult) {
