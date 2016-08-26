@@ -43,8 +43,8 @@ if (!utResult) {
 }
 
 // TODO finish testing here (the node part will be omitted)
-console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-return;
+//console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+//return;
 
 // Issue #914
 var networkTypes = [];
