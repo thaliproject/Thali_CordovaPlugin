@@ -205,7 +205,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // we can require the test utils also from an environment
   // where Mobile isn't defined (which is a requirement when
   // thaliMobile is required).
-  var ThaliMobile = require('thali/Runtime/thaliMobile');
+  var ThaliMobile = require('thali/Runtime/networking/thaliMobile');
   // Check that network status is as expected and
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()

@@ -1,7 +1,7 @@
 'use strict';
 
 var PeerDictionary = require('./thaliPeerDictionary');
-var ThaliMobile = require('../thaliMobile');
+var ThaliMobile = require('../networking/thaliMobile');
 var ThaliNotificationAction = require('./thaliNotificationAction.js');
 var NotificationBeacons = require('./thaliNotificationBeacons');
 var logger = require('../../thaliLogger')('thaliNotificationClient');

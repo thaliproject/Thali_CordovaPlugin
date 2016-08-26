@@ -22,7 +22,7 @@ var thaliConfig = require('thali/Runtime/thaliConfig');
 var ThaliPeerPoolDefault =
   require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 
-var ThaliMobile = require('thali/Runtime/thaliMobile');
+var ThaliMobile = require('thali/Runtime/networking/thaliMobile');
 var ThaliSendNotificationBasedOnReplication =
   require('thali/Runtime/replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification =
@@ -125,7 +125,7 @@ function Mocks(t) {
         this.Notification,
       './replication/thaliPullReplicationFromNotification':
         this.Replication,
-      './thaliMobile': this.ThaliMobile,
+      './networking/thaliMobile': this.ThaliMobile,
       'express': this.express,
       'salti': this.Salti
     });

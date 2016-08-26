@@ -3,7 +3,7 @@
 var logger = require('../thalilogger')('thaliManager');
 
 var thaliConfig = require('./thaliConfig');
-var ThaliMobile = require('./thaliMobile');
+var ThaliMobile = require('./networking/thaliMobile');
 var ThaliSendNotificationBasedOnReplication =
   require('./replication/thaliSendNotificationBasedOnReplication');
 var ThaliPullReplicationFromNotification =

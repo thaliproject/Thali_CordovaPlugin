@@ -9,7 +9,7 @@ var ThaliNotificationClient =
 var ThaliNotificationServer =
   require('thali/Runtime/notification/thaliNotificationServer');
 var thaliMobile =
-  require('thali/Runtime/thaliMobile');
+  require('thali/Runtime/networking/thaliMobile');
 var ThaliPeerPoolDefault =
   require('thali/Runtime/thaliPeerPool/thaliPeerPoolDefault');
 var NotificationBeacons =

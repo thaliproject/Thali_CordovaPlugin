@@ -2,18 +2,18 @@
 
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
-var logger = require('../thaliLogger')('thaliMobile');
+var logger = require('../../thaliLogger')('thaliMobile');
 
-var thaliConfig = require('./thaliConfig');
+var thaliConfig = require('../thaliConfig');
 
-var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
+var ThaliMobileNativeWrapper = require('../thaliMobileNativeWrapper');
 var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 
-var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
+var ThaliWifiInfrastructure = require('../thaliWifiInfrastructure');
 var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
 
 var Promise = require('lie');
-var PromiseQueue = require('./promiseQueue');
+var PromiseQueue = require('../promiseQueue');
 var promiseQueue = new PromiseQueue();
 
 var promiseResultSuccessOrFailure = function (promise) {

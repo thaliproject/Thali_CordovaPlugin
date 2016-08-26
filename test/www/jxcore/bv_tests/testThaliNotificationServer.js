@@ -37,7 +37,7 @@ var GlobalVariables = function () {
   var MockThaliMobile = { };
   this.ThaliNotificationServerProxyquired =
     proxyquire('thali/Runtime/notification/thaliNotificationServer',
-      { '../thaliMobile':
+      { '../networking/thaliMobile':
       MockThaliMobile});
 
   // Mocks ThaliMobile.startUpdateAdvertisingAndListening function
