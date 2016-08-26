@@ -50,8 +50,12 @@ class SocketRelay<T: VirtualSocketBuilder> {
 
     func createSocket(with session: Session, onPort port: UInt16 = 0,
                            timeout: Double = 5, completion: (UInt16?, ErrorType?) -> Void) {
-        let virtualSocketBuilder = T(session: session, didCreateSocketHandler: { [weak self] socket in
+        let virtualSocketBuilder = T(session: session, completionHandler: { [weak self] socket, error in
             //todo bind to CocoaAsyncSocket and call completion block
+            guard let socket = socket else {
+                completion(nil, error)
+                return
+            }
             self?.handleDidReceive(socket: socket, for: session)
             }, disconnectedHandler: {
                 completion(nil, MultiСonnectError.ConnectionFailed)

@@ -11,14 +11,14 @@ import Foundation
 class VirtualSocketBuilder {
     private var outputStream: NSOutputStream?
     private var inputStream: NSInputStream?
-    private let didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void
+    private let completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void
     private let disconnectedHandler: () -> Void
     let session: Session
 
-    required init(session: Session, didCreateSocketHandler: (NSOutputStream, NSInputStream) -> Void,
+    required init(session: Session, completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void,
                   disconnectedHandler: () -> Void) {
         self.session = session
-        self.didCreateSocketHandler = didCreateSocketHandler
+        self.completionHandler = completionHandler
         self.disconnectedHandler = disconnectedHandler
         session.didReceiveInputStream = didReceive
         session.sessionStateChangesHandler = sessionStateChanged
@@ -49,9 +49,11 @@ class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
             return
         }
         self.inputStream = inputStream
-        didCreateSocketHandler(outputStream!, inputStream)
-        session.didReceiveInputStream = nil
-        session.sessionStateChangesHandler = nil
+        if let outputStream = outputStream {
+            completionHandler((outputStream, inputStream), nil)
+            session.didReceiveInputStream = nil
+            session.sessionStateChangesHandler = nil
+        }
     }
 
     override func sessionStateChanged(state: Session.SessionState) {
@@ -66,8 +68,7 @@ class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
                 break
             }
         } catch let error {
-            //todo handle error
-            print(error)
+            completionHandler(nil, error)
         }
     }
 }
@@ -83,12 +84,11 @@ class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
             }
             let outputStream = try session.createOutputStream(name)
             self.outputStream = outputStream
-            didCreateSocketHandler(outputStream, inputStream)
+            completionHandler((outputStream, inputStream), nil)
             session.didReceiveInputStream = nil
             session.sessionStateChangesHandler = nil
         } catch let error {
-            //todo handle error
-            print(error)
+            completionHandler(nil, error)
         }
     }
 
