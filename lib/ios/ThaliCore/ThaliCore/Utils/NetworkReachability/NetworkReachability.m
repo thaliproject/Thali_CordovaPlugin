@@ -28,17 +28,18 @@
         }
     }
 
+    freeifaddrs(interfaces);
+
     NSString *aimInterface = @"awdl0";
 
     return [cset countForObject:aimInterface] > 1 ? YES : NO;
 }
 
 - (NSDictionary *)wifiDetails {
-    return
-    (__bridge NSDictionary *)
-    CNCopyCurrentNetworkInfo(
-                             CFArrayGetValueAtIndex( CNCopySupportedInterfaces(), 0)
-                             );
+    CFArrayRef supportedInterfaces = CNCopySupportedInterfaces();
+    CFDictionaryRef details = CNCopyCurrentNetworkInfo(CFArrayGetValueAtIndex(supportedInterfaces , 0));
+    CFRelease(supportedInterfaces);
+    return (__bridge_transfer NSDictionary *)details;
 }
 
 - (BOOL)isWiFiConnected {
