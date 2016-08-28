@@ -67,6 +67,8 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
 
+    private var bluetoothIsPowered = false
+    private var bluetoothLEIsPowered = false
     private var bluetoothManager: CBCentralManager?
 
     private func updateNetworkStatus() {
@@ -80,10 +82,6 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
         } catch {
             wifiIsPowered = false
         }
-
-
-        let bluetoothIsPowered = false
-        let bluetoothLEIsPowered = false
 
         let networkStatus = [
             "wifi"              :   wifiIsPowered ? "on" : "off",
@@ -208,11 +206,11 @@ extension AppContext: CBCentralManagerDelegate {
     public func centralManagerDidUpdateState(central: CBCentralManager) {
         switch central.state {
         case .PoweredOn:
-            break
-        case .PoweredOff:
-            break
+            bluetoothIsPowered = true
+            bluetoothLEIsPowered = true
         default:
-            break
+            bluetoothIsPowered = false
+            bluetoothLEIsPowered = false
         }
     }
 }
