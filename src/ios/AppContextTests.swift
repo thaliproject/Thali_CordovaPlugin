@@ -70,5 +70,22 @@ class AppContextTests: XCTestCase {
         bluetoothLowEnergyStateActual = delegateMock.networkStatus!["bluetoothLowEnergyState"]
         XCTAssertEqual(bluetoothStateActual, bluetoothStateExpected, "Wrong bluetooth state (expected: \(bluetoothStateExpected), real: \(bluetoothStateActual))")
         XCTAssertEqual(bluetoothLowEnergyStateActual, bluetoothLowEnergyStateExpected, "Wrong bluetoothLowEnergyState state (expected: \(bluetoothLowEnergyStateExpected), real: \(bluetoothLowEnergyStateActual))")
+
+        //TODO: turn wifi on and check status
+        wifiStateExpected = "on"
+        wifiStateActual = delegateMock.networkStatus!["wifi"]
+        XCTAssertEqual(wifiStateActual, wifiStateExpected, "Wrong wifi state (expected: \(wifiStateExpected), real: \(wifiStateActual))")
+
+
+        //TODO: turn wifi off and check status
+        wifiStateExpected = "off"
+        wifiStateActual = delegateMock.networkStatus!["wifi"]
+        XCTAssertEqual(wifiStateActual, wifiStateExpected, "Wrong wifi state (expected: \(wifiStateExpected), real: \(wifiStateActual))")
+
+
+        //TODO: check cellular in status
+        cellularStateExpected = "doNotCare"
+        cellularStateActual = delegateMock.networkStatus!["cellular"]
+        XCTAssertEqual(cellularStateActual, cellularStateExpected, "Wrong cellular state (expected: \(cellularStateExpected), real: \(cellularStateActual))")
     }
 }
