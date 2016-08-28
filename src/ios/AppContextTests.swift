@@ -53,5 +53,22 @@ class AppContextTests: XCTestCase {
         var bluetoothLowEnergyStateExpected: String!
         var wifiStateExpected: String!
         var cellularStateExpected: String!
+
+        //TODO: turn bluetooth (and BLE) on and check status
+        bluetoothStateExpected = "on"
+        bluetoothLowEnergyStateExpected = "on"
+        bluetoothStateActual = delegateMock.networkStatus!["bluetooth"]
+        bluetoothLowEnergyStateActual = delegateMock.networkStatus!["bluetoothLowEnergyState"]
+        XCTAssertEqual(bluetoothStateActual, bluetoothStateExpected, "Wrong bluetooth state (expected: \(bluetoothStateExpected), real: \(bluetoothStateActual))")
+        XCTAssertEqual(bluetoothLowEnergyStateActual, bluetoothLowEnergyStateExpected, "Wrong bluetoothLowEnergyState state (expected: on, real: \(bluetoothLowEnergyStateActual))")
+
+
+        //TODO: turn bluetooth (and BLE) off and check status
+        bluetoothStateExpected = "off"
+        bluetoothLowEnergyStateExpected = "off"
+        bluetoothStateActual = delegateMock.networkStatus!["bluetooth"]
+        bluetoothLowEnergyStateActual = delegateMock.networkStatus!["bluetoothLowEnergyState"]
+        XCTAssertEqual(bluetoothStateActual, bluetoothStateExpected, "Wrong bluetooth state (expected: \(bluetoothStateExpected), real: \(bluetoothStateActual))")
+        XCTAssertEqual(bluetoothLowEnergyStateActual, bluetoothLowEnergyStateExpected, "Wrong bluetoothLowEnergyState state (expected: \(bluetoothLowEnergyStateExpected), real: \(bluetoothLowEnergyStateActual))")
     }
 }
