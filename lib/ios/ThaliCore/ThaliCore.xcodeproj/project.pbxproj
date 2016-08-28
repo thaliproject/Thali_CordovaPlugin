@@ -12,6 +12,8 @@
 		3A2D74B61D73369C00691C57 /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A2D74B31D73369C00691C57 /* NetworkReachability.m */; };
 		3A2D74B71D73369C00691C57 /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A2D74B31D73369C00691C57 /* NetworkReachability.m */; };
 		3A2D74BF1D73541E00691C57 /* BluetoothManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A2D74BE1D73541E00691C57 /* BluetoothManager.h */; };
+		3A2D74C61D7354D300691C57 /* BluetoothHarwareControlManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A2D74C41D7354D300691C57 /* BluetoothHarwareControlManager.h */; };
+		3A2D74C71D7354D300691C57 /* BluetoothHarwareControlManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A2D74C51D7354D300691C57 /* BluetoothHarwareControlManager.m */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -36,6 +38,8 @@
 		3A2D74B21D73369C00691C57 /* NetworkReachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetworkReachability.h; path = Utils/NetworkReachability/NetworkReachability.h; sourceTree = "<group>"; };
 		3A2D74B31D73369C00691C57 /* NetworkReachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NetworkReachability.m; path = Utils/NetworkReachability/NetworkReachability.m; sourceTree = "<group>"; };
 		3A2D74BE1D73541E00691C57 /* BluetoothManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothManager.h; path = "Utils/HardwareControl/Bluetooth/Private API/BluetoothManager.h"; sourceTree = "<group>"; };
+		3A2D74C41D7354D300691C57 /* BluetoothHarwareControlManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothHarwareControlManager.h; path = Utils/HardwareControl/Bluetooth/BluetoothHarwareControlManager.h; sourceTree = "<group>"; };
+		3A2D74C51D7354D300691C57 /* BluetoothHarwareControlManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BluetoothHarwareControlManager.m; path = Utils/HardwareControl/Bluetooth/BluetoothHarwareControlManager.m; sourceTree = "<group>"; };
 		CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA571BF1D4787A900FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
 		CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThaliCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -112,6 +116,8 @@
 		3A2D74BB1D73539300691C57 /* Bluetooth */ = {
 			isa = PBXGroup;
 			children = (
+				3A2D74C41D7354D300691C57 /* BluetoothHarwareControlManager.h */,
+				3A2D74C51D7354D300691C57 /* BluetoothHarwareControlManager.m */,
 				3A2D74BC1D73539700691C57 /* Private API */,
 			);
 			name = Bluetooth;
@@ -257,6 +263,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A2D74C61D7354D300691C57 /* BluetoothHarwareControlManager.h in Headers */,
 				3A2D74BF1D73541E00691C57 /* BluetoothManager.h in Headers */,
 				3A2D74B51D73369C00691C57 /* NetworkReachability.h in Headers */,
 				CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */,
@@ -457,6 +464,7 @@
 			files = (
 				D34EF8511D5B41E8006481DE /* ApplicationStateNotificationsManagerTests.swift in Sources */,
 				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
+				3A2D74C71D7354D300691C57 /* BluetoothHarwareControlManager.m in Sources */,
 				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
 				3A2D74B71D73369C00691C57 /* NetworkReachability.m in Sources */,
 			);
