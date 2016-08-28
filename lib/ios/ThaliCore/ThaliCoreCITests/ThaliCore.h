@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import <ThaliCore/NetworkReachability.h>
+
 //! Project version number for ThaliCoreWithTests.
 FOUNDATION_EXPORT double ThaliCoreVersionNumber;
 

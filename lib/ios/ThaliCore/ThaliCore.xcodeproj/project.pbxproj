@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3A2D74B41D73369C00691C57 /* NetworkReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A2D74B21D73369C00691C57 /* NetworkReachability.h */; };
-		3A2D74B51D73369C00691C57 /* NetworkReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A2D74B21D73369C00691C57 /* NetworkReachability.h */; };
+		3A2D74B41D73369C00691C57 /* NetworkReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A2D74B21D73369C00691C57 /* NetworkReachability.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3A2D74B51D73369C00691C57 /* NetworkReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A2D74B21D73369C00691C57 /* NetworkReachability.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A2D74B61D73369C00691C57 /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A2D74B31D73369C00691C57 /* NetworkReachability.m */; };
 		3A2D74B71D73369C00691C57 /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A2D74B31D73369C00691C57 /* NetworkReachability.m */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
