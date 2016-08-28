@@ -153,14 +153,18 @@ extension PeerAvailability {
         }
         
         let wifiEnabled = NetworkReachability().isWiFiEnabled()
-        
+        let wifiConnected = NetworkReachability().isWiFiConnected()
+
         wifiState = wifiEnabled ? .On : .Off
-        
+
+        let bssid = ((wifiState == .On) && wifiConnected) ? NetworkReachability().BSSID() : "null"
+
         let networkStatus = [
             "wifi"              : wifiState.rawValue,
             "bluetooth"         : bluetoothState.rawValue,
             "bluetoothLowEnergy": bluetoothLowEnergyState.rawValue,
-            "cellular"          : cellularState.rawValue
+            "cellular"          : cellularState.rawValue,
+            "bssid"             : bssid
         ]
 
 
