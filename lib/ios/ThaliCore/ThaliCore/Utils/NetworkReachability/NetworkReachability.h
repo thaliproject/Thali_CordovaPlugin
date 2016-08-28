@@ -1,9 +1,9 @@
 //
+//  Thali CordovaPlugin
 //  NetworkReachability.h
-//  ThaliCore
 //
-//  Created by Dersim Davaod on 8/17/16.
-//  Copyright © 2016 Thali. All rights reserved.
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //
 
 #ifndef NetworkReachability_h
