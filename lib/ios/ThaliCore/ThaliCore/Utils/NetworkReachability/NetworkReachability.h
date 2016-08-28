@@ -9,5 +9,14 @@
 #ifndef NetworkReachability_h
 #define NetworkReachability_h
 
+#import <Foundation/Foundation.h>
+
+@interface NetworkReachability : NSObject
+
+- (BOOL)isWiFiEnabled;
+- (BOOL)isWiFiConnected;
+
+@end
 
 #endif /* NetworkReachability_h */
+
