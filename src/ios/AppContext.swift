@@ -68,13 +68,17 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
 
     private func updateNetworkStatus() {
 
+        //TODO: update with real values from hardware
+        let wifiIsPowered =  false
+        let bluetoothIsPowered = false
+        let bluetoothLEIsPowered = false
+
         let networkStatus = [
-            "wifi"              :   "off",
-            "bluetooth"         :   "off",
-            "bluetoothLowEnergy":   "off",
+            "wifi"              :   wifiIsPowered ? "on" : "off",
+            "bluetooth"         :   bluetoothIsPowered ? "on" : "off",
+            "bluetoothLowEnergy":   bluetoothLEIsPowered ? "on" : "off",
             "cellular"          :   "doNotCare"
         ]
-
 
         delegate?.context(self, didChangeNetworkStatus: [:])
     }
