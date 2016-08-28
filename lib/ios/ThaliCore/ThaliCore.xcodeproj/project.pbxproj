@@ -68,6 +68,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3A2D74A41D72FC7500691C57 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				3A2D74A51D72FC7A00691C57 /* Reachability */,
+			);
+			name = Utils;
+			sourceTree = "<group>";
+		};
+		3A2D74A51D72FC7A00691C57 /* Reachability */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Reachability;
+			sourceTree = "<group>";
+		};
 		CCA571B21D4787A900FBEC41 = {
 			isa = PBXGroup;
 			children = (
@@ -91,6 +106,7 @@
 		CCA571BE1D4787A900FBEC41 /* ThaliCore */ = {
 			isa = PBXGroup;
 			children = (
+				3A2D74A41D72FC7500691C57 /* Utils */,
 				CCA571DC1D47883C00FBEC41 /* Core */,
 				CCA571E51D47883C00FBEC41 /* MultipeerConnectivity */,
 				CCA571D61D47883100FBEC41 /* Supporting Files */,
