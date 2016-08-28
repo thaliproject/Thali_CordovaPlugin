@@ -57,8 +57,8 @@ class AppContextTests: XCTestCase {
         //TODO: turn bluetooth (and BLE) on and check status
         bluetoothStateExpected = "on"
         bluetoothLowEnergyStateExpected = "on"
-        bluetoothStateActual = delegateMock.networkStatus!["bluetooth"]
-        bluetoothLowEnergyStateActual = delegateMock.networkStatus!["bluetoothLowEnergyState"]
+        bluetoothStateActual = delegateMock.networkStatus!["bluetooth"] as! String
+        bluetoothLowEnergyStateActual = delegateMock.networkStatus!["bluetoothLowEnergyState"] as! String
         XCTAssertEqual(bluetoothStateActual, bluetoothStateExpected, "Wrong bluetooth state (expected: \(bluetoothStateExpected), real: \(bluetoothStateActual))")
         XCTAssertEqual(bluetoothLowEnergyStateActual, bluetoothLowEnergyStateExpected, "Wrong bluetoothLowEnergyState state (expected: on, real: \(bluetoothLowEnergyStateActual))")
 
@@ -66,26 +66,26 @@ class AppContextTests: XCTestCase {
         //TODO: turn bluetooth (and BLE) off and check status
         bluetoothStateExpected = "off"
         bluetoothLowEnergyStateExpected = "off"
-        bluetoothStateActual = delegateMock.networkStatus!["bluetooth"]
-        bluetoothLowEnergyStateActual = delegateMock.networkStatus!["bluetoothLowEnergyState"]
+        bluetoothStateActual = delegateMock.networkStatus!["bluetooth"] as! String
+        bluetoothLowEnergyStateActual = delegateMock.networkStatus!["bluetoothLowEnergyState"] as! String
         XCTAssertEqual(bluetoothStateActual, bluetoothStateExpected, "Wrong bluetooth state (expected: \(bluetoothStateExpected), real: \(bluetoothStateActual))")
         XCTAssertEqual(bluetoothLowEnergyStateActual, bluetoothLowEnergyStateExpected, "Wrong bluetoothLowEnergyState state (expected: \(bluetoothLowEnergyStateExpected), real: \(bluetoothLowEnergyStateActual))")
 
         //TODO: turn wifi on and check status
         wifiStateExpected = "on"
-        wifiStateActual = delegateMock.networkStatus!["wifi"]
+        wifiStateActual = delegateMock.networkStatus!["wifi"] as! String
         XCTAssertEqual(wifiStateActual, wifiStateExpected, "Wrong wifi state (expected: \(wifiStateExpected), real: \(wifiStateActual))")
 
 
         //TODO: turn wifi off and check status
         wifiStateExpected = "off"
-        wifiStateActual = delegateMock.networkStatus!["wifi"]
+        wifiStateActual = delegateMock.networkStatus!["wifi"] as! String
         XCTAssertEqual(wifiStateActual, wifiStateExpected, "Wrong wifi state (expected: \(wifiStateExpected), real: \(wifiStateActual))")
 
 
         //TODO: check cellular in status
         cellularStateExpected = "doNotCare"
-        cellularStateActual = delegateMock.networkStatus!["cellular"]
+        cellularStateActual = delegateMock.networkStatus!["cellular"] as! String
         XCTAssertEqual(cellularStateActual, cellularStateExpected, "Wrong cellular state (expected: \(cellularStateExpected), real: \(cellularStateActual))")
     }
 }
