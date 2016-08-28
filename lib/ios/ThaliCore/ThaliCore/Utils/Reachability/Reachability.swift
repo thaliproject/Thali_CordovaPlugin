@@ -9,6 +9,7 @@
 import Foundation
 import SystemConfiguration
 
+
 public enum ReachabilityError: ErrorType {
     case FailedToCreateWithSocketAddress(sockaddr_in)
 }
@@ -38,6 +39,14 @@ public class Reachability: NSObject {
         }
     }
 
+    private var isRunningOnDevice: Bool = {
+        #if (arch(i386) || arch(x86_64)) && os(iOS)
+            return false
+        #else
+            return true
+        #endif
+    }()
+
 
     // MARK: - Initialization
     required public init(reachabilityRef: SCNetworkReachability) {
@@ -59,6 +68,7 @@ public class Reachability: NSObject {
         localWifiAddress.sin_len = UInt8(sizeofValue(localWifiAddress))
         localWifiAddress.sin_family = sa_family_t(AF_INET)
 
+        // |address| stores hex value of the IP 169.254.0.0
         let address: UInt32 = 0xA9FE0000
         localWifiAddress.sin_addr.s_addr = in_addr_t(address.bigEndian)
 
@@ -79,31 +89,44 @@ public class Reachability: NSObject {
 
         let flags = reachabilityFlags
 
-        if !flags.contains(.Reachable) {
+        if !isReachable(flags) {
             return false
         }
 
+        if !isRunningOnDevice {
+            return true
+        }
+
         // Avoid cellular false-positive.
-        return !flags.contains(.IsWWAN)
+        return !isOnWWAN(flags)
     }
 
 
     // MARK: Private methods
     private func isReachableWithFlags(flags: SCNetworkReachabilityFlags) -> Bool {
 
-        if !flags.contains(.Reachable) {
+        if !isReachable(flags) {
             return false
         }
 
-        if flags.contains(.IsWWAN) {
+        if isRunningOnDevice && isOnWWAN(flags) {
             return false
         }
 
         return true
     }
 
+
+    // MARK: Analyse of particular flags in SCNetworkReachabilityFlags
+    private func isOnWWAN(flags: SCNetworkReachabilityFlags) -> Bool {
+        return flags.contains(.IsWWAN)
+    }
+
+    private func isReachable(flags: SCNetworkReachabilityFlags) -> Bool {
+        return flags.contains(.Reachable)
+    }
+
     deinit {
         reachabilityRef = nil
     }
 }
-
