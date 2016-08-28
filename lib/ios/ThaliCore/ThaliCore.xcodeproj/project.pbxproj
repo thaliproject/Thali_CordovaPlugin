@@ -11,6 +11,7 @@
 		3A2D74B51D73369C00691C57 /* NetworkReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A2D74B21D73369C00691C57 /* NetworkReachability.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A2D74B61D73369C00691C57 /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A2D74B31D73369C00691C57 /* NetworkReachability.m */; };
 		3A2D74B71D73369C00691C57 /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A2D74B31D73369C00691C57 /* NetworkReachability.m */; };
+		3A2D74BF1D73541E00691C57 /* BluetoothManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A2D74BE1D73541E00691C57 /* BluetoothManager.h */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -34,6 +35,7 @@
 /* Begin PBXFileReference section */
 		3A2D74B21D73369C00691C57 /* NetworkReachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetworkReachability.h; path = Utils/NetworkReachability/NetworkReachability.h; sourceTree = "<group>"; };
 		3A2D74B31D73369C00691C57 /* NetworkReachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NetworkReachability.m; path = Utils/NetworkReachability/NetworkReachability.m; sourceTree = "<group>"; };
+		3A2D74BE1D73541E00691C57 /* BluetoothManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothManager.h; path = "Utils/HardwareControl/Bluetooth/Private API/BluetoothManager.h"; sourceTree = "<group>"; };
 		CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA571BF1D4787A900FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
 		CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThaliCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -89,6 +91,38 @@
 				3A2D74B31D73369C00691C57 /* NetworkReachability.m */,
 			);
 			name = Reachability;
+			sourceTree = "<group>";
+		};
+		3A2D74B91D73538300691C57 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				3A2D74BA1D73538D00691C57 /* HardwareControl */,
+			);
+			name = Utils;
+			sourceTree = "<group>";
+		};
+		3A2D74BA1D73538D00691C57 /* HardwareControl */ = {
+			isa = PBXGroup;
+			children = (
+				3A2D74BB1D73539300691C57 /* Bluetooth */,
+			);
+			name = HardwareControl;
+			sourceTree = "<group>";
+		};
+		3A2D74BB1D73539300691C57 /* Bluetooth */ = {
+			isa = PBXGroup;
+			children = (
+				3A2D74BC1D73539700691C57 /* Private API */,
+			);
+			name = Bluetooth;
+			sourceTree = "<group>";
+		};
+		3A2D74BC1D73539700691C57 /* Private API */ = {
+			isa = PBXGroup;
+			children = (
+				3A2D74BE1D73541E00691C57 /* BluetoothManager.h */,
+			);
+			name = "Private API";
 			sourceTree = "<group>";
 		};
 		CCA571B21D4787A900FBEC41 = {
@@ -175,6 +209,7 @@
 		CCA572F71D4B9E5300FBEC41 /* ThaliCoreCITests */ = {
 			isa = PBXGroup;
 			children = (
+				3A2D74B91D73538300691C57 /* Utils */,
 				CCA573091D4BA04B00FBEC41 /* Core */,
 				CCA5730C1D4BA04B00FBEC41 /* TestRunner */,
 				CCA573061D4B9F1B00FBEC41 /* Supporting Files */,
@@ -222,6 +257,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A2D74BF1D73541E00691C57 /* BluetoothManager.h in Headers */,
 				3A2D74B51D73369C00691C57 /* NetworkReachability.h in Headers */,
 				CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */,
 			);
