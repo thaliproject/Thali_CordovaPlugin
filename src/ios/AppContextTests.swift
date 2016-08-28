@@ -12,10 +12,12 @@ class AppContextTests: XCTestCase {
     func testUpdateNetworkStatus() {
         
         class AppContextDelegateMock: NSObject, AppContextDelegate {
+            var networkStatus: [String : AnyObject]?
             var networkStatusUpdated = false
             @objc func context(context: AppContext, didChangePeerAvailability peers: Array<[String : AnyObject]>) {}
             @objc func context(context: AppContext, didChangeNetworkStatus status: [String : AnyObject]) {
                 networkStatusUpdated = true
+                networkStatus = status
             }
             @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: [String : AnyObject]) {}
             @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
@@ -28,5 +30,18 @@ class AppContextTests: XCTestCase {
         context.delegate = delegateMock
         context.didRegisterToNative(AppContext.networkChanged())
         XCTAssertTrue(delegateMock.networkStatusUpdated, "network status is not updated")
+
+        let expectedParameters = [
+            "bluetooth",
+            "bluetoothLowEnergy",
+            "wifi",
+            "cellular"
+        ]
+
+        XCTAssertEqual(delegateMock.networkStatus!.count, expectedParameters.count, "Wrong amount of parameters in network status")
+
+        for expectedParameter in expectedParameters {
+            XCTAssertNotNil(delegateMock.networkStatus![expectedParameter], "Network status doesn't contain \(expectedParameter) parameter")
+        }
     }
 }
