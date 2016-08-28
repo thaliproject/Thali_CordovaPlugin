@@ -31,6 +31,7 @@ class AppContextTests: XCTestCase {
         context.didRegisterToNative(AppContext.networkChanged())
         XCTAssertTrue(delegateMock.networkStatusUpdated, "network status is not updated")
 
+
         let expectedParameters = [
             "bluetooth",
             "bluetoothLowEnergy",
@@ -39,9 +40,18 @@ class AppContextTests: XCTestCase {
         ]
 
         XCTAssertEqual(delegateMock.networkStatus!.count, expectedParameters.count, "Wrong amount of parameters in network status")
-
         for expectedParameter in expectedParameters {
             XCTAssertNotNil(delegateMock.networkStatus![expectedParameter], "Network status doesn't contain \(expectedParameter) parameter")
         }
+
+
+        var bluetoothStateActual: String!
+        var bluetoothLowEnergyStateActual: String!
+        var wifiStateActual: String!
+        var cellularStateActual: String!
+        var bluetoothStateExpected: String!
+        var bluetoothLowEnergyStateExpected: String!
+        var wifiStateExpected: String!
+        var cellularStateExpected: String!
     }
 }
