@@ -65,9 +65,17 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
     public weak var delegate: AppContextDelegate?
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
-    
+
     private func updateNetworkStatus() {
-        //todo put actual network status
+
+        let networkStatus = [
+            "wifi"              :   "off",
+            "bluetooth"         :   "off",
+            "bluetoothLowEnergy":   "off",
+            "cellular"          :   "doNotCare"
+        ]
+
+
         delegate?.context(self, didChangeNetworkStatus: [:])
     }
 
