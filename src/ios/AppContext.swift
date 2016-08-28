@@ -80,7 +80,7 @@ public typealias ClientConnectCallback = (String, [String : AnyObject]) -> Void
             "cellular"          :   "doNotCare"
         ]
 
-        delegate?.context(self, didChangeNetworkStatus: [:])
+        delegate?.context(self, didChangeNetworkStatus: networkStatus)
     }
 
     public override init() {
