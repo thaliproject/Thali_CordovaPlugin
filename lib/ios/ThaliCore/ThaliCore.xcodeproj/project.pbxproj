@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1C3670C51D745300007FBDE4 /* GCDAsyncSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C3670C31D745300007FBDE4 /* GCDAsyncSocket.h */; };
+		1C3670C61D745300007FBDE4 /* GCDAsyncSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C3670C31D745300007FBDE4 /* GCDAsyncSocket.h */; };
+		1C3670C71D745300007FBDE4 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C3670C41D745300007FBDE4 /* GCDAsyncSocket.m */; };
+		1C3670C81D745300007FBDE4 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C3670C41D745300007FBDE4 /* GCDAsyncSocket.m */; };
 		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
 		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -28,6 +32,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1C3670C31D745300007FBDE4 /* GCDAsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GCDAsyncSocket.h; path = SocketConnection/GCDAsyncSocket.h; sourceTree = "<group>"; };
+		1C3670C41D745300007FBDE4 /* GCDAsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GCDAsyncSocket.m; path = SocketConnection/GCDAsyncSocket.m; sourceTree = "<group>"; };
 		CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA571BF1D4787A900FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
 		CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThaliCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -68,6 +74,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1C3670BB1D745269007FBDE4 /* SocketConnection */ = {
+			isa = PBXGroup;
+			children = (
+				1C3670BC1D745275007FBDE4 /* GCDAsyncSocket */,
+			);
+			name = SocketConnection;
+			sourceTree = "<group>";
+		};
+		1C3670BC1D745275007FBDE4 /* GCDAsyncSocket */ = {
+			isa = PBXGroup;
+			children = (
+				1C3670C31D745300007FBDE4 /* GCDAsyncSocket.h */,
+				1C3670C41D745300007FBDE4 /* GCDAsyncSocket.m */,
+			);
+			name = GCDAsyncSocket;
+			sourceTree = "<group>";
+		};
 		CCA571B21D4787A900FBEC41 = {
 			isa = PBXGroup;
 			children = (
@@ -93,6 +116,7 @@
 			children = (
 				CCA571DC1D47883C00FBEC41 /* Core */,
 				CCA571E51D47883C00FBEC41 /* MultipeerConnectivity */,
+				1C3670BB1D745269007FBDE4 /* SocketConnection */,
 				CCA571D61D47883100FBEC41 /* Supporting Files */,
 				CCA571BF1D4787A900FBEC41 /* ThaliCore.h */,
 			);
@@ -190,6 +214,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */,
+				1C3670C51D745300007FBDE4 /* GCDAsyncSocket.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -198,6 +223,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */,
+				1C3670C61D745300007FBDE4 /* GCDAsyncSocket.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -376,6 +402,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1C3670C71D745300007FBDE4 /* GCDAsyncSocket.m in Sources */,
 				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -392,6 +419,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1C3670C81D745300007FBDE4 /* GCDAsyncSocket.m in Sources */,
 				D34EF8511D5B41E8006481DE /* ApplicationStateNotificationsManagerTests.swift in Sources */,
 				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
 				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
