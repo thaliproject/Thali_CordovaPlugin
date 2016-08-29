@@ -77,21 +77,49 @@ public typealias ClientConnectCallback = (String, String) -> Void
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
     
-    private var bluetoothIsPowered = false
-    private var bluetoothLEIsPowered = false
     private var bluetoothManager: CBCentralManager?
     
     private func notifyOnDidUpdateNetworkStatus() {
         
-        let wifiIsPowered = NetworkReachability().isWiFiEnabled()
-        let bluetoothIsPowered = false
-        let bluetoothLEIsPowered = false
+        enum RadioState: String {
+            case On = "on"
+            case Off = "off"
+            case Unavailable = "unavailable"
+            case NotHere = "notHere"
+            case DoNotCare = "doNotCare"
+        }
+        
+        var bluetoothState = RadioState.Unavailable
+        var bluetoothLowEnergyState = RadioState.Unavailable
+        var wifiState = RadioState.Unavailable
+        let cellularState = RadioState.DoNotCare
+        
+        if (nil != bluetoothManager) {
+            switch bluetoothManager!.state {
+            case .PoweredOn:
+                bluetoothState = .On
+                bluetoothLowEnergyState = .On
+            case .PoweredOff:
+                bluetoothState = .Off
+                bluetoothLowEnergyState = .Off
+            case .Unsupported:
+                bluetoothState = .NotHere
+                bluetoothLowEnergyState = .NotHere
+            default:
+                bluetoothState = .Unavailable
+                bluetoothLowEnergyState = .Unavailable
+            }
+        }
+        
+        let wifiEnabled = NetworkReachability().isWiFiEnabled()
+        
+        wifiState = wifiEnabled ? .On : .Off
         
         let networkStatus = [
-            "wifi"              :   wifiIsPowered ? "on" : "off",
-            "bluetooth"         :   bluetoothIsPowered ? "on" : "off",
-            "bluetoothLowEnergy":   bluetoothLEIsPowered ? "on" : "off",
-            "cellular"          :   "doNotCare"
+            "wifi"              : wifiState.rawValue,
+            "bluetooth"         : bluetoothState.rawValue,
+            "bluetoothLowEnergy": bluetoothLowEnergyState.rawValue,
+            "cellular"          : cellularState.rawValue
         ]
         
         
@@ -167,21 +195,12 @@ public typealias ClientConnectCallback = (String, String) -> Void
         return runner.resultDescription ?? ""
     }
 #endif
-
+    
 }
 
 // MARK: CBCentralManagerDelegate
 extension AppContext: CBCentralManagerDelegate {
-    public func centralManagerDidUpdateState(central: CBCentralManager) {
-        switch central.state {
-        case .PoweredOn:
-            bluetoothIsPowered = true
-            bluetoothLEIsPowered = true
-        default:
-            bluetoothIsPowered = false
-            bluetoothLEIsPowered = false
-        }
-    }
+    public func centralManagerDidUpdateState(central: CBCentralManager) {}
 }
 
 /// Node functions names
