@@ -281,7 +281,7 @@
  * | startListeningForAdvertisements is not active | Go start it! |
  * | Already connect(ing/ed) | There already is a connection or a request to create one is already in process. |
  * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
- * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
+ * | Connection wait timed out | This is for the case where connection isn't established within a reasonable period of time. |
  * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
  * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
  * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
