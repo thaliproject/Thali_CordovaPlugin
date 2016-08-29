@@ -415,6 +415,9 @@ function (callBack) {
  */
 // jscs:enable jsDoc
 MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
+  if (this.platform === platformChoice.IOS) {
+    return callback('Platform does not support connect');
+  }
   if (!startListeningForAdvertisementsIsActive) {
     return callback('startListeningForAdvertisements is not active');
   }
@@ -591,7 +594,9 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
  */
 MobileCallInstance.prototype.multiConnect =
   function (peerIdentifier, syncValue, callback) {
-
+    if (!startListeningForAdvertisementsIsActive) {
+      return callback('startListeningForAdvertisements is not active');
+    }
   };
 
 
