@@ -17,13 +17,13 @@ public struct PeerAvailability {
 public final class BrowserManager: NSObject {
     private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>()
 
-    internal private (set) var currentBrowser: Browser?
+    internal private(set) var currentBrowser: Browser?
     internal private(set) var availablePeers: [PeerIdentifier] = []
 
     internal let serviceType: String
 
     public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil
-    public var isListening: Bool {
+    public var listening: Bool {
         return currentBrowser?.listening ?? false
     }
 

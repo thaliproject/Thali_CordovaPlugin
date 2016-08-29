@@ -30,17 +30,17 @@ class Session: NSObject {
 
     private let session: MCSession
     private let identifier: MCPeerID
-    var sessionStateChangesHandler: ((SessionState) -> Void)?
+    var sessionStateDidChangeHandler: ((SessionState) -> Void)?
     var didReceiveInputStream: ((NSInputStream, String) -> Void)?
     internal private(set) var inputStreams: [NSInputStream] = []
     internal private(set) var outputStreams: [NSOutputStream] = []
     internal private(set) var sessionState: SessionState = .NotConnected {
         didSet {
-            self.sessionStateChangesHandler?(sessionState)
+            self.sessionStateDidChangeHandler?(sessionState)
         }
     }
 
-    func createOutputStream(name: String) throws -> NSOutputStream {
+    func createOutputStream(withName name: String) throws -> NSOutputStream {
         let stream = try session.startStreamWithName(name, toPeer: identifier)
         outputStreams.append(stream)
         return stream

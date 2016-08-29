@@ -11,8 +11,8 @@ import Foundation
 //class for managing Thali advertiser's logic
 @objc public final class AdvertiserManager: NSObject {
     let socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>()
-    internal private (set) var advertisers: [Advertiser] = []
-    internal private (set) var currentAdvertiser: Advertiser? = nil
+    internal private(set) var advertisers: [Advertiser] = []
+    internal private(set) var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
 
