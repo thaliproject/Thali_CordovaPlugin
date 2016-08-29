@@ -15,7 +15,6 @@ import Foundation
     internal private (set) var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
-    internal private(set) var activeSessions: [AdvertiserVirtualSocketBuilder] = []
 
     public var advertising: Bool {
         return currentAdvertiser?.advertising ?? false
