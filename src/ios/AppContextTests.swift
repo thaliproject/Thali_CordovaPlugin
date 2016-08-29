@@ -77,7 +77,7 @@ class AppContextTests: XCTestCase {
         // Push hardware state
         let bluetoothIsPoweredBeforeTest = BluetoothHardwareControlManager.sharedInstance().bluetoothIsPowered()
         
-        //TODO: turn bluetooth (and BLE) on and check status
+        // Turn bluetooth (and BLE) on and check status
         if !bluetoothIsPoweredBeforeTest {
             expectation = expectationWithDescription("Bluetooth turned on")
             
@@ -103,7 +103,7 @@ class AppContextTests: XCTestCase {
         }
         
         
-        //TODO: turn bluetooth (and BLE) off and check status
+        // Turn bluetooth (and BLE) off and check status
         expectation = expectationWithDescription("Bluetooth turned off")
         
         BluetoothHardwareControlManager.sharedInstance().turnBluetoothOff()
@@ -123,7 +123,6 @@ class AppContextTests: XCTestCase {
             bluetoothLowEnergyStateActual = dictinaryNetworkStatus["bluetoothLowEnergy"] as! String
             XCTAssertEqual(bluetoothStateActual, bluetoothStateExpected, "Wrong bluetooth state (expected: \(bluetoothStateExpected), real: \(bluetoothStateActual))")
             XCTAssertEqual(bluetoothLowEnergyStateActual, bluetoothLowEnergyStateExpected, "Wrong bluetoothLowEnergyState state (expected: \(bluetoothLowEnergyStateExpected), real: \(bluetoothLowEnergyStateActual))")
-            
         } else {
             XCTFail("Can not convert network status JSON string to dictionary")
         }
@@ -147,8 +146,8 @@ class AppContextTests: XCTestCase {
         //        XCTAssertEqual(wifiStateActual, wifiStateExpected, "Wrong wifi state (expected: \(wifiStateExpected), real: \(wifiStateActual))")
         
         
+        // Check cellular status
         if let dictinaryNetworkStatus = dictionaryValue(delegateMock.networkStatus!) {
-            //TODO: check cellular in status
             cellularStateExpected = "doNotCare"
             cellularStateActual = dictinaryNetworkStatus["cellular"] as! String
             XCTAssertEqual(cellularStateActual, cellularStateExpected, "Wrong cellular state (expected: \(cellularStateExpected), real: \(cellularStateActual))")
