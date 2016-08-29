@@ -82,6 +82,7 @@ extension PeerAvailability {
      - parameter discoveryAdvertisingState: json with information about peer's state
      - parameter context:                   related AppContext
      */
+
     func context(context: AppContext,
                  didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
 
@@ -117,7 +118,7 @@ extension PeerAvailability {
     private var networkChangedRegistered: Bool = false
     private let browserManager: BrowserManager
     private let advertiserManager: AdvertiserManager
-    
+
     private var bluetoothManager: CBCentralManager?
 
     private func notifyOnDidUpdateNetworkStatus() {
@@ -129,12 +130,12 @@ extension PeerAvailability {
             case NotHere = "notHere"
             case DoNotCare = "doNotCare"
         }
-        
+
         var bluetoothState = RadioState.Unavailable
         var bluetoothLowEnergyState = RadioState.Unavailable
         var wifiState = RadioState.Unavailable
         let cellularState = RadioState.DoNotCare
-        
+
         if (nil != bluetoothManager) {
             switch bluetoothManager!.state {
             case .PoweredOn:
@@ -151,7 +152,7 @@ extension PeerAvailability {
                 bluetoothLowEnergyState = .Unavailable
             }
         }
-        
+
         let wifiEnabled = NetworkReachability().isWiFiEnabled()
         let wifiConnected = NetworkReachability().isWiFiConnected()
 
@@ -209,7 +210,7 @@ extension PeerAvailability {
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
             self?.willEnterBackground()
         }
-        
+
         #if TEST
             // We use background queue because CI tests use main_queue synchronously
             // Otherwise we won't be able to get centralManager state.
@@ -218,7 +219,7 @@ extension PeerAvailability {
             let centralManagerDispathQueue = nil
         #endif
         bluetoothManager = CBCentralManager(delegate: self, queue: centralManagerDispathQueue)
-        
+
     }
 
     public func startListeningForAdvertisements() throws {
@@ -274,7 +275,7 @@ extension PeerAvailability {
         return runner.resultDescription ?? ""
     }
 #endif
-    
+
 }
 
 // MARK: CBCentralManagerDelegate
