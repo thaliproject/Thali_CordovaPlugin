@@ -42,11 +42,12 @@ setImmediate(function() {
     if (!utResult) {
         console.log("Failed to execute UT.");
         global.nativeUTFailed = true;
-
+        console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+    } else {        
         // TODO finish testing here (the node part will be omitted)
         console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-    } else {
-        ThaliMobile.getNetworkStatus()
+
+	ThaliMobile.getNetworkStatus()
         .then(function (networkStatus) {
             var promiseList = [];
             if (networkStatus.wifi === 'off') {
