@@ -23,9 +23,10 @@ public typealias ClientConnectCallback = (String, String) -> Void
     case UnknownError
 }
 
-extension PeerAvailability {
+private extension PeerAvailability {
     var dictionaryValue: [String : AnyObject] {
         return ["peerIdentifier" : peerIdentifier.uuid,
+                "generation" : peerIdentifier.generation,
                 "peerAvailable" : available
         ]
     }
