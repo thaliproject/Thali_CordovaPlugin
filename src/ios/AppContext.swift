@@ -30,7 +30,7 @@ func dictionaryValue(jsonText: String) -> [String:AnyObject]? {
 
 public typealias ClientConnectCallback = (String, String) -> Void
 
-@objc public enum AppContextError: Int, ErrorType{
+@objc public enum AppContextError: Int, ErrorType {
     case BadParameters
     case UnknownError
 }
@@ -104,11 +104,11 @@ extension PeerAvailability {
     private var bluetoothIsPowered = false
     private var bluetoothLEIsPowered = false
     private var bluetoothManager: CBCentralManager?
-    
+
     private func notifyOnDidUpdateNetworkStatus() {
         //TODO: update with real values from hardware
         var wifiIsPowered =  false
-        
+
         do {
             let reachability = try Reachability.reachabilityForLocalWiFi()
             wifiIsPowered = reachability.isReachableViaWiFi()
@@ -123,12 +123,12 @@ extension PeerAvailability {
             case NotHere = "notHere"
             case DoNotCare = "doNotCare"
         }
-        
+
         var bluetoothState = RadioState.Unavailable
         var bluetoothLowEnergyState = RadioState.Unavailable
         var wifiState = RadioState.Unavailable
         let cellularState = RadioState.DoNotCare
-        
+
         if (nil != bluetoothManager) {
             switch bluetoothManager!.state {
             case .PoweredOn:
@@ -145,7 +145,7 @@ extension PeerAvailability {
                 bluetoothLowEnergyState = .Unavailable
             }
         }
-        
+
         let wifiEnabled = NetworkReachability().isWiFiEnabled()
         let wifiConnected = NetworkReachability().isWiFiConnected()
 
@@ -207,7 +207,7 @@ extension PeerAvailability {
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
             self?.willEnterBackground()
         }
-        
+
         #if TEST
             // We use background queue because CI tests use main_queue synchronously
             // Otherwise we won't be able to get centralManager state.
@@ -216,7 +216,7 @@ extension PeerAvailability {
             let centralManagerDispathQueue = nil
         #endif
         bluetoothManager = CBCentralManager(delegate: self, queue: centralManagerDispathQueue)
-        
+
     }
 
     public func startListeningForAdvertisements() throws {
@@ -270,7 +270,7 @@ extension PeerAvailability {
         return runner.resultDescription ?? ""
     }
 #endif
-    
+
 }
 
 // MARK: CBCentralManagerDelegate
