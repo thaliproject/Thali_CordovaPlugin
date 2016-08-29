@@ -2,6 +2,8 @@
 
 var fs = require('fs-extra-promise');
 var path = require('path');
+var thaliTape = require('./lib/thaliTape');
+var testUtils = require('./lib/testUtils');
 var logger = require('thali/thaliLogger')('runTests');
 
 // The global.Mobile object is replaced here after thaliTape
@@ -39,9 +41,6 @@ if (hasJavaScriptSuffix(testsToRun)) {
 }
 
 module.exports.run = function () {
-  var thaliTape = require('./lib/thaliTape');
-  var testUtils = require('./lib/testUtils');
-
   return testUtils.hasRequiredHardware()
     .then(function (hasRequiredHardware) {
       return testUtils.getOSVersion()
