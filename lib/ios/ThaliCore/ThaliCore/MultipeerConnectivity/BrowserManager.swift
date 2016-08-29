@@ -13,18 +13,6 @@ public struct PeerAvailability {
     public let available: Bool
 }
 
-public enum MultiСonnectError: ErrorType {
-    case StartListeningNotActive
-    case ConnectionFailed
-    case ConnectionTimedOut
-    case MaxConnectionsReached
-    case NoNativeNonTCPSupport
-    case NoAvailableTCPPorts
-    case RadioTurnedOff
-    case UnspecifiedRadioError
-    case IllegalPeerID
-}
-
 //class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
     private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>()
