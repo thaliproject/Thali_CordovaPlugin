@@ -28,7 +28,7 @@ func dictionaryValue(jsonText: String) -> [String:AnyObject]? {
 
 public typealias ClientConnectCallback = (String, String) -> Void
 
-@objc public enum AppContextError: Int, ErrorType{
+@objc public enum AppContextError: Int, ErrorType {
     case BadParameters
     case UnknownError
 }
@@ -36,46 +36,46 @@ public typealias ClientConnectCallback = (String, String) -> Void
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
     /**
      Notifies about context's peer changes
-     
+
      - parameter peers:   json with data about changed peers
      - parameter context: related AppContext
      */
     func context(context: AppContext, didChangePeerAvailability peers: String)
-    
+
     /**
      Notifies about network status changes
-     
+
      - parameter status:  json string with network availability status
      - parameter context: related AppContext
      */
     func context(context: AppContext, didChangeNetworkStatus status: String)
-    
+
     /**
      Notifies about peer advertisement update
-     
+
      - parameter discoveryAdvertisingState: json with information about peer's state
      - parameter context:                   related AppContext
      */
     func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
-    
+
     /**
      Notifies about failing connection to port
-     
+
      - parameter port:      port failed to connect
      - parameter context: related AppContext
      */
     func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16)
-    
+
     /**
      Notifies about entering background
-     
+
      - parameter context: related AppContext
      */
     func appWillEnterBackground(withContext context: AppContext)
-    
+
     /**
      Notifies about entering foreground
-     
+
      - parameter context: related AppContext
      */
     func appDidEnterForeground(withContext context: AppContext)
@@ -87,11 +87,11 @@ public typealias ClientConnectCallback = (String, String) -> Void
     public weak var delegate: AppContextDelegate?
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
-    
+
     private var bluetoothManager: CBCentralManager?
-    
+
     private func notifyOnDidUpdateNetworkStatus() {
-        
+
         enum RadioState: String {
             case On = "on"
             case Off = "off"
@@ -99,12 +99,12 @@ public typealias ClientConnectCallback = (String, String) -> Void
             case NotHere = "notHere"
             case DoNotCare = "doNotCare"
         }
-        
+
         var bluetoothState = RadioState.Unavailable
         var bluetoothLowEnergyState = RadioState.Unavailable
         var wifiState = RadioState.Unavailable
         let cellularState = RadioState.DoNotCare
-        
+
         if (nil != bluetoothManager) {
             switch bluetoothManager!.state {
             case .PoweredOn:
@@ -121,7 +121,7 @@ public typealias ClientConnectCallback = (String, String) -> Void
                 bluetoothLowEnergyState = .Unavailable
             }
         }
-        
+
         let wifiEnabled = NetworkReachability().isWiFiEnabled()
         let wifiConnected = NetworkReachability().isWiFiConnected()
 
@@ -136,15 +136,15 @@ public typealias ClientConnectCallback = (String, String) -> Void
             "cellular"          : cellularState.rawValue,
             "bssid"             : bssid
         ]
-        
-        
+
+
         do {
             delegate?.context(self, didChangeNetworkStatus: try jsonValue(networkStatus)!)
         } catch let error {
             assert(false, "\(error)")
         }
     }
-    
+
     public override init() {
         appNotificationsManager = ApplicationStateNotificationsManager()
         super.init()
@@ -160,7 +160,7 @@ public typealias ClientConnectCallback = (String, String) -> Void
             }
             strongSelf.delegate?.appWillEnterBackground(withContext: strongSelf)
         }
-        
+
         #if TEST
             // We use background queue because CI tests use main_queue synchronously
             // Otherwise we won't be able to get centralManager state.
@@ -169,38 +169,38 @@ public typealias ClientConnectCallback = (String, String) -> Void
             let centralManagerDispathQueue = nil
         #endif
         bluetoothManager = CBCentralManager(delegate: self, queue: centralManagerDispathQueue)
-        
+
     }
-    
+
     public func startListeningForAdvertisements() throws {
     }
-    
+
     public func stopListeningForAdvertisements() throws {
     }
-    
+
     public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
         guard let _ = (parameters.first as? NSNumber)?.unsignedShortValue where parameters.count == 2 else {
             throw AppContextError.BadParameters
         }
     }
-    
+
     public func stopListening() throws {
     }
-    
+
     public func stopAdvertisingAndListening() throws {
     }
-    
+
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
-        
+
     }
-    
+
     public func killConnection(parameters: [AnyObject]) throws {
     }
-    
+
     public func getIOSVersion() -> String {
         return NSProcessInfo().operatingSystemVersionString
     }
-    
+
     public func didRegisterToNative(parameters: [AnyObject]) throws {
         guard let functionName = parameters.first as? String where parameters.count == 2 else {
             throw AppContextError.BadParameters
@@ -218,7 +218,7 @@ public typealias ClientConnectCallback = (String, String) -> Void
         return runner.resultDescription ?? ""
     }
 #endif
-    
+
 }
 
 // MARK: CBCentralManagerDelegate
