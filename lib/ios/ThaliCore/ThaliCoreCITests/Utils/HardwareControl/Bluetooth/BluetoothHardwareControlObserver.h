@@ -1,5 +1,5 @@
 //
-//  BluetoothHarwareControlObserver.h
+//  BluetoothHardwareControlObserver.h
 //  ThaliCore
 //
 //  Copyright (C) Microsoft. All rights reserved.
@@ -12,7 +12,7 @@ typedef enum BluetoothHardwareControlNotification : NSUInteger {
     PowerChangedNotification,
 } BluetoothHardwareControlNotification;
 
-@protocol BluetoothHarwareControlObserverProtocol <NSObject>
+@protocol BluetoothHardwareControlObserverProtocol <NSObject>
 
 @required
 - (void)receivedBluetoothNotification: (BluetoothHardwareControlNotification)btNotification;
