@@ -50,7 +50,8 @@ class AppContextTests: XCTestCase {
             "bluetooth",
             "bluetoothLowEnergy",
             "wifi",
-            "cellular"
+            "cellular",
+            "bssid"
         ]
         
         
