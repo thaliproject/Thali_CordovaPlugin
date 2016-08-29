@@ -15,6 +15,17 @@ func jsonValue(object: AnyObject) throws -> String? {
     return String(data: data, encoding: NSUTF8StringEncoding)
 }
 
+func dictionaryValue(jsonText: String) -> [String:AnyObject]? {
+    if let data = jsonText.dataUsingEncoding(NSUTF8StringEncoding) {
+        do {
+            return try NSJSONSerialization.JSONObjectWithData(data, options: []) as? [String:AnyObject]
+        } catch let error as NSError {
+            print(error)
+        }
+    }
+    return nil
+}
+
 public typealias ClientConnectCallback = (String, String) -> Void
 
 @objc public enum AppContextError: Int, ErrorType{
@@ -146,7 +157,15 @@ public typealias ClientConnectCallback = (String, String) -> Void
             strongSelf.delegate?.appWillEnterBackground(withContext: strongSelf)
         }
         
-        bluetoothManager = CBCentralManager(delegate: self, queue: nil)
+        #if TEST
+            // We use background queue because CI tests use main_queue synchronously
+            // Otherwise we won't be able to get centralManager state.
+            let centralManagerDispathQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)
+        #else
+            let centralManagerDispathQueue = nil
+        #endif
+        bluetoothManager = CBCentralManager(delegate: self, queue: centralManagerDispathQueue)
+        
     }
     
     public func startListeningForAdvertisements() throws {
