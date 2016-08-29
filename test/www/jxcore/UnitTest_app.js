@@ -42,8 +42,8 @@ if (!utResult) {
 }
 
 // TODO finish testing here (the node part will be omitted)
-//console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-//return;
+// console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+// return;
 
 // Issue #914
 var networkTypes = [ThaliMobile.networkTypes.BOTH];
@@ -71,7 +71,7 @@ ThaliMobile.getNetworkStatus()
 
       networkTypes.reduce(function (sequence, networkType) {
         return sequence
-          .then(function (res) {
+          .then(function () {
             console.log('Running for ' + networkType + ' network type');
             global.NETWORK_TYPE = networkType;
             var testRunner = require('./runTests.js');

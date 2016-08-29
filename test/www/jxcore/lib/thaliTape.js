@@ -315,12 +315,8 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   return new Promise(function (resolve, reject) {
     testServer.once('complete', function () {
       if (allSuccess) {
-        console.log('DEBUG: All tests uccessfully pass for ' +
-      global.NETWORK_TYPE + ' network type');
         resolve('Successfully completed');
       } else {
-        console.log('DEBUG: Some of tests failed for ' +
-      global.NETWORK_TYPE + ' network type');
         reject('Completed with errors');
       }
     });
