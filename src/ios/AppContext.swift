@@ -9,24 +9,9 @@
 import Foundation
 import ThaliCore
 
-func jsonValue(object: AnyObject) -> String {
-    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0)) else {
-        return ""
-    }
-    return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
-}
-
 @objc public enum AppContextError: Int, ErrorType{
     case BadParameters
     case UnknownError
-}
-
-extension PeerAvailability {
-    var dictionaryValue: [String : AnyObject] {
-        return ["peerIdentifier" : peerIdentifier.uuid,
-                "peerAvailable" : available
-        ]
-    }
 }
 
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
@@ -61,6 +46,18 @@ extension PeerAvailability {
      - parameter context: related AppContext
      */
     func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16)
+
+    /**
+     callback for multiConnect function
+
+     */
+    func context(context: AppContext, didResolveMultiConnectWith params: String)
+
+    /**
+     callback for multiConnect function
+
+     */
+    func context(context: AppContext, didFailMultiConnectConnectionWith params: String)
 
     /**
      Notifies about entering background
@@ -115,6 +112,23 @@ extension PeerAvailability {
         delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))
     }
 
+    private func handleMultiConnectResolved(withSyncValue value: String, port: UInt16?, error: ErrorType?) {
+        let parameters = [
+            "syncValue" : value,
+            "error" : error != nil ? errorDescription(error!) : NSNull(),
+            "port" : port != nil ? NSNumber(unsignedShort: port!) : NSNull()
+        ]
+        delegate?.context(self, didResolveMultiConnectWith: jsonValue(parameters))
+    }
+
+    private func handleMultiConnectConnectionFailure(withIdentifier identifier: String, error: ErrorType?) {
+        let parameters = [
+            "peerIdentifier" : identifier,
+            "error" : error != nil ? errorDescription(error!) : NSNull()
+        ]
+        delegate?.context(self, didFailMultiConnectConnectionWith: jsonValue(parameters))
+    }
+
     public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
@@ -160,17 +174,29 @@ extension PeerAvailability {
      - parameter callback: callback with connection results.
      */
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
-        guard parameters.count == 3 else {
+        guard parameters.count < 2 else {
             throw AppContextError.BadParameters
         }
         guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String else {
             throw AppContextError.BadParameters
         }
         let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
-        browserManager.connectToPeer(peerIdentifier) { port, error in
-            print(syncValue)
-            //todo call multiconnectResolved with port or error
+        browserManager.connectToPeer(peerIdentifier) { [weak self] port, error in
+            self?.handleMultiConnectResolved(withSyncValue: syncValue, port: port, error: error)
+            if let error = error {
+                self?.handleMultiConnectConnectionFailure(withIdentifier: identifierString, error: error)
+            }
         }
+    }
+    
+    public func disconnect(parameters: [AnyObject]) throws {
+        guard parameters.count < 1 else {
+            throw AppContextError.BadParameters
+        }
+        guard let identifierString = parameters[0] as? String else {
+            throw AppContextError.BadParameters
+        }
+        handleMultiConnectConnectionFailure(withIdentifier: identifierString, error: nil)
     }
 
     public func killConnection(parameters: [AnyObject]) throws {
@@ -213,8 +239,55 @@ extension PeerAvailability {
     @objc public static let didRegisterToNative: String = "didRegisterToNative"
     @objc public static let killConnections: String = "killConnections"
     @objc public static let connect: String = "connect"
+    @objc public static let multiConnect: String = "multiConnect"
+    @objc public static let multiConnectResolved: String = "multiConnectResolved"
+    @objc public static let multiConnectConnectionFailure: String = "multiConnectConnectionFailure"
     @objc public static let stopAdvertisingAndListening: String = "stopAdvertisingAndListening"
     @objc public static let startUpdateAdvertisingAndListening: String = "startUpdateAdvertisingAndListening"
     @objc public static let stopListeningForAdvertisements: String = "stopListeningForAdvertisements"
     @objc public static let startListeningForAdvertisements: String = "startListeningForAdvertisements"
+}
+
+extension PeerAvailability {
+    var dictionaryValue: [String : AnyObject] {
+        return ["peerIdentifier" : peerIdentifier.uuid,
+                "peerAvailable" : available
+        ]
+    }
+}
+
+private func jsonValue(object: AnyObject) -> String {
+    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0)) else {
+        return ""
+    }
+    return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
+}
+
+private func errorDescription(error: ErrorType) -> String {
+    if let error = error as? PeerIdentifierError where error == .IllegalPeerID {
+        return "Illegal peerID"
+    }
+    if let error = error as? MultiConnectError {
+        switch error {
+        case .StartListeningNotActive:
+            return "startListeningForAdvertisements is not active"
+        case .ConnectionFailed:
+            return "Connection could not be established"
+        case .ConnectionTimedOut:
+            return "Connection wait timed out"
+        case .MaxConnectionsReached:
+            return "Max connections reached"
+        case .NoNativeNonTCPSupport:
+            return "No Native Non-TCP Support"
+        case .NoAvailableTCPPorts:
+            return "No available TCP ports"
+        case .RadioTurnedOffMultiConnectError:
+            return "Radio Turned Off"
+        case .UnspecifiedRadioError:
+            return "Unspecified Error with Radio infrastructure"
+        case .IllegalPeerID:
+            return "Illegal peerID"
+        }
+    }
+    return (error as NSError).localizedDescription
 }

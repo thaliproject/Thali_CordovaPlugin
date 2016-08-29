@@ -43,7 +43,7 @@
     [self defineStopListeningForAdvertisements:appContext];
     [self defineStartUpdateAdvertisingAndListening:appContext];
     [self defineStopAdvertisingAndListening:appContext];
-    [self defineMulticonnect:appContext];
+    [self defineMultiConnect:appContext];
     [self defineKillConnections:appContext];
     [self defineDidRegisterToNative:appContext];
     [self defineGetOSVersion:appContext];
@@ -94,12 +94,12 @@
     } withName:[AppContextJSEvent stopAdvertisingAndListening]];
 }
 
-- (void)defineMulticonnect:(AppContext *)appContext {
+- (void)defineMultiConnect:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
         NSError *error = nil;
         [appContext multiConnectToPeer:params error:&error];
         [self handleCallback:callbackId error:error];
-    } withName:[AppContextJSEvent connect]];
+    } withName:[AppContextJSEvent multiConnect]];
 }
 
 - (void)defineKillConnections:(AppContext *)appContext {
@@ -191,6 +191,19 @@
     @synchronized(self) {
         [JXcore callEventCallback:[AppContextJSEvent appEnteredForeground] withParams:@[]];
     }
+}
+
+- (void)context:(AppContext * _Nonnull)context didResolveMultiConnectWith:(NSString * _Nonnull)parameters {
+    @synchronized(self) {
+        [JXcore callEventCallback:[AppContextJSEvent multiConnectResolved] withJSON:parameters];
+    }
+}
+
+- (void)context:(AppContext * _Nonnull)context didFailMultiConnectConnectionWith:(NSString * _Nonnull)parameters {
+    @synchronized(self) {
+        [JXcore callEventCallback:[AppContextJSEvent multiConnectConnectionFailure] withJSON:parameters];
+    }
+
 }
 
 @end

@@ -31,6 +31,8 @@ class AppContextTests: XCTestCase {
             @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
             @objc func appWillEnterBackground(withContext context: AppContext) {}
             @objc func appDidEnterForeground(withContext context: AppContext) {}
+            @objc func context(context: AppContext, didResolveMultiConnectWith params: String) {}
+            @objc func context(context: AppContext, didFailMultiConnectConnectionWith params: String) {}
         }
 
         let delegateMock = AppContextDelegateMock()
@@ -59,5 +61,15 @@ class AppContextTests: XCTestCase {
 
     func testGetIOSVersion() {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
+    }
+    
+    func testMultiConnectErrors() {
+        var error: AppContextError?
+        do {
+            try context.multiConnectToPeer([""])
+        } catch let err as AppContextError {
+            error = err
+        } catch _ {}
+        XCTAssertEqual(error, AppContextError.BadParameters)
     }
 }
