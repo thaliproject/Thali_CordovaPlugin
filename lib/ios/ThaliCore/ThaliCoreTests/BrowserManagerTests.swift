@@ -32,9 +32,9 @@ class BrowserManagerTests: XCTestCase {
 
     func testStartListeningNotActive() {
         let expectation = expectationWithDescription("got startListening not active error")
-        var connectError: MultiСonnectError?
+        var connectError: MultiConnectError?
         browser.connectToPeer(PeerIdentifier()) { [weak expectation] port, error in
-            if let error = error as? MultiСonnectError {
+            if let error = error as? MultiConnectError {
                 connectError = error
                 expectation?.fulfill()
             }
@@ -45,10 +45,10 @@ class BrowserManagerTests: XCTestCase {
 
     func testIllegalPeer() {
         let expectation = expectationWithDescription("got Illegal Peer")
-        var connectError: MultiСonnectError?
+        var connectError: MultiConnectError?
         browser.startListeningForAdvertisements()
         browser.connectToPeer(PeerIdentifier()) { [weak expectation] port, error in
-            if let error = error as? MultiСonnectError {
+            if let error = error as? MultiConnectError {
                 connectError = error
                 expectation?.fulfill()
             }

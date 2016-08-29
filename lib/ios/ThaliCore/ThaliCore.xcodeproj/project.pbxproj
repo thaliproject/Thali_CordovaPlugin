@@ -26,14 +26,14 @@
 		D377C5021D6D9C1600916A7B /* VirtualSocketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */; };
 		D37E88BE1D5209B0009243EE /* AppStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* AppStateNotificationsManagerTests.swift */; };
 		D3CBCCE51D5DD44A00F1591A /* PeerDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */; };
+		D3D0DE7D1D742872000F077C /* MultiConnectError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
+		D3D0DE7E1D742873000F077C /* MultiConnectError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
 		D3E380D41D6303F50040DF58 /* Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E380D31D6303F50040DF58 /* Sync.swift */; };
-		FAADD03B6B03B79BF6D7BF66 /* MultiConnectError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
 		FAADD04D8930DF3297562D09 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD342AF116FCE3B46A03D /* Session.swift */; };
 		FAADD16070404F0C249AF956 /* VirtualSocketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */; };
 		FAADD1775D396DBAD50F2C36 /* MultiConnectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD87110881950482ECFF9 /* MultiConnectTests.swift */; };
 		FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
 		FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
-		FAADD3E99490B25596FB099B /* MultiConnectError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
 		FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
 		FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
 		FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */; };
@@ -451,6 +451,7 @@
 				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
 				FAADD7B9451F32511828885E /* Browser.swift in Sources */,
 				FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */,
+				D3D0DE7D1D742872000F077C /* MultiConnectError.swift in Sources */,
 				D30051691D6F269E0001E85F /* SocketRelay.swift in Sources */,
 				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
 				D3E380D41D6303F50040DF58 /* Sync.swift in Sources */,
@@ -471,7 +472,6 @@
 				D375BDEC1D6313F70059805F /* BrowserManagerTests.swift in Sources */,
 				D3CBCCE51D5DD44A00F1591A /* PeerDiscoveryTests.swift in Sources */,
 				FAADD1775D396DBAD50F2C36 /* MultiConnectTests.swift in Sources */,
-				FAADD03B6B03B79BF6D7BF66 /* MultiConnectError.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -486,6 +486,7 @@
 				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
 				FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */,
 				D3217E341D5E0D980068390B /* PeerIdentifierTests.swift in Sources */,
+				D3D0DE7E1D742873000F077C /* MultiConnectError.swift in Sources */,
 				D377C4FD1D6B58F800916A7B /* String+Random.swift in Sources */,
 				FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */,
 				D3217E311D5E01580068390B /* PeerDiscoveryTests.swift in Sources */,
@@ -497,7 +498,6 @@
 				FAADDD566FA7D3F34C6C4581 /* Session.swift in Sources */,
 				FAADD95E916CC41331AA1613 /* MultiConnectTests.swift in Sources */,
 				FAADDC1C4A7942B159C0B09F /* SocketRelay.swift in Sources */,
-				FAADD3E99490B25596FB099B /* MultiConnectError.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

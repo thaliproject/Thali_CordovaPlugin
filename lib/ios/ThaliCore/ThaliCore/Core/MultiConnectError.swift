@@ -13,8 +13,7 @@ public enum MultiConnectError: ErrorType {
     case MaxConnectionsReached
     case NoNativeNonTCPSupport
     case NoAvailableTCPPorts
-    case RadioTurnedOff
+    case RadioTurnedOffMultiConnectError
     case UnspecifiedRadioError
     case IllegalPeerID
 }
-
