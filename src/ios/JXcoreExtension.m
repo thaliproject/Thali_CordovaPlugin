@@ -33,7 +33,7 @@
     if (!appContext) {
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
-            appContext = [[AppContext alloc] init];
+            appContext = [[AppContext alloc] initWithServiceType:@"thaliproject"];
         });
     }
     appContext.delegate = self;

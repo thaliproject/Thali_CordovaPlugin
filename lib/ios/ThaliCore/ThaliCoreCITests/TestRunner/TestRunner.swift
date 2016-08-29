@@ -76,6 +76,7 @@ public final class TestRunner: NSObject {
         // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
         testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
     }
+
 }
 
 // MARK:

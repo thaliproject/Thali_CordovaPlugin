@@ -12,7 +12,7 @@ class AppContextTests: XCTestCase {
     var context: AppContext! = nil
 
     override func setUp() {
-        context = AppContext()
+        context = AppContext(serviceType: "thaliTest")
     }
 
     override func tearDown() {

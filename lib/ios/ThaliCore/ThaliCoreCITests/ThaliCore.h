@@ -13,5 +13,3 @@ FOUNDATION_EXPORT double ThaliCoreVersionNumber;
 
 //! Project version string for ThaliCoreWithTests.
 FOUNDATION_EXPORT const unsigned char ThaliCoreVersionString[];
-
-// In this header, you should import all the public headers of your framework using statements like #import <ThaliCoreWithTests/PublicHeader.h>

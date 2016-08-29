@@ -9,9 +9,11 @@
 import Foundation
 import ThaliCore
 
-func jsonValue(object: AnyObject) throws -> String? {
-    let data = try NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0))
-    return String(data: data, encoding: NSUTF8StringEncoding)
+func jsonValue(object: AnyObject) -> String {
+    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0)) else {
+        return ""
+    }
+    return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
 }
 
 public typealias ClientConnectCallback = (String, String) -> Void
@@ -19,6 +21,14 @@ public typealias ClientConnectCallback = (String, String) -> Void
 @objc public enum AppContextError: Int, ErrorType{
     case BadParameters
     case UnknownError
+}
+
+extension PeerAvailability {
+    var dictionaryValue: [String : AnyObject] {
+        return ["peerIdentifier" : peerIdentifier.uuid,
+                "peerAvailable" : available
+        ]
+    }
 }
 
 @objc public protocol AppContextDelegate: class, NSObjectProtocol {
@@ -73,45 +83,72 @@ public typealias ClientConnectCallback = (String, String) -> Void
 @objc public final class AppContext: NSObject {
     /// delegate for AppContext's events
     public weak var delegate: AppContextDelegate?
+    private let serviceType: String
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
+    private let browserManager: BrowserManager
+    private let advertiserManager: AdvertiserManager
 
     private func notifyOnDidUpdateNetworkStatus() {
         //todo put actual network status
-        do {
-            delegate?.context(self, didChangeNetworkStatus: try jsonValue([:])!)
-        } catch let error {
-            assert(false, "\(error)")
-        }
+        delegate?.context(self, didChangeNetworkStatus: jsonValue([:]))
     }
 
-    public override init() {
+    private func willEnterBackground() {
+        delegate?.appWillEnterBackground(withContext: self)
+    }
+
+    private func didEnterForeground() {
+        delegate?.appDidEnterForeground(withContext: self)
+    }
+
+    private func peersAvailabilityChanged(peers: [PeerAvailability]) {
+        let mappedPeers = peers.map {
+            $0.dictionaryValue
+        }
+        delegate?.context(self, didChangePeerAvailability: jsonValue(mappedPeers))
+    }
+
+    private func updateListeningAdvertisingState() {
+        let newState = [
+            "discoveryActive" : browserManager.isListening,
+            "advertisingActive" : advertiserManager.advertising
+        ]
+        delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))
+    }
+
+    public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
+        self.serviceType = serviceType
+        browserManager = BrowserManager(serviceType: serviceType)
+        advertiserManager = AdvertiserManager(serviceType: serviceType)
         super.init()
-        appNotificationsManager.didEnterForegroundHandler = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.delegate?.appDidEnterForeground(withContext: strongSelf)
+        browserManager.peersAvailabilityChanged = { [weak self] peers in
+            self?.peersAvailabilityChanged(peers)
+        }
+        appNotificationsManager.didEnterForegroundHandler = {[weak self] in
+            self?.willEnterBackground()
         }
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.delegate?.appWillEnterBackground(withContext: strongSelf)
+            self?.willEnterBackground()
         }
     }
 
     public func startListeningForAdvertisements() throws {
+        browserManager.startListeningForAdvertisements()
+        updateListeningAdvertisingState()
     }
 
     public func stopListeningForAdvertisements() throws {
+        browserManager.stopListeningForAdvertisements()
+        updateListeningAdvertisingState()
     }
 
     public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
-        guard let _ = (parameters.first as? NSNumber)?.unsignedShortValue where parameters.count == 2 else {
+        guard let port = (parameters.first as? NSNumber)?.unsignedShortValue where parameters.count == 2 else {
             throw AppContextError.BadParameters
         }
+        advertiserManager.startUpdateAdvertisingAndListening(port)
     }
 
     public func stopListening() throws {

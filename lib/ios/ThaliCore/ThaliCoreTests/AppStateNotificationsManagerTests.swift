@@ -1,6 +1,6 @@
 //
 //  Thali CordovaPlugin
-//  ApplicationStateNotificationsManagerTests.swift
+//  AppStateNotificationsManagerTests.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
@@ -10,12 +10,12 @@
 import XCTest
 import ThaliCore
 
-class AppContextTests: XCTestCase {
-    
+class AppStateNotificationsManagerTests: XCTestCase {
+
     override func setUp() {
         super.setUp()
     }
-    
+
     override func tearDown() {
         super.tearDown()
     }
@@ -29,7 +29,7 @@ class AppContextTests: XCTestCase {
         NSNotificationCenter.defaultCenter().postNotificationName(UIApplicationWillResignActiveNotification, object: nil)
         XCTAssertTrue(willEnterBackgroundCalled)
     }
-    
+
     func testDidEnterForeground() {
         var didEnterForegroundCalled: Bool = false
         let c = ApplicationStateNotificationsManager()
