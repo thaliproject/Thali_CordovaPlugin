@@ -1,18 +1,18 @@
 //
-//  BluetoothHarwareControlManager.m
+//  BluetoothHardwareControlManager.m
 //  ThaliCore
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //
 
-#import "BluetoothHarwareControlManager.h"
+#import "BluetoothHardwareControlManager.h"
 #import "BluetoothManager.h"
 #import <dlfcn.h>
 
 static void *frameworkHandle;
 
-@interface BluetoothHarwareControlManager ()
+@interface BluetoothHardwareControlManager ()
 
 @property (strong, nonatomic) NSMutableArray *observers;
 @property (retain, nonatomic) BluetoothManager *privateBluetoothManager;
@@ -23,7 +23,7 @@ static void *frameworkHandle;
 
 @end
 
-@implementation BluetoothHarwareControlManager
+@implementation BluetoothHardwareControlManager
 
 // Instantiate current class dynamically
 + (BluetoothManager *) bluetoothManagerSharedInstance {
@@ -31,15 +31,15 @@ static void *frameworkHandle;
     return (BluetoothManager *)[bm sharedInstance];
 }
 
-+ (BluetoothHarwareControlManager *)sharedInstance
++ (BluetoothHardwareControlManager *)sharedInstance
 {
-    static BluetoothHarwareControlManager *bluetoothManager = nil;
+    static BluetoothHardwareControlManager *bluetoothManager = nil;
     static dispatch_once_t onceToken;
     
     dispatch_once(&onceToken, ^{
         frameworkHandle = dlopen("/System/Library/PrivateFrameworks/BluetoothManager.framework/BluetoothManager", RTLD_NOW);
         if (frameworkHandle) {
-            bluetoothManager = [[BluetoothHarwareControlManager alloc] init];
+            bluetoothManager = [[BluetoothHardwareControlManager alloc] init];
         }
     });
     
@@ -50,7 +50,7 @@ static void *frameworkHandle;
 {
     if (self = [super init]) {
         _observers = [[NSMutableArray alloc] init];
-        _privateBluetoothManager = [BluetoothHarwareControlManager bluetoothManagerSharedInstance];
+        _privateBluetoothManager = [BluetoothHardwareControlManager bluetoothManagerSharedInstance];
     }
 
     [self addNotification];
@@ -71,31 +71,31 @@ static void *frameworkHandle;
 
 - (BOOL)bluetoothIsPowered
 {
-    return [[BluetoothHarwareControlManager bluetoothManagerSharedInstance] powered];
+    return [[BluetoothHardwareControlManager bluetoothManagerSharedInstance] powered];
 }
 
 - (void)turnBluetoothOn
 {
     if (![self bluetoothIsPowered]) {
-        [[BluetoothHarwareControlManager bluetoothManagerSharedInstance] setPowered:YES];
+        [[BluetoothHardwareControlManager bluetoothManagerSharedInstance] setPowered:YES];
     }
 }
 
 - (void)turnBluetoothOff
 {
     if ([self bluetoothIsPowered]) {
-        [[BluetoothHarwareControlManager bluetoothManagerSharedInstance] setPowered:NO];
+        [[BluetoothHardwareControlManager bluetoothManagerSharedInstance] setPowered:NO];
     }
 }
 
 #pragma mark - Observer methods
 
-- (void)registerObserver:(id<BluetoothHarwareControlObserverProtocol>)observer
+- (void)registerObserver:(id<BluetoothHardwareControlObserverProtocol>)observer
 {
     [self.observers addObject:observer];
 }
 
-- (void)unregisterObserver:(id<BluetoothHarwareControlObserverProtocol>)observer
+- (void)unregisterObserver:(id<BluetoothHardwareControlObserverProtocol>)observer
 {
     [self.observers removeObject:observer];
 }
@@ -104,7 +104,7 @@ static void *frameworkHandle;
 
 - (void)bluetoothPowerStateChanged:(NSNotification*)notification
 {
-    for (id<BluetoothHarwareControlObserverProtocol> observer in self.observers) {
+    for (id<BluetoothHardwareControlObserverProtocol> observer in self.observers) {
         [observer receivedBluetoothNotification:PowerChangedNotification];
     }
 }
