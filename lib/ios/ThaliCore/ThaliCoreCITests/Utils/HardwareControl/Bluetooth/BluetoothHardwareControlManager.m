@@ -63,7 +63,7 @@ static void *frameworkHandle;
     [[NSNotificationCenter defaultCenter]
         addObserver:self
            selector:@selector(bluetoothPowerStateChanged:)
-               name:@"BluetoothPowerStateChangedNotification"
+               name:@"BluetoothPowerChangedNotification"
              object:nil];
 }
 
