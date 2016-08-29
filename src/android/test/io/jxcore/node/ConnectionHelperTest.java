@@ -145,9 +145,15 @@ public class ConnectionHelperTest {
 
     @Test
     public void testStart() throws Exception {
-        assertThat("Start method returns true",
-                mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
 
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        } else {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        }
+            
         Thread.sleep(5000); //Wait for connectionHelper to start
 
         Field fServerPortNumber = mConnectionHelper.getClass()
@@ -185,8 +191,15 @@ public class ConnectionHelperTest {
 
         Thread.sleep(5000); //Wait for connectionHelper to stop
 
-        assertThat("Start method returns true",
-                mConnectionHelper.start(-1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(-1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        } else {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(-1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        }
+        
+        Thread.sleep(5000); //Wait for connectionHelper to start
 
         mServerPortNumber = fServerPortNumber.getInt(mConnectionHelper);
         mPowerUpBleDiscoveryTimer =

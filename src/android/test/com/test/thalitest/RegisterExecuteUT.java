@@ -88,7 +88,10 @@ public final class RegisterExecuteUT {
                 String failures = "";
 
                 for (Failure failure: resultTest.getFailures()) {
-                    failures += failure.getMessage() + "\n";
+                    failures += failure.getTestHeader() +
+                            "\n" + failure.getMessage() +
+                            "\n" + failure.getTrace() +
+                            "\n" + failure.getDescription();
                 }
 
                 try {
