@@ -382,7 +382,35 @@ function (callBack) {
     });
 };
 
-MobileCallInstance.prototype._connectToPeeer =
+MobileCallInstance.prototype._disconnect =
+  function (peerIdentifier, callback) {
+    var connection = peerConnections[peerIdentifier];
+    var socket = peerProxySockets[peerIdentifier];
+    var server = peerProxyServers[peerIdentifier];
+
+    if (connection) {
+      connection.destroy();
+      delete peerConnections[peerIdentifier];
+    }
+    if (socket) {
+      socket.destroy();
+      delete peerProxySockets[peerIdentifier];
+    }
+    if (server) {
+      server.closeAllPromise()
+        .then(function () {
+          delete peerProxyServers[peerIdentifier];
+          callback(null);
+        })
+        .catch(callback);
+
+      return;
+    }
+
+    callback(null);
+};
+
+MobileCallInstance.prototype._connect =
   function (peerIdentifier, callback) {
     if (!startListeningForAdvertisementsIsActive) {
       return callback('startListeningForAdvertisements is not active');
@@ -416,21 +444,9 @@ MobileCallInstance.prototype._connectToPeeer =
         return;
       }
       cleanProxyServerCalled = true;
-      peerConnections[peerIdentifier] &&
-        peerConnections[peerIdentifier].destroy();
-      peerProxySockets[peerIdentifier] &&
-        peerProxySockets[peerIdentifier].destroy();
-      peerProxyServers[peerIdentifier] &&
-        peerProxyServers[peerIdentifier].closeAllPromise()
-          .then(function () {
-            delete peerConnections[peerIdentifier];
-            delete peerProxySockets[peerIdentifier];
-            delete peerProxyServers[peerIdentifier];
-          })
-          .catch(function (err) {
-            logger.debug('Got error closing server ' + err);
-            throw err;
-          });
+      this._disconnect(peerIdentifier, function (error) {
+        logger.debug('Got error while disconecting a peer: ' + error);
+      });
     }
 
     var peerToConnect = peerAvailabilities[peerIdentifier];
@@ -543,7 +559,7 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
   if (this.platform === platformChoice.IOS) {
     return callback('Platform does not support connect');
   }
-  return this._connectToPeeer(peerIdentifier, callback);
+  return this._connect(peerIdentifier, callback);
 };
 
 /**
@@ -593,7 +609,7 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
  * method is called while we are simulating Android then we MUST throw a
  * "Platform does not support `multiConnect`" error.
  */
- var multiConnectResponsesCache = {};
+ var multiConnectResponses = {};
  /**
  * @param {string} peerIdentifier
  * @param {string} syncValue
@@ -605,15 +621,15 @@ MobileCallInstance.prototype.multiConnect =
       return callback('Platform does not support multiConnect');
     }
 
-    return this._connectToPeeer(peerIdentifier, function (error, response) {
-      multiConnectResponsesCache[syncValue] = {
+    return this._connect(peerIdentifier, function (error, response) {
+      multiConnectResponses[syncValue] = {
           error: error
       };
 
       if (!error && response) {
         var conenction = JSON.parse(response);
         var listeningPort = connection.listeningPort;
-        multiConnectResponsesCache[syncValue].portNumber = listeningPort;
+        multiConnectResponses[syncValue].portNumber = listeningPort;
       }
       // Just notify callback that request was recived
       // An actual handling of response should be done in the
@@ -633,7 +649,11 @@ MobileCallInstance.prototype.multiConnect =
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.disconnect = function(peerIdentifier, callback) {
+  if (this.platform === platformChoice.ANDROID) {
+    return callback('Platform does not support multiConnect');
+  }
 
+  this._disconnect(peerIdentifier, callback);
 };
 
 /**
@@ -844,9 +864,9 @@ function (callback) {
  * @param {module:thaliMobileNative~multiConnectResolved} callback
  */
 MobileCallInstance.prototype.multiConnectResolved = function (callback) {
-  Object.keys(multiConnectResponsesCache)
+  Object.keys(multiConnectResponses)
     .forEach(function (syncValue) {
-      var multiConnectResponse = multiConnectResponsesCache[syncValue];
+      var multiConnectResponse = multiConnectResponses[syncValue];
       var error = multiConnectResponse.error;
       var portNumber = multiConnectResponse.portNumber;
 
