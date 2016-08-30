@@ -7,6 +7,7 @@
 //
 
 import XCTest
+@testable import ThaliCore
 
 class AppContextTests: XCTestCase {
     var context: AppContext! = nil
@@ -59,5 +60,13 @@ class AppContextTests: XCTestCase {
 
     func testGetIOSVersion() {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
+    }
+    
+    func testPeerAvailabilityConversion() {
+        let peerAvailability = PeerAvailability(peerIdentifier: PeerIdentifier(), available: true)
+        let dictionaryValue = peerAvailability.dictionaryValue
+        XCTAssertEqual(peerAvailability.peerIdentifier.uuid, dictionaryValue[JSONValueKey.PeerIdentifier.rawValue] as? String)
+        XCTAssertEqual(peerAvailability.peerIdentifier.generation, dictionaryValue[JSONValueKey.Generation.rawValue] as? Int)
+        XCTAssertEqual(peerAvailability.available, dictionaryValue[JSONValueKey.PeerAvailable.rawValue] as? Bool)
     }
 }

@@ -9,6 +9,15 @@
 import Foundation
 import ThaliCore
 
+enum JSONValueKey: String {
+    case PeerIdentifier = "peerIdentifier"
+    case Generation = "generation"
+    case PeerAvailable = "peerAvailable"
+
+    case DiscoveryActive = "discoveryActive"
+    case AdvertisingActive = "advertisingActive"
+}
+
 func jsonValue(object: AnyObject) -> String {
     guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0)) else {
         return ""
@@ -23,11 +32,11 @@ public typealias ClientConnectCallback = (String, String) -> Void
     case UnknownError
 }
 
-private extension PeerAvailability {
+extension PeerAvailability {
     var dictionaryValue: [String : AnyObject] {
-        return ["peerIdentifier" : peerIdentifier.uuid,
-                "generation" : peerIdentifier.generation,
-                "peerAvailable" : available
+        return [ JSONValueKey.PeerIdentifier.rawValue : peerIdentifier.uuid,
+                 JSONValueKey.Generation.rawValue : peerIdentifier.generation,
+                 JSONValueKey.PeerAvailable.rawValue : available
         ]
     }
 }
@@ -112,8 +121,8 @@ private extension PeerAvailability {
 
     private func updateListeningAdvertisingState() {
         let newState = [
-            "discoveryActive" : browserManager.isListening,
-            "advertisingActive" : advertiserManager.advertising
+                JSONValueKey.DiscoveryActive.rawValue : browserManager.isListening,
+                JSONValueKey.AdvertisingActive.rawValue : advertiserManager.advertising
         ]
         delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))
     }
