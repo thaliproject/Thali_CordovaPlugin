@@ -31,10 +31,10 @@ func jsonValue(object: AnyObject) -> String {
     return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
 }
 
-func dictionaryValue(jsonText: String) -> [String:AnyObject]? {
+func dictionaryValue(jsonText: String) -> [String : AnyObject]? {
     if let data = jsonText.dataUsingEncoding(NSUTF8StringEncoding) {
         do {
-            return try NSJSONSerialization.JSONObjectWithData(data, options: []) as? [String:AnyObject]
+            return try NSJSONSerialization.JSONObjectWithData(data, options: []) as? [String : AnyObject]
         } catch let error as NSError {
             print(error)
         }
@@ -121,44 +121,44 @@ extension PeerAvailability {
 
     private var bluetoothManager: CBCentralManager?
 
+    enum RadioState: String {
+        case on = "on"
+        case off = "off"
+        case unavailable = "unavailable"
+        case notHere = "notHere"
+        case doNotCare = "doNotCare"
+    }
+
     private func notifyOnDidUpdateNetworkStatus() {
 
-        enum RadioState: String {
-            case On = "on"
-            case Off = "off"
-            case Unavailable = "unavailable"
-            case NotHere = "notHere"
-            case DoNotCare = "doNotCare"
-        }
+        var bluetoothState = RadioState.unavailable
+        var bluetoothLowEnergyState = RadioState.unavailable
+        var wifiState = RadioState.unavailable
+        let cellularState = RadioState.doNotCare
 
-        var bluetoothState = RadioState.Unavailable
-        var bluetoothLowEnergyState = RadioState.Unavailable
-        var wifiState = RadioState.Unavailable
-        let cellularState = RadioState.DoNotCare
-
-        if (nil != bluetoothManager) {
+        if nil != bluetoothManager {
             switch bluetoothManager!.state {
             case .PoweredOn:
-                bluetoothState = .On
-                bluetoothLowEnergyState = .On
+                bluetoothState = .on
+                bluetoothLowEnergyState = .on
             case .PoweredOff:
-                bluetoothState = .Off
-                bluetoothLowEnergyState = .Off
+                bluetoothState = .off
+                bluetoothLowEnergyState = .off
             case .Unsupported:
-                bluetoothState = .NotHere
-                bluetoothLowEnergyState = .NotHere
+                bluetoothState = .notHere
+                bluetoothLowEnergyState = .notHere
             default:
-                bluetoothState = .Unavailable
-                bluetoothLowEnergyState = .Unavailable
+                bluetoothState = .unavailable
+                bluetoothLowEnergyState = .unavailable
             }
         }
 
         let wifiEnabled = NetworkReachability().isWiFiEnabled()
         let wifiConnected = NetworkReachability().isWiFiConnected()
 
-        wifiState = wifiEnabled ? .On : .Off
+        wifiState = wifiEnabled ? .on : .off
 
-        let bssid = ((wifiState == .On) && wifiConnected) ? NetworkReachability().BSSID() : "null"
+        let bssid = ((wifiState == .on) && wifiConnected) ? NetworkReachability().BSSID() : "null"
 
         let networkStatus = [
             "wifi"              : wifiState.rawValue,
@@ -268,18 +268,19 @@ extension PeerAvailability {
     }
 
 
-#if TEST
+    #if TEST
     func executeNativeTests() -> String {
-        let runner = TestRunner.`default`
-        runner.runTest()
-        return runner.resultDescription ?? ""
+    let runner = TestRunner.`default`
+    runner.runTest()
+    return runner.resultDescription ?? ""
     }
-#endif
+    #endif
 
 }
 
 // MARK: CBCentralManagerDelegate
 extension AppContext: CBCentralManagerDelegate {
+
     public func centralManagerDidUpdateState(central: CBCentralManager) {}
 }
 
