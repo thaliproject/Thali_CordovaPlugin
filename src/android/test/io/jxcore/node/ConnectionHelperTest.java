@@ -45,12 +45,11 @@ public class ConnectionHelperTest {
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         mConnectionHelper = new ConnectionHelper();
-        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
     }
 
     @Before
     public void setUp() throws Exception {
-
+        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
         outgoingThreadsIds = new ArrayList<String>();
         incomingThreadsIds = new ArrayList<String>();
         mInputStreamMock = new InputStreamMock();
@@ -61,7 +60,6 @@ public class ConnectionHelperTest {
     @After
     public void tearDown() throws Exception {
         mConnectionHelper.killConnections(true);
-        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
         mConnectionHelper.dispose();
         mConnectionHelper.getDiscoveryManager().stop();
         mConnectionHelper.getDiscoveryManager().stopAdvertising();
@@ -104,7 +102,18 @@ public class ConnectionHelperTest {
 
     @Test
     public void testDispose() throws Exception {
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        } else {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        }
+
+        Thread.sleep(5000); //Wait for connectionHelper to start
+
         mConnectionHelper.dispose();
+
         Thread.sleep(5000); //Wait for connectionHelper to dispose
 
         Field fDiscoveryManager = mConnectionHelper.getClass()
@@ -153,7 +162,7 @@ public class ConnectionHelperTest {
             assertThat("Start method returns true",
                     mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
         }
-            
+
         Thread.sleep(5000); //Wait for connectionHelper to start
 
         Field fServerPortNumber = mConnectionHelper.getClass()
@@ -186,8 +195,11 @@ public class ConnectionHelperTest {
                     mConnectionHelper.getDiscoveryManager().isRunning(), is(true));
         }
 
-        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
-        mConnectionHelper.dispose();
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+            mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        } else {
+            mConnectionHelper.stop(true, mJXcoreThaliCallbackMock);
+        }
 
         Thread.sleep(5000); //Wait for connectionHelper to stop
 
@@ -198,7 +210,7 @@ public class ConnectionHelperTest {
             assertThat("Start method returns true",
                     mConnectionHelper.start(-1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
         }
-        
+
         Thread.sleep(5000); //Wait for connectionHelper to start
 
         mServerPortNumber = fServerPortNumber.getInt(mConnectionHelper);
