@@ -1,14 +1,16 @@
 'use strict';
 
 var Promise = require('lie');
-var PromiseQueue = require('./promiseQueue');
-var EventEmitter = require('events').EventEmitter;
-var logger = require('../thaliLogger')('thaliMobileNativeWrapper');
-var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
-var express = require('express');
-var TCPServersManager = require('./mux/thaliTcpServersManager');
 var https = require('https');
+var EventEmitter = require('events').EventEmitter;
+var express = require('express');
+var assert = require('assert');
+
+var PromiseQueue = require('./promiseQueue');
+var logger = require('../thaliLogger')('thaliMobileNativeWrapper');
 var thaliConfig = require('./thaliConfig');
+var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
+var TCPServersManager = require('./mux/thaliTcpServersManager');
 
 var states = {
   started: false
@@ -79,55 +81,61 @@ module.exports._isStarted = function () {
  * but this module should ever call {@link module:thaliMobileNative}. Anyone
  * who wants to use the {@link module:thaliMobileNative} functionality should
  * be calling this module.
- */
-
-/*
-        METHODS
+ *
+ * METHODS
  */
 
 function failedConnectionHandler(failedConnection) {
-  var peer = {
+  handlePeerAvailabilityChanged({
     peerIdentifier: failedConnection.peerIdentifier,
-    portNumber: null
-  };
-  handlePeerAvailabilityChanged(peer);
-  module.exports.emitter.emit('failedConnection', failedConnection);
+    portNumber: null,
+    peerAvailable: false
+  });
+  emitter.emit('failedConnection', failedConnection);
 }
 
 function routerPortConnectionFailedHandler(failedRouterPort) {
-  logger.info('routerPortConnectionFailed - ' +
-    JSON.stringify(failedRouterPort));
+  logger.info(
+    'routerPortConnectionFailed - %s',
+    JSON.stringify(failedRouterPort)
+  );
 
   if (!states.started) {
     // We are stopped anyway so no reason to kick up a fuss
-    logger.info('got routerPortConnectionFailed while we were not in start');
+    logger.info(
+      'got routerPortConnectionFailed while we were not in start'
+    );
     return;
   }
 
   if (failedRouterPort.routerPort !== gRouterServerPort) {
     // Some kind of race condition? This isn't for us
-    logger.info('got routerPortConnectionFailed but not for our port, ' +
-      ', our port is ' + gRouterServerPort + ' and the error was for ' +
-      failedRouterPort.routerPort);
+    logger.info(
+      'got routerPortConnectionFailed but not for our port, ' +
+      'our port is %s and the error was for %s',
+      gRouterServerPort, failedRouterPort.routerPort
+    );
     return;
   }
 
   gPromiseQueue.enqueueAtTop(stop())
-    .catch(function (err) {
-      return err;
-    })
-    .then(function (err) {
-      var errorArray = [failedRouterPort.error];
-      if (err) {
-        errorArray.push(err);
+  .catch(function (err) {
+    return err;
+  })
+  .then(function (err) {
+    var errorArray = [failedRouterPort.error];
+    if (err) {
+      errorArray.push(err);
+    }
+    emitter.emit(
+      'incomingConnectionToPortNumberFailed',
+      {
+        reason: routerFailureReason.APP_LISTENER,
+        errors: errorArray,
+        routerPort: failedRouterPort.routerPort
       }
-      module.exports.emitter.emit('incomingConnectionToPortNumberFailed',
-        {
-          reason: module.exports.routerFailureReason.APP_LISTENER,
-          errors: errorArray,
-          routerPort: failedRouterPort.routerPort
-        });
-    });
+    );
+  });
 }
 
 function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
@@ -135,11 +143,14 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
     // We aren't supposed to emit events when we aren't started
     return;
   }
-
-  module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
-    peerIdentifier: recreateAnnouncement.peerIdentifier,
-    portNumber: recreateAnnouncement.portNumber
-  });
+  emitter.emit(
+    'nonTCPPeerAvailabilityChangedEvent',
+    {
+      peerIdentifier: recreateAnnouncement.peerIdentifier,
+      portNumber: recreateAnnouncement.portNumber,
+      peerAvailable: true
+    }
+  );
 }
 
 function stopServersManager() {
@@ -148,32 +159,61 @@ function stopServersManager() {
   }
   var oldServersManager = gServersManager;
   gServersManager = null;
+
   return oldServersManager.stop()
-    .then(function () {
-      oldServersManager.removeListener('failedConnection',
-        failedConnectionHandler);
-      oldServersManager.removeListener('routerPortConnectionFailed',
-        routerPortConnectionFailedHandler);
-      oldServersManager.removeListener('listenerRecreatedAfterFailure',
-        listenerRecreatedAfterFailureHandler);
-    });
+  .then(function () {
+    oldServersManager.removeListener(
+      'failedConnection',
+      failedConnectionHandler
+    );
+    oldServersManager.removeListener(
+      'routerPortConnectionFailed',
+      routerPortConnectionFailedHandler
+    );
+    oldServersManager.removeListener(
+      'listenerRecreatedAfterFailure',
+      listenerRecreatedAfterFailureHandler
+    );
+  });
 }
 
 function stopCreateAndStartServersManager() {
   return stopServersManager()
-    .then(function () {
-      gServersManager = new TCPServersManager(gRouterServerPort);
-      gServersManager.on('failedConnection', failedConnectionHandler);
-      gServersManager.on('routerPortConnectionFailed',
-        routerPortConnectionFailedHandler);
-      gServersManager.on('listenerRecreatedAfterFailure',
-        listenerRecreatedAfterFailureHandler);
-      return gServersManager.start();
-    })
-    .then(function (localPort) {
-      gServersManagerLocalPort = localPort;
-    });
+  .then(function () {
+    gServersManager = new TCPServersManager(gRouterServerPort);
+    gServersManager.on(
+      'failedConnection',
+      failedConnectionHandler
+    );
+    gServersManager.on(
+      'routerPortConnectionFailed',
+      routerPortConnectionFailedHandler
+    );
+    gServersManager.on(
+      'listenerRecreatedAfterFailure',
+      listenerRecreatedAfterFailureHandler
+    );
+    return gServersManager.start();
+  })
+  .then(function (localPort) {
+    gServersManagerLocalPort = localPort;
+  });
 }
+
+/**
+ * Use this emitter to subscribe to events.
+ *
+ * @public
+ * @fires event:nonTCPPeerAvailabilityChangedEvent
+ * @fires event:networkChangedNonTCP
+ * @fires event:incomingConnectionToPortNumberFailed
+ * @fires event:discoveryAdvertisingStateUpdateNonTCP
+ * @fires event:failedNativeConnectionEvent
+ * @fires module:TCPServersManager~incomingConnectionState we repeat these
+ * events.
+ */
+var emitter = new EventEmitter();
+module.exports.emitter = emitter;
 
 /**
  * Takes a PSK ID as input and returns either null if the ID is not supported or
@@ -197,7 +237,7 @@ function stopCreateAndStartServersManager() {
  * module:makeIntoCloseAllServer~makeIntoCloseAllServer}) on a random port and
  * host the router on that server.
  *
- * On `multiConnect` platforms (read: iOS) we will also do the following:
+ * On 'multiConnect' platforms (read: iOS) we will also do the following:
  *
  * - listen for the {@link
  * thaliMobileNative~incomingConnectionToPortNumberFailed} callback which will
@@ -208,7 +248,7 @@ function stopCreateAndStartServersManager() {
  * Note however that this event is only consumed within thaliMobileNativeWrapper
  * and is not intended for external use.
  *
- * On `connect` platforms (read: Android) we will also do the following:
+ * On 'connect' platforms (read: Android) we will also do the following:
  *
  * - create a {@link module:tcpServersManager}.
  *
@@ -256,29 +296,32 @@ module.exports.start = function (router, pskIdToSecret) {
       return reject(new Error('Bad Router'));
     }
     gRouterObject = router;
-    var options = {
-      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-      pskCallback : function (id) {
-        return pskIdToSecret(id);
-      },
-      key: thaliConfig.BOGUS_KEY_PEM,
-      cert: thaliConfig.BOGUS_CERT_PEM
-    };
-    // listen(port, ...) port = 0 for random port
-    gRouterServer = https.createServer(options, gRouterExpress).listen(0,
-      function () {
-        gRouterServerPort = gRouterServer.address().port;
-        logger.debug('listening', gRouterServerPort);
 
-        stopCreateAndStartServersManager()
-          .then(function () {
-            states.started = true;
-            resolve();
-          })
-          .catch(function (err) {
-            reject(err);
-          });
+    // listen(port, ...) port = 0 for random port
+    gRouterServer = https.createServer(
+      {
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+        pskCallback: function (id) {
+          return pskIdToSecret(id);
+        },
+        key: thaliConfig.BOGUS_KEY_PEM,
+        cert: thaliConfig.BOGUS_CERT_PEM
+      },
+      gRouterExpress
+    )
+    .listen(0, function () {
+      gRouterServerPort = gRouterServer.address().port;
+      logger.debug('listening', gRouterServerPort);
+
+      stopCreateAndStartServersManager()
+      .then(function () {
+        states.started = true;
+        resolve();
+      })
+      .catch(function (err) {
+        reject(err);
       });
+    });
     gRouterServer = makeIntoCloseAllServer(gRouterServer);
   });
 };
@@ -288,7 +331,6 @@ function stop() {
     if (!states.started) {
       return resolve();
     }
-
     states.started = false;
 
     var errorDescriptions = {};
@@ -302,28 +344,31 @@ function stop() {
           errorDescriptions.stopListeningError = new Error(error);
         }
         stopServersManager()
-          .catch(function (err) {
-            errorDescriptions.stopServersManagerError = err;
-          })
-          .then(function () {
-            var oldRouterServer = gRouterServer;
-            gRouterServer = null;
-            return oldRouterServer ? oldRouterServer.closeAllPromise() :
-              Promise.resolve();
-          })
-          .catch(function (err) {
-            errorDescriptions.stopRouterServerError = err;
-          })
-          .then(function () {
-            if (Object.getOwnPropertyNames(errorDescriptions).length === 0) {
-              return resolve();
-            }
+        .catch(function (err) {
+          errorDescriptions.stopServersManagerError = err;
+        })
+        .then(function () {
+          var oldRouterServer = gRouterServer;
+          gRouterServer = null;
+          if (oldRouterServer) {
+            return oldRouterServer.closeAllPromise();
+          } else {
+            return Promise.resolve();
+          }
+        })
+        .catch(function (err) {
+          errorDescriptions.stopRouterServerError = err;
+        })
+        .then(function () {
+          if (Object.getOwnPropertyNames(errorDescriptions).length === 0) {
+            return resolve();
+          }
 
-            var error = new Error('check errorDescriptions property');
-            error.errorDescriptions = errorDescriptions;
+          var error = new Error('check errorDescriptions property');
+          error.errorDescriptions = errorDescriptions;
 
-            return reject(error);
-          });
+          return reject(error);
+        });
       });
     });
   };
@@ -331,7 +376,7 @@ function stop() {
 
 /**
  * This method will call all the stop methods, call stop on the {@link
- * module:tcpServersManager} object (if we are on a `connect` platform) and
+ * module:tcpServersManager} object (if we are on a 'connect' platform) and
  * close the TCP server hosting the router.
  *
  * Once called the object is in stop state.
@@ -451,7 +496,7 @@ module.exports.stopListeningForAdvertisements = function () {
  *
  * ## Incoming Connections
  *
- * On `connect` platforms all incoming TCP connections generated by {@link
+ * On 'connect' platforms all incoming TCP connections generated by {@link
  * external:"Mobile('startUpdateAdvertisingAndListening')".callNative} MUST be
  * passed through a multiplex layer. The details of how this layer works are
  * given in {@link module:TCPServersManager}. This method will pass the port
@@ -462,7 +507,7 @@ module.exports.stopListeningForAdvertisements = function () {
  * specified port is terminated by the server for any reason then the native
  * layer MUST tear down the associated non-TCP connection.
  *
- * On `multiConnect` platforms all incoming TCP connections are sent directly to
+ * On 'multiConnect' platforms all incoming TCP connections are sent directly to
  * the router started by {@link module:TCPServersManager.start} since we have
  * no need for {@link module:TCPServersManager} on these platforms.
  *
@@ -547,11 +592,13 @@ module.exports.stopAdvertisingAndListening = function () {
 module.exports.getNonTCPNetworkStatus = function () {
   return gPromiseQueue.enqueue(function (resolve) {
     if (gNonTcpNetworkStatus === null) {
-      module.exports.emitter.once('networkChangedNonTCP',
-      function (networkChangedValue) {
-        gNonTcpNetworkStatus = networkChangedValue;
-        return resolve(gNonTcpNetworkStatus);
-      });
+      emitter.once(
+        'networkChangedNonTCP',
+        function (networkChangedValue) {
+          gNonTcpNetworkStatus = networkChangedValue;
+          return resolve(gNonTcpNetworkStatus);
+        }
+      );
     } else {
       return resolve(gNonTcpNetworkStatus);
     }
@@ -580,9 +627,10 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @return {Promise<number|Error} The promise will either return an integer with
  * the localhost port to connect to or an Error object.
  */
-module.exports._multiConnect = function (peerIdentifier) {
+var _multiConnect = function (peerIdentifier) {
   return Promise.reject(new Error('Not yet implemented'));
 };
+module.exports._multiConnect = _multiConnect;
 
 /**
  * This function attempts to obtain a port that Node code can use to open TCP/IP
@@ -594,7 +642,7 @@ module.exports._multiConnect = function (peerIdentifier) {
  * then this method MUST return a "peer not available" error.
  *
  * If the peerIdentifier identifies a peer for which the last
- * nonTCPPeerAvailabilityChanged event advertised peerAvaiable set to true then
+ * nonTCPPeerAvailabilityChanged event advertised peerAvailable set to true then
  * the behavior depends on our platform:
  *
  * On a 'connect' platform this call MUST call
@@ -608,16 +656,60 @@ module.exports._multiConnect = function (peerIdentifier) {
  * @param {string} peerIdentifier
  * @returns {Promise<number|Error>}
  */
-module.exports.getPort = function (peerIdentifier) {
-  return Promise.reject(new Error('Not Yet Implemented'));
-};
+
+(function () {
+  var peersAvaiability = {};
+
+  emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peerData) {
+    assert(peerData, 'peer data should be defined');
+    assert(
+      peerData.peerIdentifier,
+      '\'peerIdentifier\' should be defined'
+    );
+    console.log('ololo', peerData);
+    assert(
+      peerData.peerAvailable !== undefined,
+      '\'peerAvailable\' should be defined'
+    );
+    if (peerData.peerAvailable) {
+      assert(
+        // 'multiConnect' platform
+        peerData.portNumber === null ||
+        // 'connect' platform
+        typeof peerData.portNumber === 'number'
+      );
+      peersAvaiability[peerData.peerIdentifier] = { port: peerData.portNumber };
+    } else {
+      delete peersAvaiability[peerData.peerIdentifier];
+    }
+  });
+
+  var getPort = function (peerIdentifier) {
+    var data = peersAvaiability[peerIdentifier];
+    if (data) {
+      return Promise.reject(new Error(
+        'peer is not available, peerIdentifier: %s', peerIdentifier
+      ));
+    }
+
+    if (data.port === null) {
+      // 'multiConnect' platform
+      return _multiConnect(peerIdentifier);
+    } else {
+      // 'connect' platform
+      assert(gServersManager, 'gServersManager should be available');
+      return gServersManager.createPeerListener(peerIdentifier, true);
+    }
+  }
+  module.exports.getPort = getPort;
+}) ();
 
 // jscs:disable jsDoc
 /**
- * This is used on `connect` platforms for native connections and calls through
+ * This is used on 'connect' platforms for native connections and calls through
  * to ThaliTcpServersManager.
  *
- * If called on a non-`connect` platform then a 'Not connect platform' error
+ * If called on a non-'connect' platform then a 'Not connect platform' error
  * MUST be returned.
  *
  * @private
@@ -658,7 +750,7 @@ module.exports._disconnect = function (peerIdentifier) {
  * then the method will still return success.
  *
  * On 'connect' platforms this calls _terminateConnection method and on
- * `multiConnect` platforms this calls _disconnect.
+ * 'multiConnect' platforms this calls _disconnect.
  *
  * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
  * event.
@@ -671,7 +763,7 @@ module.exports.disconnect = function(peerIdentifier) {
 }
 
 /**
- * Used on `connect` platforms to terminate a TCP/IP listener waiting for
+ * Used on 'connect' platforms to terminate a TCP/IP listener waiting for
  * connections to be sent to a remote device.
  *
  * It is NOT an error to terminate a listener that has already been terminated.
@@ -679,7 +771,7 @@ module.exports.disconnect = function(peerIdentifier) {
  * This method MUST be idempotent so multiple calls with the same value MUST NOT
  * cause an error or a state change.
  *
- * If called on a non-`connect` platform then a 'Not connect platform' error
+ * If called on a non-'connect' platform then a 'Not connect platform' error
  * MUST be returned.
  *
  * @param {string} peerIdentifier
@@ -736,9 +828,7 @@ module.exports.killConnections = function () {
   });
 };
 
-/*
-        EVENTS
- */
+// EVENTS
 
 /**
  * Enum to define the types of connections
@@ -803,8 +893,8 @@ module.exports.connectionTypes = connectionTypes;
  * @property {?number} portNumber This value MUST be null if peerAvailable is
  * false. If this value is non-null then it is a port on 127.0.0.1 at which the
  * local peer can connect in order to establish a TCP/IP connection to the
- * remote peer. This value will only be set on `connect` platforms, it will
- * always be null for `multiConnect`.
+ * remote peer. This value will only be set on 'connect' platforms, it will
+ * always be null for 'multiConnect'.
  */
 
 // jscs:disable maximumLineLength
@@ -836,8 +926,10 @@ module.exports.connectionTypes = connectionTypes;
 var peerAvailabilityChangedQueue = new PromiseQueue();
 var handlePeerAvailabilityChanged = function (peer) {
   if (!states.started) {
-    logger.debug('Filtered out nonTCPPeerAvailabilityChangedEvent ' +
-                 'due to not being in started state');
+    logger.debug(
+      'Filtered out nonTCPPeerAvailabilityChangedEvent ' +
+      'due to not being in started state'
+    );
     return;
   }
   return peerAvailabilityChangedQueue.enqueue(function (resolve) {
@@ -845,19 +937,23 @@ var handlePeerAvailabilityChanged = function (peer) {
       // TODO: Should the created peer listener be cleaned up when
       // peer becomes unavailable and which function should be used
       // for that?
-      module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+      emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
         peerIdentifier: peer.peerIdentifier,
-        portNumber: null
+        portNumber: null,
+        peerAvailable: false
       });
       resolve();
     };
     if (peer.peerAvailable) {
-      gServersManager.createPeerListener(peer.peerIdentifier,
-                                         peer.pleaseConnect)
+      gServersManager.createPeerListener(
+        peer.peerIdentifier,
+        peer.pleaseConnect
+      )
       .then(function (portNumber) {
-        module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+        emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
           peerIdentifier: peer.peerIdentifier,
-          portNumber: portNumber
+          portNumber: portNumber,
+          peerAvailable: true
         });
         resolve();
       })
@@ -910,10 +1006,11 @@ var handlePeerAvailabilityChanged = function (peer) {
  * @readonly
  * @enum {string}
  */
-module.exports.routerFailureReason = {
+var routerFailureReason = {
   NATIVE_LISTENER: 'nativeListener',
   APP_LISTENER: 'appListener'
 };
+module.exports.routerFailureReason = routerFailureReason;
 
 /**
  * This event specifies that one of our two internal TCP servers has failed.
@@ -958,20 +1055,6 @@ module.exports.routerFailureReason = {
  */
 
 /**
- * Use this emitter to subscribe to events.
- *
- * @public
- * @fires event:nonTCPPeerAvailabilityChangedEvent
- * @fires event:networkChangedNonTCP
- * @fires event:incomingConnectionToPortNumberFailed
- * @fires event:discoveryAdvertisingStateUpdateNonTCP
- * @fires event:failedNativeConnectionEvent
- * @fires module:TCPServersManager~incomingConnectionState we repeat these
- * events.
- */
-module.exports.emitter = new EventEmitter();
-
-/**
  * Function to register event handler functions
  * for events emitted from the native side.
  *
@@ -981,7 +1064,7 @@ module.exports.emitter = new EventEmitter();
  *
  * @private
  */
-module.exports._registerToNative = function () {
+var _registerToNative = function () {
   // Function to register a method to the native side
   // and inform that the registration was done.
   var registerToNative = function (methodName, callback) {
@@ -992,19 +1075,23 @@ module.exports._registerToNative = function () {
   };
 
   registerToNative('peerAvailabilityChanged', function (peers) {
-    if (typeof peers.forEach !== 'function') {
-      peers = [peers];
+    if (Array.isArray(peers)) {
+      peers.forEach(function (peer) {
+        handlePeerAvailabilityChanged(peer);
+      });
+    } else {
+      handlePeerAvailabilityChanged(peers);
     }
-    peers.forEach(function (peer) {
-      handlePeerAvailabilityChanged(peer);
-    });
   });
 
-  registerToNative('discoveryAdvertisingStateUpdateNonTCP',
+  registerToNative(
+    'discoveryAdvertisingStateUpdateNonTCP',
     function (discoveryAdvertisingStateUpdateValue) {
-      logger.debug('discoveryAdvertisingStateUpdateNonTCP: %s',
-        JSON.stringify(discoveryAdvertisingStateUpdateValue));
-      module.exports.emitter.emit(
+      logger.debug(
+        'discoveryAdvertisingStateUpdateNonTCP: %s',
+        JSON.stringify(discoveryAdvertisingStateUpdateValue)
+      );
+      emitter.emit(
         'discoveryAdvertisingStateUpdateNonTCP',
         discoveryAdvertisingStateUpdateValue
       );
@@ -1017,42 +1104,50 @@ module.exports._registerToNative = function () {
     // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
     // can return it.
     gNonTcpNetworkStatus = networkChangedValue;
-    module.exports.emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
+    emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
   });
 
-  registerToNative('incomingConnectionToPortNumberFailed',
+  registerToNative(
+    'incomingConnectionToPortNumberFailed',
     function (portNumber) {
       logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
 
       if (!states.started) {
-        logger.info('got incomingConnectionToPortNumberFailed while not in ' +
-          'start');
+        logger.info(
+          'got incomingConnectionToPortNumberFailed while not in start'
+        );
         return;
       }
 
       if (gServersManagerLocalPort !== portNumber) {
-        logger.info('got incomingConnectionToPortNumberFailed for port ' +
-          portNumber + ' but we are listening on ' + gServersManagerLocalPort);
+        logger.info(
+          'got incomingConnectionToPortNumberFailed for port %s ' +
+          'but we are listening on %s',
+          portNumber, gServersManagerLocalPort
+        );
         return;
       }
 
       // Enqueue the restart to prevent other calls being handled
       // while the restart is ongoing.
       gPromiseQueue.enqueueAtTop(stop())
-        .catch(function (err) {
-          return err;
-        })
-        .then(function (err) {
-          module.exports.emitter.emit('incomingConnectionToPortNumberFailed',
-            {
-              reason: module.exports.routerFailureReason.NATIVE_LISTENER,
-              errors: err ? [err] : [],
-              routerPort: portNumber
-            });
-        });
+      .catch(function (err) {
+        return err;
+      })
+      .then(function (err) {
+        emitter.emit(
+          'incomingConnectionToPortNumberFailed',
+          {
+            reason: routerFailureReason.NATIVE_LISTENER,
+            errors: err ? [err] : [],
+            routerPort: portNumber
+          }
+        );
+      });
     }
   );
 };
+module.exports._registerToNative = _registerToNative;
 
 // Perform the registration when this file first required.
-module.exports._registerToNative();
+_registerToNative();

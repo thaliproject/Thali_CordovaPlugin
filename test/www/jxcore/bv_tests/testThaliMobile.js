@@ -176,7 +176,8 @@ test('does not send duplicate availability changes', function (t) {
   var dummyPeer = {
     peerIdentifier: 'dummy',
     hostAddress: 'dummy',
-    portNumber: 8080
+    portNumber: 8080,
+    peerAvailable: true
   };
   var spy = sinon.spy(ThaliMobile.emitter, 'emit');
   ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
@@ -375,7 +376,8 @@ test('peer is marked unavailable if port number changes', function (t) {
           'nonTCPPeerAvailabilityChangedEvent',
           {
             peerIdentifier: somePeerIdentifier,
-            portNumber: somePort + 1
+            portNumber: somePort + 1,
+            peerAvailable: true
           }
         );
       } else if (spy.calledTwice) {
@@ -400,7 +402,8 @@ test('peer is marked unavailable if port number changes', function (t) {
     ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
       {
         peerIdentifier: somePeerIdentifier,
-        portNumber: somePort
+        portNumber: somePort,
+        peerAvailable: true
       }
     );
   });
@@ -437,7 +440,8 @@ function (t) {
     ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
       {
         peerIdentifier: somePeerIdentifier,
-        portNumber: 8080
+        portNumber: 8080,
+        peerAvailable: true
       }
     );
   });

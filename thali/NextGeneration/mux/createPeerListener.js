@@ -42,8 +42,8 @@ function closeServer(self, server, failedConnectionErr, canRetry)
       module.exports(self, server._peerIdentifier, false)
         .then(function (port) {
           self.emit('listenerRecreatedAfterFailure', {
-            'peerIdentifier': server._peerIdentifier,
-            'portNumber': port
+            peerIdentifier: server._peerIdentifier,
+            portNumber: port
           });
         })
         .catch(function (err) {
