@@ -28,7 +28,7 @@ func + (left: TestRunnerResult, right: TestRunnerResult) -> TestRunnerResult {
         unexpectedExceptionCount: left.unexpectedExceptionCount + right.unexpectedExceptionCount,
         succeededCount: left.succeededCount + right.succeededCount,
         totalDuration: left.totalDuration + right.totalDuration,
-        executed: left.executed && right.executed
+        executed: left.executed || right.executed
     )
 }
 
@@ -47,7 +47,7 @@ extension TestRunnerResult {
 
         do {
             let jsonData = try NSJSONSerialization.dataWithJSONObject(jsonDictionary, options: [])
-            
+
             return String(data: jsonData, encoding: NSUTF8StringEncoding)
         } catch _ as NSError {
             return nil
