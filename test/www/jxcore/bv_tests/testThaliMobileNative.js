@@ -204,6 +204,11 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
     } else {
       logger.info('Connect returned an error: ' + err);
 
+      if (err === 'Already connect(ing/ed)') {
+        failureCb(err, connection, peer);
+        return;
+      }
+
       // Retry a failed connection..
       if (retries > 0) {
         logger.info('Scheduling a connect retry - retries left: ' + retries);
