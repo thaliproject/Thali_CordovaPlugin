@@ -174,7 +174,7 @@ import ThaliCore
      - parameter callback: callback with connection results.
      */
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
-        guard parameters.count < 2 else {
+        guard parameters.count >= 2 else {
             throw AppContextError.BadParameters
         }
         guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String else {
@@ -190,7 +190,7 @@ import ThaliCore
     }
     
     public func disconnect(parameters: [AnyObject]) throws {
-        guard parameters.count < 1 else {
+        guard parameters.count >= 1 else {
             throw AppContextError.BadParameters
         }
         guard let identifierString = parameters[0] as? String else {
