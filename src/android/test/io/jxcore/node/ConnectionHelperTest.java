@@ -61,10 +61,6 @@ public class ConnectionHelperTest {
     public void tearDown() throws Exception {
         mConnectionHelper.killConnections(true);
         mConnectionHelper.dispose();
-        mConnectionHelper.getDiscoveryManager().stop();
-        mConnectionHelper.getDiscoveryManager().stopAdvertising();
-        mConnectionHelper.getDiscoveryManager().stopDiscovery();
-        mConnectionHelper.getDiscoveryManager().dispose();
     }
 
     @Test
