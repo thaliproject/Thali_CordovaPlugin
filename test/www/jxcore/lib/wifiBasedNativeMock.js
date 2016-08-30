@@ -592,11 +592,35 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
  * @param {string} syncValue
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
+
+var ThaliTcpServersManager =
+  require('thali/NextGeneration/mux/thaliTcpServersManager');
+var tcpServerManager = new ThaliTcpServersManager();
+var multiConnectResolveResponse = {
+  syncValue: null,
+  error: null,
+  portNumber: null
+};
+
 MobileCallInstance.prototype.multiConnect =
   function (peerIdentifier, syncValue, callback) {
+    if (this.platform === platformChoice.ANDROID) {
+      return callback('Platform does not support multiConnect');
+    }
     if (!startListeningForAdvertisementsIsActive) {
       return callback('startListeningForAdvertisements is not active');
     }
+
+    tcpServerManager.createPeerListener(peerIdentifier)
+      .then(function (portNumber) {
+        multiConnectResolveResponse.syncValue = syncValue;
+        multiConnectResolveResponse.portNumber = portNumber;
+        callback(null);
+      })
+      .catch(function (error) {
+        multiConnectResolveResponse.error = error;
+        callback(error);
+      });
   };
 
 
@@ -673,6 +697,10 @@ MobileCallInstance.prototype.callNative = function () {
     case 'connect':
     {
       return this.connect(arguments[0], arguments[1]);
+    }
+    case 'multiConnect':
+    {
+      return this.multiConnect(arguments[0], arguments[1], arguments[2]);
     }
     case 'killConnections':
     {
@@ -809,6 +837,14 @@ function (callback) {
   incomingConnectionToPortNumberFailedCallback = callback;
 };
 
+MobileCallInstance.prototype.multiConnectResolved = function (callback) {
+  var syncValue = multiConnectResolveResponse.syncValue || null;
+  var portNumber = multiConnectResolveResponse.portNumber || null;
+  var error = multiConnectResolveResponse.error || null;
+
+  return callback(syncValue, error, portNumber);
+};
+
 MobileCallInstance.prototype.registerToNative = function () {
   switch (this.mobileMethodName) {
     case 'peerAvailabilityChanged':
@@ -826,6 +862,10 @@ MobileCallInstance.prototype.registerToNative = function () {
     case 'incomingConnectionToPortNumberFailed':
     {
       return this.incomingConnectionToPortNumberFailed(arguments[0]);
+    }
+    case 'multiConnectResolved':
+    {
+      return this.multiConnectResolved(arguments[0]);
     }
     default:
     {
