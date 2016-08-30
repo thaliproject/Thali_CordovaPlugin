@@ -1,11 +1,17 @@
 disabled_rules: # rule identifiers to exclude from running
 
 opt_in_rules: # some rules are only opt-in
+  - conditional_returns_on_newline
+  - cyclomatic_complexity
+  - empty_count
+  - force_unwrapping: warning
+  - missing_docs
 
 included: # paths to include during linting. `--path` is ignored if present.
   - ThaliCore
   - ThaliCoreTests
   - ThaliCoreWithTests
+  - ../../../src/ios
 
 excluded: # paths to ignore during linting. Takes precedence over `included`.
   - build
@@ -14,4 +20,116 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Pods
 
 # configurable rules can be customized from this configuration file
-line_length: 130
+
+# opt-in - conditional_returns_on_newline
+# opt-in cyclomatic_complexity: # limit the number of entries inside an enum or struct.
+#  warning: 3
+#  error: 6
+# opt-in empty_count
+# opt-in force_unwrapping: warning
+# opt-in missing_docs: warning
+
+closing_brace: error
+colon: error                # let s : String >> let s: String
+comma: error                # k,v >> k, v
+control_statement: error
+file_length:                # max number of lines per file
+  warning: 500
+  error: 1000
+force_cast: warning         # as!
+force_try: warning          # try!
+function_body_length:       # max length of function body
+  warning: 50
+  error: 150
+function_parameter_count:
+  warning: 5
+  error: 8
+leading_whitespace: error     # empty lines with whitespaces only
+legacy_cggeometry_functions: error
+legacy_constant: error
+legacy_constructor: error     # e.g CGPointMake(...) >>> CGPoint(x: ..., y: ...)
+legacy_nsgeometry_functions: error
+line_length:                  # max length of a line
+  warning: 120
+  error: 140
+mark: warning
+nesting: warning
+opening_brace: error          # [].map(){ ... } >>> [].map() { ... }
+operator_whitespace: error
+private_outlet: warning
+#private_unit_test:
+return_arrow_whitespace: error  # func thing()->Bool >>> func thing() -> Bool
+statement_position:             # }else if { >>> } else if {
+  #statement_mode: default
+  severity: error
+todo: warning
+trailing_newline: error       # new line at the end of a file
+trailing_semicolon: error     # no ;
+trailing_whitespace:          # no trailing whitespaced
+  ignores_empty_lines: false
+  severity: error
+type_body_length:             # max body length
+  warning: 200
+  error: 350
+type_name:                    # types should start with a capital letter
+  min_length:
+    warning: 3
+    error: 1
+  max_length:
+    warning: 45
+    error: 60
+  excluded:
+    - URL
+    - id
+    - API
+valid_docs: warning       # docs should match the method signature
+variable_name:            # variables should start with a lower case character or a capitalized one if `static`.
+  min_length:
+    warning: 4
+    error: 2
+  max_length:
+    warning: 45
+    error: 60
+  excluded:
+     - lhs
+     - rhs
+     - url
+     - app
+vertical_whitespace: warning
+
+custom_rules:
+  comments_space:
+    name: "Space After Comment"
+    regex: "(^ *//\w+)"
+    message: "There should be a space after //"
+    severity: error
+  comments_capitalized_ignore_possible_code:
+    name: "Capitalize First Word In Comment"
+    regex: "(^ *// +(?!swiftlint)[a-z]+)"
+    message: "The first word of a comment should be capitalized"
+    severity: error
+  empty_first_line:
+    name: "Empty First Line"
+    regex: "(^[ a-zA-Z ]*(?:protocol|extension|class|struct) (?!(?:var|let))[ a-zA-Z:]*\{\n *\S+)"
+    message: "There should be an empty line after a declaration"
+    severity: error
+  empty_line_after_guard:
+    name: "Empty Line After Guard"
+    regex: "(^ *guard[ a-zA-Z0-9=?.\(\),><!]*\{[ a-zA-Z0-9=?.\(\),><!]*\}\n *(?!(?:return|guard))\S+)"
+    message: "There should be an empty line after a guard"
+    severity: error
+  #empty_line_after_super:
+  #  name: "Empty Line After Super"
+  #  regex: "(^ *super\.[ a-zA-Z0-9=?.\(\)\{\}:,><!]*\n *(?!(?:\}|return))\S+)"
+  #  message: "There should be an empty line after super"
+  #  severity: error
+  multiple_empty_lines:
+    name: "Multiple Empty Lines"
+    regex: "((?:\s*\n){4,})"
+    message: "There are too many line breaks"
+    severity: warning
+  unnecessary_type:
+    name: "Unnecessary Type"
+    regex: "[ a-zA-Z0-9]*(?:let|var) [ a-zA-Z0-9]*: ([a-zA-Z0-9]*)[\? ]*= \1"
+    message: "Type Definition Not Needed"
+    severity: error
