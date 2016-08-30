@@ -13,11 +13,9 @@ public enum PeerIdentifierError: String, ErrorType {
     case IllegalPeerID
 }
 
-///Peer identifier for with generations
+///Peer identifier with generations
 public struct PeerIdentifier: Hashable {
-    ///UUID identifier of peer
     public let uuid: String
-    ///generation of peer.
     let generation: Int
 
     init() {
@@ -25,7 +23,7 @@ public struct PeerIdentifier: Hashable {
         generation = 0
     }
 
-    private init(uuidIdentifier: String, generation: Int) {
+    init(uuidIdentifier: String, generation: Int) {
         self.uuid = uuidIdentifier
         self.generation = generation
     }
@@ -72,5 +70,19 @@ extension MCPeerID {
 }
 
 public func == (lhs: PeerIdentifier, rhs: PeerIdentifier) -> Bool {
-    return lhs.stringValue == rhs.stringValue
+    guard lhs.stringValue.characters.count == rhs.stringValue.characters.count else {
+        return false
+    }
+    let lhsString = lhs.stringValue
+    let rhsString = rhs.stringValue
+    var lhsIndex = lhsString.characters.startIndex
+    var rhsIndex = lhsString.characters.startIndex
+    while lhsIndex < lhsString.endIndex && rhsIndex < rhsString.endIndex {
+        guard lhsString.characters[lhsIndex] == rhsString.characters[rhsIndex] else {
+            return false
+        }
+        lhsIndex = lhsIndex.successor()
+        rhsIndex = rhsIndex.successor()
+    }
+    return true
 }

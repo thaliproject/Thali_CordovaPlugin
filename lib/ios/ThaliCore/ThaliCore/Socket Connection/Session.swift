@@ -34,11 +34,7 @@ class Session: NSObject {
     var didReceiveInputStream: ((NSInputStream, String) -> Void)?
     internal private(set) var inputStreams: [NSInputStream] = []
     internal private(set) var outputStreams: [NSOutputStream] = []
-    internal private(set) var sessionState: SessionState = .NotConnected {
-        didSet {
-            self.sessionStateDidChangeHandler?(sessionState)
-        }
-    }
+    internal private(set) var sessionState: SessionState = .NotConnected
 
     func createOutputStream(withName name: String) throws -> NSOutputStream {
         let stream = try session.startStreamWithName(name, toPeer: identifier)
@@ -56,17 +52,18 @@ class Session: NSObject {
 
 extension Session: MCSessionDelegate {
     func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {
-        //in current version we can have only one peer to communicate
         guard identifier.displayName == peerID.displayName else {
+            print("ignoring peer state changes \(peerID.displayName)")
             return
         }
         self.sessionState = SessionState(sessionState: state)
+        sessionStateDidChangeHandler?(sessionState)
     }
 
     func session(session: MCSession, didReceiveStream stream: NSInputStream,
                  withName streamName: String, fromPeer peerID: MCPeerID) {
-        //in current version we can have only one peer to communicate
         guard identifier.displayName == peerID.displayName else {
+            print("ignoring stream from peer \(peerID.displayName)")
             return
         }
         didReceiveInputStream?(stream, streamName)

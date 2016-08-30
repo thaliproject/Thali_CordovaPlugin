@@ -30,8 +30,8 @@ import Foundation
     }
 
     //dispose advertiser after 30 sec to ensure that it has no pending invitations
-    func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(30 * Double(NSEC_PER_SEC)))
+    func addAdvertiserToDisposeQueue(advertiser: Advertiser, withTimeout timeout: Double = 30) {
+        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(timeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
             synchronized(self) {
                 advertiser.stopAdvertising()
@@ -48,15 +48,19 @@ import Foundation
             self?.handle(session, withPort: port)
         }
         advertiser.startAdvertising()
-        self.advertisers.append(advertiser)
+        synchronized(self) {
+            self.advertisers.append(advertiser)
+        }
         return advertiser
     }
 
     public func stopAdvertising() {
-        advertisers.forEach {
-            $0.stopAdvertising()
+        synchronized(self) {
+            self.advertisers.forEach {
+                $0.stopAdvertising()
+            }
+            self.advertisers.removeAll()
         }
-        advertisers.removeAll()
         currentAdvertiser = nil
     }
 

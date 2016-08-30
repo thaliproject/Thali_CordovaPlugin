@@ -32,14 +32,18 @@ public final class BrowserManager: NSObject {
     }
 
     private func handleFoundPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
-        availablePeers.append(identifier)
+        synchronized(self) {
+            peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
+            availablePeers.append(identifier)
+        }
     }
 
     private func handleLostPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
-        if let index = availablePeers.indexOf(identifier) {
-            availablePeers.removeAtIndex(index)
+        synchronized(self) {
+            peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
+            if let index = availablePeers.indexOf(identifier) {
+                availablePeers.removeAtIndex(index)
+            }
         }
     }
 
@@ -54,11 +58,7 @@ public final class BrowserManager: NSObject {
     }
 
     public func stopListeningForAdvertisements() {
-        guard let currentBrowser = self.currentBrowser where currentBrowser.listening else {
-            assert(false, "there is no active listener")
-            return
-        }
-        currentBrowser.stopListening()
+        currentBrowser?.stopListening()
         self.currentBrowser = nil
     }
 
@@ -74,7 +74,7 @@ public final class BrowserManager: NSObject {
                 return
             }
             do {
-                let session = try currentBrowser.invitePeerToConnect(lastGenerationIdentifier)
+                let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier)
                 socketRelay.createSocket(with: session, completion: completion)
             } catch let error {
                 completion(nil, error)

@@ -43,7 +43,7 @@ class MultiConnectTests: XCTestCase {
         waitForExpectationsWithTimeout(5, handler: nil)
 
         do {
-            let session = try browser.invitePeerToConnect(peerIdentifier)
+            let session = try browser.inviteToConnectPeer(with: peerIdentifier)
             let socketCreatedExpectation = expectationWithDescription("socket created")
             let _ = BrowserVirtualSocketBuilder(session: session,
                                                 completionHandler: { [weak socketCreatedExpectation] socket, error in
