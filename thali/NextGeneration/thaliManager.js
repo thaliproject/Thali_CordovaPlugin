@@ -143,7 +143,7 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
   this.state = ThaliManager.STATES.STARTING;
 
   logger.debug('starting thaliPullReplicationFromNotification');
-  this._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys)
+  this._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
 
   logger.debug('starting ThaliMobile');
   this._startingPromise = ThaliMobile.start(self._router, self._getPskIdToSecret)
@@ -219,14 +219,14 @@ ThaliManager.prototype.stop = function () {
   this.state = ThaliManager.STATES.STOPPING;
 
   logger.debug('stopping thaliPullReplicationFromNotification');
-  this._thaliPullReplicationFromNotification.stop()
+  this._thaliPullReplicationFromNotification.stop();
 
-  logger.debug('stopping thaliPeerPoolInterface');
-  this._stoppingPromise = this._thaliPeerPoolInterface.stop()
+  logger.debug('stopping thaliSendNotificationBasedOnReplication');
+  this._stoppingPromise = this._thaliSendNotificationBasedOnReplication.stop()
 
   .then(function () {
-    logger.debug('stopping thaliSendNotificationBasedOnReplication');
-    return self._thaliSendNotificationBasedOnReplication.stop();
+    logger.debug('stopping thaliPeerPoolInterface');
+    return self._thaliPeerPoolInterface.stop();
   })
 
   .then(function () {
