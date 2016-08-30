@@ -88,6 +88,13 @@ test('Coordinated pull replication from notification test', function (t) {
     cancelTimer && clearTimeout(cancelTimer);
 
     var isPassed = true;
+    // We do this here to make sure we don't try to enqueue any replication
+    // events after we have called stop on thaliPeerPoolDefault as that
+    // would cause an exception to be thrown.
+    if (thaliPullReplicationFromNotification) {
+      thaliPullReplicationFromNotification.stop();
+      thaliPullReplicationFromNotification = null;
+    }
     thaliPeerPoolDefault.stop()
     .catch(function (error) {
       t.fail('failed with ' + error);

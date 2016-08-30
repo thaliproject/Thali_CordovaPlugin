@@ -20,15 +20,12 @@
 
 'use strict';
 
-var longjohn = require('longjohn');
 var util = require('util');
 var uuid = require('node-uuid');
 var tape = require('tape-catch');
 var io = require('socket.io-client');
 var testUtils = require('./testUtils');
 var Promise = require('lie');
-
-longjohn.async_trace_limit = -1;
 
 process.on('uncaughtException', function (err) {
   testUtils.logMessageToScreen('Uncaught Exception: ' + err);
