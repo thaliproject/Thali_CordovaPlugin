@@ -112,8 +112,23 @@ custom_rules:
     regex: "(^[ a-zA-Z ]*(?:protocol|extension|class|struct) (?!(?:var|let))[ a-zA-Z:]*\{\n *\S+)"
     message: "There should be an empty line after a declaration"
     severity: error
+  empty_line_after_guard:
+    name: "Empty Line After Guard"
+    regex: "(^ *guard[ a-zA-Z0-9=?.\(\),><!]*\{[ a-zA-Z0-9=?.\(\),><!]*\}\n *(?!(?:return|guard))\S+)"
+    message: "There should be an empty line after a guard"
+    severity: error
+  empty_line_after_super:
+    name: "Empty Line After Super"
+    regex: "(^ *super\.[ a-zA-Z0-9=?.\(\)\{\}:,><!]*\n *(?!(?:\}|return))\S+)"
+    message: "There should be an empty line after super"
+    severity: error
   multiple_empty_lines:
     name: "Multiple Empty Lines"
     regex: "((?:\s*\n){4,})"
     message: "There are too many line breaks"
     severity: warning
+  unnecessary_type:
+    name: "Unnecessary Type"
+    regex: "[ a-zA-Z0-9]*(?:let|var) [ a-zA-Z0-9]*: ([a-zA-Z0-9]*)[\? ]*= \1"
+    message: "Type Definition Not Needed"
+    severity: error
