@@ -1,6 +1,6 @@
 'use strict';
 
-var logger = require('../thalilogger')('thaliManager');
+var logger = require('../thaliLogger')('thaliManager');
 
 var thaliConfig = require('./thaliConfig');
 var ThaliMobile = require('./thaliMobile');
