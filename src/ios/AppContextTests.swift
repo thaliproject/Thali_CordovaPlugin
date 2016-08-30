@@ -7,7 +7,7 @@
 //
 
 import XCTest
-@testable import ThaliCore
+import ThaliCore
 
 class AppContextTests: XCTestCase {
     var context: AppContext! = nil

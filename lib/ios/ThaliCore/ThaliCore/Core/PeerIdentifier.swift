@@ -20,7 +20,7 @@ public struct PeerIdentifier: Hashable {
     ///generation of peer.
     public let generation: Int
 
-    init() {
+    public init() {
         uuid = NSUUID().UUIDString
         generation = 0
     }
