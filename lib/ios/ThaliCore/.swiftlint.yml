@@ -31,7 +31,7 @@ file_length:
 force_cast: warning
 force_try: warning
 function_body_length:
-  warning: 50
+  warning: 100
   error: 150
 function_parameter_count:
   warning: 5
@@ -42,8 +42,8 @@ legacy_constant: error
 legacy_constructor: error
 legacy_nsgeometry_functions: error
 line_length:
-  warning: 120
-  error: 140
+  warning: 100
+  error: 120
 mark: warning
 nesting: warning
 opening_brace: error
