@@ -11,6 +11,7 @@ import UIKit
 
 /// Class that listens for UIApplicationWillResignActiveNotification and UIApplicationDidBecomeActiveNotification
 public final class ApplicationStateNotificationsManager: NSObject {
+
     public var willEnterBackgroundHandler: (Void -> Void)?
     public var didEnterForegroundHandler: (Void -> Void)?
 
