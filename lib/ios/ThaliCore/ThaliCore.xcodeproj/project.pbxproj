@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		19A90E3E1D75B05300300082 /* TestRunnerResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19A90E3D1D75B05300300082 /* TestRunnerResult.swift */; };
+		19A90E401D75B07C00300082 /* XCTest+TestRunnerResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19A90E3F1D75B07C00300082 /* XCTest+TestRunnerResult.swift */; };
 		CC12211F1D4F8D930079C0C3 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA572EC1D4B6E9600FBEC41 /* SimpleTestCase.swift */; };
 		CC4A41541D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */; };
 		CC4A41551D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */; };
@@ -117,6 +119,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		19A90E3D1D75B05300300082 /* TestRunnerResult.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRunnerResult.swift; sourceTree = "<group>"; };
+		19A90E3F1D75B07C00300082 /* XCTest+TestRunnerResult.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCTest+TestRunnerResult.swift"; sourceTree = "<group>"; };
 		CC4A41531D538A4D00FCF5D1 /* SimpleTestCaseNumberTwo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimpleTestCaseNumberTwo.swift; sourceTree = "<group>"; };
 		CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA571BF1D4787A900FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
@@ -408,6 +412,8 @@
 			isa = PBXGroup;
 			children = (
 				CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */,
+				19A90E3D1D75B05300300082 /* TestRunnerResult.swift */,
+				19A90E3F1D75B07C00300082 /* XCTest+TestRunnerResult.swift */,
 				CCA5730F1D4BA04B00FBEC41 /* TheTestRunner.swift */,
 			);
 			path = TestRunner;
@@ -680,12 +686,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				19A90E3E1D75B05300300082 /* TestRunnerResult.swift in Sources */,
 				CCA572B31D4A4EB400FBEC41 /* THESessionDictionary.m in Sources */,
 				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
 				CCA572B81D4A4EC600FBEC41 /* THEMultipeerClientSession.m in Sources */,
 				CCA572C01D4A4EDC00FBEC41 /* THEMultipeerPeerSession.m in Sources */,
 				CCA572C51D4A4EE900FBEC41 /* THEMultipeerServerSession.m in Sources */,
 				CCA572D11D4A506700FBEC41 /* GCDAsyncSocket.m in Sources */,
+				19A90E401D75B07C00300082 /* XCTest+TestRunnerResult.swift in Sources */,
 				CCA573111D4BA04B00FBEC41 /* THEAppContext+Tests.m in Sources */,
 				CCA572C71D4A4EEE00FBEC41 /* THEMultipeerServerSocketRelay.m in Sources */,
 				CCA572B61D4A4EC100FBEC41 /* THEMultipeerClient.m in Sources */,
