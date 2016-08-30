@@ -660,35 +660,34 @@ module.exports._multiConnect = _multiConnect;
 (function () {
   var peersAvaiability = {};
 
-  emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peerData) {
-    assert(peerData, 'peer data should be defined');
+  emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peer) {
+    assert(peer, 'peer should be defined');
     assert(
-      peerData.peerIdentifier,
+      peer.peerIdentifier,
       '\'peerIdentifier\' should be defined'
     );
-    console.log('ololo', peerData);
     assert(
-      peerData.peerAvailable !== undefined,
+      peer.peerAvailable !== undefined,
       '\'peerAvailable\' should be defined'
     );
-    if (peerData.peerAvailable) {
+    if (peer.peerAvailable) {
       assert(
         // 'multiConnect' platform
-        peerData.portNumber === null ||
+        peer.portNumber === null ||
         // 'connect' platform
-        typeof peerData.portNumber === 'number'
+        typeof peer.portNumber === 'number'
       );
-      peersAvaiability[peerData.peerIdentifier] = { port: peerData.portNumber };
+      peersAvaiability[peer.peerIdentifier] = { port: peer.portNumber };
     } else {
-      delete peersAvaiability[peerData.peerIdentifier];
+      delete peersAvaiability[peer.peerIdentifier];
     }
   });
 
   var getPort = function (peerIdentifier) {
     var data = peersAvaiability[peerIdentifier];
-    if (data) {
+    if (!data) {
       return Promise.reject(new Error(
-        'peer is not available, peerIdentifier: %s', peerIdentifier
+        'peer is not available, peerIdentifier: ' + peerIdentifier
       ));
     }
 

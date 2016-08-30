@@ -731,3 +731,72 @@ test('We provide notification when a listener dies and we recreate it',
       }
     });
   });
+
+test('test getPort with remote participants', function (t) {
+  var remotePeerIds = t.participants.filter(function (participant) {
+    return participant.uuid !== tape.uuid;
+  })
+  .map(function (participant) {
+    return 'urn:uuid:' + participant.uuid;
+  });
+
+  trivialEndToEndTest(t, false, function () {
+    // We shouldn't succeed with 'getPort' now.
+    var promises = [];
+    remotePeerIds.forEach(function (peerId) {
+      promises.push(
+        thaliMobileNativeWrapper.getPort(peerId)
+        .then(function () {
+          t.fail('getPort is available');
+        })
+        .catch(function () {
+          t.pass('getPort is unavailable');
+        })
+      );
+    });
+    Promise.all(promises)
+
+    // Wait until all remote participants become available.
+    .then(function () {
+      return new Promise(function (resolve) {
+        var peers = {};
+        thaliMobileNativeWrapper.emitter.on(
+          'nonTCPPeerAvailabilityChangedEvent',
+          function (peer) {
+            if (peer.peerAvailable) {
+              peers[peer.peerIdentifier] = true;
+              var peerIds = Object.getOwnPropertyNames(peers);
+              if (peerIds.length === remotePeerIds.length) {
+                remotePeerIds = peerIds;
+                resolve();
+              }
+            } else {
+              delete peers[peer.peerIdentifier];
+            }
+          }
+        );
+      });
+    })
+
+    // We should succeed with 'getPort' now.
+    .then(function () {
+      var promises = [];
+      remotePeerIds.forEach(function (peerId) {
+        promises.push(
+          thaliMobileNativeWrapper.getPort(peerId)
+          .then(function () {
+            t.pass('getPort is available');
+          })
+          .catch(function (error) {
+            t.fail(error.toString());
+          })
+        );
+      });
+      return Promise.all(promises);
+    })
+
+    .then(function () {
+      t.end();
+    });
+  });
+});
