@@ -264,9 +264,12 @@ module.exports.start = function (router, pskIdToSecret) {
       key: thaliConfig.BOGUS_KEY_PEM,
       cert: thaliConfig.BOGUS_CERT_PEM
     };
+    // listen(port, ...) port = 0 for random port
     gRouterServer = https.createServer(options, gRouterExpress).listen(0,
       function () {
         gRouterServerPort = gRouterServer.address().port;
+        logger.debug('listening', gRouterServerPort);
+
         stopCreateAndStartServersManager()
           .then(function () {
             states.started = true;

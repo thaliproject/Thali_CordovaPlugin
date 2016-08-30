@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('../../lib/thaliTape');
+var tape = require('../lib/thaliTape');
 var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
 
 var test = tape({
