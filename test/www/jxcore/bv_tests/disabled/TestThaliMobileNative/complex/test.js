@@ -2,7 +2,7 @@
 
 var net = require('net');
 var randomstring = require('randomstring');
-var tape = require('../lib/thaliTape');
+var tape = require('../../../../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var logger = require('thali/thaliLogger')('testThaliMobileNative');
 var Promise = require('lie');
@@ -221,6 +221,11 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
       successCb(err, connection, peer);
     } else {
       logger.info('Connect returned an error: ' + err);
+
+      if (err === 'Already connect(ing/ed)') {
+        failureCb(err, connection, peer);
+        return;
+      }
 
       // Retry a failed connection..
       if (retries > 0) {
@@ -1168,7 +1173,7 @@ function clientRound(t, roundNumber, boundListener, quitSignal) {
   return new Promise(function (resolve, reject) {
     boundListener.listener = function (peers) {
       if (verifyPeers(t, peersWeSucceededWith)) {
-        return
+        return;
       }
 
       var peerPromises = [];
