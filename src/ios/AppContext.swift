@@ -28,6 +28,24 @@ func dictionaryValue(jsonText: String) -> [String : AnyObject]? {
     return nil
 }
 
+enum RadioState: String {
+    case on = "on"
+    case off = "off"
+    case unavailable = "unavailable"
+    case notHere = "notHere"
+    case doNotCare = "doNotCare"
+}
+
+enum NetworkStatusParameters: String {
+    case bluetooth = "bluetooth"
+    case bluetoothLowEnergy = "bluetoothLowEnergy"
+    case wifi = "wifi"
+    case cellular = "cellular"
+    case bssid = "bssid"
+
+    static let allValues = [bluetooth, bluetoothLowEnergy, wifi, cellular, bssid]
+}
+
 public typealias ClientConnectCallback = (String, String) -> Void
 
 @objc public enum AppContextError: Int, ErrorType {
@@ -105,14 +123,6 @@ extension PeerAvailability {
     private var bluetoothLEIsPowered = false
     private var bluetoothManager: CBCentralManager?
 
-    enum RadioState: String {
-        case on = "on"
-        case off = "off"
-        case unavailable = "unavailable"
-        case notHere = "notHere"
-        case doNotCare = "doNotCare"
-    }
-
     private func notifyOnDidUpdateNetworkStatus() {
 
         var bluetoothState = RadioState.unavailable
@@ -142,14 +152,16 @@ extension PeerAvailability {
 
         wifiState = wifiEnabled ? .on : .off
 
-        let bssid = ((wifiState == .on) && wifiConnected) ? NetworkReachability().BSSID() : "null"
+        let bssid = ((wifiState == .on) && wifiConnected)
+            ? NetworkReachability().BSSID()
+            : "null"
 
         let networkStatus = [
-            "wifi"              : wifiState.rawValue,
-            "bluetooth"         : bluetoothState.rawValue,
-            "bluetoothLowEnergy": bluetoothLowEnergyState.rawValue,
-            "cellular"          : cellularState.rawValue,
-            "bssid"             : bssid
+            NetworkStatusParameters.wifi.rawValue                : wifiState.rawValue,
+            NetworkStatusParameters.bluetooth.rawValue           : bluetoothState.rawValue,
+            NetworkStatusParameters.bluetoothLowEnergy.rawValue  : bluetoothLowEnergyState.rawValue,
+            NetworkStatusParameters.cellular.rawValue            : cellularState.rawValue,
+            NetworkStatusParameters.bssid.rawValue               : bssid
         ]
 
 

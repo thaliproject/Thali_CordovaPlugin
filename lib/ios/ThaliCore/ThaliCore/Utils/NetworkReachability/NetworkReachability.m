@@ -15,11 +15,11 @@
 @implementation NetworkReachability
 
 - (BOOL)isWiFiEnabled {
-    
+
     NSCountedSet * cset = [NSCountedSet new];
-    
+
     struct ifaddrs *interfaces;
-    
+
     if( ! getifaddrs(&interfaces) ) {
         for (struct ifaddrs *interface = interfaces; interface; interface = interface->ifa_next) {
             if ( (interface->ifa_flags & IFF_UP) == IFF_UP ) {
@@ -31,7 +31,7 @@
     freeifaddrs(interfaces);
 
     NSString *aimInterface = @"awdl0";
-    
+
     return [cset countForObject:aimInterface] > 1 ? YES : NO;
 }
 

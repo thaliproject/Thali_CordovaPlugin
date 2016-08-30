@@ -35,14 +35,14 @@ static void *frameworkHandle;
 {
     static BluetoothHardwareControlManager *bluetoothManager = nil;
     static dispatch_once_t onceToken;
-    
+
     dispatch_once(&onceToken, ^{
         frameworkHandle = dlopen("/System/Library/PrivateFrameworks/BluetoothManager.framework/BluetoothManager", RTLD_NOW);
         if (frameworkHandle) {
             bluetoothManager = [[BluetoothHardwareControlManager alloc] init];
         }
     });
-    
+
     return bluetoothManager;
 }
 

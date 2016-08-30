@@ -11,12 +11,27 @@ import ThaliCore
 
 // MARK: - Mock objects
 class AppContextDelegateMock: NSObject, AppContextDelegate {
+    /// Network status represented as JSON String.
+    /// Gets updated value in didChangeNetworkStatus method.
     var networkStatus: String?
+
+    /// Indicates that didChangeNetworkStatus method was called at least once.
     var networkStatusUpdated = false
 
+    /// Bluetooth RadioState value represented as String
+    /// Gets updated value in didChangeNetworkStatus method.
     var bluetoothStateActual: String?
+
+    /// BluetoothLowEnergy RadioState value represented as String
+    /// Gets updated value in didChangeNetworkStatus method.
     var bluetoothLowEnergyStateActual: String?
+
+    /// WiFi RadioState value represented as String
+    /// Gets updated value in didChangeNetworkStatus method.
     var wifiStateActual: String?
+
+    /// Cellular RadioState value represented as String
+    /// Gets updated value in didChangeNetworkStatus method.
     var cellularStateActual: String?
 
     @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
@@ -24,25 +39,43 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
         networkStatusUpdated = true
         networkStatus = status
 
+        bluetoothStateActual = nil
+        bluetoothLowEnergyStateActual = nil
+        wifiStateActual = nil
+        cellularStateActual = nil
+
         if let dictinaryNetworkStatus = dictionaryValue(networkStatus!) {
-            guard let bluetoothState = dictinaryNetworkStatus["bluetooth"] as? String else {
-                XCTFail("Can't cast bluetooth status to String")
-                return
+
+            guard
+                let bluetoothState =
+                dictinaryNetworkStatus[NetworkStatusParameters.bluetooth.rawValue]
+                    as? String
+                else {
+                    return
             }
 
-            guard let bluetoothLowEnergyState = dictinaryNetworkStatus["bluetoothLowEnergy"] as? String else {
-                XCTFail("Can't cast bluetoothLowEnergy status to String")
-                return
+            guard
+                let bluetoothLowEnergyState =
+                dictinaryNetworkStatus[NetworkStatusParameters.bluetoothLowEnergy.rawValue]
+                    as? String
+                else {
+                    return
             }
 
-            guard let wifiState = dictinaryNetworkStatus["wifi"] as? String else {
-                XCTFail("Can't cast wifi status to String")
-                return
+            guard
+                let wifiState =
+                dictinaryNetworkStatus[NetworkStatusParameters.wifi.rawValue]
+                    as? String
+                else {
+                    return
             }
 
-            guard let cellularState = dictinaryNetworkStatus["cellular"] as? String else {
-                XCTFail("Can't cast cellular status to String")
-                return
+            guard
+                let cellularState =
+                dictinaryNetworkStatus[NetworkStatusParameters.cellular.rawValue]
+                    as? String
+                else {
+                    return
             }
 
             bluetoothStateActual = bluetoothState
@@ -53,7 +86,8 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
             XCTFail("Can not convert network status JSON string to dictionary")
         }
     }
-    @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
+    @objc func context(context: AppContext,
+                       didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
     @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
     @objc func appWillEnterBackground(withContext context: AppContext) {}
     @objc func appDidEnterForeground(withContext context: AppContext) {}
@@ -73,142 +107,161 @@ class AppContextTests: XCTestCase {
         context = nil
     }
 
-    // MARK: - private functions
-
-    // MARK: - tests
+    // MARK: Tests
     func testUpdateNetworkStatus() {
 
-        // Check if we have correct parameters in network status
+        // MARK: Store Bluetooth power state
+        BluetoothHardwareControlManager.sharedInstance().registerObserver(self)
+
+        let bluetoothWasPoweredBeforeTest =
+            BluetoothHardwareControlManager.sharedInstance().bluetoothIsPowered()
+        let bluetoothShouldBeTurnedOn = !bluetoothWasPoweredBeforeTest
+
+
+        // MARK: Check if we have correct parameters in network status
+        // Given
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
-        let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
-        XCTAssertTrue(delegateMock.networkStatusUpdated, "network status is not updated")
 
-        let expectedParameters = [
-            "bluetooth",
-            "bluetoothLowEnergy",
-            "wifi",
-            "cellular",
-            "bssid"
-        ]
+        // When
+        let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
+
+        // Then
+        XCTAssertTrue(delegateMock.networkStatusUpdated, "network status is not updated")
 
         if let dictinaryNetworkStatus = dictionaryValue(delegateMock.networkStatus!) {
 
             XCTAssertEqual(
                 dictinaryNetworkStatus.count,
-                expectedParameters.count,
-                "Wrong amount of parameters in network status"
+                NetworkStatusParameters.allValues.count,
+                "Wrong amount of parameters in network status" +
+                    "(Expected: \(dictinaryNetworkStatus.count), " +
+                    "Actual: \(NetworkStatusParameters.allValues.count))"
             )
 
-            for expectedParameter in expectedParameters {
+            for expectedParameter in NetworkStatusParameters.allValues {
                 XCTAssertNotNil(
-                    dictinaryNetworkStatus[expectedParameter],
-                    "Network status doesn't contain \(expectedParameter) parameter"
+                    dictinaryNetworkStatus[expectedParameter.rawValue],
+                    "Network status doesn't contain \(expectedParameter.rawValue) parameter"
                 )
             }
         } else {
             XCTFail("Can not convert network status JSON string to dictionary")
         }
 
-        // Dynamically check if networkStatus responds on turning on/off radios
-        var bluetoothStateExpected: String!
-        var bluetoothLowEnergyStateExpected: String!
-        var cellularStateExpected: String!
 
-        // Dersim Davaod (8/19/16):
-        // For some unknown reasons we should invoke
-        // - sharedInstance method on main thread at the early time.
-        dispatch_async(dispatch_get_main_queue(), {
-            BluetoothHardwareControlManager.sharedInstance()
-        })
+        // MARK: Dynamically check if networkStatus responds on turning on Bluetooth
+        // Given
+        var bluetoothStateExpected = RadioState.on.rawValue
+        var bluetoothLowEnergyStateExpected = RadioState.on.rawValue
 
-        NSThread.sleepForTimeInterval(1)
-
-        // Push hardware state
-        let bluetoothIsPoweredBeforeTest = BluetoothHardwareControlManager.sharedInstance().bluetoothIsPowered()
-
-        // Turn bluetooth (and BLE) on and check status
-        if !bluetoothIsPoweredBeforeTest {
-
-            expectation = expectationWithDescription("Bluetooth turned on")
-
+        if bluetoothShouldBeTurnedOn {
+            expectation = expectationWithDescription("Bluetooth is turned on")
             BluetoothHardwareControlManager.sharedInstance().turnBluetoothOn()
-
-            waitForExpectationsWithTimeout(10) { error in
-                XCTAssertNotNil(
+            waitForExpectationsWithTimeout(10) {
+                error in
+                XCTAssertNil(
                     error,
-                    "Can not turn on bluetooth hardware"
+                    "Can not turn on Bluetooth hardware"
                 )
             }
+
+            expectation = nil
         }
 
-
+        // When
         let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
-        NSThread.sleepForTimeInterval(1)
 
-        bluetoothStateExpected = "on"
-        bluetoothLowEnergyStateExpected = "on"
-
+        // Then
         XCTAssertEqual(
             delegateMock.bluetoothStateActual,
             bluetoothStateExpected,
-            "Wrong bluetooth state (expected: \(bluetoothStateExpected), " +
-                "real: \(delegateMock.bluetoothStateActual))"
+            "Wrong bluetooth state." +
+                "Expected: \(bluetoothStateExpected), " +
+                "actual: \(delegateMock.bluetoothStateActual))"
         )
 
         XCTAssertEqual(
             delegateMock.bluetoothLowEnergyStateActual,
             bluetoothLowEnergyStateExpected,
-            "Wrong bluetoothLowEnergyState state (expected: on, " +
-                "real: \(delegateMock.bluetoothLowEnergyStateActual))"
+            "Wrong bluetoothLowEnergyState state. " +
+                "Expected: \(bluetoothLowEnergyStateExpected), " +
+                "actual: \(delegateMock.bluetoothLowEnergyStateActual))"
         )
 
-        // Turn bluetooth (and BLE) off and check status
-        expectation = expectationWithDescription("Bluetooth turned off")
 
+        // MARK: Dynamically check if networkStatus responds on turning off Bluetooth
+        // Given
+        bluetoothStateExpected = RadioState.off.rawValue
+        bluetoothLowEnergyStateExpected = RadioState.off.rawValue
+
+        expectation = expectationWithDescription("Bluetooth is turned off")
         BluetoothHardwareControlManager.sharedInstance().turnBluetoothOff()
-
-        waitForExpectationsWithTimeout(10) { error in
-            XCTAssertNotNil(
+        waitForExpectationsWithTimeout(10) {
+            error in
+            XCTAssertNil(
                 error,
                 "Can not turn off bluetooth hardware"
             )
         }
 
+        expectation = nil
+
+        // When
         let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
-        NSThread.sleepForTimeInterval(1)
 
-        bluetoothStateExpected = "off"
-        bluetoothLowEnergyStateExpected = "off"
-
+        // Then
         XCTAssertEqual(
             delegateMock.bluetoothStateActual,
             bluetoothStateExpected,
-            "Wrong bluetooth state (expected: \(bluetoothStateExpected), " +
-                "real: \(delegateMock.bluetoothStateActual))"
+            "Wrong bluetooth state. " +
+                "Expected: \(bluetoothStateExpected), " +
+                "actual: \(delegateMock.bluetoothStateActual))"
         )
 
         XCTAssertEqual(
             delegateMock.bluetoothLowEnergyStateActual,
             bluetoothLowEnergyStateExpected,
-            "Wrong bluetoothLowEnergyState state (expected: \(bluetoothLowEnergyStateExpected), " +
-                "real: \(delegateMock.bluetoothLowEnergyStateActual))"
+            "Wrong bluetoothLowEnergyState state. " +
+                "Expected: \(bluetoothLowEnergyStateExpected), " +
+                "actual: \(delegateMock.bluetoothLowEnergyStateActual))"
         )
 
-        // Check cellular status
-        cellularStateExpected = "doNotCare"
 
+        // MARK: Check cellular status
+        // Given
+        let cellularStateExpected = RadioState.doNotCare.rawValue
+
+        // Then
         XCTAssertEqual(
             delegateMock.cellularStateActual,
             cellularStateExpected,
-            "Wrong cellular state (expected: \(cellularStateExpected), " +
-                "real: \(delegateMock.cellularStateActual))"
+            "Wrong cellular state. " +
+                "Expected: \(cellularStateExpected), " +
+                "actual: \(delegateMock.cellularStateActual))"
         )
 
-        // Restore hardware state
-        bluetoothIsPoweredBeforeTest
-            ? BluetoothHardwareControlManager.sharedInstance().turnBluetoothOn()
-            : BluetoothHardwareControlManager.sharedInstance().turnBluetoothOff()
+
+        // MARK: Restore Bluetooth power state
+        let bluetoothIsPoweredAfterTest =
+            BluetoothHardwareControlManager.sharedInstance().bluetoothIsPowered()
+
+        if bluetoothWasPoweredBeforeTest != bluetoothIsPoweredAfterTest {
+            expectation = expectationWithDescription("Bluetooth is restoring its state")
+            bluetoothWasPoweredBeforeTest
+                ? BluetoothHardwareControlManager.sharedInstance().turnBluetoothOn()
+                : BluetoothHardwareControlManager.sharedInstance().turnBluetoothOff()
+
+            waitForExpectationsWithTimeout(10) {
+                error in
+                XCTAssertNil(
+                    error,
+                    "Can not turn off bluetooth hardware"
+                )
+            }
+
+            expectation = nil
+        }
     }
 
     func testDidRegisterToNative() {
@@ -238,7 +291,9 @@ extension AppContextTests : BluetoothHardwareControlObserverProtocol {
 
     func receivedBluetoothNotification(btNotification: BluetoothHardwareControlNotification) {
         if btNotification == PowerChangedNotification {
-            expectation?.fulfill()
+            if nil != expectation {
+                expectation!.fulfill()
+            }
         }
     }
 }
