@@ -438,13 +438,14 @@ MobileCallInstance.prototype._connect =
       }, 2000);
     }
 
+    var self = this;
     var cleanProxyServerCalled = false;
     function cleanProxyServer() {
       if (cleanProxyServerCalled) {
         return;
       }
       cleanProxyServerCalled = true;
-      this._disconnect(peerIdentifier, function (error) {
+      self._disconnect(peerIdentifier, function (error) {
         logger.debug('Got error while disconecting a peer: ' + error);
       });
     }
