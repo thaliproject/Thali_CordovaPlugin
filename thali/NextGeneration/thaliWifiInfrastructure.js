@@ -62,6 +62,7 @@ var promiseResultSuccessOrFailure = function (promise) {
  */
 function ThaliWifiInfrastructure () {
   EventEmitter.call(this);
+  this._generation = null;
   this.usn = null;
   this.previousUsn = null;
   // Can be used in tests to override the port
@@ -509,7 +510,12 @@ function () {
     self.previousUsn = self.usn;
     // Generate a new USN value to flag that something has changed
     // in this peer.
-    self.usn = 'urn:uuid:' + uuid.v4();
+    if (self._generation === null) {
+      self._generation = 0;
+    } else {
+      self._generation ++;
+    }
+    self.usn = 'urn:uuid:' + uuid.v4() + ':' + self._generation;
 
     if (self.states.networkState.wifi !== 'on') {
       return self._rejectPerWifiState(reject);

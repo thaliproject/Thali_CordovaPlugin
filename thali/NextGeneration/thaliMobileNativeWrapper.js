@@ -86,8 +86,13 @@ module.exports._isStarted = function () {
  */
 
 function failedConnectionHandler(failedConnection) {
+  assert(failedConnection, '\'failedConnection\' should exist');
+  assert(failedConnection.peerIdentifier, '\'failedConnection.peerIdentifier\' should exist');
+  assert(!isNaN(failedConnection.generation), '\'failedConnection.generation\' should be a number');
+
   handlePeerAvailabilityChanged({
     peerIdentifier: failedConnection.peerIdentifier,
+    generation: failedConnection.generation,
     portNumber: null,
     peerAvailable: false
   });
@@ -147,6 +152,7 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
     'nonTCPPeerAvailabilityChangedEvent',
     {
       peerIdentifier: recreateAnnouncement.peerIdentifier,
+      generation: recreateAnnouncement.generation,
       portNumber: recreateAnnouncement.portNumber,
       peerAvailable: true
     }
@@ -658,7 +664,7 @@ module.exports._multiConnect = _multiConnect;
  */
 
 (function () {
-  var peersAvaiability = {};
+  var peerAvailabilities = {};
 
   emitter.on('nonTCPPeerAvailabilityChangedEvent', function (peer) {
     assert(peer, 'peer should be defined');
@@ -677,14 +683,14 @@ module.exports._multiConnect = _multiConnect;
         // 'connect' platform
         typeof peer.portNumber === 'number'
       );
-      peersAvaiability[peer.peerIdentifier] = { port: peer.portNumber };
+      peerAvailabilities[peer.peerIdentifier] = { port: peer.portNumber };
     } else {
-      delete peersAvaiability[peer.peerIdentifier];
+      delete peerAvailabilities[peer.peerIdentifier];
     }
   });
 
   var getPort = function (peerIdentifier) {
-    var data = peersAvaiability[peerIdentifier];
+    var data = peerAvailabilities[peerIdentifier];
     if (!data) {
       return Promise.reject(new Error(
         'peer is not available, peerIdentifier: ' + peerIdentifier
@@ -931,6 +937,7 @@ var handlePeerAvailabilityChanged = function (peer) {
     );
     return;
   }
+
   return peerAvailabilityChangedQueue.enqueue(function (resolve) {
     var handlePeerUnavailable = function () {
       // TODO: Should the created peer listener be cleaned up when
@@ -938,11 +945,18 @@ var handlePeerAvailabilityChanged = function (peer) {
       // for that?
       emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
         peerIdentifier: peer.peerIdentifier,
+        generation: peer.generation,
         portNumber: null,
         peerAvailable: false
       });
       resolve();
     };
+
+    assert(peer, '\'peer\' should exist');
+    assert(peer.peerIdentifier, '\'peer.peerIdentifier\' should exist');
+    assert(!isNaN(peer.generation), '\'peer.generation\' should be a number');
+    assert(peer.peerAvailable !== undefined, '\'peer.peerAvailable\' should exist');
+
     if (peer.peerAvailable) {
       gServersManager.createPeerListener(
         peer.peerIdentifier,
@@ -951,6 +965,7 @@ var handlePeerAvailabilityChanged = function (peer) {
       .then(function (portNumber) {
         emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
           peerIdentifier: peer.peerIdentifier,
+          generation: peer.generation,
           portNumber: portNumber,
           peerAvailable: true
         });
@@ -1074,12 +1089,30 @@ var _registerToNative = function () {
   };
 
   registerToNative('peerAvailabilityChanged', function (peers) {
-    if (Array.isArray(peers)) {
-      peers.forEach(function (peer) {
-        handlePeerAvailabilityChanged(peer);
+    function handler (peer) {
+      assert(peer, '\'peer\' should exist');
+      assert(peer.peerIdentifier, '\'peer.peerIdentifier\' should exist');
+
+      // peer.peerIdentifier = peerIdentifier + ':' + generation.
+      // We can split it and provide 'peerIdentifier' and 'generation' separately.
+      var generationIndex = peer.peerIdentifier.lastIndexOf(':');
+      assert(generationIndex !== -1, 'generation should exist');
+      var peerIdentifier = peer.peerIdentifier.substring(0, generationIndex);
+      var generation = peer.peerIdentifier.substring(generationIndex + 1);
+      assert(!isNaN(generation), 'generation should be a number');
+
+      handlePeerAvailabilityChanged({
+        peerIdentifier: peerIdentifier,
+        generation: generation,
+        portNumber: peer.portNumber,
+        peerAvailable: peer.peerAvailable
       });
+    }
+
+    if (Array.isArray(peers)) {
+      peers.forEach(handler);
     } else {
-      handlePeerAvailabilityChanged(peers);
+      handler(peers);
     }
   });
 

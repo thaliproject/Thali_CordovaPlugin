@@ -167,7 +167,7 @@ function trivialEndToEndTestScaffold(t, needManualNotify,
     })
     .then(function () {
       if (needManualNotify) {
-        Mobile.wifiPeerAvailabilityChanged('foo');
+        Mobile.wifiPeerAvailabilityChanged('foo:0');
       }
     });
 }
@@ -447,7 +447,7 @@ if (!jxcore.utils.OSInfo().isMobile) {
         var dummyPeers = [];
         for (var i = 1; i <= peerCount; i++) {
           dummyPeers.push({
-            peerIdentifier: i + '',
+            peerIdentifier: i + ':' + (i - 1),
             peerAvailable: peerAvailable,
             pleaseConnect: false
           });

@@ -445,6 +445,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       }
 
       logger.debug('We got a peer ' + JSON.stringify(record));
+      console.trace();
 
       if (!peerID) {
         peerID = record.peerIdentifier;
