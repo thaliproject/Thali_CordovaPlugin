@@ -45,11 +45,11 @@ public class ConnectionHelperTest {
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         mConnectionHelper = new ConnectionHelper();
-        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
     }
 
     @Before
     public void setUp() throws Exception {
+        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
         outgoingThreadsIds = new ArrayList<String>();
         incomingThreadsIds = new ArrayList<String>();
         mInputStreamMock = new InputStreamMock();
@@ -60,12 +60,7 @@ public class ConnectionHelperTest {
     @After
     public void tearDown() throws Exception {
         mConnectionHelper.killConnections(true);
-        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
         mConnectionHelper.dispose();
-        mConnectionHelper.getDiscoveryManager().stop();
-        mConnectionHelper.getDiscoveryManager().stopAdvertising();
-        mConnectionHelper.getDiscoveryManager().stopDiscovery();
-        mConnectionHelper.getDiscoveryManager().dispose();
     }
 
     @Test
@@ -103,7 +98,19 @@ public class ConnectionHelperTest {
 
     @Test
     public void testDispose() throws Exception {
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        } else {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        }
+
+        Thread.sleep(5000); //Wait for connectionHelper to start
+
         mConnectionHelper.dispose();
+
+        Thread.sleep(5000); //Wait for connectionHelper to dispose
 
         Field fDiscoveryManager = mConnectionHelper.getClass()
                 .getDeclaredField("mDiscoveryManager");
@@ -143,8 +150,16 @@ public class ConnectionHelperTest {
 
     @Test
     public void testStart() throws Exception {
-        assertThat("Start method returns true",
-                mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        } else {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        }
+
+        Thread.sleep(5000); //Wait for connectionHelper to start
 
         Field fServerPortNumber = mConnectionHelper.getClass()
                 .getDeclaredField("mServerPortNumber");
@@ -176,11 +191,23 @@ public class ConnectionHelperTest {
                     mConnectionHelper.getDiscoveryManager().isRunning(), is(true));
         }
 
-        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
-        mConnectionHelper.dispose();
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+            mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        } else {
+            mConnectionHelper.stop(true, mJXcoreThaliCallbackMock);
+        }
 
-        assertThat("Start method returns true",
-                mConnectionHelper.start(-1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        Thread.sleep(5000); //Wait for connectionHelper to stop
+
+        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(-1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        } else {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(-1111, true, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        }
+
+        Thread.sleep(5000); //Wait for connectionHelper to start
 
         mServerPortNumber = fServerPortNumber.getInt(mConnectionHelper);
         mPowerUpBleDiscoveryTimer =
@@ -207,7 +234,9 @@ public class ConnectionHelperTest {
     @Test
     public void testStop() throws Exception {
         mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock);
+        Thread.sleep(5000); //Wait for connectionHelper to start
         mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        Thread.sleep(5000); //Wait for connectionHelper to stop
 
         Field fStartStopOperationHandler = mConnectionHelper.getClass()
                 .getDeclaredField("mStartStopOperationHandler");
@@ -659,6 +688,4 @@ public class ConnectionHelperTest {
         thrown.expect(UnsupportedOperationException.class);
         mConnectionHelper.onBluetoothMacAddressResolved("00:11:22:33:44:55");
     }
-
-    //TODO Write tests for onPeerDiscovered and onPeerLost
 }
