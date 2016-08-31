@@ -8,7 +8,7 @@
 
 import Foundation
 
-//class for managing Thali advertiser's logic
+// Class for managing Thali advertiser's logic
 @objc public final class AdvertiserManager: NSObject {
     internal private (set) var advertisers: [Advertiser] = []
     internal private (set) var currentAdvertiser: Advertiser? = nil
@@ -19,14 +19,15 @@ import Foundation
         return currentAdvertiser?.advertising ?? false
     }
 
-    private func advertiserIdentifier(advertiserPeer: PeerIdentifier, receivedInvitationFromPeer peer: PeerIdentifier) {
+    private func advertiserIdentifier(advertiserPeer: PeerIdentifier,
+                                      receivedInvitationFromPeer peer: PeerIdentifier) {
     }
 
     public init(serviceType: String) {
         self.serviceType = serviceType
     }
 
-    //dispose advertiser after 30 sec to ensure that it has no pending invitations
+    // Dispose advertiser after 30 sec to ensure that it has no pending invitations
     func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(30 * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
@@ -41,8 +42,10 @@ import Foundation
     }
 
     private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16) -> Advertiser {
-        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
-                                    port: port, receivedInvitationHandler: { [weak self] receivedIdentifier in
+        let advertiser = Advertiser(peerIdentifier: identifier,
+                                    serviceType: serviceType,
+                                    port: port,
+                                    receivedInvitationHandler: { [weak self] receivedIdentifier in
             self?.advertiserIdentifier(identifier, receivedInvitationFromPeer: receivedIdentifier)
         })
         advertiser.startAdvertising()
@@ -67,6 +70,7 @@ import Foundation
             self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port)
         }
 
-        assert(self.currentAdvertiser != nil, "we should have initialized advertiser after calling this function")
+        assert(self.currentAdvertiser != nil,
+               "we should have initialized advertiser after calling this function")
     }
 }

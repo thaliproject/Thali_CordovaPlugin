@@ -10,6 +10,7 @@ import Foundation
 import MultipeerConnectivity
 
 final class Advertiser: NSObject {
+
     private let advertiser: MCNearbyServiceAdvertiser
 
     let peerIdentifier: PeerIdentifier
@@ -43,8 +44,10 @@ final class Advertiser: NSObject {
 
 extension Advertiser: MCNearbyServiceAdvertiserDelegate {
 
-    func advertiser(advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID,
-                    withContext context: NSData?, invitationHandler: (Bool, MCSession) -> Void) {
+    func advertiser(advertiser: MCNearbyServiceAdvertiser,
+                    didReceiveInvitationFromPeer peerID: MCPeerID,
+                    withContext context: NSData?,
+                    invitationHandler: (Bool, MCSession) -> Void) {
         do {
             let peer = try PeerIdentifier(mcPeer: peerID)
             receivedInvitationHandler(peer: peer)
@@ -53,7 +56,8 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
         }
     }
 
-    func advertiser(advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: NSError) {
+    func advertiser(advertiser: MCNearbyServiceAdvertiser,
+                    didNotStartAdvertisingPeer error: NSError) {
         advertising = false
         print("WARNING: server didNotStartAdvertisingPeer")
     }

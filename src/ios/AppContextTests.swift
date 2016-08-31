@@ -9,6 +9,7 @@
 import XCTest
 
 class AppContextTests: XCTestCase {
+
     var context: AppContext! = nil
 
     override func setUp() {
@@ -27,7 +28,10 @@ class AppContextTests: XCTestCase {
             @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
                 networkStatusUpdated = true
             }
-            @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
+            @objc func context(
+                context: AppContext,
+                didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String
+                ) {}
             @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
             @objc func appWillEnterBackground(withContext context: AppContext) {}
             @objc func appDidEnterForeground(withContext context: AppContext) {}
@@ -50,7 +54,7 @@ class AppContextTests: XCTestCase {
         var contextError: AppContextError?
         do {
             try context.didRegisterToNative(["test"])
-        } catch let err as AppContextError{
+        } catch let err as AppContextError {
             contextError = err
         } catch _ {
         }

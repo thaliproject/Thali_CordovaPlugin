@@ -10,6 +10,7 @@ import XCTest
 @testable import ThaliCore
 
 class PeerDiscoveryTests: XCTestCase {
+
     var browser: BrowserManager!
     var advertiser: AdvertiserManager!
 
@@ -98,11 +99,12 @@ class PeerDiscoveryTests: XCTestCase {
         browser.startListeningForAdvertisements()
         var advertisersCount = 0
         browser.peersAvailabilityChanged = { peerAvailability in
-            if let availability = peerAvailability.first where availability.peerIdentifier.uuid == identifier.uuid {
-                advertisersCount += 1
-                if advertisersCount == 2 {
-                    found2AdvertisersExpectation.fulfill()
-                }
+            if let availability = peerAvailability.first
+                where availability.peerIdentifier.uuid == identifier.uuid {
+                    advertisersCount += 1
+                    if advertisersCount == 2 {
+                        found2AdvertisersExpectation.fulfill()
+                    }
             }
         }
 
