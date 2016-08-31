@@ -9,6 +9,11 @@
 import XCTest
 import ThaliCore
 
+extension NetworkStatusParameters {
+
+    static let allValues = [bluetooth, bluetoothLowEnergy, wifi, cellular, bssid]
+}
+
 // MARK: - Mock objects
 class AppContextDelegateMock: NSObject, AppContextDelegate {
     /// Network status represented as JSON String.
