@@ -60,4 +60,10 @@ class PeerIdentifierTests: XCTestCase {
         XCTAssertEqual(p3.uuid, p4.uuid)
         XCTAssertNotEqual(p3, p4)
     }
+
+    func testGenerationEquality() {
+        let p1 = PeerIdentifier()
+        let p2 = PeerIdentifier(uuidIdentifier: p1.uuid, generation: p1.generation + 1)
+        XCTAssertNotEqual(p1, p2)
+    }
 }

@@ -71,7 +71,7 @@ extension MCPeerID {
 
 public func == (lhs: PeerIdentifier, rhs: PeerIdentifier) -> Bool {
     let lhsString = lhs.stringValue
-    let rhsString = rhs.stringValue.utf8
+    let rhsString = rhs.stringValue
     guard lhsString.characters.count == rhsString.characters.count else {
         return false
     }
