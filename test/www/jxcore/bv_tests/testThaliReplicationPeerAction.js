@@ -10,7 +10,7 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 var https = require('https');
 var httpTester = require('../lib/httpTester');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
-var thaliMobile = require('thali/NextGeneration/thaliMobile');
+var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
@@ -29,16 +29,26 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    thaliReplicationPeerAction && thaliReplicationPeerAction.kill();
-    (testCloseAllServer ? testCloseAllServer.closeAllPromise() :
-      Promise.resolve())
-      .catch(function (err) {
-        t.fail('Got error in teardown ' + err);
-      })
-      .then(function () {
+    Promise.resolve()
+    .then(function () {
+      if (thaliReplicationPeerAction) {
+        thaliReplicationPeerAction.kill();
+        return thaliReplicationPeerAction.waitUntilKilled();
+      }
+    })
+    .then(function () {
+      if (testCloseAllServer) {
+        var promise = testCloseAllServer.closeAllPromise();
         testCloseAllServer = null;
-        t.end();
-      });
+        return promise;
+      }
+    })
+    .catch(function (err) {
+      t.fail('Got error in teardown ' + err);
+    })
+    .then(function () {
+      t.end();
+    });
   }
 });
 
@@ -50,7 +60,7 @@ function failedRequest(t, serverPort, catchHandler) {
     pskIdentifyField: pskId,
     psk: pskKey,
     suggestedTCPTimeout: 10000,
-    connectionType: thaliMobile.connectionTypes.TCP_NATIVE
+    connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
   };
   thaliReplicationPeerAction =
     new ThaliReplicationPeerAction(notificationForUs,
@@ -186,8 +196,14 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
     }).on('complete', function () {
       // Give sequence updater time to run before killing everything
       setTimeout(function () {
-        thaliPeerReplicationAction && thaliPeerReplicationAction.kill();
-        resolve();
+        Promise.resolve()
+        .then(function () {
+          if (thaliPeerReplicationAction) {
+            thaliPeerReplicationAction.kill();
+            return thaliPeerReplicationAction.waitUntilKilled();
+          }
+        })
+        .then(resolve);
       }, ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds);
     }).on ('error', function (err) {
       reject('got error ' + err);
@@ -211,7 +227,7 @@ test('Make sure docs replicate', function (t) {
           pskIdentifyField: pskId,
           psk: pskKey,
           suggestedTCPTimeout: 10000,
-          connectionType: thaliMobile.connectionTypes.TCP_NATIVE
+          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
         };
         var promises = [];
         thaliReplicationPeerAction =
@@ -255,7 +271,7 @@ test('Do nothing and make sure we time out', function (t) {
       pskIdentifyField: pskId,
       psk: pskKey,
       suggestedTCPTimeout: 10000,
-      connectionType: thaliMobile.connectionTypes.TCP_NATIVE
+      connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
     };
     // Using a different directory really shouldn't make any difference
     // to this particular test but I'm being paranoid
@@ -312,7 +328,7 @@ test('Do something and make sure we time out', function (t) {
           pskIdentifyField: pskId,
           psk: pskKey,
           suggestedTCPTimeout: 10000,
-          connectionType: thaliMobile.connectionTypes.TCP_NATIVE
+          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
         };
         thaliReplicationPeerAction =
           new ThaliReplicationPeerAction(notificationForUs,
@@ -384,7 +400,7 @@ test('Start replicating and then catch error when server goes', function (t) {
           pskIdentifyField: pskId,
           psk: pskKey,
           suggestedTCPTimeout: 10000,
-          connectionType: thaliMobile.connectionTypes.TCP_NATIVE
+          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
         };
         thaliReplicationPeerAction =
           new ThaliReplicationPeerAction(notificationForUs,
