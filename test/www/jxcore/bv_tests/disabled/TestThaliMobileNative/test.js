@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('../../../../lib/thaliTape');
+var tape = require('../../../lib/thaliTape');
 if (!tape.coordinated) {
   return;
 }
@@ -11,11 +11,11 @@ var net = require('net');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var logger = require('thali/thaliLogger')('testThaliMobileNativeComplex');
 
-var testUtils = require('../../../../lib/testUtils');
+var testUtils = require('../../../lib/testUtils');
 
-var QuitSignal  = require('../QuitSignal');
-var ServerRound = require('../ServerRound');
-var ClientRound = require('../ClientRound');
+var QuitSignal  = require('./QuitSignal');
+var ServerRound = require('./ServerRound');
+var ClientRound = require('./ClientRound');
 
 
 var serverToBeClosed;
