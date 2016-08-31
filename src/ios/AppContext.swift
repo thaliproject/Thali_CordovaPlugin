@@ -213,11 +213,11 @@ extension PeerAvailability {
         #if TEST
             // We use background queue because CI tests use main_queue synchronously
             // Otherwise we won't be able to get centralManager state.
-            let centralManagerDispathQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)
+            let centralManagerDispatchQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)
         #else
-            let centralManagerDispathQueue = nil
+            let centralManagerDispatchQueue = nil
         #endif
-        bluetoothManager = CBCentralManager(delegate: self, queue: centralManagerDispathQueue)
+        bluetoothManager = CBCentralManager(delegate: self, queue: centralManagerDispatchQueue)
 
     }
 
