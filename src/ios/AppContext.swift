@@ -138,7 +138,7 @@ public typealias ClientConnectCallback = (String, String) -> Void
 
         let bssid = ((wifiState == .on) && wifiConnected)
             ? networkReachability.BSSID()
-            : "null"
+            : NSNull()
 
         let networkStatus = [
             NetworkStatusParameters.wifi.rawValue                : wifiState.rawValue,
