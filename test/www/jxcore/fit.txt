@@ -1,0 +1,279 @@
+2016-08-31T21:24:49.090Z - info: Require 3 ios devices
+
+2016-08-31T21:24:49.092Z - info: Require 0 android devices
+
+2016-08-31T21:24:49.097Z - info: listening on *:3000
+
+[36mUnit Test app is loaded
+[39m
+[36mDEBUG thaliMobileNativeWrapper: Method peerAvailabilityChanged registered to native
+[39m
+[33mUnit Test app is loaded
+[39m
+[36mDEBUG thaliMobileNativeWrapper: Method discoveryAdvertisingStateUpdateNonTCP registered to native
+[39m
+[36mDEBUG thaliMobileNativeWrapper: networkChanged: {"wifi":"on","bluetooth":"on","bluetoothLowEnergy":"doNotCare","cellular":"doNotCare"}
+[39m
+[36mDEBUG thaliMobileNativeWrapper: Method networkChanged registered to native
+[39m
+[36mDEBUG thaliMobileNativeWrapper: Method incomingConnectionToPortNumberFailed registered to native
+[39m
+[36mMy device name is: bb068960-63f6-4740-bdb1-ea0de698403f
+[39m
+[36mWARN testUtils: myNameCallback not set!
+[39m
+[33mDEBUG thaliMobileNativeWrapper: Method peerAvailabilityChanged registered to native
+[39m
+[33mDEBUG thaliMobileNativeWrapper: Method discoveryAdvertisingStateUpdateNonTCP registered to native
+DEBUG thaliMobileNativeWrapper: networkChanged: {"wifi":"on","bluetooth":"on","bluetoothLowEnergy":"doNotCare","cellular":"doNotCare"}
+DEBUG thaliMobileNativeWrapper: Method networkChanged registered to native
+DEBUG thaliMobileNativeWrapper: Method incomingConnectionToPortNumberFailed registered to native
+My device name is: 9d235d81-d163-4fd7-9fb8-6fa4c6e0056e
+WARN testUtils: myNameCallback not set!
+[39m
+[32mUnit Test app is loaded
+[39m
+[32mDEBUG thaliMobileNativeWrapper: Method peerAvailabilityChanged registered to native
+[39m
+[32mDEBUG thaliMobileNativeWrapper: Method discoveryAdvertisingStateUpdateNonTCP registered to native
+DEBUG thaliMobileNativeWrapper: networkChanged: {"wifi":"on","bluetooth":"on","bluetoothLowEnergy":"doNotCare","cellular":"doNotCare"}
+[39m
+[32mDEBUG thaliMobileNativeWrapper: Method networkChanged registered to native
+[39m
+[32mDEBUG thaliMobileNativeWrapper: Method incomingConnectionToPortNumberFailed registered to native
+[39m
+[32mMy device name is: 056a1c85-5f46-49eb-b16d-3e0f695ed085
+[39m
+[32mWARN testUtils: myNameCallback not set!
+[39m
+[36mTest runner loading file: /Users/hiqouser/workspace/vNext_evabishchevich_848/Thali_CordovaPlugin/test/www/jxcore/bv_tests/disabled/TestThaliMobileNative/complex/newTest.js
+[39m
+[33mTest runner loading file: /Users/hiqouser/workspace/vNext_evabishchevich_848/Thali_CordovaPlugin/test/www/jxcore/bv_tests/disabled/TestThaliMobileNative/complex/newTest.js
+[39m
+[32mTest runner loading file: /Users/hiqouser/workspace/vNext_evabishchevich_848/Thali_CordovaPlugin/test/www/jxcore/bv_tests/disabled/TestThaliMobileNative/complex/newTest.js
+[39m
+[36mConnected to the test server
+[39m
+[33mConnected to the test server
+[39m
+2016-08-31T21:24:50.519Z - debug: Device presented: bb068960-63f6-4740-bdb1-ea0de698403f (0775eb96-0ba0-49c3-b4c3-147deb9b09a5) - ios dummy
+
+2016-08-31T21:24:50.520Z - debug: Device presented: 9d235d81-d163-4fd7-9fb8-6fa4c6e0056e (c246f922-aa86-4b26-9c23-180d6f60c9de) - ios dummy
+
+[32mConnected to the test server
+[39m
+2016-08-31T21:24:50.541Z - debug: Device presented: 056a1c85-5f46-49eb-b16d-3e0f695ed085 (dfbd422d-a2a4-47b7-aad9-1647c824b1de) - ios dummy
+
+2016-08-31T21:24:50.541Z - info: All 3 ios devices are present
+
+2016-08-31T21:24:50.541Z - info: Starting unit test run on 3 ios devices
+
+[36mTAP version 13
+[39m
+[33mTAP version 13
+[39m
+[32mTAP version 13
+[39m
+[36m# setup
+[39m
+[33m# setup
+[39m
+[32m# setup
+[39m
+2016-08-31T21:24:50.548Z - info: Running on ios test: 1. Simple test #0 (updating advertising and parallel data transfer)
+
+[33m# 1. Simple test #0 (updating advertising and parallel data transfer)
+[39m
+[36m# 1. Simple test #0 (updating advertising and parallel data transfer)
+[39m
+[32m# 1. Simple test #0 (updating advertising and parallel data transfer)
+[39m
+[36mDEBUG thaliMobileNativeWrapper: discoveryAdvertisingStateUpdateNonTCP: {"discoveryActive":false,"advertisingActive":true}
+[39m
+[33mDEBUG thaliMobileNativeWrapper: discoveryAdvertisingStateUpdateNonTCP: {"discoveryActive":false,"advertisingActive":true}
+[39m
+[32mDEBUG thaliMobileNativeWrapper: discoveryAdvertisingStateUpdateNonTCP: {"discoveryActive":false,"advertisingActive":true}
+[39m
+[33mDEBUG thaliMobileNativeWrapper: discoveryAdvertisingStateUpdateNonTCP: {"discoveryActive":true,"advertisingActive":true}
+[39m
+[36mDEBUG thaliMobileNativeWrapper: discoveryAdvertisingStateUpdateNonTCP: {"discoveryActive":true,"advertisingActive":true}
+[39m
+[33mDEBUG ServerRound: round 0 started
+[39m
+[36mDEBUG ServerRound: round 0 started
+[39m
+[32mDEBUG thaliMobileNativeWrapper: discoveryAdvertisingStateUpdateNonTCP: {"discoveryActive":true,"advertisingActive":true}
+[39m
+[32mDEBUG ServerRound: round 0 started
+[39m
+[36mDEBUG ClientRound: connecting to peer, peerIdentifier: urn:uuid:8e48306b-e56b-4df4-bbab-7ce6f224e9f1
+[39m
+[33mDEBUG ClientRound: connecting to peer, peerIdentifier: urn:uuid:9b43b30c-4747-4d2f-981b-9c497df6380d
+[39m
+[32mDEBUG ClientRound: connecting to peer, peerIdentifier: urn:uuid:8e48306b-e56b-4df4-bbab-7ce6f224e9f1
+[39m
+[36mDEBUG ClientRound: connecting to peer, peerIdentifier: urn:uuid:44852c2e-e0ac-441a-91fb-2b0e66d446e9
+[39m
+[33mDEBUG ClientRound: connecting to peer, peerIdentifier: urn:uuid:44852c2e-e0ac-441a-91fb-2b0e66d446e9
+[39m
+[32mDEBUG ClientRound: connecting to peer, peerIdentifier: urn:uuid:9b43b30c-4747-4d2f-981b-9c497df6380d
+[39m
+[36mDEBUG ServerRound: new connection
+[39m
+[33mDEBUG ServerRound: new connection
+[39m
+[33mDEBUG ServerRound: new connection
+DEBUG wifiBasedNativeMock: proxy socket connected
+DEBUG wifiBasedNativeMock: proxy socket connected
+[39m
+[36mDEBUG wifiBasedNativeMock: proxy socket connected
+DEBUG ServerRound: new connection
+DEBUG wifiBasedNativeMock: proxy socket connected
+[39m
+[32mDEBUG ServerRound: new connection
+DEBUG ServerRound: new connection
+DEBUG wifiBasedNativeMock: proxy socket connected
+DEBUG wifiBasedNativeMock: proxy socket connected
+[39m
+[36mDEBUG ClientRound: peer is connected, peerIdentifier: urn:uuid:8e48306b-e56b-4df4-bbab-7ce6f224e9f1, connection: {"listeningPort":64761,"clientPort":0,"serverPort":0}
+[39m
+[36mDEBUG ClientRound: peer is connected, peerIdentifier: urn:uuid:44852c2e-e0ac-441a-91fb-2b0e66d446e9, connection: {"listeningPort":64766,"clientPort":0,"serverPort":0}
+[39m
+[36mDEBUG ClientRound: sending message to peer, our uuid: 0775eb96-0ba0-49c3-b4c3-147deb9b09a5
+[39m
+[36mDEBUG ClientRound: sending message to peer, our uuid: 0775eb96-0ba0-49c3-b4c3-147deb9b09a5
+[39m
+[36mDEBUG ClientRound: reading peer response
+[39m
+[32mDEBUG ClientRound: peer is connected, peerIdentifier: urn:uuid:8e48306b-e56b-4df4-bbab-7ce6f224e9f1, connection: {"listeningPort":64765,"clientPort":0,"serverPort":0}
+[39m
+[36mDEBUG ClientRound: reading peer response
+[39m
+[33mDEBUG ClientRound: peer is connected, peerIdentifier: urn:uuid:9b43b30c-4747-4d2f-981b-9c497df6380d, connection: {"listeningPort":64762,"clientPort":0,"serverPort":0}
+[39m
+[32mDEBUG ClientRound: peer is connected, peerIdentifier: urn:uuid:9b43b30c-4747-4d2f-981b-9c497df6380d, connection: {"listeningPort":64773,"clientPort":0,"serverPort":0}
+[39m
+[33mDEBUG ClientRound: peer is connected, peerIdentifier: urn:uuid:44852c2e-e0ac-441a-91fb-2b0e66d446e9, connection: {"listeningPort":64767,"clientPort":0,"serverPort":0}
+[39m
+[32mDEBUG ClientRound: sending message to peer, our uuid: dfbd422d-a2a4-47b7-aad9-1647c824b1de
+[39m
+[33mDEBUG ClientRound: sending message to peer, our uuid: c246f922-aa86-4b26-9c23-180d6f60c9de
+[39m
+[32mDEBUG ClientRound: sending message to peer, our uuid: dfbd422d-a2a4-47b7-aad9-1647c824b1de
+[39m
+[33mDEBUG ClientRound: reading peer response
+[39m
+[32mDEBUG ClientRound: reading peer response
+[39m
+[32mDEBUG ClientRound: reading peer response
+[39m
+[33mDEBUG ServerRound: received message from uuid: 0775eb96-0ba0-49c3-b4c3-147deb9b09a5
+[39m
+[33mDEBUG ServerRound: sending response code: 2 to uuid: 0775eb96-0ba0-49c3-b4c3-147deb9b09a5
+[39m
+[33mDEBUG ClientRound: sending message to peer, our uuid: c246f922-aa86-4b26-9c23-180d6f60c9de
+[39m
+[32mDEBUG ServerRound: received message from uuid: 0775eb96-0ba0-49c3-b4c3-147deb9b09a5
+[39m
+[32mDEBUG ServerRound: sending response code: 2 to uuid: 0775eb96-0ba0-49c3-b4c3-147deb9b09a5
+[39m
+[36mDEBUG ServerRound: received message from uuid: dfbd422d-a2a4-47b7-aad9-1647c824b1de
+[39m
+[36mDEBUG ServerRound: sending response code: 2 to uuid: dfbd422d-a2a4-47b7-aad9-1647c824b1de
+[39m
+[33mDEBUG ClientRound: reading peer response
+[39m
+[33mDEBUG ServerRound: Message written, connection.end
+[39m
+[32mDEBUG ServerRound: Message written, connection.end
+[39m
+[36mDEBUG ServerRound: Message written, connection.end
+[39m
+[32mDEBUG ActiveConnections: connection.end
+[39m
+[33mDEBUG ActiveConnections: connection.end
+[39m
+[33mDEBUG ServerRound: received message from uuid: dfbd422d-a2a4-47b7-aad9-1647c824b1de
+[39m
+[33mDEBUG ServerRound: sending response code: 2 to uuid: dfbd422d-a2a4-47b7-aad9-1647c824b1de
+[39m
+[33mDEBUG ServerRound: Message written, connection.end
+[39m
+[32mDEBUG ServerRound: received message from uuid: c246f922-aa86-4b26-9c23-180d6f60c9de
+[39m
+[32mDEBUG ServerRound: sending response code: 2 to uuid: c246f922-aa86-4b26-9c23-180d6f60c9de
+[39m
+[33mDEBUG ActiveConnections: connection.end
+[39m
+[33mDEBUG ServerRound: finished, stopping myself
+[39m
+[36mDEBUG ActiveConnections: connection.end
+[39m
+[36mDEBUG ServerRound: received message from uuid: c246f922-aa86-4b26-9c23-180d6f60c9de
+[39m
+[36mDEBUG ServerRound: sending response code: 2 to uuid: c246f922-aa86-4b26-9c23-180d6f60c9de
+[39m
+[36mDEBUG ClientRound: received peer response with code: 2
+[39m
+[36mDEBUG ActiveConnections: connection.end
+[39m
+[32mDEBUG ServerRound: Message written, connection.end
+[39m
+[36mDEBUG ServerRound: Message written, connection.end
+[39m
+[32mDEBUG ClientRound: received peer response with code: 2
+[39m
+[32mDEBUG ActiveConnections: connection.end
+[39m
+[36mDEBUG ActiveConnections: connection.end
+[39m
+[36mDEBUG ServerRound: finished, stopping myself
+[39m
+[32mDEBUG ActiveConnections: connection.end
+[39m
+[32mDEBUG ServerRound: finished, stopping myself
+[39m
+[33mDEBUG ClientRound: received peer response with code: 2
+[39m
+[33mDEBUG ActiveConnections: connection.end
+[39m
+[33mDEBUG ClientRound: received peer response with code: 2
+[39m
+[33mDEBUG ActiveConnections: connection.end
+[39m
+[33mDEBUG ClientRound: finished, stopping myself
+[39m
+[33mok 1 We made it through round one in simple test
+[39m
+[33m# teardown
+[39m
+[32mERROR ActiveConnections: Error: connection timeout
+[39m
+[36mERROR ActiveConnections: Error: connection timeout
+DEBUG ActiveConnections: connection.destroy
+[39m
+[32mDEBUG ActiveConnections: connection.destroy
+ERROR ClientRound: Error: connection timeout
+[39m
+[36mERROR ClientRound: Error: connection timeout
+[39m
+[36mDEBUG ClientRound: connecting to peer, peerIdentifier: urn:uuid:44852c2e-e0ac-441a-91fb-2b0e66d446e9
+[39m
+[32mDEBUG ClientRound: connecting to peer, peerIdentifier: urn:uuid:8e48306b-e56b-4df4-bbab-7ce6f224e9f1
+[39m
+[33mDEBUG wifiBasedNativeMock: proxy socket connected
+[39m
+[32mDEBUG wifiBasedNativeMock: proxy socket connected
+[39m
+[36mDEBUG ClientRound: peer is connected, peerIdentifier: urn:uuid:44852c2e-e0ac-441a-91fb-2b0e66d446e9, connection: {"listeningPort":64786,"clientPort":0,"serverPort":0}
+[39m
+[32mDEBUG ClientRound: peer is connected, peerIdentifier: urn:uuid:8e48306b-e56b-4df4-bbab-7ce6f224e9f1, connection: {"listeningPort":64788,"clientPort":0,"serverPort":0}
+[39m
+[32mDEBUG ClientRound: sending message to peer, our uuid: dfbd422d-a2a4-47b7-aad9-1647c824b1de
+[39m
+[36mDEBUG ClientRound: sending message to peer, our uuid: 0775eb96-0ba0-49c3-b4c3-147deb9b09a5
+[39m
+[36mDEBUG ClientRound: reading peer response
+[39m
+[32mDEBUG ClientRound: reading peer response
+[39m
