@@ -161,13 +161,14 @@ extension PeerAvailability {
             }
         }
 
-        let wifiEnabled = NetworkReachability().isWiFiEnabled()
-        let wifiConnected = NetworkReachability().isWiFiConnected()
+        let networkReachability = NetworkReachability()
+        let wifiEnabled = networkReachability.isWiFiEnabled()
+        let wifiConnected = networkReachability.isWiFiConnected()
 
         wifiState = wifiEnabled ? .on : .off
 
         let bssid = ((wifiState == .on) && wifiConnected)
-            ? NetworkReachability().BSSID()
+            ? networkReachability.BSSID()
             : "null"
 
         let networkStatus = [
