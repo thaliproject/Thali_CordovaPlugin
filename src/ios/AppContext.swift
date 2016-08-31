@@ -113,8 +113,8 @@ public typealias ClientConnectCallback = (String, String) -> Void
         var wifiState = RadioState.unavailable
         let cellularState = RadioState.doNotCare
 
-        if nil != bluetoothManager {
-            switch bluetoothManager!.state {
+        if let bluetoothManager = bluetoothManager {
+            switch bluetoothManager.state {
             case .PoweredOn:
                 bluetoothState = .on
                 bluetoothLowEnergyState = .on
