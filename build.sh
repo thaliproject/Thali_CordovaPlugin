@@ -1,6 +1,6 @@
 #!/bin/sh
 
-### START - JXcore Test Server --------..........................
+### START - JXcore Test Server --------....................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -18,8 +18,7 @@ LOG() {
 
 
 ERROR_ABORT() {
-  if [[ $? != 0 ]]
-  then
+  if [[ $? != 0 ]]; then
     LOG $RED_COLOR "compilation aborted\n"
     exit -1
   fi
@@ -31,17 +30,16 @@ ERROR_ABORT() {
 # files per process, which is 256. Try to boost it as workaround.
 ulimit -n 1024;ERROR_ABORT
 
-PROJECT_ROOT=$(pwd)
+WORKING_DIR=$(pwd)
 
 # A hack to workaround an issue where the install scripts assume that the
 # folder of the Thali Cordova plugin is called exactly Thali_CordovaPlugin,
 # but this isn't always the case in the CI.
 # https://github.com/thaliproject/Thali_CordovaPlugin/issues/218
-THALI_DIRECTORY="../Thali_CordovaPlugin"
-if [ ! -d "$THALI_DIRECTORY" ]
-then
-  cp -R . $THALI_DIRECTORY;ERROR_ABORT
-  cd $THALI_DIRECTORY;ERROR_ABORT
+THALI_PLUGIN_DIR="${WORKING_DIR}/../Thali_CordovaPlugin"
+if [ ! -d "$THALI_PLUGIN_DIR" ]; then
+  cp -R . $THALI_PLUGIN_DIR;ERROR_ABORT
+  cd $THALI_PLUGIN_DIR;ERROR_ABORT
 fi
 
 # Check the existence of the script that in CI gives the right test server
@@ -57,21 +55,20 @@ cordova -v;ERROR_ABORT
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
-#jx npm test;ERROR_ABORT
-#jx npm run test-meta;ERROR_ABORT
-#jx npm run test-coordinated;ERROR_ABORT
+# jx npm test;ERROR_ABORT
+# jx npm run test-meta;ERROR_ABORT
+# jx npm run test-coordinated;ERROR_ABORT
 
 # Verify that docs can be generated
-#cd $PROJECT_ROOT/thali/;ERROR_ABORT
+#cd $WORKING_DIR/thali/;ERROR_ABORT
 #jx npm run createPublicDocs;ERROR_ABORT
 #jx npm run createInternalDocs;ERROR_ABORT
 
 # Make sure we are back in the project root folder
 # after the test execution
-cd $PROJECT_ROOT;ERROR_ABORT
+cd $WORKING_DIR;ERROR_ABORT
 
-if [ $RUN_IN_CI == 0 ]
-then
+if [ $RUN_IN_CI == 0 ]; then
   SERVER_ADDRESS=$(CIGIVEMEMYIP.sh)
 else
   # Passing an empty value as the server address means that the address
@@ -90,8 +87,12 @@ TEST_TYPE="UnitTest_app.js"
 # intermediary node.js script to fix this but for now we'll just hack it.
 thali/install/setUpTests.sh $TEST_TYPE $SERVER_ADDRESS;ERROR_ABORT
 
-if [ $RUN_IN_CI == 0 ]
-then
+if [ $RUN_IN_CI == 0 ]; then
+
+  # Make sure we are back in the project root folder
+  # after the setting up the tests
+  cd $WORKING_DIR;ERROR_ABORT
+
   # Remove the node_modules in the CI environment, because the coordination
   # server may have different OS and CPU architecture than the build server
   # so modules need to be installed there separately (this is handled by the CI).
@@ -103,7 +104,6 @@ then
   rm -rf android-release-unsigned.apk;ERROR_ABORT
   cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk;ERROR_ABORT
 
-  # TODO Temporarily disabling ios build
-  #rm -rf ThaliTest.app;ERROR_ABORT
-  #cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
+  rm -rf ThaliTest.app;ERROR_ABORT
+  cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
 fi
