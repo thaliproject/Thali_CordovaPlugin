@@ -297,8 +297,8 @@ class AppContextTests: XCTestCase {
 
 extension AppContextTests : BluetoothHardwareControlObserverProtocol {
 
-    func receivedBluetoothNotification(btNotification: BluetoothHardwareControlNotification) {
-        if btNotification == PowerChangedNotification {
+    func receivedBluetoothManagerNotificationWithName(bluetoothNotificationName: String) {
+        if bluetoothNotificationName == PowerChangedNotification {
             if nil != expectation {
                 expectation!.fulfill()
             }

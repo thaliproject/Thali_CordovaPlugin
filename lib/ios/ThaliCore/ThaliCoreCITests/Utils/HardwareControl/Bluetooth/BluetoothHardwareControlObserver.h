@@ -8,13 +8,11 @@
 
 #import <Foundation/Foundation.h>
 
-typedef enum BluetoothHardwareControlNotification : NSUInteger {
-    PowerChangedNotification,
-} BluetoothHardwareControlNotification;
+extern NSString *const PowerChangedNotification;
 
 @protocol BluetoothHardwareControlObserverProtocol <NSObject>
 
 @required
-- (void)receivedBluetoothNotification: (BluetoothHardwareControlNotification)btNotification;
+- (void)receivedBluetoothManagerNotificationWithName:(NSString *)bluetoothNotificationName;
 
 @end
