@@ -48,8 +48,8 @@ public final class BrowserManager: NSObject {
     }
 
     public func startListeningForAdvertisements() {
-        if let currentBrowser = currentBrowser {
-            currentBrowser.stopListening()
+        if currentBrowser != nil {
+            return
         }
         let browser = Browser(serviceType: serviceType,
                               foundPeer: handleFoundPeer, lostPeer: handleLostPeer)
@@ -64,7 +64,7 @@ public final class BrowserManager: NSObject {
 
     public func connectToPeer(identifier: PeerIdentifier, completion: (UInt16?, ErrorType?) -> Void) {
         return synchronized(self) {
-            //todo check reachability status
+            //todo check reachability status #823
             guard let currentBrowser = self.currentBrowser else {
                 completion(nil, MultiConnectError.StartListeningNotActive)
                 return

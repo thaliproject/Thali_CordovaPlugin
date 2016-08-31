@@ -52,6 +52,7 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
                            timeout: Double = 5, completion: (UInt16?, ErrorType?) -> Void) {
         let virtualSocketBuilder = Builder(session: session, completionHandler: { [weak self] socket, error in
             //todo bind to CocoaAsyncSocket and call completion block
+            //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
             guard let socket = socket else {
                 completion(nil, error)
                 return
