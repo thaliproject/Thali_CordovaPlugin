@@ -42,8 +42,6 @@ enum NetworkStatusParameters: String {
     case wifi = "wifi"
     case cellular = "cellular"
     case bssid = "bssid"
-
-    static let allValues = [bluetooth, bluetoothLowEnergy, wifi, cellular, bssid]
 }
 
 public typealias ClientConnectCallback = (String, String) -> Void
