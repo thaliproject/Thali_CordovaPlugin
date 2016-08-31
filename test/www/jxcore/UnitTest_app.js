@@ -55,7 +55,7 @@ ThaliMobile.getNetworkStatus()
         console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
       }
 
-      global.Mobile('GetDeviceName').callNative(function (name) {
+      Mobile('GetDeviceName').callNative(function (name) {
         console.log('My device name is: %s', name);
         testUtils.setName(name);
         // The setImmediate is to avoid this issue:
