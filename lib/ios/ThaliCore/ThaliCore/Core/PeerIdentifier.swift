@@ -70,19 +70,5 @@ extension MCPeerID {
 }
 
 public func == (lhs: PeerIdentifier, rhs: PeerIdentifier) -> Bool {
-    let lhsString = lhs.stringValue
-    let rhsString = rhs.stringValue
-    guard lhsString.characters.count == rhsString.characters.count else {
-        return false
-    }
-    var lhsIndex = lhsString.characters.startIndex
-    var rhsIndex = lhsString.characters.startIndex
-    while lhsIndex < lhsString.endIndex && rhsIndex < rhsString.endIndex {
-        guard lhsString.characters[lhsIndex] == rhsString.characters[rhsIndex] else {
-            return false
-        }
-        lhsIndex = lhsIndex.successor()
-        rhsIndex = rhsIndex.successor()
-    }
-    return true
+    return lhs.stringValue.compare(rhs.stringValue, options: .LiteralSearch) == .OrderedSame
 }
