@@ -59,6 +59,9 @@ var test = tape({
 });
 
 var TEST_TIMEOUT = 1 * 60 * 1000;
+var CONNECT_TIMEOUT = 5 * 1000;
+var CONNECT_RETRY_TIMEOUT = 5.5 * 1000;
+var CONNECT_RETRIES = 10;
 
 test('Simple test #0 (updating advertising and parallel data transfer)', function (t) {
   var quitSignal = new QuitSignal();
@@ -77,8 +80,14 @@ test('Simple test #0 (updating advertising and parallel data transfer)', functio
   // and all connections will be properly closed.
   serverToBeClosed = server;
 
-  var serverRound = new ServerRound(t, 0, server, quitSignal);
-  var clientRound = new ClientRound(t, 0, quitSignal);
+  var serverRound = new ServerRound(t, 0, server, quitSignal, {
+    connectTimeout: CONNECT_TIMEOUT
+  });
+  var clientRound = new ClientRound(t, 0, quitSignal, {
+    connectRetries: CONNECT_RETRIES,
+    connectRetryTimeout: CONNECT_RETRY_TIMEOUT,
+    connectTimeout: CONNECT_TIMEOUT
+  });
 
   serverRound.start()
   .then(function () {
@@ -86,10 +95,6 @@ test('Simple test #0 (updating advertising and parallel data transfer)', functio
       serverRound.waitUntilStopped(),
       clientRound.waitUntilStopped()
     ]);
-  })
-  .then(function () {
-    // Just to be sure that no one can create new requests.
-    quitSignal.raise();
   })
   .catch(function (error) {
     t.fail('Got error: ' + error);

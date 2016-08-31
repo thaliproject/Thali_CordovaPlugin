@@ -25,7 +25,7 @@ function ClientRound(tapeTest, roundNumber, quitSignal, options) {
   this.options = extend({}, ClientRound.defaults, options);
 
   this._activeConnections = new ActiveConnections(this._quitSignal, {
-    timeout: this.options.connectionTimeout
+    timeout: this.options.connectTimeout
   });
 
   this.bind();
@@ -34,7 +34,7 @@ function ClientRound(tapeTest, roundNumber, quitSignal, options) {
 ClientRound.defaults = {
   connectRetries: 10,
   connectRetryTimeout: 3500,
-  connectionTimeout: 3000,
+  connectTimeout: 3000,
 }
 
 ClientRound.states = {
@@ -133,6 +133,9 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
       logger.debug('finished, stopping myself');
       self.stop();
     }
+  })
+  .catch(function (error) {
+    logger.error(error.toString());
   });
 }
 

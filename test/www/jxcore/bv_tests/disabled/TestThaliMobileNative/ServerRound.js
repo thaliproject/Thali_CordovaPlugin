@@ -171,7 +171,7 @@ ServerRound.prototype._newConnection = function (connection) {
     data.reject = reject;
 
     var requestPeerId;
-    var responseCode;
+    var responseMessage;
 
     logger.debug('new connection');
 
@@ -183,8 +183,8 @@ ServerRound.prototype._newConnection = function (connection) {
         requestMessage.uuid
       );
 
-      responseCode = self._validateMessage(requestMessage);
-      var responseMessage = new Message(tape.uuid, responseCode);
+      var responseCode = self._validateMessage(requestMessage);
+      responseMessage = new Message(tape.uuid, responseCode);
 
       logger.debug(
         'sending response code: %s to uuid: %s',
@@ -206,7 +206,7 @@ ServerRound.prototype._newConnection = function (connection) {
     })
 
     .then(function () {
-      switch (responseCode) {
+      switch (responseMessage.code) {
         case Message.codes.WRONG_SYNTAX: // Usually connection died
         case Message.codes.WRONG_TEST:
         case Message.codes.WRONG_ME:
@@ -228,6 +228,9 @@ ServerRound.prototype._newConnection = function (connection) {
           break;
         }
       }
+    })
+    .catch(function (error) {
+      reject(error);
     });
   });
   data.connection = connection;
@@ -247,6 +250,9 @@ ServerRound.prototype._newConnection = function (connection) {
       logger.debug('finished, stopping myself');
       self.stop();
     }
+  })
+  .catch(function (error) {
+    logger.error(error.toString());
   });
 }
 
