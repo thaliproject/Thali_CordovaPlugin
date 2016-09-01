@@ -17,12 +17,13 @@ var ServerRound = require('./ServerRound');
 var ClientRound = require('./ClientRound');
 
 
-var autostop = {
-  serverQuitSignal: null,
-  serverRound: null
-};
+var autostop = {};
 var test = tape({
   setup: function (t) {
+    autostop = {
+      serverQuitSignal: null,
+      serverRound: null
+    };
     t.end();
   },
   teardown: function (t) {
