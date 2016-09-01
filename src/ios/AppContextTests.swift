@@ -72,4 +72,33 @@ class AppContextTests: XCTestCase {
         } catch _ {}
         XCTAssertEqual(error, AppContextError.BadParameters)
     }
+
+    func testErrorDescription() {
+        enum StringConvertibleError: ErrorType, CustomStringConvertible {
+            case TestError
+
+            var description: String {
+                return "test_description"
+            }
+        }
+        XCTAssertEqual(StringConvertibleError.TestError.description, errorDescription(StringConvertibleError.TestError))
+
+        let unknownError = AppContextError.UnknownError
+        XCTAssertEqual((unknownError as NSError).localizedDescription, errorDescription(unknownError))
+    }
+
+    func testJsonValue() {
+        var jsonDict: [String : AnyObject] = ["number" : 4.2]
+        var jsonString = "{\"number\":4.2}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+        jsonDict = ["string" : "42"]
+        jsonString = "{\"string\":\"42\"}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+        jsonDict = ["null" : NSNull()]
+        jsonString = "{\"null\":null}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+        jsonDict = ["bool" : true]
+        jsonString = "{\"bool\":true}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+    }
 }

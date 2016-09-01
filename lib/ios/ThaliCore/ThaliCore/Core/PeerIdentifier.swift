@@ -13,6 +13,15 @@ public enum PeerIdentifierError: String, ErrorType {
     case IllegalPeerID
 }
 
+extension PeerIdentifierError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .IllegalPeerID:
+            return "Illegal peerID"
+        }
+    }
+}
+
 ///Peer identifier for with generations
 public struct PeerIdentifier: Hashable {
     ///UUID identifier of peer

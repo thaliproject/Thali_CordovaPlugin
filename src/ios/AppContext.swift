@@ -9,7 +9,7 @@
 import Foundation
 import ThaliCore
 
-@objc public enum AppContextError: Int, ErrorType{
+@objc enum AppContextError: Int, ErrorType{
     case BadParameters
     case UnknownError
 }
@@ -188,7 +188,7 @@ import ThaliCore
             }
         }
     }
-    
+
     public func disconnect(parameters: [AnyObject]) throws {
         guard parameters.count >= 1 else {
             throw AppContextError.BadParameters
@@ -256,38 +256,16 @@ extension PeerAvailability {
     }
 }
 
-private func jsonValue(object: AnyObject) -> String {
+func jsonValue(object: AnyObject) -> String {
     guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0)) else {
         return ""
     }
     return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
 }
 
-private func errorDescription(error: ErrorType) -> String {
-    if let error = error as? PeerIdentifierError where error == .IllegalPeerID {
-        return "Illegal peerID"
-    }
-    if let error = error as? MultiConnectError {
-        switch error {
-        case .StartListeningNotActive:
-            return "startListeningForAdvertisements is not active"
-        case .ConnectionFailed:
-            return "Connection could not be established"
-        case .ConnectionTimedOut:
-            return "Connection wait timed out"
-        case .MaxConnectionsReached:
-            return "Max connections reached"
-        case .NoNativeNonTCPSupport:
-            return "No Native Non-TCP Support"
-        case .NoAvailableTCPPorts:
-            return "No available TCP ports"
-        case .RadioTurnedOffMultiConnectError:
-            return "Radio Turned Off"
-        case .UnspecifiedRadioError:
-            return "Unspecified Error with Radio infrastructure"
-        case .IllegalPeerID:
-            return "Illegal peerID"
-        }
+func errorDescription(error: ErrorType) -> String {
+    if let stringConvertibleError = error as? CustomStringConvertible {
+        return stringConvertibleError.description
     }
     return (error as NSError).localizedDescription
 }
