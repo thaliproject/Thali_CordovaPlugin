@@ -9,7 +9,7 @@ var express = require('express');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliNotificationServer = require('thali/NextGeneration/notification/thaliNotificationServer');
 var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-var Promise = require('lie');
+var Promise = require('thali/NextGeneration/thaliPromise');
 var ThaliPullReplicationFromNotification = require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
 
 var thaliNotificationServer = null;

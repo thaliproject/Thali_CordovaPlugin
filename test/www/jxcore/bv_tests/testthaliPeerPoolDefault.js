@@ -10,7 +10,7 @@ var Agent = require('http').Agent;
 var testUtils = require('../lib/testUtils');
 var express = require('express');
 var https = require('https');
-var Promise = require('lie');
+var Promise = require('thali/NextGeneration/thaliPromise');
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');

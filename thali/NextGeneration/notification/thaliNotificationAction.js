@@ -1,6 +1,6 @@
 'use strict';
 var inherits = require('util').inherits;
-var Promise = require('lie');
+var Promise = require('../thaliPromise');
 var assert = require('assert');
 var https = require('https');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');

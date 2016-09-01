@@ -4,7 +4,7 @@ var logger = require('../../thaliLogger')('createPeerListener');
 var multiplex = require('multiplex');
 var net = require('net');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
-var Promise = require('lie');
+var Promise = require('../thaliPromise');
 var assert = require('assert');
 var thaliConfig = require('./../thaliConfig');
 

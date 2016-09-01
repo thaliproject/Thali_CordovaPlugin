@@ -3,7 +3,7 @@
 'use strict';
 
 var bodyParser = require('body-parser');
-var Promise = require('lie');
+var Promise = require('../thaliPromise');
 var IdentityExchange = require('./identityexchange');
 
 module.exports = function (app, replicationManager, identityExchange) {

@@ -292,7 +292,7 @@ installPackage('fs-extra-promise', fsExtraPromiseVersion,
       if (error) {
         process.exit(-1);
       }
-      Promise = require('lie');
+      Promise = require('thali/NextGeneration/thaliPromise');
       installAll();
     });
   });

@@ -21,6 +21,7 @@
     "js-extend": "1.0.1"
   },
   "devDependencies": {
+    "bluebird": "^3.4.5",
     "jsdoc": "3.3.3"
   },
   "thaliInstall": {

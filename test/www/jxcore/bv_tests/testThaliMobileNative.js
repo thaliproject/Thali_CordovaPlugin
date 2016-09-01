@@ -5,7 +5,7 @@ var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var logger = require('thali/thaliLogger')('testThaliMobileNative');
-var Promise = require('lie');
+var Promise = require('thali/NextGeneration/thaliPromise');
 var assert = require('assert');
 
 // jshint -W064

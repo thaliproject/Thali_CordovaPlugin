@@ -14,7 +14,7 @@ var logger = require('../thaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var https = require('https');
 
-var Promise = require('lie');
+var Promise = require('./thaliPromise');
 var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
 

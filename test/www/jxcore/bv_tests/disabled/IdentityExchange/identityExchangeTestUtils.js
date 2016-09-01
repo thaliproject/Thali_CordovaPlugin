@@ -2,7 +2,7 @@
 
 var expressPouchDB = require('express-pouchdb');
 var express = require('express');
-var Promise = require('lie');
+var Promise = require('thali/NextGeneration/thaliPromise');
 var crypto = require('crypto');
 var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
 var testUtils = require('../lib/testUtils');

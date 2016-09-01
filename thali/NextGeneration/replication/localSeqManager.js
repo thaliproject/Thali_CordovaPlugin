@@ -1,7 +1,7 @@
 'use strict';
 
 var logger = require('../../thaliLogger')('localSeqManager');
-var Promise = require('lie');
+var Promise = require('../thaliPromise');
 var assert = require('assert');
 var urlSafeBase64 = require('urlsafe-base64');
 var thaliConfig = require('../thaliConfig');

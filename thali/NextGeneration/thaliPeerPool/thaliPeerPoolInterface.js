@@ -2,7 +2,7 @@
 
 var PeerAction = require('./thaliPeerAction');
 var assert = require('assert');
-var Promise = require('lie');
+var Promise = require('../thaliPromise');
 
 /** @module thaliPeerPoolInterface */
 

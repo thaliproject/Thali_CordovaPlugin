@@ -1,6 +1,6 @@
 'use strict';
 
-var Promise = require('lie');
+var Promise = require('./thaliPromise');
 var PromiseQueue = require('./promiseQueue');
 var EventEmitter = require('events').EventEmitter;
 var logger = require('../thaliLogger')('thaliMobileNativeWrapper');

@@ -2,7 +2,7 @@
 
 var express = require('express');
 var net = require('net');
-var Promise = require('lie');
+var Promise = require('thali/NextGeneration/thaliPromise');
 var sinon = require('sinon');
 var testUtils = require('../lib/testUtils.js');
 
