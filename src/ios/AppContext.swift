@@ -89,15 +89,15 @@ import ThaliCore
         delegate?.context(self, didChangeNetworkStatus: jsonValue([:]))
     }
 
-    private func notifyOnWillEnterBackground() {
+    private func handleWillEnterBackground() {
         delegate?.appWillEnterBackground(with: self)
     }
 
-    private func notifyOnDidEnterForeground() {
+    private func handleDidEnterForeground() {
         delegate?.appDidEnterForeground(with: self)
     }
 
-    private func notifyOnPeersAvailabilityChanged(peers: [PeerAvailability]) {
+    private func handleOnPeersAvailabilityChanged(peers: [PeerAvailability]) {
         let mappedPeers = peers.map {
             $0.dictionaryValue
         }
@@ -136,13 +136,13 @@ import ThaliCore
         advertiserManager = AdvertiserManager(serviceType: serviceType)
         super.init()
         browserManager.peersAvailabilityChanged = { [weak self] peers in
-            self?.notifyOnPeersAvailabilityChanged(peers)
+            self?.handleOnPeersAvailabilityChanged(peers)
         }
         appNotificationsManager.didEnterForegroundHandler = {[weak self] in
-            self?.notifyOnDidEnterForeground()
+            self?.handleDidEnterForeground()
         }
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
-            self?.notifyOnWillEnterBackground()
+            self?.handleWillEnterBackground()
         }
     }
 
