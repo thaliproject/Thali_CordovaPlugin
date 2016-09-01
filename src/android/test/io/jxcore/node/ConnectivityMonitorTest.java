@@ -95,7 +95,6 @@ public class ConnectivityMonitorTest {
 
         // Start monitoring connectivity, Wi-Fi and Bluetooth state changes.
         mConnectivityMonitor.start();
-
         Thread.sleep(3000);
 
         assertThat("Proper state of WIFI is set during the start",
@@ -142,12 +141,12 @@ public class ConnectivityMonitorTest {
         assertThat("Proper state of BT is set when switched on",
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothManager.isBluetoothEnabled()));
 
+        int sizeBeforeBTlistenerRelease = ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size();
         mConnectivityMonitor.stop();
 
-        Thread.sleep(3000);
         assertThat("The BT listener is released",
                 ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
-                is(equalTo(1)));
+                is(equalTo(sizeBeforeBTlistenerRelease - 1)));
 
         Field fWifiStateChangedAndConnectivityActionBroadcastReceiver = mConnectivityMonitor.getClass()
                 .getDeclaredField("mWifiStateChangedAndConnectivityActionBroadcastReceiver");

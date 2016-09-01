@@ -31,13 +31,19 @@ import static org.hamcrest.core.IsNot.not;
 
 public class ConnectionHelperTest {
 
-    public static ConnectionHelper mConnectionHelper;
-    public static JXcoreThaliCallbackMock mJXcoreThaliCallbackMock;
+
     ArrayList<String> outgoingThreadsIds;
     ArrayList<String> incomingThreadsIds;
     ListenerMock mListenerMock;
     InputStreamMock mInputStreamMock;
     OutputStreamMock mOutputStreamMock;
+    Thread checkDiscoveryManagerRunning, checkDiscoveryManagerRunning1,
+            checkDiscoveryManagerNotRunning;
+    public static ConnectionHelper mConnectionHelper;
+    static JXcoreThaliCallbackMock mJXcoreThaliCallbackMock;
+    static long mOperationTimeout;
+    static StartStopOperationHandler mStartStopOperatonHandler;
+    static boolean isBLESupported;
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -45,27 +51,72 @@ public class ConnectionHelperTest {
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         mConnectionHelper = new ConnectionHelper();
-        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
+        isBLESupported =
+                mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
+
+        Field fStartStopOperationHandler = mConnectionHelper.getClass().getDeclaredField("mStartStopOperationHandler");
+        fStartStopOperationHandler.setAccessible(true);
+        mStartStopOperatonHandler = (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
+
+        Field fOperationTimeout = mStartStopOperatonHandler.getClass()
+                .getDeclaredField("OPERATION_TIMEOUT_IN_MILLISECONDS");
+        fOperationTimeout.setAccessible(true);
+        mOperationTimeout = (long) fOperationTimeout.get(mStartStopOperatonHandler);
     }
 
     @Before
     public void setUp() throws Exception {
-        outgoingThreadsIds = new ArrayList<String>();
-        incomingThreadsIds = new ArrayList<String>();
+        mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
+        outgoingThreadsIds = new ArrayList<>();
+        incomingThreadsIds = new ArrayList<>();
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();
+
+        checkDiscoveryManagerRunning = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!mConnectionHelper.getDiscoveryManager().isRunning()) {
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        checkDiscoveryManagerRunning1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!mConnectionHelper.getDiscoveryManager().isRunning()) {
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        checkDiscoveryManagerNotRunning = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (mConnectionHelper.getDiscoveryManager().isRunning()) {
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
     }
 
     @After
     public void tearDown() throws Exception {
         mConnectionHelper.killConnections(true);
-        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
         mConnectionHelper.dispose();
-        mConnectionHelper.getDiscoveryManager().stop();
-        mConnectionHelper.getDiscoveryManager().stopAdvertising();
-        mConnectionHelper.getDiscoveryManager().stopDiscovery();
-        mConnectionHelper.getDiscoveryManager().dispose();
     }
 
     @Test
@@ -103,7 +154,32 @@ public class ConnectionHelperTest {
 
     @Test
     public void testDispose() throws Exception {
+        if (!isBLESupported) {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock),
+                    is(equalTo(true)));
+
+            /* If BLE is not supported, DiscoveryManager won't start anyway, so there is no need
+               to check this. */
+
+        } else {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock),
+                    is(equalTo(true)));
+        }
+
+        checkDiscoveryManagerRunning.start();
+        checkDiscoveryManagerRunning.join();
+
+        /* After 3s mCurrentOperation should be null. This is defined in
+         * StartStopOperationHandler, field OPERATION_TIMEOUT_IN_MILLISECONDS */
+
+        Thread.sleep(mOperationTimeout);
         mConnectionHelper.dispose();
+
+        checkDiscoveryManagerNotRunning.start();
+        checkDiscoveryManagerNotRunning.join();
+        Thread.sleep(mOperationTimeout);
 
         Field fDiscoveryManager = mConnectionHelper.getClass()
                 .getDeclaredField("mDiscoveryManager");
@@ -136,15 +212,24 @@ public class ConnectionHelperTest {
 
         assertThat("CurrentOperation in StartStopOperationHandler is null value",
                 mCurrentOperation, is(nullValue()));
-
-        mDiscoveryManager.dispose();
-        mConnectionManager.dispose();
     }
 
     @Test
     public void testStart() throws Exception {
-        assertThat("Start method returns true",
-                mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        if (!isBLESupported) {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock),
+                    is(equalTo(true)));
+        } else {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock),
+                    is(equalTo(true)));
+
+            checkDiscoveryManagerRunning.start();
+            checkDiscoveryManagerRunning.join();
+        }
+
+        Thread.sleep(mOperationTimeout);
 
         Field fServerPortNumber = mConnectionHelper.getClass()
                 .getDeclaredField("mServerPortNumber");
@@ -168,19 +253,34 @@ public class ConnectionHelperTest {
         assertThat("StartStopOperation handler is not null value",
                 mStartStopOperationHandler, is(notNullValue()));
 
-        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+        if (!isBLESupported) {
             assertThat("DiscoveryManager1 isRunning should return false",
                     mConnectionHelper.getDiscoveryManager().isRunning(), is(false));
+            mConnectionHelper.stop(true, mJXcoreThaliCallbackMock);
         } else {
             assertThat("DiscoveryManager1 isRunning should return true",
                     mConnectionHelper.getDiscoveryManager().isRunning(), is(true));
+            mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
         }
 
-        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
-        mConnectionHelper.dispose();
+        checkDiscoveryManagerNotRunning.start();
+        checkDiscoveryManagerNotRunning.join();
+        Thread.sleep(mOperationTimeout);
 
-        assertThat("Start method returns true",
-                mConnectionHelper.start(-1111, false, mJXcoreThaliCallbackMock), is(equalTo(true)));
+        if (!isBLESupported) {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(-1111, false, mJXcoreThaliCallbackMock),
+                    is(equalTo(true)));
+        } else {
+            assertThat("Start method returns true",
+                    mConnectionHelper.start(-1111, true, mJXcoreThaliCallbackMock),
+                    is(equalTo(true)));
+
+            checkDiscoveryManagerRunning1.start();
+            checkDiscoveryManagerRunning1.join();
+        }
+
+        Thread.sleep(mOperationTimeout);
 
         mServerPortNumber = fServerPortNumber.getInt(mConnectionHelper);
         mPowerUpBleDiscoveryTimer =
@@ -194,7 +294,7 @@ public class ConnectionHelperTest {
         assertThat("StartStopOperation handler is not null value",
                 mStartStopOperationHandler, is(notNullValue()));
 
-        if (!mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported()) {
+        if (!isBLESupported) {
             assertThat("DiscoveryManager isRunning should return false",
                     mConnectionHelper.getDiscoveryManager().isRunning(), is(false));
         } else {
@@ -206,8 +306,26 @@ public class ConnectionHelperTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testStop() throws Exception {
-        mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock);
-        mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        if (!isBLESupported) {
+            mConnectionHelper.start(1111, false, mJXcoreThaliCallbackMock);
+        } else {
+            mConnectionHelper.start(1111, true, mJXcoreThaliCallbackMock);
+
+            checkDiscoveryManagerRunning.start();
+            checkDiscoveryManagerRunning.join();
+        }
+
+        Thread.sleep(mOperationTimeout);
+
+        if (!isBLESupported) {
+            mConnectionHelper.stop(true, mJXcoreThaliCallbackMock);
+        } else {
+            mConnectionHelper.stop(false, mJXcoreThaliCallbackMock);
+        }
+
+        checkDiscoveryManagerNotRunning.start();
+        checkDiscoveryManagerNotRunning.join();
+        Thread.sleep(mOperationTimeout);
 
         Field fStartStopOperationHandler = mConnectionHelper.getClass()
                 .getDeclaredField("mStartStopOperationHandler");
@@ -323,9 +441,6 @@ public class ConnectionHelperTest {
         assertThat("IsRunning returns true", mConnectionHelper.isRunning(), is(true));
         assertThat("IsRunning should not return false", mConnectionHelper.isRunning(),
                 is(not(false)));
-
-        mConnectionManager.dispose();
-        mDiscoveryManager.dispose();
     }
 
     @Test
@@ -659,6 +774,4 @@ public class ConnectionHelperTest {
         thrown.expect(UnsupportedOperationException.class);
         mConnectionHelper.onBluetoothMacAddressResolved("00:11:22:33:44:55");
     }
-
-    //TODO Write tests for onPeerDiscovered and onPeerLost
 }
