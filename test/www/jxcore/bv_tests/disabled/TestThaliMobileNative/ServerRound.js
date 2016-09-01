@@ -24,7 +24,6 @@ function ServerRound(tapeTest, roundNumber, quitSignal, options) {
 
   this._startPromise = null;
   this._validPeerIds = {};
-  this._validPeerIds[roundNumber] = {};
   this._server = net.createServer();
 
   this._state = ServerRound.states.CREATED;
@@ -54,14 +53,17 @@ ServerRound.states = {
 
 ServerRound.prototype.setRoundNumber = function (roundNumber) {
   assert(
-    this._state === ServerRound.states.STOPPED,
+    this._state === ServerRound.states.STOPPED ||
+    this._state === ServerRound.states.STARTED,
     'we should be in stopped state'
   );
+  if (this._state === ServerRound.states.STOPPED) {
+    this._activeConnections.reset();
+  }
   this._state = ServerRound.states.CREATED;
 
-  this._validPeerIds[roundNumber] = {};
+  this._validPeerIds = {};
   this.roundNumber = roundNumber;
-  this._activeConnections.reset();
 }
 
 ServerRound.prototype.bind = function () {
@@ -83,6 +85,7 @@ ServerRound.prototype.unbind = function () {
 
 ServerRound.prototype.start = function () {
   var self = this;
+
   switch (this._state) {
     case ServerRound.states.STARTING: {
       assert(this._startPromise, 'start promise should exist');
@@ -177,8 +180,6 @@ ServerRound.prototype._newConnection = function (connection) {
     return;
   }
 
-  var validPeerIds = this._validPeerIds;
-
   var data = {};
   data.promise = new Promise(function (resolve, reject) {
     data.resolve = resolve;
@@ -231,7 +232,7 @@ ServerRound.prototype._newConnection = function (connection) {
         case Message.codes.SUCCESS: {
           // We can receive here multiple valid peers.
           // We can just ignore this case.
-          validPeerIds[requestPeerId] = true;
+          self._validPeerIds[requestPeerId] = true;
           resolve();
           break;
         }
@@ -255,8 +256,8 @@ ServerRound.prototype._newConnection = function (connection) {
   .then(function () {
     // We can check whether all peers are valid.
     var validPeersCount = 0;
-    for (var peerId in validPeerIds) {
-      if (validPeerIds[peerId]) {
+    for (var peerId in self._validPeerIds) {
+      if (self._validPeerIds[peerId]) {
         validPeersCount ++;
       }
     };
@@ -293,8 +294,8 @@ ServerRound.prototype._validateMessage = function (message) {
     return Message.codes.WRONG_ME;
   }
 
-  if (message.code !== this.roundNumber) {
-    logger.error('this client is from other round');
+  if (message.code > this.roundNumber) {
+    logger.error('this client is from bad round');
     return Message.codes.WRONG_GEN;
   }
 

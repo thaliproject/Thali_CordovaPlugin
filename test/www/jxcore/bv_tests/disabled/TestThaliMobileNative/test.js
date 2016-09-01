@@ -51,7 +51,7 @@ var CONNECT_TIMEOUT = 3 * 1000;
 var CONNECT_RETRY_TIMEOUT = 3.5 * 1000;
 var CONNECT_RETRIES = 10;
 
-test('Very simple test with single round', function (t) {
+test('Simple test with single round', function (t) {
   var serverQuitSignal = new QuitSignal();
   var clientQuitSignal = new QuitSignal();
 
@@ -95,6 +95,58 @@ test('Very simple test with single round', function (t) {
   });
 });
 
-(function () {
-  ;
-}) ();
+test('Complex test with two rounds', function (t) {
+  var serverQuitSignal = new QuitSignal();
+  var clientQuitSignal = new QuitSignal();
+
+  testUtils.testTimeout(t, TEST_TIMEOUT, function () {
+    // serverQuitSignal.raise();
+    clientQuitSignal.raise();
+  });
+
+  var serverRound = new ServerRound(t, 0, serverQuitSignal, {
+    connectTimeout: CONNECT_TIMEOUT
+  });
+  var clientRound = new ClientRound(t, 0, clientQuitSignal, {
+    connectRetries: CONNECT_RETRIES,
+    connectRetryTimeout: CONNECT_RETRY_TIMEOUT,
+    connectTimeout: CONNECT_TIMEOUT
+  });
+
+  autostop.serverQuitSignal = serverQuitSignal;
+  autostop.serverRound = serverRound;
+
+  serverRound.on('finished', function () {
+    // We should have server up and running.
+    // serverRound.stop();
+  });
+  clientRound.on('finished', function () {
+    clientRound.stop();
+  });
+
+  serverRound.start()
+  .then(function () {
+    return Promise.all([
+      // serverRound.waitUntilStopped(),
+      clientRound.waitUntilStopped()
+    ]);
+  })
+  .then(function () {
+    serverRound.setRoundNumber(1);
+    clientRound.setRoundNumber(1);
+    clientRound.bind();
+    return serverRound.start();
+  })
+  .then(function () {
+    return Promise.all([
+      // serverRound.waitUntilStopped(),
+      clientRound.waitUntilStopped()
+    ]);
+  })
+  .catch(function (error) {
+    t.fail('Got error: ' + error);
+  })
+  .then(function () {
+    t.end();
+  });
+});

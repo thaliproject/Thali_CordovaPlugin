@@ -174,7 +174,7 @@ ClientRound.prototype._connectToPeer = function (peer) {
         setTimeout(function () {
           handler(retries);
         }, self.options.connectRetryTimeout);
-      })
+      });
     }
     handler(self.options.connectRetries);
   });
@@ -247,6 +247,11 @@ ClientRound.prototype._processTestMessage = function (connectionData) {
       })
     });
     data.connection = connection;
+  });
+
+  data.promise
+  .catch(function (error) {
+    logger.error(error.toString());
   });
 
   this._activeConnections.add(data);
