@@ -24,10 +24,10 @@ class BrowserManagerTests: XCTestCase {
     func testStopBrowsing() {
         browser.startListeningForAdvertisements()
         XCTAssertNotNil(browser.currentBrowser)
-        XCTAssertTrue(browser.isListening)
+        XCTAssertTrue(browser.listening)
         browser.stopListeningForAdvertisements()
         XCTAssertNil(browser.currentBrowser)
-        XCTAssertFalse(browser.isListening)
+        XCTAssertFalse(browser.listening)
     }
 
     func testStartListeningNotActive() {

@@ -106,7 +106,7 @@ import ThaliCore
 
     private func updateListeningAdvertisingState() {
         let newState = [
-            "discoveryActive" : browserManager.isListening,
+            "discoveryActive" : browserManager.listening,
             "advertisingActive" : advertiserManager.advertising
         ]
         delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))

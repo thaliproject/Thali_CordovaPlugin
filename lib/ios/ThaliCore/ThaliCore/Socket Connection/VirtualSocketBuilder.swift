@@ -21,7 +21,7 @@ class VirtualSocketBuilder {
         self.completionHandler = completionHandler
         self.disconnectedHandler = disconnectedHandler
         session.didReceiveInputStream = didReceive
-        session.sessionStateChangesHandler = sessionStateChanged
+        session.sessionStateDidChangeHandler = sessionStateChanged
     }
 
     private func didReceive(inputStream: NSInputStream, name: String) {}
@@ -56,7 +56,7 @@ class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
             switch state {
             case .Connected:
                 let streamName = NSUUID().UUIDString
-                outputStream = try session.createOutputStream(streamName)
+                outputStream = try session.createOutputStream(withName: streamName)
                 outputStreamName = streamName
             default:
                 break
@@ -76,7 +76,7 @@ class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
             guard session.sessionState == .Connected else {
                 return
             }
-            let outputStream = try session.createOutputStream(name)
+            let outputStream = try session.createOutputStream(withName: name)
             self.outputStream = outputStream
             completionHandler((outputStream, inputStream), nil)
         } catch let error {

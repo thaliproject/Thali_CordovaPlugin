@@ -45,7 +45,7 @@ final class Browser: NSObject {
 
      - returns: Session object for managing multipeer session between devices
      */
-    func invitePeerToConnect(peerIdentifier: PeerIdentifier) throws -> Session {
+    func inviteToConnectPeer(with peerIdentifier: PeerIdentifier) throws -> Session {
         let mcSession = MCSession(peer: browser.myPeerID, securityIdentity: nil, encryptionPreference: .None)
         guard let mcPeer = availablePeers[peerIdentifier] else {
             throw MultiConnectError.IllegalPeerID

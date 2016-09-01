@@ -22,11 +22,9 @@ extension PeerIdentifierError: CustomStringConvertible {
     }
 }
 
-///Peer identifier for with generations
+///Peer identifier with generations
 public struct PeerIdentifier: Hashable {
-    ///UUID identifier of peer
     public let uuid: String
-    ///generation of peer.
     let generation: Int
 
     init() {
@@ -34,7 +32,7 @@ public struct PeerIdentifier: Hashable {
         generation = 0
     }
 
-    private init(uuidIdentifier: String, generation: Int) {
+    init(uuidIdentifier: String, generation: Int) {
         self.uuid = uuidIdentifier
         self.generation = generation
     }
@@ -81,5 +79,5 @@ extension MCPeerID {
 }
 
 public func == (lhs: PeerIdentifier, rhs: PeerIdentifier) -> Bool {
-    return lhs.stringValue == rhs.stringValue
+    return lhs.stringValue.compare(rhs.stringValue, options: .LiteralSearch) == .OrderedSame
 }

@@ -8,13 +8,13 @@
 
 import Foundation
 
-class SocketRelay<T: VirtualSocketBuilder> {
-    private var activeBuilders: [Session : T] = [:]
+class SocketRelay<Builder: VirtualSocketBuilder> {
+    private var activeBuilders: [Session :Builder] = [:]
     private var activeSessions: [Session : (NSOutputStream, NSInputStream)] = [:]
 
     init() {}
 
-    private func discard(builder: T) {
+    private func discard(builder: Builder) {
         synchronized(self) {
             let index = activeBuilders.indexOf {
                 $0.1 === builder
@@ -26,7 +26,7 @@ class SocketRelay<T: VirtualSocketBuilder> {
         }
     }
 
-    private func addToDiscardQueue(builder: T, for session: Session, withTimeout timeout: Double, completion: () -> Void) {
+    private func addToDiscardQueue(builder: Builder, for session: Session, withTimeout timeout: Double, completion: () -> Void) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(timeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) { [weak self] in
             guard let strongSelf = self else {
@@ -50,8 +50,9 @@ class SocketRelay<T: VirtualSocketBuilder> {
 
     func createSocket(with session: Session, onPort port: UInt16 = 0,
                            timeout: Double = 5, completion: (UInt16?, ErrorType?) -> Void) {
-        let virtualSocketBuilder = T(session: session, completionHandler: { [weak self] socket, error in
+        let virtualSocketBuilder = Builder(session: session, completionHandler: { [weak self] socket, error in
             //todo bind to CocoaAsyncSocket and call completion block
+            //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
             guard let socket = socket else {
                 completion(nil, error)
                 return

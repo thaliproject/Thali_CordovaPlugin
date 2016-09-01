@@ -17,13 +17,13 @@ public struct PeerAvailability {
 public final class BrowserManager: NSObject {
     private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>()
 
-    internal private (set) var currentBrowser: Browser?
+    internal private(set) var currentBrowser: Browser?
     internal private(set) var availablePeers: [PeerIdentifier] = []
 
     internal let serviceType: String
 
     public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil
-    public var isListening: Bool {
+    public var listening: Bool {
         return currentBrowser?.listening ?? false
     }
 
@@ -32,20 +32,24 @@ public final class BrowserManager: NSObject {
     }
 
     private func handleFoundPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
-        availablePeers.append(identifier)
+        synchronized(self) {
+            peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
+            availablePeers.append(identifier)
+        }
     }
 
     private func handleLostPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
-        if let index = availablePeers.indexOf(identifier) {
-            availablePeers.removeAtIndex(index)
+        synchronized(self) {
+            peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
+            if let index = availablePeers.indexOf(identifier) {
+                availablePeers.removeAtIndex(index)
+            }
         }
     }
 
     public func startListeningForAdvertisements() {
-        if let currentBrowser = currentBrowser {
-            currentBrowser.stopListening()
+        if currentBrowser != nil {
+            return
         }
         let browser = Browser(serviceType: serviceType,
                               foundPeer: handleFoundPeer, lostPeer: handleLostPeer)
@@ -54,17 +58,13 @@ public final class BrowserManager: NSObject {
     }
 
     public func stopListeningForAdvertisements() {
-        guard let currentBrowser = self.currentBrowser where currentBrowser.listening else {
-            assert(false, "there is no active listener")
-            return
-        }
-        currentBrowser.stopListening()
+        currentBrowser?.stopListening()
         self.currentBrowser = nil
     }
 
     public func connectToPeer(identifier: PeerIdentifier, completion: (UInt16?, ErrorType?) -> Void) {
         return synchronized(self) {
-            //todo check reachability status
+            //todo check reachability status #823
             guard let currentBrowser = self.currentBrowser else {
                 completion(nil, MultiConnectError.StartListeningNotActive)
                 return
@@ -74,7 +74,7 @@ public final class BrowserManager: NSObject {
                 return
             }
             do {
-                let session = try currentBrowser.invitePeerToConnect(lastGenerationIdentifier)
+                let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier)
                 socketRelay.createSocket(with: session, completion: completion)
             } catch let error {
                 completion(nil, error)

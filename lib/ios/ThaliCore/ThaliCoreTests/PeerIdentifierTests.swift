@@ -49,4 +49,21 @@ class PeerIdentifierTests: XCTestCase {
         }
         XCTAssertEqual(parsingError, .IllegalPeerID)
     }
+
+    func testEquality() {
+        let p1 = PeerIdentifier()
+        let p2 = PeerIdentifier(uuidIdentifier: p1.uuid, generation: p1.generation)
+        XCTAssertEqual(p1, p2)
+
+        let p3 = PeerIdentifier(uuidIdentifier: "id\u{E9}ntifi\u{E9}r", generation: 0)
+        let p4 = PeerIdentifier(uuidIdentifier: "id\u{65}\u{301}ntifi\u{65}\u{301}r", generation: 0)
+        XCTAssertEqual(p3.uuid, p4.uuid)
+        XCTAssertNotEqual(p3, p4)
+    }
+
+    func testGenerationEquality() {
+        let p1 = PeerIdentifier()
+        let p2 = PeerIdentifier(uuidIdentifier: p1.uuid, generation: p1.generation + 1)
+        XCTAssertNotEqual(p1, p2)
+    }
 }
