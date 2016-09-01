@@ -111,19 +111,32 @@ ActiveConnections.prototype._bind_connection = function (data) {
   var closedFired = false;
 
   new Promise(function (resolve, reject) {
+    // TODO jxcore bug. Promise couldn't catch errors in these events.
     data.connection
     .on('error', function (error) {
-      assert(!errorFired, 'On error handle to a socket');
-      errorFired = true;
+      try {
+        assert(!errorFired, 'On error handle to a socket');
+        errorFired = true;
+      } catch (e) {
+        reject(e);
+      }
     })
     .on('end', function () {
-      assert(!endFired, 'One end handle to a socket');
-      assert(!errorFired, 'Should not get an end after error');
-      endFired = true;
+      try {
+        assert(!endFired, 'One end handle to a socket');
+        assert(!errorFired, 'Should not get an end after error');
+        endFired = true;
+      } catch (e) {
+        reject(e);
+      }
     })
     .on('close', function () {
-      assert(!closedFired, 'One close to a customer');
-      closedFired = true;
+      try {
+        assert(!closedFired, 'One close to a customer');
+        closedFired = true;
+      } catch (e) {
+        reject(e);
+      }
     });
   })
   .catch(function (error) {
