@@ -1,8 +1,10 @@
 'use strict';
 
+var inherits = require('util').inherits;
 var net = require('net');
 var assert = require('assert');
 var Promise = require('lie');
+var EventEmitter = require('events').EventEmitter;
 var extend = require('js-extend').extend;
 
 var logger = require('thali/thaliLogger')('ClientRound');
@@ -30,6 +32,8 @@ function ClientRound(tapeTest, roundNumber, quitSignal, options) {
 
   this.bind();
 }
+
+inherits(ClientRound, EventEmitter);
 
 ClientRound.defaults = {
   connectRetries: 10,
@@ -130,8 +134,8 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
       }
     };
     if (validPeersCount === self._tapeTest.participants.length - 1) {
-      logger.debug('finished, stopping myself');
-      self.stop();
+      logger.debug('finished');
+      self.emit('finished');
     }
   })
   .catch(function (error) {
@@ -307,6 +311,8 @@ ClientRound.prototype.stop = function () {
       delete self._waitUntilStoppedPromise;
       delete self._waitUntilStoppedResolve;
     }
+
+    logger.debug('client has stopped');
   });
 
   return this._stopPromise;

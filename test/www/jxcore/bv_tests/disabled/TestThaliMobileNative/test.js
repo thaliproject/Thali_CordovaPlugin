@@ -5,10 +5,9 @@ if (!tape.coordinated) {
   return;
 }
 
+var assert = require('assert');
 var Promise = require('lie');
-var net = require('net');
 
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var logger = require('thali/thaliLogger')('testThaliMobileNativeComplex');
 
 var testUtils = require('../../../lib/testUtils');
@@ -18,81 +17,73 @@ var ServerRound = require('./ServerRound');
 var ClientRound = require('./ClientRound');
 
 
-var serverToBeClosed;
+var autostop = {
+  serverQuitSignal: null,
+  serverRound: null
+};
 var test = tape({
   setup: function (t) {
-    serverToBeClosed = undefined;
     t.end();
   },
   teardown: function (t) {
-    var promise;
-    if (serverToBeClosed) {
-      promise = new Promise(function (resolve) {
-        serverToBeClosed.closeAll(function () {
-          Mobile('stopListeningForAdvertisements').callNative(function (err) {
-            t.notOk(
-              err,
-              'Should be able to call stopListeningForAdvertisements in teardown'
-            );
-            Mobile('stopAdvertisingAndListening').callNative(function (err) {
-              t.notOk(
-                err,
-                'Should be able to call stopAdvertisingAndListening in teardown'
-              );
-              resolve();
-            });
-          });
-        });
+    if (autostop.serverRound) {
+      assert(
+        autostop.serverQuitSignal,
+        '\'autostop.serverQuitSignal\' should exist'
+      );
+      autostop.serverQuitSignal.raise();
+      autostop.serverRound.stop()
+      .catch(function (error) {
+        // Ignoring any error
+        logger.error('teardown error %s', error);
+      })
+      .then(function () {
+        t.end();
       });
     } else {
-      promise = Promise.resolve();
-    }
-    promise
-    .catch(function (error) {
-      // Ignoring any error
-      logger.error('teardown error %s', error);
-    })
-    .then(function () {
       t.end();
-    });
+    }
   }
 });
 
 var TEST_TIMEOUT = 1 * 60 * 1000;
-var CONNECT_TIMEOUT = 5 * 1000;
-var CONNECT_RETRY_TIMEOUT = 5.5 * 1000;
+var CONNECT_TIMEOUT = 3 * 1000;
+var CONNECT_RETRY_TIMEOUT = 3.5 * 1000;
 var CONNECT_RETRIES = 10;
 
-test('Simple test #0 (updating advertising and parallel data transfer)', function (t) {
-  var quitSignal = new QuitSignal();
+test('Very simple test with single round', function (t) {
+  var serverQuitSignal = new QuitSignal();
+  var clientQuitSignal = new QuitSignal();
 
   testUtils.testTimeout(t, TEST_TIMEOUT, function () {
-    quitSignal.raise();
+    // serverQuitSignal.raise();
+    clientQuitSignal.raise();
   });
 
-  var server = net.createServer();
-  server.on('error', function (err) {
-    logger.debug('got error while creating server %s', err);
-  });
-  server = makeIntoCloseAllServer(server);
-
-  // 'teardown' will call close method of 'serverToBeClosed'
-  // and all connections will be properly closed.
-  serverToBeClosed = server;
-
-  var serverRound = new ServerRound(t, 0, server, quitSignal, {
+  var serverRound = new ServerRound(t, 0, serverQuitSignal, {
     connectTimeout: CONNECT_TIMEOUT
   });
-  var clientRound = new ClientRound(t, 0, quitSignal, {
+  var clientRound = new ClientRound(t, 0, clientQuitSignal, {
     connectRetries: CONNECT_RETRIES,
     connectRetryTimeout: CONNECT_RETRY_TIMEOUT,
     connectTimeout: CONNECT_TIMEOUT
   });
 
+  autostop.serverQuitSignal = serverQuitSignal;
+  autostop.serverRound = serverRound;
+
+  serverRound.once('finished', function () {
+    // We should have server up and running.
+    // serverRound.stop();
+  });
+  clientRound.once('finished', function () {
+    clientRound.stop();
+  });
+
   serverRound.start()
   .then(function () {
     return Promise.all([
-      serverRound.waitUntilStopped(),
+      // serverRound.waitUntilStopped(),
       clientRound.waitUntilStopped()
     ]);
   })
@@ -100,7 +91,10 @@ test('Simple test #0 (updating advertising and parallel data transfer)', functio
     t.fail('Got error: ' + error);
   })
   .then(function () {
-    t.pass('We made it through round one in simple test');
     t.end();
   });
 });
+
+(function () {
+  ;
+}) ();

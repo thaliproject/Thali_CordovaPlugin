@@ -1,9 +1,13 @@
 'use strict';
 
+var net = require('net');
+var inherits = require('util').inherits;
 var assert = require('assert');
 var Promise = require('lie');
+var EventEmitter = require('events').EventEmitter;
 var extend = require('js-extend').extend;
 
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var logger = require('thali/thaliLogger')('ServerRound');
 
 var ActiveConnections = require('./ActiveConnections');
@@ -12,15 +16,16 @@ var Message = require('./Message');
 var tape = require('../../../lib/thaliTape');
 
 
-function ServerRound(tapeTest, roundNumber, server, quitSignal, options) {
+function ServerRound(tapeTest, roundNumber, quitSignal, options) {
   this.roundNumber = roundNumber;
 
   this._tapeTest   = tapeTest;
-  this._server     = server;
   this._quitSignal = quitSignal;
 
   this._startPromise = null;
   this._validPeerIds = {};
+  this._validPeerIds[roundNumber] = {};
+  this._server = net.createServer();
 
   this._state = ServerRound.states.CREATED;
 
@@ -32,6 +37,8 @@ function ServerRound(tapeTest, roundNumber, server, quitSignal, options) {
 
   this.bind();
 }
+
+inherits(ServerRound, EventEmitter);
 
 ServerRound.defaults = {
   connectTimeout: 3000
@@ -52,7 +59,7 @@ ServerRound.prototype.setRoundNumber = function (roundNumber) {
   );
   this._state = ServerRound.states.CREATED;
 
-  this._validPeerIds = {};
+  this._validPeerIds[roundNumber] = {};
   this.roundNumber = roundNumber;
   this._activeConnections.reset();
 }
@@ -60,6 +67,11 @@ ServerRound.prototype.setRoundNumber = function (roundNumber) {
 ServerRound.prototype.bind = function () {
   this._newConnectionHandler = this._newConnection.bind(this);
   this._server.on('connection', this._newConnectionHandler);
+
+  this._server.on('error', function (err) {
+    logger.error('received server error' + err);
+  });
+  this._server = makeIntoCloseAllServer(this._server);
 }
 
 ServerRound.prototype.unbind = function () {
@@ -165,6 +177,8 @@ ServerRound.prototype._newConnection = function (connection) {
     return;
   }
 
+  var validPeerIds = this._validPeerIds;
+
   var data = {};
   data.promise = new Promise(function (resolve, reject) {
     data.resolve = resolve;
@@ -217,7 +231,7 @@ ServerRound.prototype._newConnection = function (connection) {
         case Message.codes.SUCCESS: {
           // We can receive here multiple valid peers.
           // We can just ignore this case.
-          self._validPeerIds[requestPeerId] = true;
+          validPeerIds[requestPeerId] = true;
           resolve();
           break;
         }
@@ -241,14 +255,14 @@ ServerRound.prototype._newConnection = function (connection) {
   .then(function () {
     // We can check whether all peers are valid.
     var validPeersCount = 0;
-    for (var peerId in self._validPeerIds) {
-      if (self._validPeerIds[peerId]) {
+    for (var peerId in validPeerIds) {
+      if (validPeerIds[peerId]) {
         validPeersCount ++;
       }
     };
     if (validPeersCount === self._tapeTest.participants.length - 1) {
-      logger.debug('finished, stopping myself');
-      self.stop();
+      logger.debug('unreliable server finished without confirmation');
+      self.emit('finished');
     }
   })
   .catch(function (error) {
@@ -309,6 +323,27 @@ ServerRound.prototype.stop = function () {
   this._state = ServerRound.states.STOPPING;
 
   this._stopPromise = this._activeConnections.stop()
+
+  .then(function () {
+    return new Promise(function (resolve, reject) {
+      self._server.closeAll(function () {
+        Mobile('stopListeningForAdvertisements').callNative(function (error) {
+          if (error) {
+            reject(new Error(error));
+            return;
+          }
+          Mobile('stopAdvertisingAndListening').callNative(function (error) {
+            if (error) {
+              reject(new Error(error));
+            } else {
+              resolve();
+            }
+          });
+        });
+      });
+    });
+  })
+
   .then(function () {
     self.unbind();
     self._state = ServerRound.states.STOPPED;
@@ -319,6 +354,8 @@ ServerRound.prototype.stop = function () {
       delete self._waitUntilStoppedPromise;
       delete self._waitUntilStoppedResolve;
     }
+
+    logger.debug('server has stopped');
   });
 
   return this._stopPromise;
