@@ -9,7 +9,7 @@
 import Foundation
 import ThaliCore
 
-@objc enum AppContextError: Int, ErrorType{
+@objc enum AppContextError: Int, ErrorType {
     case BadParameters
     case UnknownError
 }
@@ -21,7 +21,7 @@ import ThaliCore
      - parameter peers:   json with data about changed peers
      - parameter context: related AppContext
      */
-    func context(context: AppContext, didChangePeerAvailability peers: String)
+    func context(context: AppContext, didChangePeerAvailability peersJSONString: String)
 
     /**
      Notifies about network status changes
@@ -29,7 +29,7 @@ import ThaliCore
      - parameter status:  json string with network availability status
      - parameter context: related AppContext
      */
-    func context(context: AppContext, didChangeNetworkStatus status: String)
+    func context(context: AppContext, didChangeNetworkStatus statusJSONString: String)
 
     /**
      Notifies about peer advertisement update
@@ -37,7 +37,7 @@ import ThaliCore
      - parameter discoveryAdvertisingState: json with information about peer's state
      - parameter context:                   related AppContext
      */
-    func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
+    func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingStateJSONString: String)
 
     /**
      Notifies about failing connection to port
@@ -51,27 +51,27 @@ import ThaliCore
      callback for multiConnect function
 
      */
-    func context(context: AppContext, didResolveMultiConnectWith params: String)
+    func context(context: AppContext, didResolveMultiConnectWith paramsJSONString: String)
 
     /**
      callback for multiConnect function
 
      */
-    func context(context: AppContext, didFailMultiConnectConnectionWith params: String)
+    func context(context: AppContext, didFailMultiConnectConnectionWith paramsJSONString: String)
 
     /**
      Notifies about entering background
 
      - parameter context: related AppContext
      */
-    func appWillEnterBackground(withContext context: AppContext)
+    func appWillEnterBackground(with context: AppContext)
 
     /**
      Notifies about entering foreground
 
      - parameter context: related AppContext
      */
-    func appDidEnterForeground(withContext context: AppContext)
+    func appDidEnterForeground(with context: AppContext)
 }
 
 /// Interface for communication between native and cross-platform parts
@@ -89,15 +89,15 @@ import ThaliCore
         delegate?.context(self, didChangeNetworkStatus: jsonValue([:]))
     }
 
-    private func willEnterBackground() {
-        delegate?.appWillEnterBackground(withContext: self)
+    private func notifyOnWillEnterBackground() {
+        delegate?.appWillEnterBackground(with: self)
     }
 
-    private func didEnterForeground() {
-        delegate?.appDidEnterForeground(withContext: self)
+    private func notifyOnDidEnterForeground() {
+        delegate?.appDidEnterForeground(with: self)
     }
 
-    private func peersAvailabilityChanged(peers: [PeerAvailability]) {
+    private func notifyOnPeersAvailabilityChanged(peers: [PeerAvailability]) {
         let mappedPeers = peers.map {
             $0.dictionaryValue
         }
@@ -136,13 +136,13 @@ import ThaliCore
         advertiserManager = AdvertiserManager(serviceType: serviceType)
         super.init()
         browserManager.peersAvailabilityChanged = { [weak self] peers in
-            self?.peersAvailabilityChanged(peers)
+            self?.notifyOnPeersAvailabilityChanged(peers)
         }
         appNotificationsManager.didEnterForegroundHandler = {[weak self] in
-            self?.willEnterBackground()
+            self?.notifyOnDidEnterForeground()
         }
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
-            self?.willEnterBackground()
+            self?.notifyOnWillEnterBackground()
         }
     }
 
@@ -257,7 +257,7 @@ extension PeerAvailability {
 }
 
 func jsonValue(object: AnyObject) -> String {
-    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0)) else {
+    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: []) else {
         return ""
     }
     return String(data: data, encoding: NSUTF8StringEncoding) ?? ""

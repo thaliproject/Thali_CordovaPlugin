@@ -29,8 +29,8 @@ class AppContextTests: XCTestCase {
             }
             @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
             @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
-            @objc func appWillEnterBackground(withContext context: AppContext) {}
-            @objc func appDidEnterForeground(withContext context: AppContext) {}
+            @objc func appWillEnterBackground(with context: AppContext) {}
+            @objc func appDidEnterForeground(with context: AppContext) {}
             @objc func context(context: AppContext, didResolveMultiConnectWith params: String) {}
             @objc func context(context: AppContext, didFailMultiConnectConnectionWith params: String) {}
         }

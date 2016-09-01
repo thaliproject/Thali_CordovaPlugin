@@ -181,13 +181,13 @@
     }
 }
 
-- (void)appWillEnterBackgroundWithContext:(AppContext * _Nonnull)context {
+- (void)appWillEnterBackgroundWith:(AppContext * _Nonnull)context {
     @synchronized(self) {
         [JXcore callEventCallback:[AppContextJSEvent appEnteringBackground] withParams:@[]];
     }
 }
 
-- (void)appDidEnterForegroundWithContext:(AppContext * _Nonnull)context {
+- (void)appDidEnterForegroundWith:(AppContext * _Nonnull)context {
     @synchronized(self) {
         [JXcore callEventCallback:[AppContextJSEvent appEnteredForeground] withParams:@[]];
     }
