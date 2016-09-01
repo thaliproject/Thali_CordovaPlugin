@@ -80,6 +80,9 @@ var setListeners = function (instance, instanceId) {
   instance.stderr.on('data', function (data) {
     logInstanceOutput(data, instanceId);
   });
+  instance.stdout.on('end', function (data) {
+    logInstanceOutput(data, instanceId);
+  });
 };
 
 var testServerConfiguration = {
