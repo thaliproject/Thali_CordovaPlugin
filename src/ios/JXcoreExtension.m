@@ -1,398 +1,398 @@
 //
-//  The MIT License (MIT)
-//
-//  Copyright (c) 2015 Microsoft
-//
-//  Permission is hereby granted, free of charge, to any person obtaining a copy
-//  of this software and associated documentation files (the "Software"), to deal
-//  in the Software without restriction, including without limitation the rights
-//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-//  copies of the Software, and to permit persons to whom the Software is
-//  furnished to do so, subject to the following conditions:
-//
-//  The above copyright notice and this permission notice shall be included in
-//  all copies or substantial portions of the Software.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-//  THE SOFTWARE.
-//
 //  Thali CordovaPlugin
 //  JXcoreExtension.m
 //
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//
+
+#import <ThaliCore/ThaliCore.h>
 
 #import "JXcore.h"
-#import "THEThreading.h"
 #import "JXcoreExtension.h"
-#import "THEAppContext.h"
-#import "THEThaliEventDelegate.h"
 
-// JXcoreExtension implementation.
+// JavaScript Callbacks
+//
+NSString * const JXcoreAppEnteringBackgroundJSCallbackName = @"appEnteringBackground";
+NSString * const JXcoreAppEnteredForegroundJSCallbackName = @"appEnteredForeground";
+NSString * const JXcoreDiscoveryAdvertisingStateUpdateJSCallbackName = @"discoveryAdvertisingStateUpdateNonTCP";
+NSString * const JXcoreIncomingConnectionToPortNumberFailedJSCallbackName = @"incomingConnectionToPortNumberFailed";
+NSString * const JXcoreNetworkChangedJSCallbackName = @"networkChanged";
+NSString * const JXcorePeerAvailabilityChangedJSCallbackName = @"peerAvailabilityChanged";
 
-@interface JXcoreExtension (Internal) <THEThaliEventDelegate>
+// JavaScript Methods
+//
+NSString * const JXcoreStartListeningForAdvertisementsJSMethodName = @"startListeningForAdvertisements";
+NSString * const JXcoreStopListeningForAdvertisementsJSMethodName = @"stopListeningForAdvertisements";
+NSString * const JXcoreStartUpdateAdvertisingAndListeningJSMethodName = @"startUpdateAdvertisingAndListening";
+NSString * const JXcoreStopAdvertisingAndListeningJSMethodName = @"stopAdvertisingAndListening";
+NSString * const JXcoreConnectJSMethodName = @"connect";
+NSString * const JXcoreDidRegisterToNativeJSMethodName = @"didRegisterToNative";
+NSString * const JXcoreExecuteNativeTestsJSMethodName = @"executeNativeTests";
+NSString * const JXcoreGetOSVersionJSMethodName = @"getOSVersion";
+NSString * const JXcoreKillConnectionsJSMethodName = @"killConnections";
 
-- (void)networkChanged:(NSString *)json;
-- (void)peerAvailabilityChanged:(NSString *)peerJSON;
-- (void)discoveryAdvertisingStateUpdate:(NSDictionary *)discoveryAdvertisingState;
-- (void)incomingConnectionToPortNumberFailed:(unsigned short)serverPort;
+// JXcoreExtension
+//
+@interface JXcoreExtension () <THEThaliEventDelegate>
 
-- (void)appEnteringBackground;
-- (void)appEnteredForeground;
++ (THEAppContext *)appContext;
 
-- (void)didRegisterToNative:(NSString *)name;
+- (void)didRegisterNativeMethodWithName:(NSString *)name;
 
 @end
 
-// JavaScript callbacks.
-NSString * const kNetworkChanged = @"networkChanged";
-NSString * const kPeerAvailabilityChanged = @"peerAvailabilityChanged";
-NSString * const kAppEnteringBackground = @"appEnteringBackground";
-NSString * const kAppEnteredForeground = @"appEnteredForeground";
-NSString * const kDiscoveryAdvertisingStateUpdate = @"discoveryAdvertisingStateUpdateNonTCP";
-NSString * const kIncomingConnectionToPortNumberFailed = @"incomingConnectionToPortNumberFailed";
-
-@implementation JXcoreExtension
-{
-  BOOL _networkChangedRegistered;
+@implementation JXcoreExtension {
+    NSMutableSet <NSString *> *_registeredNativeMethods;
 }
 
-- (instancetype)init
-{
-  if (self = [super init])
-  {
-    _networkChangedRegistered = NO;
-    return self;
-  }
-  return nil;
-}
+#pragma mark - Properties
 
-- (void)networkChanged:(NSDictionary *)networkStatus
-{
-  @synchronized(self)
-  {
-    if (_networkChangedRegistered) {
-      [JXcore callEventCallback:kNetworkChanged
-                       withJSON:[JXcoreExtension objectToJSON:networkStatus]];
-    }
-  }
-}
++ (THEAppContext *)appContext {
 
-- (void)peerAvailabilityChanged:(NSArray<NSDictionary *> *)peers
-{
-  @synchronized(self)
-  {
-    [JXcore callEventCallback:kPeerAvailabilityChanged
-                     withJSON:[JXcoreExtension objectToJSON:peers]];
-  }
-}
-
-- (void)discoveryAdvertisingStateUpdate:(NSDictionary *)stateUpdate
-{
-  @synchronized(self)
-  {
-      [JXcore callEventCallback:kDiscoveryAdvertisingStateUpdate
-                       withJSON:[JXcoreExtension objectToJSON:stateUpdate]];
-  }
-}
-
-- (void)incomingConnectionToPortNumberFailed:(unsigned short)serverPort
-{
-  @synchronized(self)
-  {
-      [JXcore callEventCallback:kIncomingConnectionToPortNumberFailed withParams:@[@(serverPort)]];
-  }
-}
-
-- (void)appEnteringBackground
-{
-  @synchronized(self)
-  {
-    [JXcore callEventCallback:kAppEnteringBackground withParams:@[]];
-  }
-}
-
-- (void)appEnteredForeground
-{
-  @synchronized(self)
-  {
-    [JXcore callEventCallback:kAppEnteredForeground withParams:@[]];
-  }
-}
-
-+ (THEAppContext *)theAppContext
-{
-  // Singleton instance.
-  static THEAppContext * appContext = nil;
-    
-  // If unallocated, allocate.
-  if (!appContext)
-  {
-    // Allocator.
-    void (^allocator)() = ^
-    {
-      appContext = [[THEAppContext alloc] init];
-    };
-        
-    // Dispatch allocator once.
+    static THEAppContext *appContext = nil;
     static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, allocator);
-  }
-    
-  // Done.
-  return appContext;
+
+    dispatch_once(&onceToken, ^{
+        appContext = [[THEAppContext alloc] init];
+    });
+
+    return appContext;
 }
 
-+ (NSString *)objectToJSON:(NSObject *)object
-{
-  NSError *err = nil;
-  NSString *json = [[NSString alloc] initWithData:
-    [NSJSONSerialization dataWithJSONObject:object options:0 error:&err]
-    encoding:NSUTF8StringEncoding
-  ];
+#pragma mark - init / deinit
 
-  if (err != nil)
-  {
-    @throw err;
-  }
-
-  return json;
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _registeredNativeMethods = [NSMutableSet new];
+    }
+    return self;
 }
 
-- (void)didRegisterToNative:(NSString *)name
-{
-  if ([name isEqualToString:kNetworkChanged]) {
-    _networkChangedRegistered = YES;
-    [[JXcoreExtension theAppContext] fireNetworkChangedEvent];
-  }
+#pragma mark - Override
+
+- (void)defineMethods {
+    THEAppContext *appContext = [JXcoreExtension appContext];
+    [appContext setThaliEventDelegate:self];
+
+    // This method must go first
+    // Because we can lose notifications about registered methods
+    [self defineDidRegisterToNative:appContext];
+
+    [self defineStartListeningForAdvertisements:appContext];
+    [self defineStopListeningForAdvertisements:appContext];
+    [self defineStartUpdateAdvertisingAndListening:appContext];
+    [self defineStopAdvertisingAndListening:appContext];
+    [self defineConnect:appContext];
+    [self defineKillConnections:appContext];
+    [self defineGetOSVersion:appContext];
+
+#ifdef TEST
+    [self defineExecuteNativeTests:appContext];
+#endif
 }
 
-// Defines methods.
-- (void)defineMethods
-{
-  THEAppContext *theApp = [JXcoreExtension theAppContext];
-  [theApp setThaliEventDelegate:self];
+#pragma mark - JavaScript Callbacks
 
-  // Export the public API to node
+// didRegisterNativeMethodWithName - Allow JXCore to inform us that someone registered
+// a JS function to native
+- (void)didRegisterNativeMethodWithName:(NSString *)name {
+    [_registeredNativeMethods addObject:name];
 
-  // startListeningForAdvertisements
-  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
-  {
-    NSLog(@"jxcore: startListeningForAdvertisements");
+    THEAppContext *appContext = [JXcoreExtension appContext];
 
-    if ([theApp startListeningForAdvertisements])
-    {
-      NSLog(@"jxcore: startListeningForAdvertisements: success");
-
-      @synchronized(self)
-      {
-        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-      }
+    if ([name isEqualToString:JXcoreNetworkChangedJSCallbackName]) {
+        [appContext fireNetworkChangedEvent];
     }
-    else
-    {
-      NSLog(@"jxcore: startListeningForAdvertisements: failure");
-  
-      @synchronized(self)
-      {
-        [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
-      }
-    }
-  } withName:@"startListeningForAdvertisements"];
+}
 
-  // StopListeningForAdvertisements
-  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
-  {
-    NSLog(@"jxcore: stopListeningForAdvertisements");
-
-    if ([theApp stopListeningForAdvertisements])
-    {
-      NSLog(@"jxcore: stopListeningForAdvertisements: success");
-
-      @synchronized(self)
-      {
-        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-      }
-    }
-    else
-    {
-      NSLog(@"jxcore: stopListeningForAdvertisements: failure");
-  
-      @synchronized(self)
-      {
-        [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
-      }
-    }
-  } withName:@"stopListeningForAdvertisements"];
+#pragma mark - JavaScript Native Methods Registration
 
 
-  // StartUpdateAdvertisingAndListening
-  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
-  {
-    NSLog(@"jxcore: startUpdateAdvertisingAndListening");
+- (void)defineDidRegisterToNative:(THEAppContext *)appContext {
+    NSString *methodName = JXcoreDidRegisterToNativeJSMethodName;
 
-    if ([params count] != 2 || ![params[0] isKindOfClass:[NSNumber class]])
-    {
-      NSLog(@"jxcore: startUpdateAdvertisingAndListening: bad arg");
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        if (params.count != 2 || [params[0] isKindOfClass:[NSString class]]) {
+            NSLog(@"jxcore: %@ %@", methodName, params[0]);
 
-      @synchronized(self)
-      {
-        [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-      }
-    }
-    else 
-    {
-      if ([theApp startUpdateAdvertisingAndListening:(unsigned short)[params[0] intValue]])
-      {
-        NSLog(@"jxcore: startUpdateAdvertisingAndListening: success");
-
-        @synchronized(self)
-        {
-          [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+            [self didRegisterNativeMethodWithName:params[0]];
+        } else {
+            NSLog(@"jxcore: %@: badParam", methodName);
         }
-      }
-      else
-      {
-        NSLog(@"jxcore: startUpdateAdvertisingAndListening: failure");
+    } withName:methodName];
+}
 
-        @synchronized(self)
-        {
-          [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+- (void)defineStartListeningForAdvertisements:(THEAppContext *)appContext {
+    NSString *methodName = JXcoreStartListeningForAdvertisementsJSMethodName;
+
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        NSLog(@"jxcore: %@", methodName);
+
+        if ([appContext startListeningForAdvertisements]) {
+            NSLog(@"jxcore: %@: success", methodName);
+
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+            }
+        } else {
+            NSLog(@"jxcore: %@: failure", methodName);
+
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+            }
         }
-      }
-    }
-  } withName:@"startUpdateAdvertisingAndListening"];
+    } withName:methodName];
+}
 
-  // StopUpdateAdvertisingAndListenForIncomingConnections
-  [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) 
-  {
-    NSLog(@"jxcore: stopAdvertisingAndListening");
+- (void)defineStopListeningForAdvertisements:(THEAppContext *)appContext {
+    NSString *methodName = JXcoreStopListeningForAdvertisementsJSMethodName;
 
-    if ([theApp stopAdvertisingAndListening])
-    {
-      NSLog(@"jxcore: stopAdvertisingAndListening: success");
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        NSLog(@"jxcore: %@", methodName);
 
-      @synchronized(self)
-      {
-        [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
-      }
-    }
-    else
-    {
-      NSLog(@"jxcore: stopAdvertisingAndListening: failure");
+        if ([appContext stopListeningForAdvertisements]) {
+            NSLog(@"jxcore: %@: success", methodName);
 
-      @synchronized(self)
-      {
-        [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
-      }
-    }
-  } withName:@"stopAdvertisingAndListening"];
- 
-  // Connect
-  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
-  {
-    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
-    {
-      NSLog(@"jxcore: connect: badParam");
-    
-      @synchronized(self)
-      {
-        [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-      }
-    }
-    else
-    {
-      NSLog(@"jxcore: connect %@", params[0]);
-      ClientConnectCallback connectCallback = ^(NSString *errorMsg, NSDictionary *connection) 
-      {
-        if (errorMsg == nil)
-        {
-          NSLog(@"jxcore: connect: success");
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+            }
+        } else {
+            NSLog(@"jxcore: %@: failure", methodName);
 
-          @synchronized(self)
-          {
-            [JXcore callEventCallback:callbackId withParams:
-              @[[NSNull null], [JXcoreExtension objectToJSON:connection]]];
-          }
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+            }
         }
-        else
-        {
-          NSLog(@"jxcore: connect: fail: %@", errorMsg);
+    } withName:methodName];
+}
 
-          @synchronized(self)
-          {
-            [JXcore callEventCallback:callbackId withParams:@[errorMsg, [NSNull null]]];
-          }
+- (void)defineStartUpdateAdvertisingAndListening:(THEAppContext *)appContext {
+    NSString *methodName = JXcoreStartUpdateAdvertisingAndListeningJSMethodName;
+
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        NSLog(@"jxcore: %@", methodName);
+
+        if (params.count != 2 || ![params[0] isKindOfClass:[NSNumber class]]) {
+            NSLog(@"jxcore: %@: bad arg", methodName);
+
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+            }
+        } else {
+            if ([appContext startUpdateAdvertisingAndListening:(unsigned short)[params[0] intValue]]) {
+                NSLog(@"jxcore: %@: success", methodName);
+
+                @synchronized(self) {
+                    [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+                }
+            } else {
+                NSLog(@"jxcore: %@: failure", methodName);
+
+                @synchronized(self) {
+                    [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+                }
+            }
         }
-      };
+    } withName:methodName];
+}
 
-      // We'll callback to the upper layer when the connect completes or fails
-      [theApp connectToPeer:params[0] connectCallback:connectCallback];
-    }
-  } withName:@"connect"];
+- (void)defineStopAdvertisingAndListening:(THEAppContext *)appContext {
+    NSString *methodName = JXcoreStopAdvertisingAndListeningJSMethodName;
 
-  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
-  {
-    NSLog(@"jxcore: killConnections");
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        NSLog(@"jxcore: %@", methodName);
 
-    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
-    {
-      NSLog(@"jxcore: killConnections: badParam");
+        if ([appContext stopAdvertisingAndListening]) {
+            NSLog(@"jxcore: %@: success", methodName);
 
-      @synchronized(self)
-      {
-        [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
-      }
-    }
-    else
-    {
-      if ([theApp killConnections: params[0]])
-      {
-        NSLog(@"jxcore: killConnections: success");
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+            }
+        } else {
+            NSLog(@"jxcore: %@: failure", methodName);
 
-        @synchronized(self)
-        {
-          [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[@"Unknown Error!"]];
+            }
         }
-      }
-      else
-      {
-        NSLog(@"jxcore: killConnections: fail");
+    } withName:methodName];
+}
 
-        @synchronized(self)
-        {
-          [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
+- (void)defineConnect:(THEAppContext *)appContext {
+    NSString *methodName = JXcoreConnectJSMethodName;
+
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]]) {
+            NSLog(@"jxcore: %@: badParam", methodName);
+
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+            }
+        } else {
+            NSLog(@"jxcore: %@ %@", methodName, params[0]);
+
+            ClientConnectCallback connectCallback = ^(NSString *errorMsg, NSDictionary *connection) {
+                if (errorMsg == nil) {
+                    NSLog(@"jxcore: %@: success", methodName);
+
+                    @synchronized(self) {
+                        [JXcore callEventCallback:callbackId
+                                       withParams:@[[NSNull null], [JXcoreExtension JSONStringWithObject:connection]]];
+                    }
+                } else {
+                    NSLog(@"jxcore: %@: fail: %@", methodName, errorMsg);
+
+                    @synchronized(self) {
+                        [JXcore callEventCallback:callbackId withParams:@[errorMsg, [NSNull null]]];
+                    }
+                }
+            };
+
+            // We'll callback to the upper layer when the connect completes or fails
+            [appContext connectToPeer:params[0] connectCallback:connectCallback];
         }
-      }
-    }
-  } withName:@"killConnections"];
+    } withName:methodName];
+}
 
-  // didRegisterToNative - Allow JXCore to inform us that someone registered
-  // a JS function to native
-  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
-  {
-    if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
-    {
-      NSLog(@"jxcore: didRegisterToNative: badParam");
-    }
-    else
-    {
-      NSLog(@"jxcore: didRegisterToNative %@", params[0]);
-      [self didRegisterToNative: params[0]];
-    }
-  } withName:@"didRegisterToNative"];
+- (void)defineKillConnections:(THEAppContext *)appContext {
+    NSString *methodName = JXcoreKillConnectionsJSMethodName;
 
-  [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId)
-   {
-     NSString * const version = [[NSProcessInfo processInfo] operatingSystemVersionString];
-     @synchronized(self)
-     {
-       [JXcore callEventCallback:callbackId withParams:@[version]];
-     }
-   } withName:@"getOSVersion"];
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        NSLog(@"jxcore: %@", methodName);
+
+        if (params.count != 2 || ![params[0] isKindOfClass:[NSString class]]) {
+            NSLog(@"jxcore: %@: badParam", methodName);
+
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[@"Bad argument"]];
+            }
+        } else {
+            if ([appContext killConnections:params[0]]) {
+                NSLog(@"jxcore: %@: success", methodName);
+
+                @synchronized(self) {
+                    [JXcore callEventCallback:callbackId withParams:@[[NSNull null]]];
+                }
+            } else {
+                NSLog(@"jxcore: %@: fail", methodName);
+
+                @synchronized(self) {
+                    [JXcore callEventCallback:callbackId withParams:@[@"Not connected to specified peer"]];
+                }
+            }
+        }
+    } withName:methodName];
+}
+
+- (void)defineGetOSVersion:(THEAppContext *)appContext {
+    NSString *methodName = JXcoreGetOSVersionJSMethodName;
+
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        NSString * const version = [NSProcessInfo processInfo].operatingSystemVersionString;
+
+        @synchronized(self) {
+            [JXcore callEventCallback:callbackId withParams:@[version]];
+        }
+    } withName:methodName];
+}
+
+#pragma mark Methods only available for testing
+
+#ifdef TEST
+
+- (void)defineExecuteNativeTests:(THEAppContext *)appContext {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
+
+    if (![appContext respondsToSelector:@selector(executeNativeTests)]) {
+      return;
+    }
+
+    NSString *methodName = JXcoreExecuteNativeTestsJSMethodName;
+
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        NSString *result = [appContext performSelector:@selector(executeNativeTests)];
+#pragma clang diagnostic pop
+
+        if (result) {
+            NSLog(@"jxcore: %@: success", methodName);
+
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withJSON:result];
+            }
+        } else {
+            NSLog(@"jxcore: %@: fail", methodName);
+
+            @synchronized(self) {
+                [JXcore callEventCallback:callbackId withParams:@[@"Tests results are empty"]];
+            }
+        }
+    } withName:methodName];
+}
+
+#endif
+
+#pragma mark - Helper Methods
+
++ (NSString *)JSONStringWithObject:(NSObject *)object {
+    NSError *error = nil;
+    NSData *data = [NSJSONSerialization dataWithJSONObject:object options:kNilOptions error:&error];
+
+    if (error != nil) {
+        @throw error;
+    }
+
+    NSString *json = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+
+    return json;
+}
+
+#pragma mark - THEThaliEventDelegate
+
+- (void)networkChanged:(NSDictionary *)networkStatus {
+    @synchronized(self) {
+        if ([_registeredNativeMethods containsObject:JXcoreNetworkChangedJSCallbackName]) {
+            [JXcore callEventCallback:JXcoreNetworkChangedJSCallbackName
+                             withJSON:[JXcoreExtension JSONStringWithObject:networkStatus]];
+        }
+    }
+}
+
+- (void)peerAvailabilityChanged:(NSArray<NSDictionary *> *)peers {
+    @synchronized(self) {
+        [JXcore callEventCallback:JXcorePeerAvailabilityChangedJSCallbackName
+                         withJSON:[JXcoreExtension JSONStringWithObject:peers]];
+    }
+}
+
+- (void)discoveryAdvertisingStateUpdate:(NSDictionary *)stateUpdate {
+    @synchronized(self) {
+        [JXcore callEventCallback:JXcoreDiscoveryAdvertisingStateUpdateJSCallbackName
+                         withJSON:[JXcoreExtension JSONStringWithObject:stateUpdate]];
+    }
+}
+
+- (void)incomingConnectionToPortNumberFailed:(unsigned short)serverPort {
+    @synchronized(self) {
+        [JXcore callEventCallback:JXcoreIncomingConnectionToPortNumberFailedJSCallbackName
+                       withParams:@[@(serverPort)]];
+    }
+}
+
+- (void)appEnteringBackground {
+    @synchronized(self) {
+        [JXcore callEventCallback:JXcoreAppEnteringBackgroundJSCallbackName
+                       withParams:@[]];
+    }
+}
+
+- (void)appEnteredForeground {
+    @synchronized(self) {
+        [JXcore callEventCallback:JXcoreAppEnteredForegroundJSCallbackName
+                       withParams:@[]];
+    }
 }
 
 @end
