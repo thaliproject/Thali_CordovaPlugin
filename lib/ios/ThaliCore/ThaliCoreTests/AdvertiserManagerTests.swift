@@ -25,10 +25,10 @@ class AdvertiserManagerTests: XCTestCase {
 
     func testStopAdvertising() {
         advertiserManager.startUpdateAdvertisingAndListening(42)
-        XCTAssertEqual(advertiserManager.advertisers.count, 1)
+        XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
         XCTAssertTrue(advertiserManager.advertising)
         advertiserManager.stopAdvertising()
-        XCTAssertEqual(advertiserManager.advertisers.count, 0)
+        XCTAssertEqual(advertiserManager.advertisers.value.count, 0)
         XCTAssertFalse(advertiserManager.advertising)
     }
 }

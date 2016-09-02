@@ -160,6 +160,7 @@ extension PeerAvailability {
      - parameter callback: callback with connection results.
      */
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
+        //todo check reachability status #823
         guard parameters.count == 3 else {
             throw AppContextError.BadParameters
         }

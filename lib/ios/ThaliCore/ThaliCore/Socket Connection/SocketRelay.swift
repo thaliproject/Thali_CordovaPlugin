@@ -9,20 +9,20 @@
 import Foundation
 
 class SocketRelay<Builder: VirtualSocketBuilder> {
-    private var activeBuilders: [Session : Builder] = [:]
-    private var activeSessions: [Session : (NSOutputStream, NSInputStream)] = [:]
+    private var activeBuilders: Atomic<[Session : Builder]> = Atomic([:])
+    private var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> = Atomic([:])
 
     init() {}
 
     private func discard(builder: Builder) {
-        synchronized(self) {
-            let index = activeBuilders.indexOf {
+        activeBuilders.modify {
+            let index = $0.indexOf {
                 $0.1 === builder
             }
             guard let builderIndex = index else {
                 return
             }
-            activeBuilders.removeAtIndex(builderIndex)
+            $0.removeAtIndex(builderIndex)
         }
     }
 
@@ -32,9 +32,10 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
             guard let strongSelf = self else {
                 return
             }
-            synchronized(strongSelf) {
-                strongSelf.discard(builder)
-                if strongSelf.activeSessions[session] == nil {
+            
+            strongSelf.discard(builder)
+            strongSelf.activeSessions.withValue {
+                if $0[session] == nil {
                     completion()
                 }
             }
@@ -42,9 +43,8 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
     }
 
     private func handleDidReceive(socket socket: (NSOutputStream, NSInputStream), for session: Session) {
-        synchronized(self) {
-            self.activeSessions[session] = socket
-            self.activeSessions.removeValueForKey(session)
+        activeSessions.modify {
+            $0[session] = socket
         }
     }
 
