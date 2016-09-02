@@ -104,31 +104,14 @@ public typealias ClientConnectCallback = (String, String) -> Void
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
 
+    private var bluetoothState = RadioState.unavailable
+    private var bluetoothLowEnergyState = RadioState.unavailable
     private var bluetoothManager: CBCentralManager?
 
     private func notifyOnDidUpdateNetworkStatus() {
 
-        var bluetoothState = RadioState.unavailable
-        var bluetoothLowEnergyState = RadioState.unavailable
         var wifiState = RadioState.unavailable
         let cellularState = RadioState.doNotCare
-
-        if let bluetoothManager = bluetoothManager {
-            switch bluetoothManager.state {
-            case .PoweredOn:
-                bluetoothState = .on
-                bluetoothLowEnergyState = .on
-            case .PoweredOff:
-                bluetoothState = .off
-                bluetoothLowEnergyState = .off
-            case .Unsupported:
-                bluetoothState = .notHere
-                bluetoothLowEnergyState = .notHere
-            default:
-                bluetoothState = .unavailable
-                bluetoothLowEnergyState = .unavailable
-            }
-        }
 
         let networkReachability = NetworkReachability()
         let wifiEnabled = networkReachability.isWiFiEnabled()
@@ -175,12 +158,15 @@ public typealias ClientConnectCallback = (String, String) -> Void
         #if TEST
             // We use background queue because CI tests use main_queue synchronously
             // Otherwise we won't be able to get centralManager state.
-            let centralManagerDispatchQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)
+            let centralManagerDispatchQueue =
+                dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)
         #else
-            let centralManagerDispatchQueue = nil
+            let centralManagerDispatchQueue: dispatch_queue_t? = nil
         #endif
-        bluetoothManager = CBCentralManager(delegate: self, queue: centralManagerDispatchQueue)
-
+        bluetoothManager =
+            CBCentralManager(delegate: self,
+                             queue: centralManagerDispatchQueue,
+                             options: [CBCentralManagerOptionShowPowerAlertKey : false])
     }
 
     public func startListeningForAdvertisements() throws {
@@ -235,7 +221,34 @@ public typealias ClientConnectCallback = (String, String) -> Void
 // MARK: CBCentralManagerDelegate
 extension AppContext: CBCentralManagerDelegate {
 
-    public func centralManagerDidUpdateState(central: CBCentralManager) {}
+    public func centralManagerDidUpdateState(central: CBCentralManager) {
+        switch central.state {
+        case .PoweredOn:
+            bluetoothState = .on
+            bluetoothLowEnergyState = .on
+            #if TEST
+                NSNotificationCenter.defaultCenter().postNotificationName(
+                    Constants.NSNotificationName.centralBluetoothManagerDidChangeState,
+                    object: self
+                )
+            #endif
+        case .PoweredOff:
+            bluetoothState = .off
+            bluetoothLowEnergyState = .off
+            #if TEST
+                NSNotificationCenter.defaultCenter().postNotificationName(
+                    Constants.NSNotificationName.centralBluetoothManagerDidChangeState,
+                    object: self
+                )
+            #endif
+        case .Unsupported:
+            bluetoothState = .notHere
+            bluetoothLowEnergyState = .notHere
+        default:
+            bluetoothState = .unavailable
+            bluetoothLowEnergyState = .unavailable
+        }
+    }
 }
 
 /// Node functions names
