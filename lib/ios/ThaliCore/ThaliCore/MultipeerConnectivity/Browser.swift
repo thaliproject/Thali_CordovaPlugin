@@ -61,7 +61,7 @@ extension Browser: MCNearbyServiceBrowserDelegate {
     func browser(browser: MCNearbyServiceBrowser,
                         foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
         do {
-            let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
+            let peerIdentifier = try PeerIdentifier(peerID: peerID)
             synchronized(self) {
                 self.availablePeers[peerIdentifier] = peerID
             }
@@ -73,7 +73,7 @@ extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         do {
-            let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
+            let peerIdentifier = try PeerIdentifier(peerID: peerID)
             synchronized(self) {
                 self.availablePeers.removeValueForKey(peerIdentifier)
             }

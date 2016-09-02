@@ -58,7 +58,7 @@ public struct PeerIdentifier: Hashable {
 ///Multipeer connectivity specific functions
 extension PeerIdentifier {
 
-    init(mcPeer peer: MCPeerID) throws {
+    init(peerID peer: MCPeerID) throws {
         try self.init(stringValue: peer.displayName)
     }
 }
