@@ -9,7 +9,7 @@
 import Foundation
 
 class SocketRelay<Builder: VirtualSocketBuilder> {
-    private var activeBuilders: [Session :Builder] = [:]
+    private var activeBuilders: [Session : Builder] = [:]
     private var activeSessions: [Session : (NSOutputStream, NSInputStream)] = [:]
 
     init() {}
