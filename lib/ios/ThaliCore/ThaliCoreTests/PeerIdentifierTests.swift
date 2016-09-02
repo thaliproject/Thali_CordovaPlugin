@@ -55,6 +55,10 @@ class PeerIdentifierTests: XCTestCase {
         let p2 = PeerIdentifier(uuidIdentifier: p1.uuid, generation: p1.generation)
         XCTAssertEqual(p1, p2)
 
+        /* These strings has the same linguistic meaning and appearance but using different UTF-8 characters.
+           But `==` treats them as equal because they're canonically equivalent. Therefore we need to use
+           String.compare function to compare strings by charachter
+         */
         let p3 = PeerIdentifier(uuidIdentifier: "id\u{E9}ntifi\u{E9}r", generation: 0)
         let p4 = PeerIdentifier(uuidIdentifier: "id\u{65}\u{301}ntifi\u{65}\u{301}r", generation: 0)
         XCTAssertEqual(p3.uuid, p4.uuid)

@@ -15,7 +15,7 @@ class AdvertiserManagerTests: XCTestCase {
 
     override func setUp() {
         let serviceType = String.random(length: 7)
-        advertiserManager = AdvertiserManager(serviceType: serviceType)
+        advertiserManager = AdvertiserManager(serviceType: serviceType, disposeAdvertiserTimeout: 1.0)
     }
 
     override func tearDown() {

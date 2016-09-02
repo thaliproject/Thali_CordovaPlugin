@@ -75,14 +75,14 @@ class MultiConnectTests: XCTestCase {
     }
 
     func testSocketCreateTimeout() {
-        let relay = SocketRelay<BrowserVirtualSocketBuilder>()
+        let timeout: Double = 1.0
+        let relay = SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: timeout)
         let peerID = MCPeerID(displayName: "test")
         let mcSession = MCSession(peer: peerID)
         let session = Session(session: mcSession, identifier: peerID)
-        let timeout: Double = 3.0
         let expectation = expectationWithDescription("got connection timed out")
         var error: MultiConnectError?
-        relay.createSocket(with: session, timeout: timeout) { port, err in
+        relay.createSocket(with: session) { port, err in
             error = err as? MultiConnectError
             expectation.fulfill()
         }

@@ -11,8 +11,11 @@ import Foundation
 class SocketRelay<Builder: VirtualSocketBuilder> {
     private var activeBuilders: Atomic<[Session : Builder]> = Atomic([:])
     private var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> = Atomic([:])
+    private let createSocketTimeout: Double
 
-    init() {}
+    init(createSocketTimeout: Double) {
+        self.createSocketTimeout = createSocketTimeout
+    }
 
     private func discard(builder: Builder) {
         activeBuilders.modify {
@@ -26,8 +29,8 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
         }
     }
 
-    private func addToDiscardQueue(builder: Builder, for session: Session, withTimeout timeout: Double, completion: () -> Void) {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(timeout * Double(NSEC_PER_SEC)))
+    private func addToDiscardQueue(builder: Builder, for session: Session, completion: () -> Void) {
+        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(self.createSocketTimeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -48,8 +51,7 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
         }
     }
 
-    func createSocket(with session: Session, onPort port: UInt16 = 0,
-                           timeout: Double = 5, completion: (UInt16?, ErrorType?) -> Void) {
+    func createSocket(with session: Session, onPort port: UInt16 = 0, completion: (UInt16?, ErrorType?) -> Void) {
         let virtualSocketBuilder = Builder(session: session, completionHandler: { [weak self] socket, error in
             //todo bind to CocoaAsyncSocket and call completion block
             //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
@@ -61,7 +63,7 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
             }, disconnectedHandler: {
                 completion(nil, MultiConnectError.ConnectionFailed)
         })
-        addToDiscardQueue(virtualSocketBuilder, for: session, withTimeout: timeout) {
+        addToDiscardQueue(virtualSocketBuilder, for: session) {
             completion(nil, MultiConnectError.ConnectionTimedOut)
         }
     }

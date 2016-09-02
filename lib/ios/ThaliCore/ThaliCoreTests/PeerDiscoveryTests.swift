@@ -12,11 +12,12 @@ import XCTest
 class PeerDiscoveryTests: XCTestCase {
     var browser: BrowserManager!
     var advertiser: AdvertiserManager!
+    let disposeTimeout: Double = 4.0
 
     override func setUp() {
         let serviceType = String.random(length: 7)
         browser = BrowserManager(serviceType: serviceType)
-        advertiser = AdvertiserManager(serviceType: serviceType)
+        advertiser = AdvertiserManager(serviceType: serviceType, disposeAdvertiserTimeout: disposeTimeout)
     }
 
     override func tearDown() {
@@ -43,7 +44,7 @@ class PeerDiscoveryTests: XCTestCase {
         XCTAssertEqual(advertiserIdentifier, advertiserPeerAvailability?.peerIdentifier)
     }
 
-    func testDisposeAdvertiserAfter30sec() {
+    func testDisposeAdvertiserAfterTimeout() {
         advertiser.startUpdateAdvertisingAndListening(42)
         XCTAssertEqual(advertiser.advertisers.value.count, 1)
         let firstAdvertiserIdentifier = advertiser.currentAdvertiser?.peerIdentifier
@@ -56,7 +57,7 @@ class PeerDiscoveryTests: XCTestCase {
             expectation?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(40, handler: nil)
+        waitForExpectationsWithTimeout(disposeTimeout + 1, handler: nil)
         XCTAssertEqual(advertiser.advertisers.value.count, 1)
     }
 
@@ -106,7 +107,7 @@ class PeerDiscoveryTests: XCTestCase {
             }
         }
 
-        waitForExpectationsWithTimeout(10, handler: nil)
+        waitForExpectationsWithTimeout(disposeTimeout + 1, handler: nil)
         let lastGenerationIdentifier = browser.lastGenerationPeer(for: identifier)
 
         XCTAssertEqual(1, lastGenerationIdentifier?.generation)

@@ -119,7 +119,7 @@ extension PeerAvailability {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
         browserManager = BrowserManager(serviceType: serviceType)
-        advertiserManager = AdvertiserManager(serviceType: serviceType)
+        advertiserManager = AdvertiserManager(serviceType: serviceType, disposeAdvertiserTimeout: 30)
         super.init()
         browserManager.peersAvailabilityChanged = { [weak self] peers in
             self?.peersAvailabilityChanged(peers)

@@ -15,7 +15,7 @@ public struct PeerAvailability {
 
 //class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
-    private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>()
+    private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: 5)
 
     internal private(set) var currentBrowser: Browser?
     internal private(set) var availablePeers: Atomic<[PeerIdentifier]> = Atomic([])
