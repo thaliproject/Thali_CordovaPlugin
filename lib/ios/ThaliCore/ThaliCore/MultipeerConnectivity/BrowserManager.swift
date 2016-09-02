@@ -66,11 +66,11 @@ public final class BrowserManager: NSObject {
         return synchronized(self) {
             //todo check reachability status #823
             guard let currentBrowser = self.currentBrowser else {
-                completion(nil, MultiConnectError.StartListeningNotActive)
+                completion(nil, ThaliCoreError.StartListeningNotActive)
                 return
             }
             guard let lastGenerationIdentifier = self.lastGenerationPeer(for: identifier) else {
-                completion(nil, MultiConnectError.IllegalPeerID)
+                completion(nil, ThaliCoreError.IllegalPeerID)
                 return
             }
             do {

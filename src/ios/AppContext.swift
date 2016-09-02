@@ -264,8 +264,8 @@ func jsonValue(object: AnyObject) -> String {
 }
 
 func errorDescription(error: ErrorType) -> String {
-    if let stringConvertibleError = error as? CustomStringConvertible {
-        return stringConvertibleError.description
+    if let thaliCoreError = error as? ThaliCoreError {
+        return thaliCoreError.rawValue
     }
     return (error as NSError).localizedDescription
 }

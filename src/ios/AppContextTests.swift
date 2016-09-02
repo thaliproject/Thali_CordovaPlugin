@@ -8,6 +8,7 @@
 
 import XCTest
 import UIKit
+import ThaliCore
 
 class AppContextDelegateMock: NSObject, AppContextDelegate {
     var networkStatusUpdated = false
@@ -109,14 +110,7 @@ class AppContextTests: XCTestCase {
     }
 
     func testErrorDescription() {
-        enum StringConvertibleError: ErrorType, CustomStringConvertible {
-            case TestError
-
-            var description: String {
-                return "test_description"
-            }
-        }
-        XCTAssertEqual(StringConvertibleError.TestError.description, errorDescription(StringConvertibleError.TestError))
+        XCTAssertEqual(ThaliCoreError.IllegalPeerID.rawValue, errorDescription(ThaliCoreError.IllegalPeerID))
 
         let unknownError = AppContextError.UnknownError
         XCTAssertEqual((unknownError as NSError).localizedDescription, errorDescription(unknownError))

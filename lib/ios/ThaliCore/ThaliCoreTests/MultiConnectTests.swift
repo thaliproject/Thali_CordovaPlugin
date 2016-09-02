@@ -81,9 +81,9 @@ class MultiConnectTests: XCTestCase {
         let session = Session(session: mcSession, identifier: peerID)
         let timeout: Double = 3.0
         let expectation = expectationWithDescription("got connection timed out")
-        var error: MultiConnectError?
+        var error: ThaliCoreError?
         relay.createSocket(with: session, timeout: timeout) { port, err in
-            error = err as? MultiConnectError
+            error = err as? ThaliCoreError
             expectation.fulfill()
         }
         waitForExpectationsWithTimeout(timeout + 1, handler: nil)

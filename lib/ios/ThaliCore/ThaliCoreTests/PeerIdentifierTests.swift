@@ -30,10 +30,10 @@ class PeerIdentifierTests: XCTestCase {
 
     func testWrongFormatString() {
         let string = "eqwer:asdf:aasdf"
-        var parsingError: PeerIdentifierError?
+        var parsingError: ThaliCoreError?
         do {
             let _ = try PeerIdentifier(stringValue: string)
-        } catch let peerErr as PeerIdentifierError {
+        } catch let peerErr as ThaliCoreError {
             parsingError = peerErr
         } catch _ {
         }
@@ -43,7 +43,7 @@ class PeerIdentifierTests: XCTestCase {
         parsingError = nil
         do {
             let _ = try PeerIdentifier(stringValue: string2)
-        } catch let peerErr as PeerIdentifierError {
+        } catch let peerErr as ThaliCoreError {
             parsingError = peerErr
         } catch _ {
         }

@@ -59,10 +59,10 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
             }
             self?.handleDidReceive(socket: socket, for: session)
             }, disconnectedHandler: {
-                completion(nil, MultiConnectError.ConnectionFailed)
+                completion(nil, ThaliCoreError.ConnectionFailed)
         })
         addToDiscardQueue(virtualSocketBuilder, for: session, withTimeout: timeout) {
-            completion(nil, MultiConnectError.ConnectionTimedOut)
+            completion(nil, ThaliCoreError.ConnectionTimedOut)
         }
     }
 }

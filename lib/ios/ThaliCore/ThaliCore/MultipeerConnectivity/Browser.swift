@@ -48,7 +48,7 @@ final class Browser: NSObject {
     func inviteToConnectPeer(with peerIdentifier: PeerIdentifier) throws -> Session {
         let mcSession = MCSession(peer: browser.myPeerID, securityIdentity: nil, encryptionPreference: .None)
         guard let mcPeer = availablePeers[peerIdentifier] else {
-            throw MultiConnectError.IllegalPeerID
+            throw ThaliCoreError.IllegalPeerID
         }
         let session = Session(session: mcSession, identifier: mcPeer)
         browser.invitePeer(mcPeer, toSession: mcSession, withContext: nil, timeout: 30)
