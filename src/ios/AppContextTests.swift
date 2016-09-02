@@ -7,6 +7,28 @@
 //
 
 import XCTest
+import UIKit
+
+class AppContextDelegateMock: NSObject, AppContextDelegate {
+    var networkStatusUpdated = false
+    var willEnterBackground = false
+    var didEnterForeground = false
+
+    @objc func context(context: AppContext, didResolveMultiConnectWith paramsJSONString: String) {}
+    @objc func context(context: AppContext, didFailMultiConnectConnectionWith paramsJSONString: String) {}
+    @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
+    @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
+        networkStatusUpdated = true
+    }
+    @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
+    @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
+    @objc func appWillEnterBackground(with context: AppContext) {
+        willEnterBackground = true
+    }
+    @objc func appDidEnterForeground(with context: AppContext) {
+        didEnterForeground = true
+    }
+}
 
 class AppContextTests: XCTestCase {
     var context: AppContext! = nil
@@ -20,25 +42,24 @@ class AppContextTests: XCTestCase {
     }
 
     func testUpdateNetworkStatus() {
-
-        class AppContextDelegateMock: NSObject, AppContextDelegate {
-            var networkStatusUpdated = false
-            @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
-            @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
-                networkStatusUpdated = true
-            }
-            @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
-            @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
-            @objc func appWillEnterBackground(with context: AppContext) {}
-            @objc func appDidEnterForeground(with context: AppContext) {}
-            @objc func context(context: AppContext, didResolveMultiConnectWith params: String) {}
-            @objc func context(context: AppContext, didFailMultiConnectConnectionWith params: String) {}
-        }
-
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
         let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
         XCTAssertTrue(delegateMock.networkStatusUpdated, "network status is not updated")
+    }
+
+    func testWillEnterBackground() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        NSNotificationCenter.defaultCenter().postNotificationName(UIApplicationWillResignActiveNotification, object: nil)
+        XCTAssertTrue(delegateMock.willEnterBackground)
+    }
+
+    func testDidEnterForeground() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        NSNotificationCenter.defaultCenter().postNotificationName(UIApplicationDidBecomeActiveNotification, object: nil)
+        XCTAssertTrue(delegateMock.didEnterForeground)
     }
 
     func testDidRegisterToNative() {
@@ -62,7 +83,7 @@ class AppContextTests: XCTestCase {
     func testGetIOSVersion() {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
     }
-    
+
     func testMultiConnectErrors() {
         var error: AppContextError?
         do {
