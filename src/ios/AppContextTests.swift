@@ -14,6 +14,30 @@ extension NetworkStatusParameters {
     static let allValues = [bluetooth, bluetoothLowEnergy, wifi, cellular, bssid]
 }
 
+struct Constants {
+
+    struct TimeForWhich {
+
+        static let  bluetoothStateIsChanged: NSTimeInterval = 10
+    }
+
+    struct NSNotificationName {
+
+        static let centralBluetoothManagerDidChangeState = "CentralBluetoothManagerDidChangeState"
+    }
+}
+
+private extension Selector {
+
+    static let centralBluetoothManagerStateChanged =
+        #selector(AppContextTests.centralBluetoothManagerStateChanged(_:))
+}
+
+enum BluetoothHardwareState: String {
+    case on = "on"
+    case off = "off"
+}
+
 // MARK: - Mock objects
 class AppContextDelegateMock: NSObject, AppContextDelegate {
     /// Network status represented as JSON String.
@@ -102,7 +126,11 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
 class AppContextTests: XCTestCase {
 
     var context: AppContext! = nil
-    var expectation: XCTestExpectation?
+
+    weak var expectationThatPrivateBluetoothStateIsChanged: XCTestExpectation?
+    weak var expectationThatCoreBluetoothStateIsChanged: XCTestExpectation?
+    weak var expectationThatBothBluetoothStatesAreChanged: XCTestExpectation?
+    var bluetoothChangingStateGroup: dispatch_group_t?
 
     override func setUp() {
         context = AppContext(serviceType: "thaliTest")
@@ -115,18 +143,35 @@ class AppContextTests: XCTestCase {
     // MARK: Tests
     func testUpdateNetworkStatus() {
 
-        // MARK: Store Bluetooth power state
-        BluetoothHardwareControlManager.sharedInstance().registerObserver(self)
+        // MARK: Register observers
+        NSNotificationCenter.defaultCenter().addObserver(
+            self,
+            selector: Selector.centralBluetoothManagerStateChanged,
+            name: Constants.NSNotificationName.centralBluetoothManagerDidChangeState,
+            object: context
+        )
 
-        let bluetoothWasPoweredBeforeTest =
-            BluetoothHardwareControlManager.sharedInstance().bluetoothIsPowered()
-        let bluetoothShouldBeTurnedOn = !bluetoothWasPoweredBeforeTest
+        BluetoothHardwareControlManager.sharedInstance().registerObserver(self)
 
 
         // MARK: Check if we have correct parameters in network status
         // Given
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
+
+        expectationThatCoreBluetoothStateIsChanged =
+            expectationWithDescription(
+                "Central Bluetooth Manager has actual state either .PoweredOn or .PoweredOff"
+        )
+        waitForExpectationsWithTimeout(Constants.TimeForWhich.bluetoothStateIsChanged) {
+            error in
+            XCTAssertNil(
+                error,
+                "Can't update Central Bluetooth Manager state"
+            )
+        }
+
+        expectationThatCoreBluetoothStateIsChanged = nil
 
         // When
         let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
@@ -155,23 +200,23 @@ class AppContextTests: XCTestCase {
         }
 
 
+        // MARK: Store Bluetooth power state
+        let bluetoothWasPoweredBeforeTest =
+            BluetoothHardwareControlManager.sharedInstance().bluetoothIsPowered()
+
+
         // MARK: Dynamically check if networkStatus responds on turning on Bluetooth
         // Given
         var bluetoothStateExpected = RadioState.on.rawValue
         var bluetoothLowEnergyStateExpected = RadioState.on.rawValue
 
+        let bluetoothShouldBeTurnedOn = !bluetoothWasPoweredBeforeTest
         if bluetoothShouldBeTurnedOn {
-            expectation = expectationWithDescription("Bluetooth is turned on")
-            BluetoothHardwareControlManager.sharedInstance().turnBluetoothOn()
-            waitForExpectationsWithTimeout(10) {
-                error in
-                XCTAssertNil(
-                    error,
-                    "Can not turn on Bluetooth hardware"
-                )
-            }
 
-            expectation = nil
+            changeBluetoothState(
+                to: .on,
+                andWaitUntilChangesWithTimeout: Constants.TimeForWhich.bluetoothStateIsChanged
+            )
         }
 
         // When
@@ -200,17 +245,10 @@ class AppContextTests: XCTestCase {
         bluetoothStateExpected = RadioState.off.rawValue
         bluetoothLowEnergyStateExpected = RadioState.off.rawValue
 
-        expectation = expectationWithDescription("Bluetooth is turned off")
-        BluetoothHardwareControlManager.sharedInstance().turnBluetoothOff()
-        waitForExpectationsWithTimeout(10) {
-            error in
-            XCTAssertNil(
-                error,
-                "Can not turn off bluetooth hardware"
-            )
-        }
-
-        expectation = nil
+        changeBluetoothState(
+            to: .off,
+            andWaitUntilChangesWithTimeout: Constants.TimeForWhich.bluetoothStateIsChanged
+        )
 
         // When
         let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
@@ -252,21 +290,14 @@ class AppContextTests: XCTestCase {
             BluetoothHardwareControlManager.sharedInstance().bluetoothIsPowered()
 
         if bluetoothWasPoweredBeforeTest != bluetoothIsPoweredAfterTest {
-            expectation = expectationWithDescription("Bluetooth is restoring its state")
-            bluetoothWasPoweredBeforeTest
-                ? BluetoothHardwareControlManager.sharedInstance().turnBluetoothOn()
-                : BluetoothHardwareControlManager.sharedInstance().turnBluetoothOff()
 
-            waitForExpectationsWithTimeout(10) {
-                error in
-                XCTAssertNil(
-                    error,
-                    "Can not turn off bluetooth hardware"
-                )
-            }
-
-            expectation = nil
+            changeBluetoothState(
+                to: bluetoothWasPoweredBeforeTest ? .on : .off,
+                andWaitUntilChangesWithTimeout: Constants.TimeForWhich.bluetoothStateIsChanged
+            )
         }
+
+        NSNotificationCenter.defaultCenter().removeObserver(self)
     }
 
     func testDidRegisterToNative() {
@@ -290,14 +321,64 @@ class AppContextTests: XCTestCase {
     func testGetIOSVersion() {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
     }
+
+
+    // MARK: Private helpers
+    @objc private func centralBluetoothManagerStateChanged(notification: NSNotification) {
+        if notification.name == Constants.NSNotificationName.centralBluetoothManagerDidChangeState {
+            expectationThatCoreBluetoothStateIsChanged?.fulfill()
+            if let bluetoothChangingStateGroup = bluetoothChangingStateGroup {
+                dispatch_group_leave(bluetoothChangingStateGroup)
+            }
+        }
+    }
+
+    private func changeBluetoothState(to state: BluetoothHardwareState,
+                                         andWaitUntilChangesWithTimeout timeout: NSTimeInterval) {
+
+        bluetoothChangingStateGroup = dispatch_group_create()
+
+        expectationThatBothBluetoothStatesAreChanged =
+            expectationWithDescription("Bluetooth is turned \(state.rawValue)")
+
+        dispatch_group_enter(bluetoothChangingStateGroup!)
+        dispatch_group_enter(bluetoothChangingStateGroup!)
+
+        state == .on
+            ? BluetoothHardwareControlManager.sharedInstance().turnBluetoothOn()
+            : BluetoothHardwareControlManager.sharedInstance().turnBluetoothOff()
+
+        dispatch_group_notify(
+            bluetoothChangingStateGroup!,
+            dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), {
+                self.privateAndPublicBluetoothStatesDidChanged()
+            }
+        )
+
+        waitForExpectationsWithTimeout(Constants.TimeForWhich.bluetoothStateIsChanged) {
+            error in
+            XCTAssertNil(
+                error,
+                "Can not turn \(state.rawValue) Bluetooth hardware"
+            )
+        }
+
+        bluetoothChangingStateGroup = nil
+        expectationThatBothBluetoothStatesAreChanged = nil
+    }
+
+    private func privateAndPublicBluetoothStatesDidChanged() {
+        expectationThatBothBluetoothStatesAreChanged?.fulfill()
+    }
 }
 
 extension AppContextTests : BluetoothHardwareControlObserverProtocol {
 
     func receivedBluetoothManagerNotificationWithName(bluetoothNotificationName: String) {
         if bluetoothNotificationName == PowerChangedNotification {
-            if nil != expectation {
-                expectation!.fulfill()
+            expectationThatPrivateBluetoothStateIsChanged?.fulfill()
+            if let bluetoothChangingStateGroup = bluetoothChangingStateGroup {
+                dispatch_group_leave(bluetoothChangingStateGroup)
             }
         }
     }
