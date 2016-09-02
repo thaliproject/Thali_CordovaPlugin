@@ -85,6 +85,7 @@ class AppContextTests: XCTestCase {
     }
 
     func testMultiConnectErrors() {
+        //testing parameters count
         var error: AppContextError?
         do {
             try context.multiConnectToPeer([""])
@@ -92,6 +93,19 @@ class AppContextTests: XCTestCase {
             error = err
         } catch _ {}
         XCTAssertEqual(error, AppContextError.BadParameters)
+        
+        //testing parameter types
+        error = nil
+        do {
+            try context.multiConnectToPeer([2, 2])
+        } catch let err as AppContextError {
+            error = err
+        } catch _ {}
+        XCTAssertEqual(error, AppContextError.BadParameters)
+    }
+    
+    func testMultiConnect() {
+        //todo will be implemented as soon as we will have the whole stack working
     }
 
     func testErrorDescription() {
