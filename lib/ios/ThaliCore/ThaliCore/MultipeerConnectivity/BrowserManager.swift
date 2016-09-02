@@ -18,7 +18,7 @@ public final class BrowserManager: NSObject {
     private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>()
 
     internal private(set) var currentBrowser: Browser?
-    internal private(set) var availablePeers: [PeerIdentifier] = []
+    internal private(set) var availablePeers: Atomic<[PeerIdentifier]> = Atomic([])
 
     internal let serviceType: String
 
@@ -32,17 +32,17 @@ public final class BrowserManager: NSObject {
     }
 
     private func handleFoundPeer(with identifier: PeerIdentifier) {
-        synchronized(self) {
-            peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
-            availablePeers.append(identifier)
+        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
+        availablePeers.modify {
+            $0.append(identifier)
         }
     }
 
     private func handleLostPeer(with identifier: PeerIdentifier) {
-        synchronized(self) {
-            peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
-            if let index = availablePeers.indexOf(identifier) {
-                availablePeers.removeAtIndex(index)
+        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
+        availablePeers.modify {
+            if let index = $0.indexOf(identifier) {
+                $0.removeAtIndex(index)
             }
         }
     }
@@ -63,33 +63,30 @@ public final class BrowserManager: NSObject {
     }
 
     public func connectToPeer(identifier: PeerIdentifier, completion: (UInt16?, ErrorType?) -> Void) {
-        return synchronized(self) {
-            //todo check reachability status #823
-            guard let currentBrowser = self.currentBrowser else {
-                completion(nil, ThaliCoreError.StartListeningNotActive)
-                return
-            }
-            guard let lastGenerationIdentifier = self.lastGenerationPeer(for: identifier) else {
-                completion(nil, ThaliCoreError.IllegalPeerID)
-                return
-            }
-            do {
-                let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier)
-                socketRelay.createSocket(with: session, completion: completion)
-            } catch let error {
-                completion(nil, error)
-            }
+        guard let currentBrowser = self.currentBrowser else {
+            completion(nil, ThaliCoreError.StartListeningNotActive)
+            return
         }
-
+        guard let lastGenerationIdentifier = self.lastGenerationPeer(for: identifier) else {
+            completion(nil, ThaliCoreError.IllegalPeerID)
+            return
+        }
+        do {
+            let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier)
+            socketRelay.createSocket(with: session, completion: completion)
+        } catch let error {
+            completion(nil, error)
+        }
     }
 
     func lastGenerationPeer(for identifier: PeerIdentifier) -> PeerIdentifier? {
-        return availablePeers
-            .filter {
+        return availablePeers.withValue {
+            $0.filter {
                 $0.uuid == identifier.uuid
+                }
+                .maxElement {
+                    $0.0.generation < $0.1.generation
             }
-            .maxElement {
-                $0.0.generation < $0.1.generation
         }
     }
 }

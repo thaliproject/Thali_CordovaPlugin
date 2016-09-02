@@ -13,7 +13,6 @@ final class Advertiser: NSObject {
     private let advertiser: MCNearbyServiceAdvertiser
 
     let peerIdentifier: PeerIdentifier
-    let serviceType: String
     internal private(set) var advertising: Bool = false
     private let receivedInvitationHandler: (session: Session) -> Void
 
@@ -22,7 +21,6 @@ final class Advertiser: NSObject {
         advertiser = MCNearbyServiceAdvertiser(peer: MCPeerID(peerIdentifier: peerIdentifier),
                                                discoveryInfo:nil, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
-        self.serviceType = serviceType
         self.receivedInvitationHandler = receivedInvitationHandler
         super.init()
         advertiser.delegate = self

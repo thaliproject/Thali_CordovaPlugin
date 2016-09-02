@@ -45,11 +45,11 @@ class PeerDiscoveryTests: XCTestCase {
 
     func testDisposeAdvertiserAfter30sec() {
         advertiser.startUpdateAdvertisingAndListening(42)
-        XCTAssertEqual(advertiser.advertisers.count, 1)
+        XCTAssertEqual(advertiser.advertisers.value.count, 1)
         let firstAdvertiserIdentifier = advertiser.currentAdvertiser?.peerIdentifier
 
         advertiser.startUpdateAdvertisingAndListening(4242)
-        XCTAssertEqual(advertiser.advertisers.count, 2)
+        XCTAssertEqual(advertiser.advertisers.value.count, 2)
         let expectation = expectationWithDescription("advertiser removed after delay")
         advertiser.didRemoveAdvertiserWithIdentifierHandler = { [weak expectation] identifier in
             XCTAssertEqual(firstAdvertiserIdentifier, identifier)
@@ -57,7 +57,7 @@ class PeerDiscoveryTests: XCTestCase {
         }
 
         waitForExpectationsWithTimeout(40, handler: nil)
-        XCTAssertEqual(advertiser.advertisers.count, 1)
+        XCTAssertEqual(advertiser.advertisers.value.count, 1)
     }
 
     func testStopBrowsing() {

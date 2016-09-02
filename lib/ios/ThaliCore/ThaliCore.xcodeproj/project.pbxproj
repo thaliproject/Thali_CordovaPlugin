@@ -21,15 +21,15 @@
 		D375BDEA1D6313E30059805F /* AdvertiserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34882F41D62060E0052A3EA /* AdvertiserManagerTests.swift */; };
 		D375BDEC1D6313F70059805F /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */; };
 		D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */; };
-		D377C4FC1D6B58EF00916A7B /* Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E380D31D6303F50040DF58 /* Sync.swift */; };
 		D377C4FD1D6B58F800916A7B /* String+Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34882F61D62064B0052A3EA /* String+Random.swift */; };
 		D377C5021D6D9C1600916A7B /* VirtualSocketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */; };
 		D37E88BE1D5209B0009243EE /* AppStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37E88BD1D5209B0009243EE /* AppStateNotificationsManagerTests.swift */; };
 		D3CBCCE51D5DD44A00F1591A /* PeerDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */; };
-		D3D0DE7D1D742872000F077C /* ThaliCoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* ThaliCoreError.swift */; };
-		D3D0DE7E1D742873000F077C /* ThaliCoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* ThaliCoreError.swift */; };
-		D3E380D41D6303F50040DF58 /* Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E380D31D6303F50040DF58 /* Sync.swift */; };
+		D3D0DE7D1D742872000F077C /* ThaliCoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
+		D3D0DE7E1D742873000F077C /* ThaliCoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
+		D3E699F81D798F93005D5315 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD84F3454375EE4974B67 /* Atomic.swift */; };
 		FAADD04D8930DF3297562D09 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD342AF116FCE3B46A03D /* Session.swift */; };
+		FAADD102266797342438FB50 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD84F3454375EE4974B67 /* Atomic.swift */; };
 		FAADD16070404F0C249AF956 /* VirtualSocketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */; };
 		FAADD1775D396DBAD50F2C36 /* MultiConnectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD87110881950482ECFF9 /* MultiConnectTests.swift */; };
 		FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */; };
@@ -76,7 +76,6 @@
 		D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserManagerTests.swift; sourceTree = "<group>"; };
 		D37E88BD1D5209B0009243EE /* AppStateNotificationsManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppStateNotificationsManagerTests.swift; sourceTree = "<group>"; };
 		D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerDiscoveryTests.swift; sourceTree = "<group>"; };
-		D3E380D31D6303F50040DF58 /* Sync.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Sync.swift; sourceTree = "<group>"; };
 		FAADD0A063AF85E1634DB500 /* Browser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Browser.swift; sourceTree = "<group>"; };
 		FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserManager.swift; sourceTree = "<group>"; };
 		FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Advertiser.swift; sourceTree = "<group>"; };
@@ -84,6 +83,7 @@
 		FAADD7119C663364132D5C36 /* BrowserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserManager.swift; sourceTree = "<group>"; };
 		FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VirtualSocketBuilder.swift; sourceTree = "<group>"; };
 		FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerIdentifier.swift; sourceTree = "<group>"; };
+		FAADD84F3454375EE4974B67 /* Atomic.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Atomic.swift; sourceTree = "<group>"; };
 		FAADD87110881950482ECFF9 /* MultiConnectTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiConnectTests.swift; sourceTree = "<group>"; };
 		FAADDAC0464B4FA765D583CF /* ThaliCoreError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThaliCoreError.swift; sourceTree = "<group>"; };
 		FAADDB0E92AB65796641015A /* SocketRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketRelay.swift; sourceTree = "<group>"; };
@@ -177,8 +177,8 @@
 			children = (
 				FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */,
 				FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */,
-				D3E380D31D6303F50040DF58 /* Sync.swift */,
 				FAADDAC0464B4FA765D583CF /* ThaliCoreError.swift */,
+				FAADD84F3454375EE4974B67 /* Atomic.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -454,10 +454,10 @@
 				D3D0DE7D1D742872000F077C /* ThaliCoreError.swift in Sources */,
 				D30051691D6F269E0001E85F /* SocketRelay.swift in Sources */,
 				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
-				D3E380D41D6303F50040DF58 /* Sync.swift in Sources */,
 				FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */,
 				FAADD04D8930DF3297562D09 /* Session.swift in Sources */,
 				FAADD16070404F0C249AF956 /* VirtualSocketBuilder.swift in Sources */,
+				D3E699F81D798F93005D5315 /* Atomic.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -494,10 +494,10 @@
 				D375BDEA1D6313E30059805F /* AdvertiserManagerTests.swift in Sources */,
 				D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */,
 				D3217E351D5E0D990068390B /* AppStateNotificationsManagerTests.swift in Sources */,
-				D377C4FC1D6B58EF00916A7B /* Sync.swift in Sources */,
 				FAADDD566FA7D3F34C6C4581 /* Session.swift in Sources */,
 				FAADD95E916CC41331AA1613 /* MultiConnectTests.swift in Sources */,
 				FAADDC1C4A7942B159C0B09F /* SocketRelay.swift in Sources */,
+				FAADD102266797342438FB50 /* Atomic.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -174,6 +174,7 @@ import ThaliCore
      - parameter callback: callback with connection results.
      */
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
+        //todo check reachability status #823
         guard parameters.count >= 2 else {
             throw AppContextError.BadParameters
         }

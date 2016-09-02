@@ -14,7 +14,7 @@ final class Browser: NSObject {
     private let didFindPeerHandler: (PeerIdentifier) -> Void
     private let didLosePeerHandler: (PeerIdentifier) -> Void
     internal private(set) var listening: Bool = false
-    private var availablePeers: [PeerIdentifier: MCPeerID] = [:]
+    private var availablePeers: Atomic<[PeerIdentifier: MCPeerID]> = Atomic([:])
 
     required init(serviceType: String,
                   foundPeer: (PeerIdentifier) -> Void,
@@ -47,7 +47,10 @@ final class Browser: NSObject {
      */
     func inviteToConnectPeer(with peerIdentifier: PeerIdentifier) throws -> Session {
         let mcSession = MCSession(peer: browser.myPeerID, securityIdentity: nil, encryptionPreference: .None)
-        guard let mcPeer = availablePeers[peerIdentifier] else {
+        let peer = availablePeers.withValue {
+            $0[peerIdentifier]
+        }
+        guard let mcPeer = peer else {
             throw ThaliCoreError.IllegalPeerID
         }
         let session = Session(session: mcSession, identifier: mcPeer)
@@ -61,9 +64,9 @@ extension Browser: MCNearbyServiceBrowserDelegate {
     func browser(browser: MCNearbyServiceBrowser,
                         foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
         do {
-            let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
-            synchronized(self) {
-                self.availablePeers[peerIdentifier] = peerID
+            let peerIdentifier = try PeerIdentifier(peerID: peerID)
+            availablePeers.modify {
+                $0[peerIdentifier] = peerID
             }
             didFindPeerHandler(peerIdentifier)
         } catch let error {
@@ -73,9 +76,9 @@ extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         do {
-            let peerIdentifier = try PeerIdentifier(mcPeer: peerID)
-            synchronized(self) {
-                self.availablePeers.removeValueForKey(peerIdentifier)
+            let peerIdentifier = try PeerIdentifier(peerID: peerID)
+            availablePeers.modify {
+                $0.removeValueForKey(peerIdentifier)
             }
             didLosePeerHandler(peerIdentifier)
         } catch let error {

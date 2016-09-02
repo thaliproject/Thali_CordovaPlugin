@@ -11,7 +11,7 @@ import Foundation
 //class for managing Thali advertiser's logic
 @objc public final class AdvertiserManager: NSObject {
     let socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>()
-    internal private(set) var advertisers: [Advertiser] = []
+    internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
     internal private(set) var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
@@ -33,13 +33,15 @@ import Foundation
     func addAdvertiserToDisposeQueue(advertiser: Advertiser, withTimeout timeout: Double = 30) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(timeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
-            synchronized(self) {
-                advertiser.stopAdvertising()
-                if let index = self.advertisers.indexOf(advertiser) {
-                    self.advertisers.removeAtIndex(index)
+            advertiser.stopAdvertising()
+            
+            self.advertisers.modify {
+                if let index = $0.indexOf(advertiser) {
+                    $0.removeAtIndex(index)
                 }
-                self.didRemoveAdvertiserWithIdentifierHandler?(advertiser.peerIdentifier)
             }
+            
+            self.didRemoveAdvertiserWithIdentifierHandler?(advertiser.peerIdentifier)
         }
     }
 
@@ -48,18 +50,20 @@ import Foundation
             self?.handle(session, withPort: port)
         }
         advertiser.startAdvertising()
-        synchronized(self) {
-            self.advertisers.append(advertiser)
+        advertisers.modify {
+            $0.append(advertiser)
         }
         return advertiser
     }
 
     public func stopAdvertising() {
-        synchronized(self) {
-            self.advertisers.forEach {
+        advertisers.withValue {
+            $0.forEach {
                 $0.stopAdvertising()
             }
-            self.advertisers.removeAll()
+        }
+        advertisers.modify {
+            $0.removeAll()
         }
         currentAdvertiser = nil
     }
