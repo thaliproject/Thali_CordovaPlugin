@@ -11,9 +11,9 @@ import Foundation
 
 /// Managing async queues: inputStreams queue and inputStream's handlers queue
 final class InputStreamHandlerTaskQueue {
-    private var streamPool: [(NSInputStream, String)] = []
-    private var streamHandlerPool: [(NSInputStream, String) -> Void] = []
-    private let serialQueue = dispatch_queue_create("org.thaliproject.inputstream",
+    var streamPool: [(NSInputStream, String)] = []
+    var streamHandlerPool: [(NSInputStream, String) -> Void] = []
+    let serialQueue = dispatch_queue_create("org.thaliproject.InputStreamHandlerTaskQueue",
             DISPATCH_QUEUE_SERIAL)
 
     func add(inputStream: NSInputStream, withName name: String) {

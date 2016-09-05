@@ -24,11 +24,16 @@ class InputStreamHandlerTaskQueueTests: XCTestCase {
         var receivedStreamName: String?
         let stream = NSInputStream(data: NSData(bytes: nil, length: 0))
         queue.add(stream, withName: streamName)
+        dispatch_sync(queue.serialQueue) {
+            XCTAssertEqual(self.queue.streamPool.count, 1)
+        }
         queue.add { [weak expectation] in
             receivedStreamName = $0.1
             expectation?.fulfill()
         }
         waitForExpectationsWithTimeout(1.0, handler: nil)
+        XCTAssertEqual(queue.streamHandlerPool.count, 0)
+        XCTAssertEqual(queue.streamPool.count, 0)
         XCTAssertEqual(receivedStreamName, streamName)
     }
 
@@ -40,8 +45,13 @@ class InputStreamHandlerTaskQueueTests: XCTestCase {
             receivedStreamName = $0.1
             expectation?.fulfill()
         }
+        dispatch_sync(queue.serialQueue) {
+            XCTAssertEqual(self.queue.streamHandlerPool.count, 1)
+        }
         queue.add(stream, withName: streamName)
         waitForExpectationsWithTimeout(1.0, handler: nil)
+        XCTAssertEqual(queue.streamHandlerPool.count, 0)
+        XCTAssertEqual(queue.streamPool.count, 0)
         XCTAssertEqual(receivedStreamName, streamName)
     }
 
