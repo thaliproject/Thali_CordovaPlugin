@@ -3,7 +3,8 @@
 //  SocketRelay.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
+//  information.
 //
 
 import Foundation
@@ -30,7 +31,8 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
     }
 
     private func addToDiscardQueue(builder: Builder, for session: Session, completion: () -> Void) {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(self.createSocketTimeout * Double(NSEC_PER_SEC)))
+        let delayTime = dispatch_time(DISPATCH_TIME_NOW,
+                Int64(self.createSocketTimeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -44,14 +46,17 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
         }
     }
 
-    private func handleDidReceive(socket socket: (NSOutputStream, NSInputStream), for session: Session) {
+    private func handleDidReceive(socket socket: (NSOutputStream, NSInputStream),
+                                  for session: Session) {
         activeSessions.modify {
             $0[session] = socket
         }
     }
 
-    func createSocket(with session: Session, onPort port: UInt16 = 0, completion: (UInt16?, ErrorType?) -> Void) {
-        let virtualSocketBuilder = Builder(session: session, completionHandler: { [weak self] socket, error in
+    func createSocket(with session: Session, onPort port: UInt16 = 0,
+                      completion: (UInt16?, ErrorType?) -> Void) {
+        let virtualSocketBuilder = Builder(session: session,
+                completionHandler: { [weak self] socket, error in
             //todo bind to CocoaAsyncSocket and call completion block
             //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
             guard let socket = socket else {
