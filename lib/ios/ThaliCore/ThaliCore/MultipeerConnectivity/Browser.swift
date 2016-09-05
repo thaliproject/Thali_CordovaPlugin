@@ -3,7 +3,8 @@
 //  Browser.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
+//  information.
 //
 
 import Foundation
@@ -45,15 +46,18 @@ final class Browser: NSObject {
 
      - returns: Session object for managing multipeer session between devices
      */
-    func inviteToConnectPeer(with peerIdentifier: PeerIdentifier) throws -> Session {
-        let mcSession = MCSession(peer: browser.myPeerID, securityIdentity: nil, encryptionPreference: .None)
+    func inviteToConnectPeer(with peerIdentifier: PeerIdentifier,
+                                  disconnectHandler: () -> Void) throws -> Session {
+        let mcSession = MCSession(peer: browser.myPeerID, securityIdentity: nil,
+                                  encryptionPreference: .None)
         let peer = availablePeers.withValue {
             $0[peerIdentifier]
         }
         guard let mcPeer = peer else {
             throw MultiConnectError.IllegalPeerID
         }
-        let session = Session(session: mcSession, identifier: mcPeer)
+        let session = Session(session: mcSession, identifier: mcPeer,
+                              disconnectHandler: disconnectHandler)
         browser.invitePeer(mcPeer, toSession: mcSession, withContext: nil, timeout: 30)
         return session
     }

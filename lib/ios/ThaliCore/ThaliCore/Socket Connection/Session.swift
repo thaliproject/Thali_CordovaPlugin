@@ -11,61 +11,61 @@ import MultipeerConnectivity
 
 /// Class for managing MCSession: subscribing for incoming streams and creating output streams
 class Session: NSObject {
-    enum SessionState {
-        case Connecting
-        case Connected
-        case NotConnected
-
-        private init(sessionState: MCSessionState) {
-            switch sessionState {
-            case .Connected:
-                self = .Connected
-            case .Connecting:
-                self = .Connecting
-            case .NotConnected:
-                self = .NotConnected
-            }
-        }
-    }
 
     private let session: MCSession
     private let identifier: MCPeerID
-    var sessionStateDidChangeHandler: ((SessionState) -> Void)?
-    var didReceiveInputStream: ((NSInputStream, String) -> Void)?
-    internal private(set) var inputStreams: [NSInputStream] = []
-    internal private(set) var outputStreams: [NSOutputStream] = []
-    internal private(set) var sessionState: SessionState = .NotConnected
+    private var didReceiveInputStream: ((NSInputStream, String) -> Void)?
+    private let disconnectHandler: () -> Void
+    internal private(set) var sessionState: MCSessionState = .NotConnected
 
-    func createOutputStream(withName name: String) throws -> NSOutputStream {
-        let stream = try session.startStreamWithName(name, toPeer: identifier)
-        outputStreams.append(stream)
-        return stream
-    }
-
-    init(session: MCSession, identifier: MCPeerID) {
+    init(session: MCSession, identifier: MCPeerID, disconnectHandler: () -> Void) {
         self.session = session
         self.identifier = identifier
+        self.disconnectHandler = disconnectHandler
         super.init()
         self.session.delegate = self
+    }
+
+    func getInputStream(name: String?, completion: (NSInputStream, String) -> Void) {
+        //todoo implement
+    }
+
+    func createOutputStream(withName name: String,
+                            completion: (NSOutputStream?, ErrorType?) -> Void) {
+        let createOutputStream = { [weak self] in
+            do {
+                guard let strongSelf = self else {
+                    return
+                }
+                let stream = try strongSelf.session.startStreamWithName(name, toPeer: strongSelf.identifier)
+                completion(stream, nil)
+            } catch let error {
+                completion(nil, error)
+            }
+        }
+        if self.sessionState == .Connected {
+            createOutputStream()
+        } else {
+            //todo wait for connected state
+        }
     }
 }
 
 extension Session: MCSessionDelegate {
     func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {
-        guard identifier.displayName == peerID.displayName else {
-            print("ignoring peer state changes \(peerID.displayName)")
-            return
+        assert(identifier.displayName == peerID.displayName)
+        sessionState = state
+        switch sessionState {
+        case .NotConnected:
+            disconnectHandler()
+        default:
+            break
         }
-        self.sessionState = SessionState(sessionState: state)
-        sessionStateDidChangeHandler?(sessionState)
     }
 
     func session(session: MCSession, didReceiveStream stream: NSInputStream,
                  withName streamName: String, fromPeer peerID: MCPeerID) {
-        guard identifier.displayName == peerID.displayName else {
-            print("ignoring stream from peer \(peerID.displayName)")
-            return
-        }
+        assert(identifier.displayName == peerID.displayName)
         didReceiveInputStream?(stream, streamName)
     }
 

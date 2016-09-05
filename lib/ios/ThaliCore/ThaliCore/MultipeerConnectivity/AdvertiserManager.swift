@@ -49,9 +49,12 @@ import Foundation
     }
 
     private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16) -> Advertiser {
-        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType) { [weak self] session in
-            self?.handle(session, withPort: port)
-        }
+        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
+                                    receivedInvitationHandler: { [weak self] session in
+                                        self?.handle(session, withPort: port)
+            }, disconnectHandler: {
+                //todo disconnect notification
+        })
         advertiser.startAdvertising()
         advertisers.modify {
             $0.append(advertiser)

@@ -21,7 +21,9 @@ class MultiConnectTests: XCTestCase {
             }, lostPeer: { _ in })
         browser.startListening()
         let advertiser = Advertiser(peerIdentifier: advertiserIdentifier,
-                                    serviceType: serviceType, receivedInvitationHandler: advertiserSessionHandler)
+                                    serviceType: serviceType,
+                                    receivedInvitationHandler: advertiserSessionHandler,
+                                    disconnectHandler: {})
         advertiser.startAdvertising()
 
         return (advertiser, browser)
@@ -35,21 +37,21 @@ class MultiConnectTests: XCTestCase {
         let (advertiser, browser) = createMCPFConnection(peerIdentifier, advertiserSessionHandler: { session in
             let _ = AdvertiserVirtualSocketBuilder(session: session, completionHandler: { socket, error in
                 advertiserStreams = socket
-                }, disconnectedHandler: {
-            })
+                })
         }) { [weak foundPeerExpectation] in
             foundPeerExpectation?.fulfill()
         }
         waitForExpectationsWithTimeout(5, handler: nil)
 
         do {
-            let session = try browser.inviteToConnectPeer(with: peerIdentifier)
+            let session = try browser.inviteToConnectPeer(with: peerIdentifier,
+                                                          disconnectHandler: {})
             let socketCreatedExpectation = expectationWithDescription("socket created")
             let _ = BrowserVirtualSocketBuilder(session: session,
                                                 completionHandler: { [weak socketCreatedExpectation] socket, error in
                                                     browserStreams = socket
                                                     socketCreatedExpectation?.fulfill()
-            }) { _ in }
+            })
             waitForExpectationsWithTimeout(10, handler: nil)
 
             XCTAssertNotNil(advertiser)
@@ -64,11 +66,11 @@ class MultiConnectTests: XCTestCase {
         let disconnectedExpectation = expectationWithDescription("found peer")
         let mcSession = MCSession(peer: MCPeerID(displayName: String.random(length: 5)))
         let peerID = MCPeerID(displayName: String.random(length: 5))
-        let session = Session(session: mcSession, identifier: peerID)
-        let _ = VirtualSocketBuilder(session: session, completionHandler: { data in },
-                                     disconnectedHandler: { [weak disconnectedExpectation] in
+        let session = Session(session: mcSession, identifier: peerID) {
+            [weak disconnectedExpectation] in
             disconnectedExpectation?.fulfill()
-        })
+        }
+        let _ = VirtualSocketBuilder(session: session, completionHandler: { data in })
         //dirty hack to check flow
         mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .NotConnected)
         waitForExpectationsWithTimeout(2, handler: nil)
@@ -79,7 +81,7 @@ class MultiConnectTests: XCTestCase {
         let relay = SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: timeout)
         let peerID = MCPeerID(displayName: "test")
         let mcSession = MCSession(peer: peerID)
-        let session = Session(session: mcSession, identifier: peerID)
+        let session = Session(session: mcSession, identifier: peerID) { _ in }
         let expectation = expectationWithDescription("got connection timed out")
         var error: MultiConnectError?
         relay.createSocket(with: session) { port, err in
