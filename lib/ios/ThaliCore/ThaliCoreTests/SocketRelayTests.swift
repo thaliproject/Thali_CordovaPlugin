@@ -28,4 +28,39 @@ class SocketRelayTests: XCTestCase {
         waitForExpectationsWithTimeout(timeout + 1, handler: nil)
         XCTAssertEqual(error, .ConnectionTimedOut)
     }
+
+    func testCreateSocket() {
+        let foundPeerExpectation = expectationWithDescription("found peer")
+        let peerIdentifier = PeerIdentifier()
+        var browserStreams, advertiserStreams: (NSOutputStream, NSInputStream)?
+
+        let (advertiser, browser) = createMCPFConnection(advertiserIdentifier: peerIdentifier,
+                                                         advertiserSessionHandler: { session in
+            let _ = AdvertiserVirtualSocketBuilder(session: session,
+                completionHandler: { socket, error in
+                advertiserStreams = socket
+            })
+        }) { [weak foundPeerExpectation] in
+            foundPeerExpectation?.fulfill()
+        }
+        waitForExpectationsWithTimeout(5, handler: nil)
+
+        do {
+            let session = try browser.inviteToConnectPeer(with: peerIdentifier,
+                    disconnectHandler: {})
+            let socketCreatedExpectation = expectationWithDescription("socket created")
+            let _ = BrowserVirtualSocketBuilder(session: session,
+                    completionHandler: { [weak socketCreatedExpectation] socket, error in
+                        browserStreams = socket
+                        socketCreatedExpectation?.fulfill()
+                    })
+            waitForExpectationsWithTimeout(10, handler: nil)
+
+            XCTAssertNotNil(advertiser)
+            XCTAssertNotNil(browserStreams)
+            XCTAssertNotNil(advertiserStreams)
+        } catch let error {
+            XCTAssertNil(error)
+        }
+    }
 }

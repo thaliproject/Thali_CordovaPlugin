@@ -41,6 +41,7 @@ final class Browser: NSObject {
      invites PeerIdentifier to session
 
      - parameter peerIdentifier: peer identifier to invite
+     - parameter disconnectHandler: notifies about session not connected state
 
      - throws: IllegalPeerID
 
