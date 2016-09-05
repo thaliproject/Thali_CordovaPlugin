@@ -63,7 +63,6 @@ public final class BrowserManager: NSObject {
     }
 
     public func connectToPeer(identifier: PeerIdentifier, completion: (UInt16?, ErrorType?) -> Void) {
-        
         guard let currentBrowser = self.currentBrowser else {
             completion(nil, MultiConnectError.StartListeningNotActive)
             return
@@ -81,7 +80,7 @@ public final class BrowserManager: NSObject {
             completion(nil, error)
         }
     }
-    
+
     func lastGenerationPeer(for identifier: PeerIdentifier) -> PeerIdentifier? {
         return availablePeers.withValue {
             $0.filter {

@@ -3,7 +3,8 @@
 //  MultiConnectTests.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
+//  information.
 //
 
 import XCTest
@@ -60,35 +61,5 @@ class MultiConnectTests: XCTestCase {
         } catch let error {
             XCTAssertNil(error)
         }
-    }
-
-    func testSessionDisconnected() {
-        let disconnectedExpectation = expectationWithDescription("found peer")
-        let mcSession = MCSession(peer: MCPeerID(displayName: String.random(length: 5)))
-        let peerID = MCPeerID(displayName: String.random(length: 5))
-        let session = Session(session: mcSession, identifier: peerID) {
-            [weak disconnectedExpectation] in
-            disconnectedExpectation?.fulfill()
-        }
-        let _ = VirtualSocketBuilder(session: session, completionHandler: { data in })
-        //dirty hack to check flow
-        mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .NotConnected)
-        waitForExpectationsWithTimeout(2, handler: nil)
-    }
-
-    func testSocketCreateTimeout() {
-        let timeout: Double = 1.0
-        let relay = SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: timeout)
-        let peerID = MCPeerID(displayName: "test")
-        let mcSession = MCSession(peer: peerID)
-        let session = Session(session: mcSession, identifier: peerID) { _ in }
-        let expectation = expectationWithDescription("got connection timed out")
-        var error: MultiConnectError?
-        relay.createSocket(with: session) { port, err in
-            error = err as? MultiConnectError
-            expectation.fulfill()
-        }
-        waitForExpectationsWithTimeout(timeout + 1, handler: nil)
-        XCTAssertEqual(error, .ConnectionTimedOut)
     }
 }

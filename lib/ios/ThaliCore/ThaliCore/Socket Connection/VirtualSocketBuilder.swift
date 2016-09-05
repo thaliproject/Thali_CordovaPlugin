@@ -26,7 +26,6 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
                   completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
         super.init(session: session, completionHandler: completionHandler)
         let streamName = NSUUID().UUIDString
-        //todo add timeouts
         session.createOutputStream(withName: streamName) { outputStream, error in
             guard let outputStream = outputStream where error == nil else {
                 completionHandler(nil, error)
@@ -47,7 +46,6 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
     required init(session: Session,
                   completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
         super.init(session: session, completionHandler: completionHandler)
-        //todo add timeouts
         session.getInputStream() { inputStream, name in
             session.createOutputStream(withName: name) { outputStream, error in
                 guard let outputStream = outputStream where error == nil else {

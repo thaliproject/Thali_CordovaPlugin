@@ -23,6 +23,7 @@
 		D368EE251D7DA54900F1C9D4 /* InputStreamHandlerTaskQueueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D368EE231D7DA53B00F1C9D4 /* InputStreamHandlerTaskQueueTests.swift */; };
 		D368EE271D7DA80500F1C9D4 /* AtomicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D368EE261D7DA80500F1C9D4 /* AtomicTests.swift */; };
 		D368EE281D7DA80800F1C9D4 /* AtomicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D368EE261D7DA80500F1C9D4 /* AtomicTests.swift */; };
+		D368EE2A1D7DB0DC00F1C9D4 /* SocketRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D368EE291D7DB0DC00F1C9D4 /* SocketRelayTests.swift */; };
 		D375BDEA1D6313E30059805F /* AdvertiserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34882F41D62060E0052A3EA /* AdvertiserManagerTests.swift */; };
 		D375BDEC1D6313F70059805F /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */; };
 		D375BDED1D6314A10059805F /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */; };
@@ -48,6 +49,8 @@
 		FAADD7B9451F32511828885E /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0A063AF85E1634DB500 /* Browser.swift */; };
 		FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */; };
 		FAADD95E916CC41331AA1613 /* MultiConnectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD87110881950482ECFF9 /* MultiConnectTests.swift */; };
+		FAADD9C4A689F822A6F54D2E /* SessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF493162FBCCDFCD354B /* SessionTests.swift */; };
+		FAADD9E769D21230217F6C63 /* SessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF493162FBCCDFCD354B /* SessionTests.swift */; };
 		FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
 		FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
 		FAADDC1C4A7942B159C0B09F /* SocketRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDB0E92AB65796641015A /* SocketRelay.swift */; };
@@ -81,6 +84,7 @@
 		D34882F61D62064B0052A3EA /* String+Random.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "String+Random.swift"; sourceTree = "<group>"; };
 		D368EE231D7DA53B00F1C9D4 /* InputStreamHandlerTaskQueueTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InputStreamHandlerTaskQueueTests.swift; sourceTree = "<group>"; };
 		D368EE261D7DA80500F1C9D4 /* AtomicTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AtomicTests.swift; sourceTree = "<group>"; };
+		D368EE291D7DB0DC00F1C9D4 /* SocketRelayTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketRelayTests.swift; sourceTree = "<group>"; };
 		D375BDEB1D6313F70059805F /* BrowserManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserManagerTests.swift; sourceTree = "<group>"; };
 		D37E88BD1D5209B0009243EE /* AppStateNotificationsManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppStateNotificationsManagerTests.swift; sourceTree = "<group>"; };
 		D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerDiscoveryTests.swift; sourceTree = "<group>"; };
@@ -96,6 +100,7 @@
 		FAADD87110881950482ECFF9 /* MultiConnectTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiConnectTests.swift; sourceTree = "<group>"; };
 		FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiConnectError.swift; sourceTree = "<group>"; };
 		FAADDB0E92AB65796641015A /* SocketRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketRelay.swift; sourceTree = "<group>"; };
+		FAADDF493162FBCCDFCD354B /* SessionTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionTests.swift; sourceTree = "<group>"; };
 		FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -171,6 +176,8 @@
 				FAADD87110881950482ECFF9 /* MultiConnectTests.swift */,
 				D368EE231D7DA53B00F1C9D4 /* InputStreamHandlerTaskQueueTests.swift */,
 				D368EE261D7DA80500F1C9D4 /* AtomicTests.swift */,
+				D368EE291D7DB0DC00F1C9D4 /* SocketRelayTests.swift */,
+				FAADDF493162FBCCDFCD354B /* SessionTests.swift */,
 			);
 			path = ThaliCoreTests;
 			sourceTree = "<group>";
@@ -478,6 +485,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D368EE2A1D7DB0DC00F1C9D4 /* SocketRelayTests.swift in Sources */,
 				D34882F71D62064B0052A3EA /* String+Random.swift in Sources */,
 				D300C47B1D54C0EA00A9D97D /* PeerIdentifierTests.swift in Sources */,
 				D368EE271D7DA80500F1C9D4 /* AtomicTests.swift in Sources */,
@@ -487,6 +495,7 @@
 				D3CBCCE51D5DD44A00F1591A /* PeerDiscoveryTests.swift in Sources */,
 				D368EE241D7DA53B00F1C9D4 /* InputStreamHandlerTaskQueueTests.swift in Sources */,
 				FAADD1775D396DBAD50F2C36 /* MultiConnectTests.swift in Sources */,
+				FAADD9C4A689F822A6F54D2E /* SessionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -516,6 +525,7 @@
 				FAADDC1C4A7942B159C0B09F /* SocketRelay.swift in Sources */,
 				FAADD102266797342438FB50 /* Atomic.swift in Sources */,
 				FAADD69116E133AF936D6AAC /* InputStreamHandlerTaskQueue.swift in Sources */,
+				FAADD9E769D21230217F6C63 /* SessionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

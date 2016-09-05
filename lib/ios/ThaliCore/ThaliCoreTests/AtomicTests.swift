@@ -1,9 +1,10 @@
 //
+//  Thali CordovaPlugin
 //  AtomicTests.swift
-//  ThaliCore
 //
-//  Created by Alexander Evsyuchenya on 9/5/16.
-//  Copyright © 2016 Thali. All rights reserved.
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
+//  information.
 //
 
 import XCTest

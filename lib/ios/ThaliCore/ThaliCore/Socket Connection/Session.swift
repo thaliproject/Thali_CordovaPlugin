@@ -18,7 +18,7 @@ final class Session: NSObject {
     private let disconnectHandler: () -> Void
     private var inputStreamTaskPool = InputStreamHandlerTaskQueue()
     private var createOutputStreamHandlerQueue: Atomic<[() -> Void]> = Atomic([])
-    internal private(set) var sessionState: MCSessionState = .NotConnected
+    private var sessionState: Atomic<MCSessionState> = Atomic(.NotConnected)
 
     private func clearOutputStreamQueue() {
         createOutputStreamHandlerQueue.modify {
@@ -55,7 +55,7 @@ final class Session: NSObject {
                 completion(nil, error)
             }
         }
-        if self.sessionState == .Connected {
+        if self.sessionState.value == .Connected {
             createOutputStream()
         } else {
             createOutputStreamHandlerQueue.modify {
@@ -68,8 +68,10 @@ final class Session: NSObject {
 extension Session: MCSessionDelegate {
     func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {
         assert(identifier.displayName == peerID.displayName)
-        sessionState = state
-        switch sessionState {
+        sessionState.modify {
+            $0 = state
+        }
+        switch sessionState.value {
         case .NotConnected:
             disconnectHandler()
         case .Connected:
