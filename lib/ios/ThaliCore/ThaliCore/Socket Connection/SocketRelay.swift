@@ -51,14 +51,14 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
         activeSessions.modify {
             $0[session] = socket
         }
+        //todo bind to CocoaAsyncSocket and call completion block
+        //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
     }
 
     func createSocket(with session: Session, onPort port: UInt16 = 0,
                       completion: (UInt16?, ErrorType?) -> Void) {
         let virtualSocketBuilder = Builder(session: session,
                 completionHandler: { [weak self] socket, error in
-            //todo bind to CocoaAsyncSocket and call completion block
-            //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
             guard let socket = socket else {
                 completion(nil, error)
                 return
