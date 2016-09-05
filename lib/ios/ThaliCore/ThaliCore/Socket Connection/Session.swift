@@ -11,7 +11,7 @@ import Foundation
 import MultipeerConnectivity
 
 /// Class for managing MCSession: subscribing for incoming streams and creating output streams
-final class Session: NSObject {
+class Session: NSObject {
 
     private let session: MCSession
     private let identifier: MCPeerID
