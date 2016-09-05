@@ -1,4 +1,11 @@
 //
+//  AtomicSpec.swift
+//  ReactiveCocoa
+//
+//  Created by Justin Spahr-Summers on 2014-07-13.
+//  Copyright (c) 2014 GitHub. All rights reserved.
+//
+//
 //  Thali CordovaPlugin
 //  Atomic.swift
 //

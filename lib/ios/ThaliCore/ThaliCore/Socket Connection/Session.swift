@@ -3,20 +3,31 @@
 //  Session.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
+//  information.
 //
 
 import Foundation
 import MultipeerConnectivity
 
 /// Class for managing MCSession: subscribing for incoming streams and creating output streams
-class Session: NSObject {
+final class Session: NSObject {
 
     private let session: MCSession
     private let identifier: MCPeerID
-    private var didReceiveInputStream: ((NSInputStream, String) -> Void)?
     private let disconnectHandler: () -> Void
+    private var inputStreamTaskPool = InputStreamHandlerTaskQueue()
+    private var createOutputStreamHandlerQueue: Atomic<[() -> Void]> = Atomic([])
     internal private(set) var sessionState: MCSessionState = .NotConnected
+
+    private func clearOutputStreamQueue() {
+        createOutputStreamHandlerQueue.modify {
+            $0.forEach {
+                $0()
+            }
+            $0.removeAll()
+        }
+    }
 
     init(session: MCSession, identifier: MCPeerID, disconnectHandler: () -> Void) {
         self.session = session
@@ -26,8 +37,8 @@ class Session: NSObject {
         self.session.delegate = self
     }
 
-    func getInputStream(name: String?, completion: (NSInputStream, String) -> Void) {
-        //todoo implement
+    func getInputStream(completion: (NSInputStream, String) -> Void) {
+        inputStreamTaskPool.add(completion)
     }
 
     func createOutputStream(withName name: String,
@@ -37,7 +48,8 @@ class Session: NSObject {
                 guard let strongSelf = self else {
                     return
                 }
-                let stream = try strongSelf.session.startStreamWithName(name, toPeer: strongSelf.identifier)
+                let stream = try strongSelf.session.startStreamWithName(name,
+                        toPeer: strongSelf.identifier)
                 completion(stream, nil)
             } catch let error {
                 completion(nil, error)
@@ -46,7 +58,9 @@ class Session: NSObject {
         if self.sessionState == .Connected {
             createOutputStream()
         } else {
-            //todo wait for connected state
+            createOutputStreamHandlerQueue.modify {
+                $0.append(createOutputStream)
+            }
         }
     }
 }
@@ -58,6 +72,8 @@ extension Session: MCSessionDelegate {
         switch sessionState {
         case .NotConnected:
             disconnectHandler()
+        case .Connected:
+            clearOutputStreamQueue()
         default:
             break
         }
@@ -66,7 +82,7 @@ extension Session: MCSessionDelegate {
     func session(session: MCSession, didReceiveStream stream: NSInputStream,
                  withName streamName: String, fromPeer peerID: MCPeerID) {
         assert(identifier.displayName == peerID.displayName)
-        didReceiveInputStream?(stream, streamName)
+        inputStreamTaskPool.add(stream, withName: streamName)
     }
 
     func session(session: MCSession, didReceiveData data: NSData, fromPeer peerID: MCPeerID) {}

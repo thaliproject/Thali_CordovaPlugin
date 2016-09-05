@@ -21,7 +21,7 @@ class VirtualSocketBuilder {
     }
 }
 
-class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
+final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
     required init(session: Session,
                   completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
         super.init(session: session, completionHandler: completionHandler)
@@ -32,19 +32,23 @@ class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
                 completionHandler(nil, error)
                 return
             }
-            session.getInputStream(streamName) { inputStream, name in
+            session.getInputStream() { inputStream, name in
+                guard name == streamName else {
+                    completionHandler(nil, MultiConnectError.ConnectionFailed)
+                    return
+                }
                 completionHandler((outputStream, inputStream), nil)
             }
         }
     }
 }
 
-class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
+final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
     required init(session: Session,
                   completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
         super.init(session: session, completionHandler: completionHandler)
         //todo add timeouts
-        session.getInputStream(nil) { inputStream, name in
+        session.getInputStream() { inputStream, name in
             session.createOutputStream(withName: name) { outputStream, error in
                 guard let outputStream = outputStream where error == nil else {
                     completionHandler(nil, error)

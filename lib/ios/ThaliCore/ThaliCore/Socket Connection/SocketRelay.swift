@@ -8,7 +8,7 @@
 
 import Foundation
 
-class SocketRelay<Builder: VirtualSocketBuilder> {
+final class SocketRelay<Builder: VirtualSocketBuilder> {
     private var activeBuilders: Atomic<[Session : Builder]> = Atomic([:])
     private var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> = Atomic([:])
     private let createSocketTimeout: Double
@@ -35,7 +35,6 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
             guard let strongSelf = self else {
                 return
             }
-            
             strongSelf.discard(builder)
             strongSelf.activeSessions.withValue {
                 if $0[session] == nil {
