@@ -3,7 +3,8 @@
 //  Session.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
+//  information.
 //
 
 import Foundation
@@ -11,62 +12,79 @@ import MultipeerConnectivity
 
 /// Class for managing MCSession: subscribing for incoming streams and creating output streams
 class Session: NSObject {
-    enum SessionState {
-        case Connecting
-        case Connected
-        case NotConnected
-
-        private init(sessionState: MCSessionState) {
-            switch sessionState {
-            case .Connected:
-                self = .Connected
-            case .Connecting:
-                self = .Connecting
-            case .NotConnected:
-                self = .NotConnected
-            }
-        }
-    }
 
     private let session: MCSession
     private let identifier: MCPeerID
-    var sessionStateDidChangeHandler: ((SessionState) -> Void)?
-    var didReceiveInputStream: ((NSInputStream, String) -> Void)?
-    internal private(set) var inputStreams: [NSInputStream] = []
-    internal private(set) var outputStreams: [NSOutputStream] = []
-    internal private(set) var sessionState: SessionState = .NotConnected
+    private let disconnectHandler: () -> Void
+    private var inputStreamTaskPool = InputStreamHandlerTaskQueue()
+    private var createOutputStreamHandlerQueue: Atomic<[() -> Void]> = Atomic([])
+    private var sessionState: Atomic<MCSessionState> = Atomic(.NotConnected)
 
-    func createOutputStream(withName name: String) throws -> NSOutputStream {
-        let stream = try session.startStreamWithName(name, toPeer: identifier)
-        outputStreams.append(stream)
-        return stream
+    private func clearOutputStreamQueue() {
+        createOutputStreamHandlerQueue.modify {
+            $0.forEach {
+                $0()
+            }
+            $0.removeAll()
+        }
     }
 
-    init(session: MCSession, identifier: MCPeerID) {
+    init(session: MCSession, identifier: MCPeerID, disconnectHandler: () -> Void) {
         self.session = session
         self.identifier = identifier
+        self.disconnectHandler = disconnectHandler
         super.init()
         self.session.delegate = self
+    }
+
+    func getInputStream(completion: (NSInputStream, String) -> Void) {
+        inputStreamTaskPool.add(completion)
+    }
+
+    func createOutputStream(withName name: String,
+                            completion: (NSOutputStream?, ErrorType?) -> Void) {
+        let createOutputStream = { [weak self] in
+            do {
+                guard let strongSelf = self else {
+                    return
+                }
+                let stream = try strongSelf.session.startStreamWithName(name,
+                        toPeer: strongSelf.identifier)
+                completion(stream, nil)
+            } catch let error {
+                completion(nil, error)
+            }
+        }
+        if self.sessionState.value == .Connected {
+            createOutputStream()
+        } else {
+            createOutputStreamHandlerQueue.modify {
+                $0.append(createOutputStream)
+            }
+        }
     }
 }
 
 extension Session: MCSessionDelegate {
     func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {
-        guard identifier.displayName == peerID.displayName else {
-            print("ignoring peer state changes \(peerID.displayName)")
-            return
+        assert(identifier.displayName == peerID.displayName)
+        sessionState.modify {
+            $0 = state
         }
-        self.sessionState = SessionState(sessionState: state)
-        sessionStateDidChangeHandler?(sessionState)
+        switch sessionState.value {
+        case .NotConnected:
+            disconnectHandler()
+        case .Connected:
+            clearOutputStreamQueue()
+        default:
+            break
+        }
     }
 
     func session(session: MCSession, didReceiveStream stream: NSInputStream,
                  withName streamName: String, fromPeer peerID: MCPeerID) {
-        guard identifier.displayName == peerID.displayName else {
-            print("ignoring stream from peer \(peerID.displayName)")
-            return
-        }
-        didReceiveInputStream?(stream, streamName)
+        assert(identifier.displayName == peerID.displayName)
+        inputStreamTaskPool.add(stream, withName: streamName)
     }
 
     func session(session: MCSession, didReceiveData data: NSData, fromPeer peerID: MCPeerID) {}

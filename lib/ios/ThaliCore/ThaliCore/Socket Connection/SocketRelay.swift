@@ -3,16 +3,20 @@
 //  SocketRelay.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
+//  information.
 //
 
 import Foundation
 
-class SocketRelay<Builder: VirtualSocketBuilder> {
+final class SocketRelay<Builder: VirtualSocketBuilder> {
     private var activeBuilders: Atomic<[Session : Builder]> = Atomic([:])
     private var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> = Atomic([:])
+    private let createSocketTimeout: Double
 
-    init() {}
+    init(createSocketTimeout: Double) {
+        self.createSocketTimeout = createSocketTimeout
+    }
 
     private func discard(builder: Builder) {
         activeBuilders.modify {
@@ -26,13 +30,13 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
         }
     }
 
-    private func addToDiscardQueue(builder: Builder, for session: Session, withTimeout timeout: Double, completion: () -> Void) {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(timeout * Double(NSEC_PER_SEC)))
+    private func addToDiscardQueue(builder: Builder, for session: Session, completion: () -> Void) {
+        let delayTime = dispatch_time(DISPATCH_TIME_NOW,
+                Int64(self.createSocketTimeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            
             strongSelf.discard(builder)
             strongSelf.activeSessions.withValue {
                 if $0[session] == nil {
@@ -42,26 +46,25 @@ class SocketRelay<Builder: VirtualSocketBuilder> {
         }
     }
 
-    private func handleDidReceive(socket socket: (NSOutputStream, NSInputStream), for session: Session) {
+    private func handleDidReceive(socket socket: (NSOutputStream, NSInputStream),
+                                  for session: Session) {
         activeSessions.modify {
             $0[session] = socket
         }
+        //todo bind to CocoaAsyncSocket and call completion block
+        //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
     }
 
     func createSocket(with session: Session, onPort port: UInt16 = 0,
-                           timeout: Double = 5, completion: (UInt16?, ErrorType?) -> Void) {
-        let virtualSocketBuilder = Builder(session: session, completionHandler: { [weak self] socket, error in
-            //todo bind to CocoaAsyncSocket and call completion block
-            //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
+                           completion: (UInt16?, ErrorType?) -> Void) {
+        let virtualSocketBuilder = Builder(session: session) { [weak self] socket, error in
             guard let socket = socket else {
                 completion(nil, error)
                 return
             }
             self?.handleDidReceive(socket: socket, for: session)
-            }, disconnectedHandler: {
-                completion(nil, ThaliCoreError.ConnectionFailed)
-        })
-        addToDiscardQueue(virtualSocketBuilder, for: session, withTimeout: timeout) {
+        }
+        addToDiscardQueue(virtualSocketBuilder, for: session) {
             completion(nil, ThaliCoreError.ConnectionTimedOut)
         }
     }

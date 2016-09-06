@@ -14,6 +14,7 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
     var networkStatusUpdated = false
     var willEnterBackground = false
     var didEnterForeground = false
+    var discoveryUpdated = false
 
     @objc func context(context: AppContext, didResolveMultiConnectWith paramsJSONString: String) {}
     @objc func context(context: AppContext, didFailMultiConnectConnectionWith paramsJSONString: String) {}
@@ -21,7 +22,10 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
     @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
         networkStatusUpdated = true
     }
-    @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
+    @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState
+        discoveryAdvertisingState: String) {
+        discoveryUpdated = true
+    }
     @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
     @objc func appWillEnterBackground(with context: AppContext) {
         willEnterBackground = true
@@ -85,7 +89,7 @@ class AppContextTests: XCTestCase {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
     }
 
-    func testMultiConnectErrors() {
+    func testThaliCoreErrors() {
         //testing parameters count
         var error: AppContextError?
         do {
@@ -94,7 +98,7 @@ class AppContextTests: XCTestCase {
             error = err
         } catch _ {}
         XCTAssertEqual(error, AppContextError.BadParameters)
-        
+
         //testing parameter types
         error = nil
         do {
@@ -104,7 +108,7 @@ class AppContextTests: XCTestCase {
         } catch _ {}
         XCTAssertEqual(error, AppContextError.BadParameters)
     }
-    
+
     func testMultiConnect() {
         //todo will be implemented as soon as we will have the whole stack working
     }
@@ -129,5 +133,19 @@ class AppContextTests: XCTestCase {
         jsonDict = ["bool" : true]
         jsonString = "{\"bool\":true}"
         XCTAssertEqual(jsonValue(jsonDict), jsonString)
+    }
+
+    func testListeningAdvertisingUpdateOnStartAdvertising() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        let _ = try? context.startUpdateAdvertisingAndListening(withParameters: [42])
+        XCTAssertTrue(delegateMock.discoveryUpdated, "network status is not updated")
+    }
+
+    func testListeningAdvertisingUpdateOnStartListening() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        let _ = try? context.startListeningForAdvertisements()
+        XCTAssertTrue(delegateMock.discoveryUpdated, "network status is not updated")
     }
 }

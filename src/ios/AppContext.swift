@@ -9,7 +9,15 @@
 import Foundation
 import ThaliCore
 
-@objc enum AppContextError: Int, ErrorType {
+func jsonValue(object: AnyObject) -> String {
+    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options:
+        NSJSONWritingOptions(rawValue:0)) else {
+        return ""
+    }
+    return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
+}
+
+@objc public enum AppContextError: Int, ErrorType{
     case BadParameters
     case UnknownError
 }
@@ -81,8 +89,13 @@ import ThaliCore
     private let serviceType: String
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
-    private let browserManager: BrowserManager
+    lazy private var browserManager: BrowserManager = { [unowned self] in
+         return BrowserManager(serviceType: self.serviceType) { peers in
+            self.handleOnPeersAvailabilityChanged(peers)
+        }
+    }()
     private let advertiserManager: AdvertiserManager
+
 
     private func notifyOnDidUpdateNetworkStatus() {
         //todo put actual network status
@@ -132,12 +145,9 @@ import ThaliCore
     public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
-        browserManager = BrowserManager(serviceType: serviceType)
-        advertiserManager = AdvertiserManager(serviceType: serviceType)
+        advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                              disposeAdvertiserTimeout: 30)
         super.init()
-        browserManager.peersAvailabilityChanged = { [weak self] peers in
-            self?.handleOnPeersAvailabilityChanged(peers)
-        }
         appNotificationsManager.didEnterForegroundHandler = {[weak self] in
             self?.handleDidEnterForeground()
         }
@@ -147,7 +157,10 @@ import ThaliCore
     }
 
     public func startListeningForAdvertisements() throws {
-        browserManager.startListeningForAdvertisements()
+        browserManager.startListeningForAdvertisements { [weak self] error in
+            print("failed start listening due the error \(error)")
+            self?.updateListeningAdvertisingState()
+        }
         updateListeningAdvertisingState()
     }
 
@@ -157,10 +170,14 @@ import ThaliCore
     }
 
     public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
-        guard let port = (parameters.first as? NSNumber)?.unsignedShortValue where parameters.count == 2 else {
+        guard let port = (parameters.first as? NSNumber)?.unsignedShortValue else {
             throw AppContextError.BadParameters
         }
-        advertiserManager.startUpdateAdvertisingAndListening(port)
+        advertiserManager.startUpdateAdvertisingAndListening(port) { [weak self] error in
+            print("failed start advertising due the error \(error)")
+            self?.updateListeningAdvertisingState()
+        }
+        updateListeningAdvertisingState()
     }
 
     public func stopListening() throws {
@@ -178,7 +195,8 @@ import ThaliCore
         guard parameters.count >= 2 else {
             throw AppContextError.BadParameters
         }
-        guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String else {
+        guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
+            else {
             throw AppContextError.BadParameters
         }
         let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
@@ -255,13 +273,6 @@ extension PeerAvailability {
                 "peerAvailable" : available
         ]
     }
-}
-
-func jsonValue(object: AnyObject) -> String {
-    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: []) else {
-        return ""
-    }
-    return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
 }
 
 func errorDescription(error: ErrorType) -> String {

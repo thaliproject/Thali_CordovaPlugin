@@ -3,7 +3,8 @@
 //  Browser.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
+//  information.
 //
 
 import Foundation
@@ -15,6 +16,7 @@ final class Browser: NSObject {
     private let didLosePeerHandler: (PeerIdentifier) -> Void
     internal private(set) var listening: Bool = false
     private var availablePeers: Atomic<[PeerIdentifier: MCPeerID]> = Atomic([:])
+    private var startBrowsingErrorHandler: (ErrorType -> Void)? = nil
 
     required init(serviceType: String,
                   foundPeer: (PeerIdentifier) -> Void,
@@ -27,7 +29,8 @@ final class Browser: NSObject {
         browser.delegate = self
     }
 
-    func startListening() {
+    func startListening(startListeningErrorHandler: ErrorType -> Void) {
+        startBrowsingErrorHandler = startListeningErrorHandler
         browser.startBrowsingForPeers()
         listening = true
     }
@@ -40,20 +43,24 @@ final class Browser: NSObject {
      invites PeerIdentifier to session
 
      - parameter peerIdentifier: peer identifier to invite
+     - parameter disconnectHandler: notifies about session not connected state
 
      - throws: IllegalPeerID
 
      - returns: Session object for managing multipeer session between devices
      */
-    func inviteToConnectPeer(with peerIdentifier: PeerIdentifier) throws -> Session {
-        let mcSession = MCSession(peer: browser.myPeerID, securityIdentity: nil, encryptionPreference: .None)
+    func inviteToConnectPeer(with peerIdentifier: PeerIdentifier,
+                                  disconnectHandler: () -> Void) throws -> Session {
+        let mcSession = MCSession(peer: browser.myPeerID, securityIdentity: nil,
+                                  encryptionPreference: .None)
         let peer = availablePeers.withValue {
             $0[peerIdentifier]
         }
         guard let mcPeer = peer else {
             throw ThaliCoreError.IllegalPeerID
         }
-        let session = Session(session: mcSession, identifier: mcPeer)
+        let session = Session(session: mcSession, identifier: mcPeer,
+                              disconnectHandler: disconnectHandler)
         browser.invitePeer(mcPeer, toSession: mcSession, withContext: nil, timeout: 30)
         return session
     }
@@ -88,6 +95,6 @@ extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: NSError) {
         listening = false
-        print("didNotStartingBrowsingForPeers \(error)")
+        startBrowsingErrorHandler?(error)
     }
 }

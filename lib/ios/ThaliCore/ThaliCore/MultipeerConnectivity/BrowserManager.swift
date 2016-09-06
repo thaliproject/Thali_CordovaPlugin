@@ -15,31 +15,32 @@ public struct PeerAvailability {
 
 //class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
-    private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>()
+    private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: 5)
 
     internal private(set) var currentBrowser: Browser?
     internal private(set) var availablePeers: Atomic<[PeerIdentifier]> = Atomic([])
 
     internal let serviceType: String
 
-    public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil
+    private let peersAvailabilityChangedHandler: ([PeerAvailability]) -> Void
     public var listening: Bool {
         return currentBrowser?.listening ?? false
     }
 
-    public init(serviceType: String) {
+    public init(serviceType: String, peersAvailabilityChangedHandler: ([PeerAvailability]) -> Void) {
         self.serviceType = serviceType
+        self.peersAvailabilityChangedHandler = peersAvailabilityChangedHandler
     }
 
     private func handleFoundPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
+        peersAvailabilityChangedHandler([PeerAvailability(peerIdentifier: identifier, available: true)])
         availablePeers.modify {
             $0.append(identifier)
         }
     }
 
     private func handleLostPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
+        peersAvailabilityChangedHandler([PeerAvailability(peerIdentifier: identifier, available: false)])
         availablePeers.modify {
             if let index = $0.indexOf(identifier) {
                 $0.removeAtIndex(index)
@@ -47,13 +48,13 @@ public final class BrowserManager: NSObject {
         }
     }
 
-    public func startListeningForAdvertisements() {
+    public func startListeningForAdvertisements(errorHandler: ErrorType -> Void) {
         if currentBrowser != nil {
             return
         }
         let browser = Browser(serviceType: serviceType,
                               foundPeer: handleFoundPeer, lostPeer: handleLostPeer)
-        browser.startListening()
+        browser.startListening(errorHandler)
         self.currentBrowser = browser
     }
 
@@ -62,7 +63,8 @@ public final class BrowserManager: NSObject {
         self.currentBrowser = nil
     }
 
-    public func connectToPeer(identifier: PeerIdentifier, completion: (UInt16?, ErrorType?) -> Void) {
+    public func connectToPeer(identifier: PeerIdentifier,
+                              completion: (UInt16?, ErrorType?) -> Void) {
         guard let currentBrowser = self.currentBrowser else {
             completion(nil, ThaliCoreError.StartListeningNotActive)
             return
@@ -72,7 +74,10 @@ public final class BrowserManager: NSObject {
             return
         }
         do {
-            let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier)
+            let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier,
+                    disconnectHandler: {
+                completion(nil, ThaliCoreError.ConnectionFailed)
+            })
             socketRelay.createSocket(with: session, completion: completion)
         } catch let error {
             completion(nil, error)

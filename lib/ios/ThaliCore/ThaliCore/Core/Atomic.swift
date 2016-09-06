@@ -1,4 +1,11 @@
 //
+//  AtomicSpec.swift
+//  ReactiveCocoa
+//
+//  Created by Justin Spahr-Summers on 2014-07-13.
+//  Copyright (c) 2014 GitHub. All rights reserved.
+//
+//
 //  Thali CordovaPlugin
 //  Atomic.swift
 //
@@ -10,22 +17,22 @@ import Foundation
 
 final class PosixThreadMutex: NSLocking {
     private var mutex = pthread_mutex_t()
-    
+
     init() {
         let result = pthread_mutex_init(&mutex, nil)
         precondition(result == 0, "Failed to initialize mutex with error \(result).")
     }
-    
+
     deinit {
         let result = pthread_mutex_destroy(&mutex)
         precondition(result == 0, "Failed to destroy mutex with error \(result).")
     }
-    
+
     @objc func lock() {
         let result = pthread_mutex_lock(&mutex)
         precondition(result == 0, "Failed to lock \(self) with error \(result).")
     }
-    
+
     @objc func unlock() {
         let result = pthread_mutex_unlock(&mutex)
         precondition(result == 0, "Failed to unlock \(self) with error \(result).")
@@ -35,28 +42,32 @@ final class PosixThreadMutex: NSLocking {
 public final class Atomic<Value> {
 	private let lock: PosixThreadMutex
 	private var _value: Value
-    
+
     public var value: Value {
         get {
             return withValue { $0 }
         }
     }
 
-	/// Initialize the variable with the given initial value.
-	///
-	/// - parameters:
-	///   - value: Initial value for `self`.
+    /**
+     Initialize the variable with the given initial value
+
+     - parameter value: Initial value for `self`.
+     */
 	public init(_ value: Value) {
 		_value = value
 		lock = PosixThreadMutex()
 	}
 
-	/// Atomically modifies the variable.
-	///
-	/// - parameters:
-	///   - action: A closure that takes the current value.
-	///
-	/// - returns: The result of the action.
+    /**
+     Atomically modifies the variable
+
+     - parameter action: A closure that takes the current value
+
+     - throws: rethrows errors
+
+     - returns: The result of the action
+     */
 	public func modify<Result>(action: (inout Value) throws -> Result) rethrows -> Result {
 		lock.lock()
 		defer { lock.unlock() }
@@ -64,13 +75,15 @@ public final class Atomic<Value> {
 		return try action(&_value)
 	}
 
-	/// Atomically perform an arbitrary action using the current value of the
-	/// variable.
-	///
-	/// - parameters:
-	///   - action: A closure that takes the current value.
-	///
-	/// - returns: The result of the action.
+    /**
+     Atomically perform an arbitrary action using the current value of the variable
+
+     - parameter action: A closure that takes the current value
+
+     - throws: rethrows errors
+
+     - returns: The result of the action
+     */
 	public func withValue<Result>(action: (Value) throws -> Result) rethrows -> Result {
 		lock.lock()
 		defer { lock.unlock() }
