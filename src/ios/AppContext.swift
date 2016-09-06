@@ -116,26 +116,26 @@ extension PeerAvailability {
     private var networkChangedRegistered: Bool = false
     private let browserManager: BrowserManager
     private let advertiserManager: AdvertiserManager
-    
+
     private var bluetoothState = RadioState.unavailable
     private var bluetoothLowEnergyState = RadioState.unavailable
     private var bluetoothManager: CBCentralManager?
-    
+
     private func notifyOnDidUpdateNetworkStatus() {
-        
+
         var wifiState = RadioState.unavailable
         let cellularState = RadioState.doNotCare
-        
+
         let networkReachability = NetworkReachability()
         let wifiEnabled = networkReachability.isWiFiEnabled()
         let wifiConnected = networkReachability.isWiFiConnected()
-        
+
         wifiState = wifiEnabled ? .on : .off
-        
+
         let bssid = ((wifiState == .on) && wifiConnected)
             ? networkReachability.BSSID()
             : NSNull()
-        
+
         let networkStatus = [
             NetworkStatusParameters.wifi.rawValue                : wifiState.rawValue,
             NetworkStatusParameters.bluetooth.rawValue           : bluetoothState.rawValue,
@@ -143,25 +143,25 @@ extension PeerAvailability {
             NetworkStatusParameters.cellular.rawValue            : cellularState.rawValue,
             NetworkStatusParameters.bssid.rawValue               : bssid
         ]
-        
+
         delegate?.context(self, didChangeNetworkStatus: jsonValue(networkStatus))
     }
-    
+
     private func willEnterBackground() {
         delegate?.appWillEnterBackground(withContext: self)
     }
-    
+
     private func didEnterForeground() {
         delegate?.appDidEnterForeground(withContext: self)
     }
-    
+
     private func peersAvailabilityChanged(peers: [PeerAvailability]) {
         let mappedPeers = peers.map {
             $0.dictionaryValue
         }
         delegate?.context(self, didChangePeerAvailability: jsonValue(mappedPeers))
     }
-    
+
     private func updateListeningAdvertisingState() {
         let newState = [
             "discoveryActive" : browserManager.isListening,
@@ -169,7 +169,7 @@ extension PeerAvailability {
         ]
         delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))
     }
-    
+
     public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
@@ -185,7 +185,7 @@ extension PeerAvailability {
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
             self?.willEnterBackground()
         }
-        
+
         #if TEST
             // We use background queue because CI tests use main_queue synchronously
             // Otherwise we won't be able to get centralManager state.
@@ -199,41 +199,41 @@ extension PeerAvailability {
                              queue: centralManagerDispatchQueue,
                              options: [CBCentralManagerOptionShowPowerAlertKey : false])
     }
-    
+
     public func startListeningForAdvertisements() throws {
         browserManager.startListeningForAdvertisements()
         updateListeningAdvertisingState()
     }
-    
+
     public func stopListeningForAdvertisements() throws {
         browserManager.stopListeningForAdvertisements()
         updateListeningAdvertisingState()
     }
-    
+
     public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
         guard let port = (parameters.first as? NSNumber)?.unsignedShortValue where parameters.count == 2 else {
             throw AppContextError.BadParameters
         }
         advertiserManager.startUpdateAdvertisingAndListening(port)
     }
-    
+
     public func stopListening() throws {
     }
-    
+
     public func stopAdvertisingAndListening() throws {
     }
-    
+
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
-        
+
     }
-    
+
     public func killConnection(parameters: [AnyObject]) throws {
     }
-    
+
     public func getIOSVersion() -> String {
         return NSProcessInfo().operatingSystemVersionString
     }
-    
+
     public func didRegisterToNative(parameters: [AnyObject]) throws {
         guard let functionName = parameters.first as? String where parameters.count == 2 else {
             throw AppContextError.BadParameters
@@ -242,8 +242,8 @@ extension PeerAvailability {
             notifyOnDidUpdateNetworkStatus()
         }
     }
-    
-    
+
+
     #if TEST
     func executeNativeTests() -> String {
     let runner = TestRunner.`default`
@@ -251,13 +251,13 @@ extension PeerAvailability {
     return runner.resultDescription ?? ""
     }
     #endif
-    
+
 }
 
 
 // MARK: CBCentralManagerDelegate
 extension AppContext: CBCentralManagerDelegate {
-    
+
     public func centralManagerDidUpdateState(central: CBCentralManager) {
         switch central.state {
         case .PoweredOn:
