@@ -149,14 +149,14 @@ extension PeerAvailability {
     }
 
     public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
-        guard let port = (parameters.first as? NSNumber)?.unsignedShortValue
-            where parameters.count == 2 else {
+        guard let port = (parameters.first as? NSNumber)?.unsignedShortValue else {
             throw AppContextError.BadParameters
         }
         advertiserManager.startUpdateAdvertisingAndListening(port) { [weak self] error in
             print("failed start advertising due the error \(error)")
             self?.updateListeningAdvertisingState()
         }
+        updateListeningAdvertisingState()
     }
 
     public func stopListening() throws {

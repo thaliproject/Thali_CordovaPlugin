@@ -8,6 +8,22 @@
 
 import XCTest
 
+class AppContextDelegateMock: NSObject, AppContextDelegate {
+    var networkStatusUpdated = false
+    var discoveryUpdated = false
+    @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
+    @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
+        networkStatusUpdated = true
+    }
+    @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState
+        discoveryAdvertisingState: String) {
+        discoveryUpdated = true
+    }
+    @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
+    @objc func appWillEnterBackground(withContext context: AppContext) {}
+    @objc func appDidEnterForeground(withContext context: AppContext) {}
+}
+
 class AppContextTests: XCTestCase {
     var context: AppContext! = nil
 
@@ -20,19 +36,6 @@ class AppContextTests: XCTestCase {
     }
 
     func testUpdateNetworkStatus() {
-
-        class AppContextDelegateMock: NSObject, AppContextDelegate {
-            var networkStatusUpdated = false
-            @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
-            @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
-                networkStatusUpdated = true
-            }
-            @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
-            @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
-            @objc func appWillEnterBackground(withContext context: AppContext) {}
-            @objc func appDidEnterForeground(withContext context: AppContext) {}
-        }
-
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
         let _ = try? context.didRegisterToNative([AppContextJSEvent.networkChanged, NSNull()])
@@ -59,5 +62,19 @@ class AppContextTests: XCTestCase {
 
     func testGetIOSVersion() {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
+    }
+    
+    func testListeningAdvertisingUpdateOnStartAdvertising() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        let _ = try? context.startUpdateAdvertisingAndListening(withParameters: [42])
+        XCTAssertTrue(delegateMock.discoveryUpdated, "network status is not updated")
+    }
+    
+    func testListeningAdvertisingUpdateOnStartListening() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        let _ = try? context.startListeningForAdvertisements()
+        XCTAssertTrue(delegateMock.discoveryUpdated, "network status is not updated")
     }
 }
