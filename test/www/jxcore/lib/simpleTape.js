@@ -5,6 +5,7 @@
 // needs to be called before tests start to run.
 
 var tape = require('tape');
+var Promise = require('lie');
 
 var nextTestOnly = false;
 var ignoreRemainingTests = false;
@@ -47,14 +48,31 @@ module.exports = function (opts) {
 };
 
 module.exports.begin = function () {
-  tests.forEach(function (test) {
+  /**
+   * Each begin call must provide an uniq tape instance
+   * See https://github.com/substack/tape#var-htest--testcreateharness
+   * and https://github.com/substack/tape#var-stream--testcreatestreamopts
+   * for more details
+   */
+  var htest = tape.createHarness();
+  htest.createStream().pipe(process.stdout);
+
+  var allSucceed = true;
+
+  var handleResult = function (res) {
+    allSucceed = allSucceed && res.ok;
+  };
+
+  tests.forEach(function (test, i) {
     if (test.opts.setup) {
-      tape('setup', function (t) {
+      htest('setup', function (t) {
+        t.on('result', handleResult);
         test.opts.setup.call(t, t);
       });
     }
 
-    tape(test.name, function (t) {
+    htest(test.name, function (t) {
+      t.on('result', handleResult);
       if (test.expect !== null) {
         t.plan(test.expect);
       }
@@ -62,9 +80,22 @@ module.exports.begin = function () {
     });
 
     if (test.opts.teardown) {
-      tape('teardown', function (t) {
+      htest('teardown', function (t) {
+        t.on('result', handleResult);
         test.opts.teardown.call(t, t);
       });
     }
+  });
+
+  return new Promise (function (resolve, reject) {
+    htest('summary', function (t) {
+      if (allSucceed) {
+        resolve();
+      } else {
+        reject('Some of TAP tests failed. See logs for more details.');
+      }
+      tests = [];
+      t.end();
+    });
   });
 };
