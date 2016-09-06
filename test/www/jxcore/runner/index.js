@@ -12,16 +12,28 @@ var parseArgv = function (argv) {
   if ('help' in argv || 'h' in argv) {
     return help();
   }
-  if('filter' in argv || 'f' in argv) {
+
+  var testFiles = argv['_'];
+
+  if(testFiles.length) {
     return execute({
-      filter: argv.filter
+      files: testFiles
     });
   }
 
   return execute({
-    filter: DEFAULT_TESTS_FOLDER
+    files: DEFAULT_TESTS_FOLDER
   });
 };
 
-// Works for both when required as module and when executed from CLI
-parseArgv(argv);
+// If running from CLI
+if (!module.parent) {
+  return parseArgv(argv);
+}
+
+// If running as module
+module.exports.run = function () {
+  return execute({
+    files: DEFAULT_TESTS_FOLDER
+  });
+};
