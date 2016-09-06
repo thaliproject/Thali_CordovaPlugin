@@ -10,14 +10,16 @@ import XCTest
 
 class AppContextDelegateMock: NSObject, AppContextDelegate {
     var networkStatusUpdated = false
-    var discoveryUpdated = false
+    var advertisingListeningState = ""
+    var willEnterBackground = false
+    var didEnterForeground = false
     @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
     @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
         networkStatusUpdated = true
     }
     @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState
         discoveryAdvertisingState: String) {
-        discoveryUpdated = true
+        advertisingListeningState = discoveryAdvertisingState
     }
     @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
     @objc func appWillEnterBackground(withContext context: AppContext) {}
@@ -33,6 +35,23 @@ class AppContextTests: XCTestCase {
 
     override func tearDown() {
         context = nil
+    }
+
+    private func jsonDicitonaryFrom(string: String) -> [String : AnyObject]? {
+        guard let data = string.dataUsingEncoding(NSUTF8StringEncoding) else {
+            return nil
+        }
+        return (try? NSJSONSerialization.JSONObjectWithData(data, options: [])) as? [String : AnyObject]
+    }
+    
+    private func validateAdvertisingUpdate(jsonString: String, advertising: Bool, browsing: Bool) {
+        let json = jsonDicitonaryFrom(jsonString)
+        let listeningActive = (json?["discoveryActive"] as? Bool)
+        let advertisingActive = (json?["advertisingActive"] as? Bool)
+        print(advertisingActive)
+        print(listeningActive)
+        XCTAssertEqual(advertisingActive, advertising)
+        XCTAssertEqual(listeningActive, browsing)
     }
 
     func testUpdateNetworkStatus() {
@@ -52,7 +71,7 @@ class AppContextTests: XCTestCase {
         XCTAssertNil(error)
         var contextError: AppContextError?
         do {
-            try context.didRegisterToNative(["test"])
+            try context.didRegisterToNative([42])
         } catch let err as AppContextError{
             contextError = err
         } catch _ {
@@ -63,18 +82,20 @@ class AppContextTests: XCTestCase {
     func testGetIOSVersion() {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
     }
-    
+
     func testListeningAdvertisingUpdateOnStartAdvertising() {
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
         let _ = try? context.startUpdateAdvertisingAndListening(withParameters: [42])
-        XCTAssertTrue(delegateMock.discoveryUpdated, "network status is not updated")
+        validateAdvertisingUpdate(delegateMock.advertisingListeningState, advertising: true,
+                                  browsing: false)
     }
-    
+
     func testListeningAdvertisingUpdateOnStartListening() {
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
         let _ = try? context.startListeningForAdvertisements()
-        XCTAssertTrue(delegateMock.discoveryUpdated, "network status is not updated")
+        validateAdvertisingUpdate(delegateMock.advertisingListeningState, advertising: false,
+                                  browsing: true)
     }
 }

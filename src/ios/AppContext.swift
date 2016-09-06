@@ -193,7 +193,7 @@ extension PeerAvailability {
     }
 
     public func didRegisterToNative(parameters: [AnyObject]) throws {
-        guard let functionName = parameters.first as? String where parameters.count == 2 else {
+        guard let functionName = parameters.first as? String else {
             throw AppContextError.BadParameters
         }
         if functionName == AppContextJSEvent.networkChanged {
