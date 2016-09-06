@@ -109,3 +109,8 @@ custom_rules:
     regex: "[ a-zA-Z0-9]*(?:let|var) [ a-zA-Z0-9]*: ([a-zA-Z0-9]*)[\? ]*= \1"
     message: "Type Definition Not Needed"
     severity: error
+  closure_void_syntax:
+    name: "Closure Void Syntax"
+    regex: "(->\s*\n*\(\s*\))"
+    message: "We should use following syntax: "(A, B, C) -> Void" in case of empty result and "() -> Void" in case of empty parameters.
+    severity: warning
