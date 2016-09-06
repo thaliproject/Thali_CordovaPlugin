@@ -167,7 +167,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
 
   console.log('Building ThaliCore.framework');
 
-  return exec(buildCmd, { maxBuffer: 400*1024 } )
+  return exec(buildCmd, { maxBuffer: 1024*1024 } )
     .then(function () {
       return fs.ensureDir(outputDir);
     })
