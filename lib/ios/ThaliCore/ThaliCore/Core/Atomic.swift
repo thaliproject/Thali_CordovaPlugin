@@ -49,21 +49,25 @@ public final class Atomic<Value> {
         }
     }
 
-	/// Initialize the variable with the given initial value.
-	///
-	/// - parameters:
-	///   - value: Initial value for `self`.
+    /**
+     Initialize the variable with the given initial value
+
+     - parameter value: Initial value for `self`.
+     */
 	public init(_ value: Value) {
 		_value = value
 		lock = PosixThreadMutex()
 	}
 
-	/// Atomically modifies the variable.
-	///
-	/// - parameters:
-	///   - action: A closure that takes the current value.
-	///
-	/// - returns: The result of the action.
+    /**
+     Atomically modifies the variable
+
+     - parameter action: A closure that takes the current value
+
+     - throws: rethrows errors
+
+     - returns: The result of the action
+     */
 	public func modify<Result>(action: (inout Value) throws -> Result) rethrows -> Result {
 		lock.lock()
 		defer { lock.unlock() }
@@ -71,13 +75,15 @@ public final class Atomic<Value> {
 		return try action(&_value)
 	}
 
-	/// Atomically perform an arbitrary action using the current value of the
-	/// variable.
-	///
-	/// - parameters:
-	///   - action: A closure that takes the current value.
-	///
-	/// - returns: The result of the action.
+    /**
+     Atomically perform an arbitrary action using the current value of the variable
+
+     - parameter action: A closure that takes the current value
+
+     - throws: rethrows errors
+
+     - returns: The result of the action
+     */
 	public func withValue<Result>(action: (Value) throws -> Result) rethrows -> Result {
 		lock.lock()
 		defer { lock.unlock() }
