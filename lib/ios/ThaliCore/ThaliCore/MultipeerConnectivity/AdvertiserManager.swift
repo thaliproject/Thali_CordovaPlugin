@@ -3,7 +3,8 @@
 //  AdvertiserManager.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
+//  information.
 //
 
 import Foundation
@@ -34,16 +35,17 @@ import Foundation
 
     //dispose advertiser after timeout to ensure that it has no pending invitations
     func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
+        let delayTime = dispatch_time(DISPATCH_TIME_NOW,
+                Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
             advertiser.stopAdvertising()
-            
+
             self.advertisers.modify {
                 if let index = $0.indexOf(advertiser) {
                     $0.removeAtIndex(index)
                 }
             }
-            
+
             self.didRemoveAdvertiserWithIdentifierHandler?(advertiser.peerIdentifier)
         }
     }
@@ -83,6 +85,7 @@ import Foundation
             self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port)
         }
 
-        assert(self.currentAdvertiser != nil, "we should have initialized advertiser after calling this function")
+        assert(self.currentAdvertiser != nil,
+                "we should have initialized advertiser after calling this function")
     }
 }

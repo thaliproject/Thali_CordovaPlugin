@@ -18,7 +18,8 @@ func createMCPFConnection(advertiserIdentifier identifier: PeerIdentifier,
     let browser = Browser(serviceType: serviceType, foundPeer: { identifier in
         completion()
         }, lostPeer: { _ in })
-    browser.startListening()
+    browser.startListening() { _ in
+    }
     let advertiser = Advertiser(peerIdentifier: identifier,
                                 serviceType: serviceType,
                                 receivedInvitationHandler: advertiserSessionHandler,

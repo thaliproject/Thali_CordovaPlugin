@@ -3,7 +3,8 @@
 //  Advertiser.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
+//  information.
 //
 
 import Foundation
@@ -42,15 +43,20 @@ final class Advertiser: NSObject {
 
 extension Advertiser: MCNearbyServiceAdvertiserDelegate {
 
-    func advertiser(advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID,
-                    withContext context: NSData?, invitationHandler: (Bool, MCSession) -> Void) {
-        let mcSession = MCSession(peer: advertiser.myPeerID, securityIdentity: nil, encryptionPreference: .None)
-        let session = Session(session: mcSession, identifier: peerID, disconnectHandler: disconnectHandler)
+    func advertiser(advertiser: MCNearbyServiceAdvertiser,
+                    didReceiveInvitationFromPeer peerID: MCPeerID,
+                    withContext context: NSData?,
+                    invitationHandler: (Bool, MCSession) -> Void) {
+        let mcSession = MCSession(peer: advertiser.myPeerID, securityIdentity: nil,
+                encryptionPreference: .None)
+        let session = Session(session: mcSession, identifier: peerID,
+                disconnectHandler: disconnectHandler)
         invitationHandler(true, mcSession)
         receivedInvitationHandler(session: session)
     }
 
-    func advertiser(advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: NSError) {
+    func advertiser(advertiser: MCNearbyServiceAdvertiser,
+                    didNotStartAdvertisingPeer error: NSError) {
         advertising = false
         print("WARNING: server didNotStartAdvertisingPeer")
     }

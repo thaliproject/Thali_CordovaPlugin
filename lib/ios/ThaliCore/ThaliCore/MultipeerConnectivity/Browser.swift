@@ -3,7 +3,7 @@
 //  Browser.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
 //  information.
 //
 
@@ -16,6 +16,7 @@ final class Browser: NSObject {
     private let didLosePeerHandler: (PeerIdentifier) -> Void
     internal private(set) var listening: Bool = false
     private var availablePeers: Atomic<[PeerIdentifier: MCPeerID]> = Atomic([:])
+    private var startBrowsingErrorHandler: (ErrorType -> Void)? = nil
 
     required init(serviceType: String,
                   foundPeer: (PeerIdentifier) -> Void,
@@ -28,7 +29,8 @@ final class Browser: NSObject {
         browser.delegate = self
     }
 
-    func startListening() {
+    func startListening(startListeningErrorHandler: ErrorType -> Void) {
+        startBrowsingErrorHandler = startListeningErrorHandler
         browser.startBrowsingForPeers()
         listening = true
     }
@@ -93,6 +95,6 @@ extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: NSError) {
         listening = false
-        print("didNotStartingBrowsingForPeers \(error)")
+        startBrowsingErrorHandler?(error)
     }
 }
