@@ -1,5 +1,4 @@
 'use strict';
-var inspect = require('util').inspect;
 
 var log = function () {
   var msg = Array.prototype.join.call(arguments, '');
@@ -7,12 +6,11 @@ var log = function () {
 };
 
 log.error = function (msg, error) {
+  var err = error;
   if (msg instanceof Error) {
-    var error = msg;
-    log(error.message, error.stack);
-  } else {
-    log(msg, error.message, error.stack);
+    err = msg;
   }
+  log(msg, err, '\n', err.stack);
 };
 
 module.exports = log;
