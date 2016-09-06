@@ -33,8 +33,10 @@ class InputStreamHandlerTaskQueueTests: XCTestCase {
             expectation?.fulfill()
         }
         waitForExpectationsWithTimeout(1.0, handler: nil)
-        XCTAssertEqual(queue.streamHandlerPool.count, 0)
-        XCTAssertEqual(queue.streamPool.count, 0)
+        dispatch_sync(queue.serialQueue) {
+            XCTAssertEqual(self.queue.streamHandlerPool.count, 0)
+            XCTAssertEqual(self.queue.streamPool.count, 0)
+        }
         XCTAssertEqual(receivedStreamName, streamName)
     }
 
@@ -51,8 +53,10 @@ class InputStreamHandlerTaskQueueTests: XCTestCase {
         }
         queue.add(stream, withName: streamName)
         waitForExpectationsWithTimeout(1.0, handler: nil)
-        XCTAssertEqual(queue.streamHandlerPool.count, 0)
-        XCTAssertEqual(queue.streamPool.count, 0)
+        dispatch_sync(queue.serialQueue) {
+            XCTAssertEqual(self.queue.streamHandlerPool.count, 0)
+            XCTAssertEqual(self.queue.streamPool.count, 0)
+        }
         XCTAssertEqual(receivedStreamName, streamName)
     }
 
