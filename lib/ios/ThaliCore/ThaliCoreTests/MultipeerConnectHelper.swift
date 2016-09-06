@@ -24,6 +24,6 @@ func createMCPFConnection(advertiserIdentifier identifier: PeerIdentifier,
                                 serviceType: serviceType,
                                 receivedInvitationHandler: advertiserSessionHandler,
                                 disconnectHandler: {})
-    advertiser.startAdvertising()
+    advertiser.startAdvertising { _ in}
     return (advertiser, browser)
 }

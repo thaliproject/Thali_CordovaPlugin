@@ -50,14 +50,14 @@ import Foundation
         }
     }
 
-    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16) -> Advertiser {
+    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16, errorHandler: ErrorType -> Void) -> Advertiser {
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
                                     receivedInvitationHandler: { [weak self] session in
                                         self?.handle(session, withPort: port)
             }, disconnectHandler: {
                 //todo disconnect notification
         })
-        advertiser.startAdvertising()
+        advertiser.startAdvertising(errorHandler)
         advertisers.modify {
             $0.append(advertiser)
         }
@@ -76,13 +76,13 @@ import Foundation
         currentAdvertiser = nil
     }
 
-    public func startUpdateAdvertisingAndListening(port: UInt16) {
+    public func startUpdateAdvertisingAndListening(port: UInt16, errorHandler: ErrorType -> Void) {
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
             addAdvertiserToDisposeQueue(currentAdvertiser)
-            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port)
+            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port, errorHandler: errorHandler)
         } else {
-            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port)
+            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port, errorHandler: errorHandler)
         }
 
         assert(self.currentAdvertiser != nil,

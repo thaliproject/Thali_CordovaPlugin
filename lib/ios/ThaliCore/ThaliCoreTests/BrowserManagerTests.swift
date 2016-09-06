@@ -73,7 +73,7 @@ class BrowserManagerTests: XCTestCase {
 
         browserManager.startListeningForAdvertisements { _ in }
 
-        advertiserManager.startUpdateAdvertisingAndListening(42)
+        advertiserManager.startUpdateAdvertisingAndListening(42) { _ in}
         let advertiserIdentifier = advertiserManager.currentAdvertiser?.peerIdentifier
 
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(2 * Double(NSEC_PER_SEC)))
@@ -95,7 +95,7 @@ class BrowserManagerTests: XCTestCase {
         }
 
         browserManager.startListeningForAdvertisements { _ in }
-        advertiserManager.startUpdateAdvertisingAndListening(42)
+        advertiserManager.startUpdateAdvertisingAndListening(42) { _ in}
         let advertiserIdentifier = advertiserManager.currentAdvertiser?.peerIdentifier
 
         waitForExpectationsWithTimeout(10000, handler: nil)

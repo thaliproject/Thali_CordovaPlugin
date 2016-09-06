@@ -17,6 +17,7 @@ final class Advertiser: NSObject {
     internal private(set) var advertising: Bool = false
     private let receivedInvitationHandler: (session: Session) -> Void
     private let disconnectHandler: () -> Void
+    private var startAdvertisingErrorHandler: (ErrorType -> Void)? = nil
 
     required init(peerIdentifier: PeerIdentifier, serviceType: String,
                   receivedInvitationHandler: (session: Session) -> Void,
@@ -30,7 +31,8 @@ final class Advertiser: NSObject {
         advertiser.delegate = self
     }
 
-    func startAdvertising() {
+    func startAdvertising(startAdvertisingErrorHandler: ErrorType -> Void) {
+        self.startAdvertisingErrorHandler = startAdvertisingErrorHandler
         advertiser.startAdvertisingPeer()
         advertising = true
     }
@@ -58,6 +60,6 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
     func advertiser(advertiser: MCNearbyServiceAdvertiser,
                     didNotStartAdvertisingPeer error: NSError) {
         advertising = false
-        print("WARNING: server didNotStartAdvertisingPeer")
+        startAdvertisingErrorHandler?(error)
     }
 }

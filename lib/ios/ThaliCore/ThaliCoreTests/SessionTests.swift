@@ -3,7 +3,7 @@
 //  SessionTests.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
 //  information.
 //
 
@@ -14,7 +14,8 @@ import MultipeerConnectivity
 
 class MCSessionMock: MCSession {
     var errorOnCreateStream = false
-    override func startStreamWithName(streamName: String, toPeer peerID: MCPeerID) throws -> NSOutputStream {
+    override func startStreamWithName(streamName: String, toPeer peerID: MCPeerID) throws ->
+        NSOutputStream {
         guard !errorOnCreateStream else {
             throw NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
         }
@@ -49,7 +50,8 @@ class SessionTests: XCTestCase {
 
         mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .Connected)
 
-        session.createOutputStream(withName: "test") { [weak createdStreamExpectation] outputStream, error in
+        session.createOutputStream(withName: "test") {
+            [weak createdStreamExpectation] outputStream, error in
             stream = outputStream
             createdStreamExpectation?.fulfill()
         }
@@ -65,7 +67,8 @@ class SessionTests: XCTestCase {
         let createdStreamsExpectation = expectationWithDescription("streams created")
         var outputStreams: [NSOutputStream] = []
         for i in 0...outputStreamsCount {
-            session.createOutputStream(withName: "test\(i)") { [weak createdStreamsExpectation] outputStream, error in
+            session.createOutputStream(withName: "test\(i)") {
+                [weak createdStreamsExpectation] outputStream, error in
                 guard let stream = outputStream else {
                     return
                 }
