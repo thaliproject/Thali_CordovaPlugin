@@ -56,15 +56,14 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
     }
 
     func createSocket(with session: Session, onPort port: UInt16 = 0,
-                      completion: (UInt16?, ErrorType?) -> Void) {
-        let virtualSocketBuilder = Builder(session: session,
-                completionHandler: { [weak self] socket, error in
+                           completion: (UInt16?, ErrorType?) -> Void) {
+        let virtualSocketBuilder = Builder(session: session) { [weak self] socket, error in
             guard let socket = socket else {
                 completion(nil, error)
                 return
             }
             self?.handleDidReceive(socket: socket, for: session)
-            })
+        }
         addToDiscardQueue(virtualSocketBuilder, for: session) {
             completion(nil, MultiConnectError.ConnectionTimedOut)
         }
