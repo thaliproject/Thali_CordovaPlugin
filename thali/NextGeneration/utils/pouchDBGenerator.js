@@ -47,10 +47,13 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 
     opts = extend({}, opts);
 
-    // If database endpoint is not remote we are using defaultDirectory as
+    // If database endpoint is not remote we will use defaultDirectory as
     // prefix and defaultAdapter as adapter for it.
-    if (name !== undefined && name.indexOf('http') !== 0 &&
-        name.indexOf('https') !== 0) {
+    if (
+      name !== undefined &&
+      name.indexOf('http') !== 0 &&
+      name.indexOf('https') !== 0
+    ) {
       if (!opts.db && options.defaultAdapter) {
         opts.db = options.defaultAdapter;
       }

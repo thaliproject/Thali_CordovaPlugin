@@ -4,6 +4,7 @@ var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
+var LeveldownMobile = require('leveldown-mobile');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
 var Promise = require('lie');
@@ -136,7 +137,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  * @returns {string}
  */
 var tmpObject = null;
-module.exports.tmpDirectory = function () {
+var tmpDirectory = function () {
   if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
     return os.tmpdir();
   }
@@ -149,6 +150,7 @@ module.exports.tmpDirectory = function () {
   }
   return tmpObject.name;
 };
+module.exports.tmpDirectory = tmpDirectory;
 
 /**
  * Returns a promise that resolved with true or false depending on if this
@@ -244,23 +246,6 @@ module.exports.verifyCombinedResultSuccess =
       message || 'error should be null');
   };
 
-// Use a folder specific to this test so that the database content
-// will not interfere with any other databases that might be created
-// during other tests.
-var pouchDBTestDirectory = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-fs.ensureDirSync(pouchDBTestDirectory);
-module.exports.getPouchDBTestDirectory = function () {
-  return pouchDBTestDirectory;
-};
-
-var LevelDownPouchDB = PouchDBGenerator(PouchDB, pouchDBTestDirectory, {
-  defaultAdapter: require('leveldown-mobile')
-});
-
-module.exports.getLevelDownPouchDb = function () {
-  return LevelDownPouchDB;
-};
-
 // Short, random and globally unique name can be obtained from current timestamp.
 // For example '1w8ueaswm1'
 var getUniqueRandomName = function () {
@@ -268,20 +253,7 @@ var getUniqueRandomName = function () {
   time = time[0] * Math.pow(10, 9) + time[1];
   return time.toString(36);
 }
-module.exports.getUniqueRandomName  = getUniqueRandomName;
-module.exports.getRandomPouchDBName = getUniqueRandomName;
-
-module.exports.getRandomlyNamedTestPouchDBInstance = function () {
-  return new LevelDownPouchDB(getUniqueRandomName());
-};
-
-module.exports.getPouchDBFactoryInRandomDirectory = function () {
-  var directory = path.join(pouchDBTestDirectory, getUniqueRandomName());
-  fs.ensureDirSync(directory);
-  return PouchDBGenerator(PouchDB, directory, {
-    defaultAdapter: require('leveldown-mobile')
-  });
-};
+module.exports.getUniqueRandomName = getUniqueRandomName;
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
   notificationBeacons.EXPIRATION_SIZE;
@@ -474,33 +446,6 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
   });
 };
 
-module.exports.createPskPouchDBRemote = function (serverPort, dbName,
-                                                 pskId, pskKey, host) {
-  var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
-    thaliConfig.BASE_DB_PATH + '/' + dbName;
-
-  /**
-   * See the notes in thaliReplicationPeerAction.start for why the below
-   * is here and why it's wrong and should use agent instead but can't.
-   */
-  return new LevelDownPouchDB(serverUrl,
-    {
-      ajax: {
-        agentClass: ForeverAgent.SSL,
-        agentOptions: {
-          keepAlive: true,
-          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-          maxSockets: Infinity,
-          maxFreeSockets: 256,
-          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-          pskIdentity: pskId,
-          pskKey: pskKey,
-          secureOptions: pskId + serverUrl
-        }
-      }
-    });
-};
-
 module.exports.validateCombinedResult = function (combinedResult) {
   if (combinedResult.wifiResult !== null ||
     combinedResult.nativeResult !== null) {
@@ -508,28 +453,6 @@ module.exports.validateCombinedResult = function (combinedResult) {
       JSON.stringify(combinedResult)));
   }
   return Promise.resolve();
-};
-
-module.exports.setUpServer = function (testBody, appConfig) {
-  var app = express();
-  appConfig && appConfig(app);
-  app.use(thaliConfig.BASE_DB_PATH, expressPouchdb(LevelDownPouchDB, {mode: 'minimumForPouchDB'}));
-  var testCloseAllServer = makeIntoCloseAllServer(https.createServer(
-    {
-      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-      pskCallback : function (id) {
-        return id === pskId ? pskKey : null;
-      }
-    }, app));
-  testCloseAllServer.listen(0, function () {
-    var serverPort = testCloseAllServer.address().port;
-    var randomDBName = getUniqueRandomName();
-    var remotePouchDB =
-      module.exports.createPskPouchDBRemote(serverPort, randomDBName, pskId,
-                                            pskKey);
-    testBody(serverPort, randomDBName, remotePouchDB);
-  });
-  return testCloseAllServer;
 };
 
 var MAX_FAILURE = 10;
@@ -698,3 +621,92 @@ module.exports.checkArgs = function (t, spy, description, args) {
     t.ok(arg.compare(currentArgs[index]), argDescription);
   });
 }
+
+
+// -- pouchdb --
+
+var pouchDBTestDirectory = path.join(tmpDirectory(), 'pouchdb-test-directory');
+fs.ensureDirSync(pouchDBTestDirectory);
+module.exports.getPouchDBTestDirectory = function () {
+  return pouchDBTestDirectory;
+};
+
+function getLevelDownPouchDb() {
+  // Running each PouchDB in different directory.
+  var defaultDirectory = path.join(pouchDBTestDirectory, getUniqueRandomName());
+  fs.ensureDirSync(defaultDirectory);
+  return PouchDBGenerator(PouchDB, defaultDirectory, {
+    defaultAdapter: LeveldownMobile
+  });
+};
+module.exports.getLevelDownPouchDb = getLevelDownPouchDb;
+
+module.exports.getRandomlyNamedTestPouchDBInstance = function () {
+  return new getLevelDownPouchDb()(getUniqueRandomName());
+};
+
+module.exports.getRandomPouchDBName = getUniqueRandomName;
+
+var createPskPouchDBRemote = function (
+  serverPort, dbName,
+  pskId, pskKey, host
+) {
+  var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
+    thaliConfig.BASE_DB_PATH + '/' + dbName;
+
+  // See the notes in thaliReplicationPeerAction.start for why the below
+  // is here and why it's wrong and should use agent instead but can't.
+  return new getLevelDownPouchDb()(
+    serverUrl, {
+      ajax: {
+        agentClass: ForeverAgent.SSL,
+        agentOptions: {
+          keepAlive: true,
+          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+          maxSockets: Infinity,
+          maxFreeSockets: 256,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+          pskIdentity: pskId,
+          pskKey: pskKey,
+          secureOptions: pskId + serverUrl
+        }
+      }
+    }
+  );
+};
+module.exports.createPskPouchDBRemote = createPskPouchDBRemote;
+
+module.exports.setUpServer = function (testBody, appConfig) {
+  var app = express();
+  appConfig && appConfig(app);
+  app.use(
+    thaliConfig.BASE_DB_PATH,
+    expressPouchdb(
+      getLevelDownPouchDb(),
+      { mode: 'minimumForPouchDB' }
+    )
+  );
+  var testCloseAllServer = makeIntoCloseAllServer(
+    https.createServer(
+      {
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+        pskCallback: function (id) {
+          return id === pskId ? pskKey : null;
+        }
+      },
+      app
+    )
+  );
+  testCloseAllServer.listen(
+    0,
+    function () {
+      var serverPort = testCloseAllServer.address().port;
+      var randomDBName = getUniqueRandomName();
+      var remotePouchDB = createPskPouchDBRemote(
+        serverPort, randomDBName, pskId, pskKey
+      );
+      testBody(serverPort, randomDBName, remotePouchDB);
+    }
+  );
+  return testCloseAllServer;
+};
