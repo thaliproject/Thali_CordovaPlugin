@@ -341,6 +341,9 @@ class AppContextTests: XCTestCase {
         expectationThatBothBluetoothStatesAreChanged =
             expectationWithDescription("Bluetooth is turned \(state.rawValue)")
 
+        // When we're switching bluetooth hardware, we're waiting for two async acknowledgements.
+        // The first one is from private API, the second acknowledgement is from CoreBluetooth.
+        // This is why we enter the same group twice
         dispatch_group_enter(bluetoothChangingStateGroup!)
         dispatch_group_enter(bluetoothChangingStateGroup!)
 
