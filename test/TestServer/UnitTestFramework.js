@@ -1,35 +1,27 @@
-/**
- * Unit test framework used with thaliTape.
- */
-
 'use strict';
 
 var util = require('util');
+
 var TestFramework = require('./TestFramework');
+var unitTestConfig = require('./UnitTestConfig');
 
-var logger = console;
 
-function UnitTestFramework(testConfig, _logger)
-{
-  if (_logger) {
-    logger = _logger;
-  }
-
-  var configFile = './UnitTestConfig';
-  var unitTestConfig = require(configFile);
-  if (testConfig.userConfig) {
-    unitTestConfig = testConfig.userConfig;
-  }
-
-  UnitTestFramework.super_.call(this, testConfig, unitTestConfig, _logger);
-
-  // Track which platforms we expect to be running on
+function UnitTestFramework(testConfig, logger) {
   var self = this;
-  self.runningTests = Object.keys(self.requiredDevices).filter(
+
+  console.log(testConfig);
+
+  this.logger = logger || console;
+  this.unitTestConfig = testConfig.userConfig || unitTestConfig;
+
+  UnitTestFramework.super_.call(this, testConfig, this.unitTestConfig, this.logger);
+
+  // Track which platforms we expect to be running on.
+  this.runningTests = Object.keys(this.requiredDevices).filter(
     function (platform) {
-      logger.info(
+      self.logger.info(
         'Require %d %s devices',
-        self.requiredDevices[platform] || 0, platform
+        self.requiredDevices[platform], platform
       );
       return self.requiredDevices[platform];
     }
@@ -38,80 +30,51 @@ function UnitTestFramework(testConfig, _logger)
 
 util.inherits(UnitTestFramework, TestFramework);
 
-UnitTestFramework.prototype.abortRun =
-  function (devices, platform, tests, results) {
-    // Tests on all devices are aborted
-    logger.info('Test run on %s aborted', platform);
+UnitTestFramework.prototype.finishRun = function (devices, platform, tests, results) {
+  // All devices have completed all their tests.
+  this.logger.info('Test run on %s complete', platform);
 
-    this.finalizeRun(devices, platform, tests, results, 'aborted');
-  };
+  // The whole point !! Log test results from the server.
+  this.testReport(platform, tests, results);
 
-UnitTestFramework.prototype.finishRun =
-  function (devices, platform, tests, results) {
-    // All devices have completed all their tests
-    logger.info('Test run on %s complete', platform);
+  // Signal devices to quit.
+  devices.forEach(function (device) {
+    device.socket.emit('complete');
+  });
 
-    this.finalizeRun(devices, platform, tests, results, 'complete');
-  };
+  // We're done running for this platform.
+  this.runningTests = this.runningTests.filter(function (p) {
+    return p !== platform;
+  });
 
-UnitTestFramework.prototype.finalizeRun =
-  function (devices, platform, tests, results, finalizeMessage) {
-
-    // Log test results from the server
-    this.testReport(platform, tests, results);
-
-    // Signal devices to quit
-    devices.forEach(function (device) {
-      device.socket.emit(finalizeMessage);
-    });
-
-    // We're done running for this platform..
-    this.runningTests = this.runningTests.filter(function (p) {
-      return p !== platform;
-    });
-
-    // There may be other platforms still running
-    if (this.runningTests.length === 0) {
-      this.emit('completed');
-    }
-  };
+  // There may be other platforms still running.
+  if (this.runningTests.length === 0) {
+    this.emit('completed');
+  }
+};
 
 UnitTestFramework.prototype.startTests = function (platform, tests) {
+  var self = this;
 
   var toComplete;
   var results = {};
 
   if (!tests) {
-    if (this.devices[platform].length) {
-      // Default to all tests named by first device
-      tests = this.devices[platform][0].tests;
-    } else {
-      tests = [];
-    }
+    // Default to all tests named by first device.
+    tests = this.devices[platform][0].tests;
   }
 
-  // Copy arrays
+  // Copy arrays.
   var _tests = tests.slice();
   var devices = this.devices[platform].slice();
 
-  if (devices.length < 2) {
-    logger.warn(
-      'Aborting unit test run for %s. At least 2 devices needed, having %d device(s)',
-      platform, this.devices[platform].length
-    );
-    this.abortRun(devices, platform, tests, results);
-    return;
-  }
-
-  logger.info(
+  this.logger.info(
     'Starting unit test run on %d %s devices',
     this.devices[platform].length, platform
   );
 
-  var self = this;
   function doTest(test, cb) {
-
-    logger.info('Running on %s test: %s', platform, test);
+    self.logger.info('Running on %s test: %s', platform, test);
 
     function emit(device, msg, data) {
       // Try to retry 120 times every second, because
@@ -130,7 +93,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
         }
       });
 
-      // Emit message every second until acknowledged
+      // Emit message every second until acknowledged.
       function _emit() {
         if (!acknowledged) {
           if (data) {
@@ -141,8 +104,10 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
           if (--retries > 0) {
             emitTimeout = setTimeout(_emit, retryInterval);
           } else {
-            logger.debug('Too many emit retries to device: %s',
-              device.deviceName);
+            self.logger.debug(
+              'Too many emit retries to device: %s',
+              device.deviceName
+            );
           }
         }
       }
@@ -174,18 +139,18 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
       }
     }
 
-    // Add event handlers for each stage of a single test
-    // Test proceed in the order shown below
+    // Add event handlers for each stage of a single test.
+    // Test proceed in the order shown below.
     toComplete = devices.length;
     devices.forEach(function (device) {
 
       function setResult(result) {
-        results[result.test] = result.success &&
-          (result.test in results ? results[result.test] :
-            true);
+        results[result.test] = result.success && (
+          result.test in results ? results[result.test] : true
+        );
       }
 
-      // The device has completed setup for this test
+      // The device has completed setup for this test.
       device.socket.once('setup_complete', function (result) {
         var parsedResult = JSON.parse(result);
         setResult(parsedResult);
@@ -195,19 +160,19 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
         });
       });
 
-      // The device has completed it's test
+      // The device has completed it's test.
       device.socket.once('test_complete', function (result) {
         setResult(JSON.parse(result));
         doNext('teardown');
       });
 
-      // The device has completed teardown for this test
+      // The device has completed teardown for this test.
       device.socket.once('teardown_complete', function (result) {
         var parsedResult = JSON.parse(result);
         setResult(parsedResult);
         if (--toComplete === 0) {
           if (!results[parsedResult.test]) {
-            logger.warn(
+            self.logger.warn(
               'Failed on %s test: %s', platform, test
             );
           }
@@ -215,14 +180,13 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
         }
       });
 
-      // All server-side handlers for this test are now installed, let's go..
+      // All server-side handlers for this test are now installed, let's go.
       emit(device, 'setup_' + test);
     });
   }
 
   function nextTest() {
-    // Pop the completed test off the list
-    // and move to next test
+    // Pop the completed test off the list and move to next test.
     tests.shift();
     if (tests.length) {
       process.nextTick(function () {
@@ -237,27 +201,26 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
   toComplete = devices.length;
 
   devices.forEach(function (device) {
-    // Wait for devices to signal they've scheduled their
-    // test runs and then begin
+    // Wait for devices to signal they've scheduled
+    // their test runs and then begin.
     device.socket.once('schedule_complete', function () {
       if (tests.length) {
         if (--toComplete === 0) {
           doTest(tests[0], nextTest);
         }
       } else {
-        logger.warn('Schedule complete with no tests to run');
+        self.logger.warn('Schedule complete with no tests to run');
         self.finishRun(devices, platform, _tests, results);
       }
     });
 
-    // Tell devices to set tests up to run in the order we supply
+    // Tell devices to set tests up to run in the order we supply.
     device.socket.emit('schedule', JSON.stringify(tests));
   });
 };
 
 UnitTestFramework.prototype.testReport = function (platform, tests, results) {
-
-  logger.info('\n\n-== UNIT TEST RESULTS ==-');
+  this.logger.info('\n\n-== UNIT TEST RESULTS ==-');
 
   var passed = 0;
   for (var test in results) {
@@ -265,23 +228,27 @@ UnitTestFramework.prototype.testReport = function (platform, tests, results) {
   }
   var failed = tests.length - passed;
 
-  logger.info('PLATFORM: %s', platform);
-  logger.info('RESULT: %s', passed === tests.length ? 'PASS' : 'FAIL');
-  logger.info('%d of %d tests completed',
-    Object.keys(results).length, tests.length);
-  logger.info('%d/%d passed (%d failures)',
-    passed, tests.length, failed);
+  this.logger.info('PLATFORM: %s', platform);
+  this.logger.info('RESULT: %s', passed === tests.length ? 'PASS' : 'FAIL');
+  this.logger.info(
+    '%d of %d tests completed',
+    Object.keys(results).length, tests.length
+  );
+  this.logger.info(
+    '%d/%d passed (%d failures)',
+    passed, tests.length, failed
+  );
 
   if (failed > 0) {
-    logger.info('\n\n--- Failed tests ---');
+    this.logger.info('\n\n--- Failed tests ---');
     for (test in results) {
       if (!results[test]) {
-        logger.warn(test + ' - fail');
+        this.logger.warn(test + ' - fail');
       }
     }
   }
 
-  logger.info('\n\n-== END ==-');
+  this.logger.info('\n\n-== END ==-');
 };
 
 module.exports = UnitTestFramework;

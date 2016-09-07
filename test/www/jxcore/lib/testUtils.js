@@ -4,8 +4,8 @@ var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
+var randomString = require('randomstring');
 var Promise = require('lie');
 var https = require('https');
 var logger = require('thali/thaliLogger')('testUtils');
@@ -244,43 +244,80 @@ module.exports.verifyCombinedResultSuccess =
       message || 'error should be null');
   };
 
+function levelDownPouchDBGenerator(defaultDirectory) {
+  // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/fb77927d2f14911478032884f1576b770815bcab/packages/pouchdb-core/src/setup.js#L108-L137
+  function PouchAlt(name, opts, callback) {
+    if (!(this instanceof PouchAlt)) {
+      return new PouchAlt(name, opts, callback);
+    }
+
+    if (typeof opts === 'function' || typeof opts === 'undefined') {
+      callback = opts;
+      opts = {};
+    }
+
+    if (name && typeof name === 'object') {
+      opts = name;
+      name = undefined;
+    }
+
+    opts = extend({}, opts);
+
+    if (name !== undefined && name.indexOf('http') !== 0) {
+      if (!opts.db) {
+        opts.db = require('leveldown-mobile');
+      }
+
+      if (!opts.prefix) {
+        opts.prefix = defaultDirectory;
+      }
+    }
+
+    PouchDB.call(this, name, opts, callback);
+  }
+
+  inherits(PouchAlt, PouchDB);
+
+  PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
+  Object.keys(PouchDB).forEach(function (key) {
+    if (!(key in PouchAlt)) {
+      PouchAlt[key] = PouchDB[key];
+    }
+  });
+
+  return PouchAlt;
+}
+
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
 // during other tests.
-var pouchDBTestDirectory = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-fs.ensureDirSync(pouchDBTestDirectory);
-module.exports.getPouchDBTestDirectory = function () {
-  return pouchDBTestDirectory;
-};
+var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
+fs.ensureDirSync(dbPath);
 
-var LevelDownPouchDB = PouchDBGenerator(PouchDB, pouchDBTestDirectory, {
-  defaultAdapter: require('leveldown-mobile')
-});
+var LevelDownPouchDB = levelDownPouchDBGenerator(dbPath);
 
 module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
 };
 
-// Short, random and globally unique name can be obtained from current timestamp.
-// For example '1w8ueaswm1'
-var getUniqueRandomName = function () {
-  var time = process.hrtime();
-  time = time[0] * Math.pow(10, 9) + time[1];
-  return time.toString(36);
-}
-module.exports.getUniqueRandomName  = getUniqueRandomName;
-module.exports.getRandomPouchDBName = getUniqueRandomName;
+module.exports.getRandomPouchDBName= function () {
+  return randomString.generate({
+    length: 40,
+    charset: 'alphabetic'
+  });
+};
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
-  return new LevelDownPouchDB(getUniqueRandomName());
+  return new LevelDownPouchDB(module.exports.getRandomPouchDBName());
 };
 
 module.exports.getPouchDBFactoryInRandomDirectory = function () {
-  var directory = path.join(pouchDBTestDirectory, getUniqueRandomName());
+  var directory = path.join(dbPath, randomString.generate({
+    length: 20,
+    charset: 'alphabetic'
+  }));
   fs.ensureDirSync(directory);
-  return PouchDBGenerator(PouchDB, directory, {
-    defaultAdapter: require('leveldown-mobile')
-  });
+  return levelDownPouchDBGenerator(directory);
 };
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
@@ -519,11 +556,13 @@ module.exports.setUpServer = function (testBody, appConfig) {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskCallback : function (id) {
         return id === pskId ? pskKey : null;
-      }
+      },
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
     }, app));
   testCloseAllServer.listen(0, function () {
     var serverPort = testCloseAllServer.address().port;
-    var randomDBName = getUniqueRandomName();
+    var randomDBName = randomString.generate(30);
     var remotePouchDB =
       module.exports.createPskPouchDBRemote(serverPort, randomDBName, pskId,
                                             pskKey);
@@ -671,30 +710,22 @@ module.exports.runTestOnAllParticipants = function (t, router,
 
 // We doesn't want our test to run infinite time.
 // We will replace t.end with custom exit function.
-module.exports.testTimeout = function (t, timeout) {
+module.exports.testTimeout = function (t, timeout, callback) {
   var timer = setTimeout(function () {
     t.fail('test timeout');
     t.end();
   }, timeout);
+
   var oldEnd = t.end;
   t.end = function () {
+    // Restoring original t.end.
+    t.end = oldEnd;
+
+    if (typeof callback === 'function') {
+      callback();
+    }
+
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
   }
-}
-
-module.exports.checkArgs = function (t, spy, description, args) {
-  t.ok(spy.calledOnce, description + ' was called once');
-
-  var currentArgs = spy.getCalls()[0].args;
-  t.equals(
-    args.length, currentArgs.length,
-    description + ' was called with ' + currentArgs.length + ' arguments'
-  );
-
-  args.forEach(function (arg, index) {
-    var argDescription = description + ' was called with \'' +
-      arg.description + '\' as ' + (index + 1) + '-st argument';
-    t.ok(arg.compare(currentArgs[index]), argDescription);
-  });
 }
