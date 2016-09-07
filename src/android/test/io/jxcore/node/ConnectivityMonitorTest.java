@@ -15,7 +15,9 @@ import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
 import org.thaliproject.p2p.btconnectorlib.internal.wifi.WifiDirectManager;
 
 import java.lang.reflect.Field;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -100,38 +102,20 @@ public class ConnectivityMonitorTest {
 
     @Test
     public void testStartStop() throws Exception {
-        currentWifiState = !currentWifiState;
-        currentBTState = !currentBTState;
-
         Field mListenersField = mBluetoothManager.getClass().getDeclaredField("mListeners");
         mListenersField.setAccessible(true);
 
-        // Set opposite states
-        if (currentBTState) {
-            mBluetoothAdapter.disable();
-        } else {
-            mBluetoothAdapter.enable();
-        }
-
-        mWifiManager.setWifiEnabled(currentWifiState);
-
-        Thread wifiStateCheck1 = wifiStateCheckThread();
-        Thread btStateCheck1 = bluetoothStateCheckThread();
-
-        wifiStateCheck1.start();
-        btStateCheck1.start();
-
-        wifiStateCheck1.join();
-        btStateCheck1.join();
-
-        // Start monitoring connectivity, Wi-Fi and Bluetooth state changes.
-        mConnectivityMonitor.start();
-
+        // Since ConnectivityMonitor was already started during initialization of ConnectionHelper,
+        // we only check if proper states of WiFi and BT were set.
         assertThat("Proper state of WIFI is set during the start",
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
 
         assertThat("Proper state of BT is set when during the start",
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothAdapter.isEnabled()));
+
+        assertThat("The BT listener was bound",
+                ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size() > 0,
+                is(true));
 
         Thread wifiStateCheck2 = wifiStateCheckThread();
         Thread wifiStateCheck3 = wifiStateCheckThread();
@@ -191,7 +175,13 @@ public class ConnectivityMonitorTest {
         assertThat("Proper state of BT is set when switched on",
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothAdapter.isEnabled()));
 
+        int sizeBeforeBTlistenerRelease = ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size();
+
         mConnectivityMonitor.stop();
+
+        assertThat("The BT listener is released",
+                ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
+                is(equalTo(sizeBeforeBTlistenerRelease - 1)));
 
         Field fWifiStateChangedAndConnectivityActionBroadcastReceiver = mConnectivityMonitor.getClass()
                 .getDeclaredField("mWifiStateChangedAndConnectivityActionBroadcastReceiver");
