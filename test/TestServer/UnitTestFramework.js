@@ -1,7 +1,14 @@
 'use strict';
 
 var util = require('util');
+var inherits = util.inherits;
+var format = util.format;
 
+var assert = require('assert');
+var Promise = require('bluebird');
+
+var asserts = require('./utils/asserts.js');
+var TestDevice = require('./TestDevice');
 var TestFramework = require('./TestFramework');
 var unitTestConfig = require('./UnitTestConfig');
 
@@ -9,69 +16,72 @@ var unitTestConfig = require('./UnitTestConfig');
 function UnitTestFramework(testConfig, logger) {
   var self = this;
 
-  console.log(testConfig);
-
   this.logger = logger || console;
   this.unitTestConfig = testConfig.userConfig || unitTestConfig;
 
   UnitTestFramework.super_.call(this, testConfig, this.unitTestConfig, this.logger);
-
-  // Track which platforms we expect to be running on.
-  this.runningTests = Object.keys(this.requiredDevices).filter(
-    function (platform) {
-      self.logger.info(
-        'Require %d %s devices',
-        self.requiredDevices[platform], platform
-      );
-      return self.requiredDevices[platform];
-    }
-  );
 }
 
 util.inherits(UnitTestFramework, TestFramework);
 
-UnitTestFramework.prototype.finishRun = function (devices, platform, tests, results) {
-  // All devices have completed all their tests.
-  this.logger.info('Test run on %s complete', platform);
-
-  // The whole point !! Log test results from the server.
-  this.testReport(platform, tests, results);
-
-  // Signal devices to quit.
-  devices.forEach(function (device) {
-    device.socket.emit('complete');
-  });
-
-  // We're done running for this platform.
-  this.runningTests = this.runningTests.filter(function (p) {
-    return p !== platform;
-  });
-
-  // There may be other platforms still running.
-  if (this.runningTests.length === 0) {
-    this.emit('completed');
-  }
-};
-
-UnitTestFramework.prototype.startTests = function (platform, tests) {
+UnitTestFramework.prototype.startTests = function (platformName, platform) {
   var self = this;
 
-  var toComplete;
-  var results = {};
+  asserts.isObject(platform);
+  asserts.isString(platformName);
 
-  if (!tests) {
-    // Default to all tests named by first device.
-    tests = this.devices[platform][0].tests;
-  }
+  var devices = platform.devices;
+  asserts.isArray(devices);
 
-  // Copy arrays.
-  var _tests = tests.slice();
-  var devices = this.devices[platform].slice();
+  var config = this.unitTestConfig[platformName];
+  asserts.isObject(config);
+
+  var desigedCount = config.numDevices;
+  asserts.isNumber(desigedCount);
+  assert(desigedCount > 0, 'we should have at least one device');
+
+  assert(
+    devices.length === desigedCount,
+    format(
+      'we should receive %d devices for platform: \'%s\', but received %d devices instead',
+      desigedCount, platformName, devices.length
+    )
+  );
+
+  devices.forEach(function (device) {
+    asserts.instanceOf(device, TestDevice);
+  });
+
+  var tests = devices[0].tests;
+  devices.slice(1).forEach(function (device) {
+    asserts.arrayEquals(tests, device.tests);
+  });
 
   this.logger.info(
-    'Starting unit test run on %d %s devices',
-    this.devices[platform].length, platform
+    'Starting unit tests on %d devices, platform: \'%s\'',
+    devices.length, platformName
   );
+
+  Promise.all(
+    devices.map(function (device) {
+      return device.scheduleTests();
+    })
+  )
+  .then(function () {
+    ;
+  })
+  .catch(function (error) {
+    self.logger.error(
+      'failed to run tests, reason: \'%s\'',
+      error.stack
+    );
+  });
+}
+
+/*
+UnitTestFramework.prototype.startTests = function (platform, tests) {
+  var toComplete;
+  var results = {};
 
   function doTest(test, cb) {
     self.logger.info('Running on %s test: %s', platform, test);
@@ -106,7 +116,7 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
           } else {
             self.logger.debug(
               'Too many emit retries to device: %s',
-              device.deviceName
+              device.name
             );
           }
         }
@@ -186,14 +196,12 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
   }
 
   function nextTest() {
-    // Pop the completed test off the list and move to next test.
     tests.shift();
     if (tests.length) {
       process.nextTick(function () {
         doTest(tests[0], nextTest);
       });
     } else {
-      // ALL DONE !!
       self.finishRun(devices, platform, _tests, results);
     }
   }
@@ -201,24 +209,57 @@ UnitTestFramework.prototype.startTests = function (platform, tests) {
   toComplete = devices.length;
 
   devices.forEach(function (device) {
-    // Wait for devices to signal they've scheduled
-    // their test runs and then begin.
-    device.socket.once('schedule_complete', function () {
-      if (tests.length) {
-        if (--toComplete === 0) {
-          doTest(tests[0], nextTest);
-        }
-      } else {
-        self.logger.warn('Schedule complete with no tests to run');
-        self.finishRun(devices, platform, _tests, results);
+    device.socket
+    .once('schedule_complete', function () {
+      if (--toComplete === 0) {
+        doTest(tests[0], nextTest);
       }
-    });
-
-    // Tell devices to set tests up to run in the order we supply.
-    device.socket.emit('schedule', JSON.stringify(tests));
+    })
+    .emit('schedule', JSON.stringify(tests));
   });
 };
+*/
 
+
+/*
+// Track which platforms we expect to be running on.
+this.runningTests = Object.keys(this.platforms)
+  .filter(function (platform) {
+    var platformData = self.platforms[platform];
+    self.logger.info(
+      '%d devices is required for platform: \'%s\'',
+      platformData.count, platform
+    );
+    return platformData.count;
+  });
+*/
+
+/*
+UnitTestFramework.prototype.finishRun = function (devices, platform, tests, results) {
+  // All devices have completed all their tests.
+  this.logger.info('Test run on %s complete', platform);
+
+  // The whole point !! Log test results from the server.
+  this.testReport(platform, tests, results);
+
+  // Signal devices to quit.
+  devices.forEach(function (device) {
+    device.socket.emit('complete');
+  });
+
+  // We're done running for this platform.
+  this.runningTests = this.runningTests.filter(function (p) {
+    return p !== platform;
+  });
+
+  // There may be other platforms still running.
+  if (this.runningTests.length === 0) {
+    this.emit('completed');
+  }
+};
+*/
+
+/*
 UnitTestFramework.prototype.testReport = function (platform, tests, results) {
   this.logger.info('\n\n-== UNIT TEST RESULTS ==-');
 
@@ -250,5 +291,6 @@ UnitTestFramework.prototype.testReport = function (platform, tests, results) {
 
   this.logger.info('\n\n-== END ==-');
 };
+*/
 
 module.exports = UnitTestFramework;
