@@ -3,7 +3,7 @@
 var logCallback;
 var os = require('os');
 var tmp = require('tmp');
-var PouchDB = require('pouchdb-node');
+var PouchDB = require('pouchdb');
 var path = require('path');
 var randomString = require('randomstring');
 var Promise = require('lie');
