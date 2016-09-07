@@ -50,12 +50,12 @@
 #ifdef TEST
     [self defineExecuteNativeTests:appContext];
 
-    // Dersim Davaod (8/19/16):
-    // For some unknown reasons we should invoke
-    // sharedInstance method on main thread at the early time.
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [[BluetoothHardwareControlManager sharedInstance] bluetoothIsPowered];
-    });
+//    // Dersim Davaod (8/19/16):
+//    // For some unknown reasons we should invoke
+//    // sharedInstance method on main thread at the early time.
+//    dispatch_async(dispatch_get_main_queue(), ^{
+//        [[BluetoothHardwareControlManager sharedInstance] bluetoothIsPowered];
+//    });
 #endif
 }
 
