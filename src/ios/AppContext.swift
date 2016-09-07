@@ -85,6 +85,7 @@ extension PeerAvailability {
     private let serviceType: String
     private let appNotificationsManager: ApplicationStateNotificationsManager
     private var networkChangedRegistered: Bool = false
+    private let disposeAdvertiserTimeout = 30.0
     lazy private var browserManager: BrowserManager = { [unowned self] in
          return BrowserManager(serviceType: self.serviceType) { peers in
             self.peersAvailabilityChanged(peers)
@@ -125,7 +126,7 @@ extension PeerAvailability {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
         advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                              disposeAdvertiserTimeout: 30)
+                                              disposeAdvertiserTimeout: disposeAdvertiserTimeout)
         super.init()
         appNotificationsManager.didEnterForegroundHandler = {[weak self] in
             self?.willEnterBackground()

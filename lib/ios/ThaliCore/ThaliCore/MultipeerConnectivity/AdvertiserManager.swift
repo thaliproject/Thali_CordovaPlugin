@@ -23,6 +23,13 @@ import Foundation
         return currentAdvertiser?.advertising ?? false
     }
 
+    /**
+
+     - parameter serviceType:              The type of service to advertise
+     - parameter disposeAdvertiserTimeout: time in seconds after old verrsion of advertiser will be
+                                           disposed
+
+     */
     public init(serviceType: String, disposeAdvertiserTimeout: Double) {
         self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
         self.serviceType = serviceType
@@ -34,7 +41,7 @@ import Foundation
     }
 
     //dispose advertiser after timeout to ensure that it has no pending invitations
-    func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
+    private func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW,
                 Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
