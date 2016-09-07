@@ -61,14 +61,14 @@ public class ConnectionHelperTest {
         Field fOperationTimeout = mStartStopOperatonHandler.getClass()
                 .getDeclaredField("OPERATION_TIMEOUT_IN_MILLISECONDS");
         fOperationTimeout.setAccessible(true);
-        mOperationTimeout = (long) fOperationTimeout.get(mStartStopOperatonHandler);
+        mOperationTimeout = fOperationTimeout.getLong(mStartStopOperatonHandler);
     }
 
     @Before
     public void setUp() throws Exception {
         mJXcoreThaliCallbackMock = new JXcoreThaliCallbackMock();
-        outgoingThreadsIds = new ArrayList<>();
-        incomingThreadsIds = new ArrayList<>();
+        outgoingThreadsIds = new ArrayList<String>();
+        incomingThreadsIds = new ArrayList<String>();
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();

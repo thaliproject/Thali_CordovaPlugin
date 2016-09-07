@@ -44,7 +44,7 @@ public class StartStopOperationHandlerTest {
         Field fOperationTimeout = mStartStopOperatonHandler.getClass()
                 .getDeclaredField("OPERATION_TIMEOUT_IN_MILLISECONDS");
         fOperationTimeout.setAccessible(true);
-        mOperationTimeout = (long) fOperationTimeout.get(mStartStopOperatonHandler);
+        mOperationTimeout = fOperationTimeout.getLong(mStartStopOperatonHandler);
     }
 
     @Before

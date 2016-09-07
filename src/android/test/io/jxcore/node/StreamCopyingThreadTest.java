@@ -43,7 +43,7 @@ public class StreamCopyingThreadTest {
     @Before
     public void setUp() throws Exception {
         mResult = "Lorem ipsum dolor sit.";
-        notifications = new ArrayList<>();
+        notifications = new ArrayList<Integer>();
 
         mContext = jxcore.activity.getBaseContext();
         mListener = new ListenerMock();

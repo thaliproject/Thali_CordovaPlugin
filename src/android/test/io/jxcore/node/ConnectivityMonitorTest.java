@@ -316,7 +316,7 @@ public class ConnectivityMonitorTest {
         @Override
         public void onPeerUpdated(PeerProperties peerProperties) {
 
-        }
+        }   
 
         @Override
         public void onPeerLost(PeerProperties peerProperties) {
