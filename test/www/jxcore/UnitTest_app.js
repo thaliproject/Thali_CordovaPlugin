@@ -46,13 +46,7 @@ if (!utResult) {
 // return;
 
 // Issue #914
-var networkTypes = [ThaliMobile.networkTypes.BOTH];
-if (process.platform === 'ios') {
-  networkTypes = [ThaliMobile.networkTypes.WIFI];
-}
-if (process.platform === 'android') {
-  networkTypes = [ThaliMobile.networkTypes.NATIVE];
-}
+var networkTypes = [ThaliMobile.networkTypes.WIFI];
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
