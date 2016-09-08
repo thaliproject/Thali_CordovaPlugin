@@ -251,12 +251,12 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   testServer.on('connect_error', function (error) {
     console.log('ThaliTape :: Error when connecting to the test server '
       + error);
-    testUtils.logMessageToScreen0('Error when connecting to the test server '
+    testUtils.logMessageToScreen('Error when connecting to the test server '
       + error);
     onConnection();
   });
   testServer.on('connect_timeout', function () {
-    console.log('ThaliTape :: Connection timeout reached when connecting ' 
+    console.log('ThaliTape :: Connection timeout reached when connecting '
       + 'to the test server');
     testUtils.logMessageToScreen('Connection timeout reached when connecting '
       + 'to the test server');
