@@ -16,29 +16,35 @@ var Promise = require('lie');
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
-  console.log('Running unit tests');
-  Mobile('ExecuteNativeTests').callNative(function (result) {
-    utResult = true;
-    if (result && result.executed) {
+  Mobile('executeNativeTests').callNative(function (result) {
+    if (result) {
+      if (!result.executed) {
+        console.log('*Native tests were not executed*');
+
+        utResult = false;
+      } else {
+        console.log('*Native tests were executed*');
+
+        utResult = result.failed <= 0;
+      }
+
       console.log('Total number of executed tests: ', result.total);
       console.log('Number of passed tests: ', result.passed);
       console.log('Number of failed tests: ', result.failed);
       console.log('Number of ignored tests: ', result.ignored);
       console.log('Total duration: ', result.duration);
-      if (result.failed > 0) {
-        console.log('Failures: \n', result.failures);
-        utResult = false;
-      }
+    } else {
+      console.log('*Native tests results are empty*');
+
+      utResult = false;
     }
   });
-} else {
-  // We aren't on a device so we can't run those tests anyway
-  utResult = true;
-}
 
-if (!utResult) {
-  console.log('Failed to execute UT.');
-  global.nativeUTFailed = true;
+  if (!utResult) {
+    console.log("Failed to execute UT.");
+    global.nativeUTFailed = true;
+  }
+
 }
 
 ThaliMobile.getNetworkStatus()
