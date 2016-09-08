@@ -48,8 +48,8 @@ class Session: NSObject {
                 guard let strongSelf = self else {
                     return
                 }
-                let stream = try strongSelf.session.startStreamWithName(name,
-                        toPeer: strongSelf.identifier)
+                let stream =
+                    try strongSelf.session.startStreamWithName(name, toPeer: strongSelf.identifier)
                 completion(stream, nil)
             } catch let error {
                 completion(nil, error)
@@ -65,6 +65,7 @@ class Session: NSObject {
     }
 }
 
+// MARK: - Handling events for MCSession
 extension Session: MCSessionDelegate {
     func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {
         assert(identifier.displayName == peerID.displayName)

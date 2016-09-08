@@ -17,6 +17,7 @@ final class Browser: NSObject {
     internal private(set) var listening: Bool = false
     private var availablePeers: Atomic<[PeerIdentifier: MCPeerID]> = Atomic([:])
     private var startBrowsingErrorHandler: (ErrorType -> Void)? = nil
+    let invitePeerTimeout = 30
 
     required init(serviceType: String,
                   foundPeer: (PeerIdentifier) -> Void,
@@ -69,7 +70,7 @@ final class Browser: NSObject {
 extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser,
-                        foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
+                 foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
         do {
             let peerIdentifier = try PeerIdentifier(peerID: peerID)
             availablePeers.modify {

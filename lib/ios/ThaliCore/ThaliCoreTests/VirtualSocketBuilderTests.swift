@@ -35,14 +35,13 @@ class VirtualSocketBuilderTests: XCTestCase {
         super.setUp()
         socketCreatedExpectation = expectationWithDescription("Socket created")
         session = SessionMock(session: MCSession(peer: MCPeerID(displayName:"peer1")),
-                                  identifier: MCPeerID(displayName:"peer2")) {
+                              identifier: MCPeerID(displayName:"peer2")) {
         }
     }
 
     private func createSocket<Builder: VirtualSocketBuilder>(session: Session,
-                              completion: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void)
-        -> Builder {
-            return Builder(session: session, completionHandler: completion)
+                              completion: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) -> Builder {
+        return Builder(session: session, completionHandler: completion)
     }
 
     func testAdvertiserBuilder() {

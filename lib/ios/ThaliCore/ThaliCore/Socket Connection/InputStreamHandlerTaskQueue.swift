@@ -14,7 +14,7 @@ final class InputStreamHandlerTaskQueue {
     internal private(set) var streamPool: [(NSInputStream, String)] = []
     internal private(set) var streamHandlerPool: [(NSInputStream, String) -> Void] = []
     let serialQueue = dispatch_queue_create("org.thaliproject.InputStreamHandlerTaskQueue",
-            DISPATCH_QUEUE_SERIAL)
+                                            DISPATCH_QUEUE_SERIAL)
 
     func add(inputStream: NSInputStream, withName name: String) {
         dispatch_async(serialQueue) { [weak self] in

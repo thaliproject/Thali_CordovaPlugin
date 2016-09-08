@@ -44,7 +44,7 @@ import Foundation
     //dispose advertiser after timeout to ensure that it has no pending invitations
     private func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW,
-                Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
+                                      Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
             advertiser.stopAdvertising()
 
@@ -84,7 +84,7 @@ import Foundation
         currentAdvertiser = nil
     }
 
-    public func startUpdateAdvertisingAndListening(port: UInt16, errorHandler: ErrorType -> Void) {
+    public func startUpdateAdvertisingAndListening(withPort port: UInt16, errorHandler: ErrorType -> Void) {
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
             addAdvertiserToDisposeQueue(currentAdvertiser)

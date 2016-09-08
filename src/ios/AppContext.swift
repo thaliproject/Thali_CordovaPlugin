@@ -22,6 +22,7 @@ func jsonValue(object: AnyObject) -> String {
     case UnknownError
 }
 
+// MARK: - JSON representation of PeerAvailability object
 extension PeerAvailability {
     var dictionaryValue: [String : AnyObject] {
         return ["peerIdentifier" : peerIdentifier.uuid,
@@ -157,7 +158,7 @@ extension PeerAvailability {
         guard let port = (parameters.first as? NSNumber)?.unsignedShortValue else {
             throw AppContextError.BadParameters
         }
-        advertiserManager.startUpdateAdvertisingAndListening(port) { [weak self] error in
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: port) { [weak self] error in
             print("failed start advertising due the error \(error)")
             self?.updateListeningAdvertisingState()
         }

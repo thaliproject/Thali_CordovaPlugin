@@ -27,18 +27,20 @@ class AdvertiserManagerTests: XCTestCase {
         advertiserManager = nil
     }
 
-    func testStartAdvertising() {
+    func testIsAdvertising() {
         XCTAssertFalse(advertiserManager.advertising)
-        advertiserManager.startUpdateAdvertisingAndListening(42) { _ in }
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42) { _ in }
         XCTAssertTrue(advertiserManager.advertising)
     }
 
     func testDisposeAdvertiserAfterTimeout() {
-        advertiserManager.startUpdateAdvertisingAndListening(42) { _ in }
+        let port1: UInt16 = 42
+        let port2: UInt16 = 43
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: port1) { _ in }
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
         let firstAdvertiserIdentifier = advertiserManager.currentAdvertiser?.peerIdentifier
 
-        advertiserManager.startUpdateAdvertisingAndListening(4242) { _ in}
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: port2) { _ in}
         XCTAssertEqual(advertiserManager.advertisers.value.count, 2)
         let expectation = expectationWithDescription("advertiser removed after delay")
         advertiserManager.didRemoveAdvertiserWithIdentifierHandler = { [weak expectation] identifier in
@@ -51,10 +53,12 @@ class AdvertiserManagerTests: XCTestCase {
     }
 
     func testPickLatestGenerationAdvertiserOnConnect() {
+        let port1: UInt16 = 42
+        let port2: UInt16 = 43
         let found2AdvertisersExpectation = expectationWithDescription("found 2 advertisers")
         var advertisersCount = 0
 
-        advertiserManager.startUpdateAdvertisingAndListening(42) { _ in }
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: port1) { _ in }
         let identifier: PeerIdentifier! = advertiserManager.currentAdvertiser?.peerIdentifier
 
         let browser = BrowserManager(serviceType: serviceType, inputStreamReceiveTimeout: 1) {
@@ -68,7 +72,7 @@ class AdvertiserManagerTests: XCTestCase {
             }
         }
 
-        advertiserManager.startUpdateAdvertisingAndListening(43) { _ in }
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: port2) { _ in }
         browser.startListeningForAdvertisements { _ in }
 
         waitForExpectationsWithTimeout(disposeTimeout + 1, handler: nil)
@@ -78,7 +82,7 @@ class AdvertiserManagerTests: XCTestCase {
     }
 
     func testStopAdvertising() {
-        advertiserManager.startUpdateAdvertisingAndListening(42) { _ in }
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42) { _ in }
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
         XCTAssertTrue(advertiserManager.advertising)
         advertiserManager.stopAdvertising()

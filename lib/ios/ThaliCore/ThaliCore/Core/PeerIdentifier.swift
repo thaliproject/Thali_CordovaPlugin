@@ -17,6 +17,7 @@ public enum PeerIdentifierError: String, ErrorType {
 public struct PeerIdentifier: Hashable {
     public let uuid: String
     let generation: Int
+    private static let separator = Character(":")
 
     init() {
         uuid = NSUUID().UUIDString
@@ -30,7 +31,7 @@ public struct PeerIdentifier: Hashable {
 
     public init(stringValue: String) throws {
         let parts = stringValue.characters.split {
-             $0 == ":"
+             $0 == PeerIdentifier.separator
              }.map(String.init)
         guard parts.count == 2 else {
             throw PeerIdentifierError.IllegalPeerID
@@ -47,7 +48,7 @@ public struct PeerIdentifier: Hashable {
     }
 
     var stringValue: String {
-        return "\(uuid):\(String(generation, radix: 16))"
+        return "\(uuid)\(PeerIdentifier.separator)\(String(generation, radix: 16))"
     }
 
     public var hashValue: Int {
@@ -55,7 +56,7 @@ public struct PeerIdentifier: Hashable {
     }
 }
 
-///Multipeer connectivity specific functions
+// MARK: - Multipeer connectivity specific functions
 extension PeerIdentifier {
 
     init(peerID peer: MCPeerID) throws {
@@ -63,6 +64,7 @@ extension PeerIdentifier {
     }
 }
 
+// MARK: - Multipeer connectivity specific functions
 extension MCPeerID {
     convenience init(peerIdentifier: PeerIdentifier) {
         self.init(displayName: peerIdentifier.stringValue)

@@ -17,22 +17,31 @@ class BrowserManagerTests: XCTestCase {
         serviceType = String.random(length: 7)
     }
 
-    func testStopBrowsing() {
+    func testStopBrowsingChangesListeningState() {
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peers in }
         browserManager.startListeningForAdvertisements { _ in }
+
+        //precondition
         XCTAssertNotNil(browserManager.currentBrowser)
         XCTAssertTrue(browserManager.listening)
+
         browserManager.stopListeningForAdvertisements()
+
+        //then
         XCTAssertNil(browserManager.currentBrowser)
         XCTAssertFalse(browserManager.listening)
     }
 
-    func testStartListeningNotActive() {
+    func testConnectWithoutListeningReturnStartListeningNotActiveError() {
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peers in }
         let expectation = expectationWithDescription("got startListening not active error")
         var connectError: MultiConnectError?
+
+        //precondition
+        XCTAssertFalse(browserManager.listening)
+
         browserManager.connectToPeer(PeerIdentifier()) { [weak expectation] port, error in
             if let error = error as? MultiConnectError {
                 connectError = error
@@ -40,21 +49,28 @@ class BrowserManagerTests: XCTestCase {
             }
         }
         waitForExpectationsWithTimeout(5, handler: nil)
+
+        //then
         XCTAssertEqual(connectError, .StartListeningNotActive)
     }
 
-    func testIllegalPeer() {
+    func testConnectToIllegalPeerReturnError() {
         let expectation = expectationWithDescription("got Illegal Peer")
         var connectError: MultiConnectError?
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peers in }
+        //precondition
+        let notDiscoveredPeerIdentifier = PeerIdentifier()
+
         browserManager.startListeningForAdvertisements { _ in }
-        browserManager.connectToPeer(PeerIdentifier()) { [weak expectation] port, error in
+        browserManager.connectToPeer(notDiscoveredPeerIdentifier) { [weak expectation] port, error in
             if let error = error as? MultiConnectError {
                 connectError = error
                 expectation?.fulfill()
             }
         }
+
+        //then
         waitForExpectationsWithTimeout(5, handler: nil)
         XCTAssertEqual(connectError, .IllegalPeerID)
     }
@@ -67,7 +83,8 @@ class BrowserManagerTests: XCTestCase {
                                                   inputStreamReceiveTimeout: 1)
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peerAvailability in
-            if let availability = peerAvailability.first where availability.available == false {
+            if let availability = peerAvailability.first
+                where availability.available == false {
                 advertiserPeerAvailability = availability
                 lostPeerExpectation.fulfill()
             }
@@ -75,7 +92,7 @@ class BrowserManagerTests: XCTestCase {
 
         browserManager.startListeningForAdvertisements { _ in }
 
-        advertiserManager.startUpdateAdvertisingAndListening(42) { _ in}
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42) { _ in}
         let advertiserIdentifier = advertiserManager.currentAdvertiser?.peerIdentifier
 
         let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(2 * Double(NSEC_PER_SEC)))
@@ -87,7 +104,7 @@ class BrowserManagerTests: XCTestCase {
         XCTAssertEqual(advertiserIdentifier, advertiserPeerAvailability?.peerIdentifier)
     }
 
-    func testFoundAdvertiser() {
+    func testReceivedPeerAvailabilityEventAfterFoundAdvertiser() {
         let expectation = expectationWithDescription("found peer advertiser's identifier")
         var advertiserPeerAvailability: PeerAvailability? = nil
         let advertiserManager = AdvertiserManager(serviceType: serviceType,
@@ -101,7 +118,7 @@ class BrowserManagerTests: XCTestCase {
         }
 
         browserManager.startListeningForAdvertisements { _ in }
-        advertiserManager.startUpdateAdvertisingAndListening(42) { _ in}
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42) { _ in}
         let advertiserIdentifier = advertiserManager.currentAdvertiser?.peerIdentifier
 
         waitForExpectationsWithTimeout(20, handler: nil)

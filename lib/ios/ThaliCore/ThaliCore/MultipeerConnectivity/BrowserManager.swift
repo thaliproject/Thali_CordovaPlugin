@@ -77,7 +77,7 @@ public final class BrowserManager: NSObject {
         }
         do {
             let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier,
-                    disconnectHandler: {
+                                                                 disconnectHandler: {
                 completion(nil, MultiConnectError.ConnectionFailed)
             })
             socketRelay.createSocket(with: session, completion: completion)

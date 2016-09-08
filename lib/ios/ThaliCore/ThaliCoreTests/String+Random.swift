@@ -9,6 +9,7 @@
 
 import Foundation
 
+// MARK: - Random string generator 
 extension String {
     static func random(length length: Int) -> String {
         let letters: String = "abcdefghkmnopqrstuvxyzABCDEFGHKLMNOPQRSTUXYZ"

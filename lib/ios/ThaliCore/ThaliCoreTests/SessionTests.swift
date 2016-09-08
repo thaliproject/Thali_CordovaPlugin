@@ -14,8 +14,8 @@ import MultipeerConnectivity
 
 class MCSessionMock: MCSession {
     var errorOnCreateStream = false
-    override func startStreamWithName(streamName: String, toPeer peerID: MCPeerID) throws ->
-        NSOutputStream {
+    override func startStreamWithName(streamName: String,
+                                      toPeer peerID: MCPeerID) throws -> NSOutputStream {
         guard !errorOnCreateStream else {
             throw NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
         }

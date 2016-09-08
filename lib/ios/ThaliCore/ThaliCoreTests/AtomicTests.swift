@@ -11,7 +11,7 @@ import XCTest
 @testable import ThaliCore
 
 class AtomicTests: XCTestCase {
-    
+
     var atomic: Atomic<Int>!
     let initialValue: Int = 1
 
@@ -25,8 +25,9 @@ class AtomicTests: XCTestCase {
     }
 
     func testModify() {
-        atomic.modify { $0 += 1 }
-        XCTAssertEqual(atomic.value, initialValue + 1)
+        let valueAfterModifying = initialValue + 1
+        atomic.modify { $0 = valueAfterModifying}
+        XCTAssertEqual(atomic.value, valueAfterModifying)
     }
 
     func testWithValue() {
