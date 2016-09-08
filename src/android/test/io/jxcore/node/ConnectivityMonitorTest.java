@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.net.wifi.WifiManager;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -39,9 +40,20 @@ public class ConnectivityMonitorTest {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        mContext = jxcore.activity.getBaseContext();
+
+        mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
+
+        currentWifiState = mWifiManager.isWifiEnabled();
+        currentBTState = mBluetoothAdapter.isEnabled();
+    }
+
+    @Before
+    public void setUp() throws Exception {
         mConnectionHelper = new ConnectionHelper();
         mConnectivityMonitor = mConnectionHelper.getConnectivityMonitor();
-        mContext = jxcore.activity.getBaseContext();
 
         Field bluetoothManagerField = mConnectivityMonitor.getClass()
                 .getDeclaredField("mBluetoothManager");
@@ -52,18 +64,11 @@ public class ConnectivityMonitorTest {
                 .getDeclaredField("mWifiDirectManager");
         wifiDirectManagerField.setAccessible(true);
         mWifiDirectManager = (WifiDirectManager) wifiDirectManagerField.get(mConnectivityMonitor);
-
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        mBluetoothAdapter.enable();
-
-        mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
-        mWifiManager.setWifiEnabled(true);
     }
 
-    @Before
-    public void setUp() throws Exception {
-        currentWifiState = mWifiManager.isWifiEnabled();
-        currentBTState = mBluetoothAdapter.isEnabled();
+    @After
+    public void tearDown() throws Exception {
+        mConnectionHelper.dispose();
     }
 
     public Thread bluetoothStateCheckThread() {
@@ -71,14 +76,14 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public void run() {
-                while (mBluetoothAdapter.isEnabled() != currentBTState && counter < 2) {
+                do {
                     try {
                         Thread.sleep(3000);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                }
+                } while (mBluetoothAdapter.isEnabled() != currentBTState && counter < 2);
             }
         });
     }
@@ -88,14 +93,14 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public void run() {
-                while (mWifiManager.isWifiEnabled() != currentWifiState && counter < 2) {
+                do {
                     try {
                         Thread.sleep(3000);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                }
+                } while (mWifiManager.isWifiEnabled() != currentWifiState && counter < 2);
             }
         });
     }
@@ -222,14 +227,14 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public void run() {
-                while (!mBluetoothAdapter.isEnabled() && counter < 2) {
+                do {
                     try {
                         Thread.sleep(3000);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                }
+                } while (!mBluetoothAdapter.isEnabled() && counter < 2);
             }
         });
 
@@ -237,14 +242,14 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public void run() {
-                while (mBluetoothAdapter.isEnabled() && counter < 2) {
+                do {
                     try {
                         Thread.sleep(3000);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                }
+                } while (mBluetoothAdapter.isEnabled() && counter < 2);
             }
         });
 
@@ -280,14 +285,14 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public void run() {
-                while (!mWifiManager.isWifiEnabled() && counter < 2) {
+                do {
                     try {
                         Thread.sleep(3000);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                }
+                } while (!mWifiManager.isWifiEnabled() && counter < 2);
             }
         });
 
@@ -295,14 +300,14 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public void run() {
-                while (mWifiManager.isWifiEnabled() && counter < 2) {
+                do {
                     try {
                         Thread.sleep(3000);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                }
+                } while (mWifiManager.isWifiEnabled() && counter < 2);
             }
         });
 

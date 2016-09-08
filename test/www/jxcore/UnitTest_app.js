@@ -37,7 +37,7 @@ ThaliMobile.getNetworkStatus()
             console.log('Number of ignored tests: ', result.ignored);
             console.log('Total duration: ', result.duration);
 
-            if (result.failed > 0) {
+            if (result.failed > 0 || result.total == 0) {
               utResult = false;
             }
           }
