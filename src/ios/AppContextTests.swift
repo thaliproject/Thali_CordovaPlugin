@@ -43,7 +43,7 @@ class AppContextTests: XCTestCase {
         }
         return (try? NSJSONSerialization.JSONObjectWithData(data, options: [])) as? [String : AnyObject]
     }
-    
+
     private func validateAdvertisingUpdate(jsonString: String, advertising: Bool, browsing: Bool) {
         let json = jsonDicitonaryFrom(jsonString)
         let listeningActive = (json?["discoveryActive"] as? Bool)
@@ -71,7 +71,8 @@ class AppContextTests: XCTestCase {
         XCTAssertNil(error)
         var contextError: AppContextError?
         do {
-            try context.didRegisterToNative([42])
+            let notAString = 42
+            try context.didRegisterToNative([notAString])
         } catch let err as AppContextError{
             contextError = err
         } catch _ {
@@ -86,7 +87,8 @@ class AppContextTests: XCTestCase {
     func testListeningAdvertisingUpdateOnStartAdvertising() {
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock
-        let _ = try? context.startUpdateAdvertisingAndListening(withParameters: [42])
+        let port = 42
+        let _ = try? context.startUpdateAdvertisingAndListening(withParameters: [port])
         validateAdvertisingUpdate(delegateMock.advertisingListeningState, advertising: true,
                                   browsing: false)
     }
