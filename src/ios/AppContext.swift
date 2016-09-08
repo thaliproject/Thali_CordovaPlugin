@@ -80,14 +80,17 @@ extension PeerAvailability {
 
 /// Interface for communication between native and cross-platform parts
 @objc public final class AppContext: NSObject {
-    /// delegate for AppContext's events
-    public weak var delegate: AppContextDelegate?
+    private let disposeAdvertiserTimeout = 30.0
+    private let inputStreamReceiveTimeout = 5.0
+
     private let serviceType: String
     private let appNotificationsManager: ApplicationStateNotificationsManager
+
     private var networkChangedRegistered: Bool = false
-    private let disposeAdvertiserTimeout = 30.0
+    public weak var delegate: AppContextDelegate?
     lazy private var browserManager: BrowserManager = { [unowned self] in
-         return BrowserManager(serviceType: self.serviceType) { peers in
+         return BrowserManager(serviceType: self.serviceType,
+                 inputStreamReceiveTimeout: self.inputStreamReceiveTimeout) { peers in
             self.peersAvailabilityChanged(peers)
         }
     }()
@@ -126,7 +129,8 @@ extension PeerAvailability {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
         advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                              disposeAdvertiserTimeout: disposeAdvertiserTimeout)
+                                              disposeAdvertiserTimeout: disposeAdvertiserTimeout,
+                                              inputStreamReceiveTimeout: inputStreamReceiveTimeout)
         super.init()
         appNotificationsManager.didEnterForegroundHandler = {[weak self] in
             self?.willEnterBackground()

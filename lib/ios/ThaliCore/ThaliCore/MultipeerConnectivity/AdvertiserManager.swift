@@ -16,7 +16,7 @@ import Foundation
     internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
     internal private(set) var currentAdvertiser: Advertiser? = nil
 
-    let socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(createSocketTimeout: 5)
+    let socketRelay: SocketRelay<AdvertiserVirtualSocketBuilder>
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
 
     public var advertising: Bool {
@@ -30,9 +30,10 @@ import Foundation
                                            disposed
 
      */
-    public init(serviceType: String, disposeAdvertiserTimeout: Double) {
+    public init(serviceType: String, disposeAdvertiserTimeout: Double, inputStreamReceiveTimeout: Double) {
         self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
         self.serviceType = serviceType
+        socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(createSocketTimeout: inputStreamReceiveTimeout)
     }
 
     private func handle(session: Session, withPort port: UInt16) {

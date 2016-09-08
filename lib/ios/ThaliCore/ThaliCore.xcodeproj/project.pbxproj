@@ -172,12 +172,12 @@
 		CCA571CA1D4787A900FBEC41 /* ThaliCoreTests */ = {
 			isa = PBXGroup;
 			children = (
-				D38606491D7E984900B93156 /* Core Tests */,
-				D386064A1D7E987200B93156 /* MultipeerConnectivity Tests */,
-				D38606471D7E982000B93156 /* SocketConnection Tests */,
+				D38606491D7E984900B93156 /* CoreTests */,
+				D386064A1D7E987200B93156 /* MultipeerConnectivityTests */,
+				D38606471D7E982000B93156 /* SocketConnectionTests */,
 				D34882F81D6206510052A3EA /* Utils */,
 				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
-				CCA572501D478C1000FBEC41 /* Supporting Files */,
+				CCA572501D478C1000FBEC41 /* SupportingFiles */,
 			);
 			path = ThaliCoreTests;
 			sourceTree = "<group>";
@@ -213,11 +213,12 @@
 			path = MultipeerConnectivity;
 			sourceTree = "<group>";
 		};
-		CCA572501D478C1000FBEC41 /* Supporting Files */ = {
+		CCA572501D478C1000FBEC41 /* SupportingFiles */ = {
 			isa = PBXGroup;
 			children = (
 				CCA572511D478C1000FBEC41 /* Info.plist */,
 			);
+			name = SupportingFiles;
 			path = "Supporting Files";
 			sourceTree = "<group>";
 		};
@@ -264,7 +265,7 @@
 			name = Utils;
 			sourceTree = "<group>";
 		};
-		D38606471D7E982000B93156 /* SocketConnection Tests */ = {
+		D38606471D7E982000B93156 /* SocketConnectionTests */ = {
 			isa = PBXGroup;
 			children = (
 				D368EE231D7DA53B00F1C9D4 /* InputStreamHandlerTaskQueueTests.swift */,
@@ -272,20 +273,20 @@
 				FAADDF493162FBCCDFCD354B /* SessionTests.swift */,
 				D368EE2E1D7DDB7000F1C9D4 /* VirtualSocketBuilderTests.swift */,
 			);
-			name = "SocketConnection Tests";
+			name = SocketConnectionTests;
 			sourceTree = "<group>";
 		};
-		D38606491D7E984900B93156 /* Core Tests */ = {
+		D38606491D7E984900B93156 /* CoreTests */ = {
 			isa = PBXGroup;
 			children = (
 				D37E88BD1D5209B0009243EE /* AppStateNotificationsManagerTests.swift */,
 				D300C47A1D54C0EA00A9D97D /* PeerIdentifierTests.swift */,
 				D368EE261D7DA80500F1C9D4 /* AtomicTests.swift */,
 			);
-			name = "Core Tests";
+			name = CoreTests;
 			sourceTree = "<group>";
 		};
-		D386064A1D7E987200B93156 /* MultipeerConnectivity Tests */ = {
+		D386064A1D7E987200B93156 /* MultipeerConnectivityTests */ = {
 			isa = PBXGroup;
 			children = (
 				D34882F41D62060E0052A3EA /* AdvertiserManagerTests.swift */,
@@ -293,7 +294,7 @@
 				D38606511D7EA3A600B93156 /* AdvertiserTests.swift */,
 				D38606531D7EA3B100B93156 /* BrowserTests.swift */,
 			);
-			name = "MultipeerConnectivity Tests";
+			name = MultipeerConnectivityTests;
 			sourceTree = "<group>";
 		};
 		FAADD1C6BE43B5292357C72D /* SocketConnection */ = {

@@ -18,7 +18,8 @@ class BrowserManagerTests: XCTestCase {
     }
 
     func testStopBrowsing() {
-        let browserManager = BrowserManager(serviceType: serviceType) { peers in }
+        let browserManager = BrowserManager(serviceType: serviceType,
+                                            inputStreamReceiveTimeout: 1) { peers in }
         browserManager.startListeningForAdvertisements { _ in }
         XCTAssertNotNil(browserManager.currentBrowser)
         XCTAssertTrue(browserManager.listening)
@@ -28,7 +29,8 @@ class BrowserManagerTests: XCTestCase {
     }
 
     func testStartListeningNotActive() {
-        let browserManager = BrowserManager(serviceType: serviceType) { peers in }
+        let browserManager = BrowserManager(serviceType: serviceType,
+                                            inputStreamReceiveTimeout: 1) { peers in }
         let expectation = expectationWithDescription("got startListening not active error")
         var connectError: MultiConnectError?
         browserManager.connectToPeer(PeerIdentifier()) { [weak expectation] port, error in
@@ -44,7 +46,8 @@ class BrowserManagerTests: XCTestCase {
     func testIllegalPeer() {
         let expectation = expectationWithDescription("got Illegal Peer")
         var connectError: MultiConnectError?
-        let browserManager = BrowserManager(serviceType: serviceType) { peers in }
+        let browserManager = BrowserManager(serviceType: serviceType,
+                                            inputStreamReceiveTimeout: 1) { peers in }
         browserManager.startListeningForAdvertisements { _ in }
         browserManager.connectToPeer(PeerIdentifier()) { [weak expectation] port, error in
             if let error = error as? MultiConnectError {
@@ -59,8 +62,11 @@ class BrowserManagerTests: XCTestCase {
     func testLostPeer() {
         let lostPeerExpectation = expectationWithDescription("lost peer advertiser's identifier")
         var advertiserPeerAvailability: PeerAvailability? = nil
-        let advertiserManager = AdvertiserManager(serviceType: serviceType, disposeAdvertiserTimeout: 30)
-        let browserManager = BrowserManager(serviceType: serviceType) { peerAvailability in
+        let advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                                  disposeAdvertiserTimeout: 30,
+                                                  inputStreamReceiveTimeout: 1)
+        let browserManager = BrowserManager(serviceType: serviceType,
+                                            inputStreamReceiveTimeout: 1) { peerAvailability in
             if let availability = peerAvailability.first where availability.available == false {
                 advertiserPeerAvailability = availability
                 lostPeerExpectation.fulfill()
@@ -84,8 +90,12 @@ class BrowserManagerTests: XCTestCase {
     func testFoundAdvertiser() {
         let expectation = expectationWithDescription("found peer advertiser's identifier")
         var advertiserPeerAvailability: PeerAvailability? = nil
-        let advertiserManager = AdvertiserManager(serviceType: serviceType, disposeAdvertiserTimeout: 20)
-        let browserManager = BrowserManager(serviceType: serviceType) { [weak expectation] peerAvailability in
+        let advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                                  disposeAdvertiserTimeout: 20,
+                                                  inputStreamReceiveTimeout: 1)
+        let browserManager = BrowserManager(serviceType: serviceType,
+                                            inputStreamReceiveTimeout: 1) {
+                                                [weak expectation] peerAvailability in
             advertiserPeerAvailability = peerAvailability.first
             expectation?.fulfill()
         }

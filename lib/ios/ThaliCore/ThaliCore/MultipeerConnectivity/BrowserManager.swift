@@ -15,7 +15,7 @@ public struct PeerAvailability {
 
 //class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
-    private let socketRelay = SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: 5)
+    private let socketRelay: SocketRelay<BrowserVirtualSocketBuilder>
 
     internal private(set) var currentBrowser: Browser?
     internal private(set) var availablePeers: Atomic<[PeerIdentifier]> = Atomic([])
@@ -27,9 +27,11 @@ public final class BrowserManager: NSObject {
         return currentBrowser?.listening ?? false
     }
 
-    public init(serviceType: String, peersAvailabilityChangedHandler: ([PeerAvailability]) -> Void) {
+    public init(serviceType: String, inputStreamReceiveTimeout: Double,
+                peersAvailabilityChangedHandler: ([PeerAvailability]) -> Void) {
         self.serviceType = serviceType
         self.peersAvailabilityChangedHandler = peersAvailabilityChangedHandler
+        socketRelay = SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: inputStreamReceiveTimeout)
     }
 
     private func handleFoundPeer(with identifier: PeerIdentifier) {

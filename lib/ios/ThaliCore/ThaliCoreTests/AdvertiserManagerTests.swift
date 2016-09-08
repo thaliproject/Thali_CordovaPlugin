@@ -17,7 +17,9 @@ class AdvertiserManagerTests: XCTestCase {
 
     override func setUp() {
         serviceType = String.random(length: 7)
-        advertiserManager = AdvertiserManager(serviceType: serviceType, disposeAdvertiserTimeout: disposeTimeout)
+        advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                              disposeAdvertiserTimeout: disposeTimeout,
+                                              inputStreamReceiveTimeout: 1)
     }
 
     override func tearDown() {
@@ -55,8 +57,10 @@ class AdvertiserManagerTests: XCTestCase {
         advertiserManager.startUpdateAdvertisingAndListening(42) { _ in }
         let identifier: PeerIdentifier! = advertiserManager.currentAdvertiser?.peerIdentifier
 
-        let browser = BrowserManager(serviceType: serviceType) { [weak found2AdvertisersExpectation] peerAvailability in
-            if let availability = peerAvailability.first where availability.peerIdentifier.uuid == identifier.uuid {
+        let browser = BrowserManager(serviceType: serviceType, inputStreamReceiveTimeout: 1) {
+            [weak found2AdvertisersExpectation] peerAvailability in
+            if let availability = peerAvailability.first
+                where availability.peerIdentifier.uuid == identifier.uuid {
                 advertisersCount += 1
                 if advertisersCount == 2 {
                     found2AdvertisersExpectation?.fulfill()
