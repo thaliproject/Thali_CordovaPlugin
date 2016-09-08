@@ -12,8 +12,8 @@ var Promise = require('bluebird');
 var asserts = require('./utils/asserts');
 
 var TestDevice = require('./TestDevice');
-var PerfTestFramework = require('./PerfTestFramework');
 var UnitTestFramework = require('./UnitTestFramework');
+// var PerfTestFramework = require('./PerfTestFramework');
 
 
 Promise.config({
@@ -62,10 +62,29 @@ process
   process.exit(2);
 });
 
+var RETRY_COUNT = 120;
+var RETRY_TIMEOUT = 3 * 1000;
+var SETUP_TIMEOUT = 1 * 60 * 1000;
+var TEST_TIMEOUT = 10 * 60 * 1000;
+var TEARDOWN_TIMEOUT = 1 * 60 * 1000;
+
 try {
   var testConfig = JSON.parse(process.argv[2]);
   var unitTestManager = new UnitTestFramework(testConfig, logger);
-  var perfTestManager = new PerfTestFramework(testConfig, logger);
+  // var perfTestManager = new PerfTestFramework(testConfig, logger);
+
+  unitTestManager.once('completed', function (results) {
+    logger.debug('completed');
+    var isSuccess = results.every(function (result) {
+      return result;
+    });
+    io.close();
+    if (isSuccess) {
+      process.exit(0);
+    } else {
+      process.exit(3);
+    }
+  });
 
   io.on('connection', function (socket) {
     // A new device has connected to us.
@@ -92,7 +111,13 @@ try {
       try {
         asserts.isString(data);
         var device_data = JSON.parse(data);
-        device = new TestDevice(socket, device_data);
+        device = new TestDevice(socket, device_data, {
+          retryCount: RETRY_COUNT,
+          retryTimeout: RETRY_TIMEOUT,
+          setupTimeout: SETUP_TIMEOUT,
+          testTimeout: TEST_TIMEOUT,
+          teardownTimeout: TEARDOWN_TIMEOUT
+        });
         socket.deviceName = device.name;
       } catch (error) {
         socket.emit(
@@ -117,10 +142,10 @@ try {
             unitTestManager.addDevice(device);
             break;
           }
-          case 'perftest': {
-            perfTestManager.addDevice(device);
-            break;
-          }
+          // case 'perftest': {
+          //   perfTestManager.addDevice(device);
+          //   break;
+          // }
           default: {
             throw new Error(
               format('unrecognised device type: \'%s\'', device.type)

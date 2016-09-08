@@ -21,6 +21,8 @@
 'use strict';
 
 var util = require('util');
+var format = util.format;
+
 var uuid = require('node-uuid');
 var tape = require('tape-catch');
 var io = require('socket.io-client');
@@ -71,7 +73,11 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     // Run setup function when the testServer tells us
     var success = true;
     testServer.once('setup_' + name, function () {
-      emitWhenConnected(testServer, util.format('setup_%s_ok', name));
+      emitWhenConnected(
+        testServer,
+        format('setup_%s_confirmed', name)
+      );
+
       t.on('result', function (res) {
         success = success && res.ok;
       });
@@ -79,9 +85,11 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
         if (!success) {
           allSuccess = false;
         }
-        emitWhenConnected(testServer, 'setup_complete',
+
+        emitWhenConnected(
+          testServer,
+          format('setup_%s_finished', name),
           JSON.stringify({
-            'test': name,
             'success': success,
             'data': t.data || null
           })
@@ -94,33 +102,45 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
   tape(name, function (t) {
     var success = true;
 
-    // Listen for the test result
     t.on('result', function (res) {
       success = success && res.ok;
     });
 
     t.once('end', function () {
+      emitWhenConnected(
+        testServer,
+        format('run_%s_finished', name),
+        JSON.stringify({
+          success: success
+        })
+      );
+
       if (!success) {
         allSuccess = false;
       }
-      // Tell the server we ran the test and what the result was (true == pass)
-      emitWhenConnected(testServer, 'test_complete',
-        JSON.stringify({'test':name, 'success':success}));
     });
 
     // Run the test (cb) when the server tells us to
-    testServer.once('start_test_' + name, function (data) {
+    testServer.once('run_' + name, function (data) {
+      emitWhenConnected(
+        testServer,
+        format('run_%s_confirmed', name),
+        data
+      );
+
       t.participants = JSON.parse(data);
-      emitWhenConnected(testServer, util.format('start_test_%s_ok', name));
       cb(t);
     });
   });
 
   tape('teardown', function (t) {
-    // Run teardown function when the server tells us
-    var success = true;
     testServer.once('teardown_' + name, function () {
-      emitWhenConnected(testServer, util.format('teardown_%s_ok', name));
+      emitWhenConnected(
+        testServer,
+        format('teardown_%s_confirmed', name)
+      );
+
+      var success = true;
       t.on('result', function (res) {
         success = success && res.ok;
       });
@@ -128,8 +148,14 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
         if (!success) {
           allSuccess = false;
         }
-        emitWhenConnected(testServer, 'teardown_complete',
-          JSON.stringify({'test':name, 'success':success}));
+
+        emitWhenConnected(
+          testServer,
+          format('teardown_%s_finished', name),
+          JSON.stringify({
+            success: success
+          })
+        );
       });
       teardown(t);
     });
@@ -223,7 +249,7 @@ thaliTape.begin = function (version, hasRequiredHardware) {
             tests[test].fn
           );
         });
-        emitWhenConnected(testServer, 'schedule_complete');
+        emitWhenConnected(testServer, 'schedule_confirmed', schedule);
       });
     }
     firstConnection = false;
@@ -254,6 +280,8 @@ thaliTape.begin = function (version, hasRequiredHardware) {
   });
 
   testServer.once('discard', function () {
+    emitWhenConnected(testServer, 'discard_confirmed');
+
     // This device not needed, log appropriately so CI doesn't think we've
     // failed
     testUtils.logMessageToScreen('Device discarded as surplus');
@@ -262,6 +290,8 @@ thaliTape.begin = function (version, hasRequiredHardware) {
   });
 
   testServer.once('disqualify', function () {
+    emitWhenConnected(testServer, 'disqualify_confirmed');
+
     testUtils.logMessageToScreen('Device disqualified');
     testUtils.returnsValidNetworkStatus()
     .then(function (validStatus) {
@@ -290,6 +320,8 @@ thaliTape.begin = function (version, hasRequiredHardware) {
   });
 
   testServer.once('complete', function () {
+    emitWhenConnected(testServer, 'complete_confirmed');
+
     testUtils.logMessageToScreen('Tests complete');
     complete = true;
     if (allSuccess) {

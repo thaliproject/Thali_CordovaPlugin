@@ -270,6 +270,7 @@ test('no peer discovery', function (t) {
   });
 
   setTimeout(function () {
+    Mobile('peerAvailabilityChanged').registerToNative(function () {});
     t.end();
   }, STEP_TIMEOUT);
 });

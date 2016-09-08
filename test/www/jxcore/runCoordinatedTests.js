@@ -58,7 +58,8 @@ var logInstanceOutput = function (data, instanceId) {
 var setListeners = function (instance, instanceId) {
   instanceLogs[instanceId] = '';
 
-  instance.stdout.on('data', function (data) {
+  instance.stdout
+  .on('data', function (data) {
     logInstanceOutput(data, instanceId);
 
     if (data.indexOf('PROCESS_ON_EXIT_') >= 0) {
@@ -76,12 +77,17 @@ var setListeners = function (instance, instanceId) {
         shutdown(0);
       }
     }
+  })
+  .on('end', function () {
+    logInstanceOutput('stdout finished', instanceId);
   });
-  instance.stderr.on('data', function (data) {
+
+  instance.stderr
+  .on('data', function (data) {
     logInstanceOutput(data, instanceId);
-  });
-  instance.stdout.on('end', function (data) {
-    logInstanceOutput(data, instanceId);
+  })
+  .on('end', function () {
+    logInstanceOutput('stderr finished', instanceId);
   });
 };
 
