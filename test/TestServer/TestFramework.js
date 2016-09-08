@@ -39,7 +39,9 @@ function TestFramework(testConfig, userConfig, logger) {
     userPlatforms.length > 0,
     '\'userPlatforms\' should not be an empty array'
   );
-  asserts.arrayEquals(testPlatforms.sort(), userPlatforms.sort());
+  // 'testPlatforms' can include less platforms than userPlatforms.
+  // We will just ignore this case.
+  // asserts.arrayEquals(testPlatforms.sort(), userPlatforms.sort());
 
   // Number of devices per platform we can use to complete the test
   // that the CI system think deployed succesfully.
