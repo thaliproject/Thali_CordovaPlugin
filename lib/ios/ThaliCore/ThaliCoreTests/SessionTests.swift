@@ -13,10 +13,10 @@ import Foundation
 import MultipeerConnectivity
 
 class MCSessionMock: MCSession {
-    var errorOnCreateStream = false
+    var errorOnStartStream = false
     override func startStreamWithName(streamName: String,
                                       toPeer peerID: MCPeerID) throws -> NSOutputStream {
-        guard !errorOnCreateStream else {
+        guard !errorOnStartStream else {
             throw NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
         }
         return NSOutputStream(toBuffer: nil, capacity: 0)
@@ -83,7 +83,7 @@ class SessionTests: XCTestCase {
     }
 
     func testCreateStreamError() {
-        mcSession.errorOnCreateStream = true
+        mcSession.errorOnStartStream = true
         let session = Session(session: mcSession, identifier: peerID) {}
         let gotErrorExpectation = expectationWithDescription("get error on create stream")
         var err: ErrorType?

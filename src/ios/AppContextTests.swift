@@ -3,7 +3,8 @@
 //  AppContextTests.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
+//  information.
 //
 
 import XCTest
@@ -41,7 +42,8 @@ class AppContextTests: XCTestCase {
         guard let data = string.dataUsingEncoding(NSUTF8StringEncoding) else {
             return nil
         }
-        return (try? NSJSONSerialization.JSONObjectWithData(data, options: [])) as? [String : AnyObject]
+        return (try? NSJSONSerialization.JSONObjectWithData(data, options: [])) as?
+            [String : AnyObject]
     }
 
     private func validateAdvertisingUpdate(jsonString: String, advertising: Bool, browsing: Bool) {
