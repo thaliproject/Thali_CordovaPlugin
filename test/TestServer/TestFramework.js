@@ -61,11 +61,14 @@ function TestFramework(testConfig, userConfig, logger) {
     }
     assert(count <= availableCount, 'we should have enough devices');
 
-    platforms[platform] = {
-      count: count,
-      devices: [],
-      deviceIndexes: {}
-    };
+    if (count > 0) {
+      platforms[platform] = {
+        count: count,
+        devices: [],
+        deviceIndexes: {},
+        success: undefined
+      };
+    }
     return platforms;
   }, {});
 }
@@ -91,25 +94,16 @@ TestFramework.prototype.addDevice = function (device) {
   var count = platform.count;
 
   var deviceIndex = deviceIndexes[device.uuid];
-  if (deviceIndex) {
+  if (deviceIndex !== undefined) {
     var existingDevice = devices[deviceIndex];
     asserts.instanceOf(device, TestDevice);
-
-    // This is annoying.
-    // Android devices will randomly disconnect and reconnect during a run.
-    // When they do we need to patch the existing device record.
-    // with the new socket by comparing the uuid's.
-    // The new socket won't have any of the old socket's event handlers though.
-    // So we need to transfer them from the old to the new socket.
 
     this.logger.info(
       'updating existing device, name: \'%s\', uuid: \'%s\'',
       existingDevice.name, existingDevice.uuid
     );
 
-    // Move all the event listeners from the existing device
-    // device.socket._events = existingDevice.socket._events;
-    // existingDevice.socket = device.socket;
+    existingDevice.update(device);
     return;
   }
 
@@ -123,6 +117,7 @@ TestFramework.prototype.addDevice = function (device) {
   }
 
   devices.push(device);
+  deviceIndexes[device.uuid] = devices.length - 1;
   this.logger.debug('device added, name: \'%s\'', device.name);
 
   if (devices.length === count) {
@@ -136,6 +131,21 @@ TestFramework.prototype.addDevice = function (device) {
 
 TestFramework.prototype.startTests = function (platformName, platform) {
   throw new Error('should be implemented');
+}
+
+TestFramework.prototype.resolveCompleted = function () {
+  var self = this;
+
+  var results = Object.keys(this.platforms)
+  .map(function (platformName) {
+    return self.platforms[platformName].success;
+  });
+  var isCompleted = results.every(function (result) {
+    return result !== undefined;
+  })
+  if (isCompleted) {
+    this.emit('completed', results);
+  }
 }
 
 module.exports = TestFramework;

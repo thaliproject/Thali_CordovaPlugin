@@ -58,7 +58,8 @@ var logInstanceOutput = function (data, instanceId) {
 var setListeners = function (instance, instanceId) {
   instanceLogs[instanceId] = '';
 
-  instance.stdout.on('data', function (data) {
+  instance.stdout
+  .on('data', function (data) {
     logInstanceOutput(data, instanceId);
 
     if (data.indexOf('PROCESS_ON_EXIT_') >= 0) {
@@ -77,7 +78,9 @@ var setListeners = function (instance, instanceId) {
       }
     }
   });
-  instance.stderr.on('data', function (data) {
+
+  instance.stderr
+  .on('data', function (data) {
     logInstanceOutput(data, instanceId);
   });
   instance.on('error', function (err) {
