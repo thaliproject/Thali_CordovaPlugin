@@ -28,6 +28,11 @@ if (process.platform === 'android' || process.platform === 'ios') {
         utResult = result.failed <= 0;
       }
 
+      console.log('Total number of executed tests: ', result.total);
+      console.log('Number of passed tests: ', result.passed);
+      console.log('Number of failed tests: ', result.failed);
+      console.log('Number of ignored tests: ', result.ignored);
+      console.log('Total duration: ', result.duration);
     } else {
       console.log('*Native tests results are empty*');
 
