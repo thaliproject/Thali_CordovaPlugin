@@ -80,9 +80,6 @@ var setListeners = function (instance, instanceId) {
   instance.stderr.on('data', function (data) {
     logInstanceOutput(data, instanceId);
   });
-  instance.stdout.on('end', function (data) {
-    logInstanceOutput(data, instanceId);
-  });
   instance.on('error', function (err) {
     var error = 'Error : ' + err + '\n' + err.stack;
     logInstanceOutput(error, instanceId);

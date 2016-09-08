@@ -53,7 +53,10 @@ module.exports.run = function () {
 
 // If running this script from CLI
 // http://thlorenz.com/blog/how-to-detect-if-a-nodejs-module-is-run-as-a-script/
-// then execute immediatly
+// then execute immediately
 if (!module.parent) {
-  module.exports.run();
+  module.exports.run()
+    .catch(function (error) {
+      console.log('Run failed with ' + error);
+    });
 }
