@@ -3,7 +3,7 @@
 var fs = require('fs-extra-promise');
 var os = require('os');
 var path = require('path');
-var Promise = require('lie');
+var Promise = require('bluebird');
 
 function writeFiles(address) {
   function writeServerAddress(filePath) {
