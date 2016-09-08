@@ -251,6 +251,8 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   testServer.on('connect_error', function (error) {
     console.log('ThaliTape :: Error when connecting to the test server '
       + error);
+    console.log(error.message);
+    console.log(error.stack);
     testUtils.logMessageToScreen('Error when connecting to the test server '
       + error);
     onConnection();
