@@ -201,12 +201,15 @@ var platform =
   'ios';
 
 thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
+  console.log('ThaliTape :: Started ThaliTape');
   var serverOptions = {
     transports: ['websocket']
   };
 
-  var testServer = io('http://' + require('../server-address') + ':' + 3000 +
-    '/', serverOptions);
+  var connectionString = 'http://' + require('../server-address') + ':' + 3000 +
+  '/';
+  console.log('ThaliTape ::  Connecting to ', connectionString);
+  var testServer = io(connectionString, serverOptions);
 
   var firstConnection = true;
   var onConnection = function () {
@@ -246,10 +249,12 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   // we get the connect event even if we have been connected before
   // (and sometimes the reconnect event).
   testServer.on('connect', function () {
+    console.log('ThaliTape :: Connected to the test server');
     testUtils.logMessageToScreen('Connected to the test server');
     onConnection();
   });
   testServer.on('reconnect', function () {
+    console.log('ThaliTape :: Reconnected to the test server');
     testUtils.logMessageToScreen('Reconnected to the test server');
     onConnection();
   });

@@ -45,6 +45,7 @@ module.exports.run = function () {
     .then(function (hasRequiredHardware) {
       return testUtils.getOSVersion()
       .then(function (version) {
+        console.log('ThaliTestRunner :: Running ThaliTape');
         return thaliTape.begin(version, hasRequiredHardware);
       });
     });
