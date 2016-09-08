@@ -13,10 +13,10 @@ import MultipeerConnectivity
 
 class SessionMock: Session {
     var simulateRelay: Bool = true
-    var outputStreamName: String = ""
+    private var outputStreamName: String?
 
     override func getInputStream(completion: (NSInputStream, String) -> Void) {
-        let inputStreamName = simulateRelay ? outputStreamName : ""
+        let inputStreamName = outputStreamName ?? ""
         completion(NSInputStream(data: NSData(bytes: nil, length: 0)), inputStreamName)
     }
 
