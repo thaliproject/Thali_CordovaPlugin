@@ -162,8 +162,8 @@
 			children = (
 				CCA571DC1D47883C00FBEC41 /* Core */,
 				CCA571E51D47883C00FBEC41 /* MultipeerConnectivity */,
-				FAADD1C6BE43B5292357C72D /* Socket Connection */,
-				CCA571D61D47883100FBEC41 /* Supporting Files */,
+				FAADD1C6BE43B5292357C72D /* SocketConnection */,
+				CCA571D61D47883100FBEC41 /* SupportingFiles */,
 				CCA571BF1D4787A900FBEC41 /* ThaliCore.h */,
 			);
 			path = ThaliCore;
@@ -174,7 +174,7 @@
 			children = (
 				D38606491D7E984900B93156 /* Core Tests */,
 				D386064A1D7E987200B93156 /* MultipeerConnectivity Tests */,
-				D38606471D7E982000B93156 /* Socket Connection Tests */,
+				D38606471D7E982000B93156 /* SocketConnection Tests */,
 				D34882F81D6206510052A3EA /* Utils */,
 				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
 				CCA572501D478C1000FBEC41 /* Supporting Files */,
@@ -182,11 +182,12 @@
 			path = ThaliCoreTests;
 			sourceTree = "<group>";
 		};
-		CCA571D61D47883100FBEC41 /* Supporting Files */ = {
+		CCA571D61D47883100FBEC41 /* SupportingFiles */ = {
 			isa = PBXGroup;
 			children = (
 				CCA571D71D47883100FBEC41 /* Info.plist */,
 			);
+			name = SupportingFiles;
 			path = "Supporting Files";
 			sourceTree = "<group>";
 		};
@@ -263,7 +264,7 @@
 			name = Utils;
 			sourceTree = "<group>";
 		};
-		D38606471D7E982000B93156 /* Socket Connection Tests */ = {
+		D38606471D7E982000B93156 /* SocketConnection Tests */ = {
 			isa = PBXGroup;
 			children = (
 				D368EE231D7DA53B00F1C9D4 /* InputStreamHandlerTaskQueueTests.swift */,
@@ -271,7 +272,7 @@
 				FAADDF493162FBCCDFCD354B /* SessionTests.swift */,
 				D368EE2E1D7DDB7000F1C9D4 /* VirtualSocketBuilderTests.swift */,
 			);
-			name = "Socket Connection Tests";
+			name = "SocketConnection Tests";
 			sourceTree = "<group>";
 		};
 		D38606491D7E984900B93156 /* Core Tests */ = {
@@ -295,7 +296,7 @@
 			name = "MultipeerConnectivity Tests";
 			sourceTree = "<group>";
 		};
-		FAADD1C6BE43B5292357C72D /* Socket Connection */ = {
+		FAADD1C6BE43B5292357C72D /* SocketConnection */ = {
 			isa = PBXGroup;
 			children = (
 				FAADD342AF116FCE3B46A03D /* Session.swift */,
@@ -303,6 +304,7 @@
 				FAADDB0E92AB65796641015A /* SocketRelay.swift */,
 				FAADD4A08897E0AF08752741 /* InputStreamHandlerTaskQueue.swift */,
 			);
+			name = SocketConnection;
 			path = "Socket Connection";
 			sourceTree = "<group>";
 		};

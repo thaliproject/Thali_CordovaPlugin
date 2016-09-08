@@ -26,7 +26,7 @@ import Foundation
     /**
 
      - parameter serviceType:              The type of service to advertise
-     - parameter disposeAdvertiserTimeout: time in seconds after old verrsion of advertiser will be
+     - parameter disposeAdvertiserTimeout: time in seconds after old version of advertiser will be
                                            disposed
 
      */
