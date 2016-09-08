@@ -9,10 +9,10 @@
 
 var config = {
   ios: {
-    numDevices: -1
+    numDevices: 3
   },
   android: {
-    numDevices: -1
+    numDevices: 3
   }
 };
 
