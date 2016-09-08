@@ -64,7 +64,7 @@ ThaliMobile.getNetworkStatus()
             });
           });
         });
-      }, function (err) {
+      }).catch(function (err) {
         console.log('Error during turning on bluetooth and WiFi radios. ', err);
         console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
       });

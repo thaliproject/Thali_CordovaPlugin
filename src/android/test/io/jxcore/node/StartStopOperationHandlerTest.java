@@ -63,25 +63,25 @@ public class StartStopOperationHandlerTest {
         mStartStopOperationHandler =
                 (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
 
-        checkDiscoveryManagerRunning = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (!mConnectionHelper.getDiscoveryManager().isRunning()) {
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e){
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
+        checkDiscoveryManagerRunning = createCheckDiscoveryManagerRunningThread();
+        checkDiscoveryManagerNotRunning = createCheckDiscoveryManagerNotRunningThread();
+    }
 
-        checkDiscoveryManagerNotRunning = new Thread(new Runnable() {
+    @After
+    public void tearDown() throws Exception {
+        mConnectionHelper.killConnections(true);
+        mConnectionHelper.dispose();
+    }
+
+    public Thread createCheckDiscoveryManagerRunningThread() {
+        return new Thread(new Runnable() {
+            int counter = 0;
             @Override
             public void run() {
-                while (mConnectionHelper.getDiscoveryManager().isRunning()) {
+                while (!mConnectionHelper.getDiscoveryManager().isRunning() && counter < 10) {
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(500);
+                        counter++;
                     } catch (InterruptedException e){
                         e.printStackTrace();
                     }
@@ -90,10 +90,21 @@ public class StartStopOperationHandlerTest {
         });
     }
 
-    @After
-    public void tearDown() throws Exception {
-        mConnectionHelper.killConnections(true);
-        mConnectionHelper.dispose();
+    public Thread createCheckDiscoveryManagerNotRunningThread() {
+        return new Thread(new Runnable() {
+            int counter = 0;
+            @Override
+            public void run() {
+                while (mConnectionHelper.getDiscoveryManager().isRunning() && counter < 10) {
+                    try {
+                        Thread.sleep(500);
+                        counter++;
+                    } catch (InterruptedException e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
     }
 
     @Test
@@ -146,14 +157,9 @@ public class StartStopOperationHandlerTest {
 
     @Test
     public void testExecuteStartOperation() throws Exception {
-        if (!isBLESupported) {
-            mStartStopOperationHandler.executeStartOperation(false, mJXcoreThaliCallback);
+        mStartStopOperationHandler.executeStartOperation(isBLESupported, mJXcoreThaliCallback);
 
-            /* If BLE is not supported, DiscoveryManager won't start anyway, so there is no need
-               to check this. */
-        } else {
-            mStartStopOperationHandler.executeStartOperation(true, mJXcoreThaliCallback);
-
+        if (isBLESupported) {
             checkDiscoveryManagerRunning.start();
             checkDiscoveryManagerRunning.join();
         }
@@ -196,23 +202,19 @@ public class StartStopOperationHandlerTest {
 
     @Test
     public void testExecuteStopOperation() throws Exception {
-        if (!isBLESupported) {
-            mStartStopOperationHandler.executeStartOperation(false, mJXcoreThaliCallback);
-            Thread.sleep(mOperationTimeout);
-            mStartStopOperationHandler.executeStopOperation(true, mJXcoreThaliCallback);
-        } else {
-            mStartStopOperationHandler.executeStartOperation(true, mJXcoreThaliCallback);
+        mStartStopOperationHandler.executeStartOperation(isBLESupported, mJXcoreThaliCallback);
 
+        if (isBLESupported) {
             checkDiscoveryManagerRunning.start();
             checkDiscoveryManagerRunning.join();
-            Thread.sleep(mOperationTimeout);
-
-            mStartStopOperationHandler.executeStopOperation(false, mJXcoreThaliCallback);
         }
+
+        Thread.sleep(mOperationTimeout);
+
+        mStartStopOperationHandler.executeStopOperation(!isBLESupported, mJXcoreThaliCallback);
 
         checkDiscoveryManagerNotRunning.start();
         checkDiscoveryManagerNotRunning.join();
-        Thread.sleep(mOperationTimeout);
 
         Field fCurrentOperation = mStartStopOperationHandler.getClass()
         .getDeclaredField("mCurrentOperation");
@@ -239,13 +241,8 @@ public class StartStopOperationHandlerTest {
         .getDeclaredField("mCurrentOperation");
         fCurrentOperation.setAccessible(true);
 
-        if (!isBLESupported) {
-            fCurrentOperation.set(mStartStopOperationHandler,
-                    StartStopOperation.createStartOperation(false, mJXcoreThaliCallback));
-        } else {
-            fCurrentOperation.set(mStartStopOperationHandler,
-                    StartStopOperation.createStartOperation(true, mJXcoreThaliCallback));
-        }
+        fCurrentOperation.set(mStartStopOperationHandler,
+                    StartStopOperation.createStartOperation(isBLESupported, mJXcoreThaliCallback));
 
         mStartStopOperationHandler.checkCurrentOperationStatus();
 

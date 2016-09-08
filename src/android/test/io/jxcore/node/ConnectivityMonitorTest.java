@@ -76,14 +76,13 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public void run() {
-                do {
+                while (mBluetoothAdapter.isEnabled() != currentBTState && counter < 2)
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(500);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                } while (mBluetoothAdapter.isEnabled() != currentBTState && counter < 2);
             }
         });
     }

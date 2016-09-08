@@ -28,6 +28,8 @@ public class IncomingSocketThreadTest {
             "imperdiet wisi. Morbi vel risus. Nunc molestie placerat, nulla mi, id nulla ornare " +
             "risus. Sed lacinia, urna eros lacus, elementum eu.";
 
+    final int testPortNumber = 47775;
+
     ByteArrayOutputStream incomingOutputStream;
     ListenerMock mListenerMockIncoming;
     InputStreamMock mInputStreamMockIncoming;
@@ -103,11 +105,13 @@ public class IncomingSocketThreadTest {
     @Test
     public void testRun() throws Exception {
         Thread checkOutgoingSocketThreadStart = new Thread(new Runnable() {
+            int counter = 0;
             @Override
             public void run() {
-                while (mOutgoingSocketThread.mServerSocket == null) {
+                while (mOutgoingSocketThread.mServerSocket == null && counter < 10) {
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(500);
+                        counter++;
                     } catch (InterruptedException e1) {
                         e1.printStackTrace();
                     }
@@ -116,11 +120,13 @@ public class IncomingSocketThreadTest {
         });
 
         Thread checkIncomingSocketThreadStart = new Thread(new Runnable() {
+            int counter = 0;
             @Override
             public void run() {
-                while (!mIncomingSocketThread.localStreamsCreatedSuccessfully) {
+                while (!mIncomingSocketThread.localStreamsCreatedSuccessfully && counter < 10) {
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(500);
+                        counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -128,8 +134,8 @@ public class IncomingSocketThreadTest {
             }
         });
 
-        mOutgoingSocketThread.setPort(47775);
-        mIncomingSocketThread.setPort(47775);
+        mOutgoingSocketThread.setPort(testPortNumber);
+        mIncomingSocketThread.setPort(testPortNumber);
 
         mOutgoingSocketThread.start(); //Simulate end point to connect to
         checkOutgoingSocketThreadStart.start();
@@ -153,7 +159,7 @@ public class IncomingSocketThreadTest {
 
         assertThat("mLocalhostSocket port should be equal to 47775",
                 mIncomingSocketThread.mLocalhostSocket.getPort(),
-                is(equalTo(47775)));
+                is(equalTo(testPortNumber)));
 
         assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
                         "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),

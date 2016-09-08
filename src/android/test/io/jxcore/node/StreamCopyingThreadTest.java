@@ -30,7 +30,6 @@ public class StreamCopyingThreadTest {
     String mResult;
     String mText = "TestingText";
     String lastExceptionMessage = "";
-    int counter = 0;
     int bufferLength = 0;
     ByteArrayOutputStream bOutputStream;
     ArrayList<Integer> notifications;
@@ -208,7 +207,7 @@ public class StreamCopyingThreadTest {
     }
 
     class StreamCopyingThreadOutputStreamInfinite extends OutputStream {
-
+        public int counter = 0;
         @Override
         public void write(int oneByte) throws IOException {
             counter++;

@@ -28,6 +28,8 @@ public class OutgoingSocketThreadTest {
             "venenatis placerat, nulla ornare suscipit, erat urna, pellentesque dapibus vel, " +
             "lorem. Sed egestas non, dolor. Aliquam hendrerit sollicitudin sed.";
 
+    final int portNumber = 57775;
+
     private ByteArrayOutputStream incomingOutputStream;
     private ListenerMock mListenerMockIncoming;
     private InputStreamMock mInputStreamMockIncoming;
