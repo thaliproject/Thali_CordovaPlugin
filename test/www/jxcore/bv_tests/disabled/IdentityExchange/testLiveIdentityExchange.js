@@ -5,7 +5,7 @@ var IdentityExchange = require('thali/identityExchange/identityexchange');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
 var ThaliEmitter = require('thali/thaliemitter');
-var testUtils = require('../../lib/testUtils');
+var testUtils = require('../lib/testUtils');
 
 var thaliApp = null;
 var thaliServer = null;

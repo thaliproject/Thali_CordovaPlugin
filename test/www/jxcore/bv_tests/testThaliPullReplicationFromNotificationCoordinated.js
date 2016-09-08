@@ -39,26 +39,31 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    thaliPullReplicationFromNotification &&
+    if (thaliPullReplicationFromNotification) {
       thaliPullReplicationFromNotification.stop();
+      thaliPullReplicationFromNotification = null;
+    }
     thaliNotificationServer.stop()
-      .then(function () {
-        return ThaliMobile.stop();
-      })
-      .then(function (combinedResult) {
-        if (combinedResult.wifiResult !== null ||
-          combinedResult.nativeResult !== null) {
-          return Promise.reject(
-            new Error('Had a failure in ThaliMobile.stop - ' +
-              JSON.stringify(combinedResult)));
-        }
-      })
-      .catch(function (err) {
-        t.fail('Got error in teardown - ' + JSON.stringify(err));
-      })
-      .then(function () {
-        t.end();
-      });
+    .then(function () {
+      return ThaliMobile.stop();
+    })
+    .then(function (combinedResult) {
+      if (combinedResult.wifiResult !== null ||
+        combinedResult.nativeResult !== null) {
+        return Promise.reject(
+          new Error(
+            'Had a failure in ThaliMobile.stop - ' +
+            JSON.stringify(combinedResult)
+          )
+        );
+      }
+    })
+    .catch(function (err) {
+      t.fail('Got error in teardown - ' + JSON.stringify(err));
+    })
+    .then(function () {
+      t.end();
+    });
   }
 });
 
@@ -74,16 +79,37 @@ function bufferIndexOf(bufferArray, entryToFind) {
 test('Coordinated pull replication from notification test', function (t) {
   var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
   var exited = false;
-  function exit(err) {
+  function exit(error) {
     if (exited) {
       return;
     }
     exited = true;
     changes && changes.cancel();
     cancelTimer && clearTimeout(cancelTimer);
-    thaliPeerPoolDefault.stop();
-    err ? t.fail('failed with ' + err) : t.pass('all tests passed');
-    t.end();
+
+    var isPassed = true;
+    // We do this here to make sure we don't try to enqueue any replication
+    // events after we have called stop on thaliPeerPoolDefault as that
+    // would cause an exception to be thrown.
+    if (thaliPullReplicationFromNotification) {
+      thaliPullReplicationFromNotification.stop();
+      thaliPullReplicationFromNotification = null;
+    }
+    thaliPeerPoolDefault.stop()
+    .catch(function (error) {
+      t.fail('failed with ' + error);
+      isPassed = false;
+    })
+    .then(function () {
+      if (error) {
+        t.fail('failed with ' + error);
+        isPassed = false;
+      }
+      if (isPassed) {
+        t.pass('all tests passed');
+      }
+      t.end();
+    });
   }
 
   var cancelTimer = setTimeout(function () {
@@ -122,11 +148,10 @@ test('Coordinated pull replication from notification test', function (t) {
   localPouchDB
     .put({_id: JSON.stringify(devicePublicKey.toJSON())})
     .then(function () {
-      return thaliPullReplicationFromNotification.start(partnerKeys);
-    })
-    .then(function () {
-      return testUtils.startServerInfrastructure(thaliNotificationServer,
-        partnerKeys, ThaliMobile, router);
+      thaliPullReplicationFromNotification.start(partnerKeys);
+      return testUtils.startServerInfrastructure(
+        thaliNotificationServer, partnerKeys, ThaliMobile, router
+      );
     })
     .catch(function (err) {
       exit(err);
