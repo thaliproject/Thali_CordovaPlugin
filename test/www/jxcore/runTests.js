@@ -1,4 +1,4 @@
- 'use strict';
+'use strict';
 
 var fs = require('fs-extra-promise');
 var path = require('path');
@@ -40,10 +40,23 @@ if (hasJavaScriptSuffix(testsToRun)) {
   });
 }
 
-testUtils.hasRequiredHardware()
-.then(function (hasRequiredHardware) {
-  testUtils.getOSVersion()
-  .then(function (version) {
-    thaliTape.begin(version, hasRequiredHardware, global.nativeUTFailed);
-  });
-});
+module.exports.run = function () {
+  return testUtils.hasRequiredHardware()
+    .then(function (hasRequiredHardware) {
+      return testUtils.getOSVersion()
+      .then(function (version) {
+        console.log('ThaliTestRunner :: Running ThaliTape');
+        return thaliTape.begin(version, hasRequiredHardware);
+      });
+    });
+};
+
+// If running this script from CLI
+// http://thlorenz.com/blog/how-to-detect-if-a-nodejs-module-is-run-as-a-script/
+// then execute immediately
+if (!module.parent) {
+  module.exports.run()
+    .catch(function (error) {
+      console.log('Run failed with ' + error);
+    });
+}
