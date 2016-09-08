@@ -10,6 +10,7 @@ import Foundation
 import MultipeerConnectivity
 
 final class Browser: NSObject {
+
     private let browser: MCNearbyServiceBrowser
     private let didFindPeerHandler: (PeerIdentifier) -> Void
     private let didLosePeerHandler: (PeerIdentifier) -> Void
@@ -23,7 +24,8 @@ final class Browser: NSObject {
     required init(serviceType: String,
                   foundPeer: (PeerIdentifier) -> Void,
                   lostPeer: (PeerIdentifier) -> Void) {
-        browser = MCNearbyServiceBrowser(peer: MCPeerID(displayName: NSUUID().UUIDString), serviceType: serviceType)
+        browser = MCNearbyServiceBrowser(peer: MCPeerID(displayName: NSUUID().UUIDString),
+                                         serviceType: serviceType)
         self.didFindPeerHandler = foundPeer
         self.didLosePeerHandler = lostPeer
         super.init()

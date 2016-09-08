@@ -10,6 +10,7 @@ import XCTest
 @testable import ThaliCore
 
 class BrowserManagerTests: XCTestCase {
+
     var browser: BrowserManager!
 
     override func setUp() {

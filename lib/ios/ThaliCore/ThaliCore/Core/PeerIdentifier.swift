@@ -15,6 +15,7 @@ enum PeerIdentifierError: String, ErrorType {
 
 ///Peer identifier for with generations
 public struct PeerIdentifier: Hashable {
+
     ///UUID identifier of peer
     public let uuid: String
     ///generation of peer.
@@ -59,6 +60,7 @@ public struct PeerIdentifier: Hashable {
 
 ///Multipeer connectivity specific functions
 extension PeerIdentifier {
+
     var mcPeer: MCPeerID {
         return MCPeerID(displayName: stringValue)
     }

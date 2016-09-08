@@ -9,12 +9,14 @@
 import Foundation
 
 public struct PeerAvailability {
+
     public let peerIdentifier: PeerIdentifier
     public let available: Bool
 }
 
-//class for managing Thali browser's logic
+// Class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
+
     internal private (set) var currentBrowser: Browser?
     let serviceType: String
     public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil

@@ -11,6 +11,7 @@ import XCTest
 @testable import ThaliCore
 
 final class ThaliSingleInstanceTests: XCTestCase {
+
     private var app: THEAppContext?
 
     override func setUp() {

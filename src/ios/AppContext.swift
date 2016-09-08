@@ -10,20 +10,26 @@ import Foundation
 import ThaliCore
 
 func jsonValue(object: AnyObject) -> String {
-    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options: NSJSONWritingOptions(rawValue:0)) else {
-        return ""
+
+    guard
+        let data = try? NSJSONSerialization.dataWithJSONObject(
+            object,
+            options: NSJSONWritingOptions(rawValue:0)
+        ) else {
+            return ""
     }
     return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
 }
 
 public typealias ClientConnectCallback = (String, String) -> Void
 
-@objc public enum AppContextError: Int, ErrorType{
+@objc public enum AppContextError: Int, ErrorType {
     case BadParameters
     case UnknownError
 }
 
 extension PeerAvailability {
+
     var dictionaryValue: [String : AnyObject] {
         return ["peerIdentifier" : peerIdentifier.uuid,
                 "peerAvailable" : available
@@ -54,7 +60,8 @@ extension PeerAvailability {
      - parameter discoveryAdvertisingState: json with information about peer's state
      - parameter context:                   related AppContext
      */
-    func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
+    func context(context: AppContext,
+                 didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
 
     /**
      Notifies about failing connection to port
@@ -90,7 +97,7 @@ extension PeerAvailability {
     private let advertiserManager: AdvertiserManager
 
     private func notifyOnDidUpdateNetworkStatus() {
-        //todo put actual network status
+        // TODO: put actual network status
         delegate?.context(self, didChangeNetworkStatus: jsonValue([:]))
     }
 
@@ -145,8 +152,10 @@ extension PeerAvailability {
     }
 
     public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
-        guard let port = (parameters.first as? NSNumber)?.unsignedShortValue where parameters.count == 2 else {
-            throw AppContextError.BadParameters
+        guard
+            let port = (parameters.first as? NSNumber)?.unsignedShortValue
+            where parameters.count == 2 else {
+                throw AppContextError.BadParameters
         }
         advertiserManager.startUpdateAdvertisingAndListening(port)
     }
@@ -194,15 +203,21 @@ extension PeerAvailability {
     @objc public static let peerAvailabilityChanged: String = "peerAvailabilityChanged"
     @objc public static let appEnteringBackground: String = "appEnteringBackground"
     @objc public static let appEnteredForeground: String = "appEnteredForeground"
-    @objc public static let discoveryAdvertisingStateUpdateNonTCP: String = "discoveryAdvertisingStateUpdateNonTCP"
-    @objc public static let incomingConnectionToPortNumberFailed: String = "incomingConnectionToPortNumberFailed"
+    @objc public static let discoveryAdvertisingStateUpdateNonTCP: String =
+        "discoveryAdvertisingStateUpdateNonTCP"
+    @objc public static let incomingConnectionToPortNumberFailed: String =
+        "incomingConnectionToPortNumberFailed"
     @objc public static let executeNativeTests: String = "executeNativeTests"
     @objc public static let getOSVersion: String = "getOSVersion"
     @objc public static let didRegisterToNative: String = "didRegisterToNative"
     @objc public static let killConnections: String = "killConnections"
     @objc public static let connect: String = "connect"
-    @objc public static let stopAdvertisingAndListening: String = "stopAdvertisingAndListening"
-    @objc public static let startUpdateAdvertisingAndListening: String = "startUpdateAdvertisingAndListening"
-    @objc public static let stopListeningForAdvertisements: String = "stopListeningForAdvertisements"
-    @objc public static let startListeningForAdvertisements: String = "startListeningForAdvertisements"
+    @objc public static let stopAdvertisingAndListening: String =
+        "stopAdvertisingAndListening"
+    @objc public static let startUpdateAdvertisingAndListening: String =
+        "startUpdateAdvertisingAndListening"
+    @objc public static let stopListeningForAdvertisements: String =
+        "stopListeningForAdvertisements"
+    @objc public static let startListeningForAdvertisements: String =
+        "startListeningForAdvertisements"
 }
