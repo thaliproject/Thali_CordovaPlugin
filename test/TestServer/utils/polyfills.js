@@ -122,3 +122,7 @@ if (!Array.from) {
     };
   }());
 }
+
+if (!console.debug) {
+  console.debug = console.log;
+}
