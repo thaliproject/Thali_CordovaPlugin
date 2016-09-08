@@ -248,6 +248,20 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   // events, because socket.io seems to behave so that sometimes
   // we get the connect event even if we have been connected before
   // (and sometimes the reconnect event).
+  testServer.on('connect_error', function (error) {
+    console.log('ThaliTape :: Error when connecting to the test server '
+      + error);
+    testUtils.logMessageToScreen0('Error when connecting to the test server '
+      + error);
+    onConnection();
+  });
+  testServer.on('connect_timeout', function () {
+    console.log('ThaliTape :: Connection timeout reached when connecting ' 
+      + 'to the test server');
+    testUtils.logMessageToScreen('Connection timeout reached when connecting '
+      + 'to the test server');
+    onConnection();
+  });
   testServer.on('connect', function () {
     console.log('ThaliTape :: Connected to the test server');
     testUtils.logMessageToScreen('Connected to the test server');
