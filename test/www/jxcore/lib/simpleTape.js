@@ -48,15 +48,6 @@ module.exports = function (opts) {
 };
 
 module.exports.begin = function () {
-  /**
-   * Each begin call must provide an uniq tape instance
-   * See https://github.com/substack/tape#var-htest--testcreateharness
-   * and https://github.com/substack/tape#var-stream--testcreatestreamopts
-   * for more details
-   */
-  var htest = tape.createHarness();
-  htest.createStream().pipe(process.stdout);
-
   var allSucceed = true;
 
   var handleResult = function (res) {
@@ -65,13 +56,13 @@ module.exports.begin = function () {
 
   tests.forEach(function (test, i) {
     if (test.opts.setup) {
-      htest('setup', function (t) {
+      tape('setup', function (t) {
         t.on('result', handleResult);
         test.opts.setup.call(t, t);
       });
     }
 
-    htest(test.name, function (t) {
+    tape(test.name, function (t) {
       t.on('result', handleResult);
       if (test.expect !== null) {
         t.plan(test.expect);
@@ -80,7 +71,7 @@ module.exports.begin = function () {
     });
 
     if (test.opts.teardown) {
-      htest('teardown', function (t) {
+      tape('teardown', function (t) {
         t.on('result', handleResult);
         test.opts.teardown.call(t, t);
       });
@@ -88,7 +79,7 @@ module.exports.begin = function () {
   });
 
   return new Promise (function (resolve, reject) {
-    htest('summary', function (t) {
+    tape('summary', function (t) {
       if (allSucceed) {
         resolve();
       } else {
