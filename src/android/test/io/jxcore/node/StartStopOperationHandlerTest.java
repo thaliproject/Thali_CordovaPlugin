@@ -2,6 +2,8 @@ package io.jxcore.node;
 
 import android.os.CountDownTimer;
 
+import com.test.thalitest.ThaliTestRunner;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -33,7 +35,8 @@ public class StartStopOperationHandlerTest {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
-        mConnectionHelper = new ConnectionHelper();
+        ThaliTestRunner.mConnectionHelper = new ConnectionHelper();
+        mConnectionHelper = ThaliTestRunner.mConnectionHelper;
         isBLESupported =
                 mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
 
@@ -63,48 +66,14 @@ public class StartStopOperationHandlerTest {
         mStartStopOperationHandler =
                 (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
 
-        checkDiscoveryManagerRunning = createCheckDiscoveryManagerRunningThread();
-        checkDiscoveryManagerNotRunning = createCheckDiscoveryManagerNotRunningThread();
+        checkDiscoveryManagerRunning = ThaliTestRunner.createCheckDiscoveryManagerRunningThread();
+        checkDiscoveryManagerNotRunning = ThaliTestRunner.createCheckDiscoveryManagerNotRunningThread();
     }
 
     @After
     public void tearDown() throws Exception {
         mConnectionHelper.killConnections(true);
         mConnectionHelper.dispose();
-    }
-
-    public Thread createCheckDiscoveryManagerRunningThread() {
-        return new Thread(new Runnable() {
-            int counter = 0;
-            @Override
-            public void run() {
-                while (!mConnectionHelper.getDiscoveryManager().isRunning() && counter < 10) {
-                    try {
-                        Thread.sleep(500);
-                        counter++;
-                    } catch (InterruptedException e){
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-    }
-
-    public Thread createCheckDiscoveryManagerNotRunningThread() {
-        return new Thread(new Runnable() {
-            int counter = 0;
-            @Override
-            public void run() {
-                while (mConnectionHelper.getDiscoveryManager().isRunning() && counter < 10) {
-                    try {
-                        Thread.sleep(500);
-                        counter++;
-                    } catch (InterruptedException e){
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
     }
 
     @Test

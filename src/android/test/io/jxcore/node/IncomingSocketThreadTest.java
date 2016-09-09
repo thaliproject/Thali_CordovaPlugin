@@ -1,5 +1,9 @@
 package io.jxcore.node;
 
+import android.util.Log;
+
+import com.test.thalitest.ThaliTestRunner;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -19,6 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class IncomingSocketThreadTest {
 
+    static String mTag = IncomingSocketThreadTest.class.getName();
     ByteArrayOutputStream outgoingOutputStream;
     ListenerMock mListenerMockOutgoing;
     InputStreamMock mInputStreamMockOutgoing;
@@ -57,6 +62,42 @@ public class IncomingSocketThreadTest {
         mOutgoingSocketThread =
                 new OutgoingSocketThreadMock(null, mListenerMockOutgoing, mInputStreamMockOutgoing,
                         mOutputStreamMockOutgoing);
+    }
+
+    public Thread createCheckOutgoingSocketThreadStart() {
+        return new Thread(new Runnable() {
+            int counter = 0;
+            @Override
+            public void run() {
+                while (mOutgoingSocketThread.mServerSocket == null && counter < ThaliTestRunner.counterLimit) {
+                    try {
+                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        counter++;
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "OutgoingSocketThread didn't start after 5s!");
+            }
+        });
+    }
+
+    public Thread createCheckIncomingSocketThreadStart() {
+        return new Thread(new Runnable() {
+            int counter = 0;
+            @Override
+            public void run() {
+                while (!mIncomingSocketThread.localStreamsCreatedSuccessfully && counter < ThaliTestRunner.counterLimit) {
+                    try {
+                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        counter++;
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "IncomingSocketThread didn't start after 5s!");
+            }
+        });
     }
 
     @Test
@@ -104,38 +145,11 @@ public class IncomingSocketThreadTest {
 
     @Test
     public void testRun() throws Exception {
-        Thread checkOutgoingSocketThreadStart = new Thread(new Runnable() {
-            int counter = 0;
-            @Override
-            public void run() {
-                while (mOutgoingSocketThread.mServerSocket == null && counter < 10) {
-                    try {
-                        Thread.sleep(500);
-                        counter++;
-                    } catch (InterruptedException e1) {
-                        e1.printStackTrace();
-                    }
-                }
-            }
-        });
-
-        Thread checkIncomingSocketThreadStart = new Thread(new Runnable() {
-            int counter = 0;
-            @Override
-            public void run() {
-                while (!mIncomingSocketThread.localStreamsCreatedSuccessfully && counter < 10) {
-                    try {
-                        Thread.sleep(500);
-                        counter++;
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-
         mOutgoingSocketThread.setPort(testPortNumber);
         mIncomingSocketThread.setPort(testPortNumber);
+
+        Thread checkOutgoingSocketThreadStart = createCheckOutgoingSocketThreadStart();
+        Thread checkIncomingSocketThreadStart = createCheckIncomingSocketThreadStart();
 
         mOutgoingSocketThread.start(); //Simulate end point to connect to
         checkOutgoingSocketThreadStart.start();
@@ -157,7 +171,7 @@ public class IncomingSocketThreadTest {
                 mIncomingSocketThread.tempOutputStream,
                 is(equalTo(mIncomingSocketThread.mLocalOutputStream)));
 
-        assertThat("mLocalhostSocket port should be equal to 47775",
+        assertThat("mLocalhostSocket port should be equal to " + testPortNumber,
                 mIncomingSocketThread.mLocalhostSocket.getPort(),
                 is(equalTo(testPortNumber)));
 

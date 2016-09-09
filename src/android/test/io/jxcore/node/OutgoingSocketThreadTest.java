@@ -1,5 +1,7 @@
 package io.jxcore.node;
 
+import com.test.thalitest.ThaliTestRunner;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -28,7 +30,7 @@ public class OutgoingSocketThreadTest {
             "venenatis placerat, nulla ornare suscipit, erat urna, pellentesque dapibus vel, " +
             "lorem. Sed egestas non, dolor. Aliquam hendrerit sollicitudin sed.";
 
-    final int portNumber = 57775;
+    final int testPortNumber = 57775;
 
     private ByteArrayOutputStream incomingOutputStream;
     private ListenerMock mListenerMockIncoming;
@@ -59,6 +61,40 @@ public class OutgoingSocketThreadTest {
                         mOutputStreamMockIncoming);
     }
 
+    public Thread createCheckOutgoingSocketThreadStart() {
+        return new Thread(new Runnable() {
+            int counter = 0;
+            @Override
+            public void run() {
+                while (mOutgoingSocketThread.mServerSocket == null && counter < ThaliTestRunner.counterLimit) {
+                    try {
+                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        counter++;
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            }
+        });
+    }
+
+    public Thread createCheckIncomingSocketThreadStart() {
+        return new Thread(new Runnable() {
+            int counter = 0;
+            @Override
+            public void run() {
+                while (!mIncomingSocketThread.localStreamsCreatedSuccessfully && counter < ThaliTestRunner.counterLimit) {
+                    try {
+                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        counter++;
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+    }
+
     @Test
     public void testConstructor() throws Exception {
         assertThat("mIncomingSocketThread should not be null", mOutgoingSocketThread,
@@ -84,34 +120,11 @@ public class OutgoingSocketThreadTest {
 
     @Test
     public void testRun() throws Exception {
-        Thread checkOutgoingSocketThreadStart = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (mOutgoingSocketThread.mServerSocket == null) {
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e1) {
-                        e1.printStackTrace();
-                    }
-                }
-            }
-        });
+        mOutgoingSocketThread.setPort(testPortNumber);
+        mIncomingSocketThread.setPort(testPortNumber);
 
-        Thread checkIncomingSocketThreadStart = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (!mIncomingSocketThread.localStreamsCreatedSuccessfully) {
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-
-        mOutgoingSocketThread.setPort(57775);
-        mIncomingSocketThread.setPort(57775);
+        Thread checkOutgoingSocketThreadStart = createCheckOutgoingSocketThreadStart();
+        Thread checkIncomingSocketThreadStart = createCheckIncomingSocketThreadStart();
 
         mOutgoingSocketThread.start();
         checkOutgoingSocketThreadStart.start();
@@ -149,9 +162,9 @@ public class OutgoingSocketThreadTest {
                 mOutgoingSocketThread.tempOutputStream,
                 is(equalTo(mOutgoingSocketThread.mLocalOutputStream)));
 
-        assertThat("mLocalhostSocket port should be equal to 57775",
+        assertThat("mLocalhostSocket port should be equal to " + testPortNumber,
                 mOutgoingSocketThread.mLocalhostSocket.getLocalPort(),
-                is(equalTo(57775)));
+                is(equalTo(testPortNumber)));
 
         assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
                 "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),

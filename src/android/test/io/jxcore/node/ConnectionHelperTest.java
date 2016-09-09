@@ -4,6 +4,8 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.os.CountDownTimer;
 
+import com.test.thalitest.ThaliTestRunner;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -39,7 +41,7 @@ public class ConnectionHelperTest {
     OutputStreamMock mOutputStreamMock;
     Thread checkDiscoveryManagerRunning, checkDiscoveryManagerRunning1,
             checkDiscoveryManagerNotRunning;
-    public static ConnectionHelper mConnectionHelper;
+    static ConnectionHelper mConnectionHelper;
     static JXcoreThaliCallback mJXcoreThaliCallback;
     static StartStopOperationHandler mStartStopOperatonHandler;
     static boolean isBLESupported;
@@ -49,7 +51,8 @@ public class ConnectionHelperTest {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
-        mConnectionHelper = new ConnectionHelper();
+        ThaliTestRunner.mConnectionHelper = new ConnectionHelper();
+        mConnectionHelper = ThaliTestRunner.mConnectionHelper;
         isBLESupported =
                 mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
 
@@ -71,9 +74,9 @@ public class ConnectionHelperTest {
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();
 
-        checkDiscoveryManagerRunning = createCheckDiscoveryManagerRunningThread();
-        checkDiscoveryManagerRunning1 = createCheckDiscoveryManagerRunningThread();
-        checkDiscoveryManagerNotRunning = createCheckDiscoveryManagerNotRunningThread();
+        checkDiscoveryManagerRunning = ThaliTestRunner.createCheckDiscoveryManagerRunningThread();
+        checkDiscoveryManagerRunning1 = ThaliTestRunner.createCheckDiscoveryManagerRunningThread();
+        checkDiscoveryManagerNotRunning = ThaliTestRunner.createCheckDiscoveryManagerNotRunningThread();
     }
 
     @After
@@ -82,39 +85,6 @@ public class ConnectionHelperTest {
         mConnectionHelper.dispose();
     }
 
-    public Thread createCheckDiscoveryManagerRunningThread() {
-        return new Thread(new Runnable() {
-            int counter = 0;
-            @Override
-            public void run() {
-                while (!mConnectionHelper.getDiscoveryManager().isRunning() && counter < 10) {
-                    try {
-                        Thread.sleep(500);
-                        counter++;
-                    } catch (InterruptedException e){
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-    }
-
-    public Thread createCheckDiscoveryManagerNotRunningThread() {
-        return new Thread(new Runnable() {
-            int counter = 0;
-            @Override
-            public void run() {
-                while (mConnectionHelper.getDiscoveryManager().isRunning() && counter < 10) {
-                    try {
-                        Thread.sleep(500);
-                        counter++;
-                    } catch (InterruptedException e){
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-    }
 
     @Test
     public void testConstructor() throws Exception {
@@ -233,8 +203,8 @@ public class ConnectionHelperTest {
 
         assertThat("DiscoveryManager1 isRunning should return " + isBLESupported,
                 mConnectionHelper.getDiscoveryManager().isRunning(), is(isBLESupported));
-        mConnectionHelper.stop(!isBLESupported, mJXcoreThaliCallback);
 
+        mConnectionHelper.stop(!isBLESupported, mJXcoreThaliCallback);
 
         checkDiscoveryManagerNotRunning.start();
         checkDiscoveryManagerNotRunning.join();
