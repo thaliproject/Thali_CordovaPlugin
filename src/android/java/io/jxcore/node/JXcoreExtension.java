@@ -78,6 +78,7 @@ public class JXcoreExtension {
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
 
+
     public static void LoadExtensions() {
         if (mConnectionHelper != null) {
             Log.e(TAG, "LoadExtensions: A connection helper instance already exists - this indicates that this method was called twice - disposing of the previous instance");
@@ -484,26 +485,10 @@ public class JXcoreExtension {
         });
     }
 
-    public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
-        String peerId = peerProperties.getId()
-                + BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR
-                + peerProperties.getExtraInformation();
-        JSONObject jsonObject = new JSONObject();
-        boolean jsonObjectCreated = false;
 
-        try {
-            jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
-            jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
-            jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
-            jsonObjectCreated = true;
-        } catch (JSONException e) {
-            Log.e(TAG, "notifyPeerAvailabilityChanged: Failed to populate the JSON object: " + e.getMessage(), e);
+            }
         }
 
-        if (jsonObjectCreated) {
-            JSONArray jsonArray = new JSONArray();
-            jsonArray.put(jsonObject);
-            final String jsonArrayAsString = jsonArray.toString();
 
             jxcore.activity.runOnUiThread(new Runnable() {
                 @Override
