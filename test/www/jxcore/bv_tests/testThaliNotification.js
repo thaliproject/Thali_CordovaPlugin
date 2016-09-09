@@ -8,16 +8,16 @@ var ThaliNotificationClient =
   require('thali/NextGeneration/notification/thaliNotificationClient');
 var ThaliNotificationServer =
   require('thali/NextGeneration/notification/thaliNotificationServer');
-var ThaliMobile =
+var thaliMobile =
   require('thali/NextGeneration/thaliMobile');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var logger = require('thali/thalilogger')('testThaliNotification');
+var logger = require('thali/thaliLogger')('testThaliNotification');
+var testUtils = require('../lib/testUtils');
 
-var SECP256K1 = 'secp256k1';
 var HELLO = 'Hello world';
 var HELLO_PATH = '/hello';
 var globals = {};
@@ -57,7 +57,7 @@ var GlobalVariables = function () {
   this.expressApp = express();
   this.expressRouter = express.Router();
   this.expressApp.use('/', this.expressRouter);
-  this.ecdh = crypto.createECDH(SECP256K1);
+  this.ecdh = crypto.createECDH(thaliConfig.BEACON_CURVE);
   this.myKeyExchangeObject = this.ecdh.generateKeys();
   this.myPublicBase64 = this.ecdh.getPublicKey('base64');
 
@@ -90,6 +90,7 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    thaliMobile.stop();
     // Clears timeout
     var summary =
       'Participants:' + globals.numberOfParticipants +
@@ -209,6 +210,7 @@ test('Client to server request coordinated', function (t) {
   }
 
   var peerPool = new ThaliPeerPoolDefault();
+  peerPool.start();
 
   // Initialize the ThaliNotificationClient
   var notificationClient =
@@ -245,7 +247,7 @@ test('Client to server request coordinated', function (t) {
   globals.expressRouter.get(HELLO_PATH,
     helloWorld);
 
-  notificationClient.on(ThaliNotificationClient.Events.PeerAdvertisesDataForUs,
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
       var msg = 'PeerAdvertisesDataForUs:' + res.connectionType +
         ', '+res.hostAddress+', ' + res.hostAddress + ', '+
@@ -263,7 +265,7 @@ test('Client to server request coordinated', function (t) {
     if(checkSuccess() || ++intervalRounds > 24) {
       // Test has been completed successfully or we have hit the time limit
       clearInterval(globals.testInterval);
-      ThaliMobile.stopListeningForAdvertisements().then(function () {
+      thaliMobile.stopListeningForAdvertisements().then(function () {
         notificationClient.stop();
         notificationServer.stop().then(function () {
 
@@ -289,13 +291,14 @@ test('Client to server request coordinated', function (t) {
     }
   }, 5000);
 
-  ThaliMobile.start(globals.expressRouter,
+  thaliMobile.start(globals.expressRouter,
     notificationServer.getPskIdToSecret())
-  .then(function () {
+  .then(function (combinedResult) {
+    testUtils.verifyCombinedResultSuccess(t, combinedResult);
     return notificationServer.start(addressBook);
   }).then(function () {
     notificationClient.start(addressBook);
-    return ThaliMobile.startListeningForAdvertisements().then(function () {
+    return thaliMobile.startListeningForAdvertisements().then(function () {
       logger.info('startListeningForAdvertisements');
     });
   });

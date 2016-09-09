@@ -15,7 +15,7 @@ var thaliConfig = require('../thaliConfig');
  * class to represent actions for retrieving notifications.
  *
  * @param {string} peerIdentifier
- * @param {module:thaliMobile.connectionTypes} connectionType
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
  * @param {addressBookCallback} addressBookCallback A callback used to validate
@@ -221,7 +221,7 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
  * function is called.
  *
  * It emits the event to listeners, aborts potentially ongoing
- * HTTP client request and resolves or rejects the promise
+ * HTTP client requests and resolves or rejects the promise
  * that was returned by the start function call.
  *
  * @private
@@ -241,6 +241,9 @@ ThaliNotificationAction.prototype._complete = function (resolution,
   if (!this._resolution) {
     this._resolution = resolution;
     this._httpRequest && this._httpRequest.abort();
+
+    // Sets our state to KILLED now that we are done
+    ThaliNotificationAction.super_.prototype.kill.call(this);
 
     this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
       this.getPeerIdentifier(), resolution, beaconDetails);

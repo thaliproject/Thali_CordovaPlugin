@@ -4,7 +4,7 @@ var tape = require('../lib/thaliTape');
 var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
 var inherits = require('util').inherits;
 var connectionTypes =
-  require('thali/NextGeneration/thaliMobile').connectionTypes;
+  require('thali/NextGeneration/thaliMobileNativeWrapper').connectionTypes;
 var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var Agent = require('http').Agent;
 var testUtils = require('../lib/testUtils');
@@ -35,6 +35,7 @@ var test = tape({
         return t.fail(err);
       })
       .then(function () {
+        testServer = null;
         t.end();
       });
   }
@@ -67,8 +68,13 @@ TestPeerAction.prototype.start = function (httpAgentPool) {
 test('#ThaliPeerPoolDefault - single action', function (t) {
   var testPeerAction = new TestPeerAction(peerIdentifier, connectionType,
     actionType, t);
-  t.equal(testThaliPeerPoolDefault.enqueue(testPeerAction), null,
-    'enqueue is fine');
+  testThaliPeerPoolDefault.start();
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testPeerAction);
+    },
+    'enqueue is fine'
+  );
   testPeerAction.startPromise.then(function () {
     t.equal(Object.getOwnPropertyNames(
           testThaliPeerPoolDefault._inQueue).length, 0,
@@ -85,10 +91,19 @@ test('#ThaliPeerPoolDefault - multiple actions', function (t) {
     actionType, t);
   var testPeerAction2 = new TestPeerAction(peerIdentifier, connectionType,
     actionType, t);
-  t.equal(testThaliPeerPoolDefault.enqueue(testPeerAction1), null, '' +
-    'first enqueue is fine');
-  t.equal(testThaliPeerPoolDefault.enqueue(testPeerAction2), null,
-    'second enqueue is fine');
+  testThaliPeerPoolDefault.start();
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testPeerAction1);
+    },
+    'first enqueue is fine'
+  );
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testPeerAction2);
+    },
+    'second enqueue is fine'
+  );
   testPeerAction1.startPromise.then(function () {
     return testPeerAction2.startPromise;
   }).then(function () {
@@ -139,6 +154,8 @@ test('#ThaliPeerPoolDefault - PSK Pool works', function (t) {
   Make a get request to the server when calling start
    */
 
+  testThaliPeerPoolDefault.start();
+
   var app = express();
   app.get('/return10', function (req, res) {
     res.send('10');
@@ -159,11 +176,57 @@ test('#ThaliPeerPoolDefault - PSK Pool works', function (t) {
   testServer.listen(0, function () {
     var pskTestPeerAction =
       new PskTestPeerAction(t, testServer.address().port);
-    t.equal(testThaliPeerPoolDefault.enqueue(pskTestPeerAction), null,
-      'good enqueue');
+    t.doesNotThrow(
+      function () {
+        testThaliPeerPoolDefault.enqueue(pskTestPeerAction);
+      },
+      'good enqueue'
+    );
     pskTestPeerAction.startPromise.then(function () {
       t.ok(gotPskCallBack, 'Got psk call back');
       t.end();
     });
   });
+});
+
+test('#ThaliPeerPoolDefault - stop', function (t) {
+  var testAction1 = new TestPeerAction(peerIdentifier, connectionType,
+    actionType, t);
+  var testAction2 = new TestPeerAction(peerIdentifier, connectionType,
+    actionType, t);
+  testThaliPeerPoolDefault.start();
+
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testAction1);
+    },
+    'enqueue worked'
+  );
+  t.doesNotThrow(
+    function () {
+      testThaliPeerPoolDefault.enqueue(testAction2);
+    },
+    'enqueue 2 worked'
+  );
+
+  testThaliPeerPoolDefault.stop()
+  .then(function () {
+    t.throws(
+      function () {
+        testThaliPeerPoolDefault.enqueue(testAction1);
+      },
+      new RegExp(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED),
+      'enqueue is not available when stopped'
+    );
+
+    t.equal(testAction1.getActionState(), PeerAction.actionState.KILLED,
+    'start action is killed');
+    t.equal(testAction2.getActionState(), PeerAction.actionState.KILLED,
+    'killed action is still killed');
+
+    t.equal(Object.getOwnPropertyNames(testThaliPeerPoolDefault._inQueue).length,
+      0, 'inQueue is empty');
+
+    t.end();
+  })
 });

@@ -1,6 +1,6 @@
 'use strict';
 
-var logger = require('../../thalilogger')('createPeerListener');
+var logger = require('../../thaliLogger')('createPeerListener');
 var multiplex = require('multiplex');
 var net = require('net');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
@@ -330,22 +330,13 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
  *
  * ## TCP server
  *
- * If pleaseConnect is true then an immediate call MUST be made to {@link
- * external:"Mobile('connect')".callNative} to connect to the specified peer. If
- * that call fails then the error MUST be returned. Otherwise a new multiplex
- * object MUST be created and a new TCP connection via net.createConnection
- * pointed at the port returned by the connect call. The multiplex object MUST
- * be piped in both directions with the new TCP connection. The TCP connection
- * MUST have setTimeout called on it and set to a reasonable value for the
- * platform.
- *
  * ### Connection Event
  *
- * #### First call to connection event when pleaseConnect is false
+ * #### First call to connection event
  *
- * If pleaseConnect is false then when the first connection event occurs we MUST
- * issue a {@link external:"Mobile('connect')".callNative} for the requested
- * peer and handle the response as given in the following sections.
+ * When the first connection event occurs we MUST issue a {@link
+ * external:"Mobile('connect')".callNative} for the requested peer and handle
+ * the response as given in the following sections.
  *
  * ##### Error
  *
@@ -354,32 +345,15 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
  *
  * ##### listenerPort
  *
- * If the response is listenerPort then we MUST perform the actions specified
- * above for pleaseConnect is true with the exception that if the connect fails
- * then we MUST call close on the TCP server since the peer is not available and
- * fire a {@link event:failedConnection} event with the error set to "Cannot
- * Connect To Peer".
- *
- * ##### clientPort/serverPort
- *
- * If clientPort/serverPort are not null then we MUST confirm that the
- * serverPort matches the port that the server created in {@link
- * module:tcpServersManager._createNativeListener} is listening on and if not
- * then we MUST call destroy on the incoming TCP connection, fire a {@link
- * event:failedConnection} event with the error set to "Mismatched serverPort",
- * and act as if connection had not been called (e.g. the next connection will
- * be treated as the first).
- *
- * Otherwise we must then lookup the multiplex object via the clientPort. If
- * there is no multiplex object associated with that clientPort then we have a
- * race condition where the incoming connection died between when the connect
- * response was sent and now. In that case we MUST call destroy on the incoming
- * TCP connection, fire a {@link event:failedConnection} event with the error
- * set to "Incoming connection died" and as previously described treat the next
- * connection as if it were the first.
- *
- * Otherwise we MUST configure the multiplex object with the behavior specified
- * below.
+ * If the response is listenerPort then we MUST make an immediate call to {@link
+ * external:"Mobile('connect')".callNative} to connect to the specified peer. If
+ * that call fails then we MUST call close on the TCP server since the peer is
+ * not available and fire a {@link event:failedConnection} event with the error
+ * set to "Cannot Connect To Peer". Otherwise a new multiplex object MUST be
+ * created and a new TCP connection via net.createConnection pointed at the port
+ * returned by the connect call. The multiplex object MUST be piped in both
+ * directions with the new TCP connection. The TCP connection MUST have
+ * setTimeout called on it and set to a reasonable value for the platform.
  *
  * #### Standard connection event behavior
  *
@@ -400,18 +374,6 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
  * destroy MUST be called on the multiplex object.
  *
  * ## Multiplex object
- *
- * ### onStream callback
- *
- * If a stream is received a call to net.createConnection MUST be made pointed
- * at routerPort. If the TCP connection cannot be successfully connected then a
- * {@link event:routerPortConnectionFailed} MUST be fired and destroy MUST be
- * called on the stream. Otherwise the TCP connection and the stream MUST be
- * piped to each other in both directions.
- *
- * Note that we will support the ability to accept incoming connections over the
- * multiplex object even for platforms like Android that do not need it. This is
- * just to keep the code and testing simple and consistent.
  *
  * ### Error Event
  *
@@ -463,39 +425,10 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
  * If destroy wasn't called by the TCP socket from Thali Application the stream
  * is piped to then destroy MUST be called on that TCP socket.
  *
- * ## TCP socket to routerPort
- *
- * ### Error Event
- *
- * The error MUST be logged.
- *
- * ### Close Event
- *
- * Destroy MUST be called on the stream object the socket is piped to if that
- * isn't the object that called destroy on the socket.
- *
- * ## onStream callback stream
- *
- * ### Error Event
- *
- * The error MUST be logged.
- *
- * ### Close Event
- *
- * If destroy wasn't called by the TCP socket to routerPort the stream is piped
- * to then destroy MUST be called on that TCP socket.
- *
  * @public
- * @param {module:thaliTcpServersManager~ThaliTcpServersManager} self the
- * this object from tcpServersManager.
+ * @param {module:thaliTcpServersManager~ThaliTcpServersManager} self the this
+ * object from tcpServersManager.
  * @param {string} peerIdentifier
- * @param {boolean} [pleaseConnect] If set to true this indicates that a
- * lexically smaller peer asked for a connection so the lexically larger peer
- * (the local device) who will immediately call {@link
- * external:"Mobile('connect')".callNative} to create a connection. If false
- * (the default value) then the call to {@link
- * external:"Mobile('connect')".callNative} will only happen on the first
- * incoming connection to the TCP server.
  * @returns {Promise<number|Error>}
  */
 module.exports = function (self, peerIdentifier, pleaseConnect) {
@@ -671,7 +604,11 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
       failedStartup(err);
     });
 
+    // listen(port, ...) port = 0 for random port
     server.listen(0, function () {
+      var port = server.address().port;
+      logger.debug('listening', port);
+
       logger.debug('pleaseConnect=', pleaseConnect);
 
       if (!pleaseConnect) {

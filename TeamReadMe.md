@@ -168,7 +168,7 @@ way is to nuke all `node_modules` folders from your local source tree.
   * The script removes the folder `../ThaliTest` (relative to your clones souces)
   so before running it, make sure you don't have any precious changes there.
 
-## Debugging AppVeyor failues
+## Debugging AppVeyor failures
 
 If you get a failure in AppVeyor that you can't reproduce locally, you can RDP
 into the build server to debug the issue there.
