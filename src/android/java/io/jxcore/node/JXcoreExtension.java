@@ -532,6 +532,7 @@ public class JXcoreExtension {
             if (jsonObjectCreated) {
                 jsonArray.put(jsonObject);
             }
+            peerPropertiesBatch.remove(peerProperties);
         }
         sendPeersToNode(jsonArray);
 
