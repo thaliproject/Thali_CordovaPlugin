@@ -33,17 +33,24 @@ class SessionTests: XCTestCase {
         peerID = MCPeerID(displayName: String.random(length: 5))
     }
 
-    func testSessionDisconnected() {
-        let disconnectedExpectation = expectationWithDescription("disconnected")
+    func testReceiveDisconnectedNotificationAfterMCSessionDelegateCall() {
+        // Precondition
+        let disconnectedExpectation =
+            expectationWithDescription("session disconnected notification received")
         let session = Session(session: mcSession, identifier: peerID) {
             [weak disconnectedExpectation] in
             disconnectedExpectation?.fulfill()
         }
+
         mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .NotConnected)
-        waitForExpectationsWithTimeout(2, handler: nil)
+
+        // Should
+        let sessionDisconnectedExpectationTimeout: Double = 2
+        waitForExpectationsWithTimeout(sessionDisconnectedExpectationTimeout, handler: nil)
+        XCTAssertEqual(session.sessionState.value, MCSessionState.NotConnected)
     }
 
-    func testCreateOutputStreramAfterConnected() {
+    func testCreateOutputStreamAfterSessionReceivedConnectedState() {
         let createdStreamExpectation = expectationWithDescription("stream created")
         let session = Session(session: mcSession, identifier: peerID) {}
         var stream: NSOutputStream? = nil
@@ -60,57 +67,70 @@ class SessionTests: XCTestCase {
         XCTAssertNotNil(stream)
     }
 
-    func testCreateOutputStreramBeforeConnected() {
+    func testCreateOutputStreamBeforeSessionReceivedConnectedState() {
+        // Preconditions
         let session = Session(session: mcSession, identifier: peerID) {}
-        let outputStreamsCount = 3
+        let expectedStreamsCount = 3
+        let allStreamsWereCreatedExpectation = expectationWithDescription("streams created")
+        var alreadyCreatedStreams: [NSOutputStream] = []
 
-        let createdStreamsExpectation = expectationWithDescription("streams created")
-        var outputStreams: [NSOutputStream] = []
-        for i in 0...outputStreamsCount {
+        for i in 0... expectedStreamsCount {
             session.createOutputStream(withName: "test\(i)") {
-                [weak createdStreamsExpectation] outputStream, error in
+                [weak allStreamsWereCreatedExpectation] outputStream, error in
                 guard let stream = outputStream else {
                     return
                 }
-                outputStreams.append(stream)
-                if outputStreams.count == outputStreamsCount {
-                    createdStreamsExpectation?.fulfill()
+                alreadyCreatedStreams.append(stream)
+                if alreadyCreatedStreams.count == expectedStreamsCount {
+                    allStreamsWereCreatedExpectation?.fulfill()
                 }
             }
         }
         mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .Connected)
-        waitForExpectationsWithTimeout(1.0, handler: nil)
+
+        // Should
+        let allStreamsWereCreatedTimeout = 1.0
+        waitForExpectationsWithTimeout(allStreamsWereCreatedTimeout, handler: nil)
     }
 
     func testCreateStreamError() {
+        // Preconditions
         mcSession.errorOnStartStream = true
         let session = Session(session: mcSession, identifier: peerID) {}
-        let gotErrorExpectation = expectationWithDescription("get error on create stream")
+        let errorOnCreateStreamExpectation =
+            expectationWithDescription("get error on create stream")
         var err: ErrorType?
+
         mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .Connected)
-        session.createOutputStream(withName: "test") { [weak gotErrorExpectation] stream, error in
+        session.createOutputStream(withName: "test") { [weak errorOnCreateStreamExpectation] stream, error in
             err = error
-            gotErrorExpectation?.fulfill()
+            errorOnCreateStreamExpectation?.fulfill()
         }
-        waitForExpectationsWithTimeout(1.0, handler: nil)
+
+        // Should
+        let errorOnCreateStreamTimeout = 1.0
+        waitForExpectationsWithTimeout(errorOnCreateStreamTimeout, handler: nil)
         XCTAssertNotNil(err)
     }
 
     func testReceiveInputStream() {
+        // Preconditions
         let streamName = NSUUID().UUIDString
         let session = Session(session: mcSession, identifier: peerID) {}
-
-        let getStreamExpectation = expectationWithDescription("received input stream")
-
+        let receivedStreamExpectation = expectationWithDescription("received input stream")
         var receivedStreamName: String?
-        session.getInputStream { [weak getStreamExpectation] stream, name in
+
+        session.getInputStream { [weak receivedStreamExpectation] stream, name in
             receivedStreamName = name
-            getStreamExpectation?.fulfill()
+            receivedStreamExpectation?.fulfill()
         }
         mcSession.delegate?.session(mcSession, didReceiveStream:
             NSInputStream(data: NSData(bytes: nil, length: 0)),
                                     withName: streamName, fromPeer: peerID)
-        waitForExpectationsWithTimeout(1.0, handler: nil)
+
+        // Should
+        let receivedStreamTimeout = 1.0
+        waitForExpectationsWithTimeout(receivedStreamTimeout, handler: nil)
         XCTAssertEqual(streamName, receivedStreamName)
     }
 }

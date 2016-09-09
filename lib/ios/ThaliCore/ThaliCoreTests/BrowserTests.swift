@@ -13,20 +13,26 @@ import MultipeerConnectivity
 
 class BrowserTests: XCTestCase {
 
-    func testFailedStartBrowsing() {
+    func testReceivedFailedStartBrowsingErrorOnMPCFBrowserDelegateCall() {
+        // Preconditions
         let failedStartBrowsingExpectation =
-            expectationWithDescription("failed start advertising")
-        let browser = Browser(serviceType: "test",
+            expectationWithDescription("failed start advertising because of delegate " +
+                                       "MCNearbyServiceBrowserDelegate call")
+        let serviceType = String.random(length: 7)
+        let browser = Browser(serviceType: serviceType,
                               foundPeer: { _ in },
                               lostPeer: { _ in })
 
         browser.startListening { [weak failedStartBrowsingExpectation] error in
             failedStartBrowsingExpectation?.fulfill()
         }
-        let mcBrowser = MCNearbyServiceBrowser(peer: MCPeerID(displayName: "test"),
-                                               serviceType: "test")
-        browser.browser(mcBrowser, didNotStartBrowsingForPeers:
-            NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil))
+
+        // Send error start browsing failed error
+        let peerID = MCPeerID(displayName: NSUUID().UUIDString)
+        let mcBrowser = MCNearbyServiceBrowser(peer: peerID, serviceType: serviceType)
+        let error = NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
+        browser.browser(mcBrowser, didNotStartBrowsingForPeers: error)
+
         waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }

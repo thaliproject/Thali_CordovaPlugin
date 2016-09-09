@@ -18,7 +18,7 @@ class Session: NSObject {
     private let disconnectHandler: () -> Void
     private var inputStreamTaskPool = InputStreamHandlerTaskQueue()
     private var createOutputStreamHandlerQueue: Atomic<[() -> Void]> = Atomic([])
-    private var sessionState: Atomic<MCSessionState> = Atomic(.NotConnected)
+    internal private(set) var sessionState: Atomic<MCSessionState> = Atomic(.NotConnected)
 
     private func clearOutputStreamQueue() {
         createOutputStreamHandlerQueue.modify {
