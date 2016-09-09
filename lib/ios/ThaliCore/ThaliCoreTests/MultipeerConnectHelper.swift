@@ -10,14 +10,15 @@
 import Foundation
 @testable import ThaliCore
 
-func createMCPFConnection(advertiserIdentifier identifier: PeerIdentifier,
-                                               advertiserSessionHandler: (Session) -> Void,
+func createMPCFConnection(advertiserIdentifier identifier: PeerIdentifier,
+                          advertiserSessionHandler: (Session) -> Void,
                           completion: () -> Void) -> (Advertiser, Browser) {
     let serviceType = String.random(length: 7)
 
     let browser = Browser(serviceType: serviceType, foundPeer: { identifier in
         completion()
-        }, lostPeer: { _ in })
+        },
+                          lostPeer: { _ in })
     browser.startListening() { _ in
     }
     let advertiser = Advertiser(peerIdentifier: identifier,

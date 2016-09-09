@@ -34,7 +34,7 @@ class SocketRelayTests: XCTestCase {
         let peerIdentifier = PeerIdentifier()
         var browserStreams, advertiserStreams: (NSOutputStream, NSInputStream)?
 
-        let (advertiser, browser) = createMCPFConnection(advertiserIdentifier: peerIdentifier,
+        let (advertiser, browser) = createMPCFConnection(advertiserIdentifier: peerIdentifier,
                                                          advertiserSessionHandler: { session in
             let _ = AdvertiserVirtualSocketBuilder(session: session,
                 completionHandler: { socket, error in

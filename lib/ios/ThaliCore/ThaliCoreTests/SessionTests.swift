@@ -97,7 +97,7 @@ class SessionTests: XCTestCase {
     }
 
     func testReceiveInputStream() {
-        let streamName = "name"
+        let streamName = NSUUID().UUIDString
         let session = Session(session: mcSession, identifier: peerID) {}
 
         let getStreamExpectation = expectationWithDescription("received input stream")
