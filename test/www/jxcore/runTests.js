@@ -48,4 +48,3 @@ testUtils.hasRequiredHardware()
       return thaliTape.begin(version, hasRequiredHardware);
     });
   });
-};
