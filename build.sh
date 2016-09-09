@@ -57,7 +57,7 @@ thali/install/setUpDesktop.sh;ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
 jx npm test;ERROR_ABORT
 jx npm run test-meta;ERROR_ABORT
-jx npm run test-coordinated;ERROR_ABORT
+# jx npm run test-coordinated;ERROR_ABORT
 
 # Verify that docs can be generated
 #cd $WORKING_DIR/thali/;ERROR_ABORT
