@@ -25,7 +25,7 @@
     "thali": {
       "projectName": "thaliproject",
       "depotName": "Thali_CordovaPlugin",
-      "branchName": "vNext_ilya_771"
+      "branchName": "vNext"
     },
     "btconnectorlib2": "0.3.2",
     "jxcore-cordova": "0.1.2b",
