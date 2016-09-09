@@ -74,7 +74,7 @@ class SessionTests: XCTestCase {
         let allStreamsWereCreatedExpectation = expectationWithDescription("streams created")
         var alreadyCreatedStreams: [NSOutputStream] = []
 
-        for i in 0... expectedStreamsCount {
+        for i in 0...expectedStreamsCount {
             session.createOutputStream(withName: "test\(i)") {
                 [weak allStreamsWereCreatedExpectation] outputStream, error in
                 guard let stream = outputStream else {

@@ -13,23 +13,30 @@ import MultipeerConnectivity
 
 class SocketRelayTests: XCTestCase {
 
-    func testSocketCreateTimeout() {
-        let timeout: Double = 1.0
-        let relay = SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: timeout)
-        let peerID = MCPeerID(displayName: "test")
+    func testGetTimeoutErrorOnCreateSocket() {
+        // Preconditions
+        let createSocketTimeout: Double = 1.0
+        let relay =
+            SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: createSocketTimeout)
+        let peerID = MCPeerID(displayName: NSUUID().UUIDString)
         let mcSession = MCSession(peer: peerID)
         let session = Session(session: mcSession, identifier: peerID) { _ in }
-        let expectation = expectationWithDescription("got connection timed out")
         var error: MultiConnectError?
+        let getTimeoutErrorOnCreateSocketExpectation =
+            expectationWithDescription("get timeout error on create socket")
+
         relay.createSocket(with: session) { port, err in
             error = err as? MultiConnectError
-            expectation.fulfill()
+            getTimeoutErrorOnCreateSocketExpectation.fulfill()
         }
-        waitForExpectationsWithTimeout(timeout + 1, handler: nil)
+
+        // Should
+        waitForExpectationsWithTimeout(createSocketTimeout, handler: nil)
         XCTAssertEqual(error, .ConnectionTimedOut)
     }
 
-    func testCreateSocket() {
+    func testReceiveVirtualSocketOnCreateSocket() {
+        // Preconditions
         let foundPeerExpectation = expectationWithDescription("found peer")
         let peerIdentifier = PeerIdentifier()
         var browserStreams, advertiserStreams: (NSOutputStream, NSInputStream)?
@@ -43,7 +50,8 @@ class SocketRelayTests: XCTestCase {
         }) { [weak foundPeerExpectation] in
             foundPeerExpectation?.fulfill()
         }
-        waitForExpectationsWithTimeout(5, handler: nil)
+        let foundPeerTimeout: Double = 2.0
+        waitForExpectationsWithTimeout(foundPeerTimeout, handler: nil)
 
         do {
             let session = try browser.inviteToConnectPeer(with: peerIdentifier,
@@ -54,8 +62,10 @@ class SocketRelayTests: XCTestCase {
                         browserStreams = socket
                         socketCreatedExpectation?.fulfill()
                     })
-            waitForExpectationsWithTimeout(10, handler: nil)
+            let socketCreatedTimeout: Double = 5
+            waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
 
+            // Should
             XCTAssertNotNil(advertiser)
             XCTAssertNotNil(browserStreams)
             XCTAssertNotNil(advertiserStreams)
