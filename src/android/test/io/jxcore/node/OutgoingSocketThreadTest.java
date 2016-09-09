@@ -1,5 +1,7 @@
 package io.jxcore.node;
 
+import android.util.Log;
+
 import com.test.thalitest.ThaliTestRunner;
 
 import org.junit.Before;
@@ -21,6 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class OutgoingSocketThreadTest {
 
+    static String mTag = OutgoingSocketThreadTest.class.getName();
     private ByteArrayOutputStream outgoingOutputStream;
     private ListenerMock mListenerMockOutgoing;
     private InputStreamMock mInputStreamMockOutgoing;
@@ -74,6 +77,7 @@ public class OutgoingSocketThreadTest {
                         e1.printStackTrace();
                     }
                 }
+                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "OutgoingSocketThread didn't start after 5s!");
             }
         });
     }
@@ -91,6 +95,7 @@ public class OutgoingSocketThreadTest {
                         e.printStackTrace();
                     }
                 }
+                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "IncomingSocketThread didn't start after 5s!");
             }
         });
     }
@@ -167,7 +172,7 @@ public class OutgoingSocketThreadTest {
                 is(equalTo(testPortNumber)));
 
         assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
-                "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),
+                        "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),
                 is(equalTo(textIncoming)));
 
         assertThat("IncomingSocketThread should get inputStream from OutgoingSocketThread and " +
