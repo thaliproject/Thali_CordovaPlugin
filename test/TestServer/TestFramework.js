@@ -13,7 +13,7 @@ var TestDevice = require('./TestDevice');
 
 
 // Base for classes that manage collections of devices and associated tests.
-function TestFramework(testConfig, userConfig, logger) {
+function TestFramework(config, logger) {
   var self = this;
 
   TestFramework.super_.call(this);
@@ -21,50 +21,23 @@ function TestFramework(testConfig, userConfig, logger) {
   this.logger = logger || console;
   asserts.exists(this.logger);
 
-  // 'testConfig' provided by the CI system.
-  // Tells how many devices are available.
-  asserts.isObject(testConfig);
-  asserts.isObject(testConfig.devices);
-  var testPlatforms = Object.keys(testConfig.devices);
-  assert(
-    testPlatforms.length > 0,
-    '\'testPlatforms\' should not be an empty array'
-  );
-
-  // 'userConfig' provided by the user (via source).
+  // 'config' provided by the user.
   // Tells us how many devices we need.
-  asserts.isObject(testConfig);
-  var userPlatforms = Object.keys(userConfig);
+  asserts.isObject(config);
+  var devices = config.devices;
+  asserts.isObject(devices);
+  var platformNames = Object.keys(devices);
   assert(
-    userPlatforms.length > 0,
-    '\'userPlatforms\' should not be an empty array'
+    platformNames.length > 0,
+    '\'platformNames\' should not be an empty array'
   );
-  // 'testPlatforms' can include less platforms than userPlatforms.
-  // We will just ignore this case.
-  // asserts.arrayEquals(testPlatforms.sort(), userPlatforms.sort());
 
-  // Number of devices per platform we can use to complete the test
-  // that the CI system think deployed succesfully.
-  var availableDeviceCounts = testConfig.devices;
-  asserts.isObject(availableDeviceCounts);
+  this.platforms = platformNames.reduce(function (platforms, platformName) {
+    var count = devices[platformName];
+    asserts.isNumber(count);
 
-  // Then use the userConfig which may specify a smaller number of devices.
-  this.platforms = testPlatforms.reduce(function (platforms, platform) {
-    var platformData = userConfig[platform];
-    asserts.isObject(platformData);
-    var count = platformData.numDevices;
-
-    var availableCount = availableDeviceCounts[platform];
-    asserts.isNumber(availableCount);
-
-    if (count === undefined || count === null || count === -1) {
-      // Use all available devices.
-      count = availableCount;
-    }
-    assert(count <= availableCount, 'we should have enough devices');
-
-    if (count > 0) {
-      platforms[platform] = {
+    if (count && count > 0) {
+      platforms[platformName] = {
         count: count,
         devices: [],
         deviceIndexes: {},
@@ -89,7 +62,7 @@ TestFramework.prototype.addDevice = function (device) {
     return;
   }
 
-  var platform = this.platforms[device.platform];
+  var platform = this.platforms[device.platformName];
 
   var devices = platform.devices;
   var deviceIndexes = platform.deviceIndexes;
@@ -101,8 +74,8 @@ TestFramework.prototype.addDevice = function (device) {
     asserts.instanceOf(device, TestDevice);
 
     this.logger.info(
-      'updating existing device, name: \'%s\', uuid: \'%s\'',
-      existingDevice.name, existingDevice.uuid
+      'updating existing device, name: \'%s\', uuid: \'%s\', platformName: \'%s\'',
+      existingDevice.name, existingDevice.uuid, device.platformName
     );
 
     existingDevice.update(device);
@@ -111,8 +84,8 @@ TestFramework.prototype.addDevice = function (device) {
 
   if (devices.length === count) {
     this.logger.info(
-      'we have enough devices; discarding device, name: \'%s\'',
-      device.name
+      'we have enough devices; discarding device, name: \'%s\', platformName: \'%s\'',
+      device.name, device.platformName
     );
     device.discard();
     return;
@@ -124,10 +97,10 @@ TestFramework.prototype.addDevice = function (device) {
 
   if (devices.length === count) {
     this.logger.info(
-      'all required %d devices are present for platform: \'%s\'',
-      count, device.platform
+      'all required %d devices are present for platformName: \'%s\'',
+      count, device.platformName
     );
-    this.startTests(device.platform, platform);
+    this.startTests(device.platformName, platform);
   }
 };
 
