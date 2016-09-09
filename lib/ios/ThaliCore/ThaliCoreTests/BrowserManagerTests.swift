@@ -22,13 +22,13 @@ class BrowserManagerTests: XCTestCase {
                                             inputStreamReceiveTimeout: 1) { peers in }
         browserManager.startListeningForAdvertisements { _ in }
 
-        //precondition
+        // Precondition
         XCTAssertNotNil(browserManager.currentBrowser)
         XCTAssertTrue(browserManager.listening)
 
         browserManager.stopListeningForAdvertisements()
 
-        //then
+        // Should
         XCTAssertNil(browserManager.currentBrowser)
         XCTAssertFalse(browserManager.listening)
     }
@@ -36,42 +36,47 @@ class BrowserManagerTests: XCTestCase {
     func testConnectWithoutListeningReturnStartListeningNotActiveError() {
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peers in }
-        let expectation = expectationWithDescription("got startListening not active error")
+        let getErrorOnStartListeningExpectation =
+            expectationWithDescription("got startListening not active error")
         var connectError: MultiConnectError?
 
-        //precondition
+        // Precondition
         XCTAssertFalse(browserManager.listening)
 
-        browserManager.connectToPeer(PeerIdentifier()) { [weak expectation] port, error in
+        browserManager.connectToPeer(PeerIdentifier()) {
+            [weak getErrorOnStartListeningExpectation] port, error in
             if let error = error as? MultiConnectError {
                 connectError = error
-                expectation?.fulfill()
+                getErrorOnStartListeningExpectation?.fulfill()
             }
         }
-        waitForExpectationsWithTimeout(5, handler: nil)
+        let getErrorOnStartListeningTimeout: Double = 5
+        waitForExpectationsWithTimeout(getErrorOnStartListeningTimeout, handler: nil)
 
-        //then
+        // Should
         XCTAssertEqual(connectError, .StartListeningNotActive)
     }
 
     func testConnectToIllegalPeerReturnError() {
-        let expectation = expectationWithDescription("got Illegal Peer")
+        let getIllegalPeerExpectation = expectationWithDescription("get Illegal Peer")
         var connectError: MultiConnectError?
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peers in }
-        //precondition
+        // Precondition
         let notDiscoveredPeerIdentifier = PeerIdentifier()
 
         browserManager.startListeningForAdvertisements { _ in }
-        browserManager.connectToPeer(notDiscoveredPeerIdentifier) { [weak expectation] port, error in
+        browserManager.connectToPeer(notDiscoveredPeerIdentifier) {
+            [weak getIllegalPeerExpectation] port, error in
             if let error = error as? MultiConnectError {
                 connectError = error
-                expectation?.fulfill()
+                getIllegalPeerExpectation?.fulfill()
             }
         }
 
-        //then
-        waitForExpectationsWithTimeout(5, handler: nil)
+        // Should
+        let getIllegalPeerTimeout: Double = 5
+        waitForExpectationsWithTimeout(getIllegalPeerTimeout, handler: nil)
         XCTAssertEqual(connectError, .IllegalPeerID)
     }
 

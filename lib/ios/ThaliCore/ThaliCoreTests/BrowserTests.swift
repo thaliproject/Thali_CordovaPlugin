@@ -13,6 +13,14 @@ import MultipeerConnectivity
 
 class BrowserTests: XCTestCase {
 
+    private func unexpectedFoundPeerHandler(peer: PeerIdentifier) {
+        XCTFail("unexpected find peer event with peer: \(peer)")
+    }
+
+    private func unexpectedLostPeerHandler(peer: PeerIdentifier) {
+        XCTFail("unexpected lost peer event with peer: \(peer)")
+    }
+
     func testReceivedFailedStartBrowsingErrorOnMPCFBrowserDelegateCall() {
         // Preconditions
         let failedStartBrowsingExpectation =
@@ -20,8 +28,8 @@ class BrowserTests: XCTestCase {
                                        "MCNearbyServiceBrowserDelegate call")
         let serviceType = String.random(length: 7)
         let browser = Browser(serviceType: serviceType,
-                              foundPeer: { _ in },
-                              lostPeer: { _ in })
+                              foundPeer: unexpectedFoundPeerHandler,
+                              lostPeer: unexpectedLostPeerHandler)
 
         browser.startListening { [weak failedStartBrowsingExpectation] error in
             failedStartBrowsingExpectation?.fulfill()
