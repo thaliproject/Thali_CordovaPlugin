@@ -46,7 +46,7 @@ if (!utResult) {
 // return;
 
 // Issue #914
-var networkTypes = [ThaliMobile.networkTypes.WIFI];
+global.NETWORK_TYPE = ThaliMobile.networkTypes.WIFI;
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
@@ -71,17 +71,10 @@ ThaliMobile.getNetworkStatus()
       console.log('My device name is: %s', name);
       testUtils.setName(name);
 
-      networkTypes.reduce(function (sequence, networkType) {
-        return sequence
-          .then(function () {
-            console.log('Running for ' + networkType + ' network type');
-            global.NETWORK_TYPE = networkType;
-            var testRunner = require('./runTests.js');
-            return testRunner.run();
-          });
-      }, Promise.resolve())
-      .catch(function (error) {
-        console.log(error);
+      console.log('Running for ' + global.NETWORK_TYPE + ' network type');
+      setImmediate(function () {
+        var testRunner = require('./runTests.js');
+        return testRunner.run();
       });
     });
   });
