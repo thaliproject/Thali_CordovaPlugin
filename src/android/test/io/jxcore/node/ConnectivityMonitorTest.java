@@ -56,7 +56,8 @@ public class ConnectivityMonitorTest {
 
     @Before
     public void setUp() throws Exception {
-        mConnectionHelper = new ConnectionHelper();
+        ThaliTestRunner.mConnectionHelper = new ConnectionHelper();
+        mConnectionHelper = ThaliTestRunner.mConnectionHelper;
         mConnectivityMonitor = mConnectionHelper.getConnectivityMonitor();
 
         Field bluetoothManagerField = mConnectivityMonitor.getClass()
