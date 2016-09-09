@@ -8,6 +8,7 @@
 //
 
 import Foundation
+import XCTest
 @testable import ThaliCore
 
 func createMPCFConnection(advertiserIdentifier identifier: PeerIdentifier,
@@ -27,4 +28,8 @@ func createMPCFConnection(advertiserIdentifier identifier: PeerIdentifier,
                                 disconnectHandler: {})
     advertiser.startAdvertising { _ in}
     return (advertiser, browser)
+}
+
+func errorHandler(error: ErrorType) {
+    XCTFail("start advertising failed with error: \(error)")
 }
