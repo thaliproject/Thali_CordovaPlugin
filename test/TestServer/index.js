@@ -3,7 +3,9 @@
 // Main entry point for Thali test frameworks coordinator server
 // jx index.js "{ 'devices': { 'android': 3, 'ios': 2 } }"
 
-var format = require('util').format;
+var util = require('util');
+var format = util.format;
+
 var http = require('http');
 var socketIO = require('socket.io');
 var winston = require('winston');
@@ -49,14 +51,20 @@ process
 })
 .on('uncaughtException', function (error) {
   logger.error(
-    format('Uncaught Exception, error: \'%s\'', error.stack)
+    format(
+      'uncaught exception, error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
+    )
   );
   io.close();
   process.exit(1);
 })
 .on('unhandledRejection', function (error, p) {
   logger.error(
-    format('Uncaught Promise Rejection, error: \'%s\'', error.stack)
+    format(
+      'uncaught promise rejection, error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
+    )
   );
   io.close();
   process.exit(2);
@@ -104,7 +112,10 @@ try {
       );
     })
     .on('error', function (error) {
-      logger.error(error);
+      logger.error(
+        'unexpected exception, error: \'%s\', stack: \'%s\'',
+        error.toString(), error.stack
+      );
     })
     .on('present', function (data) {
       // present - The device is announcing it's presence and telling us
@@ -126,8 +137,8 @@ try {
         socket.emit(
           'error',
           format(
-            'malformed message, reason: \'%s\', data: \'%s\'',
-            error.stack, data
+            'malformed message, data: \'%s\', error: \'%s\', stack: \'%s\'',
+            data, error.toString(), error.stack
           )
         );
         return;
@@ -158,12 +169,18 @@ try {
       } catch (error) {
         socket.emit(
           'error',
-          format('could not add device, reason: \'%s\'', error.stack)
+          format(
+            'could not add device, error: \'%s\', stack: \'%s\'',
+            error.toString(), error.stack
+          )
         );
       }
     });
   });
 } catch (error) {
   io.close();
-  logger.error(error.stack);
+  logger.error(
+    'unexpected exception, error: \'%s\', stack: \'%s\'',
+    error.toString(), error.stack
+  );
 }

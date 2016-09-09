@@ -57,9 +57,11 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
   });
 
   this.logger.debug(
-    'Starting unit tests on %d devices, platformName: \'%s\'',
+    'starting unit tests on %d devices, platformName: \'%s\'',
     devices.length, platformName
   );
+
+  this.logger.debug('scheduling tests');
 
   Promise.all(
     devices.map(function (device) {
@@ -67,6 +69,8 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
     })
   )
   .then(function () {
+    self.logger.debug('tests scheduled');
+
     return tests.reduce(function (promise, test) {
       return promise.then(function () {
         return self.runTest(devices, test);
@@ -100,6 +104,10 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
 }
 
 UnitTestFramework.prototype.runTest = function (devices, test) {
+  var self = this;
+
+  this.logger.debug('#setup: \'%s\'', test);
+
   return Promise.all(
     devices.map(function (device) {
       return device.setupTest(test)
@@ -112,6 +120,9 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
     })
   )
   .then(function (devicesData) {
+    self.logger.debug('#setup ok: \'%s\'', test);
+    self.logger.debug('#run: \'%s\'', test);
+
     return Promise.all(
       devices.map(function (device) {
         return device.runTest(test, devicesData);
@@ -119,11 +130,24 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
     );
   })
   .then(function () {
+    self.logger.debug('#run ok: \'%s\'', test);
+    self.logger.debug('#teardown: \'%s\'', test);
+
     return Promise.all(
       devices.map(function (device) {
         return device.teardownTest(test);
       })
     );
+  })
+  .then(function () {
+    self.logger.debug('#teardown ok: \'%s\'', test);
+  })
+  .catch(function (error) {
+    self.logger.error(
+      '#run failed: \'%s\', error: \'%s\', stack: \'%s\'',
+      test, error.toString(), error.stack
+    );
+    return Promise.reject(error);
   });
 }
 
