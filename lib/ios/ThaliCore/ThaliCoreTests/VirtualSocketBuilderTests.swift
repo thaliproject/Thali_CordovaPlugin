@@ -50,37 +50,46 @@ class VirtualSocketBuilderTests: XCTestCase {
         return Builder(session: session, completionHandler: completion)
     }
 
-    func testAdvertiserBuilder() {
+    func testSocketCreatedWithAdvertiserBuilder() {
         var socket: (NSOutputStream, NSInputStream)?
+
         let _: AdvertiserVirtualSocketBuilder = createSocket(session) {
             [weak socketCreatedExpectation] receivedSocket, error in
             socket = receivedSocket
             socketCreatedExpectation?.fulfill()
         }
-        waitForExpectationsWithTimeout(2.0, handler: nil)
+
+        let socketCreatedTimeout = 2.0
+        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
         XCTAssertNotNil(socket)
     }
 
-    func testBrowserBuilder() {
+    func testSocketCreatedWithBrowserBuilder() {
         var socket: (NSOutputStream, NSInputStream)?
+
         let _: BrowserVirtualSocketBuilder = createSocket(session) {
             [weak socketCreatedExpectation] receivedSocket, error in
             socket = receivedSocket
             socketCreatedExpectation?.fulfill()
         }
-        waitForExpectationsWithTimeout(2.0, handler: nil)
+
+        let socketCreatedTimeout = 2.0
+        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
         XCTAssertNotNil(socket)
     }
 
-    func testBrowserWrongInputName() {
+    func testReceivedWrongInputStreamNameForBrowserBuilder() {
         session.simulateRelay = false
         var error: ErrorType?
+
         let _: BrowserVirtualSocketBuilder = createSocket(session) {
             [weak socketCreatedExpectation] receivedSocket, err in
             error = err
             socketCreatedExpectation?.fulfill()
         }
-        waitForExpectationsWithTimeout(2.0, handler: nil)
+
+        let socketCreatedTimeout = 2.0
+        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
         XCTAssertNotNil(error)
     }
 }

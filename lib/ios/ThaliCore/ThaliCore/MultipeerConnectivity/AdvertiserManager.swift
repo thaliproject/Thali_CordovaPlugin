@@ -24,12 +24,12 @@ import Foundation
     }
 
     /**
-     
+
      - parameter serviceType:               The type of service to advertise
      - parameter disposeAdvertiserTimeout:  Time in seconds after old version of advertiser will be
      disposed
      - parameter inputStreamReceiveTimeout: Timeout in seconds for receiving input stream
-     
+
      */
     public init(serviceType: String, disposeAdvertiserTimeout: Double, inputStreamReceiveTimeout: Double) {
         self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
