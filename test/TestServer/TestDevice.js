@@ -25,7 +25,7 @@ function TestDevice(socket, data, options) {
   this.uuid = data.uuid;
 
   asserts.isString(data.os);
-  this.platform = data.os;
+  this.platformName = data.os;
 
   asserts.isString(data.type);
   this.type = data.type;
@@ -74,7 +74,7 @@ TestDevice.prototype.update = function (newDevice) {
   // We are going to update only socket.
   asserts.equals(this.name, newDevice.name);
   asserts.equals(this.uuid, newDevice.uuid);
-  asserts.equals(this.platform, newDevice.platform);
+  asserts.equals(this.platformName, newDevice.platformName);
   asserts.equals(this.type, newDevice.type);
   asserts.equals(this.supportedHardware, newDevice.supportedHardware);
   asserts.arrayEquals(this.tests, newDevice.tests);
@@ -149,7 +149,8 @@ TestDevice.prototype._emitData = function (event, data) {
           resolve();
         } else {
           reject(new Error(
-            'received confirmation with invalid data'
+            'received confirmation with invalid data, sent data: \'%s\', received data: \'%s\'',
+            data, _data
           ));
         }
       }
@@ -194,17 +195,17 @@ TestDevice.prototype._runEvent = function (event, test, data, timeout) {
       onceFinished = self._socketBind(
         'once',
         event + '_finished',
-        function (result) {
+        function (_data) {
           try {
-            asserts.isString(result);
-            result = JSON.parse(result);
+            asserts.isString(_data);
+            var result = JSON.parse(_data);
             asserts.isBool(result.success);
             if (result.success) {
               resolve(result.data);
             } else {
               throw new Error(format(
-                'invalid response, event: \'%s\', test: \'%s\'',
-                event, test
+                'run failed, test: \'%s\', event: \'%s\', sent data: \'%s\', received data: \'%s\'',
+                test, event, data, _data
               ));
             }
           } catch (error) {

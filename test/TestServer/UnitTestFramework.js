@@ -10,16 +10,16 @@ var Promise = require('bluebird');
 var asserts = require('./utils/asserts.js');
 var TestDevice = require('./TestDevice');
 var TestFramework = require('./TestFramework');
-var unitTestConfig = require('./UnitTestConfig');
+var defaultConfig = require('./UnitTestConfig');
 
 
-function UnitTestFramework(testConfig, logger) {
+function UnitTestFramework(config, logger) {
   var self = this;
 
   this.logger = logger || console;
-  this.unitTestConfig = testConfig.userConfig || unitTestConfig;
+  this.config = config || defaultConfig;
 
-  UnitTestFramework.super_.call(this, testConfig, this.unitTestConfig, this.logger);
+  UnitTestFramework.super_.call(this, this.config, this.logger);
 }
 
 inherits(UnitTestFramework, TestFramework);
@@ -35,18 +35,15 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
   var devices = platform.devices;
   asserts.isArray(devices);
 
-  var config = this.unitTestConfig[platformName];
-  asserts.isObject(config);
-
-  var desigedCount = config.numDevices;
-  asserts.isNumber(desigedCount);
-  assert(desigedCount > 0, 'we should have at least one device');
+  var count = platform.count;
+  asserts.isNumber(count);
+  assert(count > 0, 'we should have at least one device');
 
   assert(
-    devices.length === desigedCount,
+    count === devices.length,
     format(
       'we should receive %d devices for platform: \'%s\', but received %d devices instead',
-      desigedCount, platformName, devices.length
+      count, platformName, devices.length
     )
   );
 
@@ -60,7 +57,7 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
   });
 
   this.logger.debug(
-    'Starting unit tests on %d devices, platform: \'%s\'',
+    'Starting unit tests on %d devices, platformName: \'%s\'',
     devices.length, platformName
   );
 
@@ -79,15 +76,15 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
   .then(function () {
     platform.success = true;
     self.logger.debug(
-      'all unit tests succeed, platform: \'%s\'',
+      'all unit tests succeed, platformName: \'%s\'',
       platformName
     );
   })
   .catch(function (error) {
     platform.success = false;
     self.logger.error(
-      'failed to run tests, platform: \'%s\', reason: \'%s\'',
-      platformName, error.stack
+      'failed to run tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
+      platformName, error.toString(), error.stack
     );
   })
   .finally(function () {

@@ -34,7 +34,7 @@ var logger = new winston.Logger({
 });
 
 var server = http.createServer();
-server.listen(3000, function (){
+server.listen(3000, function () {
   logger.info('listening on *:3000');
 });
 var io = socketIO(server, {
@@ -69,8 +69,11 @@ var TEST_TIMEOUT = 10 * 60 * 1000;
 var TEARDOWN_TIMEOUT = 1 * 60 * 1000;
 
 try {
-  var testConfig = JSON.parse(process.argv[2]);
-  var unitTestManager = new UnitTestFramework(testConfig, logger);
+  var config = process.argv[2];
+  if (config) {
+    config = JSON.parse(config);
+  }
+  var unitTestManager = new UnitTestFramework(config, logger);
   // var perfTestManager = new PerfTestFramework(testConfig, logger);
 
   unitTestManager.once('completed', function (results) {
@@ -131,8 +134,8 @@ try {
       }
 
       logger.debug(
-        'device presented, name: \'%s\', uuid: \'%s\', platform: \'%s\', type: \'%s\', supportedHardware: \'%s\'',
-        device.name, device.uuid, device.platform, device.type, device.supportedHardware
+        'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', type: \'%s\', supportedHardware: \'%s\'',
+        device.name, device.uuid, device.platformName, device.type, device.supportedHardware
       );
 
       // Add the new device to the test type/os it reports as belonging to.
