@@ -6,11 +6,6 @@ var thaliTapeOpts = require('./utils/thaliTapeOpts');
 var thaliTape = require('../lib/thaliTape');
 var MobileMock = require('../lib/wifiBasedNativeMock.js');
 
-var mobileShouldBeMocked = global.Mobile === undefined;
-if (mobileShouldBeMocked) {
-  global.Mobile = new MobileMock();
-}
-
 function executeTests (filePaths) {
   return thaliTapeOpts()
     .then(function (opts) {
@@ -33,13 +28,12 @@ function executeTests (filePaths) {
 var WITH_JS_SUFFIX = /.js$/;
 
 /**
- * @param {Object} opts includes `filter` by which tests are selected
+ * @param {String[]} locations - a list of folders and files
  */
-module.exports = function (opts) {
-  var location = opts.files;
-  log('Looking for tests in ', location);
+module.exports = function (locations) {
+  log('Looking for tests in ', locations);
 
-  var testFiles = filePaths(location, WITH_JS_SUFFIX);
+  var testFiles = filePaths(locations, WITH_JS_SUFFIX);
   log('Going to execute ', testFiles.length, ' test file(s)');
 
   return executeTests(testFiles)

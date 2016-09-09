@@ -1,38 +1,50 @@
 'use strict';
 var fs = require('fs');
 var path = require('path');
+
+var isDirectory = function (location) {
+  return fs.lstatSync(location).isDirectory();
+};
+
+var directoryFiles = function (folder) {
+  var filePaths = [];
+  fs.readdirSync(folder)
+    .forEach(function (file) {
+      var filePath = path.resolve(folder, file);
+      filePaths.push(filePath);
+    });
+  return filePaths;
+};
+
+var normalizePath = function (filePath) {
+    var cwd = process.cwd();
+    return path.resolve(cwd, filePath);
+};
 /**
- * @param {String|String[]} location is a folder where files
- * should be searched or a list of filenames to be proceeded
- * can be a folder or file itself
+ * @param {String[]} locations - a list of folders and files
+ * where tests should be searched
  * @param {RegExp} pattern that founded files should match
- * @returns {String[]} filePaths is a list of file paths
+ * @returns {String[]} filePaths is a list of normalized file paths
  */
-module.exports = function (location, pattern) {
-  var ptrn = pattern || /.*/;
-  var cwd = process.cwd();
+module.exports = function (locations, pattern) {
   var filePaths = [];
 
-  // location is a folder name
-  if (typeof location === 'string') {
-    fs.readdirSync(location)
-      .forEach(function (file) {
-        if (file.match(ptrn)) {
-          var filePath = path.resolve(cwd, location, file);
-          filePaths.push(filePath);
-        }
-      });
-  }
+  locations.forEach(function (location) {
+    if (isDirectory(location)) {
+      var files = directoryFiles(location);
+      filePaths = filePaths.concat(files);
+    } else {
+      filePaths.push(location);
+    }
+  });
 
-  // location is an array of filenames
-  if (Array.isArray(location)) {
-    location.forEach(function (file) {
-      if (file.match(ptrn)) {
-        var filePath = path.resolve(cwd, file);
-        filePaths.push(filePath);
-      }
+  if (pattern) {
+    filePaths = filePaths.filter(function (filePath) {
+      return filePath.match(pattern);
     });
   }
 
+  filePaths = filePaths.map(normalizePath);
+
   return filePaths;
-}
+};
