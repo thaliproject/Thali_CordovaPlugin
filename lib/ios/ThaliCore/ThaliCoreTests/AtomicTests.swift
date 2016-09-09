@@ -44,6 +44,7 @@ class AtomicTests: XCTestCase {
         let loopIterationsCount = 100
 
         for i in 0..<queuesCount {
+            // Performing async write on even iterations and read on odd iterations
             dispatch_async(queue) {
                 if i % 2 == 0 {
                     atomicArray.modify {
@@ -68,6 +69,7 @@ class AtomicTests: XCTestCase {
             }
         }
 
+        // Wating for async block execution completion
         for _ in 0..<queuesCount {
             dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
         }

@@ -15,9 +15,15 @@ class SessionMock: Session {
     var simulateRelay: Bool = true
     private var outputStreamName: String?
 
+    func getInputStreamName() -> String {
+        guard let streamName = outputStreamName where simulateRelay else {
+            return ""
+        }
+        return streamName
+    }
+
     override func getInputStream(completion: (NSInputStream, String) -> Void) {
-        let inputStreamName = outputStreamName ?? ""
-        completion(NSInputStream(data: NSData(bytes: nil, length: 0)), inputStreamName)
+        completion(NSInputStream(data: NSData(bytes: nil, length: 0)), getInputStreamName())
     }
 
     override func createOutputStream(withName name: String,

@@ -123,7 +123,7 @@ class BrowserManagerTests: XCTestCase {
 
         waitForExpectationsWithTimeout(20, handler: nil)
 
-        XCTAssertTrue(advertiserPeerAvailability?.available ?? false)
+        XCTAssertEqual(advertiserPeerAvailability?.available, true)
         XCTAssertEqual(advertiserIdentifier, advertiserPeerAvailability?.peerIdentifier)
     }
 }
