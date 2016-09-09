@@ -1,245 +1,347 @@
 package io.jxcore.node;
 
-import android.os.CountDownTimer;
-
-import com.test.thalitest.ThaliTestRunner;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNot.not;
 
-public class StartStopOperationHandlerTest {
+public class StartStopOperationTest {
 
-    ConnectionManager mConnectionManager;
-    DiscoveryManager mDiscoveryManager;
-    StartStopOperationHandler mStartStopOperationHandler;
-    JXcoreThaliCallbackMock mJXcoreThaliCallback;
-    Thread checkDiscoveryManagerRunning, checkDiscoveryManagerNotRunning;
-    static ConnectionHelper mConnectionHelper;
-    static StartStopOperationHandler mStartStopOperatonHandler;
-    static long mOperationTimeout;
-    static boolean isBLESupported;
+    @Test
+    public void testCreateStartOperation() throws Exception {
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation mStartStopOperation =
+                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        mConnectionHelper = new ConnectionHelper();
-        isBLESupported =
-                mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
+        Field fCallback = mStartStopOperation.getClass().getDeclaredField("mCallback");
+        Field fIsStartOperation = mStartStopOperation.getClass()
+                .getDeclaredField("mIsStartOperation");
+        Field fShouldStartOrStopListeningToAdvertisementsOnly = mStartStopOperation.getClass()
+                .getDeclaredField("mShouldStartOrStopListeningToAdvertisementsOnly");
 
-        Field fStartStopOperationHandler = mConnectionHelper.getClass().getDeclaredField("mStartStopOperationHandler");
-        fStartStopOperationHandler.setAccessible(true);
-        mStartStopOperatonHandler = (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
+        fCallback.setAccessible(true);
+        fIsStartOperation.setAccessible(true);
+        fShouldStartOrStopListeningToAdvertisementsOnly.setAccessible(true);
 
-        Field fOperationTimeout = mStartStopOperatonHandler.getClass()
-                .getDeclaredField("OPERATION_TIMEOUT_IN_MILLISECONDS");
-        fOperationTimeout.setAccessible(true);
-        mOperationTimeout = fOperationTimeout.getLong(mStartStopOperatonHandler);
+        JXcoreThaliCallback mCallback = (JXcoreThaliCallback) fCallback.get(mStartStopOperation);
+        boolean mIsStartOperation = fIsStartOperation.getBoolean(mStartStopOperation);
+        boolean mShouldStartOrStopListeningToAdvertisementsOnly =
+                fShouldStartOrStopListeningToAdvertisementsOnly.getBoolean(mStartStopOperation);
+
+        assertThat("mJXcoreThaliCallback should not be null", mJXcoreThaliCallback,
+                is(notNullValue()));
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("mCallback should not be null", mCallback, is(notNullValue()));
+        assertThat("mCallback should be equal to mJXcoreThaliCallback", mCallback,
+                is(equalTo(mJXcoreThaliCallback)));
+        assertThat("mIsStartOperation should not be null", mIsStartOperation, is(notNullValue()));
+        assertThat("mIsStartOperation should be true", mIsStartOperation, is(true));
+        assertThat("mIsStartOperation should not be false", mIsStartOperation, is(not(false)));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be null",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(notNullValue()));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should be true",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(true));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be false",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(not(false)));
+
+        mStartStopOperation =
+                StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
+        mIsStartOperation = (Boolean) fIsStartOperation.get(mStartStopOperation);
+        mShouldStartOrStopListeningToAdvertisementsOnly =
+                (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mStartStopOperation);
+
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("mIsStartOperation should not be null", mIsStartOperation, is(notNullValue()));
+        assertThat("mIsStartOperation should be true", mIsStartOperation, is(true));
+        assertThat("mIsStartOperation should not be false", mIsStartOperation, is(not(false)));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be null",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(notNullValue()));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should be false",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(false));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be true",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(not(true)));
     }
 
-    @Before
-    public void setUp() throws Exception {
+    @Test
+    public void testCreateStopOperation() throws Exception {
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation mStartStopOperation =
+                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+
+        Field fCallback = mStartStopOperation.getClass().getDeclaredField("mCallback");
+        Field fIsStartOperation = mStartStopOperation.getClass()
+                .getDeclaredField("mIsStartOperation");
+        Field fShouldStartOrStopListeningToAdvertisementsOnly = mStartStopOperation.getClass()
+                .getDeclaredField("mShouldStartOrStopListeningToAdvertisementsOnly");
+
+        fCallback.setAccessible(true);
+        fIsStartOperation.setAccessible(true);
+        fShouldStartOrStopListeningToAdvertisementsOnly.setAccessible(true);
+
+        JXcoreThaliCallback mCallback = (JXcoreThaliCallback) fCallback.get(mStartStopOperation);
+        boolean mIsStartOperation = (Boolean) fIsStartOperation.get(mStartStopOperation);
+        boolean mShouldStartOrStopListeningToAdvertisementsOnly =
+                (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mStartStopOperation);
+
+        assertThat("mJXcoreThaliCallback should not be null", mJXcoreThaliCallback,
+                is(notNullValue()));
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("mCallback should not be null", mCallback, is(notNullValue()));
+        assertThat("mCallback shoulb be equal to mJXcoreThaliCallback", mCallback,
+                is(equalTo(mJXcoreThaliCallback)));
+        assertThat("mIsStartOperation should not be null", mIsStartOperation, is(notNullValue()));
+        assertThat("mIsStartOperation should be false", mIsStartOperation, is(false));
+        assertThat("mIsStartOperation should not be true", mIsStartOperation, is(not(true)));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be null",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(notNullValue()));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should be true",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(true));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be false",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(not(false)));
+
+        mStartStopOperation =
+                StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
+        mIsStartOperation = (Boolean) fIsStartOperation.get(mStartStopOperation);
+        mShouldStartOrStopListeningToAdvertisementsOnly =
+                (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mStartStopOperation);
+
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("mIsStartOperation should not be null", mIsStartOperation,
+                is(notNullValue()));
+        assertThat("mIsStartOperation should be false", mIsStartOperation, is(false));
+        assertThat("mIsStartOperation should not be true", mIsStartOperation, is(not(true)));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be null",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(notNullValue()));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should be false",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(false));
+        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be true",
+                mShouldStartOrStopListeningToAdvertisementsOnly, is(not(true)));
+    }
+
+    @Test
+    public void testGetCallback() throws Exception {
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation mStartStopOperation =
+                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getCallback should be equal to mJXcoreThaliCallback",
+                mStartStopOperation.getCallback(), is(equalTo(mJXcoreThaliCallback)));
+
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
-        mDiscoveryManager = mConnectionHelper.getDiscoveryManager();
+        mStartStopOperation =
+                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
-        Field fConnectionManager =
-                mConnectionHelper.getClass().getDeclaredField("mConnectionManager");
-        fConnectionManager.setAccessible(true);
-        mConnectionManager = (ConnectionManager) fConnectionManager.get(mConnectionHelper);
-
-        Field fStartStopOperationHandler =
-                mConnectionHelper.getClass().getDeclaredField("mStartStopOperationHandler");
-        fStartStopOperationHandler.setAccessible(true);
-        mStartStopOperationHandler =
-                (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
-
-        checkDiscoveryManagerRunning = ThaliTestRunner.createCheckDiscoveryManagerRunningThread();
-        checkDiscoveryManagerNotRunning = ThaliTestRunner.createCheckDiscoveryManagerNotRunningThread();
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        mConnectionHelper.killConnections(true);
-        mConnectionHelper.dispose();
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getCallback return should be equal to mJXcoreThaliCallback",
+                mStartStopOperation.getCallback(), is(equalTo(mJXcoreThaliCallback)));
     }
 
     @Test
-    public void testConstructor() throws Exception {
-        Field fConnectionManager = mStartStopOperationHandler.getClass()
-        .getDeclaredField("mConnectionManager");
-        Field fDiscoveryManager = mStartStopOperationHandler.getClass()
-        .getDeclaredField("mDiscoveryManager");
+    public void testIsStartOperation() throws Exception {
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation mStartStopOperation =
+                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
-        fConnectionManager.setAccessible(true);
-        fDiscoveryManager.setAccessible(true);
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("isStartOperation should return true",
+                mStartStopOperation.isStartOperation(), is(true));
 
-        ConnectionManager mConnectionManager1 =
-        (ConnectionManager) fConnectionManager.get(mStartStopOperationHandler);
-        DiscoveryManager mDiscoveryManager1 =
-        (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
+        mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        mStartStopOperation =
+                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
-        assertThat("mStartStopOperationHandler should not be null", mStartStopOperationHandler,
-                   is(notNullValue()));
-        assertThat("mConnectionManager1 should not be null", mConnectionManager1,
-                   is(notNullValue()));
-        assertThat("mConnectionManager1 should be equal to mConnectionManager",
-                   mConnectionManager1, is(equalTo(mConnectionManager)));
-        assertThat("mDiscoveryManager1 should not be null", mDiscoveryManager1,
-                   is(notNullValue()));
-        assertThat("mDiscoveryManager1 should be equal to mDiscoveryManager",
-                   mDiscoveryManager1, is(equalTo(mDiscoveryManager)));
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("isStartOperation should return false",
+                mStartStopOperation.isStartOperation(), is(false));
     }
 
     @Test
-    public void testCancelCurrentOperation() throws Exception {
-        mStartStopOperationHandler.cancelCurrentOperation();
+    public void testGetShouldStartOrStopListeningToAdvertisementsOnly() throws Exception {
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation mStartStopOperation =
+                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
-        Field fCurrentOperation = mStartStopOperationHandler.getClass()
-        .getDeclaredField("mCurrentOperation");
-        fCurrentOperation.setAccessible(true);
-        StartStopOperation mCurrentOperation =
-        (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getShouldStartOrStopListeningToAdvertisementsOnly should return true",
+                mStartStopOperation.getShouldStartOrStopListeningToAdvertisementsOnly(), is(true));
 
-        Field fOperationTimeoutTimer =
-        mStartStopOperationHandler.getClass().getDeclaredField("mOperationTimeoutTimer");
-        fOperationTimeoutTimer.setAccessible(true);
-        CountDownTimer mOperationTimeoutTimer =
-        (CountDownTimer) fOperationTimeoutTimer.get(mStartStopOperationHandler);
+        mStartStopOperation =
+                StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
 
-        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-        assertThat("mOperationTimeoutTimer should be null", mOperationTimeoutTimer,
-                   is(nullValue()));
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getShouldStartOrStopListeningToAdvertisementsOnly should return false",
+                mStartStopOperation.getShouldStartOrStopListeningToAdvertisementsOnly(), is(false));
+
+        mStartStopOperation =
+                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getShouldStartOrStopListeningToAdvertisementsOnly should return true",
+                mStartStopOperation.getShouldStartOrStopListeningToAdvertisementsOnly(), is(true));
+
+        mStartStopOperation =
+                StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
+
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getShouldStartOrStopListeningToAdvertisementsOnly should return false",
+                mStartStopOperation.getShouldStartOrStopListeningToAdvertisementsOnly(), is(false));
     }
 
     @Test
-    public void testExecuteStartOperation() throws Exception {
-        mStartStopOperationHandler.executeStartOperation(isBLESupported, mJXcoreThaliCallback);
+    public void testGetOperationExecutedTime() throws Exception {
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation mStartStopOperation =
+                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
-        if (isBLESupported) {
-            checkDiscoveryManagerRunning.start();
-            checkDiscoveryManagerRunning.join();
-        }
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getOperationExecutedTime should return 0", mStartStopOperation
+                        .getOperationExecutedTime(),
+                is(equalTo(0L)));
 
-        /* After 3s mCurrentOperation should be null. This is defined in
-         * StartStopOperationHandler, field OPERATION_TIMEOUT_IN_MILLISECONDS */
+        mStartStopOperation = StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
-        Thread.sleep(mOperationTimeout);
-
-        Field fDiscoveryManager =
-        mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
-        Field fCurrentOperation = mStartStopOperationHandler.getClass()
-        .getDeclaredField("mCurrentOperation");
-
-        fDiscoveryManager.setAccessible(true);
-        fCurrentOperation.setAccessible(true);
-
-        DiscoveryManager mDiscoveryManager1 =
-        (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
-        StartStopOperation mCurrentOperation =
-        (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-
-        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-
-        if (!isBLESupported) {
-            assertThat("mDiscoveryManager1 state should be NOT_STARTED",
-                       mDiscoveryManager1.getState(),
-                       is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
-            assertThat("mDiscoveryManager1 should be not running",
-                       mDiscoveryManager1.isRunning(),
-                       is(false));
-        } else {
-            assertThat("mDiscoveryManager1 state should not be NOT_STARTED",
-                       mDiscoveryManager1.getState(),
-                       is(not(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED))));
-            assertThat("mDiscoveryManager1 should be running", mDiscoveryManager1.isRunning(),
-                       is(true));
-        }
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getOperationExecutedTime should return 0", mStartStopOperation
+                        .getOperationExecutedTime(),
+                is(equalTo(0L)));
     }
 
     @Test
-    public void testExecuteStopOperation() throws Exception {
-        mStartStopOperationHandler.executeStartOperation(isBLESupported, mJXcoreThaliCallback);
+    public void testSetOperationExecutedTime() throws Exception {
+        long operationTime = 3000L;
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation mStartStopOperation =
+                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
-        if (isBLESupported) {
-            checkDiscoveryManagerRunning.start();
-            checkDiscoveryManagerRunning.join();
-        }
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getOperationExecutedTime should return 0", mStartStopOperation
+                        .getOperationExecutedTime(),
+                is(equalTo(0L)));
 
-        Thread.sleep(mOperationTimeout);
+        mStartStopOperation.setOperationExecutedTime(operationTime);
 
-        mStartStopOperationHandler.executeStopOperation(!isBLESupported, mJXcoreThaliCallback);
+        assertThat("getOperationExecutedTime should return 3000", mStartStopOperation
+                        .getOperationExecutedTime(),
+                is(equalTo(operationTime)));
 
-        checkDiscoveryManagerNotRunning.start();
-        checkDiscoveryManagerNotRunning.join();
+        mStartStopOperation = StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
-        Field fCurrentOperation = mStartStopOperationHandler.getClass()
-        .getDeclaredField("mCurrentOperation");
-        Field fDiscoveryManager =
-        mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
+        assertThat("mStartStopOperation should not be null", mStartStopOperation,
+                is(notNullValue()));
+        assertThat("getOperationExecutedTime should return 0", mStartStopOperation
+                        .getOperationExecutedTime(),
+                is(equalTo(0L)));
 
-        fCurrentOperation.setAccessible(true);
-        fDiscoveryManager.setAccessible(true);
+        mStartStopOperation.setOperationExecutedTime(operationTime);
 
-        StartStopOperation mCurrentOperation =
-        (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-        DiscoveryManager mDiscoveryManager1 =
-        (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
-
-        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-
-        assertThat("mDiscoveryManager1 state should be NOT_STARTED", mDiscoveryManager1.getState(),
-                   is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
+        assertThat("getOperationExecutedTime should return 3000", mStartStopOperation
+                        .getOperationExecutedTime(),
+                is(equalTo(operationTime)));
     }
 
     @Test
-    public void testCheckCurrentOperationStatus() throws Exception {
-        Field fCurrentOperation = mStartStopOperationHandler.getClass()
-        .getDeclaredField("mCurrentOperation");
-        fCurrentOperation.setAccessible(true);
+    public void testIsTargetState() throws Exception {
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation mStartStopOperation =
+                StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
+        String result = mStartStopOperation
+                .isTargetState(ConnectionManager.ConnectionManagerState.NOT_STARTED,
+                        DiscoveryManager.DiscoveryManagerState.NOT_STARTED, true, true);
 
-        fCurrentOperation.set(mStartStopOperationHandler,
-                    StartStopOperation.createStartOperation(isBLESupported, mJXcoreThaliCallback));
+        assertThat("Result should be Discovery manager not started", result,
+                is(equalTo("Discovery manager not started")));
 
-        mStartStopOperationHandler.checkCurrentOperationStatus();
+        result = mStartStopOperation
+                .isTargetState(ConnectionManager.ConnectionManagerState.NOT_STARTED,
+                        DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, false, true);
 
-        Method executeCurrentOperation = mStartStopOperationHandler.getClass()
-        .getDeclaredMethod("executeCurrentOperation");
-        executeCurrentOperation.setAccessible(true);
-        executeCurrentOperation.invoke(mStartStopOperationHandler);
+        assertThat("Result should be Connection manager not started", result,
+                is(equalTo("Connection manager not started")));
 
-        StartStopOperation mCurrentOperation =
-        (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+        result = mStartStopOperation
+                .isTargetState(ConnectionManager.ConnectionManagerState.RUNNING,
+                        DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, true, false);
 
-        if (!isBLESupported) {
-            assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-        } else {
-            fCurrentOperation.set(mStartStopOperationHandler,
-                    StartStopOperation.createStartOperation(true, mJXcoreThaliCallback));
-            mCurrentOperation =
-                    (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+        assertThat("Result should be Is not advertising", result,
+                is(equalTo("Is not advertising")));
 
-            assertThat("mCurrentOperation should not be null", mCurrentOperation,
-                    is(notNullValue()));
+        mStartStopOperation =
+                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
-            Thread.sleep(mOperationTimeout);
-            mStartStopOperationHandler.checkCurrentOperationStatus();
+        result = mStartStopOperation.isTargetState(ConnectionManager.ConnectionManagerState.RUNNING,
+                DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, false, false);
 
-            mCurrentOperation =
-                    (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+        assertThat("Result should be Is not discovering", result,
+                is(equalTo("Is not discovering")));
 
-            assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-        }
+        mStartStopOperation =
+                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+        result = mStartStopOperation.isTargetState(ConnectionManager.ConnectionManagerState.RUNNING,
+                DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, true, false);
+
+        assertThat("Result should be 'Is discovering (listening to advertisements), " +
+                        "but should not be'", result,
+                is(equalTo("Is discovering (listening to advertisements), but should not be")));
+
+        mStartStopOperation =
+                StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
+        result = mStartStopOperation.isTargetState(ConnectionManager.ConnectionManagerState.RUNNING,
+                DiscoveryManager.DiscoveryManagerState.RUNNING_BLE, true, false);
+
+        assertThat("Result should be Either the connection manager or the discovery manager is " +
+                "still running", result, is(equalTo("Either the connection manager or the " +
+                "discovery manager is still running")));
+    }
+
+    @Test
+    public void testToString() {
+        JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
+        StartStopOperation startStopOperation =
+                StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
+        String result  = startStopOperation.toString();
+
+        assertThat("Result should be Start operation: Should start/stop everything",
+                result, is(equalTo("Start operation: Should start/stop everything")));
+
+        startStopOperation = StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+        result  = startStopOperation.toString();
+
+        assertThat("Result should be Start operation: Should affect listening to advertisements only",
+                result, is(equalTo("Start operation: Should affect listening to advertisements only")));
+
+        startStopOperation = StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
+        result  = startStopOperation.toString();
+
+        assertThat("Result should be Stop operation: Should start/stop everything",
+                result, is(equalTo("Stop operation: Should start/stop everything")));
+
+        startStopOperation = StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+        result  = startStopOperation.toString();
+
+        assertThat("Result should be Stop operation: Should affect listening to advertisements only",
+                result, is(equalTo("Stop operation: Should affect listening to advertisements only")));
     }
 }
