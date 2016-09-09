@@ -50,15 +50,23 @@ var networkTypes = [ThaliMobile.networkTypes.WIFI];
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
+  console.log('Network status after Unit Tests: ', networkStatus);
   var promiseList = [];
   if (networkStatus.wifi === 'off') {
+    console.log('Toggling WIFI ON');
     promiseList.push(testUtils.toggleWifi(true));
   }
   if (networkStatus.bluetooth === 'off') {
+    console.log('Toggling BLUETOOTH ON');
     promiseList.push(testUtils.toggleBluetooth(true));
   }
   Promise.all(promiseList)
-  .then(function () {
+  .then(function() {
+    // To be sure that radios are enabled;
+    return ThaliMobile.getNetworkStatus()
+  })
+  .then(function (networkStatus) {
+    console.log('Network status before Coordination Tests: ', networkStatus);
     Mobile('GetDeviceName').callNative(function (name) {
       console.log('My device name is: %s', name);
       testUtils.setName(name);
