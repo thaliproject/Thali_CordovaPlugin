@@ -46,8 +46,8 @@ if (process.platform === 'android' || process.platform === 'ios') {
   }
 
   // TODO finish testing here (the node part will be omitted)
-  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-  return;
+  //console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+  //return;
 }
 
 ThaliMobile.getNetworkStatus()
