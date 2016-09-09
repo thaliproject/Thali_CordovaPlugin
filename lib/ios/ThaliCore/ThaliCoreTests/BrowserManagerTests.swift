@@ -17,7 +17,7 @@ class BrowserManagerTests: XCTestCase {
         serviceType = String.random(length: 7)
     }
 
-    func testStopBrowsingChangesListeningState() {
+    func testStartStopListeningChangesListeningState() {
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peers in }
         browserManager.startListeningForAdvertisements { _ in }
