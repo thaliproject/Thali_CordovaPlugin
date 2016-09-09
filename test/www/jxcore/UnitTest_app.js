@@ -73,8 +73,7 @@ ThaliMobile.getNetworkStatus()
 
       console.log('Running for ' + global.NETWORK_TYPE + ' network type');
       setImmediate(function () {
-        var testRunner = require('./runTests.js');
-        return testRunner.run();
+        require('./runTests.js');
       });
     });
   });
