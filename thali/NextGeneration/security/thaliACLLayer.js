@@ -2,6 +2,11 @@
 
 /** @module thaliACLLayer */
 
+/*
+NOTE: THE REQUIREMENTS IN THIS SECTION ARE IN THEORY MET BY https://github.com/thaliproject/salti
+When we confirm that and integrate it we'll remove this file.
+ */
+
 /**
  * @classdesc This class defines two different sets of behaviors. One is is
  * defines the API that our TLS layer will call to validate PSK requests and
@@ -139,7 +144,7 @@
  * not true for _local docs that do not start with 'thali_'. The mixing of the
  * two together is for historical reasons. For those interested in the gory
  * details please check [here](http://thaliproject.org/ReplicationAcrossDiscoveryProtocol/).
- * 
+ *
  * I would have expected that _missing_revs would be something we needed to
  * support but I can't find it implemented in Express-PouchDB so I guess not.
  *

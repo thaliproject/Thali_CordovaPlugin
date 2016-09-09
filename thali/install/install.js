@@ -352,29 +352,18 @@ module.exports = function (callback, appRootDirectory) {
           .then(function () {
             console.log('Adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
-
-            return exec('cordova plugins add ' +
-              thaliCordovaPluginUnZipResult.unzipedDirectory + ' -d',
-                { cwd : appRootDirectory })
-              .then(function (result) {
-                if (result.stdout) {
-                  console.log('Added Thali Cordova plugin successfully\n');
-                  console.log(result.stdout);
-                }
-
-                if (result.stderr) {
-                  console.log('Added Thali Cordova plugin with errors\n');
-                  console.log(result.stderr);
-                }
-
-                return;
-              })
-              .catch(function (error) {
-                  console.log('Failed adding Thali Cordova plugin\n');
-                  console.log(error);
-              });
-          })
-          .then(function () {
+            return childProcessExecPromise('cordova plugins add ' +
+              thaliCordovaPluginUnZipResult.unzipedDirectory,
+              appRootDirectory);
+          }).then(function () {
+            // The step below is required, because the Android after prepare
+            // Cordova hook depends on external node modules that need to be
+            // installed.
+            console.log('Running jx npm install in: ' + appScriptsFolder);
+            return childProcessExecPromise(
+              'jx npm install --no-optional --autoremove "*.gz"',
+               appScriptsFolder);
+          }).then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
           });
       }

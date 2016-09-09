@@ -8,7 +8,7 @@ var tape = require('../lib/thaliTape');
 var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersManager');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
-var logger = require('thali/thalilogger')('testCreatePeerListener');
+var logger = require('thali/thaliLogger')('testCreatePeerListener');
 
 // Every call to Mobile trips this warning
 /* jshint -W064 */

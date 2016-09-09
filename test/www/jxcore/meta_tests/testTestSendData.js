@@ -13,10 +13,21 @@ var test = tape({
     global.Mobile = function (key) {
       return {
         'callNative': function () {
+          var cb = arguments[arguments.length - 1];
+
+          if(typeof cb !== 'function') {
+            throw new Error('The last argument of the Mobile callNative ' +
+            'method must be a callback');
+          }
+
           if (key === 'Connect') {
-            setTimeout(arguments[arguments.length - 1](null, testPort), 100);
+            setTimeout(function () {
+              cb(null, testPort);
+            }, 100);
           } else {
-            setTimeout(arguments[arguments.length - 1], 100);
+            setTimeout(function () {
+              cb(null);
+            }, 100);
           }
         },
         'registerToNative': function () {}

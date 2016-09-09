@@ -4,16 +4,24 @@ var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
+var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
-var randomString = require('randomstring');
 var Promise = require('lie');
 var https = require('https');
-var logger = require('thali/thalilogger')('testUtils');
+var logger = require('thali/thaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
-
+var expressPouchdb = require('express-pouchdb');
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var express = require('express');
+var fs = require('fs-extra-promise');
+var extend = require('js-extend').extend;
+var inherits = require('inherits');
+
+var pskId = 'yo ho ho';
+var pskKey = new Buffer('Nothing going on here');
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
@@ -125,14 +133,16 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  * to store temporary data.
  * On desktop, returns a directory that does not persist between app restarts
  * and is removed when the process exits.
+ * @returns {string}
  */
 var tmpObject = null;
 module.exports.tmpDirectory = function () {
   if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
     return os.tmpdir();
   }
+
+  tmp.setGracefulCleanup();
   if (tmpObject === null) {
-    tmp.setGracefulCleanup();
     tmpObject = tmp.dirSync({
       unsafeCleanup: true
     });
@@ -225,27 +235,53 @@ module.exports.getOSVersion = function () {
   });
 };
 
+
+module.exports.verifyCombinedResultSuccess =
+  function (t, combinedResult, message) {
+    t.equal(combinedResult.wifiResult, null,
+      message || 'error should be null');
+    t.equal(combinedResult.nativeResult, null,
+      message || 'error should be null');
+  };
+
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
 // during other tests.
-var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-var LevelDownPouchDB = PouchDB.defaults({
-  db: require('leveldown-mobile'),
-  prefix: dbPath
+var pouchDBTestDirectory = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
+fs.ensureDirSync(pouchDBTestDirectory);
+module.exports.getPouchDBTestDirectory = function () {
+  return pouchDBTestDirectory;
+};
+
+var LevelDownPouchDB = PouchDBGenerator(PouchDB, pouchDBTestDirectory, {
+  defaultAdapter: require('leveldown-mobile')
 });
 
-module.exports.getTestPouchDBInstance = function (name) {
-  return new LevelDownPouchDB(name);
+module.exports.getLevelDownPouchDb = function () {
+  return LevelDownPouchDB;
 };
+
+// Short, random and globally unique name can be obtained from current timestamp.
+// For example '1w8ueaswm1'
+var getUniqueRandomName = function () {
+  var time = process.hrtime();
+  time = time[0] * Math.pow(10, 9) + time[1];
+  return time.toString(36);
+}
+module.exports.getUniqueRandomName  = getUniqueRandomName;
+module.exports.getRandomPouchDBName = getUniqueRandomName;
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
-  var randomPouchDBName = randomString.generate({
-    length: 40,
-    charset: 'alphabetic'
-  });
-  return module.exports.getTestPouchDBInstance(randomPouchDBName);
+  return new LevelDownPouchDB(getUniqueRandomName());
 };
 
+module.exports.getPouchDBFactoryInRandomDirectory = function () {
+  var directory = path.join(pouchDBTestDirectory, getUniqueRandomName());
+  fs.ensureDirSync(directory);
+  return PouchDBGenerator(PouchDB, directory, {
+    defaultAdapter: require('leveldown-mobile')
+  });
+};
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
   notificationBeacons.EXPIRATION_SIZE;
@@ -437,3 +473,228 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       nonTCPAvailableHandler);
   });
 };
+
+module.exports.createPskPouchDBRemote = function (serverPort, dbName,
+                                                 pskId, pskKey, host) {
+  var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
+    thaliConfig.BASE_DB_PATH + '/' + dbName;
+
+  /**
+   * See the notes in thaliReplicationPeerAction.start for why the below
+   * is here and why it's wrong and should use agent instead but can't.
+   */
+  return new LevelDownPouchDB(serverUrl,
+    {
+      ajax: {
+        agentClass: ForeverAgent.SSL,
+        agentOptions: {
+          keepAlive: true,
+          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+          maxSockets: Infinity,
+          maxFreeSockets: 256,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+          pskIdentity: pskId,
+          pskKey: pskKey,
+          secureOptions: pskId + serverUrl
+        }
+      }
+    });
+};
+
+module.exports.validateCombinedResult = function (combinedResult) {
+  if (combinedResult.wifiResult !== null ||
+    combinedResult.nativeResult !== null) {
+    return Promise.reject(new Error('Had a failure in ThaliMobile.start - ' +
+      JSON.stringify(combinedResult)));
+  }
+  return Promise.resolve();
+};
+
+module.exports.setUpServer = function (testBody, appConfig) {
+  var app = express();
+  appConfig && appConfig(app);
+  app.use(thaliConfig.BASE_DB_PATH, expressPouchdb(LevelDownPouchDB, {mode: 'minimumForPouchDB'}));
+  var testCloseAllServer = makeIntoCloseAllServer(https.createServer(
+    {
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskCallback : function (id) {
+        return id === pskId ? pskKey : null;
+      }
+    }, app));
+  testCloseAllServer.listen(0, function () {
+    var serverPort = testCloseAllServer.address().port;
+    var randomDBName = getUniqueRandomName();
+    var remotePouchDB =
+      module.exports.createPskPouchDBRemote(serverPort, randomDBName, pskId,
+                                            pskKey);
+    testBody(serverPort, randomDBName, remotePouchDB);
+  });
+  return testCloseAllServer;
+};
+
+var MAX_FAILURE = 10;
+
+module.exports.turnParticipantsIntoBufferArray = function (t, devicePublicKey) {
+  var publicKeys = [];
+  t.participants.forEach(function (participant) {
+    var publicKey = new Buffer(participant.data);
+    if (Buffer.compare(publicKey, devicePublicKey) !== 0) {
+      publicKeys.push(publicKey);
+    }
+  });
+  return publicKeys;
+};
+
+module.exports.startServerInfrastructure =
+  function (thaliNotificationServer, publicKeys, ThaliMobile, router) {
+    return thaliNotificationServer.start(publicKeys)
+      .then(function () {
+        return ThaliMobile.start(router,
+          thaliNotificationServer.getPskIdToSecret());
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      })
+      .then(function () {
+        return ThaliMobile.startListeningForAdvertisements();
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      })
+      .then(function () {
+        return ThaliMobile.startUpdateAdvertisingAndListening();
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      });
+  };
+
+module.exports.runTestOnAllParticipants = function (t, router,
+                                                    thaliNotificationClient,
+                                                    thaliNotificationServer,
+                                                    ThaliMobile,
+                                                    devicePublicKey,
+                                                    testToRun) {
+  var publicKeys =
+    module.exports.turnParticipantsIntoBufferArray(t, devicePublicKey);
+
+  return new Promise(function (resolve, reject) {
+    var completed = false;
+    /*
+     Each participant is recorded via their public key
+     If the value is -1 then they are done
+     If the value is 0 then no test has completed
+     If the value is greater than 0 then that is how many failures there have
+     been.
+     */
+    var participantCount = {};
+
+    publicKeys.forEach(function (participantPublicKey) {
+      participantCount[participantPublicKey] = 0;
+    });
+
+    var participantTask = {};
+
+    publicKeys.forEach(function (participantPublicKey) {
+      participantTask[participantPublicKey] = Promise.resolve();
+    });
+
+    function success(publicKey) {
+      if (completed) {
+        return;
+      }
+
+      participantCount[publicKey] = -1;
+
+      var participantKeys =
+        Object.getOwnPropertyNames(participantCount);
+      for (var i = 0; i < participantKeys.length; ++i) {
+        if (participantCount[participantKeys[i]] !== -1) {
+          return;
+        }
+      }
+
+      completed = true;
+      clearTimeout(timerCancel);
+      resolve();
+    }
+
+    function fail(publicKey, err) {
+      logger.debug('Got an err - ' + err);
+      if (completed || participantCount[publicKey] === -1) {
+        return;
+      }
+      ++participantCount[publicKey];
+      if (participantCount[publicKey] >= MAX_FAILURE) {
+        completed = true;
+        clearTimeout(timerCancel);
+        reject(err);
+      }
+    }
+
+    var timerCancel = setTimeout(function () {
+      reject(new Error('Test timed out'));
+    }, 5 * 60 * 1000);
+
+    thaliNotificationClient.on(
+      thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+      function (notificationForUs) {
+        if (completed) {
+          return;
+        }
+        participantTask[notificationForUs.keyId]
+          .then(function () {
+            if (!completed) {
+              participantTask[notificationForUs.keyId] =
+                testToRun(notificationForUs)
+                  .then(function () {
+                    success(notificationForUs.keyId);
+                  })
+                  .catch(function (err) {
+                    fail(notificationForUs.keyId, err);
+                    return Promise.resolve();
+                  });
+              return participantTask[notificationForUs.keyId];
+            }
+          });
+      });
+
+    thaliNotificationClient.start(publicKeys);
+    return module.exports.startServerInfrastructure(thaliNotificationServer,
+                                                    publicKeys,
+                                                    ThaliMobile, router)
+      .catch(function (err) {
+        reject(err);
+      });
+  });
+};
+
+// We doesn't want our test to run infinite time.
+// We will replace t.end with custom exit function.
+module.exports.testTimeout = function (t, timeout) {
+  var timer = setTimeout(function () {
+    t.fail('test timeout');
+    t.end();
+  }, timeout);
+  var oldEnd = t.end;
+  t.end = function () {
+    clearTimeout(timer);
+    return oldEnd.apply(this, arguments);
+  }
+}
+
+module.exports.checkArgs = function (t, spy, description, args) {
+  t.ok(spy.calledOnce, description + ' was called once');
+
+  var currentArgs = spy.getCalls()[0].args;
+  t.equals(
+    args.length, currentArgs.length,
+    description + ' was called with ' + currentArgs.length + ' arguments'
+  );
+
+  args.forEach(function (arg, index) {
+    var argDescription = description + ' was called with \'' +
+      arg.description + '\' as ' + (index + 1) + '-st argument';
+    t.ok(arg.compare(currentArgs[index]), argDescription);
+  });
+}
