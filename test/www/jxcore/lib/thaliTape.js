@@ -201,13 +201,15 @@ var platform =
   'ios';
 
 thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
-
+  console.log('ThaliTape :: Started ThaliTape');
   var serverOptions = {
     transports: ['websocket']
   };
 
-  var testServer = io('http://' + require('../server-address') + ':' + 3000 +
-    '/', serverOptions);
+  var connectionString = 'http://' + require('../server-address') + ':' + 3000 +
+  '/';
+  console.log('ThaliTape ::  Connecting to ', connectionString);
+  var testServer = io(connectionString, serverOptions);
 
   var firstConnection = true;
   var onConnection = function () {
@@ -246,11 +248,29 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   // events, because socket.io seems to behave so that sometimes
   // we get the connect event even if we have been connected before
   // (and sometimes the reconnect event).
+  testServer.on('connect_error', function (error) {
+    console.log('ThaliTape :: Error when connecting to the test server '
+      + error);
+    console.log(error.message);
+    console.log(error.stack);
+    testUtils.logMessageToScreen('Error when connecting to the test server '
+      + error);
+    onConnection();
+  });
+  testServer.on('connect_timeout', function () {
+    console.log('ThaliTape :: Connection timeout reached when connecting '
+      + 'to the test server');
+    testUtils.logMessageToScreen('Connection timeout reached when connecting '
+      + 'to the test server');
+    onConnection();
+  });
   testServer.on('connect', function () {
+    console.log('ThaliTape :: Connected to the test server');
     testUtils.logMessageToScreen('Connected to the test server');
     onConnection();
   });
   testServer.on('reconnect', function () {
+    console.log('ThaliTape :: Reconnected to the test server');
     testUtils.logMessageToScreen('Reconnected to the test server');
     onConnection();
   });
@@ -317,7 +337,6 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
       } else {
         reject('Some of TAP tests failed. See logs for more details.');
       }
-      tests = {};
     });
   });
 };
