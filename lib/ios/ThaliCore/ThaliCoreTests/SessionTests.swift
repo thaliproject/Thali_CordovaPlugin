@@ -52,7 +52,8 @@ class SessionTests: XCTestCase {
 
     func testCreateOutputStreamAfterSessionReceivedConnectedState() {
         let createdStreamExpectation = expectationWithDescription("stream created")
-        let session = Session(session: mcSession, identifier: peerID) {}
+        let session = Session(session: mcSession, identifier: peerID,
+                              disconnectHandler: unexpectedDisconnectHandler)
         var stream: NSOutputStream? = nil
 
         mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .Connected)
@@ -69,7 +70,8 @@ class SessionTests: XCTestCase {
 
     func testCreateOutputStreamBeforeSessionReceivedConnectedState() {
         // Preconditions
-        let session = Session(session: mcSession, identifier: peerID) {}
+        let session = Session(session: mcSession, identifier: peerID,
+                              disconnectHandler: unexpectedDisconnectHandler)
         let expectedStreamsCount = 3
         let allStreamsWereCreatedExpectation = expectationWithDescription("streams created")
         var alreadyCreatedStreams: [NSOutputStream] = []
@@ -96,7 +98,8 @@ class SessionTests: XCTestCase {
     func testCreateStreamError() {
         // Preconditions
         mcSession.errorOnStartStream = true
-        let session = Session(session: mcSession, identifier: peerID) {}
+        let session = Session(session: mcSession, identifier: peerID,
+                              disconnectHandler: unexpectedDisconnectHandler)
         let errorOnCreateStreamExpectation =
             expectationWithDescription("get error on create stream")
         var err: ErrorType?
@@ -116,7 +119,8 @@ class SessionTests: XCTestCase {
     func testReceiveInputStream() {
         // Preconditions
         let streamName = NSUUID().UUIDString
-        let session = Session(session: mcSession, identifier: peerID) {}
+        let session = Session(session: mcSession, identifier: peerID,
+                              disconnectHandler: unexpectedDisconnectHandler)
         let receivedStreamExpectation = expectationWithDescription("received input stream")
         var receivedStreamName: String?
 

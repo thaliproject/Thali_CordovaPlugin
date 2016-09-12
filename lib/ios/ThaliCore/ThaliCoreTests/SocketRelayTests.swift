@@ -20,7 +20,8 @@ class SocketRelayTests: XCTestCase {
             SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: createSocketTimeout)
         let peerID = MCPeerID(displayName: NSUUID().UUIDString)
         let mcSession = MCSession(peer: peerID)
-        let session = Session(session: mcSession, identifier: peerID) { _ in }
+        let session = Session(session: mcSession, identifier: peerID,
+                              disconnectHandler: unexpectedDisconnectHandler)
         var error: MultiConnectError?
         let getTimeoutErrorOnCreateSocketExpectation =
             expectationWithDescription("get timeout error on create socket")
@@ -55,7 +56,7 @@ class SocketRelayTests: XCTestCase {
 
         do {
             let session = try browser.inviteToConnectPeer(with: peerIdentifier,
-                    disconnectHandler: {})
+                    disconnectHandler: unexpectedDisconnectHandler)
             let socketCreatedExpectation = expectationWithDescription("socket created")
             let _ = BrowserVirtualSocketBuilder(session: session,
                     completionHandler: { [weak socketCreatedExpectation] socket, error in

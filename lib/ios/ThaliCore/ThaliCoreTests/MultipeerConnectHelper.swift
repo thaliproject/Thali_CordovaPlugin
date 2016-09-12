@@ -30,6 +30,14 @@ func createMPCFConnection(advertiserIdentifier identifier: PeerIdentifier,
     return (advertiser, browser)
 }
 
-func errorHandler(error: ErrorType) {
+func unexpectedErrorHandler(error: ErrorType) {
     XCTFail("start advertising failed with error: \(error)")
+}
+
+func unexpectedDisconnectHandler() {
+    XCTFail("Unexpected disconnect received")
+}
+
+func unexpectedSessionHandler(session: Session) {
+    XCTFail("Unexpected session received: \(session)")
 }

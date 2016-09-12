@@ -29,18 +29,21 @@ class AdvertiserManagerTests: XCTestCase {
 
     func testIsAdvertising() {
         XCTAssertFalse(advertiserManager.advertising)
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42) { _ in }
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
         XCTAssertTrue(advertiserManager.advertising)
     }
 
     func testDisposeAdvertiserAfterTimeout() {
         let port1: UInt16 = 42
         let port2: UInt16 = 43
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: port1) { _ in }
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: port1,
+                                                             errorHandler: unexpectedErrorHandler)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
         let firstAdvertiserIdentifier = advertiserManager.currentAdvertiser?.peerIdentifier
 
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: port2) { _ in}
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: port2,
+                                                             errorHandler: unexpectedErrorHandler)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 2)
         let expectation = expectationWithDescription("advertiser removed after delay")
         advertiserManager.didRemoveAdvertiserWithIdentifierHandler = { [weak expectation] identifier in
@@ -52,37 +55,9 @@ class AdvertiserManagerTests: XCTestCase {
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
     }
 
-    func testPickLatestGenerationAdvertiserOnConnect() {
-        let port1: UInt16 = 42
-        let port2: UInt16 = 43
-        let found2AdvertisersExpectation = expectationWithDescription("found 2 advertisers")
-        var advertisersCount = 0
-
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: port1) { _ in }
-        let identifier: PeerIdentifier! = advertiserManager.currentAdvertiser?.peerIdentifier
-
-        let browser = BrowserManager(serviceType: serviceType, inputStreamReceiveTimeout: 1) {
-            [weak found2AdvertisersExpectation] peerAvailability in
-            if let availability = peerAvailability.first
-                where availability.peerIdentifier.uuid == identifier.uuid {
-                advertisersCount += 1
-                if advertisersCount == 2 {
-                    found2AdvertisersExpectation?.fulfill()
-                }
-            }
-        }
-
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: port2) { _ in }
-        browser.startListeningForAdvertisements { _ in }
-
-        waitForExpectationsWithTimeout(disposeTimeout + 1, handler: nil)
-        let lastGenerationIdentifier = browser.lastGenerationPeer(for: identifier)
-
-        XCTAssertEqual(1, lastGenerationIdentifier?.generation)
-    }
-
     func testStopAdvertising() {
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42) { _ in }
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
         XCTAssertTrue(advertiserManager.advertising)
         advertiserManager.stopAdvertising()

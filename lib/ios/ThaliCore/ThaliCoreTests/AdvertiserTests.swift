@@ -29,7 +29,7 @@ class AdvertiserTests: XCTestCase {
         advertiser.advertiser(mcAdvertiser, didReceiveInvitationFromPeer: peerID,
                 withContext: nil,
                 invitationHandler: mcInvitationHandler)
-        advertiser.startAdvertising(errorHandler)
+        advertiser.startAdvertising(unexpectedErrorHandler)
         return advertiser
     }
 
@@ -38,8 +38,8 @@ class AdvertiserTests: XCTestCase {
             expectationWithDescription("failed start advertising")
         let advertiser = Advertiser(peerIdentifier: PeerIdentifier(),
                                     serviceType: String.random(length: 7),
-                                    receivedInvitationHandler: { _ in},
-                                    disconnectHandler: { })
+                                    receivedInvitationHandler: unexpectedSessionHandler,
+                                    disconnectHandler: unexpectedDisconnectHandler)
         advertiser.startAdvertising { [weak failedStartAdvertisingExpectation] error in
             failedStartAdvertisingExpectation?.fulfill()
         }
@@ -61,7 +61,8 @@ class AdvertiserTests: XCTestCase {
         }
         let peerID = MCPeerID(displayName: NSUUID().UUIDString)
         let _ = startAdvertiser(with: peerID,  receivedInvitationHandler: receivedInvitationHandler,
-                                disconnectHandler: { }, mcInvitationHandler: { _ in })
+                                disconnectHandler: unexpectedDisconnectHandler,
+                                mcInvitationHandler: { _ in })
 
         let receivedInvitationTimeout = 1.0
         waitForExpectationsWithTimeout(receivedInvitationTimeout, handler: nil)
@@ -96,8 +97,8 @@ class AdvertiserTests: XCTestCase {
     func testStartStopChangesAdvertisingState() {
         let peerID: MCPeerID = MCPeerID(displayName: NSUUID().UUIDString)
         let advertiser = startAdvertiser(with: peerID,
-                                          receivedInvitationHandler: { _ in },
-                                          disconnectHandler: { _ in},
+                                          receivedInvitationHandler: unexpectedSessionHandler,
+                                          disconnectHandler: unexpectedDisconnectHandler,
                                           mcInvitationHandler: { _ in })
 
         XCTAssertTrue(advertiser.advertising)
