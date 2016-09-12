@@ -9,6 +9,7 @@ import android.util.Log;
 
 import com.test.thalitest.ThaliTestRunner;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -68,6 +69,12 @@ public class ConnectivityMonitorTest {
         mWifiManager.setWifiEnabled(true);
     }
 
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception {
+        mBluetoothAdapter.enable();
+        mWifiManager.setWifiEnabled(true);
+    }
+
     public Thread enableAndCheckBTEnabled() {
         return new Thread(new Runnable() {
             int counter = 0;
@@ -82,14 +89,13 @@ public class ConnectivityMonitorTest {
                         e.printStackTrace();
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) {
-                    Log.e(mTag, "BT is not enabled after 5s!");
-                }
+                mConnectivityMonitor.updateConnectivityInfo(false);
+                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "BT is not enabled after 5s!");
             }
         });
     }
 
-    public Thread disableAndCkechBTDisabled() {
+    public Thread disableAndCheckBTDisabled() {
         return new Thread(new Runnable() {
             int counter = 0;
             @Override
@@ -103,9 +109,8 @@ public class ConnectivityMonitorTest {
                         e.printStackTrace();
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) {
-                    Log.e(mTag, "BT is not disabled after 5s!");
-                }
+                mConnectivityMonitor.updateConnectivityInfo(false);
+                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "BT is not disabled after 5s!");
             }
         });
     }
@@ -124,9 +129,8 @@ public class ConnectivityMonitorTest {
                         e.printStackTrace();
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) {
-                    Log.e(mTag, "Wifi is not enabled after 5s!");
-                }
+                mConnectivityMonitor.updateConnectivityInfo(false);
+                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Wifi is not enabled after 5s!");
             }
         });
     }
@@ -145,9 +149,8 @@ public class ConnectivityMonitorTest {
                         e.printStackTrace();
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) {
-                    Log.e(mTag, "Wifi is not disabled after 5s!");
-                }
+                mConnectivityMonitor.updateConnectivityInfo(false);
+                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Wifi is not disabled after 5s!");
             }
         });
     }
@@ -189,7 +192,7 @@ public class ConnectivityMonitorTest {
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
 
         //Bluetooth
-        Thread disableBT = disableAndCkechBTDisabled();
+        Thread disableBT = disableAndCheckBTDisabled();
 
         disableBT.start();
         disableBT.join();
@@ -250,7 +253,7 @@ public class ConnectivityMonitorTest {
 
     @Test
     public void testIsBluetoothEnabled() throws Exception {
-        Thread disableBT = disableAndCkechBTDisabled();
+        Thread disableBT = disableAndCheckBTDisabled();
 
         disableBT.start();
         disableBT.join();

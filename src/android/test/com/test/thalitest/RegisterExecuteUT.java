@@ -5,23 +5,69 @@ import android.util.Log;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.runner.Result;
-
+import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import java.util.ArrayList;
 import java.util.Date;
 
+import io.jxcore.node.ConnectionHelper;
+import io.jxcore.node.ConnectionHelperTest;
 import io.jxcore.node.jxcore;
 
 public final class RegisterExecuteUT {
     private RegisterExecuteUT() throws Exception {
         throw new Exception("Constructor should not be called.");
+    }
 
+    static String TAG = "RegisterExecuteUT";
+
+    private static void FireTestedMethod(String methodName) {
+        ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
+
+        switch (methodName) {
+            case "onPeerLost" :
+                ConnectionHelperTest.mConnectionHelper
+                        .onPeerLost(new PeerProperties("33:44:55:44:33:22"));
+                break;
+            case "onPeerDiscovered" :
+                ConnectionHelperTest.mConnectionHelper
+                        .onPeerDiscovered(new PeerProperties("11:22:33:22:11:00"));
+                break;
+            default :
+                Log.e(TAG, "Method called in FireTestedMethod doesn't exists!");
+                break;
+        }
     }
 
     public static void Register() {
+        jxcore.RegisterMethod("TestNativeMethod", new jxcore.JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, final String callbackId) {
+                String methodToTest = "";
+
+                if (params.size() == 0) {
+                    Log.e(TAG, "Required parameter (toast message) missing");
+                } else {
+                    methodToTest = params.get(0).toString();
+                    FireTestedMethod(methodToTest);
+                }
+
+                JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put("Testing_", methodToTest);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                final String jsonObjectAsString = jsonObject.toString();
+
+                jxcore.CallJSMethod(callbackId, jsonObjectAsString);
+            }
+        });
+
         jxcore.RegisterMethod("executeNativeTests", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-                String logtag = "executeNativeTests";
+                ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
+                String logtag = "ExecuteNativeTests";
                 Log.d(logtag, "Running unit tests");
                 Result resultTest = ThaliTestRunner.runTests();
 

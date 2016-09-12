@@ -6,9 +6,13 @@ if (process.platform === 'android' || process.platform === 'ios') {
   var thaliMobileNativeWrapper = require('../node_modules/thali/NextGeneration/thaliMobileNativeWrapper');
 
   var callbackPeer;
+  var timeout;
 
   var test = tape({
     setup: function (t) {
+      timeout = setTimeout(function () {
+        t.fail('No callback after calling registerToNative');
+      }, 5000);
       t.end();
     },
     teardown: function (t) {
@@ -18,32 +22,28 @@ if (process.platform === 'android' || process.platform === 'ios') {
   });
 
   test('onPeerLost calls jxcore', function (t) {
-    var timeOut = setTimeout(function () {
-      t.fail('No callback after calling registerToNative');
-    }, 5000);
+    setImmediate(function () {
+      Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
+        //clearTimeout(timeOut);
+        if (typeof peers.forEach !== 'function') {
+          peers = [peers];
+          t.fail('peers callback should be an array!');
+        }
 
-    Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-      clearTimeout(timeOut);
-
-      if (typeof peers.forEach !== 'function') {
-        peers = [peers];
-      } else {
-        t.fail('Peers object is not an array!');
-        t.end();
-      }
-
-      peers.forEach(function (peer) {
-        callbackPeer = peer;
+        peers.forEach(function (peer) {
+          callbackPeer = peer;
+        });
       });
+    });
 
-      setImmediate(function () {
-        Mobile('TestNativeMethod').callNative('onPeerLost', function (result) {
-          console.log(result.Testing_);
-          setImmediate(function () {
-            t.equal(callbackPeer.peerIdentifier, '11:22:33:22:11:00-0',
-              'check if callback was fired by onPeerLost');
-            t.notOk(callbackPeer.peerAvailable, 'check if peerAvailable is false');
-          });
+    setImmediate(function () {
+      Mobile('testNativeMethod').callNative('onPeerLost', function (result) {
+        clearTimeout(timeout);
+        console.log(result.Testing_);
+        setImmediate(function () {
+          t.equal(callbackPeer.peerIdentifier, '11:22:33:22:11:00-0',
+            'check if callback was fired by onPeerLost');
+          t.notOk(callbackPeer.peerAvailable, 'check if peerAvailable is false');
         });
       });
     });
@@ -51,32 +51,28 @@ if (process.platform === 'android' || process.platform === 'ios') {
   });
 
   test('onPeerDiscovered calls jxcore', function (t) {
-    var timeOut = setTimeout(function () {
-      t.fail('No callback after calling registerToNative');
-    }, 5000);
+    setImmediate(function () {
+      Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
 
-    Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-      clearTimeout(timeOut);
+        if (typeof peers.forEach !== 'function') {
+          peers = [peers];
+          t.fail('peers callback should be an array!');
+        }
 
-      if (typeof peers.forEach !== 'function') {
-        peers = [peers];
-      } else {
-        t.fail('Peers object is not an array!');
-        t.end();
-      }
-
-      peers.forEach(function (peer) {
-        callbackPeer = peer;
+        peers.forEach(function (peer) {
+          callbackPeer = peer;
+        });
       });
+    });
 
-      setImmediate(function () {
-        Mobile('TestNativeMethod').callNative('onPeerDiscovered', function (result) {
-          console.log(result.Testing_);
-          setImmediate(function () {
-            t.equal(callbackPeer.peerIdentifier, '33:44:55:44:33:22-0',
-              'check if callback was fired by onPeerDiscovered');
-            t.ok(callbackPeer.peerAvailable, 'check if peerAvailable is true');
-          });
+    setImmediate(function () {
+      Mobile('testNativeMethod').callNative('onPeerDiscovered', function (result) {
+        clearTimeout(timeout);
+        console.log(result.Testing_);
+        setImmediate(function () {
+          t.equal(callbackPeer.peerIdentifier, '33:44:55:44:33:22-0',
+            'check if callback was fired by onPeerDiscovered');
+          t.ok(callbackPeer.peerAvailable, 'check if peerAvailable is true');
         });
       });
     });
