@@ -10,6 +10,7 @@ function executeTests (filePaths) {
   return thaliTapeOpts()
     .then(function (opts) {
       filePaths.forEach(function (filePath) {
+        log('Loading ', filePath);
         require(filePath);
       });
 
