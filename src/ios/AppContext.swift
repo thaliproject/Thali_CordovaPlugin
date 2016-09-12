@@ -3,7 +3,8 @@
 //  AppContext.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import CoreBluetooth
@@ -11,6 +12,7 @@ import Foundation
 import ThaliCore
 
 enum JSONValueKey: String {
+
     case PeerIdentifier = "peerIdentifier"
     case Generation = "generation"
     case PeerAvailable = "peerAvailable"
@@ -34,7 +36,8 @@ func jsonValue(object: AnyObject) -> String {
 func dictionaryValue(jsonText: String) -> [String : AnyObject]? {
     if let data = jsonText.dataUsingEncoding(NSUTF8StringEncoding) {
         do {
-            return try NSJSONSerialization.JSONObjectWithData(data, options: []) as? [String : AnyObject]
+            return try
+                NSJSONSerialization.JSONObjectWithData(data, options: []) as? [String : AnyObject]
         } catch let error as NSError {
             print(error)
         }
@@ -43,6 +46,7 @@ func dictionaryValue(jsonText: String) -> [String : AnyObject]? {
 }
 
 enum RadioState: String {
+
     case on = "on"
     case off = "off"
     case unavailable = "unavailable"
@@ -51,6 +55,7 @@ enum RadioState: String {
 }
 
 enum NetworkStatusParameters: String {
+
     case bluetooth = "bluetooth"
     case bluetoothLowEnergy = "bluetoothLowEnergy"
     case wifi = "wifi"
@@ -163,7 +168,7 @@ extension PeerAvailability {
         ]
 
 
-        delegate?.context(self, didChangeNetworkStatus: jsonValue(networkStatus)!)
+        delegate?.context(self, didChangeNetworkStatus: jsonValue(networkStatus))
     }
 
     private func willEnterBackground() {

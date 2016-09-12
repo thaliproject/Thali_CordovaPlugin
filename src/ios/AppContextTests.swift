@@ -3,7 +3,8 @@
 //  AppContextTests.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import XCTest
@@ -34,6 +35,7 @@ private extension Selector {
 }
 
 enum BluetoothHardwareState: String {
+
     case on = "on"
     case off = "off"
 }
@@ -325,9 +327,18 @@ class AppContextTests: XCTestCase {
     func testPeerAvailabilityConversion() {
         let peerAvailability = PeerAvailability(peerIdentifier: PeerIdentifier(), available: true)
         let dictionaryValue = peerAvailability.dictionaryValue
-        XCTAssertEqual(peerAvailability.peerIdentifier.uuid, dictionaryValue[JSONValueKey.PeerIdentifier.rawValue] as? String)
-        XCTAssertEqual(peerAvailability.peerIdentifier.generation, dictionaryValue[JSONValueKey.Generation.rawValue] as? Int)
-        XCTAssertEqual(peerAvailability.available, dictionaryValue[JSONValueKey.PeerAvailable.rawValue] as? Bool)
+        XCTAssertEqual(
+            peerAvailability.peerIdentifier.uuid,
+            dictionaryValue[JSONValueKey.PeerIdentifier.rawValue] as? String
+        )
+        XCTAssertEqual(
+            peerAvailability.peerIdentifier.generation,
+            dictionaryValue[JSONValueKey.Generation.rawValue] as? Int
+        )
+        XCTAssertEqual(
+            peerAvailability.available,
+            dictionaryValue[JSONValueKey.PeerAvailable.rawValue] as? Bool
+        )
     }
 
 
