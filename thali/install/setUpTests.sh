@@ -43,8 +43,8 @@ prepare_project()
   echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
 
   cd $REPO_ROOT_DIR/test/TestServer
-  jx npm install
-  jx generateServerAddress.js $2
+  npm install --no-optional
+  node generateServerAddress.js $2
   cd $REPO_ROOT_DIR/..
   cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME;ERROR_ABORT
   mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev;ERROR_ABORT
@@ -65,7 +65,8 @@ install_thali()
   echo "Installing Thali into ${TEST_PROJECT_NAME}"
 
   cd $TEST_PROJECT_ROOT_DIR/www/jxcore;ERROR_ABORT
-  jx npm install $REPO_ROOT_DIR/thali --save --no-optional --autoremove "*.gz";ERROR_ABORT
+  npm install $REPO_ROOT_DIR/thali --save --no-optional --production;ERROR_ABORT
+find . -name "*.gz" -delete
 
   if [ $IS_MINIGW_PLATFORM == true ]; then
       # On Windows the package.json file will contain an invalid local file URI for Thali,
@@ -79,9 +80,9 @@ install_thali()
   # SuperTest which is used by some of the BVTs include a PEM file (for private
   # keys) that makes Android unhappy so we remove it below in addition to the gz
   # files.
-  jx npm install --no-optional --autoremove "*.gz,*.pem";ERROR_ABORT
+  npm install --no-optional --production;ERROR_ABORT
 
-  # In case autoremove fails to delete the files, delete them explicitly.
+  # Cleanup the files *.gz and *.pem filed after npm install.
   find . -name "*.gz" -delete
   find . -name "*.pem" -delete
 
@@ -183,4 +184,4 @@ install_thali $1 $2
 build_android
 build_ios_if_possible
 
-echo "Remember to start the test coordination server by running jx index.js"
+echo "Remember to start the test coordination server by running node index.js"
