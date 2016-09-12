@@ -44,6 +44,7 @@ var tests = {};
 var allSuccess = true;
 
 var emitWhenConnected = function (socket, name, data) {
+  console.log("thaliTape.emitWhenConnected");
   if (socket.connected) {
     data ? socket.emit(name, data) : socket.emit(name);
   } else {
@@ -246,6 +247,7 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   // we get the connect event even if we have been connected before
   // (and sometimes the reconnect event).
   testServer.on('connect', function () {
+    console.log("thaliTape.onConnect");
     testUtils.logMessageToScreen('Connected to the test server');
     onConnection();
   });
@@ -315,12 +317,10 @@ if (typeof jxcore === 'undefined' ||
     typeof Mobile !== 'undefined') {
   // On mobile, or outside of jxcore (some dev scenarios) we use
   // the server-coordinated thaliTape
-  console.log("Use thaliTape");
   objectToExport = thaliTape;
   objectToExport.coordinated = true;
 } else {
   // On desktop we just use simple non-coordinated tape
-  console.log("Use simpleTape");
   objectToExport = require('./simpleTape');
   objectToExport.coordinated = false;
 }
