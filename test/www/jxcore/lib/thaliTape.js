@@ -209,6 +209,7 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   var testServer = io('http://' + require('../server-address') + ':' + 3000 +
     '/', serverOptions);
 
+  console.log("thaliTape.testServer created");
   var firstConnection = true;
   var onConnection = function () {
     if (firstConnection) {
