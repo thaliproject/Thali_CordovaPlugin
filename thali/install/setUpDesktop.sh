@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
-export NVM_NODEJS_ORG_MIRROR
+NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
+export NODEJS_ORG_MIRROR
 JX_NPM_JXB=jxb311
 export JX_NPM_JXB
 
@@ -10,13 +10,13 @@ set -e
 
 cd `dirname $0`
 cd ../../test/TestServer
-jx npm install
-jx generateServerAddress.js
+npm install --no-optional
+node generateServerAddress.js
 cd ../../thali
-jx npm install --no-optional
-jx npm link
+npm install --no-optional
+npm link
 cd install
-jx npm install
+npm install --no-optional
 cd ../../test/www/jxcore
-jx npm link thali
-jx npm install --no-optional
+npm link thali
+npm install --no-optional
