@@ -9,8 +9,6 @@ import android.util.Log;
 
 import com.test.thalitest.ThaliTestRunner;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,6 +42,8 @@ public class ConnectivityMonitorTest {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
+        mConnectionHelper = new ConnectionHelper();
+
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         mContext = jxcore.activity.getBaseContext();
@@ -52,14 +52,8 @@ public class ConnectivityMonitorTest {
 
         currentWifiState = mWifiManager.isWifiEnabled();
         currentBTState = mBluetoothAdapter.isEnabled();
-    }
 
-    @Before
-    public void setUp() throws Exception {
-        ThaliTestRunner.mConnectionHelper = new ConnectionHelper();
-        mConnectionHelper = ThaliTestRunner.mConnectionHelper;
         mConnectivityMonitor = mConnectionHelper.getConnectivityMonitor();
-
         Field bluetoothManagerField = mConnectivityMonitor.getClass()
                 .getDeclaredField("mBluetoothManager");
         bluetoothManagerField.setAccessible(true);
@@ -69,120 +63,91 @@ public class ConnectivityMonitorTest {
                 .getDeclaredField("mWifiDirectManager");
         wifiDirectManagerField.setAccessible(true);
         mWifiDirectManager = (WifiDirectManager) wifiDirectManagerField.get(mConnectivityMonitor);
+
+        mBluetoothAdapter.enable();
+        mWifiManager.setWifiEnabled(true);
     }
 
-    @After
-    public void tearDown() throws Exception {
-        mConnectionHelper.dispose();
-    }
-
-    public Thread createBluetoothStateCheckThread() {
-        return new Thread(new Runnable() {
-            int counter = 0;
-            @Override
-            public void run() {
-                while (mBluetoothAdapter.isEnabled() != currentBTState && counter < ThaliTestRunner.counterLimit)
-                {
-                    try {
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
-                        counter++;
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "BT state didn't change after 5s!");
-            }
-        });
-    }
-
-    public Thread createWifiStateCheckThread() {
-        return new Thread(new Runnable() {
-            int counter = 0;
-            @Override
-            public void run() {
-                while (mWifiManager.isWifiEnabled() != currentWifiState && counter < ThaliTestRunner.counterLimit)
-                {
-                    try {
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
-                        counter++;
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Wifi state didn't after 5s!");
-            }
-        });
-    }
-
-    public Thread createCheckBTEnabled() {
+    public Thread enableAndCheckBTEnabled() {
         return new Thread(new Runnable() {
             int counter = 0;
             @Override
             public void run() {
                 while (!mBluetoothAdapter.isEnabled() && counter < ThaliTestRunner.counterLimit) {
                     try {
+                        mBluetoothAdapter.enable();
                         Thread.sleep(ThaliTestRunner.timeoutLimit);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "BT is not enabled after 5s!");
+                if (counter >= ThaliTestRunner.counterLimit) {
+                    Log.e(mTag, "BT is not enabled after 5s!");
+                }
             }
         });
     }
 
-    public Thread createCheckBTDisabled() {
+    public Thread disableAndCkechBTDisabled() {
         return new Thread(new Runnable() {
             int counter = 0;
             @Override
             public void run() {
                 while (mBluetoothAdapter.isEnabled() && counter < ThaliTestRunner.counterLimit) {
                     try {
+                        mBluetoothAdapter.disable();
                         Thread.sleep(ThaliTestRunner.timeoutLimit);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "BT is not disabled after 5s!");
+                if (counter >= ThaliTestRunner.counterLimit) {
+                    Log.e(mTag, "BT is not disabled after 5s!");
+                }
             }
         });
     }
 
-    public Thread createCheckWifiEnabled() {
+    public Thread enableAndCheckWifiEnabled() {
         return new Thread(new Runnable() {
             int counter = 0;
             @Override
             public void run() {
                 while (!mWifiManager.isWifiEnabled() && counter < ThaliTestRunner.counterLimit) {
                     try {
+                        mWifiManager.setWifiEnabled(true);
                         Thread.sleep(ThaliTestRunner.timeoutLimit);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Wifi is not enabled after 5s!");
+                if (counter >= ThaliTestRunner.counterLimit) {
+                    Log.e(mTag, "Wifi is not enabled after 5s!");
+                }
             }
         });
     }
 
-    public Thread createCheckWifiDisabled() {
+    public Thread disableAndCheckWifiDisabled() {
         return new Thread(new Runnable() {
             int counter = 0;
-
             @Override
             public void run() {
                 while (mWifiManager.isWifiEnabled() && counter < ThaliTestRunner.counterLimit) {
                     try {
+                        mWifiManager.setWifiEnabled(false);
                         Thread.sleep(ThaliTestRunner.timeoutLimit);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Wifi is not disabled after 5s!");
+                if (counter >= ThaliTestRunner.counterLimit) {
+                    Log.e(mTag, "Wifi is not disabled after 5s!");
+                }
             }
         });
     }
@@ -204,60 +169,40 @@ public class ConnectivityMonitorTest {
                 ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size() > 0,
                 is(true));
 
-        Thread wifiStateCheck2 = createWifiStateCheckThread();
-        Thread wifiStateCheck3 = createWifiStateCheckThread();
-
         // WIFI
-        currentWifiState = !currentWifiState;
-        mWifiManager.setWifiEnabled(currentWifiState);
+        Thread disableWifi = disableAndCheckWifiDisabled();
 
         // check the state. If the intent is registered the state should be updated;
-        wifiStateCheck2.start();
-        wifiStateCheck2.join();
+        disableWifi.start();
+        disableWifi.join();
 
         assertThat("Proper state of WIFI is set when switched off",
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
 
         // change the WIFI state back
-        currentWifiState = !currentWifiState;
-        mWifiManager.setWifiEnabled(currentWifiState);
+        Thread enableWifi = enableAndCheckWifiEnabled();
 
-        wifiStateCheck3.start();
-        wifiStateCheck3.join();
+        enableWifi.start();
+        enableWifi.join();
 
         assertThat("Proper state of WIFI is set when switched on",
                 mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
 
-        Thread btStateCheck2 = createBluetoothStateCheckThread();
-        Thread btStateCheck3 = createBluetoothStateCheckThread();
-
         //Bluetooth
-        currentBTState = !currentBTState;
+        Thread disableBT = disableAndCkechBTDisabled();
 
-        if (currentBTState) {
-            mBluetoothAdapter.disable();
-        } else {
-            mBluetoothAdapter.enable();
-        }
-
-        btStateCheck2.start();
-        btStateCheck2.join();
+        disableBT.start();
+        disableBT.join();
 
         // check the state. If the intent is registered the state should be updated;
-        assertThat("Proper state of BT is set when switched on",
-                mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothAdapter.isEnabled()));
+        assertThat("Proper state of BT is set when switched off",
+                mConnectivityMonitor.isBluetoothEnabled(), is(false));
 
         // change the BT state back
-        currentBTState = !currentBTState;
+        Thread enableBT = enableAndCheckBTEnabled();
 
-        if (currentBTState) {
-            mBluetoothAdapter.disable();
-        } else {
-            mBluetoothAdapter.enable();
-        }
-
-        btStateCheck3.start();
-        btStateCheck3.join();
+        enableBT.start();
+        enableBT.join();
 
         assertThat("Proper state of BT is set when switched on",
                 mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothAdapter.isEnabled()));
@@ -305,21 +250,21 @@ public class ConnectivityMonitorTest {
 
     @Test
     public void testIsBluetoothEnabled() throws Exception {
-        mBluetoothAdapter.disable();
+        Thread disableBT = disableAndCkechBTDisabled();
 
-        Thread checkBTDisabled = createCheckBTDisabled();
-        Thread checkBTEnabled = createCheckBTEnabled();
+        disableBT.start();
+        disableBT.join();
 
-        checkBTDisabled.start();
-        checkBTDisabled.join();
         mConnectivityMonitor.updateConnectivityInfo(false);
 
         assertThat("Returns proper state of BT when switched off",
                 mConnectivityMonitor.isBluetoothEnabled(), is(false));
 
-        mBluetoothAdapter.enable();
-        checkBTEnabled.start();
-        checkBTEnabled.join();
+        Thread enableBT = enableAndCheckBTEnabled();
+
+        enableBT.start();
+        enableBT.join();
+
         mConnectivityMonitor.updateConnectivityInfo(false);
 
         assertThat("Returns proper state of BT when switched on",
@@ -336,21 +281,21 @@ public class ConnectivityMonitorTest {
 
     @Test
     public void testIsWifiEnabled() throws Exception {
+        Thread disableWifi = disableAndCheckWifiDisabled();
+
         mWifiManager.setWifiEnabled(false);
-
-        Thread checkWifiDisabled = createCheckWifiDisabled();
-        Thread checkWifiEnabled = createCheckWifiEnabled();
-
-        checkWifiDisabled.start();
-        checkWifiDisabled.join();
+        disableWifi.start();
+        disableWifi.join();
         mConnectivityMonitor.updateConnectivityInfo(false);
 
         assertThat("Returns proper state of WIFI when switched off",
                 mConnectivityMonitor.isWifiEnabled(), is(false));
 
+        Thread enableWifi = enableAndCheckWifiEnabled();
+
         mWifiManager.setWifiEnabled(true);
-        checkWifiEnabled.start();
-        checkWifiEnabled.join();
+        enableWifi.start();
+        enableWifi.join();
         mConnectivityMonitor.updateConnectivityInfo(false);
 
         assertThat("Returns proper state of WIFI when switched on",
