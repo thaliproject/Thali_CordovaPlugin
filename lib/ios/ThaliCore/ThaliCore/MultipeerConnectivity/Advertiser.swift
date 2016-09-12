@@ -11,6 +11,7 @@ import Foundation
 import MultipeerConnectivity
 
 final class Advertiser: NSObject {
+
     private let advertiser: MCNearbyServiceAdvertiser
 
     let peerIdentifier: PeerIdentifier

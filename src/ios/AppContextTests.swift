@@ -8,6 +8,7 @@
 //
 
 import XCTest
+import ThaliCore
 
 class AppContextDelegateMock: NSObject, AppContextDelegate {
     var networkStatusUpdated = false
@@ -101,5 +102,13 @@ class AppContextTests: XCTestCase {
         let _ = try? context.startListeningForAdvertisements()
         validateAdvertisingUpdate(delegateMock.advertisingListeningState, advertising: false,
                                   browsing: true)
+    }
+
+    func testPeerAvailabilityConversion() {
+        let peerAvailability = PeerAvailability(peerIdentifier: PeerIdentifier(), available: true)
+        let dictionaryValue = peerAvailability.dictionaryValue
+        XCTAssertEqual(peerAvailability.peerIdentifier.uuid, dictionaryValue[JSONValueKey.PeerIdentifier.rawValue] as? String)
+        XCTAssertEqual(peerAvailability.peerIdentifier.generation, dictionaryValue[JSONValueKey.Generation.rawValue] as? Int)
+        XCTAssertEqual(peerAvailability.available, dictionaryValue[JSONValueKey.PeerAvailable.rawValue] as? Bool)
     }
 }

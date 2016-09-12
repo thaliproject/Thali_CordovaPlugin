@@ -27,13 +27,16 @@ public enum JSONKey: String {
     case peerAvailable
     case discoveryActive
     case advertisingActive
+    case generation
 }
 
 // MARK: - JSON representation of PeerAvailability object
 extension PeerAvailability {
+
     var dictionaryValue: [String : AnyObject] {
         return [JSONKey.peerIdentifier.rawValue : peerIdentifier.uuid,
-                JSONKey.peerAvailable.rawValue : available
+                JSONKey.peerAvailable.rawValue : available,
+                JSONKey.generation.rawValue : peerIdentifier.generation,
         ]
     }
 }
@@ -61,7 +64,8 @@ extension PeerAvailability {
      - parameter discoveryAdvertisingState: json with information about peer's state
      - parameter context:                   related AppContext
      */
-    func context(context: AppContext, didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
+    func context(context: AppContext,
+                 didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
 
     /**
      Notifies about failing connection to port
@@ -103,10 +107,10 @@ extension PeerAvailability {
         }
     }()
     private let advertiserManager: AdvertiserManager
-    
+
 
     private func notifyOnDidUpdateNetworkStatus() {
-        //todo put actual network status
+        // TODO: put actual network status
         delegate?.context(self, didChangeNetworkStatus: jsonValue([:]))
     }
 
@@ -231,15 +235,21 @@ extension PeerAvailability {
     @objc public static let peerAvailabilityChanged: String = "peerAvailabilityChanged"
     @objc public static let appEnteringBackground: String = "appEnteringBackground"
     @objc public static let appEnteredForeground: String = "appEnteredForeground"
-    @objc public static let discoveryAdvertisingStateUpdateNonTCP: String = "discoveryAdvertisingStateUpdateNonTCP"
-    @objc public static let incomingConnectionToPortNumberFailed: String = "incomingConnectionToPortNumberFailed"
+    @objc public static let discoveryAdvertisingStateUpdateNonTCP: String =
+        "discoveryAdvertisingStateUpdateNonTCP"
+    @objc public static let incomingConnectionToPortNumberFailed: String =
+        "incomingConnectionToPortNumberFailed"
     @objc public static let executeNativeTests: String = "executeNativeTests"
     @objc public static let getOSVersion: String = "getOSVersion"
     @objc public static let didRegisterToNative: String = "didRegisterToNative"
     @objc public static let killConnections: String = "killConnections"
     @objc public static let connect: String = "connect"
-    @objc public static let stopAdvertisingAndListening: String = "stopAdvertisingAndListening"
-    @objc public static let startUpdateAdvertisingAndListening: String = "startUpdateAdvertisingAndListening"
-    @objc public static let stopListeningForAdvertisements: String = "stopListeningForAdvertisements"
-    @objc public static let startListeningForAdvertisements: String = "startListeningForAdvertisements"
+    @objc public static let stopAdvertisingAndListening: String =
+        "stopAdvertisingAndListening"
+    @objc public static let startUpdateAdvertisingAndListening: String =
+        "startUpdateAdvertisingAndListening"
+    @objc public static let stopListeningForAdvertisements: String =
+        "stopListeningForAdvertisements"
+    @objc public static let startListeningForAdvertisements: String =
+        "startListeningForAdvertisements"
 }

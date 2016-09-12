@@ -9,11 +9,17 @@
 import Foundation
 
 public struct PeerAvailability {
+
     public let peerIdentifier: PeerIdentifier
     public let available: Bool
+
+    public init(peerIdentifier: PeerIdentifier, available: Bool) {
+        self.peerIdentifier = peerIdentifier
+        self.available = available
+    }
 }
 
-//class for managing Thali browser's logic
+// Class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
     private let socketRelay: SocketRelay<BrowserVirtualSocketBuilder>
 

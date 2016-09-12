@@ -27,7 +27,10 @@ class AppStateNotificationsManagerTests: XCTestCase {
         c.willEnterBackgroundHandler = {
             willEnterBackgroundCalled = true
         }
-        NSNotificationCenter.defaultCenter().postNotificationName(UIApplicationWillResignActiveNotification, object: nil)
+        NSNotificationCenter.defaultCenter().postNotificationName(
+            UIApplicationWillResignActiveNotification,
+            object: nil
+        )
         XCTAssertTrue(willEnterBackgroundCalled)
     }
 
@@ -37,7 +40,10 @@ class AppStateNotificationsManagerTests: XCTestCase {
         c.didEnterForegroundHandler = {
             didEnterForegroundCalled = true
         }
-        NSNotificationCenter.defaultCenter().postNotificationName(UIApplicationDidBecomeActiveNotification, object: nil)
+        NSNotificationCenter.defaultCenter().postNotificationName(
+            UIApplicationDidBecomeActiveNotification,
+            object: nil
+        )
         XCTAssertTrue(didEnterForegroundCalled)
     }
 }

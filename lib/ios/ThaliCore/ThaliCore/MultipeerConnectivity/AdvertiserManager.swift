@@ -9,7 +9,7 @@
 
 import Foundation
 
-//class for managing Thali advertiser's logic
+// Class for managing Thali advertiser's logic
 @objc public final class AdvertiserManager: NSObject {
     private let disposeAdvertiserTimeout: Double
     private let serviceType: String
@@ -31,7 +31,8 @@ import Foundation
      - parameter inputStreamReceiveTimeout: Timeout in seconds for receiving input stream
 
      */
-    public init(serviceType: String, disposeAdvertiserTimeout: Double, inputStreamReceiveTimeout: Double) {
+    public init(serviceType: String, disposeAdvertiserTimeout: Double,
+                inputStreamReceiveTimeout: Double) {
         self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
         self.serviceType = serviceType
         socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(createSocketTimeout: inputStreamReceiveTimeout)
@@ -59,7 +60,8 @@ import Foundation
         }
     }
 
-    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16, errorHandler: ErrorType -> Void) -> Advertiser {
+    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16,
+                                 errorHandler: ErrorType -> Void) -> Advertiser {
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
                                     receivedInvitationHandler: { [weak self] session in
                                         self?.handle(session, withPort: port)

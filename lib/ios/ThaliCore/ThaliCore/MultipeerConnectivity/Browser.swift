@@ -11,6 +11,7 @@ import Foundation
 import MultipeerConnectivity
 
 final class Browser: NSObject {
+
     private let browser: MCNearbyServiceBrowser
     private let didFindPeerHandler: (PeerIdentifier) -> Void
     private let didLosePeerHandler: (PeerIdentifier) -> Void
