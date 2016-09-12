@@ -105,7 +105,8 @@ class SessionTests: XCTestCase {
         var err: ErrorType?
 
         mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .Connected)
-        session.createOutputStream(withName: "test") { [weak errorOnCreateStreamExpectation] stream, error in
+        session.createOutputStream(withName: "test") {
+            [weak errorOnCreateStreamExpectation] stream, error in
             err = error
             errorOnCreateStreamExpectation?.fulfill()
         }

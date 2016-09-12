@@ -46,7 +46,8 @@ class AdvertiserManagerTests: XCTestCase {
                                                              errorHandler: unexpectedErrorHandler)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 2)
         let expectation = expectationWithDescription("advertiser removed after delay")
-        advertiserManager.didRemoveAdvertiserWithIdentifierHandler = { [weak expectation] identifier in
+        advertiserManager.didRemoveAdvertiserWithIdentifierHandler = {
+            [weak expectation] identifier in
             XCTAssertEqual(firstAdvertiserIdentifier, identifier)
             expectation?.fulfill()
         }

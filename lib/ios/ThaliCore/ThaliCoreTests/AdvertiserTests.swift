@@ -97,9 +97,11 @@ class AdvertiserTests: XCTestCase {
     func testStartStopChangesAdvertisingState() {
         let peerID: MCPeerID = MCPeerID(displayName: NSUUID().UUIDString)
         let advertiser = startAdvertiser(with: peerID,
-                                          receivedInvitationHandler: unexpectedSessionHandler,
-                                          disconnectHandler: unexpectedDisconnectHandler,
-                                          mcInvitationHandler: { _ in })
+                                         receivedInvitationHandler: {
+                                            print("received session: \($0)")
+                                         },
+                                         disconnectHandler: unexpectedDisconnectHandler,
+                                         mcInvitationHandler: { _ in })
 
         XCTAssertTrue(advertiser.advertising)
         advertiser.stopAdvertising()

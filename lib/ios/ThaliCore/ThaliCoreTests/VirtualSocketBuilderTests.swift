@@ -46,7 +46,8 @@ class VirtualSocketBuilderTests: XCTestCase {
     }
 
     private func createSocket<Builder: VirtualSocketBuilder>(session: Session,
-                              completion: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) -> Builder {
+                              completion: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void)
+                                                                                        -> Builder {
         return Builder(session: session, completionHandler: completion)
     }
 

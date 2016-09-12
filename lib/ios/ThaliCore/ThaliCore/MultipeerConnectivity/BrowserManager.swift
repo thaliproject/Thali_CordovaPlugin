@@ -3,7 +3,8 @@
 //  BrowserManager.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
+//  information.
 //
 
 import Foundation
@@ -37,18 +38,21 @@ public final class BrowserManager: NSObject {
                 peersAvailabilityChangedHandler: ([PeerAvailability]) -> Void) {
         self.serviceType = serviceType
         self.peersAvailabilityChangedHandler = peersAvailabilityChangedHandler
-        socketRelay = SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: inputStreamReceiveTimeout)
+        socketRelay =
+            SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: inputStreamReceiveTimeout)
     }
 
     private func handleFoundPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChangedHandler([PeerAvailability(peerIdentifier: identifier, available: true)])
+        let peerAvailability = PeerAvailability(peerIdentifier: identifier, available: true)
+        peersAvailabilityChangedHandler([peerAvailability])
         availablePeers.modify {
             $0.append(identifier)
         }
     }
 
     private func handleLostPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChangedHandler([PeerAvailability(peerIdentifier: identifier, available: false)])
+        let peerAvailability = PeerAvailability(peerIdentifier: identifier, available: false)
+        peersAvailabilityChangedHandler([peerAvailability])
         availablePeers.modify {
             if let index = $0.indexOf(identifier) {
                 $0.removeAtIndex(index)

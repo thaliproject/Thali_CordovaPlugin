@@ -158,7 +158,6 @@ class BrowserManagerTests: XCTestCase {
                                                              errorHandler: unexpectedErrorHandler)
         let secondGenerationAdvertiserIdentifier =
             advertiserManager.currentAdvertiser?.peerIdentifier
-
         let browser = BrowserManager(serviceType: serviceType, inputStreamReceiveTimeout: 1) {
             [weak found2AdvertisersExpectation] peerAvailability in
             if let availability = peerAvailability.first

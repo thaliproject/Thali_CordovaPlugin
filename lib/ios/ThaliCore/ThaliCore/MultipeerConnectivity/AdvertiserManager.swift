@@ -35,7 +35,8 @@ import Foundation
                 inputStreamReceiveTimeout: Double) {
         self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
         self.serviceType = serviceType
-        socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(createSocketTimeout: inputStreamReceiveTimeout)
+        socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(
+            createSocketTimeout: inputStreamReceiveTimeout)
     }
 
     private func handle(session: Session, withPort port: UInt16) {
@@ -87,13 +88,16 @@ import Foundation
         currentAdvertiser = nil
     }
 
-    public func startUpdateAdvertisingAndListening(withPort port: UInt16, errorHandler: ErrorType -> Void) {
+    public func startUpdateAdvertisingAndListening(withPort port: UInt16,
+                                                            errorHandler: ErrorType -> Void) {
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
             addAdvertiserToDisposeQueue(currentAdvertiser)
-            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port, errorHandler: errorHandler)
+            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port,
+                                                     errorHandler: errorHandler)
         } else {
-            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port, errorHandler: errorHandler)
+            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port,
+                                                     errorHandler: errorHandler)
         }
 
         assert(self.currentAdvertiser != nil,
