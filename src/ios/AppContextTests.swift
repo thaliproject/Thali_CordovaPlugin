@@ -48,8 +48,8 @@ class AppContextTests: XCTestCase {
 
     private func validateAdvertisingUpdate(jsonString: String, advertising: Bool, browsing: Bool) {
         let json = jsonDicitonaryFrom(jsonString)
-        let listeningActive = (json?["discoveryActive"] as? Bool)
-        let advertisingActive = (json?["advertisingActive"] as? Bool)
+        let listeningActive = (json?[JSONKey.discoveryActive.rawValue] as? Bool)
+        let advertisingActive = (json?[JSONKey.advertisingActive.rawValue] as? Bool)
         print(advertisingActive)
         print(listeningActive)
         XCTAssertEqual(advertisingActive, advertising)

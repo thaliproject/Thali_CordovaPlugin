@@ -22,11 +22,18 @@ func jsonValue(object: AnyObject) -> String {
     case UnknownError
 }
 
+public enum JSONKey: String {
+    case peerIdentifier
+    case peerAvailable
+    case discoveryActive
+    case advertisingActive
+}
+
 // MARK: - JSON representation of PeerAvailability object
 extension PeerAvailability {
     var dictionaryValue: [String : AnyObject] {
-        return ["peerIdentifier" : peerIdentifier.uuid,
-                "peerAvailable" : available
+        return [JSONKey.peerIdentifier.rawValue : peerIdentifier.uuid,
+                JSONKey.peerAvailable.rawValue : available
         ]
     }
 }
@@ -120,8 +127,8 @@ extension PeerAvailability {
 
     private func updateListeningAdvertisingState() {
         let newState = [
-            "discoveryActive" : browserManager.listening,
-            "advertisingActive" : advertiserManager.advertising
+            JSONKey.discoveryActive.rawValue : browserManager.listening,
+            JSONKey.advertisingActive.rawValue : advertiserManager.advertising
         ]
         delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))
     }
