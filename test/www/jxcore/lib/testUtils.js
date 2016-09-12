@@ -1,5 +1,8 @@
 'use strict';
 
+var util = require('util');
+var format = util.format;
+
 var logCallback;
 var os = require('os');
 var tmp = require('tmp');
@@ -77,13 +80,26 @@ function isFunction(functionToCheck) {
  * receive logging messages and display them.
  * @param {string} message
  */
-module.exports.logMessageToScreen = function (message) {
+var logMessageToScreen = function (message) {
   if (isFunction(logCallback)) {
     logCallback(message);
   } else {
     logger.warn('logCallback not set!');
   }
 };
+module.exports.logMessageToScreen = logMessageToScreen;
+
+var logger = {};
+['debug', 'info', 'warn', 'error'].forEach(function (level) {
+  logger[level] = function () {
+    var message = format.apply(format, arguments);
+    var date = new Date().toISOString()
+      .replace(/T/, ' ')
+      .replace(/.[^.]+$/, '');
+    logMessageToScreen("[" + date + "] " + level.toUpperCase() + " " + message);
+  };
+});
+module.exports.logger = logger;
 
 var myName = '';
 var myNameCallback = null;
@@ -210,7 +226,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
   .then(function (networkStatus) {
-    module.exports.logMessageToScreen(
+    logMessageToScreen(
       'Device did not have required hardware capabilities!'
     );
     if (networkStatus.bluetoothLowEnergy === 'on') {

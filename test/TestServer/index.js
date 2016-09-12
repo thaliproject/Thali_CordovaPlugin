@@ -36,11 +36,11 @@ var logger = new winston.Logger({
 });
 
 var server = http.createServer();
-server.listen(3000, function () {
-  logger.info('listening on *:3000');
-});
 var io = socketIO(server, {
   transports: ['websocket']
+});
+server.listen(3000, function () {
+  logger.info('listening on *:3000');
 });
 
 process
@@ -97,7 +97,7 @@ try {
     }
   });
 
-  io.on('connection', function (socket) {
+  io.on('connect', function (socket) {
     // A new device has connected to us.
     // We expect the next thing to happen to be a 'present' message.
 

@@ -41,10 +41,23 @@ if (hasJavaScriptSuffix(testsToRun)) {
   });
 }
 
+var platform;
+if (
+  typeof jxcore !== 'undefined' &&
+  jxcore &&
+  jxcore.utils &&
+  jxcore.utils.OSInfo() &&
+  jxcore.utils.OSInfo().isAndroid
+) {
+  platform = 'android';
+} else {
+  platform = 'ios';
+}
+
 testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
   testUtils.getOSVersion()
   .then(function (version) {
-    thaliTape.begin(version, hasRequiredHardware);
+    return thaliTape.begin(platform, version, hasRequiredHardware);
   });
 });
