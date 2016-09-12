@@ -2,7 +2,7 @@
   "name": "thali",
   "version": "2.1.0",
   "description": "Thali Cordova Plugin",
-  "main": "thalireplicationmanager.js",
+  "main": "NextGeneration/thaliManager.js",
   "dependencies": {
     "body-parser": "1.13.3",
     "express": "4.13.3",

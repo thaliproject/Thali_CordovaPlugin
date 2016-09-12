@@ -22,7 +22,7 @@ exec('cordova info', function (error) {
     process.exit(1);
   }
   var installDirectory = path.join(__dirname, 'install');
-  exec('jx npm install --no-optional --autoremove "*.gz"',
+  exec('npm install --no-optional --production & find . -name "*.gz" -delete',
         { cwd: installDirectory },
     function (error, stdout, stderr) {
       // Log the output in all cases since it might contain useful
