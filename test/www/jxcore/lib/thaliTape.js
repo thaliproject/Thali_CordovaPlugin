@@ -200,6 +200,7 @@ var platform =
 
 thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
 
+  console.log("thaliTape.begin");
   var serverOptions = {
     transports: ['websocket']
   };
@@ -314,10 +315,12 @@ if (typeof jxcore === 'undefined' ||
     typeof Mobile !== 'undefined') {
   // On mobile, or outside of jxcore (some dev scenarios) we use
   // the server-coordinated thaliTape
+  console.log("Use thaliTape");
   objectToExport = thaliTape;
   objectToExport.coordinated = true;
 } else {
   // On desktop we just use simple non-coordinated tape
+  console.log("Use simpleTape");
   objectToExport = require('./simpleTape');
   objectToExport.coordinated = false;
 }
