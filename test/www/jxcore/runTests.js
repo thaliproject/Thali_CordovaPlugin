@@ -33,30 +33,31 @@ if (hasJavaScriptSuffix(testsToRun)) {
   loadFile(path.join(__dirname, testsToRun));
 } else {
   fs.readdirSync(path.join(__dirname, testsToRun)).forEach(function (fileName) {
-    if ((fileName.indexOf('test') === 0) && hasJavaScriptSuffix(fileName)) {
+    if ((fileName.indexOf('test') === 0) &&
+         hasJavaScriptSuffix(fileName)) {
       var filePath = path.join(__dirname, testsToRun, fileName);
       loadFile(filePath);
     }
   });
 }
 
-module.exports.run = function () {
-  return testUtils.hasRequiredHardware()
-    .then(function (hasRequiredHardware) {
-      return testUtils.getOSVersion()
-      .then(function (version) {
-        console.log('ThaliTestRunner :: Running ThaliTape');
-        return thaliTape.begin(version, hasRequiredHardware);
-      });
-    });
-};
-
-// If running this script from CLI
-// http://thlorenz.com/blog/how-to-detect-if-a-nodejs-module-is-run-as-a-script/
-// then execute immediately
-if (!module.parent) {
-  module.exports.run()
-    .catch(function (error) {
-      console.log('Run failed with ' + error);
-    });
+var platform;
+if (
+  typeof jxcore !== 'undefined' &&
+  jxcore &&
+  jxcore.utils &&
+  jxcore.utils.OSInfo() &&
+  jxcore.utils.OSInfo().isAndroid
+) {
+  platform = 'android';
+} else {
+  platform = 'ios';
 }
+
+testUtils.hasRequiredHardware()
+.then(function (hasRequiredHardware) {
+  testUtils.getOSVersion()
+  .then(function (version) {
+    return thaliTape.begin(platform, version, hasRequiredHardware);
+  });
+});
