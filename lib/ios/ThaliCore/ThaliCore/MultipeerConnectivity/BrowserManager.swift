@@ -12,6 +12,11 @@ public struct PeerAvailability {
 
     public let peerIdentifier: PeerIdentifier
     public let available: Bool
+
+    public init(peerIdentifier: PeerIdentifier, available: Bool) {
+        self.peerIdentifier = peerIdentifier
+        self.available = available
+    }
 }
 
 // Class for managing Thali browser's logic
