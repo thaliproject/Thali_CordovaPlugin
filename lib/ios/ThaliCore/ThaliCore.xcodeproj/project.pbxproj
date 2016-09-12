@@ -305,8 +305,7 @@
 				FAADDB0E92AB65796641015A /* SocketRelay.swift */,
 				FAADD4A08897E0AF08752741 /* InputStreamHandlerTaskQueue.swift */,
 			);
-			name = SocketConnection;
-			path = "Socket Connection";
+			path = SocketConnection;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
