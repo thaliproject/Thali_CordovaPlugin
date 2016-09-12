@@ -475,100 +475,103 @@ if (jxcore.utils.OSInfo().isMobile) {
   return;
 }
 
-test('network changes are ignored while stopping', function (t) {
-  wifiInfrastructure.startListeningForAdvertisements()
-  .then(function () {
-    wifiInfrastructure.states.stopping = true;
-    var spy = sinon.spy(wifiInfrastructure, 'startListeningForAdvertisements');
-    testUtils.toggleWifi(false)
+// Issue #1015
+if (process.platform !== 'ios') {
+  test('network changes are ignored while stopping', function (t) {
+    wifiInfrastructure.startListeningForAdvertisements()
     .then(function () {
-      return testUtils.toggleWifi(true);
-    })
-    .then(function () {
-      t.equals(spy.callCount, 0, 'should not be called');
-      wifiInfrastructure.startListeningForAdvertisements.restore();
-      t.end();
+      wifiInfrastructure.states.stopping = true;
+      var spy = sinon.spy(wifiInfrastructure, 'startListeningForAdvertisements');
+      testUtils.toggleWifi(false)
+      .then(function () {
+        return testUtils.toggleWifi(true);
+      })
+      .then(function () {
+        t.equals(spy.callCount, 0, 'should not be called');
+        wifiInfrastructure.startListeningForAdvertisements.restore();
+        t.end();
+      });
     });
   });
-});
 
-var tryStartingFunctionWhileWifiOff = function (t, functionName, keyName) {
-  wifiInfrastructure.stop()
-  .then(function () {
-    testUtils.toggleWifi(false);
+  var tryStartingFunctionWhileWifiOff = function (t, functionName, keyName) {
+    wifiInfrastructure.stop()
+    .then(function () {
+      testUtils.toggleWifi(false);
+      ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
+      function (networkChangedValue) {
+        t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
+        wifiInfrastructure.start(express.Router())
+        .then(function () {
+          return wifiInfrastructure[functionName]();
+        })
+        .then(function () {
+          t.fail('the call should not succeed');
+          t.end();
+        })
+        .catch(function (error) {
+          t.equals(error.message, 'Radio Turned Off', 'specific error expected');
+          wifiInfrastructure.once('discoveryAdvertisingStateUpdateWifiEvent',
+          function (discoveryAdvertisingStateUpdateValue) {
+            t.equals(discoveryAdvertisingStateUpdateValue[keyName], true,
+              keyName + ' should be true');
+            t.end();
+          });
+          testUtils.toggleWifi(true);
+        });
+      });
+    });
+  };
+
+  test('#startListeningForAdvertisements returns error if wifi is off and ' +
+    'fires event when on', function (t) {
+    tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements',
+      'discoveryActive');
+  });
+
+  test('#startUpdateAdvertisingAndListening returns error if wifi is off and ' +
+    'fires event when on', function (t) {
+    tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening',
+      'advertisingActive');
+  });
+
+  test('when wifi is enabled discovery is activated and peers become available',
+  function (t) {
     ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
     function (networkChangedValue) {
       t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
-      wifiInfrastructure.start(express.Router())
-      .then(function () {
-        return wifiInfrastructure[functionName]();
-      })
-      .then(function () {
-        t.fail('the call should not succeed');
-        t.end();
-      })
-      .catch(function (error) {
-        t.equals(error.message, 'Radio Turned Off', 'specific error expected');
-        wifiInfrastructure.once('discoveryAdvertisingStateUpdateWifiEvent',
-        function (discoveryAdvertisingStateUpdateValue) {
-          t.equals(discoveryAdvertisingStateUpdateValue[keyName], true,
-            keyName + ' should be true');
-          t.end();
+      var peerIdentifier = 'urn:uuid:' + uuid.v4();
+      var testServer = createTestServer(peerIdentifier);
+      testServer.start(function () {
+        wifiInfrastructure.startListeningForAdvertisements()
+        .catch(function (error) {
+          t.equals(error.message, 'Radio Turned Off', 'specific error expected');
+
+          var peerAvailableListener = function (peer) {
+            if (peer.peerIdentifier !== peerIdentifier) {
+              return;
+            }
+
+            t.equal(peer.peerIdentifier, peerIdentifier,
+                    'peer identifier should match');
+            t.equal(peer.hostAddress, testSeverHostAddress,
+                    'host address should match');
+            t.equal(peer.portNumber, testServerPort,
+                    'port should match');
+
+            wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+                                              peerAvailableListener);
+            testServer.stop(function () {
+              t.end();
+            });
+          };
+
+          wifiInfrastructure.on('wifiPeerAvailabilityChanged',
+                                peerAvailableListener);
+          testUtils.toggleWifi(true);
         });
-        testUtils.toggleWifi(true);
       });
     });
+    testUtils.toggleWifi(false);
   });
-};
-
-test('#startListeningForAdvertisements returns error if wifi is off and ' +
-  'fires event when on', function (t) {
-  tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements',
-    'discoveryActive');
-});
-
-test('#startUpdateAdvertisingAndListening returns error if wifi is off and ' +
-  'fires event when on', function (t) {
-  tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening',
-    'advertisingActive');
-});
-
-test('when wifi is enabled discovery is activated and peers become available',
-function (t) {
-  ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
-  function (networkChangedValue) {
-    t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
-    var peerIdentifier = 'urn:uuid:' + uuid.v4();
-    var testServer = createTestServer(peerIdentifier);
-    testServer.start(function () {
-      wifiInfrastructure.startListeningForAdvertisements()
-      .catch(function (error) {
-        t.equals(error.message, 'Radio Turned Off', 'specific error expected');
-
-        var peerAvailableListener = function (peer) {
-          if (peer.peerIdentifier !== peerIdentifier) {
-            return;
-          }
-
-          t.equal(peer.peerIdentifier, peerIdentifier,
-                  'peer identifier should match');
-          t.equal(peer.hostAddress, testSeverHostAddress,
-                  'host address should match');
-          t.equal(peer.portNumber, testServerPort,
-                  'port should match');
-
-          wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
-                                            peerAvailableListener);
-          testServer.stop(function () {
-            t.end();
-          });
-        };
-
-        wifiInfrastructure.on('wifiPeerAvailabilityChanged',
-                              peerAvailableListener);
-        testUtils.toggleWifi(true);
-      });
-    });
-  });
-  testUtils.toggleWifi(false);
-});
+}
