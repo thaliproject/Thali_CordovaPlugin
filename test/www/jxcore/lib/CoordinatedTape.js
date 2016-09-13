@@ -3,9 +3,10 @@
 var util     = require('util');
 var inherits = util.inherits;
 
-var assert  = require('assert');
-var Promise = require('bluebird');
-var uuid    = require('node-uuid');
+var objectAssign = require('object-assign');
+var assert       = require('assert');
+var Promise      = require('bluebird');
+var uuid         = require('node-uuid');
 
 var SimpleThaliTape   = require('./SimpleTape');
 var CoordinatedClient = require('./CoordinatedClient');
@@ -28,9 +29,19 @@ CoordinatedThaliTape.states    = SimpleThaliTape.states;
 CoordinatedThaliTape.instances = SimpleThaliTape.instances;
 CoordinatedThaliTape.begin     = SimpleThaliTape.begin;
 
+// 'tape.uuid' here.
 CoordinatedThaliTape.uuid = uuid.v4();
 
-CoordinatedThaliTape.prototype._begin = function (platform, version, hasRequiredHardware) {
+CoordinatedThaliTape.prototype.defaults = objectAssign(
+  {},
+  CoordinatedThaliTape.prototype.defaults,
+  {
+    emitRetryCount:   20,
+    emitRetryTimeout: 1000
+  }
+);
+
+CoordinatedThaliTape.prototype._begin = function () {
   assert(
     this._state === CoordinatedThaliTape.states.created,
     'we should be in created state'
@@ -38,17 +49,21 @@ CoordinatedThaliTape.prototype._begin = function (platform, version, hasRequired
   this._state = CoordinatedThaliTape.states.started;
 }
 
+CoordinatedThaliTape.prototype.getTests = function () {
+  var self = this;
+  return this._tests.map(function (test) {
+    // We don't need to copy '_options', it will be used readonly.
+    test.options = self._options;
+    return test;
+  });
+}
+
 CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware) {
   var self = this;
 
   var tests = CoordinatedThaliTape.instances.reduce(function (tests, thaliTape) {
     thaliTape._begin();
-    var newTests = thaliTape._tests.map(function (test) {
-      test.setup    = thaliTape._options.setup;
-      test.teardown = thaliTape._options.teardown;
-      return test;
-    });
-    return tests.concat(newTests);
+    return tests.concat(thaliTape.getTests());
   }, []);
   CoordinatedThaliTape.instances = [];
 

@@ -3,8 +3,8 @@
 var util     = require('util');
 var format   = util.format;
 var inherits = util.inherits;
-var extend   = util._extend;
 
+var objectAssign   = require('object-assign');
 var assert         = require('assert');
 var tape           = require('tape-catch');
 var Promise        = require('bluebird');
@@ -18,18 +18,26 @@ var serverAddress = require('../server-address');
 
 var logger = testUtils.logger;
 
-function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, options) {
+function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) {
   asserts.isArray(tests);
   tests.forEach(function (test) {
     asserts.isString(test.name);
     asserts.isFunction(test.fun);
-    if (test.setup) {
-      asserts.isFunction(test.setup);
-    }
-    if (test.teardown) {
-      asserts.isFunction(test.teardown);
-    }
+    asserts.isFunction(test.options.setup);
+    asserts.isFunction(test.options.teardown);
+    asserts.isNumber(test.options.testTimeout);
+    asserts.isNumber(test.options.emitRetryCount);
+    asserts.isNumber(test.options.emitRetryTimeout);
   });
+  assert(
+    tests.length > 0,
+    'we should have at least one test'
+  );
+  // We will use emit retry options from first test as default.
+  this._defaults = {
+    emitRetryCount:   tests[0].options.emitRetryCount,
+    emitRetryTimeout: tests[0].options.emitRetryTimeout
+  };
 
   this._tests = tests.slice(0);
   this._testNames = this._tests.map(function (test) {
@@ -47,11 +55,6 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, 
 
   asserts.isBool(hasRequiredHardware);
   this._hasRequiredHardware = hasRequiredHardware;
-
-  this._options = extend({}, CoordinatedClient.defaults);
-  this._options = extend(this._options, options);
-  asserts.isNumber(this._options.emitRetryCount);
-  asserts.isNumber(this._options.emitRetryTimeout);
 
   this._state = CoordinatedClient.states.created;
 
@@ -72,12 +75,6 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, 
 }
 
 inherits(CoordinatedClient, EventEmitter);
-
-CoordinatedClient.defaults = {
-  emitRetryCount:   20,
-  emitRetryTimeout: 1000,
-  testTimeout:      5 * 60 * 1000
-}
 
 CoordinatedClient.states = {
   created:   'created',
@@ -198,6 +195,7 @@ CoordinatedClient.prototype._complete = function () {
   this._emit('complete_confirmed')
   .then(function () {
     logger.debug('all tests completed');
+
     // We are waiting for 'disconnect' event.
     self._state = CoordinatedClient.states.completed;
   });
@@ -216,16 +214,18 @@ CoordinatedClient.prototype._failed = function (error) {
 }
 
 // Emitting message to 'connected' socket without confirmation.
-CoordinatedClient.prototype._emit = function (event, data) {
+// We will just check that socket is 'connected'.
+CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
   var self = this;
 
+  var options = objectAssign({}, this._defaults, externalOptions);
   var timeout;
   var retryIndex = 0;
   data = data || '';
 
   return new Promise(function (resolve, reject) {
     function emit() {
-      if (retryIndex >= self._options.emitRetryCount) {
+      if (retryIndex >= options.emitRetryCount) {
         reject(new Error(
           'retry count exceed'
         ));
@@ -238,7 +238,7 @@ CoordinatedClient.prototype._emit = function (event, data) {
         resolve();
         return;
       }
-      timeout = setTimeout(emit, self._options.emitRetryTimeout);
+      timeout = setTimeout(emit, options.emitRetryTimeout);
     }
     emit();
   })
@@ -250,10 +250,10 @@ CoordinatedClient.prototype._emit = function (event, data) {
 CoordinatedClient.prototype._scheduleTest = function (test) {
   var self = this;
 
-  function process(tape, event, fun) {
+  function processEvent(tape, event, fun) {
     return new Promise(function (resolve, reject) {
       self._io.once(event, function (data) {
-        self._emit(event + '_confirmed', data);
+        self._emit(event + '_confirmed', data, test.options);
 
         // 'end' can be called without 'result', so success is true by default.
         // We can receive 'result' many times.
@@ -271,7 +271,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
             JSON.stringify({
               'success': success,
               'data':    tape.data
-            })
+            }),
+            test.options
           )
           .then(function () {
             if (success) {
@@ -293,46 +294,36 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
   }
 
   return new Promise(function (resolve, reject) {
-    if (test.setup) {
-      tape('setup', function (tape) {
-        process(tape, 'setup_' + test.name, test.setup)
-        .catch(function (error) {
-          reject(error);
-        });
-      });
-    }
-
-    tape(test.name, function (tape) {
-      if (test.expect !== undefined && test.expect !== null) {
-        tape.plan(test.expect);
-      }
-      process(tape, 'run_' + test.name, test.fun)
-      .then(function () {
-        if (!test.teardown) {
-          // 'teardown' is not defined, we can exit after test itself.
-          resolve();
-        }
-      })
+    tape('setup', function (tape) {
+      processEvent(tape, 'setup_' + test.name, test.options.setup)
       .catch(function (error) {
         reject(error);
       });
     });
 
-    if (test.teardown) {
-      tape('teardown', function (tape) {
-        process(tape, 'teardown_' + test.name, test.teardown)
-        .then(function () {
-          // We should exit after test teardown.
-          resolve();
-        })
-        .catch(function (error) {
-          reject(error);
-        });
+    tape(test.name, function (tape) {
+      if (test.expect !== undefined && test.expect !== null) {
+        tape.plan(test.expect);
+      }
+      processEvent(tape, 'run_' + test.name, test.fun)
+      .catch(function (error) {
+        reject(error);
       });
-    }
+    });
+
+    tape('teardown', function (tape) {
+      processEvent(tape, 'teardown_' + test.name, test.options.teardown)
+      .then(function () {
+        // We should exit after test teardown.
+        resolve();
+      })
+      .catch(function (error) {
+        reject(error);
+      });
+    });
   })
   .timeout(
-    this._options.testTimeout,
+    test.options.testTimeout,
     format('timeout, test: \'%s\'', test.name)
   );
 }

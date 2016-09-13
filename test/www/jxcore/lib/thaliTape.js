@@ -17,12 +17,24 @@ var test = tape({
     // will be called after each device has ended the test
     // do any final tear down for the test in here
     t.end();
-  }
+  },
+  testTimeout:      10 * 60 * 1000 , // timeout for each test.
+  emitRetryCount:   20,              // count of emit retries for coordinated test.
+  emitRetryTimeout: 1000             // retry timeout for coordinated test.
 });
 */
 
+var Promise = require('bluebird');
+
 var testUtils = require('./testUtils');
 
+
+Promise.config({
+  warnings:        true,
+  longStackTraces: true,
+  cancellation:    true,
+  monitoring:      true
+});
 
 var logger = testUtils.logger;
 
