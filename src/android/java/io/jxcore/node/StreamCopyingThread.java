@@ -158,6 +158,7 @@ class StreamCopyingThread extends Thread {
         if (numberOfBytesRead == -1 && !mDoStop) {
             Log.d(TAG, "The end of the input stream has been reached (thread ID: "
                     + getId() + ", thread name: " + mThreadName + ")");
+            closeOutputStream();
             mIsInputStreamDone = true;
         }
 
@@ -169,6 +170,19 @@ class StreamCopyingThread extends Thread {
                 + "), during the lifetime of the thread the total number of bytes read was "
                 + totalNumberOfBytesRead + " and the total number of bytes written "
                 + totalNumberOfBytesWritten);
+    }
+
+    private void closeOutputStream(){
+        try {
+            mOutputStream.flush();
+            mOutputStream.close();
+        } catch (IOException e) {
+            String errorMessage = "Failed to close output stream";
+            Log.e(TAG, errorMessage + " (thread ID: " + getId() + ", thread name: "
+                + mThreadName + "): " + e.getMessage());
+            errorMessage += ": " + e.getMessage();
+            mListener.onStreamCopyError(this, errorMessage);
+        }
     }
 
     /**

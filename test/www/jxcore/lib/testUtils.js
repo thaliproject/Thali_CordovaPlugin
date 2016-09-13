@@ -4,7 +4,6 @@ var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
 var Promise = require('lie');
 var https = require('https');
@@ -671,17 +670,35 @@ module.exports.runTestOnAllParticipants = function (t, router,
 
 // We doesn't want our test to run infinite time.
 // We will replace t.end with custom exit function.
+<<<<<<< HEAD
 module.exports.testTimeout = function (t, timeout) {
+=======
+module.exports.testTimeout = function (t, timeout, callback) {
+>>>>>>> 1a293f3a78e4099d23156379bee6f935d1517e8f
   var timer = setTimeout(function () {
     t.fail('test timeout');
     t.end();
   }, timeout);
+<<<<<<< HEAD
   var oldEnd = t.end;
   t.end = function () {
+=======
+
+  var oldEnd = t.end;
+  t.end = function () {
+    // Restoring original t.end.
+    t.end = oldEnd;
+
+    if (typeof callback === 'function') {
+      callback();
+    }
+
+>>>>>>> 1a293f3a78e4099d23156379bee6f935d1517e8f
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
   }
 }
+<<<<<<< HEAD
 
 module.exports.checkArgs = function (t, spy, description, args) {
   t.ok(spy.calledOnce, description + ' was called once');
@@ -698,3 +715,5 @@ module.exports.checkArgs = function (t, spy, description, args) {
     t.ok(arg.compare(currentArgs[index]), argDescription);
   });
 }
+=======
+>>>>>>> 1a293f3a78e4099d23156379bee6f935d1517e8f

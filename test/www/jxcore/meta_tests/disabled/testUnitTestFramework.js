@@ -11,16 +11,24 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    console.log();
     t.end();
   }
 });
 
 var createTestDevice = function (socket, platform, index) {
-  var name = platform + ' device ' + index;
-  var uuid = platform + '-uuid-' + index;
   var tests = ['test-1', 'test-2'];
   return new TestDevice(
-    socket, name, uuid, platform, 'unittest', tests, true, null
+    socket,
+    {
+      name: platform + ' device ' + index,
+      uuid: platform + '-uuid-' + index,
+      os: platform,
+      type: 'unittest',
+      supportedHardware: true,
+      tests: tests,
+      btaddress: null
+    }
   );
 };
 
@@ -44,8 +52,9 @@ var testConfig = {
 
 var addSetupHandler = function (device, cb) {
   device.tests.forEach(function (test) {
-    device.socket.on('setup_' + test, function () {
-      device.socket.emit(util.format('setup_%s_ok', test));
+    device._socket.on('setup_' + test, function (data) {
+      device._socket.emit(util.format('setup_%s_confirmed', test), data);
+      device._socket.emit(util.format('setup_%s_finished', test));
       cb();
     });
   });
@@ -61,8 +70,9 @@ test('should get right number of setup emits', function (t) {
   var mockSocket = new EventEmitter();
   var mockAndroidSocket = new EventEmitter();
 
-  mockSocket.on('schedule', function () {
-    mockSocket.emit('schedule_complete');
+  mockSocket.on('schedule', function (data) {
+    mockSocket.emit('schedule_confirmed', data);
+    mockSocket.emit('schedule_finished');
   });
 
   function addAndroidSetupHandlers(device) {
@@ -89,8 +99,9 @@ test('should get right number of setup emits', function (t) {
     });
   }
 
-  mockAndroidSocket.on('schedule', function () {
-    mockAndroidSocket.emit('schedule_complete');
+  mockAndroidSocket.on('schedule', function (data) {
+    mockAndroidSocket.emit('schedule_confirmed', data);
+    mockAndroidSocket.emit('schedule_finished');
   });
 
   var unitTestFramework = new UnitTestFramework(testConfig);
@@ -104,7 +115,7 @@ test('should discard surplus devices', function (t) {
   var unitTestFramework = new UnitTestFramework(testConfig);
 
   unitTestFramework.startTests = function (devices) {
-    t.equals(unitTestFramework.devices.ios.length, amountOfDevices,
+    t.equals(unitTestFramework.platforms.ios.devices.length, amountOfDevices,
       'should have discarded the extra devices');
     t.end();
   };
@@ -125,6 +136,7 @@ test('should disqualify unsupported device', function (t) {
 
   var mockSocket = new EventEmitter();
   mockSocket.on('disqualify', function () {
+    mockSocket.emit('disqualify_confirmed');
     t.ok(true, 'disqualified unsupported device');
     t.end();
   });
@@ -137,12 +149,17 @@ test('should disqualify unsupported device', function (t) {
   }
 
   unitTestFramework.addDevice(
-    addSetupHandler(
-      new TestDevice(
-        mockSocket, 'some-name', 'some-uuid', 'ios', 'unittest', [],
-        false, // this means the device doesn't have supported hardware
-        null
-      )
-    )
+    addSetupHandler(new TestDevice(
+      mockSocket,
+      {
+        name: 'some-name',
+        uuid: 'some-uuid',
+        os: 'ios',
+        type: 'unittest',
+        supportedHardware: false, // this means the device doesn't have supported hardware
+        tests: ['test'],
+        btaddress: null
+      }
+    ))
   );
 });
