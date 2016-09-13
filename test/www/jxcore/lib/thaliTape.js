@@ -44,6 +44,7 @@ var tests = {};
 var allSuccess = true;
 
 var emitWhenConnected = function (socket, name, data) {
+  console.log("thaliTape.emitWhenConnected");
   if (socket.connected) {
     data ? socket.emit(name, data) : socket.emit(name);
   } else {
@@ -200,6 +201,7 @@ var platform =
 
 thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
 
+  console.log("thaliTape.begin");
   var serverOptions = {
     transports: ['websocket']
   };
@@ -207,6 +209,7 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   var testServer = io('http://' + require('../server-address') + ':' + 3000 +
     '/', serverOptions);
 
+  console.log("thaliTape.testServer created");
   var firstConnection = true;
   var onConnection = function () {
     if (firstConnection) {
@@ -245,6 +248,7 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   // we get the connect event even if we have been connected before
   // (and sometimes the reconnect event).
   testServer.on('connect', function () {
+    console.log("thaliTape.onConnect");
     testUtils.logMessageToScreen('Connected to the test server');
     onConnection();
   });
