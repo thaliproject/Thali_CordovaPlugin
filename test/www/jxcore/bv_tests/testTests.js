@@ -1,6 +1,7 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
+var Promise = require('lie');
 
 var customData = 'custom data';
 
@@ -47,28 +48,46 @@ test('can pass data in setup', function (t) {
 
 if (!jxcore.utils.OSInfo().isMobile) {
   test('can continue after disconnect from server', function (t) {
-    t.timeoutAfter(5000);
-    var reconnected = false;
-    tape._testServer.once('connect', function () {
-      if (reconnected) {
+    // Android phone like to do huge amount of reconnects.
+    var RECONNECT_TIMEOUT = 50;
+    var RECONNECT_ATTEMPTS = 100;
+
+    t.timeoutAfter(2 * RECONNECT_TIMEOUT * RECONNECT_ATTEMPTS + 3000);
+
+    var reconnectedTimes = 0;
+    tape._testServer.on('connect', function () {
+      if (reconnectedTimes === RECONNECT_ATTEMPTS - 1) {
         return;
       }
-      reconnected = true;
+      reconnectedTimes++;
       t.ok(true, 'got connect event');
-      t.end();
+      if (reconnectedTimes === RECONNECT_ATTEMPTS - 1) {
+        t.end();
+      }
     });
-    tape._testServer.once('reconnect', function () {
-      if (reconnected) {
+    tape._testServer.on('reconnect', function () {
+      if (reconnectedTimes === RECONNECT_ATTEMPTS - 1) {
         return;
       }
-      reconnected = true;
+      reconnectedTimes++;
       t.ok(true, 'got reconnect event');
-      t.end();
+      if (reconnectedTimes === RECONNECT_ATTEMPTS - 1) {
+        t.end();
+      }
     });
-    tape._testServer.disconnect();
-    setTimeout(function () {
-      tape._testServer.connect();
-    }, 500);
+
+    var promise = Promise.resolve();
+    for (var i = 0; i < RECONNECT_ATTEMPTS; i ++) {
+      promise = promise.then(function () {
+        return new Promise(function (resolve) {
+          tape._testServer.disconnect();
+          setTimeout(function () {
+            tape._testServer.connect();
+            setTimeout(resolve, RECONNECT_TIMEOUT);
+          }, RECONNECT_TIMEOUT);
+        });
+      });
+    }
   });
 
   test('test after disconnect', function (t) {

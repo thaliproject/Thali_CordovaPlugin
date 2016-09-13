@@ -19,3 +19,13 @@ module.exports.ensureNonNullOrEmptyString = function ensureNonNullOrEmptyString 
 module.exports.ensureIsFunction = function ensureIsFunction (value, param) {
   if (toString.call(value) !== '[object Function]') { throw new TypeError(param + ' must be a function'); }
 };
+
+module.exports.objectKeysEquals = function (obj, keys) {
+  var currentKeys = Object.getOwnPropertyNames(obj);
+  if (currentKeys.length !== keys.length) {
+    return false;
+  }
+  return keys.every(function (key) {
+    return obj.hasOwnProperty(key);
+  });
+}

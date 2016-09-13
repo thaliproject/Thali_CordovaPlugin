@@ -140,6 +140,7 @@ public class StartStopOperationHandler {
                     Log.e(TAG, "executeCurrentOperation: " + errorMessage);
                     mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
                     mCurrentOperation = null;
+                    return;
                 }
 
                 if (!mDiscoveryManager.start(
