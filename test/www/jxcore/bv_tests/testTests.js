@@ -33,7 +33,6 @@ if (!tape.coordinated) {
 }
 
 test('can pass data in setup', function (t) {
-  console.log(JSON.stringify(t.participants));
   var uuidFound = false;
   t.participants.forEach(function (participant) {
     if (tape.uuid === participant.uuid) {

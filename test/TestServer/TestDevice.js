@@ -77,6 +77,7 @@ TestDevice.prototype.update = function (newDevice) {
   asserts.equals(this.platformName, newDevice.platformName);
   asserts.equals(this.type, newDevice.type);
   asserts.equals(this.supportedHardware, newDevice.supportedHardware);
+
   asserts.arrayEquals(this.tests, newDevice.tests);
   asserts.equals(this.btAddress, newDevice.btAddress);
 
@@ -139,6 +140,7 @@ TestDevice.prototype._emitData = function (event, data) {
   var retryIndex = 0;
   var onceConfirmed;
   var emitter;
+  data = data || '';
 
   return new Promise(function (resolve, reject) {
     onceConfirmed = self._socketBind(
@@ -149,8 +151,10 @@ TestDevice.prototype._emitData = function (event, data) {
           resolve();
         } else {
           reject(new Error(
-            'received confirmation with invalid data, sent data: \'%s\', received data: \'%s\'',
-            data, _data
+            format(
+              'received confirmation with invalid data, sent data: \'%s\', received data: \'%s\'',
+              data, _data
+            )
           ));
         }
       }
@@ -179,7 +183,9 @@ TestDevice.prototype._emitData = function (event, data) {
     if (emitter) {
       emitter.unbind();
     }
-    onceConfirmed.unbind();
+    if (onceConfirmed) {
+      onceConfirmed.unbind();
+    }
   });
 }
 
@@ -220,7 +226,9 @@ TestDevice.prototype._runEvent = function (event, test, data, timeout) {
     ));
   })
   .finally(function () {
-    onceFinished.unbind();
+    if (onceFinished) {
+      onceFinished.unbind();
+    }
   });
 }
 

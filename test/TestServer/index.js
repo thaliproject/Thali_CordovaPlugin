@@ -29,7 +29,11 @@ var logger = new winston.Logger({
   level: 'debug',
   transports: [
     new winston.transports.Console({
-      timestamp: true,
+      timestamp: function () {
+        return new Date().toISOString()
+          .replace(/T/, ' ')
+          .replace(/.[^.]+$/, '');
+      },
       debugStdout: true
     })
   ]
@@ -51,20 +55,16 @@ process
 })
 .on('uncaughtException', function (error) {
   logger.error(
-    format(
-      'uncaught exception, error: \'%s\', stack: \'%s\'',
-      error.toString(), error.stack
-    )
+    'uncaught exception, error: \'%s\', stack: \'%s\'',
+    error.toString(), error.stack
   );
   io.close();
   process.exit(1);
 })
 .on('unhandledRejection', function (error, p) {
   logger.error(
-    format(
-      'uncaught promise rejection, error: \'%s\', stack: \'%s\'',
-      error.toString(), error.stack
-    )
+    'uncaught promise rejection, error: \'%s\', stack: \'%s\'',
+    error.toString(), error.stack
   );
   io.close();
   process.exit(2);
