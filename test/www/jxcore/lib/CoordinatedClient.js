@@ -25,7 +25,9 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) 
     asserts.isFunction(test.fun);
     asserts.isFunction(test.options.setup);
     asserts.isFunction(test.options.teardown);
+    asserts.isNumber(test.options.setupTimeout);
     asserts.isNumber(test.options.testTimeout);
+    asserts.isNumber(test.options.teardownTimeout);
     asserts.isNumber(test.options.emitRetryCount);
     asserts.isNumber(test.options.emitRetryTimeout);
   });
@@ -250,7 +252,7 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
 CoordinatedClient.prototype._scheduleTest = function (test) {
   var self = this;
 
-  function processEvent(tape, event, fun) {
+  function processEvent(tape, event, fun, timeout) {
     return new Promise(function (resolve, reject) {
       self._io.once(event, function (data) {
         self._emit(event + '_confirmed', data, test.options);
@@ -259,13 +261,17 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
         // We can receive 'result' many times.
         // For example each 'tape.ok' will provide a 'result'.
         var success = true;
-        tape
-        .on('result', function (result) {
+        function resultHandler (result) {
           if (!result.ok) {
             success = false;
           }
-        })
-        .once('end', function () {
+        }
+        tape.on('result', resultHandler);
+
+        function endHandler () {
+          clearTimeout(timer);
+          tape.removeListener('result', resultHandler);
+
           self._emit(
             event + '_finished',
             JSON.stringify({
@@ -278,11 +284,28 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
             if (success) {
               resolve();
             } else {
-              logger.error('test failed');
-              reject(new Error('test failed'));
+              var error = format(
+                'test failed, name: \'%s\'',
+                test.name
+              );
+              logger.error(error);
+              reject(new Error(error));
             }
           });
-        });
+        }
+        tape.once('end', endHandler);
+
+        var timer = setTimeout(function () {
+          tape.removeListener('result', resultHandler);
+          tape.removeListener('end', endHandler);
+
+          var error = format(
+            'timeout exceed, test: \'%s\'',
+            test.name
+          );
+          logger.error(error);
+          reject(new Error(error));
+        }, timeout);
 
         // Only for testing purposes.
         if (data) {
@@ -295,7 +318,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
 
   return new Promise(function (resolve, reject) {
     tape('setup', function (tape) {
-      processEvent(tape, 'setup_' + test.name, test.options.setup)
+      processEvent(tape, 'setup_' + test.name, test.options.setup, test.options.setupTimeout)
       .catch(function (error) {
         reject(error);
       });
@@ -305,14 +328,14 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
       if (test.expect !== undefined && test.expect !== null) {
         tape.plan(test.expect);
       }
-      processEvent(tape, 'run_' + test.name, test.fun)
+      processEvent(tape, 'run_' + test.name, test.fun, test.options.testTimeout)
       .catch(function (error) {
         reject(error);
       });
     });
 
     tape('teardown', function (tape) {
-      processEvent(tape, 'teardown_' + test.name, test.options.teardown)
+      processEvent(tape, 'teardown_' + test.name, test.options.teardown, test.options.teardownTimeout)
       .then(function () {
         // We should exit after test teardown.
         resolve();
@@ -321,11 +344,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
         reject(error);
       });
     });
-  })
-  .timeout(
-    test.options.testTimeout,
-    format('timeout, test: \'%s\'', test.name)
-  );
+  });
 }
 
 module.exports = CoordinatedClient;

@@ -23,7 +23,9 @@ function SimpleThaliTape (options) {
   this._options = objectAssign({}, this.defaults, options);
   asserts.isFunction(this._options.setup);
   asserts.isFunction(this._options.teardown);
+  asserts.isNumber(this._options.setupTimeout);
   asserts.isNumber(this._options.testTimeout);
+  asserts.isNumber(this._options.teardownTimeout);
 
   this._tests = [];
   this._nextTestOnly = false;
@@ -47,7 +49,9 @@ SimpleThaliTape.prototype.defaults = {
   teardown: function (t) {
     t.end();
   },
-  testTimeout: 10 * 60 * 1000 // 10 minutes
+  setupTimeout:     1 * 60 * 1000,
+  testTimeout:      10 * 60 * 1000,
+  teardownTimeout:  1 * 60 * 1000
 }
 
 SimpleThaliTape.states = {
@@ -95,52 +99,68 @@ SimpleThaliTape.prototype.addTest = function (name, expect, fun) {
 }
 
 SimpleThaliTape.prototype._runTest = function (test) {
-  var setup    = this._options.setup;
-  var teardown = this._options.teardown;
+  var self = this;
 
   return new Promise(function (resolve, reject) {
-    function bindResult(tape) {
+    function bindResult(tape, timeout) {
       // 'end' can be called without 'result', so success is true by default.
       // We can receive 'result' many times.
       // For example each 'tape.ok' will provide a 'result'.
       var success = true;
-      tape
-      .on('result', function (result) {
+      function resultHandler (result) {
         if (!result.ok) {
           success = false;
         }
-      })
-      .once('end', function () {
+      }
+      tape.on('result', resultHandler);
+
+      function endHandler () {
+        clearTimeout(timer);
+        tape.removeListener('result', resultHandler);
+
         if (!success) {
-          logger.error('test failed');
-          reject(new Error('test failed'));
+          var error = format(
+            'test failed, name: \'%s\'',
+            test.name
+          );
+          logger.error(error);
+          reject(new Error(error));
         }
-      });
+      }
+      tape.once('end', endHandler);
+
+      var timer = setTimeout(function () {
+        tape.removeListener('result', resultHandler);
+        tape.removeListener('end', endHandler);
+
+        var error = format(
+          'timeout exceed, test: \'%s\'',
+          test.name
+        );
+        logger.error(error);
+        reject(new Error(error));
+      }, timeout);
     }
 
     tape('setup', function (tape) {
-      bindResult(tape);
-      setup(tape);
+      bindResult(tape, self._options.setupTimeout);
+      self._options.setup(tape);
     });
 
     tape(test.name, function (tape) {
       if (test.expect !== undefined && test.expect !== null) {
         tape.plan(test.expect);
       }
-      bindResult(tape);
+      bindResult(tape, self._options.testTimeout);
       test.fun(tape);
     });
 
     tape('teardown', function (tape) {
-      bindResult(tape);
+      bindResult(tape, self._options.teardownTimeout);
       tape.once('end', resolve);
-      teardown(tape);
+      self._options.teardown(tape);
     });
-  })
-  .timeout(
-    this._options.testTimeout,
-    format('timeout, test: \'%s\'', test.name)
-  );
+  });
 }
 
 SimpleThaliTape.prototype._begin = function () {
