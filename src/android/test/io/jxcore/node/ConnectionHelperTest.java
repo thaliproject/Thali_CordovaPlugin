@@ -42,7 +42,7 @@ public class ConnectionHelperTest {
     OutputStreamMock mOutputStreamMock;
     Thread checkDiscoveryManagerRunning, checkDiscoveryManagerRunning1,
     checkDiscoveryManagerNotRunning;
-    static ConnectionHelper mConnectionHelper;
+    public static ConnectionHelper mConnectionHelper;
     static JXcoreThaliCallback mJXcoreThaliCallback;
     static StartStopOperationHandler mStartStopOperatonHandler;
     static boolean isBLESupported;
