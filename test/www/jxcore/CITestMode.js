@@ -101,11 +101,3 @@ createCINativeTestClass();
 createCINodeTestClass();
 updateThaliTestSuiteFunction();
 updateRunTestsToRunOnlyOneNodeTest();
-
-
-
-
-
-
-
-
