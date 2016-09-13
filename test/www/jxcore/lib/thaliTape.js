@@ -18,9 +18,11 @@ var test = tape({
     // do any final tear down for the test in here
     t.end();
   },
-  testTimeout:      10 * 60 * 1000 , // timeout for each test.
-  emitRetryCount:   20,              // count of emit retries for coordinated test.
-  emitRetryTimeout: 1000             // retry timeout for coordinated test.
+  emitRetryCount:   120,
+  emitRetryTimeout: 3 * 1000,
+  setupTimeout:     1 * 60 * 1000,
+  testTimeout:      10 * 60 * 1000,
+  teardownTimeout:  1 * 60 * 1000
 });
 */
 
