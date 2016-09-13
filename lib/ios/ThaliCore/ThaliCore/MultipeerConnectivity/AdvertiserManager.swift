@@ -66,8 +66,10 @@ import Foundation
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
                                     receivedInvitationHandler: { [weak self] session in
                                         self?.handle(session, withPort: port)
-            }, disconnectHandler: {
-                //todo disconnect notification
+            }, disconnectHandler: { [weak self] in
+                // Disconnected session
+                self?.stopAdvertising()
+                errorHandler(MultiConnectError.ConnectionFailed)
         })
         advertiser.startAdvertising(errorHandler)
         advertisers.modify {

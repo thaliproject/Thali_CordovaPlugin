@@ -39,7 +39,7 @@ class AppContextTests: XCTestCase {
         context = nil
     }
 
-    private func jsonDicitonaryFrom(string: String) -> [String : AnyObject]? {
+    private func jsonDictionaryFrom(string: String) -> [String : AnyObject]? {
         guard let data = string.dataUsingEncoding(NSUTF8StringEncoding) else {
             return nil
         }
@@ -48,7 +48,7 @@ class AppContextTests: XCTestCase {
     }
 
     private func validateAdvertisingUpdate(jsonString: String, advertising: Bool, browsing: Bool) {
-        let json = jsonDicitonaryFrom(jsonString)
+        let json = jsonDictionaryFrom(jsonString)
         let listeningActive = (json?[JSONKey.discoveryActive.rawValue] as? Bool)
         let advertisingActive = (json?[JSONKey.advertisingActive.rawValue] as? Bool)
         print(advertisingActive)
