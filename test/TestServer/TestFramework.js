@@ -1,14 +1,13 @@
 'use strict';
 
-var util = require('util');
+var util     = require('util');
 var inherits = util.inherits;
-var extend = util._extend;
 
-var assert = require('assert');
+var assert       = require('assert');
 var EventEmitter = require('events').EventEmitter;
 
 require('./utils/polyfills.js');
-var asserts = require('./utils/asserts.js');
+var asserts    = require('./utils/asserts.js');
 var TestDevice = require('./TestDevice');
 
 

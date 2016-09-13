@@ -1,16 +1,17 @@
 'use strict';
 
-var util = require('util');
-var extend = util._extend;
-var format = util.format;
+var util     = require('util');
+var format   = util.format;
 var inherits = util.inherits;
 
-var assert = require('assert');
-var Promise = require('bluebird');
+var objectAssign = require('object-assign');
+var assert       = require('assert');
+var Promise      = require('bluebird');
 var EventEmitter = require('events').EventEmitter;
 
 require('./utils/polyfills.js');
-var asserts = require('./utils/asserts.js');
+var asserts       = require('./utils/asserts.js');
+var defaultConfig = require('./TestDeviceConfig');
 
 
 // Class that is used to store each test device so we can send data to them.
@@ -45,24 +46,12 @@ function TestDevice(socket, data, options) {
 
   this.btAddress = data.btaddress;
 
-  this._options = extend({}, TestDevice.defaults);
-  this._options = extend(this._options, options);
+  this._options = objectAssign({}, defaultConfig, options);
   asserts.isNumber(this._options.retryCount);
   asserts.isNumber(this._options.retryTimeout);
 }
 
 inherits(TestDevice, EventEmitter);
-
-// Try to retry 120 times every second.
-// It might be that the socket connection is temporarily down while retrying.
-// This gives the device 2 minutes to reconnect.
-TestDevice.defaults = {
-  retryCount: 120,
-  retryTimeout: 1000,
-  setupTimeout: 1 * 60 * 1000,
-  testTimeout: 5 * 60 * 1000,
-  teardownTimeout: 1 * 60 * 1000
-};
 
 TestDevice.prototype.update = function (newDevice) {
   // This is annoying.

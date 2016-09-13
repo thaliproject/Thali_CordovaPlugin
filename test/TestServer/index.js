@@ -3,26 +3,26 @@
 // Main entry point for Thali test frameworks coordinator server
 // jx index.js "{ 'devices': { 'android': 3, 'ios': 2 } }"
 
-var util = require('util');
+var util   = require('util');
 var format = util.format;
 
-var http = require('http');
+var http     = require('http');
 var socketIO = require('socket.io');
-var winston = require('winston');
-var Promise = require('bluebird');
+var winston  = require('winston');
+var Promise  = require('bluebird');
 
 var asserts = require('./utils/asserts');
 
-var TestDevice = require('./TestDevice');
+var TestDevice        = require('./TestDevice');
 var UnitTestFramework = require('./UnitTestFramework');
 // var PerfTestFramework = require('./PerfTestFramework');
 
 
 Promise.config({
-  warnings: true,
+  warnings:        true,
   longStackTraces: true,
-  cancellation: true,
-  monitoring: true
+  cancellation:    true,
+  monitoring:      true
 });
 
 var logger = new winston.Logger({
@@ -70,12 +70,6 @@ process
   process.exit(2);
 });
 
-var RETRY_COUNT = 120;
-var RETRY_TIMEOUT = 3 * 1000;
-var SETUP_TIMEOUT = 1 * 60 * 1000;
-var TEST_TIMEOUT = 10 * 60 * 1000;
-var TEARDOWN_TIMEOUT = 1 * 60 * 1000;
-
 try {
   var config = process.argv[2];
   if (config) {
@@ -116,6 +110,8 @@ try {
         'unexpected exception, error: \'%s\', stack: \'%s\'',
         error.toString(), error.stack
       );
+      io.close();
+      process.exit(4);
     })
     .on('present', function (data) {
       // present - The device is announcing it's presence and telling us
@@ -125,13 +121,7 @@ try {
       try {
         asserts.isString(data);
         var device_data = JSON.parse(data);
-        device = new TestDevice(socket, device_data, {
-          retryCount: RETRY_COUNT,
-          retryTimeout: RETRY_TIMEOUT,
-          setupTimeout: SETUP_TIMEOUT,
-          testTimeout: TEST_TIMEOUT,
-          teardownTimeout: TEARDOWN_TIMEOUT
-        });
+        device = new TestDevice(socket, device_data);
         socket.deviceName = device.name;
       } catch (error) {
         socket.emit(
@@ -178,9 +168,10 @@ try {
     });
   });
 } catch (error) {
-  io.close();
   logger.error(
     'unexpected exception, error: \'%s\', stack: \'%s\'',
     error.toString(), error.stack
   );
+  io.close();
+  process.exit(5);
 }

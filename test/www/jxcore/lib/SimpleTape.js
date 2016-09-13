@@ -1,11 +1,12 @@
 'use strict';
 
 var util   = require('util');
-var extend = util._extend;
+var format = util.format;
 
-var tape    = require('tape-catch');
-var assert  = require('assert');
-var Promise = require('bluebird');
+var objectAssign = require('object-assign');
+var tape         = require('tape-catch');
+var assert       = require('assert');
+var Promise      = require('bluebird');
 
 var asserts   = require('./utils/asserts');
 var testUtils = require('./testUtils');
@@ -19,17 +20,10 @@ function SimpleThaliTape (options) {
     return new SimpleThaliTape(options);
   }
 
-  asserts.isObject(options);
-  this._options = extend({}, options);
-
-  var setup = this._options.setup;
-  if (setup) {
-    asserts.isFunction(setup);
-  }
-  var teardown = this._options.teardown;
-  if (teardown) {
-    asserts.isFunction(teardown);
-  }
+  this._options = objectAssign({}, this.defaults, options);
+  asserts.isFunction(this._options.setup);
+  asserts.isFunction(this._options.teardown);
+  asserts.isNumber(this._options.testTimeout);
 
   this._tests = [];
   this._nextTestOnly = false;
@@ -39,11 +33,21 @@ function SimpleThaliTape (options) {
 
   this.resolveInstance();
 
-  // test('name', ...) -> 'this.addTest('name, ...)'
+  // test('name', ...)      -> 'this.addTest('name, ...)'
   // test.only('name', ...) -> 'this.only('name, ...)'
-  this._handler = this.addTest.bind(this);
+  this._handler      = this.addTest.bind(this);
   this._handler.only = this.only.bind(this);
   return this._handler;
+}
+
+SimpleThaliTape.prototype.defaults = {
+  setup: function (t) {
+    t.end();
+  },
+  teardown: function (t) {
+    t.end();
+  },
+  testTimeout: 10 * 60 * 1000 // 10 minutes
 }
 
 SimpleThaliTape.states = {
@@ -113,38 +117,30 @@ SimpleThaliTape.prototype._runTest = function (test) {
         }
       });
     }
-    function bindExit(tape) {
-      tape.once('end', resolve);
-    }
 
-    if (setup) {
-      tape('setup', function (tape) {
-        bindResult(tape);
-        setup(tape);
-      });
-    }
+    tape('setup', function (tape) {
+      bindResult(tape);
+      setup(tape);
+    });
 
     tape(test.name, function (tape) {
       if (test.expect !== undefined && test.expect !== null) {
         tape.plan(test.expect);
       }
       bindResult(tape);
-      if (!teardown) {
-        // 'teardown' is not defined, we can exit after test itself.
-        bindExit(tape);
-      }
       test.fun(tape);
     });
 
-    if (teardown) {
-      tape('teardown', function (tape) {
-        bindResult(tape);
-        // We should exit after test teardown.
-        bindExit(tape);
-        teardown(tape);
-      });
-    }
-  });
+    tape('teardown', function (tape) {
+      bindResult(tape);
+      tape.once('end', resolve);
+      teardown(tape);
+    });
+  })
+  .timeout(
+    this._options.testTimeout,
+    format('timeout, test: \'%s\'', test.name)
+  );
 }
 
 SimpleThaliTape.prototype._begin = function () {
