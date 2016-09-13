@@ -30,7 +30,7 @@
 
 'use strict';
 
-var exec = require('child-process-promise').exec;
+var spawn = require('child-process-promise').spawn;
 var fs = require('fs-extra-promise');
 var path = require('path');
 var Promise = require('lie');
@@ -156,18 +156,28 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
   var buildDir = path.join(projectDir, 'build');
 
   var buildCmd = 'set -o pipefail && ' +
-    'xcodebuild -project' +
-    ' \"' + projectPath + '\"' +
+    'xcodebuild' +
+    ' -project ' + '\"' + projectPath + '\"' +
     ' -scheme ' + '\"' + projectScheme + '\"' +
     ' -configuration ' + projectConfiguration +
     ' -sdk ' + sdk +
-    ' ONLY_ACTIVE_ARCH=NO ' +
+    ' ONLY_ACTIVE_ARCH=NO' +
     ' BUILD_DIR=' + '\"' + buildDir + '\"' +
     ' clean build';
 
+  var buildPromise = spawn(buildCmd, []);
+
   console.log('Building ThaliCore.framework');
 
-  return exec(buildCmd, { maxBuffer: 400*1024 } )
+  return buildPromise
+    .progress(function (childProcess) {
+      childProcess.stdout.on('data', function (data) {
+        console.log(data.toString());
+      });
+      childProcess.stderr.on('data', function (data) {
+        console.log(data.toString());
+      });
+    })
     .then(function () {
       return fs.ensureDir(outputDir);
     })
@@ -177,9 +187,9 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
       var frameworkOutputDir = path.join(
         outputDir, projectName + '.framework');
 
-        return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
+      return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
     });
-};
+}
 
 module.exports = {
   addFramework: addFramework
