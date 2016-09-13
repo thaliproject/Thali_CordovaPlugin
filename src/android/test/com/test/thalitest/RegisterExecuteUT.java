@@ -26,11 +26,11 @@ public final class RegisterExecuteUT {
         switch (methodName) {
             case "onPeerLost" :
                 ConnectionHelperTest.mConnectionHelper
-                        .onPeerLost(new PeerProperties("33:44:55:44:33:22"));
+                        .onPeerLost(new PeerProperties("11:22:33:22:11:00"));
                 break;
             case "onPeerDiscovered" :
                 ConnectionHelperTest.mConnectionHelper
-                        .onPeerDiscovered(new PeerProperties("11:22:33:22:11:00"));
+                        .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
                 break;
             default :
                 Log.e(TAG, "Method called in FireTestedMethod doesn't exists!");
@@ -39,13 +39,13 @@ public final class RegisterExecuteUT {
     }
 
     public static void Register() {
-        jxcore.RegisterMethod("TestNativeMethod", new jxcore.JXcoreCallback() {
+        jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
                 String methodToTest = "";
 
                 if (params.size() == 0) {
-                    Log.e(TAG, "Required parameter (toast message) missing");
+                    Log.e(TAG, "Required parameter is missing");
                 } else {
                     methodToTest = params.get(0).toString();
                     FireTestedMethod(methodToTest);
