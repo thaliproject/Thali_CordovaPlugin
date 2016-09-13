@@ -42,6 +42,9 @@ SWIFT_OBJC_BRIDGING_HEADER = $(PROJECT_DIR)/$(PROJECT_NAME)/Bridging-Header.h
 
 // CI Required
 
+// BluetoothManager private API requires build with embedded arm64 architecture
+ONLY_ACTIVE_ARCH = NO
+
 EMBEDDED_CONTENT_CONTAINS_SWIFT = YES
 GCC_PREPROCESSOR_DEFINITIONS = $(inherited) DEBUG=1 TEST=1
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks

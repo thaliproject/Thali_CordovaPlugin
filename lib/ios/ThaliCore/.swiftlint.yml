@@ -112,5 +112,5 @@ custom_rules:
   closure_void_syntax:
     name: "Closure Void Syntax"
     regex: "(->\s*\n*\(\s*\))"
-    message: "We should use following syntax: "(A, B, C) -> Void" in case of empty result and "() -> Void" in case of empty parameters.
+    message: "We should use following syntax: \"(A, B, C) -> Void\" in case of empty result and \"() -> Void\" in case of empty parameters."
     severity: warning
