@@ -22,13 +22,22 @@ public final class RegisterExecuteUT {
 
     private static void FireTestedMethod(String methodName) {
         ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
+        int caseInt = 0;
+        
+        if (methodName.equals("onPeerLost")) {
+            caseInt = 1;
+        } else {
+            if (methodName.equals("onPeerDiscovered")) {
+                caseInt = 2;
+            }
+        }
 
-        switch (methodName) {
-            case "onPeerLost" :
+        switch (caseInt) {
+            case 1:
                 ConnectionHelperTest.mConnectionHelper
                         .onPeerLost(new PeerProperties("11:22:33:22:11:00"));
                 break;
-            case "onPeerDiscovered" :
+            case 2:
                 ConnectionHelperTest.mConnectionHelper
                         .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
                 break;
