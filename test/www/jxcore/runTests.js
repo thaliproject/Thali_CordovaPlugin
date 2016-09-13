@@ -56,8 +56,14 @@ if (
 
 testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
-  testUtils.getOSVersion()
+  return testUtils.getOSVersion()
   .then(function (version) {
     return thaliTape.begin(platform, version, hasRequiredHardware);
-  });
+  })
+})
+.then(function () {
+  process.exit(0);
+})
+.catch(function () {
+  process.exit(1);
 });

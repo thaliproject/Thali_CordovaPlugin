@@ -1,5 +1,8 @@
 'use strict';
 
+var util   = require('util');
+var extend = util._extend;
+
 var tape    = require('tape-catch');
 var assert  = require('assert');
 var Promise = require('bluebird');
@@ -17,7 +20,16 @@ function SimpleThaliTape (options) {
   }
 
   asserts.isObject(options);
-  this._options = options;
+  this._options = extend({}, options);
+
+  var setup = this._options.setup;
+  if (setup) {
+    asserts.isFunction(setup);
+  }
+  var teardown = this._options.teardown;
+  if (teardown) {
+    asserts.isFunction(teardown);
+  }
 
   this._tests = [];
   this._nextTestOnly = false;
@@ -27,8 +39,8 @@ function SimpleThaliTape (options) {
 
   this.resolveInstance();
 
-  // test('name', ...)
-  // test.only('name', ...)
+  // test('name', ...) -> 'this.addTest('name, ...)'
+  // test.only('name', ...) -> 'this.only('name, ...)'
   this._handler = this.addTest.bind(this);
   this._handler.only = this.only.bind(this);
   return this._handler;
@@ -79,56 +91,57 @@ SimpleThaliTape.prototype.addTest = function (name, expect, fun) {
 }
 
 SimpleThaliTape.prototype._runTest = function (test) {
-  var self = this;
-
   var setup    = this._options.setup;
   var teardown = this._options.teardown;
 
   return new Promise(function (resolve, reject) {
-    if (setup) {
-      tape('setup', function (t) {
-        t.once('result', function (result) {
-          if (!result.ok) {
-            reject(new Error('setup failed'));
-          }
-        });
-        asserts.isFunction(setup);
-        setup.call(t, t);
-      });
-    }
-
-    function exit(t) {
-      t.once('end', resolve);
-    }
-
-    tape(test.name, function (t) {
-      if (test.expect !== undefined && test.expect !== null) {
-        t.plan(test.expect);
-      }
-      if (!teardown) {
-        // 'teardown' is not defined, we can exit after test itself.
-        exit(t);
-      }
-      t.once('result', function (result) {
+    function bindResult(tape) {
+      // 'end' can be called without 'result', so success is true by default.
+      // We can receive 'result' many times.
+      // For example each 'tape.ok' will provide a 'result'.
+      var success = true;
+      tape
+      .on('result', function (result) {
         if (!result.ok) {
+          success = false;
+        }
+      })
+      .once('end', function () {
+        if (!success) {
+          logger.error('test failed');
           reject(new Error('test failed'));
         }
       });
-      asserts.isFunction(test.fun);
-      test.fun.call(t, t);
+    }
+    function bindExit(tape) {
+      tape.once('end', resolve);
+    }
+
+    if (setup) {
+      tape('setup', function (tape) {
+        bindResult(tape);
+        setup(tape);
+      });
+    }
+
+    tape(test.name, function (tape) {
+      if (test.expect !== undefined && test.expect !== null) {
+        tape.plan(test.expect);
+      }
+      bindResult(tape);
+      if (!teardown) {
+        // 'teardown' is not defined, we can exit after test itself.
+        bindExit(tape);
+      }
+      test.fun(tape);
     });
 
     if (teardown) {
-      tape('teardown', function (t) {
+      tape('teardown', function (tape) {
+        bindResult(tape);
         // We should exit after test teardown.
-        exit(t);
-        t.once('result', function (result) {
-          if (!result.ok) {
-            reject(new Error('teardown failed'));
-          }
-        });
-        asserts.isFunction(teardown);
-        teardown.call(t, t);
+        bindExit(tape);
+        teardown(tape);
       });
     }
   });
@@ -157,7 +170,7 @@ SimpleThaliTape.prototype.resolveInstance = function () {
 
 SimpleThaliTape.begin = function (platform, version, hasRequiredHardware) {
   var promises = SimpleThaliTape.instances.map(function (thaliTape) {
-    return thaliTape._begin(platform, version, hasRequiredHardware);
+    return thaliTape._begin();
   });
   SimpleThaliTape.instances = [];
 
