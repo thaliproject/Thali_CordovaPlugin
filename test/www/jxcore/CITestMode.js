@@ -22,7 +22,7 @@ var updateUnitTestConfig = function() {
 };
 
 var updateThaliTestSuiteFunction = function() {
-  var locationOfAndroidBeforeCompile = '../../../scripts/before_compile.js';
+  var locationOfAndroidBeforeCompile = '../../../scripts/android/before_compile.js';
 
   try {
     var originalContent = fs.readFileSync(locationOfAndroidBeforeCompile);
@@ -76,15 +76,21 @@ var copyCINodeTestClass = function() {
 
 var removeAlliOSTestsButOne = function() {
   try {
-    var oldPath = '../../../lib/ios/ThaliCore/ThaliCoreTests/SimpleTestCase.swift';
-    var newPath = '../../../lib/ios/ThaliCore/SimpleTestCase.swift';
+    var oldPathTest = '../../../lib/ios/ThaliCore/ThaliCoreTests/SimpleTestCase.swift';
+    var newPathTest = '../../../lib/ios/ThaliCore/SimpleTestCase.swift';
 
-    fs.renameSync(oldPath, newPath);
+    var oldPathInfo = '../../../lib/ios/ThaliCore/ThaliCoreTests/Supporting Files/Info.plist';
+    var newPathInfo = '../../../lib/ios/ThaliCore/Info.plist';
+
+    fs.renameSync(oldPathTest, newPathTest);
+    fs.renameSync(oldPathInfo, newPathInfo);
 
     fs.removeSync('../../../lib/ios/ThaliCore/ThaliCoreTests');
 
-    fs.mkdirsSync('../../../lib/ios/ThaliCore/ThaliCoreTests');
-    fs.renameSync(newPath, oldPath);
+    fs.mkdirsSync('../../../lib/ios/ThaliCore/ThaliCoreTests/Supporting Files');
+    fs.renameSync(newPathTest, oldPathTest);
+    fs.renameSync(newPathInfo, oldPathInfo);
+
   } catch (e) {
     console.log(e);
     console.log('Failed to remove all iOS test files but one');
