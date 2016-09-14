@@ -1,6 +1,6 @@
 #!/bin/sh
 
-### START - JXcore Test Server --------..................
+### START - JXcore Test Server --------.................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -104,6 +104,7 @@ if [ $RUN_IN_CI == 0 ]; then
   rm -rf android-release-unsigned.apk;ERROR_ABORT
   cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk;ERROR_ABORT
 
-  rm -rf ThaliTest.app;ERROR_ABORT
-  cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
+  # Temporary disabled iOS build
+  # rm -rf ThaliTest.app;ERROR_ABORT
+  # cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
 fi
