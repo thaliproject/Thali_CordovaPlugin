@@ -1,16 +1,17 @@
 'use strict';
 
-var util = require('util');
-var extend = util._extend;
-var format = util.format;
+var util     = require('util');
+var format   = util.format;
 var inherits = util.inherits;
 
-var assert = require('assert');
-var Promise = require('bluebird');
+var objectAssign = require('object-assign');
+var assert       = require('assert');
+var Promise      = require('bluebird');
 var EventEmitter = require('events').EventEmitter;
 
 require('./utils/polyfills.js');
-var asserts = require('./utils/asserts.js');
+var asserts       = require('./utils/asserts.js');
+var defaultConfig = require('./TestDeviceConfig');
 
 
 // Class that is used to store each test device so we can send data to them.
@@ -45,24 +46,12 @@ function TestDevice(socket, data, options) {
 
   this.btAddress = data.btaddress;
 
-  this._options = extend({}, TestDevice.defaults);
-  this._options = extend(this._options, options);
+  this._options = objectAssign({}, defaultConfig, options);
   asserts.isNumber(this._options.retryCount);
   asserts.isNumber(this._options.retryTimeout);
 }
 
 inherits(TestDevice, EventEmitter);
-
-// Try to retry 120 times every second.
-// It might be that the socket connection is temporarily down while retrying.
-// This gives the device 2 minutes to reconnect.
-TestDevice.defaults = {
-  retryCount: 120,
-  retryTimeout: 1000,
-  setupTimeout: 1 * 60 * 1000,
-  testTimeout: 5 * 60 * 1000,
-  teardownTimeout: 1 * 60 * 1000
-};
 
 TestDevice.prototype.update = function (newDevice) {
   // This is annoying.
@@ -77,6 +66,7 @@ TestDevice.prototype.update = function (newDevice) {
   asserts.equals(this.platformName, newDevice.platformName);
   asserts.equals(this.type, newDevice.type);
   asserts.equals(this.supportedHardware, newDevice.supportedHardware);
+
   asserts.arrayEquals(this.tests, newDevice.tests);
   asserts.equals(this.btAddress, newDevice.btAddress);
 
@@ -139,6 +129,7 @@ TestDevice.prototype._emitData = function (event, data) {
   var retryIndex = 0;
   var onceConfirmed;
   var emitter;
+  data = data || '';
 
   return new Promise(function (resolve, reject) {
     onceConfirmed = self._socketBind(
@@ -149,8 +140,10 @@ TestDevice.prototype._emitData = function (event, data) {
           resolve();
         } else {
           reject(new Error(
-            'received confirmation with invalid data, sent data: \'%s\', received data: \'%s\'',
-            data, _data
+            format(
+              'received confirmation with invalid data, sent data: \'%s\', received data: \'%s\'',
+              data, _data
+            )
           ));
         }
       }
@@ -179,7 +172,9 @@ TestDevice.prototype._emitData = function (event, data) {
     if (emitter) {
       emitter.unbind();
     }
-    onceConfirmed.unbind();
+    if (onceConfirmed) {
+      onceConfirmed.unbind();
+    }
   });
 }
 
@@ -220,7 +215,9 @@ TestDevice.prototype._runEvent = function (event, test, data, timeout) {
     ));
   })
   .finally(function () {
-    onceFinished.unbind();
+    if (onceFinished) {
+      onceFinished.unbind();
+    }
   });
 }
 

@@ -100,3 +100,13 @@ module.exports.equals = function (value1, value2) {
     format('equals values expected, received value 1: \'%s\', value 2: \'%s\'', value1, value2)
   );
 }
+
+function isFunction(fun) {
+  return exists(fun) && typeof fun === 'function';
+}
+module.exports.isFunction = function (value) {
+  assert(
+    isFunction(value),
+    format('function expected, received: \'%s\'', value)
+  );
+};

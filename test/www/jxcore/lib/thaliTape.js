@@ -48,7 +48,8 @@ var allSuccess = true;
 
 var emitWhenConnected = function (socket, name, data) {
   if (socket.connected) {
-    data ? socket.emit(name, data) : socket.emit(name);
+    data = data || '';
+    socket.emit(name, data);
   } else {
     setTimeout(function () {
       emitWhenConnected(socket, name, data);

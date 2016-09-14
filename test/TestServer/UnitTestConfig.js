@@ -6,5 +6,6 @@ module.exports = {
   devices: {
     ios: 3,
     android: 3
-  }
+  },
+  timeout: 5 * 60 * 1000
 };

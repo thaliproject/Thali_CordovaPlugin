@@ -1,14 +1,13 @@
 'use strict';
 
-var util = require('util');
+var util     = require('util');
 var inherits = util.inherits;
-var extend = util._extend;
 
-var assert = require('assert');
+var assert       = require('assert');
 var EventEmitter = require('events').EventEmitter;
 
 require('./utils/polyfills.js');
-var asserts = require('./utils/asserts.js');
+var asserts    = require('./utils/asserts.js');
 var TestDevice = require('./TestDevice');
 
 
@@ -24,6 +23,7 @@ function TestFramework(config, logger) {
   // 'config' provided by the user.
   // Tells us how many devices we need.
   asserts.isObject(config);
+  asserts.isNumber(config.timeout);
   var devices = config.devices;
   asserts.isObject(devices);
   var platformNames = Object.keys(devices);
@@ -46,6 +46,10 @@ function TestFramework(config, logger) {
     }
     return platforms;
   }, {});
+
+  this._timer = setTimeout(function () {
+    throw new Error('timeout exceed');
+  }, config.timeout);
 }
 
 inherits(TestFramework, EventEmitter);
@@ -105,7 +109,7 @@ TestFramework.prototype.addDevice = function (device) {
 };
 
 TestFramework.prototype.startTests = function (platformName, platform) {
-  throw new Error('should be implemented');
+  clearTimeout(this._timer);
 }
 
 TestFramework.prototype.resolveCompleted = function () {
