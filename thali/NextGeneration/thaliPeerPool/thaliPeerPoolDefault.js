@@ -97,8 +97,11 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   // kill, even if it has already been called. So this ensures that our
   // cleanup code gets called regardless of how the action ended.
   peerAction.start(actionAgent)
-    .catch(function (err) {
-      logger.debug('Got err ', Utils.serializePouchError(err));
+    .catch(function (error) {
+      logger.error(
+        'Got error: \'%s\', stack: \'%s\'',
+        error.toString(), error.stack
+      );
     })
     .then(function () {
       peerAction.kill();

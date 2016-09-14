@@ -1,12 +1,15 @@
 'use strict';
 
+var util = require('util');
+var format = util.format;
+
 var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var https = require('https');
 var logger = require('thali/thaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
@@ -19,6 +22,8 @@ var express = require('express');
 var fs = require('fs-extra-promise');
 var extend = require('js-extend').extend;
 var inherits = require('inherits');
+
+require('longjohn');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
@@ -77,13 +82,26 @@ function isFunction(functionToCheck) {
  * receive logging messages and display them.
  * @param {string} message
  */
-module.exports.logMessageToScreen = function (message) {
+var logMessageToScreen = function (message) {
   if (isFunction(logCallback)) {
     logCallback(message);
   } else {
     logger.warn('logCallback not set!');
   }
 };
+module.exports.logMessageToScreen = logMessageToScreen;
+
+var logger = {};
+['debug', 'info', 'warn', 'error'].forEach(function (level) {
+  logger[level] = function () {
+    var message = format.apply(format, arguments);
+    var date = new Date().toISOString()
+      .replace(/T/, ' ')
+      .replace(/.[^.]+$/, '');
+    logMessageToScreen("[" + date + "] " + level.toUpperCase() + " " + message);
+  };
+});
+module.exports.logger = logger;
 
 var myName = '';
 var myNameCallback = null;
@@ -210,7 +228,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
   .then(function (networkStatus) {
-    module.exports.logMessageToScreen(
+    logMessageToScreen(
       'Device did not have required hardware capabilities!'
     );
     if (networkStatus.bluetoothLowEnergy === 'on') {
@@ -247,13 +265,13 @@ module.exports.verifyCombinedResultSuccess =
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
 // during other tests.
-var pouchDBTestDirectory = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-fs.ensureDirSync(pouchDBTestDirectory);
+var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
+fs.ensureDirSync(dbPath);
 module.exports.getPouchDBTestDirectory = function () {
-  return pouchDBTestDirectory;
+  return dbPath;
 };
 
-var LevelDownPouchDB = PouchDBGenerator(PouchDB, pouchDBTestDirectory, {
+var LevelDownPouchDB = PouchDBGenerator(PouchDB, dbPath, {
   defaultAdapter: require('leveldown-mobile')
 });
 
@@ -262,7 +280,7 @@ module.exports.getLevelDownPouchDb = function () {
 };
 
 // Short, random and globally unique name can be obtained from current timestamp.
-// For example '1w8ueaswm1'
+// For example '1w8ueaswm1'.
 var getUniqueRandomName = function () {
   var time = process.hrtime();
   time = time[0] * Math.pow(10, 9) + time[1];
@@ -276,7 +294,7 @@ module.exports.getRandomlyNamedTestPouchDBInstance = function () {
 };
 
 module.exports.getPouchDBFactoryInRandomDirectory = function () {
-  var directory = path.join(pouchDBTestDirectory, getUniqueRandomName());
+  var directory = path.join(dbPath, getUniqueRandomName());
   fs.ensureDirSync(directory);
   return PouchDBGenerator(PouchDB, directory, {
     defaultAdapter: require('leveldown-mobile')
@@ -676,8 +694,12 @@ module.exports.testTimeout = function (t, timeout) {
     t.fail('test timeout');
     t.end();
   }, timeout);
+
   var oldEnd = t.end;
   t.end = function () {
+    // Restoring original t.end.
+    t.end = oldEnd;
+
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
   }

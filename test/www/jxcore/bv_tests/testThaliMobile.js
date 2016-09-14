@@ -8,7 +8,7 @@ var testUtils = require('../lib/testUtils.js');
 var express = require('express');
 var validations = require('thali/validations');
 var sinon = require('sinon');
-var uuid = require('uuid');
+var uuid = require('node-uuid');
 var nodessdp = require('node-ssdp');
 var randomstring = require('randomstring');
 
@@ -197,16 +197,17 @@ test('can get the network status', function (t) {
   ThaliMobile.getNetworkStatus()
   .then(function (networkChangedValue) {
     t.doesNotThrow(function () {
-      var requiredProperties = [
+      [
         'wifi',
         'bluetooth',
         'bluetoothLowEnergy',
         'cellular'
-      ];
-      for (var index in requiredProperties) {
+      ]
+      .forEach(function (requiredProperty) {
         validations.ensureNonNullOrEmptyString(
-          networkChangedValue[requiredProperties[index]]);
-      }
+          networkChangedValue[requiredProperty]
+        );
+      });
     }, 'network status should have certain non-empty properties');
     t.end();
   });
