@@ -40,8 +40,8 @@ var copyCINativeTestClass = function() {
     var path = '../../../scripts/android/before_compile.js';
 
     var originalContent = fs.readFileSync(path);
-    var oldFunc = 'copyFiles(appRoot, \'/io/jxcore/node\', \'/src/io/jxcore/node\', \'test classes\')';
-    var newFunc = 'copyFiles(appRoot, \'/io/jxcore/node/CITestClass.java/\', \'/src/io/jxcore/node/CITestClass.java/\', \'CI test class\');';
+    var oldFunc = 'fs.copySync(sourceFile, targetFile);';
+    var newFunc = 'fs.copySync(appRoot + \'plugins/org.thaliproject.p2p/src/android/test/CITestClass.java\', appRoot + \'platforms/android/CITestClass.java\');';
     var newContent = originalContent.toString().replace(oldFunc, newFunc);
 
     fs.writeFileSync(path, newContent);
