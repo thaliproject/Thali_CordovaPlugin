@@ -32,7 +32,7 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
 
     private func addToDiscardQueue(builder: Builder, for session: Session, completion: () -> Void) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW,
-                Int64(self.createSocketTimeout * Double(NSEC_PER_SEC)))
+                                      Int64(self.createSocketTimeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) { [weak self] in
             guard let strongSelf = self else {
                 return

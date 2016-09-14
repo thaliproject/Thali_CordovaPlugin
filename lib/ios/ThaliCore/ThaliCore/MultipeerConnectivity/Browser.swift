@@ -68,6 +68,7 @@ final class Browser: NSObject {
     }
 }
 
+// MARK: - MCNearbyServiceBrowserDelegate
 extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser,
