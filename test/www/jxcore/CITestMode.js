@@ -41,7 +41,7 @@ var copyCINativeTestClass = function() {
 
     var originalContent = fs.readFileSync(path);
     var oldFunc = 'fs.copySync(sourceFile, targetFile);';
-    var newFunc = 'fs.copySync(appRoot + \'/plugins/org.thaliproject.p2p/src/android/java/io/jxcore/node/test/CITestClass.java\', appRoot + \'/platforms/android/src/io/jxcore/node/CITestClass.java\');';
+    var newFunc = 'fs.copySync(appRoot + \'/plugins/org.thaliproject.p2p/src/android/test/io/jxcore/node/CITestClass.java\', appRoot + \'/platforms/android/src/io/jxcore/node/CITestClass.java\');';
     var newContent = originalContent.toString().replace(oldFunc, newFunc);
 
     fs.writeFileSync(path, newContent);
