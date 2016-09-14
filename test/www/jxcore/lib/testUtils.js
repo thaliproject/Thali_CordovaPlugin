@@ -84,7 +84,7 @@ var logMessageToScreen = function (message) {
   if (isFunction(logCallback)) {
     logCallback(message);
   } else {
-    logger.warn('logCallback not set!');
+    console.warn('logCallback not set!');
   }
 };
 module.exports.logMessageToScreen = logMessageToScreen;
