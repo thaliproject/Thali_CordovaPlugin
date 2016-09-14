@@ -6,6 +6,7 @@ import android.util.Log;
 import com.test.thalitest.ThaliTestRunner;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -76,7 +77,6 @@ public class StartStopOperationHandlerTest {
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         mConnectionHelper = new ConnectionHelper();
-        //mConnectionHelper = ThaliTestRunner.mConnectionHelper;
         isBLESupported =
         mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
         
@@ -110,9 +110,8 @@ public class StartStopOperationHandlerTest {
         checkDiscoveryManagerNotRunning = createCheckDiscoveryManagerNotRunningThread();
     }
     
-    @After
-    public void tearDown() throws Exception {
-        mConnectionHelper.killConnections(true);
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception {
         mConnectionHelper.dispose();
     }
     

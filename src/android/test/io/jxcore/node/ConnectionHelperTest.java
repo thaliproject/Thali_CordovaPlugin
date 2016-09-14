@@ -8,6 +8,7 @@ import android.util.Log;
 import com.test.thalitest.ThaliTestRunner;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -118,9 +119,8 @@ public class ConnectionHelperTest {
         checkDiscoveryManagerNotRunning = createCheckDiscoveryManagerNotRunningThread();
     }
     
-    @After
-    public void tearDown() throws Exception {
-        mConnectionHelper.killConnections(true);
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception {
         mConnectionHelper.dispose();
     }
     
@@ -242,7 +242,7 @@ public class ConnectionHelperTest {
         assertThat("DiscoveryManager1 isRunning should return " + isBLESupported,
                    mConnectionHelper.getDiscoveryManager().isRunning(), is(isBLESupported));
         
-        mConnectionHelper.stop(!isBLESupported, mJXcoreThaliCallback);
+        mConnectionHelper.stop(false, mJXcoreThaliCallback);
         
         checkDiscoveryManagerNotRunning.start();
         checkDiscoveryManagerNotRunning.join();
@@ -281,7 +281,7 @@ public class ConnectionHelperTest {
             checkDiscoveryManagerRunning.join();
         }
         
-        mConnectionHelper.stop(!isBLESupported, mJXcoreThaliCallback);
+        mConnectionHelper.stop(false, mJXcoreThaliCallback);
         
         checkDiscoveryManagerNotRunning.start();
         checkDiscoveryManagerNotRunning.join();
