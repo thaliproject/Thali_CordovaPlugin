@@ -36,6 +36,10 @@ class Session: NSObject {
         super.init()
         self.session.delegate = self
     }
+    
+    func disconnect() {
+        session.disconnect()
+    }
 
     func getInputStream(completion: (NSInputStream, String) -> Void) {
         inputStreamTaskPool.add(completion)

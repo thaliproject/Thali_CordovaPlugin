@@ -23,6 +23,7 @@ public struct PeerAvailability {
 // Class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
     private let socketRelay: SocketRelay<BrowserVirtualSocketBuilder>
+    private var activeSessions: Atomic<[PeerIdentifier : Session]> = Atomic([:])
 
     internal private(set) var currentBrowser: Browser?
     internal private(set) var availablePeers: Atomic<[PeerIdentifier]> = Atomic([])
@@ -90,10 +91,25 @@ public final class BrowserManager: NSObject {
                                                                  disconnectHandler: {
                 completion(nil, MultiConnectError.ConnectionFailed)
             })
+            activeSessions.modify {
+                $0[identifier] = session
+            }
             socketRelay.createSocket(with: session, completion: completion)
         } catch let error {
             completion(nil, error)
         }
+    }
+    
+    public func disconnect(peerIdentifier: PeerIdentifier) {
+        guard let session = activeSessions.value[peerIdentifier] else {
+            // There is no active session for current identifier
+            return
+        }
+        session.disconnect()
+        activeSessions.modify {
+            $0.removeValueForKey(peerIdentifier)
+        }
+        socketRelay.closeSocket(for: session)
     }
 
     func lastGenerationPeer(for identifier: PeerIdentifier) -> PeerIdentifier? {
