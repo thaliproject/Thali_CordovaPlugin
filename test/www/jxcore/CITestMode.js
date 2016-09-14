@@ -37,7 +37,7 @@ var updateThaliTestSuiteFunction = function() {
 
 var copyCINativeTestClass = function() {
   try {
-    var path = '../../../scripts/before_compile.js';
+    var path = '../../../scripts/android/before_compile.js';
 
     var originalContent = fs.readFileSync(path);
     var oldFunc = 'copyFiles(appRoot, \'/io/jxcore/node\', \'/src/io/jxcore/node\', \'test classes\')';
@@ -102,4 +102,4 @@ copyCINodeTestClass();
 copyCINativeTestClass();
 updateThaliTestSuiteFunction();
 updateRunTestsToRunOnlyOneNodeTest();
-removeAlliOSTestsButOne();
+//removeAlliOSTestsButOne();
