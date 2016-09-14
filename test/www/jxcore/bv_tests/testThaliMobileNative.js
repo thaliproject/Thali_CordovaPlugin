@@ -1,5 +1,11 @@
 'use strict';
 
+// Issue #419
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
+  return;
+}
+
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');

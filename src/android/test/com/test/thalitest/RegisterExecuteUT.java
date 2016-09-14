@@ -79,7 +79,7 @@ public final class RegisterExecuteUT {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
-                String logtag = "ExecuteNativeTests";
+                String logtag = "executeNativeTests";
                 Log.d(logtag, "Running unit tests");
                 Result resultTest = ThaliTestRunner.runTests();
 

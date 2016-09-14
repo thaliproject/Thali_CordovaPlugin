@@ -291,18 +291,16 @@
  * TCP listener can handle exactly one connection at a time and therefore need
  * to use a multiplex layer in Node.
  *
- * This method MUST return an error if called while start listening for
- * advertisements is not active.
- *
  * The node layer is responsible for making sure there is not more than a single
  * outstanding `connect` or 'disconnect' method call at a time for any given
  * peerID. If that restriction is violated then the system enters an unknown
  * state.
  *
  * A call to `multiConnect` will immediately return with no information other
- * than a confirmation that the request was received. A separate {@link
- * multiConnectResolve} asynchronous callback will be fired with the actual
- * result of the method call.
+ * than a confirmation that the request was received or an error if this is not
+ * a `multiConnect` platform. A separate {@link multiConnectResolve}
+ * asynchronous callback will be fired with the actual result of the method
+ * call.
  *
  * The submitted peerIdentifier only contains a value mapped to the UUID part
  * of the remote peer's MCPeerID.
@@ -348,8 +346,10 @@
  * on the correlated {@link multiConnectResolved} callback for the result of
  * this particular method call.
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback The err value
- * MUST be null. Any real errors will be returned in the {@link
- * multiConnectResolved} callback.
+ * MUST be null unless this is not a platform that supports multiconnect in
+ * which case an error object MUST be returned with the value "Platform does not
+ * support multiConnect". Other than the platform not supported error any other
+ * errors will be returned in the {@link multiConnectResolved} callback.
  */
 // jscs:enable maximumLineLength
 
@@ -445,7 +445,6 @@
  * | No available TCP ports | There are no TCP ports available to listen on. |
  * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
  * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
- * | Platform does not support multiConnect | The platform doesn't support the `multiConnect` method. |
  *
  * @public
  * @callback multiConnectResolvedCallback
