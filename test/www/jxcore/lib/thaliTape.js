@@ -255,7 +255,7 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
     console.log(error.stack);
     testUtils.logMessageToScreen('Error when connecting to the test server '
       + error);
-    firstConnection = false;
+    firstConnection = true;
     onConnection();
   });
   testServer.on('connect_timeout', function () {
