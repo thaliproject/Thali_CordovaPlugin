@@ -12,9 +12,7 @@ var fs = require('fs-extra-promise');
 var path = require('path');
 var crypto = require('crypto');
 var Promise = require('lie');
-var PouchDB = require('pouchdb');
 var ExpressPouchDB = require('express-pouchdb');
-var LeveldownMobile = require('leveldown-mobile');
 
 var sinon = require('sinon');
 
@@ -24,14 +22,6 @@ var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 
-// DB defaultDirectory should be unique among all tests
-// and any instance of this test.
-// This is especially required for tape.coordinated.
-var defaultDirectory = path.join(
-  testUtils.getPouchDBTestDirectory(),
-  'thali-manager-db-' + testUtils.getUniqueRandomName()
-);
-
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
@@ -40,10 +30,7 @@ var publicBase64KeyForLocalDevice = ecdhForLocalDevice.getPublicKey('base64');
 
 // PouchDB name should be the same between peers.
 var DB_NAME = 'ThaliManagerCoordinated';
-
-PouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
-  defaultAdapter: LeveldownMobile
-});
+var PouchDB = testUtils.getLevelDownPouchDb();
 
 var thaliManager;
 
@@ -53,7 +40,6 @@ var thisWasTheLastTest = false;
 var test = tape({
   setup: function (t) {
     t.data = publicKeyForLocalDevice.toJSON();
-    fs.ensureDirSync(defaultDirectory);
     t.end();
   },
   teardown: function (t) {
@@ -64,9 +50,6 @@ var test = tape({
       }
     })
     .then(function () {
-      if (thisWasTheLastTest) {
-        fs.removeSync(defaultDirectory);
-      }
       t.end();
     });
   }

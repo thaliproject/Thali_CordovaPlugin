@@ -8,10 +8,8 @@ var extend = require('js-extend').extend;
 var path = require('path');
 var crypto = require('crypto');
 var Promise = require('lie');
-var PouchDB = require('pouchdb');
 var express = require('express');
 var expressPouchDB = require('express-pouchdb');
-var LeveldownMobile = require('leveldown-mobile');
 
 var sinon = require('sinon');
 var proxyquire = require('proxyquire').noCallThru();
@@ -30,33 +28,21 @@ var ThaliPullReplicationFromNotification =
 var ThaliNotificationServer =
   require('thali/NextGeneration/notification/thaliNotificationServer');
 
-// DB 'defaultDirectory' should be unique among all tests
-// and any instance of this test.
-// This is especially required for 'tape.coordinated'.
-var defaultDirectory = path.join(
-  testUtils.getPouchDBTestDirectory(),
-  'thali-manager-db-' + testUtils.getUniqueRandomName()
-);
-
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
 
-PouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
-  defaultAdapter: LeveldownMobile
-});
+var PouchDB = testUtils.getLevelDownPouchDb();
 
 var TEST_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 var test = tape({
   setup: function (t) {
     t.data = publicKeyForLocalDevice.toJSON();
-    fs.ensureDirSync(defaultDirectory);
     t.end();
   },
   teardown: function (t) {
-    fs.removeSync(defaultDirectory);
     t.end();
   }
 });
