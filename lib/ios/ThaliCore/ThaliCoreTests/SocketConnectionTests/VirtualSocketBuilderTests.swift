@@ -21,7 +21,7 @@ class SessionMock: Session {
         }
         return streamName
     }
-
+    
     override func getInputStream(completion: (NSInputStream, String) -> Void) {
         completion(NSInputStream(data: NSData(bytes: nil, length: 0)), getInputStreamName())
     }

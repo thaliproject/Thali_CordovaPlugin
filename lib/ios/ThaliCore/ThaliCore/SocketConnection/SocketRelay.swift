@@ -11,7 +11,8 @@ import Foundation
 
 final class SocketRelay<Builder: VirtualSocketBuilder> {
     private var activeBuilders: Atomic<[Session : Builder]> = Atomic([:])
-    private var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> = Atomic([:])
+    internal private(set) var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> =
+                              Atomic([:])
     private let createSocketTimeout: Double
 
     init(createSocketTimeout: Double) {
@@ -54,9 +55,9 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
         //todo bind to CocoaAsyncSocket and call completion block
         //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
     }
-    
+
     func closeSocket(for session: Session) {
-        //todo bind to CocoaAsyncSocket and call completion block
+        //todo remove close TCP listener
         //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
         activeSessions.modify {
             $0.removeValueForKey(session)
