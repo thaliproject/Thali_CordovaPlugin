@@ -4,8 +4,9 @@ var util     = require('util');
 var inherits = util.inherits;
 var format   = util.format;
 
-var assert  = require('assert');
-var Promise = require('bluebird');
+var assert       = require('assert');
+var Promise      = require('bluebird');
+var objectAssign = require('object-assign');
 
 var asserts       = require('./utils/asserts.js');
 var TestDevice    = require('./TestDevice');
@@ -17,7 +18,7 @@ function UnitTestFramework(config, logger) {
   var self = this;
 
   this.logger = logger || console;
-  this.config = config || defaultConfig;
+  this.config = objectAssign({}, defaultConfig, config);
 
   UnitTestFramework.super_.call(this, this.config, this.logger);
 }
@@ -26,6 +27,8 @@ inherits(UnitTestFramework, TestFramework);
 
 UnitTestFramework.prototype.startTests = function (platformName, platform) {
   var self = this;
+
+  UnitTestFramework.super_.prototype.startTests.call(this, platformName, platform);
 
   assert(platform.success === undefined, 'platform should not be finished');
 
