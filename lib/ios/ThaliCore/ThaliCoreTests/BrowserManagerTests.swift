@@ -17,6 +17,46 @@ class BrowserManagerTests: XCTestCase {
         serviceType = String.random(length: 7)
     }
 
+    private func createSession() -> (AdvertiserManager, BrowserManager) {
+        let foundPeerExpectation = expectationWithDescription("found advertiser's peer")
+        var peerIdentifier: PeerIdentifier?
+
+        let advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                                  disposeAdvertiserTimeout: 2.0,
+                                                  inputStreamReceiveTimeout: 2.0)
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+
+        let browserManager = BrowserManager(serviceType: serviceType,
+                                            inputStreamReceiveTimeout: 2.0) {
+                                                [weak foundPeerExpectation] peers in
+                                                guard let peer = peers.first?.peerIdentifier
+                                                    where peers.first?.available == true else {
+                                                    return
+                                                }
+                                                foundPeerExpectation?.fulfill()
+                                                peerIdentifier = peer
+                                            }
+        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+        let foundPeerTimeout = 2.0
+        waitForExpectationsWithTimeout(foundPeerTimeout, handler: nil)
+        guard let identifier = peerIdentifier else {
+            XCTFail("peer identifier should be not nil")
+            return (advertiserManager, browserManager)
+        }
+        let connectToAdvertiserPeer = expectationWithDescription("connected to peer identifier")
+        browserManager.connectToPeer(identifier) { [weak connectToAdvertiserPeer] port, error in
+            if let _ = error {
+                return
+            } else {
+                connectToAdvertiserPeer?.fulfill()
+            }
+        }
+        let connectToPeerTimeout = 2.0
+        waitForExpectationsWithTimeout(connectToPeerTimeout, handler: nil)
+        return (advertiserManager, browserManager)
+    }
+
     func testStartStopListeningChangesListeningState() {
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peers in }
@@ -176,6 +216,28 @@ class BrowserManagerTests: XCTestCase {
 
         XCTAssertEqual(lastGenerationPeer?.generation,
                        secondGenerationAdvertiserIdentifier?.generation)
+    }
+
+    func testDisconnectRemovesActiveSession() {
+        let (advertiser, browser) = createSession()
+        XCTAssertEqual(browser.activeSessions.value.count, 1)
+        guard let peerIdentifier = advertiser.currentAdvertiser?.peerIdentifier else {
+            XCTFail("advertiser manager should have active advertiser")
+            return
+        }
+        browser.disconnect(peerIdentifier)
+        XCTAssertEqual(browser.activeSessions.value.count, 0)
+        browser.stopListeningForAdvertisements()
+        advertiser.stopAdvertising()
+    }
+
+    func testDisconnectWrongIdentifierNotChangesActiveSessions() {
+        let (advertiser, browser) = createSession()
+        XCTAssertEqual(browser.activeSessions.value.count, 1)
+        browser.disconnect(PeerIdentifier())
+        XCTAssertEqual(browser.activeSessions.value.count, 1)
+        browser.stopListeningForAdvertisements()
+        advertiser.stopAdvertising()
     }
 
 }

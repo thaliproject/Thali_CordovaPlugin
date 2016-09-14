@@ -23,10 +23,10 @@ public struct PeerAvailability {
 // Class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
     private let socketRelay: SocketRelay<BrowserVirtualSocketBuilder>
-    private var activeSessions: Atomic<[PeerIdentifier : Session]> = Atomic([:])
 
     internal private(set) var currentBrowser: Browser?
     internal private(set) var availablePeers: Atomic<[PeerIdentifier]> = Atomic([])
+    internal private(set) var activeSessions: Atomic<[PeerIdentifier : Session]> = Atomic([:])
 
     internal let serviceType: String
 

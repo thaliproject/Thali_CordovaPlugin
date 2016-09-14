@@ -138,4 +138,15 @@ class SessionTests: XCTestCase {
         waitForExpectationsWithTimeout(receivedStreamTimeout, handler: nil)
         XCTAssertEqual(streamName, receivedStreamName)
     }
+
+    // Smoke test
+    func testDisconnect() {
+        let peerID = MCPeerID(displayName: PeerIdentifier().stringValue)
+        let mcSession = MCSessionMock(peer: peerID, securityIdentity: nil,
+                                      encryptionPreference: .None)
+        let session = Session(session: mcSession,
+                              identifier: peerID,
+                              disconnectHandler: unexpectedDisconnectHandler)
+        session.disconnect()
+    }
 }

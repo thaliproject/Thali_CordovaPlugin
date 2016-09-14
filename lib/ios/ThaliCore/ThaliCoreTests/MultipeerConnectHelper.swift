@@ -31,7 +31,7 @@ func createMPCFConnection(advertiserIdentifier identifier: PeerIdentifier,
 }
 
 func unexpectedErrorHandler(error: ErrorType) {
-    XCTFail("start advertising failed with error: \(error)")
+    XCTFail("unexpected error: \(error)")
 }
 
 func unexpectedDisconnectHandler() {
