@@ -3,8 +3,8 @@
 //  BrowserManager.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
-//  information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
@@ -89,7 +89,7 @@ public final class BrowserManager: NSObject {
         do {
             let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier,
                                                                  disconnectHandler: {
-                completion(nil, MultiConnectError.ConnectionFailed)
+                //todo call multiConnectConnectionFailure #946
             })
             activeSessions.modify {
                 $0[identifier] = session

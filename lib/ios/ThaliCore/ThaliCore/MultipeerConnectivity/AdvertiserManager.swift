@@ -3,8 +3,8 @@
 //  AdvertiserManager.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
-//  information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
@@ -66,7 +66,8 @@ import Foundation
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
                                     receivedInvitationHandler: { [weak self] session in
                                         self?.handle(session, withPort: port)
-            }, disconnectHandler: {
+                                    }, disconnectHandler: {
+            //todo fix with #1040
         })
         advertiser.startAdvertising(errorHandler)
         advertisers.modify {
