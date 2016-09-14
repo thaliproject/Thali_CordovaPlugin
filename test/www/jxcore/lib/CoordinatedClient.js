@@ -13,10 +13,9 @@ var EventEmitter   = require('events').EventEmitter;
 
 var asserts       = require('./utils/asserts');
 var testUtils     = require('./testUtils');
+var logger        = require('thali/thaliLogger')('CoordinatedClient');
 var serverAddress = require('../server-address');
 
-
-var logger = testUtils.logger;
 
 function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) {
   asserts.isArray(tests);

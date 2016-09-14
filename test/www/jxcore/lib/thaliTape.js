@@ -28,7 +28,7 @@ var test = tape({
 
 var Promise = require('bluebird');
 
-var testUtils = require('./testUtils');
+var logger = require('thali/thaliLogger')('thaliTape');
 
 
 Promise.config({
@@ -37,8 +37,6 @@ Promise.config({
   cancellation:    true,
   monitoring:      true
 });
-
-var logger = testUtils.logger;
 
 process
 .on('SIGINT', function () {

@@ -89,18 +89,6 @@ var logMessageToScreen = function (message) {
 };
 module.exports.logMessageToScreen = logMessageToScreen;
 
-var logger = {};
-['debug', 'info', 'warn', 'error'].forEach(function (level) {
-  logger[level] = function () {
-    var message = format.apply(format, arguments);
-    var date = new Date().toISOString()
-      .replace(/T/, ' ')
-      .replace(/.[^.]+$/, '');
-    logMessageToScreen("[" + date + "] " + level.toUpperCase() + " " + message);
-  };
-});
-module.exports.logger = logger;
-
 var myName = '';
 var myNameCallback = null;
 
@@ -226,7 +214,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
   .then(function (networkStatus) {
-    logMessageToScreen(
+    logger.debug(
       'Device did not have required hardware capabilities!'
     );
     if (networkStatus.bluetoothLowEnergy === 'on') {
