@@ -10,10 +10,8 @@ var uuid         = require('node-uuid');
 
 var SimpleThaliTape   = require('./SimpleTape');
 var CoordinatedClient = require('./CoordinatedClient');
-var testUtils         = require('./testUtils');
+var logger            = require('thali/thaliLogger')('CoordinatedThaliTape');
 
-
-var logger = testUtils.logger;
 
 function CoordinatedThaliTape (options) {
   // We are calling this function directly without 'new'.
