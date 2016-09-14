@@ -40,7 +40,7 @@ var copyCINativeTestClass = function() {
     var path = '../../../scripts/android/before_compile.js';
 
     var originalContent = fs.readFileSync(path);
-    var oldFunc = 'fs.copySync(sourceFile, targetFile);';
+    var oldFunc = 'var i, testClassName;';
     var newFunc = oldFunc + '\nfs.copySync(appRoot + \'/plugins/org.thaliproject.p2p/src/android/test/io/jxcore/node/CITestClass.java\', appRoot + \'/platforms/android/src/io/jxcore/node/CITestClass.java\');';
     var newContent = originalContent.toString().replace(oldFunc, newFunc);
 
