@@ -40,26 +40,13 @@ if (hasJavaScriptSuffix(testsToRun)) {
   });
 }
 
-var platform;
-if (
-  typeof jxcore !== 'undefined' &&
-  jxcore &&
-  jxcore.utils &&
-  jxcore.utils.OSInfo() &&
-  jxcore.utils.OSInfo().isAndroid
-) {
-  platform = 'android';
-} else {
-  platform = 'ios';
-}
-
 module.exports.run = function () {
   return testUtils.hasRequiredHardware()
     .then(function (hasRequiredHardware) {
       return testUtils.getOSVersion()
       .then(function (version) {
         console.log('ThaliTestRunner :: Running ThaliTape');
-        return thaliTape.begin(platform, version, hasRequiredHardware);
+        return thaliTape.begin(version, hasRequiredHardware);
       });
     });
 };
@@ -69,11 +56,7 @@ module.exports.run = function () {
 // then execute immediately
 if (!module.parent) {
   module.exports.run()
-    .then(function () {
-      process.exit(0);
-    })
     .catch(function (error) {
       console.log('Run failed with ' + error);
-      process.exit(1);
     });
 }

@@ -1,177 +1,111 @@
+/*
+ Main entry point for Thali test frameworks coordinator server
+ jx index.js "{\"devices\": {\"android\": 3, \"ios\": 2}, \"honorCount\": true}"
+*/
+
 'use strict';
 
-// Main entry point for Thali test frameworks coordinator server
-// jx index.js "{ 'devices': { 'android': 3, 'ios': 2 } }"
+var options = {
+  transports: ['websocket']
+};
 
-var util   = require('util');
-var format = util.format;
+var app = require('express')();
+var http = require('http').Server(app);
 
-var http     = require('http');
-var socketIO = require('socket.io');
-var winston  = require('winston');
-var Promise  = require('bluebird');
+var io = require('socket.io')(http, options);
 
-var asserts = require('./utils/asserts');
-
-var TestDevice        = require('./TestDevice');
+var TestDevice = require('./TestDevice');
+var PerfTestFramework = require('./PerfTestFramework');
 var UnitTestFramework = require('./UnitTestFramework');
-// var PerfTestFramework = require('./PerfTestFramework');
 
-
-Promise.config({
-  warnings:        true,
-  longStackTraces: true,
-  cancellation:    true,
-  monitoring:      true
-});
-
-var logger = new winston.Logger({
-  level: 'debug',
+// Create a logger
+var winston = require('winston');
+var logger = new (winston.Logger)({
+  level : 'debug',
   transports: [
-    new winston.transports.Console({
-      timestamp: function () {
-        return new Date().toISOString()
-          .replace(/T/, ' ')
-          .replace(/.[^.]+$/, '');
-      },
-      debugStdout: true
-    })
+    new (winston.transports.Console)({'timestamp':true, 'debugStdout':true})
   ]
 });
 
-var server = http.createServer();
-var io = socketIO(server, {
-  transports: ['websocket']
-});
-server.listen(3000, function () {
-  logger.info('listening on *:3000');
-});
+var testConfig = JSON.parse(process.argv[2]);
+var unitTestManager = new UnitTestFramework(testConfig, logger);
+var perfTestManager = new PerfTestFramework(testConfig, logger);
 
-process
-.on('SIGINT', function () {
-  logger.error('got \'SIGINT\', terminating');
+process.on('SIGINT', function () {
+  logger.debug('Got SIGINT.  Terminating.');
   io.close();
   process.exit(130); // Ctrl-C std exit code
-})
-.on('uncaughtException', function (error) {
-  logger.error(
-    'uncaught exception, error: \'%s\', stack: \'%s\'',
-    error.toString(), error.stack
-  );
-  io.close();
-  process.exit(1);
-})
-.on('unhandledRejection', function (error, p) {
-  logger.error(
-    'uncaught promise rejection, error: \'%s\', stack: \'%s\'',
-    error.toString(), error.stack
-  );
-  io.close();
-  process.exit(2);
 });
 
-try {
-  var config = process.argv[2];
-  if (config) {
-    config = JSON.parse(config);
-  }
-  var unitTestManager = new UnitTestFramework(config, logger);
-  // var perfTestManager = new PerfTestFramework(testConfig, logger);
+io.on('connection', function (socket) {
 
-  unitTestManager.once('completed', function (results) {
-    logger.debug('completed');
-    var isSuccess = results.every(function (result) {
-      return result;
-    });
-    io.close();
-    if (isSuccess) {
-      process.exit(0);
-    } else {
-      process.exit(3);
+  // A new device has connected to us.. we expect the next thing to happen to be
+  // a 'present' message
+
+  socket.deviceName = 'DEVICE THAT HAS NOT PRESENTED YET';
+
+  socket.on('disconnect', function (reason) {
+    logger.info(
+      'Socket to device %s disconnected: %s',
+      socket.deviceName, reason
+    );
+  });
+
+  socket.on('error', function (error) {
+    logger.debug(error);
+  });
+
+  socket.on('present', function (msg) {
+
+    // present - The device is announcing it's presence and telling us
+    // whether it's running perf or unit tests
+
+    var _device = JSON.parse(msg);
+    if (!_device.os || !_device.name || !_device.type) {
+      logger.debug('malformed message');
+      socket.emit('error', JSON.stringify({
+        'errorDescription ': 'malformed message',
+        'message' : msg
+      }));
+      return;
+    }
+
+    socket.deviceName = _device.name;
+
+    // Add the new device to the test type/os it reports as belonging to
+    var device = new TestDevice(
+      socket, _device.name, _device.uuid, _device.os, _device.type,
+      _device.tests, _device.supportedHardware, _device.nativeUTFailed, _device.btaddress
+    );
+
+    logger.debug(
+      'Device presented: %s (%s) - %s %s',
+      _device.name, _device.uuid, _device.os, _device.version
+    );
+
+    switch (device.type)
+    {
+      case 'unittest' : {
+        unitTestManager.addDevice(device);
+        break;
+      }
+      case 'perftest' : {
+        perfTestManager.addDevice(device);
+        break;
+      }
+      default : {
+        logger.debug('unrecognised test type: ' + device.type);
+      }
     }
   });
 
-  io.on('connect', function (socket) {
-    // A new device has connected to us.
-    // We expect the next thing to happen to be a 'present' message.
+});
 
-    asserts.isObject(socket);
-    socket.deviceName = 'device that was not presented yet';
+app.get('/', function (req, res){
+  logger.info('HTTP get called');
+  res.sendfile('index.html');
+});
 
-    socket
-    .on('disconnect', function (reason) {
-      logger.info(
-        'Socket to device name: \'%s\' disconnected, reason: \'%s\'',
-        socket.deviceName, reason
-      );
-    })
-    .on('error', function (error) {
-      logger.error(
-        'unexpected exception, error: \'%s\', stack: \'%s\'',
-        error.toString(), error.stack
-      );
-      io.close();
-      process.exit(4);
-    })
-    .on('present', function (data) {
-      // present - The device is announcing it's presence and telling us
-      // whether it's running perf or unit tests.
-
-      var device;
-      try {
-        asserts.isString(data);
-        var device_data = JSON.parse(data);
-        device = new TestDevice(socket, device_data);
-        socket.deviceName = device.name;
-      } catch (error) {
-        socket.emit(
-          'error',
-          format(
-            'malformed message, data: \'%s\', error: \'%s\', stack: \'%s\'',
-            data, error.toString(), error.stack
-          )
-        );
-        return;
-      }
-
-      logger.debug(
-        'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', type: \'%s\', supportedHardware: \'%s\'',
-        device.name, device.uuid, device.platformName, device.type, device.supportedHardware
-      );
-
-      // Add the new device to the test type/os it reports as belonging to.
-      try {
-        switch (device.type) {
-          case 'unittest': {
-            unitTestManager.addDevice(device);
-            break;
-          }
-          // case 'perftest': {
-          //   perfTestManager.addDevice(device);
-          //   break;
-          // }
-          default: {
-            throw new Error(
-              format('unrecognised device type: \'%s\'', device.type)
-            );
-          }
-        }
-      } catch (error) {
-        socket.emit(
-          'error',
-          format(
-            'could not add device, error: \'%s\', stack: \'%s\'',
-            error.toString(), error.stack
-          )
-        );
-      }
-    });
-  });
-} catch (error) {
-  logger.error(
-    'unexpected exception, error: \'%s\', stack: \'%s\'',
-    error.toString(), error.stack
-  );
-  io.close();
-  process.exit(5);
-}
+http.listen(3000, function (){
+  logger.info('listening on *:3000');
+});

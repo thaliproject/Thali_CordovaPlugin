@@ -1,11 +1,19 @@
 'use strict';
 
-// Default amount of devices required to run tests.
+// Some user-accessible config for unit tests
+// Format is: { platform:{ ...settings.. } }
 
-module.exports = {
-  devices: {
-    ios: 3,
-    android: 3
+// numDevices - The number of devices the server will start a test with
+//              (-1 == all devices)
+//              Any other devices after that will just be ignored
+
+var config = {
+  ios: {
+    numDevices: 0
   },
-  timeout: 5 * 60 * 1000
+  android: {
+    numDevices: 3
+  }
 };
+
+module.exports = config;
