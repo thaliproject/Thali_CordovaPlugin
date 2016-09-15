@@ -14,8 +14,7 @@ var Message = require('./Message');
 
 var tape = require('../../../lib/thaliTape');
 
-var testUtils = require('../../../lib/testUtils');
-var logger    = testUtils.getLogger('ServerRound');
+var logger = require('../../../lib/testLogger')('ServerRound');
 
 
 function ServerRound(tapeTest, roundNumber, quitSignal, options) {

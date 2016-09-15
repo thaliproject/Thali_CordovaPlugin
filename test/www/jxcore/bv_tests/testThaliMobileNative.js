@@ -7,8 +7,7 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 var Promise = require('lie');
 var assert = require('assert');
 
-var testUtils = require('../lib/testUtils');
-var logger    = testUtils.getLogger('testThaliMobileNative');
+var logger = require('../lib/testLogger')('testThaliMobileNative');
 
 // jshint -W064
 

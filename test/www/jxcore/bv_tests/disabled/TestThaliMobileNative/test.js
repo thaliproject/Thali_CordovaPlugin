@@ -9,7 +9,7 @@ var assert = require('assert');
 var Promise = require('lie');
 
 var testUtils = require('../../../lib/testUtils');
-var logger    = testUtils.getLogger('testThaliMobileNativeComplex');
+var logger    = require('../../../lib/testLogger')('testThaliMobileNativeComplex');
 
 var QuitSignal  = require('./QuitSignal');
 var ServerRound = require('./ServerRound');

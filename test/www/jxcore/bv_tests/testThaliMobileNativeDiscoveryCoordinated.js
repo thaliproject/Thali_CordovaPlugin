@@ -11,8 +11,7 @@ var Promise = require('lie');
 
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
-var testUtils = require('../lib/testUtils');
-var logger    = testUtils.getLogger('testThaliMobileNativeDiscoveryCoordinated');
+var logger = require('../lib/testLogger')('testThaliMobileNativeDiscoveryCoordinated');
 
 var longjohn = require('longjohn');
 longjohn.async_trace_limit = -1;

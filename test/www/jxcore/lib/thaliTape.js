@@ -28,8 +28,7 @@ var test = tape({
 
 var Promise = require('bluebird');
 
-var testUtils = require('./testUtils');
-var logger    = testUtils.getLogger('thaliTape');
+var logger = require('./testLogger')('thaliTape');
 
 
 Promise.config({

@@ -4,8 +4,7 @@ var assert = require('assert');
 var Promise = require('lie');
 var extend = require('js-extend').extend;
 
-var testUtils = require('../../../lib/testUtils');
-var logger    = testUtils.getLogger('ActiveConnections');
+var logger = require('../../../lib/testLogger')('ActiveConnections');
 
 
 // We are going to add a new connections to the list.

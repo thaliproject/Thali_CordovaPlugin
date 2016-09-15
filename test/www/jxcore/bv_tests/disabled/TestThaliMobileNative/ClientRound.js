@@ -7,8 +7,7 @@ var Promise = require('lie');
 var EventEmitter = require('events').EventEmitter;
 var extend = require('js-extend').extend;
 
-var testUtils = require('../../../lib/testUtils');
-var logger    = testUtils.getLogger('ClientRound');
+var logger = require('../../../lib/testLogger')('ClientRound');
 
 var ActiveConnections = require('./ActiveConnections');
 var Message = require('./Message');
