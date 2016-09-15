@@ -3,7 +3,6 @@
 var util = require('util');
 var format = util.format;
 
-var logCallback;
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
@@ -11,6 +10,7 @@ var path = require('path');
 var randomString = require('randomstring');
 var Promise = require('bluebird');
 var https = require('https');
+var Logger = require('thali/thaliLogger');
 var logger = require('thali/thaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
@@ -25,6 +25,13 @@ var inherits = require('inherits');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
+
+var isMobile = (
+  typeof jxcore !== 'undefined' &&
+  jxcore.utils &&
+  jxcore.utils.OSInfo() &&
+  jxcore.utils.OSInfo().isMobile
+);
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
@@ -74,20 +81,41 @@ function isFunction(functionToCheck) {
     '[object Function]';
 }
 
-/**
- * Log a message to the screen - only applies when running on Mobile. It assumes
- * we are using our test framework with our Cordova WebView who is setup to
- * receive logging messages and display them.
- * @param {string} message
- */
-var logMessageToScreen = function (message) {
-  if (isFunction(logCallback)) {
-    logCallback(message);
-  } else {
-    console.warn('logCallback not set!');
+(function () {
+  var logCallback;
+  var messages = [];
+
+  if (isMobile) {
+    Mobile('setLogCallback').registerAsync(function (callback) {
+      logCallback = callback;
+      messages.forEach(function (message) {
+        logCallback(message);
+      });
+      messages = [];
+    });
   }
-};
-module.exports.logMessageToScreen = logMessageToScreen;
+
+  /**
+  * Log a message to the screen - only applies when running on Mobile.
+  * It assumes we are using our test framework with our Cordova WebView
+  * who is setup to receive logging messages and display them.
+  */
+  module.exports.getLogger = function (meta) {
+    var logger = Logger(meta);
+    if (isMobile) {
+      logger._thaliLogger.on('message', function (message) {
+        // 'logCallback' is required.
+        // We should save all messages before it will be available.
+        if (logCallback) {
+          logCallback(message);
+        } else {
+          messages.push(message);
+        }
+      });
+    }
+    return logger;
+  }
+}) ();
 
 var myName = '';
 var myNameCallback = null;
@@ -113,11 +141,7 @@ module.exports.getName = function () {
   return myName;
 };
 
-if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
-  Mobile('setLogCallback').registerAsync(function (callback) {
-    logCallback = callback;
-  });
-
+if (isMobile) {
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
     // If the name is already set, pass it to the callback
@@ -126,10 +150,6 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
       myNameCallback(myName);
     }
   });
-} else {
-  logCallback = function (message) {
-    console.log(message);
-  };
 }
 
 /**
@@ -141,7 +161,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  */
 var tmpObject = null;
 module.exports.tmpDirectory = function () {
-  if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+  if (isMobile) {
     return os.tmpdir();
   }
 
@@ -230,7 +250,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!jxcore.utils.OSInfo().isMobile) {
+    if (!isMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {

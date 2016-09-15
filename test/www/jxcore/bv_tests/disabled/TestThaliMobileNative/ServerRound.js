@@ -8,12 +8,14 @@ var EventEmitter = require('events').EventEmitter;
 var extend = require('js-extend').extend;
 
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thaliLogger')('ServerRound');
 
 var ActiveConnections = require('./ActiveConnections');
 var Message = require('./Message');
 
 var tape = require('../../../lib/thaliTape');
+
+var testUtils = require('../../../lib/testUtils');
+var logger    = testUtils.getLogger('ServerRound');
 
 
 function ServerRound(tapeTest, roundNumber, quitSignal, options) {

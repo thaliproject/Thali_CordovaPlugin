@@ -10,7 +10,9 @@ var assert = require('assert');
 var Promise = require('lie');
 
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thaliLogger')('testThaliMobileNativeDiscoveryCoordinated');
+
+var testUtils = require('../lib/testUtils');
+var logger    = testUtils.getLogger('testThaliMobileNativeDiscoveryCoordinated');
 
 var longjohn = require('longjohn');
 longjohn.async_trace_limit = -1;

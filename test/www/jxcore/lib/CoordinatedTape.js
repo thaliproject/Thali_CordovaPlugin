@@ -8,9 +8,10 @@ var assert       = require('assert');
 var Promise      = require('bluebird');
 var uuid         = require('node-uuid');
 
+var testUtils         = require('./testUtils');
 var SimpleThaliTape   = require('./SimpleTape');
 var CoordinatedClient = require('./CoordinatedClient');
-var logger            = require('thali/thaliLogger')('CoordinatedThaliTape');
+var logger            = testUtils.getLogger('CoordinatedThaliTape');
 
 
 function CoordinatedThaliTape (options) {

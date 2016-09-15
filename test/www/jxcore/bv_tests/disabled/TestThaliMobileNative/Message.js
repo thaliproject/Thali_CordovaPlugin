@@ -3,8 +3,10 @@
 var assert = require('assert');
 var Promise = require('lie');
 
-var logger = require('thali/thaliLogger')('Message');
 var objectKeysEquals = require('thali/validations').objectKeysEquals;
+
+var testUtils = require('../../../lib/testUtils');
+var logger    = testUtils.getLogger('Message');
 
 
 function Message (uuid, code, bulkData) {

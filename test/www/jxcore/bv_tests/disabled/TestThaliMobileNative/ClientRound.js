@@ -7,7 +7,8 @@ var Promise = require('lie');
 var EventEmitter = require('events').EventEmitter;
 var extend = require('js-extend').extend;
 
-var logger = require('thali/thaliLogger')('ClientRound');
+var testUtils = require('../../../lib/testUtils');
+var logger    = testUtils.getLogger('ClientRound');
 
 var ActiveConnections = require('./ActiveConnections');
 var Message = require('./Message');

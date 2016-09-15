@@ -4,7 +4,7 @@ var fs = require('fs-extra-promise');
 var path = require('path');
 var thaliTape = require('./lib/thaliTape');
 var testUtils = require('./lib/testUtils');
-var logger = require('thali/thaliLogger')('runTests');
+var logger    = testUtils.getLogger('runTests');
 
 // The global.Mobile object is replaced here after thaliTape
 // has been required so that thaliTape can pick up the right

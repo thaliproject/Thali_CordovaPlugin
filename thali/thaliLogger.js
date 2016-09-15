@@ -1,37 +1,50 @@
 'use strict';
 
-var util = require('util');
-var winston = require('winston');
+var util     = require('util');
+var inherits = util.inherits;
+var format   = util.format;
+
+var winston      = require('winston');
 var EventEmitter = require('events').EventEmitter;
 
-var Thalilogger = function () {
-  EventEmitter.call(this);
+
+var ThaliLogger = function () {
+  ThaliLogger.super_.call(this);
 };
 
-util.inherits(Thalilogger, EventEmitter);
+util.inherits(ThaliLogger, EventEmitter);
 
-Thalilogger.prototype.name = 'thaliLogger';
+ThaliLogger.prototype.name = 'thaliLogger';
 
-Thalilogger.prototype.log = function (level, msg, meta, callback) {
-  jxcore.utils.console.log(level.toUpperCase() + ' ' + meta.tag + ': ' + msg);
-  //
+ThaliLogger.prototype.log = function (level, message, meta, callback) {
+  var now = new Date().toISOString()
+    .replace(/T/, ' ')
+    .replace(/.[^.]+$/, '');
+  message = format(
+    '%s - %s %s: \'%s\'',
+    now, level.toUpperCase(), meta.tag, message
+  );
+  jxcore.utils.console.log(message);
+
   // Emit the `logged` event immediately because the event loop
   // will not exit until `process.stdout` has drained anyway.
-  //
   this.emit('logged');
   callback(null, true);
+
+  this.emit('message', message);
 };
 
 module.exports = function (tag) {
   if (!tag || typeof tag !== 'string' || tag.length < 3) {
-    throw new Error('All logging must have a tag that is at least 3 ' +
-                    'characters long!');
+    throw new Error(
+      'All logging must have a tag that is at least 3 characters long!'
+    );
   }
-  var logger =  new winston.Logger({
-    transports: [
-      new Thalilogger()
-    ]
+  var thaliLogger = new ThaliLogger();
+  var logger = new winston.Logger({
+    transports: [thaliLogger]
   });
+  logger._thaliLogger = thaliLogger;
   logger.rewriters.push(function (level, msg, meta) {
     if (!meta.tag) {
       meta.tag = tag;
