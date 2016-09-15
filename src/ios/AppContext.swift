@@ -255,7 +255,9 @@ extension PeerAvailability {
     }
 
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
-        // TODO: check reachability status #823
+        guard bluetoothState == .on || NetworkReachability().isWiFiEnabled() else {
+            throw MultiConnectError.RadioTurnedOffMultiConnectError
+        }
         guard parameters.count == 3 else {
             throw AppContextError.BadParameters
         }
