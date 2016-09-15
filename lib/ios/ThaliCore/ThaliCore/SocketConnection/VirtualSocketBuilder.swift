@@ -30,10 +30,10 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 
         let createSocket = {
             do {
-                let streamName = NSUUID().UUIDString
-                let outputStream = try session.createOutputStream(withName: streamName)
-                session.didReceiveInputStreamHandler = { inputStream, name in
-                    guard name == streamName else {
+                let outputStreamName = NSUUID().UUIDString
+                let outputStream = try session.createOutputStream(withName: outputStreamName)
+                session.didReceiveInputStreamHandler = { inputStream, inputStreamName in
+                    guard inputStreamName == outputStreamName else {
                         completionHandler(nil, MultiConnectError.ConnectionFailed)
                         return
                     }
@@ -64,9 +64,9 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
                   completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
         super.init(session: session, completionHandler: completionHandler)
 
-        self.session.didReceiveInputStreamHandler = { inputStream, name in
+        self.session.didReceiveInputStreamHandler = { inputStream, inputStreamName in
             do {
-                let outputStream = try session.createOutputStream(withName: name)
+                let outputStream = try session.createOutputStream(withName: inputStreamName)
                 completionHandler((outputStream, inputStream), nil)
             } catch let error {
                 completionHandler(nil, error)

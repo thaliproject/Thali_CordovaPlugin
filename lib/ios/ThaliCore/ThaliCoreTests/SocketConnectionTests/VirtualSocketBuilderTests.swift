@@ -36,7 +36,7 @@ class SessionMock: Session {
         }
     }
 
-    var simulateError: Bool = false
+    var simulateCreateOutputStreamError: Bool = false
 
     override init(session: MCSession, identifier: MCPeerID, disconnectHandler: () -> Void) {
         self.session = session
@@ -51,8 +51,9 @@ class SessionMock: Session {
         }
         return streamName
     }
+
     override func createOutputStream(withName name: String) throws -> NSOutputStream {
-        guard !simulateError else {
+        guard !simulateCreateOutputStreamError else {
             throw NSError(domain: "org.thaliproject.testError", code: 42, userInfo: nil)
         }
         print(name)
@@ -63,12 +64,12 @@ class SessionMock: Session {
 
 class VirtualSocketBuilderTests: XCTestCase {
 
-    var socketCompletionHandlerExpectation: XCTestExpectation!
+    var socketCompletionHandlerCalledExpectation: XCTestExpectation!
     var session: SessionMock!
 
     override func setUp() {
         super.setUp()
-        socketCompletionHandlerExpectation = expectationWithDescription("Socket created")
+        socketCompletionHandlerCalledExpectation = expectationWithDescription("Socket created")
         session = SessionMock(session: MCSession(peer: MCPeerID(displayName:"peer1")),
                               identifier: MCPeerID(displayName:"peer2")) {
         }
@@ -84,9 +85,9 @@ class VirtualSocketBuilderTests: XCTestCase {
         var socket: (NSOutputStream, NSInputStream)?
 
         let _: AdvertiserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerExpectation] receivedSocket, error in
+            [weak socketCompletionHandlerCalledExpectation] receivedSocket, error in
             socket = receivedSocket
-            socketCompletionHandlerExpectation?.fulfill()
+            socketCompletionHandlerCalledExpectation?.fulfill()
         }
 
         let socketCreatedTimeout = 2.0
@@ -99,9 +100,9 @@ class VirtualSocketBuilderTests: XCTestCase {
         var socket: (NSOutputStream, NSInputStream)?
 
         let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerExpectation] receivedSocket, error in
+            [weak socketCompletionHandlerCalledExpectation] receivedSocket, error in
             socket = receivedSocket
-            socketCompletionHandlerExpectation?.fulfill()
+            socketCompletionHandlerCalledExpectation?.fulfill()
         }
         session.mockState = .Connected
 
@@ -115,9 +116,9 @@ class VirtualSocketBuilderTests: XCTestCase {
 
         session.mockState = .Connected
         let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerExpectation] receivedSocket, error in
+            [weak socketCompletionHandlerCalledExpectation] receivedSocket, error in
             socket = receivedSocket
-            socketCompletionHandlerExpectation?.fulfill()
+            socketCompletionHandlerCalledExpectation?.fulfill()
         }
 
         let socketCreatedTimeout = 2.0
@@ -130,9 +131,9 @@ class VirtualSocketBuilderTests: XCTestCase {
         var error: ErrorType?
 
         let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerExpectation] receivedSocket, err in
+            [weak socketCompletionHandlerCalledExpectation] receivedSocket, err in
             error = err
-            socketCompletionHandlerExpectation?.fulfill()
+            socketCompletionHandlerCalledExpectation?.fulfill()
         }
 
         let socketCreatedTimeout = 2.0
@@ -141,13 +142,13 @@ class VirtualSocketBuilderTests: XCTestCase {
     }
 
     func testReceiveErrorOnCreateBrowserOutputStream() {
-        session.simulateError = true
+        session.simulateCreateOutputStreamError = true
         var error: ErrorType?
 
         let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerExpectation] receivedSocket, err in
+            [weak socketCompletionHandlerCalledExpectation] receivedSocket, err in
             error = err
-            socketCompletionHandlerExpectation?.fulfill()
+            socketCompletionHandlerCalledExpectation?.fulfill()
         }
 
         let receiveErrorTimeout = 2.0
@@ -156,13 +157,13 @@ class VirtualSocketBuilderTests: XCTestCase {
     }
 
     func testReceiveErrorOnCreateAdvertiserOutputStream() {
-        session.simulateError = true
+        session.simulateCreateOutputStreamError = true
         var error: ErrorType?
 
         let _: AdvertiserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerExpectation] receivedSocket, err in
+            [weak socketCompletionHandlerCalledExpectation] receivedSocket, err in
             error = err
-            socketCompletionHandlerExpectation?.fulfill()
+            socketCompletionHandlerCalledExpectation?.fulfill()
         }
 
         let socketCreatedTimeout = 2.0
