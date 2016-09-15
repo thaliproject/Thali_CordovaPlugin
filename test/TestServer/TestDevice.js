@@ -6,11 +6,11 @@ var inherits = util.inherits;
 
 var objectAssign = require('object-assign');
 var assert       = require('assert');
-var Promise      = require('bluebird');
 var EventEmitter = require('events').EventEmitter;
 
 require('./utils/polyfills.js');
 var asserts       = require('./utils/asserts.js');
+var Promise       = require('./utils/promise');
 var defaultConfig = require('./TestDeviceConfig');
 
 

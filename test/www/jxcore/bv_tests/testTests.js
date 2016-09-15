@@ -49,8 +49,8 @@ test('can pass data in setup', function (t) {
 if (!jxcore.utils.OSInfo().isMobile) {
   test('can continue after disconnect from server', function (t) {
     // Android phone like to do huge amount of reconnects.
-    var RECONNECT_TIMEOUT = 50;
-    var RECONNECT_ATTEMPTS = 100;
+    var RECONNECT_TIMEOUT = 20;
+    var RECONNECT_ATTEMPTS = 50;
 
     t.timeoutAfter(2 * RECONNECT_TIMEOUT * RECONNECT_ATTEMPTS + 3000);
 
