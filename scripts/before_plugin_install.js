@@ -11,12 +11,12 @@ var path = require('path');
 
 module.exports = function (context) {
 
-    var Q = context.requireCordovaModule('q');
-    var deferred = new Q.defer();
+  var Q = context.requireCordovaModule('q');
+  var deferred = new Q.defer();
 
-    // Temporary hack to run npm install on this plugin's hooks dependencies.
-    var hooksDir = path.resolve(__dirname);
-    var execCallback = function (error, stdout, stderr) {
+  // Temporary hack to run npm install on this plugin's hooks dependencies.
+  var hooksDir = path.resolve(__dirname);
+  var execCallback = function (error, stdout, stderr) {
       if (error) {
         if (stdout) { console.log('stdout: ' + stdout); }
         if (stderr) { console.log('stderr: ' + stderr); }
@@ -40,10 +40,10 @@ module.exports = function (context) {
       deferred.resolve();
     };
 
-    console.log(
-      'Installing dependencies for Thali Cordova plugin hooks in ' +
-      hooksDir);
-    exec('jx npm install --autoremove "*.gz"', { cwd: hooksDir }, execCallback);
+  console.log(
+    'Installing dependencies for Thali Cordova plugin hooks in ' +
+    hooksDir);
+  exec('jx npm install --autoremove "*.gz"', { cwd: hooksDir }, execCallback);
 
-    return deferred.promise;
-  };
+  return deferred.promise;
+};
