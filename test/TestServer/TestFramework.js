@@ -6,7 +6,6 @@ var inherits = util.inherits;
 var assert       = require('assert');
 var EventEmitter = require('events').EventEmitter;
 
-require('./utils/polyfills.js');
 var asserts = require('./utils/asserts.js');
 var logger  = require('./utils/logger')('TestFramework');
 
