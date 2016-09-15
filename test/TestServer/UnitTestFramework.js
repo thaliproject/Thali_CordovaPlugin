@@ -13,7 +13,9 @@ var logger  = require('./utils/logger')('UnitTestFramework');
 
 var TestDevice    = require('./TestDevice');
 var TestFramework = require('./TestFramework');
-var defaultConfig = require('./UnitTestConfig');
+var defaultConfig = require('./config/UnitTest');
+
+var MIN_DEVICES = 2;
 
 
 function UnitTestFramework(config) {
@@ -42,8 +44,11 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
   var count = platform.count;
   asserts.isNumber(count);
   assert(
-    count > 0,
-    'we should have at least one device'
+    count > MIN_DEVICES,
+    format(
+      'we should have at least %d devices',
+      MIN_DEVICES
+    )
   );
 
   assert(
