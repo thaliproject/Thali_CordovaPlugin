@@ -102,4 +102,4 @@ copyCINodeTestClass();
 copyCINativeTestClass();
 updateThaliTestSuiteFunction();
 updateRunTestsToRunOnlyOneNodeTest();
-//removeAlliOSTestsButOne();
+removeAlliOSTestsButOne();
