@@ -8,8 +8,7 @@ var assert = require('assert');
 var net = require('net');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
-var testUtils = require('./testUtils');
-var logger    = testUtils.getLogger('wifiBasedNativeMock');
+var logger = require('./testLogger')('wifiBasedNativeMock');
 
 var proxyquire = require('proxyquire');
 proxyquire.noPreserveCache();

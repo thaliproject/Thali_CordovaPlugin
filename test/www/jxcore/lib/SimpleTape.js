@@ -8,9 +8,8 @@ var tape         = require('tape-catch');
 var assert       = require('assert');
 var Promise      = require('bluebird');
 
-var testUtils = require('./testUtils');
-var asserts   = require('./utils/asserts');
-var logger    = testUtils.getLogger('SimpleThaliTape');
+var asserts = require('./utils/asserts');
+var logger  = require('./testLogger')('SimpleThaliTape');
 
 
 function SimpleThaliTape (options) {

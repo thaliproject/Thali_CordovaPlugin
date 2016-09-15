@@ -10,7 +10,7 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 var Promise = require('lie');
 
 var testUtils = require('../lib/testUtils');
-var logger    = testUtils.getLogger('testCreatePeerListener');
+var logger    = require('../lib/testLogger')('testCreatePeerListener');
 
 // Every call to Mobile trips this warning
 /* jshint -W064 */

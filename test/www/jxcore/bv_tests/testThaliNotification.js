@@ -17,7 +17,7 @@ var NotificationBeacons =
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var testUtils = require('../lib/testUtils');
-var logger    = testUtils.getLogger('testThaliNotification');
+var logger    = require('../lib/testLogger')('testThaliNotification');
 
 var HELLO = 'Hello world';
 var HELLO_PATH = '/hello';

@@ -13,7 +13,7 @@ var EventEmitter   = require('events').EventEmitter;
 
 var testUtils     = require('./testUtils');
 var asserts       = require('./utils/asserts');
-var logger        = testUtils.getLogger('CoordinatedClient');
+var logger        = require('./testLogger')('CoordinatedClient');
 var serverAddress = require('../server-address');
 
 
