@@ -137,13 +137,13 @@ var commandsAndResults =
     'python': {
       'versionRequired': '2.7.10',
       'versionCheck': 'python -V',
-      'checkStdErr': true, // http://bugs.python.org/issue28160?@ok_message=msg%20276496%20created%0Aissue%2028160%20created&@template=item
+      'checkStdErr': true, // http://bugs.python.org/issue28160 - fixed in 3.4
       'versionResult': function (expectedVersion, result) {
         return 'Python ' + expectedVersion === result.trim();
       }
     },
     'cordova': {
-      'versionRequired': '6.0.0',
+      'versionRequired': '6.3.1',
       'versionCheck': 'cordova -v',
       'versionResult': function (expectedVersion, result) {
         return expectedVersion === result.trim();
@@ -152,7 +152,7 @@ var commandsAndResults =
     'java': {
       'versionRequired': '1.8.0_102',
       'versionCheck': 'java -version',
-      'checkStdErr': true, // Review ID: JI-9043760
+      'checkStdErr': true, // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=JDK-8166116
       'versionResult': function (expectedVersion, result) {
         return result.startsWith('java version "' + expectedVersion + '"\n');
       }
