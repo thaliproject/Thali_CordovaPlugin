@@ -13,35 +13,62 @@ import MultipeerConnectivity
 
 class SessionMock: Session {
 
-    var simulateRelay: Bool = true
+    private var identifier: MCPeerID
+    private var session: MCSession
     private var outputStreamName: String?
 
+    var simulateRelay: Bool = true
+
+    var mockState: MCSessionState = .Connected {
+        didSet {
+            self.session(session, peer: identifier, didChangeState: mockState)
+        }
+    }
+
+    override var sessionState: Atomic<MCSessionState> {
+        return Atomic(mockState)
+    }
+
+    override var didReceiveInputStreamHandler: ((NSInputStream, String) -> Void)? {
+        didSet {
+            didReceiveInputStreamHandler?(NSInputStream(data: NSData(bytes: nil, length: 0)),
+                                          getInputStreamName())
+        }
+    }
+
+    var simulateError: Bool = false
+
+    override init(session: MCSession, identifier: MCPeerID, disconnectHandler: () -> Void) {
+        self.session = session
+        self.identifier = identifier
+        super.init(session: session, identifier: identifier, disconnectHandler: disconnectHandler)
+    }
+
     func getInputStreamName() -> String {
+        print(outputStreamName)
         guard let streamName = outputStreamName where simulateRelay else {
             return ""
         }
         return streamName
     }
-
-    override func getInputStream(completion: (NSInputStream, String) -> Void) {
-        completion(NSInputStream(data: NSData(bytes: nil, length: 0)), getInputStreamName())
-    }
-
-    override func createOutputStream(withName name: String,
-                                     completion: (NSOutputStream?, ErrorType?) -> Void) {
+    override func createOutputStream(withName name: String) throws -> NSOutputStream {
+        guard !simulateError else {
+            throw NSError(domain: "org.thaliproject.testError", code: 42, userInfo: nil)
+        }
+        print(name)
         outputStreamName = name
-        completion(NSOutputStream(toBuffer: nil, capacity: 0), nil)
+        return NSOutputStream(toBuffer: nil, capacity: 0)
     }
 }
 
 class VirtualSocketBuilderTests: XCTestCase {
 
-    var socketCreatedExpectation: XCTestExpectation!
+    var socketCompletionHandlerExpectation: XCTestExpectation!
     var session: SessionMock!
 
     override func setUp() {
         super.setUp()
-        socketCreatedExpectation = expectationWithDescription("Socket created")
+        socketCompletionHandlerExpectation = expectationWithDescription("Socket created")
         session = SessionMock(session: MCSession(peer: MCPeerID(displayName:"peer1")),
                               identifier: MCPeerID(displayName:"peer2")) {
         }
@@ -57,9 +84,9 @@ class VirtualSocketBuilderTests: XCTestCase {
         var socket: (NSOutputStream, NSInputStream)?
 
         let _: AdvertiserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCreatedExpectation] receivedSocket, error in
+            [weak socketCompletionHandlerExpectation] receivedSocket, error in
             socket = receivedSocket
-            socketCreatedExpectation?.fulfill()
+            socketCompletionHandlerExpectation?.fulfill()
         }
 
         let socketCreatedTimeout = 2.0
@@ -67,13 +94,30 @@ class VirtualSocketBuilderTests: XCTestCase {
         XCTAssertNotNil(socket)
     }
 
-    func testSocketCreatedWithBrowserBuilder() {
+    func testSocketCreatedWithBrowserBuilderBeforeConnectedState() {
+        session.mockState = .NotConnected
         var socket: (NSOutputStream, NSInputStream)?
 
         let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCreatedExpectation] receivedSocket, error in
+            [weak socketCompletionHandlerExpectation] receivedSocket, error in
             socket = receivedSocket
-            socketCreatedExpectation?.fulfill()
+            socketCompletionHandlerExpectation?.fulfill()
+        }
+        session.mockState = .Connected
+
+        let socketCreatedTimeout = 2.0
+        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
+        XCTAssertNotNil(socket)
+    }
+
+    func testSocketCreatedWithBrowserBuilderAfterConnectedState() {
+        var socket: (NSOutputStream, NSInputStream)?
+
+        session.mockState = .Connected
+        let _: BrowserVirtualSocketBuilder = createSocket(session) {
+            [weak socketCompletionHandlerExpectation] receivedSocket, error in
+            socket = receivedSocket
+            socketCompletionHandlerExpectation?.fulfill()
         }
 
         let socketCreatedTimeout = 2.0
@@ -86,9 +130,39 @@ class VirtualSocketBuilderTests: XCTestCase {
         var error: ErrorType?
 
         let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCreatedExpectation] receivedSocket, err in
+            [weak socketCompletionHandlerExpectation] receivedSocket, err in
             error = err
-            socketCreatedExpectation?.fulfill()
+            socketCompletionHandlerExpectation?.fulfill()
+        }
+
+        let socketCreatedTimeout = 2.0
+        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
+        XCTAssertNotNil(error)
+    }
+
+    func testReceiveErrorOnCreateBrowserOutputStream() {
+        session.simulateError = true
+        var error: ErrorType?
+
+        let _: BrowserVirtualSocketBuilder = createSocket(session) {
+            [weak socketCompletionHandlerExpectation] receivedSocket, err in
+            error = err
+            socketCompletionHandlerExpectation?.fulfill()
+        }
+
+        let receiveErrorTimeout = 2.0
+        waitForExpectationsWithTimeout(receiveErrorTimeout, handler: nil)
+        XCTAssertNotNil(error)
+    }
+
+    func testReceiveErrorOnCreateAdvertiserOutputStream() {
+        session.simulateError = true
+        var error: ErrorType?
+
+        let _: AdvertiserVirtualSocketBuilder = createSocket(session) {
+            [weak socketCompletionHandlerExpectation] receivedSocket, err in
+            error = err
+            socketCompletionHandlerExpectation?.fulfill()
         }
 
         let socketCreatedTimeout = 2.0

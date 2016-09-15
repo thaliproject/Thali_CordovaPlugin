@@ -16,18 +16,9 @@ class Session: NSObject {
     private let session: MCSession
     private let identifier: MCPeerID
     private let disconnectHandler: () -> Void
-    private var inputStreamTaskPool = InputStreamHandlerTaskQueue()
-    private var createOutputStreamHandlerQueue: Atomic<[() -> Void]> = Atomic([])
+    var sessionStateChangesHandler: ((MCSessionState) -> Void)?
+    var didReceiveInputStreamHandler: ((NSInputStream, String) -> Void)?
     internal private(set) var sessionState: Atomic<MCSessionState> = Atomic(.NotConnected)
-
-    private func clearOutputStreamQueue() {
-        createOutputStreamHandlerQueue.modify {
-            $0.forEach {
-                $0()
-            }
-            $0.removeAll()
-        }
-    }
 
     init(session: MCSession, identifier: MCPeerID, disconnectHandler: () -> Void) {
         self.session = session
@@ -37,31 +28,8 @@ class Session: NSObject {
         self.session.delegate = self
     }
 
-    func getInputStream(completion: (NSInputStream, String) -> Void) {
-        inputStreamTaskPool.add(completion)
-    }
-
-    func createOutputStream(withName name: String,
-                            completion: (NSOutputStream?, ErrorType?) -> Void) {
-        let createOutputStream = { [weak self] in
-            do {
-                guard let strongSelf = self else {
-                    return
-                }
-                let stream =
-                    try strongSelf.session.startStreamWithName(name, toPeer: strongSelf.identifier)
-                completion(stream, nil)
-            } catch let error {
-                completion(nil, error)
-            }
-        }
-        if self.sessionState.value == .Connected {
-            createOutputStream()
-        } else {
-            createOutputStreamHandlerQueue.modify {
-                $0.append(createOutputStream)
-            }
-        }
+    func createOutputStream(withName name: String) throws -> NSOutputStream {
+        return try session.startStreamWithName(name, toPeer: identifier)
     }
 }
 
@@ -73,20 +41,16 @@ extension Session: MCSessionDelegate {
         sessionState.modify {
             $0 = state
         }
-        switch sessionState.value {
-        case .NotConnected:
+        sessionStateChangesHandler?(state)
+        if state == .NotConnected {
             disconnectHandler()
-        case .Connected:
-            clearOutputStreamQueue()
-        default:
-            break
         }
     }
 
     func session(session: MCSession, didReceiveStream stream: NSInputStream,
                  withName streamName: String, fromPeer peerID: MCPeerID) {
         assert(identifier.displayName == peerID.displayName)
-        inputStreamTaskPool.add(stream, withName: streamName)
+        didReceiveInputStreamHandler?(stream, streamName)
     }
 
     func session(session: MCSession, didReceiveData data: NSData, fromPeer peerID: MCPeerID) {}
