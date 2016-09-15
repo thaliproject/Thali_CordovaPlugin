@@ -11,9 +11,9 @@ var Promise        = require('bluebird');
 var SocketIOClient = require('socket.io-client');
 var EventEmitter   = require('events').EventEmitter;
 
-var asserts       = require('./utils/asserts');
 var testUtils     = require('./testUtils');
-var logger        = require('thali/thaliLogger')('CoordinatedClient');
+var asserts       = require('./utils/asserts');
+var logger        = testUtils.getLogger('CoordinatedClient');
 var serverAddress = require('../server-address');
 
 
