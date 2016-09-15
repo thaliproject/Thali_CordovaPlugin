@@ -463,8 +463,8 @@ module.exports.stopListeningForAdvertisements = function () {
  * layer MUST tear down the associated non-TCP connection.
  *
  * On `multiConnect` platforms all incoming TCP connections are sent directly to
- * the router started by {@link module:TCPServersManager.start} since we have
- * no need for {@link module:TCPServersManager} on these platforms.
+ * the router started by {@link module:thaliMobileNativeWrapper.start} since we 
+ * have no need for {@link module:TCPServersManager} on these platforms.
  *
  * ## Repeated calls
  *
