@@ -7,18 +7,17 @@ var assert       = require('assert');
 var EventEmitter = require('events').EventEmitter;
 
 require('./utils/polyfills.js');
-var asserts    = require('./utils/asserts.js');
+var asserts = require('./utils/asserts.js');
+var logger  = require('./utils/logger')('TestFramework');
+
 var TestDevice = require('./TestDevice');
 
 
 // Base for classes that manage collections of devices and associated tests.
-function TestFramework(config, logger) {
+function TestFramework(config) {
   var self = this;
 
   TestFramework.super_.call(this);
-
-  this.logger = logger || console;
-  asserts.exists(this.logger);
 
   // 'config' provided by the user.
   // Tells us how many devices we need.
@@ -58,7 +57,7 @@ TestFramework.prototype.addDevice = function (device) {
   asserts.instanceOf(device, TestDevice);
 
   if (!device.supportedHardware) {
-    this.logger.info(
+    logger.info(
       'disqualifying device with unsupported hardware, name: \'%s\'',
       device.name
     );
@@ -77,7 +76,7 @@ TestFramework.prototype.addDevice = function (device) {
     var existingDevice = devices[deviceIndex];
     asserts.instanceOf(device, TestDevice);
 
-    this.logger.info(
+    logger.info(
       'updating existing device, name: \'%s\', uuid: \'%s\', platformName: \'%s\'',
       existingDevice.name, existingDevice.uuid, device.platformName
     );
@@ -87,7 +86,7 @@ TestFramework.prototype.addDevice = function (device) {
   }
 
   if (devices.length === count) {
-    this.logger.info(
+    logger.info(
       'we have enough devices; discarding device, name: \'%s\', platformName: \'%s\'',
       device.name, device.platformName
     );
@@ -97,10 +96,10 @@ TestFramework.prototype.addDevice = function (device) {
 
   devices.push(device);
   deviceIndexes[device.uuid] = devices.length - 1;
-  this.logger.debug('device added, name: \'%s\'', device.name);
+  logger.debug('device added, name: \'%s\'', device.name);
 
   if (devices.length === count) {
-    this.logger.info(
+    logger.info(
       'all required %d devices are present for platformName: \'%s\'',
       count, device.platformName
     );
