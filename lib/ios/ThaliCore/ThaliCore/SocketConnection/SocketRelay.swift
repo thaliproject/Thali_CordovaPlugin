@@ -72,6 +72,7 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
                 return
             }
             self?.handleDidReceive(socket: socket, for: session)
+            // todo: port or tcp listener creation error should be returned. Part of #881
             completion(nil, nil)
         }
         addToDiscardQueue(virtualSocketBuilder, for: session) {

@@ -338,7 +338,8 @@ class AppContextTests: XCTestCase {
             try context.didRegisterToNative([notAString])
         } catch let err as AppContextError {
             contextError = err
-        } catch _ {
+        } catch let error {
+            XCTFail("unexpected error: \(error)")
         }
         XCTAssertEqual(contextError, .BadParameters)
     }
@@ -382,7 +383,8 @@ class AppContextTests: XCTestCase {
             try context.disconnect([notAString])
         } catch let err as AppContextError {
             contextError = err
-        } catch _ {
+        } catch let error {
+            XCTFail("unexpected error: \(error)")
         }
         XCTAssertEqual(contextError, .BadParameters)
     }
