@@ -8,16 +8,13 @@
 
 #import <Foundation/Foundation.h>
 
+#import <ThaliCore/NetworkReachability.h>
+
+#import <ThaliCore/BluetoothHardwareControlManager.h>
+#import <ThaliCore/BluetoothHardwareControlObserver.h>
+
 //! Project version number for ThaliCoreWithTests.
 FOUNDATION_EXPORT double ThaliCoreVersionNumber;
 
 //! Project version string for ThaliCoreWithTests.
 FOUNDATION_EXPORT const unsigned char ThaliCoreVersionString[];
-
-// In this header, you should import all the public headers of your framework using statements like #import <ThaliCoreWithTests/PublicHeader.h>
-
-#import <ThaliCore/THEAppContext.h>
-#import <ThaliCore/THEAppContext+Tests.h>
-#import <ThaliCore/THEThaliEventDelegate.h>
-#import <ThaliCore/THEThreading.h>
-#import <ThaliCore/THEMultipeerManager.h>
