@@ -44,7 +44,7 @@ import Foundation
         }
     }
 
-    //dispose advertiser after timeout to ensure that it has no pending invitations
+    // Dispose advertiser after timeout to ensure that it has no pending invitations
     private func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW,
                                       Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
@@ -67,7 +67,7 @@ import Foundation
                                     receivedInvitationHandler: { [weak self] session in
                                         self?.handle(session, withPort: port)
                                     }, disconnectHandler: {
-            //todo fix with #1040
+            // TODO: fix with #1040
         })
         advertiser.startAdvertising(errorHandler)
         advertisers.modify {

@@ -12,6 +12,7 @@ import XCTest
 import MultipeerConnectivity
 
 class BrowserTests: XCTestCase {
+
     let serviceType = String.random(length: 7)
 
     private func unexpectedFoundPeerHandler(peer: PeerIdentifier) {

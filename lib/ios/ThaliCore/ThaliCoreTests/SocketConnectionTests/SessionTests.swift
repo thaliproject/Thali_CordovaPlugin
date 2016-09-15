@@ -13,6 +13,7 @@ import Foundation
 import MultipeerConnectivity
 
 class MCSessionMock: MCSession {
+
     var errorOnStartStream = false
     override func startStreamWithName(streamName: String,
                                       toPeer peerID: MCPeerID) throws -> NSOutputStream {
@@ -24,6 +25,7 @@ class MCSessionMock: MCSession {
 }
 
 class SessionTests: XCTestCase {
+
     var disconnectedExpectation: XCTestExpectation!
     var mcSession: MCSessionMock!
     var peerID: MCPeerID!

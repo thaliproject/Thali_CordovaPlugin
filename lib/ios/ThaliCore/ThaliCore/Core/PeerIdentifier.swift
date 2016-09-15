@@ -3,8 +3,8 @@
 //  PeerIdentifier.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
-//  information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
@@ -16,6 +16,7 @@ public enum PeerIdentifierError: String, ErrorType {
 
 ///Peer identifier with generations
 public struct PeerIdentifier: Hashable {
+
     public let uuid: String
     public let generation: Int
     private static let separator = Character(":")
@@ -67,6 +68,7 @@ extension PeerIdentifier {
 
 // MARK: - Multipeer connectivity specific functions
 extension MCPeerID {
+
     convenience init(peerIdentifier: PeerIdentifier) {
         self.init(displayName: peerIdentifier.stringValue)
     }

@@ -11,6 +11,7 @@ import XCTest
 @testable import ThaliCore
 
 class BrowserManagerTests: XCTestCase {
+
     var serviceType: String!
 
     override func setUp() {

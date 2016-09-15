@@ -22,6 +22,7 @@ public struct PeerAvailability {
 
 // Class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
+
     private let socketRelay: SocketRelay<BrowserVirtualSocketBuilder>
 
     internal private(set) var currentBrowser: Browser?
@@ -88,7 +89,7 @@ public final class BrowserManager: NSObject {
         do {
             let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier,
                                                                  disconnectHandler: {
-                //todo call multiConnectConnectionFailure #946
+                // TODO: call multiConnectConnectionFailure #946
             })
             socketRelay.createSocket(with: session, completion: completion)
         } catch let error {

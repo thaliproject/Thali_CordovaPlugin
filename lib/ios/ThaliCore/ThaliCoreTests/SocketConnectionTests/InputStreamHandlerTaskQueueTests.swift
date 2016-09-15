@@ -12,6 +12,7 @@ import Foundation
 @testable import ThaliCore
 
 class InputStreamHandlerTaskQueueTests: XCTestCase {
+
     var expectation: XCTestExpectation!
     var queue: InputStreamHandlerTaskQueue!
 

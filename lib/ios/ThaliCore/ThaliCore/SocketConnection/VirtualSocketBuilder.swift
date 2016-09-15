@@ -10,6 +10,7 @@
 import Foundation
 
 class VirtualSocketBuilder {
+
     private let completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void
     let session: Session
 
@@ -22,6 +23,7 @@ class VirtualSocketBuilder {
 }
 
 final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
+
     required init(session: Session,
                   completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
         super.init(session: session, completionHandler: completionHandler)
@@ -43,6 +45,7 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 }
 
 final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
+
     required init(session: Session,
                   completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
         super.init(session: session, completionHandler: completionHandler)

@@ -11,6 +11,7 @@ import Foundation
 
 /// Managing async queues: inputStreams queue and inputStream's handlers queue
 final class InputStreamHandlerTaskQueue {
+
     internal private(set) var streamPool: [(NSInputStream, String)] = []
     internal private(set) var streamHandlerPool: [(NSInputStream, String) -> Void] = []
     let serialQueue = dispatch_queue_create("org.thaliproject.InputStreamHandlerTaskQueue",

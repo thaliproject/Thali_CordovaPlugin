@@ -51,8 +51,8 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
         activeSessions.modify {
             $0[session] = socket
         }
-        //todo bind to CocoaAsyncSocket and call completion block
-        //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
+        // TODO: bind to CocoaAsyncSocket and call completion block
+        // Issue: https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
     }
 
     func createSocket(with session: Session, onPort port: UInt16 = 0,

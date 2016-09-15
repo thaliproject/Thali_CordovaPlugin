@@ -12,6 +12,7 @@ import XCTest
 import MultipeerConnectivity
 
 class SessionMock: Session {
+
     var simulateRelay: Bool = true
     private var outputStreamName: String?
 
@@ -34,6 +35,7 @@ class SessionMock: Session {
 }
 
 class VirtualSocketBuilderTests: XCTestCase {
+
     var socketCreatedExpectation: XCTestExpectation!
     var session: SessionMock!
 

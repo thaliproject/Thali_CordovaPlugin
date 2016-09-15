@@ -67,6 +67,7 @@ class Session: NSObject {
 
 // MARK: - Handling events for MCSession
 extension Session: MCSessionDelegate {
+
     func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {
         assert(identifier.displayName == peerID.displayName)
         sessionState.modify {

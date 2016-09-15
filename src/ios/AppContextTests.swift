@@ -336,7 +336,7 @@ class AppContextTests: XCTestCase {
         do {
             let notAString = 42
             try context.didRegisterToNative([notAString])
-        } catch let err as AppContextError{
+        } catch let err as AppContextError {
             contextError = err
         } catch _ {
         }
