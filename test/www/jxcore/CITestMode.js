@@ -74,32 +74,8 @@ var copyCINodeTestClass = function() {
   }
 };
 
-var removeAlliOSTestsButOne = function() {
-  try {
-    var oldPathTest = '../../../lib/ios/ThaliCore/ThaliCoreTests/SimpleTestCase.swift';
-    var newPathTest = '../../../lib/ios/ThaliCore/SimpleTestCase.swift';
-
-    var oldPathInfo = '../../../lib/ios/ThaliCore/ThaliCoreTests/Supporting Files/Info.plist';
-    var newPathInfo = '../../../lib/ios/ThaliCore/Info.plist';
-
-    fs.renameSync(oldPathTest, newPathTest);
-    fs.renameSync(oldPathInfo, newPathInfo);
-
-    fs.removeSync('../../../lib/ios/ThaliCore/ThaliCoreTests');
-
-    fs.mkdirsSync('../../../lib/ios/ThaliCore/ThaliCoreTests/Supporting Files');
-    fs.renameSync(newPathTest, oldPathTest);
-    fs.renameSync(newPathInfo, oldPathInfo);
-
-  } catch (e) {
-    console.log(e);
-    console.log('Failed to remove all iOS test files but one');
-  }
-};
-
 updateUnitTestConfig();
 copyCINodeTestClass();
 copyCINativeTestClass();
 updateThaliTestSuiteFunction();
 updateRunTestsToRunOnlyOneNodeTest();
-removeAlliOSTestsButOne();
