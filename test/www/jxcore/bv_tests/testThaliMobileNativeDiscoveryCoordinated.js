@@ -13,9 +13,6 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 
 var logger = require('../lib/testLogger')('testThaliMobileNativeDiscoveryCoordinated');
 
-var longjohn = require('longjohn');
-longjohn.async_trace_limit = -1;
-
 // Global server that should be stopped with it's mobile sources in teardown.
 var serverToBeClosed;
 // Do we need to call 'stopListeningForAdvertisements'?
