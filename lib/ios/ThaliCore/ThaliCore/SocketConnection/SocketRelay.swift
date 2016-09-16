@@ -12,9 +12,9 @@ import Foundation
 final class SocketRelay<Builder: VirtualSocketBuilder> {
     private var activeBuilders: Atomic<[Session : Builder]> = Atomic([:])
     private var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> = Atomic([:])
-    private let createSocketTimeout: Double
+    private let createSocketTimeout: NSTimeInterval
 
-    init(createSocketTimeout: Double) {
+    init(createSocketTimeout: NSTimeInterval) {
         self.createSocketTimeout = createSocketTimeout
     }
 

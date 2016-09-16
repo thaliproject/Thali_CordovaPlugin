@@ -11,7 +11,7 @@ import Foundation
 
 // Class for managing Thali advertiser's logic
 @objc public final class AdvertiserManager: NSObject {
-    private let disposeAdvertiserTimeout: Double
+    private let disposeAdvertiserTimeout: NSTimeInterval
     private let serviceType: String
     internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
     internal private(set) var currentAdvertiser: Advertiser? = nil
@@ -31,8 +31,8 @@ import Foundation
      - parameter inputStreamReceiveTimeout: Timeout in seconds for receiving input stream
 
      */
-    public init(serviceType: String, disposeAdvertiserTimeout: Double,
-                inputStreamReceiveTimeout: Double) {
+    public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval,
+                inputStreamReceiveTimeout: NSTimeInterval) {
         self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
         self.serviceType = serviceType
         socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(

@@ -35,7 +35,7 @@ public final class BrowserManager: NSObject {
         return currentBrowser?.listening ?? false
     }
 
-    public init(serviceType: String, inputStreamReceiveTimeout: Double,
+    public init(serviceType: String, inputStreamReceiveTimeout: NSTimeInterval,
                 peersAvailabilityChangedHandler: ([PeerAvailability]) -> Void) {
         self.serviceType = serviceType
         self.peersAvailabilityChangedHandler = peersAvailabilityChangedHandler

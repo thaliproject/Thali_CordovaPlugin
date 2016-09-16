@@ -51,7 +51,7 @@ class BrowserManagerTests: XCTestCase {
                 getErrorOnStartListeningExpectation?.fulfill()
             }
         }
-        let getErrorOnStartListeningTimeout: Double = 5
+        let getErrorOnStartListeningTimeout: NSTimeInterval = 5
         waitForExpectationsWithTimeout(getErrorOnStartListeningTimeout, handler: nil)
 
         // Should
@@ -76,7 +76,7 @@ class BrowserManagerTests: XCTestCase {
         }
 
         // Should
-        let getIllegalPeerTimeout: Double = 5
+        let getIllegalPeerTimeout: NSTimeInterval = 5
         waitForExpectationsWithTimeout(getIllegalPeerTimeout, handler: nil)
         XCTAssertEqual(connectError, .IllegalPeerID)
     }

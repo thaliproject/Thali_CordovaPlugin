@@ -15,7 +15,7 @@ class SocketRelayTests: XCTestCase {
 
     func testGetTimeoutErrorOnCreateSocket() {
         // Preconditions
-        let createSocketTimeout: Double = 1.0
+        let createSocketTimeout: NSTimeInterval = 1.0
         let relay =
             SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: createSocketTimeout)
         let peerID = MCPeerID(displayName: NSUUID().UUIDString)
@@ -51,7 +51,7 @@ class SocketRelayTests: XCTestCase {
         }) { [weak foundPeerExpectation] in
             foundPeerExpectation?.fulfill()
         }
-        let foundPeerTimeout: Double = 2.0
+        let foundPeerTimeout: NSTimeInterval = 2.0
         waitForExpectationsWithTimeout(foundPeerTimeout, handler: nil)
 
         do {
@@ -63,7 +63,7 @@ class SocketRelayTests: XCTestCase {
                         browserStreams = socket
                         socketCreatedExpectation?.fulfill()
                     })
-            let socketCreatedTimeout: Double = 5
+            let socketCreatedTimeout: NSTimeInterval = 5
             waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
 
             // Should

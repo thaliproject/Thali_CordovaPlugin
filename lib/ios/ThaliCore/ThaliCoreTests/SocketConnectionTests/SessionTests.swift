@@ -47,7 +47,7 @@ class SessionTests: XCTestCase {
         mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .NotConnected)
 
         // Should
-        let sessionDisconnectedExpectationTimeout: Double = 2
+        let sessionDisconnectedExpectationTimeout: NSTimeInterval = 2
         waitForExpectationsWithTimeout(sessionDisconnectedExpectationTimeout, handler: nil)
         XCTAssertEqual(session.sessionState.value, MCSessionState.NotConnected)
     }

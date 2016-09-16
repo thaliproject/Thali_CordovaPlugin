@@ -14,7 +14,7 @@ class AdvertiserManagerTests: XCTestCase {
 
     var serviceType: String!
     var advertiserManager: AdvertiserManager!
-    let disposeTimeout: Double = 4.0
+    let disposeTimeout: NSTimeInterval = 4.0
 
     override func setUp() {
         serviceType = String.random(length: 7)
