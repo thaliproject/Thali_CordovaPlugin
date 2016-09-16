@@ -1,9 +1,12 @@
 'use strict';
 
+// We want to initialize Socket
+
 var util     = require('util');
 var format   = util.format;
 var inherits = util.inherits;
 
+var uuid         = require('node-uuid');
 var objectAssign = require('object-assign');
 var EventEmitter = require('events').EventEmitter;
 
@@ -13,6 +16,9 @@ var Promise = require('./utils/promise');
 var defaultConfig = require('./config/Socket');
 
 
+// We want to create 'Socket' from raw socket.
+// We want to use 'runEvent' and 'emitData' methods.
+// We can update raw socket anytime and our current jobs shouldn't fail or hang.
 function Socket(rawSocket, options) {
   this._setOptions(options);
 
@@ -31,6 +37,8 @@ Socket.prototype._setOptions = function (options) {
   asserts.isNumber(this._options.retryTimeout);
 }
 
+// We want to notify all our auto-bind and auto-apply handlers
+// that raw socket was updated.
 Socket.prototype.update = function (socket) {
   asserts.instanceOf(socket, Socket);
   asserts.exists(socket._rawSocket);
@@ -38,7 +46,11 @@ Socket.prototype.update = function (socket) {
   this.emit('updated');
 }
 
-// Our handler should not care about socket.
+// For example _bind('once', 'schedule_confirmed', function (receivedData) { ... })
+// We want our handler not to care about socket.
+// We want to receive data from any raw socket.
+// So we want to auto-bind to any new socket and unbind from previous one.
+// We want to be able to unbind this auto-bind function.
 Socket.prototype._bind = function (method, event, handler) {
   var self = this;
 
@@ -66,8 +78,11 @@ Socket.prototype._bind = function (method, event, handler) {
   };
 }
 
-// We should re-run method on the new socket.
-Socket.prototype._run = function (method) {
+// For example _apply('emit', 'schedule', '[test1, test2]')
+// We need to apply this 'emit' method on current socket.
+// We want this method to be applied to any new socket.
+// We want to be able to unbind this auto-apply function.
+Socket.prototype._apply = function (method) {
   var self = this;
   var args = Array.from(arguments).slice(1);
 
@@ -85,6 +100,10 @@ Socket.prototype._run = function (method) {
 }
 
 // We will emit data until confirmation.
+// For example: emitData('schedule', '[test1, test2]');
+// 1. We will send 'schedule' with data until confirmation.
+// 2. We will wait until 'schedule_confirmed' will be received with data.
+// 3. We will check that these datas are the same.
 Socket.prototype.emitData = function (event, data) {
   var self = this;
 
@@ -92,7 +111,8 @@ Socket.prototype.emitData = function (event, data) {
   var retryIndex = 0;
   var onceConfirmed;
   var emitter;
-  data = data || '';
+
+  data = uuid.v4() + (data || '');
 
   return new Promise(function (resolve, reject) {
     onceConfirmed = self._bind(
@@ -124,7 +144,7 @@ Socket.prototype.emitData = function (event, data) {
       if (emitter) {
         emitter.unbind();
       }
-      emitter = self._run('emit', event, data);
+      emitter = self._apply('emit', event, data);
 
       timer = setTimeout(emit, self._options.retryTimeout);
     }
@@ -141,7 +161,11 @@ Socket.prototype.emitData = function (event, data) {
   });
 }
 
-// For example: runEvent('teardown', '2. my test', '{ a: 1 }', 1000)
+// We will emit data until confirmation and then verify the test finish.
+// For example: runEvent('teardown', '2. my test', '{ a: 1 }', 1000).
+// 1. We will send 'teardown_2. my test' until confirmation.
+// 2. We will wait until 'teardown_2. my test_finished' will be received.
+// 3. We will verify that test succeed.
 Socket.prototype.runEvent = function (event, test, data, timeout) {
   var self = this;
   event += '_' + test;
