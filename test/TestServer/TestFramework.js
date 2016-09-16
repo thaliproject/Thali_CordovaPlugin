@@ -3,6 +3,7 @@
 var util     = require('util');
 var inherits = util.inherits;
 
+var objectAssign = require('object-assign');
 var assert       = require('assert');
 var EventEmitter = require('events').EventEmitter;
 
@@ -13,44 +14,72 @@ var TestDevice = require('./TestDevice');
 
 
 // Base for classes that manage collections of devices and associated tests.
-function TestFramework(config) {
+function TestFramework(options) {
   var self = this;
 
   TestFramework.super_.call(this);
 
-  // 'config' provided by the user.
-  // Tells us how many devices we need.
-  asserts.isObject(config);
-  asserts.isNumber(config.timeout);
-  var devices = config.devices;
-  asserts.isObject(devices);
-  var platformNames = Object.keys(devices);
-  assert(
-    platformNames.length > 0,
-    '\'platformNames\' should not be an empty array'
-  );
+  this._setOptions(options);
 
-  this.platforms = platformNames.reduce(function (platforms, platformName) {
-    var count = devices[platformName];
+  var devices    = this._options.devices;
+  var minDevices = this._options.minDevices;
+  this.platforms = Object.keys(devices)
+  .reduce(function (platforms, platformName) {
+    var count    = devices[platformName];
+    var minCount = minDevices[platformName];
     asserts.isNumber(count);
+    asserts.isNumber(minCount);
 
     if (count && count > 0) {
       platforms[platformName] = {
         count: count,
+        minCount: minCount,
         devices: [],
         deviceIndexes: {},
-        success: undefined
+        state: TestFramework.platformStates.created
       };
     }
     return platforms;
   }, {});
-
-  this._timer = setTimeout(function () {
-    throw new Error('timeout exceed');
-  }, config.timeout);
 }
 
 inherits(TestFramework, EventEmitter);
+
+TestFramework.platformStates = {
+  created: 'created',
+  started: 'started',
+  succeed: 'succeed',
+  failed:  'failed'
+}
+
+TestFramework.prototype._setOptions = function (options) {
+  var self = this;
+
+  // 'options' provided by the user.
+  // Tells us how many devices we need.
+  this._options = objectAssign({}, options);
+
+  asserts.isObject(this._options);
+  asserts.isObject(this._options.devices);
+
+  var platformNames = Object.keys(this._options.devices);
+  assert(
+    platformNames.length > 0,
+    '\'platformNames\' should not be an empty array'
+  );
+  platformNames.forEach(function (platformName) {
+    asserts.isString(platformName);
+    asserts.isNumber(self._options.devices[platformName]);
+  });
+
+  asserts.isObject(this._options.minDevices);
+  var minPlatformNames = Object.keys(this._options.minDevices);
+  asserts.arrayEquals(platformNames.sort(), minPlatformNames.sort());
+  minPlatformNames.forEach(function (platformName) {
+    asserts.isString(platformName);
+    asserts.isNumber(self._options.minDevices[platformName]);
+  });
+}
 
 TestFramework.prototype.addDevice = function (device) {
   asserts.instanceOf(device, TestDevice);
@@ -107,20 +136,40 @@ TestFramework.prototype.addDevice = function (device) {
 };
 
 TestFramework.prototype.startTests = function (platformName, platform) {
-  clearTimeout(this._timer);
+  platform.state = TestFramework.platformStates.started;
+  this.resolveStarted();
+}
+
+TestFramework.prototype.resolveStarted = function () {
+  var self = this;
+
+  var isStarted = Object.keys(this.platforms)
+  .every(function (platformName) {
+    return self.platforms[platformName].state === TestFramework.platformStates.started;
+  });
+  if (isStarted) {
+    this.emit('started');
+  }
 }
 
 TestFramework.prototype.resolveCompleted = function () {
   var self = this;
 
-  var results = Object.keys(this.platforms)
+  var states = Object.keys(this.platforms)
   .map(function (platformName) {
-    return self.platforms[platformName].success;
+    return self.platforms[platformName].state;
   });
-  var isCompleted = results.every(function (result) {
-    return result !== undefined;
-  })
+
+  var isCompleted = states.every(function (state) {
+    return (
+      state === TestFramework.platformStates.succeed ||
+      state === TestFramework.platformStates.failed
+    );
+  });
   if (isCompleted) {
+    var results = states.map(function (state) {
+      return state === TestFramework.platformStates.succeed;
+    });
     this.emit('completed', results);
   }
 }

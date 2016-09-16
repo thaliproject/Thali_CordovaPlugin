@@ -6,6 +6,7 @@
 var util   = require('util');
 var format = util.format;
 
+require('./utils/process');
 var logger = require('./utils/logger')('TestServer');
 
 var HttpServer        = require('./HttpServer');
@@ -13,16 +14,18 @@ var TestDevice        = require('./TestDevice');
 var UnitTestFramework = require('./UnitTestFramework');
 
 
+var WAITING_FOR_DEVICES_TIMEOUT = 5 * 60 * 1000;
+
 var httpServer = new HttpServer({
   port: 3000,
   transports: ['websocket']
 });
 
-var config = process.argv[2];
-if (config) {
-  config = JSON.parse(config);
+var options = process.argv[2];
+if (options) {
+  options = JSON.parse(options);
 }
-var unitTestManager = new UnitTestFramework(config);
+var unitTestManager = new UnitTestFramework(options);
 
 httpServer
 .on('present', function (device) {
@@ -39,9 +42,17 @@ httpServer
   }
 });
 
+var timer = setTimeout(function () {
+  throw new Error('timeout exceed');
+}, WAITING_FOR_DEVICES_TIMEOUT);
+
 unitTestManager
+.once('started', function (results) {
+  clearTimeout(timer);
+})
 .once('completed', function (results) {
   logger.debug('completed');
+
   var isSuccess = results.every(function (result) {
     return result;
   });
