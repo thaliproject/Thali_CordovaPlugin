@@ -6,10 +6,11 @@ var format = util.format;
 var objectAssign = require('object-assign');
 var tape         = require('tape-catch');
 var assert       = require('assert');
-var Promise      = require('bluebird');
 
 var asserts = require('./utils/asserts');
-var logger  = require('./testLogger')('SimpleThaliTape');
+var Promise = require('./utils/promise');
+
+var logger = require('thali/thaliLogger')('SimpleThaliTape');
 
 
 function SimpleThaliTape (options) {
@@ -31,7 +32,7 @@ function SimpleThaliTape (options) {
 
   this._state = SimpleThaliTape.states.created;
 
-  this.resolveInstance();
+  this._resolveInstance();
 
   // test('name', ...)      -> 'this.addTest('name, ...)'
   // test.only('name', ...) -> 'this.only('name, ...)'
@@ -178,7 +179,7 @@ SimpleThaliTape.prototype._begin = function () {
 // We will run 'begin' on all 'SimpleThaliTape' instances.
 SimpleThaliTape.instances = [];
 
-SimpleThaliTape.prototype.resolveInstance = function () {
+SimpleThaliTape.prototype._resolveInstance = function () {
   SimpleThaliTape.instances.push(this);
 }
 

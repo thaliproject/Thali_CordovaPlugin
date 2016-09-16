@@ -5,12 +5,14 @@ var inherits = util.inherits;
 
 var objectAssign = require('object-assign');
 var assert       = require('assert');
-var Promise      = require('bluebird');
 var uuid         = require('node-uuid');
+
+var Promise = require('./utils/promise');
 
 var SimpleThaliTape   = require('./SimpleTape');
 var CoordinatedClient = require('./CoordinatedClient');
-var logger            = require('./testLogger')('CoordinatedThaliTape');
+
+var logger = require('thali/thaliLogger')('CoordinatedThaliTape');
 
 
 function CoordinatedThaliTape (options) {
@@ -47,7 +49,7 @@ CoordinatedThaliTape.prototype._begin = function () {
   this._state = CoordinatedThaliTape.states.started;
 }
 
-CoordinatedThaliTape.prototype.getTests = function () {
+CoordinatedThaliTape.prototype._getTests = function () {
   var self = this;
   return this._tests.map(function (test) {
     // We don't need to copy '_options', it will be used readonly.
@@ -61,7 +63,7 @@ CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware) {
 
   var tests = CoordinatedThaliTape.instances.reduce(function (tests, thaliTape) {
     thaliTape._begin();
-    return tests.concat(thaliTape.getTests());
+    return tests.concat(thaliTape._getTests());
   }, []);
   CoordinatedThaliTape.instances = [];
 
