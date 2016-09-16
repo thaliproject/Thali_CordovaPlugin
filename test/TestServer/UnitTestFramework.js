@@ -15,8 +15,6 @@ var TestDevice    = require('./TestDevice');
 var TestFramework = require('./TestFramework');
 var defaultConfig = require('./config/UnitTest');
 
-var MIN_DEVICES = 2;
-
 
 function UnitTestFramework(config) {
   var self = this;
@@ -31,9 +29,12 @@ inherits(UnitTestFramework, TestFramework);
 UnitTestFramework.prototype.startTests = function (platformName, platform) {
   var self = this;
 
-  UnitTestFramework.super_.prototype.startTests.call(this, platformName, platform);
+  UnitTestFramework.super_.prototype.startTests.apply(this, arguments);
 
-  assert(platform.success === undefined, 'platform should not be finished');
+  assert(
+    platform.state === TestFramework.platformStates.started,
+    'platform should be in started state'
+  );
 
   asserts.isObject(platform);
   asserts.isString(platformName);
@@ -43,11 +44,12 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
 
   var count = platform.count;
   asserts.isNumber(count);
+  var minCount = platform.minCount;
   assert(
-    count > MIN_DEVICES,
+    count >= minCount,
     format(
       'we should have at least %d devices',
-      MIN_DEVICES
+      minCount
     )
   );
 
@@ -90,14 +92,14 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
     }, Promise.resolve());
   })
   .then(function () {
-    platform.success = true;
+    platform.state = TestFramework.platformStates.succeed;
     logger.debug(
       'all unit tests succeed, platformName: \'%s\'',
       platformName
     );
   })
   .catch(function (error) {
-    platform.success = false;
+    platform.state = TestFramework.platformStates.failed;
     logger.error(
       'failed to run tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
       platformName, error.toString(), error.stack

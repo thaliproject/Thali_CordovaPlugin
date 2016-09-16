@@ -7,5 +7,8 @@ module.exports = {
     ios: 3,
     android: 3
   },
-  timeout: 5 * 60 * 1000
+  minDevices: {
+    ios: 3,
+    android: 3
+  }
 };
