@@ -5,6 +5,7 @@ var format   = util.format;
 var inherits = util.inherits;
 
 var objectAssign   = require('object-assign');
+var uuidValidate   = require('uuid-validate');
 var assert         = require('assert');
 var tape           = require('tape-catch');
 var Promise        = require('bluebird');
@@ -127,8 +128,10 @@ CoordinatedClient.prototype._newConnection = function () {
   }));
 }
 
-CoordinatedClient.prototype._schedule = function (testNamesString) {
+CoordinatedClient.prototype._schedule = function (data) {
   var self = this;
+
+  var testNamesString = CoordinatedClient.getData(data);
 
   asserts.isString(testNamesString);
   var testNames = JSON.parse(testNamesString);
@@ -139,13 +142,13 @@ CoordinatedClient.prototype._schedule = function (testNamesString) {
   });
   Promise.all(promises);
 
-  this._emit('schedule_confirmed', testNamesString);
+  this._emit('schedule_confirmed', data);
 }
 
-CoordinatedClient.prototype._discard = function () {
+CoordinatedClient.prototype._discard = function (data) {
   var self = this;
 
-  this._emit('discard_confirmed')
+  this._emit('discard_confirmed', data)
   .then(function () {
     logger.debug('device discarded as surplus from the test server');
 
@@ -154,10 +157,10 @@ CoordinatedClient.prototype._discard = function () {
   });
 }
 
-CoordinatedClient.prototype._disqualify = function () {
+CoordinatedClient.prototype._disqualify = function (data) {
   var self = this;
 
-  this._emit('disqualify_confirmed')
+  this._emit('disqualify_confirmed', data)
   .then(function () {
     logger.debug('device disqualified from the test server');
 
@@ -190,10 +193,10 @@ CoordinatedClient.prototype._error = function (error) {
   this._failed(new Error(error));
 }
 
-CoordinatedClient.prototype._complete = function () {
+CoordinatedClient.prototype._complete = function (data) {
   var self = this;
 
-  this._emit('complete_confirmed')
+  this._emit('complete_confirmed', data)
   .then(function () {
     logger.debug('all tests completed');
 
@@ -254,6 +257,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
   function processEvent(tape, event, fun, timeout) {
     return new Promise(function (resolve, reject) {
       self._io.once(event, function (data) {
+        var parsedData = CoordinatedClient.getData(data);
         self._emit(event + '_confirmed', data, test.options);
 
         // 'end' can be called without 'result', so success is true by default.
@@ -307,8 +311,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
         }, timeout);
 
         // Only for testing purposes.
-        if (data) {
-          tape.participants = JSON.parse(data);
+        if (parsedData) {
+          tape.participants = JSON.parse(parsedData);
         }
         fun(tape);
       });
@@ -344,6 +348,17 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
       });
     });
   });
+}
+
+// We should remove prefix (uuid.v4) from data.
+CoordinatedClient.getData = function (dataString) {
+  var data = JSON.parse(dataString);
+  assert(
+    uuidValidate(data.uuid, 4),
+    'we should have a valid uuid.v4'
+  );
+
+  return data.content;
 }
 
 module.exports = CoordinatedClient;
