@@ -16,6 +16,17 @@ util.inherits(ThaliLogger, EventEmitter);
 
 ThaliLogger.prototype.name = 'thaliLogger';
 
+if (
+  typeof jxcore !== 'undefined' &&
+  jxcore.utils &&
+  jxcore.utils.console &&
+  jxcore.utils.console.log
+) {
+  ThaliLogger._logger = jxcore.utils.console.log;
+} else {
+  ThaliLogger._logger = console.log;
+}
+
 ThaliLogger.prototype.log = function (level, message, meta, callback) {
   var now = new Date().toISOString()
     .replace(/T/, ' ')
@@ -24,7 +35,8 @@ ThaliLogger.prototype.log = function (level, message, meta, callback) {
     '%s - %s %s: \'%s\'',
     now, level.toUpperCase(), meta.tag, message
   );
-  jxcore.utils.console.log(message);
+
+  ThaliLogger._logger(message);
 
   // Emit the `logged` event immediately because the event loop
   // will not exit until `process.stdout` has drained anyway.

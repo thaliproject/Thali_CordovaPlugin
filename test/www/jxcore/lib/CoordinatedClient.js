@@ -8,14 +8,16 @@ var objectAssign   = require('object-assign');
 var uuidValidate   = require('uuid-validate');
 var assert         = require('assert');
 var tape           = require('tape-catch');
-var Promise        = require('bluebird');
 var SocketIOClient = require('socket.io-client');
 var EventEmitter   = require('events').EventEmitter;
 
+var asserts = require('./utils/asserts');
+var Promise = require('./utils/promise');
+
 var testUtils     = require('./testUtils');
-var asserts       = require('./utils/asserts');
-var logger        = require('./testLogger')('CoordinatedClient');
 var serverAddress = require('../server-address');
+
+var logger = require('thali/thaliLogger')('CoordinatedClient');
 
 
 function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) {

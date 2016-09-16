@@ -26,39 +26,7 @@ var test = tape({
 });
 */
 
-var Promise = require('bluebird');
-
-var logger = require('./testLogger')('thaliTape');
-
-
-Promise.config({
-  warnings:        true,
-  longStackTraces: true,
-  cancellation:    true,
-  monitoring:      true
-});
-
-process
-.on('SIGINT', function () {
-  logger.error('got \'SIGINT\', terminating');
-  process.exit(130); // Ctrl-C std exit code
-})
-.on('uncaughtException', function (error) {
-  logger.error(
-    'uncaught exception, error: \'%s\', stack: \'%s\'',
-    error.toString(), error.stack
-  );
-  logger.error('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-  process.exit(1);
-})
-.on('unhandledRejection', function (error, p) {
-  logger.error(
-    'uncaught promise rejection, error: \'%s\', stack: \'%s\'',
-    error.toString(), error.stack
-  );
-  logger.error('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-  process.exit(2);
-});
+require('./utils/process');
 
 var exports;
 if (typeof jxcore === 'undefined' || typeof Mobile !== 'undefined') {
