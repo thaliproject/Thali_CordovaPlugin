@@ -6,9 +6,12 @@ set -e
 ERROR_ABORT()
 {
   if [[ $? != 0 ]]; then
+    LOG $RED_COLOR "SetUp Tests Failed\n"
     exit -1
   fi
 }
+
+node validateBuildEnvironment.js;ERROR_ABORT
 
 # Check the platform we are running
 IS_MINIGW_PLATFORM=false
