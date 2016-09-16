@@ -5,22 +5,23 @@ var inherits = util.inherits;
 var format   = util.format;
 
 var assert       = require('assert');
-var Promise      = require('bluebird');
 var objectAssign = require('object-assign');
 
-var asserts       = require('./utils/asserts.js');
+var asserts = require('./utils/asserts.js');
+var Promise = require('./utils/promise');
+var logger  = require('./utils/logger')('UnitTestFramework');
+
 var TestDevice    = require('./TestDevice');
 var TestFramework = require('./TestFramework');
-var defaultConfig = require('./UnitTestConfig');
+var defaultConfig = require('./config/UnitTest');
 
 
-function UnitTestFramework(config, logger) {
+function UnitTestFramework(config) {
   var self = this;
 
-  this.logger = logger || console;
   this.config = objectAssign({}, defaultConfig, config);
 
-  UnitTestFramework.super_.call(this, this.config, this.logger);
+  UnitTestFramework.super_.call(this, this.config);
 }
 
 inherits(UnitTestFramework, TestFramework);
@@ -28,9 +29,12 @@ inherits(UnitTestFramework, TestFramework);
 UnitTestFramework.prototype.startTests = function (platformName, platform) {
   var self = this;
 
-  UnitTestFramework.super_.prototype.startTests.call(this, platformName, platform);
+  UnitTestFramework.super_.prototype.startTests.apply(this, arguments);
 
-  assert(platform.success === undefined, 'platform should not be finished');
+  assert(
+    platform.state === TestFramework.platformStates.started,
+    'platform should be in started state'
+  );
 
   asserts.isObject(platform);
   asserts.isString(platformName);
@@ -40,9 +44,13 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
 
   var count = platform.count;
   asserts.isNumber(count);
+  var minCount = platform.minCount;
   assert(
-    count > 0,
-    'we should have at least one device'
+    count >= minCount,
+    format(
+      'we should have at least %d devices',
+      minCount
+    )
   );
 
   assert(
@@ -62,12 +70,12 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
     asserts.arrayEquals(tests, device.tests);
   });
 
-  this.logger.debug(
+  logger.debug(
     'starting unit tests on %d devices, platformName: \'%s\'',
     devices.length, platformName
   );
 
-  this.logger.debug('scheduling tests');
+  logger.debug('scheduling tests');
 
   Promise.all(
     devices.map(function (device) {
@@ -75,7 +83,7 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
     })
   )
   .then(function () {
-    self.logger.debug('tests scheduled');
+    logger.debug('tests scheduled');
 
     return tests.reduce(function (promise, test) {
       return promise.then(function () {
@@ -84,15 +92,15 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
     }, Promise.resolve());
   })
   .then(function () {
-    platform.success = true;
-    self.logger.debug(
+    platform.state = TestFramework.platformStates.succeed;
+    logger.debug(
       'all unit tests succeed, platformName: \'%s\'',
       platformName
     );
   })
   .catch(function (error) {
-    platform.success = false;
-    self.logger.error(
+    platform.state = TestFramework.platformStates.failed;
+    logger.error(
       'failed to run tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
       platformName, error.toString(), error.stack
     );
@@ -112,7 +120,7 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
 UnitTestFramework.prototype.runTest = function (devices, test) {
   var self = this;
 
-  this.logger.debug('#setup: \'%s\'', test);
+  logger.debug('#setup: \'%s\'', test);
 
   return Promise.all(
     devices.map(function (device) {
@@ -126,8 +134,8 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
     })
   )
   .then(function (devicesData) {
-    self.logger.debug('#setup ok: \'%s\'', test);
-    self.logger.debug('#run: \'%s\'', test);
+    logger.debug('#setup ok: \'%s\'', test);
+    logger.debug('#run: \'%s\'', test);
 
     return Promise.all(
       devices.map(function (device) {
@@ -136,8 +144,8 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
     );
   })
   .then(function () {
-    self.logger.debug('#run ok: \'%s\'', test);
-    self.logger.debug('#teardown: \'%s\'', test);
+    logger.debug('#run ok: \'%s\'', test);
+    logger.debug('#teardown: \'%s\'', test);
 
     return Promise.all(
       devices.map(function (device) {
@@ -146,10 +154,10 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
     );
   })
   .then(function () {
-    self.logger.debug('#teardown ok: \'%s\'', test);
+    logger.debug('#teardown ok: \'%s\'', test);
   })
   .catch(function (error) {
-    self.logger.error(
+    logger.error(
       '#run failed: \'%s\', error: \'%s\', stack: \'%s\'',
       test, error.toString(), error.stack
     );

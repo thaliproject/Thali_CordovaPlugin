@@ -11,7 +11,6 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    console.log();
     t.end();
   }
 });
