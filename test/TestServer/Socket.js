@@ -112,7 +112,10 @@ Socket.prototype.emitData = function (event, data) {
   var onceConfirmed;
   var emitter;
 
-  data = uuid.v4() + (data || '');
+  data = JSON.stringify({
+    uuid:    uuid.v4(),
+    content: data || ''
+  });
 
   return new Promise(function (resolve, reject) {
     onceConfirmed = self._bind(
