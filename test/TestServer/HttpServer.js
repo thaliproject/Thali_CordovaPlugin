@@ -70,13 +70,17 @@ Server.prototype._disconnect = function (socket, reason) {
 }
 
 Server.prototype._error = function (socket, error) {
-  throw error;
+  logger.error(
+    'unexpected server error: \'%s\'',
+    error
+  );
+  throw new Error(error);
 }
 
-Server.prototype._present = function (socket, deviceData) {
-  asserts.isString(deviceData);
-  deviceData = JSON.parse(deviceData);
-  var device = new TestDevice(socket, deviceData);
+Server.prototype._present = function (socket, deviceInfo) {
+  asserts.isString(deviceInfo);
+  deviceInfo = JSON.parse(deviceInfo);
+  var device = new TestDevice(socket, deviceInfo);
   socket.deviceName = device.name;
 
   logger.debug(

@@ -52,8 +52,9 @@
     "tmp": "0.0.28",
     "urlsafe-base64": "1.0.0",
     "uuid": "2.0.0",
-    "longjohn": "0.2.11",
-    "object-assign": "4.1.0"
+    "uuid-validate": "0.0.2",
+    "object-assign": "4.1.0",
+    "longjohn": "0.2.11"
   },
   "devDependencies": {}
 }

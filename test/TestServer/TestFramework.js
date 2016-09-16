@@ -84,20 +84,22 @@ TestFramework.prototype._setOptions = function (options) {
 TestFramework.prototype.addDevice = function (device) {
   asserts.instanceOf(device, TestDevice);
 
+  var platform = this.platforms[device.platformName];
+
+  var devices = platform.devices;
+  var deviceIndexes = platform.deviceIndexes;
+  var count = platform.count;
+
   if (!device.supportedHardware) {
     logger.info(
       'disqualifying device with unsupported hardware, name: \'%s\'',
       device.name
     );
     device.disqualify();
+    // We can require less devices.
+    count --;
     return;
   }
-
-  var platform = this.platforms[device.platformName];
-
-  var devices = platform.devices;
-  var deviceIndexes = platform.deviceIndexes;
-  var count = platform.count;
 
   var deviceIndex = deviceIndexes[device.uuid];
   if (deviceIndex !== undefined) {
