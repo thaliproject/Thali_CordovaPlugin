@@ -29,7 +29,7 @@
 // Defines methods.
 - (void)defineMethods {
     static AppContext * appContext = nil;
-    
+
     if (!appContext) {
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{

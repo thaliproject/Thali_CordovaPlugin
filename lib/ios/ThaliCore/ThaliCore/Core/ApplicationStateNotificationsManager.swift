@@ -3,14 +3,17 @@
 //  ApplicationStateNotificationsManager.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
 import UIKit
 
-/// Class that listens for UIApplicationWillResignActiveNotification and UIApplicationDidBecomeActiveNotification
+/// Class that listens for UIApplicationWillResignActiveNotification and
+/// UIApplicationDidBecomeActiveNotification
 public final class ApplicationStateNotificationsManager: NSObject {
+
     public var willEnterBackgroundHandler: (Void -> Void)?
     public var didEnterForegroundHandler: (Void -> Void)?
 

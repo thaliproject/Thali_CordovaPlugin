@@ -3,8 +3,8 @@
 //  SocketRelay.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
-//  information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
@@ -12,9 +12,9 @@ import Foundation
 final class SocketRelay<Builder: VirtualSocketBuilder> {
     private var activeBuilders: Atomic<[Session : Builder]> = Atomic([:])
     private var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> = Atomic([:])
-    private let createSocketTimeout: Double
+    private let createSocketTimeout: NSTimeInterval
 
-    init(createSocketTimeout: Double) {
+    init(createSocketTimeout: NSTimeInterval) {
         self.createSocketTimeout = createSocketTimeout
     }
 
@@ -32,7 +32,7 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
 
     private func addToDiscardQueue(builder: Builder, for session: Session, completion: () -> Void) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW,
-                Int64(self.createSocketTimeout * Double(NSEC_PER_SEC)))
+                                      Int64(self.createSocketTimeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -51,8 +51,8 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
         activeSessions.modify {
             $0[session] = socket
         }
-        //todo bind to CocoaAsyncSocket and call completion block
-        //https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
+        // TODO: bind to CocoaAsyncSocket and call completion block
+        // Issue: https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
     }
 
     func createSocket(with session: Session, onPort port: UInt16 = 0,

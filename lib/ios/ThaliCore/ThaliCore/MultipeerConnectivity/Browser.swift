@@ -3,20 +3,22 @@
 //  Browser.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
-//  information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
 import MultipeerConnectivity
 
 final class Browser: NSObject {
+
     private let browser: MCNearbyServiceBrowser
     private let didFindPeerHandler: (PeerIdentifier) -> Void
     private let didLosePeerHandler: (PeerIdentifier) -> Void
     internal private(set) var listening: Bool = false
     private var availablePeers: Atomic<[PeerIdentifier: MCPeerID]> = Atomic([:])
     private var startBrowsingErrorHandler: (ErrorType -> Void)? = nil
+    let invitePeerTimeout = 30
 
     required init(serviceType: String,
                   foundPeer: (PeerIdentifier) -> Void,
@@ -66,10 +68,11 @@ final class Browser: NSObject {
     }
 }
 
+// MARK: - MCNearbyServiceBrowserDelegate
 extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser,
-                        foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
+                 foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
         do {
             let peerIdentifier = try PeerIdentifier(peerID: peerID)
             availablePeers.modify {

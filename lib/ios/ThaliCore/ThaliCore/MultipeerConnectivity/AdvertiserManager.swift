@@ -3,29 +3,40 @@
 //  AdvertiserManager.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
-//  information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
 
-//class for managing Thali advertiser's logic
+// Class for managing Thali advertiser's logic
 @objc public final class AdvertiserManager: NSObject {
-    private let disposeAdvertiserTimeout: Double
+    private let disposeAdvertiserTimeout: NSTimeInterval
     private let serviceType: String
     internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
     internal private(set) var currentAdvertiser: Advertiser? = nil
 
-    let socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(createSocketTimeout: 5)
+    let socketRelay: SocketRelay<AdvertiserVirtualSocketBuilder>
     internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
 
     public var advertising: Bool {
         return currentAdvertiser?.advertising ?? false
     }
 
-    public init(serviceType: String, disposeAdvertiserTimeout: Double) {
+    /**
+
+     - parameter serviceType:               The type of service to advertise
+     - parameter disposeAdvertiserTimeout:  Time in seconds after old version of advertiser will be
+     disposed
+     - parameter inputStreamReceiveTimeout: Timeout in seconds for receiving input stream
+
+     */
+    public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval,
+                inputStreamReceiveTimeout: NSTimeInterval) {
         self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
         self.serviceType = serviceType
+        socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(
+            createSocketTimeout: inputStreamReceiveTimeout)
     }
 
     private func handle(session: Session, withPort port: UInt16) {
@@ -33,10 +44,10 @@ import Foundation
         }
     }
 
-    //dispose advertiser after timeout to ensure that it has no pending invitations
-    func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
+    // Dispose advertiser after timeout to ensure that it has no pending invitations
+    private func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW,
-                Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
+                                      Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
         dispatch_after(delayTime, dispatch_get_main_queue()) {
             advertiser.stopAdvertising()
 
@@ -50,12 +61,13 @@ import Foundation
         }
     }
 
-    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16, errorHandler: ErrorType -> Void) -> Advertiser {
+    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16,
+                                 errorHandler: ErrorType -> Void) -> Advertiser {
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
                                     receivedInvitationHandler: { [weak self] session in
                                         self?.handle(session, withPort: port)
-            }, disconnectHandler: {
-                //todo disconnect notification
+                                    }, disconnectHandler: {
+            // TODO: fix with #1040
         })
         advertiser.startAdvertising(errorHandler)
         advertisers.modify {
@@ -76,13 +88,16 @@ import Foundation
         currentAdvertiser = nil
     }
 
-    public func startUpdateAdvertisingAndListening(port: UInt16, errorHandler: ErrorType -> Void) {
+    public func startUpdateAdvertisingAndListening(withPort port: UInt16,
+                                                            errorHandler: ErrorType -> Void) {
         if let currentAdvertiser = currentAdvertiser {
             let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
             addAdvertiserToDisposeQueue(currentAdvertiser)
-            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port, errorHandler: errorHandler)
+            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port,
+                                                     errorHandler: errorHandler)
         } else {
-            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port, errorHandler: errorHandler)
+            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port,
+                                                     errorHandler: errorHandler)
         }
 
         assert(self.currentAdvertiser != nil,
