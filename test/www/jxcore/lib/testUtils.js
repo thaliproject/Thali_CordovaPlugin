@@ -293,6 +293,9 @@ function levelDownPouchDBGenerator(defaultDirectory) {
 // during other tests.
 var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
 fs.ensureDirSync(dbPath);
+module.exports.getPouchDBTestDirectory = function () {
+  return dbPath;
+}
 
 var LevelDownPouchDB = levelDownPouchDBGenerator(dbPath);
 
@@ -300,12 +303,14 @@ module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
 };
 
-module.exports.getRandomPouchDBName= function () {
+var getRandomName = function () {
   return randomString.generate({
     length: 40,
     charset: 'alphabetic'
   });
 };
+module.exports.getRandomPouchDBName = getRandomName;
+module.exports.getUniqueRandomName  = getRandomName;
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
   return new LevelDownPouchDB(module.exports.getRandomPouchDBName());
@@ -728,4 +733,20 @@ module.exports.testTimeout = function (t, timeout, callback) {
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
   }
+}
+
+module.exports.checkArgs = function (t, spy, description, args) {
+  t.ok(spy.calledOnce, description + ' was called once');
+
+  var currentArgs = spy.getCalls()[0].args;
+  t.equals(
+    args.length, currentArgs.length,
+    description + ' was called with ' + currentArgs.length + ' arguments'
+  );
+
+  args.forEach(function (arg, index) {
+    var argDescription = description + ' was called with \'' +
+      arg.description + '\' as ' + (index + 1) + '-st argument';
+    t.ok(arg.compare(currentArgs[index]), argDescription);
+  });
 }
