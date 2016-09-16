@@ -73,7 +73,7 @@ public class SocketThreadBaseTest {
 
         if (mLocalhostSocket == null || mLocalhostSocket.getInetAddress() == null) {
             assertThat("getLocalHostAddressAsString should return null value if mLocalhostSocket" +
-                    " or mLocalhostSocket.getInetAddress return null",
+                            " or mLocalhostSocket.getInetAddress return null",
                     mSocketThreadBaseMock.getLocalHostAddressAsString(),
                     is(nullValue()));
         } else {
