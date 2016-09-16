@@ -22,9 +22,9 @@ if (
   jxcore.utils.console &&
   jxcore.utils.console.log
 ) {
-  ThaliLogger.prototype._logger = jxcore.utils.console.log;
+  ThaliLogger._logger = jxcore.utils.console.log;
 } else {
-  ThaliLogger.prototype._logger = console.log;
+  ThaliLogger._logger = console.log;
 }
 
 ThaliLogger.prototype.log = function (level, message, meta, callback) {
@@ -36,7 +36,7 @@ ThaliLogger.prototype.log = function (level, message, meta, callback) {
     now, level.toUpperCase(), meta.tag, message
   );
 
-  ThaliLogger.prototype._logger(message);
+  ThaliLogger._logger(message);
 
   // Emit the `logged` event immediately because the event loop
   // will not exit until `process.stdout` has drained anyway.
