@@ -25,6 +25,7 @@ var format = util.format;
 
 var assert = require('assert');
 var uuid = require('node-uuid');
+var uuidValidate = require('uuid-validate');
 var tape = require('tape-catch');
 var io = require('socket.io-client');
 var testUtils = require('./testUtils');
@@ -59,20 +60,14 @@ var emitWhenConnected = function (socket, name, data) {
 };
 
 // We should remove prefix (uuid.v4) from data.
-function parseData(dataString) {
+function getData(dataString) {
+  var data = JSON.parse(dataString);
   assert(
-    dataString.length >= thaliTape.length,
-    'we should have prefix in data'
+    uuidValidate(data.uuid, 4),
+    'we should have a valid uuid.v4'
   );
 
-  var uuidString = dataString.substring(0, thaliTape.uuid.length);
-  var parsedUuidString = uuid.unparse(uuid.parse(uuidString));
-  assert(
-    uuidString === parsedUuidString,
-    'we should have valid uuid'
-  );
-
-  return dataString.substring(thaliTape.uuid.length);
+  return data.content;
 }
 
 function declareTest(testServer, name, setup, teardown, opts, cb) {
@@ -92,7 +87,6 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
     // Run setup function when the testServer tells us
     var success = true;
     testServer.once('setup_' + name, function (data) {
-      parseData(data);
       emitWhenConnected(
         testServer,
         format('setup_%s_confirmed', name),
@@ -143,7 +137,7 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 
     // Run the test (cb) when the server tells us to
     testServer.once('run_' + name, function (data) {
-      var parsedData = parseData(data);
+      var parsedData = getData(data);
       emitWhenConnected(
         testServer,
         format('run_%s_confirmed', name),
@@ -157,7 +151,6 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
 
   tape('teardown', function (t) {
     testServer.once('teardown_' + name, function (data) {
-      var parsedData = parseData(data);
       emitWhenConnected(
         testServer,
         format('teardown_%s_confirmed', name),
@@ -263,7 +256,7 @@ thaliTape.begin = function (version, hasRequiredHardware) {
     if (firstConnection) {
       // Once connected, let the server know who we are and what we do
       testServer.once('schedule', function (data) {
-        var parsedData = parseData(data);
+        var parsedData = getData(data);
         emitWhenConnected(
           testServer,
           'schedule_confirmed',
@@ -311,7 +304,6 @@ thaliTape.begin = function (version, hasRequiredHardware) {
   });
 
   testServer.once('discard', function (data) {
-    parseData(data);
     emitWhenConnected(testServer, 'discard_confirmed', data);
 
     // This device not needed, log appropriately so CI doesn't think we've
@@ -322,7 +314,6 @@ thaliTape.begin = function (version, hasRequiredHardware) {
   });
 
   testServer.once('disqualify', function (data) {
-    parseData(data);
     emitWhenConnected(testServer, 'disqualify_confirmed', data);
 
     testUtils.logMessageToScreen('Device disqualified');
@@ -353,7 +344,6 @@ thaliTape.begin = function (version, hasRequiredHardware) {
   });
 
   testServer.once('complete', function (data) {
-    parseData(data);
     emitWhenConnected(testServer, 'complete_confirmed', data);
 
     testUtils.logMessageToScreen('Tests complete');
