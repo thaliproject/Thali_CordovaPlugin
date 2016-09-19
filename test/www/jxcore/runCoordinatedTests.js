@@ -25,6 +25,9 @@ var argv = parseargv(process.argv.slice(2), {
 });
 
 var spawnedInstanceCount = argv.instanceCount;
+if (spawnedInstanceCount === -1) {
+  spawnedInstanceCount = DEFAULT_INSTANCE_COUNT;
+}
 if (argv.waitForInstance) {
   spawnedInstanceCount = spawnedInstanceCount - 1;
 }
@@ -92,19 +95,15 @@ var setListeners = function (instance, instanceId) {
 };
 
 var testServerConfiguration = {
-  'devices': {
-    'android': 0,
-    'ios': argv.instanceCount
+  devices: {
+    android: 0,
+    ios: argv.instanceCount
   },
-  'honorCount': true,
-  userConfig: {
-    ios: {
-      numDevices: argv.instanceCount
-    },
-    android: {
-      numDevices: 0
-    }
-  }
+  minDevices: {
+    android: 0,
+    ios: 2
+  },
+  waiting_for_devices_timeout: 5 * 1000
 };
 
 var testServerInstance = spawn('jx', ['../../TestServer/index.js',

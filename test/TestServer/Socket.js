@@ -11,7 +11,7 @@ var objectAssign = require('object-assign');
 var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts.js');
-var Promise = require('./utils/promise');
+var Promise = require('./utils/Promise');
 
 var defaultConfig = require('./config/Socket');
 
@@ -112,23 +112,25 @@ Socket.prototype.emitData = function (event, data) {
   var onceConfirmed;
   var emitter;
 
-  data = JSON.stringify({
+  data = {
     uuid:    uuid.v4(),
-    content: data || ''
-  });
+    content: data
+  };
+  var dataString = JSON.stringify(data);
 
   return new Promise(function (resolve, reject) {
     onceConfirmed = self._bind(
       'once',
       event + '_confirmed',
       function (receivedData) {
-        if (data === receivedData) {
+        var receivedDataString = JSON.stringify(receivedData);
+        if (dataString === receivedDataString) {
           resolve();
         } else {
           reject(new Error(
             format(
               'received confirmation with invalid data, sent data: \'%s\', received data: \'%s\'',
-              data, receivedData
+              dataString, receivedDataString
             )
           ));
         }
@@ -168,22 +170,23 @@ Socket.prototype.emitData = function (event, data) {
 // For example: runEvent('teardown', '2. my test', '{ a: 1 }', 1000).
 // 1. We will send 'teardown_2. my test' until confirmation.
 // 2. We will wait until 'teardown_2. my test_finished' will be received.
-// 3. We will verify that test succeed.
+// 3. We will verify that test succeeded.
 Socket.prototype.runEvent = function (event, test, data, timeout) {
   var self = this;
+
+  var dataString = JSON.stringify(data);
   event += '_' + test;
 
   function handler (receivedData, resolve, reject) {
     try {
-      asserts.isString(receivedData);
-      var result = JSON.parse(receivedData);
-      asserts.isBool(result.success);
-      if (result.success) {
-        resolve(result.data);
+      var receivedDataString = JSON.stringify(receivedData);
+      asserts.isBool(receivedData.success);
+      if (receivedData.success) {
+        resolve(receivedData.data);
       } else {
         throw new Error(format(
           'run failed, test: \'%s\', event: \'%s\', sent data: \'%s\', received data: \'%s\'',
-          test, event, data, receivedData
+          test, event, dataString, receivedDataString
         ));
       }
     } catch (error) {
@@ -192,22 +195,20 @@ Socket.prototype.runEvent = function (event, test, data, timeout) {
   }
 
   var onceFinished;
-  return this.emitData(event, data)
-  .then(function () {
-    return new Promise(function (resolve, reject) {
-      onceFinished = self._bind(
-        'once',
-        event + '_finished',
-        function (receivedData) {
-          handler(receivedData, resolve, reject);
-        }
-      );
-    })
-    .timeout(timeout, format(
-      'timeout, event: \'%s_finished\', test: \'%s\'',
-      event, test
-    ));
+  return new Promise(function (resolve, reject) {
+    onceFinished = self._bind(
+      'once',
+      event + '_finished',
+      function (receivedData) {
+        handler(receivedData, resolve, reject);
+      }
+    );
+    self.emitData(event, data);
   })
+  .timeout(timeout, format(
+    'timeout, event: \'%s_finished\', test: \'%s\'',
+    event, test
+  ))
   .finally(function () {
     if (onceFinished) {
       onceFinished.unbind();

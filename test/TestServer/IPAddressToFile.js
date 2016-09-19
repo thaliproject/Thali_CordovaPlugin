@@ -4,7 +4,7 @@ var fs = require('fs-extra-promise');
 var os = require('os');
 var path = require('path');
 
-var Promise = require('./utils/promise');
+var Promise = require('./utils/Promise');
 
 
 function writeFiles(address) {

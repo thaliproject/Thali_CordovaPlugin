@@ -9,7 +9,7 @@ var objectAssign = require('object-assign');
 var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
-var logger  = require('./utils/logger')('HttpServer');
+var logger  = require('./utils/ThaliLogger')('HttpServer');
 
 var TestDevice = require('./TestDevice');
 
@@ -78,8 +78,6 @@ Server.prototype._error = function (socket, error) {
 }
 
 Server.prototype._present = function (socket, deviceInfo) {
-  asserts.isString(deviceInfo);
-  deviceInfo = JSON.parse(deviceInfo);
   var device = new TestDevice(socket, deviceInfo);
   socket.deviceName = device.name;
 

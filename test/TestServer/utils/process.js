@@ -1,6 +1,6 @@
 'use strict';
 
-var logger = require('./logger')('TestServerProcess');
+var logger = require('./ThaliLogger')('TestServerProcess');
 
 
 process
