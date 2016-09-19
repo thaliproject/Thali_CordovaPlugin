@@ -54,6 +54,7 @@ public class JXcoreExtension {
     private static final String METHOD_ARGUMENT_NETWORK_CHANGED = EVENT_NAME_NETWORK_CHANGED;
 
     private static final String EVENT_VALUE_PEER_ID = "peerIdentifier";
+    private static final String EVENT_VALUE_PEER_GENERATION = "generation";
     private static final String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
     private static final String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
     private static final String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
@@ -510,14 +511,12 @@ public class JXcoreExtension {
     }
 
     public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
-        String peerId = peerProperties.getId()
-                + BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR
-                + peerProperties.getExtraInformation();
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
+            jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
+            jsonObject.put(EVENT_VALUE_PEER_GENERATION, peerProperties.getExtraInformation());
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
             jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
             jsonObjectCreated = true;
