@@ -2,6 +2,7 @@
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
+import com.test.thalitest.RegisterExecuteUT;
 
 import android.content.Context;
 import android.net.wifi.WifiManager;
@@ -42,6 +43,8 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_CONNECT = "connect";
     private static final String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
     private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
+    private static final String METHOD_NAME_MULTICONNECT = "multiConnect";
+    private static final String METHOD_NAME_DISCONNECT = "disconnect";
 
     private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
@@ -77,6 +80,9 @@ public class JXcoreExtension {
     private static ConnectionHelper mConnectionHelper = null;
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
+
+
+    private static String ERROR_PLATFORM_DOES_NOT_SUPPORT_CONNECT = "Platform does not support connect";
 
     public static void LoadExtensions() {
         if (mConnectionHelper != null) {
@@ -328,6 +334,29 @@ public class JXcoreExtension {
                 }
 
                 args.add(errorString);
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+
+        jxcore.RegisterMethod(METHOD_NAME_MULTICONNECT, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                args.add(ERROR_PLATFORM_DOES_NOT_SUPPORT_CONNECT);
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+        jxcore.RegisterMethod(METHOD_NAME_DISCONNECT, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                args.add(ERROR_PLATFORM_DOES_NOT_SUPPORT_CONNECT);
                 args.add(null);
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
