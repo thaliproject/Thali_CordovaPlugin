@@ -60,13 +60,11 @@ var emitWhenConnected = function (socket, name, data) {
 };
 
 // We should remove prefix (uuid.v4) from data.
-function getData(dataString) {
-  var data = JSON.parse(dataString);
+function getData(data) {
   assert(
     uuidValidate(data.uuid, 4),
     'we should have a valid uuid.v4'
   );
-
   return data.content;
 }
 
@@ -104,10 +102,10 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
         emitWhenConnected(
           testServer,
           format('setup_%s_finished', name),
-          JSON.stringify({
+          {
             'success': success,
             'data': t.data || null
-          })
+          }
         );
       });
       setup(t);
@@ -125,9 +123,9 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
       emitWhenConnected(
         testServer,
         format('run_%s_finished', name),
-        JSON.stringify({
+        {
           success: success
-        })
+        }
       );
 
       if (!success) {
@@ -144,7 +142,7 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
         data
       );
 
-      t.participants = JSON.parse(parsedData);
+      t.participants = parsedData;
       cb(t);
     });
   });
@@ -169,9 +167,9 @@ function declareTest(testServer, name, setup, teardown, opts, cb) {
         emitWhenConnected(
           testServer,
           format('teardown_%s_finished', name),
-          JSON.stringify({
+          {
             success: success
-          })
+          }
         );
       });
       teardown(t);
@@ -263,7 +261,7 @@ thaliTape.begin = function (version, hasRequiredHardware) {
           data
         );
 
-        JSON.parse(parsedData)
+        parsedData
         .forEach(function (test) {
           declareTest(
             testServer,
@@ -287,7 +285,7 @@ thaliTape.begin = function (version, hasRequiredHardware) {
       type: 'unittest',
       tests: Object.keys(tests)
     };
-    emitWhenConnected(testServer, 'present', JSON.stringify(presentData));
+    emitWhenConnected(testServer, 'present', presentData);
   };
 
   // We are having similar logic in both connect reconnect

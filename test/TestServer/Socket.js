@@ -112,23 +112,25 @@ Socket.prototype.emitData = function (event, data) {
   var onceConfirmed;
   var emitter;
 
-  data = JSON.stringify({
+  data = {
     uuid:    uuid.v4(),
-    content: data || ''
-  });
+    content: data
+  };
+  var dataString = JSON.stringify(data);
 
   return new Promise(function (resolve, reject) {
     onceConfirmed = self._bind(
       'once',
       event + '_confirmed',
       function (receivedData) {
-        if (data === receivedData) {
+        var receivedDataString = JSON.stringify(receivedData);
+        if (dataString === receivedDataString) {
           resolve();
         } else {
           reject(new Error(
             format(
               'received confirmation with invalid data, sent data: \'%s\', received data: \'%s\'',
-              data, receivedData
+              dataString, receivedDataString
             )
           ));
         }
@@ -171,19 +173,20 @@ Socket.prototype.emitData = function (event, data) {
 // 3. We will verify that test succeed.
 Socket.prototype.runEvent = function (event, test, data, timeout) {
   var self = this;
+
+  var dataString = JSON.stringify(data);
   event += '_' + test;
 
   function handler (receivedData, resolve, reject) {
     try {
-      asserts.isString(receivedData);
-      var result = JSON.parse(receivedData);
-      asserts.isBool(result.success);
-      if (result.success) {
-        resolve(result.data);
+      var receivedDataString = JSON.stringify(receivedData);
+      asserts.isBool(receivedData.success);
+      if (receivedData.success) {
+        resolve(receivedData.data);
       } else {
         throw new Error(format(
           'run failed, test: \'%s\', event: \'%s\', sent data: \'%s\', received data: \'%s\'',
-          test, event, data, receivedData
+          test, event, dataString, receivedDataString
         ));
       }
     } catch (error) {

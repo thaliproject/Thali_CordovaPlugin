@@ -8,24 +8,27 @@ var winston      = require('winston');
 var EventEmitter = require('events').EventEmitter;
 
 
-var ThaliLogger = function () {
+var ThaliLogger = function (logger) {
   ThaliLogger.super_.call(this);
+
+  this._logger = logger || ThaliLogger._defaultLogger;
 };
 
-util.inherits(ThaliLogger, EventEmitter);
-
-ThaliLogger.prototype.name = 'thaliLogger';
-
+var defaultLogger;
 if (
   typeof jxcore !== 'undefined' &&
   jxcore.utils &&
   jxcore.utils.console &&
   jxcore.utils.console.log
 ) {
-  ThaliLogger._logger = jxcore.utils.console.log;
+  ThaliLogger._defaultLogger = jxcore.utils.console.log.bind(jxcore.utils.console);
 } else {
-  ThaliLogger._logger = console.log;
+  ThaliLogger._defaultLogger = console.log.bind(console);
 }
+
+util.inherits(ThaliLogger, EventEmitter);
+
+ThaliLogger.prototype.name = 'thaliLogger';
 
 ThaliLogger.prototype.log = function (level, message, meta, callback) {
   var now = new Date().toISOString()
@@ -36,7 +39,7 @@ ThaliLogger.prototype.log = function (level, message, meta, callback) {
     now, level.toUpperCase(), meta.tag, message
   );
 
-  ThaliLogger._logger(message);
+  this._logger(message);
 
   // Emit the `logged` event immediately because the event loop
   // will not exit until `process.stdout` has drained anyway.
@@ -46,13 +49,13 @@ ThaliLogger.prototype.log = function (level, message, meta, callback) {
   this.emit('message', message);
 };
 
-module.exports = function (tag) {
+module.exports = function (tag, logger) {
   if (!tag || typeof tag !== 'string' || tag.length < 3) {
     throw new Error(
       'All logging must have a tag that is at least 3 characters long!'
     );
   }
-  var thaliLogger = new ThaliLogger();
+  var thaliLogger = new ThaliLogger(logger);
   var logger = new winston.Logger({
     transports: [thaliLogger]
   });
