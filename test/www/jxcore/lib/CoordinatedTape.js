@@ -7,12 +7,12 @@ var objectAssign = require('object-assign');
 var assert       = require('assert');
 var uuid         = require('node-uuid');
 
-var Promise = require('./utils/promise');
+var Promise = require('./utils/Promise');
 
 var SimpleThaliTape   = require('./SimpleTape');
 var CoordinatedClient = require('./CoordinatedClient');
 
-var logger = require('thali/thaliLogger')('CoordinatedThaliTape');
+var logger = require('thali/ThaliLogger')('CoordinatedThaliTape');
 
 
 function CoordinatedThaliTape (options) {
@@ -20,6 +20,7 @@ function CoordinatedThaliTape (options) {
   if (!this) {
     return new CoordinatedThaliTape(options);
   }
+
   return CoordinatedThaliTape.super_.call(this, options);
 }
 
@@ -59,26 +60,25 @@ CoordinatedThaliTape.prototype._getTests = function () {
 }
 
 CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware) {
-  var self = this;
-
   var tests = CoordinatedThaliTape.instances.reduce(function (tests, thaliTape) {
     thaliTape._begin();
     return tests.concat(thaliTape._getTests());
   }, []);
   CoordinatedThaliTape.instances = [];
 
-  this._testClient = new CoordinatedClient(
+  var _testClient = new CoordinatedClient(
     tests,
     CoordinatedThaliTape.uuid,
     platform,
     version,
     hasRequiredHardware
   );
+
   // Only used for testing purposes.
-  CoordinatedThaliTape._testServer = this._testClient._io;
+  CoordinatedThaliTape._testServer = _testClient._io;
 
   return new Promise(function (resolve, reject) {
-    self._testClient.once('finished', function (error) {
+    _testClient.once('finished', function (error) {
       if (error) {
         reject(error);
       } else {

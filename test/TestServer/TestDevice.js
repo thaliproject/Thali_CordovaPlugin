@@ -42,8 +42,8 @@ TestDevice.prototype._setInfo = function (info) {
   asserts.isString(info.type);
   this.type = info.type;
 
-  asserts.isBool(info.supportedHardware);
-  this.supportedHardware = info.supportedHardware;
+  asserts.isBool(info.hasRequiredHardware);
+  this.hasRequiredHardware = info.hasRequiredHardware;
 
   asserts.isArray(info.tests);
   assert(
@@ -70,7 +70,7 @@ TestDevice.prototype.update = function (newDevice) {
   asserts.equals(this.uuid, newDevice.uuid);
   asserts.equals(this.platformName, newDevice.platformName);
   asserts.equals(this.type, newDevice.type);
-  asserts.equals(this.supportedHardware, newDevice.supportedHardware);
+  asserts.equals(this.hasRequiredHardware, newDevice.hasRequiredHardware);
 
   asserts.arrayEquals(this.tests, newDevice.tests);
   asserts.equals(this.btAddress, newDevice.btAddress);

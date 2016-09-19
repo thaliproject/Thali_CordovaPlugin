@@ -14,7 +14,7 @@ have to be created.
 var StateMachine = require('javascript-state-machine');
 var crypto = require('crypto');
 var request = require('request');
-var logger = require('../thaliLogger')('smallerHash');
+var logger = require('../ThaliLogger')('smallerHash');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var identityExchangeUtils = require('./identityExchangeUtils');

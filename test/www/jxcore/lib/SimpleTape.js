@@ -8,9 +8,9 @@ var tape         = require('tape-catch');
 var assert       = require('assert');
 
 var asserts = require('./utils/asserts');
-var Promise = require('./utils/promise');
+var Promise = require('./utils/Promise');
 
-var logger = require('thali/thaliLogger')('SimpleThaliTape');
+var logger = require('thali/ThaliLogger')('SimpleThaliTape');
 
 
 function SimpleThaliTape (options) {

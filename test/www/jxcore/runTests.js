@@ -44,14 +44,19 @@ if (hasJavaScriptSuffix(testsToRun)) {
 var platform;
 if (
   typeof jxcore !== 'undefined' &&
-  jxcore &&
   jxcore.utils &&
-  jxcore.utils.OSInfo() &&
-  jxcore.utils.OSInfo().isAndroid
+  jxcore.utils.OSInfo()
 ) {
-  platform = 'android';
+  var osInfo = jxcore.utils.OSInfo();
+  if (osInfo.isAndroid) {
+    platform = 'android';
+  } else if (osInfo.isIOS) {
+    platform = 'ios';
+  } else {
+    platform = 'desktop';
+  }
 } else {
-  platform = 'ios';
+  platform = 'desktop';
 }
 
 testUtils.hasRequiredHardware()
