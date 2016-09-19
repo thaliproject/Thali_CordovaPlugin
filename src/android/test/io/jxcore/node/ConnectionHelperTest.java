@@ -7,13 +7,15 @@ import android.util.Log;
 
 import com.test.thalitest.ThaliTestRunner;
 
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManagerSettings;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
@@ -23,7 +25,11 @@ import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -35,25 +41,30 @@ import static org.hamcrest.core.IsNot.not;
 
 public class ConnectionHelperTest {
 
-
     ArrayList<String> outgoingThreadsIds;
     ArrayList<String> incomingThreadsIds;
     ListenerMock mListenerMock;
     InputStreamMock mInputStreamMock;
     OutputStreamMock mOutputStreamMock;
-    Thread checkDiscoveryManagerRunning, checkDiscoveryManagerRunning1,
-    checkDiscoveryManagerNotRunning;
     public static ConnectionHelper mConnectionHelper;
     static JXcoreThaliCallback mJXcoreThaliCallback;
     static StartStopOperationHandler mStartStopOperatonHandler;
     static boolean isBLESupported;
-    static String mTag = ConnectionHelperTest.class.getName();
+    final static String mTag = ConnectionHelperTest.class.getName();
+    static ExecutorService mExecutor;
 
-    public static Thread createCheckDiscoveryManagerRunningThread() {
-        return new Thread(new Runnable() {
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
+
+    public static Callable<Boolean> createCheckDiscoveryManagerRunningCallable() {
+        return new Callable<Boolean>() {
             int counter = 0;
             @Override
-            public void run() {
+            public Boolean call() {
                 while (!mConnectionHelper
                        .getDiscoveryManager().isRunning() && counter < ThaliTestRunner.counterLimit) {
                     try {
@@ -61,18 +72,24 @@ public class ConnectionHelperTest {
                         counter++;
                     } catch (InterruptedException e){
                         e.printStackTrace();
+                        return false;
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Discovery manager didn't start after 5s!");
+                if (counter < ThaliTestRunner.counterLimit) {
+                    return true;
+                } else {
+                    Log.e(mTag, "Discovery manager didn't start after 5s!");
+                    return false;
+                }
             }
-        });
+        };
     }
 
-    public static Thread createCheckDiscoveryManagerNotRunningThread() {
-        return new Thread(new Runnable() {
+    public static Callable<Boolean> createCheckDiscoveryManagerNotRunningCallable() {
+        return new Callable<Boolean>() {
             int counter = 0;
             @Override
-            public void run() {
+            public Boolean call() {
                 while (mConnectionHelper
                        .getDiscoveryManager().isRunning() && counter < ThaliTestRunner.counterLimit) {
                     try {
@@ -82,9 +99,15 @@ public class ConnectionHelperTest {
                         e.printStackTrace();
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Discovery manager still running after 5s!");
+
+                if (counter < ThaliTestRunner.counterLimit) {
+                    return true;
+                } else {
+                    Log.e(mTag, "Discovery manager still running after 5s!");
+                    return false;
+                }
             }
-        });
+        };
     }
 
     @Rule
@@ -103,20 +126,18 @@ public class ConnectionHelperTest {
         Field fOperationTimeout = mStartStopOperatonHandler.getClass()
         .getDeclaredField("OPERATION_TIMEOUT_IN_MILLISECONDS");
         fOperationTimeout.setAccessible(true);
+
+        mExecutor = Executors.newFixedThreadPool(5);
     }
 
     @Before
     public void setUp() throws Exception {
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
-        outgoingThreadsIds = new ArrayList<String>();
-        incomingThreadsIds = new ArrayList<String>();
+        outgoingThreadsIds = new ArrayList<>();
+        incomingThreadsIds = new ArrayList<>();
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();
-
-        checkDiscoveryManagerRunning = createCheckDiscoveryManagerRunningThread();
-        checkDiscoveryManagerRunning1 = createCheckDiscoveryManagerRunningThread();
-        checkDiscoveryManagerNotRunning = createCheckDiscoveryManagerNotRunningThread();
     }
 
     @AfterClass
@@ -159,19 +180,23 @@ public class ConnectionHelperTest {
 
     @Test
     public void testDispose() throws Exception {
+        Future<Boolean> future;
+
         assertThat("Start method returns true",
                    mConnectionHelper.start(1111, isBLESupported, mJXcoreThaliCallback),
                    is(equalTo(true)));
 
         if (isBLESupported) {
-            checkDiscoveryManagerRunning.start();
-            checkDiscoveryManagerRunning.join();
+            future = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
+            assertThat("DiscoveryManager should be running",
+                    future.get(), is(true));
         }
 
         mConnectionHelper.dispose();
 
-        checkDiscoveryManagerNotRunning.start();
-        checkDiscoveryManagerNotRunning.join();
+        future = mExecutor.submit(createCheckDiscoveryManagerNotRunningCallable());
+        assertThat("DiscoveryManager should not be running",
+                future.get(), is(true));
 
         Field fDiscoveryManager = mConnectionHelper.getClass()
         .getDeclaredField("mDiscoveryManager");
@@ -208,13 +233,16 @@ public class ConnectionHelperTest {
 
     @Test
     public void testStart() throws Exception {
+        Future<Boolean> mFuture;
+
         assertThat("Start method returns true",
                    mConnectionHelper.start(1111, isBLESupported, mJXcoreThaliCallback),
                    is(equalTo(true)));
 
         if (isBLESupported) {
-            checkDiscoveryManagerRunning.start();
-            checkDiscoveryManagerRunning.join();
+            mFuture = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
+            assertThat("DiscoveryManager should be running",
+                    mFuture.get(), is(true));
         }
 
         Field fServerPortNumber = mConnectionHelper.getClass()
@@ -244,16 +272,19 @@ public class ConnectionHelperTest {
 
         mConnectionHelper.stop(false, mJXcoreThaliCallback);
 
-        checkDiscoveryManagerNotRunning.start();
-        checkDiscoveryManagerNotRunning.join();
+        mFuture = mExecutor.submit(createCheckDiscoveryManagerNotRunningCallable());
+
+        assertThat("DiscoveryManager should not be running",
+                mFuture.get(), is(true));
 
         assertThat("Start method returns true",
                    mConnectionHelper.start(-1111, isBLESupported, mJXcoreThaliCallback),
                    is(equalTo(true)));
 
         if (isBLESupported) {
-            checkDiscoveryManagerRunning1.start();
-            checkDiscoveryManagerRunning1.join();
+            mFuture = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
+            assertThat("DiscoveryManager should be running",
+                    mFuture.get(), is(true));
         }
 
         mServerPortNumber = fServerPortNumber.getInt(mConnectionHelper);
@@ -274,17 +305,21 @@ public class ConnectionHelperTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testStop() throws Exception {
+        Future<Boolean> future;
+
         mConnectionHelper.start(1111, isBLESupported, mJXcoreThaliCallback);
 
         if (isBLESupported) {
-            checkDiscoveryManagerRunning.start();
-            checkDiscoveryManagerRunning.join();
+            future = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
+            assertThat("DiscoveryManager should be running",
+                    future.get(), is(true));
         }
 
         mConnectionHelper.stop(false, mJXcoreThaliCallback);
 
-        checkDiscoveryManagerNotRunning.start();
-        checkDiscoveryManagerNotRunning.join();
+        future = mExecutor.submit(createCheckDiscoveryManagerNotRunningCallable());
+        assertThat("DiscoveryManager should not be running",
+                future.get(), is(true));
 
         Field fStartStopOperationHandler = mConnectionHelper.getClass()
         .getDeclaredField("mStartStopOperationHandler");
@@ -324,7 +359,7 @@ public class ConnectionHelperTest {
     public void testKillAllConnections() throws Exception {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
         IncomingSocketThreadMock mIncomingSocketThreadMock = new IncomingSocketThreadMock(
-                                                                                          null, mListenerMock, mInputStreamMock, mOutputStreamMock);
+                null, mListenerMock, mInputStreamMock, mOutputStreamMock);
 
         mIncomingSocketThreadMock.setPeerProperties(new PeerProperties("incoming"));
         mIncomingSocketThreadMock.threadId = 1L;
@@ -352,11 +387,10 @@ public class ConnectionHelperTest {
         assertThat("ConnectionManager state is NOT_STARTED", mConnectionManager.getState(),
                    is(equalTo(ConnectionManager.ConnectionManagerState.NOT_STARTED)));
         assertThat("ConnectionManager state is not either WAITING_FOR_SERVICES_TO_BE_ENABLED " +
-                   "or RUNNING",mConnectionManager.getState(), is(not(anyOf(
-                                                                            equalTo(ConnectionManager.ConnectionManagerState
-                                                                                    .WAITING_FOR_SERVICES_TO_BE_ENABLED),
-                                                                            equalTo(ConnectionManager.ConnectionManagerState
-                                                                                    .RUNNING)))));
+                   "or RUNNING",
+                mConnectionManager.getState(), is(not(anyOf(
+                        equalTo(ConnectionManager.ConnectionManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED),
+                        equalTo(ConnectionManager.ConnectionManagerState.RUNNING)))));
 
         Field fDiscoveryManager = mConnectionHelper.getClass()
         .getDeclaredField("mDiscoveryManager");
@@ -449,7 +483,7 @@ public class ConnectionHelperTest {
         String bluetoothMacAddress = "00:11:22:33:44:55";
         PeerProperties mPeerProperties = new PeerProperties(bluetoothMacAddress);
         OutgoingSocketThreadMock mOutgoingSocketThreadMock = new OutgoingSocketThreadMock(
-                                                                                          null, mListenerMock, mInputStreamMock, mOutputStreamMock);
+                null, mListenerMock, mInputStreamMock, mOutputStreamMock);
 
         mOutgoingSocketThreadMock.setPeerProperties(mPeerProperties);
         mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock);
@@ -474,7 +508,7 @@ public class ConnectionHelperTest {
     public void testHasMaximumNumberOfConnections() throws Exception {
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
         OutgoingSocketThreadMock mOutgoingSocketThreadMock = new OutgoingSocketThreadMock(
-                                                                                          null, mListenerMock, mInputStreamMock, mOutputStreamMock);
+                null, mListenerMock, mInputStreamMock, mOutputStreamMock);
 
         mOutgoingSocketThreadMock.setPeerProperties(new PeerProperties("00:11:22:33:44:55"));
         mConnectionModel.addConnectionThread(mOutgoingSocketThreadMock);
@@ -487,10 +521,10 @@ public class ConnectionHelperTest {
 
         for (int i = 0; i < 30; i++) {
             mOutgoingSocketThreads.add(new OutgoingSocketThreadMock(
-                                                                    null, mListenerMock, mInputStreamMock, mOutputStreamMock));
+                    null, mListenerMock, mInputStreamMock, mOutputStreamMock));
             mOutgoingSocketThreads.get(i).setPeerProperties(
-                                                            new PeerProperties(i + 10 + ":" + i + 10 + ":" + i + 10 + ":" + i + 10 + ":" +
-                                                                               i + 10 + ":" + i + 10));
+                    new PeerProperties(i + 10 + ":" + i + 10 + ":" + i + 10 + ":" + i + 10 + ":" +
+                            i + 10 + ":" + i + 10));
             mConnectionModel.addConnectionThread(mOutgoingSocketThreads.get(i));
         }
 
@@ -505,7 +539,7 @@ public class ConnectionHelperTest {
         String bluetoothMacAddressOutgoing = "00:11:22:33:44:55";
         JXcoreThaliCallbackMock mJXcoreTHaliCallBack = new JXcoreThaliCallbackMock();
         OutgoingSocketThreadMock mOutgoingSocketThreadMock = new OutgoingSocketThreadMock(
-                                                                                          null, mListenerMock, mInputStreamMock, mOutputStreamMock);
+                null, mListenerMock, mInputStreamMock, mOutputStreamMock);
 
         mOutgoingSocketThreadMock
         .setPeerProperties(new PeerProperties(bluetoothMacAddressOutgoing));
@@ -522,10 +556,10 @@ public class ConnectionHelperTest {
 
         for (int i = 0; i < 30; i++) {
             mOutgoingSocketThreads.add(new OutgoingSocketThreadMock(
-                                                                    null, mListenerMock, mInputStreamMock, mOutputStreamMock));
+                    null, mListenerMock, mInputStreamMock, mOutputStreamMock));
             mOutgoingSocketThreads.get(i).setPeerProperties(
-                                                            new PeerProperties(i + 10 + ":" + i + 10 + ":" + i + 10 + ":" + i + 10 + ":" +
-                                                                               i + 10 + ":" + i + 10));
+                    new PeerProperties(i + 10 + ":" + i + 10 + ":" + i + 10 + ":" + i + 10 + ":" +
+                            i + 10 + ":" + i + 10));
             mConnectionModel.addConnectionThread(mOutgoingSocketThreads.get(i));
         }
 
@@ -570,7 +604,7 @@ public class ConnectionHelperTest {
         ConnectionManagerSettings settings = ConnectionManagerSettings.getInstance(mContext);
 
         settings.setInsecureRfcommSocketPortNumber(
-                                                   ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
+                ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
 
         mConnectionHelper.toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();
         assertThat("getInsecureRfcommSocketPortNumber should be equal to SYSTEM_DECIDED_" +
@@ -627,7 +661,7 @@ public class ConnectionHelperTest {
 
         ConnectionManagerSettings settings = ConnectionManagerSettings.getInstance(mContext);
         settings.setInsecureRfcommSocketPortNumber(
-                                                   ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
+                ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
 
         assertThat("Peer has added connection callback, should return same mJXcoreThaliCallback",
                    mConnectionModel
@@ -660,7 +694,7 @@ public class ConnectionHelperTest {
 
         ConnectionManagerSettings settings = ConnectionManagerSettings.getInstance(mContext);
         settings.setInsecureRfcommSocketPortNumber(
-                                                   ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
+                ConnectionManagerSettings.DEFAULT_ALTERNATIVE_INSECURE_RFCOMM_SOCKET_PORT);
 
         ConnectionModel mConnectionModel = mConnectionHelper.getConnectionModel();
         mConnectionModel.addOutgoingConnectionCallback(bluetoothMacAddress, mJXcoreThaliCallback);
@@ -688,7 +722,7 @@ public class ConnectionHelperTest {
     @Test
     public void testOnDiscoveryManagerStateChanged() throws Exception {
         mConnectionHelper.onDiscoveryManagerStateChanged(
-                                                         DiscoveryManager.DiscoveryManagerState.NOT_STARTED, true, true);
+                DiscoveryManager.DiscoveryManagerState.NOT_STARTED, true, true);
 
         Field fStartStopOperationHandler =
         mConnectionHelper.getClass().getDeclaredField("mStartStopOperationHandler");

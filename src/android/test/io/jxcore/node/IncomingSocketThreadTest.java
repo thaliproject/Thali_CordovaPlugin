@@ -5,7 +5,11 @@ import android.util.Log;
 import com.test.thalitest.ThaliTestRunner;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -14,6 +18,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.net.Socket;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -44,6 +52,15 @@ public class IncomingSocketThreadTest {
             "venenatis placerat, nulla ornare suscipit, erat urna, pellentesque dapibus vel, " +
             "lorem. Sed egestas non, dolor. Aliquam hendrerit sollicitudin sed.";
 
+    ExecutorService mExecutor;
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
+
     @Before
     public void setUp() throws Exception {
         outgoingOutputStream = new ByteArrayOutputStream();
@@ -62,42 +79,56 @@ public class IncomingSocketThreadTest {
         mOutgoingSocketThread =
                 new OutgoingSocketThreadMock(null, mListenerMockOutgoing, mInputStreamMockOutgoing,
                         mOutputStreamMockOutgoing);
+
+        mExecutor = Executors.newSingleThreadExecutor();
     }
 
-    public Thread createCheckOutgoingSocketThreadStart() {
-        return new Thread(new Runnable() {
+    public Callable<Boolean> createCheckOutgoingSocketThreadStart() {
+        return new Callable<Boolean>() {
             int counter = 0;
             @Override
-            public void run() {
+            public Boolean call() {
                 while (mOutgoingSocketThread.mServerSocket == null && counter < ThaliTestRunner.counterLimit) {
                     try {
                         Thread.sleep(ThaliTestRunner.timeoutLimit);
                         counter++;
                     } catch (InterruptedException e1) {
                         e1.printStackTrace();
+                        return false;
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "OutgoingSocketThread didn't start after 5s!");
+                if (counter < ThaliTestRunner.counterLimit) {
+                    return true;
+                } else {
+                    Log.e(mTag, "OutgoingSocketThread didn't start after 5s!");
+                    return false;
+                }
             }
-        });
+        };
     }
 
-    public Thread createCheckIncomingSocketThreadStart() {
-        return new Thread(new Runnable() {
+    public Callable<Boolean> createCheckIncomingSocketThreadStart() {
+        return new Callable<Boolean>() {
             int counter = 0;
             @Override
-            public void run() {
+            public Boolean call() {
                 while (!mIncomingSocketThread.localStreamsCreatedSuccessfully && counter < ThaliTestRunner.counterLimit) {
                     try {
                         Thread.sleep(ThaliTestRunner.timeoutLimit);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        return false;
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "IncomingSocketThread didn't start after 5s!");
+                if (counter < ThaliTestRunner.counterLimit) {
+                    return true;
+                } else {
+                    Log.e(mTag, "IncomingSocketThread didn't start after 5s!");
+                    return false;
+                }
             }
-        });
+        };
     }
 
     @Test
@@ -145,19 +176,20 @@ public class IncomingSocketThreadTest {
 
     @Test
     public void testRun() throws Exception {
+        Future<Boolean> mFuture;
         mOutgoingSocketThread.setPort(testPortNumber);
         mIncomingSocketThread.setPort(testPortNumber);
 
-        Thread checkOutgoingSocketThreadStart = createCheckOutgoingSocketThreadStart();
-        Thread checkIncomingSocketThreadStart = createCheckIncomingSocketThreadStart();
-
         mOutgoingSocketThread.start(); //Simulate end point to connect to
-        checkOutgoingSocketThreadStart.start();
-        checkOutgoingSocketThreadStart.join();
+
+        mFuture = mExecutor.submit(createCheckOutgoingSocketThreadStart());
+
+        assertThat("OutgoingSocketThread started", mFuture.get(), is(true));
 
         mIncomingSocketThread.start(); //Connect to end point
-        checkIncomingSocketThreadStart.start();
-        checkIncomingSocketThreadStart.join();
+        mFuture = mExecutor.submit(createCheckIncomingSocketThreadStart());
+
+        assertThat("IncomingSocketThread started", mFuture.get(), is(true));
 
         assertThat("localStreamsCreatedSuccessfully should be true",
                 mIncomingSocketThread.localStreamsCreatedSuccessfully,

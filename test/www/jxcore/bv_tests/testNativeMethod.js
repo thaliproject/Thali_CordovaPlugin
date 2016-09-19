@@ -24,10 +24,9 @@ if (process.platform === 'android' || process.platform === 'ios') {
   test('onPeerLost calls jxcore', function (t) {
     setImmediate(function () {
       Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-        //clearTimeout(timeOut);
         if (typeof peers.forEach !== 'function') {
           peers = [peers];
-          t.fail('peers callback should be an array!');
+          t.fail('peers callback shoul  d be an array!');
         }
 
         peers.forEach(function (peer) {

@@ -9,6 +9,14 @@ import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import io.jxcore.node.jxcore;
 
 public class ThaliTestRunner {
@@ -21,47 +29,46 @@ public class ThaliTestRunner {
     final static WifiManager wifiManager =
     (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
 
-    public static Thread createCheckRadiosThread() {
-        return new Thread(new Runnable() {
+    public static Callable<Boolean> createCheckRadiosThread() {
+        return new Callable<Boolean>() {
             int counter = 0;
 
             @Override
-            public void run() {
+            public Boolean call() throws Exception{
                 while (!btAdapter.isEnabled() && !wifiManager.isWifiEnabled() && counter < counterLimit) {
                     try {
                         Thread.sleep(timeoutLimit);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        return false;
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Radios didn't start after 5s!");
+                return !(counter >= ThaliTestRunner.counterLimit);
             }
-        });
+        };
     }
 
     public static boolean turnOnRadios() {
         btAdapter.enable();
         wifiManager.setWifiEnabled(true);
 
-        Thread checkRadiosThread = createCheckRadiosThread();
+        ExecutorService es = Executors.newSingleThreadExecutor();
+        Future<Boolean> future = es.submit(createCheckRadiosThread());
 
         try {
-            checkRadiosThread.start();
-            checkRadiosThread.join();
-            return true;
-        } catch (InterruptedException e) {
+            return future.get(5000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException|ExecutionException|TimeoutException e) {
             e.printStackTrace();
+            future.cancel(true);
+            return false;
         }
-        return false;
     }
 
     public static Result runTests() {
-        boolean isBtAndWiFiOn = turnOnRadios();
+        boolean isWifiAndBTOn = turnOnRadios();
 
-        if (isBtAndWiFiOn) {
-            System.out.println("Running UT");
-
+        if (isWifiAndBTOn) {
             try {
                 Thread.sleep(10000);
                 /*
@@ -73,6 +80,8 @@ public class ThaliTestRunner {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
+            Log.i(mTag, "Running UT");
 
             Result result = JUnitCore.runClasses(ThaliTestSuite.class);
 

@@ -5,16 +5,23 @@ import android.util.Log;
 
 import com.test.thalitest.ThaliTestRunner;
 
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -29,18 +36,18 @@ public class StartStopOperationHandlerTest {
     DiscoveryManager mDiscoveryManager;
     StartStopOperationHandler mStartStopOperationHandler;
     JXcoreThaliCallbackMock mJXcoreThaliCallback;
-    Thread checkDiscoveryManagerRunning, checkDiscoveryManagerNotRunning;
     static ConnectionHelper mConnectionHelper;
     static StartStopOperationHandler mStartStopOperatonHandler;
     static long mOperationTimeout;
     static boolean isBLESupported;
     static String mTag = StartStopOperationHandlerTest.class.getName();
+    static ExecutorService mExecutor;
 
-    public static Thread createCheckDiscoveryManagerRunningThread() {
-        return new Thread(new Runnable() {
+    public static Callable<Boolean> createCheckDiscoveryManagerRunningCallable() {
+        return new Callable<Boolean>() {
             int counter = 0;
             @Override
-            public void run() {
+            public Boolean call() {
                 while (!mConnectionHelper
                        .getDiscoveryManager().isRunning() && counter < ThaliTestRunner.counterLimit) {
                     try {
@@ -48,18 +55,24 @@ public class StartStopOperationHandlerTest {
                         counter++;
                     } catch (InterruptedException e){
                         e.printStackTrace();
+                        return false;
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Discovery manager didn't start after 5s!");
+                if (counter < ThaliTestRunner.counterLimit) {
+                    return true;
+                } else {
+                    Log.e(mTag, "Discovery manager didn't start after 5s!");
+                    return false;
+                }
             }
-        });
+        };
     }
 
-    public static Thread createCheckDiscoveryManagerNotRunningThread() {
-        return new Thread(new Runnable() {
+    public static Callable<Boolean> createCheckDiscoveryManagerNotRunningCallable() {
+        return new Callable<Boolean>() {
             int counter = 0;
             @Override
-            public void run() {
+            public Boolean call() {
                 while (mConnectionHelper
                        .getDiscoveryManager().isRunning() && counter < ThaliTestRunner.counterLimit) {
                     try {
@@ -67,12 +80,25 @@ public class StartStopOperationHandlerTest {
                         counter++;
                     } catch (InterruptedException e){
                         e.printStackTrace();
+                        return false;
                     }
                 }
-                if (counter >= ThaliTestRunner.counterLimit) Log.e(mTag, "Discovery manager still running after 5s!");
+                if (counter < ThaliTestRunner.counterLimit) {
+                    return true;
+                } else {
+                    Log.e(mTag, "Discovery manager still running after 5s!");
+                    return false;
+                }
             }
-        });
+        };
     }
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
@@ -88,6 +114,8 @@ public class StartStopOperationHandlerTest {
         .getDeclaredField("OPERATION_TIMEOUT_IN_MILLISECONDS");
         fOperationTimeout.setAccessible(true);
         mOperationTimeout = fOperationTimeout.getLong(mStartStopOperatonHandler);
+
+        mExecutor = Executors.newFixedThreadPool(5);
     }
 
     @Before
@@ -105,9 +133,6 @@ public class StartStopOperationHandlerTest {
         fStartStopOperationHandler.setAccessible(true);
         mStartStopOperationHandler =
         (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
-
-        checkDiscoveryManagerRunning = createCheckDiscoveryManagerRunningThread();
-        checkDiscoveryManagerNotRunning = createCheckDiscoveryManagerNotRunningThread();
     }
 
     @AfterClass
@@ -165,11 +190,12 @@ public class StartStopOperationHandlerTest {
 
     @Test
     public void testExecuteStartOperation() throws Exception {
+        Future<Boolean> mFuture;
         mStartStopOperationHandler.executeStartOperation(isBLESupported, mJXcoreThaliCallback);
 
         if (isBLESupported) {
-            checkDiscoveryManagerRunning.start();
-            checkDiscoveryManagerRunning.join();
+            mFuture = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
+            assertThat("DiscoveryManager should be running", mFuture.get(), is(true));
         }
 
         /* After 3s mCurrentOperation should be null. This is defined in
@@ -210,19 +236,22 @@ public class StartStopOperationHandlerTest {
 
     @Test
     public void testExecuteStopOperation() throws Exception {
+        Future<Boolean> mFuture;
+
         mStartStopOperationHandler.executeStartOperation(isBLESupported, mJXcoreThaliCallback);
 
         if (isBLESupported) {
-            checkDiscoveryManagerRunning.start();
-            checkDiscoveryManagerRunning.join();
+            mFuture = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
+            assertThat("DiscoveryManager should be running", mFuture.get(), is(true));
         }
 
         Thread.sleep(mOperationTimeout);
 
-        mStartStopOperationHandler.executeStopOperation(!isBLESupported, mJXcoreThaliCallback);
+        mStartStopOperationHandler.executeStopOperation(false, mJXcoreThaliCallback);
 
-        checkDiscoveryManagerNotRunning.start();
-        checkDiscoveryManagerNotRunning.join();
+        mFuture = mExecutor.submit(createCheckDiscoveryManagerNotRunningCallable());
+
+        assertThat("DiscoveryManager should not be running", mFuture.get(), is(true));
 
         Field fCurrentOperation = mStartStopOperationHandler.getClass()
         .getDeclaredField("mCurrentOperation");
