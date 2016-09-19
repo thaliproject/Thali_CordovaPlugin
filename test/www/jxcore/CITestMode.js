@@ -74,8 +74,32 @@ var copyCINodeTestClass = function() {
   }
 };
 
+var emptyAlliOSTestFilesButOne = function() {
+  try {
+    var i, path = '../../../lib/ios/ThaliCore/ThaliCoreTests';
+    var currentFilePath;
+    var filesArray = fs.readdirSync(path);
+
+    console.log('path ' + path);
+
+    for (i = 0; i < filesArray.length; i++) {
+      if (filesArray[i].indexOf('SimpleTestCase') == -1) {
+        currentFilePath = path + '/' + filesArray[i].toString();
+        if (!fs.lstatSync(currentFilePath).isDirectory()) {
+          console.log('currentPath ' + currentFilePath);
+          fs.writeFileSync(currentFilePath, '');
+        }
+      }
+    }
+  } catch (e) {
+    console.log(e);
+    console.log('Failed to empty all iOS test files but one!');
+  }
+};
+
 updateUnitTestConfig();
 copyCINodeTestClass();
 copyCINativeTestClass();
+emptyAlliOSTestFilesButOne();
 updateThaliTestSuiteFunction();
 updateRunTestsToRunOnlyOneNodeTest();
