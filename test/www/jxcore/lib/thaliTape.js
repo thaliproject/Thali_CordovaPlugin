@@ -287,6 +287,7 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
     testUtils.logMessageToScreen('Device disqualified');
     testUtils.returnsValidNetworkStatus()
     .then(function (validStatus) {
+      console.log('Device disqualified');
       if (validStatus) {
         console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
       } else {
@@ -313,6 +314,7 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
 
   testServer.once('complete', function () {
     testUtils.logMessageToScreen('Tests complete');
+    console.log('Tests complete');
     complete = true;
     if (allSuccess) {
       console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
