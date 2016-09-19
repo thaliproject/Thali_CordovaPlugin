@@ -179,6 +179,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
   }
 
   var usn = data.USN;
+  var generation = data.generation;
   try {
     validations.ensureNonNullOrEmptyString(usn);
   } catch (error) {
@@ -187,7 +188,8 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
   }
 
   var peer = {
-    peerIdentifier: usn
+    peerIdentifier: usn,
+    generation: generation
   };
 
   // We expect location only in alive messages.
