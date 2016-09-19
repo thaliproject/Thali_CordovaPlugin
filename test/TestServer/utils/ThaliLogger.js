@@ -28,7 +28,7 @@ if (
 
 util.inherits(ThaliLogger, EventEmitter);
 
-ThaliLogger.prototype.name = 'thaliLogger';
+ThaliLogger.prototype.name = 'ThaliLogger';
 
 ThaliLogger.prototype.log = function (level, message, meta, callback) {
   var now = new Date().toISOString()

@@ -28,6 +28,7 @@ var test = tape({
 
 require('./utils/process');
 
+
 var exports;
 if (typeof jxcore === 'undefined' || typeof Mobile !== 'undefined') {
   // On mobile, or outside of jxcore (some dev scenarios)

@@ -14,7 +14,7 @@ var ThaliLogger = function () {
 
 util.inherits(ThaliLogger, EventEmitter);
 
-ThaliLogger.prototype.name = 'thaliLogger';
+ThaliLogger.prototype.name = 'ThaliLogger';
 
 if (
   typeof jxcore !== 'undefined' &&

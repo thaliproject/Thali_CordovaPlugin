@@ -12,12 +12,12 @@ var SocketIOClient = require('socket.io-client');
 var EventEmitter   = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
-var Promise = require('./utils/promise');
+var Promise = require('./utils/Promise');
 
 var testUtils     = require('./testUtils');
 var serverAddress = require('../server-address');
 
-var logger = require('thali/thaliLogger')('CoordinatedClient');
+var logger = require('thali/ThaliLogger')('CoordinatedClient');
 
 
 function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) {
@@ -43,7 +43,7 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) 
     emitRetryTimeout: tests[0].options.emitRetryTimeout
   };
 
-  this._tests = tests.slice(0);
+  this._tests = tests.slice();
   this._testNames = this._tests.map(function (test) {
     return test.name;
   });
@@ -119,32 +119,37 @@ CoordinatedClient.prototype._newConnection = function () {
   );
   this._state = CoordinatedClient.states.connected;
 
-  this._emit('present', JSON.stringify({
-    name: testUtils.getName(),
-    uuid: this._uuid,
-    type: 'unittest',
-    tests: this._testNames,
-    os: this._platform,
+  this._emit('present', {
+    name:    testUtils.getName(),
+    uuid:    this._uuid,
+    type:    'unittest',
+    tests:   this._testNames,
+    os:      this._platform,
     version: this._version,
-    supportedHardware: this._hasRequiredHardware,
-  }));
+
+    hasRequiredHardware: this._hasRequiredHardware,
+  });
 }
 
 CoordinatedClient.prototype._schedule = function (data) {
   var self = this;
 
-  var testNamesString = CoordinatedClient.getData(data);
-
-  asserts.isString(testNamesString);
-  var testNames = JSON.parse(testNamesString);
+  var testNames = CoordinatedClient.getData(data);
   asserts.arrayEquals(testNames, this._testNames);
 
-  var promises = this._tests.map(function (test) {
-    return self._scheduleTest(test);
+  this._emit('schedule_confirmed', data)
+  .then(function () {
+    var promises = self._tests.map(function (test) {
+      return self._scheduleTest(test);
+    });
+    return Promise.all(promises);
+  })
+  .catch(function (error) {
+    logger.error(
+      'unexpected error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
+    );
   });
-  Promise.all(promises);
-
-  this._emit('schedule_confirmed', data);
 }
 
 CoordinatedClient.prototype._discard = function (data) {
@@ -166,7 +171,7 @@ CoordinatedClient.prototype._disqualify = function (data) {
   .then(function () {
     logger.debug('device disqualified from the test server');
 
-    testUtils.returnsValidNetworkStatus()
+    return testUtils.returnsValidNetworkStatus()
     .then(function (validStatus) {
       if (!validStatus) {
         self._failed(new Error(
@@ -248,6 +253,13 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
     }
     emit();
   })
+  .catch(function (error) {
+    logger.error(
+      'unexpected error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
+    );
+    return Promise.reject(error);
+  })
   .finally(function () {
     clearTimeout(timeout);
   });
@@ -279,10 +291,10 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
 
           self._emit(
             event + '_finished',
-            JSON.stringify({
-              'success': success,
-              'data':    tape.data
-            }),
+            {
+              success: success,
+              data:    tape.data
+            },
             test.options
           )
           .then(function () {
@@ -314,7 +326,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
 
         // Only for testing purposes.
         if (parsedData) {
-          tape.participants = JSON.parse(parsedData);
+          tape.participants = parsedData;
         }
         fun(tape);
       });
@@ -324,9 +336,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
   return new Promise(function (resolve, reject) {
     tape('setup', function (tape) {
       processEvent(tape, 'setup_' + test.name, test.options.setup, test.options.setupTimeout)
-      .catch(function (error) {
-        reject(error);
-      });
+      .catch(reject);
     });
 
     tape(test.name, function (tape) {
@@ -334,32 +344,24 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
         tape.plan(test.expect);
       }
       processEvent(tape, 'run_' + test.name, test.fun, test.options.testTimeout)
-      .catch(function (error) {
-        reject(error);
-      });
+      .catch(reject);
     });
 
     tape('teardown', function (tape) {
       processEvent(tape, 'teardown_' + test.name, test.options.teardown, test.options.teardownTimeout)
-      .then(function () {
-        // We should exit after test teardown.
-        resolve();
-      })
-      .catch(function (error) {
-        reject(error);
-      });
+      // We should exit after test teardown.
+      .then(resolve)
+      .catch(reject);
     });
   });
 }
 
 // We should remove prefix (uuid.v4) from data.
-CoordinatedClient.getData = function (dataString) {
-  var data = JSON.parse(dataString);
+CoordinatedClient.getData = function (data) {
   assert(
     uuidValidate(data.uuid, 4),
     'we should have a valid uuid.v4'
   );
-
   return data.content;
 }
 

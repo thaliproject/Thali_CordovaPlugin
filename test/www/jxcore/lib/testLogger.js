@@ -1,6 +1,6 @@
 'use strict';
 
-var Logger = require('thali/thaliLogger');
+var Logger = require('thali/ThaliLogger');
 
 
 var logCallback;
