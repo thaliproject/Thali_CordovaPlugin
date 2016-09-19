@@ -224,11 +224,7 @@ public class JXcoreExtension {
                 String bluetoothMacAddress = null;
 
                 if (peerId != null) {
-                    try {
-                        bluetoothMacAddress = peerId.split(BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR)[0];
-                    } catch (IndexOutOfBoundsException e) {
-                        Log.e(TAG, METHOD_NAME_CONNECT + ": Failed to extract the Bluetooth MAC address: " + e.getMessage(), e);
-                    }
+                    bluetoothMacAddress = peerId;
                 }
 
                 if (!BluetoothUtils.isValidBluetoothMacAddress(bluetoothMacAddress)) {
