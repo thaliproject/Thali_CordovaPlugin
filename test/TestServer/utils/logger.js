@@ -56,7 +56,6 @@ module.exports = function (tag) {
   var logger = new winston.Logger({
     transports: [thaliLogger]
   });
-  logger._thaliLogger = thaliLogger;
   logger.rewriters.push(function (level, msg, meta) {
     if (!meta.tag) {
       meta.tag = tag;
