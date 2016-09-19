@@ -188,9 +188,12 @@ var updateJavaVersion = function (appRoot) {
 
     try {
       var originalContent = fs.readFileSync(buildGradleLocation).toString();
-      var newContent = originalContent.replace("JavaVersion.VERSION_1_6", "JavaVersion.VERSION_1_7");
+      var newContent = originalContent.replace(/JavaVersion.VERSION_1_6/g, "JavaVersion.VERSION_1_7");
 
       fs.writeFileSync(buildGradleLocation, newContent);
+    } catch (e) {
+      console.log(e);
+      console.log('Failed to update JavaVersion!');
     }
   };
 
