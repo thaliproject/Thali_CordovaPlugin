@@ -235,6 +235,22 @@ module.exports.getOSVersion = function () {
   });
 };
 
+var _platform = process.platform;
+Object.defineProperty(module.exports, 'platform', {
+  get: function () {
+    return _platform;
+  }
+});
+
+// Only for testing reason
+// See the issue #902
+module.exports._overridePlatform = function (platform) {
+  _platform = platform;
+};
+
+module.exports._resetPlatform = function () {
+  _platform = process.platform;
+};
 
 module.exports.verifyCombinedResultSuccess =
   function (t, combinedResult, message) {
