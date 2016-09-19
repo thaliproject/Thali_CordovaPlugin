@@ -357,7 +357,7 @@ public class ConnectionHelper
     @Override
     public void onConnectionManagerStateChanged(ConnectionManagerState connectionManagerState) {
         Log.i(TAG, "onConnectionManagerStateChanged: " + connectionManagerState);
-        mStartStopOperationHandler.checkCurrentOperationStatus();
+        mStartStopOperationHandler.processCurrentOperationStatus();
     }
 
     /**
@@ -484,7 +484,7 @@ public class ConnectionHelper
                 Log.v(TAG, "Notifying discovery manager state change: is discovering: "
                         + isDiscovering + ", is advertising: " + isAdvertising);
 
-                mStartStopOperationHandler.checkCurrentOperationStatus();
+                mStartStopOperationHandler.processCurrentOperationStatus();
                 JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
                 mNotifyDiscoveryAdvertisingStateUpdateNonTcp.cancel();
                 mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
