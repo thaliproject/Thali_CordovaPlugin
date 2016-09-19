@@ -78,8 +78,6 @@ Server.prototype._error = function (socket, error) {
 }
 
 Server.prototype._present = function (socket, deviceInfo) {
-  asserts.isString(deviceInfo);
-  deviceInfo = JSON.parse(deviceInfo);
   var device = new TestDevice(socket, deviceInfo);
   socket.deviceName = device.name;
 
