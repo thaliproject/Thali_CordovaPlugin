@@ -7,7 +7,7 @@ var util   = require('util');
 var format = util.format;
 
 require('./utils/process');
-var logger = require('./utils/logger')('TestServer');
+var logger = require('./utils/ThaliLogger')('TestServer');
 
 var HttpServer        = require('./HttpServer');
 var TestDevice        = require('./TestDevice');

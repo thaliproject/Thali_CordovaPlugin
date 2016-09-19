@@ -9,7 +9,7 @@ var objectAssign = require('object-assign');
 var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
-var logger  = require('./utils/logger')('HttpServer');
+var logger  = require('./utils/ThaliLogger')('HttpServer');
 
 var TestDevice = require('./TestDevice');
 
