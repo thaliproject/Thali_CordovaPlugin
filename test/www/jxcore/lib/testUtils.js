@@ -1,14 +1,16 @@
 'use strict';
 
-var logCallback;
+var util = require('util');
+var format = util.format;
+
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
-var Promise = require('lie');
+var randomString = require('randomstring');
+var Promise = require('bluebird');
 var https = require('https');
-var logger = require('thali/thaliLogger')('testUtils');
+var logger = require('thali/ThaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
@@ -22,6 +24,13 @@ var inherits = require('inherits');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
+
+var isMobile = (
+  typeof jxcore !== 'undefined' &&
+  jxcore.utils &&
+  jxcore.utils.OSInfo() &&
+  jxcore.utils.OSInfo().isMobile
+);
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
@@ -71,20 +80,6 @@ function isFunction(functionToCheck) {
     '[object Function]';
 }
 
-/**
- * Log a message to the screen - only applies when running on Mobile. It assumes
- * we are using our test framework with our Cordova WebView who is setup to
- * receive logging messages and display them.
- * @param {string} message
- */
-module.exports.logMessageToScreen = function (message) {
-  if (isFunction(logCallback)) {
-    logCallback(message);
-  } else {
-    logger.warn('logCallback not set!');
-  }
-};
-
 var myName = '';
 var myNameCallback = null;
 
@@ -109,11 +104,7 @@ module.exports.getName = function () {
   return myName;
 };
 
-if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
-  Mobile('setLogCallback').registerAsync(function (callback) {
-    logCallback = callback;
-  });
-
+if (isMobile) {
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
     // If the name is already set, pass it to the callback
@@ -122,10 +113,6 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
       myNameCallback(myName);
     }
   });
-} else {
-  logCallback = function (message) {
-    console.log(message);
-  };
 }
 
 /**
@@ -137,7 +124,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  */
 var tmpObject = null;
 module.exports.tmpDirectory = function () {
-  if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+  if (isMobile) {
     return os.tmpdir();
   }
 
@@ -210,7 +197,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
   .then(function (networkStatus) {
-    module.exports.logMessageToScreen(
+    logger.debug(
       'Device did not have required hardware capabilities!'
     );
     if (networkStatus.bluetoothLowEnergy === 'on') {
@@ -226,7 +213,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!jxcore.utils.OSInfo().isMobile) {
+    if (!isMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {
@@ -244,43 +231,85 @@ module.exports.verifyCombinedResultSuccess =
       message || 'error should be null');
   };
 
+function levelDownPouchDBGenerator(defaultDirectory) {
+  // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/fb77927d2f14911478032884f1576b770815bcab/packages/pouchdb-core/src/setup.js#L108-L137
+  function PouchAlt(name, opts, callback) {
+    if (!(this instanceof PouchAlt)) {
+      return new PouchAlt(name, opts, callback);
+    }
+
+    if (typeof opts === 'function' || typeof opts === 'undefined') {
+      callback = opts;
+      opts = {};
+    }
+
+    if (name && typeof name === 'object') {
+      opts = name;
+      name = undefined;
+    }
+
+    opts = extend({}, opts);
+
+    if (name !== undefined && name.indexOf('http') !== 0) {
+      if (!opts.db) {
+        opts.db = require('leveldown-mobile');
+      }
+
+      if (!opts.prefix) {
+        opts.prefix = defaultDirectory;
+      }
+    }
+
+    PouchDB.call(this, name, opts, callback);
+  }
+
+  inherits(PouchAlt, PouchDB);
+
+  PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
+  Object.keys(PouchDB).forEach(function (key) {
+    if (!(key in PouchAlt)) {
+      PouchAlt[key] = PouchDB[key];
+    }
+  });
+
+  return PouchAlt;
+}
+
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
 // during other tests.
-var pouchDBTestDirectory = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-fs.ensureDirSync(pouchDBTestDirectory);
+var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
+fs.ensureDirSync(dbPath);
 module.exports.getPouchDBTestDirectory = function () {
-  return pouchDBTestDirectory;
-};
+  return dbPath;
+}
 
-var LevelDownPouchDB = PouchDBGenerator(PouchDB, pouchDBTestDirectory, {
-  defaultAdapter: require('leveldown-mobile')
-});
+var LevelDownPouchDB = levelDownPouchDBGenerator(dbPath);
 
 module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
 };
 
-// Short, random and globally unique name can be obtained from current timestamp.
-// For example '1w8ueaswm1'
-var getUniqueRandomName = function () {
-  var time = process.hrtime();
-  time = time[0] * Math.pow(10, 9) + time[1];
-  return time.toString(36);
-}
-module.exports.getUniqueRandomName  = getUniqueRandomName;
-module.exports.getRandomPouchDBName = getUniqueRandomName;
+var getRandomName = function () {
+  return randomString.generate({
+    length: 40,
+    charset: 'alphabetic'
+  });
+};
+module.exports.getRandomPouchDBName = getRandomName;
+module.exports.getUniqueRandomName  = getRandomName;
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
-  return new LevelDownPouchDB(getUniqueRandomName());
+  return new LevelDownPouchDB(module.exports.getRandomPouchDBName());
 };
 
 module.exports.getPouchDBFactoryInRandomDirectory = function () {
-  var directory = path.join(pouchDBTestDirectory, getUniqueRandomName());
+  var directory = path.join(dbPath, randomString.generate({
+    length: 20,
+    charset: 'alphabetic'
+  }));
   fs.ensureDirSync(directory);
-  return PouchDBGenerator(PouchDB, directory, {
-    defaultAdapter: require('leveldown-mobile')
-  });
+  return levelDownPouchDBGenerator(directory);
 };
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
@@ -519,11 +548,13 @@ module.exports.setUpServer = function (testBody, appConfig) {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskCallback : function (id) {
         return id === pskId ? pskKey : null;
-      }
+      },
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
     }, app));
   testCloseAllServer.listen(0, function () {
     var serverPort = testCloseAllServer.address().port;
-    var randomDBName = getUniqueRandomName();
+    var randomDBName = randomString.generate(30);
     var remotePouchDB =
       module.exports.createPskPouchDBRemote(serverPort, randomDBName, pskId,
                                             pskKey);
@@ -671,13 +702,21 @@ module.exports.runTestOnAllParticipants = function (t, router,
 
 // We doesn't want our test to run infinite time.
 // We will replace t.end with custom exit function.
-module.exports.testTimeout = function (t, timeout) {
+module.exports.testTimeout = function (t, timeout, callback) {
   var timer = setTimeout(function () {
     t.fail('test timeout');
     t.end();
   }, timeout);
+
   var oldEnd = t.end;
   t.end = function () {
+    // Restoring original t.end.
+    t.end = oldEnd;
+
+    if (typeof callback === 'function') {
+      callback();
+    }
+
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
   }
