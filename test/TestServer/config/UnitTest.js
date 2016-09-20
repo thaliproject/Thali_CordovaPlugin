@@ -5,11 +5,13 @@
 module.exports = {
   devices: {
     ios: 3,
-    android: 3
+    android: 3,
+    desktop: 3
   },
   minDevices: {
     ios: 3,
-    android: 3
+    android: 3,
+    desktop: 3
   },
   // if 'devices[platform]' is -1 we wont limit the amount of devices.
   // We will wait some amount of time before tests.

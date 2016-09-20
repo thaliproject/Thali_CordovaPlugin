@@ -99,11 +99,13 @@ var setListeners = function (instance, instanceId) {
 var testServerConfiguration = {
   devices: {
     android: 0,
-    ios: argv.instanceCount
+    ios: 0,
+    desktop: argv.instanceCount
   },
   minDevices: {
     android: 0,
-    ios: 2
+    ios: 0,
+    desktop: 2
   },
   waiting_for_devices_timeout: 5 * 1000
 };

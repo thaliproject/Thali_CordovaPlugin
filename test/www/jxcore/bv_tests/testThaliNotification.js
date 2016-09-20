@@ -15,8 +15,9 @@ var ThaliPeerPoolDefault =
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var logger = require('thali/thaliLogger')('testThaliNotification');
+
 var testUtils = require('../lib/testUtils');
+var logger    = require('../lib/testLogger')('testThaliNotification');
 
 var HELLO = 'Hello world';
 var HELLO_PATH = '/hello';

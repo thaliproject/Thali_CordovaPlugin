@@ -94,12 +94,13 @@ TestFramework.prototype.addDevice = function (device) {
   asserts.instanceOf(device, TestDevice);
 
   var platform = this.platforms[device.platformName];
+  asserts.isObject(platform);
 
   var devices = platform.devices;
   var deviceIndexes = platform.deviceIndexes;
   var count = platform.count;
 
-  if (!device.supportedHardware) {
+  if (!device.hasRequiredHardware) {
     logger.info(
       'disqualifying device with unsupported hardware, name: \'%s\'',
       device.name
