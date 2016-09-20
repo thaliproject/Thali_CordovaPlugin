@@ -3,7 +3,8 @@
 //  TestRunner.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
+//  information.
 //
 
 import Foundation
@@ -19,7 +20,7 @@ public final class TestRunner: NSObject {
     }
 
     private let testSuite: XCTestSuite
-    
+
     private init(testSuite: XCTestSuite) {
         self.testSuite = testSuite
     }
@@ -74,7 +75,8 @@ public final class TestRunner: NSObject {
     public func runTest() {
         // Test must only be run on the main thread.
         // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
-        testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
+        testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil,
+                                              waitUntilDone: true)
     }
 
 }

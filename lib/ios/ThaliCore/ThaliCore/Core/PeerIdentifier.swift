@@ -3,43 +3,43 @@
 //  PeerIdentifier.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
 import MultipeerConnectivity
 
-enum PeerIdentifierError: String, ErrorType {
-    case WrongDataFormat
+public enum PeerIdentifierError: String, ErrorType {
+    case IllegalPeerID
 }
 
-///Peer identifier for with generations
+///Peer identifier with generations
 public struct PeerIdentifier: Hashable {
 
-    ///UUID identifier of peer
     public let uuid: String
-    ///generation of peer.
     public let generation: Int
+    private static let separator = Character(":")
 
     public init() {
         uuid = NSUUID().UUIDString
         generation = 0
     }
 
-    private init(uuidIdentifier: String, generation: Int) {
+    init(uuidIdentifier: String, generation: Int) {
         self.uuid = uuidIdentifier
         self.generation = generation
     }
 
     public init(stringValue: String) throws {
         let parts = stringValue.characters.split {
-             $0 == ":"
+             $0 == PeerIdentifier.separator
              }.map(String.init)
         guard parts.count == 2 else {
-            throw PeerIdentifierError.WrongDataFormat
+            throw PeerIdentifierError.IllegalPeerID
         }
         guard let generation = Int(parts[1], radix: 16) else {
-            throw PeerIdentifierError.WrongDataFormat
+            throw PeerIdentifierError.IllegalPeerID
         }
         self.uuid = parts[0]
         self.generation = generation
@@ -50,7 +50,7 @@ public struct PeerIdentifier: Hashable {
     }
 
     var stringValue: String {
-        return "\(uuid):\(String(generation, radix: 16))"
+        return "\(uuid)\(PeerIdentifier.separator)\(String(generation, radix: 16))"
     }
 
     public var hashValue: Int {
@@ -58,18 +58,22 @@ public struct PeerIdentifier: Hashable {
     }
 }
 
-///Multipeer connectivity specific functions
+// MARK: - Multipeer connectivity specific functions
 extension PeerIdentifier {
 
-    var mcPeer: MCPeerID {
-        return MCPeerID(displayName: stringValue)
-    }
-
-    init(mcPeer peer: MCPeerID) throws {
+    init(peerID peer: MCPeerID) throws {
         try self.init(stringValue: peer.displayName)
     }
 }
 
+// MARK: - Multipeer connectivity specific functions
+extension MCPeerID {
+
+    convenience init(peerIdentifier: PeerIdentifier) {
+        self.init(displayName: peerIdentifier.stringValue)
+    }
+}
+
 public func == (lhs: PeerIdentifier, rhs: PeerIdentifier) -> Bool {
-    return lhs.stringValue == rhs.stringValue
+    return lhs.stringValue.compare(rhs.stringValue, options: .LiteralSearch) == .OrderedSame
 }

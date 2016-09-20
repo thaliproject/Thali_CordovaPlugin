@@ -65,6 +65,8 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
     /// Gets updated value in didChangeNetworkStatus method.
     var cellularStateActual: String?
 
+    var advertisingListeningState = ""
+
     @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
     @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
         networkStatusUpdated = true
@@ -117,8 +119,10 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
             XCTFail("Can not convert network status JSON string to dictionary")
         }
     }
-    @objc func context(context: AppContext,
-                       didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {}
+    @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState
+                       discoveryAdvertisingState: String) {
+        advertisingListeningState = discoveryAdvertisingState
+    }
     @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
     @objc func appWillEnterBackground(withContext context: AppContext) {}
     @objc func appDidEnterForeground(withContext context: AppContext) {}
@@ -140,6 +144,14 @@ class AppContextTests: XCTestCase {
 
     override func tearDown() {
         context = nil
+    }
+
+    private func jsonDictionaryFrom(string: String) -> [String : AnyObject]? {
+        guard let data = string.dataUsingEncoding(NSUTF8StringEncoding) else {
+            return nil
+        }
+        return (try? NSJSONSerialization.JSONObjectWithData(data, options: [])) as?
+            [String : AnyObject]
     }
 
     // MARK: Tests
@@ -302,6 +314,16 @@ class AppContextTests: XCTestCase {
         NSNotificationCenter.defaultCenter().removeObserver(self)
     }
 
+    private func validateAdvertisingUpdate(jsonString: String, advertising: Bool, browsing: Bool) {
+        let json = jsonDictionaryFrom(jsonString)
+        let listeningActive = (json?[JSONKey.discoveryActive.rawValue] as? Bool)
+        let advertisingActive = (json?[JSONKey.advertisingActive.rawValue] as? Bool)
+        print(advertisingActive)
+        print(listeningActive)
+        XCTAssertEqual(advertisingActive, advertising)
+        XCTAssertEqual(listeningActive, browsing)
+    }
+
     func testDidRegisterToNative() {
         var error: ErrorType?
         do {
@@ -312,7 +334,8 @@ class AppContextTests: XCTestCase {
         XCTAssertNil(error)
         var contextError: AppContextError?
         do {
-            try context.didRegisterToNative(["test"])
+            let notAString = 42
+            try context.didRegisterToNative([notAString])
         } catch let err as AppContextError {
             contextError = err
         } catch _ {
@@ -324,21 +347,32 @@ class AppContextTests: XCTestCase {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
     }
 
+    func testListeningAdvertisingUpdateOnStartAdvertising() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        let port = 42
+        let _ = try? context.startUpdateAdvertisingAndListening(withParameters: [port])
+        validateAdvertisingUpdate(delegateMock.advertisingListeningState, advertising: true,
+                                  browsing: false)
+    }
+
+    func testListeningAdvertisingUpdateOnStartListening() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        let _ = try? context.startListeningForAdvertisements()
+        validateAdvertisingUpdate(delegateMock.advertisingListeningState, advertising: false,
+                                  browsing: true)
+    }
+
     func testPeerAvailabilityConversion() {
         let peerAvailability = PeerAvailability(peerIdentifier: PeerIdentifier(), available: true)
         let dictionaryValue = peerAvailability.dictionaryValue
-        XCTAssertEqual(
-            peerAvailability.peerIdentifier.uuid,
-            dictionaryValue[JSONValueKey.PeerIdentifier.rawValue] as? String
-        )
-        XCTAssertEqual(
-            peerAvailability.peerIdentifier.generation,
-            dictionaryValue[JSONValueKey.Generation.rawValue] as? Int
-        )
-        XCTAssertEqual(
-            peerAvailability.available,
-            dictionaryValue[JSONValueKey.PeerAvailable.rawValue] as? Bool
-        )
+        XCTAssertEqual(peerAvailability.peerIdentifier.uuid,
+                       dictionaryValue[JSONKey.peerIdentifier.rawValue] as? String)
+        XCTAssertEqual(peerAvailability.peerIdentifier.generation,
+                       dictionaryValue[JSONKey.generation.rawValue] as? Int)
+        XCTAssertEqual(peerAvailability.available,
+                       dictionaryValue[JSONKey.peerAvailable.rawValue] as? Bool)
     }
 
 

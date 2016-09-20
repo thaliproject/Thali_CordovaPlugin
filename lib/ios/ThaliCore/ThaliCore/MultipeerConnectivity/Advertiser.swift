@@ -3,7 +3,8 @@
 //  Advertiser.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
@@ -14,24 +15,25 @@ final class Advertiser: NSObject {
     private let advertiser: MCNearbyServiceAdvertiser
 
     let peerIdentifier: PeerIdentifier
-    let serviceType: String
-    let port: UInt16
     internal private(set) var advertising: Bool = false
-    private let receivedInvitationHandler: (peer: PeerIdentifier) -> Void
+    private let receivedInvitationHandler: (session: Session) -> Void
+    private let disconnectHandler: () -> Void
+    private var startAdvertisingErrorHandler: (ErrorType -> Void)? = nil
 
-    required init(peerIdentifier: PeerIdentifier, serviceType: String, port: UInt16,
-                  receivedInvitationHandler: (peer: PeerIdentifier) -> Void) {
-        advertiser = MCNearbyServiceAdvertiser(peer: peerIdentifier.mcPeer,
+    required init(peerIdentifier: PeerIdentifier, serviceType: String,
+                  receivedInvitationHandler: (session: Session) -> Void,
+                  disconnectHandler: () -> Void) {
+        advertiser = MCNearbyServiceAdvertiser(peer: MCPeerID(peerIdentifier: peerIdentifier),
                                                discoveryInfo:nil, serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
-        self.serviceType = serviceType
-        self.port = port
         self.receivedInvitationHandler = receivedInvitationHandler
+        self.disconnectHandler = disconnectHandler
         super.init()
         advertiser.delegate = self
     }
 
-    func startAdvertising() {
+    func startAdvertising(startAdvertisingErrorHandler: ErrorType -> Void) {
+        self.startAdvertisingErrorHandler = startAdvertisingErrorHandler
         advertiser.startAdvertisingPeer()
         advertising = true
     }
@@ -42,23 +44,24 @@ final class Advertiser: NSObject {
     }
 }
 
+// MARK: - MCNearbyServiceAdvertiserDelegate
 extension Advertiser: MCNearbyServiceAdvertiserDelegate {
 
     func advertiser(advertiser: MCNearbyServiceAdvertiser,
                     didReceiveInvitationFromPeer peerID: MCPeerID,
                     withContext context: NSData?,
                     invitationHandler: (Bool, MCSession) -> Void) {
-        do {
-            let peer = try PeerIdentifier(mcPeer: peerID)
-            receivedInvitationHandler(peer: peer)
-        } catch let error {
-            print("\(error) wrong peer format")
-        }
+        let mcSession = MCSession(peer: advertiser.myPeerID, securityIdentity: nil,
+                                  encryptionPreference: .None)
+        let session =
+            Session(session: mcSession, identifier: peerID, disconnectHandler: disconnectHandler)
+        invitationHandler(true, mcSession)
+        receivedInvitationHandler(session: session)
     }
 
     func advertiser(advertiser: MCNearbyServiceAdvertiser,
                     didNotStartAdvertisingPeer error: NSError) {
         advertising = false
-        print("WARNING: server didNotStartAdvertisingPeer")
+        startAdvertisingErrorHandler?(error)
     }
 }

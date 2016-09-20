@@ -43,7 +43,7 @@
     [self defineStopListeningForAdvertisements:appContext];
     [self defineStartUpdateAdvertisingAndListening:appContext];
     [self defineStopAdvertisingAndListening:appContext];
-    [self defineConnect:appContext];
+    [self defineMulticonnect:appContext];
     [self defineKillConnections:appContext];
     [self defineDidRegisterToNative:appContext];
     [self defineGetOSVersion:appContext];
@@ -94,7 +94,7 @@
     } withName:[AppContextJSEvent stopAdvertisingAndListening]];
 }
 
-- (void)defineConnect:(AppContext *)appContext {
+- (void)defineMulticonnect:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
         NSError *error = nil;
         [appContext multiConnectToPeer:params error:&error];

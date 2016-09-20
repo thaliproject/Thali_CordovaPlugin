@@ -11,24 +11,10 @@ import CoreBluetooth
 import Foundation
 import ThaliCore
 
-enum JSONValueKey: String {
-
-    case PeerIdentifier = "peerIdentifier"
-    case Generation = "generation"
-    case PeerAvailable = "peerAvailable"
-
-    case DiscoveryActive = "discoveryActive"
-    case AdvertisingActive = "advertisingActive"
-}
-
 func jsonValue(object: AnyObject) -> String {
-
-    guard
-        let data = try? NSJSONSerialization.dataWithJSONObject(
-            object,
-            options: NSJSONWritingOptions(rawValue:0)
-        ) else {
-            return ""
+    guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options:
+        NSJSONWritingOptions(rawValue:0)) else {
+        return ""
     }
     return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
 }
@@ -63,19 +49,27 @@ enum NetworkStatusParameters: String {
     case bssid = "bssid"
 }
 
-public typealias ClientConnectCallback = (String, String) -> Void
-
 @objc public enum AppContextError: Int, ErrorType {
     case BadParameters
     case UnknownError
 }
 
+public enum JSONKey: String {
+
+    case peerIdentifier
+    case peerAvailable
+    case discoveryActive
+    case advertisingActive
+    case generation
+}
+
+// MARK: - JSON representation of PeerAvailability object
 extension PeerAvailability {
 
     var dictionaryValue: [String : AnyObject] {
-        return [ JSONValueKey.PeerIdentifier.rawValue : peerIdentifier.uuid,
-                 JSONValueKey.Generation.rawValue : peerIdentifier.generation,
-                 JSONValueKey.PeerAvailable.rawValue : available
+        return [JSONKey.peerIdentifier.rawValue : peerIdentifier.uuid,
+                JSONKey.peerAvailable.rawValue : available,
+                JSONKey.generation.rawValue : peerIdentifier.generation,
         ]
     }
 }
@@ -132,12 +126,20 @@ extension PeerAvailability {
 
 /// Interface for communication between native and cross-platform parts
 @objc public final class AppContext: NSObject {
-    /// delegate for AppContext's events
-    public weak var delegate: AppContextDelegate?
+    private let disposeAdvertiserTimeout = 30.0
+    private let inputStreamReceiveTimeout = 5.0
+
     private let serviceType: String
     private let appNotificationsManager: ApplicationStateNotificationsManager
+
     private var networkChangedRegistered: Bool = false
-    private let browserManager: BrowserManager
+    public weak var delegate: AppContextDelegate?
+    lazy private var browserManager: BrowserManager = { [unowned self] in
+         return BrowserManager(serviceType: self.serviceType,
+                 inputStreamReceiveTimeout: self.inputStreamReceiveTimeout) { peers in
+            self.peersAvailabilityChanged(peers)
+        }
+    }()
     private let advertiserManager: AdvertiserManager
 
     private var bluetoothState = RadioState.unavailable
@@ -188,8 +190,8 @@ extension PeerAvailability {
 
     private func updateListeningAdvertisingState() {
         let newState = [
-                JSONValueKey.DiscoveryActive.rawValue : browserManager.isListening,
-                JSONValueKey.AdvertisingActive.rawValue : advertiserManager.advertising
+            JSONKey.discoveryActive.rawValue : browserManager.listening,
+            JSONKey.advertisingActive.rawValue : advertiserManager.advertising
         ]
         delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))
     }
@@ -197,12 +199,10 @@ extension PeerAvailability {
     public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
-        browserManager = BrowserManager(serviceType: serviceType)
-        advertiserManager = AdvertiserManager(serviceType: serviceType)
+        advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                              disposeAdvertiserTimeout: disposeAdvertiserTimeout,
+                                              inputStreamReceiveTimeout: inputStreamReceiveTimeout)
         super.init()
-        browserManager.peersAvailabilityChanged = { [weak self] peers in
-            self?.peersAvailabilityChanged(peers)
-        }
         appNotificationsManager.didEnterForegroundHandler = {[weak self] in
             self?.willEnterBackground()
         }
@@ -225,7 +225,10 @@ extension PeerAvailability {
     }
 
     public func startListeningForAdvertisements() throws {
-        browserManager.startListeningForAdvertisements()
+        browserManager.startListeningForAdvertisements { [weak self] error in
+            print("failed start listening due the error \(error)")
+            self?.updateListeningAdvertisingState()
+        }
         updateListeningAdvertisingState()
     }
 
@@ -235,12 +238,14 @@ extension PeerAvailability {
     }
 
     public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
-        guard
-            let port = (parameters.first as? NSNumber)?.unsignedShortValue
-            where parameters.count == 2 else {
-                throw AppContextError.BadParameters
+        guard let port = (parameters.first as? NSNumber)?.unsignedShortValue else {
+            throw AppContextError.BadParameters
         }
-        advertiserManager.startUpdateAdvertisingAndListening(port)
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: port) { [weak self] error in
+            print("failed start advertising due the error \(error)")
+            self?.updateListeningAdvertisingState()
+        }
+        updateListeningAdvertisingState()
     }
 
     public func stopListening() throws {
@@ -250,7 +255,21 @@ extension PeerAvailability {
     }
 
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
-
+        guard bluetoothState == .on || NetworkReachability().isWiFiEnabled() else {
+            throw MultiConnectError.RadioTurnedOffMultiConnectError
+        }
+        guard parameters.count == 3 else {
+            throw AppContextError.BadParameters
+        }
+        guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
+            else {
+            throw AppContextError.BadParameters
+        }
+        let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
+        browserManager.connectToPeer(peerIdentifier) { port, error in
+            print(syncValue)
+            // TODO: call multiconnectResolved with port or error #946
+        }
     }
 
     public func killConnection(parameters: [AnyObject]) throws {
@@ -261,7 +280,7 @@ extension PeerAvailability {
     }
 
     public func didRegisterToNative(parameters: [AnyObject]) throws {
-        guard let functionName = parameters.first as? String where parameters.count == 2 else {
+        guard let functionName = parameters.first as? String else {
             throw AppContextError.BadParameters
         }
         if functionName == AppContextJSEvent.networkChanged {

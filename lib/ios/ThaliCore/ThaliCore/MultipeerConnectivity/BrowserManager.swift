@@ -3,7 +3,8 @@
 //  BrowserManager.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
 import Foundation
@@ -22,56 +23,88 @@ public struct PeerAvailability {
 // Class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
 
-    internal private (set) var currentBrowser: Browser?
-    let serviceType: String
-    public var peersAvailabilityChanged: (([PeerAvailability]) -> Void)? = nil
-    internal private(set) var availablePeers: [PeerIdentifier] = []
-    public var isListening: Bool {
+    private let socketRelay: SocketRelay<BrowserVirtualSocketBuilder>
+
+    internal private(set) var currentBrowser: Browser?
+    internal private(set) var availablePeers: Atomic<[PeerIdentifier]> = Atomic([])
+
+    internal let serviceType: String
+
+    private let peersAvailabilityChangedHandler: ([PeerAvailability]) -> Void
+    public var listening: Bool {
         return currentBrowser?.listening ?? false
     }
 
-    public init(serviceType: String) {
+    public init(serviceType: String, inputStreamReceiveTimeout: NSTimeInterval,
+                peersAvailabilityChangedHandler: ([PeerAvailability]) -> Void) {
         self.serviceType = serviceType
+        self.peersAvailabilityChangedHandler = peersAvailabilityChangedHandler
+        socketRelay =
+            SocketRelay<BrowserVirtualSocketBuilder>(createSocketTimeout: inputStreamReceiveTimeout)
     }
 
     private func handleFoundPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: true)])
-        availablePeers.append(identifier)
+        let peerAvailability = PeerAvailability(peerIdentifier: identifier, available: true)
+        peersAvailabilityChangedHandler([peerAvailability])
+        availablePeers.modify {
+            $0.append(identifier)
+        }
     }
 
     private func handleLostPeer(with identifier: PeerIdentifier) {
-        peersAvailabilityChanged?([PeerAvailability(peerIdentifier: identifier, available: false)])
-        if let index = availablePeers.indexOf(identifier) {
-            availablePeers.removeAtIndex(index)
+        let peerAvailability = PeerAvailability(peerIdentifier: identifier, available: false)
+        peersAvailabilityChangedHandler([peerAvailability])
+        availablePeers.modify {
+            if let index = $0.indexOf(identifier) {
+                $0.removeAtIndex(index)
+            }
         }
     }
 
-    public func startListeningForAdvertisements() {
-        if let currentBrowser = currentBrowser {
-            currentBrowser.stopListening()
+    public func startListeningForAdvertisements(errorHandler: ErrorType -> Void) {
+        if currentBrowser != nil {
+            return
         }
         let browser = Browser(serviceType: serviceType,
                               foundPeer: handleFoundPeer, lostPeer: handleLostPeer)
-        browser.startListening()
+        browser.startListening(errorHandler)
         self.currentBrowser = browser
     }
 
     public func stopListeningForAdvertisements() {
-        guard let currentBrowser = self.currentBrowser where currentBrowser.listening else {
-            assert(false, "there is no active listener")
-            return
-        }
-        currentBrowser.stopListening()
+        currentBrowser?.stopListening()
         self.currentBrowser = nil
     }
 
+    public func connectToPeer(identifier: PeerIdentifier,
+                              completion: (UInt16?, ErrorType?) -> Void) {
+        guard let currentBrowser = self.currentBrowser else {
+            completion(nil, MultiConnectError.StartListeningNotActive)
+            return
+        }
+        guard let lastGenerationIdentifier = self.lastGenerationPeer(for: identifier) else {
+            completion(nil, MultiConnectError.IllegalPeerID)
+            return
+        }
+        do {
+            let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier,
+                                                                 disconnectHandler: {
+                // TODO: call multiConnectConnectionFailure #946
+            })
+            socketRelay.createSocket(with: session, completion: completion)
+        } catch let error {
+            completion(nil, error)
+        }
+    }
+
     func lastGenerationPeer(for identifier: PeerIdentifier) -> PeerIdentifier? {
-        return availablePeers
-            .filter {
+        return availablePeers.withValue {
+            $0.filter {
                 $0.uuid == identifier.uuid
+                }
+                .maxElement {
+                    $0.0.generation < $0.1.generation
             }
-            .maxElement {
-                $0.0.generation < $0.1.generation
         }
     }
 }
