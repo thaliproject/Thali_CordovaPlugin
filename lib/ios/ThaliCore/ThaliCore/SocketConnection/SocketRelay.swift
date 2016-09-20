@@ -11,7 +11,8 @@ import Foundation
 
 final class SocketRelay<Builder: VirtualSocketBuilder> {
     private var activeBuilders: Atomic<[Session : Builder]> = Atomic([:])
-    private var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> = Atomic([:])
+    internal private(set) var activeSessions: Atomic<[Session : (NSOutputStream, NSInputStream)]> =
+                              Atomic([:])
     private let createSocketTimeout: NSTimeInterval
 
     init(createSocketTimeout: NSTimeInterval) {
@@ -55,6 +56,14 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
         // Issue: https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
     }
 
+    func closeSocket(for session: Session) {
+        // todo: remove close TCP listener
+        // https://github.com/thaliproject/Thali_CordovaPlugin/issues/881
+        activeSessions.modify {
+            $0.removeValueForKey(session)
+        }
+    }
+
     func createSocket(with session: Session, onPort port: UInt16 = 0,
                            completion: (UInt16?, ErrorType?) -> Void) {
         let virtualSocketBuilder = Builder(session: session) { [weak self] socket, error in
@@ -63,6 +72,8 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
                 return
             }
             self?.handleDidReceive(socket: socket, for: session)
+            // todo: port or tcp listener creation error should be returned. Part of #881
+            completion(nil, nil)
         }
         addToDiscardQueue(virtualSocketBuilder, for: session) {
             completion(nil, ThaliCoreError.ConnectionTimedOut)

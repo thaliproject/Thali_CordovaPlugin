@@ -368,7 +368,8 @@ class AppContextTests: XCTestCase {
             try context.didRegisterToNative([notAString])
         } catch let err as AppContextError {
             contextError = err
-        } catch _ {
+        } catch let error {
+            XCTFail("unexpected error: \(error)")
         }
         XCTAssertEqual(contextError, .BadParameters)
     }
@@ -453,6 +454,18 @@ class AppContextTests: XCTestCase {
                        dictionaryValue[JSONKey.peerAvailable.rawValue] as? Bool)
     }
 
+    func testDisconnectErrors() {
+        var contextError: AppContextError?
+        do {
+            let notAString = 42
+            try context.disconnect([notAString])
+        } catch let err as AppContextError {
+            contextError = err
+        } catch let error {
+            XCTFail("unexpected error: \(error)")
+        }
+        XCTAssertEqual(contextError, .BadParameters)
+    }
 
     // MARK: Private helpers
     @objc private func centralBluetoothManagerStateChanged(notification: NSNotification) {

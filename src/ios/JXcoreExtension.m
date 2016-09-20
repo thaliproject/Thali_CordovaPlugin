@@ -47,6 +47,7 @@
     [self defineKillConnections:appContext];
     [self defineDidRegisterToNative:appContext];
     [self defineGetOSVersion:appContext];
+    [self defineDisconnect:appContext];
 #ifdef TEST
     [self defineExecuteNativeTests:appContext];
 #endif
@@ -127,6 +128,14 @@
         }
     } withName:[AppContextJSEvent getOSVersion]];
 }
+
+- (void)defineDisconnect:(AppContext *)appContext {
+    [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
+        NSError *error = nil;
+        [appContext disconnect: params error:&error];
+        [self handleCallback:callbackId error:error];
+        
+    } withName:[AppContextJSEvent disconnect]];}
 
 #ifdef TEST
 - (void)defineExecuteNativeTests:(AppContext *)appContext {

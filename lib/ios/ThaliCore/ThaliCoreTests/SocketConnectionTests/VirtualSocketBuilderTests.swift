@@ -56,7 +56,6 @@ class SessionMock: Session {
         guard !simulateCreateOutputStreamError else {
             throw NSError(domain: "org.thaliproject.testError", code: 42, userInfo: nil)
         }
-        print(name)
         outputStreamName = name
         return NSOutputStream(toBuffer: nil, capacity: 0)
     }
