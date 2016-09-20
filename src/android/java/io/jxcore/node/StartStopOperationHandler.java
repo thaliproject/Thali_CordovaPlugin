@@ -5,9 +5,11 @@ package io.jxcore.node;
 
 import android.os.CountDownTimer;
 import android.util.Log;
+
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManagerSettings;
+
 import java.util.Date;
 
 /**
@@ -25,7 +27,7 @@ public class StartStopOperationHandler {
      * Constructor.
      *
      * @param connectionManager The connection manager.
-     * @param discoveryManager The discovery manager.
+     * @param discoveryManager  The discovery manager.
      */
     public StartStopOperationHandler(ConnectionManager connectionManager, DiscoveryManager discoveryManager) {
         mConnectionManager = connectionManager;
@@ -36,12 +38,8 @@ public class StartStopOperationHandler {
      * Cancels the current operation.
      * Note that the callback of the current operations, if one exists, will not be called.
      */
-    public void cancelCurrentOperation() {
-        if (mOperationTimeoutTimer != null) {
-            mOperationTimeoutTimer.cancel();
-            mOperationTimeoutTimer = null;
-        }
-
+    public synchronized void cancelCurrentOperation() {
+        cancelTimer();
         mCurrentOperation = null;
     }
 
@@ -50,7 +48,7 @@ public class StartStopOperationHandler {
      *
      * @param startAdvertising If true, will start advertising. If false, will only start listening
      *                         for advertisements.
-     * @param callback The callback to call when we get the operation result.
+     * @param callback         The callback to call when we get the operation result.
      */
     public synchronized void executeStartOperation(boolean startAdvertising, JXcoreThaliCallback callback) {
         if (mCurrentOperation != null) {
@@ -67,10 +65,10 @@ public class StartStopOperationHandler {
      *
      * @param stopOnlyListeningForAdvertisements If true, will only stop listening for advertisements.
      *                                           If false, will stop everything.
-     * @param callback The callback to call when we get the operation result.
+     * @param callback                           The callback to call when we get the operation result.
      */
     public synchronized void executeStopOperation(
-            boolean stopOnlyListeningForAdvertisements, JXcoreThaliCallback callback) {
+        boolean stopOnlyListeningForAdvertisements, JXcoreThaliCallback callback) {
         if (mCurrentOperation != null) {
             Log.w(TAG, "executeStartOperation: Cancelling a pending operation");
             cancelCurrentOperation();
@@ -87,25 +85,12 @@ public class StartStopOperationHandler {
     public synchronized void checkCurrentOperationStatus() {
         if (mCurrentOperation != null && isTargetState(mCurrentOperation) == null) {
             Log.d(TAG, "checkCurrentOperationStatus: Operation successfully executed");
-
-            if (mOperationTimeoutTimer != null) {
-                mOperationTimeoutTimer.cancel();
-                mOperationTimeoutTimer = null;
-            }
-
-            /*jxcore.coreThread.handler.postDelayed(new Runnable() {
-                final StartStopOperation operation = mCurrentOperation;
-
-                @Override
-                public void run() {
-                    operation.getCallback().callOnStartStopCallback(null);
-                }
-            }, 2000);*/
-
+            cancelTimer();
             mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
         }
     }
+
 
     /**
      * Executes the current operation.
@@ -117,7 +102,7 @@ public class StartStopOperationHandler {
         }
 
         if (mCurrentOperation.isStartOperation()
-                && !mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly()) {
+            && !mCurrentOperation.shouldAffectListeningToAdvertisementsOnly()) {
             updateBeaconAdExtraInformation();
         }
 
@@ -129,23 +114,28 @@ public class StartStopOperationHandler {
             mCurrentOperation = null;
         } else {
             Log.v(TAG, "executeCurrentOperation: Executing: " + mCurrentOperation.toString());
-            final boolean shouldStartOrStopListeningToAdvertisementsOnly =
-                    mCurrentOperation.getShouldStartOrStopListeningToAdvertisementsOnly();
+            final boolean shouldAffectListeningToAdvertisementsOnly =
+                mCurrentOperation.shouldAffectListeningToAdvertisementsOnly();
 
             if (mCurrentOperation.isStartOperation()) {
                 // Connection manager shouldn't be started if we want to listen to *advertisements* only
-                if (!shouldStartOrStopListeningToAdvertisementsOnly
-                        && !mConnectionManager.startListeningForIncomingConnections()) {
+                if (!shouldAffectListeningToAdvertisementsOnly
+                    && !mConnectionManager.startListeningForIncomingConnections()) {
                     final String errorMessage = "Failed to start the connection manager (Bluetooth connection listener)";
                     Log.e(TAG, "executeCurrentOperation: " + errorMessage);
                     mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
                     mCurrentOperation = null;
                     return;
                 }
+                boolean shouldAdvertise = !shouldAffectListeningToAdvertisementsOnly;
+                boolean shouldDiscovery = shouldAffectListeningToAdvertisementsOnly;
 
-                if (!mDiscoveryManager.start(
-                        shouldStartOrStopListeningToAdvertisementsOnly,
-                        !shouldStartOrStopListeningToAdvertisementsOnly)) {
+                if (shouldAffectListeningToAdvertisementsOnly) {
+                    shouldAdvertise = mDiscoveryManager.isAdvertising();
+                } else {
+                    shouldDiscovery = mDiscoveryManager.isDiscovering();
+                }
+                if (!mDiscoveryManager.start(shouldDiscovery, shouldAdvertise)) {
                     final String errorMessage = "Failed to start the discovery manager";
                     Log.e(TAG, "executeCurrentOperation: " + errorMessage);
                     mCurrentOperation.getCallback().callOnStartStopCallback(errorMessage);
@@ -153,7 +143,7 @@ public class StartStopOperationHandler {
                 }
             } else {
                 // Is stop operation
-                if (shouldStartOrStopListeningToAdvertisementsOnly) {
+                if (shouldAffectListeningToAdvertisementsOnly) {
                     // Should only stop listening to advertisements
                     mDiscoveryManager.stopDiscovery();
                 } else {
@@ -166,15 +156,12 @@ public class StartStopOperationHandler {
         }
 
         if (mCurrentOperation != null) {
-            if (mOperationTimeoutTimer != null) {
-                mOperationTimeoutTimer.cancel();
-                mOperationTimeoutTimer = null;
-            }
+            cancelTimer();
 
             mCurrentOperation.setOperationExecutedTime(new Date().getTime());
 
             mOperationTimeoutTimer = new CountDownTimer(
-                    OPERATION_TIMEOUT_IN_MILLISECONDS, OPERATION_TIMEOUT_IN_MILLISECONDS) {
+                OPERATION_TIMEOUT_IN_MILLISECONDS, OPERATION_TIMEOUT_IN_MILLISECONDS) {
                 @Override
                 public void onTick(long l) {
                     // Not used
@@ -196,6 +183,13 @@ public class StartStopOperationHandler {
         }
     }
 
+    private void cancelTimer() {
+        if (mOperationTimeoutTimer != null) {
+            mOperationTimeoutTimer.cancel();
+            mOperationTimeoutTimer = null;
+        }
+    }
+
     /**
      * Checks if the current states match the expected outcome of the given operation after executed.
      *
@@ -204,11 +198,12 @@ public class StartStopOperationHandler {
      */
     private String isTargetState(StartStopOperation startStopOperation) {
         return startStopOperation.isTargetState(
-                mConnectionManager.getState(),
-                mDiscoveryManager.getState(),
-                mDiscoveryManager.isDiscovering(),
-                mDiscoveryManager.isAdvertising());
+            mConnectionManager.getState(),
+            mDiscoveryManager.getState(),
+            mDiscoveryManager.isDiscovering(),
+            mDiscoveryManager.isAdvertising());
     }
+
 
     /**
      * Updates the extra information of the beacon advertisement to notify the listeners that we

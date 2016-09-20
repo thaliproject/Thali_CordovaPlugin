@@ -431,6 +431,7 @@ public class ConnectionHelper
     public void onConnectionFailed(PeerProperties peerProperties, String errorMessage) {
         Log.e(TAG, "onConnectionFailed: Peer properties: " + peerProperties + ", error message: " + errorMessage);
 
+        //TODO add notification here even if properties are null
         if (peerProperties != null) {
             handleOutgoingConnectionFailure(peerProperties, errorMessage);
             toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();
@@ -568,7 +569,8 @@ public class ConnectionHelper
         final JXcoreThaliCallback callback = mConnectionModel.getOutgoingConnectionCallbackByBluetoothMacAddress(finalPeerId);
 
         try {
-            newOutgoingSocketThread = new OutgoingSocketThread(bluetoothSocket, new SocketThreadBase.Listener() {
+            newOutgoingSocketThread = new OutgoingSocketThread(bluetoothSocket, new ConnectionData(peerProperties, false),
+                new SocketThreadBase.Listener() {
                 @Override
                 public void onListeningForIncomingConnections(int portNumber) {
                     Log.i(TAG, "onListeningForIncomingConnections: Outgoing connection is using port "
@@ -667,7 +669,8 @@ public class ConnectionHelper
         IncomingSocketThread newIncomingSocketThread = null;
 
         try {
-            newIncomingSocketThread = new IncomingSocketThread(bluetoothSocket, new SocketThreadBase.Listener() {
+            newIncomingSocketThread = new IncomingSocketThread(bluetoothSocket, new ConnectionData(peerProperties, true),
+                new SocketThreadBase.Listener() {
                 @Override
                 public void onListeningForIncomingConnections(int portNumber) {
                     // Not applicable for incoming connections
