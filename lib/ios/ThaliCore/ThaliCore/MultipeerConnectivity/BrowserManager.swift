@@ -22,6 +22,7 @@ public struct PeerAvailability {
 
 // Class for managing Thali browser's logic
 public final class BrowserManager: NSObject {
+
     private let socketRelay: SocketRelay<BrowserVirtualSocketBuilder>
 
     internal private(set) var currentBrowser: Browser?
@@ -35,7 +36,7 @@ public final class BrowserManager: NSObject {
         return currentBrowser?.listening ?? false
     }
 
-    public init(serviceType: String, inputStreamReceiveTimeout: Double,
+    public init(serviceType: String, inputStreamReceiveTimeout: NSTimeInterval,
                 peersAvailabilityChangedHandler: ([PeerAvailability]) -> Void) {
         self.serviceType = serviceType
         self.peersAvailabilityChangedHandler = peersAvailabilityChangedHandler
@@ -89,7 +90,7 @@ public final class BrowserManager: NSObject {
         do {
             let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier,
                                                                  disconnectHandler: {
-                //todo call multiConnectConnectionFailure #946
+                // TODO: call multiConnectConnectionFailure #946
             })
             activeSessions.modify {
                 $0[identifier] = session
@@ -99,7 +100,7 @@ public final class BrowserManager: NSObject {
             completion(nil, error)
         }
     }
-    
+
     public func disconnect(peerIdentifier: PeerIdentifier) {
         guard let session = activeSessions.value[peerIdentifier] else {
             // There is no active session for current identifier

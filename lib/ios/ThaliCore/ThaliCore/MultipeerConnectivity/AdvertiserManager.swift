@@ -11,7 +11,7 @@ import Foundation
 
 // Class for managing Thali advertiser's logic
 @objc public final class AdvertiserManager: NSObject {
-    private let disposeAdvertiserTimeout: Double
+    private let disposeAdvertiserTimeout: NSTimeInterval
     private let serviceType: String
     internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
     internal private(set) var currentAdvertiser: Advertiser? = nil
@@ -31,8 +31,8 @@ import Foundation
      - parameter inputStreamReceiveTimeout: Timeout in seconds for receiving input stream
 
      */
-    public init(serviceType: String, disposeAdvertiserTimeout: Double,
-                inputStreamReceiveTimeout: Double) {
+    public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval,
+                inputStreamReceiveTimeout: NSTimeInterval) {
         self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
         self.serviceType = serviceType
         socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(
@@ -44,7 +44,7 @@ import Foundation
         }
     }
 
-    //dispose advertiser after timeout to ensure that it has no pending invitations
+    // Dispose advertiser after timeout to ensure that it has no pending invitations
     private func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
         let delayTime = dispatch_time(DISPATCH_TIME_NOW,
                                       Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
@@ -67,7 +67,7 @@ import Foundation
                                     receivedInvitationHandler: { [weak self] session in
                                         self?.handle(session, withPort: port)
                                     }, disconnectHandler: {
-            //todo fix with #1040
+            // TODO: fix with #1040
         })
         advertiser.startAdvertising(errorHandler)
         advertisers.modify {

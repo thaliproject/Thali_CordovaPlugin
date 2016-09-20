@@ -11,9 +11,10 @@ import XCTest
 @testable import ThaliCore
 
 class AdvertiserManagerTests: XCTestCase {
+
     var serviceType: String!
     var advertiserManager: AdvertiserManager!
-    let disposeTimeout: Double = 4.0
+    let disposeTimeout: NSTimeInterval = 4.0
 
     override func setUp() {
         serviceType = String.random(length: 7)
@@ -52,7 +53,7 @@ class AdvertiserManagerTests: XCTestCase {
             expectation?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(disposeTimeout + 1, handler: nil)
+        waitForExpectationsWithTimeout(disposeTimeout, handler: nil)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
     }
 

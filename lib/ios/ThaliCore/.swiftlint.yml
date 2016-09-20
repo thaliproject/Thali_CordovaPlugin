@@ -84,11 +84,6 @@ custom_rules:
     regex: "(^ *//\w+)"
     message: "There should be a space after //"
     severity: error
-  comments_capitalized_ignore_possible_code:
-    name: "Capitalize First Word In Comment"
-    regex: "(^ *// +(?!swiftlint)[a-z]+)"
-    message: "The first word of a comment should be capitalized"
-    severity: error
   empty_first_line:
     name: "Empty First Line"
     regex: "(^[ a-zA-Z ]*(?:protocol|extension|class|struct|enum) (?!(?:var|let))[ a-zA-Z:]*\{\n *\S+)"

@@ -55,6 +55,7 @@ enum NetworkStatusParameters: String {
 }
 
 public enum JSONKey: String {
+
     case peerIdentifier
     case peerAvailable
     case discoveryActive
@@ -253,12 +254,10 @@ extension PeerAvailability {
     public func stopAdvertisingAndListening() throws {
     }
 
-    /**
-     - parameter peer: identifier of peer to connect
-     - parameter callback: callback with connection results.
-     */
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
-        //todo check reachability status #823
+        guard bluetoothState == .on || NetworkReachability().isWiFiEnabled() else {
+            throw MultiConnectError.RadioTurnedOffMultiConnectError
+        }
         guard parameters.count == 3 else {
             throw AppContextError.BadParameters
         }
@@ -269,7 +268,7 @@ extension PeerAvailability {
         let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
         browserManager.connectToPeer(peerIdentifier) { port, error in
             print(syncValue)
-            //todo call multiconnectResolved with port or error
+            // TODO: call multiconnectResolved with port or error #946
         }
     }
 
@@ -288,7 +287,7 @@ extension PeerAvailability {
             notifyOnDidUpdateNetworkStatus()
         }
     }
-    
+
     public func disconnect(parameters: [AnyObject]) throws {
         guard let peerID = parameters.first as? String else {
             throw AppContextError.BadParameters

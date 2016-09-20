@@ -10,6 +10,7 @@
 import Foundation
 
 class VirtualSocketBuilder {
+
     private let completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void
     let session: Session
 
@@ -22,37 +23,53 @@ class VirtualSocketBuilder {
 }
 
 final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
+
     required init(session: Session,
                   completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
         super.init(session: session, completionHandler: completionHandler)
-        let streamName = NSUUID().UUIDString
-        session.createOutputStream(withName: streamName) { outputStream, error in
-            guard let outputStream = outputStream where error == nil else {
-                completionHandler(nil, error)
-                return
-            }
-            session.getInputStream() { inputStream, name in
-                guard name == streamName else {
-                    completionHandler(nil, MultiConnectError.ConnectionFailed)
-                    return
+
+        let createSocket = {
+            do {
+                let outputStreamName = NSUUID().UUIDString
+                let outputStream = try session.createOutputStream(withName: outputStreamName)
+                session.didReceiveInputStreamHandler = { inputStream, inputStreamName in
+                    guard inputStreamName == outputStreamName else {
+                        completionHandler(nil, MultiConnectError.ConnectionFailed)
+                        return
+                    }
+                    completionHandler((outputStream, inputStream), nil)
                 }
-                completionHandler((outputStream, inputStream), nil)
+            } catch let error {
+                completionHandler(nil, error)
+            }
+        }
+
+        session.sessionState.withValue { [unowned session] value in
+            if value == .Connected {
+                createSocket()
+            } else {
+                session.sessionStateChangesHandler = { state in
+                    if state == .Connected {
+                        createSocket()
+                    }
+                }
             }
         }
     }
 }
 
 final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
+
     required init(session: Session,
                   completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
         super.init(session: session, completionHandler: completionHandler)
-        session.getInputStream() { inputStream, name in
-            session.createOutputStream(withName: name) { outputStream, error in
-                guard let outputStream = outputStream where error == nil else {
-                    completionHandler(nil, error)
-                    return
-                }
+
+        self.session.didReceiveInputStreamHandler = { inputStream, inputStreamName in
+            do {
+                let outputStream = try session.createOutputStream(withName: inputStreamName)
                 completionHandler((outputStream, inputStream), nil)
+            } catch let error {
+                completionHandler(nil, error)
             }
         }
     }

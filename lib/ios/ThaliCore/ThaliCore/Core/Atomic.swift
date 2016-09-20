@@ -31,6 +31,7 @@
 import Foundation
 
 final class PosixThreadMutex: NSLocking {
+
     private var mutex = pthread_mutex_t()
 
     init() {
@@ -74,7 +75,7 @@ public final class Atomic<Value> {
 		lock = PosixThreadMutex()
 	}
 
-    /**
+    /*!
      Atomically modifies the variable
 
      - parameter action: A closure that takes the current value
@@ -90,7 +91,7 @@ public final class Atomic<Value> {
 		return try action(&_value)
 	}
 
-    /**
+    /*!
      Atomically perform an arbitrary action using the current value of the variable
 
      - parameter action: A closure that takes the current value

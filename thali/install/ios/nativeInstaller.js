@@ -167,7 +167,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
 
   console.log('Building ThaliCore.framework');
 
-  // maxBuffer - buffer size for xcodebuild output
+  // todo: fixed buffer size should be fixed with streaming in #1001
   return exec(buildCmd, { maxBuffer: 1024*1024 } )
     .then(function () {
       return fs.ensureDir(outputDir);

@@ -60,7 +60,7 @@ class AdvertiserTests: XCTestCase {
             receivedInvitationCalledAfterDelegateCallExpectation?.fulfill()
         }
         let peerID = MCPeerID(displayName: NSUUID().UUIDString)
-        let _ = startAdvertiser(with: peerID,  receivedInvitationHandler: receivedInvitationHandler,
+        let _ = startAdvertiser(with: peerID, receivedInvitationHandler: receivedInvitationHandler,
                                 disconnectHandler: unexpectedDisconnectHandler,
                                 mcInvitationHandler: { _ in })
 
@@ -72,7 +72,7 @@ class AdvertiserTests: XCTestCase {
         let disconnectCalledExpectation =
             expectationWithDescription("disconnect called session disconnected")
         var mcSession: MCSession?
-        let peerID: MCPeerID = MCPeerID(displayName: NSUUID().UUIDString)
+        let peerID = MCPeerID(displayName: NSUUID().UUIDString)
 
         let disconnectHandler = { [weak disconnectCalledExpectation] in
             disconnectCalledExpectation?.fulfill()
@@ -95,7 +95,7 @@ class AdvertiserTests: XCTestCase {
     }
 
     func testStartStopChangesAdvertisingState() {
-        let peerID: MCPeerID = MCPeerID(displayName: NSUUID().UUIDString)
+        let peerID = MCPeerID(displayName: NSUUID().UUIDString)
         let advertiser = startAdvertiser(with: peerID,
                                          receivedInvitationHandler: {
                                             print("received session: \($0)")

@@ -8,6 +8,7 @@
 //
 
 public enum MultiConnectError: ErrorType {
+
     case StartListeningNotActive
     case ConnectionFailed
     case ConnectionTimedOut
