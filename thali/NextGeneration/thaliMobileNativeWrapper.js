@@ -88,6 +88,7 @@ module.exports._isStarted = function () {
 function failedConnectionHandler(failedConnection) {
   var peer = {
     peerIdentifier: failedConnection.peerIdentifier,
+    generation: failedConnection.generation,
     portNumber: null
   };
   handlePeerAvailabilityChanged(peer);
@@ -138,6 +139,7 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
 
   module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
     peerIdentifier: recreateAnnouncement.peerIdentifier,
+    generation: recreateAnnouncement.generation,
     portNumber: recreateAnnouncement.portNumber
   });
 }
@@ -847,6 +849,7 @@ var handlePeerAvailabilityChanged = function (peer) {
       // for that?
       module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
         peerIdentifier: peer.peerIdentifier,
+        generation: peer.generation,
         portNumber: null
       });
       resolve();
@@ -857,6 +860,7 @@ var handlePeerAvailabilityChanged = function (peer) {
       .then(function (portNumber) {
         module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
           peerIdentifier: peer.peerIdentifier,
+          generation: peer.generation,
           portNumber: portNumber
         });
         resolve();

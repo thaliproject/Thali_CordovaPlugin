@@ -15,7 +15,7 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
 var utResult = false;
 
-if (process.platform === 'android' || process.platform === 'ios') {
+if (testUtils.platform === 'android' || testUtils.platform === 'ios') {
   console.log('Running unit tests');
   Mobile('executeNativeTests').callNative(function (result) {
     utResult = true;

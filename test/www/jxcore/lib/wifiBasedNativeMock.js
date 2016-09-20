@@ -1030,6 +1030,9 @@ function WifiBasedNativeMock(platform, router) {
   if (!router) {
     router = express.Router();
   }
+  // Issue #902
+  testUtils._overridePlatform(platform);
+
   var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
   // In the native side, there is no equivalent for the start call,
   // but it needs to be done once somewhere before calling other functions.
