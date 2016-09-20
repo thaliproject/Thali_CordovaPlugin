@@ -141,6 +141,9 @@ SimpleThaliTape.prototype._runTest = function (test) {
       }, timeout);
     }
 
+    // TODO This can be implemented using 'tape/lib/test' directly.
+    // Example is 'tape.createHarness' https://github.com/substack/tape/blob/master/index.js#L103
+
     tape('setup', function (tape) {
       bindResult(tape, self._options.setupTimeout);
       self._options.setup(tape);
