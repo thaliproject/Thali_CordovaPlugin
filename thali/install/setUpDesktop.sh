@@ -10,14 +10,13 @@ ERROR_ABORT() {
   fi
 }
 
-node validateBuildEnvironment.js;ERROR_ABORT
-
 NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
 export NVM_NODEJS_ORG_MIRROR
 JX_NPM_JXB=jxb311
 export JX_NPM_JXB
 
 cd `dirname $0`;ERROR_ABORT
+node validateBuildEnvironment.js;ERROR_ABORT
 cd ../../test/TestServer;ERROR_ABORT
 jx npm install;ERROR_ABORT
 jx generateServerAddress.js;ERROR_ABORT
