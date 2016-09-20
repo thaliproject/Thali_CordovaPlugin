@@ -11,8 +11,6 @@ ERROR_ABORT()
   fi
 }
 
-node validateBuildEnvironment.js;ERROR_ABORT
-
 # Check the platform we are running
 IS_MINIGW_PLATFORM=false
 IS_DARWIN_PLATFORM=false
@@ -43,6 +41,8 @@ TEST_PROJECT_ROOT_DIR=${REPO_ROOT_DIR}/../${TEST_PROJECT_NAME}
 # Prepares test project
 prepare_project()
 {
+  node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js;ERROR_ABORT
+
   echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
 
   cd $REPO_ROOT_DIR/test/TestServer
