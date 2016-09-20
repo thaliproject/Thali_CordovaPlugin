@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 
-var logger = require('thali/thaliLogger')('QuitSignal');
+var logger = require('../../../lib/testLogger')('QuitSignal');
 
 
 function QuitSignal() {

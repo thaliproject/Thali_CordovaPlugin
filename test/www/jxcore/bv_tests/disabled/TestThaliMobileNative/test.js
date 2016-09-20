@@ -8,9 +8,8 @@ if (!tape.coordinated) {
 var assert = require('assert');
 var Promise = require('lie');
 
-var logger = require('thali/thaliLogger')('testThaliMobileNativeComplex');
-
 var testUtils = require('../../../lib/testUtils');
+var logger    = require('../../../lib/testLogger')('testThaliMobileNativeComplex');
 
 var QuitSignal  = require('./QuitSignal');
 var ServerRound = require('./ServerRound');

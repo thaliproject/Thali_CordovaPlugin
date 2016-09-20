@@ -12,6 +12,7 @@ var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts.js');
 var Promise = require('./utils/Promise');
+var logger  = require('./utils/ThaliLogger')('Socket');
 
 var defaultConfig = require('./config/Socket');
 
@@ -203,7 +204,14 @@ Socket.prototype.runEvent = function (event, test, data, timeout) {
         handler(receivedData, resolve, reject);
       }
     );
-    self.emitData(event, data);
+    self.emitData(event, data)
+    .catch(function (error) {
+      logger.error(
+        'unexpected error: \'%s\', stack: \'%s\'',
+        error.toString(), error.stack
+      );
+      reject(error);
+    });
   })
   .timeout(timeout, format(
     'timeout, event: \'%s_finished\', test: \'%s\'',

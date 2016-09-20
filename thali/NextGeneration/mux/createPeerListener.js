@@ -1,6 +1,6 @@
 'use strict';
 
-var logger = require('../../thaliLogger')('createPeerListener');
+var logger = require('../../ThaliLogger')('createPeerListener');
 var multiplex = require('multiplex');
 var net = require('net');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
