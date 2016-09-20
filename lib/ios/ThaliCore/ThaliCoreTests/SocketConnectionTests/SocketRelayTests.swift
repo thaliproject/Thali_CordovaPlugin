@@ -11,6 +11,17 @@ import XCTest
 @testable import ThaliCore
 import MultipeerConnectivity
 
+class VirtualSocketBuilderMock: VirtualSocketBuilder {
+
+    required init(session: Session,
+                  completionHandler: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void) {
+        super.init(session: session, completionHandler: completionHandler)
+        let inputStream = NSInputStream(data: NSData(bytes: nil, length: 0))
+        let outputStream = NSOutputStream(toBuffer: nil, capacity: 0)
+        completionHandler((outputStream, inputStream), nil)
+    }
+}
+
 class SocketRelayTests: XCTestCase {
 
     func testGetTimeoutErrorOnCreateSocket() {
@@ -73,5 +84,22 @@ class SocketRelayTests: XCTestCase {
         } catch let error {
             XCTAssertNil(error)
         }
+    }
+
+    func testCloseSocket() {
+        let socketCreatedExpectation = expectationWithDescription("socket created expectation")
+        let socketRelay = SocketRelay<VirtualSocketBuilderMock>(createSocketTimeout: 10)
+        let session = SessionMock(session: MCSession(peer: MCPeerID(displayName:"peer1")),
+                                  identifier: MCPeerID(displayName:"peer2")) { }
+        socketRelay.createSocket(with: session) { [weak socketCreatedExpectation] port, error in
+            socketCreatedExpectation?.fulfill()
+        }
+
+        let createSocketTimeout = 1.0
+        waitForExpectationsWithTimeout(createSocketTimeout, handler: nil)
+
+        XCTAssertEqual(socketRelay.activeSessions.value.count, 1)
+        socketRelay.closeSocket(for: session)
+        XCTAssertEqual(socketRelay.activeSessions.value.count, 0)
     }
 }

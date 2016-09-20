@@ -28,6 +28,10 @@ class Session: NSObject {
         self.session.delegate = self
     }
 
+    func disconnect() {
+        session.disconnect()
+    }
+
     func createOutputStream(withName name: String) throws -> NSOutputStream {
         return try session.startStreamWithName(name, toPeer: identifier)
     }

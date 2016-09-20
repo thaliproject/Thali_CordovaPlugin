@@ -288,6 +288,14 @@ extension PeerAvailability {
         }
     }
 
+    public func disconnect(parameters: [AnyObject]) throws {
+        guard let peerID = parameters.first as? String else {
+            throw AppContextError.BadParameters
+        }
+        let peerIdentifier = try PeerIdentifier(stringValue: peerID)
+        browserManager.disconnect(peerIdentifier)
+    }
+
 
     #if TEST
     func executeNativeTests() -> String {
@@ -355,4 +363,6 @@ extension AppContext: CBCentralManagerDelegate {
         "stopListeningForAdvertisements"
     @objc public static let startListeningForAdvertisements: String =
         "startListeningForAdvertisements"
+    @objc public static let disconnect: String =
+        "disconnect"
 }

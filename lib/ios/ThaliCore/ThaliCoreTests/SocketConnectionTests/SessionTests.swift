@@ -73,4 +73,5 @@ class SessionTests: XCTestCase {
         waitForExpectationsWithTimeout(receivedStreamTimeout, handler: nil)
         XCTAssertEqual(streamName, receivedStreamName)
     }
+
 }
