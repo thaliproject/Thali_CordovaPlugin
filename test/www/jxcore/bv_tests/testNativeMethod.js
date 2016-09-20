@@ -26,7 +26,7 @@ if (process.platform === 'android' || process.platform === 'ios') {
       Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
         if (typeof peers.forEach !== 'function') {
           peers = [peers];
-          t.fail('peers callback shoul  d be an array!');
+          t.fail('peers callback should be an array!');
         }
 
         peers.forEach(function (peer) {

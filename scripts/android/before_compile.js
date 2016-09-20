@@ -182,27 +182,11 @@ var updateJXCoreExtensionWithUTMethod = function (appRoot) {
   fs.writeFileSync(filePath, content, 'utf-8');
 };
 
-var updateJavaVersion = function (appRoot) {
-  var buildGradleLocation =
-    path.join(appRoot, 'platforms/android/build.gradle');
-
-    try {
-      var originalContent = fs.readFileSync(buildGradleLocation).toString();
-      var newContent = originalContent.replace(/JavaVersion.VERSION_1_6/g, "JavaVersion.VERSION_1_7");
-
-      fs.writeFileSync(buildGradleLocation, newContent);
-    } catch (e) {
-      console.log(e);
-      console.log('Failed to update JavaVersion!');
-    }
-  };
-
 module.exports = function (context) {
   var appRoot = context.opts.projectRoot;
   updateAndroidSDKVersion(appRoot);
   replaceJXCoreExtension(appRoot);
   updateBtconnectorlibVersion(appRoot);
   copyTestFiles(appRoot);
-  updateJavaVersion(appRoot);
   removeInstallFromPlatform(appRoot);
 };
