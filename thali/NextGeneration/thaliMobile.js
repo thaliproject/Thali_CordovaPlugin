@@ -3,6 +3,7 @@
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
 var logger = require('../thaliLogger')('thaliMobile');
+var platform = require('thali/NextGeneration/utils/platform');
 
 var thaliConfig = require('./thaliConfig');
 
@@ -474,7 +475,11 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
  * @returns {Promise<?Error>}
  */
 module.exports.disconnect = function(peerIdentifier, connectionType) {
-  return Promise.reject('not implement');
+  return promiseQueue.enqueue(function (resolve, reject) {
+    if (!platform.isIOS) {
+      return reject('not implement');
+    }
+  });
 };
 /*
         EVENTS
@@ -939,7 +944,7 @@ function (peer) {
     peer.hostAddress = '127.0.0.1';
   }
   var connectionType =
-    jxcore.utils.OSInfo().isAndroid ?
+    platform.isAndroid ?
     connectionTypes.BLUETOOTH :
     connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
   handlePeer(peer, connectionType);
