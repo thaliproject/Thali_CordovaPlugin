@@ -189,7 +189,7 @@ public class StartStopOperationHandlerTest {
         fCurrentOperation.set(mStartStopOperationHandler,
                 StartStopOperation.createStartOperation(true, mJXcoreThaliCallback));
 
-        mStartStopOperationHandler.checkCurrentOperationStatus();
+        mStartStopOperationHandler.processCurrentOperationStatus();
 
         StartStopOperation mCurrentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
@@ -200,7 +200,7 @@ public class StartStopOperationHandlerTest {
         executeCurrentOperation.setAccessible(true);
         executeCurrentOperation.invoke(mStartStopOperationHandler);
 
-        mStartStopOperationHandler.checkCurrentOperationStatus();
+        mStartStopOperationHandler.processCurrentOperationStatus();
 
         mCurrentOperation = (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
         assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));

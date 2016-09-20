@@ -39,7 +39,7 @@ public class StartStopOperationHandler {
      * Note that the callback of the current operations, if one exists, will not be called.
      */
     public synchronized void cancelCurrentOperation() {
-        cancelTimer();
+        cancelOperationTimeoutTimer();
         mCurrentOperation = null;
     }
 
@@ -79,18 +79,17 @@ public class StartStopOperationHandler {
     }
 
     /**
-     * Checks if the current operation is successful (the current state matches the expected
-     * outcome) and if so, calls its callback.
+     * Calls callback of the current operation if the current operation is successful (the current state matches the expected
+     * outcome).
      */
-    public synchronized void checkCurrentOperationStatus() {
+    public synchronized void processCurrentOperationStatus() {
         if (mCurrentOperation != null && isTargetState(mCurrentOperation) == null) {
-            Log.d(TAG, "checkCurrentOperationStatus: Operation successfully executed");
-            cancelTimer();
+            Log.d(TAG, "processCurrentOperationStatus: Operation successfully executed");
+            cancelOperationTimeoutTimer();
             mCurrentOperation.getCallback().callOnStartStopCallback(null);
             mCurrentOperation = null;
         }
     }
-
 
     /**
      * Executes the current operation.
@@ -156,7 +155,7 @@ public class StartStopOperationHandler {
         }
 
         if (mCurrentOperation != null) {
-            cancelTimer();
+            cancelOperationTimeoutTimer();
 
             mCurrentOperation.setOperationExecutedTime(new Date().getTime());
 
@@ -183,7 +182,7 @@ public class StartStopOperationHandler {
         }
     }
 
-    private void cancelTimer() {
+    private void cancelOperationTimeoutTimer() {
         if (mOperationTimeoutTimer != null) {
             mOperationTimeoutTimer.cancel();
             mOperationTimeoutTimer = null;
@@ -203,7 +202,6 @@ public class StartStopOperationHandler {
             mDiscoveryManager.isDiscovering(),
             mDiscoveryManager.isAdvertising());
     }
-
 
     /**
      * Updates the extra information of the beacon advertisement to notify the listeners that we
