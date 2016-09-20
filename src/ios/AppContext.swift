@@ -305,16 +305,6 @@ extension PeerAvailability {
         }
     }
 
-    public func disconnect(parameters: [AnyObject]) throws {
-        guard parameters.count >= 1 else {
-            throw AppContextError.BadParameters
-        }
-        guard let identifierString = parameters[0] as? String else {
-            throw AppContextError.BadParameters
-        }
-        handleMultiConnectConnectionFailure(withIdentifier: identifierString, error: nil)
-    }
-
     public func killConnection(parameters: [AnyObject]) throws {
     }
 
