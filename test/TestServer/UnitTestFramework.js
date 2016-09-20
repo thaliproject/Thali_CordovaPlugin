@@ -2,14 +2,13 @@
 
 var util     = require('util');
 var inherits = util.inherits;
-var format   = util.format;
 
 var assert       = require('assert');
 var objectAssign = require('object-assign');
 
 var asserts = require('./utils/asserts.js');
-var Promise = require('./utils/promise');
-var logger  = require('./utils/logger')('UnitTestFramework');
+var Promise = require('./utils/Promise');
+var logger  = require('./utils/ThaliLogger')('UnitTestFramework');
 
 var TestDevice    = require('./TestDevice');
 var TestFramework = require('./TestFramework');
@@ -26,49 +25,14 @@ function UnitTestFramework(config) {
 
 inherits(UnitTestFramework, TestFramework);
 
-UnitTestFramework.prototype.startTests = function (platformName, platform) {
+UnitTestFramework.prototype.startTests = function (platformName) {
   var self = this;
 
   UnitTestFramework.super_.prototype.startTests.apply(this, arguments);
 
-  assert(
-    platform.state === TestFramework.platformStates.started,
-    'platform should be in started state'
-  );
-
-  asserts.isObject(platform);
-  asserts.isString(platformName);
-
+  var platform = this.platforms[platformName];
   var devices = platform.devices;
-  asserts.isArray(devices);
-
-  var count = platform.count;
-  asserts.isNumber(count);
-  var minCount = platform.minCount;
-  assert(
-    count >= minCount,
-    format(
-      'we should have at least %d devices',
-      minCount
-    )
-  );
-
-  assert(
-    count === devices.length,
-    format(
-      'we should receive %d devices for platform: \'%s\', but received %d devices instead',
-      count, platformName, devices.length
-    )
-  );
-
-  devices.forEach(function (device) {
-    asserts.instanceOf(device, TestDevice);
-  });
-
-  var tests = devices[0].tests;
-  devices.slice(1).forEach(function (device) {
-    asserts.arrayEquals(tests, device.tests);
-  });
+  var tests   = devices[0].tests;
 
   logger.debug(
     'starting unit tests on %d devices, platformName: \'%s\'',
@@ -92,9 +56,9 @@ UnitTestFramework.prototype.startTests = function (platformName, platform) {
     }, Promise.resolve());
   })
   .then(function () {
-    platform.state = TestFramework.platformStates.succeed;
+    platform.state = TestFramework.platformStates.succeeded;
     logger.debug(
-      'all unit tests succeed, platformName: \'%s\'',
+      'all unit tests succeeded, platformName: \'%s\'',
       platformName
     );
   })

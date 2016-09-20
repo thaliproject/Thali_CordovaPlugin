@@ -79,7 +79,7 @@ TestDevice.prototype.update = function (newDevice) {
 }
 
 TestDevice.prototype.scheduleTests = function (tests) {
-  return this._socket.emitData('schedule', JSON.stringify(tests));
+  return this._socket.emitData('schedule', tests);
 }
 
 TestDevice.prototype.setupTest = function (test) {
@@ -87,7 +87,7 @@ TestDevice.prototype.setupTest = function (test) {
 }
 
 TestDevice.prototype.runTest = function (test, data) {
-  return this._socket.runEvent('run', test, JSON.stringify(data), this._options.testTimeout);
+  return this._socket.runEvent('run', test, data, this._options.testTimeout);
 }
 
 TestDevice.prototype.teardownTest = function (test) {
