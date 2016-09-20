@@ -13,9 +13,11 @@ dependencies {
     compile 'com.crittercism.dexmaker:dexmaker-mockito:1.4'
 }
 
-android {
-  compileOptions {
-    sourceCompatibility JavaVersion.VERSION_1_7
-    targetCompatibility JavaVersion.VERSION_1_7
-  }
+ext.postBuildExtras = {
+    android {
+        compileOptions {
+            sourceCompatibility JavaVersion.VERSION_1_7
+            targetCompatibility JavaVersion.VERSION_1_7
+        }
+    }
 }
