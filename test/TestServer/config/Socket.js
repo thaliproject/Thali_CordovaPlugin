@@ -2,5 +2,5 @@
 
 module.exports = {
   retryCount:   120,
-  retryTimeout: 3 * 1000
+  retryTimeout: 1 * 1000
 };
