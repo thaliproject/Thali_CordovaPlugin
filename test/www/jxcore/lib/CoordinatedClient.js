@@ -158,10 +158,10 @@ CoordinatedClient.prototype._discard = function (data) {
   this._emit('discard_confirmed', data)
   .then(function () {
     logger.debug('device discarded as surplus from the test server');
-
-    // We are waiting for 'disconnect' event.
-    self._state = CoordinatedClient.states.completed;
   });
+
+  // We are waiting for 'disconnect' event.
+  self._state = CoordinatedClient.states.completed;
 }
 
 CoordinatedClient.prototype._disqualify = function (data) {
@@ -178,11 +178,11 @@ CoordinatedClient.prototype._disqualify = function (data) {
           'test client failed, network status is not valid'
         ));
       }
-
-      // We are waiting for 'disconnect' event.
-      self._state = CoordinatedClient.states.completed;
     });
   });
+
+  // We are waiting for 'disconnect' event.
+  self._state = CoordinatedClient.states.completed;
 }
 
 CoordinatedClient.prototype._disconnect = function () {
@@ -206,10 +206,10 @@ CoordinatedClient.prototype._complete = function (data) {
   this._emit('complete_confirmed', data)
   .then(function () {
     logger.debug('all tests completed');
-
-    // We are waiting for 'disconnect' event.
-    self._state = CoordinatedClient.states.completed;
   });
+
+  // We are waiting for 'disconnect' event.
+  self._state = CoordinatedClient.states.completed;
 }
 
 CoordinatedClient.prototype._succeed = function () {
