@@ -26,6 +26,7 @@ var tape = require('tape-catch');
 var io = require('socket.io-client');
 var testUtils = require('./testUtils');
 var Promise = require('lie');
+var platform = require('thali/NextGeneration/utils/platform');
 
 process.on('uncaughtException', function (err) {
   testUtils.logMessageToScreen('Uncaught Exception: ' + err);
@@ -196,7 +197,7 @@ var thaliTape = function (fixture) {
 thaliTape.uuid = uuid.v4();
 
 var platform =
-  typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isAndroid ?
+  typeof jxcore !== 'undefined' && platform.isAndroid ?
   'android' :
   'ios';
 

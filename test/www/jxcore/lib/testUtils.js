@@ -12,6 +12,7 @@ var logger = require('thali/thaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
+var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
@@ -27,7 +28,7 @@ var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
     return Promise.resolve();
   }
-  if (jxcore.utils.OSInfo().isIOS) {
+  if (platform.isIOS) {
     return Promise.resolve();
   }
   return new Promise(function (resolve, reject) {
@@ -109,7 +110,7 @@ module.exports.getName = function () {
   return myName;
 };
 
-if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+if (typeof jxcore !== 'undefined' && platform.isMobile) {
   Mobile('setLogCallback').registerAsync(function (callback) {
     logCallback = callback;
   });
@@ -137,7 +138,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  */
 var tmpObject = null;
 module.exports.tmpDirectory = function () {
-  if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+  if (typeof jxcore !== 'undefined' && platform.isMobile) {
     return os.tmpdir();
   }
 
@@ -158,7 +159,7 @@ module.exports.tmpDirectory = function () {
  */
 module.exports.hasRequiredHardware = function () {
   return new Promise(function (resolve) {
-    if (jxcore.utils.OSInfo().isAndroid) {
+    if (platform.isAndroid) {
       var checkBleMultipleAdvertisementSupport = function () {
         Mobile('isBleMultipleAdvertisementSupported').callNative(
           function (error, result) {
@@ -226,7 +227,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!jxcore.utils.OSInfo().isMobile) {
+    if (!platform.isMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {

@@ -3,6 +3,7 @@
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var platform = require('thali/NextGeneration/utils/platform');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var express = require('express');
@@ -275,7 +276,7 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
 // up Mobile, because with real devices in CI, the Wifi
 // network is configured in a way that it doesn't allow
 // routing between peers.
-if (jxcore.utils.OSInfo().isMobile) {
+if (platform.isMobile) {
   return;
 }
 

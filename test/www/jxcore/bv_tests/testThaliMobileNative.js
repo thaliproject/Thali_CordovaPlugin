@@ -9,6 +9,7 @@ if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
+var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var logger = require('thali/thaliLogger')('testThaliMobileNative');
 var Promise = require('lie');
@@ -514,7 +515,7 @@ test('Connect port dies if not connected to in time', function (t) {
 
   This test should not be ran on Android until #714 is solved (implemented).
    */
-  if (jxcore.utils.OSInfo().isAndroid) {
+  if (platform.isAndroid) {
     t.ok(true, 'This test is not ran on Android, since it lacks the timeout implementation');
     t.end();
   } else {
