@@ -4,7 +4,7 @@ var assert = require('assert');
 var Promise = require('lie');
 var extend = require('js-extend').extend;
 
-var logger = require('thali/thaliLogger')('ActiveConnections');
+var logger = require('../../../lib/testLogger')('ActiveConnections');
 
 
 // We are going to add a new connections to the list.

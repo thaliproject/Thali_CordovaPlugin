@@ -197,16 +197,17 @@ test('can get the network status', function (t) {
   ThaliMobile.getNetworkStatus()
   .then(function (networkChangedValue) {
     t.doesNotThrow(function () {
-      var requiredProperties = [
+      [
         'wifi',
         'bluetooth',
         'bluetoothLowEnergy',
         'cellular'
-      ];
-      for (var index in requiredProperties) {
+      ]
+      .forEach(function (requiredProperty) {
         validations.ensureNonNullOrEmptyString(
-          networkChangedValue[requiredProperties[index]]);
-      }
+          networkChangedValue[requiredProperty]
+        );
+      });
     }, 'network status should have certain non-empty properties');
     t.end();
   });

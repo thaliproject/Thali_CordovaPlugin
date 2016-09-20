@@ -10,7 +10,8 @@ var assert = require('assert');
 var Promise = require('lie');
 
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thaliLogger')('testThaliMobileNativeDiscoveryCoordinated');
+
+var logger = require('../lib/testLogger')('testThaliMobileNativeDiscoveryCoordinated');
 
 // Global server that should be stopped with it's mobile sources in teardown.
 var serverToBeClosed;
@@ -267,6 +268,7 @@ test('no peer discovery', function (t) {
   });
 
   setTimeout(function () {
+    Mobile('peerAvailabilityChanged').registerToNative(function () {});
     t.end();
   }, STEP_TIMEOUT);
 });
