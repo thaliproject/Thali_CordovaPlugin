@@ -110,8 +110,15 @@ var testServerConfiguration = {
   waiting_for_devices_timeout: 5 * 1000
 };
 
+var options = {
+  env: {
+    // http://bluebirdjs.com/docs/api/promise.config.html#promise.config
+    BLUEBIRD_DEBUG: true
+  }
+};
+
 var testServerInstance = spawn('jx', ['../../TestServer/index.js',
-  JSON.stringify(testServerConfiguration)]);
+  JSON.stringify(testServerConfiguration)], options);
 setListeners(testServerInstance, 0);
 
 var testInstances = {};
@@ -120,7 +127,7 @@ var spawnTestInstance = function (instanceId) {
   if (argv.filter) {
     instanceArgs.push(argv.filter);
   }
-  var testInstance = spawn('jx', instanceArgs);
+  var testInstance = spawn('jx', instanceArgs, options);
   setListeners(testInstance, instanceId);
   testInstances[instanceId] = testInstance;
 };
