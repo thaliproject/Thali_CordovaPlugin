@@ -378,6 +378,54 @@ class AppContextTests: XCTestCase {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
     }
 
+    func testThaliCoreErrors() {
+        // testing parameters count
+        var error: AppContextError?
+        do {
+            try context.multiConnectToPeer([""])
+        } catch let err as AppContextError {
+            error = err
+        } catch _ {}
+        XCTAssertEqual(error, AppContextError.BadParameters)
+
+        // testing parameter types
+        error = nil
+        do {
+            try context.multiConnectToPeer([2, 2])
+        } catch let err as AppContextError {
+            error = err
+        } catch _ {}
+        XCTAssertEqual(error, AppContextError.BadParameters)
+    }
+
+    func testMultiConnect() {
+        // todo will be implemented as soon as we will have the whole stack working #881
+    }
+
+    func testErrorDescription() {
+        XCTAssertEqual(ThaliCoreError.IllegalPeerID.rawValue,
+                       errorDescription(ThaliCoreError.IllegalPeerID))
+
+        let unknownError = AppContextError.UnknownError
+        XCTAssertEqual((unknownError as NSError).localizedDescription,
+                       errorDescription(unknownError))
+    }
+
+    func testJsonValue() {
+        var jsonDict: [String : AnyObject] = ["number" : 4.2]
+        var jsonString = "{\"number\":4.2}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+        jsonDict = ["string" : "42"]
+        jsonString = "{\"string\":\"42\"}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+        jsonDict = ["null" : NSNull()]
+        jsonString = "{\"null\":null}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+        jsonDict = ["bool" : true]
+        jsonString = "{\"bool\":true}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+    }
+
     func testListeningAdvertisingUpdateOnStartAdvertising() {
         let delegateMock = AppContextDelegateMock()
         context.delegate = delegateMock

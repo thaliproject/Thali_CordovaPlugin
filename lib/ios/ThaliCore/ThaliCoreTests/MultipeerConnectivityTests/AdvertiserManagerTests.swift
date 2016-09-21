@@ -53,7 +53,7 @@ class AdvertiserManagerTests: XCTestCase {
             expectation?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(disposeTimeout, handler: nil)
+        waitForExpectationsWithTimeout(disposeTimeout + 1, handler: nil)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
     }
 

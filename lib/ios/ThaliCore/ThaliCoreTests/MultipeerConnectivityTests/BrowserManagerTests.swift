@@ -171,7 +171,7 @@ class BrowserManagerTests: XCTestCase {
                                                              errorHandler: unexpectedErrorHandler)
         let advertiserIdentifier = advertiserManager.currentAdvertiser?.peerIdentifier
 
-        waitForExpectationsWithTimeout(disposeAdvertiserTimeout, handler: nil)
+        waitForExpectationsWithTimeout(disposeAdvertiserTimeout + 1, handler: nil)
 
         XCTAssertEqual(advertiserPeerAvailability?.available, true)
         XCTAssertEqual(advertiserIdentifier, advertiserPeerAvailability?.peerIdentifier)
@@ -211,7 +211,7 @@ class BrowserManagerTests: XCTestCase {
         }
 
         browser.startListeningForAdvertisements(unexpectedErrorHandler)
-        waitForExpectationsWithTimeout(disposeTimeout, handler: nil)
+        waitForExpectationsWithTimeout(disposeTimeout + 1, handler: nil)
         let lastGenerationPeer =
             browser.lastGenerationPeer(for: firstGenerationAdvertiserIdentifier)
 
