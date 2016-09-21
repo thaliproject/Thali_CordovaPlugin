@@ -303,11 +303,11 @@ module.exports = function (callback, appRootDirectory) {
   // Get the app root as an argument or from app/www/jxcore/node_modules/thali.
   // Passing as argument can be leveraged in local development and testing
   // scenarios.
+  //
+  // 5 folders up
   appRootDirectory = appRootDirectory ||
-                     path.join(__dirname, '../../../../../');
+                     path.join(__dirname, '..', '..', '..', '..', '..');
   var thaliDontCheckIn = path.join(appRootDirectory, 'thaliDontCheckIn' );
-  var appScriptsFolder =
-    path.join(appRootDirectory, 'plugins/org.thaliproject.p2p/scripts');
 
   var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
 
@@ -338,8 +338,8 @@ module.exports = function (callback, appRootDirectory) {
       // containing the btconnectorlib2 version
       var projectDir = createUnzippedDirectoryPath(thaliDepotName,
                                             thaliBranchName, thaliDontCheckIn);
-      var gradleFileName = path.join(projectDir, 'src', 'android',
-                                      'gradle.properties');
+      var gradleFileName = path.join(projectDir,
+        'src', 'android', 'gradle.properties');
 
       return fs.writeFileAsync(gradleFileName,
         'btconnectorlib2Version=' + btconnectorlib2)
