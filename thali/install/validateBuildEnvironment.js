@@ -252,11 +252,23 @@ function checkVersion(objectName, versionNumber) {
 module.exports.checkVersion = checkVersion;
 
 function processCommandsAndResults(commandsAndResults) {
-  let promises = [];
+  let passed = true;
+  let errorMessage = '';
+  let runningPromise = Promise.resolve();
   Object.getOwnPropertyNames(commandsAndResults).forEach(function (name) {
-    promises.push(checkVersion(name));
+    runningPromise = runningPromise.then(function () {
+      return checkVersion(name)
+        .catch(function (err) {
+          passed = false;
+          errorMessage += '\n' + err;
+          return Promise.resolve();
+        });
+    });
   });
-  return Promise.all(promises);
+  return runningPromise
+    .then(function () {
+      return passed ? Promise.resolve() : Promise.reject(errorMessage);
+    });
 }
 
 // Detects if we were called from the command line
