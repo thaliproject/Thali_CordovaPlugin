@@ -86,7 +86,7 @@ function replaceContent(content, replacements) {
   function replace(string, pattern, replacement) {
     var isReplaced = false;
 
-    var result = string.replace(pattern, function replacing() {
+    var result = string.replace(pattern, function () {
       isReplaced = true;
 
       // arguments are $0, $1, ..., offset, string
@@ -94,7 +94,7 @@ function replaceContent(content, replacements) {
       .reduce(function (pattern, match, index) {
         // '$1' from strings like '$11 $12' shouldn't be replaced.
         return pattern.replace(
-          new RegExp("\\$" + (index + 1) + "(?=[^\\d]|$)", "g"),
+          new RegExp('\\$' + (index + 1) + '(?=[^\\d]|$)', 'g'),
           match
         );
       }, replacement);
