@@ -38,6 +38,10 @@
     }
     appContext.delegate = self;
 
+    // Handler for didRegisterToNative should be registered before other node functions that
+    // firing didRegisterToNative call
+    [self defineDidRegisterToNative:appContext];
+
     // Export the public API to node
     [self defineStartListeningForAdvertisements:appContext];
     [self defineStopListeningForAdvertisements:appContext];
@@ -45,7 +49,6 @@
     [self defineStopAdvertisingAndListening:appContext];
     [self defineMultiConnect:appContext];
     [self defineKillConnections:appContext];
-    [self defineDidRegisterToNative:appContext];
     [self defineGetOSVersion:appContext];
     [self defineDisconnect:appContext];
 #ifdef TEST
