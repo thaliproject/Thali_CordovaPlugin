@@ -76,15 +76,20 @@ function copyCINodeTestClass() {
 function emptyAlliOSTestFilesButOne() {
   try {
     const path = '../../../lib/ios/ThaliCore/ThaliCoreTests';
-    let currentFilePath, i, filesArray = fs.readdirSync(path);
+    let currentFilePath, i, filesArray = fs.readdirSync(path), simpleTestCaseFound = false;
 
     for (i = 0; i < filesArray.length; i++) {
       if (filesArray[i].indexOf('SimpleTestCase') == -1) {
         currentFilePath = path + '/' + filesArray[i].toString();
         if (!fs.lstatSync(currentFilePath).isDirectory()) {
+          simpleTestCaseFound = true;
           fs.writeFileSync(currentFilePath, '');
         }
       }
+    }
+
+    if (!simpleTestCaseFound) {
+      throw new Error('SimpleTestCase test file was not found!');
     }
   } catch (e) {
     console.log(e);
