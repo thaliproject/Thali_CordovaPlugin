@@ -84,14 +84,21 @@ function replaceContent(content, replacements) {
   // https://stackoverflow.com/questions/5257000/how-to-know-if-javascript-string-replace-did-anything
   function replace(string, pattern, replacement) {
     var isReplaced = false;
+
     var result = string.replace(pattern, function replacing() {
       isReplaced = true;
+
       // arguments are $0, $1, ..., offset, string
-      return Array.from(arguments).slice(0, -2)
+      return Array.from(arguments).slice(1, -2)
       .reduce(function (pattern, match, index) {
-        return pattern.replace("$" + index, match);
+        // '$1' from strings like '$11 $12' shouldn't be replaced.
+        return pattern.replace(
+          new RegExp("\\$" + (index + 1) + "(?=[^\\d]|$)", "g"),
+          match
+        );
       }, replacement);
     });
+
     if (!isReplaced) {
       throw new Error(
         format(
@@ -133,117 +140,120 @@ function replaceStringsInFile(name, replacements) {
   });
 }
 
-var promises = [
-  (function () {
-    var replacements = [];
+// Our task is to replace 'b' between 'a' and 'c' with other value.
+// We couldn't use the simpliest solution:
+//   'abc'.replace(/(?<=a)(b)(?=c)/, 'q')
+// (?<=...) is not supported in nodejs. (we don't want to require 'pcre' here)
+// So we have to use:
+//   'abc'.replace(/(a)(b)(c)/, '$1q$3')
 
-    // example: 'SSDP_NT: 'http://www.thaliproject.org/ssdp','
-    // We want to replace 'http://www.thaliproject.org/ssdp' here with random string.
-    var value = randomString.generate({
-      length: 'http://www.thaliproject.org/ssdp'.length
-    });
-    replacements.push({
-      pattern: new RegExp(
-        [
-          '(',
-            ['SSDP_NT', ':', '[\'"]'].join('\\s*'),
-          ')',
-          '(.*?)',
-          '([\'"])'
-        ].join('')
-      ),
-      value: '$1' + value + '$3'
-    });
+function replaceThaliConfig () {
+  // example: 'SSDP_NT: 'http://www.thaliproject.org/ssdp','
+  // We want to replace 'http://www.thaliproject.org/ssdp' here with random string.
+  var value = randomString.generate({
+    length: 'http://www.thaliproject.org/ssdp'.length
+  });
+  var replacement = {
+    pattern: new RegExp(
+      [
+        '(',
+          ['SSDP_NT', ':', '[\'"]'].join('\\s*'),
+        ')',
+        '(.*?)',
+        '([\'"])'
+      ].join('')
+    ),
+    value: '$1' + value + '$3'
+  };
+  return replaceStringsInFile('thaliConfig.js', [replacement]);
+}
 
-    return replaceStringsInFile('thaliConfig.js', replacements);
-  }) (),
+function replaceConnectionHelper () {
+  var replacements = [];
 
-  (function () {
-    var replacements = [];
+  // Example: 'private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";'
+  // We want to replace 'fa87c0d0-afac-11de-8a39-0800200c9a66' with new uuid.v4.
+  replacements.push({
+    pattern: new RegExp(
+      [
+        '(',
+          ['static', 'final', 'String', 'SERVICE_UUID_AS_STRING'].join('\\s+'),
+          '\\s*', '=', '\\s*', '"',
+        ')',
+        '(.*?)',
+        '(")'
+      ].join('')
+    ),
+    value: '$1' + uuid.v4() + '$3'
+  });
 
-    // Example: 'private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";'
-    // We want to replace 'fa87c0d0-afac-11de-8a39-0800200c9a66' with new uuid.v4.
-    replacements.push({
-      pattern: new RegExp(
-        [
-          '(',
-            ['static', 'final', 'String', 'SERVICE_UUID_AS_STRING'].join('\\s+'),
-            '\\s*', '=', '\\s*', '"',
-          ')',
-          '(.*?)',
-          '(")'
-        ].join('')
-      ),
-      value: '$1' + uuid.v4() + '$3'
-    });
+  // Example: 'private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";'
+  // We want to replace 'b6a44ad1-d319-4b3a-815d-8b805a47fb51' with new uuid.v4.
 
-    // Example: 'private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";'
-    // We want to replace 'b6a44ad1-d319-4b3a-815d-8b805a47fb51' with new uuid.v4.
+  replacements.push({
+    pattern: new RegExp(
+      [
+        '(',
+          ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING'].join('\\s+'),
+          '\\s*', '=', '\\s*', '"',
+        ')',
+        '(.*?)',
+        '(")'
+      ].join('')
+    ),
+    value: '$1' + uuid.v4() + '$3'
+  });
 
-    replacements.push({
-      pattern: new RegExp(
-        [
-          '(',
-            ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING'].join('\\s+'),
-            '\\s*', '=', '\\s*', '"',
-          ')',
-          '(.*?)',
-          '(")'
-        ].join('')
-      ),
-      value: '$1' + uuid.v4() + '$3'
-    });
+  function getRandomNumber (min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
 
-    function getRandomNumber (min, max) {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+  // Example: 'private static final int MANUFACTURER_ID = 7413;'
+  // We want to replace 7413 with random number, 1100 <= number <= 65534.
+  replacements.push({
+    pattern: new RegExp(
+      [
+        '(',
+          ['static', 'final', 'int', 'MANUFACTURER_ID'].join('\\s+'),
+          '\\s*', '=', '\\s*',
+        ')',
+        '(.*?)',
+        '(;)'
+      ].join('')
+    ),
+    value: '$1' + getRandomNumber(1100, 65534) + '$3'
+  });
 
-    // Example: 'private static final int MANUFACTURER_ID = 7413;'
-    // We want to replace 7413 with random number, 1100 <= number <= 65534.
-    replacements.push({
-      pattern: new RegExp(
-        [
-          '(',
-            ['static', 'final', 'int', 'MANUFACTURER_ID'].join('\\s+'),
-            '\\s*', '=', '\\s*',
-          ')',
-          '(.*?)',
-          '(;)'
-        ].join('')
-      ),
-      value: '$1' + getRandomNumber(1100, 65534) + '$3'
-    });
+  return replaceStringsInFile('ConnectionHelper.java', replacements);
+}
 
-    return replaceStringsInFile('ConnectionHelper.java', replacements);
-  }) (),
+function replaceJXcoreExtension() {
+  // example: 'appContext = [[AppContext alloc] initWithServiceType:@"thaliproject"];'
+  // We want to replace 'thaliproject' here with random alphabetic string.
+  var value = randomString.generate({
+    length:  'thaliproject'.length,
+    charset: 'alphabetic'
+  });
+  var replacement = {
+    pattern: new RegExp(
+      [
+        '(',
+          ['initWithServiceType', ':', '@"'].join('\\s*'),
+        ')',
+        '(.*?)',
+        '(")'
+      ].join('')
+    ),
+    value: '$1' + value + '$3'
+  };
+  return replaceStringsInFile('JXcoreExtension.m', [replacement]);
+}
 
-  (function () {
-    var replacements = [];
-
-    // example: 'appContext = [[AppContext alloc] initWithServiceType:@"thaliproject"];'
-    // We want to replace 'thaliproject' here with random alphabetic string.
-    var value = randomString.generate({
-      length:  'thaliproject'.length,
-      charset: 'alphabetic'
-    });
-    replacements.push({
-      pattern: new RegExp(
-        [
-          '(',
-            ['initWithServiceType', ':', '@"'].join('\\s*'),
-          ')',
-          '(.*?)',
-          '(")'
-        ].join('')
-      ),
-      value: '$1' + value + '$3'
-    });
-
-    return replaceStringsInFile('JXcoreExtension.m', replacements);
-  }) ()
-];
-
-Promise.all(promises)
+Promise.all([
+  replaceThaliConfig(),
+  replaceConnectionHelper(),
+  replaceJXcoreExtension()
+])
 .then(function () {
   console.info('We have replaced hardcoded ids with random values.');
 });
