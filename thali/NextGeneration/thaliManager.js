@@ -12,7 +12,7 @@ var ThaliPullReplicationFromNotification =
 var express = require('express');
 var salti = require('salti');
 var path = require('path');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var assert = require('assert');
 
 /** @module thaliManager */

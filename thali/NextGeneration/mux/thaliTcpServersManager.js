@@ -1,7 +1,7 @@
 'use strict';
 
 var util = require('util');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var EventEmitter = require('events').EventEmitter;
 var createNativeListener = require('./createNativeListener');
 var createPeerListener = require('./createPeerListener');

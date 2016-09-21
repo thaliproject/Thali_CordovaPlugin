@@ -1,8 +1,8 @@
 'use strict';
 
 var net = require('net');
-var Promise = require('lie');
-var logger = require('../../ThaliLogger')('createNativeListener');
+var Promise = require('bluebird');
+var logger = require('../../thaliLogger')('createNativeListener');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
 var multiplex = require('multiplex');
 var thaliConfig = require('../thaliConfig');

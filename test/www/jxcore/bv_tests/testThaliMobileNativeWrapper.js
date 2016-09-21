@@ -8,7 +8,7 @@ if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
 
 var express = require('express');
 var net = require('net');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var sinon = require('sinon');
 var testUtils = require('../lib/testUtils.js');
 

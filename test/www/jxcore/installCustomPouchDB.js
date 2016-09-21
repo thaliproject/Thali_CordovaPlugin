@@ -287,12 +287,12 @@ installPackage('fs-extra-promise', fsExtraPromiseVersion,
       process.exit(-1);
     }
     fs = require('fs-extra-promise');
-    var lieVersion = getPackageJsonVersion('lie');
-    installPackage('lie', lieVersion, function (error) {
+    var bluebirdVersion = getPackageJsonVersion('bluebird');
+    installPackage('bluebird', bluebirdVersion, function (error) {
       if (error) {
         process.exit(-1);
       }
-      Promise = require('lie');
+      Promise = require('bluebird');
       installAll();
     });
   });

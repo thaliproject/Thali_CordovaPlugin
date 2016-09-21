@@ -1,7 +1,7 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var Promise = require('lie');
+var Promise = require('bluebird');
 
 var customData = 'custom data';
 

@@ -12,7 +12,7 @@ var SocketIOClient = require('socket.io-client');
 var EventEmitter   = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
-var Promise = require('./utils/Promise');
+var Promise = require('bluebird');
 
 var testUtils     = require('./testUtils');
 var serverAddress = require('../server-address');

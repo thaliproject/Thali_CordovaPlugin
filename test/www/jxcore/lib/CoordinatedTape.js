@@ -7,7 +7,7 @@ var objectAssign = require('object-assign');
 var assert       = require('assert');
 var uuid         = require('node-uuid');
 
-var Promise = require('./utils/Promise');
+var Promise = require('bluebird');
 
 var SimpleThaliTape   = require('./SimpleTape');
 var CoordinatedClient = require('./CoordinatedClient');
