@@ -1,6 +1,6 @@
 'use strict';
 
-var Promise = require('../thaliPromise');
+var Promise = require('bluebird');
 var ThaliNotificationServer =
   require('../notification/thaliNotificationServer');
 var PromiseQueue = require('./../promiseQueue');

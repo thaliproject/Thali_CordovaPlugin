@@ -2,7 +2,7 @@
 
 var PeerAction = require('./thaliPeerAction');
 var assert = require('assert');
-var Promise = require('../thaliPromise');
+var Promise = require('bluebird');
 
 /** @module thaliPeerPoolInterface */
 

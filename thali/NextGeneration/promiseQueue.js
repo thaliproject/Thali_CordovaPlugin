@@ -1,6 +1,6 @@
 'use strict';
 
-var Promise = require('./thaliPromise');
+var Promise = require('bluebird');
 
 /** @module promiseQueue */
 

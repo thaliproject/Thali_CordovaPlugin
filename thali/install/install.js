@@ -4,9 +4,9 @@ var spawn = require('child_process').spawn;
 var path = require('path');
 var https = require('https');
 var unzip = require('unzip');
-var Promise = require('lie');
 var fs = require('fs-extra-promise');
 var url = require('url');
+var Promise = require('bluebird');
 var FILE_NOT_FOUND = 'ENOENT';
 
 // If this file exists in the thaliDontCheckIn directory then

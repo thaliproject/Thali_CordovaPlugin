@@ -1,7 +1,7 @@
 'use strict';
 var tape = require('../lib/thaliTape');
 var PromiseQueue = require('thali/NextGeneration/promiseQueue');
-var Promise = require('thali/NextGeneration/thaliPromise');
+var Promise = require('bluebird');
 
 var currentUnhandledRejectionHandler = null;
 

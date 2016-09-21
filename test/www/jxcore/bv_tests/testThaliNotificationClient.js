@@ -3,7 +3,7 @@ var tape = require('../lib/thaliTape');
 var express = require('express');
 var crypto = require('crypto');
 var sinon = require('sinon');
-var Promise = require('thali/NextGeneration/thaliPromise');
+var Promise = require('bluebird');
 var http = require('http');
 var httpTester = require('../lib/httpTester.js');
 

@@ -292,7 +292,7 @@ installPackage('fs-extra-promise', fsExtraPromiseVersion,
       if (error) {
         process.exit(-1);
       }
-      Promise = require('thali/NextGeneration/thaliPromise');
+      Promise = require('bluebird');
       installAll();
     });
   });

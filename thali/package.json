@@ -4,12 +4,12 @@
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
+    "bluebird": "3.4.6",
     "body-parser": "1.13.3",
     "express": "4.13.3",
     "forever-agent": "0.6.1",
     "ip": "1.0.1",
     "javascript-state-machine": "2.3.5",
-    "lie": "3.0.4",
     "long": "3.0.3",
     "multiplex": "6.7.0",
     "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
@@ -21,7 +21,6 @@
     "js-extend": "1.0.1"
   },
   "devDependencies": {
-    "bluebird": "^3.4.5",
     "jsdoc": "3.3.3"
   },
   "thaliInstall": {

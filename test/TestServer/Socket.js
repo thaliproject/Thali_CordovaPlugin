@@ -11,7 +11,7 @@ var objectAssign = require('object-assign');
 var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts.js');
-var Promise = require('./utils/Promise');
+var Promise = require('bluebird');
 var logger  = require('./utils/ThaliLogger')('Socket');
 
 var defaultConfig = require('./config/Socket');

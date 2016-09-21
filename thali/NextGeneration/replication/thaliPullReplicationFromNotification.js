@@ -3,7 +3,7 @@
 var ThaliNotificationClient = require('../notification/thaliNotificationClient');
 var logger = require('../../ThaliLogger')('thaliPullReplicationFromNotification');
 var assert = require('assert');
-var Promise = require('../thaliPromise');
+var Promise = require('bluebird');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');
 

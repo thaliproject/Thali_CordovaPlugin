@@ -2,7 +2,7 @@
 
 var crypto = require('crypto');
 var ThaliReplicationManager = require('../thalireplicationmanager');
-var Promise = require('../thaliPromise');
+var Promise = require('bluebird');
 var urlSafeBase64 = require('urlsafe-base64');
 
 // Exports for Identity Exchange

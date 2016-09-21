@@ -1,7 +1,7 @@
 'use strict';
 
 var assert = require('assert');
-var Promise = require('./thaliPromise');
+var Promise = require('bluebird');
 
 /** @module makeIntoCloseAllServer */
 

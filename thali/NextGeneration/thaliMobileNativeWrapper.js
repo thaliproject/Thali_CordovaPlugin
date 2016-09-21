@@ -1,6 +1,6 @@
 'use strict';
 
-var Promise = require('./thaliPromise');
+var Promise = require('bluebird');
 var PromiseQueue = require('./promiseQueue');
 var EventEmitter = require('events').EventEmitter;
 var logger = require('../ThaliLogger')('thaliMobileNativeWrapper');

@@ -7,7 +7,7 @@ var assert       = require('assert');
 var objectAssign = require('object-assign');
 
 var asserts = require('./utils/asserts.js');
-var Promise = require('./utils/Promise');
+var Promise = require('bluebird');
 var logger  = require('./utils/ThaliLogger')('UnitTestFramework');
 
 var TestDevice    = require('./TestDevice');

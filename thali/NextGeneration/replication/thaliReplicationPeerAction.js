@@ -1,6 +1,6 @@
 'use strict';
 
-var Promise = require('../thaliPromise');
+var Promise = require('bluebird');
 var util = require('util');
 var path = require('path');
 var ThaliPeerAction = require('../thaliPeerPool/thaliPeerAction');

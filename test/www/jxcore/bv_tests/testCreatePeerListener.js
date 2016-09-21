@@ -7,7 +7,7 @@ var multiplex = require('multiplex');
 var tape = require('../lib/thaliTape');
 var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersManager');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var Promise = require('thali/NextGeneration/thaliPromise');
+var Promise = require('bluebird');
 var testUtils = require('../lib/testUtils');
 var logger    = require('../lib/testLogger')('testCreatePeerListener');
 

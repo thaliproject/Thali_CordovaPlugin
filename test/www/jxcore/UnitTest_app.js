@@ -12,7 +12,7 @@ if (typeof Mobile === 'undefined') {
 
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var Promise = require('thali/NextGeneration/thaliPromise');
+var Promise = require('bluebird');
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {

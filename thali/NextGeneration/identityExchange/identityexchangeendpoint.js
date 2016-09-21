@@ -1,9 +1,8 @@
 /* jshint node: true, undef: true, unused: true  */
-/* globals Promise */
 'use strict';
 
 var bodyParser = require('body-parser');
-var Promise = require('../thaliPromise');
+var Promise = require('bluebird');
 var IdentityExchange = require('./identityexchange');
 
 module.exports = function (app, replicationManager, identityExchange) {

@@ -11,7 +11,7 @@ var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var logger = require('thali/thaliLogger')('testThaliMobileNative');
-var Promise = require('thali/NextGeneration/thaliPromise');
+var Promise = require('bluebird');
 var assert = require('assert');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
