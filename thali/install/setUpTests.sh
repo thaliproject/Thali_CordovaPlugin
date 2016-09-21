@@ -66,7 +66,7 @@ install_thali()
 
   cd $TEST_PROJECT_ROOT_DIR/www/jxcore;ERROR_ABORT
   npm install $REPO_ROOT_DIR/thali --save --no-optional --production;ERROR_ABORT
-find . -name "*.gz" -delete
+  find . -name "*.gz" -delete
 
   if [ $IS_MINIGW_PLATFORM == true ]; then
       # On Windows the package.json file will contain an invalid local file URI for Thali,
