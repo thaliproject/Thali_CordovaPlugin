@@ -2,10 +2,28 @@
 
 var format = require('util').format;
 
-// TODO: documentation
+/**
+ * @module utils/usn
+ *
+ * Decode/encode peer information from/into USN strings used by SSDP discovery
+ * mechanism
+ */
+
+/**
+ * @typdef {Object} UsnPeer
+ * @property {string} peerIdentifier - UUID part of USN
+ * @property {number} generation - generation part of USN
+ */
+
 var USN = {
   _prefix: 'data:',
 
+  /**
+   * @param {string} usn
+   * @returns {{peerIdentifier: string, generation: number}}
+   * @throws Will throw when provided usn has an invalid prefix (other than
+   * 'data:'), has incorrect number of segments or its generation is not a number.
+   */
   parse: function (usn) {
     if (usn.indexOf(USN._prefix) !== 0) {
       throw new Error(
@@ -29,6 +47,10 @@ var USN = {
     };
   },
 
+  /**
+   * @param {UsnPeer} peer
+   * @returns {string}
+   */
   stringify: function (peer) {
     return USN._prefix + peer.peerIdentifier + ':' + peer.generation;
   },
