@@ -75,11 +75,11 @@ public final class RegisterExecuteUT {
             }
         });
 
-        jxcore.RegisterMethod("ExecuteNativeTests", new jxcore.JXcoreCallback() {
+        jxcore.RegisterMethod("executeNativeTests", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
-                String logtag = "ExecuteNativeTests";
+                String logtag = "executeNativeTests";
                 Log.d(logtag, "Running unit tests");
                 Result resultTest = ThaliTestRunner.runTests();
 

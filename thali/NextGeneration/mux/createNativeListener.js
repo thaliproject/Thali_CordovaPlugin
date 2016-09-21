@@ -2,7 +2,7 @@
 
 var net = require('net');
 var Promise = require('lie');
-var logger = require('../../thaliLogger')('createNativeListener');
+var logger = require('../../ThaliLogger')('createNativeListener');
 var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
 var multiplex = require('multiplex');
 var thaliConfig = require('../thaliConfig');
@@ -283,7 +283,11 @@ module.exports = function (self) {
         self.incomingConnectionState.CONNECTED);
     });
 
+    // listen(port, ...) port = 0 for random port
     self._nativeServer.listen(0, function (err) {
+      var port = self._nativeServer.address().port;
+      logger.debug('listening', port);
+
       if (err) {
         logger.warn(err);
         return reject(err);
@@ -292,8 +296,7 @@ module.exports = function (self) {
       assert(self._nativeServer, 'It should not be possible for it to be ' +
         'nulled out before we return from this call');
 
-      logger.debug('listening', self._nativeServer.address().port);
-      resolve(self._nativeServer.address().port);
+      resolve(port);
     });
   });
 };

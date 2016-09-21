@@ -4,7 +4,7 @@ var PeerDictionary = require('./thaliPeerDictionary');
 var ThaliMobile = require('../thaliMobile');
 var ThaliNotificationAction = require('./thaliNotificationAction.js');
 var NotificationBeacons = require('./thaliNotificationBeacons');
-var logger = require('../../thaliLogger')('thaliNotificationClient');
+var logger = require('../../ThaliLogger')('thaliNotificationClient');
 var assert = require('assert');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
@@ -27,7 +27,7 @@ var util = require('util');
  * @param {number} suggestedTCPTimeout Provides a hint to what time out to
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
- * @param {module:thaliMobile.connectionTypes} connectionType The type of
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType The type of
  * connection that will be used when connecting to this peer.
  */
 function PeerAdvertisesDataForUs (keyId, pskIdentifyField,

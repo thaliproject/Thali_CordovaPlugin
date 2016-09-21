@@ -11,8 +11,8 @@ var ThaliPeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
 var ThaliNotificationClient =
   require('thali/NextGeneration/notification/thaliNotificationClient');
-var ThaliMobile =
-  require('thali/NextGeneration/thaliMobile');
+var ThaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
@@ -45,13 +45,15 @@ var GlobalVariables = function () {
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
 
   this.peerPoolInterface = new ThaliPeerPoolDefault();
+  this.peerPoolInterface.start();
   this.peerPoolInterfaceStub = new ThaliPeerPoolDefault();
+  this.peerPoolInterfaceStub.start();
 
   this.TCPEvent = {
     peerIdentifier: 'id124',
     hostAddress: '127.0.0.1',
     portNumber: 0,
-    connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
+    connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     suggestedTCPTimeout: 10000
   };
 
@@ -152,7 +154,7 @@ test('Add two Peers.', function (t) {
     peerIdentifier: 'id123',
     hostAddress: 'anything',
     portNumber: 8080,
-    connectionType: ThaliMobile.connectionTypes.BLUETOOTH,
+    connectionType: ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH,
     suggestedTCPTimeout: 1000
   };
 
@@ -160,7 +162,7 @@ test('Add two Peers.', function (t) {
     peerIdentifier: 'id3212',
     hostAddress: 'anything',
     portNumber: 8080,
-    connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
+    connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     suggestedTCPTimeout: 1000
   };
 
@@ -176,10 +178,10 @@ test('Add two Peers.', function (t) {
   var peer2 = notificationClient.peerDictionary.get('id3212');
 
   t.equal(peer.notificationAction.getConnectionType(),
-    ThaliMobile.connectionTypes.BLUETOOTH);
+    ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH);
 
   t.equal(peer2.notificationAction.getConnectionType(),
-    ThaliMobile.connectionTypes.TCP_NATIVE);
+    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE);
 
   notificationClient.stop();
   t.equal(notificationClient.peerDictionary, null);
@@ -328,6 +330,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
   // Action is getting resolved ok
 
   var peerPool = new ThaliPeerPoolDefault();
+  peerPool.start();
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
@@ -404,7 +407,7 @@ test('Action fails because of a bad hostname.', function (t) {
     peerIdentifier: 'id123',
     hostAddress: 'address-that-does-not-exists',
     portNumber: 123,
-    connectionType: ThaliMobile.connectionTypes.TCP_NATIVE,
+    connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     suggestedTCPTimeout: 10000
   };
 

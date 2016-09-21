@@ -5,7 +5,7 @@ var ThaliNotificationServer =
   require('../notification/thaliNotificationServer');
 var PromiseQueue = require('./../promiseQueue');
 var logger =
-  require('../../thaliLogger')('thaliSendNotificationBasedOnReplication');
+  require('../../ThaliLogger')('thaliSendNotificationBasedOnReplication');
 var urlsafeBase64 = require('urlsafe-base64');
 var assert = require('assert');
 var compareBufferArrays = require('./utilities').compareBufferArrays;
@@ -60,6 +60,10 @@ function ThaliSendNotificationBasedOnReplication(router,
   this._thaliNotificationServer =
     new ThaliNotificationServer(router, ecdhForLocalDevice,
                                 millisecondsUntilExpiration);
+
+  this._resolveStart = null;
+  this._rejectStart = null;
+  this._completed = false;
 }
 
 /**
@@ -311,76 +315,107 @@ ThaliSendNotificationBasedOnReplication.prototype._commonStart =
 ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
   function (seqValue) {
     var self = this;
+    this._completed = false;
+
     assert.equal(self._transientState.pouchDBChangesCancelObject, null,
       'Something went wrong in initialization');
     var transientStateWhenCreated = self._transientState;
-    self._transientState.pouchDBChangesCancelObject = self._pouchDB.changes({
-      live: true,
-      since: seqValue,
-      timeout: false // Not sure we really need this
-    }).on('change', function () {
-      // This check will guarantee that the object's transient variables
-      // are in a trustworthy state
-      if (self._state !== stateEnum.STARTED) {
-        logger.debug('Our changes state was not started - ' + self._state);
-        return;
-      }
 
-      // This catches a theoretical race condition where the change listener
-      // was closed down due to a start or stop but somehow the change
-      // event still got queued.
-      if (self._transientState !== transientStateWhenCreated) {
-        logger.debug('transient states did not match');
-        return;
-      }
+    this._replicationPromise = new Promise(function (resolve, reject) {
+      self._resolveStart = resolve;
+      self._rejectStart = reject;
+      self._transientState.pouchDBChangesCancelObject = self._pouchDB.changes({
+        live: true,
+        since: seqValue,
+        timeout: false // Not sure we really need this
+      }).on('change', function () {
+        // This check will guarantee that the object's transient variables
+        // are in a trustworthy state
+        if (self._state !== stateEnum.STARTED) {
+          logger.debug('Our changes state was not started - ' + self._state);
+          return;
+        }
 
-      // All the peers were up to date when start was called so we never
-      // sent out a beacon, but now we may need to because there has been a
-      // change.
-      if (self._transientState.lastTimeBeaconsWereUpdated === 0) {
-        assert.equal(self._transientState.beaconRefreshTimerManager, null,
-          'If the tokens were never updated then there should not be a' +
-          'beacon timer');
-        self._transientState.lastTimeBeaconsWereUpdated = Date.now();
-        return self._updateOnExpiration(0);
-      }
+        // This catches a theoretical race condition where the change listener
+        // was closed down due to a start or stop but somehow the change
+        // event still got queued.
+        if (self._transientState !== transientStateWhenCreated) {
+          logger.debug('transient states did not match');
+          return;
+        }
 
-      assert(self._transientState.beaconRefreshTimerManager, 'If beacons were' +
-        'previously updated then there has to be a refresh timer for them.');
+        // All the peers were up to date when start was called so we never
+        // sent out a beacon, but now we may need to because there has been a
+        // change.
+        if (self._transientState.lastTimeBeaconsWereUpdated === 0) {
+          assert.equal(self._transientState.beaconRefreshTimerManager, null,
+            'If the tokens were never updated then there should not be a' +
+            'beacon timer');
+          self._transientState.lastTimeBeaconsWereUpdated = Date.now();
+          return self._updateOnExpiration(0);
+        }
 
-      var soonestPossibleRefresh =
-        self._transientState.lastTimeBeaconsWereUpdated +
-        ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_FOREGROUND;
+        assert(self._transientState.beaconRefreshTimerManager, 'If beacons were' +
+          'previously updated then there has to be a refresh timer for them.');
 
-      var whenTimerWillRun =
-        self._transientState.beaconRefreshTimerManager.getTimeWhenRun();
+        var soonestPossibleRefresh =
+          self._transientState.lastTimeBeaconsWereUpdated +
+          ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_FOREGROUND;
 
-      assert.notEqual(whenTimerWillRun, null, 'How can there be a change ' +
-        'listener without a started timer?');
+        var whenTimerWillRun =
+          self._transientState.beaconRefreshTimerManager.getTimeWhenRun();
 
-      // A race condition where the timer has fired and run but the change
-      // listener got run before the scheduled startFirst call from the
-      // timer has had a chance to execute.
-      if (whenTimerWillRun === -1) {
-        logger.debug('whenTimerWillRun is -1');
-        return;
-      }
+        assert.notEqual(whenTimerWillRun, null, 'How can there be a change ' +
+          'listener without a started timer?');
 
-      if (whenTimerWillRun > soonestPossibleRefresh) {
-        var milliSecondsUntilNextRefresh =
-          soonestPossibleRefresh - Date.now();
+        // A race condition where the timer has fired and run but the change
+        // listener got run before the scheduled startFirst call from the
+        // timer has had a chance to execute.
+        if (whenTimerWillRun === -1) {
+          logger.debug('whenTimerWillRun is -1');
+          return;
+        }
 
-        self._updateOnExpiration(milliSecondsUntilNextRefresh);
-      }
-    }).on('complete', function (info) {
-      logger.debug('We must have stopped because we are complete -' +
-        JSON.stringify(info));
-    }).on('error', function (err) {
-      logger.error('Got an error on the replication change listener - ' +
-        JSON.stringify(err));
-      throw new Error(err);
+        if (whenTimerWillRun > soonestPossibleRefresh) {
+          var milliSecondsUntilNextRefresh =
+            soonestPossibleRefresh - Date.now();
+
+          self._updateOnExpiration(milliSecondsUntilNextRefresh);
+        }
+      })
+      .on('complete', function (info) {
+        logger.debug(
+          'We must have stopped because we are complete -' +
+          JSON.stringify(info)
+        );
+        self._complete(info.errors);
+      })
+      .on('error', function (err) {
+        logger.error(
+          'Got an error on the replication change listener - ' +
+          JSON.stringify(err)
+        );
+        self._complete([err]);
+      });
     });
+    return this._replicationPromise;
   };
+
+ThaliSendNotificationBasedOnReplication.prototype._complete =
+  function (errorArray) {
+    if (this._completed) {
+      return;
+    }
+    this._completed = true;
+
+    assert(this._resolveStart, 'resolveStart should exist');
+    assert(this._rejectStart, 'rejectStart should exist');
+
+    if (!errorArray || errorArray.length === 0) {
+      return this._resolveStart();
+    }
+    this._rejectStart(errorArray[0]);
+  }
 
 ThaliSendNotificationBasedOnReplication.prototype._findSequenceNumber =
   function () {
@@ -522,12 +557,24 @@ ThaliSendNotificationBasedOnReplication.prototype.stop = function () {
       if (self._transientState) {
         self._transientState.cleanUp();
         self._transientState = null;
-        return self._thaliNotificationServer.stop()
+
+        // We have just killed replication request.
+        // We don't care if this request will end with an error.
+        Promise.all([
+          Promise.resolve()
           .then(function () {
-            resolve();
-          }).catch(function (err) {
-            reject(err);
-          });
+            if (self._replicationPromise) {
+              return self._replicationPromise
+              .catch(function () {});
+            }
+          }),
+          self._thaliNotificationServer.stop()
+        ])
+        .then(function () {
+          resolve();
+        }).catch(function (err) {
+          reject(err);
+        });
       }
 
       return resolve();

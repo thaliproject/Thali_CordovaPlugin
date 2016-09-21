@@ -13,11 +13,11 @@ if (typeof Mobile === 'undefined') {
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
-var utResult;
+var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
   console.log('Running unit tests');
-  Mobile('ExecuteNativeTests').callNative(function (result) {
+  Mobile('executeNativeTests').callNative(function (result) {
     utResult = true;
     if (result && result.executed) {
       console.log('Total number of executed tests: ', result.total);
@@ -31,13 +31,22 @@ if (process.platform === 'android' || process.platform === 'ios') {
       }
     }
   });
-
-  if (!utResult) {
-    console.log('Failed to execute UT.');
-    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-    return;
-  }
+} else {
+  // We aren't on a device so we can't run those tests anyway
+  utResult = true;
 }
+
+if (!utResult) {
+  console.log('Failed to execute UT.');
+  global.nativeUTFailed = true;
+}
+
+// TODO finish testing here (the node part will be omitted)
+// console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+// return;
+
+// Issue #914
+var networkTypes = [ThaliMobile.networkTypes.WIFI];
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
@@ -53,10 +62,18 @@ ThaliMobile.getNetworkStatus()
     Mobile('GetDeviceName').callNative(function (name) {
       console.log('My device name is: %s', name);
       testUtils.setName(name);
-      // The setImmediate is to avoid this issue:
-      // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
-      setImmediate(function () {
-        require('./runTests.js');
+
+      networkTypes.reduce(function (sequence, networkType) {
+        return sequence
+          .then(function () {
+            console.log('Running for ' + networkType + ' network type');
+            global.NETWORK_TYPE = networkType;
+            var testRunner = require('./runTests.js');
+            return testRunner.run();
+          });
+      }, Promise.resolve())
+      .catch(function (error) {
+        console.log(error);
       });
     });
   });

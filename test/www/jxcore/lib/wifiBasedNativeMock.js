@@ -7,7 +7,8 @@ var express = require('express');
 var assert = require('assert');
 var net = require('net');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thaliLogger')('wifiBasedNativeMock');
+
+var logger = require('./testLogger')('wifiBasedNativeMock');
 
 var proxyquire = require('proxyquire');
 proxyquire.noPreserveCache();
@@ -93,6 +94,77 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
  * For testing purposes if callNative or registerToNative do not get all the
  * parameters they were expecting then a "Bad Arguments" exception MUST be
  * thrown.
+ *
+ * ## Mocking iOS
+ *
+ * The file was original written from the perspective of Android and the
+ * connect method (which we also used to use on iOS). But the new code uses
+ * multiConnect for iOS. The challenge with this change is how do we model
+ * a MCSession on the WiFi Mock? It was relatively easy to model an Android
+ * Bluetooth socket because the mux in node is allowed to create exactly one
+ * TCP/IP connection to the native layer. If node kills that connection then it
+ * means that node wants the associated Bluetooth socket to die. And if the
+ * native layer kills the connection it tells node that for some reason the
+ * Bluetooth socket was lost. So by just killing that single TCP/IP connection
+ * we could model kill the mocked Bluetooth socket either from node or from
+ * the 'native' layer.
+ *
+ * But with iOS there can be many or even no connections to the native TCP/IP
+ * listener. So the life span of the MCSession is largely separate from the
+ * listener. I say 'largely' because if the listen is closed all together then
+ * that tells the node layer that the MCSession was lost but this is not
+ * something that is easily detected by the node layer so it isn't terribly
+ * useful for us. More importantly, there is no way for the remote peer to
+ * directly trigger the closure of the TCP/IP listener, at least not via any
+ * TCP/IP mechanism. Where as a remote peer can trigger the closure of the
+ * the single TCP/IP connection by closing its relayed connection.
+ *
+ * So what we need is an explicit way to model MCSessions in the mock when we
+ * are emulating iOS. We had thought of using the mux layer for this, in other
+ * words we could put the iOS code on top of the TCPServersManager code
+ * which would then run on top of the WiFiMock which would then run on top of
+ * the real WiFi code. This is workable but it's so complex it made our heads
+ * hurt. So we decided to go with a simple solution.
+ *
+ * When a multiConnect method is received we will connect to the advertised
+ * port and address that came over WiFi originally and we will connect to
+ * an express endpoint we will add to the router called /inviteToSession. We
+ * will support a POST request to that endpoint with a query argument on the
+ * URL that contains a UUID to identify the session the remote peer is being
+ * invited to. Remember that we will need to create an ACL for this (and the
+ * other end points mentioned here) with a pre-defined secret since we
+ * require all connections to run over PSK. Right now the response to
+ * /inviteToSession will always be 200 OK. This is because we don't yet have
+ * the functionality to allow peers to reject incoming session requests other
+ * than for DOS reasons. So once the requesting peer gets 200 OK it can treat
+ * the MCSession as established and continue with the multiConnect request.
+ *
+ * We will add a second endpoint under the same ACL called /endSession. This
+ * endpoint also takes a query argument that contains a UUID. This identifies
+ * the MCSession ID that is being closed. Either peer can send this to the
+ * other. This enables us to simulate MCSession failures due both to the peer
+ * who created the session and the peer who is a member of the session. A call
+ * to this endpoint on the peer who initiated the session (so we have to track
+ * which IDs we initiated) MUST cause a multiConnectConnectionFailureCallback
+ * event to be fired to tell Node that the session is gone. The TCP listener
+ * associated with the original multiConnect that created the session MUST also
+ * be closed and all existing connections terminated.
+ *
+ * If a peer who was invited to a session (e.g. received an /inviteToSession
+ * request) then receives a /endSession request with the same ID then this
+ * signals that the TCP/IP listener that is handling WiFi requests to be
+ * relayed to that peer's local router is to be shut down and all client
+ * connections to that router shut down. The most common reason for this to
+ * happens is that the initiating peer called the native disconnect method.
+ *
+ * In the case that peer A initiated a session with peer B and now peer B
+ * wants to terminate that session (e.g. the test code on peer B called the
+ * killConnections method which would kill everything) then this could trigger
+ * a call to the /endSession endpoint on peer A. The result is very similar to
+ * what would have happened had peer A called disconnect on the session. That
+ * is, the TCP listener waiting for node requests to relay across WiFi would
+ * be closed down. Existing connections would be closed and the
+ * multiConnectConnectionFailureCallback would be called.
  */
 
 /**
@@ -264,8 +336,8 @@ var startUpdateAdvertisingAndListeningIsActive = false;
  * running on 127.0.0.1.
  *
  * Otherwise the behavior MUST be the same as defined for (@link
- * external:"Mobile('startUpdateAdvertisingAndListening')".ca
- * llNative}. That includes returning the "Call Start!" error as appropriate as
+ * external:"Mobile('startUpdateAdvertisingAndListening')".callNative}. That
+ * includes returning the "Call Start!" error as appropriate as
  * well as returning "Radio Turned Off" if we are emulating Bluetooth as being
  * off.
  *
@@ -406,103 +478,9 @@ function (callBack) {
  * listener (that will then relay to the remote peer's port) is torn down then
  * we tear down the connection to the remote peer and vice versa.
  *
- * On iOS we need the same behavior as Android plus we have to deal with the
- * MCSession problem. This means we have to look at the peerIdentifier, compare
- * it to the peerIdentifier that we generated at the SSDP layer and do a lexical
- * comparison. If we are lexically smaller then we have to simulate the trick
- * that iOS uses where we create a MCSession but don't establish any connections
- * over it. The MCSession is just used as a signaling mechanism to let the
- * lexically larger peer know that the lexically smaller peer wants to connect.
- * See the sections below on /ConnectToMeForMock and /IConnectedMock for
- * details.
- *
- * ## Making requests to /ConnectToMeForMock
- *
- * After we receive a connect when we are simulating iOS and the requester is
- * lexically smaller than the target peerIdentifier then we MUST make a GET
- * request to the target peer's /ConnectToMeForMock endpoint with a query
- * argument of the form "?port=x&peerIdentifier=y". The port is the port the
- * current peer wishes the target peer to connect over and the peerIdentifier is
- * the current peer's peerIdentifier.
- *
- * If we get a 400 response then we MUST return the "Connection could not be
- * established" error.
- *
- * If we get a 200 OK then we just have to wait for a /IConnectedMock request
- * to come in telling us that the remote peer has established a connection. See
- * the section below on how we handle this. Note that the usual timeout rules
- * apply so if the /IConnectedMock request does not come within the timeout
- * period the we MUST issue a "Connection wait time out" error.
- *
- * We do not include IP addresses in the request or response because we are
- * only running the mock amongst instances that are all hosted on the same box
- * and talking over 127.0.0.1.
- *
- * ## Sending responses to /ConnectToMeForMock
- *
- * If we are not currently simulating an iOS device then we MUST return a 500
- * Server Error because something really bad has happened. We do not currently
- * support simulating mixed scenarios, everyone in the test run needs to be
- * either simulating iOS or Android.
- *
- * If we are not currently listening for incoming connections then we MUST
- * return a 400 Bad Request. But we MUST also log the fact that this happened
- * since baring some nasty race conditions we really shouldn't get a call to
- * this endpoint unless we are listening.
- *
- * If we are listening then we MUST issue a peerAvailabilityChanged callback
- * and set the peerIdentifier to the value in the query argument, peerAvailable
- * to true and pleaseConnect to true. We MUST also record the port in the query
- * argument so that if we get a connect request we know what port to submit.
- *
- * In theory it's possible for us to get into a situation where we get one
- * port for a peerIdentifier in the /ConnectToMeForMock request and a different
- * port in a SSDP request. We should just publish the PeerAvailablityChanged
- * event as they come in and for internal mapping of peerIdentifier to port we
- * should just record whatever came in last. And yes, this can lead to fun race
- * conditions which is the situation in the real world too.
- *
- * ## Making requests to /IConnectedMock
- *
- * If we are simulating iOS and if we are establishing a TCP connection to a
- * remote peer then by definition we are the lexically larger peer. However the
- * iOS protocol shares our peerIdentifier with the remote peer, TCP does not. To
- * work around this anytime we are simulating iOS and have successfully
- * established a TCP connection to a remote peer we MUST issue a GET request to
- * the /IConnectedMock endpoint of the remote peer with the query string
- * "?clientPort=x&serverPort=z&peerIdentifier=y". The clientPort and serverPort
- * are the client port and server port values from the TCP connection that
- * caused us to send this request in the first place. The peerIdentifier is our
- * peerIdentifier. If we get a 400 response back then we MUST log this event as
- * it really should not have happened.
- *
- * ## Sending response to /IConnectedMock
- *
- * If we are not currently simulating an iOS device then we MUST return a 500
- * Server Error because something really bad has happened. We do not currently
- * support simulating mixed scenarios, everyone in the test run needs to be
- * either simulating iOS or Android.
- *
- * If we are not currently listening for incoming connections then we MUST
- * return a 400 Bad Request. But we MUST also log the fact that this happened
- * since baring some nasty race conditions we really shouldn't have been able to
- * set up the TCP connection in the first place.
- *
- * Otherwise we MUST return a 200 OK.
- *
- * When we return a 200 OK we MUST issue a peerAvailabilityChanged callback
- * with peerIdentifier set to the submitted peerIdentifier, peerAvailable set to
- * true and pleaseConnect set to false. If we have an outstanding connect
- * request to the specified peerIdentifier then we MUST look up the specified
- * clientPort/serverPort and see if we can match it to any of the incoming
- * connections to the TCP proxy. If we can then we MUST return the
- * clientPort/serverPort being used by the TCP proxy as the connect response
- * with listeningPort set to null and clientPort/serverPort set to the values
- * the TCP proxy is using. If we cannot match the connection via the TCP proxy
- * then this means that the connection might have died or been killed while this
- * request to /IConnectedMock was being sent. In that case we should send bogus
- * values in the connect response to simulate a situation where a peer connects
- * but then the connection dies before the connect callback is returned.
+ * We have to throw the same errors as for connect so, for example, if this
+ * method is called while we are simulating iOS then we MUST throw a
+ * 'Platform does not support connect' error.
  *
  * @param {string} peerIdentifier
  * @param {module:thaliMobileNative~ConnectCallback} callback
@@ -630,6 +608,75 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
   peerProxyServers[peerIdentifier].on('close', function () {
     cleanProxyServer();
   });
+};
+
+/**
+ * All the usual restrictions on multiConnect apply including throwing errors if
+ * start listening isn't active, handling consecutive calls, etc. Please see the
+ * details in {@link external:"Mobile('multiConnect')".callNative}. In this case
+ * the mock MUST keep track of the advertised IP and port for each
+ * peerIdentifier and then be able to establish a TCP/IP listener on 127.0.0.1
+ * and use a TCP proxy to relay any connections to the 127.0.0.1 port to the IP
+ * address and port that was advertised over SSDP. The point of all this
+ * redirection is to fully simulate the native layer so we can run tests of the
+ * Wrapper and above with full fidelity. This lets us do fun things like
+ * simulate turning off radios as well as properly enforce behaviors such as
+ * supporting the disconnect method.
+ *
+ * Although this is going to sound fairly nuts probably the easiest way to make
+ * this all work is to re-use thaliTcpServersManager and friends from the mux.
+ * The idea is that in iOS we have a MCSession which contains within it all
+ * the connections between two peers going in a particular direction (meaning
+ * we have two MCSessions at a time between two peers). We need a way to
+ * simulate a MCSession ending (which can be initiated by either peer) and have
+ * that harvest all the associated TCP/IP connections. The way we can do this is
+ * by having startUpdateAdvertisingAndListening actually call
+ * thaliTcpServersManager passing in the port it was given and then advertising
+ * over SSDP the port returned by calling start on ThaliTcpServersManager. This
+ * will automatically create a listener that turns each single TCP connection
+ * into a mux and so lets many connections be generated but we can simulate
+ * disconnect or turning off radios either by calling
+ * terminateIncomingConnection on ThaliTcpServersManager or even stop.
+ *
+ * For multiConnect what we would do is call createPeerListener on
+ * ThaliTcpServersManager and return the port of the TCP Listener that
+ * createPeerListener created as the response to multiConnect. This will allow
+ * arbitrary TCP/IP connections but they will all be passed through the mux
+ * layer and so disconnect is trivially easy to implement, we just call
+ * terminateOutgoingConnection.
+ *
+ * We could then issue multiConnectConnectionFailure events by trapping the
+ * failedConnection events from the ThaliTcpServersManager.
+ *
+ * We have to make sure that if we get multiple calls to multiConnect for the
+ * same peer that we already have a connection outstanding for that we return
+ * the same address and port. (Which ThaliTcpServersManager would handle for us
+ * for free).
+ *
+ * We have to throw the same errors as for multiConnect so, for example, if this
+ * method is called while we are simulating Android then we MUST throw a
+ * "Platform does not support `multiConnect`" error.
+ *
+ * @param {string} peerIdentifier
+ * @param {string} syncValue
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback
+ */
+MobileCallInstance.prototype.multiConnect =
+  function (peerIdentifier, syncValue, callback) {
+
+  };
+
+
+/**
+ * Emulates disconnect. If we have a session for the peerIdentifier via the
+ * TCP proxy then we MUST kill the proxy. If there is no session for the
+ * peerIdentifier then we return success.
+ *
+ * @param {string} peerIdentifier
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback
+ */
+MobileCallInstance.prototype.disconnect = function(peerIdentifier, callback) {
+
 };
 
 /**
@@ -967,9 +1014,6 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
  * To use this mock save the current global object Mobile (if it exists) and
  * replace it with this object. In general this object won't exist on the
  * desktop.
- *
- * If we are simulating iOS then we MUST add the /ConnectToMeForMock and
- * /IConnectedMock endpoints as described above to the router object.
  *
  * @public
  * @constructor

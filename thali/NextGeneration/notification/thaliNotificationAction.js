@@ -15,7 +15,7 @@ var thaliConfig = require('../thaliConfig');
  * class to represent actions for retrieving notifications.
  *
  * @param {string} peerIdentifier
- * @param {module:thaliMobile.connectionTypes} connectionType
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
  * @param {addressBookCallback} addressBookCallback A callback used to validate

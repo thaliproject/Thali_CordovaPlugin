@@ -1,14 +1,16 @@
 'use strict';
 
-var logCallback;
+var util = require('util');
+var format = util.format;
+
 var os = require('os');
 var tmp = require('tmp');
-var PouchDB = require('pouchdb-node');
+var PouchDB = require('pouchdb');
 var path = require('path');
 var randomString = require('randomstring');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var https = require('https');
-var logger = require('thali/thaliLogger')('testUtils');
+var logger = require('thali/ThaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
@@ -22,6 +24,13 @@ var inherits = require('inherits');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
+
+var isMobile = (
+  typeof jxcore !== 'undefined' &&
+  jxcore.utils &&
+  jxcore.utils.OSInfo() &&
+  jxcore.utils.OSInfo().isMobile
+);
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
@@ -71,20 +80,6 @@ function isFunction(functionToCheck) {
     '[object Function]';
 }
 
-/**
- * Log a message to the screen - only applies when running on Mobile. It assumes
- * we are using our test framework with our Cordova WebView who is setup to
- * receive logging messages and display them.
- * @param {string} message
- */
-module.exports.logMessageToScreen = function (message) {
-  if (isFunction(logCallback)) {
-    logCallback(message);
-  } else {
-    logger.warn('logCallback not set!');
-  }
-};
-
 var myName = '';
 var myNameCallback = null;
 
@@ -109,11 +104,7 @@ module.exports.getName = function () {
   return myName;
 };
 
-if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
-  Mobile('setLogCallback').registerAsync(function (callback) {
-    logCallback = callback;
-  });
-
+if (isMobile) {
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
     // If the name is already set, pass it to the callback
@@ -122,10 +113,6 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
       myNameCallback(myName);
     }
   });
-} else {
-  logCallback = function (message) {
-    console.log(message);
-  };
 }
 
 /**
@@ -137,7 +124,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  */
 var tmpObject = null;
 module.exports.tmpDirectory = function () {
-  if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+  if (isMobile) {
     return os.tmpdir();
   }
 
@@ -210,7 +197,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
   .then(function (networkStatus) {
-    module.exports.logMessageToScreen(
+    logger.debug(
       'Device did not have required hardware capabilities!'
     );
     if (networkStatus.bluetoothLowEnergy === 'on') {
@@ -226,7 +213,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!jxcore.utils.OSInfo().isMobile) {
+    if (!isMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {
@@ -293,6 +280,9 @@ function levelDownPouchDBGenerator(defaultDirectory) {
 // during other tests.
 var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
 fs.ensureDirSync(dbPath);
+module.exports.getPouchDBTestDirectory = function () {
+  return dbPath;
+}
 
 var LevelDownPouchDB = levelDownPouchDBGenerator(dbPath);
 
@@ -300,12 +290,14 @@ module.exports.getLevelDownPouchDb = function () {
   return LevelDownPouchDB;
 };
 
-module.exports.getRandomPouchDBName= function () {
+var getRandomName = function () {
   return randomString.generate({
     length: 40,
     charset: 'alphabetic'
   });
 };
+module.exports.getRandomPouchDBName = getRandomName;
+module.exports.getUniqueRandomName  = getRandomName;
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
   return new LevelDownPouchDB(module.exports.getRandomPouchDBName());
@@ -707,3 +699,41 @@ module.exports.runTestOnAllParticipants = function (t, router,
       });
   });
 };
+
+// We doesn't want our test to run infinite time.
+// We will replace t.end with custom exit function.
+module.exports.testTimeout = function (t, timeout, callback) {
+  var timer = setTimeout(function () {
+    t.fail('test timeout');
+    t.end();
+  }, timeout);
+
+  var oldEnd = t.end;
+  t.end = function () {
+    // Restoring original t.end.
+    t.end = oldEnd;
+
+    if (typeof callback === 'function') {
+      callback();
+    }
+
+    clearTimeout(timer);
+    return oldEnd.apply(this, arguments);
+  }
+}
+
+module.exports.checkArgs = function (t, spy, description, args) {
+  t.ok(spy.calledOnce, description + ' was called once');
+
+  var currentArgs = spy.getCalls()[0].args;
+  t.equals(
+    args.length, currentArgs.length,
+    description + ' was called with ' + currentArgs.length + ' arguments'
+  );
+
+  args.forEach(function (arg, index) {
+    var argDescription = description + ' was called with \'' +
+      arg.description + '\' as ' + (index + 1) + '-st argument';
+    t.ok(arg.compare(currentArgs[index]), argDescription);
+  });
+}

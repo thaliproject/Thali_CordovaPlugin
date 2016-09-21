@@ -4,7 +4,7 @@ var NotificationBeacons = require('./thaliNotificationBeacons');
 var ThaliPskMapCache = require('./thaliPskMapCache');
 var PromiseQueue = require('../promiseQueue');
 var ThaliMobile = require('../thaliMobile');
-var logger = require('../../thaliLogger')('thaliNotificationServer');
+var logger = require('../../ThaliLogger')('thaliNotificationServer');
 var thaliConfig = require('../thaliConfig');
 /** @module thaliNotificationServer */
 
@@ -114,7 +114,7 @@ ThaliNotificationServer.prototype.start = function (publicKeysToNotify) {
     // Following if clause ensures that we don't call
     // startUpdateAdvertisingAndListening when the last two
     // start calls have had publicKeysToNotify as an empty array ([]).
-    if (self._preambleAndBeacons || previousPreambleAndBeacons ) {
+    if (self._preambleAndBeacons || previousPreambleAndBeacons) {
       ThaliMobile.startUpdateAdvertisingAndListening()
       .then(function () {
         return resolve();
