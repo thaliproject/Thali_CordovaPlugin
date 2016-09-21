@@ -2,6 +2,7 @@
 
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+var USN = require('thali/NextGeneration/utils/usn');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
@@ -221,7 +222,7 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
   // have to wait for so long.
   thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
     thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
-  var testPeerIdentifier = 'urn:uuid:' + uuid.v4();
+  var testPeerIdentifier = uuid.v4();
   var testSeverHostAddress = randomstring.generate({
     charset: 'hex', // to get lowercase chars for the host address
     length: 8
@@ -235,7 +236,10 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
     // waiting for the advertisement.
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 10
   });
-  testServer.setUSN(testPeerIdentifier);
+  testServer.setUSN(USN.stringify({
+    peerIdentifier: testPeerIdentifier,
+    generation: 0,
+  }));
 
   var spy = sinon.spy();
   var availabilityChangedHandler = function (peer) {
