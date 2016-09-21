@@ -12,6 +12,7 @@ var randomString = require('randomstring');
 
 var Promise = require('./utils/Promise');
 require('./utils/process');
+require('./utils/polyfills.js');
 
 
 // We want to find the first path that ends with 'name'.
