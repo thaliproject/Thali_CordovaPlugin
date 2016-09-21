@@ -46,17 +46,17 @@ prepare_project()
   jx npm install
   jx generateServerAddress.js $2
   cd $REPO_ROOT_DIR/..
-  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
-  mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
+  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME;ERROR_ABORT
+  mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev;ERROR_ABORT
 
   if [ $IS_MINIGW_PLATFORM == true ]; then
       # The thali package might be installed as link and there will
       # be troubles later on if this link is tried to be copied so
       # remove it here.
-      rm -rf $REPO_ROOT_DIR/test/www/jxcore/node_modules/thali
-      cp -R $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/
+      rm -rf $REPO_ROOT_DIR/test/www/jxcore/node_modules/thali;ERROR_ABORT
+      cp -R $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/;ERROR_ABORT
   else
-      rsync -a --no-links $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/www
+      rsync -a --no-links $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/www;ERROR_ABORT
   fi
 }
 
@@ -64,8 +64,8 @@ install_thali()
 {
   echo "Installing Thali into ${TEST_PROJECT_NAME}"
 
-  cd $TEST_PROJECT_ROOT_DIR/www/jxcore
-  jx npm install $REPO_ROOT_DIR/thali --save --no-optional --autoremove "*.gz"
+  cd $TEST_PROJECT_ROOT_DIR/www/jxcore;ERROR_ABORT
+  jx npm install $REPO_ROOT_DIR/thali --save --no-optional --autoremove "*.gz";ERROR_ABORT
 
   if [ $IS_MINIGW_PLATFORM == true ]; then
       # On Windows the package.json file will contain an invalid local file URI for Thali,
@@ -79,7 +79,7 @@ install_thali()
   # SuperTest which is used by some of the BVTs include a PEM file (for private
   # keys) that makes Android unhappy so we remove it below in addition to the gz
   # files.
-  jx npm install --no-optional --autoremove "*.gz,*.pem"
+  jx npm install --no-optional --autoremove "*.gz,*.pem";ERROR_ABORT
 
   # In case autoremove fails to delete the files, delete them explicitly.
   find . -name "*.gz" -delete
@@ -87,8 +87,8 @@ install_thali()
 
   cp -v $1 app.js
 
-  cd $TEST_PROJECT_ROOT_DIR/thaliDontCheckIn
-  jx $REPO_ROOT_DIR/thali/install/setUpThaliTestIds.js
+  cd $TEST_PROJECT_ROOT_DIR/thaliDontCheckIn;ERROR_ABORT
+  jx $REPO_ROOT_DIR/thali/install/setUpThaliTestIds.js;ERROR_ABORT
 }
 
 add_android_platform()
@@ -120,10 +120,10 @@ add_ios_platform_if_possible()
 
     cd $TEST_PROJECT_ROOT_DIR
 
-    cordova platform add ios
+    cordova platform add ios;ERROR_ABORT
 
     # A file that identifies the current build as a UT build
-    touch platforms/ios/unittests
+    touch platforms/ios/unittests;ERROR_ABORT
   fi
 }
 
@@ -168,6 +168,7 @@ build_ios_if_possible()
       CONFIGURATION_BUILD_DIR="${TEST_PROJECT_DIR}/build/device" \
       SHARED_PRECOMPS_DIR="${TEST_PROJECT_DIR}/build/sharedpch" \
     )
+    ERROR_ABORT
 
   fi
 }
