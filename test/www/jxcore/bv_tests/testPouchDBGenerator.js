@@ -14,7 +14,7 @@ var leveldownMobile = require('leveldown-mobile');
 // This is especially required for tape.coordinated.
 var defaultDirectory = path.join(
   testUtils.getPouchDBTestDirectory(),
-  'pouch-db-generator-db-' + testUtils.getUniqueRandomName()
+  'pouch-db-generator-db-' + testUtils.getRandomPouchDBName()
 );
 
 var test = tape({

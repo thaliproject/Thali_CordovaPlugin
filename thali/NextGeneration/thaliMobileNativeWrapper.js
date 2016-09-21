@@ -3,7 +3,7 @@
 var Promise = require('./thaliPromise');
 var PromiseQueue = require('./promiseQueue');
 var EventEmitter = require('events').EventEmitter;
-var logger = require('../thaliLogger')('thaliMobileNativeWrapper');
+var logger = require('../ThaliLogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
@@ -463,8 +463,8 @@ module.exports.stopListeningForAdvertisements = function () {
  * layer MUST tear down the associated non-TCP connection.
  *
  * On `multiConnect` platforms all incoming TCP connections are sent directly to
- * the router started by {@link module:TCPServersManager.start} since we have
- * no need for {@link module:TCPServersManager} on these platforms.
+ * the router started by {@link module:thaliMobileNativeWrapper.start} since we 
+ * have no need for {@link module:TCPServersManager} on these platforms.
  *
  * ## Repeated calls
  *

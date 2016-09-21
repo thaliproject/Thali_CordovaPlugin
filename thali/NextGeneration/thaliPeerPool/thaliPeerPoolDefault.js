@@ -4,7 +4,7 @@ var util = require('util');
 var ThaliPeerPoolInterface = require('./thaliPeerPoolInterface');
 var thaliConfig = require('../thaliConfig');
 var ForeverAgent = require('forever-agent');
-var logger = require('../../thaliLogger')('thaliPeerPoolDefault');
+var logger = require('../../ThaliLogger')('thaliPeerPoolDefault');
 var Utils = require('../utils/common.js');
 
 /** @module thaliPeerPoolDefault */

@@ -1,5 +1,11 @@
 'use strict';
 
+// Issue #419
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
+  return;
+}
+
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
@@ -7,6 +13,8 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 var logger = require('thali/thaliLogger')('testThaliMobileNative');
 var Promise = require('thali/NextGeneration/thaliPromise');
 var assert = require('assert');
+
+var logger = require('../lib/testLogger')('testThaliMobileNative');
 
 // jshint -W064
 

@@ -10,7 +10,7 @@ var express = require('express');
 var validations = require('../validations');
 var thaliConfig = require('./thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-var logger = require('../thaliLogger')('thaliWifiInfrastructure');
+var logger = require('../ThaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var https = require('https');
 
