@@ -4,13 +4,13 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var nodessdp = require('node-ssdp');
 var ip = require('ip');
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 var url = require('url');
 var express = require('express');
 var validations = require('../validations');
 var thaliConfig = require('./thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-var logger = require('../thalilogger')('thaliWifiInfrastructure');
+var logger = require('../ThaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var https = require('https');
 
@@ -197,7 +197,8 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     try {
       validations.ensureValidPort(portNumber);
     } catch (error) {
-      logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
+      logger.warn('Failed to parse a valid port number from location: %s',
+        data.LOCATION);
       return false;
     }
     peer.hostAddress = parsedLocation.hostname;
@@ -335,6 +336,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
   });
 };
 
+// jscs:disable maximumLineLength
 /**
  * This will start the local Wi-Fi Infrastructure Mode discovery mechanism
  * (currently SSDP). Calling this method will trigger {@link
@@ -354,6 +356,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  *
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
 function () {
   var self = this;
@@ -407,7 +410,7 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.listening.target = false;
   }
-  var action = function (resolve, reject) {
+  var action = function (resolve) {
     if (!self.states.listening.current) {
       return resolve();
     }
@@ -424,6 +427,7 @@ function (skipPromiseQueue, changeTarget) {
   }
 };
 
+// jscs:disable maximumLineLength
 /**
  * This method will start advertising the peer's presence over the local Wi-Fi
  * Infrastructure Mode discovery mechanism (currently SSDP). When creating the
@@ -464,9 +468,16 @@ function (skipPromiseQueue, changeTarget) {
  * retrieve. No details will be provided about the peer on who the changes are
  * for. All that is provided is a flag just indicating that something has
  * changed. It is up to other peer to connect and retrieve details on what has
- * changed if they are interested.
+ * changed if they are interested. The way this flag MUST be implemented is by
+ * creating a UUID the first time startUpdateAdvertisingAndListening is called
+ * and maintaining that UUID until stopAdvertisingAndListening is called. When
+ * the UUID is created a generation counter MUST be set to 0. Every subsequent
+ * call to startUpdateAdvertisingAndListening until the counter is reset MUST
+ * increment the counter by 1. The USN set by a call to
+ * startUpdateAdvertisingAndListening MUST be of the form `data:` + uuid.v4() +
+ * `:` + generation.
  *
- * * By design this method is intended to be called multiple times without
+ * By design this method is intended to be called multiple times without
  * calling stop as each call causes the currently notification flag to change.
  *
  * | Error String | Description |
@@ -479,6 +490,7 @@ function (skipPromiseQueue, changeTarget) {
  *
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening =
 function () {
   var self = this;
@@ -537,6 +549,8 @@ function () {
       };
       var listeningHandler = function () {
         self.routerServerPort = self.routerServer.address().port;
+        logger.debug('listening', self.routerServerPort);
+
         self._server.setUSN(self.usn);
         // We need to update the location string, because the port
         // may have changed when we re-start the router server.
@@ -556,7 +570,9 @@ function () {
         ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
         pskCallback: function (id) {
           return self.pskIdToSecret(id);
-        }
+        },
+        key: thaliConfig.BOGUS_KEY_PEM,
+        cert: thaliConfig.BOGUS_CERT_PEM
       };
       self.routerServer = https.createServer(options, self.expressApp)
         .listen(self.routerServerPort, listeningHandler);
@@ -591,7 +607,7 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.advertising.target = false;
   }
-  var action = function (resolve, reject) {
+  var action = function (resolve) {
     if (!self.states.advertising.current) {
       return resolve();
     }
@@ -642,13 +658,15 @@ function (skipPromiseQueue, changeTarget) {
  * @event wifiPeerAvailabilityChanged
  * @public
  * @type {Object}
- * @property {string} peerIdentifier This is the USN value
- * @property {string} hostAddress This can be either an IP address or a DNS
+ * @property {string} peerIdentifier This is the UUID part of the USN value.
+ * @property {number} generation This is the generation part of the USN value
+ * @property {?string} hostAddress This can be either an IP address or a DNS
  * address encoded as a string
- * @property {number} portNumber The port on the hostAddress to use to connect
+ * @property {?number} portNumber The port on the hostAddress to use to connect
  * to the peer
  */
 
+// jscs:disable maximumLineLength
 /**
  * For the definition of this event please see {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
@@ -672,6 +690,7 @@ function (skipPromiseQueue, changeTarget) {
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
+// jscs:enable maximumLineLength
 
 /**
  * [NOT IMPLEMENTED]

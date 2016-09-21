@@ -4,7 +4,7 @@ var PeerDictionary = require('./thaliPeerDictionary');
 var ThaliMobile = require('../thaliMobile');
 var ThaliNotificationAction = require('./thaliNotificationAction.js');
 var NotificationBeacons = require('./thaliNotificationBeacons');
-var logger = require('../../thalilogger')('thaliNotificationClient');
+var logger = require('../../ThaliLogger')('thaliNotificationClient');
 var assert = require('assert');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
@@ -27,7 +27,7 @@ var util = require('util');
  * @param {number} suggestedTCPTimeout Provides a hint to what time out to
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
- * @param {module:thaliMobile.connectionTypes} connectionType The type of
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType The type of
  * connection that will be used when connecting to this peer.
  */
 function PeerAdvertisesDataForUs (keyId, pskIdentifyField,
@@ -102,6 +102,12 @@ util.inherits(ThaliNotificationClient, EventEmitter);
 
 /**
  * Fired whenever we discover a peer who is looking for us.
+ *
+ * Note: This value should be static but we have made it a value on the
+ * prototype because otherwise we would have to require thaliNotificationClient
+ * in our mobile mock to get to this value. Requiring this file causes certain
+ * state changes that screw up testing. So I decided to simplify my life and
+ * just put this on the prototype.
  *
  * @public
  * @event module:thaliNotificationClient.event:peerAdvertisesDataForUs

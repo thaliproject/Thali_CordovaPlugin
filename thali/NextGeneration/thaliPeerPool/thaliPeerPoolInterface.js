@@ -2,6 +2,7 @@
 
 var PeerAction = require('./thaliPeerAction');
 var assert = require('assert');
+var Promise = require('lie');
 
 /** @module thaliPeerPoolInterface */
 
@@ -43,83 +44,115 @@ function ThaliPeerPoolInterface() {
 }
 
 /**
- * Tracks what actions are still somewhere in this object. Each object is
- * added as a member of the inQueue object using its ID as the key.
- * @type {Object}
+ * Tracks what actions are still somewhere in this object.
+ * Each object is added as a member of the inQueue object
+ * using its ID as the key.
  * @private
+ * @type {Object}
  */
 ThaliPeerPoolInterface.prototype._inQueue = null;
 
-// jscs:disable jsDoc
 /**
- * Adds a request to run the specified peerAction.
+ * Adds a request to run the specified 'peerAction'.
  *
- * If there is already an entry either in the queue or currently running with
- * the same peerAction object then the "Object already in use" error MUST be
- * returned and no further action taken.
+ * If peer action is null or not a 'PeerAction' object then
+ * the 'Bad peerAction' error MUST be thrown.
  *
- * If peerAction is null or not a peerAction object then a "Bad peerAction"
- * error MUST be returned.
+ * If there is already an entry either in the queue then
+ * the 'Object already in use' error MUST be thrown.
  *
- * If a peerAction is submitted that is not in CREATED state then an error MUST
- * be returned with the message "Object not in created".
+ * If a peer action is submitted that is not in CREATED state then
+ * 'Object not in created' error MUST be thrown.
  *
- * When an action is submitted the pool MUST override the action's kill method
- * so as to be able to intercept it. When kill is called if the action has
- * not started yet then it will just be removed from the queue and the action's
- * own kill method called just for completeness sake (it should be a NOOP). If
- * kill is called and the action has started then first the action's kill
- * method MUST be called and then the action must be removed from running and
- * discarded.
+ * We must add peer action to the queue.
+ * We must remove peer action from the queue when it will become 'killed'.
  *
  * @public
  * @param {module:thaliPeerAction~PeerAction} peerAction
- * @returns {?Error} Null unless there is a problem in which case Error is
- * returned.
+ * @throws {Error}
  */
-// jscs:enable jsDoc
 ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
-  var self = this;
   if (!peerAction || !(peerAction instanceof PeerAction)) {
-    return new Error(ThaliPeerPoolInterface.BAD_PEER_ACTION);
+    throw new Error(ThaliPeerPoolInterface.ERRORS.BAD_PEER_ACTION);
   }
   if (peerAction.getActionState() !== PeerAction.actionState.CREATED) {
-    return new Error(ThaliPeerPoolInterface.OBJECT_NOT_IN_CREATED);
+    throw new Error(ThaliPeerPoolInterface.ERRORS.OBJECT_NOT_IN_CREATED);
   }
-  if (self._inQueue[peerAction.getId()]) {
-    return new Error(ThaliPeerPoolInterface.OBJECT_ALREADY_ENQUEUED);
+  var peerActionId = peerAction.getId();
+  if (this._inQueue[peerActionId]) {
+    throw new Error(ThaliPeerPoolInterface.ERRORS.OBJECT_ALREADY_ENQUEUED);
   }
-  if (!peerAction._poolScratch) {
-    peerAction._poolScratch = {};
-  }
-  peerAction._poolScratch.kill = peerAction.kill;
+
+  this._inQueue[peerActionId] = peerAction;
+
+  // TODO implement _TODO_ mentioned in 'ThaliPullReplicationFromNotification'
+  // We can use here:
+  // peerAction.once('killed', this._onPeerActionKilled.bind(this, peerAction));
+
+  // This is a workaround for 'once'.
+  var self = this;
+  var originalKill = peerAction.kill;
   peerAction.kill = function () {
-    assert(self._inQueue[peerAction.getId()] === peerAction, 'Items should ' +
-      'not escape the queue without going through kill');
-    delete self._inQueue[peerAction.getId()];
-    // This code only needs to run once so we can restore the original kill
-    // to handle future calls.
-    peerAction.kill = this._poolScratch.kill.bind(peerAction);
-    return this._poolScratch.kill.call(peerAction);
-  };
-  self._inQueue[peerAction.getId()] = peerAction;
-  return null;
+    self._onPeerActionKilled(peerAction);
+    peerAction.kill = originalKill;
+    return originalKill.apply(this, arguments);
+  }
 };
 
 /**
- * Error message returned when enqueue is called with a null or bad object.
- * @type {string}
- * @readonly
+ * Remove peer action from the queue if it become 'killed'.
+ * @private
+ * @param {module:thaliPeerAction~PeerAction} peerAction
  */
-ThaliPeerPoolInterface.BAD_PEER_ACTION = 'Bad peerAction';
+ThaliPeerPoolInterface.prototype._onPeerActionKilled = function (peerAction) {
+  var peerActionId = peerAction.getId();
+  assert(
+    this._inQueue[peerActionId] === peerAction,
+    'peerAction shouldn\'t escape the queue without going through kill'
+  );
+  delete this._inQueue[peerActionId];
+}
 
 /**
- * Error message returned when enqueue is called with an action that is already
- * in the queue.
- * @type {string}
+ * Error messages.
+ * @public
+ * @enum {string}
+ * @readonly
  */
-ThaliPeerPoolInterface.OBJECT_ALREADY_ENQUEUED = 'Object already in use';
+ThaliPeerPoolInterface.ERRORS = {
+  BAD_PEER_ACTION: 'Bad peerAction',
+  OBJECT_ALREADY_ENQUEUED: 'Object already in use',
+  OBJECT_NOT_IN_CREATED: 'Object not in created',
+  QUEUE_IS_NOT_EMPTY: 'Queue should be empty before start'
+};
 
-ThaliPeerPoolInterface.OBJECT_NOT_IN_CREATED = 'Object not in created';
+ThaliPeerPoolInterface.prototype.start = function () {
+  assert(
+    Object.getOwnPropertyNames(this._inQueue).length === 0,
+    ThaliPeerPoolInterface.ERRORS.QUEUE_IS_NOT_EMPTY
+  );
+}
+
+/**
+ * Kills all peer actions in the queue.
+ * @public
+ */
+ThaliPeerPoolInterface.prototype.stop = function () {
+  var self = this;
+
+  var promises = [];
+  Object.getOwnPropertyNames(this._inQueue)
+  .forEach(function (peerActionId) {
+    var peerAction = self._inQueue[peerActionId];
+    peerAction.kill();
+    promises.push(peerAction.waitUntilKilled());
+  });
+  assert(
+    Object.getOwnPropertyNames(this._inQueue).length === 0,
+    ThaliPeerPoolInterface.ERRORS.QUEUE_IS_NOT_EMPTY
+  );
+
+  return Promise.all(promises);
+}
 
 module.exports = ThaliPeerPoolInterface;

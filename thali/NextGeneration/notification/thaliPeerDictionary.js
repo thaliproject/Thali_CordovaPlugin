@@ -41,7 +41,7 @@ module.exports.peerState = {
  *
  * @public
  * @constructor
- * @param {module:thaliMobile.connectionTypes} connectionType
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
  * @param {string} hostAddress
  * @param {number} portNumber
  * @param {number} suggestedTCPTimeout
@@ -91,7 +91,7 @@ PeerConnectionInformation.prototype.getSuggestedTCPTimeout = function () {
  * Returns the connection type that we use to communicate with the peer.
  *
  * @public
- * @return {module:thaliMobile.connectionTypes} TCP time out
+ * @return {module:ThaliMobileNativeWrapper.connectionTypes} TCP time out
  */
 PeerConnectionInformation.prototype.getConnectionType = function () {
   return this._connectionType;

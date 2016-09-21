@@ -24,7 +24,7 @@ var peerActionCounter = 0;
  * @interface PeerAction
  * @constructor
  * @param {string} peerIdentifier
- * @param {module:thaliMobile.connectionTypes} connectionType
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
  * @param {string} actionType
  * @param {string} pskIdentity
  * @param {Buffer} pskKey
@@ -73,7 +73,7 @@ PeerAction.prototype.getPeerIdentifier = function () {
 /**
  * The type of connection the requests will be sent over
  * @private
- * @type {module:thaliMobile.connectionTypes}
+ * @type {module:ThaliMobileNativeWrapper.connectionTypes}
  */
 PeerAction.prototype._connectionType = null;
 
@@ -235,5 +235,9 @@ PeerAction.prototype.kill = function () {
   this._actionState = PeerAction.actionState.KILLED;
   return null;
 };
+
+PeerAction.prototype.waitUntilKilled = function () {
+  return Promise.resolve();
+}
 
 module.exports = PeerAction;

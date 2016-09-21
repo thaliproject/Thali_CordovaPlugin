@@ -21,7 +21,7 @@ cd `dirname $0`
 cd ../..
 repositoryRoot=$(pwd)
 cd test/TestServer
-jx npm install
+jx npm install --no-optional
 jx generateServerAddress.js $2
 cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest
@@ -42,6 +42,7 @@ cd ThaliTest
 #cordova platform add ios
 cordova platform add android
 cd www/jxcore
+jx installCustomPouchDB.js
 jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
 
 if [ $runningInMinGw == true ]; then

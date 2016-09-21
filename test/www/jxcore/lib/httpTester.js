@@ -99,6 +99,8 @@ module.exports.getTestHttpsServer = function (expressApp,
 
     var options = {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM,
       pskCallback : pskCallback
     };
 
@@ -152,7 +154,7 @@ module.exports.generateSeqDocPath = function (devicePublicKey) {
 
 module.exports.getSeqDoc = function(dbName, serverPort, pskId, pskKey,
                                     devicePublicKey, host) {
-  var path = '/db/' + dbName + '/' +
+  var path = thaliConfig.BASE_DB_PATH + '/' + dbName + '/' +
     module.exports.generateSeqDocPath(devicePublicKey);
   return module.exports.pskGet(serverPort, path, pskId, pskKey, host)
     .then(function (responseBody) {

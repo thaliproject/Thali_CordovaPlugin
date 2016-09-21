@@ -41,6 +41,28 @@ configuration before finally completing and tearing down it's resources.
 
 ## Usage
 
+### Running your own NPM registry
+From time to time we run into bugs in PouchDB and Express-PouchDB that we can't
+get fixed and into the public NPM repo fast enough to not block our development.
+So we have written a script (installCustomPouchDB.js) that handles installing a
+custom verison of those packages if and when we need them. To make this work we
+depend on the developer running a local copy of a program called sinopia
+(although any private NPM repository server will do) and using that as a place
+to stage our custom releases. This requires the following manual steps:
+
+1. `npm install -g sinopia`. If you get errors, try to install via
+`npm install -g sinopia --no-optional --no-shrinkwrap`
+2. Run the 'sinopia' command in a terminal window and leave it running, forever.
+3. `npm set registry http://localhost:4873` or whatever the address of the
+NPM registry server is. 
+4. `jx npm get registry`. There should be http://localhost:4873 or the other address from the previous point.
+Otherwise run `jx npm set registry http://localhost:4873`
+5. `npm adduser --registry http://localhost:4873` this last command will require
+you to make up a name and password.
+
+These steps really only have to be done once. Our code will detect the registry
+and use it correctly.
+
 ### Mobile
 
 To run either unit or performance tests on mobile devices one first has to build a Cordova project and then launch
@@ -58,7 +80,7 @@ Android and iOS. This assumes you are running on a Mac with all the right tools.
 3. Go to Thali_CordovaPlugin/test/TestServer
 4. Examine Config_PerfTest.json or Config_UnitTest.json (depending on the test type you are running) and make sure it
 is configured properly.
-5. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2}}` in that directory on your local PC to start the 
+5. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2\}\}` in that directory on your local PC to start the 
 coordination server. Obviously edit the device counts passed on the command line to reflect the actual test
 environment.
 6. Deploy and run the tests on your two Android or two iPhone devices.
