@@ -64,7 +64,7 @@ CI_TEST_MODE=true;
 if [ $CI_TEST_MODE == true ]
 then
   LOG $GREEN_COLOR "Running in CI test mode"
-  jx CITestMode.js;ERROR_ABORT
+  node CITestMode.js;ERROR_ABORT
 fi
 
 # jx npm test;ERROR_ABORT

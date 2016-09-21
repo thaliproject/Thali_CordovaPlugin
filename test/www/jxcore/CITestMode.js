@@ -15,8 +15,7 @@ function updateUnitTestConfig() {
     let newContent = originalContent.toString().replace(/numDevices: -?[0-9]/g, 'numDevices: -1');
 
     if (originalContent === newContent) {
-      var err = new Error('Replace function with regex didn\'t worked properly!');
-      throw err;
+      throw new Error('Replace function with regex didn\'t worked properly!');;
     }
 
     fs.writeFileSync(locationOfUnitTestConfig, newContent);
