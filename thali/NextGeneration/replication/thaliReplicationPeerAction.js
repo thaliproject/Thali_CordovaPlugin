@@ -180,6 +180,14 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   var self = this;
+
+  var stackTrace = '';
+  try {
+    throw new Error("something");
+  } catch (e) {
+    stackTrace = e.stack;
+  }
+
   this._completed = false;
 
   return ThaliReplicationPeerAction.super_.prototype.start
@@ -269,7 +277,10 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
               'Got error on replication - ',
               Utils.serializePouchError(err)
             );
-            self._complete([err]);
+            // self._complete([err]);
+            self._complete([
+              new Error('Got error on replication!, error: ' + err.toString() + ', stack: ' + stackTrace)
+            ]);
           })
           .on('change', function (info) {
             self._replicationTimer();
