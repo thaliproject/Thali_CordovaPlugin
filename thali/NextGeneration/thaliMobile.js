@@ -475,7 +475,17 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
  * @returns {Promise<?Error>}
  */
 module.exports.disconnect = function(peerIdentifier, connectionType) {
-  return Promise.reject('not implement');
+  return promiseQueue
+    .enqueue(function (resolve, reject) {
+      if (connectionType === connectionTypes.TCP_NATIVE) {
+        return reject(new Error('Wifi does not support disconnect'));
+      }
+
+      return thaliMobileNativeWrapper
+        .disconnect(peerIdentifier)
+        .then(resolve)
+        .catch(reject);
+    });
 };
 /*
         EVENTS
