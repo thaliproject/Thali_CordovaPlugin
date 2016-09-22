@@ -118,7 +118,7 @@ function replaceStringsInFile(name, replacements) {
 // Our task is to replace 'b' between 'a' and 'c' with other value.
 // We couldn't use the simpliest solution:
 //   'abc'.replace(/(?<=a)(b)(?=c)/, 'q')
-// (?<=...) is not supported in nodejs. (we don't want to require 'pcre' here)
+// (?<=...) is not supported in nodejs (we don't want to require 'pcre' here).
 // So we have to use:
 //   'abc'.replace(/(a)(b)(c)/, '$1q$3')
 
@@ -146,23 +146,6 @@ function replaceThaliConfig () {
 
 function replaceConnectionHelper () {
   var replacements = [];
-
-  // Example: 'private static final String SERVICE_UUID_AS_STRING = "fa87c0d0-afac-11de-8a39-0800200c9a66";'
-  // We want to replace 'fa87c0d0-afac-11de-8a39-0800200c9a66' with new uuid.v4.
-  replacements.push({
-    pattern: new RegExp(
-      [
-        '(',
-          ['static', 'final', 'String', 'SERVICE_UUID_AS_STRING'].join('\\s+'),
-          '\\s*', '=', '\\s*',
-        ')',
-        '(',
-          '"', '.*?', '"',
-        ')'
-      ].join('')
-    ),
-    value: '$1"' + uuid.v4() + '"'
-  });
 
   // Example: 'private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";'
   // We want to replace 'b6a44ad1-d319-4b3a-815d-8b805a47fb51' with new uuid.v4.
