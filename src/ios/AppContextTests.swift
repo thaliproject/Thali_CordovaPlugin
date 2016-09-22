@@ -11,6 +11,19 @@ import XCTest
 import UIKit
 import ThaliCore
 
+class THTestCase: XCTestCase {
+
+    override func recordFailureWithDescription(description: String,
+                                               inFile filePath: String,
+                                                      atLine lineNumber: UInt,
+                                                             expected: Bool) {
+        super.recordFailureWithDescription(description, inFile: filePath,
+                                           atLine: lineNumber, expected: expected)
+        print("\(description) - \(filePath) - \(lineNumber)")
+    }
+}
+
+
 extension NetworkStatusParameters {
 
     static let allValues = [bluetooth, bluetoothLowEnergy, wifi, cellular, bssid]
@@ -141,7 +154,7 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
 }
 
 // MARK: - Test cases
-class AppContextTests: XCTestCase {
+class AppContextTests: THTestCase {
 
     var context: AppContext! = nil
 
