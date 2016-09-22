@@ -7,7 +7,7 @@
 
 const fs = require('fs-extra-promise');
 
-const setUpFunctions = {
+var setUpFunctions = {
 
   updateUnitTestConfig: () => {
     const locationOfUnitTestConfig = '../../TestServer/UnitTestConfig.js';
@@ -87,15 +87,10 @@ function runFunctionAndCheckFailures(func, errStr) {
   }
 }
 
-for (let name in Object.getOwnPropertyNames(setUpFunctions)) {
-  runFunctionAndCheckFailures(setUpFunctions[name], name)
+for (let name in setUpFunctions) {
+  if (setUpFunctions.hasOwnProperty(name)) {
+    runFunctionAndCheckFailures(setUpFunctions[name], name);
+  }
 }
-
-// runFunctionAndCheckFailures(updateUnitTestConfig, 'Failed to update unitTestConfig!');
-// runFunctionAndCheckFailures(copyCINodeTestClass, 'Failed to copy CI node test class!');
-// runFunctionAndCheckFailures(copyCINativeTestClass, 'Failed to copy CI native test class!');
-// runFunctionAndCheckFailures(emptyAlliOSTestFilesButOne, 'Failed to empty all iOS test files but one!');
-// runFunctionAndCheckFailures(updateThaliTestSuiteFunction, 'Failed to update ThaliTestSuite!');
-// runFunctionAndCheckFailures(updateRunTestsToRunOnlyOneNodeTest, 'Failed to modify runTests.js file!');
 
 process.exit(0);
