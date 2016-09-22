@@ -90,7 +90,7 @@ TestFramework.prototype._setOptions = function (options) {
     asserts.isNumber(self._options.minDevices[platformName]);
   });
 
-  // Required platforms can not be equals to desiged platforms.
+  // Required platforms can not be equal to desired platforms.
   // Required platforms should be included in desired platforms.
   // For example: desired platforms are [ 'android', 'desktop', 'ios' ],
   //   required platforms are [ 'android', 'ios' ].
