@@ -10,7 +10,7 @@
 import XCTest
 @testable import ThaliCore
 
-class AdvertiserManagerTests: XCTestCase {
+class AdvertiserManagerTests: THTestCase {
 
     var serviceType: String!
     var advertiserManager: AdvertiserManager!

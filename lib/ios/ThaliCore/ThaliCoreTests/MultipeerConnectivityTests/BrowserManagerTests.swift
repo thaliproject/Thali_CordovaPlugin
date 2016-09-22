@@ -10,7 +10,7 @@
 import XCTest
 @testable import ThaliCore
 
-class BrowserManagerTests: XCTestCase {
+class BrowserManagerTests: THTestCase {
 
     var serviceType: String!
 

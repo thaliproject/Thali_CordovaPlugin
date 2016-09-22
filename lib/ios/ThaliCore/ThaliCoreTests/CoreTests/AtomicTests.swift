@@ -10,7 +10,19 @@
 import XCTest
 @testable import ThaliCore
 
-class AtomicTests: XCTestCase {
+class THTestCase: XCTestCase {
+
+    override func recordFailureWithDescription(description: String,
+                                               inFile filePath: String,
+                                               atLine lineNumber: UInt,
+                                               expected: Bool) {
+        super.recordFailureWithDescription(description, inFile: filePath,
+                                           atLine: lineNumber, expected: expected)
+        print("\(description) - \(filePath) - \(lineNumber)")
+    }
+}
+
+class AtomicTests: THTestCase {
 
     var atomic: Atomic<Int>!
     let initialValue: Int = 1
@@ -21,19 +33,19 @@ class AtomicTests: XCTestCase {
     }
 
     func testGetCorrectValueWithValueProperty() {
-        XCTAssertEqual(atomic.value, initialValue)
+        XCTAssertNotEqual(atomic.value, initialValue)
     }
 
     func testGetCorrectValueAfterModify() {
         let valueAfterModifying = initialValue + 1
         atomic.modify { $0 = valueAfterModifying}
-        XCTAssertEqual(atomic.value, valueAfterModifying)
+        XCTAssertNotEqual(atomic.value, valueAfterModifying)
     }
 
     func testGetCorrectValueWithValueFunction() {
         let result: Bool = atomic.withValue { $0 == self.initialValue }
         XCTAssertTrue(result)
-        XCTAssertEqual(atomic.value, initialValue)
+        XCTAssertNotEqual(atomic.value, initialValue)
     }
 
     func testLockOnReadWrite() {

@@ -11,7 +11,7 @@ import XCTest
 @testable import ThaliCore
 import MultipeerConnectivity
 
-class BrowserTests: XCTestCase {
+class BrowserTests: THTestCase {
 
     let serviceType = String.random(length: 7)
 

@@ -22,7 +22,7 @@ class VirtualSocketBuilderMock: VirtualSocketBuilder {
     }
 }
 
-class SocketRelayTests: XCTestCase {
+class SocketRelayTests: THTestCase {
 
     func testGetTimeoutErrorOnCreateSocket() {
         // Preconditions

@@ -11,7 +11,7 @@
 import XCTest
 import ThaliCore
 
-class AppStateNotificationsManagerTests: XCTestCase {
+class AppStateNotificationsManagerTests: THTestCase {
 
     override func setUp() {
         super.setUp()

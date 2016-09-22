@@ -10,7 +10,7 @@
 import XCTest
 @testable import ThaliCore
 
-class PeerIdentifierTests: XCTestCase {
+class PeerIdentifierTests: THTestCase {
 
     func testGenetationByNextGenerationCallShouldBeIncreasedByOne() {
         let peer = PeerIdentifier()
