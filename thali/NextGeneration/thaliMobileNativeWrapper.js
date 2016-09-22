@@ -3,6 +3,7 @@
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var EventEmitter = require('events').EventEmitter;
+var platform = require('./utils/platform');
 var logger = require('../ThaliLogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var express = require('express');
@@ -648,7 +649,21 @@ module.exports._terminateConnection = function (incomingConnectionId) {
  * a null result.
  */
 module.exports._disconnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+  return gPromiseQueue
+    .enqueue(function (resolve, reject) {
+      if (platform.isAndroid) {
+        return reject(new Error('Not multiConnect platform'));
+      }
+      if (platform.isIOS) {
+        Mobile('disconnect')
+          .callNative(function (errorMsg) {
+            if (errorMsg) {
+              return reject(new Error(errorMsg));
+            }
+            resolve();
+          });
+      }
+    });
 };
 
 /**
@@ -664,9 +679,17 @@ module.exports._disconnect = function (peerIdentifier) {
  * reject with an Error will be returned) the response will be a resolve with
  * a null result.
  */
-module.exports.disconnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
-};
+module.exports.disconnect = function(peerIdentifier) {
+  if (platform.isAndroid) {
+    return this._terminateConnection(peerIdentifier);
+  }
+  if (platform.isIOS) {
+    return this._disconnect(peerIdentifier)
+  }
+
+  return Promise.reject(new Error('Disconnect can not be called on ' +
+    platform.name + ' platform'));
+}
 
 /**
  * Used on `connect` platforms to terminate a TCP/IP listener waiting for

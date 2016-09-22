@@ -517,8 +517,18 @@ var getPeerHostInfoStrategies = (function () {
  * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
  * @returns {Promise<?Error>}
  */
-module.exports.disconnect = function () {
-  return Promise.reject('not implemented');
+module.exports.disconnect = function(peerIdentifier, connectionType) {
+  return promiseQueue
+    .enqueue(function (resolve, reject) {
+      if (connectionType === connectionTypes.TCP_NATIVE) {
+        return reject(new Error('Wifi does not support disconnect'));
+      }
+
+      return thaliMobileNativeWrapper
+        .disconnect(peerIdentifier)
+        .then(resolve)
+        .catch(reject);
+    });
 };
 /*
         EVENTS
