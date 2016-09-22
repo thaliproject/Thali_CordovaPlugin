@@ -10,6 +10,8 @@ var uuid         = require('node-uuid');
 var objectAssign = require('object-assign');
 var EventEmitter = require('events').EventEmitter;
 
+var arrayFrom = require('array-from');
+
 var asserts = require('./utils/asserts.js');
 var Promise = require('./utils/Promise');
 var logger  = require('./utils/ThaliLogger')('Socket');
@@ -85,7 +87,7 @@ Socket.prototype._bind = function (method, event, handler) {
 // We want to be able to unbind this auto-apply function.
 Socket.prototype._apply = function (method) {
   var self = this;
-  var args = Array.from(arguments).slice(1);
+  var args = arrayFrom(arguments).slice(1);
 
   function updatedHandler () {
     self._rawSocket[method].apply(self._rawSocket, args);
