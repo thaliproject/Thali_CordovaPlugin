@@ -237,7 +237,7 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
   });
   testServer.setUSN(USN.stringify({
     peerIdentifier: testPeerIdentifier,
-    generation: 0,
+    generation: 0
   }));
 
   var spy = sinon.spy();

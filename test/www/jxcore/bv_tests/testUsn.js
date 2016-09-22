@@ -18,7 +18,7 @@ test('Correctly parses/stringifies USN', function (t) {
 
   var peer = {
     peerIdentifier: someUuid,
-    generation: someGeneration,
+    generation: someGeneration
   };
 
   t.deepEqual(USN.parse(usn), peer, 'correctly parses USN string');

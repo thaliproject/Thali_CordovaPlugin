@@ -71,7 +71,7 @@ var createTestServer = function (peerIdentifier) {
   });
   var usn = USN.stringify({
     peerIdentifier: peerIdentifier,
-    generation: 0,
+    generation: 0
   });
   testServer.setUSN(usn);
   return testServer;
@@ -137,7 +137,7 @@ function(t) {
     firstUuid = peer.peerIdentifier;
     t.deepEqual(peer, {
       peerIdentifier: firstUuid,
-      generation: 0,
+      generation: 0
     }, 'first invocation sets 0 generation');
     return wifiInfrastructure.startUpdateAdvertisingAndListening();
   }).then(function () {
@@ -145,7 +145,7 @@ function(t) {
     var peer = wifiInfrastructure.peer;
     t.deepEqual(peer, {
       peerIdentifier: firstUuid,
-      generation: 1,
+      generation: 1
     }, 'second invocation doesn’t change UUID but increments generation');
     return wifiInfrastructure.startUpdateAdvertisingAndListening();
   }).then(function () {
@@ -153,7 +153,7 @@ function(t) {
     var peer = wifiInfrastructure.peer;
     t.deepEqual(peer, {
       peerIdentifier: firstUuid,
-      generation: 2,
+      generation: 2
     }, 'third invocation doesn’t change UUID but increments generation');
     t.end();
   }).catch(t.end);
@@ -219,7 +219,7 @@ test('#startUpdateAdvertisingAndListening sends correct requests', function (t) 
 test('messages with invalid location or USN should be ignored', function (t) {
   var usn = USN.stringify({
     peerIdentifier: uuid.v4(),
-    generation: 0,
+    generation: 0
   });
   var testMessage = {
     NT: thaliConfig.SSDP_NT,
@@ -293,12 +293,12 @@ test('verify that Thali-specific messages are filtered correctly',
 function (t) {
   var usn = USN.stringify({
     peerIdentifier: uuid.v4(),
-    generation: 4,
+    generation: 4
   });
 
   var irrelevantNTMessage = {
     NT: 'foobar',
-    USN: usn,
+    USN: usn
   };
   t.equal(
     wifiInfrastructure._shouldBeIgnored(irrelevantNTMessage),
@@ -310,7 +310,7 @@ function (t) {
 
   var relevantMessage = {
     NT: thaliConfig.SSDP_NT,
-    USN: usn,
+    USN: usn
   };
   t.equal(
     wifiInfrastructure._shouldBeIgnored(relevantMessage),

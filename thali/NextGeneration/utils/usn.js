@@ -43,7 +43,7 @@ var USN = {
     }
     return {
       peerIdentifier: peerIdentifier,
-      generation: generation,
+      generation: generation
     };
   },
 
@@ -53,7 +53,7 @@ var USN = {
    */
   stringify: function (peer) {
     return USN._prefix + peer.peerIdentifier + ':' + peer.generation;
-  },
+  }
 };
 
 module.exports = USN;

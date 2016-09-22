@@ -90,7 +90,7 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL,
-    udn: thaliConfig.SSDP_NT,
+    udn: thaliConfig.SSDP_NT
   };
   this._server = new nodessdp.Server(serverOptions);
   this._setLocation();
@@ -587,7 +587,7 @@ ThaliWifiInfrastructure.prototype._updateOwnPeer = function () {
   if (!this.peer) {
     this.peer = {
       peerIdentifier: uuid.v4(),
-      generation: 0,
+      generation: 0
     };
 
     // Update own peers history
