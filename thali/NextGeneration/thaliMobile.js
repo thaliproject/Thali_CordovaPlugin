@@ -2,7 +2,7 @@
 
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
-var logger = require('../thaliLogger')('thaliMobile');
+var logger = require('../ThaliLogger')('thaliMobile');
 var platform = require('thali/NextGeneration/utils/platform');
 
 var thaliConfig = require('./thaliConfig');

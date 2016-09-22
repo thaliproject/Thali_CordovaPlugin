@@ -25,6 +25,9 @@ var argv = parseargv(process.argv.slice(2), {
 });
 
 var spawnedInstanceCount = argv.instanceCount;
+if (spawnedInstanceCount === -1) {
+  spawnedInstanceCount = DEFAULT_INSTANCE_COUNT;
+}
 if (argv.waitForInstance) {
   spawnedInstanceCount = spawnedInstanceCount - 1;
 }
@@ -58,7 +61,8 @@ var logInstanceOutput = function (data, instanceId) {
 var setListeners = function (instance, instanceId) {
   instanceLogs[instanceId] = '';
 
-  instance.stdout.on('data', function (data) {
+  instance.stdout
+  .on('data', function (data) {
     logInstanceOutput(data, instanceId);
 
     if (data.indexOf('PROCESS_ON_EXIT_') >= 0) {
@@ -77,7 +81,9 @@ var setListeners = function (instance, instanceId) {
       }
     }
   });
-  instance.stderr.on('data', function (data) {
+
+  instance.stderr
+  .on('data', function (data) {
     logInstanceOutput(data, instanceId);
   });
   instance.on('error', function (err) {
@@ -91,19 +97,17 @@ var setListeners = function (instance, instanceId) {
 };
 
 var testServerConfiguration = {
-  'devices': {
-    'android': 0,
-    'ios': argv.instanceCount
+  devices: {
+    android: 0,
+    ios: 0,
+    desktop: argv.instanceCount
   },
-  'honorCount': true,
-  userConfig: {
-    ios: {
-      numDevices: argv.instanceCount
-    },
-    android: {
-      numDevices: 0
-    }
-  }
+  minDevices: {
+    android: 0,
+    ios: 0,
+    desktop: 2
+  },
+  waiting_for_devices_timeout: 5 * 1000
 };
 
 var testServerInstance = spawn('jx', ['../../TestServer/index.js',
