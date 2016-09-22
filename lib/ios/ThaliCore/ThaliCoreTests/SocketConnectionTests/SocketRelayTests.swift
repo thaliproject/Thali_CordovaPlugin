@@ -43,7 +43,7 @@ class SocketRelayTests: XCTestCase {
         }
 
         // Should
-        waitForExpectationsWithTimeout(createSocketTimeout, handler: nil)
+        waitForExpectationsWithTimeout(createSocketTimeout + 1, handler: nil)
         XCTAssertEqual(error, .ConnectionTimedOut)
     }
 
