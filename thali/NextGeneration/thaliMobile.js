@@ -475,11 +475,7 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
  * @returns {Promise<?Error>}
  */
 module.exports.disconnect = function(peerIdentifier, connectionType) {
-  return promiseQueue.enqueue(function (resolve, reject) {
-    if (!platform.isIOS) {
-      return reject('not implement');
-    }
-  });
+  return Promise.reject('not implement');
 };
 /*
         EVENTS
