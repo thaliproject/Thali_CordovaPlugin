@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
+export NODEJS_ORG_MIRROR
+JX_NPM_JXB=jxb311
+export JX_NPM_JXB
+
 # Exit immediately if a command exits with a non-zero status.
 set -e
 

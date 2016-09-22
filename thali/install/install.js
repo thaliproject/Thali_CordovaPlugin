@@ -303,8 +303,6 @@ module.exports = function (callback, appRootDirectory) {
   // Get the app root as an argument or from app/www/jxcore/node_modules/thali.
   // Passing as argument can be leveraged in local development and testing
   // scenarios.
-  //
-  // 5 folders up
   appRootDirectory = appRootDirectory ||
                      path.join(__dirname, '..', '..', '..', '..', '..');
   var thaliDontCheckIn = path.join(appRootDirectory, 'thaliDontCheckIn' );
