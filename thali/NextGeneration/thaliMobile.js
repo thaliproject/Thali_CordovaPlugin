@@ -885,6 +885,29 @@ peerAvailabilities[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
 peerAvailabilities[connectionTypes.BLUETOOTH] = {};
 peerAvailabilities[connectionTypes.TCP_NATIVE] = {};
 
+// Issue #899
+var connectionTypePeersLimits = {};
+connectionTypePeersLimits[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
+  thaliConfig.MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT;
+connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
+  thaliConfig.BLUETOOTH_PEERS_LIMIT;
+connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
+  thaliConfig.TCP_NATIVE_PEERS_LIMIT;
+
+var emitIfConnectionTypePeersLimitReached = function (connectionType) {
+  var connectionTypePeers = peerAvailabilities[connectionType];
+  var connectionTypePeersCount = Object.keys(connectionTypePeers).length;
+  var peersLimit = connectionTypePeersLimits[connectionType];
+
+  if (connectionTypePeersCount > peersLimit) {
+    module.exports.emitter
+      .emit(connectionType + 'PeersLimitReached', {
+        limit: peersLimit,
+        count: connectionTypePeersCount
+      });
+  }
+}
+
 var changeCachedPeerUnavailable = function (peer) {
   removeAvailabilityWatcherFromPeerIfExists(peer);
 
@@ -894,9 +917,12 @@ var changeCachedPeerUnavailable = function (peer) {
 var changeCachedPeerAvailable = function (peer) {
   var cachedPeer = JSON.parse(JSON.stringify(peer));
   cachedPeer.availableSince = Date.now();
-  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
+  var peerIdentifier = peer.peerIdentifier;
+  var connectionType = peer.connectionType;
+  peerAvailabilities[connectionType][peerIdentifier] = cachedPeer;
 
   addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
+  emitIfConnectionTypePeersLimitReached(connectionType);
 };
 
 var changePeersUnavailable = function (connectionType) {
@@ -1191,6 +1217,10 @@ var emitNetworkChanged = function (networkChangedValue) {
   }
 };
 
+var emitDiscoveryDOS = function (dosInfo) {
+  module.exports.emitter.emit('discoveryDOS', dosInfo);
+};
+
 /**
  * Unless something went horribly wrong only one of thaliMobileNativeWrapper
  * or ThaliWifiInfrastructure should be enabled for this event at a time. We can
@@ -1206,6 +1236,18 @@ ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', emitNetworkChanged);
 
 thaliWifiInfrastructure.on('networkChangedWifi', emitNetworkChanged);
 
+Object.keys(connectionTypes)
+  .forEach(function (key) {
+    var connectionType = connectionTypes[key];
+    module.exports.emitter.on(connectionType + 'PeersLimitReached',
+      function (info) {
+        emitDiscoveryDOS({
+          connectionType: connectionType,
+          limit: info.limit,
+          count: info.count
+        });
+      }
+  });
 /**
  * Fired when we get more peer discoveries than we have allocated space to
  * store. This is pretty much guaranteed to be an attack so we expect whomever
