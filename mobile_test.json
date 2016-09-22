@@ -5,7 +5,6 @@
     "android": "android-release-unsigned.apk"
   },
   "target": "all",
-  "test": "true",
   "priority": "normal",
   "csname": {
     "android": "com.test.thalitest",
