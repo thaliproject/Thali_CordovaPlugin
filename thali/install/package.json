@@ -8,14 +8,16 @@
     "findit": "2.0.0",
     "randomstring": "1.1.5",
     "node-uuid": "1.4.7",
-    "js-polyfills": "0.1.22",
     "child-process-promise": "^1.1.0",
     "fs-extra-promise": "^0.2.0",
     "jxc": "^1.0.14",
     "lie": "^3.1.0",
     "request": "^2.74.0",
     "unzip": "^0.1.11",
-    "xcode": "^0.8.9"
+    "xcode": "^0.8.9",
+
+    "array-from": "2.1.1",
+    "end-with": "1.0.2"
   },
   "scripts": {
     "setupUnit": "./setUpTests.sh UnitTest_app.js",
