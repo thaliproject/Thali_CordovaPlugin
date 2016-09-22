@@ -10,6 +10,10 @@ var fs     = require('fs-extra-promise');
 var uuid         = require('node-uuid');
 var randomString = require('randomstring');
 
+// ponyfills
+var arrayFrom = require('array-from');
+var endsWith  = require('end-with');
+
 var Promise = require('./utils/Promise');
 require('./utils/process');
 
@@ -33,7 +37,7 @@ function findFirstFile (name) {
     .on('file', function (path) {
       // We can receive here 'path': 'a/b/my-file', 'a/b/bad-my-file', 'my-file', 'bad-my-file'.
       // Both 'a/b/my-file' and 'my-file' should be valid.
-      if (path === name || path.endsWith('/' + name)) {
+      if (path === name || endsWith(path, '/' + name)) {
         resultPath = path;
         finder.stop();
       }
@@ -63,7 +67,7 @@ function replaceContent(content, replacements) {
       isReplaced = true;
 
       // arguments are $0, $1, ..., offset, string
-      return Array.from(arguments).slice(1, -2)
+      return arrayFrom(arguments).slice(1, -2)
       .reduce(function (pattern, match, index) {
         // '$1' from strings like '$11 $12' shouldn't be replaced.
         return pattern.replace(
