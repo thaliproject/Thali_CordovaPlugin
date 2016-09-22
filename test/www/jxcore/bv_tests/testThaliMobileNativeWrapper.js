@@ -1,6 +1,6 @@
 'use strict';
 
-// Issue #419
+// Issue #914
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
   return;
@@ -456,7 +456,7 @@ if (!platform.isMobile) {
           dummyPeers.push({
             peerIdentifier: i + '',
             peerAvailable: peerAvailable,
-            pleaseConnect: false
+            generation: 0
           });
         }
         return dummyPeers;

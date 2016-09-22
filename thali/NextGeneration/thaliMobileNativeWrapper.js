@@ -819,7 +819,8 @@ var handlePeerAvailabilityChanged = function (peer) {
       // for that?
       module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
         peerIdentifier: peer.peerIdentifier,
-        portNumber: null
+        portNumber: null,
+        generation: null
       });
       resolve();
     };
@@ -829,7 +830,8 @@ var handlePeerAvailabilityChanged = function (peer) {
       .then(function (portNumber) {
         module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
           peerIdentifier: peer.peerIdentifier,
-          portNumber: portNumber
+          portNumber: portNumber,
+          generation: peer.generation
         });
         resolve();
       })

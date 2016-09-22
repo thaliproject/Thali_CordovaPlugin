@@ -144,15 +144,20 @@ test('peerAvailabilityChange is called', function (t) {
       t.ok(peers instanceof Array, 'peers must be an array');
       t.ok(peers.length !== 0, 'peers must not be zero-length');
 
-      t.ok(peers[0].hasOwnProperty('peerIdentifier'),
-        'peer must have peerIdentifier');
-      t.ok(typeof peers[0].peerIdentifier === 'string',
-        'peerIdentifier must be a string');
+      var peer = peers[0];
+      var keys = Object.keys(peer);
+      var expectedKeys = ['peerIdentifier', 'peerAvailable', 'generation'];
 
-      t.ok(peers[0].hasOwnProperty('peerAvailable'),
-        'peer must have peerAvailable');
-      t.ok(peers[0].hasOwnProperty('pleaseConnect'),
-        'peer must have pleaseConnect');
+      keys.sort();
+      expectedKeys.sort();
+
+      t.deepEqual(keys, expectedKeys,
+        'peer must have only peerIdentifier, peerAvailable and generation ' +
+        'properties');
+      t.ok(typeof peer.peerIdentifier === 'string',
+        'peerIdentifier must be a string');
+      t.ok(typeof peer.generation === 'number',
+        'generation must be a number');
 
       complete = true;
       t.end();
