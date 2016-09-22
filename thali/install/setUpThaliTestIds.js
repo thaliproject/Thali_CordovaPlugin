@@ -5,14 +5,13 @@ var format = util.format;
 
 var assert = require('assert');
 var findit = require('findit');
-var fs     = require('fs');
+var fs     = require('fs-extra-promise');
 
 var uuid         = require('node-uuid');
 var randomString = require('randomstring');
 
 var Promise = require('./utils/Promise');
 require('./utils/process');
-require('./utils/polyfills.js');
 
 
 // We want to find the first path that ends with 'name'.
@@ -54,32 +53,6 @@ function findFirstFile (name) {
   });
 }
 
-function readFile(path) {
-  return new Promise(function (resolve, reject) {
-    fs.readFile(path, 'utf8', function (error, content) {
-      if (error) {
-        reject(new Error(
-          format('we couldn\'t read file, reason: \'%s\'', error)
-        ));
-      }
-      resolve(content);
-    });
-  });
-}
-
-function writeFile(path, content) {
-  return new Promise(function (resolve, reject) {
-    fs.writeFile(path, content, 'utf8', function (error) {
-      if (error) {
-        reject(new Error(
-          format('we couldn\'t write file, reason: \'%s\'', error)
-        ));
-      }
-      resolve();
-    });
-  });
-}
-
 function replaceContent(content, replacements) {
   // String.prototype.replace in javascript is defected by design.
   // https://stackoverflow.com/questions/5257000/how-to-know-if-javascript-string-replace-did-anything
@@ -101,6 +74,7 @@ function replaceContent(content, replacements) {
     });
 
     if (!isReplaced) {
+      console.log(pattern);
       throw new Error(
         format(
           'we couldn\'t replace pattern: \'%s\' with value: \'%s\'',
@@ -122,12 +96,12 @@ function replaceStringsInFile(name, replacements) {
   return new Promise(function (resolve, reject) {
     return findFirstFile(name)
     .then(function (path) {
-      return readFile(path)
+      return fs.readFileAsync(path, 'utf8')
       .then(function (content) {
         return replaceContent(content, replacements);
       })
       .then(function (content) {
-        return writeFile(path, content);
+        return fs.writeFileAsync(path, content, 'utf8');
       })
       .then(resolve);
     });
@@ -158,13 +132,14 @@ function replaceThaliConfig () {
     pattern: new RegExp(
       [
         '(',
-          ['SSDP_NT', ':', '[\'"]'].join('\\s*'),
+          'SSDP_NT', '\\s*', ':', '\\s*',
         ')',
-        '(.*?)',
-        '([\'"])'
+        '(',
+          '[\'"]', '.*?', '[\'"]',
+        ')'
       ].join('')
     ),
-    value: '$1' + value + '$3'
+    value: '$1\'' + value + '\''
   };
   return replaceStringsInFile('thaliConfig.js', [replacement]);
 }
@@ -179,13 +154,14 @@ function replaceConnectionHelper () {
       [
         '(',
           ['static', 'final', 'String', 'SERVICE_UUID_AS_STRING'].join('\\s+'),
-          '\\s*', '=', '\\s*', '"',
+          '\\s*', '=', '\\s*',
         ')',
-        '(.*?)',
-        '(")'
+        '(',
+          '"', '.*?', '"',
+        ')'
       ].join('')
     ),
-    value: '$1' + uuid.v4() + '$3'
+    value: '$1"' + uuid.v4() + '"'
   });
 
   // Example: 'private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";'
@@ -196,13 +172,14 @@ function replaceConnectionHelper () {
       [
         '(',
           ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING'].join('\\s+'),
-          '\\s*', '=', '\\s*', '"',
+          '\\s*', '=', '\\s*',
         ')',
-        '(.*?)',
-        '(")'
+        '(',
+          '"', '.*?', '"',
+        ')'
       ].join('')
     ),
-    value: '$1' + uuid.v4() + '$3'
+    value: '$1"' + uuid.v4() + '"'
   });
 
   function getRandomNumber (min, max) {
@@ -216,13 +193,14 @@ function replaceConnectionHelper () {
       [
         '(',
           ['static', 'final', 'int', 'MANUFACTURER_ID'].join('\\s+'),
-          '\\s*', '=', '\\s*',
+          '\\s*', '=',
         ')',
-        '(.*?)',
-        '(;)'
+        '(',
+          '\\s*', '.*?', ';',
+        ')'
       ].join('')
     ),
-    value: '$1' + getRandomNumber(1100, 65534) + '$3'
+    value: '$1 ' + getRandomNumber(1100, 65534) + ';'
   });
 
   return replaceStringsInFile('ConnectionHelper.java', replacements);
@@ -239,13 +217,14 @@ function replaceJXcoreExtension() {
     pattern: new RegExp(
       [
         '(',
-          ['initWithServiceType', ':', '@"'].join('\\s*'),
+          ['initWithServiceType', ':', '@'].join('\\s*'),
         ')',
-        '(.*?)',
-        '(")'
+        '(',
+          '"', '.*?', '"',
+        ')'
       ].join('')
     ),
-    value: '$1' + value + '$3'
+    value: '$1"' + value + '"'
   };
   return replaceStringsInFile('JXcoreExtension.m', [replacement]);
 }
