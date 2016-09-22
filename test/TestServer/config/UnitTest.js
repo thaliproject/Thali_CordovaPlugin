@@ -4,11 +4,15 @@
 
 module.exports = {
   devices: {
+    // This is a list of required platforms.
+    // All required platform should have minDevices entry.
+    // So all required platforms should be listed in desired platform list.
     ios: 3,
     android: 3,
     desktop: 3
   },
   minDevices: {
+    // This is a list of desired platforms.
     ios: 3,
     android: 3,
     desktop: 3

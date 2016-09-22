@@ -72,30 +72,34 @@ TestFramework.prototype._setOptions = function (options) {
   asserts.isObject(this._options.devices);
 
   // 'this._options.devices' is options for our required platforms.
-  var platformNames = Object.keys(this._options.devices);
+  asserts.isObject(this._options.devices);
+  var requiredPlatformNames = Object.keys(this._options.devices);
   assert(
-    platformNames.length > 0,
-    '\'platformNames\' should not be an empty array'
+    requiredPlatformNames.length > 0,
+    '\'requiredPlatformNames\' should not be an empty array'
   );
-  platformNames.forEach(function (platformName) {
-    asserts.isString(platformName);
-    asserts.isNumber(self._options.devices[platformName]);
+  requiredPlatformNames.forEach(function (requiredPlatformName) {
+    asserts.isString(requiredPlatformName);
+    asserts.isNumber(self._options.devices[requiredPlatformName]);
   });
 
   // 'minDevices' is options for all our desired platforms.
   asserts.isObject(this._options.minDevices);
-  var minPlatformNames = Object.keys(this._options.minDevices);
-  minPlatformNames.forEach(function (platformName) {
-    asserts.isString(platformName);
-    asserts.isNumber(self._options.minDevices[platformName]);
+  var desiredPlatformNames = Object.keys(this._options.minDevices);
+  desiredPlatformNames.forEach(function (desiredPlatformName) {
+    asserts.isString(desiredPlatformName);
+    asserts.isNumber(self._options.minDevices[desiredPlatformName]);
   });
 
   // Required platforms can not be equal to desired platforms.
   // Required platforms should be included in desired platforms.
   // For example: desired platforms are [ 'android', 'desktop', 'ios' ],
   //   required platforms are [ 'android', 'ios' ].
-  platformNames.forEach(function (platformName) {
-    asserts.isNumber(self._options.minDevices[platformName]);
+  requiredPlatformNames.forEach(function (requiredPlatformName) {
+    assert(
+      desiredPlatformNames.indexOf(requiredPlatformName) !== -1,
+      format('platform name: \'%s\' is required', requiredPlatformName)
+    );
   });
 }
 
