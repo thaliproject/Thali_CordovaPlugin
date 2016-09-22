@@ -4,7 +4,8 @@
     "ios": "ThaliTest.app",
     "android": "android-release-unsigned.apk"
   },
-  "target": "test",
+  "target": "all",
+  "test": "true",
   "priority": "normal",
   "csname": {
     "android": "com.test.thalitest",
