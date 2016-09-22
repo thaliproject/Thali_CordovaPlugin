@@ -7,38 +7,31 @@
 
 const fs = require('fs-extra-promise');
 
-function updateUnitTestConfig() {
-  const locationOfUnitTestConfig = '../../TestServer/UnitTestConfig.js';
+const setUpFunctions = {
 
-  try {
+  updateUnitTestConfig: () => {
+    const locationOfUnitTestConfig = '../../TestServer/UnitTestConfig.js';
+
     let originalContent = fs.readFileSync(locationOfUnitTestConfig);
     let newContent = originalContent.toString().replace(/numDevices: -?[0-9]/g, 'numDevices: -1');
 
     if (originalContent === newContent) {
-      throw new Error('Replace function with regex didn\'t worked properly!');;
+      throw new Error('Replace function with regex didn\'t worked properly!');
     }
 
     fs.writeFileSync(locationOfUnitTestConfig, newContent);
-  } catch (e) {
-    console.log(e);
-  }
-}
+  },
 
-function updateThaliTestSuiteFunction() {
-  const locationOfAndroidBeforeCompile = '../../../scripts/android/before_compile.js';
+  updateThaliTestSuiteFunction: () => {
+    const locationOfAndroidBeforeCompile = '../../../scripts/android/before_compile.js';
 
-  try {
     let originalContent = fs.readFileSync(locationOfAndroidBeforeCompile);
     let newContent = originalContent.toString().replace('Test.java', 'CITest');
 
     fs.writeFileSync(locationOfAndroidBeforeCompile, newContent, 'utf-8');
-  } catch (e) {
-    console.log(e);
-  }
-}
+  },
 
-function copyCINativeTestClass() {
-  try {
+  copyCINativeTestClass: () => {
     const path = '../../../scripts/android/before_compile.js';
 
     let originalContent = fs.readFileSync(path);
@@ -47,36 +40,26 @@ function copyCINativeTestClass() {
     let newContent = originalContent.toString().replace(oldFunc, newFunc);
 
     fs.writeFileSync(path, newContent);
-  } catch (e) {
-    console.log(e);
-  }
-}
+  },
 
-function updateRunTestsToRunOnlyOneNodeTest() {
-  const locationOfRunTests = './runTests.js';
+  updateRunTestsToRunOnlyOneNodeTest: () => {
+    const locationOfRunTests = './runTests.js';
 
-  try {
     let originalContent = fs.readFileSync(locationOfRunTests);
     let newContent = originalContent.toString().replace('fileName.indexOf(\'test\') === 0)', 'fileName.indexOf(\'CITest\') === 0)');
 
     fs.writeFileSync(locationOfRunTests, newContent);
-  } catch (e) {
-    console.log(e);
-  }
-}
+  },
 
-function copyCINodeTestClass() {
-  try {
+  copyCINodeTestClass: () => {
     fs.renameSync('bv_tests/disabled/CITestClass.js', 'bv_tests/CITestClass.js');
-  } catch (e) {
-    console.log(e);
-  }
-}
+  },
 
-function emptyAlliOSTestFilesButOne() {
-  try {
+  emptyAlliOSTestFilesButOne: () => {
     const path = '../../../lib/ios/ThaliCore/ThaliCoreTests';
-    let currentFilePath, i, filesArray = fs.readdirSync(path), simpleTestCaseFound = false;
+    const filesArray = fs.readdirSync(path);
+    let currentFilePath, i;
+    let simpleTestCaseFound = false;
 
     for (i = 0; i < filesArray.length; i++) {
       if (filesArray[i].indexOf('SimpleTestCase') == -1) {
@@ -91,10 +74,8 @@ function emptyAlliOSTestFilesButOne() {
     if (!simpleTestCaseFound) {
       throw new Error('SimpleTestCase test file was not found!');
     }
-  } catch (e) {
-    console.log(e);
-  }
-}
+  },
+};
 
 function runFunctionAndCheckFailures(func, errStr) {
   try {
@@ -106,11 +87,15 @@ function runFunctionAndCheckFailures(func, errStr) {
   }
 }
 
-runFunctionAndCheckFailures(updateUnitTestConfig, 'Failed to update unitTestConfig!');
-runFunctionAndCheckFailures(copyCINodeTestClass, 'Failed to copy CI node test class!');
-runFunctionAndCheckFailures(copyCINativeTestClass, 'Failed to copy CI native test class!');
-runFunctionAndCheckFailures(emptyAlliOSTestFilesButOne, 'Failed to empty all iOS test files but one!');
-runFunctionAndCheckFailures(updateThaliTestSuiteFunction, 'Failed to update ThaliTestSuite!');
-runFunctionAndCheckFailures(updateRunTestsToRunOnlyOneNodeTest, 'Failed to modify runTests.js file!');
+for (let name in Object.getOwnPropertyNames(setUpFunctions)) {
+  runFunctionAndCheckFailures(setUpFunctions[name], name)
+}
+
+// runFunctionAndCheckFailures(updateUnitTestConfig, 'Failed to update unitTestConfig!');
+// runFunctionAndCheckFailures(copyCINodeTestClass, 'Failed to copy CI node test class!');
+// runFunctionAndCheckFailures(copyCINativeTestClass, 'Failed to copy CI native test class!');
+// runFunctionAndCheckFailures(emptyAlliOSTestFilesButOne, 'Failed to empty all iOS test files but one!');
+// runFunctionAndCheckFailures(updateThaliTestSuiteFunction, 'Failed to update ThaliTestSuite!');
+// runFunctionAndCheckFailures(updateRunTestsToRunOnlyOneNodeTest, 'Failed to modify runTests.js file!');
 
 process.exit(0);
