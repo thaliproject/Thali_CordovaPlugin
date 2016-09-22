@@ -57,7 +57,8 @@ thali/install/setUpDesktop.sh;ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
 
 # Check if build is running in CI Test Mode
-CI_TEST_MODE=$1;
+#CI_TEST_MODE=$1;
+CI_TEST_MODE=true;
 
 if [ $CI_TEST_MODE == true ]
 then
