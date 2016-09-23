@@ -43,6 +43,11 @@ if (hasJavaScriptSuffix(testsToRun)) {
 }
 
 var currentPlatform = platform.name;
+// Our current platform can be 'darwin', 'linux', 'windows', etc.
+// Our 'thaliTape' expects all these platforms will be named as 'desktop'
+if (!platform.isMobile) {
+  currentPlatform = 'desktop';
+}
 
 testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {

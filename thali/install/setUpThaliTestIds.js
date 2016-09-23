@@ -217,8 +217,9 @@ function replaceJXcoreExtension() {
 
 Promise.all([
   replaceThaliConfig(),
-  replaceConnectionHelper(),
-  replaceJXcoreExtension()
+  replaceConnectionHelper()
+  // In our current branch 'JXcoreExtension.m' is old and we shouldn't try to replace it.
+  // replaceJXcoreExtension()
 ])
 .then(function () {
   console.info('We have replaced hardcoded ids with random values.');
