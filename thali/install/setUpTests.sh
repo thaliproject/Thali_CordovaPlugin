@@ -67,7 +67,7 @@ find . -name "*.pem" -delete
 cp -v $1 app.js
 
 cd $repositoryRoot/thali/install
-jx npm install; ERROR_ABORT
+jx npm install
 cd $cordovaRoot/thaliDontCheckIn
 jx $repositoryRoot/thali/install/setUpThaliTestIds.js
 

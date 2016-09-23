@@ -562,24 +562,21 @@ module.exports.disconnect = function(peerIdentifier, connectionType) {
  *
  * #### peerAvailable === false
  *
- * At the moment it is not possible for us to get a peerAvailable === false
- * result. The reason is that Android didn't introduce the
- * CALLBACK_TYPE_MATCH_LOST result (telling us that a peer we had previously
- * seen is no longer available) until API 23 which we don't currently support.
- * This will be fixed in
- * https://github.com/thaliproject/Thali_CordovaPlugin_BtLibrary/issues/84 but
- * that will only work for Marshmallow and higher devices. And anyway it isn't
- * clear if 84 is even worth fixing. There are lots of reasons why a peer might
- * disappear off BLE but still be around on Bluetooth. Most likely we won't
- * really care about peerAvailable === false until we have the GATT server
- * working over BLE and we can get a definitive 'I'm powering down' message.
+ * If we get a peerAvailable === false event then we MUST check the peer
+ * availability cache and if the peer is listed then we MUST remove the peer
+ * from the cache and issue a peerAvailabilityChanged event with the given
+ * peerIdentifier and connectionType but with the peerAvailable set to false
+ * and generation and newAddressPort set to null.
+ *
+ * If we get a peerAvailable === false event for a peer that is not in the peer
+ * availability cache then we MUST ignore the event.
  *
  * ### Heuristics for marking peers as not available
  *
- * When we get a nonTCPPeerAvailabilityChanged event with peerAvailable === true
- * we have to realize, as explained in the previous section, that we aren't ever
- * going to get a peerAvailable === false. So it's up to us to decide when the
- * peer has disappeared.
+ * The heuristics for tracking peers in the native layer is based just on
+ * seeing if we have discovered them recently. It doesn't take into account
+ * what happens if we tried to connect to the peer and the connection fails. So
+ * for that we need our own heuristics.
  *
  * To do this when we get a successful response to a getPeerHostInfo call for
  * an Android peer we MUST record in the availability cache the fact that there
