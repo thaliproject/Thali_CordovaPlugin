@@ -3,12 +3,29 @@
 //  TestRunner.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
 //  information.
 //
 
 import Foundation
 import XCTest
+
+// MARK: - Current version of TestRunner doesn't display in logs assertion failures.
+// This category `overrides` recordFailureWithDescription and adds logging for failures.
+extension XCTestCase {
+    @objc func swizzled_recordFailureWithDescription(description: String,
+                                                     inFile filePath: String,
+                                                     atLine lineNumber: UInt,
+                                                     expected: Bool) {
+        // We don't have endless recursion here because of method swizzling in TestRunner.
+        // Therefore original implementation of `recordFailureWithDescription` is calling here
+        self.swizzled_recordFailureWithDescription(description,
+                                                   inFile: filePath,
+                                                   atLine: lineNumber,
+                                                   expected: expected)
+        print("\(description) in file: \(filePath), line: \(lineNumber)")
+    }
+}
 
 public final class TestRunner: NSObject {
     struct RunResult {
@@ -70,6 +87,28 @@ public final class TestRunner: NSObject {
             duration: duration,
             executed: true
         )
+    }
+
+    override public class func initialize() {
+        super.initialize()
+
+        struct Static {
+            static var token: dispatch_once_t = 0
+        }
+
+        dispatch_once(&Static.token) {
+            swizzleRecordFailure()
+        }
+    }
+
+    private class func swizzleRecordFailure() {
+        let originalSelector = #selector(XCTestCase.recordFailureWithDescription(_:inFile:atLine:expected:))
+        let swizzledSelector = #selector(XCTestCase.swizzled_recordFailureWithDescription(_:inFile:atLine:expected:))
+
+        let originalMethod = class_getInstanceMethod(XCTestCase.self, originalSelector)
+        let swizzledMethod = class_getInstanceMethod(XCTestCase.self, swizzledSelector)
+
+        method_exchangeImplementations(originalMethod, swizzledMethod)
     }
 
     public func runTest() {
