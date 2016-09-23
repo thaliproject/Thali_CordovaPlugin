@@ -1,21 +1,42 @@
 {
   "name": "thali",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
     "body-parser": "^1.13.3",
     "express": "4.13.3",
+    "forever-agent": "0.6.1",
+    "ip": "^1.0.1",
     "javascript-state-machine": "^2.3.5",
-    "lie": "^3.0.1",
-    "multiplex": "^6.2.2",
+    "lie": "^3.1.0",
+    "long": "^3.0.3",
+    "multiplex": "^6.7.0",
+    "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
+    "node-uuid": "^1.4.7",
     "request": "^2.64.0",
-    "winston": "^1.0.2"
+    "urlsafe-base64": "^1.0.0",
+    "winston": "^2.2.0"
+  },
+  "devDependencies": {
+    "jsdoc": "^3.3.3"
+  },
+  "thaliInstall": {
+    "thali": {
+      "projectName": "thaliproject",
+      "depotName": "Thali_CordovaPlugin",
+      "branchName": "vNext"
+    },
+    "btconnectorlib2": "0.3.2",
+    "jxcore-cordova": "0.1.2b",
+    "jxcore-cordova-url": "https://jxcore.blob.core.windows.net/jxcore-release/jxcore-cordova/0.1.2b/release/io.jxcore.node.jx"
   },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",
     "postpublish": "jx install/postPublishThaliCordovaPlugin.js",
-    "postinstall": "jx installCordovaPlugin.js"
+    "postinstall": "jx installCordovaPlugin.js",
+    "createPublicDocs": "./node_modules/.bin/jsdoc -c conf.json .",
+    "createInternalDocs": "./node_modules/.bin/jsdoc -c conf.json -p ."
   },
   "repository": {
     "type": "git",
@@ -30,8 +51,12 @@
     "Plugin",
     "P2P",
     "BlueTooth",
-    "WiFi-Direct",
-    "node.js"
+    "BLE",
+    "Multipeer Connectivity Framework",
+    "node.js",
+    "Android",
+    "iOS",
+    "Cordova"
   ],
   "author": "Microsoft Corporation",
   "license": "MIT",

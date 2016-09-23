@@ -1,7 +1,22 @@
 #!/usr/bin/env bash
-cd ..
+
+NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
+export NVM_NODEJS_ORG_MIRROR
+JX_NPM_JXB=jxb311
+export JX_NPM_JXB
+
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+cd `dirname $0`
+cd ../../test/TestServer
 jx npm install
+jx generateServerAddress.js
+cd ../../thali
+jx npm install --no-optional
 jx npm link
-cd ../test/www/jxcore
-jx npm link thali
+cd install
 jx npm install
+cd ../../test/www/jxcore
+jx npm link thali
+jx npm install --no-optional

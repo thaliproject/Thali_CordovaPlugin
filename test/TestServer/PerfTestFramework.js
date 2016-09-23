@@ -3,34 +3,29 @@
 
 'use strict';
 
-var events = require('events');
-var TestDevice = require('./TestDevice');
-var configFile = require('./Config_PerfTest.json');
+var fs = require('fs');
+var inherits = require('util').inherits;
+var TestFramework = require('./TestFramework');
+var ResultsProcessor = require('./ResultsProcessor.js');
 
 /*
  {
  "name": "performance tests",
  "description": "basic performance tests for Thali apps framework",
- "startDeviceCount": "4",
  "tests": [
- {"name": "testFindPeers.js", "timeout": "30000","data": {"count": "3","timeout": "20000"}},
- {"name": "testReConnect.js", "timeout": "700000","data": {"count": "3","timeout": "600000","rounds":"6","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
- {"name": "testSendData.js", "timeout": "7000000","data": {"count": "3","timeout": "6000000","rounds":"3","dataAmount":"1000000","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"10"}},
+ {"name": "testFindPeers.js", "servertimeout": "30000","data": {"timeout": "20000"}},
+ {"name": "testReConnect.js", "servertimeout": "700000","data": {"timeout": "600000","rounds":"1","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"1"}},
+ {"name": "testSendData.js", "servertimeout": "7000000","data": {"timeout": "6000000","rounds":"1","dataAmount":"1000000","dataTimeout":"5000","conReTryTimeout":"2000","conReTryCount":"5"}},
 
  ]
  }
-
-  With startDeviceCount define on how many devices needs to be connected before tests are started
 
   Test item in the array includes the tests file name and:
   - timeout: defines timeout value which after the coordinator server will cancel the test
   - data: is data that gets sent to the clients devices, and defines what they need to do
 
-   with testFindPeers additional data item included is:
-   - count: defines how many peers needs to be found/processed
-
    additionally with  re-Connect test data
-   - rounds defines how many rounds of connection established needs to be performed for each peers
+   - rounds defines how many rounds of connection established needs to be performed for each peers (use 1 for now)
    - dataTimeout defines timeout which after data sent is determined to be lost, and the connection is disconnected (and reconnected, data send starts from the point we know we managed to deliver to other side)
    - conReTryTimeout defines timeout value used between disconnection (by error) and re-connection
    - conReTryCount defined on how many times we re-try establishing connections before we give up.
@@ -39,241 +34,255 @@ var configFile = require('./Config_PerfTest.json');
    - dataAmount defines the amount of data sent through each connection before disconnecting
  */
 
+var logger = console;
 
+function PerfTestFramework(testConfig, _logger) {
 
-function PerfTestFramework() {
-    this.timerId = null;
-    this.testDevices = {};
-    this.testResults = [];
-    this.currentTest = -1;
+  if (_logger) {
+    logger =_logger;
+  }
 
-    console.log('Start test : ' + configFile.name + ", start tests with " + configFile.startDeviceCount + " devices");
+  var configFile = "./PerfTestConfig";
+  if (testConfig.configFile) {
+    configFile = testConfig.configFile;
+  }
+  this.perfTestConfig = require(configFile);
+ 
+  PerfTestFramework.super_.call(this, testConfig, this.perfTestConfig.userConfig, _logger);
 
-    for(var i=0; i < configFile.tests.length; i++) {
-        console.log('Test[' + i + ']: ' + configFile.tests[i].name + ', timeout : ' + configFile.tests[i].timeout + ", data : " + JSON.stringify(configFile.tests[i].data));
-    }
+  // Map of platform to tests to run
+  this.testsToRun = {};
+
+  // The accumulate set of results
+  this.results = [];
+
+  // The platfoms we can have concurrently running the test set
+  this.platforms = {};
 }
 
-PerfTestFramework.prototype = new events.EventEmitter;
+inherits(PerfTestFramework, TestFramework);
 
-PerfTestFramework.prototype.addDevice = function(device){
+PerfTestFramework.prototype.addDevice = function(device) {
 
-    if(this.currentTest >= 0){
-        console.log('test progressing ' + device.getName() + ' not added to tests');
-        return;
+  PerfTestFramework.super_.prototype.addDevice.call(this, device);
+
+  var platform = device.platform;
+
+  // Create some state for the new platform
+  if (!(platform in this.platforms)) {
+    this.platforms[platform] = {
+      state:"waiting",
+      startTimeout:null
+    };
+  }
+
+  // Start a timer on first device discovery that will start tests regardless of 
+  // number found if honorCount is false
+
+  if (this.devices[platform].length == 1) {
+
+    if (!this.testConfig.honorCount) {
+
+      var self = this;
+
+      logger.info(
+        "Setting start timeout to: %d (%s)", 
+        this.perfTestConfig.userConfig[platform].startTimeout, platform
+      );
+
+      this.platforms[platform].startTimeout = setTimeout(function () {
+        logger.info("Start timeout elapsed for platform: %s", platform);
+        self.startTests(platform);
+      }, this.perfTestConfig.userConfig[platform].startTimeout);
     }
-
-    this.testDevices[device.getName()] = device;
-    console.log(device.getName() + ' added!');
-
-    if(this.getConnectedDevicesCount() == configFile.startDeviceCount){
-        console.log('----- start testing now -----');
-        this.doNextTest();
-    }
+  }
 }
 
-PerfTestFramework.prototype.removeDevice = function(name){
-    console.log(name + ' id now disconnected!');
-    if(this.currentTest >= 0){
-        if(this.testDevices[name]){
-            console.log('test for ' + name + ' cancelled');
-            this.ClientDataReceived(name,JSON.stringify({"result":"DISCONNECTED"}));
-        }else {
-            console.log('test progressing ' + name + ' is not removed from the list');
-        }
-        return;
+PerfTestFramework.prototype.completeTest = function(test, platform, devices) {
+
+  logger.info("All test data retrieved for %s (%s)", test, platform);
+
+  var self = this;
+
+  // Collate the results..
+  devices.forEach(function(device) {
+
+    if (device.results == null) {
+      logger.info("No results from " + device.deviceName);
+    } else {
+      self.results.push({
+        "test" : test,
+        "device" : device.deviceName,
+        "time" : null,
+        "data" : device.results
+      });
     }
 
-    //mark it removed from te list
-    this.testDevices[name] = null;
-}
+    // Let the completed device know it can tear down the current test
+    device.socket.emit("teardown");
+  });
 
-PerfTestFramework.prototype.ClientDataReceived = function(name,data){
-    var jsonData = JSON.parse(data);
+  // Check if we're done
+  this.testsToRun[platform].shift();
+  if (!this.testsToRun[platform].length) {
 
-    //save the time and the time we got the results
-    this.testDevices[name].data = jsonData;
-    this.testDevices[name].endTime = new Date();
+    // All tests are complete, generate the result report
+    logger.info("ALL DONE !!!");
 
-    var responseTime = this.testDevices[name].endTime - this.testDevices[name].startTime;
-    console.log('with ' + name + ' request took : ' + responseTime + " ms.");
+    // Cancel the startTimeout
+    clearTimeout(this.platforms[platform].startTimeout);
 
-    if(this.getFinishedDevicesCount() == configFile.startDeviceCount){
-        console.log('test[ ' + this.currentTest + '] done now.');
-        this.testFinished();
-    }
-}
+    var processedResults = ResultsProcessor.process(this.results, devices);
+    logger.info(processedResults);
 
-PerfTestFramework.prototype.getFinishedDevicesCount  = function(){
-    var devicesFinishedCount = 0;
-    for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null && this.testDevices[deviceName].data != null){
-            devicesFinishedCount = devicesFinishedCount + 1;
-        }
-    }
+    // Let the devices know we're completely finished
+    var acksReceived = devices.length;
+    devices.forEach(function(device) {
 
-    return devicesFinishedCount;
-}
+      // Send 'end' and wait for 'end_ack'
 
-PerfTestFramework.prototype.getConnectedDevicesCount  = function(){
-    var count = 0;
-    for (var deviceName in this.testDevices) {
-        if(this.testDevices[deviceName] != null){
-            count++;
-        }
-    }
+      device.socket.once("end_ack", function() {
+        if (--acksReceived == 0) {
 
-    return count;
-}
-PerfTestFramework.prototype.doNextTest  = function(){
-    var self = this;
-    if(this.timerId != null) {
-        clearTimeout(this.timerId);
-        this.timerId = null;
-    }
+          // Record we've completed this platform's run
+          self.platforms[platform].state = "completed";
 
-    this.currentTest++;
-    if(configFile.tests[this.currentTest]){
-        //if we have tests, then lets start new tests on all devices
-        console.log('start test[' + this.currentTest + ']');
-        for (var deviceName in this.testDevices) {
-            if(this.testDevices[deviceName] != null){
-                this.testDevices[deviceName].startTime = new Date();
-                this.testDevices[deviceName].endTime = new Date();
-                this.testDevices[deviceName].data = null;
-                this.testDevices[deviceName].SendCommand('start',configFile.tests[this.currentTest].name,JSON.stringify(configFile.tests[this.currentTest].data));
-           }
-        }
-
-        if(configFile.tests[this.currentTest].timeout) {
-                this.timerId = setTimeout(function() {
-                    console.log('timeout now');
-                    if(!self.doneAlready)
-                    {
-                        console.log('TIMEOUT');
-                        self.testFinished();
-                    }
-                }, configFile.tests[this.currentTest].timeout);
-
-        }
-        return;
-    }
-
-    console.log('All tests are done, preparing test report.');
-    var results = {};
-    var combined ={};
-    for (var i=0; i < this.testResults.length; i++) {
-
-        if(this.testResults[i].data) {
-            if (!results[this.testResults[i].device]) {
-                results[this.testResults[i].device] = {};
+          // Are all platforms now complete ?
+          var completed = true;
+          for (var p in self.platforms) {
+            logger.debug("state: %s %s", p, self.platforms[p].state);
+            if (self.platforms[p].state != "completed") {
+              completed = false;
             }
+          }
 
-            if (this.testResults[i].data.peersList) {
-                results[this.testResults[i].device].peersList = this.extendArray(this.testResults[i].data.peersList, results[this.testResults[i].device].peersList);
-
-            } else if (this.testResults[i].data.connectList) {
-                results[this.testResults[i].device].connectList = this.extendArray(this.testResults[i].data.connectList, results[this.testResults[i].device].connectList);
-
-            } else if (this.testResults[i].data.sendList) {
-                results[this.testResults[i].device].sendList = this.extendArray(this.testResults[i].data.sendList, results[this.testResults[i].device].sendList);
-
-            } else {
-                console.log('Test[' + this.testResults[i].test + '] for ' + this.testResults[i].device + ' has unknown data : ' + JSON.stringify(this.testResults[i].data));
-            }
+          if (completed) {
+            logger.info("Server terminating normally");
+            process.exit(0);
+          }
         }
-    }
+      });
 
-    console.log('--------------- test report ---------------------');
-
-    for( var devName in results){
-        console.log('--------------- ' + devName + ' ---------------------');
-
-        if(results[devName].peersList && (results[devName].peersList.length > 0)) {
-
-            results[devName].peersList.sort(this.compare);
-            console.log(devName + ' has ' + results[devName].peersList.length + ' peersList result, range ' + results[devName].peersList[0].time + ' ms  to  '  + results[devName].peersList[(results[devName].peersList.length - 1)].time + " ms.");
-            console.log("100% : " + this.getValueOf(results[devName].peersList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].peersList,0.90)  + " ms, 95 %: " + this.getValueOf(results[devName].peersList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].peersList,0.90) + " ms.");
-            combined.peersList = this.extendArray(results[devName].peersList,combined.peersList);
-        }
-
-        if(results[devName].connectList && (results[devName].connectList.length > 0)) {
-            results[devName].connectList.sort(this.compare);
-            console.log(devName + ' has ' + results[devName].connectList.length + ' connectList result , range ' + results[devName].connectList[0].time + ' ms to  '  + results[devName].connectList[(results[devName].connectList.length - 1)].time + " ms.");
-            console.log("100% : " + this.getValueOf(results[devName].connectList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].connectList,0.99)  + " ms, 95% : " + this.getValueOf(results[devName].connectList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].connectList,0.90) + " ms.");
-            combined.connectList = this.extendArray(results[devName].connectList,combined.connectList);
-        }
-
-        if(results[devName].sendList && (results[devName].sendList.length > 0)) {
-            results[devName].sendList.sort(this.compare);
-            console.log(devName + ' has ' + results[devName].sendList.length + ' sendList result , range ' + results[devName].sendList[0].time + ' ms to  '  + results[devName].sendList[(results[devName].sendList.length - 1)].time + " ms.");
-            console.log("100% : " + this.getValueOf(results[devName].sendList,1.00) + " ms, 99% : " + this.getValueOf(results[devName].sendList,0.99)  + " ms, 95 : " + this.getValueOf(results[devName].sendList,0.95)  + " ms, 90% : " + this.getValueOf(results[devName].sendList,0.90) + " ms.");
-            combined.sendList = this.extendArray(results[devName].sendList,combined.sendList);
-        }
-    }
-
-    console.log('--------------- Combined ---------------------');
-
-    if(combined.peersList){
-        combined.peersList.sort(this.compare);
-        console.log("peersList : 100% : " + this.getValueOf(combined.peersList,1.00) + " ms, 99% : " + this.getValueOf(combined.peersList,0.99)  + " ms, 95 : " + this.getValueOf(combined.peersList,0.95)  + " ms, 90% : " + this.getValueOf(combined.peersList,0.90) + " ms.");
-    }
-
-    if(combined.connectList){
-        combined.connectList.sort(this.compare);
-        console.log("connectList : 100% : " + this.getValueOf(combined.connectList,1.00) + " ms, 99% : " + this.getValueOf(combined.connectList,0.99)  + " ms, 95 : " + this.getValueOf(combined.connectList,0.95)  + " ms, 90% : " + this.getValueOf(combined.connectList,0.90) + " ms.");
-    }
-
-    if(combined.sendList){
-        combined.sendList.sort(this.compare);
-        console.log("sendList : 100% : " + this.getValueOf(combined.sendList,1.00) + " ms, 99% : " + this.getValueOf(combined.sendList,0.99)  + " ms, 95 : " + this.getValueOf(combined.sendList,0.95)  + " ms, 90% : " + this.getValueOf(combined.sendList,0.90) + " ms.");
-    }
-
-    console.log('--------------- end of test report ---------------------');
+      logger.debug("end to %s", device.deviceName);
+      device.socket.emit("end", device.deviceName);
+    });
+  } else {
+    logger.info("Remaining tests: %s", this.testsToRun[platform]);
+  }
 }
 
-PerfTestFramework.prototype.getValueOf  = function(array, presentage) {
-    var index = Math.round(array.length * presentage);
-    if(index > 0){
-        index = index - 1;
+PerfTestFramework.prototype.startTests = function(platform, tests) {
+
+  if (platform in this.platforms && this.platforms[platform].state != "waiting") {
+    logger.info("Tests for %s already running or completed", platform);
+    return;
+  }
+
+  if (!tests) {
+    // Default to all tests listed in config
+    tests = this.perfTestConfig.testConfig.map(function(testConfig) {
+      return testConfig.name;
+    });
+  }
+ 
+  // Copy arrays..
+  this.testsToRun[platform] = tests.slice();
+  var devices = this.devices[platform].slice();
+  
+  logger.info("Starting perf test run for platform: %s", platform);
+  logger.info("Using devices:");
+  devices.forEach(function(dev) {
+    logger.info(dev.deviceName);
+  });
+
+  // Filter non-null bluetooth device addresses into array
+  var btAddresses = devices.map(function(dev) {
+    return dev.btAddress;
+  }).filter(function(addr) {
+    return (addr != null);
+  });
+
+  var toComplete;
+  var self = this;
+  
+  // Record that we're running tests for this platform
+  this.platforms[platform].state = "running";
+
+  var results = [];
+  function doTest(test) {
+
+    toComplete = devices.length;
+    logger.info("Starting test: with %d devices (%s)", toComplete, platform);
+
+    // Set up the test parameters
+    var testData = self.perfTestConfig.testConfig.filter(function(testConfig) {
+      return (testConfig.name == test);
+    });
+    if (testData.length != 1) {
+      throw new Error("Missing or duplicate config for test %s", test); 
     }
-    if(index < array.length) {
-        return array[index].time;
+    testData = testData[0];
+    testData.peerCount = toComplete;
+
+    // Set a timeout that will move to next test
+    // regardless of whether all results are in
+    var serverTimeoutTimer = null;
+    if (testData.serverTimeout) {
+      serverTimeoutTimer = setTimeout(function() {
+        logger.info("server timeout for test: %s (%s)", test, platform);
+        nextTest();
+      }, testData.serverTimeout);
     }
-}
 
-PerfTestFramework.prototype.extendArray  = function(source, target) {
-    if(!target)
-        return source;
-    return target.concat(source);
-}
-PerfTestFramework.prototype.compare  = function (a,b) {
-    if (a.time < b.time)
-        return -1;
-    if (a.time > b.time)
-        return 1;
-    return 0;
-}
+    var nextTest = function() {
+      // When all devices have given us a result, complete the current test
+      self.completeTest(test, platform, devices);
 
-PerfTestFramework.prototype.testFinished  = function(){
+      // Cancel the server timeout
+      if (serverTimeoutTimer !== null) {
+        clearTimeout(serverTimeoutTimer);
+        serverTimeoutTimer = null;
+      }
 
-    this.doneAlready = true;
-    for (var deviceName in this.testDevices) {
-        if (this.testDevices[deviceName] != null) {
-            var responseTime = this.testDevices[deviceName].endTime - this.testDevices[deviceName].startTime;
-            this.testResults.push({"test": this.currentTest, "device":deviceName,"time": responseTime,"data": this.testDevices[deviceName].data});
+      if (self.testsToRun[platform].length) {
+        process.nextTick(function() {
+          logger.info("Continuing to next test: " + self.testsToRun[platform][0]);
+          doTest(self.testsToRun[platform][0]);
+        });
+      }
+    };
 
-            //lets finalize the test by stopping it.
-            this.testDevices[deviceName].SendCommand('stop',"","");
+    devices.forEach(function(device) {
 
-            //reset values for next testing round
-            this.testDevices[deviceName].startTime = new Date();
-            this.testDevices[deviceName].endTime = new Date();
-            this.testDevices[deviceName].data = null;
+      // Reset test results for this device
+      device.results = null;
+
+      device.socket.once('test data', function (data) {
+
+        // Cache results in the device object
+        device.results = JSON.parse(data);
+
+        toComplete--;
+
+        logger.info(
+          "Received results for %s %s %s (%d left)", 
+          data, device.deviceName, platform, toComplete
+        );
+
+        if (toComplete === 0) {
+          nextTest();
         }
-    }
+      });
 
-    this.doNextTest()
+      // Begin the test..
+      device.socket.emit(
+        "start", 
+        { testName: test, testData: testData, addressList: btAddresses }
+      );
+    });
+  }
+
+  doTest(tests[0]);
 }
 
 module.exports = PerfTestFramework;

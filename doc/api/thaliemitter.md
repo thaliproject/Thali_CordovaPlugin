@@ -1,10 +1,13 @@
 # The `ThaliEmitter` class
 
-The `ThaliEmitter` class is a bridge between the native connectivity API and JavaScript to use the Thali local discovery and peer to peer capabilities with TCP/IP servers and clients without the rest of the Thali infrastructure needed.  This is intended to eventually be moved to its own NPM module.
+The `ThaliEmitter` class is a bridge between the native connectivity API and JavaScript to use the Thali local discovery 
+and peer to peer capabilities with TCP/IP servers and clients without the rest of the Thali infrastructure needed.  
+This is intended to eventually be moved to its own NPM module.
 
 ## Usage
 
-This is the basic usage to listen for the `peerAvailabilityChanged` event as well as start broadcasting the availability of the current device.
+This is the basic usage to listen for the `peerAvailabilityChanged` event as well as start broadcasting the availability 
+of the current device.
 
 ```js
 var ThaliEmitter = require('thali/thaliemitter');
@@ -128,7 +131,8 @@ emitter.startBroadcasting('me', 9001, function (err) {
 
 ### `ThaliEmitter.prototype.connect(peerIdentifier, callback)`
 
-This method begins a connection to the given peer found during discoverability.  If this is called twice with the same peer identifier, an error will be thrown that it is in process.
+This method begins a connection to the given peer found during discoverability.  If this is called twice with the same 
+peer identifier, an error will be thrown that it is in process.
 
 #### Arguments:
 

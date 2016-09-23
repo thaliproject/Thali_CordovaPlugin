@@ -1,8 +1,0 @@
-
-{
-    "name": "Unit tests",
-    "description": "Unit test coordinator server for Thali-Tape",
-    "startDeviceCount": "2"
-}
-
-
