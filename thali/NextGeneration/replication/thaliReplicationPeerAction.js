@@ -180,7 +180,6 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   var self = this;
-
   this._completed = false;
 
   return ThaliReplicationPeerAction.super_.prototype.start

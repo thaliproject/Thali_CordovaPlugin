@@ -1,6 +1,5 @@
 'use strict';
 
-require('longjohn');
 var logger = require('./ThaliLogger')('TestServerProcess');
 
 
