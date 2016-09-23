@@ -72,7 +72,7 @@ Server.prototype._disconnect = function (socket, reason) {
 Server.prototype._error = function (socket, error) {
   logger.error(
     'unexpected server error: \'%s\'',
-    error
+    error.toString()
   );
   throw new Error(error);
 }

@@ -83,6 +83,7 @@ function ThaliWifiInfrastructure () {
 inherits(ThaliWifiInfrastructure, EventEmitter);
 
 ThaliWifiInfrastructure.prototype._init = function () {
+  console.log('ololo', thaliConfig.SSDP_NT);
   var serverOptions = {
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL,
     udn: thaliConfig.SSDP_NT
