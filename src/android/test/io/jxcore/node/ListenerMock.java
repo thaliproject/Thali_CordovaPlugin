@@ -18,8 +18,12 @@ public class ListenerMock implements SocketThreadBase.Listener {
     }
 
     @Override
-    public void onDone(SocketThreadBase who, boolean threadDoneWasSending){
+    public void onDisconnected(SocketThreadBase who, Exception exception) {
 
     }
 
+    @Override
+    public void onDone(SocketThreadBase who, boolean threadDoneWasSending){
+
+    }
 }
