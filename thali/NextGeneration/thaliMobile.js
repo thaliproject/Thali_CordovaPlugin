@@ -3,6 +3,7 @@
 var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
 var logger = require('../ThaliLogger')('thaliMobile');
+var platform = require('./utils/platform');
 
 var thaliConfig = require('./thaliConfig');
 
@@ -939,7 +940,7 @@ function (peer) {
     peer.hostAddress = '127.0.0.1';
   }
   var connectionType =
-    jxcore.utils.OSInfo().isAndroid ?
+    platform.isAndroid ?
     connectionTypes.BLUETOOTH :
     connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
   handlePeer(peer, connectionType);
