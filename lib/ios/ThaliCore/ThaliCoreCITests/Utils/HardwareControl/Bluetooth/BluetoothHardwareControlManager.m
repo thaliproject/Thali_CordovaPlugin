@@ -83,14 +83,14 @@ static void *frameworkHandle;
 - (BOOL)bluetoothIsPowered
 {
     NSLog(@"Checking BT private state");
-    return [[BluetoothHardwareControlManager bluetoothManagerSharedInstance] powered];
+    return [_privateBluetoothManager powered];
 }
 
 - (void)turnBluetoothOn
 {
     if (![self bluetoothIsPowered]) {
         NSLog(@"Changing BT private state to On");
-        [[BluetoothHardwareControlManager bluetoothManagerSharedInstance] setPowered:YES];
+        [_privateBluetoothManager setPowered:YES];
     }
 }
 
@@ -98,7 +98,7 @@ static void *frameworkHandle;
 {
     if ([self bluetoothIsPowered]) {
         NSLog(@"Changing BT private state to Off");
-        [[BluetoothHardwareControlManager bluetoothManagerSharedInstance] setPowered:NO];
+        [_privateBluetoothManager setPowered:NO];
     }
 }
 

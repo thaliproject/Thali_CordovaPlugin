@@ -323,6 +323,7 @@ class AppContextTests: XCTestCase {
             )
         }
 
+        BluetoothHardwareControlManager.sharedInstance().unregisterObserver(self)
         NSNotificationCenter.defaultCenter().removeObserver(self)
     }
 
