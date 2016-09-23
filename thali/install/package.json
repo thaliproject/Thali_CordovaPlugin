@@ -5,6 +5,7 @@
   "main": "install.js",
   "dependencies": {
     "bluebird": "3.4.6",
+    "end-with": "1.0.2",
     "findit": "2.0.0",
     "randomstring": "1.1.5",
     "node-uuid": "1.4.7",
@@ -14,10 +15,7 @@
     "lie": "^3.1.0",
     "request": "^2.74.0",
     "unzip": "^0.1.11",
-    "xcode": "^0.8.9",
-
-    "array-from": "2.1.1",
-    "end-with": "1.0.2"
+    "xcode": "^0.8.9"
   },
   "scripts": {
     "setupUnit": "./setUpTests.sh UnitTest_app.js",
