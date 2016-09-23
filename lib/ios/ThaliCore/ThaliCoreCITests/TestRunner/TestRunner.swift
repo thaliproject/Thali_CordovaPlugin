@@ -10,23 +10,6 @@
 import Foundation
 import XCTest
 
-// MARK: - Current version of TestRunner doesn't display in logs assertion failures.
-// This category `overrides` recordFailureWithDescription and adds logging for failures.
-extension XCTestCase {
-    @objc func swizzled_recordFailureWithDescription(description: String,
-                                                     inFile filePath: String,
-                                                     atLine lineNumber: UInt,
-                                                     expected: Bool) {
-        // We don't have endless recursion here because of method swizzling in TestRunner.
-        // Therefore original implementation of `recordFailureWithDescription` is calling here
-        self.swizzled_recordFailureWithDescription(description,
-                                                   inFile: filePath,
-                                                   atLine: lineNumber,
-                                                   expected: expected)
-        print("\(description) in file: \(filePath), line: \(lineNumber)")
-    }
-}
-
 public final class TestRunner: NSObject {
     struct RunResult {
         let executedCount: Int
@@ -89,33 +72,16 @@ public final class TestRunner: NSObject {
         )
     }
 
-    override public class func initialize() {
-        super.initialize()
-
-        struct Static {
-            static var token: dispatch_once_t = 0
-        }
-
-        dispatch_once(&Static.token) {
-            swizzleRecordFailure()
-        }
-    }
-
-    private class func swizzleRecordFailure() {
-        let originalSelector = #selector(XCTestCase.recordFailureWithDescription(_:inFile:atLine:expected:))
-        let swizzledSelector = #selector(XCTestCase.swizzled_recordFailureWithDescription(_:inFile:atLine:expected:))
-
-        let originalMethod = class_getInstanceMethod(XCTestCase.self, originalSelector)
-        let swizzledMethod = class_getInstanceMethod(XCTestCase.self, swizzledSelector)
-
-        method_exchangeImplementations(originalMethod, swizzledMethod)
-    }
-
-    public func runTest() {
+    @objc public func runTest() {
         // Test must only be run on the main thread.
         // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
-        testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil,
-                                              waitUntilDone: true)
+        if !NSThread.currentThread().isMainThread {
+            performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
+            return
+        }
+        XCTestObservationCenter.sharedTestObservationCenter().addTestObserver(self)
+        testSuite.runTest()
+        XCTestObservationCenter.sharedTestObservationCenter().removeTestObserver(self)
     }
 
 }
@@ -140,5 +106,12 @@ extension TestRunner.RunResult {
         } catch _ as NSError {
             return nil
         }
+    }
+}
+
+// MARK: XCTestObservation
+extension TestRunner: XCTestObservation {
+    public func testCase(testCase: XCTestCase, didFailWithDescription description: String, inFile filePath: String?, atLine lineNumber: UInt) {
+        print("\(description) in file: \(filePath), line: \(lineNumber)")
     }
 }
