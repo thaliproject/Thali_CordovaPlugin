@@ -863,11 +863,7 @@ peerAvailabilities[connectionTypes.BLUETOOTH] = {};
 peerAvailabilities[connectionTypes.TCP_NATIVE] = {};
 
 var changeCachedPeerUnavailable = function (peer) {
-  var watcherExists = isAvailabilityWatcherForPeerExist(peer);
-
-  if(watcherExists) {
-    removeAvailabilityWatcherFromPeer(peer);
-  }
+  removeAvailabilityWatcherFromPeerIfExists(peer);
 
   delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
 };
@@ -877,11 +873,7 @@ var changeCachedPeerAvailable = function (peer) {
   cachedPeer.availableSince = Date.now();
   peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
 
-  var watcherDoesNotExist = !isAvailabilityWatcherForPeerExist(cachedPeer);
-
-  if(watcherDoesNotExist) {
-    addAvailabilityWatcherToPeer(cachedPeer);
-  }
+  addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
 };
 
 var changePeersUnavailable = function (connectionType) {
@@ -963,7 +955,11 @@ peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {}
 peerAvailabilityWatchers[connectionTypes.BLUETOOTH] = {};
 peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
 
-var addAvailabilityWatcherToPeer = function (peer) {
+var addAvailabilityWatcherToPeerIfNotExist = function (peer) {
+  if(isAvailabilityWatcherForPeerExist(peer)) {
+    return;
+  }
+
   var connectionType = peer.connectionType;
   var peerIdentifier = peer.peerIdentifier;
   var unavailabilityThreshold =
@@ -980,8 +976,11 @@ var addAvailabilityWatcherToPeer = function (peer) {
 var isAvailabilityWatcherForPeerExist = function (peer) {
   var connectionType = peer.connectionType;
   var peerIdentifier = peer.peerIdentifier;
+  var peerAvailabilityWatchersByConnectionType =
+    peerAvailabilityWatchers[connectionType];
 
-  return !!peerAvailabilityWatchers[connectionType][peerIdentifier];
+  return !!(peerAvailabilityWatchersByConnectionType &&
+            peerAvailabilityWatchersByConnectionType[peerIdentifier]);
 }
 
 var removeAllAvailabilityWatchersFromPeers = function () {
@@ -1000,11 +999,15 @@ var removeAllAvailabilityWatchersFromPeersByConnectionType =
           connectionType: connectionType
         };
 
-        removeAvailabilityWatcherFromPeer(assumingPeer);
+        removeAvailabilityWatcherFromPeerIfExist(assumingPeer);
       });
   }
 
-var removeAvailabilityWatcherFromPeer = function (peer) {
+var removeAvailabilityWatcherFromPeerIfExists = function (peer) {
+  if(!isAvailabilityWatcherForPeerExist(peer)) {
+    return;
+  }
+
   var connectionType = peer.connectionType;
   var peerIdentifier = peer.peerIdentifier;
 
