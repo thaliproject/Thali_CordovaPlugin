@@ -6,7 +6,6 @@
   },
   "target": "all",
   "priority": "normal",
-  "test": "true",
   "csname": {
     "android": "com.test.thalitest",
     "ios": "com.test.thalitest"

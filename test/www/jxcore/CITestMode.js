@@ -55,8 +55,15 @@ var setUpFunctions = {
     fs.renameSync('bv_tests/disabled/CITestClass.js', 'bv_tests/CITestClass.js');
   },
 
-  emptyAlliOSTestFilesButOne: () => {
-    const path = '../../../lib/ios/ThaliCore/ThaliCoreTests';
+  emptyAlliOSTestFilesButOne: (pathParam) => {
+    let path;
+
+    if (pathParam === undefined) {
+      path = '../../../lib/ios/ThaliCore/ThaliCoreTests';
+    } else {
+      path = pathParam;
+    }
+
     const filesArray = fs.readdirSync(path);
     let currentFilePath, i;
     let simpleTestCaseFound = false;
@@ -67,6 +74,8 @@ var setUpFunctions = {
         if (!fs.lstatSync(currentFilePath).isDirectory()) {
           simpleTestCaseFound = true;
           fs.writeFileSync(currentFilePath, '');
+        } else {
+          setUpFunctions.emptyAlliOSTestFilesButOne(currentFilePath);
         }
       }
     }
