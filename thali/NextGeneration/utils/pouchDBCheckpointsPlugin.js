@@ -20,7 +20,6 @@ var CheckpointPlugin = function (_db) {
   var delay = db.__opts.checkpointDelay || DEFAULT_DELAY;
   var events = null;
   var handlers = [];
-  var handlersAreNotified = false;
 
   // Private methods
   function setupSizePlugin () {
@@ -48,21 +47,15 @@ var CheckpointPlugin = function (_db) {
     return db.info()
       .then(function (response) {
         var dbSize = response.disk_size;
-        // If a database shrinks after a handlers have been already called
-        // the handlers should be called again when reaching a checkpoint
-        if(handlersAreNotified && dbSize < checkpoint) {
-          handlersAreNotified = false;
-        }
         // Handlers should be called only once
         // after the first reaching of a checkpoint
-        if (!handlersAreNotified && dbSize >= checkpoint) {
+        if (dbSize >= checkpoint) {
           handlers
             .forEach(function (handler) {
               // It might be better for performance
               // to execute handlers asynchronously
               executeAsync(handler)(checkpoint);
             });
-          handlersAreNotified = true;
         }
       })
       .catch(function (error) {

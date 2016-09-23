@@ -18,8 +18,6 @@ var dbName = 'pouchdb-uuid:' + Math.random();
 var dbOptions = {
   checkpoint: 500
 };
-var DEFAULT_DELAY = 200;
-var CALCULATING_DEALY = 100;
 
 var test = tape({
   setup: function (t) {
@@ -43,108 +41,91 @@ var Doc = function () {
 };
 
 test('Call of onCheckpointReached handler on a single db change', function (t) {
-  var spy = sinon.spy();
-
-  db.onCheckpointReached(spy);
+  db.onCheckpointReached(function () {
+    t.end();
+  });
 
   db.put(new Doc())
-    .then(function () {
-      // A small delay is needed to calculate database size after put
-      setTimeout(function () {
-        t.ok(spy.calledOnce, 'checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
-        t.end();
-      }, DEFAULT_DELAY + CALCULATING_DEALY);
-    })
     .catch(function (error) {
       t.fail(error);
     });
 });
 
-test('Call of multiple onCheckpointReached handlers on a single db change', function (t) {
-  var spy = sinon.spy();
-  var anotherSpy = sinon.spy();
-
-  db.onCheckpointReached(spy);
-  db.onCheckpointReached(anotherSpy);
-
-  db.put(new Doc())
-    .then(function () {
-      // A small delay is needed to calculate database size after put
-      setTimeout(function () {
-        t.ok(spy.calledOnce, 'The checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
-        t.ok(anotherSpy.calledOnce, 'The checkpointReached handler should be called once. Called ' + anotherSpy.callCount + ' time(s)');
-        t.end();
-      }, DEFAULT_DELAY + CALCULATING_DEALY);
-    })
-    .catch(function (error) {
-      t.fail(error);
-    });
-});
-
-test('Call of onCheckpointReached handler on multiple db changes' +
-'that are in the checkpoints plugin delay interval', function (t) {
+test('Call of multiple onCheckpointReached handlers on a single db change',
+  function (t) {
     var spy = sinon.spy();
+    var anotherSpy = sinon.spy();
 
-    db.onCheckpointReached(spy);
+    var endTestIfBothSpiesWereCalledOnce = function (test) {
+      if (spy.calledOnce && anotherSpy.calledOnce) {
+        test.end();
+      }
+      if (spy.callCount > 1 || anotherSpy.callCount > 1) {
+        test.fail('Each of onCheckpointReached handlers should be called once');
+      }
+    };
+
+    db.onCheckpointReached(function () {
+      spy();
+      endTestIfBothSpiesWereCalledOnce(t);
+    });
+    db.onCheckpointReached(function () {
+      anotherSpy();
+      endTestIfBothSpiesWereCalledOnce(t);
+    });
 
     db.put(new Doc())
-      // put some extra docs for 'change' event emission
-      .then(function () {
-        return db.put(new Doc());
-      })
-      .then(function () {
-        return db.put(new Doc());
-      })
-      .then(function () {
-        // A small delay is needed to calculate database size after put
-        setTimeout(function () {
-          t.ok(spy.calledOnce, 'the checkpointReached handler should be called once. Called ' + spy.callCount + ' time(s)');
-          t.end();
-        }, DEFAULT_DELAY + CALCULATING_DEALY);
-      })
       .catch(function (error) {
         t.fail(error);
       });
     });
 
-//  TODO Investigate how to force PouchDB to shrink database size
-//  Atfer that test can be enabled
-/*
-test('Call of onCheckpointReached handler after database shrinks', function (t) {
-  var spy = sinon.spy();
-  var doc = new Doc();
+test('Call of onCheckpointReached handler on multiple db changes ' +
+'that are in the checkpoints plugin delay interval', function (t) {
+    var ENSURE_DELAY = 1000;
+    var spy = sinon.spy();
 
-  db.onCheckpointReached(spy);
-
-  db.put(doc)
-    .then(function (res) {
-      return db.get(res.id);
-    })
-    .then(function (doc) {
-      return db.remove(doc);
-    })
-    .then(function () {
-      return db.compact();
-    })
-    .then(function () {
-      // Get first handler call
+    db.onCheckpointReached(function () {
+      spy();
+      // Ensure that handler will not be called more then once
       setTimeout(function () {
+        t.ok(spy.calledOnce, 'the checkpointReached handler should be ' +
+          'called once. Called ' + spy.callCount + ' time(s)');
+        t.end();
+      }, ENSURE_DELAY);
+    });
+
+    db.put(new Doc())
+      // put some extra doc for 'change' event emission
+      .then(function () {
+        return db.put(new Doc());
+      })
+      .catch(function (error) {
+        t.fail(error);
+      });
+  });
+
+test('Call of onCheckpointReached handler on multiple db changes ' +
+    'that are out of the checkpoints plugin delay interval', function (t) {
+      var spy = sinon.spy();
+
+      var handler = function () {
+        spy();
+        if (spy.callCount === 2) {
+          t.end();
+        }
+
+        // To trigger the handler again
         db.put(new Doc())
-          .then(function () {
-            // Get second handler call
-            setTimeout(function () {
-              t.ok(spy.calledTwice, 'The checkpointReached handler should be called twice');
-              t.end();
-            }, DEFAULT_DELAY + CALCULATING_DEALY)
-          })
           .catch(function (error) {
             t.fail(error);
           });
-      }, DEFAULT_DELAY + CALCULATING_DEALY);
+      };
 
-    })
-    .catch(function (error) {
-      t.fail(error);
-    });
-});
-*/
+      db.onCheckpointReached(handler);
+
+      db.put(new Doc())
+        .catch(function (error) {
+          t.fail(error);
+        });
+  });
