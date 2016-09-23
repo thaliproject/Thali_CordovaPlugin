@@ -43,9 +43,13 @@ if (process.platform === 'android' || process.platform === 'ios') {
   if (!utResult) {
     console.log("Failed to execute UT.");
     global.nativeUTFailed = true;
+
+    // TODO finish testing here with failure (the node part will be omitted)
+    console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+    return;
   }
 
-  // TODO finish testing here (the node part will be omitted)
+  // TODO finish testing here with success (the node part will be omitted)
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   return;
 }
