@@ -277,10 +277,12 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
               'Got error on replication - ',
               Utils.serializePouchError(err)
             );
-            console.error(
-              'Got error on replication!, error: \'%s\', stack: \'%s\'',
-              err.toString(), stackTrace
-            );
+            err.toString = function () {
+              return util.format(
+                'Got error on replication!, error: \'%s\', trace: \'%s\'',
+                err.message, stackTrace
+              );
+            }
             self._complete([err]);
           })
           .on('change', function (info) {
