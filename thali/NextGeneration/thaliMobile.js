@@ -906,7 +906,7 @@ var emitIfConnectionTypePeersLimitReached = function (connectionType) {
         count: connectionTypePeersCount
       });
   }
-}
+};
 
 var changeCachedPeerUnavailable = function (peer) {
   removeAvailabilityWatcherFromPeerIfExists(peer);
@@ -1236,18 +1236,18 @@ ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP', emitNetworkChanged);
 
 thaliWifiInfrastructure.on('networkChangedWifi', emitNetworkChanged);
 
-Object.keys(connectionTypes)
-  .forEach(function (key) {
-    var connectionType = connectionTypes[key];
-    module.exports.emitter.on(connectionType + 'PeersLimitReached',
-      function (info) {
-        emitDiscoveryDOS({
-          connectionType: connectionType,
-          limit: info.limit,
-          count: info.count
-        });
-      }
-  });
+
+/**
+ * Use this emitter to subscribe to events
+ *
+ * @public
+ * @fires module:thaliMobile.event:peerAvailabilityChanged
+ * @fires module:thaliMobile.event:discoveryAdvertisingStateUpdate
+ * @fires module:thaliMobile.event:networkChanged
+ * @fires module:thaliMobile.event:discoveryDOS
+ */
+module.exports.emitter = new EventEmitter();
+
 /**
  * Fired when we get more peer discoveries than we have allocated space to
  * store. This is pretty much guaranteed to be an attack so we expect whomever
@@ -1260,14 +1260,15 @@ Object.keys(connectionTypes)
  * @event module:thaliMobile.event:discoveryDOS
  * @type {Object}
  */
-
-/**
- * Use this emitter to subscribe to events
- *
- * @public
- * @fires module:thaliMobile.event:peerAvailabilityChanged
- * @fires module:thaliMobile.event:discoveryAdvertisingStateUpdate
- * @fires module:thaliMobile.event:networkChanged
- * @fires module:thaliMobile.event:discoveryDOS
- */
-module.exports.emitter = new EventEmitter();
+ Object.keys(connectionTypes)
+   .forEach(function (key) {
+     var connectionType = connectionTypes[key];
+     module.exports.emitter.on(connectionType + 'PeersLimitReached',
+       function (info) {
+         emitDiscoveryDOS({
+           connectionType: connectionType,
+           limit: info.limit,
+           count: info.count
+         });
+       })
+   });
