@@ -45,7 +45,7 @@ static void *frameworkHandle;
         if (frameworkHandle) {
             bluetoothManager = [[BluetoothHardwareControlManager alloc] init];
         }
-        NSLog(@"Finishing dispatch_once working with handle: %@ and BTmanager: %@", frameworkHandle, bluetoothManager);
+        NSLog(@"Finishing dispatch_once working with handle: %p and BTmanager: %@", frameworkHandle, bluetoothManager);
     });
 
     NSLog(@"Finishing getting shared instance of BTmanager %@", bluetoothManager);
