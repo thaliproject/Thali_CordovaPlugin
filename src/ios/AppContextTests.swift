@@ -8,7 +8,21 @@
 //
 
 import XCTest
+import UIKit
 import ThaliCore
+
+class THTestCase: XCTestCase {
+
+    override func recordFailureWithDescription(description: String,
+                                               inFile filePath: String,
+                                                      atLine lineNumber: UInt,
+                                                             expected: Bool) {
+        super.recordFailureWithDescription(description, inFile: filePath,
+                                           atLine: lineNumber, expected: expected)
+        print("\(description) - \(filePath) - \(lineNumber)")
+    }
+}
+
 
 extension NetworkStatusParameters {
 
@@ -67,6 +81,13 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
 
     var advertisingListeningState = ""
 
+    var willEnterBackground = false
+    var didEnterForeground = false
+    var discoveryUpdated = false
+
+    @objc func context(context: AppContext, didResolveMultiConnectWith paramsJSONString: String) {}
+    @objc func context(context: AppContext,
+                       didFailMultiConnectConnectionWith paramsJSONString: String) {}
     @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
     @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
         networkStatusUpdated = true
@@ -124,12 +145,16 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
         advertisingListeningState = discoveryAdvertisingState
     }
     @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
-    @objc func appWillEnterBackground(withContext context: AppContext) {}
-    @objc func appDidEnterForeground(withContext context: AppContext) {}
+    @objc func appWillEnterBackground(with context: AppContext) {
+        willEnterBackground = true
+    }
+    @objc func appDidEnterForeground(with context: AppContext) {
+        didEnterForeground = true
+    }
 }
 
 // MARK: - Test cases
-class AppContextTests: XCTestCase {
+class AppContextTests: THTestCase {
 
     var context: AppContext! = nil
 
@@ -311,6 +336,7 @@ class AppContextTests: XCTestCase {
             )
         }
 
+        BluetoothHardwareControlManager.sharedInstance().unregisterObserver(self)
         NSNotificationCenter.defaultCenter().removeObserver(self)
     }
 
@@ -322,6 +348,24 @@ class AppContextTests: XCTestCase {
         print(listeningActive)
         XCTAssertEqual(advertisingActive, advertising)
         XCTAssertEqual(listeningActive, browsing)
+    }
+
+    func testWillEnterBackground() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        NSNotificationCenter.defaultCenter()
+                            .postNotificationName(UIApplicationWillResignActiveNotification,
+                                                  object: nil)
+        XCTAssertTrue(delegateMock.willEnterBackground)
+    }
+
+    func testDidEnterForeground() {
+        let delegateMock = AppContextDelegateMock()
+        context.delegate = delegateMock
+        NSNotificationCenter.defaultCenter()
+                            .postNotificationName(UIApplicationDidBecomeActiveNotification,
+                                                  object: nil)
+        XCTAssertTrue(delegateMock.didEnterForeground)
     }
 
     func testDidRegisterToNative() {
@@ -346,6 +390,54 @@ class AppContextTests: XCTestCase {
 
     func testGetIOSVersion() {
         XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
+    }
+
+    func testThaliCoreErrors() {
+        // testing parameters count
+        var error: AppContextError?
+        do {
+            try context.multiConnectToPeer([""])
+        } catch let err as AppContextError {
+            error = err
+        } catch _ {}
+        XCTAssertEqual(error, AppContextError.BadParameters)
+
+        // testing parameter types
+        error = nil
+        do {
+            try context.multiConnectToPeer([2, 2])
+        } catch let err as AppContextError {
+            error = err
+        } catch _ {}
+        XCTAssertEqual(error, AppContextError.BadParameters)
+    }
+
+    func testMultiConnect() {
+        // todo will be implemented as soon as we will have the whole stack working #881
+    }
+
+    func testErrorDescription() {
+        XCTAssertEqual(ThaliCoreError.IllegalPeerID.rawValue,
+                       errorDescription(ThaliCoreError.IllegalPeerID))
+
+        let unknownError = AppContextError.UnknownError
+        XCTAssertEqual((unknownError as NSError).localizedDescription,
+                       errorDescription(unknownError))
+    }
+
+    func testJsonValue() {
+        var jsonDict: [String : AnyObject] = ["number" : 4.2]
+        var jsonString = "{\"number\":4.2}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+        jsonDict = ["string" : "42"]
+        jsonString = "{\"string\":\"42\"}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+        jsonDict = ["null" : NSNull()]
+        jsonString = "{\"null\":null}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
+        jsonDict = ["bool" : true]
+        jsonString = "{\"bool\":true}"
+        XCTAssertEqual(jsonValue(jsonDict), jsonString)
     }
 
     func testListeningAdvertisingUpdateOnStartAdvertising() {

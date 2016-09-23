@@ -76,7 +76,7 @@ final class SocketRelay<Builder: VirtualSocketBuilder> {
             completion(nil, nil)
         }
         addToDiscardQueue(virtualSocketBuilder, for: session) {
-            completion(nil, MultiConnectError.ConnectionTimedOut)
+            completion(nil, ThaliCoreError.ConnectionTimedOut)
         }
     }
 }

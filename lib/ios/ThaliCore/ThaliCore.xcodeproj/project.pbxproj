@@ -24,6 +24,9 @@
 		D377C5021D6D9C1600916A7B /* VirtualSocketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */; };
 		D3D0DE7D1D742872000F077C /* MultiConnectError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
 		D3D0DE7E1D742873000F077C /* MultiConnectError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
+		D3CBCCE51D5DD44A00F1591A /* PeerDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CBCCE41D5DD44A00F1591A /* PeerDiscoveryTests.swift */; };
+		D3D0DE7D1D742872000F077C /* ThaliCoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
+		D3D0DE7E1D742873000F077C /* ThaliCoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */; };
 		D3E699F81D798F93005D5315 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD84F3454375EE4974B67 /* Atomic.swift */; };
 		FAADD04D8930DF3297562D09 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD342AF116FCE3B46A03D /* Session.swift */; };
 		FAADD065F65A9A759A3DA92C /* SocketRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD9BDC5F12FDD98E4C18B /* SocketRelayTests.swift */; };
@@ -111,9 +114,9 @@
 		FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerIdentifier.swift; sourceTree = "<group>"; };
 		FAADD7C5A6317351DA1CAAFC /* AppStateNotificationsManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppStateNotificationsManagerTests.swift; sourceTree = "<group>"; };
 		FAADD84F3454375EE4974B67 /* Atomic.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Atomic.swift; sourceTree = "<group>"; };
+		FAADDAC0464B4FA765D583CF /* ThaliCoreError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThaliCoreError.swift; sourceTree = "<group>"; };
 		FAADD8FC3B9A78AE2C9EDEE0 /* AdvertiserTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserTests.swift; sourceTree = "<group>"; };
 		FAADD9BDC5F12FDD98E4C18B /* SocketRelayTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketRelayTests.swift; sourceTree = "<group>"; };
-		FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiConnectError.swift; sourceTree = "<group>"; };
 		FAADDB0E92AB65796641015A /* SocketRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketRelay.swift; sourceTree = "<group>"; };
 		FAADDB98375EC846FE1C16D9 /* BrowserManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserManagerTests.swift; sourceTree = "<group>"; };
 		FAADDCAEBC4F0F06B69A8A8B /* PeerIdentifierTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerIdentifierTests.swift; sourceTree = "<group>"; };
@@ -260,7 +263,7 @@
 			children = (
 				FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */,
 				FAADD7A741ABA2A94876C58F /* PeerIdentifier.swift */,
-				FAADDAC0464B4FA765D583CF /* MultiConnectError.swift */,
+				FAADDAC0464B4FA765D583CF /* ThaliCoreError.swift */,
 				FAADD84F3454375EE4974B67 /* Atomic.swift */,
 			);
 			path = Core;
@@ -573,7 +576,7 @@
 				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
 				FAADD7B9451F32511828885E /* Browser.swift in Sources */,
 				FAADD352919F859B6CF8942E /* PeerIdentifier.swift in Sources */,
-				D3D0DE7D1D742872000F077C /* MultiConnectError.swift in Sources */,
+				D3D0DE7D1D742872000F077C /* ThaliCoreError.swift in Sources */,
 				D30051691D6F269E0001E85F /* SocketRelay.swift in Sources */,
 				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
 				FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */,
@@ -614,7 +617,7 @@
 				1C38DDD51D74153900418F15 /* BluetoothHardwareControlManager.m in Sources */,
 				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
 				FAADD36CCBFA97A7B25AF416 /* PeerIdentifier.swift in Sources */,
-				D3D0DE7E1D742873000F077C /* MultiConnectError.swift in Sources */,
+                D3D0DE7E1D742873000F077C /* ThaliCoreError.swift in Sources */,
 				FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */,
 				FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */,
 				FAADDD566FA7D3F34C6C4581 /* Session.swift in Sources */,

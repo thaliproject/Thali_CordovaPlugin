@@ -24,7 +24,7 @@ class MCSessionMock: MCSession {
     }
 }
 
-class SessionTests: XCTestCase {
+class SessionTests: THTestCase {
 
     var disconnectedExpectation: XCTestExpectation!
     var mcSession: MCSessionMock!

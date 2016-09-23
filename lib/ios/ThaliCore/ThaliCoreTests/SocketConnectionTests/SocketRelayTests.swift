@@ -22,7 +22,7 @@ class VirtualSocketBuilderMock: VirtualSocketBuilder {
     }
 }
 
-class SocketRelayTests: XCTestCase {
+class SocketRelayTests: THTestCase {
 
     func testGetTimeoutErrorOnCreateSocket() {
         // Preconditions
@@ -33,17 +33,17 @@ class SocketRelayTests: XCTestCase {
         let mcSession = MCSession(peer: peerID)
         let session = Session(session: mcSession, identifier: peerID,
                               disconnectHandler: unexpectedDisconnectHandler)
-        var error: MultiConnectError?
+        var error: ThaliCoreError?
         let getTimeoutErrorOnCreateSocketExpectation =
             expectationWithDescription("get timeout error on create socket")
 
         relay.createSocket(with: session) { port, err in
-            error = err as? MultiConnectError
+            error = err as? ThaliCoreError
             getTimeoutErrorOnCreateSocketExpectation.fulfill()
         }
 
         // Should
-        waitForExpectationsWithTimeout(createSocketTimeout, handler: nil)
+        waitForExpectationsWithTimeout(createSocketTimeout + 1, handler: nil)
         XCTAssertEqual(error, .ConnectionTimedOut)
     }
 

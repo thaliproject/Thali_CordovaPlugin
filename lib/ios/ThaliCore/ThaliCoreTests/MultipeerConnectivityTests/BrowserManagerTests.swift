@@ -10,7 +10,7 @@
 import XCTest
 @testable import ThaliCore
 
-class BrowserManagerTests: XCTestCase {
+class BrowserManagerTests: THTestCase {
 
     var serviceType: String!
 
@@ -79,14 +79,14 @@ class BrowserManagerTests: XCTestCase {
                                             inputStreamReceiveTimeout: 1) { peers in }
         let getErrorOnStartListeningExpectation =
             expectationWithDescription("got startListening not active error")
-        var connectError: MultiConnectError?
+        var connectError: ThaliCoreError?
 
         // Precondition
         XCTAssertFalse(browserManager.listening)
 
         browserManager.connectToPeer(PeerIdentifier()) {
             [weak getErrorOnStartListeningExpectation] port, error in
-            if let error = error as? MultiConnectError {
+            if let error = error as? ThaliCoreError {
                 connectError = error
                 getErrorOnStartListeningExpectation?.fulfill()
             }
@@ -100,7 +100,7 @@ class BrowserManagerTests: XCTestCase {
 
     func testConnectToIllegalPeerReturnError() {
         let getIllegalPeerExpectation = expectationWithDescription("get Illegal Peer")
-        var connectError: MultiConnectError?
+        var connectError: ThaliCoreError?
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peers in }
         // Precondition
@@ -109,7 +109,7 @@ class BrowserManagerTests: XCTestCase {
         browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
         browserManager.connectToPeer(notDiscoveredPeerIdentifier) {
             [weak getIllegalPeerExpectation] port, error in
-            if let error = error as? MultiConnectError {
+            if let error = error as? ThaliCoreError {
                 connectError = error
                 getIllegalPeerExpectation?.fulfill()
             }
@@ -171,7 +171,7 @@ class BrowserManagerTests: XCTestCase {
                                                              errorHandler: unexpectedErrorHandler)
         let advertiserIdentifier = advertiserManager.currentAdvertiser?.peerIdentifier
 
-        waitForExpectationsWithTimeout(disposeAdvertiserTimeout, handler: nil)
+        waitForExpectationsWithTimeout(disposeAdvertiserTimeout + 1, handler: nil)
 
         XCTAssertEqual(advertiserPeerAvailability?.available, true)
         XCTAssertEqual(advertiserIdentifier, advertiserPeerAvailability?.peerIdentifier)
@@ -211,7 +211,7 @@ class BrowserManagerTests: XCTestCase {
         }
 
         browser.startListeningForAdvertisements(unexpectedErrorHandler)
-        waitForExpectationsWithTimeout(disposeTimeout, handler: nil)
+        waitForExpectationsWithTimeout(disposeTimeout + 1, handler: nil)
         let lastGenerationPeer =
             browser.lastGenerationPeer(for: firstGenerationAdvertiserIdentifier)
 

@@ -61,7 +61,7 @@ class SessionMock: Session {
     }
 }
 
-class VirtualSocketBuilderTests: XCTestCase {
+class VirtualSocketBuilderTests: THTestCase {
 
     var socketCompletionHandlerCalledExpectation: XCTestExpectation!
     var session: SessionMock!

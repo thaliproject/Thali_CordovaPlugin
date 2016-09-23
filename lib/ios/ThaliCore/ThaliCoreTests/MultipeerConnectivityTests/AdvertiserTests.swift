@@ -11,7 +11,7 @@ import XCTest
 @testable import ThaliCore
 import MultipeerConnectivity
 
-class AdvertiserTests: XCTestCase {
+class AdvertiserTests: THTestCase {
 
     private func startAdvertiser(with peerID: MCPeerID,
                                  receivedInvitationHandler: (Session) -> Void,
