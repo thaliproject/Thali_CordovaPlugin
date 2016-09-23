@@ -86,6 +86,11 @@ install_thali()
   find . -name "*.pem" -delete
 
   cp -v $1 app.js;ERROR_ABORT
+
+  cd $REPO_ROOT_DIR/thali/install; ERROR_ABORT
+  jx npm install; ERROR_ABORT
+  cd $TEST_PROJECT_ROOT_DIR/thaliDontCheckIn; ERROR_ABORT
+  jx $REPO_ROOT_DIR/thali/install/setUpThaliTestIds.js; ERROR_ABORT
 }
 
 add_android_platform()
