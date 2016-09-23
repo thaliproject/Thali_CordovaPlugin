@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
+export NVM_NODEJS_ORG_MIRROR
+JX_NPM_JXB=jxb311
+export JX_NPM_JXB
+
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
@@ -17,5 +22,4 @@ npm install --no-optional
 
 cd ../../test/www/jxcore
 npm link thali
-# we need jx here. In other case it tries to download node (not jx) from NVM_NODEJS_ORG_MIRROR
-NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net JX_NPM_JXB=jxb311 jx npm install --no-optional
+jx npm install --no-optional
