@@ -2,11 +2,15 @@ package io.jxcore.node;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 import java.lang.reflect.Field;
 
@@ -20,9 +24,17 @@ public class LifeCycleMonitorTest {
     LifeCycleMonitor.LifeCycleMonitorListener mListener;
     Context mContext;
     LifeCycleMonitor.ActivityLifeCycleEvent lastEvent;
+    String mTag = LifeCycleMonitorTest.class.getName();
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
 
     @Before
     public void setUp() throws Exception {
