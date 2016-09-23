@@ -11,8 +11,7 @@ var uuid         = require('node-uuid');
 var randomString = require('randomstring');
 
 // ponyfills
-var arrayFrom = require('array-from');
-var endsWith  = require('end-with');
+var endsWith = require('end-with');
 
 var Promise = require('./utils/Promise');
 require('./utils/process');
@@ -67,7 +66,7 @@ function replaceContent(content, replacements) {
       isReplaced = true;
 
       // arguments are $0, $1, ..., offset, string
-      return arrayFrom(arguments).slice(1, -2)
+      return Array.prototype.slice.call(arguments, 1, -2)
       .reduce(function (pattern, match, index) {
         // '$1' from strings like '$11 $12' shouldn't be replaced.
         return pattern.replace(
