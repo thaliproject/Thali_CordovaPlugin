@@ -126,7 +126,7 @@ function replaceStringsInFile(name, replacements) {
 //   'abc'.replace(/(a)(b)(c)/, '$1q$3')
 
 function replaceThaliConfig () {
-  // example: 'SSDP_NT: 'http://www.thaliproject.org/ssdp','
+  // example: 'SSDP_NT: process.env.SSDP_NT || 'http://www.thaliproject.org/ssdp','
   // We want to replace 'http://www.thaliproject.org/ssdp' here with random string.
   var value = randomString.generate({
     length: 'http://www.thaliproject.org/ssdp'.length
@@ -135,14 +135,14 @@ function replaceThaliConfig () {
     pattern: new RegExp(
       [
         '(',
-          'SSDP_NT', '\\s*', ':', '\\s*',
+          'SSDP_NT', '\\s*', ':',
         ')',
         '(',
-          '[\'"]', '.*?', '[\'"]',
+          '\\s*', '.*?', ',',
         ')'
       ].join('')
     ),
-    value: '$1\'' + value + '\''
+    value: '$1 \'' + value + '\','
   };
   return replaceStringsInFile('thaliConfig.js', [replacement]);
 }
