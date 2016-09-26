@@ -87,7 +87,7 @@ TestDevice.prototype.setupTest = function (test) {
 }
 
 TestDevice.prototype.runTest = function (test, data) {
-  return this._socket.runEvent('run', test, data, this._options.testTimeout);
+  return this._socket.runEvent('run', test, data, this._options.testTimeout, true);
 }
 
 TestDevice.prototype.teardownTest = function (test) {

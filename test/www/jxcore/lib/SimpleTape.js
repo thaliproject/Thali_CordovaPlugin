@@ -58,12 +58,13 @@ SimpleThaliTape.states = {
   started: 'started'
 };
 
-SimpleThaliTape.prototype.only = function (name, expect, fun) {
+SimpleThaliTape.prototype.only = function () {
   this._nextTestOnly = true;
-  return this.addTest(name, expect, fun);
+  return this.addTest.apply(this, arguments);
 };
 
-SimpleThaliTape.prototype.addTest = function (name, expect, fun) {
+// 'canBeSkipped' is optional argument.
+SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
   assert(
     this._state === SimpleThaliTape.states.created,
     'we should be in created state'
@@ -79,22 +80,37 @@ SimpleThaliTape.prototype.addTest = function (name, expect, fun) {
     this._ignoreRemainingTests = true;
   }
 
-  // Users can optionally specify the number of assertions
-  // expected when they define the test.
   if (!fun) {
-    fun = expect;
-    expect = null;
+    fun = canBeSkipped;
+    canBeSkipped = null;
   }
 
   asserts.isString(name);
   asserts.isFunction(fun);
   this._tests.push({
     name: name,
-    expect: expect,
+    canBeSkipped: canBeSkipped,
     fun: fun
   });
 
   return this._handler;
+}
+
+SimpleThaliTape.prototype._runTest = function (test) {
+  var self = this;
+
+  return Promise.try(function () {
+    if (test.canBeSkipped) {
+      return test.canBeSkipped();
+    }
+  })
+  .then(function (canBeSkipped) {
+    if (canBeSkipped) {
+      return self._skipTest(test);
+    } else {
+      return self._processTest(test);
+    }
+  });
 }
 
 SimpleThaliTape.prototype._runTest = function (test) {
@@ -150,11 +166,22 @@ SimpleThaliTape.prototype._runTest = function (test) {
     });
 
     tape(test.name, function (tape) {
-      if (test.expect !== undefined && test.expect !== null) {
-        tape.plan(test.expect);
-      }
       bindResult(tape, self._options.testTimeout);
-      test.fun(tape);
+
+      Promise.try(function () {
+        if (test.canBeSkipped) {
+          return test.canBeSkipped();
+        }
+      })
+      .then(function (canBeSkipped) {
+        if (canBeSkipped) {
+          logger.info('test was skipped, name: \'%s\'', test.name);
+          tape.end();
+        } else {
+          return test.fun(tape);
+        }
+      })
+      .catch(reject);
     });
 
     tape('teardown', function (tape) {
