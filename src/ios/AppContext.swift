@@ -81,7 +81,7 @@ extension PeerAvailability {
      - parameter peers:   json with data about changed peers
      - parameter context: related AppContext
      */
-    func context(context: AppContext, didChangePeerAvailability peers: String)
+    func context(context: AppContext, didChangePeerAvailability peersJSONString: String)
 
     /**
      Notifies about network status changes
@@ -89,7 +89,7 @@ extension PeerAvailability {
      - parameter status:  json string with network availability status
      - parameter context: related AppContext
      */
-    func context(context: AppContext, didChangeNetworkStatus status: String)
+    func context(context: AppContext, didChangeNetworkStatus statusJSONString: String)
 
     /**
      Notifies about peer advertisement update
@@ -97,9 +97,8 @@ extension PeerAvailability {
      - parameter discoveryAdvertisingState: json with information about peer's state
      - parameter context:                   related AppContext
      */
-
-    func context(context: AppContext,
-                 didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String)
+    func context(context: AppContext, didUpdateDiscoveryAdvertisingState
+                 discoveryAdvertisingStateJSONString: String)
 
     /**
      Notifies about failing connection to port
@@ -110,18 +109,30 @@ extension PeerAvailability {
     func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16)
 
     /**
+     callback for multiConnect function
+
+     */
+    func context(context: AppContext, didResolveMultiConnectWith paramsJSONString: String)
+
+    /**
+     callback for multiConnect function
+
+     */
+    func context(context: AppContext, didFailMultiConnectConnectionWith paramsJSONString: String)
+
+    /**
      Notifies about entering background
 
      - parameter context: related AppContext
      */
-    func appWillEnterBackground(withContext context: AppContext)
+    func appWillEnterBackground(with context: AppContext)
 
     /**
      Notifies about entering foreground
 
      - parameter context: related AppContext
      */
-    func appDidEnterForeground(withContext context: AppContext)
+    func appDidEnterForeground(with context: AppContext)
 }
 
 /// Interface for communication between native and cross-platform parts
@@ -136,9 +147,9 @@ extension PeerAvailability {
     public weak var delegate: AppContextDelegate?
     lazy private var browserManager: BrowserManager = { [unowned self] in
          return BrowserManager(serviceType: self.serviceType,
-                 inputStreamReceiveTimeout: self.inputStreamReceiveTimeout) { peers in
-            self.peersAvailabilityChanged(peers)
-        }
+                               inputStreamReceiveTimeout: self.inputStreamReceiveTimeout) { peers in
+                                   self.handleOnPeersAvailabilityChanged(peers)
+                               }
     }()
     private let advertiserManager: AdvertiserManager
 
@@ -173,15 +184,15 @@ extension PeerAvailability {
         delegate?.context(self, didChangeNetworkStatus: jsonValue(networkStatus))
     }
 
-    private func willEnterBackground() {
-        delegate?.appWillEnterBackground(withContext: self)
+    private func handleWillEnterBackground() {
+        delegate?.appWillEnterBackground(with: self)
     }
 
-    private func didEnterForeground() {
-        delegate?.appDidEnterForeground(withContext: self)
+    private func handleDidEnterForeground() {
+        delegate?.appDidEnterForeground(with: self)
     }
 
-    private func peersAvailabilityChanged(peers: [PeerAvailability]) {
+    private func handleOnPeersAvailabilityChanged(peers: [PeerAvailability]) {
         let mappedPeers = peers.map {
             $0.dictionaryValue
         }
@@ -196,6 +207,25 @@ extension PeerAvailability {
         delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))
     }
 
+    private func handleMultiConnectResolved(withSyncValue value: String, port: UInt16?,
+                                                          error: ErrorType?) {
+        let parameters = [
+            "syncValue" : value,
+            "error" : error != nil ? errorDescription(error!) : NSNull(),
+            "port" : port != nil ? NSNumber(unsignedShort: port!) : NSNull()
+        ]
+        delegate?.context(self, didResolveMultiConnectWith: jsonValue(parameters))
+    }
+
+    private func handleMultiConnectConnectionFailure(withIdentifier identifier: String,
+                                                                    error: ErrorType?) {
+        let parameters = [
+            "peerIdentifier" : identifier,
+            "error" : error != nil ? errorDescription(error!) : NSNull()
+        ]
+        delegate?.context(self, didFailMultiConnectConnectionWith: jsonValue(parameters))
+    }
+
     public init(serviceType: String) {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
@@ -204,10 +234,10 @@ extension PeerAvailability {
                                               inputStreamReceiveTimeout: inputStreamReceiveTimeout)
         super.init()
         appNotificationsManager.didEnterForegroundHandler = {[weak self] in
-            self?.willEnterBackground()
+            self?.handleDidEnterForeground()
         }
         appNotificationsManager.willEnterBackgroundHandler = { [weak self] in
-            self?.willEnterBackground()
+            self?.handleWillEnterBackground()
         }
 
         #if TEST
@@ -256,9 +286,9 @@ extension PeerAvailability {
 
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
         guard bluetoothState == .on || NetworkReachability().isWiFiEnabled() else {
-            throw MultiConnectError.RadioTurnedOffMultiConnectError
+            throw ThaliCoreError.RadioTurnedOff
         }
-        guard parameters.count == 3 else {
+        guard parameters.count >= 2 else {
             throw AppContextError.BadParameters
         }
         guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
@@ -266,9 +296,12 @@ extension PeerAvailability {
             throw AppContextError.BadParameters
         }
         let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
-        browserManager.connectToPeer(peerIdentifier) { port, error in
-            print(syncValue)
-            // TODO: call multiconnectResolved with port or error #946
+        browserManager.connectToPeer(peerIdentifier) { [weak self] port, error in
+            self?.handleMultiConnectResolved(withSyncValue: syncValue, port: port, error: error)
+            if let error = error {
+                self?.handleMultiConnectConnectionFailure(withIdentifier: identifierString,
+                                                          error: error)
+            }
         }
     }
 
@@ -355,14 +388,23 @@ extension AppContext: CBCentralManagerDelegate {
     @objc public static let didRegisterToNative: String = "didRegisterToNative"
     @objc public static let killConnections: String = "killConnections"
     @objc public static let connect: String = "connect"
-    @objc public static let stopAdvertisingAndListening: String =
-        "stopAdvertisingAndListening"
+    @objc public static let multiConnect: String = "multiConnect"
+    @objc public static let multiConnectResolved: String = "multiConnectResolved"
+    @objc public static let multiConnectConnectionFailure: String = "multiConnectConnectionFailure"
+    @objc public static let stopAdvertisingAndListening: String = "stopAdvertisingAndListening"
     @objc public static let startUpdateAdvertisingAndListening: String =
-        "startUpdateAdvertisingAndListening"
+                        "startUpdateAdvertisingAndListening"
     @objc public static let stopListeningForAdvertisements: String =
-        "stopListeningForAdvertisements"
+                        "stopListeningForAdvertisements"
     @objc public static let startListeningForAdvertisements: String =
-        "startListeningForAdvertisements"
+                        "startListeningForAdvertisements"
     @objc public static let disconnect: String =
-        "disconnect"
+                        "disconnect"
+}
+
+func errorDescription(error: ErrorType) -> String {
+    if let thaliCoreError = error as? ThaliCoreError {
+        return thaliCoreError.rawValue
+    }
+    return (error as NSError).localizedDescription
 }

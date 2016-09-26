@@ -80,17 +80,17 @@ public final class BrowserManager: NSObject {
     public func connectToPeer(identifier: PeerIdentifier,
                               completion: (UInt16?, ErrorType?) -> Void) {
         guard let currentBrowser = self.currentBrowser else {
-            completion(nil, MultiConnectError.StartListeningNotActive)
+            completion(nil, ThaliCoreError.StartListeningNotActive)
             return
         }
         guard let lastGenerationIdentifier = self.lastGenerationPeer(for: identifier) else {
-            completion(nil, MultiConnectError.IllegalPeerID)
+            completion(nil, ThaliCoreError.IllegalPeerID)
             return
         }
         do {
             let session = try currentBrowser.inviteToConnectPeer(with: lastGenerationIdentifier,
-                                                                 disconnectHandler: {
-                // TODO: call multiConnectConnectionFailure #946
+                    disconnectHandler: {
+                completion(nil, ThaliCoreError.ConnectionFailed)
             })
             activeSessions.modify {
                 $0[identifier] = session

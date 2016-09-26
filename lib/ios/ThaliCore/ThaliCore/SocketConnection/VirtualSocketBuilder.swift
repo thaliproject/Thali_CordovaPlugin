@@ -34,7 +34,7 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
                 let outputStream = try session.createOutputStream(withName: outputStreamName)
                 session.didReceiveInputStreamHandler = { inputStream, inputStreamName in
                     guard inputStreamName == outputStreamName else {
-                        completionHandler(nil, MultiConnectError.ConnectionFailed)
+                        completionHandler(nil, ThaliCoreError.ConnectionFailed)
                         return
                     }
                     completionHandler((outputStream, inputStream), nil)

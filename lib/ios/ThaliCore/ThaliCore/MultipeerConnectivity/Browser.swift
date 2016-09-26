@@ -59,7 +59,7 @@ final class Browser: NSObject {
             $0[peerIdentifier]
         }
         guard let mcPeer = peer else {
-            throw MultiConnectError.IllegalPeerID
+            throw ThaliCoreError.IllegalPeerID
         }
         let session = Session(session: mcSession, identifier: mcPeer,
                               disconnectHandler: disconnectHandler)

@@ -3,7 +3,7 @@
 //  TestRunner.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license 
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
 //  information.
 //
 
@@ -72,11 +72,16 @@ public final class TestRunner: NSObject {
         )
     }
 
-    public func runTest() {
+    @objc public func runTest() {
         // Test must only be run on the main thread.
         // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
-        testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil,
-                                              waitUntilDone: true)
+        if !NSThread.currentThread().isMainThread {
+            performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
+            return
+        }
+        XCTestObservationCenter.sharedTestObservationCenter().addTestObserver(self)
+        testSuite.runTest()
+        XCTestObservationCenter.sharedTestObservationCenter().removeTestObserver(self)
     }
 
 }
@@ -101,5 +106,12 @@ extension TestRunner.RunResult {
         } catch _ as NSError {
             return nil
         }
+    }
+}
+
+// MARK: XCTestObservation
+extension TestRunner: XCTestObservation {
+    public func testCase(testCase: XCTestCase, didFailWithDescription description: String, inFile filePath: String?, atLine lineNumber: UInt) {
+        print("\(description) in file: \(filePath), line: \(lineNumber)")
     }
 }
