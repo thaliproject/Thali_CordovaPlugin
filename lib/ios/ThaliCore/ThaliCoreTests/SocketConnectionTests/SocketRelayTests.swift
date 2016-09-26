@@ -33,12 +33,12 @@ class SocketRelayTests: XCTestCase {
         let mcSession = MCSession(peer: peerID)
         let session = Session(session: mcSession, identifier: peerID,
                               disconnectHandler: unexpectedDisconnectHandler)
-        var error: MultiConnectError?
+        var error: ThaliCoreError?
         let getTimeoutErrorOnCreateSocketExpectation =
             expectationWithDescription("get timeout error on create socket")
 
         relay.createSocket(with: session) { port, err in
-            error = err as? MultiConnectError
+            error = err as? ThaliCoreError
             getTimeoutErrorOnCreateSocketExpectation.fulfill()
         }
 
