@@ -14,6 +14,11 @@ var states = {
   started: false
 };
 
+// We have to keep track of discovered peers to make sure
+// 'listenerRecreatedAfterFailureHandler' event uses the same generation after
+// connection was recreated
+var peerGenerations = {};
+
 var gPromiseQueue = new PromiseQueue();
 var gRouterObject = null;
 var gRouterExpress = null;
@@ -136,9 +141,11 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
     return;
   }
 
+  var generation = peerGenerations[recreateAnnouncement.peerIdentifier];
   module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
     peerIdentifier: recreateAnnouncement.peerIdentifier,
-    portNumber: recreateAnnouncement.portNumber
+    portNumber: recreateAnnouncement.portNumber,
+    generation: generation
   });
 }
 
@@ -408,6 +415,7 @@ module.exports.stopListeningForAdvertisements = function () {
       if (error) {
         return reject(new Error(error));
       }
+      peerGenerations = {};
       resolve();
     });
   });
@@ -822,6 +830,7 @@ var handlePeerAvailabilityChanged = function (peer) {
         portNumber: null,
         generation: null
       });
+      delete peerGenerations[peer.peerIdentifier];
       resolve();
     };
     if (peer.peerAvailable) {
@@ -833,6 +842,7 @@ var handlePeerAvailabilityChanged = function (peer) {
           portNumber: portNumber,
           generation: peer.generation
         });
+        peerGenerations[peer.peerIdentifier] = peer.generation;
         resolve();
       })
       .catch(function (error) {
