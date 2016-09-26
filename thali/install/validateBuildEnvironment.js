@@ -22,8 +22,9 @@ const versions =
   ruby: '2.3.0p0',
   wget: '1.18',
   jxcore: '0.3.1.4',
+  androidSDKManager: ` `,
   androidBuildTools: '23.0.3',
-  androidPlatform: 'android-23',
+  androidPlatform: '23',
   // We don't have an easy way to identify the version of the support libraries
   // we have but if they were installed recently enough then they will have
   // what we need.
@@ -137,6 +138,12 @@ const commandsAndResults =
     versionCheck: 'jx -jxv',
     versionValidate:
       (result, version) => boolToPromise('v' + version === result.trim())
+  },
+  androidSDKManager: {
+    versionCheck: 'android --help',
+    versionValidate:
+      (result) =>
+        boolToPromise(result.length !== 0)
   },
   androidBuildTools: {
     versionCheck: () => fs.readdirAsync(path.join(process.env.ANDROID_HOME,
