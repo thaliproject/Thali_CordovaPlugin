@@ -109,8 +109,8 @@ class BrowserTests: XCTestCase {
             let _ =
                 try browser.inviteToConnectPeer(with: PeerIdentifier(),
                                                 disconnectHandler: unexpectedDisconnectHandler)
-        } catch let error as MultiConnectError {
-            XCTAssertEqual(error, MultiConnectError.IllegalPeerID)
+        } catch let error as ThaliCoreError {
+            XCTAssertEqual(error, ThaliCoreError.IllegalPeerID)
         } catch let error {
             XCTFail("unexpected error: \(error)")
         }
