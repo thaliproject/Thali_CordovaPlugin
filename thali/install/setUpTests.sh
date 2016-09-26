@@ -90,6 +90,11 @@ install_thali()
   find . -name "*.pem" -delete
 
   cp -v $1 app.js
+
+  cd $REPO_ROOT_DIR/thali/install
+  jx npm install
+  cd $TEST_PROJECT_ROOT_DIR/thaliDontCheckIn
+  jx $REPO_ROOT_DIR/thali/install/setUpThaliTestIds.js
 }
 
 add_android_platform()
