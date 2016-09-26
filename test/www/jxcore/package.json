@@ -38,6 +38,7 @@
     "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
     "node-uuid": "1.4.7",
     "pouchdb": "5.4.5",
+    "pouchdb-size": "1.2.2",
     "proxyquire": "1.7.4",
     "randomstring": "1.1.5",
     "request": "2.64.0",

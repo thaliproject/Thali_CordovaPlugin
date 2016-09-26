@@ -19,7 +19,7 @@ var hasJavaScriptSuffix = function (path) {
 };
 
 var loadFile = function (filePath) {
-  console.info('Test runner loading file: ' + filePath);
+  logger.debug('Test runner loading file: ' + filePath);
   try {
     require(filePath);
   } catch (error) {
@@ -43,6 +43,8 @@ if (hasJavaScriptSuffix(testsToRun)) {
 }
 
 var currentPlatform = platform.name;
+// Our current platform can be 'darwin', 'linux', 'windows', etc.
+// Our 'thaliTape' expects all these platforms will be named as 'desktop'
 if (!platform.isMobile) {
   currentPlatform = 'desktop';
 }
