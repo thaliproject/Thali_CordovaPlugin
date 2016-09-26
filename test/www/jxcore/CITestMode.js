@@ -58,30 +58,26 @@ var setUpFunctions = {
   emptyAlliOSTestFilesButOne: (pathParam) => {
     let path;
 
-    if (pathParam === undefined) {
-      path = '../../../lib/ios/ThaliCore/ThaliCoreTests';
-    } else {
-      path = pathParam;
+    path = pathParam || '../../../lib/ios/ThaliCore/ThaliCoreTests';
+
+    if (path === '../../../lib/ios/ThaliCore/ThaliCoreTests') {
+      if (!fs.existsSync(path + '/SimpleTestCase.swift')) {
+        throw new Error('SimpleTestCase test file was not found!');
+      }
     }
 
     const filesArray = fs.readdirSync(path);
     let currentFilePath, i;
-    let simpleTestCaseFound = false;
 
     for (i = 0; i < filesArray.length; i++) {
-      if (filesArray[i].indexOf('SimpleTestCase') == -1) {
+      if (filesArray[i].indexOf('SimpleTestCase') === -1) {
         currentFilePath = path + '/' + filesArray[i].toString();
         if (!fs.lstatSync(currentFilePath).isDirectory()) {
-          simpleTestCaseFound = true;
           fs.writeFileSync(currentFilePath, '');
         } else {
           setUpFunctions.emptyAlliOSTestFilesButOne(currentFilePath);
         }
       }
-    }
-
-    if (!simpleTestCaseFound) {
-      throw new Error('SimpleTestCase test file was not found!');
     }
   },
 };
