@@ -12,7 +12,7 @@ var Promise = require('./utils/Promise');
 var SimpleThaliTape   = require('./SimpleTape');
 var CoordinatedClient = require('./CoordinatedClient');
 
-var logger = require('thali/ThaliLogger')('CoordinatedThaliTape');
+var logger = require('./testLogger')('CoordinatedThaliTape');
 
 
 function CoordinatedThaliTape (options) {

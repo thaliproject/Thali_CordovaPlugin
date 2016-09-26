@@ -14,6 +14,7 @@ var logger = require('thali/ThaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
+var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
@@ -25,18 +26,13 @@ var inherits = require('inherits');
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
-var isMobile = (
-  typeof jxcore !== 'undefined' &&
-  jxcore.utils &&
-  jxcore.utils.OSInfo() &&
-  jxcore.utils.OSInfo().isMobile
-);
+var isMobile = platform.isMobile;
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
     return Promise.resolve();
   }
-  if (jxcore.utils.OSInfo().isIOS) {
+  if (platform.isIOS) {
     return Promise.resolve();
   }
   return new Promise(function (resolve, reject) {
@@ -145,7 +141,7 @@ module.exports.tmpDirectory = function () {
  */
 module.exports.hasRequiredHardware = function () {
   return new Promise(function (resolve) {
-    if (jxcore.utils.OSInfo().isAndroid) {
+    if (platform.isAndroid) {
       var checkBleMultipleAdvertisementSupport = function () {
         Mobile('isBleMultipleAdvertisementSupported').callNative(
           function (error, result) {

@@ -1,6 +1,7 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
+var platform = require('thali/NextGeneration/utils/platform');
 var Promise = require('lie');
 
 var customData = 'custom data';
@@ -45,7 +46,7 @@ test('can pass data in setup', function (t) {
   t.end();
 });
 
-if (!jxcore.utils.OSInfo().isMobile) {
+if (!platform.isMobile) {
   test('can continue after disconnect from server', function (t) {
     // Android phone like to do huge amount of reconnects.
     var RECONNECT_TIMEOUT = 50;
