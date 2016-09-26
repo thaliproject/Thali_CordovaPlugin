@@ -47,6 +47,7 @@ var CheckpointPlugin = function (_db) {
     return db.info()
       .then(function (response) {
         if (!response) return;
+
         var dbSize = response.disk_size;
         // Handlers should be called only once
         // after the first reaching of a checkpoint
