@@ -1000,7 +1000,8 @@ var removeAllAvailabilityWatchersFromPeersByConnectionType =
         };
 
         removeAvailabilityWatcherFromPeerIfExists(assumingPeer);
-  }
+      });
+  };
 
 var removeAvailabilityWatcherFromPeerIfExists = function (peer) {
   if(!isAvailabilityWatcherForPeerExist(peer)) {

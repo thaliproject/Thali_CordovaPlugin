@@ -1,6 +1,11 @@
 'use strict';
 
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var proxyquire = require('proxyquire');
+var ThaliMobile = proxyquire('thali/NextGeneration/thaliMobile', {
+  './thaliConfig': {
+    NON_TCP_PEER_UNAVAILABILITY_THRESHOLD: 500
+  }
+});
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
