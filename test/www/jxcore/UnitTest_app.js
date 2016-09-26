@@ -17,17 +17,17 @@ var Promise = require('lie');
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
-  logger.log('Running unit tests');
+  logger.debug('Running unit tests');
   Mobile('executeNativeTests').callNative(function (result) {
     utResult = true;
     if (result && result.executed) {
-      logger.log('Total number of executed tests: ', result.total);
-      logger.log('Number of passed tests: ', result.passed);
-      logger.log('Number of failed tests: ', result.failed);
-      logger.log('Number of ignored tests: ', result.ignored);
-      logger.log('Total duration: ', result.duration);
+      logger.debug('Total number of executed tests: ', result.total);
+      logger.debug('Number of passed tests: ', result.passed);
+      logger.debug('Number of failed tests: ', result.failed);
+      logger.debug('Number of ignored tests: ', result.ignored);
+      logger.debug('Total duration: ', result.duration);
       if (result.failed > 0) {
-        logger.log('Failures: \n', result.failures);
+        logger.debug('Failures: \n', result.failures);
         utResult = false;
       }
     }
@@ -38,7 +38,7 @@ if (process.platform === 'android' || process.platform === 'ios') {
 }
 
 if (!utResult) {
-  logger.log('Failed to execute UT.');
+  logger.debug('Failed to execute UT.');
   global.nativeUTFailed = true;
 }
 
@@ -61,23 +61,23 @@ ThaliMobile.getNetworkStatus()
   Promise.all(promiseList)
   .then(function () {
     Mobile('GetDeviceName').callNative(function (name) {
-      logger.log('My device name is: %s', name);
+      logger.debug('My device name is: %s', name);
       testUtils.setName(name);
 
       networkTypes.reduce(function (sequence, networkType) {
         return sequence
           .then(function () {
-            logger.log('Running for ' + networkType + ' network type');
+            logger.debug('Running for ' + networkType + ' network type');
             global.NETWORK_TYPE = networkType;
             var testRunner = require('./runTests.js');
             return testRunner.run();
           });
       }, Promise.resolve())
       .catch(function (error) {
-        logger.log(error);
+        logger.error(error);
       });
     });
   });
 });
 
-logger('Unit Test app is loaded');
+logger.debug('Unit Test app is loaded');
