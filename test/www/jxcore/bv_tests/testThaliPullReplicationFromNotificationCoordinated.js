@@ -1,7 +1,7 @@
 'use strict';
 
 var crypto         = require('crypto');
-var expressPouchdb = require('express-pouchdb');
+var expressPouchDB = require('express-pouchdb');
 var express        = require('express');
 var Promise        = require('lie');
 
@@ -36,8 +36,14 @@ var test = tape({
     t.data = devicePublicKey.toJSON();
 
     router = express.Router();
-    var expressPDb = expressPouchdb(TestPouchDB, {mode: 'minimumForPouchDB'});
-    router.use('/db', expressPDb);
+    router.use(
+      '/db',
+      expressPouchDB(
+        TestPouchDB, {
+          mode: 'minimumForPouchDB'
+        }
+      )
+    );
 
     thaliNotificationServer = new ThaliNotificationServer(
       router, devicePublicPrivateKey, EXPIRATION_TIMEOUT
@@ -62,8 +68,10 @@ var test = tape({
       return ThaliMobile.stop();
     })
     .then(function (combinedResult) {
-      if (combinedResult.wifiResult !== null ||
-        combinedResult.nativeResult !== null) {
+      if (
+        combinedResult.wifiResult   !== null ||
+        combinedResult.nativeResult !== null
+      ) {
         return Promise.reject(
           new Error(
             'Had a failure in ThaliMobile.stop - ' +
