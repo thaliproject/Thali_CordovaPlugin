@@ -17,7 +17,7 @@ var Promise = require('./utils/Promise');
 var testUtils     = require('./testUtils');
 var serverAddress = require('../server-address');
 
-var logger = require('thali/ThaliLogger')('CoordinatedClient');
+var logger = require('./testLogger')('CoordinatedClient');
 
 
 function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) {
@@ -88,14 +88,18 @@ CoordinatedClient.states = {
 
 CoordinatedClient.prototype._bind = function () {
   this._io
-  .on  ('connect',    this._connect.bind(this))
-  .on  ('reconnect',  this._reconnect.bind(this))
-  .once('schedule',   this._schedule.bind(this))
-  .on  ('discard',    this._discard.bind(this))
-  .on  ('disqualify', this._disqualify.bind(this))
-  .on  ('disconnect', this._disconnect.bind(this))
-  .on  ('error',      this._error.bind(this))
-  .once('complete',   this._complete.bind(this));
+  .on  ('connect',           this._connect.bind(this))
+  .on  ('connect_timeout',   this._connect.bind(this))
+  .on  ('connect_error',     this._connect.bind(this))
+  .on  ('reconnect',         this._reconnect.bind(this))
+  .on  ('reconnect_refused', this._reconnect.bind(this))
+  .on  ('reconnect_error',   this._reconnect.bind(this))
+  .once('schedule',          this._schedule.bind(this))
+  .on  ('discard',           this._discard.bind(this))
+  .on  ('disqualify',        this._disqualify.bind(this))
+  .on  ('disconnect',        this._disconnect.bind(this))
+  .on  ('error',             this._error.bind(this))
+  .once('complete',          this._complete.bind(this));
 }
 
 // We are having similar logic in both connect reconnect
