@@ -85,7 +85,7 @@ Socket.prototype._bind = function (method, event, handler) {
 // We want to be able to unbind this auto-apply function.
 Socket.prototype._apply = function (method) {
   var self = this;
-  var args = Array.from(arguments).slice(1);
+  var args = Array.prototype.slice.call(arguments, 1);
 
   function updatedHandler () {
     self._rawSocket[method].apply(self._rawSocket, args);

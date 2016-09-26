@@ -3,8 +3,6 @@
 var format = require('util').format;
 var assert = require('assert');
 
-require('./polyfills.js');
-
 
 function exists(value) {
   return value !== undefined && value !== null;

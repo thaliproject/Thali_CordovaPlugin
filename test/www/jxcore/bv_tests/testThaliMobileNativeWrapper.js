@@ -16,6 +16,7 @@ if (typeof Mobile === 'undefined') {
   return;
 }
 
+var platform = require('thali/NextGeneration/utils/platform');
 var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var validations = require('thali/validations');
 var tape = require('../lib/thaliTape');
@@ -341,7 +342,7 @@ test('make sure terminateListener is properly hooked up', function (t) {
 test('make sure we actually call kill connections properly', function (t) {
   thaliMobileNativeWrapper.killConnections()
   .then(function () {
-    if (jxcore.utils.OSInfo().isAndroid) {
+    if (platform.isAndroid) {
       t.fail('should not succeed on Android');
       t.end();
     } else {
@@ -352,7 +353,7 @@ test('make sure we actually call kill connections properly', function (t) {
     }
   })
   .catch(function (error) {
-    if (jxcore.utils.OSInfo().isIOS) {
+    if (platform.isIOS) {
       t.fail('should not fail on iOS');
       t.end();
     } else {
@@ -426,7 +427,7 @@ test('We repeat failedConnection event when we get it from ' +
   }
 );
 
-if (!jxcore.utils.OSInfo().isMobile) {
+if (!platform.isMobile) {
   // This test primarily exists to make sure that we can easily debug the full
   // connection life cycle from the HTTP client through thaliMobileNativeWrapper
   // down through the mux layer down to mobile and back up all the way to the
@@ -648,7 +649,7 @@ test('can do HTTP requests after connections are cut', function (t) {
   // (iOS does not require separate call to operate since
   // killConnections is more like a single-shot thing).
 
-  if (jxcore.utils.OSInfo().isAndroid) {
+  if (platform.isAndroid) {
     var networkChangeHandler = function(networkChangedValue) {
       t.pass('Delete me - we got a network changed value ' + networkChangedValue);
       if (networkChangedValue.bluetoothLowEnergy &&

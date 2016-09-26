@@ -1,17 +1,12 @@
 'use strict';
 
 var Logger = require('thali/ThaliLogger');
-
+var platform = require('thali/NextGeneration/utils/platform');
 
 var logCallback;
 var messages = [];
 
-var isMobile = (
-  typeof jxcore !== 'undefined' &&
-  jxcore.utils &&
-  jxcore.utils.OSInfo() &&
-  jxcore.utils.OSInfo().isMobile
-);
+var isMobile = platform.isMobile;
 
 if (isMobile) {
   Mobile('setLogCallback').registerAsync(function (callback) {

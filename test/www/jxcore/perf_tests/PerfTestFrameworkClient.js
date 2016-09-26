@@ -14,6 +14,7 @@ var io = require('socket.io-client');
 var inherits = require('util').inherits;
 var testUtils = require('../lib/testUtils.js');
 var EventEmitter = require('events').EventEmitter;
+var platform = require('thali/NextGeneration/utils/platform');
 
 function debug(msg) {
   console.log(msg);
@@ -52,7 +53,7 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
   // mock testServer (which we see as simple EventEmitter)
 
   if (!testServer) {
-    var serverOptions = {  
+    var serverOptions = {
       transports: ['websocket']
     };
     this.testServer = io('http://' + require('../server-address') + ':3000/', serverOptions);
@@ -76,7 +77,7 @@ function TestFrameworkClient(deviceName, bluetoothAddress, testServer) {
     // and what our bluetoothAddress is (Android only)
 
     var platform;
-    if (jxcore.utils.OSInfo().isAndroid) {
+    if (platform.isAndroid) {
       platform = 'android';
     } else {
       platform = 'ios';
@@ -229,8 +230,8 @@ TestFrameworkClient.prototype.printResults = function(data) {
       if (results.connectError) {
         this.printFailedLine(
           'connectList',
-          results.connectError.failedPeer, 
-          results.connectError.notTriedList, 
+          results.connectError.failedPeer,
+          results.connectError.notTriedList,
           results.connectList.length
         );
       }
@@ -250,8 +251,8 @@ TestFrameworkClient.prototype.printResults = function(data) {
         if (results.sendError) {
           this.printFailedLine(
             'sendList',
-            results.sendError.failedPeer, 
-            results.sendError.notTriedList, 
+            results.sendError.failedPeer,
+            results.sendError.notTriedList,
             results.sendList.length
           );
         }
@@ -269,7 +270,7 @@ TestFrameworkClient.prototype.printFailedLine = function(
   }
 
   console.log(
-    what + " failed peers count : " + failedPeers.length + 
+    what + " failed peers count : " + failedPeers.length +
     " [" + ((failedPeers.length * 100) / (successCount + failedPeers.length)) + " %]"
   );
 
@@ -278,8 +279,8 @@ TestFrameworkClient.prototype.printFailedLine = function(
   });
 
   console.log(
-    what + " never tried peers count : " + notTriedPeers.length + 
-    " [" + ((notTriedPeers.length * 100) / (successCount + failedPeers.length + 
+    what + " never tried peers count : " + notTriedPeers.length +
+    " [" + ((notTriedPeers.length * 100) / (successCount + failedPeers.length +
     notTriedPeers.length)) + " %]"
   );
 
@@ -294,7 +295,7 @@ TestFrameworkClient.prototype.printMinMaxLine  = function(list) {
     return;
   }
   console.log(
-    'Result count ' + list.length + ', range ' + list[0].time + ' ms to  ' + 
+    'Result count ' + list.length + ', range ' + list[0].time + ' ms to  ' +
     list[(list.length - 1)].time + " ms."
   );
 }
@@ -312,8 +313,8 @@ TestFrameworkClient.prototype.printResultLine  = function(what, list) {
   }
 
   console.log(
-    what + " : 100% : " + percentile(list, 1.00) + " ms, 99% : " + 
-    percentile(list, 0.99)  + " ms, 95 : " + percentile(list, 0.95) + " ms, 90% : " + 
+    what + " : 100% : " + percentile(list, 1.00) + " ms, 99% : " +
+    percentile(list, 0.99)  + " ms, 95 : " + percentile(list, 0.95) + " ms, 90% : " +
     percentile(list, 0.90) + " ms."
   );
 }

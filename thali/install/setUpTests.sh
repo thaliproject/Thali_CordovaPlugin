@@ -25,6 +25,7 @@ jx npm install --no-optional
 jx generateServerAddress.js $2
 cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest
+cordovaRoot=$(pwd)/ThaliTest
 mkdir -p ThaliTest/thaliDontCheckIn/localdev
 
 if [ $runningInMinGw == true ]; then
@@ -65,8 +66,14 @@ find . -name "*.pem" -delete
 
 cp -v $1 app.js
 
+cd $repositoryRoot/thali/install
+jx npm install
+cd $cordovaRoot/thaliDontCheckIn
+jx $repositoryRoot/thali/install/setUpThaliTestIds.js
+
 # A file that identifies the current build as a UT build, which results in copying Android native UT files to the platform folder
-touch ../../platforms/android/unittests
+cd $cordovaRoot
+touch platforms/android/unittests
 
 cordova build android --release --device
 

@@ -5,6 +5,7 @@ var path = require('path');
 var thaliTape = require('./lib/thaliTape');
 var testUtils = require('./lib/testUtils');
 var logger    = require('./lib/testLogger')('runTests');
+var platform = require('thali/NextGeneration/utils/platform');
 
 // The global.Mobile object is replaced here after thaliTape
 // has been required so that thaliTape can pick up the right
@@ -18,7 +19,7 @@ var hasJavaScriptSuffix = function (path) {
 };
 
 var loadFile = function (filePath) {
-  console.info('Test runner loading file: ' + filePath);
+  logger.debug('Test runner loading file: ' + filePath);
   try {
     require(filePath);
   } catch (error) {
@@ -41,29 +42,18 @@ if (hasJavaScriptSuffix(testsToRun)) {
   });
 }
 
-var platform;
-if (
-  typeof jxcore !== 'undefined' &&
-  jxcore.utils &&
-  jxcore.utils.OSInfo()
-) {
-  var osInfo = jxcore.utils.OSInfo();
-  if (osInfo.isAndroid) {
-    platform = 'android';
-  } else if (osInfo.isIOS) {
-    platform = 'ios';
-  } else {
-    platform = 'desktop';
-  }
-} else {
-  platform = 'desktop';
+var currentPlatform = platform.name;
+// Our current platform can be 'darwin', 'linux', 'windows', etc.
+// Our 'thaliTape' expects all these platforms will be named as 'desktop'
+if (!platform.isMobile) {
+  currentPlatform = 'desktop';
 }
 
 testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
   return testUtils.getOSVersion()
   .then(function (version) {
-    return thaliTape.begin(platform, version, hasRequiredHardware);
+    return thaliTape.begin(currentPlatform, version, hasRequiredHardware);
   })
 })
 .then(function () {
