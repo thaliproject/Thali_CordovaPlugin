@@ -575,7 +575,7 @@ test('can get data from all participants', function (t) {
   });
 });
 
-test.only('Discovered peer should be removed if no availability updates ' +
+test('Discovered peer should be removed if no availability updates ' +
   'were received during availability timeout', function (t) {
     var peerIdentifier = 'urn:uuid:' + uuid.v4();
     var portNumber = 8080;
