@@ -12,6 +12,7 @@
 
 #import <ThaliCore/BluetoothHardwareControlManager.h>
 #import <ThaliCore/BluetoothHardwareControlObserver.h>
+#import <ThaliCore/GCDAsyncSocket.h>
 
 //! Project version number for ThaliCoreWithTests.
 FOUNDATION_EXPORT double ThaliCoreVersionNumber;

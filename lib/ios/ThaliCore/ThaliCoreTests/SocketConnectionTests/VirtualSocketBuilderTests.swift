@@ -7,166 +7,121 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import XCTest
-@testable import ThaliCore
 import MultipeerConnectivity
-
-class SessionMock: Session {
-
-    private var identifier: MCPeerID
-    private var session: MCSession
-    private var outputStreamName: String?
-
-    var simulateRelay: Bool = true
-
-    var mockState: MCSessionState = .Connected {
-        didSet {
-            self.session(session, peer: identifier, didChangeState: mockState)
-        }
-    }
-
-    override var sessionState: Atomic<MCSessionState> {
-        return Atomic(mockState)
-    }
-
-    override var didReceiveInputStreamHandler: ((NSInputStream, String) -> Void)? {
-        didSet {
-            didReceiveInputStreamHandler?(NSInputStream(data: NSData(bytes: nil, length: 0)),
-                                          getInputStreamName())
-        }
-    }
-
-    var simulateCreateOutputStreamError: Bool = false
-
-    override init(session: MCSession, identifier: MCPeerID, disconnectHandler: () -> Void) {
-        self.session = session
-        self.identifier = identifier
-        super.init(session: session, identifier: identifier, disconnectHandler: disconnectHandler)
-    }
-
-    func getInputStreamName() -> String {
-        print(outputStreamName)
-        guard let streamName = outputStreamName where simulateRelay else {
-            return ""
-        }
-        return streamName
-    }
-
-    override func createOutputStream(withName name: String) throws -> NSOutputStream {
-        guard !simulateCreateOutputStreamError else {
-            throw NSError(domain: "org.thaliproject.testError", code: 42, userInfo: nil)
-        }
-        outputStreamName = name
-        return NSOutputStream(toBuffer: nil, capacity: 0)
-    }
-}
+@testable import ThaliCore
+import XCTest
 
 class VirtualSocketBuilderTests: XCTestCase {
 
-    var socketCompletionHandlerCalledExpectation: XCTestExpectation!
-    var session: SessionMock!
+    // MARK: - State
+    var mcPeerID: MCPeerID!
+    var mcSessionMock: MCSessionMock!
+    var nonTCPSession: Session!
 
+    let streamReceivedTimeout: NSTimeInterval = 5.0
+    let connectionErrorTimeout: NSTimeInterval = 10.0
+
+    // MARK: - Setup
     override func setUp() {
-        super.setUp()
-        socketCompletionHandlerCalledExpectation = expectationWithDescription("Socket created")
-        session = SessionMock(session: MCSession(peer: MCPeerID(displayName:"peer1")),
-                              identifier: MCPeerID(displayName:"peer2")) {
-        }
+        mcPeerID = MCPeerID(displayName: String.random(length: 5))
+        mcSessionMock = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
+        nonTCPSession = Session(session: mcSessionMock,
+                                identifier: mcPeerID,
+                                connected: {},
+                                notConnected: {})
     }
 
-    private func createSocket<Builder: VirtualSocketBuilder>(session: Session,
-                              completion: ((NSOutputStream, NSInputStream)?, ErrorType?) -> Void)
-                                                                                        -> Builder {
-        return Builder(session: session, completionHandler: completion)
-    }
+    // MARK: - Tests
+    func testAdvertiserSocketBuilderCreatesVirtualSocket() {
+        // Expectations
+        let virtualSocketCreated = expectationWithDescription("Virtual socket is created")
 
-    func testSocketCreatedWithAdvertiserBuilder() {
-        var socket: (NSOutputStream, NSInputStream)?
-
-        let _: AdvertiserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerCalledExpectation] receivedSocket, error in
-            socket = receivedSocket
-            socketCompletionHandlerCalledExpectation?.fulfill()
+        // Given
+        let socketBuilder = AdvertiserVirtualSocketBuilder(with: nonTCPSession) {
+            virtualSocket, error in
+            XCTAssertNil(error, "Virtual Socket is not created")
+            virtualSocketCreated.fulfill()
         }
 
-        let socketCreatedTimeout = 2.0
-        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
-        XCTAssertNotNil(socket)
+        let emptyData = NSData(bytes: nil, length: 0)
+        let emptyInputStream = NSInputStream(data: emptyData)
+        let randomlyGeneratedStreamName = NSUUID().UUIDString
+
+        mcSessionMock.delegate?.session(mcSessionMock,
+                                        didReceiveStream: emptyInputStream,
+                                        withName: randomlyGeneratedStreamName,
+                                        fromPeer: mcPeerID)
+
+        // When
+        socketBuilder.createVirtualSocket(with: emptyInputStream,
+                                          inputStreamName: randomlyGeneratedStreamName)
+
+        // Then
+        waitForExpectationsWithTimeout(streamReceivedTimeout, handler: nil)
     }
 
-    func testSocketCreatedWithBrowserBuilderBeforeConnectedState() {
-        session.mockState = .NotConnected
-        var socket: (NSOutputStream, NSInputStream)?
+    func testConnectionTimeoutErrorWhenBrowserSocketBuilderTimeout() {
+        // Expectations
+        let gotConnectionTimeoutErrorReturned =
+            expectationWithDescription("Got .ConnectionTimeout error")
 
-        let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerCalledExpectation] receivedSocket, error in
-            socket = receivedSocket
-            socketCompletionHandlerCalledExpectation?.fulfill()
+        // Given
+        let socketBuilder =
+            BrowserVirtualSocketBuilder(with: nonTCPSession,
+                                        streamName: NSUUID().UUIDString,
+                                        streamReceivedBackTimeout: streamReceivedTimeout)
+
+        // When
+        socketBuilder.startBuilding {
+            virtualSocket, error in
+            XCTAssertNotNil(error, "Got error in completion")
+
+            guard let thaliCoreError = error as? ThaliCoreError else {
+                XCTFail("Error in completion is not ThaliCoreError")
+                return
+            }
+
+            XCTAssertEqual(thaliCoreError,
+                           ThaliCoreError.ConnectionTimedOut,
+                           "ThaliCoreError in completion is not ConnectionTimeout error")
+            gotConnectionTimeoutErrorReturned.fulfill()
         }
-        session.mockState = .Connected
 
-        let socketCreatedTimeout = 2.0
-        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
-        XCTAssertNotNil(socket)
+        // Then
+        waitForExpectationsWithTimeout(connectionErrorTimeout, handler: nil)
     }
 
-    func testSocketCreatedWithBrowserBuilderAfterConnectedState() {
-        var socket: (NSOutputStream, NSInputStream)?
+    func testConnectionFailedErrorWhenBrowserSocketBuilderCantStartStream() {
+        // Expectations
+        let gotConnectionFailedErrorReturned =
+            expectationWithDescription("Got .ConnectionFailed error")
 
-        session.mockState = .Connected
-        let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerCalledExpectation] receivedSocket, error in
-            socket = receivedSocket
-            socketCompletionHandlerCalledExpectation?.fulfill()
+        // Given
+        mcSessionMock.errorOnStartStream = true
+        let socketBuilder =
+            BrowserVirtualSocketBuilder(with: nonTCPSession,
+                                        streamName: NSUUID().UUIDString,
+                                        streamReceivedBackTimeout: streamReceivedTimeout)
+
+        // When
+        socketBuilder.startBuilding {
+            virtualSocket, error in
+            XCTAssertNotNil(error, "Got error in completion")
+
+            guard let thaliCoreError = error as? ThaliCoreError else {
+                XCTFail("Error in completion is not ThaliCoreError")
+                return
+            }
+
+            XCTAssertEqual(thaliCoreError,
+                           ThaliCoreError.ConnectionFailed,
+                           "ThaliCoreError in completion is not ConnectionFailed error")
+            gotConnectionFailedErrorReturned.fulfill()
         }
 
-        let socketCreatedTimeout = 2.0
-        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
-        XCTAssertNotNil(socket)
-    }
-
-    func testReceivedWrongInputStreamNameForBrowserBuilder() {
-        session.simulateRelay = false
-        var error: ErrorType?
-
-        let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerCalledExpectation] receivedSocket, err in
-            error = err
-            socketCompletionHandlerCalledExpectation?.fulfill()
-        }
-
-        let socketCreatedTimeout = 2.0
-        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
-        XCTAssertNotNil(error)
-    }
-
-    func testReceiveErrorOnCreateBrowserOutputStream() {
-        session.simulateCreateOutputStreamError = true
-        var error: ErrorType?
-
-        let _: BrowserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerCalledExpectation] receivedSocket, err in
-            error = err
-            socketCompletionHandlerCalledExpectation?.fulfill()
-        }
-
-        let receiveErrorTimeout = 2.0
-        waitForExpectationsWithTimeout(receiveErrorTimeout, handler: nil)
-        XCTAssertNotNil(error)
-    }
-
-    func testReceiveErrorOnCreateAdvertiserOutputStream() {
-        session.simulateCreateOutputStreamError = true
-        var error: ErrorType?
-
-        let _: AdvertiserVirtualSocketBuilder = createSocket(session) {
-            [weak socketCompletionHandlerCalledExpectation] receivedSocket, err in
-            error = err
-            socketCompletionHandlerCalledExpectation?.fulfill()
-        }
-
-        let socketCreatedTimeout = 2.0
-        waitForExpectationsWithTimeout(socketCreatedTimeout, handler: nil)
-        XCTAssertNotNil(error)
+        // Then
+        waitForExpectationsWithTimeout(streamReceivedTimeout, handler: {
+            error in
+        })
     }
 }

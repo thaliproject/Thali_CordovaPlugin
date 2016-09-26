@@ -7,108 +7,108 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import Foundation
+/**
+ Manages Thali advertiser's logic
+ */
+public final class AdvertiserManager {
 
-// Class for managing Thali advertiser's logic
-@objc public final class AdvertiserManager: NSObject {
-    private let disposeAdvertiserTimeout: NSTimeInterval
-    private let serviceType: String
-    internal private(set) var advertiserIdentifiers: [PeerIdentifier] = []
-    internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
-    internal private(set) var currentAdvertiser: Advertiser? = nil
-
-    let socketRelay: SocketRelay<AdvertiserVirtualSocketBuilder>
-    internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
-
+    // MARK: - Public state
     public var advertising: Bool {
         return currentAdvertiser?.advertising ?? false
     }
 
-    /**
+    // MARK: - Internal state
+    internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
+    internal private(set) var activeRelays: Atomic<[String: AdvertiserRelay]> = Atomic([:])
+    internal var didDisposeAdvertiserForPeerHandler: ((Peer) -> Void)?
 
-     - parameter serviceType:               The type of service to advertise
-     - parameter disposeAdvertiserTimeout:  Time in seconds after old version of advertiser will be
-     disposed
-     - parameter inputStreamReceiveTimeout: Timeout in seconds for receiving input stream
+    // MARK: - Private state
+    private var currentAdvertiser: Advertiser?
+    private let serviceType: String
+    private let disposeTimeout: NSTimeInterval
 
-     */
-    public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval,
-                inputStreamReceiveTimeout: NSTimeInterval) {
-        self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
+    // MARK: - Initialization
+    public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval) {
         self.serviceType = serviceType
-        socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(
-            createSocketTimeout: inputStreamReceiveTimeout)
+        self.disposeTimeout = disposeAdvertiserTimeout
     }
 
-    private func handle(session: Session, withPort port: UInt16) {
-        socketRelay.createSocket(with: session, onPort: port) { port, error in
+    // MARK: - Public methods
+    public func startUpdateAdvertisingAndListening(onPort port: UInt16,
+                                                          errorHandler: ErrorType -> Void) {
+        if let currentAdvertiser = currentAdvertiser {
+            disposeAdvertiserAfterTimeoutToFinishInvites(currentAdvertiser)
         }
-    }
 
-    // Dispose advertiser after timeout to ensure that it has no pending invitations
-    private func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW,
-                                      Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
-        dispatch_after(delayTime, dispatch_get_main_queue()) {
-            advertiser.stopAdvertising()
+        let newPeer = currentAdvertiser?.peer.nextGenerationPeer() ?? Peer()
 
-            self.advertisers.modify {
-                if let index = $0.indexOf(advertiser) {
-                    $0.removeAtIndex(index)
-                }
-            }
+        let advertiser = Advertiser(peer: newPeer,
+                                    serviceType: serviceType,
+                                    receivedInvitation: {
+                                        [weak self] session in
+                                        guard let strongSelf = self else { return }
 
-            self.didRemoveAdvertiserWithIdentifierHandler?(advertiser.peerIdentifier)
+                                        strongSelf.activeRelays.modify {
+                                            let relay = AdvertiserRelay(with: session, on: port)
+                                            $0[newPeer.uuid] = relay
+                                        }
+                                    },
+                                    sessionNotConnected: {
+                                        [weak self] in
+                                        guard let strongSelf = self else { return }
+
+                                        strongSelf.activeRelays.modify {
+                                            if let relay = $0[newPeer.uuid] {
+                                                relay.closeRelay()
+                                            }
+                                            $0.removeValueForKey(newPeer.uuid)
+                                        }
+                                    })
+        guard let newAdvertiser = advertiser else {
+            errorHandler(ThaliCoreError.ConnectionFailed)
+            return
         }
-    }
 
-    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16,
-                                 errorHandler: ErrorType -> Void) -> Advertiser {
-        advertiserIdentifiers.append(identifier)
-        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
-                                    receivedInvitationHandler: { [weak self] session in
-                                        self?.handle(session, withPort: port)
-                                    }, disconnectHandler: {
-            // TODO: fix with #1040
-        })
-        advertiser.startAdvertising(errorHandler)
         advertisers.modify {
-            $0.append(advertiser)
+            newAdvertiser.startAdvertising(errorHandler)
+            $0.append(newAdvertiser)
         }
-        return advertiser
+
+        self.currentAdvertiser = newAdvertiser
     }
 
     public func stopAdvertising() {
-        advertisers.withValue {
-            $0.forEach {
-                $0.stopAdvertising()
-            }
-        }
         advertisers.modify {
+            $0.forEach { $0.stopAdvertising() }
             $0.removeAll()
         }
         currentAdvertiser = nil
     }
 
-    public func hasAdvertiser(with identifier: PeerIdentifier) -> Bool {
-        return advertiserIdentifiers.filter {
-            $0 == identifier
-        }.count > 0
+    public func hasAdvertiser(with identifier: Peer) -> Bool {
+        return advertisers.value.filter { $0.peer == identifier }
+                                .count > 0
     }
 
-    public func startUpdateAdvertisingAndListening(withPort port: UInt16,
-                                                            errorHandler: ErrorType -> Void) {
-        if let currentAdvertiser = currentAdvertiser {
-            let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
-            addAdvertiserToDisposeQueue(currentAdvertiser)
-            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port,
-                                                     errorHandler: errorHandler)
-        } else {
-            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port,
-                                                     errorHandler: errorHandler)
-        }
+    // MARK: - Private methods
+    private func disposeAdvertiserAfterTimeoutToFinishInvites(
+        advertiserShouldBeDisposed: Advertiser) {
 
-        assert(self.currentAdvertiser != nil,
-                "we should have initialized advertiser after calling this function")
+        let disposeTimeout = dispatch_time(DISPATCH_TIME_NOW,
+                                           Int64(self.disposeTimeout * Double(NSEC_PER_SEC)))
+
+        dispatch_after(disposeTimeout, dispatch_get_main_queue()) {
+            [weak self] in
+            guard let strongSelf = self else { return }
+
+            strongSelf.advertisers.modify {
+                advertiserShouldBeDisposed.stopAdvertising()
+                if let indexOfDisposingAdvertiser = $0.indexOf(advertiserShouldBeDisposed) {
+                    $0.removeAtIndex(indexOfDisposingAdvertiser)
+                }
+            }
+
+            strongSelf.didDisposeAdvertiserForPeerHandler?(advertiserShouldBeDisposed.peer)
+        }
     }
 }
