@@ -6,6 +6,10 @@ const exec = require('child-process-promise').exec;
 const path = require('path');
 const fs = require('fs-extra-promise');
 const thaliConfig = require('../package.json');
+const os = require('os');
+const http = require('http');
+const url = require('url');
+const assert = require('assert');
 
 const versions =
 {
@@ -34,7 +38,7 @@ const versions =
   python: '2.7.10',
   cordova: '6.3.1',
   java: '1.8.0_102',
-  git: '2.7.4',
+  git: '2.10.0',
   swiftLint: '0.1.1',
   btconnectorlib2: '0.3.2',
   jxcoreCordova: '0.1.2b',
@@ -44,150 +48,188 @@ const versions =
 
 module.exports.versions = versions;
 
+function sinopiaVersionCheck(sinopiaUrl) {
+  return new Promise((resolve, reject) => {
+    var parsedUrl = url.parse(sinopiaUrl);
+    if (parsedUrl.protocol !== 'http:') {
+      return Promise.reject();
+    }
+    var testThaliUrl =
+      sinopiaUrl + (sinopiaUrl.endsWith('/') ? '' : '/') + 'thali';
+    http.get(testThaliUrl, (res) => {
+      let result = '';
+      res.on('data', (chunk) => result += chunk);
+      res.on('end', () => {
+        try {
+          var thaliResponse = JSON.parse(result);
+          thaliResponse.name === 'thali' ? resolve() : reject();
+        } catch (e) {
+          reject(e);
+        }
+      });
+      res.on('error', (err) => reject(err));
+    });
+  });
+}
+
+function boolToPromise(result) {
+  return result ? Promise.resolve() : Promise.reject();
+}
+
 const commandsAndResults =
 {
   xcode: {
+    platform: ['darwin'],
     versionCheck: 'xcodebuild -version',
     versionValidate:
-      (result, version) => result.startsWith('Xcode '+ version + '\n')
+      (result, version) =>
+        boolToPromise(result.startsWith('Xcode '+ version + '\n'))
   },
   xcodeCommandLineTools: {
+    platform: ['darwin'],
     // I couldn't find any reliable way to validate which versions of the
     // tools are installed. The best I could do was find out which directory
     // they are supposed to be in. I tried http://stackoverflow.com/questions/15371925/how-to-check-if-command-line-tools-is-installed
     // and xcode-select -p returns a directory inside of XCode and none of
     // the pkgutil commands worked properly on my machine.
-    versionCheck: () => fs.readdirSync('/Library/Developer/CommandLineTools'),
+    versionCheck: () => fs.readdirAsync('/Library/Developer/CommandLineTools'),
     versionValidate:
-      (result, version) => result && result.length === 2 &&
-      result[0] === 'Library' && result[1] === 'usr'
+      (result, version) => boolToPromise(result && result.length === 2 &&
+      result[0] === 'Library' && result[1] === 'usr')
   },
   osX: {
+    platform: ['darwin'],
     versionCheck: 'sw_vers -productVersion',
     versionValidate:
-      (result, version) => version === result.trim()
+      (result, version) => boolToPromise(version === result.trim())
   },
   node: {
     versionCheck: 'node -v',
     versionValidate:
-      (result, version) =>  'v' + version === result.trim()
+      (result, version) => boolToPromise('v' + version === result.trim())
   },
   npm: {
     versionCheck: 'npm -v',
     versionValidate:
-      (result, version) =>  version === result.trim()
+      (result, version) => boolToPromise(version === result.trim())
   },
   brew: {
+    platform: ['darwin'],
     versionCheck: 'brew -v',
     versionValidate:
-      (result, version) =>  result.startsWith('Homebrew ' + version + ' ')
+      (result, version) =>
+        boolToPromise(result.startsWith('Homebrew ' + version + ' '))
   },
   ruby: {
+    platform: ['darwin'],
     versionCheck: 'ruby -v',
     versionValidate:
-      (result, version) =>  result.startsWith('ruby ' + version + ' ')
+      (result, version) =>
+        boolToPromise(result.startsWith('ruby ' + version + ' '))
   },
   wget: {
     versionCheck: 'wget -V',
     versionValidate:
-      (result, version) =>  result.startsWith('GNU Wget ' + version + ' ')
+      (result, version) =>
+        boolToPromise(result.startsWith('GNU Wget ' + version + ' '))
   },
   jxcore: {
     versionCheck: 'jx -jxv',
     versionValidate:
-      (result, version) =>  'v' + version === result.trim()
+      (result, version) => boolToPromise('v' + version === result.trim())
   },
   androidBuildTools: {
-    versionCheck: () => fs.readdirSync(path.join(process.env.ANDROID_HOME,
+    versionCheck: () => fs.readdirAsync(path.join(process.env.ANDROID_HOME,
       'build-tools')),
     versionValidate:
-      (result, version) =>  result.indexOf(version) !== -1
+      (result, version) => boolToPromise(result.indexOf(version) !== -1)
   },
   androidPlatform: {
-    versionCheck: () => fs.readdirSync(path.join(process.env.ANDROID_HOME,
+    versionCheck: () => fs.readdirAsync(path.join(process.env.ANDROID_HOME,
       'platforms')),
     versionValidate:
-      (result, version) =>  result.indexOf(version) !== -1
+      (result, version) => boolToPromise(result.indexOf(version) !== -1)
   },
   androidSupportLibraries: {
     versionCheck: () => {
       const sourcePropertiesLocation =
         path.join(process.env.ANDROID_HOME,
           'extras/android/m2repository/source.properties');
-      const sourcePropertiesFileContents =
-        fs.readFileSync(sourcePropertiesLocation, 'utf8');
-      // Skip the first line, then skip the # character on the second line
-      // and return the rest of the second line
-      const regEx = sourcePropertiesFileContents.match(/.*\n#(.*)\n/)[1];
-      if (!regEx[1]) {
-        return null;
-      }
-      return new Date(regEx);
+      return fs.readFileAsync(sourcePropertiesLocation, 'utf8')
+        .then((sourcePropertiesFileContents) => {
+          // Skip the first line, then skip the # character on the second line
+          // and return the rest of the second line
+          const regEx = sourcePropertiesFileContents.match(/.*\n#(.*)\n/)[1];
+          if (!regEx[1]) {
+            return Promise.reject();
+          }
+          return Promise.resolve(new Date(regEx));
+        });
     },
     versionValidate:
-      (result, version) => result - version >= 0
+      (result, version) => boolToPromise(result - version >= 0)
   },
   cordovaAndroidSetMinSDK: {
     versionCheck: 'echo $ORG_GRADLE_PROJECT_cdvMinSdkVersion',
     versionValidate:
-      (result, version) =>  version === result.trim()
+      (result, version) => boolToPromise(version === result.trim())
   },
   cordovaAndroidSetBuildToolsVersion: {
     versionCheck: 'echo $ORG_GRADLE_PROJECT_cdvBuildToolsVersion',
     versionValidate:
-      (result, version) =>  version === result.trim()
+      (result, version) => boolToPromise(version === result.trim())
   },
   cordovaAndroidSetCompileSdkVersion: {
     versionCheck: 'echo $ORG_GRADLE_PROJECT_cdvCompileSdkVersion',
     versionValidate:
-      (result, version) =>  version === result.trim()
+      (result, version) => boolToPromise(version === result.trim())
   },
   python: {
     versionCheck: 'python -V',
     checkStdErr: true, // http://bugs.python.org/issue28160 - fixed in 3.4
     versionValidate:
-      (result, version) =>  'Python ' + version === result.trim()
+      (result, version) => boolToPromise('Python ' + version === result.trim())
   },
   cordova: {
     versionCheck: 'cordova -v',
     versionValidate:
-      (result, version) =>  version === result.trim()
+      (result, version) => boolToPromise(version === result.trim())
   },
   java: {
     versionCheck: 'java -version',
     checkStdErr: true, // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=JDK-8166116
     versionValidate:
-      (result, version) =>  result.startsWith('java version "' + version +
-        '"\n')
+      (result, version) => boolToPromise(result.startsWith('java version "' +
+                                          version + '"\n'))
   },
   git: {
     versionCheck: 'git --version',
     versionValidate:
-      (result, version) =>  result.startsWith('git version ' + version + ' ')
+      (result, version) => boolToPromise(
+                                    'git version ' + version === result.trim())
   },
   swiftLint: {
+    platform: ['darwin'],
     versionCheck: 'swiftlint version',
     versionValidate:
-      (result, version) => version === result.trim()
+      (result, version) => boolToPromise(version === result.trim())
   },
   btconnectorlib2: {
-    versionCheck: () => thaliConfig.thaliInstall.btconnectorlib2,
+    versionCheck: () =>
+      Promise.resolve(thaliConfig.thaliInstall.btconnectorlib2),
     versionValidate:
-      (result, version) => version === result
+      (result, version) => boolToPromise(version === result)
   },
   jxcoreCordova: {
-    versionCheck: () => thaliConfig.thaliInstall['jxcore-cordova'],
+    versionCheck: () =>
+      Promise.resolve(thaliConfig.thaliInstall['jxcore-cordova']),
     versionValidate:
-      (result, version) => version === result
+      (result, version) => boolToPromise(version === result)
   },
   sinopiaNode: {
     versionCheck: 'npm get registry',
     versionValidate:
-      // The normal NPM registry uses (quite reasonably) a https URL but when
-      // we use sinopia we use a local http:// url, but the actual address
-      // will vary based on if we are on a dev box or CI so for now we just
-      // check for http
-      (result, version) => result.startsWith('http://')
+      (result, version) => sinopiaVersionCheck(result.trim())
   },
   sinopiaJxCore: {
     // The first time jx npm is run it can do an install, to simplify things
@@ -195,7 +237,7 @@ const commandsAndResults =
     // url
     versionCheck: 'jx npm get registry > /dev/null && jx npm get registry',
     versionValidate:
-      (result, version) => result.startsWith('http://')
+      (result, version) => sinopiaVersionCheck(result.trim())
   }
 
 };
@@ -203,11 +245,12 @@ const commandsAndResults =
 
 function execAndCheck(command, checkStdErr, version, validator) {
   return exec(command)
-    .then(function (result) {
+    .then((result) => {
       const output = checkStdErr ? result.stderr : result.stdout;
-      return validator(output, version) ? Promise.resolve(true) :
-        Promise.reject(new Error('Command: ' + command + ' failed'));
-    });
+      return validator(output, version);
+    })
+    .then(() => Promise.resolve(true))
+    .catch(() => Promise.reject(new Error('Command: ' + command + ' failed')));
 }
 
 /**
@@ -231,17 +274,21 @@ function checkVersion(objectName, versionNumber) {
   if (!desiredVersion) {
     return Promise.reject(new Error('Unrecognized objectName in versions'));
   }
+  if (commandAndResult.platform &&
+      !commandAndResult.platform.includes(os.platform()))
+  {
+    return Promise.reject(new Error('Requested object is not supported on ' +
+      'this platform'));
+  }
   if (typeof commandAndResult.versionCheck === 'function') {
-    return new Promise(function (resolve, reject) {
-      const version = commandAndResult.versionCheck();
-      if (!version) {
-        return reject(new Error('Version Check failed on ' + objectName));
-      }
-      return commandAndResult.versionValidate(
-                  commandAndResult.versionCheck(), desiredVersion) ?
-                  resolve(true) :
-                  reject(new Error('Version not installed of ' + objectName));
-    });
+    return commandAndResult.versionCheck()
+      .catch(() =>
+        Promise.reject(new Error('Version Check failed on ' + objectName)))
+      .then((versionCheckResult) =>
+        commandAndResult.versionValidate(versionCheckResult, desiredVersion))
+      .then(() => Promise.resolve(true))
+      .catch(() => Promise.reject(
+                        new Error('Version not installed of ' + objectName)));
   }
   return execAndCheck(commandAndResult.versionCheck,
                       commandAndResult.checkStdErr,
@@ -254,52 +301,50 @@ module.exports.checkVersion = checkVersion;
 function processCommandsAndResults(commandsAndResults) {
   let passed = true;
   let errorMessage = '';
-  let runningPromise = Promise.resolve();
-  Object.getOwnPropertyNames(commandsAndResults).forEach(function (name) {
-    runningPromise = runningPromise.then(function () {
-      return checkVersion(name)
-        .catch(function (err) {
-          passed = false;
-          errorMessage += '\n' + err;
-          return Promise.resolve();
-        });
-    });
-  });
+  let runningPromise = Object.getOwnPropertyNames(commandsAndResults)
+        .reduce((runningPromise, name) => {
+          if (commandsAndResults[name].platform &&
+            !commandsAndResults[name].platform.includes(os.platform())) {
+            return runningPromise;
+          }
+          return runningPromise.then(() =>
+            checkVersion(name)
+              .catch((err) => {
+                passed = false;
+                errorMessage += '\n' + 'Object Name: ' + name + ' : ' + err;
+                return Promise.resolve();
+              }));
+        }, Promise.resolve());
   return runningPromise
-    .then(function () {
-      return passed ? Promise.resolve() : Promise.reject(errorMessage);
-    });
+    .then(() => passed ? Promise.resolve() : Promise.reject(errorMessage));
 }
 
 // Detects if we were called from the command line
 if (require.main === module) {
-  const versionsCount = Object.getOwnPropertyNames(versions).length;
-  const commandsAndResultCount =
-    Object.getOwnPropertyNames(commandsAndResults).length;
-  if (versionsCount !== commandsAndResultCount) {
-    console.log('Versions and commandsAndResults don\'t have the same length,' +
-                ' so something is wrong.');
-    process.exit(-1);
+  if (os.platform() !== 'darwin') {
+    console.log('WARNING: WE ONLY SUPPORT OS/X AS A BUILD PLATFORM, USING ANY' +
+      'OTHER PLATFORM IS NOT OFFICIALLY SUPPORTED. WE STILL CHECK A FEW ' +
+      'THINGS BUT YOU ARE REALLY ON YOUR OWN');
   }
-  for (const name of Object.getOwnPropertyNames(commandsAndResults)) {
-    if (!versions[name]) {
-      console.log('Name ' + name + ' was in commandsAndResults but not ' +
-                  'versions');
-      process.exit(-1);
-    }
-  }
+  assert.deepStrictEqual(Object.getOwnPropertyNames(versions),
+                         Object.getOwnPropertyNames(commandsAndResults),
+                         'Versions and commandsAndResults keys must be equal');
   processCommandsAndResults(commandsAndResults)
-    .then(function () {
+    .then(() => {
       // Good to clean this up in case we have changed the version of jxcore
       const home = process.env.HOME;
       const jx = path.join(home, '.jx');
+      const jxc = path.join(home, '.jxc');
       const nodeGyp = path.join(home, 'node-gyp');
-      return Promise.all([fs.removeAsync(jx), fs.removeAsync(nodeGyp)]);
-    }).then(function () {
-    console.log('Environment validated');
-    process.exit(0);
-  }).catch(function (err) {
-    console.log('Environment not valid: ' + err);
-    process.exit(-1);
-  });
+      return Promise.all([fs.removeAsync(jx), fs.removeAsync(jxc),
+                         fs.removeAsync(nodeGyp)]);
+    })
+    .then(() => {
+      console.log('Environment validated');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.log('Environment not valid: ' + err);
+      process.exit(-1);
+    });
 }

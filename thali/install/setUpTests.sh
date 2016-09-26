@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-# Exit immediately if a command exits with a non-zero status.
-set -e
+set -euo pipefail
 
-ERROR_ABORT()
-{
-  if [[ $? != 0 ]]; then
-    LOG $RED_COLOR "SetUp Tests Failed\n"
-    exit -1
-  fi
+NORMAL_COLOR='\033[0m'
+RED_COLOR='\033[0;31m'
+
+OUTPUT() {
+  echo -e "${RED_COLOR}$BASH_COMMAND FAILED - setUpTests failure${NORMAL_COLOR}"
 }
+
+trap OUTPUT ERR
 
 # Check the platform we are running
 IS_MINIGW_PLATFORM=false
@@ -41,25 +41,26 @@ TEST_PROJECT_ROOT_DIR=${REPO_ROOT_DIR}/../${TEST_PROJECT_NAME}
 # Prepares test project
 prepare_project()
 {
-  node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js;ERROR_ABORT
+  IPADDRESS=${1:-}
+  node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
 
   echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
 
   cd $REPO_ROOT_DIR/test/TestServer
   jx npm install
-  jx generateServerAddress.js $2
+  jx generateServerAddress.js $IPADDRESS
   cd $REPO_ROOT_DIR/..
-  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME;ERROR_ABORT
-  mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev;ERROR_ABORT
+  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
+  mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
   if [ $IS_MINIGW_PLATFORM == true ]; then
       # The thali package might be installed as link and there will
       # be troubles later on if this link is tried to be copied so
       # remove it here.
-      rm -rf $REPO_ROOT_DIR/test/www/jxcore/node_modules/thali;ERROR_ABORT
-      cp -R $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/;ERROR_ABORT
+      rm -rf $REPO_ROOT_DIR/test/www/jxcore/node_modules/thali
+      cp -R $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/
   else
-      rsync -a --no-links $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/www;ERROR_ABORT
+      rsync -a --no-links $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/www
   fi
 }
 
@@ -67,8 +68,8 @@ install_thali()
 {
   echo "Installing Thali into ${TEST_PROJECT_NAME}"
 
-  cd $TEST_PROJECT_ROOT_DIR/www/jxcore;ERROR_ABORT
-  jx npm install $REPO_ROOT_DIR/thali --save --no-optional --autoremove "*.gz";ERROR_ABORT
+  cd $TEST_PROJECT_ROOT_DIR/www/jxcore
+  jx npm install $REPO_ROOT_DIR/thali --save --no-optional --autoremove "*.gz"
 
   if [ $IS_MINIGW_PLATFORM == true ]; then
       # On Windows the package.json file will contain an invalid local file URI for Thali,
@@ -82,13 +83,13 @@ install_thali()
   # SuperTest which is used by some of the BVTs include a PEM file (for private
   # keys) that makes Android unhappy so we remove it below in addition to the gz
   # files.
-  jx npm install --no-optional --autoremove "*.gz,*.pem";ERROR_ABORT
+  jx npm install --no-optional --autoremove "*.gz,*.pem"
 
   # In case autoremove fails to delete the files, delete them explicitly.
   find . -name "*.gz" -delete
   find . -name "*.pem" -delete
 
-  cp -v $1 app.js;ERROR_ABORT
+  cp -v $1 app.js
 }
 
 add_android_platform()
@@ -109,7 +110,7 @@ build_android()
 
   cd $TEST_PROJECT_ROOT_DIR
 
-  cordova build android --release --device;ERROR_ABORT
+  cordova build android --release --device
 }
 
 # Adds iOS platform when we're running on macOS
@@ -120,10 +121,10 @@ add_ios_platform_if_possible()
 
     cd $TEST_PROJECT_ROOT_DIR
 
-    cordova platform add ios;ERROR_ABORT
+    cordova platform add ios
 
     # A file that identifies the current build as a UT build
-    touch platforms/ios/unittests;ERROR_ABORT
+    touch platforms/ios/unittests
   fi
 }
 
@@ -149,7 +150,7 @@ build_ios_if_possible()
     # it's a shortcut for `cordova prepare` + `cordova compile`
     # so we have to run cordova prepare and xcodebuild then
 
-    cordova prepare ios --device;ERROR_ABORT
+    cordova prepare ios --device
 
     TEST_PROJECT_DIR=$TEST_PROJECT_ROOT_DIR/platforms/ios
     TEST_PROJECT_PATH=$TEST_PROJECT_DIR/$TEST_PROJECT_NAME.xcodeproj
@@ -168,16 +169,15 @@ build_ios_if_possible()
       CONFIGURATION_BUILD_DIR="${TEST_PROJECT_DIR}/build/device" \
       SHARED_PRECOMPS_DIR="${TEST_PROJECT_DIR}/build/sharedpch" \
     )
-    ERROR_ABORT
-
   fi
 }
 
 # Please note that functions order is important
-prepare_project $1 $2
+IPADDRESS=${2:-}
+prepare_project ${IPADDRESS}
 add_android_platform
 add_ios_platform_if_possible
-install_thali $1 $2
+install_thali $1 ${IPADDRESS}
 build_android
 build_ios_if_possible
 
