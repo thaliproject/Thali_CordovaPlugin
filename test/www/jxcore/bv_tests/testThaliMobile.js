@@ -568,3 +568,43 @@ test('can get data from all participants', function (t) {
     });
   });
 });
+
+test.only('Discovered peer should be removed if no availability updates ' +
+  'were received during availability timeout', function (t) {
+    var peerIdentifier = 'urn:uuid:' + uuid.v4();
+    var portNumber = 8080;
+
+    ThaliMobile.start(express.Router())
+      .then(function () {
+        var availabilityHandler = function (peer) {
+          if (peer.peerIdentifier !== peerIdentifier) {
+            return;
+          }
+
+          ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+            availabilityHandler);
+
+          var unavailabilityHandler = function (peer) {
+            if (peer.peerIdentifier !== peerIdentifier) {
+              return;
+            }
+            ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+              unavailabilityHandler);
+
+            t.end();
+          };
+
+          ThaliMobile.emitter.on('peerAvailabilityChanged',
+            unavailabilityHandler);
+        };
+
+      ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+      ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+        {
+          peerIdentifier: peerIdentifier,
+          portNumber: portNumber
+        }
+      );
+    });
+});
