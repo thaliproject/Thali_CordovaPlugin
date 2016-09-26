@@ -381,10 +381,10 @@ module.exports.getNetworkStatus = function () {
     switch (networkType) {
       case networkTypes.NATIVE:
       case networkTypes.BOTH:
-         ThaliMobileNativeWrapper
-          .getNonTCPNetworkStatus()
-          .then(resolve);
-         break;
+       ThaliMobileNativeWrapper
+        .getNonTCPNetworkStatus()
+        .then(resolve);
+       break;
       case networkTypes.WIFI:
         reject(new Error('Native stack is not on'));
         break;
@@ -409,7 +409,7 @@ module.exports.getNetworkStatus = function () {
  */
 
 /**
- * If the peer identifier and conntection type is not in the availability cache
+ * If the peer identifier and connection type is not in the availability cache
  * (see the peerAvailabilityChanged tome below) then a 'peer not available'
  * error MUST be returned.
  *
