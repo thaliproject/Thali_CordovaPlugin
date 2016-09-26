@@ -17,15 +17,15 @@ JX_NPM_JXB=jxb311
 export JX_NPM_JXB
 
 cd `dirname $0`
-node validateBuildEnvironment.js
 cd ../../test/TestServer
-jx npm install
+jx npm install --no-optional
 jx generateServerAddress.js
 cd ../../thali
 jx npm install --no-optional
 jx npm link
 cd install
 jx npm install
+node validateBuildEnvironment.js
 cd ../../test/www/jxcore
 jx npm link thali
 jx npm install --no-optional
