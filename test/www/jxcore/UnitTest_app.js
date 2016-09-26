@@ -17,17 +17,17 @@ var Promise = require('lie');
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
-  logger('Running unit tests');
+  logger.log('Running unit tests');
   Mobile('executeNativeTests').callNative(function (result) {
     utResult = true;
     if (result && result.executed) {
-      logger('Total number of executed tests: ', result.total);
-      logger('Number of passed tests: ', result.passed);
-      logger('Number of failed tests: ', result.failed);
-      logger('Number of ignored tests: ', result.ignored);
-      logger('Total duration: ', result.duration);
+      logger.log('Total number of executed tests: ', result.total);
+      logger.log('Number of passed tests: ', result.passed);
+      logger.log('Number of failed tests: ', result.failed);
+      logger.log('Number of ignored tests: ', result.ignored);
+      logger.log('Total duration: ', result.duration);
       if (result.failed > 0) {
-        logger('Failures: \n', result.failures);
+        logger.log('Failures: \n', result.failures);
         utResult = false;
       }
     }
@@ -38,7 +38,7 @@ if (process.platform === 'android' || process.platform === 'ios') {
 }
 
 if (!utResult) {
-  logger('Failed to execute UT.');
+  logger.log('Failed to execute UT.');
   global.nativeUTFailed = true;
 }
 
@@ -61,20 +61,20 @@ ThaliMobile.getNetworkStatus()
   Promise.all(promiseList)
   .then(function () {
     Mobile('GetDeviceName').callNative(function (name) {
-      logger('My device name is: %s', name);
+      logger.log('My device name is: %s', name);
       testUtils.setName(name);
 
       networkTypes.reduce(function (sequence, networkType) {
         return sequence
           .then(function () {
-            logger('Running for ' + networkType + ' network type');
+            logger.log('Running for ' + networkType + ' network type');
             global.NETWORK_TYPE = networkType;
             var testRunner = require('./runTests.js');
             return testRunner.run();
           });
       }, Promise.resolve())
       .catch(function (error) {
-        logger(error);
+        logger.log(error);
       });
     });
   });
