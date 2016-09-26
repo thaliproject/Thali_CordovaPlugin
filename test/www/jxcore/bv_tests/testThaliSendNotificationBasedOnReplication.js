@@ -420,65 +420,65 @@ test('two peers with empty DB, update the doc', function (t) {
     });
 });
 
-test('add doc and make sure tokens refresh when they expire', function (t) {
-  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
-  var startArg = [ partnerPublicKey ];
-  var spyTimersArray = null;
-  var millisecondsUntilExpiration = 100;
-  testStartAndStop(t,
-    startArg,
-    function (pouchDB) {
-      return pouchDB.put({_id: '45', stuff: 'yo'})
-        .then(function () {
-          return pouchDB.put({_id: '23', stuff: 'hey'});
-        }).then(function () {
-          return pouchDB.put({
-            _id: ThaliSendNotificationBasedOnReplication
-              .calculateSeqPointKeyId(partnerPublicKey),
-            lastSyncedSequenceNumber: 1});
-        });
-    },
-    function (mockThaliNotificationServer, t, spyTimers) {
-      spyTimersArray = spyTimers;
-      // The atMost is a bit of an exaggeration, I hope. But we can't be sure
-      // how many expiration cycles we will get depending on how long it
-      // takes the test environment to run things.
-      var startSpy = mockThaliNotificationServer.expects('start')
-        .atLeast(3).atMost(30000).withExactArgs(startArg)
-        .returns(Promise.resolve());
-
-      var stopSpy = mockThaliNotificationServer.expects('stop')
-        .once().withExactArgs().returns(Promise.resolve());
-
-      return function () {
-        t.ok(startSpy.calledBefore(stopSpy), 'start before stop');
-        // It could be more than 3 due to timer issues, specifically, we can
-        // say wait 'x' milliseconds and they wait say x*10 and so we get
-        // an expiration in the middle. Sigh.
-        t.ok(startSpy.callCount >= 3, 'We got at least 3 calls to start');
-        // It should really only be 3, 2 that expired and one that has not
-        // but unfortunately timing is such a mess in reality that we can't
-        // be sure
-        t.ok(spyTimersArray.length >= 3, 'at least 3');
-        t.equal(spyTimersArray[0].millisecondsUntilRun,
-          millisecondsUntilExpiration, 'default 1');
-        t.equal(spyTimersArray[0].timer.getTimeWhenRun(), -1, '1 run');
-        t.equal(spyTimersArray[1].millisecondsUntilRun,
-          millisecondsUntilExpiration, 'default 2');
-        t.equal(spyTimersArray[1].timer.getTimeWhenRun(), -1, '2 run');
-        t.equal(spyTimersArray[2].millisecondsUntilRun,
-          millisecondsUntilExpiration, 'default 3');
-      };
-    },
-    function () {
-      return new Promise(function (resolve) {
-        setTimeout(function () {
-          lengthCheck(3, spyTimersArray, resolve);
-        }, millisecondsUntilExpiration * 2.5);
-      });
-    },
-    millisecondsUntilExpiration);
-});
+//test('add doc and make sure tokens refresh when they expire', function (t) {
+//  var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
+//  var startArg = [ partnerPublicKey ];
+//  var spyTimersArray = null;
+//  var millisecondsUntilExpiration = 100;
+//  testStartAndStop(t,
+//    startArg,
+//    function (pouchDB) {
+//      return pouchDB.put({_id: '45', stuff: 'yo'})
+//        .then(function () {
+//          return pouchDB.put({_id: '23', stuff: 'hey'});
+//        }).then(function () {
+//          return pouchDB.put({
+//            _id: ThaliSendNotificationBasedOnReplication
+//              .calculateSeqPointKeyId(partnerPublicKey),
+//            lastSyncedSequenceNumber: 1});
+//        });
+//    },
+//    function (mockThaliNotificationServer, t, spyTimers) {
+//      spyTimersArray = spyTimers;
+//      // The atMost is a bit of an exaggeration, I hope. But we can't be sure
+//      // how many expiration cycles we will get depending on how long it
+//      // takes the test environment to run things.
+//      var startSpy = mockThaliNotificationServer.expects('start')
+//        .atLeast(3).atMost(30000).withExactArgs(startArg)
+//        .returns(Promise.resolve());
+//
+//      var stopSpy = mockThaliNotificationServer.expects('stop')
+//        .once().withExactArgs().returns(Promise.resolve());
+//
+//      return function () {
+//        t.ok(startSpy.calledBefore(stopSpy), 'start before stop');
+//        // It could be more than 3 due to timer issues, specifically, we can
+//        // say wait 'x' milliseconds and they wait say x*10 and so we get
+//        // an expiration in the middle. Sigh.
+//        t.ok(startSpy.callCount >= 3, 'We got at least 3 calls to start');
+//        // It should really only be 3, 2 that expired and one that has not
+//        // but unfortunately timing is such a mess in reality that we can't
+//        // be sure
+//        t.ok(spyTimersArray.length >= 3, 'at least 3');
+//        t.equal(spyTimersArray[0].millisecondsUntilRun,
+//          millisecondsUntilExpiration, 'default 1');
+//        t.equal(spyTimersArray[0].timer.getTimeWhenRun(), -1, '1 run');
+//        t.equal(spyTimersArray[1].millisecondsUntilRun,
+//          millisecondsUntilExpiration, 'default 2');
+//        t.equal(spyTimersArray[1].timer.getTimeWhenRun(), -1, '2 run');
+//        t.equal(spyTimersArray[2].millisecondsUntilRun,
+//          millisecondsUntilExpiration, 'default 3');
+//      };
+//    },
+//    function () {
+//      return new Promise(function (resolve) {
+//        setTimeout(function () {
+//          lengthCheck(3, spyTimersArray, resolve);
+//        }, millisecondsUntilExpiration * 2.5);
+//      });
+//    },
+//    millisecondsUntilExpiration);
+//});
 
 test('start and stop and start and stop', function (t) {
   var partnerPublicKey = crypto.createECDH('secp521r1').generateKeys();
