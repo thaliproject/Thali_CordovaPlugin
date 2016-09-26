@@ -18,7 +18,7 @@ const versions =
   osX: '10.11.6',
   node: '6.6.0',
   npm: '3.10.3',
-  brew: '0.9.9',
+  brew: '1.0.4-17',
   ruby: '2.3.0p0',
   wget: '1.18',
   jxcore: '0.3.1.4',
@@ -27,7 +27,7 @@ const versions =
   // We don't have an easy way to identify the version of the support libraries
   // we have but if they were installed recently enough then they will have
   // what we need.
-  androidSupportLibraries: new Date(2016, 8, 20),
+  androidSupportLibraries: '38.0.0',
   cordovaAndroidSetMinSDK: '22',
   get cordovaAndroidSetBuildToolsVersion() {
     return this.androidBuildTools;
@@ -39,7 +39,7 @@ const versions =
   cordova: '6.3.1',
   java: '1.8.0_102',
   git: '2.10.0',
-  swiftLint: '0.1.1',
+  swiftLint: '0.12.0',
   btconnectorlib2: '0.3.2',
   jxcoreCordova: '0.1.2b',
   sinopiaNode: ' ',
@@ -118,7 +118,7 @@ const commandsAndResults =
     versionCheck: 'brew -v',
     versionValidate:
       (result, version) =>
-        boolToPromise(result.startsWith('Homebrew ' + version + ' '))
+        boolToPromise(result.startsWith('Homebrew ' + version + '-'))
   },
   ruby: {
     platform: ['darwin'],
@@ -157,17 +157,16 @@ const commandsAndResults =
           'extras/android/m2repository/source.properties');
       return fs.readFileAsync(sourcePropertiesLocation, 'utf8')
         .then((sourcePropertiesFileContents) => {
-          // Skip the first line, then skip the # character on the second line
-          // and return the rest of the second line
-          const regEx = sourcePropertiesFileContents.match(/.*\n#(.*)\n/)[1];
+          const regEx =
+            sourcePropertiesFileContents.match(/^Pkg\.Revision=(.*)$/m);
           if (!regEx[1]) {
             return Promise.reject();
           }
-          return Promise.resolve(new Date(regEx));
+          return Promise.resolve(regEx[1]);
         });
     },
     versionValidate:
-      (result, version) => boolToPromise(result - version >= 0)
+      (result, version) => boolToPromise(version === result.trim())
   },
   cordovaAndroidSetMinSDK: {
     versionCheck: 'echo $ORG_GRADLE_PROJECT_cdvMinSdkVersion',
