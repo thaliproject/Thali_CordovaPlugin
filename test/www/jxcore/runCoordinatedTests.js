@@ -1,6 +1,9 @@
 'use strict';
 
-var spawn = require('child_process').spawn;
+var spawn        = require('child_process').spawn;
+var randomString = require('randomstring');
+var objectAssign = require('object-assign');
+
 
 var DEFAULT_INSTANCE_COUNT = 3;
 
@@ -114,13 +117,20 @@ var testServerInstance = spawn('jx', ['../../TestServer/index.js',
   JSON.stringify(testServerConfiguration)]);
 setListeners(testServerInstance, 0);
 
+
+// We want to provide same random SSDP_NT for each test instance in group.
+var localEnv = objectAssign({}, process.env);
+localEnv.SSDP_NT = randomString.generate({
+  length: 'http://www.thaliproject.org/ssdp'.length
+});
+
 var testInstances = {};
 var spawnTestInstance = function (instanceId) {
   var instanceArgs = [argv.test];
   if (argv.filter) {
     instanceArgs.push(argv.filter);
   }
-  var testInstance = spawn('jx', instanceArgs);
+  var testInstance = spawn('jx', instanceArgs, { env: localEnv });
   setListeners(testInstance, instanceId);
   testInstances[instanceId] = testInstance;
 };
