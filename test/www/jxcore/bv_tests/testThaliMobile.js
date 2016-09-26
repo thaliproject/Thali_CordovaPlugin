@@ -636,22 +636,23 @@ test('If there are more then PERS_LIMIT peers presented ' +
     var portNumber = 8080;
     var anotherPortNumber = 8081;
 
-    ThaliMobile.start(express.Router());
+    ThaliMobile.start(express.Router())
+      .then(function () {
+        ThaliMobile.emitter.on('discoveryDOS', function (info) {
+          t.ok(info.limit, PEERS_LIMIT, 'DOS limit should be presented');
+          t.ok(info.count, 2, 'Actual number off peers should be presented');
+          t.end();
+        });
 
-    ThaliMobile.on('discoveryDOS', function (info) {
-      t.ok(info.limit, PEERS_LIMIT, 'DOS limit should be presented');
-      t.ok(info.count, 2, 'Actual number off peers should be presented');
-      t.end();
-    });
-
-    ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
-      {
-        peerIdentifier: peerIdentifier,
-        portNumber: portNumber
-      });
-    ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
-      {
-        peerIdentifier: anotherPeerIdentifier,
-        portNumber: anotherPortNumber
+        ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+          {
+            peerIdentifier: peerIdentifier,
+            portNumber: portNumber
+          });
+        ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+          {
+            peerIdentifier: anotherPeerIdentifier,
+            portNumber: anotherPortNumber
+          });
       });
 });
