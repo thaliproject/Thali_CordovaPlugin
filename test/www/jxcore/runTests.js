@@ -43,6 +43,9 @@ if (hasJavaScriptSuffix(testsToRun)) {
 }
 
 var currentPlatform = platform.name;
+if (!platform.isMobile) {
+  currentPlatform = 'desktop';
+}
 
 testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
