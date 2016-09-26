@@ -10,23 +10,24 @@ if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 
+var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
-  console.log('Running unit tests');
+  logger.debug('Running unit tests');
   Mobile('executeNativeTests').callNative(function (result) {
     utResult = true;
     if (result && result.executed) {
-      console.log('Total number of executed tests: ', result.total);
-      console.log('Number of passed tests: ', result.passed);
-      console.log('Number of failed tests: ', result.failed);
-      console.log('Number of ignored tests: ', result.ignored);
-      console.log('Total duration: ', result.duration);
+      logger.debug('Total number of executed tests: ', result.total);
+      logger.debug('Number of passed tests: ', result.passed);
+      logger.debug('Number of failed tests: ', result.failed);
+      logger.debug('Number of ignored tests: ', result.ignored);
+      logger.debug('Total duration: ', result.duration);
       if (result.failed > 0) {
-        console.log('Failures: \n', result.failures);
+        logger.debug('Failures: \n', result.failures);
         utResult = false;
       }
     }
@@ -37,7 +38,7 @@ if (process.platform === 'android' || process.platform === 'ios') {
 }
 
 if (!utResult) {
-  console.log('Failed to execute UT.');
+  logger.debug('Failed to execute UT.');
   global.nativeUTFailed = true;
 }
 
@@ -60,23 +61,22 @@ ThaliMobile.getNetworkStatus()
   Promise.all(promiseList)
   .then(function () {
     Mobile('GetDeviceName').callNative(function (name) {
-      console.log('My device name is: %s', name);
+      logger.debug('My device name is: %s', name);
       testUtils.setName(name);
 
       networkTypes.reduce(function (sequence, networkType) {
         return sequence
           .then(function () {
-            console.log('Running for ' + networkType + ' network type');
+            logger.debug('Running for ' + networkType + ' network type');
             global.NETWORK_TYPE = networkType;
-            var testRunner = require('./runTests.js');
-            return testRunner.run();
+            require('./runTests.js');
           });
       }, Promise.resolve())
       .catch(function (error) {
-        console.log(error);
+        logger.error(error);
       });
     });
   });
 });
 
-console.log('Unit Test app is loaded');
+logger.debug('Unit Test app is loaded');
