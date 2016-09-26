@@ -12,19 +12,27 @@ import MultipeerConnectivity
 
 final class Advertiser: NSObject {
 
-    private let advertiser: MCNearbyServiceAdvertiser
-
-    let peerIdentifier: PeerIdentifier
+    // MARK: - Public state
     internal private(set) var advertising: Bool = false
+
+    // MARK: - Internal state
+    let peerIdentifier: PeerIdentifier
+
+    // MARK: - Private state
+    private let advertiser: MCNearbyServiceAdvertiser
     private let receivedInvitationHandler: (session: Session) -> Void
     private let disconnectHandler: () -> Void
     private var startAdvertisingErrorHandler: (ErrorType -> Void)? = nil
 
-    required init(peerIdentifier: PeerIdentifier, serviceType: String,
+    // MARK: - Public methods
+    required init(peerIdentifier: PeerIdentifier,
+                  serviceType: String,
                   receivedInvitationHandler: (session: Session) -> Void,
                   disconnectHandler: () -> Void) {
+
         advertiser = MCNearbyServiceAdvertiser(peer: MCPeerID(peerIdentifier: peerIdentifier),
-                                               discoveryInfo:nil, serviceType: serviceType)
+                                               discoveryInfo:nil,
+                                               serviceType: serviceType)
         self.peerIdentifier = peerIdentifier
         self.receivedInvitationHandler = receivedInvitationHandler
         self.disconnectHandler = disconnectHandler
@@ -51,10 +59,16 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
                     didReceiveInvitationFromPeer peerID: MCPeerID,
                     withContext context: NSData?,
                     invitationHandler: (Bool, MCSession) -> Void) {
-        let mcSession = MCSession(peer: advertiser.myPeerID, securityIdentity: nil,
+
+        let mcSession = MCSession(peer: advertiser.myPeerID,
+                                  securityIdentity: nil,
                                   encryptionPreference: .None)
-        let session =
-            Session(session: mcSession, identifier: peerID, disconnectHandler: disconnectHandler)
+
+        let session = Session(session: mcSession,
+                              identifier: peerID,
+                              connectHandler: {},
+                              disconnectHandler: disconnectHandler)
+
         invitationHandler(true, mcSession)
         receivedInvitationHandler(session: session)
     }

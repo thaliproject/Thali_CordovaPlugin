@@ -13,107 +13,180 @@ import MultipeerConnectivity
 
 class BrowserTests: XCTestCase {
 
-    let serviceType = String.random(length: 7)
+    // MARK: - Public state
+    let randomlyGeneratedServiceType = String.random(length: 7)
 
-    private func unexpectedFoundPeerHandler(peer: PeerIdentifier) {
-        XCTFail("unexpected find peer event with peer: \(peer)")
-    }
-
-    private func unexpectedLostPeerHandler(peer: PeerIdentifier) {
-        XCTFail("unexpected lost peer event with peer: \(peer)")
-    }
-
-    func testReceivedFailedStartBrowsingErrorOnMPCFBrowserDelegateCall() {
-        // Preconditions
-        let failedStartBrowsingExpectation =
-            expectationWithDescription("failed start advertising because of delegate " +
-                                       "MCNearbyServiceBrowserDelegate call")
-        let browser = Browser(serviceType: serviceType,
-                              foundPeer: unexpectedFoundPeerHandler,
-                              lostPeer: unexpectedLostPeerHandler)
-        browser.startListening { [weak failedStartBrowsingExpectation] error in
-            failedStartBrowsingExpectation?.fulfill()
-        }
-
-        // Send error start browsing failed error
-        let peerID = MCPeerID(displayName: NSUUID().UUIDString)
-        let mcBrowser = MCNearbyServiceBrowser(peer: peerID, serviceType: serviceType)
-        let error = NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
-        browser.browser(mcBrowser, didNotStartBrowsingForPeers: error)
-
-        waitForExpectationsWithTimeout(1.0, handler: nil)
-    }
-
+    // MARK: - Tests
     func testStartStopChangesListeningState() {
-        let browser = Browser(serviceType: serviceType,
+        // Given
+        let browser = Browser(serviceType: randomlyGeneratedServiceType,
                               foundPeer: unexpectedFoundPeerHandler,
                               lostPeer: unexpectedLostPeerHandler)
+
+        // When
         browser.startListening(unexpectedErrorHandler)
+        // Then
         XCTAssertTrue(browser.listening)
+
+        // When
         browser.stopListening()
+        // Then
         XCTAssertFalse(browser.listening)
     }
 
-    func testFoundLostPeerCalled() {
-        let foundPeerExpectation = expectationWithDescription("found peer expectation")
-        let lostPeerExpectation = expectationWithDescription("lost peer expectation")
-        let browser  = Browser(serviceType: serviceType,
-                               foundPeer: { [weak foundPeerExpectation] _ in
-                                   foundPeerExpectation?.fulfill()
-                               },
-                               lostPeer: { [weak lostPeerExpectation] _ in
-                                   lostPeerExpectation?.fulfill()
-                               })
-        let peerID = MCPeerID(displayName: PeerIdentifier().stringValue)
-        let mcBrowser = MCNearbyServiceBrowser(peer: peerID, serviceType: serviceType)
+    func testFoundPeerHandlerCalled() {
+        // Given
+        let foundPeerExpectation =
+            expectationWithDescription("foundPeerHandler is called on Browser")
+
+        let browser = Browser(serviceType: randomlyGeneratedServiceType,
+                              foundPeer: {
+                                [weak foundPeerExpectation] _ in
+                                foundPeerExpectation?.fulfill()
+            },
+                              lostPeer: {
+                                _ in
+        })
+        let randomlyGeneratedPeerID = MCPeerID(displayName: PeerIdentifier().stringValue)
+        let mcBrowser = MCNearbyServiceBrowser(peer: randomlyGeneratedPeerID,
+                                               serviceType: randomlyGeneratedServiceType)
 
 
-        browser.browser(mcBrowser, foundPeer: peerID, withDiscoveryInfo: nil)
-        browser.browser(mcBrowser, lostPeer: peerID)
+        // When
+        // Fake invocation of delegate method
+        browser.browser(mcBrowser, foundPeer: randomlyGeneratedPeerID, withDiscoveryInfo: nil)
 
         let foundLostPeerExpectationsTimeout = 1.0
         waitForExpectationsWithTimeout(foundLostPeerExpectationsTimeout, handler: nil)
     }
 
-    func testInviteToConnectWithPeerReturnsSession() {
-        let foundPeerExpectation = expectationWithDescription("found peer expectation")
-        let peerIdentifier = PeerIdentifier()
+    func testLostPeerHandlerCalled() {
+        // Given
+        let lostPeerExpectation =
+            expectationWithDescription("lostPeerHandler is called on Browser")
 
-        let browser = Browser(serviceType: serviceType,
-                              foundPeer: { [weak foundPeerExpectation] peer in
-                                  foundPeerExpectation?.fulfill()
-                                  XCTAssertEqual(peer, peerIdentifier)
-                              },
+        let browser = Browser(serviceType: randomlyGeneratedServiceType,
+                              foundPeer: {
+                                _ in
+            },
+                              lostPeer: {
+                                [weak lostPeerExpectation] _ in
+                                lostPeerExpectation?.fulfill()
+            })
+        let randomlyGeneratedPeerID = MCPeerID(displayName: PeerIdentifier().stringValue)
+        let mcBrowser = MCNearbyServiceBrowser(peer: randomlyGeneratedPeerID,
+                                               serviceType: randomlyGeneratedServiceType)
+
+        // When
+        browser.browser(mcBrowser, lostPeer: randomlyGeneratedPeerID)
+
+        // Then
+        let foundLostPeerExpectationsTimeout = 1.0
+        waitForExpectationsWithTimeout(foundLostPeerExpectationsTimeout, handler: nil)
+    }
+
+    func testStartListeningErrorHandlerCalled() {
+        // Given
+        let failedStartBrowsingExpectation =
+            expectationWithDescription("Failed start advertising because of " +
+                "delegate MCNearbyServiceBrowserDelegate call")
+
+        let browser = Browser(serviceType: randomlyGeneratedServiceType,
+                              foundPeer: unexpectedFoundPeerHandler,
                               lostPeer: unexpectedLostPeerHandler)
 
-        let peerID = MCPeerID(displayName: peerIdentifier.stringValue)
-        let mcBrowser = MCNearbyServiceBrowser(peer: peerID, serviceType: serviceType)
-        browser.browser(mcBrowser, foundPeer: peerID, withDiscoveryInfo: nil)
+        browser.startListening {
+            [weak failedStartBrowsingExpectation] error in
+            failedStartBrowsingExpectation?.fulfill()
+        }
+
+        let randomlyGeneratedPeerID = MCPeerID(displayName: NSUUID().UUIDString)
+        let mcBrowser = MCNearbyServiceBrowser(peer: randomlyGeneratedPeerID,
+                                               serviceType: randomlyGeneratedServiceType)
+
+        // When
+        // Fake invocation of delegate method
+        // Send error start browsing failed error
+        let error = NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
+        browser.browser(mcBrowser, didNotStartBrowsingForPeers: error)
+
+        // Then
+        waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testInviteToConnectPeerMethodReturnsSession() {
+        // Given
+        // Firsly we have to "find" peer and get handler called
+        let foundPeerExpectation =
+            expectationWithDescription("foundPeerHandler is called on Browser")
+
+        let randomlyGeneratedPeerIdentifier = PeerIdentifier()
+
+        let browser = Browser(serviceType: randomlyGeneratedServiceType,
+                              foundPeer: {
+                                [weak foundPeerExpectation] foundedPeerIdentifier in
+
+                                foundPeerExpectation?.fulfill()
+                                XCTAssertEqual(
+                                    foundedPeerIdentifier, randomlyGeneratedPeerIdentifier
+                                )
+            },
+                              lostPeer: unexpectedLostPeerHandler)
+
+        let peerIdOfPeerThatWillBeFounded =
+            MCPeerID(displayName: randomlyGeneratedPeerIdentifier.stringValue)
+        let mcBrowser = MCNearbyServiceBrowser(peer: peerIdOfPeerThatWillBeFounded,
+                                               serviceType: randomlyGeneratedServiceType)
+
+        // Fake invocation of delegate method
+        browser.browser(mcBrowser, foundPeer: peerIdOfPeerThatWillBeFounded, withDiscoveryInfo: nil)
+
         let foundPeerExpectationTimeout = 1.0
         waitForExpectationsWithTimeout(foundPeerExpectationTimeout, handler: nil)
 
+        // When
         do {
-            let _ =
-                try browser.inviteToConnectPeer(with: peerIdentifier,
-                                                disconnectHandler: unexpectedDisconnectHandler)
+
+            let _ = try
+                browser.inviteToConnectPeer(with: randomlyGeneratedPeerIdentifier,
+                                            sessionConnectHandler:  unexpectedConnectHandler,
+                                            sessionDisconnectHandler: unexpectedDisconnectHandler)
         } catch let error {
-            XCTFail("unexpected error: \(error)")
+            XCTFail("inviteToConnectPeer didn't return Session. Unexpected error: \(error)")
         }
+
+        // Then
+        // Session object is returned
     }
 
-    func testInviteToConnectWrongPeerIdError() {
-        let browser = Browser(serviceType: serviceType,
+    func testInviteToConnectWrongPeerReturnsIllegalPeerIDError() {
+        // Given
+        let browser = Browser(serviceType: randomlyGeneratedServiceType,
                               foundPeer: unexpectedFoundPeerHandler,
                               lostPeer: unexpectedLostPeerHandler)
+        // When
         do {
-            let _ =
-                try browser.inviteToConnectPeer(with: PeerIdentifier(),
-                                                disconnectHandler: unexpectedDisconnectHandler)
+            let _ = try
+                browser.inviteToConnectPeer(with: PeerIdentifier(),
+                                            sessionConnectHandler: unexpectedConnectHandler,
+                                            sessionDisconnectHandler: unexpectedDisconnectHandler)
         } catch let error as ThaliCoreError {
+            // Then
             XCTAssertEqual(error, ThaliCoreError.IllegalPeerID)
         } catch let error {
-            XCTFail("unexpected error: \(error)")
+            XCTFail(
+                "inviteToConnectPeer didn't return IllegalPeerID error. " +
+                    "Unexpected error: \(error)"
+            )
         }
     }
 
+    // MARK: - Private methods
+    private func unexpectedFoundPeerHandler(peer: PeerIdentifier) {
+        XCTFail("Unexpected call foundPeerHandler with peer: \(peer)")
+    }
+
+    private func unexpectedLostPeerHandler(peer: PeerIdentifier) {
+        XCTFail("unexpected lostPeerHandler with peer: \(peer)")
+    }
 }

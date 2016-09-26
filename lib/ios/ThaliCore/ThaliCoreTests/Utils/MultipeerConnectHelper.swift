@@ -12,26 +12,55 @@ import XCTest
 @testable import ThaliCore
 
 func createMPCFConnection(advertiserIdentifier identifier: PeerIdentifier,
-                          advertiserSessionHandler: (Session) -> Void,
-                          completion: () -> Void) -> (Advertiser, Browser) {
+                                               completion: (PeerAvailability) -> Void)
+                                                -> (AdvertiserManager, BrowserManager) {
+
     let serviceType = String.random(length: 7)
 
-    let browser = Browser(serviceType: serviceType, foundPeer: { identifier in
-        completion()
-        },
-                          lostPeer: { _ in })
-    browser.startListening() { _ in
-    }
-    let advertiser = Advertiser(peerIdentifier: identifier,
-                                serviceType: serviceType,
-                                receivedInvitationHandler: advertiserSessionHandler,
-                                disconnectHandler: {})
-    advertiser.startAdvertising { _ in}
-    return (advertiser, browser)
+    let browserManager = BrowserManager(serviceType: serviceType,
+                                        inputStreamReceiveTimeout: 5,
+                                        peersAvailabilityChangedHandler: {
+                                            peerAvailability in
+
+                                            completion(peerAvailability.first!)
+    })
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+
+    let advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                              disposeAdvertiserTimeout: 30,
+                                              inputStreamReceiveTimeout: 5)
+    advertiserManager.startUpdateAdvertisingAndListening(onPort: 0,
+                                                         errorHandler: unexpectedErrorHandler)
+
+    return (advertiserManager, browserManager)
 }
+
+
+// func createMPCFConnection_old(advertiserIdentifier identifier: PeerIdentifier,
+//                          advertiserSessionHandler: (Session) -> Void,
+//                          completion: () -> Void) -> (Advertiser, Browser) {
+//    let serviceType = String.random(length: 7)
+//
+//    let browser = Browser(serviceType: serviceType, foundPeer: { identifier in
+//        completion()
+//        },
+//                          lostPeer: { _ in })
+//    browser.startListening() { _ in
+//    }
+//    let advertiser = Advertiser(peerIdentifier: identifier,
+//                                serviceType: serviceType,
+//                                receivedInvitationHandler: advertiserSessionHandler,
+//                                disconnectHandler: {})
+//    advertiser.startAdvertising { _ in}
+//    return (advertiser, browser)
+//}
 
 func unexpectedErrorHandler(error: ErrorType) {
     XCTFail("unexpected error: \(error)")
+}
+
+func unexpectedConnectHandler() {
+    XCTFail("Unexpected connect received")
 }
 
 func unexpectedDisconnectHandler() {

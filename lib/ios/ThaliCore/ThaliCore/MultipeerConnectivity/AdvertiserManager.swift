@@ -10,19 +10,26 @@
 import Foundation
 
 // Class for managing Thali advertiser's logic
-@objc public final class AdvertiserManager: NSObject {
-    private let disposeAdvertiserTimeout: NSTimeInterval
-    private let serviceType: String
-    internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
-    internal private(set) var currentAdvertiser: Advertiser? = nil
+public final class AdvertiserManager: NSObject {
 
-    let socketRelay: SocketRelay<AdvertiserVirtualSocketBuilder>
-    internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
-
+    // MARK: - Public state
     public var advertising: Bool {
         return currentAdvertiser?.advertising ?? false
     }
 
+    // MARK: - Internal state
+    internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
+    var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
+
+    // MARK: - Private state
+    private var currentAdvertiser: Advertiser? = nil
+    private let serviceType: String
+    private var relay: Relay<AdvertiserVirtualSocketBuilder>? = nil
+    private let inputStreamReceiveTimeout: NSTimeInterval
+    private let disposeAdvertiserTimeout: NSTimeInterval
+
+
+    // MARK: - Public state
     /**
 
      - parameter serviceType:               The type of service to advertise
@@ -31,76 +38,90 @@ import Foundation
      - parameter inputStreamReceiveTimeout: Timeout in seconds for receiving input stream
 
      */
-    public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval,
+    public init(serviceType: String,
+                disposeAdvertiserTimeout: NSTimeInterval,
                 inputStreamReceiveTimeout: NSTimeInterval) {
-        self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
         self.serviceType = serviceType
-        socketRelay = SocketRelay<AdvertiserVirtualSocketBuilder>(
-            createSocketTimeout: inputStreamReceiveTimeout)
-    }
+        self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
+        self.inputStreamReceiveTimeout = inputStreamReceiveTimeout
+}
 
-    private func handle(session: Session, withPort port: UInt16) {
-        socketRelay.createSocket(with: session, onPort: port) { port, error in
+
+    public func startUpdateAdvertisingAndListening(onPort port: UInt16,
+                                                    errorHandler: ErrorType -> Void) {
+
+        let advertiser: Advertiser?
+        var newPeerIdentifier = PeerIdentifier()
+
+        if let currentAdvertiser = currentAdvertiser {
+            disposeAdvertiserAfterTimeout(currentAdvertiser)
+            newPeerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
         }
-    }
 
-    // Dispose advertiser after timeout to ensure that it has no pending invitations
-    private func addAdvertiserToDisposeQueue(advertiser: Advertiser) {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW,
-                                      Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC)))
-        dispatch_after(delayTime, dispatch_get_main_queue()) {
-            advertiser.stopAdvertising()
+        advertiser = Advertiser(peerIdentifier: newPeerIdentifier,
+                                serviceType: serviceType,
+                                receivedInvitationHandler: {
+                                    [weak self] session in
 
-            self.advertisers.modify {
-                if let index = $0.indexOf(advertiser) {
-                    $0.removeAtIndex(index)
-                }
-            }
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
 
-            self.didRemoveAdvertiserWithIdentifierHandler?(advertiser.peerIdentifier)
+                                    strongSelf.relay = Relay(
+                                        withSession: session,
+                                        createSocketTimeout: strongSelf.inputStreamReceiveTimeout
+                                    )
+                                    strongSelf.relay?.createVirtualSocket()
+                                    strongSelf.relay?.createTCPListenerAndConnectTo(34000) {
+                                        port, error in
+                                    }
+                                },
+                                disconnectHandler: {
+                                    // TODO: fix with #1040
+                                })
+
+        if let advertiser = advertiser {
+            advertiser.startAdvertising(errorHandler)
+            advertisers.modify({ $0.append(advertiser) })
         }
-    }
 
-    private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16,
-                                 errorHandler: ErrorType -> Void) -> Advertiser {
-        let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
-                                    receivedInvitationHandler: { [weak self] session in
-                                        self?.handle(session, withPort: port)
-                                    }, disconnectHandler: {
-            // TODO: fix with #1040
-        })
-        advertiser.startAdvertising(errorHandler)
-        advertisers.modify {
-            $0.append(advertiser)
-        }
-        return advertiser
+        self.currentAdvertiser = advertiser
+
+        assert(
+            self.currentAdvertiser != nil,
+            "We should have initialized advertiser after calling this function"
+        )
     }
 
     public func stopAdvertising() {
         advertisers.withValue {
-            $0.forEach {
-                $0.stopAdvertising()
-            }
+            $0.forEach { $0.stopAdvertising() }
         }
-        advertisers.modify {
-            $0.removeAll()
-        }
+        advertisers.modify { $0.removeAll() }
         currentAdvertiser = nil
     }
 
-    public func startUpdateAdvertisingAndListening(withPort port: UInt16,
-                                                            errorHandler: ErrorType -> Void) {
-        if let currentAdvertiser = currentAdvertiser {
-            let peerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
-            addAdvertiserToDisposeQueue(currentAdvertiser)
-            self.currentAdvertiser = startAdvertiser(with: peerIdentifier, port: port,
-                                                     errorHandler: errorHandler)
-        } else {
-            self.currentAdvertiser = startAdvertiser(with: PeerIdentifier(), port: port,
-                                                     errorHandler: errorHandler)
-        }
+    // MARK: - Private methods
 
-        assert(self.currentAdvertiser != nil,
-                "we should have initialized advertiser after calling this function")
+    // In any case when a peer starts a new MCNearbyServiceAdvertiser object
+    // it MUST keep the old object around for at least 30 seconds.
+    // This is to allow any in progress invites to finish.
+    private func disposeAdvertiserAfterTimeout(advertiserToDispose: Advertiser) {
+        let disposeTimeout = dispatch_time(
+            DISPATCH_TIME_NOW,
+            Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC))
+        )
+
+        dispatch_after(disposeTimeout, dispatch_get_main_queue()) {
+            advertiserToDispose.stopAdvertising()
+
+            self.advertisers.modify {
+                if let indexOfDisposingAdvertiser = $0.indexOf(advertiserToDispose) {
+                    $0.removeAtIndex(indexOfDisposingAdvertiser)
+                }
+            }
+
+            self.didRemoveAdvertiserWithIdentifierHandler?(advertiserToDispose.peerIdentifier)
+        }
     }
 }

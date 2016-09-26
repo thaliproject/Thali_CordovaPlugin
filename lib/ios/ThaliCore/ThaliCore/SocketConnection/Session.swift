@@ -13,27 +13,39 @@ import MultipeerConnectivity
 /// Class for managing MCSession: subscribing for incoming streams and creating output streams
 class Session: NSObject {
 
-    private let session: MCSession
-    private let identifier: MCPeerID
-    private let disconnectHandler: () -> Void
+    // MARK: - Public state
     var sessionStateChangesHandler: ((MCSessionState) -> Void)?
     var didReceiveInputStreamHandler: ((NSInputStream, String) -> Void)?
+
+    // MARK: - Internal state
     internal private(set) var sessionState: Atomic<MCSessionState> = Atomic(.NotConnected)
 
-    init(session: MCSession, identifier: MCPeerID, disconnectHandler: () -> Void) {
+    // MARK: - Private state
+    private let session: MCSession
+    private let identifier: MCPeerID
+    private let connectHandler: () -> Void
+    private let disconnectHandler: () -> Void
+
+    // MARK: - Public methods
+    init(session: MCSession,
+         identifier: MCPeerID,
+         connectHandler: () -> Void,
+         disconnectHandler: () -> Void) {
+
         self.session = session
         self.identifier = identifier
+        self.connectHandler = connectHandler
         self.disconnectHandler = disconnectHandler
         super.init()
         self.session.delegate = self
     }
 
-    func disconnect() {
-        session.disconnect()
-    }
-
     func createOutputStream(withName name: String) throws -> NSOutputStream {
         return try session.startStreamWithName(name, toPeer: identifier)
+    }
+
+    func disconnect() {
+        session.disconnect()
     }
 }
 
@@ -42,14 +54,28 @@ extension Session: MCSessionDelegate {
 
     func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {
         assert(identifier.displayName == peerID.displayName)
-        sessionState.modify {
-            $0 = state
-        }
+
+        sessionState.modify { $0 = state }
         sessionStateChangesHandler?(state)
-        if state == .NotConnected {
+
+        switch state {
+        case .NotConnected:
             disconnectHandler()
+        case .Connected:
+            connectHandler()
+        case .Connecting:
+            break
         }
     }
+
+    func session(session: MCSession,
+                 didReceiveCertificate certificate: [AnyObject]?,
+                 fromPeer peerID: MCPeerID,
+                 certificateHandler: (Bool) -> Void) {
+        // FIXME: in the future we should accept only trusted certificate
+        certificateHandler(true)
+    }
+
 
     func session(session: MCSession, didReceiveStream stream: NSInputStream,
                  withName streamName: String, fromPeer peerID: MCPeerID) {

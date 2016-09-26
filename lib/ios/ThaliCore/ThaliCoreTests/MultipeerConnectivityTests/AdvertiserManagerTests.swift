@@ -28,42 +28,74 @@ class AdvertiserManagerTests: XCTestCase {
         advertiserManager = nil
     }
 
-    func testIsAdvertising() {
+    func testStartAdvertisingChangesState() {
+        // Given
         XCTAssertFalse(advertiserManager.advertising)
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42,
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
                                                              errorHandler: unexpectedErrorHandler)
+
+        // Then
         XCTAssertTrue(advertiserManager.advertising)
     }
 
-    func testDisposeAdvertiserAfterTimeout() {
+    func testStartStopAdvertisingChangesInternalAmountOfAdvertisers() {
+        // Given
+        let expectedAmountOfAdvertisersBeforeStartMethod = 0
+        let expectedAmountOfAdvertisersAfterStartMethod = 1
+        let expectedAmountOfAdvertisersAfterStopMethod = 0
+
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedAmountOfAdvertisersBeforeStartMethod)
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+
+        // Then
+        XCTAssertTrue(advertiserManager.advertising, "advertising is not active")
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedAmountOfAdvertisersAfterStartMethod)
+
+        // When
+        advertiserManager.stopAdvertising()
+
+        // Then
+        XCTAssertFalse(advertiserManager.advertising, "advertising is still active")
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedAmountOfAdvertisersAfterStopMethod)
+
+    }
+
+    func testAdvertiserDisposedAfterTimeoutWhenSecondAdvertiserStarts() {
+        // Given
         let port1: UInt16 = 42
         let port2: UInt16 = 43
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: port1,
+
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: port1,
                                                              errorHandler: unexpectedErrorHandler)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
-        let firstAdvertiserIdentifier = advertiserManager.currentAdvertiser?.peerIdentifier
 
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: port2,
+        let firstAdvertiserPeerIdentifier =
+            advertiserManager.advertisers.value.first!.peerIdentifier
+        let firstAdvertiserDisposedExpectation =
+            expectationWithDescription("advertiser disposed after delay")
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: port2,
                                                              errorHandler: unexpectedErrorHandler)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 2)
-        let expectation = expectationWithDescription("advertiser removed after delay")
+
         advertiserManager.didRemoveAdvertiserWithIdentifierHandler = {
-            [weak expectation] identifier in
-            XCTAssertEqual(firstAdvertiserIdentifier, identifier)
-            expectation?.fulfill()
+            [weak firstAdvertiserDisposedExpectation] identifier in
+
+            XCTAssertEqual(firstAdvertiserPeerIdentifier, identifier)
+            firstAdvertiserDisposedExpectation?.fulfill()
         }
 
+        // Then
         waitForExpectationsWithTimeout(disposeTimeout, handler: nil)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
-    }
-
-    func testStopAdvertising() {
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42,
-                                                             errorHandler: unexpectedErrorHandler)
-        XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
-        XCTAssertTrue(advertiserManager.advertising)
-        advertiserManager.stopAdvertising()
-        XCTAssertEqual(advertiserManager.advertisers.value.count, 0)
-        XCTAssertFalse(advertiserManager.advertising)
     }
 }

@@ -13,10 +13,23 @@ import MultipeerConnectivity
 ///Peer identifier with generations
 public struct PeerIdentifier: Hashable {
 
+    // MARK: - Public state
     public let uuid: String
     public let generation: Int
+
+    public var hashValue: Int {
+        return stringValue.hashValue
+    }
+
+    // MARK: - Internal state
+    var stringValue: String {
+        return "\(uuid)\(PeerIdentifier.separator)\(String(generation, radix: 16))"
+    }
+
+    // MARK: - Private state
     private static let separator = Character(":")
 
+    // MARK: - Public methods
     public init() {
         uuid = NSUUID().UUIDString
         generation = 0
@@ -28,9 +41,9 @@ public struct PeerIdentifier: Hashable {
     }
 
     public init(stringValue: String) throws {
-        let parts = stringValue.characters.split {
-             $0 == PeerIdentifier.separator
-             }.map(String.init)
+        let parts = stringValue.characters
+                    .split { $0 == PeerIdentifier.separator }
+                    .map(String.init)
         guard parts.count == 2 else {
             throw ThaliCoreError.IllegalPeerID
         }
@@ -43,14 +56,6 @@ public struct PeerIdentifier: Hashable {
 
     func nextGenerationPeer() -> PeerIdentifier {
         return PeerIdentifier(uuidIdentifier: uuid, generation: generation + 1)
-    }
-
-    var stringValue: String {
-        return "\(uuid)\(PeerIdentifier.separator)\(String(generation, radix: 16))"
-    }
-
-    public var hashValue: Int {
-        return stringValue.hashValue
     }
 }
 

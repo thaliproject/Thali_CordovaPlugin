@@ -14,64 +14,108 @@ import MultipeerConnectivity
 
 class MCSessionMock: MCSession {
 
+    // MARK: - Public state
     var errorOnStartStream = false
+
+    // MARK: - Overrided methods
     override func startStreamWithName(streamName: String,
                                       toPeer peerID: MCPeerID) throws -> NSOutputStream {
+
         guard !errorOnStartStream else {
             throw NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
         }
+
         return NSOutputStream(toBuffer: nil, capacity: 0)
     }
 }
 
 class SessionTests: XCTestCase {
 
-    var disconnectedExpectation: XCTestExpectation!
-    var mcSession: MCSessionMock!
     var peerID: MCPeerID!
+    var mcSession: MCSessionMock!
+    var disconnectedExpectation: XCTestExpectation!
 
     override func setUp() {
         mcSession = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
         peerID = MCPeerID(displayName: String.random(length: 5))
     }
 
-    func testReceiveDisconnectedNotificationAfterMCSessionDelegateCall() {
-        // Precondition
-        let disconnectedExpectation =
-            expectationWithDescription("session disconnected notification received")
-        let session = Session(session: mcSession, identifier: peerID) {
-            [weak disconnectedExpectation] in
-            disconnectedExpectation?.fulfill()
-        }
+    func testConnectedHandlerAfterMCSessionDelegateCall() {
+        // Given
+        let connectHandlerInvokedExpectation =
+            expectationWithDescription("session connected handler invoked")
 
+        let session = Session(session: mcSession,
+                              identifier: peerID,
+                              connectHandler: {
+                                  [weak connectHandlerInvokedExpectation] in
+                                  connectHandlerInvokedExpectation?.fulfill()
+                              },
+                              disconnectHandler: unexpectedDisconnectHandler)
+
+        // When
+        // Fake delegate method invocation
+        mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .Connected)
+
+        // Then
+        let connectHandlerExpectationTimeout: NSTimeInterval = 2
+        waitForExpectationsWithTimeout(connectHandlerExpectationTimeout, handler: nil)
+        XCTAssertEqual(session.sessionState.value, MCSessionState.Connected)
+    }
+
+    func testDisconnectedHandlerAfterMCSessionDelegateCall() {
+        // Given
+        let disconnectHandlerInvokedExpectation =
+            expectationWithDescription("session disconnected handler invoked")
+
+        let session = Session(session: mcSession,
+                              identifier: peerID,
+                              connectHandler: unexpectedConnectHandler,
+                              disconnectHandler: {
+                                  [weak disconnectHandlerInvokedExpectation] in
+                                  disconnectHandlerInvokedExpectation?.fulfill()
+                              })
+
+        // When
+        // Fake delegate method invocation
         mcSession.delegate?.session(mcSession, peer: peerID, didChangeState: .NotConnected)
 
-        // Should
-        let sessionDisconnectedExpectationTimeout: NSTimeInterval = 2
-        waitForExpectationsWithTimeout(sessionDisconnectedExpectationTimeout, handler: nil)
+        // Then
+        let disconnectHandlerExpectationTimeout: NSTimeInterval = 2
+        waitForExpectationsWithTimeout(disconnectHandlerExpectationTimeout, handler: nil)
         XCTAssertEqual(session.sessionState.value, MCSessionState.NotConnected)
     }
 
-    func testReceiveInputStream() {
-        // Preconditions
-        let streamName = NSUUID().UUIDString
-        let session = Session(session: mcSession, identifier: peerID,
+    func testInputStreamHandler() {
+        // Given
+        let session = Session(session: mcSession,
+                              identifier: peerID,
+                              connectHandler:  unexpectedConnectHandler,
                               disconnectHandler: unexpectedDisconnectHandler)
-        let receivedStreamExpectation = expectationWithDescription("received input stream")
         var receivedStreamName: String?
 
-        session.didReceiveInputStreamHandler = { [weak receivedStreamExpectation] stream, name in
+        let receivedStreamExpectation = expectationWithDescription("received input stream")
+
+        session.didReceiveInputStreamHandler = {
+            [weak receivedStreamExpectation] stream, name in
+
             receivedStreamName = name
             receivedStreamExpectation?.fulfill()
         }
-        mcSession.delegate?.session(mcSession, didReceiveStream:
-            NSInputStream(data: NSData(bytes: nil, length: 0)),
-                                    withName: streamName, fromPeer: peerID)
 
-        // Should
+        let emptyData = NSData(bytes: nil, length: 0)
+        let randomlyGeneratedStreamName = NSUUID().UUIDString
+
+        // When
+        // Fake delegate method invocation
+        mcSession.delegate?.session(mcSession,
+                                    didReceiveStream: NSInputStream(data: emptyData),
+                                    withName: randomlyGeneratedStreamName,
+                                    fromPeer: peerID)
+
+        // Then
         let receivedStreamTimeout = 1.0
         waitForExpectationsWithTimeout(receivedStreamTimeout, handler: nil)
-        XCTAssertEqual(streamName, receivedStreamName)
+        XCTAssertEqual(randomlyGeneratedStreamName, receivedStreamName)
     }
-
 }

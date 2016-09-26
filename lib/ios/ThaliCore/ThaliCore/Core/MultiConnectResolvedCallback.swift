@@ -1,12 +1,17 @@
 //
 //  Thali CordovaPlugin
-//  ThaliCoreError.swift
+//  MultiConnectResolvedCallback.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
-//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
 
+public typealias MultiConnectResolvedCallback =
+    (syncValue: String, error: ErrorType?, port: UInt16?) -> Void
+
 public enum ThaliCoreError: String, ErrorType {
+
     case StartListeningNotActive = "startListeningForAdvertisements is not active"
     case ConnectionFailed = "Connection could not be established"
     case ConnectionTimedOut = "Connection wait timed out"
