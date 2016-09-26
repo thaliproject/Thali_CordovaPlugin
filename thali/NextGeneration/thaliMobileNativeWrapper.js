@@ -96,7 +96,13 @@ function failedConnectionHandler(failedConnection) {
     portNumber: null
   };
   handlePeerAvailabilityChanged(peer);
-  module.exports.emitter.emit('failedConnection', failedConnection);
+
+  var event = {
+    error: failedConnection.error,
+    peerIdentifier: failedConnection.peerIdentifier,
+    connectionType: connectionTypes.BLUETOOTH
+  };
+  module.exports.emitter.emit('failedNativeConnection', event);
 }
 
 function routerPortConnectionFailedHandler(failedRouterPort) {

@@ -399,7 +399,7 @@ test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
   }
 );
 
-test('We repeat failedConnection event when we get it from ' +
+test('We fire failedNativeConnection event when we get failedConnection from ' +
   'thaliTcpServersManager',
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
@@ -407,12 +407,16 @@ test('We repeat failedConnection event when we get it from ' +
       var peerIdentifier = 'some-identifier';
       var errorDescription = 'Dummy Error';
       thaliMobileNativeWrapper.emitter.once(
-        'failedConnection',
+        'failedNativeConnection',
         function (failedConnection) {
           t.equals(failedConnection.peerIdentifier, peerIdentifier,
             'peerIdentifier matches');
           t.equals(failedConnection.error.message, errorDescription,
             'error description matches');
+          t.equals(
+            failedConnection.connectionType,
+            thaliMobileNativeWrapper.connectionTypes.BLUETOOTH,
+            'connection type is tcp');
           t.end();
         }
       );
