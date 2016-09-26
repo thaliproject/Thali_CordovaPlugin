@@ -86,66 +86,79 @@ var test = tape({
 test('Coordinated replication action test', function (t) {
   var localPouchDB = new TestPouchDB(DB_NAME);
   localPouchDB
-    .put({_id: JSON.stringify(devicePublicKey.toJSON())})
-    .then(function () {
-      return testUtils.runTestOnAllParticipants(t, router,
-        thaliNotificationClient, thaliNotificationServer, ThaliMobile,
-        devicePublicKey,
-        function (notificationForUs) {
-          return new Promise(function (resolve, reject) {
-            var changes = null;
-            var thaliReplicationPeerAction = null;
-            var exited = false;
-            function exit(err) {
-              if (exited) {
-                return;
-              }
-              exited = true;
-              changes && changes.cancel();
+  .put({
+    _id: JSON.stringify(devicePublicKey.toJSON())
+  })
 
-              return Promise.resolve()
-              .then(function () {
-                if (thaliReplicationPeerAction) {
-                  thaliReplicationPeerAction.kill();
-                  return thaliReplicationPeerAction.waitUntilKilled();
-                }
-              })
-              .then(function () {
-                return err ? reject(err) : resolve();
-              });
+  .then(function () {
+    return testUtils.runTestOnAllParticipants(
+      t, router,
+      thaliNotificationClient,
+      thaliNotificationServer,
+      ThaliMobile,
+      devicePublicKey,
+      function (notificationForUs) {
+
+        return new Promise(function (resolve, reject) {
+          var changes = localPouchDB.changes({
+            since: 0,
+            live:  true
+          });
+
+          var thaliReplicationPeerAction = new ThaliReplicationPeerAction(
+            notificationForUs, TestPouchDB, DB_NAME, devicePublicKey
+          );
+
+          var exited = false;
+          var resultError = null;
+          function exit(error) {
+            if (exited) {
+              return;
             }
-            changes = localPouchDB.changes({
-              since: 0,
-              live: true
-            }).on('change', function (change) {
-              var bufferRemoteId = new Buffer(JSON.parse(change.id));
-              // note that the test might pass before we even start replicating
-              // because we already have the record from someone else, that's
-              // fine. We still guarantee at least one replication ran on each
-              // device.
-              if (Buffer.compare(notificationForUs.keyId, bufferRemoteId) !== 0)
-              {
-                return;
-              }
-              exit();
-            }).on('error', function (err) {
-              exit(err);
-            });
+            exited = true;
 
-            thaliReplicationPeerAction =
-              new ThaliReplicationPeerAction(notificationForUs, TestPouchDB,
-                DB_NAME, devicePublicKey);
-            thaliReplicationPeerAction.start(httpAgentPool)
-              .catch(function (err) {
-                exit(err);
-              });
+            resultError = error;
+            changes.cancel();
+          }
+
+          changes.on('change', function (change) {
+            var bufferRemoteId = new Buffer(JSON.parse(change.id));
+            // note that the test might pass before we even start replicating
+            // because we already have the record from someone else, that's
+            // fine. We still guarantee at least one replication ran on each
+            // device.
+            if (Buffer.compare(notificationForUs.keyId, bufferRemoteId) !== 0) {
+              return;
+            }
+            exit();
+          })
+          .on('error', function (error) {
+            exit(error);
+          })
+          .on('complete', function () {
+            thaliReplicationPeerAction.kill();
+            thaliReplicationPeerAction.waitUntilKilled()
+            .then(function () {
+              if (resultError) {
+                reject(resultError);
+              } else {
+                resolve();
+              }
+            });
+          });
+
+          thaliReplicationPeerAction.start(httpAgentPool)
+          .catch(function (error) {
+            exit(error);
           });
         });
-    })
-    .catch(function (err) {
-      t.fail(err);
-    })
-    .then(function () {
-      t.end();
-    });
+      }
+    );
+  })
+  .catch(function (error) {
+    t.fail(error);
+  })
+  .then(function () {
+    t.end();
+  });
 });

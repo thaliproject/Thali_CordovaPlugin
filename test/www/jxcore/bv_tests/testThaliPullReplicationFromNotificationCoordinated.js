@@ -78,53 +78,37 @@ function bufferIndexOf(bufferArray, entryToFind) {
 
 test('Coordinated pull replication from notification test', function (t) {
   var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
+
+  var localPouchDB = new TestPouchDB(DB_NAME);
+  var changes = localPouchDB.changes({
+    since: 0,
+    live: true
+  });
+
+  thaliPullReplicationFromNotification = new ThaliPullReplicationFromNotification(
+    TestPouchDB, DB_NAME, thaliPeerPoolDefault, devicePublicPrivateKey
+  );
+
   var exited = false;
+  var resultError = null;
   function exit(error) {
     if (exited) {
       return;
     }
     exited = true;
-    changes && changes.cancel();
-    cancelTimer && clearTimeout(cancelTimer);
 
-    var isPassed = true;
-    // We do this here to make sure we don't try to enqueue any replication
-    // events after we have called stop on thaliPeerPoolDefault as that
-    // would cause an exception to be thrown.
-    if (thaliPullReplicationFromNotification) {
-      thaliPullReplicationFromNotification.stop();
-      thaliPullReplicationFromNotification = null;
-    }
-    thaliPeerPoolDefault.stop()
-    .catch(function (error) {
-      t.fail('failed with ' + error);
-      isPassed = false;
-    })
-    .then(function () {
-      if (error) {
-        t.fail('failed with ' + error);
-        isPassed = false;
-      }
-      if (isPassed) {
-        t.pass('all tests passed');
-      }
-      t.end();
-    });
+    resultError = error;
+    changes.cancel();
   }
 
-  var cancelTimer = setTimeout(function () {
-    exit(new Error('We ran out of time'));
-  }, 1000 * 60 * 5);
+  setTimeout(function () {
+    exit(new Error('we ran out of time'));
+  }, 5 * 60 * 1000);
 
-  var remainingPartnerKeys =
-    testUtils.turnParticipantsIntoBufferArray(t, devicePublicKey);
-
-  var localPouchDB = new TestPouchDB(DB_NAME);
-
-  var changes = localPouchDB.changes({
-    since: 0,
-    live: true
-  }).on('change', function (change) {
+  var remainingPartnerKeys = testUtils.turnParticipantsIntoBufferArray(
+    t, devicePublicKey
+  );
+  changes.on('change', function (change) {
     var bufferRemoteId = new Buffer(JSON.parse(change.id));
     var index = bufferIndexOf(remainingPartnerKeys, bufferRemoteId);
     if (index === -1) {
@@ -134,26 +118,47 @@ test('Coordinated pull replication from notification test', function (t) {
     if (remainingPartnerKeys.length === 0) {
       exit();
     }
-  }).on('error', function (err) {
-    exit(err);
+  })
+  .on('error', function (error) {
+    exit(error);
+  })
+  .on('complete', function () {
+    // We do this here to make sure we don't try to enqueue any replication
+    // events after we have called stop on thaliPeerPoolDefault as that
+    // would cause an exception to be thrown.
+    thaliPullReplicationFromNotification.stop();
+    thaliPullReplicationFromNotification = null;
+
+    thaliPeerPoolDefault.stop()
+    .then(function () {
+      if (resultError) {
+        return Promise.reject(resultError);
+      } else {
+        t.pass('all tests passed');
+      }
+    })
+    .catch(function (error) {
+      t.fail('failed with ' + error);
+    })
+    .then(function () {
+      t.end();
+    });
   });
 
-  thaliPullReplicationFromNotification =
-    new ThaliPullReplicationFromNotification(TestPouchDB, DB_NAME,
-      thaliPeerPoolDefault, devicePublicPrivateKey);
-
-  var partnerKeys =
-    testUtils.turnParticipantsIntoBufferArray(t, devicePublicKey);
-
   localPouchDB
-    .put({_id: JSON.stringify(devicePublicKey.toJSON())})
-    .then(function () {
-      thaliPullReplicationFromNotification.start(partnerKeys);
-      return testUtils.startServerInfrastructure(
-        thaliNotificationServer, partnerKeys, ThaliMobile, router
-      );
-    })
-    .catch(function (err) {
-      exit(err);
-    });
+  .put({
+    _id: JSON.stringify(devicePublicKey.toJSON())
+  })
+  .then(function () {
+    var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+      t, devicePublicKey
+    );
+    thaliPullReplicationFromNotification.start(partnerKeys);
+    return testUtils.startServerInfrastructure(
+      thaliNotificationServer, partnerKeys, ThaliMobile, router
+    );
+  })
+  .catch(function (error) {
+    exit(error);
+  });
 });
