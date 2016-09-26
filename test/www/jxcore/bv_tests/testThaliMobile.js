@@ -1,9 +1,13 @@
 'use strict';
 
+var PEERS_LIMIT = 1;
 var proxyquire = require('proxyquire');
 var ThaliMobile = proxyquire('thali/NextGeneration/thaliMobile', {
   './thaliConfig': {
-    NON_TCP_PEER_UNAVAILABILITY_THRESHOLD: 500
+    NON_TCP_PEER_UNAVAILABILITY_THRESHOLD: 500,
+    MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT: PEERS_LIMIT,
+    BLUETOOTH_PEERS_LIMIT: PEERS_LIMIT,
+    TCP_NATIVE_PEERS_LIMIT: PEERS_LIMIT
   }
 });
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
@@ -623,4 +627,31 @@ test('Discovered peer should be removed if no availability updates ' +
         }
       );
     });
+});
+
+test('If there are more then PERS_LIMIT peers presented ' +
+  'then `discoveryDOS` event should be emitted', function (t) {
+    var peerIdentifier = 'urn:uuid:' + uuid.v4();
+    var anotherPeerIdentifier = 'urn:uuid:' + uuid.v4();
+    var portNumber = 8080;
+    var anotherPortNumber = 8081;
+
+    ThaliMobile.start(express.Router());
+
+    ThaliMobile.on('discoveryDOS', function (info) {
+      t.ok(info.limit, PEERS_LIMIT, 'DOS limit should be presented');
+      t.ok(info.count, 2, 'Actual number off peers should be presented');
+      t.end();
+    });
+
+    ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+      {
+        peerIdentifier: peerIdentifier,
+        portNumber: portNumber
+      });
+    ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+      {
+        peerIdentifier: anotherPeerIdentifier,
+        portNumber: anotherPortNumber
+      });
 });
