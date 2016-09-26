@@ -245,46 +245,47 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
         self._replicationTimer();
         self._cancelReplication = remoteDB.replicate.to(self._dbName, {
           live: true
-        }).on('paused', function (err) {
-            logger.debug(
-              'Got paused with - ',
-              Utils.serializePouchError(err)
-            );
-          })
-          .on('active', function () {
-            logger.debug('Replication resumed');
-          })
-          .on('denied', function (err) {
-            logger.warn(
-              'We got denied on a PouchDB access, this really should ' +
-              'not happen - ',
-              Utils.serializePouchError(err)
-            );
-          })
-          .on('complete', function (info) {
-            self._complete(info.errors);
-          })
-          .on('error', function (err) {
-            logger.debug(
-              'Got error on replication - ',
-              Utils.serializePouchError(err)
-            );
-            self._complete([err]);
-          })
-          .on('change', function (info) {
-            self._replicationTimer();
-            // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
-            self._localSeqManager
-              .update(info.last_seq)
-              .catch(function (err) {
-                logger.debug(
-                  'Got error in update, waiting for main loop to ' +
-                  'detect and handle - ',
-                  Utils.serializePouchError(err)
-                );
-              });
-            // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
-          });
+        })
+      .on('paused', function (err) {
+          logger.debug(
+            'Got paused with - ',
+            Utils.serializePouchError(err)
+          );
+        })
+        .on('active', function () {
+          logger.debug('Replication resumed');
+        })
+        .on('denied', function (err) {
+          logger.warn(
+            'We got denied on a PouchDB access, this really should ' +
+            'not happen - ',
+            Utils.serializePouchError(err)
+          );
+        })
+        .on('complete', function (info) {
+          self._complete(info.errors);
+        })
+        .on('error', function (err) {
+          logger.debug(
+            'Got error on replication - ',
+            Utils.serializePouchError(err)
+          );
+          self._complete([err]);
+        })
+        .on('change', function (info) {
+          self._replicationTimer();
+          // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+          self._localSeqManager
+            .update(info.last_seq)
+            .catch(function (err) {
+              logger.debug(
+                'Got error in update, waiting for main loop to ' +
+                'detect and handle - ',
+                Utils.serializePouchError(err)
+              );
+            });
+          // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+        });
       });
       return self._replicationPromise;
     });

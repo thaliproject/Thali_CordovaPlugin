@@ -1,24 +1,31 @@
 'use strict';
 
-var tape = require('../lib/thaliTape');
-var crypto = require('crypto');
-var testUtils = require('../lib/testUtils');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var crypto         = require('crypto');
 var expressPouchdb = require('express-pouchdb');
-var express = require('express');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var ThaliNotificationServer = require('thali/NextGeneration/notification/thaliNotificationServer');
-var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-var Promise = require('lie');
+var express        = require('express');
+var Promise        = require('lie');
+
+var testUtils = require('../lib/testUtils');
+var tape      = require('../lib/thaliTape');
+
+var thaliConfig                          = require('thali/NextGeneration/thaliConfig');
+var ThaliMobile                          = require('thali/NextGeneration/thaliMobile');
+var ThaliNotificationServer              = require('thali/NextGeneration/notification/thaliNotificationServer');
+var ThaliPeerPoolDefault                 = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var ThaliPullReplicationFromNotification = require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
 
-var thaliNotificationServer = null;
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
-var devicePublicKey = devicePublicPrivateKey.generateKeys();
-var TestPouchDB = testUtils.getLevelDownPouchDb();
-var router = null;
+var devicePublicKey        = devicePublicPrivateKey.generateKeys();
+var TestPouchDB            = testUtils.getLevelDownPouchDb();
+
+var router                               = null;
+var thaliNotificationServer              = null;
+var thaliPeerPoolDefault                 = null;
 var thaliPullReplicationFromNotification = null;
-var DB_NAME = 'repActionTest';
+
+var DB_NAME            = 'repActionTest';
+var EXPIRATION_TIMEOUT = 60 * 60 * 1000;
+var TEST_TIMEOUT       = 5 * 60 * 1000;
 
 if (!tape.coordinated) {
   return;
@@ -32,18 +39,25 @@ var test = tape({
     var expressPDb = expressPouchdb(TestPouchDB, {mode: 'minimumForPouchDB'});
     router.use('/db', expressPDb);
 
-    thaliNotificationServer =
-      new ThaliNotificationServer(router, devicePublicPrivateKey,
-        60 * 60 * 1000);
+    thaliNotificationServer = new ThaliNotificationServer(
+      router, devicePublicPrivateKey, EXPIRATION_TIMEOUT
+    );
 
     t.end();
   },
   teardown: function (t) {
-    if (thaliPullReplicationFromNotification) {
-      thaliPullReplicationFromNotification.stop();
-      thaliPullReplicationFromNotification = null;
-    }
-    thaliNotificationServer.stop()
+    Promise.resolve()
+    .then(function () {
+      if (thaliPullReplicationFromNotification) {
+        thaliPullReplicationFromNotification.stop();
+      }
+      return thaliNotificationServer.stop();
+    })
+    .then(function () {
+      if (thaliPeerPoolDefault) {
+        return thaliPeerPoolDefault.stop();
+      }
+    })
     .then(function () {
       return ThaliMobile.stop();
     })
@@ -58,8 +72,8 @@ var test = tape({
         );
       }
     })
-    .catch(function (err) {
-      t.fail('Got error in teardown - ' + JSON.stringify(err));
+    .catch(function (error) {
+      t.fail('Got error in teardown - ' + error.toString());
     })
     .then(function () {
       t.end();
@@ -77,7 +91,7 @@ function bufferIndexOf(bufferArray, entryToFind) {
 }
 
 test('Coordinated pull replication from notification test', function (t) {
-  var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
+  thaliPeerPoolDefault = new ThaliPeerPoolDefault();
 
   var localPouchDB = new TestPouchDB(DB_NAME);
   var changes = localPouchDB.changes({
@@ -103,19 +117,19 @@ test('Coordinated pull replication from notification test', function (t) {
 
   setTimeout(function () {
     exit(new Error('we ran out of time'));
-  }, 5 * 60 * 1000);
+  }, TEST_TIMEOUT);
 
-  var remainingPartnerKeys = testUtils.turnParticipantsIntoBufferArray(
+  var remotePartnerKeys = testUtils.turnParticipantsIntoBufferArray(
     t, devicePublicKey
   );
   changes.on('change', function (change) {
     var bufferRemoteId = new Buffer(JSON.parse(change.id));
-    var index = bufferIndexOf(remainingPartnerKeys, bufferRemoteId);
+    var index = bufferIndexOf(remotePartnerKeys, bufferRemoteId);
     if (index === -1) {
       return;
     }
-    remainingPartnerKeys.splice(index, 1);
-    if (remainingPartnerKeys.length === 0) {
+    remotePartnerKeys.splice(index, 1);
+    if (remotePartnerKeys.length === 0) {
       exit();
     }
   })
@@ -123,26 +137,12 @@ test('Coordinated pull replication from notification test', function (t) {
     exit(error);
   })
   .on('complete', function () {
-    // We do this here to make sure we don't try to enqueue any replication
-    // events after we have called stop on thaliPeerPoolDefault as that
-    // would cause an exception to be thrown.
-    thaliPullReplicationFromNotification.stop();
-    thaliPullReplicationFromNotification = null;
-
-    thaliPeerPoolDefault.stop()
-    .then(function () {
-      if (resultError) {
-        return Promise.reject(resultError);
-      } else {
-        t.pass('all tests passed');
-      }
-    })
-    .catch(function (error) {
-      t.fail('failed with ' + error);
-    })
-    .then(function () {
-      t.end();
-    });
+    if (resultError) {
+      t.fail('failed with ' + resultError.toString());
+    } else {
+      t.pass('passed');
+    }
+    t.end();
   });
 
   localPouchDB

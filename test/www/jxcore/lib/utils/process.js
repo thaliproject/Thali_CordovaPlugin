@@ -1,5 +1,6 @@
 'use strict';
 
+require('longjohn').async_trace_limit = -1;
 var logger = require('thali/ThaliLogger')('TestsProcess');
 
 

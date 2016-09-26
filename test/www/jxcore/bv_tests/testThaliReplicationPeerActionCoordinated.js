@@ -1,30 +1,35 @@
 'use strict';
 
-var tape = require('../lib/thaliTape');
-var crypto = require('crypto');
+var crypto         = require('crypto');
+var express        = require('express');
+var expressPouchDB = require('express-pouchdb');
+var Promise        = require('lie');
+
+var tape      = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var expressPouchdb = require('express-pouchdb');
-var express = require('express');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var ThaliNotificationServer = require('thali/NextGeneration/notification/thaliNotificationServer');
-var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNotificationClient');
-var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-var Promise = require('lie');
+
+var thaliConfig                = require('thali/NextGeneration/thaliConfig');
+var ThaliMobile                = require('thali/NextGeneration/thaliMobile');
+var ThaliNotificationServer    = require('thali/NextGeneration/notification/thaliNotificationServer');
+var ThaliNotificationClient    = require('thali/NextGeneration/notification/thaliNotificationClient');
+var ThaliPeerPoolDefault       = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 
-var thaliNotificationServer = null;
-var thaliNotificationClient = null;
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
-var devicePublicKey = devicePublicPrivateKey.generateKeys();
-var TestPouchDB = testUtils.getLevelDownPouchDb();
-var router = null;
+var devicePublicKey        = devicePublicPrivateKey.generateKeys();
+var TestPouchDB            = testUtils.getLevelDownPouchDb();
+
+var router                     = null;
+var thaliNotificationServer    = null;
+var thaliNotificationClient    = null;
 var thaliReplicationPeerAction = null;
-var DB_NAME = 'repActionTest';
 
 // BUGBUG: This is currently ignored for reasons explained
 // in thaliReplicationPeerAction.start
 var httpAgentPool = null;
+
+var DB_NAME            = 'repActionTest';
+var EXPIRATION_TIMEOUT = 60 * 60 * 1000;
 
 if (!tape.coordinated) {
   return;
@@ -35,33 +40,31 @@ var test = tape({
     t.data = devicePublicKey.toJSON();
 
     router = express.Router();
-    var expressPDb = expressPouchdb(TestPouchDB, {mode: 'minimumForPouchDB'});
-    router.use('/db', expressPDb);
+    router.use(
+      '/db',
+      expressPouchDB(TestPouchDB, {
+        mode: 'minimumForPouchDB'
+      })
+    );
 
-    thaliNotificationServer =
-      new ThaliNotificationServer(router, devicePublicPrivateKey,
-        60 * 60 * 1000);
+    thaliNotificationServer = new ThaliNotificationServer(
+      router, devicePublicPrivateKey, EXPIRATION_TIMEOUT
+    );
 
     var peerPool = new ThaliPeerPoolDefault();
     peerPool.start();
-    thaliNotificationClient =
-      new ThaliNotificationClient(peerPool,
-        devicePublicPrivateKey);
+    thaliNotificationClient = new ThaliNotificationClient(
+      peerPool, devicePublicPrivateKey
+    );
+
     t.end();
   },
   teardown: function (t) {
-    Promise.resolve()
+    thaliNotificationClient.stop();
+    thaliNotificationServer.stop()
     .then(function () {
-      if (thaliReplicationPeerAction) {
-        thaliReplicationPeerAction.kill();
-        return thaliReplicationPeerAction.waitUntilKilled();
-      }
-    })
-    .then(function () {
-      return thaliNotificationServer.stop();
-    })
-    .then(function () {
-      return thaliNotificationClient.stop();
+      thaliReplicationPeerAction.kill();
+      return thaliReplicationPeerAction.waitUntilKilled();
     })
     .then(function () {
       return ThaliMobile.stop();
@@ -70,12 +73,15 @@ var test = tape({
       if (combinedResult.wifiResult !== null ||
         combinedResult.nativeResult !== null) {
         return Promise.reject(
-          new Error('Had a failure in ThaliMobile.start - ' +
-            JSON.stringify(combinedResult)));
+          new Error(
+            'Had a failure in ThaliMobile.start - ' +
+            JSON.stringify(combinedResult)
+          )
+        );
       }
     })
     .catch(function (err) {
-      t.fail('Got error in teardown - ' + JSON.stringify(err));
+      t.fail('Got error in teardown - ' + error.toString());
     })
     .then(function () {
       t.end();
@@ -98,14 +104,13 @@ test('Coordinated replication action test', function (t) {
       ThaliMobile,
       devicePublicKey,
       function (notificationForUs) {
-
         return new Promise(function (resolve, reject) {
           var changes = localPouchDB.changes({
             since: 0,
             live:  true
           });
 
-          var thaliReplicationPeerAction = new ThaliReplicationPeerAction(
+          thaliReplicationPeerAction = new ThaliReplicationPeerAction(
             notificationForUs, TestPouchDB, DB_NAME, devicePublicKey
           );
 
@@ -136,15 +141,11 @@ test('Coordinated replication action test', function (t) {
             exit(error);
           })
           .on('complete', function () {
-            thaliReplicationPeerAction.kill();
-            thaliReplicationPeerAction.waitUntilKilled()
-            .then(function () {
-              if (resultError) {
-                reject(resultError);
-              } else {
-                resolve();
-              }
-            });
+            if (resultError) {
+              reject(resultError);
+            } else {
+              resolve();
+            }
           });
 
           thaliReplicationPeerAction.start(httpAgentPool)
@@ -155,8 +156,11 @@ test('Coordinated replication action test', function (t) {
       }
     );
   })
+  .then(function () {
+    t.pass('passed');
+  })
   .catch(function (error) {
-    t.fail(error);
+    t.fail('failed with ' + error.toString());
   })
   .then(function () {
     t.end();
