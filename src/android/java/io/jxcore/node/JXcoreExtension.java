@@ -514,7 +514,9 @@ public class JXcoreExtension {
 
     public static void notifyPeerAvailabilityChanged() {
         JSONArray jsonArray = new JSONArray();
-        for (PeerProperties peerProperties : peerPropertiesBatch.keySet()) {
+        List<PeerProperties> peerPropertiesList = new ArrayList<PeerProperties>(peerPropertiesBatch.keySet());
+        for (PeerProperties peerProperties : peerPropertiesList) {
+            boolean isAvailable = peerPropertiesBatch.remove(peerProperties);
             String peerId = peerProperties.getId()
                     + BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR
                     + peerProperties.getExtraInformation();
@@ -523,7 +525,7 @@ public class JXcoreExtension {
             boolean jsonObjectCreated = false;
             try {
                 jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
-                jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, peerPropertiesBatch.get(peerProperties));
+                jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
                 jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
                 jsonObjectCreated = true;
             } catch (JSONException e) {
@@ -532,7 +534,6 @@ public class JXcoreExtension {
             if (jsonObjectCreated) {
                 jsonArray.put(jsonObject);
             }
-            peerPropertiesBatch.remove(peerProperties);
         }
         sendPeersToNode(jsonArray);
 
