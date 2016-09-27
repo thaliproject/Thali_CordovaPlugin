@@ -31,10 +31,10 @@ class PeerIdentifierTests: XCTestCase {
 
     func testInitWithStringHasNotEBNFormError() {
         let string = "eqwer:asdf:aasdf"
-        var parsingError: PeerIdentifierError?
+        var parsingError: ThaliCoreError?
         do {
             let _ = try PeerIdentifier(stringValue: string)
-        } catch let peerErr as PeerIdentifierError {
+        } catch let peerErr as ThaliCoreError {
             parsingError = peerErr
         } catch _ {
         }
@@ -43,10 +43,10 @@ class PeerIdentifierTests: XCTestCase {
 
     func testInitWithStringHasNotNumberGeneration() {
         let string = "eqwer:not_a_number"
-        var parsingError: PeerIdentifierError?
+        var parsingError: ThaliCoreError?
         do {
             let _ = try PeerIdentifier(stringValue: string)
-        } catch let peerErr as PeerIdentifierError {
+        } catch let peerErr as ThaliCoreError {
             parsingError = peerErr
         } catch _ {
         }

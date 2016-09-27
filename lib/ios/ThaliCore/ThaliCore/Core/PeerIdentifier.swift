@@ -10,10 +10,6 @@
 import Foundation
 import MultipeerConnectivity
 
-public enum PeerIdentifierError: String, ErrorType {
-    case IllegalPeerID
-}
-
 ///Peer identifier with generations
 public struct PeerIdentifier: Hashable {
 
@@ -36,10 +32,10 @@ public struct PeerIdentifier: Hashable {
              $0 == PeerIdentifier.separator
              }.map(String.init)
         guard parts.count == 2 else {
-            throw PeerIdentifierError.IllegalPeerID
+            throw ThaliCoreError.IllegalPeerID
         }
         guard let generation = Int(parts[1], radix: 16) else {
-            throw PeerIdentifierError.IllegalPeerID
+            throw ThaliCoreError.IllegalPeerID
         }
         self.uuid = parts[0]
         self.generation = generation
