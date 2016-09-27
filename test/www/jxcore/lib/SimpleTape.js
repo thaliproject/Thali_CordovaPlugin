@@ -58,12 +58,13 @@ SimpleThaliTape.states = {
   started: 'started'
 };
 
-SimpleThaliTape.prototype.only = function (name, expect, fun) {
+SimpleThaliTape.prototype.only = function () {
   this._nextTestOnly = true;
-  return this.addTest(name, expect, fun);
+  return this.addTest.apply(this, arguments);
 };
 
-SimpleThaliTape.prototype.addTest = function (name, expect, fun) {
+// 'canBeSkipped' is optional argument.
+SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
   assert(
     this._state === SimpleThaliTape.states.created,
     'we should be in created state'
@@ -79,18 +80,16 @@ SimpleThaliTape.prototype.addTest = function (name, expect, fun) {
     this._ignoreRemainingTests = true;
   }
 
-  // Users can optionally specify the number of assertions
-  // expected when they define the test.
   if (!fun) {
-    fun = expect;
-    expect = null;
+    fun = canBeSkipped;
+    canBeSkipped = null;
   }
 
   asserts.isString(name);
   asserts.isFunction(fun);
   this._tests.push({
     name: name,
-    expect: expect,
+    canBeSkipped: canBeSkipped,
     fun: fun
   });
 
@@ -99,6 +98,9 @@ SimpleThaliTape.prototype.addTest = function (name, expect, fun) {
 
 SimpleThaliTape.prototype._runTest = function (test) {
   var self = this;
+  
+  // Test was skipped.
+  var skipped = false;
 
   return new Promise(function (resolve, reject) {
     function bindResult(tape, timeout) {
@@ -150,11 +152,25 @@ SimpleThaliTape.prototype._runTest = function (test) {
     });
 
     tape(test.name, function (tape) {
-      if (test.expect !== undefined && test.expect !== null) {
-        tape.plan(test.expect);
-      }
       bindResult(tape, self._options.testTimeout);
-      test.fun(tape);
+
+      Promise.try(function () {
+        if (test.canBeSkipped) {
+          return test.canBeSkipped();
+        } else {
+          return false;
+        }
+      })
+      .then(function (canBeSkipped) {
+        if (canBeSkipped) {
+          logger.debug('test was skipped, name: \'%s\'', test.name);
+          tape.end();
+          skipped = true;
+        } else {
+          return test.fun(tape);
+        }
+      })
+      .catch(reject);
     });
 
     tape('teardown', function (tape) {
@@ -162,6 +178,13 @@ SimpleThaliTape.prototype._runTest = function (test) {
       tape.once('end', resolve);
       self._options.teardown(tape);
     });
+  })
+  .then(function () {
+    if (skipped) {
+      return Promise.reject(
+        new Error('skipped')
+      );
+    }
   });
 }
 
@@ -173,10 +196,22 @@ SimpleThaliTape.prototype._begin = function () {
   );
   this._state = SimpleThaliTape.states.started;
 
-  var promises = this._tests.map(function (test) {
-    return self._runTest(test);
+  var skippedTests = [];
+  return Promise.all(
+    this._tests.map(function (test) {
+      return self._runTest(test)
+      .catch(function (error) {
+        if (error.message === 'skipped') {
+          skippedTests.push(test.name);
+          return;
+        }
+        return Promise.reject(error);
+      });
+    })
+  )
+  .then(function () {
+    return skippedTests;
   });
-  return Promise.all(promises);
 }
 
 // We will run 'begin' on all 'SimpleThaliTape' instances.
@@ -187,20 +222,31 @@ SimpleThaliTape.prototype._resolveInstance = function () {
 }
 
 SimpleThaliTape.begin = function (platform, version, hasRequiredHardware) {
-  var promises = SimpleThaliTape.instances.map(function (thaliTape) {
-    return thaliTape._begin();
-  });
+  var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 
-  return Promise.all(promises)
-  .then(function () {
-    logger.debug('all tests succeed');
+  return Promise.all(
+    thaliTapes.map(function (thaliTape) {
+      return thaliTape._begin();
+    })
+  )
+  .then(function (skippedTests) {
+    logger.debug(
+      'all unit tests succeeded, platformName: \'%s\'',
+      platform
+    );
+    skippedTests = skippedTests.reduce(function (allTests, tests) {
+      return allTests.concat(tests);
+    }, []);
+    logger.debug(
+      'skipped tests: \'%s\'', JSON.stringify(skippedTests)
+    );
     logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   })
   .catch(function (error) {
     logger.error(
-      'tests failed, error: \'%s\', stack: \'%s\'',
-      error.toString(), error.stack
+      'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
+      platform, error.toString(), error.stack
     );
     logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
     return Promise.reject(error);
