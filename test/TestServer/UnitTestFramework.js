@@ -49,6 +49,8 @@ UnitTestFramework.prototype.startTests = function (platformName) {
   .then(function () {
     logger.debug('tests scheduled');
 
+    self.bindSync(devices);
+
     var skippedTests = [];
     return tests.reduce(function (promise, test) {
       return promise.then(function () {
@@ -84,6 +86,8 @@ UnitTestFramework.prototype.startTests = function (platformName) {
     );
   })
   .finally(function () {
+    self.unbindSync(devices);
+
     return Promise.all(
       devices.map(function (device) {
         return device.complete();
@@ -157,6 +161,68 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
         new Error('skipped')
       );
     }
+  });
+}
+
+UnitTestFramework.prototype.sync = function (devicesData, index, syncData) {
+  logger.debug('#sync');
+
+  var isSyncDataTheSame = devicesData.every(function (deviceData) {
+    if (deviceData.syncData) {
+      return deviceData.syncData === syncData;
+    } else {
+      return true;
+    }
+  });
+  assert(
+    isSyncDataTheSame,
+    'syncData should be the same between all devices'
+  );
+
+  var deviceData = devicesData[index];
+  assert(
+    !deviceData.syncData,
+    'syncData should be unique'
+  );
+  deviceData.syncData = syncData;
+
+  var isFinished = devicesData.every(function (deviceData) {
+    return !!deviceData.syncData;
+  });
+  if (isFinished) {
+    var promises = devicesData.map(function (deviceData) {
+      delete deviceData.syncData;
+      return deviceData.device.syncFinished(syncData);
+    });
+    logger.debug('#sync ok');
+    Promise.all(promises)
+    .catch(function (error) {
+      logger.error(
+        '#sync failed: error: \'%s\', stack: \'%s\'',
+        error.toString(), error.stack
+      );
+      return Promise.reject(error);
+    })
+  }
+}
+
+UnitTestFramework.prototype.bindSync = function (devices) {
+  var self = this;
+  var devicesData = devices.map(function (device) {
+    return { device: device };
+  });
+  this._sync = this.sync.bind(this, devicesData);
+  devices.forEach(function (device, index) {
+    device.on('sync', function (data) {
+      self._sync(index, data);
+    });
+  });
+}
+
+UnitTestFramework.prototype.unbindSync = function (devices) {
+  var self = this;
+  devices.forEach(function (device) {
+    device.removeListener('sync', self._sync);
   });
 }
 

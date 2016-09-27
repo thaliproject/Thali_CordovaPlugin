@@ -98,12 +98,17 @@ SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
 
 SimpleThaliTape.prototype._runTest = function (test) {
   var self = this;
-  
+
   // Test was skipped.
   var skipped = false;
 
   return new Promise(function (resolve, reject) {
     function bindResult(tape, timeout) {
+      tape.sync = function () {
+        // noop
+        return Promise.resolve();
+      }
+
       // 'end' can be called without 'result', so success is true by default.
       // We can receive 'result' many times.
       // For example each 'tape.ok' will provide a 'result'.

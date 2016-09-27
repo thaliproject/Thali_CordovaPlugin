@@ -3,7 +3,7 @@
 var crypto         = require('crypto');
 var express        = require('express');
 var expressPouchDB = require('express-pouchdb');
-var Promise        = require('lie');
+var Promise        = require('bluebird');
 
 var tape      = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils');
@@ -19,17 +19,9 @@ var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey        = devicePublicPrivateKey.generateKeys();
 var TestPouchDB            = testUtils.getLevelDownPouchDb();
 
-var router                     = null;
-var thaliNotificationServer    = null;
-var thaliNotificationClient    = null;
-var thaliReplicationPeerAction = null;
-
-// BUGBUG: This is currently ignored for reasons explained
-// in thaliReplicationPeerAction.start
-var httpAgentPool = null;
-
 var DB_NAME            = 'repActionTest';
 var EXPIRATION_TIMEOUT = 60 * 60 * 1000;
+var TEST_TIMEOUT       = 5 * 60 * 1000;
 
 if (!tape.coordinated) {
   return;
@@ -38,64 +30,40 @@ if (!tape.coordinated) {
 var test = tape({
   setup: function (t) {
     t.data = devicePublicKey.toJSON();
-
-    router = express.Router();
-    router.use(
-      '/db',
-      expressPouchDB(TestPouchDB, {
-        mode: 'minimumForPouchDB'
-      })
-    );
-
-    thaliNotificationServer = new ThaliNotificationServer(
-      router, devicePublicPrivateKey, EXPIRATION_TIMEOUT
-    );
-
-    var peerPool = new ThaliPeerPoolDefault();
-    peerPool.start();
-    thaliNotificationClient = new ThaliNotificationClient(
-      peerPool, devicePublicPrivateKey
-    );
-
     t.end();
   },
   teardown: function (t) {
-    thaliNotificationClient.stop();
-    thaliNotificationServer.stop()
-    .then(function () {
-      thaliReplicationPeerAction.kill();
-      return thaliReplicationPeerAction.waitUntilKilled();
-    })
-    .then(function () {
-      return ThaliMobile.stop();
-    })
-    .then(function (combinedResult) {
-      if (combinedResult.wifiResult !== null ||
-        combinedResult.nativeResult !== null) {
-        return Promise.reject(
-          new Error(
-            'Had a failure in ThaliMobile.start - ' +
-            JSON.stringify(combinedResult)
-          )
-        );
-      }
-    })
-    .catch(function (err) {
-      t.fail('Got error in teardown - ' + error.toString());
-    })
-    .then(function () {
-      t.end();
-    });
+    t.end();
   }
 });
 
 test('Coordinated replication action test', function (t) {
+  // BUGBUG: This is currently ignored for reasons explained
+  // in thaliReplicationPeerAction.start
+  var httpAgentPool = null;
+
+  var router = express.Router();
+  router.use(
+    '/db',
+    expressPouchDB(TestPouchDB, {
+      mode: 'minimumForPouchDB'
+    })
+  );
+  var thaliNotificationServer = new ThaliNotificationServer(
+    router, devicePublicPrivateKey, EXPIRATION_TIMEOUT
+  );
+  var peerPool = new ThaliPeerPoolDefault();
+  peerPool.start();
+  var thaliNotificationClient = new ThaliNotificationClient(
+    peerPool, devicePublicPrivateKey
+  );
   var localPouchDB = new TestPouchDB(DB_NAME);
-  localPouchDB
-  .put({
+
+  var peerActions = [];
+
+  localPouchDB.put({
     _id: JSON.stringify(devicePublicKey.toJSON())
   })
-
   .then(function () {
     return testUtils.runTestOnAllParticipants(
       t, router,
@@ -104,15 +72,16 @@ test('Coordinated replication action test', function (t) {
       ThaliMobile,
       devicePublicKey,
       function (notificationForUs) {
+        var thaliReplicationPeerAction = new ThaliReplicationPeerAction(
+          notificationForUs, TestPouchDB, DB_NAME, devicePublicKey
+        );
+        peerActions.push(thaliReplicationPeerAction);
+
         return new Promise(function (resolve, reject) {
           var changes = localPouchDB.changes({
             since: 0,
-            live:  true
+            live: true
           });
-
-          thaliReplicationPeerAction = new ThaliReplicationPeerAction(
-            notificationForUs, TestPouchDB, DB_NAME, devicePublicKey
-          );
 
           var exited = false;
           var resultError = null;
@@ -132,13 +101,12 @@ test('Coordinated replication action test', function (t) {
             // because we already have the record from someone else, that's
             // fine. We still guarantee at least one replication ran on each
             // device.
-            if (Buffer.compare(notificationForUs.keyId, bufferRemoteId) !== 0) {
-              return;
+            if (Buffer.compare(notificationForUs.keyId, bufferRemoteId) === 0) {
+              exit();
             }
-            exit();
           })
           .on('error', function (error) {
-            exit(error);
+            reject(error);
           })
           .on('complete', function () {
             if (resultError) {
@@ -154,13 +122,56 @@ test('Coordinated replication action test', function (t) {
           });
         });
       }
-    );
+    )
+  })
+
+  .then(function () {
+    return t.sync();
+  })
+
+  .then(function () {
+    // We are simulating thaliPullReplicationFromNotification.stop() and thaliPeerPoolDefault.stop()
+    thaliNotificationClient.stop();
+    var promises = peerActions.map(function (peerAction) {
+      peerAction.kill();
+      return peerAction.waitUntilKilled();
+    });
+    return Promise.all(promises);
+  })
+  .then(function () {
+    // https://github.com/thaliproject/Thali_CordovaPlugin/issues/1138
+    // workaround for ECONNREFUSED and ECONNRESET from 'request.js' in 'pouchdb'.
+    return t.sync();
+  })
+  .then(function () {
+    return thaliNotificationServer.stop();
+  })
+  .then(function () {
+    return ThaliMobile.stop();
+  })
+  .then(function (combinedResult) {
+    if (
+      combinedResult.wifiResult   !== null ||
+      combinedResult.nativeResult !== null
+    ) {
+      return Promise.reject(
+        new Error(
+          'Had a failure in ThaliMobile.start - ',
+          JSON.stringify(combinedResult)
+        )
+      );
+    }
+  })
+
+  .then(function () {
+    return Promise.resolve()
+    .timeout(TEST_TIMEOUT, 'test timeout exceeded');
   })
   .then(function () {
     t.pass('passed');
   })
   .catch(function (error) {
-    t.fail('failed with ' + error.toString());
+    t.fail('failed with ', error.toString());
   })
   .then(function () {
     t.end();
