@@ -6,6 +6,7 @@ var util     = require('util');
 var format   = util.format;
 var inherits = util.inherits;
 
+var assert       = require('assert');
 var uuid         = require('node-uuid');
 var objectAssign = require('object-assign');
 var EventEmitter = require('events').EventEmitter;
@@ -170,15 +171,16 @@ Socket.prototype.emitData = function (event, data) {
 // We will emit data until confirmation and then verify the test finish.
 // For example: runEvent('teardown', '2. my test', '{ a: 1 }', 1000).
 // 1. We will send 'teardown_2. my test' until confirmation.
-// 2. We will wait until 'teardown_2. my test_finished' will be received.
+// 2. We will wait until 'teardown_2. my test_finished' or 'teardown_2. my test_skipped' will be received.
+// 3. We will check whether skip is allowed if event was skipped.
 // 3. We will verify that test succeeded.
-Socket.prototype.runEvent = function (event, test, data, timeout) {
+Socket.prototype.runEvent = function (event, test, data, timeout, canBeSkipped) {
   var self = this;
 
   var dataString = JSON.stringify(data);
   event += '_' + test;
 
-  function handler (receivedData, resolve, reject) {
+  function finishedHandler (receivedData, resolve, reject) {
     try {
       var receivedDataString = JSON.stringify(receivedData);
       asserts.isBool(receivedData.success);
@@ -195,15 +197,40 @@ Socket.prototype.runEvent = function (event, test, data, timeout) {
     }
   }
 
+  function skipHandler (resolve, reject) {
+    try {
+      assert(
+        canBeSkipped,
+        format('we should allow event \'%s\' to be skipped', event)
+      );
+      logger.info(
+        'run skipped, test: \'%s\', event: \'%s\'',
+        test, event
+      );
+      throw new Error('skipped');
+    } catch (error) {
+      reject(error);
+    }
+  }
+
   var onceFinished;
+  var onceSkipped;
   return new Promise(function (resolve, reject) {
     onceFinished = self._bind(
       'once',
       event + '_finished',
       function (receivedData) {
-        handler(receivedData, resolve, reject);
+        finishedHandler(receivedData, resolve, reject);
       }
     );
+    onceSkipped = self._bind(
+      'once',
+      event + '_skipped',
+      function () {
+        skipHandler(resolve, reject);
+      }
+    );
+
     self.emitData(event, data)
     .catch(function (error) {
       logger.error(
@@ -214,12 +241,15 @@ Socket.prototype.runEvent = function (event, test, data, timeout) {
     });
   })
   .timeout(timeout, format(
-    'timeout, event: \'%s_finished\', test: \'%s\'',
+    'timeout exceeded, event: \'%s_finished\', test: \'%s\'',
     event, test
   ))
   .finally(function () {
     if (onceFinished) {
       onceFinished.unbind();
+    }
+    if (onceSkipped) {
+      onceSkipped.unbind();
     }
   });
 }

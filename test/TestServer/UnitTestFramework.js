@@ -49,23 +49,37 @@ UnitTestFramework.prototype.startTests = function (platformName) {
   .then(function () {
     logger.debug('tests scheduled');
 
+    var skippedTests = [];
     return tests.reduce(function (promise, test) {
       return promise.then(function () {
-        return self.runTest(devices, test);
+        return self.runTest(devices, test)
+        .catch(function (error) {
+          if (error.message === 'skipped') {
+            skippedTests.push(test);
+            return;
+          }
+          return Promise.reject(error);
+        });
       });
-    }, Promise.resolve());
+    }, Promise.resolve())
+    .then(function () {
+      return skippedTests;
+    });
   })
-  .then(function () {
+  .then(function (skippedTests) {
     platform.state = TestFramework.platformStates.succeeded;
     logger.debug(
       'all unit tests succeeded, platformName: \'%s\'',
       platformName
     );
+    logger.debug(
+      'skipped tests: \'%s\'', JSON.stringify(skippedTests)
+    );
   })
   .catch(function (error) {
     platform.state = TestFramework.platformStates.failed;
     logger.error(
-      'failed to run tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
+      'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
       platformName, error.toString(), error.stack
     );
   })
@@ -83,6 +97,9 @@ UnitTestFramework.prototype.startTests = function (platformName) {
 
 UnitTestFramework.prototype.runTest = function (devices, test) {
   var self = this;
+
+  // Some device skipped our test.
+  var skipped = false;
 
   logger.debug('#setup: \'%s\'', test);
 
@@ -103,7 +120,14 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
 
     return Promise.all(
       devices.map(function (device) {
-        return device.runTest(test, devicesData);
+        return device.runTest(test, devicesData, true)
+        .catch(function (error) {
+          if (error.message === 'skipped') {
+            skipped = true;
+            return;
+          }
+          return Promise.reject(error);
+        });
       })
     );
   })
@@ -126,6 +150,13 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
       test, error.toString(), error.stack
     );
     return Promise.reject(error);
+  })
+  .then(function () {
+    if (skipped) {
+      return Promise.reject(
+        new Error('skipped')
+      );
+    }
   });
 }
 
