@@ -45,7 +45,7 @@ var networkTypes = {
 };
 module.exports.networkTypes = networkTypes;
 
-var getMethodByNetworkType = function (target, method, networktype) {
+var getMethodIfExists = function (target, method) {
   if (!target[method]) {
     throw new Error(target + ' has no method named ' +
       method);
@@ -63,10 +63,10 @@ var getMethodByNetworkType = function (target, method, networktype) {
 var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
   switch (networkType) {
     case networkTypes.BOTH:
-      var wifiMethod = getMethodByNetworkType(thaliWifiInfrastructure,
-        method, networkType);
-      var nativeMethod = getMethodByNetworkType(ThaliMobileNativeWrapper,
-        method, networkType);
+      var wifiMethod = getMethodIfExists(thaliWifiInfrastructure,
+        method);
+      var nativeMethod = getMethodIfExists(ThaliMobileNativeWrapper,
+        method);
       return function() {
         var args = arguments;
         return Promise.all([
@@ -76,11 +76,9 @@ var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
         .then(getCombinedResult);
       };
     case networkTypes.WIFI:
-      return getMethodByNetworkType(thaliWifiInfrastructure, method,
-         networkType);
+      return getMethodIfExists(thaliWifiInfrastructure, method);
     case networkTypes.NATIVE:
-      return getMethodByNetworkType(ThaliMobileNativeWrapper, method,
-         networkType);
+      return getMethodIfExists(ThaliMobileNativeWrapper, method);
     default: throw new Error('Unsupported network type ' + networkType);
   }
 };
