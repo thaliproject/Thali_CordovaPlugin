@@ -98,23 +98,9 @@ SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
 
 SimpleThaliTape.prototype._runTest = function (test) {
   var self = this;
-
-  return Promise.try(function () {
-    if (test.canBeSkipped) {
-      return test.canBeSkipped();
-    }
-  })
-  .then(function (canBeSkipped) {
-    if (canBeSkipped) {
-      return self._skipTest(test);
-    } else {
-      return self._processTest(test);
-    }
-  });
-}
-
-SimpleThaliTape.prototype._runTest = function (test) {
-  var self = this;
+  
+  // Test was skipped.
+  var skipped = false;
 
   return new Promise(function (resolve, reject) {
     function bindResult(tape, timeout) {
@@ -171,12 +157,15 @@ SimpleThaliTape.prototype._runTest = function (test) {
       Promise.try(function () {
         if (test.canBeSkipped) {
           return test.canBeSkipped();
+        } else {
+          return false;
         }
       })
       .then(function (canBeSkipped) {
         if (canBeSkipped) {
-          logger.info('test was skipped, name: \'%s\'', test.name);
+          logger.debug('test was skipped, name: \'%s\'', test.name);
           tape.end();
+          skipped = true;
         } else {
           return test.fun(tape);
         }
@@ -189,6 +178,13 @@ SimpleThaliTape.prototype._runTest = function (test) {
       tape.once('end', resolve);
       self._options.teardown(tape);
     });
+  })
+  .then(function () {
+    if (skipped) {
+      return Promise.reject(
+        new Error('skipped')
+      );
+    }
   });
 }
 
@@ -200,10 +196,22 @@ SimpleThaliTape.prototype._begin = function () {
   );
   this._state = SimpleThaliTape.states.started;
 
-  var promises = this._tests.map(function (test) {
-    return self._runTest(test);
+  var skippedTests = [];
+  return Promise.all(
+    this._tests.map(function (test) {
+      return self._runTest(test)
+      .catch(function (error) {
+        if (error.message === 'skipped') {
+          skippedTests.push(test.name);
+          return;
+        }
+        return Promise.reject(error);
+      });
+    })
+  )
+  .then(function () {
+    return skippedTests;
   });
-  return Promise.all(promises);
 }
 
 // We will run 'begin' on all 'SimpleThaliTape' instances.
@@ -214,20 +222,31 @@ SimpleThaliTape.prototype._resolveInstance = function () {
 }
 
 SimpleThaliTape.begin = function (platform, version, hasRequiredHardware) {
-  var promises = SimpleThaliTape.instances.map(function (thaliTape) {
-    return thaliTape._begin();
-  });
+  var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 
-  return Promise.all(promises)
-  .then(function () {
-    logger.debug('all tests succeed');
+  return Promise.all(
+    thaliTapes.map(function (thaliTape) {
+      return thaliTape._begin();
+    })
+  )
+  .then(function (skippedTests) {
+    logger.debug(
+      'all unit tests succeeded, platformName: \'%s\'',
+      platform
+    );
+    skippedTests = skippedTests.reduce(function (allTests, tests) {
+      return allTests.concat(tests);
+    }, []);
+    logger.debug(
+      'skipped tests: \'%s\'', JSON.stringify(skippedTests)
+    );
     logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   })
   .catch(function (error) {
     logger.error(
-      'tests failed, error: \'%s\', stack: \'%s\'',
-      error.toString(), error.stack
+      'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
+      platform, error.toString(), error.stack
     );
     logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
     return Promise.reject(error);

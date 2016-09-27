@@ -207,7 +207,7 @@ Socket.prototype.runEvent = function (event, test, data, timeout, canBeSkipped) 
         'run skipped, test: \'%s\', event: \'%s\'',
         test, event
       );
-      resolve();
+      throw new Error('skipped');
     } catch (error) {
       reject(error);
     }

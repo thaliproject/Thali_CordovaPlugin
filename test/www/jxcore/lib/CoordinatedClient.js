@@ -367,6 +367,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
       Promise.try(function () {
         if (test.canBeSkipped) {
           return test.canBeSkipped();
+        } else {
+          return false;
         }
       })
       .then(function (canBeSkipped) {

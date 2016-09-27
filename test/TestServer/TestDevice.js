@@ -82,16 +82,16 @@ TestDevice.prototype.scheduleTests = function (tests) {
   return this._socket.emitData('schedule', tests);
 }
 
-TestDevice.prototype.setupTest = function (test) {
-  return this._socket.runEvent('setup', test, undefined, this._options.setupTimeout);
+TestDevice.prototype.setupTest = function (test, canBeSkipped) {
+  return this._socket.runEvent('setup', test, undefined, this._options.setupTimeout, canBeSkipped);
 }
 
-TestDevice.prototype.runTest = function (test, data) {
-  return this._socket.runEvent('run', test, data, this._options.testTimeout, true);
+TestDevice.prototype.runTest = function (test, data, canBeSkipped) {
+  return this._socket.runEvent('run', test, data, this._options.testTimeout, canBeSkipped);
 }
 
-TestDevice.prototype.teardownTest = function (test) {
-  return this._socket.runEvent('teardown', test, undefined, this._options.teardownTimeout);
+TestDevice.prototype.teardownTest = function (test, canBeSkipped) {
+  return this._socket.runEvent('teardown', test, undefined, this._options.teardownTimeout, canBeSkipped);
 }
 
 TestDevice.prototype.complete = function () {
