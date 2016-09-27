@@ -73,7 +73,7 @@ var setUpFunctions = {
       if (filesArray[i].indexOf('SimpleTestCase') === -1) {
         currentFilePath = path + '/' + filesArray[i].toString();
         if (!fs.lstatSync(currentFilePath).isDirectory()) {
-          fs.writeFileSync(currentFilePath, '');
+          fs.writeFileSync(currentFilePath, 'import Foundation\n');
         } else {
           setUpFunctions.emptyAlliOSTestFilesButOne(currentFilePath);
         }
