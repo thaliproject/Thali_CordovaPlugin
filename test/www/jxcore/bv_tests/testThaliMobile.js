@@ -1,6 +1,11 @@
 'use strict';
 
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var proxyquire = require('proxyquire');
+var ThaliMobile = proxyquire('thali/NextGeneration/thaliMobile', {
+  './thaliConfig': {
+    NON_TCP_PEER_UNAVAILABILITY_THRESHOLD: 500
+  }
+});
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var platform = require('thali/NextGeneration/utils/platform');
@@ -562,16 +567,56 @@ if (global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI) {
       .then(function (responseBody) {
         t.ok(remainingParticipants[responseBody],
           'received uuid must be in remaining list');
-          delete remainingParticipants[responseBody];
-          if (Object.keys(remainingParticipants).length === 0) {
-            t.ok(true, 'received all uuids');
-            done();
-          }
-        })
-        .catch(function (error) {
-          t.fail(error);
+        delete remainingParticipants[responseBody];
+        if (Object.keys(remainingParticipants).length === 0) {
+          t.ok(true, 'received all uuids');
           done();
-        });
+        }
+      })
+      .catch(function (error) {
+        t.fail(error);
+        done();
       });
     });
+  });
 }
+
+test('Discovered peer should be removed if no availability updates ' +
+  'were received during availability timeout', function (t) {
+    var peerIdentifier = 'urn:uuid:' + uuid.v4();
+    var portNumber = 8080;
+
+    ThaliMobile.start(express.Router())
+      .then(function () {
+        var availabilityHandler = function (peer) {
+          if (peer.peerIdentifier !== peerIdentifier) {
+            return;
+          }
+
+          ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+            availabilityHandler);
+
+          var unavailabilityHandler = function (peer) {
+            if (peer.peerIdentifier !== peerIdentifier) {
+              return;
+            }
+            ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+              unavailabilityHandler);
+
+            t.end();
+          };
+
+          ThaliMobile.emitter.on('peerAvailabilityChanged',
+            unavailabilityHandler);
+        };
+
+      ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+      ThaliMobileNativeWrapper.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+        {
+          peerIdentifier: peerIdentifier,
+          portNumber: portNumber
+        }
+      );
+    });
+});
