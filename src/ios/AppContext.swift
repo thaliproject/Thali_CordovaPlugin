@@ -49,9 +49,21 @@ enum NetworkStatusParameters: String {
     case bssid = "bssid"
 }
 
-@objc public enum AppContextError: Int, ErrorType {
-    case BadParameters
-    case UnknownError
+@objc public enum AppContextError: Int, ErrorType, CustomStringConvertible {
+    case badParameters
+    case unknownError
+    case connectNotSupported
+
+    public var description: String {
+        switch self {
+        case .badParameters:
+            return "Bad parameters"
+        case .unknownError:
+            return "Unknown error"
+        case .connectNotSupported:
+            return "Platform does not support connect"
+        }
+    }
 }
 
 public enum JSONKey: String {
@@ -61,6 +73,7 @@ public enum JSONKey: String {
     case discoveryActive
     case advertisingActive
     case generation
+    case err
 }
 
 // MARK: - JSON representation of PeerAvailability object
@@ -269,7 +282,7 @@ extension PeerAvailability {
 
     public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
         guard let port = (parameters.first as? NSNumber)?.unsignedShortValue else {
-            throw AppContextError.BadParameters
+            throw AppContextError.badParameters
         }
         advertiserManager.startUpdateAdvertisingAndListening(withPort: port) { [weak self] error in
             print("failed start advertising due the error \(error)")
@@ -289,11 +302,11 @@ extension PeerAvailability {
             throw ThaliCoreError.RadioTurnedOff
         }
         guard parameters.count >= 2 else {
-            throw AppContextError.BadParameters
+            throw AppContextError.badParameters
         }
         guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
             else {
-            throw AppContextError.BadParameters
+            throw AppContextError.badParameters
         }
         let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
         browserManager.connectToPeer(peerIdentifier) { [weak self] port, error in
@@ -314,7 +327,7 @@ extension PeerAvailability {
 
     public func didRegisterToNative(parameters: [AnyObject]) throws {
         guard let functionName = parameters.first as? String else {
-            throw AppContextError.BadParameters
+            throw AppContextError.badParameters
         }
         if functionName == AppContextJSEvent.networkChanged {
             notifyOnDidUpdateNetworkStatus()
@@ -323,12 +336,15 @@ extension PeerAvailability {
 
     public func disconnect(parameters: [AnyObject]) throws {
         guard let peerID = parameters.first as? String else {
-            throw AppContextError.BadParameters
+            throw AppContextError.badParameters
         }
         let peerIdentifier = try PeerIdentifier(stringValue: peerID)
         browserManager.disconnect(peerIdentifier)
     }
 
+    public func connect(parameters: [AnyObject]) -> String {
+        return jsonValue([JSONKey.err.rawValue : AppContextError.connectNotSupported.description])
+    }
 
     #if TEST
     func executeNativeTests() -> String {
