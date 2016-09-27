@@ -70,6 +70,9 @@ var testIdempotentFunction = function (t, functionName) {
   .then(function (combinedResult) {
     verifyCombinedResultSuccess(t, combinedResult);
     t.end();
+  })
+  .catch(function (error) {
+    t.fail(error);
   });
 };
 
@@ -527,45 +530,48 @@ function (t) {
   });
 });
 
-test('can get data from all participants', function (t) {
-  var uuidPath = '/uuid';
-  var router = express.Router();
-  // Register a handler that returns the UUID of this
-  // test instance to an HTTP GET request.
-  router.get(uuidPath, function (req, res) {
-    res.send(tape.uuid);
-  });
-
-  var remainingParticipants = {};
-  t.participants.forEach(function (participant) {
-    if (participant.uuid === tape.uuid) {
-      return;
-    }
-    remainingParticipants[participant.uuid] = true;
-  });
-  setupDiscoveryAndFindPeers(t, router, function (peer, done) {
-    // Try to get data only from non-TCP peers so that the test
-    // works the same way on desktop on CI where Wifi is blocked
-    // between peers.
-    if (peer.connectionType === ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
-      return;
-    }
-    testUtils.get(
-      peer.hostAddress, peer.portNumber,
-      uuidPath, pskIdentity, pskKey
-    )
-    .then(function (responseBody) {
-      t.ok(remainingParticipants[responseBody],
-        'received uuid must be in remaining list');
-      delete remainingParticipants[responseBody];
-      if (Object.keys(remainingParticipants).length === 0) {
-        t.ok(true, 'received all uuids');
-        done();
-      }
-    })
-    .catch(function (error) {
-      t.fail(error);
-      done();
+// Next test only for BLUETOOTH/BOTH network type
+if (global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI) {
+  test('can get data from all participants', function (t) {
+    var uuidPath = '/uuid';
+    var router = express.Router();
+    // Register a handler that returns the UUID of this
+    // test instance to an HTTP GET request.
+    router.get(uuidPath, function (req, res) {
+      res.send(tape.uuid);
     });
-  });
-});
+
+    var remainingParticipants = {};
+    t.participants.forEach(function (participant) {
+      if (participant.uuid === tape.uuid) {
+        return;
+      }
+      remainingParticipants[participant.uuid] = true;
+    });
+    setupDiscoveryAndFindPeers(t, router, function (peer, done) {
+      // Try to get data only from non-TCP peers so that the test
+      // works the same way on desktop on CI where Wifi is blocked
+      // between peers.
+      if (peer.connectionType === ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
+        return;
+      }
+      testUtils.get(
+        peer.hostAddress, peer.portNumber,
+        uuidPath, pskIdentity, pskKey
+      )
+      .then(function (responseBody) {
+        t.ok(remainingParticipants[responseBody],
+          'received uuid must be in remaining list');
+          delete remainingParticipants[responseBody];
+          if (Object.keys(remainingParticipants).length === 0) {
+            t.ok(true, 'received all uuids');
+            done();
+          }
+        })
+        .catch(function (error) {
+          t.fail(error);
+          done();
+        });
+      });
+    });
+}
