@@ -214,7 +214,8 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
       return reject(new Error('Call Stop!'));
     }
     thaliMobileStates.started = true;
-    thaliMobileStates.networkType = networkType || thaliMobileStates.networkType;
+    thaliMobileStates.networkType =
+      networkType || global.NETWORK_TYPE || thaliMobileStates.networkType;
     peerAvailabilityWatcherInterval = setInterval(
       peerAvailabilityWatcher,
       thaliConfig.PEER_AVAILABILITY_WATCHER_INTERVAL
