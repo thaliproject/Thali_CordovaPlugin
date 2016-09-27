@@ -50,6 +50,7 @@ enum NetworkStatusParameters: String {
 }
 
 @objc public enum AppContextError: Int, ErrorType, CustomStringConvertible {
+
     case badParameters
     case unknownError
     case connectNotSupported
@@ -66,6 +67,10 @@ enum NetworkStatusParameters: String {
     }
 }
 
+/*!
+ JSON keys for thaliMobileNative callbacks parameters
+
+ */
 public enum JSONKey: String {
 
     case peerIdentifier
