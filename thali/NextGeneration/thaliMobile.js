@@ -45,42 +45,48 @@ var networkTypes = {
 };
 module.exports.networkTypes = networkTypes;
 
-var getMethodByNetworkType = function (target, method, networktype) {
+var getMethodIfExists = function (target, method) {
   if (!target[method]) {
     throw new Error(target + ' has no method named ' +
       method);
   }
   return function () {
     var args = arguments;
-    return Promise.resolve(
-      promiseResultSuccessOrFailure(
-        target[method].apply(target, args)
-      )
-    );
+    return promiseResultSuccessOrFailure(target[method].apply(target, args));
   }
 };
 
 var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
   switch (networkType) {
     case networkTypes.BOTH:
-      var wifiMethod = getMethodByNetworkType(thaliWifiInfrastructure,
-        method, networkType);
-      var nativeMethod = getMethodByNetworkType(ThaliMobileNativeWrapper,
-        method, networkType);
+      var wifiMethod = getMethodIfExists(thaliWifiInfrastructure, method);
+      var nativeMethod = getMethodIfExists(ThaliMobileNativeWrapper, method);
       return function() {
         var args = arguments;
         return Promise.all([
-          wifiMethod.apply(null, args),
-          nativeMethod.apply(null, args)
-        ])
-        .then(getCombinedResult);
+            wifiMethod.apply(null, args),
+            nativeMethod.apply(null, args)
+          ])
+          .then(getCombinedResult);
       };
     case networkTypes.WIFI:
-      return getMethodByNetworkType(thaliWifiInfrastructure, method,
-         networkType);
+      var wifiMethod = getMethodIfExists(thaliWifiInfrastructure, method);
+      return function() {
+        var args = arguments;
+        return wifiMethod.apply(null, args)
+          .then(function (wifiResult) {
+            return getCombinedResult([wifiResult, null]);
+          });
+      };
     case networkTypes.NATIVE:
-      return getMethodByNetworkType(ThaliMobileNativeWrapper, method,
-         networkType);
+      var nativeMethod = getMethodIfExists(ThaliMobileNativeWrapper, method);
+      return function() {
+        var args = arguments;
+        return nativeMethod.apply(null, args)
+          .then(function (nativeResult) {
+            return getCombinedResult([null, nativeResult]);
+          });
+      };
     default: throw new Error('Unsupported network type ' + networkType);
   }
 };
@@ -214,8 +220,8 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
       return reject(new Error('Call Stop!'));
     }
     thaliMobileStates.started = true;
-
-    thaliMobileStates.networkType = networkType || thaliMobileStates.networkType;
+    thaliMobileStates.networkType =
+      networkType || global.NETWORK_TYPE || thaliMobileStates.networkType;
     module.exports.emitter.on('networkChanged', handleNetworkChanged);
 
     getWifiOrNativeMethodByNetworkType('start',
@@ -298,12 +304,13 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<module:thaliMobile~combinedResult>}
  */
 module.exports.stopListeningForAdvertisements = function () {
-  return promiseQueue.enqueue(function (resolve) {
+  return promiseQueue.enqueue(function (resolve, reject) {
     thaliMobileStates.listening = false;
 
     getWifiOrNativeMethodByNetworkType('stopListeningForAdvertisements',
        thaliMobileStates.networkType)()
-      .then(resolve);
+      .then(resolve)
+      .catch(reject);
   });
 };
 
