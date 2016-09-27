@@ -6,6 +6,7 @@ var uuid = require('node-uuid');
 var express = require('express');
 var assert = require('assert');
 var net = require('net');
+var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var logger = require('./testLogger')('wifiBasedNativeMock');
@@ -999,11 +1000,12 @@ function fireDiscoveryAdvertisingStateUpdateNonTCP() {
  */
 // jscs:enable maximumLineLength
 function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
-  return function (peerIdentifier) {
+  return function (peerIdentifier, generation) {
     thaliWifiInfrastructure.emit('wifiPeerAvailabilityChanged',
       {
         peerIdentifier: peerIdentifier,
         hostAddress: '127.0.0.1',
+        generation: generation,
         portNumber: thaliWifiInfrastructure.advertisedPortOverride
       });
   };
@@ -1017,21 +1019,21 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
  *
  * @public
  * @constructor
- * @param {platformChoice} platform
- * @param {Object} router This is the express router being used up in the
+ * @param {platformChoice} _platform
+ * @param {Object} _router This is the express router being used up in the
  * stack. We need it here so we can add a router to simulate the iOS case where
  * we need to let the other peer know we want a connection.
  */
 // jscs:enable jsDoc
-function WifiBasedNativeMock(platform, router) {
-  if (!platform) {
-    platform = platformChoice.ANDROID;
+function WifiBasedNativeMock(_platform, _router) {
+  if (!_platform) {
+    _platform = platform.names.ANDROID;
   }
-  if (!router) {
-    router = express.Router();
+  if (!_router) {
+    _router = express.Router();
   }
   // Issue #902
-  testUtils._overridePlatform(platform);
+  platform._override(_platform);
 
   var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
   // In the native side, there is no equivalent for the start call,
@@ -1042,28 +1044,28 @@ function WifiBasedNativeMock(platform, router) {
   setupListeners(thaliWifiInfrastructure);
 
   var mobileHandler = function (mobileMethodName) {
-    return new MobileCallInstance(mobileMethodName, platform, router,
+    return new MobileCallInstance(mobileMethodName, _platform, _router,
                                   thaliWifiInfrastructure);
   };
 
   mobileHandler.toggleBluetooth =
-    toggleBluetooth(platform, thaliWifiInfrastructure);
+    toggleBluetooth(_platform, thaliWifiInfrastructure);
 
   mobileHandler.toggleWiFi =
-    toggleWiFi(platform, thaliWifiInfrastructure);
+    toggleWiFi(_platform, thaliWifiInfrastructure);
 
   mobileHandler.firePeerAvailabilityChanged =
-    firePeerAvailabilityChanged(platform, thaliWifiInfrastructure);
+    firePeerAvailabilityChanged(_platform, thaliWifiInfrastructure);
 
   mobileHandler.fireIncomingConnectionToPortNumberFailed =
-    fireIncomingConnectionToPortNumberFailed(platform, thaliWifiInfrastructure);
+    fireIncomingConnectionToPortNumberFailed(_platform, thaliWifiInfrastructure);
 
   mobileHandler.fireDiscoveryAdvertisingStateUpdateNonTCP =
-    fireDiscoveryAdvertisingStateUpdateNonTCP(platform,
+    fireDiscoveryAdvertisingStateUpdateNonTCP(_platform,
                                               thaliWifiInfrastructure);
 
   mobileHandler.wifiPeerAvailabilityChanged =
-    wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure);
+    wifiPeerAvailabilityChanged(_platform, thaliWifiInfrastructure);
 
   return mobileHandler;
 }
