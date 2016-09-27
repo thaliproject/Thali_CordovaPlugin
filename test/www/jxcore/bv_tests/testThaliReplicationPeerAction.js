@@ -211,54 +211,56 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
   });
 }
 
-test('Make sure docs replicate', function (t) {
-  testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
-                                                       remotePouchDB) {
-    var thaliReplicationPeerAction = null;
-    var DifferentDirectoryPouch =
-      testUtils.getPouchDBFactoryInRandomDirectory();
-    var localPouchDB = new DifferentDirectoryPouch(randomDBName);
-    createDocs(remotePouchDB, 10)
-      .then(function (docs) {
-        var notificationForUs = {
-          keyId: new Buffer('abcdefg'),
-          portNumber: serverPort,
-          hostAddress: '127.0.0.1',
-          pskIdentifyField: pskId,
-          psk: pskKey,
-          suggestedTCPTimeout: 10000,
-          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
-        };
-        var promises = [];
-        thaliReplicationPeerAction =
-          new ThaliReplicationPeerAction(notificationForUs,
-            DifferentDirectoryPouch, randomDBName,
-            devicePublicKey);
-        promises.push(thaliReplicationPeerAction.start(httpAgentPool));
-        promises.push(matchDocsInChanges(localPouchDB, docs,
-                      thaliReplicationPeerAction));
-        return Promise.all(promises);
-      })
-      .then(function () {
-        return remotePouchDB.info();
-      })
-      .then(function (info) {
-        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
-          // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
-          info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
-        // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
-      })
-      .then(function () {
-        t.pass('All tests passed!');
-      })
-      .catch(function (err) {
-        t.fail('failed with ' + err);
-      })
-      .then(function () {
-        t.end();
-      });
-  });
-});
+//TODO enable it
+//issue #1153
+//test('Make sure docs replicate', function (t) {
+//  testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
+//                                                       remotePouchDB) {
+//    var thaliReplicationPeerAction = null;
+//    var DifferentDirectoryPouch =
+//      testUtils.getPouchDBFactoryInRandomDirectory();
+//    var localPouchDB = new DifferentDirectoryPouch(randomDBName);
+//    createDocs(remotePouchDB, 10)
+//      .then(function (docs) {
+//        var notificationForUs = {
+//          keyId: new Buffer('abcdefg'),
+//          portNumber: serverPort,
+//          hostAddress: '127.0.0.1',
+//          pskIdentifyField: pskId,
+//          psk: pskKey,
+//          suggestedTCPTimeout: 10000,
+//          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+//        };
+//        var promises = [];
+//        thaliReplicationPeerAction =
+//          new ThaliReplicationPeerAction(notificationForUs,
+//            DifferentDirectoryPouch, randomDBName,
+//            devicePublicKey);
+//        promises.push(thaliReplicationPeerAction.start(httpAgentPool));
+//        promises.push(matchDocsInChanges(localPouchDB, docs,
+//                      thaliReplicationPeerAction));
+//        return Promise.all(promises);
+//      })
+//      .then(function () {
+//        return remotePouchDB.info();
+//      })
+//      .then(function (info) {
+//        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+//          // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+//          info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
+//        // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+//      })
+//      .then(function () {
+//        t.pass('All tests passed!');
+//      })
+//      .catch(function (err) {
+//        t.fail('failed with ' + err);
+//      })
+//      .then(function () {
+//        t.end();
+//      });
+//  });
+//});
 
 test('Do nothing and make sure we time out', function (t) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName)

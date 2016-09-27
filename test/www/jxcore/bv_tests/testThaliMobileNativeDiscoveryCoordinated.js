@@ -1,5 +1,10 @@
 'use strict';
 
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
+  return;
+}
+
 var tape = require('../lib/thaliTape');
 if (!tape.coordinated) {
   return;
