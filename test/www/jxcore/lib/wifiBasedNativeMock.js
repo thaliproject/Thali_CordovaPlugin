@@ -1040,7 +1040,7 @@ function WifiBasedNativeMock(_platform, _router) {
   // but it needs to be done once somewhere before calling other functions.
   // In practice, the stop function never gets called, but that is okay
   // for the purpose of this mock Mobile object.
-  thaliWifiInfrastructure.start(router);
+  thaliWifiInfrastructure.start(_router);
   setupListeners(thaliWifiInfrastructure);
 
   var mobileHandler = function (mobileMethodName) {
