@@ -12,7 +12,7 @@ var ThaliNotificationServer = require('thali/NextGeneration/notification/thaliNo
 var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNotificationClient');
 var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var httpTester = require('../lib/httpTester');
-var Promise = require('bluebird');
+var Promise = require('lie');
 
 var thaliNotificationServer = null;
 var thaliNotificationClient = null;

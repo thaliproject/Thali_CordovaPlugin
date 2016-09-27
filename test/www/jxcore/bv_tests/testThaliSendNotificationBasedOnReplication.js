@@ -9,7 +9,7 @@ var proxyquire = require('proxyquire');
 var sinon = require('sinon');
 var express = require('express');
 var crypto = require('crypto');
-var Promise = require('bluebird');
+var Promise = require('lie');
 var ThaliSendNotificationBasedOnReplication =
   require('thali/NextGeneration/replication/thaliSendNotificationBasedOnReplication');
 var urlsafeBase64 = require('urlsafe-base64');

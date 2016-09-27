@@ -35,7 +35,7 @@ var hasJavaScriptSuffix = function (path) {
 };
 
 var loadFile = function (filePath) {
-  console.info('Test runner loading file:', filePath);
+  logger.info('Test runner loading file:', filePath);
   try {
     require(filePath);
   } catch (error) {

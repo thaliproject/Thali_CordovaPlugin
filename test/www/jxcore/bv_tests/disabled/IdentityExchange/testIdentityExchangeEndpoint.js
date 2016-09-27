@@ -10,7 +10,7 @@ var ThaliReplicationManager = require('thali/thalireplicationmanager');
 var identityExchangeTestUtils = require('./identityExchangeTestUtils');
 var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtils');
 var IdentityExchange = require('thali/identityExchange/identityexchange');
-var Promise = require('bluebird');
+var Promise = require('lie');
 var testUtils = require('../lib/testUtils');
 
 // Express

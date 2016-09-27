@@ -2,7 +2,7 @@
 var tape = require('../lib/thaliTape');
 var express = require('express');
 var crypto = require('crypto');
-var Promise = require('bluebird');
+var Promise = require('lie');
 var testUtils = require('../lib/testUtils.js');
 var httpTester = require('../lib/httpTester.js');
 

@@ -2,7 +2,7 @@
 
 var tape = require('../lib/thaliTape');
 var platform = require('thali/NextGeneration/utils/platform');
-var Promise = require('bluebird');
+var Promise = require('lie');
 
 var customData = 'custom data';
 

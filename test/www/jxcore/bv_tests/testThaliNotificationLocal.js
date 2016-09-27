@@ -3,7 +3,7 @@ var tape = require('../lib/thaliTape');
 var express = require('express');
 var crypto = require('crypto');
 var sinon = require('sinon');
-var Promise = require('bluebird');
+var Promise = require('lie');
 var httpTester = require('../lib/httpTester.js');
 var proxyquire = require('proxyquire').noCallThru();
 

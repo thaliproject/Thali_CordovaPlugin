@@ -9,7 +9,7 @@ var identityExchangeUtils = require('thali/identityExchange/identityExchangeUtil
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
-var Promise = require('bluebird');
+var Promise = require('lie');
 var urlSafeBase64 = require('urlsafe-base64');
 
 
