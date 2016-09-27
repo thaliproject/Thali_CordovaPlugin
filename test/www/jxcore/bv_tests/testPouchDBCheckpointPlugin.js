@@ -1,7 +1,7 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
-var testUtils = require('../lib/testutils');
+var testUtils = require('../lib/testUtils');
 var sinon = require('sinon');
 
 var fs = require('fs-extra-promise');

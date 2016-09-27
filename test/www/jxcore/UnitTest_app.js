@@ -73,7 +73,7 @@ ThaliMobile.getNetworkStatus()
           });
       }, Promise.resolve())
       .catch(function (error) {
-        logger.error(error);
+        logger.error(error.message + '\n' + error.stack);
       });
     });
   });
