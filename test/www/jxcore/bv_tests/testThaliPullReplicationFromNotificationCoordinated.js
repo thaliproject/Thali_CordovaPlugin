@@ -167,7 +167,7 @@ test('Coordinated pull replication from notification test', function (t) {
     t.pass('passed');
   })
   .catch(function (error) {
-    t.fail('failed with ', error.toString());
+    t.fail('failed with ' + error.toString());
   })
   .then(function () {
     t.end();

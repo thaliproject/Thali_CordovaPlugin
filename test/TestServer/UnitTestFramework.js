@@ -164,37 +164,37 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
   });
 }
 
-UnitTestFramework.prototype.sync = function (devicesData, index, syncData) {
+UnitTestFramework.prototype._sync = function (deviceData, content) {
   logger.debug('#sync');
 
-  var isSyncDataTheSame = devicesData.every(function (deviceData) {
-    if (deviceData.syncData) {
-      return deviceData.syncData === syncData;
+  var isContentTheSame = this._syncDevicesData.every(function (data) {
+    if (data.content) {
+      return data.content === content;
     } else {
       return true;
     }
   });
   assert(
-    isSyncDataTheSame,
-    'syncData should be the same between all devices'
+    isContentTheSame,
+    '\'content\' should be the same between all devices'
   );
 
-  var deviceData = devicesData[index];
   assert(
-    !deviceData.syncData,
-    'syncData should be unique'
+    !deviceData.content,
+    '\'content\' should be unique'
   );
-  deviceData.syncData = syncData;
+  deviceData.content = content;
 
-  var isFinished = devicesData.every(function (deviceData) {
-    return !!deviceData.syncData;
+  var isFinished = this._syncDevicesData.every(function (data) {
+    return data.content;
   });
   if (isFinished) {
-    var promises = devicesData.map(function (deviceData) {
-      delete deviceData.syncData;
-      return deviceData.device.syncFinished(syncData);
-    });
     logger.debug('#sync ok');
+
+    var promises = this._syncDevicesData.map(function (data) {
+      delete data.content;
+      return data.device.syncFinished(content);
+    });
     Promise.all(promises)
     .catch(function (error) {
       logger.error(
@@ -208,22 +208,29 @@ UnitTestFramework.prototype.sync = function (devicesData, index, syncData) {
 
 UnitTestFramework.prototype.bindSync = function (devices) {
   var self = this;
-  var devicesData = devices.map(function (device) {
+  this._syncDevicesData = devices.map(function (device) {
     return { device: device };
   });
-  this._sync = this.sync.bind(this, devicesData);
-  devices.forEach(function (device, index) {
-    device.on('sync', function (data) {
-      self._sync(index, data);
-    });
+  this._syncDevicesData.forEach(function (data) {
+    data.handler = self._sync.bind(self, data);
+    data.device.on('sync', data.handler);
   });
 }
 
 UnitTestFramework.prototype.unbindSync = function (devices) {
   var self = this;
-  devices.forEach(function (device) {
-    device.removeListener('sync', self._sync);
+
+  var syncDevices = this._syncDevicesData.map(function (data) {
+    return data.device;
   });
+  asserts.arrayEquals(devices, syncDevices);
+
+  this._syncDevicesData.forEach(function (data) {
+    asserts.exists(data.device);
+    asserts.exists(data.handler);
+    data.device.removeListener('sync', data.handler);
+  });
+  delete this._syncDevicesData;
 }
 
 module.exports = UnitTestFramework;

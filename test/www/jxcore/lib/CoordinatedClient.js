@@ -305,20 +305,30 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
   function processEvent(tape, event, fun, timeout) {
     return runEvent(event)
     .then(function (parsedData) {
+      // Only for testing purposes.
+      if (parsedData) {
+        tape.participants = parsedData;
+      }
+
+      var resultHandler;
+      var endHandler;
+
       return new Promise(function (resolve, reject) {
         // 'end' can be called without 'result', so success is true by default.
         // We can receive 'result' many times.
         // For example each 'tape.ok' will provide a 'result'.
         var success = true;
-        function resultHandler (result) {
+        resultHandler = function (result) {
           if (!result.ok) {
             success = false;
           }
         }
         tape.on('result', resultHandler);
 
-        function endHandler () {
+        endHandler = function () {
           tape.removeListener('result', resultHandler);
+          resultHandler = null;
+          endHandler    = null;
 
           self._emit(
             event + '_finished',
@@ -330,7 +340,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           )
           .then(function () {
             if (success) {
-              resolve();
+              resolve(parsedData);
             } else {
               var error = format('test failed, name: \'%s\'', test.name);
               logger.error(error);
@@ -341,11 +351,15 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
         }
         tape.once('end', endHandler);
 
-        // Only for testing purposes.
-        if (parsedData) {
-          tape.participants = parsedData;
-        }
         fun(tape);
+      })
+      .finally(function () {
+        if (resultHandler) {
+          tape.removeListener('result', resultHandler);
+        }
+        if (endHandler) {
+          tape.removeListener('end', endHandler);
+        }
       });
     })
     .timeout(
