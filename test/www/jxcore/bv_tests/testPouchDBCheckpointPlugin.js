@@ -1,6 +1,7 @@
 'use strict';
 
 var tape = require('../lib/thaliTape');
+var testUtils = require('../lib/testutils');
 var sinon = require('sinon');
 
 var fs = require('fs-extra-promise');
@@ -14,7 +15,8 @@ var PouchDB = require('pouchdb')
 // DB directory should be unique among all tests and any instance of this test.
 // This is especially required for tape.coordinated.
 var db;
-var dbName = 'pouchdb-uuid:' + Math.random();
+var dbName = testUtils.getPouchDBTestDirectory() +
+  'pouch-db-checkpoint-plugin' + testUtils.getRandomPouchDBName();
 var dbOptions = {
   checkpoint: 500
 };
