@@ -17,7 +17,7 @@ var Promise = require('./utils/Promise');
 var testUtils     = require('./testUtils');
 var serverAddress = require('../server-address');
 
-var logger = require('thali/ThaliLogger')('CoordinatedClient');
+var logger = require('./testLogger')('CoordinatedClient');
 
 
 function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) {
@@ -88,14 +88,18 @@ CoordinatedClient.states = {
 
 CoordinatedClient.prototype._bind = function () {
   this._io
-  .on  ('connect',    this._connect.bind(this))
-  .on  ('reconnect',  this._reconnect.bind(this))
-  .once('schedule',   this._schedule.bind(this))
-  .on  ('discard',    this._discard.bind(this))
-  .on  ('disqualify', this._disqualify.bind(this))
-  .on  ('disconnect', this._disconnect.bind(this))
-  .on  ('error',      this._error.bind(this))
-  .once('complete',   this._complete.bind(this));
+  .on  ('connect',           this._connect.bind(this))
+  .on  ('connect_timeout',   this._connect.bind(this))
+  .on  ('connect_error',     this._connect.bind(this))
+  .on  ('reconnect',         this._reconnect.bind(this))
+  .on  ('reconnect_refused', this._reconnect.bind(this))
+  .on  ('reconnect_error',   this._reconnect.bind(this))
+  .once('schedule',          this._schedule.bind(this))
+  .on  ('discard',           this._discard.bind(this))
+  .on  ('disqualify',        this._disqualify.bind(this))
+  .on  ('disconnect',        this._disconnect.bind(this))
+  .on  ('error',             this._error.bind(this))
+  .once('complete',          this._complete.bind(this));
 }
 
 // We are having similar logic in both connect reconnect
@@ -268,12 +272,40 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
 CoordinatedClient.prototype._scheduleTest = function (test) {
   var self = this;
 
-  function processEvent(tape, event, fun, timeout) {
+  function runEvent (tape, event) {
     return new Promise(function (resolve, reject) {
       self._io.once(event, function (data) {
-        var parsedData = CoordinatedClient.getData(data);
-        self._emit(event + '_confirmed', data, test.options);
+        self._emit(event + '_confirmed', data, test.options)
+        .then(function () {
+          resolve(CoordinatedClient.getData(data));
+        })
+        .catch(reject);
+      });
+    });
+  }
 
+  function skipEvent (tape, event, timeout) {
+    return runEvent(tape, event)
+    .then(function () {
+      return new Promise(function (resolve, reject) {
+        tape.once('end', function () {
+          self._emit(event + '_skipped', undefined, test.options)
+          .then(resolve)
+          .catch(reject);
+        });
+        tape.end();
+      });
+    })
+    .timeout(
+      timeout,
+      format('timeout exceed while skipping test: \'%s\'', test.name)
+    );
+  }
+
+  function processEvent(tape, event, fun, timeout) {
+    return runEvent(tape, event)
+    .then(function (parsedData) {
+      return new Promise(function (resolve, reject) {
         // 'end' can be called without 'result', so success is true by default.
         // We can receive 'result' many times.
         // For example each 'tape.ok' will provide a 'result'.
@@ -286,7 +318,6 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
         tape.on('result', resultHandler);
 
         function endHandler () {
-          clearTimeout(timer);
           tape.removeListener('result', resultHandler);
 
           self._emit(
@@ -308,21 +339,10 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
               logger.error(error);
               reject(new Error(error));
             }
-          });
+          })
+          .catch(reject);
         }
         tape.once('end', endHandler);
-
-        var timer = setTimeout(function () {
-          tape.removeListener('result', resultHandler);
-          tape.removeListener('end', endHandler);
-
-          var error = format(
-            'timeout exceed, test: \'%s\'',
-            test.name
-          );
-          logger.error(error);
-          reject(new Error(error));
-        }, timeout);
 
         // Only for testing purposes.
         if (parsedData) {
@@ -330,7 +350,11 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
         }
         fun(tape);
       });
-    });
+    })
+    .timeout(
+      timeout,
+      format('timeout exceed while processing test: \'%s\'', test.name)
+    );
   }
 
   return new Promise(function (resolve, reject) {
@@ -340,10 +364,21 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     });
 
     tape(test.name, function (tape) {
-      if (test.expect !== undefined && test.expect !== null) {
-        tape.plan(test.expect);
-      }
-      processEvent(tape, 'run_' + test.name, test.fun, test.options.testTimeout)
+      Promise.try(function () {
+        if (test.canBeSkipped) {
+          return test.canBeSkipped();
+        } else {
+          return false;
+        }
+      })
+      .then(function (canBeSkipped) {
+        if (canBeSkipped) {
+          logger.info('test was skipped, name: \'%s\'', test.name);
+          return skipEvent(tape, 'run_' + test.name, test.options.testTimeout);
+        } else {
+          return processEvent(tape, 'run_' + test.name, test.fun, test.options.testTimeout);
+        }
+      })
       .catch(reject);
     });
 
