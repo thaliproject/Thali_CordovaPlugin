@@ -1,14 +1,12 @@
 'use strict';
 
+var config       = require('./config.json')
 var spawn        = require('child_process').spawn;
 var randomString = require('randomstring');
 var objectAssign = require('object-assign');
 
 
 var DEFAULT_INSTANCE_COUNT = 3;
-// Issue #1190. Bluebird's debuggability can be enabled here
-// but only for Desktop Coordinated Tests
-var BLUEBIRD_DEBUG_ENABLED = false;
 
 var parseargv = require('minimist');
 var argv = parseargv(process.argv.slice(2), {
@@ -116,22 +114,20 @@ var testServerConfiguration = {
   waiting_for_devices_timeout: 5 * 1000
 };
 
-var testServerEnv = {
-  BLUEBIRD_DEBUG: BLUEBIRD_DEBUG_ENABLED
-};
+var testEnv = objectAssign({}, process.env, config.env);
+var testServerOpts = objectAssign({}, { env: testEnv });
 
 var testServerInstance = spawn('jx', ['../../TestServer/index.js',
-  JSON.stringify(testServerConfiguration)], { env: testServerEnv });
+  JSON.stringify(testServerConfiguration)], testServerOpts);
 setListeners(testServerInstance, 0);
 
-
-var instanceEnv = objectAssign({}, process.env, {
+var instanceEnv = objectAssign({}, testEnv, {
   // We want to provide same random SSDP_NT for each test instance in group.
   SSDP_NT: randomString.generate({
-    length: 'http://www.thaliproject.org/ssdp'.length,
-  }),
-  BLUEBIRD_DEBUG: BLUEBIRD_DEBUG_ENABLED
+    length: 'http://www.thaliproject.org/ssdp'.length
+  })
 });
+var instanceOpts = objectAssign({}, { env: instanceEnv });
 
 var testInstances = {};
 var spawnTestInstance = function (instanceId) {
@@ -139,7 +135,7 @@ var spawnTestInstance = function (instanceId) {
   if (argv.filter) {
     instanceArgs.push(argv.filter);
   }
-  var testInstance = spawn('jx', instanceArgs, { env: instanceEnv });
+  var testInstance = spawn('jx', instanceArgs, instanceOpts);
   setListeners(testInstance, instanceId);
   testInstances[instanceId] = testInstance;
 };
