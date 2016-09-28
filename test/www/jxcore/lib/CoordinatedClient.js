@@ -71,7 +71,8 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) 
       reconnectionDelayMax: 1000,
       randomizationFactor: 0,
 
-      transports: ['websocket']
+      transports: ['websocket'],
+      rejectUnauthorized: null
     }
   );
 
@@ -201,8 +202,11 @@ CoordinatedClient.prototype._disconnect = function () {
 }
 
 CoordinatedClient.prototype._error = function (error) {
-  asserts.isString(error);
-  this._failed(new Error(error));
+  logger.error(
+    'unexpected error: \'%s\', stack: \'%s\'',
+    error.toString(), error.stack
+  );
+  this._failed(error);
 }
 
 CoordinatedClient.prototype._complete = function (data) {
