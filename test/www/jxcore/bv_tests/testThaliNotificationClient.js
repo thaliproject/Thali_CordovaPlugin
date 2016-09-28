@@ -6,6 +6,8 @@ var sinon = require('sinon');
 var Promise = require('lie');
 var http = require('http');
 var httpTester = require('../lib/httpTester.js');
+var Platform = require('thali/NextGeneration/utils/platform');
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 
 var ThaliPeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
@@ -229,10 +231,11 @@ test('Received beacons with no values for us', function (t) {
     action.start(keepAliveAgent).then(function () {
       setImmediate(function () {
         var entry =
-          notificationClient.peerDictionary.get(globals.TCPEvent.peerIdentifier);
+          notificationClient.peerDictionary
+            .get(globals.TCPEvent.peerIdentifier);
         t.ok(entry, 'entry exists');
-        t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED, 'entry ' +
-          'is resolved');
+        t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED,
+                  'entry is resolved');
         notificationClient.stop();
         t.end();
       });

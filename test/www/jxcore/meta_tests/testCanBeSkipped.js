@@ -1,6 +1,6 @@
 'use strict';
 
-var Promise = require('lie');
+var Promise = require('bluebird');
 
 var tape = require('../lib/thaliTape');
 

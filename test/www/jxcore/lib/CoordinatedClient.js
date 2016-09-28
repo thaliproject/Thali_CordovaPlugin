@@ -89,11 +89,11 @@ CoordinatedClient.states = {
 CoordinatedClient.prototype._bind = function () {
   this._io
   .on  ('connect',           this._connect.bind(this))
-  .on  ('connect_timeout',   this._connect.bind(this))
-  .on  ('connect_error',     this._connect.bind(this))
+  .on  ('connect_timeout',   logger.debug.bind(logger))
+  .on  ('connect_error',     logger.error.bind(logger))
   .on  ('reconnect',         this._reconnect.bind(this))
-  .on  ('reconnect_refused', this._reconnect.bind(this))
-  .on  ('reconnect_error',   this._reconnect.bind(this))
+  .on  ('reconnect_error',   logger.error.bind(logger))
+  .on  ('reconnect_failed',  this._error.bind(this))
   .once('schedule',          this._schedule.bind(this))
   .on  ('discard',           this._discard.bind(this))
   .on  ('disqualify',        this._disqualify.bind(this))
@@ -153,6 +153,7 @@ CoordinatedClient.prototype._schedule = function (data) {
       'unexpected error: \'%s\', stack: \'%s\'',
       error.toString(), error.stack
     );
+    self._failed(error);
   });
 }
 
@@ -272,7 +273,7 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
 CoordinatedClient.prototype._scheduleTest = function (test) {
   var self = this;
 
-  function runEvent (tape, event) {
+  function runEvent (event) {
     return new Promise(function (resolve, reject) {
       self._io.once(event, function (data) {
         self._emit(event + '_confirmed', data, test.options)
@@ -285,7 +286,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
   }
 
   function skipEvent (tape, event, timeout) {
-    return runEvent(tape, event)
+    return runEvent(event)
     .then(function () {
       return new Promise(function (resolve, reject) {
         tape.once('end', function () {
@@ -303,22 +304,32 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
   }
 
   function processEvent(tape, event, fun, timeout) {
-    return runEvent(tape, event)
+    return runEvent(event)
     .then(function (parsedData) {
+      // Only for testing purposes.
+      if (parsedData) {
+        tape.participants = parsedData;
+      }
+
+      var resultHandler;
+      var endHandler;
+
       return new Promise(function (resolve, reject) {
         // 'end' can be called without 'result', so success is true by default.
         // We can receive 'result' many times.
         // For example each 'tape.ok' will provide a 'result'.
         var success = true;
-        function resultHandler (result) {
+        resultHandler = function (result) {
           if (!result.ok) {
             success = false;
           }
         }
         tape.on('result', resultHandler);
 
-        function endHandler () {
+        endHandler = function () {
           tape.removeListener('result', resultHandler);
+          resultHandler = null;
+          endHandler    = null;
 
           self._emit(
             event + '_finished',
@@ -330,12 +341,9 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           )
           .then(function () {
             if (success) {
-              resolve();
+              resolve(parsedData);
             } else {
-              var error = format(
-                'test failed, name: \'%s\'',
-                test.name
-              );
+              var error = format('test failed, name: \'%s\'', test.name);
               logger.error(error);
               reject(new Error(error));
             }
@@ -344,11 +352,15 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
         }
         tape.once('end', endHandler);
 
-        // Only for testing purposes.
-        if (parsedData) {
-          tape.participants = parsedData;
-        }
         fun(tape);
+      })
+      .finally(function () {
+        if (resultHandler) {
+          tape.removeListener('result', resultHandler);
+        }
+        if (endHandler) {
+          tape.removeListener('end', endHandler);
+        }
       });
     })
     .timeout(
@@ -357,13 +369,39 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     );
   }
 
+  function sync (tape, timeout) {
+    // returns something like 'at file:lineNumber'.
+    function getCaller (level) {
+      var traces = (new Error()).stack.split('\n');
+      assert(
+        traces.length > level,
+        format('stack should have a least %d lines', level + 1)
+      );
+      return traces[level].trim();
+    }
+    var callerId = getCaller(3);
+
+    return self._emit('sync', callerId, test.options)
+    .then(function () {
+      return runEvent('syncFinished');
+    })
+    .timeout(
+      timeout,
+      format('timeout exceed while syncing test: \'%s\'', test.name)
+    );
+  }
+
   return new Promise(function (resolve, reject) {
     tape('setup', function (tape) {
+      tape.sync = sync.bind(undefined, tape, test.options.setupTimeout);
+
       processEvent(tape, 'setup_' + test.name, test.options.setup, test.options.setupTimeout)
       .catch(reject);
     });
 
     tape(test.name, function (tape) {
+      tape.sync = sync.bind(undefined, tape, test.options.testTimeout);
+
       Promise.try(function () {
         if (test.canBeSkipped) {
           return test.canBeSkipped();
@@ -383,6 +421,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     });
 
     tape('teardown', function (tape) {
+      tape.sync = sync.bind(undefined, tape, test.options.teardownTimeout);
+
       processEvent(tape, 'teardown_' + test.name, test.options.teardown, test.options.teardownTimeout)
       // We should exit after test teardown.
       .then(resolve)
