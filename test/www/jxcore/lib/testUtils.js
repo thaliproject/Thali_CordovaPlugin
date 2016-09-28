@@ -26,8 +26,8 @@ var inherits = require('inherits');
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
-var isRealAndroid = platform._isAndroid;
-var isRealMobile = platform._isMobile;
+var isRealAndroid = platform._isRealAndroid;
+var isRealMobile = platform._isRealMobile;
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {

@@ -47,23 +47,23 @@ module.exports = Object.defineProperties({}, {
       }
     },
     // Returns REAL values based on `process.platform`
-    '_name': {
+    '_realName': {
       value: function () {
         return process.platform;
       }
     },
-    '_isMobile': {
+    '_isRealMobile': {
       get: function () {
-        return this._isAndroid || this._isIOS;
+        return this._isRealAndroid || this._isRealIOS;
       }
 
     },
-    '_isAndroid': {
+    '_isRealAndroid': {
       get: function () {
         return process.platform === _platforms.ANDROID;
       }
     },
-    '_isIOS': {
+    'changePeersUnavailable(connectionType: ?)': {
       get: function () {
         return process.platform === _platforms.IOS;
       }
