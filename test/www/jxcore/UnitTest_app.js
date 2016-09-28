@@ -10,6 +10,10 @@ if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 
+var config = require('./config.json');
+var objectAssign = require('object-assign');
+process.env = objectAssign(process.env, config.env);
+
 var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
