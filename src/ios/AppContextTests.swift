@@ -213,7 +213,7 @@ class AppContextTests: XCTestCase {
         } catch let error {
             XCTFail("unexpected error: \(error)")
         }
-        XCTAssertEqual(contextError, .BadParameters)
+        XCTAssertEqual(contextError, .badParameters)
     }
 
     func testGetIOSVersion() {
@@ -228,7 +228,7 @@ class AppContextTests: XCTestCase {
         } catch let err as AppContextError {
             error = err
         } catch _ {}
-        XCTAssertEqual(error, AppContextError.BadParameters)
+        XCTAssertEqual(error, AppContextError.badParameters)
 
         // testing parameter types
         error = nil
@@ -237,7 +237,7 @@ class AppContextTests: XCTestCase {
         } catch let err as AppContextError {
             error = err
         } catch _ {}
-        XCTAssertEqual(error, AppContextError.BadParameters)
+        XCTAssertEqual(error, AppContextError.badParameters)
     }
 
     func testMultiConnect() {
@@ -248,7 +248,7 @@ class AppContextTests: XCTestCase {
         XCTAssertEqual(ThaliCoreError.IllegalPeerID.rawValue,
                        errorDescription(ThaliCoreError.IllegalPeerID))
 
-        let unknownError = AppContextError.UnknownError
+        let unknownError = AppContextError.unknownError
         XCTAssertEqual((unknownError as NSError).localizedDescription,
                        errorDescription(unknownError))
     }
@@ -306,7 +306,14 @@ class AppContextTests: XCTestCase {
         } catch let error {
             XCTFail("unexpected error: \(error)")
         }
-        XCTAssertEqual(contextError, .BadParameters)
+        XCTAssertEqual(contextError, .badParameters)
+    }
+
+    func testConnectReturnValueCorrect() {
+        let result = context.connect([])
+        let json = jsonDictionaryFrom(result)
+        XCTAssertEqual(json?[JSONKey.err.rawValue] as? String,
+                       "Platform does not support connect")
     }
 
     // MARK: Private helpers
