@@ -35,7 +35,7 @@ module.exports = Object.defineProperties({}, {
         return _platform === _platforms.IOS;
       }
     },
-    // These methods are presented ONLY for testing reasons
+    // The methods presented below ONLY for testing reasons
     '_override': {
       value: function (platform) {
         return _platform = platform;
@@ -45,5 +45,27 @@ module.exports = Object.defineProperties({}, {
       value: function () {
         return _platform = process.platform;
       }
-    }
+    },
+    // Returns REAL values based on `process.platform`
+    '_name': {
+      value: function () {
+        return process.platform;
+      }
+    },
+    '_isMobile': {
+      get: function () {
+        return this._isAndroid || this._isIOS;
+      }
+
+    },
+    '_isAndroid': {
+      get: function () {
+        return process.platform === _platforms.ANDROID;
+      }
+    },
+    '_isIOS': {
+      get: function () {
+        return process.platform === _platforms.IOS;
+      }
+    },
   });
