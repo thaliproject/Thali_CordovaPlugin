@@ -26,10 +26,11 @@ var inherits = require('inherits');
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
+var isRealAndroid = platform._isAndroid;
 var isRealMobile = platform._isMobile;
 
 var doToggle = function (toggleFunction, on) {
-  if (!isRealMobile) {
+  if (typeof Mobile === 'undefined') {
     return Promise.resolve();
   }
   if (platform.isIOS) {
@@ -141,7 +142,7 @@ module.exports.tmpDirectory = function () {
  */
 module.exports.hasRequiredHardware = function () {
   return new Promise(function (resolve) {
-    if (isRealMobile) {
+    if (isRealAndroid) {
       var checkBleMultipleAdvertisementSupport = function () {
         Mobile('isBleMultipleAdvertisementSupported').callNative(
           function (error, result) {
