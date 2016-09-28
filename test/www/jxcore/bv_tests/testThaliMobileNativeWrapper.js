@@ -764,11 +764,6 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same ' +
           afterRecreatePeer.generation,
           'the same generation before and after listener recreating'
         );
-        t.notEqual(
-          beforeRecreatePeer.portNumber,
-          afterRecreatePeer.portNumber,
-          'different port before and after listener recreating'
-        );
 
         var emittedRecreateEventForCurrentPeer =
           smEmitSpy.args.some(function (callArgs) {
