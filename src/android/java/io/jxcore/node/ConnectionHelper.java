@@ -432,8 +432,7 @@ public class ConnectionHelper
     @Override
     public void onConnectionFailed(PeerProperties peerProperties, String errorMessage) {
         Log.e(TAG, "onConnectionFailed: Peer properties: " + peerProperties + ", error message: " + errorMessage);
-
-        //TODO add notification here even if properties are null
+        //if properties are null this is incoming connection
         if (peerProperties != null) {
             handleOutgoingConnectionFailure(peerProperties, errorMessage);
             toggleBetweenSystemDecidedAndAlternativeInsecureRfcommPortNumber();

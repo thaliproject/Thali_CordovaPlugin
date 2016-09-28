@@ -129,20 +129,15 @@ class StreamCopyingThread extends Thread {
                 // Uncomment the logging, if you need to debug the stream copying process.
                 // However, note that Log calls are quite heavy and should be used here only, if
                 // necessary.
-//                Log.d(TAG, "Read " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
+
                 totalNumberOfBytesRead += numberOfBytesRead;
-
-//                Log.d(TAG, "Successfully readed");
                 isRead = true;
-//                Log.d(TAG, "Readed buffer: " + buffer[buffer.length - 1]);
-
                 mOutputStream.write(buffer, 0, numberOfBytesRead); // Can throw IOException
 
                 isFlushing = true;
                 mOutputStream.flush(); // Can throw IOException
                 isFlushing = false;
 
-//                Log.d(TAG, "Wrote " + numberOfBytesRead + " bytes (thread ID: " + getId() + ", thread name: " + mThreadName + ")");
                 totalNumberOfBytesWritten += numberOfBytesRead;
 
                 if (mNotifyStreamCopyingProgress) {
@@ -164,12 +159,12 @@ class StreamCopyingThread extends Thread {
                     errorMessage = "Failed to read from input stream, got IO, not -1. Number of bytes read " + numberOfBytesRead;
                 }
 
-                Log.e(TAG, errorMessage + " (thread ID: " + getId() + ", thread name: "
-                    + mThreadName + "): " + e.getMessage());
+                Log.e(TAG, errorMessage + " (thread ID: " + getId() + ", thread name: " + mThreadName + "): " + e.getMessage());
                 errorMessage += ": " + e.getMessage();
                 final String msg = errorMessage;
                 Log.d(TAG, "onStreamCopyError (ID: " + getId() + ", name: " + mThreadName
-                    + "). Connection data: "  + connectionData.toString() + " .During the lifetime of the thread the total number of bytes read was "
+                    + "). Connection data: " + connectionData.toString() +
+                    " .During the lifetime of the thread the total number of bytes read was "
                     + totalNumberOfBytesRead + " and the total number of bytes written "
                     + totalNumberOfBytesWritten);
                 mListener.onStreamCopyError(StreamCopyingThread.this, msg);
@@ -178,7 +173,7 @@ class StreamCopyingThread extends Thread {
 
         if (numberOfBytesRead == -1 && !mDoStop) {
             Log.d(TAG, "The end of the input stream has been reached (thread ID: "
-                + getId() + ", thread name: " + mThreadName + "). Connection data: "  + connectionData.toString());
+                + getId() + ", thread name: " + mThreadName + "). Connection data: " + connectionData.toString());
             closeOutputStream();
             mIsInputStreamDone = true;
         } else if (numberOfBytesRead == -1) {
@@ -194,13 +189,13 @@ class StreamCopyingThread extends Thread {
         }
 
         Log.d(TAG, "Exiting thread (ID: " + getId() + ", name: " + mThreadName
-            + "). Connection data: "  + connectionData.toString() + " .During the lifetime of the thread the total number of bytes read was "
+            + "). Connection data: " + connectionData.toString() + " .During the lifetime of the thread the total number of bytes read was "
             + totalNumberOfBytesRead + " and the total number of bytes written "
             + totalNumberOfBytesWritten);
     }
 
     private void closeOutputStream() {
-        Log.d(TAG, "closeOutputStream. Connection data: "  + connectionData.toString());
+        Log.d(TAG, "closeOutputStream. Connection data: " + connectionData.toString());
         try {
             Log.d(TAG, "closeOutputStream. Flushing");
             mOutputStream.flush();
