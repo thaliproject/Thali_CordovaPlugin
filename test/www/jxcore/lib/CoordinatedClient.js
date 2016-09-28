@@ -89,11 +89,11 @@ CoordinatedClient.states = {
 CoordinatedClient.prototype._bind = function () {
   this._io
   .on  ('connect',           this._connect.bind(this))
-  .on  ('connect_timeout',   this._connect.bind(this))
-  .on  ('connect_error',     this._connect.bind(this))
+  .on  ('connect_timeout',   logger.debug.bind(logger))
+  .on  ('connect_error',     logger.error.bind(logger))
   .on  ('reconnect',         this._reconnect.bind(this))
-  .on  ('reconnect_refused', this._reconnect.bind(this))
-  .on  ('reconnect_error',   this._reconnect.bind(this))
+  .on  ('reconnect_error',   logger.error.bind(logger))
+  .on  ('reconnect_failed',  this._error.bind(this))
   .once('schedule',          this._schedule.bind(this))
   .on  ('discard',           this._discard.bind(this))
   .on  ('disqualify',        this._disqualify.bind(this))
