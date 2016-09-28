@@ -153,6 +153,7 @@ CoordinatedClient.prototype._schedule = function (data) {
       'unexpected error: \'%s\', stack: \'%s\'',
       error.toString(), error.stack
     );
+    self._failed(error);
   });
 }
 
