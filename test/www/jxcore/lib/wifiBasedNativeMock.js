@@ -24,19 +24,6 @@ var peerProxySockets = {};
 var peerAvailabilityChangedCallback = null;
 var peerAvailabilities = {};
 
-/**
- * Enum to describe the platforms we can simulate, this mostly controls how we
- * handle connect
- *
- * @public
- * @readonly
- * @enum {string}
- */
-var platformChoice = {
-  ANDROID: 'Android',
-  IOS: 'iOS'
-};
-
 var currentNetworkStatus = {
   wifi: 'on',
   bluetooth: 'on',
@@ -1019,53 +1006,53 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
  *
  * @public
  * @constructor
- * @param {platformChoice} _platform
- * @param {Object} _router This is the express router being used up in the
+ * @param {platformChoice} platformName
+ * @param {Object} router This is the express router being used up in the
  * stack. We need it here so we can add a router to simulate the iOS case where
  * we need to let the other peer know we want a connection.
  */
 // jscs:enable jsDoc
-function WifiBasedNativeMock(_platform, _router) {
-  if (!_platform) {
-    _platform = platform.names.ANDROID;
+function WifiBasedNativeMock(platformName, router) {
+  if (!platformName) {
+    platformName = platform.names.ANDROID;
   }
-  if (!_router) {
-    _router = express.Router();
+  if (!router) {
+    router = express.Router();
   }
   // Issue #902
-  platform._override(_platform);
+  platform._override(platformName);
 
   var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
   // In the native side, there is no equivalent for the start call,
   // but it needs to be done once somewhere before calling other functions.
   // In practice, the stop function never gets called, but that is okay
   // for the purpose of this mock Mobile object.
-  thaliWifiInfrastructure.start(_router);
+  thaliWifiInfrastructure.start(router);
   setupListeners(thaliWifiInfrastructure);
 
   var mobileHandler = function (mobileMethodName) {
-    return new MobileCallInstance(mobileMethodName, _platform, _router,
+    return new MobileCallInstance(mobileMethodName, platformName, router,
                                   thaliWifiInfrastructure);
   };
 
   mobileHandler.toggleBluetooth =
-    toggleBluetooth(_platform, thaliWifiInfrastructure);
+    toggleBluetooth(platformName, thaliWifiInfrastructure);
 
   mobileHandler.toggleWiFi =
-    toggleWiFi(_platform, thaliWifiInfrastructure);
+    toggleWiFi(platformName, thaliWifiInfrastructure);
 
   mobileHandler.firePeerAvailabilityChanged =
-    firePeerAvailabilityChanged(_platform, thaliWifiInfrastructure);
+    firePeerAvailabilityChanged(platformName, thaliWifiInfrastructure);
 
   mobileHandler.fireIncomingConnectionToPortNumberFailed =
-    fireIncomingConnectionToPortNumberFailed(_platform, thaliWifiInfrastructure);
+    fireIncomingConnectionToPortNumberFailed(platformName, thaliWifiInfrastructure);
 
   mobileHandler.fireDiscoveryAdvertisingStateUpdateNonTCP =
-    fireDiscoveryAdvertisingStateUpdateNonTCP(_platform,
+    fireDiscoveryAdvertisingStateUpdateNonTCP(platformName,
                                               thaliWifiInfrastructure);
 
   mobileHandler.wifiPeerAvailabilityChanged =
-    wifiPeerAvailabilityChanged(_platform, thaliWifiInfrastructure);
+    wifiPeerAvailabilityChanged(platformName, thaliWifiInfrastructure);
 
   return mobileHandler;
 }
