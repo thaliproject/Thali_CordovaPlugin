@@ -6,6 +6,8 @@ var sinon = require('sinon');
 var Promise = require('lie');
 var http = require('http');
 var httpTester = require('../lib/httpTester.js');
+var Platform = require('thali/NextGeneration/utils/platform');
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 
 var ThaliPeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
@@ -227,10 +229,11 @@ test('Received beacons with no values for us', function (t) {
     action.start(keepAliveAgent).then(function () {
       setImmediate(function () {
         var entry =
-          notificationClient.peerDictionary.get(globals.TCPEvent.peerIdentifier);
+          notificationClient.peerDictionary
+            .get(globals.TCPEvent.peerIdentifier);
         t.ok(entry, 'entry exists');
-        t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED, 'entry ' +
-          'is resolved');
+        t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED,
+                  'entry is resolved');
         notificationClient.stop();
         t.end();
       });
@@ -369,64 +372,68 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
 });
 
 
-//TODO enable it
-//issue #1152
-//test('Action fails because of a bad hostname.', function (t) {
-//
-//  // Scenario:
-//  // ConnectionType is TCP_NATIVE, host address is having wrong DNS.
-//
-//  // Expected result:
-//  // Connection is tried RETRY_TIMEOUTS.length times
-//
-//  // Make timeouts shorter (kill will return values to original)
-//  ThaliNotificationClient.RETRY_TIMEOUTS =
-//    [100, 300, 600];
-//
-//  var requestCount = 0;
-//  var failCount = 0;
-//
-//  // Simulates how peer pool runs actions
-//  var enqueue = function (action) {
-//    requestCount++;
-//    var keepAliveAgent = new http.Agent({ keepAlive: true });
-//    action.start(keepAliveAgent).then( function () {
-//      t.fail('This action should fail always.');
-//      t.end();
-//    }).catch( function ( ) {
-//      failCount++;
-//    });
-//  };
-//
-//  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
-//
-//  var notificationClient =
-//    new ThaliNotificationClient(globals.peerPoolInterface,
-//      globals.targetDeviceKeyExchangeObjects[0]);
-//
-//  notificationClient.start([]);
-//
-//  var TCPEvent = {
-//    peerIdentifier: 'id123',
-//    hostAddress: 'address-that-does-not-exists',
-//    portNumber: 123,
-//    connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
-//    suggestedTCPTimeout: 10000
-//  };
-//
-//  // New peer with TCP connection
-//  notificationClient._peerAvailabilityChanged(TCPEvent);
-//
-//  // Waits 5 seconds. And checks results
-//  setTimeout( function () {
-//    t.equals(requestCount-1, ThaliNotificationClient.RETRY_TIMEOUTS.length);
-//    t.equals(failCount-1, ThaliNotificationClient.RETRY_TIMEOUTS.length);
-//    var entry = notificationClient.peerDictionary.get('id123');
-//    t.equals(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED);
-//    notificationClient.stop();
-//    t.end();
-//  }, 5000);
-//});
+
+test('Action fails because of a bad hostname.',
+  function () {
+    // issue #1152
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI &&
+      Platform.isAndroid;
+  },
+  function (t) {
+    // Scenario:
+    // ConnectionType is TCP_NATIVE, host address is having wrong DNS.
+
+    // Expected result:
+    // Connection is tried RETRY_TIMEOUTS.length times
+
+    // Make timeouts shorter (kill will return values to original)
+    ThaliNotificationClient.RETRY_TIMEOUTS =
+      [100, 300, 600];
+
+    var requestCount = 0;
+    var failCount = 0;
+
+    // Simulates how peer pool runs actions
+    var enqueue = function (action) {
+       requestCount++;
+       var keepAliveAgent = new http.Agent({ keepAlive: true });
+       action.start(keepAliveAgent).then( function () {
+         t.fail('This action should fail always.');
+         t.end();
+       }).catch( function ( ) {
+         failCount++;
+       });
+     };
+
+    sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+
+    var notificationClient =
+      new ThaliNotificationClient(globals.peerPoolInterface,
+        globals.targetDeviceKeyExchangeObjects[0]);
+
+    notificationClient.start([]);
+
+    var TCPEvent = {
+       peerIdentifier: 'id123',
+       hostAddress: 'address-that-does-not-exists',
+       portNumber: 123,
+       connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
+       suggestedTCPTimeout: 10000
+     };
+
+    // New peer with TCP connection
+    notificationClient._peerAvailabilityChanged(TCPEvent);
+
+    // Waits 5 seconds. And checks results
+    setTimeout( function () {
+       t.equals(requestCount-1, ThaliNotificationClient.RETRY_TIMEOUTS.length);
+       t.equals(failCount-1, ThaliNotificationClient.RETRY_TIMEOUTS.length);
+       var entry = notificationClient.peerDictionary.get('id123');
+       t.equals(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED);
+       notificationClient.stop();
+       t.end();
+     }, 5000);
+  });
 
 test('hostaddress is removed when the action is running. ', function (t) {
 

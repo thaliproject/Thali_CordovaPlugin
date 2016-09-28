@@ -1,5 +1,8 @@
 'use strict';
 
+var util   = require('util');
+var format = util.format;
+
 var fs           = require('fs-extra-promise');
 var path         = require('path');
 var randomString = require('randomstring');
@@ -32,12 +35,16 @@ var hasJavaScriptSuffix = function (path) {
 };
 
 var loadFile = function (filePath) {
-  logger.debug('Test runner loading file: ' + filePath);
+  logger.info('Test runner loading file:', filePath);
   try {
     require(filePath);
   } catch (error) {
+    error = format(
+      'test load failed, filePath: \'%s\', error: \'%s\', stack: \'%s\'',
+      filePath, error.toString(), error.stack
+    );
     logger.error(error);
-    throw new Error('Error when loading file ' + filePath + ': ' + error);
+    throw new Error(error);
   }
 };
 
@@ -46,9 +53,9 @@ var testsToRun = process.argv.length > 2 ? process.argv[2] : 'bv_tests';
 if (hasJavaScriptSuffix(testsToRun)) {
   loadFile(path.join(__dirname, testsToRun));
 } else {
-  fs.readdirSync(path.join(__dirname, testsToRun)).forEach(function (fileName) {
-    if ((fileName.indexOf('test') === 0) &&
-         hasJavaScriptSuffix(fileName)) {
+  fs.readdirSync(path.join(__dirname, testsToRun))
+  .forEach(function (fileName) {
+    if (fileName.indexOf('test') === 0 && hasJavaScriptSuffix(fileName)) {
       var filePath = path.join(__dirname, testsToRun, fileName);
       loadFile(filePath);
     }
@@ -57,7 +64,7 @@ if (hasJavaScriptSuffix(testsToRun)) {
 
 var currentPlatform = platform.name;
 // Our current platform can be 'darwin', 'linux', 'windows', etc.
-// Our 'thaliTape' expects all these platforms will be named as 'desktop'
+// Our 'thaliTape' expects all these platforms will be named as 'desktop'.
 if (!platform.isMobile) {
   currentPlatform = 'desktop';
 }

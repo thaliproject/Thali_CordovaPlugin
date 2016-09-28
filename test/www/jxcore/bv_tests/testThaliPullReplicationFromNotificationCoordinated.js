@@ -1,24 +1,26 @@
 'use strict';
 
-var tape = require('../lib/thaliTape');
-var crypto = require('crypto');
+var crypto         = require('crypto');
+var expressPouchDB = require('express-pouchdb');
+var express        = require('express');
+var Promise        = require('bluebird');
+
 var testUtils = require('../lib/testUtils');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var expressPouchdb = require('express-pouchdb');
-var express = require('express');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var ThaliNotificationServer = require('thali/NextGeneration/notification/thaliNotificationServer');
-var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-var Promise = require('lie');
+var tape      = require('../lib/thaliTape');
+
+var thaliConfig                          = require('thali/NextGeneration/thaliConfig');
+var ThaliMobile                          = require('thali/NextGeneration/thaliMobile');
+var ThaliNotificationServer              = require('thali/NextGeneration/notification/thaliNotificationServer');
+var ThaliPeerPoolDefault                 = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var ThaliPullReplicationFromNotification = require('thali/NextGeneration/replication/thaliPullReplicationFromNotification');
 
-var thaliNotificationServer = null;
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
-var devicePublicKey = devicePublicPrivateKey.generateKeys();
-var TestPouchDB = testUtils.getLevelDownPouchDb();
-var router = null;
-var thaliPullReplicationFromNotification = null;
-var DB_NAME = 'repActionTest';
+var devicePublicKey        = devicePublicPrivateKey.generateKeys();
+var TestPouchDB            = testUtils.getLevelDownPouchDb();
+
+var DB_NAME            = 'repActionTest';
+var EXPIRATION_TIMEOUT = 60 * 60 * 1000;
+var TEST_TIMEOUT       = 5 * 60 * 1000;
 
 if (!tape.coordinated) {
   return;
@@ -27,43 +29,10 @@ if (!tape.coordinated) {
 var test = tape({
   setup: function (t) {
     t.data = devicePublicKey.toJSON();
-
-    router = express.Router();
-    var expressPDb = expressPouchdb(TestPouchDB, {mode: 'minimumForPouchDB'});
-    router.use('/db', expressPDb);
-
-    thaliNotificationServer =
-      new ThaliNotificationServer(router, devicePublicPrivateKey,
-        60 * 60 * 1000);
-
     t.end();
   },
   teardown: function (t) {
-    if (thaliPullReplicationFromNotification) {
-      thaliPullReplicationFromNotification.stop();
-      thaliPullReplicationFromNotification = null;
-    }
-    thaliNotificationServer.stop()
-    .then(function () {
-      return ThaliMobile.stop();
-    })
-    .then(function (combinedResult) {
-      if (combinedResult.wifiResult !== null ||
-        combinedResult.nativeResult !== null) {
-        return Promise.reject(
-          new Error(
-            'Had a failure in ThaliMobile.stop - ' +
-            JSON.stringify(combinedResult)
-          )
-        );
-      }
-    })
-    .catch(function (err) {
-      t.fail('Got error in teardown - ' + JSON.stringify(err));
-    })
-    .then(function () {
-      t.end();
-    });
+    t.end();
   }
 });
 
@@ -78,82 +47,129 @@ function bufferIndexOf(bufferArray, entryToFind) {
 
 test('Coordinated pull replication from notification test', function (t) {
   var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
-  var exited = false;
-  function exit(error) {
-    if (exited) {
-      return;
-    }
-    exited = true;
-    changes && changes.cancel();
-    cancelTimer && clearTimeout(cancelTimer);
-
-    var isPassed = true;
-    // We do this here to make sure we don't try to enqueue any replication
-    // events after we have called stop on thaliPeerPoolDefault as that
-    // would cause an exception to be thrown.
-    if (thaliPullReplicationFromNotification) {
-      thaliPullReplicationFromNotification.stop();
-      thaliPullReplicationFromNotification = null;
-    }
-    thaliPeerPoolDefault.stop()
-    .catch(function (error) {
-      t.fail('failed with ' + error);
-      isPassed = false;
-    })
-    .then(function () {
-      if (error) {
-        t.fail('failed with ' + error);
-        isPassed = false;
+  var router = express.Router();
+  router.use(
+    '/db',
+    expressPouchDB(
+      TestPouchDB, {
+        mode: 'minimumForPouchDB'
       }
-      if (isPassed) {
-        t.pass('all tests passed');
-      }
-      t.end();
-    });
-  }
-
-  var cancelTimer = setTimeout(function () {
-    exit(new Error('We ran out of time'));
-  }, 1000 * 60 * 5);
-
-  var remainingPartnerKeys =
-    testUtils.turnParticipantsIntoBufferArray(t, devicePublicKey);
-
+    )
+  );
+  var thaliNotificationServer = new ThaliNotificationServer(
+    router, devicePublicPrivateKey, EXPIRATION_TIMEOUT
+  );
+  var thaliPullReplicationFromNotification = new ThaliPullReplicationFromNotification(
+    TestPouchDB, DB_NAME, thaliPeerPoolDefault, devicePublicPrivateKey
+  );
   var localPouchDB = new TestPouchDB(DB_NAME);
 
-  var changes = localPouchDB.changes({
-    since: 0,
-    live: true
-  }).on('change', function (change) {
-    var bufferRemoteId = new Buffer(JSON.parse(change.id));
-    var index = bufferIndexOf(remainingPartnerKeys, bufferRemoteId);
-    if (index === -1) {
-      return;
+  new Promise(function (resolve, reject) {
+    var remotePartnerKeys = testUtils.turnParticipantsIntoBufferArray(
+      t, devicePublicKey
+    );
+
+    var changes = localPouchDB.changes({
+      since: 0,
+      live: true
+    });
+
+    var exited = false;
+    var resultError = null;
+    function exit(error) {
+      if (exited) {
+        return;
+      }
+      exited = true;
+
+      resultError = error;
+      changes.cancel();
     }
-    remainingPartnerKeys.splice(index, 1);
-    if (remainingPartnerKeys.length === 0) {
-      exit();
-    }
-  }).on('error', function (err) {
-    exit(err);
-  });
 
-  thaliPullReplicationFromNotification =
-    new ThaliPullReplicationFromNotification(TestPouchDB, DB_NAME,
-      thaliPeerPoolDefault, devicePublicPrivateKey);
+    changes.on('change', function (change) {
+      var bufferRemoteId = new Buffer(JSON.parse(change.id));
+      var index = bufferIndexOf(remotePartnerKeys, bufferRemoteId);
+      if (index === -1) {
+        return;
+      }
+      remotePartnerKeys.splice(index, 1);
+      if (remotePartnerKeys.length === 0) {
+        exit();
+      }
+    })
+    .on('error', function (error) {
+      reject(error);
+    })
+    .on('complete', function () {
+      if (resultError) {
+        reject(resultError);
+      } else {
+        resolve();
+      }
+    });
 
-  var partnerKeys =
-    testUtils.turnParticipantsIntoBufferArray(t, devicePublicKey);
-
-  localPouchDB
-    .put({_id: JSON.stringify(devicePublicKey.toJSON())})
+    localPouchDB
+    .put({
+      _id: JSON.stringify(devicePublicKey.toJSON())
+    })
     .then(function () {
+      var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+        t, devicePublicKey
+      );
       thaliPullReplicationFromNotification.start(partnerKeys);
       return testUtils.startServerInfrastructure(
         thaliNotificationServer, partnerKeys, ThaliMobile, router
       );
     })
-    .catch(function (err) {
-      exit(err);
+    .catch(function (error) {
+      exit(error);
     });
+  })
+
+  .then(function () {
+    return t.sync();
+  })
+
+  .then(function () {
+    thaliPullReplicationFromNotification.stop();
+    return thaliPeerPoolDefault.stop();
+  })
+  .then(function () {
+    // https://github.com/thaliproject/Thali_CordovaPlugin/issues/1138
+    // workaround for ECONNREFUSED and ECONNRESET from 'request.js' in 'pouchdb'.
+    return t.sync();
+  })
+  .then(function () {
+    return thaliNotificationServer.stop();
+  })
+  .then(function () {
+    return ThaliMobile.stop();
+  })
+  .then(function (combinedResult) {
+    if (
+      combinedResult.wifiResult   !== null ||
+      combinedResult.nativeResult !== null
+    ) {
+      return Promise.reject(
+        new Error(
+          'Had a failure in ThaliMobile.stop - ',
+          JSON.stringify(combinedResult)
+        )
+      );
+    }
+  })
+
+  .then(function () {
+    return Promise.resolve()
+    .timeout(TEST_TIMEOUT, 'test timeout exceeded');
+  })
+  .then(function () {
+    t.pass('passed');
+  })
+  .catch(function (error) {
+    t.fail('failed with ' + error.toString());
+  })
+  .then(function () {
+    t.end();
+  });
 });

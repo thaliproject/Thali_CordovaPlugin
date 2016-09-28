@@ -26,6 +26,8 @@ function Socket(rawSocket, options) {
 
   asserts.exists(rawSocket);
   this._rawSocket = rawSocket;
+
+  this._init();
 }
 
 inherits(Socket, EventEmitter);
@@ -37,6 +39,15 @@ Socket.prototype._setOptions = function (options) {
   this._options = objectAssign({}, defaultConfig, options);
   asserts.isNumber(this._options.retryCount);
   asserts.isNumber(this._options.retryTimeout);
+}
+
+Socket.prototype._init = function () {
+  var self = this;
+
+  // Current socket client wants to be synchonized with other clients.
+  this._bind('on', 'sync', function (data) {
+    self.emit('sync', data);
+  });
 }
 
 // We want to notify all our auto-bind and auto-apply handlers

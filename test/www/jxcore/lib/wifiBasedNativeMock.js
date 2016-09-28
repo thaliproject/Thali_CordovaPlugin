@@ -1,6 +1,6 @@
 'use strict';
 
-var Promise = require('lie');
+var Promise = require('bluebird');
 var EventEmitter = require('events').EventEmitter;
 var uuid = require('node-uuid');
 var express = require('express');
