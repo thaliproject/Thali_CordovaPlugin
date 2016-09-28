@@ -58,8 +58,8 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
   this._ourPublicKey = ourPublicKey;
   this._localSeqManager = null;
   this._cancelReplication = null;
-  this._resolveStart = null;
-  this._rejectStart = null;
+  this._resolve = null;
+  this._reject = null;
   this._refreshTimerManager = null;
   this._completed = false;
 }
@@ -240,51 +240,52 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
         ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds,
         remoteDB, self._ourPublicKey);
       self._replicationPromise = new Promise(function (resolve, reject) {
-        self._resolveStart = resolve;
-        self._rejectStart = reject;
+        self._resolve = resolve;
+        self._reject = reject;
         self._replicationTimer();
         self._cancelReplication = remoteDB.replicate.to(self._dbName, {
           live: true
-        }).on('paused', function (err) {
-            logger.debug(
-              'Got paused with - ',
-              Utils.serializePouchError(err)
-            );
-          })
-          .on('active', function () {
-            logger.debug('Replication resumed');
-          })
-          .on('denied', function (err) {
-            logger.warn(
-              'We got denied on a PouchDB access, this really should ' +
-              'not happen - ',
-              Utils.serializePouchError(err)
-            );
-          })
-          .on('complete', function (info) {
-            self._complete(info.errors);
-          })
-          .on('error', function (err) {
-            logger.debug(
-              'Got error on replication - ',
-              Utils.serializePouchError(err)
-            );
-            self._complete([err]);
-          })
-          .on('change', function (info) {
-            self._replicationTimer();
-            // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
-            self._localSeqManager
-              .update(info.last_seq)
-              .catch(function (err) {
-                logger.debug(
-                  'Got error in update, waiting for main loop to ' +
-                  'detect and handle - ',
-                  Utils.serializePouchError(err)
-                );
-              });
-            // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
-          });
+        })
+        .on('paused', function (err) {
+          logger.debug(
+            'Got paused with - ',
+            Utils.serializePouchError(err)
+          );
+        })
+        .on('active', function () {
+          logger.debug('Replication resumed');
+        })
+        .on('denied', function (err) {
+          logger.warn(
+            'We got denied on a PouchDB access, this really should ' +
+            'not happen - ',
+            Utils.serializePouchError(err)
+          );
+        })
+        .on('complete', function (info) {
+          self._complete(info.errors);
+        })
+        .on('error', function (err) {
+          logger.debug(
+            'Got error on replication - ',
+            Utils.serializePouchError(err)
+          );
+          self._complete([err]);
+        })
+        .on('change', function (info) {
+          self._replicationTimer();
+          // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+          self._localSeqManager
+            .update(info.last_seq)
+            .catch(function (err) {
+              logger.debug(
+                'Got error in update, waiting for main loop to ' +
+                'detect and handle - ',
+                Utils.serializePouchError(err)
+              );
+            });
+          // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+        });
       });
       return self._replicationPromise;
     });
@@ -314,11 +315,12 @@ ThaliReplicationPeerAction.prototype.kill = function () {
 };
 
 /**
- * @param {Array.<Error>} errorArray
+ * @param {Array.<Error>} errors
  * @private
  */
 ThaliReplicationPeerAction.prototype._complete =
-  function (errorArray) {
+  function (errors) {
+    var self = this;
     if (this._completed) {
       return;
     }
@@ -326,25 +328,36 @@ ThaliReplicationPeerAction.prototype._complete =
 
     this.kill();
 
-    assert(this._resolveStart, 'resolveStart should exist');
-    assert(this._rejectStart, 'rejectStart should exist');
+    assert(this._resolve, 'resolve should exist');
+    assert(this._reject, 'reject should exist');
 
-    if (!errorArray || errorArray.length === 0) {
-      return this._resolveStart();
-    }
-    for(var i = 0; i < errorArray.length; ++i) {
-      if (errorArray[i].message === 'connect ECONNREFUSED') {
-        return this._rejectStart(
-          new Error('Could not establish TCP connection')
-        );
+    if (!errors || errors.length === 0) {
+      this._resolve();
+    } else {
+      var isErrorResolved = errors.some(function (error) {
+        switch (error.code) {
+          case 'ECONNREFUSED': {
+            self._reject(
+              new Error('Could not establish TCP connection')
+            );
+            return true;
+          }
+          case 'ECONNRESET': {
+            self._reject(
+              new Error('Could establish TCP connection but couldn\'t keep it running')
+            );
+            return true;
+          }
+        }
+        return false;
+      });
+      if (!isErrorResolved) {
+        return this._reject(errors[0]);
       }
-      if (errorArray[i].message === 'socket hang up') {
-        return this._rejectStart(
-          new Error('Could establish TCP connection but couldn\'t keep it running')
-        );
-      }
     }
-    this._rejectStart(errorArray[0]);
+
+    this._resolve = null;
+    this._reject  = null;
   };
 
 ThaliReplicationPeerAction.prototype.waitUntilKilled = function () {
