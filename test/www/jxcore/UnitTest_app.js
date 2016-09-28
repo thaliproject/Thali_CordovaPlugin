@@ -18,6 +18,7 @@ var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('bluebird');
+
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
@@ -45,10 +46,6 @@ if (!utResult) {
   logger.debug('Failed to execute UT.');
   global.nativeUTFailed = true;
 }
-
-// TODO finish testing here (the node part will be omitted)
-// console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-// return;
 
 // Issue #914
 var networkTypes = [ThaliMobile.networkTypes.WIFI];
