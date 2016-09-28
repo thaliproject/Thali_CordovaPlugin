@@ -2,7 +2,7 @@
 
 var platform = require('thali/NextGeneration/utils/platform');
 
-if (platform.isMobile) {
+if (platform._isMobile) {
 
     var tape = require('../lib/thaliTape');
     var thaliMobileNativeWrapper = require('../node_modules/thali/NextGeneration/thaliMobileNativeWrapper');

@@ -17,7 +17,7 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
 var utResult = false;
 
-if (platform.isMobile) {
+if (platform._isMobile) {
   logger.debug('Running unit tests');
   Mobile('executeNativeTests').callNative(function (result) {
     utResult = true;
