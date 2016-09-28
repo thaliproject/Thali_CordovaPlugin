@@ -60,10 +60,8 @@ var setUpFunctions = {
 
     path = pathParam || '../../../lib/ios/ThaliCore/ThaliCoreTests';
 
-    if (path === '../../../lib/ios/ThaliCore/ThaliCoreTests') {
-      if (!fs.existsSync(path + '/SimpleTestCase.swift')) {
+    if (path === '../../../lib/ios/ThaliCore/ThaliCoreTests' && !fs.existsSync(path + '/SimpleTestCase.swift')) {
         throw new Error('SimpleTestCase test file was not found!');
-      }
     }
 
     const filesArray = fs.readdirSync(path);
