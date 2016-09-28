@@ -53,41 +53,49 @@ var getMethodIfExists = function (target, method) {
   return function () {
     var args = arguments;
     return promiseResultSuccessOrFailure(target[method].apply(target, args));
-  }
+  };
 };
 
 var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
+  var wifiMethod;
+  var nativeMethod;
   switch (networkType) {
-    case networkTypes.BOTH:
-      var wifiMethod = getMethodIfExists(thaliWifiInfrastructure, method);
-      var nativeMethod = getMethodIfExists(ThaliMobileNativeWrapper, method);
-      return function() {
+    case networkTypes.BOTH: {
+      wifiMethod = getMethodIfExists(thaliWifiInfrastructure, method);
+      nativeMethod = getMethodIfExists(ThaliMobileNativeWrapper, method);
+      return function () {
         var args = arguments;
         return Promise.all([
-            wifiMethod.apply(null, args),
-            nativeMethod.apply(null, args)
-          ])
+          wifiMethod.apply(null, args),
+          nativeMethod.apply(null, args)
+        ])
           .then(getCombinedResult);
       };
-    case networkTypes.WIFI:
-      var wifiMethod = getMethodIfExists(thaliWifiInfrastructure, method);
-      return function() {
+    }
+    case networkTypes.WIFI: {
+      wifiMethod = getMethodIfExists(thaliWifiInfrastructure, method);
+      return function () {
         var args = arguments;
         return wifiMethod.apply(null, args)
           .then(function (wifiResult) {
             return getCombinedResult([wifiResult, null]);
           });
       };
-    case networkTypes.NATIVE:
-      var nativeMethod = getMethodIfExists(ThaliMobileNativeWrapper, method);
-      return function() {
+    }
+    case networkTypes.NATIVE: {
+      nativeMethod = getMethodIfExists(ThaliMobileNativeWrapper, method);
+      return function () {
         var args = arguments;
         return nativeMethod.apply(null, args)
           .then(function (nativeResult) {
             return getCombinedResult([null, nativeResult]);
           });
       };
-    default: throw new Error('Unsupported network type ' + networkType);
+    }
+    default:
+    {
+      throw new Error('Unsupported network type ' + networkType);
+    }
   }
 };
 
@@ -385,10 +393,10 @@ module.exports.getNetworkStatus = function () {
     switch (networkType) {
       case networkTypes.NATIVE:
       case networkTypes.BOTH:
-       ThaliMobileNativeWrapper
-        .getNonTCPNetworkStatus()
-        .then(resolve);
-       break;
+        ThaliMobileNativeWrapper
+         .getNonTCPNetworkStatus()
+         .then(resolve);
+        break;
       case networkTypes.WIFI:
         reject(new Error('Native stack is not on'));
         break;
@@ -462,7 +470,7 @@ module.exports.getNetworkStatus = function () {
  * transport types available to us.
  * @returns {Promise<peerHostInfo | Error>}
  */
-module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
+module.exports.getPeerHostInfo = function () {
   return Promise.reject('not implemented');
 };
 
@@ -478,7 +486,7 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
  * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
  * @returns {Promise<?Error>}
  */
-module.exports.disconnect = function(peerIdentifier, connectionType) {
+module.exports.disconnect = function () {
   return Promise.reject('not implement');
 };
 /*
@@ -961,7 +969,7 @@ peerAvailabilityWatchers[connectionTypes.BLUETOOTH] = {};
 peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
 
 var addAvailabilityWatcherToPeerIfNotExist = function (peer) {
-  if(isAvailabilityWatcherForPeerExist(peer)) {
+  if (isAvailabilityWatcherForPeerExist(peer)) {
     return;
   }
 
@@ -976,7 +984,7 @@ var addAvailabilityWatcherToPeerIfNotExist = function (peer) {
   // more then once per unavailability threshold
   peerAvailabilityWatchers[connectionType][peerIdentifier] =
     setInterval(watchForPeerAvailability, unavailabilityThreshold, peer);
-}
+};
 
 var isAvailabilityWatcherForPeerExist = function (peer) {
   var connectionType = peer.connectionType;
@@ -986,12 +994,12 @@ var isAvailabilityWatcherForPeerExist = function (peer) {
 
   return !!(peerAvailabilityWatchersByConnectionType &&
             peerAvailabilityWatchersByConnectionType[peerIdentifier]);
-}
+};
 
 var removeAllAvailabilityWatchersFromPeers = function () {
   Object.keys(peerAvailabilityWatchers)
     .forEach(removeAllAvailabilityWatchersFromPeersByConnectionType);
-}
+};
 
 var removeAllAvailabilityWatchersFromPeersByConnectionType =
   function (connectionType) {
@@ -1009,7 +1017,7 @@ var removeAllAvailabilityWatchersFromPeersByConnectionType =
   };
 
 var removeAvailabilityWatcherFromPeerIfExists = function (peer) {
-  if(!isAvailabilityWatcherForPeerExist(peer)) {
+  if (!isAvailabilityWatcherForPeerExist(peer)) {
     return;
   }
 
@@ -1020,7 +1028,7 @@ var removeAvailabilityWatcherFromPeerIfExists = function (peer) {
 
   clearInterval(interval);
   delete peerAvailabilityWatchers[connectionType][peerIdentifier];
-}
+};
 
 var watchForPeerAvailability = function (peer) {
   var peerIdentifier = peer.peerIdentifier;
@@ -1034,13 +1042,13 @@ var watchForPeerAvailability = function (peer) {
 
   // If the time from the latest availability advertisement doesn't
   // exceed the threshold, no need to do anything.
-  if(peer.availableSince + unavailabilityThreshold > now) {
+  if (peer.availableSince + unavailabilityThreshold > now) {
     return;
   }
 
   changeCachedPeerUnavailable(peer);
   emitPeerUnavailable(peerIdentifier, connectionType);
-}
+};
 
 /**
  * Fired whenever our state changes.
@@ -1067,12 +1075,14 @@ var discoveryAdvertisingState = {
   wifiDiscoveryActive: false,
   wifiAdvertisingActive: false
 };
+
 var getDiscoveryAdvertisingState = function () {
   var state = JSON.parse(JSON.stringify(discoveryAdvertisingState));
   state.discoveryActive = thaliMobileStates.listening;
   state.advertisingActive = thaliMobileStates.advertising;
   return state;
 };
+
 var verifyDiscoveryAdvertisingState = function (state) {
   var listening = thaliMobileStates.listening;
   var advertising = thaliMobileStates.advertising;

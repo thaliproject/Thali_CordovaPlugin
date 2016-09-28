@@ -5,6 +5,9 @@ package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
+
+import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -16,6 +19,8 @@ import java.net.ServerSocket;
 class OutgoingSocketThread extends SocketThreadBase {
     private ServerSocket mServerSocket = null;
     private int mListeningOnPortNumber = ConnectionHelper.NO_PORT_NUMBER;
+    //TODO remove it. Just for logging and test purposes
+    private ConnectionData connectionData = new ConnectionData(new PeerProperties(), false);
 
     /**
      * Constructor for test purposes.
@@ -24,9 +29,10 @@ class OutgoingSocketThread extends SocketThreadBase {
      * @param listener        The listener.
      * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
      */
-    public OutgoingSocketThread(BluetoothSocket bluetoothSocket, Listener listener)
-            throws IOException {
+    public OutgoingSocketThread(BluetoothSocket bluetoothSocket, ConnectionData connectionData, Listener listener)
+        throws IOException {
         super(bluetoothSocket, listener);
+        this.connectionData = connectionData;
         mTag = OutgoingSocketThread.class.getName();
     }
 
@@ -41,7 +47,7 @@ class OutgoingSocketThread extends SocketThreadBase {
      */
     public OutgoingSocketThread(BluetoothSocket bluetoothSocket, Listener listener,
                                 InputStream inputStream, OutputStream outputStream)
-            throws IOException {
+        throws IOException {
         super(bluetoothSocket, listener, inputStream, outputStream);
         mTag = OutgoingSocketThread.class.getName();
     }
@@ -55,7 +61,7 @@ class OutgoingSocketThread extends SocketThreadBase {
      */
     @Override
     public void run() {
-        Log.d(mTag, "Entering thread (ID: " + getId() + ")");
+        Log.d(mTag, "Entering thread (ID: " + getId() + "). Connection data  = " + connectionData.toString());
         mIsClosing = false;
 
         try {
@@ -83,7 +89,7 @@ class OutgoingSocketThread extends SocketThreadBase {
                 mLocalhostSocket = mServerSocket.accept(); // Blocking call
 
                 Log.i(mTag, "Incoming data from address: " + getLocalHostAddressAsString()
-                        + ", port: " + mServerSocket.getLocalPort());
+                    + ", port: " + mServerSocket.getLocalPort());
 
                 tempInputStream = mLocalhostSocket.getInputStream();
                 tempOutputStream = mLocalhostSocket.getOutputStream();
@@ -100,7 +106,7 @@ class OutgoingSocketThread extends SocketThreadBase {
                 Log.d(mTag, "Setting local streams and starting stream copying threads...");
                 mLocalInputStream = tempInputStream;
                 mLocalOutputStream = tempOutputStream;
-                startStreamCopyingThreads();
+                startStreamCopyingThreads(connectionData);
             }
         }
 
@@ -114,7 +120,7 @@ class OutgoingSocketThread extends SocketThreadBase {
             mServerSocket = null;
         }
 
-        Log.d(mTag, "Exiting thread (ID: " + getId() + ")");
+        Log.d(mTag, "Exiting thread (ID: " + getId() + "). Connection data  = " + connectionData.toString());
     }
 
     /**
