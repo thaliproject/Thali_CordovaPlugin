@@ -13,7 +13,7 @@ if (typeof Mobile === 'undefined') {
 var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
@@ -73,7 +73,7 @@ ThaliMobile.getNetworkStatus()
           });
       }, Promise.resolve())
       .catch(function (error) {
-        logger.error(error);
+        logger.error(error.message + '\n' + error.stack);
       });
     });
   });
