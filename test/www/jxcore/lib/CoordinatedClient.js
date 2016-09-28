@@ -90,16 +90,16 @@ CoordinatedClient.states = {
 CoordinatedClient.prototype._bind = function () {
   this._io
   .on  ('connect',           this._connect.bind(this))
-  .on  ('connect_timeout',   this._error.bind(this, 'debug', 'connect_timeout', false))
-  .on  ('connect_error',     this._error.bind(this, 'error', 'connect_error', false))
+  .on  ('connect_timeout',   logger.debug.bind(logger, 'connect_timeout'))
+  .on  ('connect_error',     logger.error.bind(logger, 'connect_error'))
   .on  ('reconnect',         this._reconnect.bind(this))
-  .on  ('reconnect_error',   this._error.bind(this, 'error', 'reconnect_error', false))
-  .on  ('reconnect_failed',  this._error.bind(this, 'error', 'reconnect_failed', true))
+  .on  ('reconnect_error',   logger.error.bind(logger, 'reconnect_error'))
+  .on  ('reconnect_failed',  this._error.bind(this, 'reconnect_failed'))
   .once('schedule',          this._schedule.bind(this))
   .on  ('discard',           this._discard.bind(this))
   .on  ('disqualify',        this._disqualify.bind(this))
   .on  ('disconnect',        this._disconnect.bind(this))
-  .on  ('error',             this._error.bind(this, 'error', 'unexpected error', true))
+  .on  ('error',             this._error.bind(this, 'unexpected error'))
   .once('complete',          this._complete.bind(this));
 }
 
@@ -201,14 +201,12 @@ CoordinatedClient.prototype._disconnect = function () {
   }
 }
 
-CoordinatedClient.prototype._error = function (level, name, isFatal, error) {
-  logger[level](
+CoordinatedClient.prototype._error = function (name, error) {
+  logger.error(
     '\'%s\' failed, error: \'%s\', stack: \'%s\'',
     name, error.toString(), error.stack
   );
-  if (isFatal) {
-    this._failed(error);
-  }
+  this._failed(error);
 }
 
 CoordinatedClient.prototype._complete = function (data) {
