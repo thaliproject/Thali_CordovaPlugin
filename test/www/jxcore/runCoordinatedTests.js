@@ -1,5 +1,6 @@
 'use strict';
 
+var config       = require('./config.json')
 var spawn        = require('child_process').spawn;
 var randomString = require('randomstring');
 var objectAssign = require('object-assign');
@@ -113,16 +114,20 @@ var testServerConfiguration = {
   waiting_for_devices_timeout: 5 * 1000
 };
 
+var testEnv = objectAssign({}, process.env, config.env);
+var testServerOpts = objectAssign({}, { env: testEnv });
+
 var testServerInstance = spawn('jx', ['../../TestServer/index.js',
-  JSON.stringify(testServerConfiguration)]);
+  JSON.stringify(testServerConfiguration)], testServerOpts);
 setListeners(testServerInstance, 0);
 
-
-// We want to provide same random SSDP_NT for each test instance in group.
-var localEnv = objectAssign({}, process.env);
-localEnv.SSDP_NT = randomString.generate({
-  length: 'http://www.thaliproject.org/ssdp'.length
+var instanceEnv = objectAssign({}, testEnv, {
+  // We want to provide same random SSDP_NT for each test instance in group.
+  SSDP_NT: randomString.generate({
+    length: 'http://www.thaliproject.org/ssdp'.length
+  })
 });
+var instanceOpts = objectAssign({}, { env: instanceEnv });
 
 var testInstances = {};
 var spawnTestInstance = function (instanceId) {
@@ -130,7 +135,7 @@ var spawnTestInstance = function (instanceId) {
   if (argv.filter) {
     instanceArgs.push(argv.filter);
   }
-  var testInstance = spawn('jx', instanceArgs, { env: localEnv });
+  var testInstance = spawn('jx', instanceArgs, instanceOpts);
   setListeners(testInstance, instanceId);
   testInstances[instanceId] = testInstance;
 };
