@@ -1,7 +1,13 @@
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root
+//  for full license information.
+//
+
 'use strict';
-var exec = require('child_process').exec;
-var spawn = require('child_process').spawn;
+
+var exec = require('./utils/child_process').exec;
 var path = require('path');
+var spawn = require('child_process').spawn;
 var https = require('https');
 var unzip = require('unzip');
 var Promise = require('lie');
@@ -13,25 +19,6 @@ var FILE_NOT_FOUND = 'ENOENT';
 // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
 // project to this Cordova project.
 var MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT = 'localdev';
-
-// I tried child-process-promise but it failed without errors and I just don't
-// have time to fight with it right now.
-function childProcessExecPromise(command, currentWorkingDirectory) {
-  return new Promise(function (resolve, reject) {
-    exec(command, { cwd: currentWorkingDirectory },
-      function (error, stdout, stderr) {
-        if (error) {
-          reject(error);
-          return;
-        }
-        // Log output even if command doesn't exit with an error,
-        // because otherwise useful debugging information might get lost.
-        if (stdout) { console.log(stdout); }
-        if (stderr) { console.log(stderr); }
-        resolve();
-      });
-  });
-}
 
 // Unfortunately the obvious library, request-promise, doesn't handle streams
 // well so it would take the multi-megabyte ZIP response file and turn it into
@@ -90,9 +77,9 @@ function getEtagFromEtagFile(depotName, branchName, directoryToInstallIn) {
  * @returns {Promise}
  */
 function getReleaseConfig() {
-  var configFileName = path.join(__dirname, '../', 'package.json');
+  var configFileName = path.join(__dirname, '..', 'package.json');
 
-  return fs.readFileAsync(configFileName, "utf-8")
+  return fs.readFileAsync(configFileName, 'utf-8')
     .then(function (data) {
       var conf;
       try {
@@ -100,7 +87,7 @@ function getReleaseConfig() {
         if (conf && conf.thaliInstall) {
           return conf.thaliInstall;
         }
-        return Promise.reject("Configuration error!");
+        return Promise.reject('Configuration error!');
       }
       catch (err) {
         return Promise.reject(new Error(err));
@@ -228,15 +215,15 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     }
     console.log('Trying to remove previously installed Thali Cordova plugin');
     var pluginRemoveCommand = 'cordova plugin remove org.thaliproject.p2p';
-    return childProcessExecPromise(pluginRemoveCommand, appRootDirectory)
-    .catch(function (err) {
-      console.log('Ignoring a non-critical error: ' + err);
-      // Resolve the promise even if plugin removal fails, because it is
-      // possible that the user has removed the plugin outside of this install
-      // script, but there is still the left-over file that says this script has
-      // added the plugins.
-      return Promise.resolve();
-    });
+    return exec(pluginRemoveCommand, { cwd: appRootDirectory })
+      .catch(function (err) {
+        console.log('Ignoring a non-critical error: ' + err);
+        // Resolve the promise even if plugin removal fails, because it is
+        // possible that the user has removed the plugin outside of this install
+        // script, but there is still the left-over file that says this script has
+        // added the plugins.
+        return Promise.resolve();
+      });
   });
 }
 
@@ -257,7 +244,8 @@ function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory,
                                                     branchName) {
   var targetDirectory = createUnzippedDirectoryPath(depotName, branchName,
                                                     thaliDontCheckIn);
-  var sourceDirectory = path.join(appRootDirectory, '../Thali_CordovaPlugin');
+  var sourceDirectory = path.join(
+    appRootDirectory, '..', 'Thali_CordovaPlugin');
   return new Promise(function (resolve, reject) {
     fs.remove(targetDirectory, function (err) {
       if (err) {
@@ -322,10 +310,10 @@ module.exports = function (callback, appRootDirectory) {
   // Passing as argument can be leveraged in local development and testing
   // scenarios.
   appRootDirectory = appRootDirectory ||
-                     path.join(__dirname, '../../../../../');
+                     path.join(__dirname, '..', '..', '..', '..', '..');
   var thaliDontCheckIn = path.join(appRootDirectory, 'thaliDontCheckIn' );
   var appScriptsFolder =
-    path.join(appRootDirectory, 'plugins/org.thaliproject.p2p/scripts');
+    path.join(appRootDirectory, 'plugins', 'org.thaliproject.p2p', 'scripts');
 
   var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
 
@@ -337,7 +325,11 @@ module.exports = function (callback, appRootDirectory) {
       thaliBranchName = conf.thali.branchName;
       btconnectorlib2 = conf.btconnectorlib2;
 
-      return fetchAndInstallJxCoreCordovaPlugin(appRootDirectory, conf["jxcore-cordova"], conf["jxcore-cordova-url"]);
+      return fetchAndInstallJxCoreCordovaPlugin(
+        appRootDirectory,
+        conf['jxcore-cordova'],
+        conf['jxcore-cordova-url']
+      );
     })
     .then(function () {
       if (doesMagicDirectoryNamedExist(thaliDontCheckIn)) {
@@ -349,15 +341,18 @@ module.exports = function (callback, appRootDirectory) {
         return installGitHubZip(thaliProjectName, thaliDepotName,
                                 thaliBranchName, thaliDontCheckIn);
       }
-    }).then(function(thaliCordovaPluginUnZipResult){
+    })
+    .then(function (thaliCordovaPluginUnZipResult){
       // This step is used to prepare the gradle.properties file
       // containing the btconnectorlib2 version
-      var projectDir = createUnzippedDirectoryPath(thaliDepotName, thaliBranchName, thaliDontCheckIn);
-      var gradleFileName = path.join(projectDir, 'src', 'android', 'gradle.properties');
+      var projectDir = createUnzippedDirectoryPath(
+        thaliDepotName, thaliBranchName, thaliDontCheckIn);
+      var gradleFileName = path.join(
+        projectDir, 'src', 'android', 'gradle.properties');
 
       return fs.writeFileAsync(gradleFileName,
-        "btconnectorlib2Version=" + btconnectorlib2)
-        .then(function() {
+        'btconnectorlib2Version=' + btconnectorlib2)
+        .then(function () {
           return thaliCordovaPluginUnZipResult;
         });
     })
@@ -368,18 +363,28 @@ module.exports = function (callback, appRootDirectory) {
           .then(function () {
             console.log('Adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
-            return childProcessExecPromise('cordova plugins add ' +
+            return exec('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory,
-              appRootDirectory);
-          }).then(function () {
+              { cwd: appRootDirectory });
+          })
+          .then(function () {
             // The step below is required, because the Android after prepare
             // Cordova hook depends on external node modules that need to be
             // installed.
-            console.log('Running jx npm install in: ' + appScriptsFolder);
-            return childProcessExecPromise(
-              'jx npm install --no-optional --autoremove "*.gz"',
-               appScriptsFolder);
-          }).then(function () {
+            console.log('Running npm install in: ' + appScriptsFolder);
+
+            return exec('npm install --no-optional --production',
+               { cwd: appScriptsFolder });
+          })
+          .then(function () {
+            return exec('find . -name "*.gz" -delete',
+              { cwd: appScriptsFolder })
+              .catch(function () {
+                // this exec should break the pipe, so we ignore errors here
+                return Promise.resolve();
+              });
+          })
+          .then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
           });
       }
