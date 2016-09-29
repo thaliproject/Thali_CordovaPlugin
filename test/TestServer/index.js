@@ -1,76 +1,64 @@
 'use strict';
-/*
-Main entry point for Thali test frameworks coordinator server
- */
-var app = require('express')();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
 
-var IpAddressToFile = require('./IpAddressToFile');
-var TestDevice = require('./TestDevice');
-var PerfTestFramework = require('./PerfTestFramework');
+// Main entry point for Thali test frameworks coordinator server
+// jx index.js "{ 'devices': { 'android': 3, 'ios': 2 } }"
+
+var util   = require('util');
+var format = util.format;
+
+require('./utils/process');
+var logger = require('./utils/ThaliLogger')('TestServer');
+
+var HttpServer        = require('./HttpServer');
+var TestDevice        = require('./TestDevice');
 var UnitTestFramework = require('./UnitTestFramework');
 
-IpAddressToFile().then(function() {
-  /* // we might need to add this later
-   process.argv.forEach(function (val, index, array) {
-   console.log("arguments : " + index + ': ' + val);
-   });
-   */
-  app.get('/', function(req, res){
-    console.log("HTTP get called");
-    res.sendFile('index.html');
-  });
 
-  var perfTests = new PerfTestFramework();
-  var unitTests = new UnitTestFramework();
+var WAITING_FOR_DEVICES_TIMEOUT = 5 * 60 * 1000;
 
-
-  io.on('connection', function(socket) {
-    console.log("got connection");
-
-    socket.on('start_performance_testing', function(msg){
-      var newDevice = new TestDevice(this,msg);
-      perfTests.addDevice(newDevice);
-
-      this.on('disconnect', function () {
-        perfTests.removeDevice(newDevice.getName());
-      });
-
-      this.on('test data', function (data) {
-        perfTests.ClientDataReceived(newDevice.getName(),data)
-      });
-    });
-
-    socket.on('start_unit_testing', function(msg){
-      var devName = JSON.parse(msg).name;
-      var unitTestDevice = new TestDevice(this,devName);
-
-      this.on('setup_unit_test', function (msg) {
-        var msgData = JSON.parse(msg);
-        if(msgData.name == unitTestDevice.getName()) {
-          unitTests.addDevice(unitTestDevice, msgData.test);
-        }
-      });
-
-      this.on('disconnect', function () {
-        unitTests.removeDevice(unitTestDevice);
-      });
-
-      this.on('unit_test_done', function (msg) {
-        var msgData = JSON.parse(msg);
-        if(msgData.name == unitTestDevice.getName()) {
-          unitTests.ClientStopEventReceived(msgData.name, msgData.test)
-        }
-      });
-    });
-  });
-
-
-  http.listen(3000, function(){
-    console.log('listening on *:3000');
-  });
-}).catch(function(err) {
-  throw new Error("We failed due to" + JSON.stringify(err));
+var httpServer = new HttpServer({
+  port: 3000,
+  transports: ['websocket']
 });
 
+var options = process.argv[2];
+if (options) {
+  options = JSON.parse(options);
+}
+var unitTestManager = new UnitTestFramework(options);
+
+httpServer
+.on('present', function (device) {
+  switch (device.type) {
+    case 'unittest': {
+      unitTestManager.addDevice(device);
+      break;
+    }
+    default: {
+      throw new Error(
+        format('unrecognised device type: \'%s\'', device.type)
+      );
+    }
+  }
+});
+
+var timer = setTimeout(function () {
+  throw new Error('timeout exceed');
+}, WAITING_FOR_DEVICES_TIMEOUT);
+
+unitTestManager
+.once('started', function (results) {
+  clearTimeout(timer);
+})
+.once('completed', function (results) {
+  logger.debug('completed');
+
+  var isSuccess = results.every(function (result) {
+    return result;
+  });
+  if (isSuccess) {
+    process.exit(0);
+  } else {
+    process.exit(1);
+  }
+});

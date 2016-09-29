@@ -1,154 +1,236 @@
-/**
- * Unit test framework used with thali-tape.
- * is basically making sure that all devices wait others on setup and tear down before proceeding
- */
-
 'use strict';
 
-var events = require('events');
-var TestDevice = require('./TestDevice');
-var configFile = require('./Config_UnitTest.json');
+var util     = require('util');
+var inherits = util.inherits;
 
-function UnitTestFramework() {
-    this.testDevices = {};
-    this.testsToRunArray = [];
+var assert       = require('assert');
+var objectAssign = require('object-assign');
 
-    console.log('Start test : ' + configFile.name + ", start tests with " + configFile.startDeviceCount + " devices.");
-}
-// to do, we would need timeout for each test, so we can cancel is somebody is hanging
+var asserts = require('./utils/asserts.js');
+var Promise = require('./utils/Promise');
+var logger  = require('./utils/ThaliLogger')('UnitTestFramework');
 
-UnitTestFramework.prototype = new events.EventEmitter;
+var TestDevice    = require('./TestDevice');
+var TestFramework = require('./TestFramework');
+var defaultConfig = require('./config/UnitTest');
 
-UnitTestFramework.prototype.addDevice = function(device,test) {
 
-    var devName = device.getName();
-    var tstName = test;
+function UnitTestFramework(config) {
+  var self = this;
 
-    console.log(devName + ' added test : ' + tstName);
+  this.config = objectAssign({}, defaultConfig, config);
 
-    if(!this.testDevices[devName]){
-        this.testDevices[devName] = {};
-    }
-
-    this.testDevices[devName][tstName] = device;
-
-    var count = [];
-    for (var deviceName in this.testDevices) {
-        if (this.testDevices[deviceName] != null) {
-            for (var testName in this.testDevices[deviceName]) {
-                //see that is the test which just got added
-                if ((tstName == testName) && this.testDevices[deviceName][testName] != null) {
-                    count++;
-                }
-            }
-        }
-    }
-
-    if (count == configFile.startDeviceCount) {
-        var testDevicesReadyArray = [];
-        for (var deviceName in this.testDevices) {
-            if (this.testDevices[deviceName] != null) {
-                for (var testName in this.testDevices[deviceName]) {
-                    //see that is the test which just got added
-                    if ((tstName == testName) && this.testDevices[deviceName][testName] != null) {
-                        var testDevicesReady = {};
-                        testDevicesReady.testName   = tstName;
-                        testDevicesReady.testDevice = this.testDevices[deviceName][testName];
-                        testDevicesReadyArray.push(testDevicesReady);
-                        this.testDevices[deviceName][testName] = null;
-                    }
-                }
-            }
-        }
-
-        if(!this.testingCurrently){
-            //no tests running so we can start with this now
-            this.startTheTestNow({"testname":tstName ,"devices" : testDevicesReadyArray});
-        }else {
-            //we add it to array to wait untill we have finished the currently running test
-            this.testsToRunArray.push({"testname":tstName ,"devices" : testDevicesReadyArray});
-        }
-    }
+  UnitTestFramework.super_.call(this, this.config);
 }
 
-UnitTestFramework.prototype.removeDevice = function(device){
+inherits(UnitTestFramework, TestFramework);
 
-    var devName = device.getName();
+UnitTestFramework.prototype.startTests = function (platformName) {
+  var self = this;
 
-    if(this.testDevices[devName]){
-        console.log(devName + ' is now disconnected!');
-        for(var test in this.testDevices[devName]){
-            if(this.testDevices[devName][test] && !this.testDevices[devName][test].done){
-                this.ClientStopEventReceived(devName,test);
-            }
-        }
-    }
+  UnitTestFramework.super_.prototype.startTests.apply(this, arguments);
+
+  var platform = this.platforms[platformName];
+  var devices = platform.devices;
+  var tests   = devices[0].tests;
+
+  logger.debug(
+    'starting unit tests on %d devices, platformName: \'%s\'',
+    devices.length, platformName
+  );
+
+  logger.debug('scheduling tests');
+
+  Promise.all(
+    devices.map(function (device) {
+      return device.scheduleTests(tests);
+    })
+  )
+  .then(function () {
+    logger.debug('tests scheduled');
+
+    self.bindSync(devices);
+
+    var skippedTests = [];
+    return tests.reduce(function (promise, test) {
+      return promise.then(function () {
+        return self.runTest(devices, test)
+        .catch(function (error) {
+          if (error.message === 'skipped') {
+            skippedTests.push(test);
+            return;
+          }
+          return Promise.reject(error);
+        });
+      });
+    }, Promise.resolve())
+    .then(function () {
+      return skippedTests;
+    });
+  })
+  .then(function (skippedTests) {
+    platform.state = TestFramework.platformStates.succeeded;
+    logger.debug(
+      'all unit tests succeeded, platformName: \'%s\'',
+      platformName
+    );
+    logger.debug(
+      'skipped tests: \'%s\'', JSON.stringify(skippedTests)
+    );
+  })
+  .catch(function (error) {
+    platform.state = TestFramework.platformStates.failed;
+    logger.error(
+      'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
+      platformName, error.toString(), error.stack
+    );
+  })
+  .finally(function () {
+    self.unbindSync(devices);
+
+    return Promise.all(
+      devices.map(function (device) {
+        return device.complete();
+      })
+    );
+  })
+  .finally(function () {
+    self.resolveCompleted();
+  });
 }
 
-UnitTestFramework.prototype.ClientStopEventReceived = function(devName,tstName) {
+UnitTestFramework.prototype.runTest = function (devices, test) {
+  var self = this;
 
-    console.log('~ ' + devName + ' test ' + tstName + ' done!');
+  // Some device skipped our test.
+  var skipped = false;
 
-    if(!this.testingCurrently || this.testingCurrently == null){
-        console.log("this.testingCurrently is null");
-        return;
-    }
+  logger.debug('#setup: \'%s\'', test);
 
-    if(!this.testingCurrently.devices || this.testingCurrently.devices == null){
-        console.log("this.testingCurrently.devices is null");
-        return;
-    }
-
-    for (var i = 0; i < this.testingCurrently.devices.length; i++) {
-        if (this.testingCurrently.devices[i] && this.testingCurrently.devices[i].testDevice) {
-            if (this.testingCurrently.devices[i].testDevice.getName() == devName) {
-                //we can now mark this as done
-                this.testingCurrently.devices[i].done = true;
-            }
+  return Promise.all(
+    devices.map(function (device) {
+      return device.setupTest(test)
+      .then(function (data) {
+        return {
+          uuid: device.uuid,
+          data: data
         }
-    }
+      });
+    })
+  )
+  .then(function (devicesData) {
+    logger.debug('#setup ok: \'%s\'', test);
+    logger.debug('#run: \'%s\'', test);
 
-    for (var i = 0; i < this.testingCurrently.devices.length; i++) {
-        if (this.testingCurrently.devices[i] && this.testingCurrently.devices[i].testDevice) {
-            if (!this.testingCurrently.devices[i].done) {
-                //not all done yet
-                return;
-            }
-        }
-    }
+    return Promise.all(
+      devices.map(function (device) {
+        return device.runTest(test, devicesData, true)
+        .catch(function (error) {
+          if (error.message === 'skipped') {
+            skipped = true;
+            return;
+          }
+          return Promise.reject(error);
+        });
+      })
+    );
+  })
+  .then(function () {
+    logger.debug('#run ok: \'%s\'', test);
+    logger.debug('#teardown: \'%s\'', test);
 
-    //if we get here, the test tstName is now done by all devices
-    this.stopTheTestNow();
+    return Promise.all(
+      devices.map(function (device) {
+        return device.teardownTest(test);
+      })
+    );
+  })
+  .then(function () {
+    logger.debug('#teardown ok: \'%s\'', test);
+  })
+  .catch(function (error) {
+    logger.error(
+      '#run failed: \'%s\', error: \'%s\', stack: \'%s\'',
+      test, error.toString(), error.stack
+    );
+    return Promise.reject(error);
+  })
+  .then(function () {
+    if (skipped) {
+      return Promise.reject(
+        new Error('skipped')
+      );
+    }
+  });
 }
 
-UnitTestFramework.prototype.startTheTestNow  = function(testDeviceObject) {
-    this.testingCurrently = testDeviceObject;
-    console.log('+++++++ starting the test : ' + this.testingCurrently.testname);
-    for (var i = 0; i < this.testingCurrently.devices.length; i++) {
-        if (this.testingCurrently.devices[i] && this.testingCurrently.devices[i].testDevice) {
-            this.testingCurrently.devices[i].testDevice.SendStartUnitTest("");
-        }
+UnitTestFramework.prototype._sync = function (deviceData, content) {
+  logger.debug('#sync');
+
+  var isContentTheSame = this._syncDevicesData.every(function (data) {
+    if (data.content) {
+      return data.content === content;
+    } else {
+      return true;
     }
+  });
+  assert(
+    isContentTheSame,
+    '\'content\' should be the same between all devices'
+  );
+
+  assert(
+    !deviceData.content,
+    '\'content\' should be unique'
+  );
+  deviceData.content = content;
+
+  var isFinished = this._syncDevicesData.every(function (data) {
+    return data.content;
+  });
+  if (isFinished) {
+    logger.debug('#sync ok');
+
+    var promises = this._syncDevicesData.map(function (data) {
+      delete data.content;
+      return data.device.syncFinished(content);
+    });
+    Promise.all(promises)
+    .catch(function (error) {
+      logger.error(
+        '#sync failed: error: \'%s\', stack: \'%s\'',
+        error.toString(), error.stack
+      );
+      return Promise.reject(error);
+    })
+  }
 }
 
-UnitTestFramework.prototype.stopTheTestNow  = function(){
-    console.log('------- stopping the test : ' + this.testingCurrently.testname);
-    for (var i = 0; i < this.testingCurrently.devices.length; i++) {
-        if (this.testingCurrently.devices[i] && this.testingCurrently.devices[i].testDevice) {
+UnitTestFramework.prototype.bindSync = function (devices) {
+  var self = this;
+  this._syncDevicesData = devices.map(function (device) {
+    return { device: device };
+  });
+  this._syncDevicesData.forEach(function (data) {
+    data.handler = self._sync.bind(self, data);
+    data.device.on('sync', data.handler);
+  });
+}
 
-            this.testingCurrently.devices[i].testDevice.SendEndUnitTest("");
-        }
-    }
-    this.testingCurrently = null;
+UnitTestFramework.prototype.unbindSync = function (devices) {
+  var self = this;
 
-    //do next test
-    if(this.testsToRunArray && this.testsToRunArray.length >= 1){
-        this.testingCurrently = this.testsToRunArray[0];
-        this.testsToRunArray.shift();
-        this.startTheTestNow(this.testingCurrently);
-    }else{
-        this.testingCurrently = null;
-    }
+  var syncDevices = this._syncDevicesData.map(function (data) {
+    return data.device;
+  });
+  asserts.arrayEquals(devices, syncDevices);
+
+  this._syncDevicesData.forEach(function (data) {
+    asserts.exists(data.device);
+    asserts.exists(data.handler);
+    data.device.removeListener('sync', data.handler);
+  });
+  delete this._syncDevicesData;
 }
 
 module.exports = UnitTestFramework;

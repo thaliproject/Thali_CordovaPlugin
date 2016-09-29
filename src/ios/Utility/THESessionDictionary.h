@@ -27,8 +27,8 @@
 
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
-#import "THEMultipeerPeerSession.h"
 #import "THEProtectedMutableDictionary.h"
+#import "THEMultipeerPeerSession.h"
 
 // Specialisation of the the protected mutable dict class for conveniently working with 
 // peer sessions
@@ -37,7 +37,7 @@
 -(void)updateForPeerID:(MCPeerID *)peerID 
            updateBlock:(THEMultipeerPeerSession *(^)(THEMultipeerPeerSession *))updateBlock;
 
--(void)updateForPeerIdentifier:(NSString *)peerIdentifier
+-(void)updateForPeerUUID:(NSString *)peerUUID
                    updateBlock:(THEMultipeerPeerSession *(^)(THEMultipeerPeerSession *))updateBlock;
 
 @end

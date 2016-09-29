@@ -27,6 +27,8 @@
 
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
+#import "THEMultipeerSocketRelay.h"
+
 typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
   THEPeerSessionStateNotConnected  = 0,
   THEPeerSessionStateConnecting    = 1,
@@ -39,24 +41,37 @@ typedef NS_ENUM(NSUInteger, THEPeerSessionState) {
 // The underlying connection transport may be any available e.g. Bluetooth, WiFi etc.
 @interface THEMultipeerPeerSession : NSObject <MCSessionDelegate>
 
-@property (nonatomic) BOOL visible;
-@property (readonly, nonatomic) THEPeerSessionState connectionState;
-
 - (instancetype)initWithLocalPeerID:(MCPeerID *)localPeerID 
                    withRemotePeerID:(MCPeerID *)remotePeerID
            withRemotePeerIdentifier:(NSString *)peerIdentifier
                     withSessionType:(NSString *)sessionType;
 
 - (MCPeerID *)remotePeerID;
+- (NSString *)remotePeerUUID;
 - (NSString *)remotePeerIdentifier;
+- (THEPeerSessionState)connectionState;
+
+- (void)updateRemotePeerIdentifier:(NSString *)remotePeerIdentifier;
 
 - (MCSession *)session;
 
 - (void)connect;
+- (void)reverseConnect;
+
 - (void)disconnect;
 
 // Kill for testing only !!
 - (void)kill;
+
+// Called when the p2p link fails
+- (void)onLinkFailure;
+
+// Accessor for the relay
+- (const THEMultipeerSocketRelay *)relay;
+
++ (NSString *)peerUUIDFromPeerIdentifier:(NSString *)peerIdentifier;
+
+- (void)changeState:(THEPeerSessionState)newState;
 
 @end
 

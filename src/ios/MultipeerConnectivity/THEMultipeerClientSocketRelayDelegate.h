@@ -22,20 +22,19 @@
 //  THE SOFTWARE.
 //
 //  Thali CordovaPlugin
-//  THEMultipeerClientSocketRelayDelegate.m
+//  THEMultipeerClientSocketRelayDelegate.h
 //
 
 // Protocol implemented by classes wishing to know about socket related events
 @protocol THEMultipeerClientSocketRelayDelegate <NSObject>
 
 // Called when the client relay succesfully established it's listening port
-- (void)didListenWithLocalPort:(uint)port withPeerIdentifier:(NSString*)peerIdentifier;
+- (void)didListenWithLocalPort:(uint)port;
 
 // Called when the client relay fails to listen
-- (void)didNotListenWithErrorMessage:(NSString *)errorMsg 
-                  withPeerIdentifier:(NSString*)peerIdentifier;
+- (void)didNotListenWithErrorMessage:(NSString *)errorMsg;
 
-// Called when the socket is disconnected (usually by the app)
-- (void)didDisconnectFromPeer:(NSString *)peerIdentifier;
+// Called when the client is closed
+- (void)didDisconnectFromPeer;
 
 @end

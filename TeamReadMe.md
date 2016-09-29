@@ -9,7 +9,7 @@ We are trying to version, as one, what are actually two different systems. One s
 the Cordova plugin.
 
 We have made the decision to drive the management process from NPM in the JXCore folder. This means that to install Thali
-both into JXCore and into Cordova one must go to www/jxcore in the app project and do a `jx install`. This will install Thali's
+both into JXCore and into Cordova one must go to www/jxcore in the app project and do a `jx npm install`. This will install Thali's
 Javascript files from NPM but it will also run a post install script that will then install Thali's Cordova plugin.
 
 Normally to update a NPM one issues `jx npm install` or `jx npm update` and that will update the Javascript files.
@@ -28,34 +28,60 @@ For all of this to work we have to have files in at least four different places:
 * __BinTray__ - We have our own bintray available [here](https://bintray.com/thali/Thali) where we publish the btconnectorlib2 JAR for Android
 
 ## Managing a new release
+
+The release preparations start from updating the dependency in the thali NPM package. This is needed
+so that the NPM package installations picks up the matching version of the Thali Cordova plugin.
+
+The `thaliInstall` property of the `thali/package.json` defines repository-related properties and binaries
+that contain versions used during the installation.
+
+The repository-related properties are located under the `thali` property:
+- projectName - usually `thaliproject`
+- depotName - usually `Thali_CordovaPlugin`
+- branchName - this value must be matching to the release you are about to make, for example, `npmv2.0.4`
+
+The binary dependencies are defined in the `thaliInstall` property:
+- btconnectorlib2 - used to get the right `btconnectorlib2` version
+- jxcore-cordova - used to fetch and install the proper version of the JXCore's Cordova plugin
+
+There are different levels that the version can be bumped to.
+Please read the [version](https://docs.npmjs.com/cli/version) docs to understand the choices and make sure
+you read up on [semver](http://semver.org/).
+
+The right version must also be updated to `thali/package.json`, for example, `2.0.4`.
+
+After the versions are updated, the release should be tagged in git. This can be done with something like
+`git tag npmv2.0.4`.
+
+Then, the changes done should be pushed to git and in addition, the new tag needs to be pushed as well with
+`git push --tags`.
+
+Next step is to create a release in GitHub:
+1. Go to the releases tab on the front page of the project on GitHub
+2. Hit 'Draft a new release'
+3. In 'Tag version' enter the right tag, for a NPM release this will be the NPM tag that was generated above and should already be in the tag list on GitHub. For example, `npmv2.0.4`. If you got the tag right, then GitHub will say 'Existing Tag'.
+4. Enter a release title, typically this is something like "Story X - Y"
+5. Enter a description that briefly specifies what functionality or bug fixes were added
+6. For now make sure to check "This is a pre-release"
+7. Hit publish release!
+
+Now there is the right version of the Cordova plugin in the location from which the NPM package installation
+can pick it up.
+
 ### Updating NPM
-In preparation for a new release we have to publish a new version to NPM. Strictly speaking this is only necessary 
-if we changed any of the .js files but realistically all of our stories require that so just assume it. 
 
 1. Navigate to the thali sub-directory
 2. Run `git status` and make sure it is clean
-3. Run `npm version patch -m "Upgrade to %s because of..."`
-  1. Note the word 'patch'. There are different levels that the version can be bumped to. Please read the [version](https://docs.npmjs.com/cli/version) docs to understand the choices and make sure you read up on [semver](http://semver.org/). This command will bump the version in the package.json and create a GIT update tagged with that version.
-  2. On my Mac the npm version command does not work properly. It will upgrade the package.json but that is it. It won't do the GIT commit or the GIT tag. So once I run npm version I still have to do the commit and tagging myself. I first issued `git tag -a npmv1.0.21 -m "Thali NPM Version 1.0.21"` and then I issued `git push --tags`
-4. Run `npm publish`
+3. Run `npm publish`
 
-Also keep in mind that thali/install/install.js has a variable called 'thaliBranchName" that points to the branch 
-where we will download the cordova code from. Right now that branch points at story_0 but soon enough we will 
-change it to point at master. For most folks it's o.k. to leave this because when we dev on a local branch we tend
-to get our files locally, not from NPM. But it's good to be aware of this variable's existence.
+If you want to verify the release package before publishing it, you can use `npm pack` to create a tgz file.
+Then, you can point `jx npm install` into this tgz to install the package locally and make sure the installation
+works properly and the matching version of the Thali Cordova plugin got installed.
 
 ### The rest of the process
 1. Write up a blog article for Thali's blog (this will be auto-reposted to Twitter)
 2. Go to [stories](https://github.com/thaliproject/thali/blob/gh-pages/stories.md) and mark the story as completed. This requires both marking it completed in the table of contents and then use `~~` wrappers to strike out the entry in the body.
-3. Go to GitHub and create a release
- 1. Go to the releases tab on the front page of the project on GitHub
- 2. Hit 'Draft a new release'
- 3. In 'Tag version' enter the right tag, for a NPM release this will be the NPM tag that was generated above and should already be in the tag list on GitHub. For example, 'npmv1.0.22'. If you got the tag right then GitHub will say 'Existing Tag'.
- 4. Enter a release title, typically this is something like "Story X - Y"
- 5. Enter a description that briefly specifies what functionality or bug fixes were added
- 6. For now make sure to check "This is a pre-release"
- 7. Hit publish release!
-4. Go to internal metrics spreadsheet and add the release to both the shared code and blog tabs.
+3. Go to internal metrics spreadsheet and add the release to both the shared code and blog tabs.
 
 ## Want to develop locally?
 
@@ -122,3 +148,41 @@ Once built the library should be visible in:
 
 ## Developing node specific code and tests for the Thali Cordova Plugin
 Please see the Thali_CordovaPlugin/test/README.md
+
+## Debugging CI failures locally
+
+If you get a build or test error in CI that you didn't get locally, here
+are suggested steps that might help reproducing the issue:
+
+* To make sure you are testing the same code CI does, you need to first
+checkout the source branch of your PR and then merge the target branch onto it.
+  * If there is a merge conflict, that you need to resolve first and push the
+  resolution onto your source branch, because CI can't handle the conflict
+  by itself.
+* To make sure you don't have excessive or wrong dependency packages, the easiest
+way is to nuke all `node_modules` folders from your local source tree.
+  * If you are sure you have no uncommitted changes, you can do:
+  `git clean -fxd`.
+* To install dependencies and run tests the same way CI does, you should run
+`./build.sh` from the root of the repository.
+  * The script removes the folder `../ThaliTest` (relative to your clones souces)
+  so before running it, make sure you don't have any precious changes there.
+
+## Debugging AppVeyor failures
+
+If you get a failure in AppVeyor that you can't reproduce locally, you can RDP
+into the build server to debug the issue there.
+
+Instructions can be found from https://www.appveyor.com/docs/how-to/rdp-to-build-worker,
+but the most convenient way is to add this to the end of `appveyor.yml`:
+
+```
+on_finish:
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+```
+
+Above will make AppVeyor print RDP connection details to the build output log
+and wait for someone to connect. Using the credentials from the build output,
+RDP into the machine and do debugging. When ready, you can remove the AppVeyor
+"lock file" that you can find from the desktop if you want AppVeyor to proceed
+with the build.
