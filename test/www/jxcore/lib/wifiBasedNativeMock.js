@@ -6,6 +6,7 @@ var uuid = require('node-uuid');
 var express = require('express');
 var assert = require('assert');
 var net = require('net');
+var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var logger = require('./testLogger')('wifiBasedNativeMock');
@@ -22,19 +23,6 @@ var peerProxySockets = {};
 
 var peerAvailabilityChangedCallback = null;
 var peerAvailabilities = {};
-
-/**
- * Enum to describe the platforms we can simulate, this mostly controls how we
- * handle connect
- *
- * @public
- * @readonly
- * @enum {string}
- */
-var platformChoice = {
-  ANDROID: 'Android',
-  IOS: 'iOS'
-};
 
 var currentNetworkStatus = {
   wifi: 'on',
@@ -999,11 +987,12 @@ function fireDiscoveryAdvertisingStateUpdateNonTCP() {
  */
 // jscs:enable maximumLineLength
 function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
-  return function (peerIdentifier) {
+  return function (peerIdentifier, generation) {
     thaliWifiInfrastructure.emit('wifiPeerAvailabilityChanged',
       {
         peerIdentifier: peerIdentifier,
         hostAddress: '127.0.0.1',
+        generation: generation,
         portNumber: thaliWifiInfrastructure.advertisedPortOverride
       });
   };
@@ -1017,19 +1006,22 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
  *
  * @public
  * @constructor
- * @param {platformChoice} platform
+ * @param {platformChoice} platformName
  * @param {Object} router This is the express router being used up in the
  * stack. We need it here so we can add a router to simulate the iOS case where
  * we need to let the other peer know we want a connection.
  */
 // jscs:enable jsDoc
-function WifiBasedNativeMock(platform, router) {
-  if (!platform) {
-    platform = platformChoice.ANDROID;
+function WifiBasedNativeMock(platformName, router) {
+  if (!platformName) {
+    platformName = platform.names.ANDROID;
   }
   if (!router) {
     router = express.Router();
   }
+  // Issue #902
+  platform._override(platformName);
+
   var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
   // In the native side, there is no equivalent for the start call,
   // but it needs to be done once somewhere before calling other functions.
@@ -1039,28 +1031,28 @@ function WifiBasedNativeMock(platform, router) {
   setupListeners(thaliWifiInfrastructure);
 
   var mobileHandler = function (mobileMethodName) {
-    return new MobileCallInstance(mobileMethodName, platform, router,
+    return new MobileCallInstance(mobileMethodName, platformName, router,
                                   thaliWifiInfrastructure);
   };
 
   mobileHandler.toggleBluetooth =
-    toggleBluetooth(platform, thaliWifiInfrastructure);
+    toggleBluetooth(platformName, thaliWifiInfrastructure);
 
   mobileHandler.toggleWiFi =
-    toggleWiFi(platform, thaliWifiInfrastructure);
+    toggleWiFi(platformName, thaliWifiInfrastructure);
 
   mobileHandler.firePeerAvailabilityChanged =
-    firePeerAvailabilityChanged(platform, thaliWifiInfrastructure);
+    firePeerAvailabilityChanged(platformName, thaliWifiInfrastructure);
 
   mobileHandler.fireIncomingConnectionToPortNumberFailed =
-    fireIncomingConnectionToPortNumberFailed(platform, thaliWifiInfrastructure);
+    fireIncomingConnectionToPortNumberFailed(platformName, thaliWifiInfrastructure);
 
   mobileHandler.fireDiscoveryAdvertisingStateUpdateNonTCP =
-    fireDiscoveryAdvertisingStateUpdateNonTCP(platform,
+    fireDiscoveryAdvertisingStateUpdateNonTCP(platformName,
                                               thaliWifiInfrastructure);
 
   mobileHandler.wifiPeerAvailabilityChanged =
-    wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure);
+    wifiPeerAvailabilityChanged(platformName, thaliWifiInfrastructure);
 
   return mobileHandler;
 }

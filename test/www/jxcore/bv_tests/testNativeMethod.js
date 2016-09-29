@@ -1,6 +1,8 @@
 'use strict';
 
-if (process.platform === 'android' || process.platform === 'ios') {
+var platform = require('thali/NextGeneration/utils/platform');
+
+if (platform._isRealMobile) {
 
     var tape = require('../lib/thaliTape');
     var thaliMobileNativeWrapper = require('../node_modules/thali/NextGeneration/thaliMobileNativeWrapper');

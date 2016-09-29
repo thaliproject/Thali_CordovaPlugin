@@ -917,6 +917,7 @@ var getExtendedPeer = function (peer, connectionType) {
   assert(timeout !== null, 'timeout value must have been set');
   return {
     peerIdentifier: peer.peerIdentifier,
+    generation: peer.generation,
     hostAddress: peer.hostAddress,
     portNumber: peer.portNumber,
     connectionType: connectionType,

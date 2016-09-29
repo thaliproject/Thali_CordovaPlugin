@@ -12,11 +12,12 @@ if (typeof Mobile === 'undefined') {
 
 var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
+var platform = require('thali/NextGeneration/utils/platform');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
 var utResult = false;
 
-if (process.platform === 'android' || process.platform === 'ios') {
+if (platform._isRealMobile) {
   logger.debug('Running unit tests');
   Mobile('executeNativeTests').callNative(function (result) {
     utResult = true;
@@ -73,7 +74,7 @@ ThaliMobile.getNetworkStatus()
           });
       }, Promise.resolve())
       .catch(function (error) {
-        logger.error(error);
+        logger.error(error.message + '\n' + error.stack);
       });
     });
   });

@@ -26,7 +26,8 @@ var inherits = require('inherits');
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
-var isMobile = platform.isMobile;
+var isRealAndroid = platform._isRealAndroid;
+var isRealMobile = platform._isRealMobile;
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
@@ -100,7 +101,7 @@ module.exports.getName = function () {
   return myName;
 };
 
-if (isMobile) {
+if (isRealMobile) {
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
     // If the name is already set, pass it to the callback
@@ -120,7 +121,7 @@ if (isMobile) {
  */
 var tmpObject = null;
 module.exports.tmpDirectory = function () {
-  if (isMobile) {
+  if (isRealMobile) {
     return os.tmpdir();
   }
 
@@ -141,7 +142,7 @@ module.exports.tmpDirectory = function () {
  */
 module.exports.hasRequiredHardware = function () {
   return new Promise(function (resolve) {
-    if (platform.isAndroid) {
+    if (isRealAndroid) {
       var checkBleMultipleAdvertisementSupport = function () {
         Mobile('isBleMultipleAdvertisementSupported').callNative(
           function (error, result) {
@@ -209,7 +210,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!isMobile) {
+    if (!isRealMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {
