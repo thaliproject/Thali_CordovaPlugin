@@ -51,7 +51,6 @@ var logInstanceOutput = function (data, instanceId) {
       instanceId - 1 : colors.length-1;
 
     jxcore.utils.console.log(data + '', colors[color]);
-
   }
 };
 
@@ -101,7 +100,7 @@ var testServerConfiguration = {
   }
 };
 
-var testServerInstance = spawn('jx', ['../../TestServer/index.js',
+var testServerInstance = spawn('node', ['../../TestServer/index.js',
   JSON.stringify(testServerConfiguration)]);
 setListeners(testServerInstance, 0);
 
