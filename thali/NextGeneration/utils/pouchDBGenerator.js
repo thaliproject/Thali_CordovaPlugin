@@ -105,7 +105,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     });
   }
 
-  // This is a woraround for #970.
+  // This is a workaround for #970.
   // 'Changes' has an 'EventEmitter' too, but it isn't exported.
   // We have to overwrite 'EventEmitter' methods here.
   PouchAlt.prototype.changes = function () {
