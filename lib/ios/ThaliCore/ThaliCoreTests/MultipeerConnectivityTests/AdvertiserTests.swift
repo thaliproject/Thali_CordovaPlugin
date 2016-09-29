@@ -24,7 +24,7 @@ class AdvertiserTests: XCTestCase {
                                             _ in
                                          },
                                          disconnectHandler: unexpectedDisconnectHandler,
-                                         mcInvitationHandler: {
+                                         mcSessionInvitationHandler: {
                                             _ in
                                          })
         // Then
@@ -52,7 +52,7 @@ class AdvertiserTests: XCTestCase {
         let _ = startAdvertiser(with: randomlyGeneratedPeerID,
                                 receivedInvitationHandler: receivedInvitationHandler,
                                 disconnectHandler: unexpectedDisconnectHandler,
-                                mcInvitationHandler: { _ in })
+                                mcSessionInvitationHandler: { _ in })
 
         // Then
         let receivedInvitationTimeout = 1.0
@@ -78,14 +78,14 @@ class AdvertiserTests: XCTestCase {
 
                                     // Fake invocation of delegate method
                                     session.session(mcSession,
-                                        peer: randomlyGeneratedPeerID,
-                                        didChangeState: .NotConnected)
+                                                    peer: randomlyGeneratedPeerID,
+                                                    didChangeState: .NotConnected)
                                 },
                                 disconnectHandler: {
                                     [weak disconnectCalledExpectation] in
                                     disconnectCalledExpectation?.fulfill()
                                 },
-                                mcInvitationHandler: {
+                                mcSessionInvitationHandler: {
                                     result, session in
                                     mcSession = session
                                 })
@@ -128,7 +128,8 @@ class AdvertiserTests: XCTestCase {
     private func startAdvertiser(with peerID: MCPeerID,
                                       receivedInvitationHandler: (Session) -> Void,
                                       disconnectHandler: () -> Void,
-                                      mcInvitationHandler: (Bool, MCSession) -> Void) -> Advertiser {
+                                      mcSessionInvitationHandler: (Bool, MCSession) -> Void)
+                                      -> Advertiser {
 
         let randomlyGeneratedServiceType = String.random(length: 7)
 
@@ -146,7 +147,7 @@ class AdvertiserTests: XCTestCase {
         advertiser.advertiser(mcAdvertiser,
                               didReceiveInvitationFromPeer: peerID,
                               withContext: nil,
-                              invitationHandler: mcInvitationHandler)
+                              invitationHandler: mcSessionInvitationHandler)
         advertiser.startAdvertising(unexpectedErrorHandler)
         return advertiser
     }
