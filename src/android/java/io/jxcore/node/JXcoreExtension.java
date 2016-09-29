@@ -20,6 +20,9 @@ import org.thaliproject.p2p.btconnectorlib.utils.CommonUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 
 import io.jxcore.node.jxcore.JXcoreCallback;
 
@@ -73,10 +76,27 @@ public class JXcoreExtension {
     private static final String TAG = JXcoreExtension.class.getName();
     private static final String BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR = "-";
     private static final long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
+    private static final long BATCH_TIMER_INTERVAL = 200;
 
     private static ConnectionHelper mConnectionHelper = null;
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
+
+    private static ConcurrentHashMap<PeerProperties, Boolean> peerPropertiesBatch =
+            new ConcurrentHashMap<PeerProperties, Boolean>();
+
+    private static Timer batchTimer = null;
+
+    private static class BatchTimerTask extends TimerTask {
+        @Override
+        public void run() {
+            if (peerPropertiesBatch.size() > 0) {
+                notifyPeerAvailabilityChanged();
+                Log.i("BatchTimer", "time " + System.currentTimeMillis());
+            }
+        }
+    }
+
 
     public static void LoadExtensions() {
         if (mConnectionHelper != null) {
@@ -102,7 +122,7 @@ public class JXcoreExtension {
         });
 
         lifeCycleMonitor.start();
-		/*
+        /*
 			This is the line where we are dynamically sticking execution of UT during build, so if you are
 			editing this line, please check updateJXCoreExtensionWithUTMethod in androidBeforeCompile.js.
 		*/
@@ -484,27 +504,44 @@ public class JXcoreExtension {
         });
     }
 
-    public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
-        String peerId = peerProperties.getId()
-                + BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR
-                + peerProperties.getExtraInformation();
-        JSONObject jsonObject = new JSONObject();
-        boolean jsonObjectCreated = false;
-
-        try {
-            jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
-            jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
-            jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
-            jsonObjectCreated = true;
-        } catch (JSONException e) {
-            Log.e(TAG, "notifyPeerAvailabilityChanged: Failed to populate the JSON object: " + e.getMessage(), e);
+    public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean availability) {
+        peerPropertiesBatch.put(peerProperties, availability);
+        if (batchTimer == null) {
+            batchTimer = new Timer();
+            batchTimer.scheduleAtFixedRate(new BatchTimerTask(), 0, BATCH_TIMER_INTERVAL);
         }
+    }
 
-        if (jsonObjectCreated) {
-            JSONArray jsonArray = new JSONArray();
-            jsonArray.put(jsonObject);
+    public static void notifyPeerAvailabilityChanged() {
+        JSONArray jsonArray = new JSONArray();
+        List<PeerProperties> peerPropertiesList = new ArrayList<PeerProperties>(peerPropertiesBatch.keySet());
+        for (PeerProperties peerProperties : peerPropertiesList) {
+            boolean isAvailable = peerPropertiesBatch.remove(peerProperties);
+            String peerId = peerProperties.getId()
+                    + BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR
+                    + peerProperties.getExtraInformation();
+
+            JSONObject jsonObject = new JSONObject();
+            boolean jsonObjectCreated = false;
+            try {
+                jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
+                jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
+                jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
+                jsonObjectCreated = true;
+            } catch (JSONException e) {
+                Log.e(TAG, "notifyPeerAvailabilityChanged: Failed to populate the JSON object: " + e.getMessage(), e);
+            }
+            if (jsonObjectCreated) {
+                jsonArray.put(jsonObject);
+            }
+        }
+        sendPeersToNode(jsonArray);
+
+    }
+
+    private static void sendPeersToNode(JSONArray jsonArray) {
+        if (jsonArray.length() > 0) {
             final String jsonArrayAsString = jsonArray.toString();
-
             jxcore.activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
