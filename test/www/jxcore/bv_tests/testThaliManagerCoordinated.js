@@ -166,6 +166,8 @@ function waitForRemoteDocs(
   });
 }
 
+var NETWORK_TYPE = global.NETWORK_TYPE || ThaliMobile.networkTypes.BOTH;
+
 test('test write', function (t) {
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
@@ -200,7 +202,8 @@ test('test write', function (t) {
       PouchDB,
       DB_NAME,
       ecdhForLocalDevice,
-      new ThaliPeerPoolDefault()
+      new ThaliPeerPoolDefault(),
+      NETWORK_TYPE
     );
     return thaliManager.start(partnerKeys);
   })

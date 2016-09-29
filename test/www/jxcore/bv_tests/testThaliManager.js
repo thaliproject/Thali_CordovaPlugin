@@ -155,8 +155,8 @@ Mocks.prototype.checkInit = function(dbName, ecdh, peerPool) {
   this.checkReplication(dbName, peerPool, ecdh);
   this.checkSalti(dbName);
 }
-Mocks.prototype.checkStart = function(partnerKeys) {
-  this.checkMobileStart();
+Mocks.prototype.checkStart = function(partnerKeys, networkType) {
+  this.checkMobileStart(networkType);
   this.checkMobileStartLA();
   this.checkMobileStartUAA();
   this.checkNotificationStart(partnerKeys);
@@ -323,7 +323,7 @@ Mocks.prototype.checkNotificationStop = function() {
   );
 }
 
-Mocks.prototype.checkMobileStart = function() {
+Mocks.prototype.checkMobileStart = function(networkType) {
   var self = this;
   testUtils.checkArgs(
     this.t, this.MobileStart, 'ThaliMobile.start',
@@ -342,6 +342,14 @@ Mocks.prototype.checkMobileStart = function() {
         compare: function (arg) {
           return typeof arg === 'function' &&
             arg.toString() === ThaliNotificationServer.prototype.getPskIdToSecret().toString();
+        }
+      },
+      {
+        description: 'networkType',
+        compare: function (arg) {
+          console.log(arg, networkType);
+          return typeof arg === 'string' &&
+            arg === networkType;
         }
       }
     ]
@@ -418,6 +426,8 @@ Mocks.prototype.checkSalti = function(dbName) {
   );
 }
 
+var NETWORK_TYPE = global.NETWORK_TYPE || ThaliMobile.networkTypes.BOTH;
+
 test('test thali manager spies', function (t) {
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
@@ -442,13 +452,14 @@ test('test thali manager spies', function (t) {
     mocks.PouchDB,
     dbName,
     ecdhForLocalDevice,
-    peerPool
+    peerPool,
+    NETWORK_TYPE
   );
   mocks.checkInit(dbName, ecdhForLocalDevice, peerPool);
 
   thaliManager.start(partnerKeys)
   .then(function () {
-    mocks.checkStart(partnerKeys);
+    mocks.checkStart(partnerKeys, NETWORK_TYPE);
   })
   .then(function () {
     return thaliManager.stop();
@@ -483,7 +494,8 @@ test('test thali manager multiple starts and stops', function (t) {
     mocks.PouchDB,
     dbName,
     ecdhForLocalDevice,
-    peerPool
+    peerPool,
+    NETWORK_TYPE
   );
   mocks.checkInit(dbName, ecdhForLocalDevice, peerPool);
 
@@ -501,7 +513,7 @@ test('test thali manager multiple starts and stops', function (t) {
     return thaliManager.start(partnerKeys);
   })
   .then(function () {
-    mocks.checkStart(partnerKeys);
+    mocks.checkStart(partnerKeys, NETWORK_TYPE);
   })
 
   // Multiple parallel stops.
@@ -550,7 +562,7 @@ test('test thali manager multiple starts and stops', function (t) {
     return thaliManager.start(partnerKeys);
   })
   .then(function () {
-    mocks.checkStart(partnerKeys);
+    mocks.checkStart(partnerKeys, NETWORK_TYPE);
   })
   .then(function () {
     return thaliManager.stop();
