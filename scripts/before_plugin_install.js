@@ -11,11 +11,11 @@ var path = require('path');
 var fs = require('fs');
 
 function updateJXcoreExtensionImport(context) {
-  var cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util'),
-      ConfigParser = context.requireCordovaModule('cordova-lib').configparser,
-      projectRoot = cordova_util.isCordova(),
-      xml = cordova_util.projectConfig(projectRoot),
-      cfg = new ConfigParser(xml);
+  var cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util');
+  var ConfigParser = context.requireCordovaModule('cordova-lib').configparser;
+  var projectRoot = cordova_util.isCordova();
+  var xml = cordova_util.projectConfig(projectRoot);
+  var cfg = new ConfigParser(xml);
 
   var jxcoreExtensionPath = path.join(
     context.opts.plugin.dir, 'src', 'ios', 'JXcoreExtension.m');
