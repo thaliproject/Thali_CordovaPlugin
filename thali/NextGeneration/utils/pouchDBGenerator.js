@@ -110,6 +110,8 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
   // We have to overwrite 'EventEmitter' methods here.
   PouchAlt.prototype.changes = function () {
     var changes = PouchAlt.super_.prototype.changes.apply(this, arguments);
+    // 'Changes' has its own 'addListener' method, we shouldn't overwrite it.
+    // This method is based on 'EventEmitter.prototype.on' method.
     changes.on  = PouchAlt.prototype.on.bind(changes);
     return changes;
   };
