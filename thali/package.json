@@ -13,11 +13,12 @@
     "long": "3.0.3",
     "multiplex": "6.7.0",
     "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
-    "node-uuid": "1.4.7",
     "request": "2.64.0",
-    "salti": "0.2.0",
+    "salti": "https://github.com/thaliproject/salti.git#master",
     "urlsafe-base64": "1.0.0",
-    "winston": "2.2.0"
+    "uuid": "2.0.2",
+    "winston": "2.2.0",
+    "js-extend": "1.0.1"
   },
   "devDependencies": {
     "jsdoc": "3.3.3"
@@ -28,9 +29,9 @@
       "depotName": "Thali_CordovaPlugin",
       "branchName": "npmv2.1.0"
     },
-    "btconnectorlib2": "0.3.2",
-    "jxcore-cordova": "0.1.2b",
-    "jxcore-cordova-url": "https://jxcore.blob.core.windows.net/jxcore-release/jxcore-cordova/0.1.2b/release/io.jxcore.node.jx"
+    "btconnectorlib2": "0.3.4-alpha2",
+    "jxcore-cordova": "0.1.4",
+    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.4/release/io.jxcore.node.jx"
   },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",

@@ -1,262 +1,236 @@
-/**
- * Unit test framework used with thaliTape.
- */
-
 'use strict';
 
-var util = require('util');
+var util     = require('util');
+var inherits = util.inherits;
+
+var assert       = require('assert');
+var objectAssign = require('object-assign');
+
+var asserts = require('./utils/asserts.js');
+var Promise = require('./utils/Promise');
+var logger  = require('./utils/ThaliLogger')('UnitTestFramework');
+
+var TestDevice    = require('./TestDevice');
 var TestFramework = require('./TestFramework');
+var defaultConfig = require('./config/UnitTest');
 
-var logger = console;
 
-function UnitTestFramework(testConfig, _logger)
-{
-  if (_logger) {
-    logger = _logger;
-  }
-
-  var configFile = './UnitTestConfig';
-  var unitTestConfig = require(configFile);
-  if (testConfig.userConfig) {
-    unitTestConfig = testConfig.userConfig;
-  }
-
-  UnitTestFramework.super_.call(this, testConfig, unitTestConfig, _logger);
-
-  // Track which platforms we expect to be running on
+function UnitTestFramework(config) {
   var self = this;
-  self.runningTests = Object.keys(self.requiredDevices).filter(
-    function (platform) {
-      logger.info(
-        'Require %d %s devices',
-        self.requiredDevices[platform], platform
-      );
-      return self.requiredDevices[platform];
-    }
-  );
+
+  this.config = objectAssign({}, defaultConfig, config);
+
+  UnitTestFramework.super_.call(this, this.config);
 }
 
-util.inherits(UnitTestFramework, TestFramework);
+inherits(UnitTestFramework, TestFramework);
 
-UnitTestFramework.prototype.finishRun =
-  function (devices, platform, tests, results) {
+UnitTestFramework.prototype.startTests = function (platformName) {
+  var self = this;
 
-    // All devices have completed all their tests
-    logger.info('Test run on %s complete', platform);
+  UnitTestFramework.super_.prototype.startTests.apply(this, arguments);
 
-    // The whole point !! Log test results from the
-    // server
-    this.testReport(platform, tests, results);
+  var platform = this.platforms[platformName];
+  var devices = platform.devices;
+  var tests   = devices[0].tests;
 
-    // Signal devices to quit
-    devices.forEach(function (device) {
-      device.socket.emit('complete');
-    });
-
-    // We're done running for this platform..
-    this.runningTests = this.runningTests.filter(function (p) {
-      return p !== platform;
-    });
-
-    // There may be other platforms still running
-    if (this.runningTests.length === 0) {
-      this.emit('completed');
-    }
-  };
-
-UnitTestFramework.prototype.startTests = function (platform, tests) {
-
-  var toComplete;
-  var results = {};
-
-  if (!tests) {
-    // Default to all tests named by first device
-    tests = this.devices[platform][0].tests;
-  }
-
-  // Copy arrays
-  var _tests = tests.slice();
-  var devices = this.devices[platform].slice();
-
-  logger.info(
-    'Starting unit test run on %d %s devices',
-    this.devices[platform].length, platform
+  logger.debug(
+    'starting unit tests on %d devices, platformName: \'%s\'',
+    devices.length, platformName
   );
 
-  var self = this;
-  function doTest(test, cb) {
+  logger.debug('scheduling tests');
 
-    logger.info('Running on %s test: %s', platform, test);
+  Promise.all(
+    devices.map(function (device) {
+      return device.scheduleTests(tests);
+    })
+  )
+  .then(function () {
+    logger.debug('tests scheduled');
 
-    function emit(device, msg, data) {
-      // Try to retry 120 times every second, because
-      // it might be that the socket connection is temporarily
-      // down while the retries are tried so this gives
-      // the device 2 minutes to reconnect.
-      var retries = 120;
-      var retryInterval = 1000;
-      var emitTimeout = null;
+    self.bindSync(devices);
 
-      var acknowledged = false;
-      device.socket.once(util.format('%s_ok', msg), function () {
-        acknowledged = true;
-        if (emitTimeout !== null) {
-          clearTimeout(emitTimeout);
-        }
-      });
-
-      // Emit message every second until acknowledged
-      function _emit() {
-        if (!acknowledged) {
-          if (data) {
-            device.socket.emit(msg, data);
-          } else {
-            device.socket.emit(msg);
+    var skippedTests = [];
+    return tests.reduce(function (promise, test) {
+      return promise.then(function () {
+        return self.runTest(devices, test)
+        .catch(function (error) {
+          if (error.message === 'skipped') {
+            skippedTests.push(test);
+            return;
           }
-          if (--retries > 0) {
-            emitTimeout = setTimeout(_emit, retryInterval);
-          } else {
-            logger.debug('Too many emit retries to device: %s',
-              device.deviceName);
-          }
-        }
-      }
-      setTimeout(_emit, 0);
-    }
-
-    var nextStageData = [];
-    // Convenience: Move to next stage in test
-    function doNext(stage, stageData) {
-      if (stageData) {
-        nextStageData.push({
-          uuid: stageData.uuid,
-          data: stageData.data
-        });
-      }
-      // We need to have seen all devices report in before we
-      // can proceed to the next stage
-      if (--toComplete === 0) {
-        toComplete = devices.length;
-        devices.forEach(function (device) {
-          // Tell each device to proceed to the next stage
-          emit(
-            device,
-            stage + '_' + test,
-            JSON.stringify(nextStageData)
-          );
-        });
-        nextStageData = [];
-      }
-    }
-
-    // Add event handlers for each stage of a single test
-    // Test proceed in the order shown below
-    toComplete = devices.length;
-    devices.forEach(function (device) {
-
-      function setResult(result) {
-        results[result.test] = result.success &&
-          (result.test in results ? results[result.test] :
-            true);
-      }
-
-      // The device has completed setup for this test
-      device.socket.once('setup_complete', function (result) {
-        var parsedResult = JSON.parse(result);
-        setResult(parsedResult);
-        doNext('start_test', {
-          uuid: device.uuid,
-          data: parsedResult.data
+          return Promise.reject(error);
         });
       });
-
-      // The device has completed it's test
-      device.socket.once('test_complete', function (result) {
-        setResult(JSON.parse(result));
-        doNext('teardown');
-      });
-
-      // The device has completed teardown for this test
-      device.socket.once('teardown_complete', function (result) {
-        var parsedResult = JSON.parse(result);
-        setResult(parsedResult);
-        if (--toComplete === 0) {
-          if (!results[parsedResult.test]) {
-            logger.warn(
-              'Failed on %s test: %s', platform, test
-            );
-          }
-          cb();
-        }
-      });
-
-      // All server-side handlers for this test are now installed, let's go..
-      emit(device, 'setup_' + test);
+    }, Promise.resolve())
+    .then(function () {
+      return skippedTests;
     });
-  }
+  })
+  .then(function (skippedTests) {
+    platform.state = TestFramework.platformStates.succeeded;
+    logger.debug(
+      'all unit tests succeeded, platformName: \'%s\'',
+      platformName
+    );
+    logger.debug(
+      'skipped tests: \'%s\'', JSON.stringify(skippedTests)
+    );
+  })
+  .catch(function (error) {
+    platform.state = TestFramework.platformStates.failed;
+    logger.error(
+      'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
+      platformName, error.toString(), error.stack
+    );
+  })
+  .finally(function () {
+    self.unbindSync(devices);
 
-  function nextTest() {
-    // Pop the completed test off the list
-    // and move to next test
-    tests.shift();
-    if (tests.length) {
-      process.nextTick(function () {
-        doTest(tests[0], nextTest);
-      });
-    } else {
-      // ALL DONE !!
-      self.finishRun(devices, platform, _tests, results);
-    }
-  }
-
-  toComplete = devices.length;
-
-  devices.forEach(function (device) {
-    // Wait for devices to signal they've scheduled their
-    // test runs and then begin
-    device.socket.once('schedule_complete', function () {
-      if (tests.length) {
-        if (--toComplete === 0) {
-          doTest(tests[0], nextTest);
-        }
-      } else {
-        logger.warn('Schedule complete with no tests to run');
-        self.finishRun(devices, platform, _tests, results);
-      }
-    });
-
-    // Tell devices to set tests up to run in the order we supply
-    device.socket.emit('schedule', JSON.stringify(tests));
+    return Promise.all(
+      devices.map(function (device) {
+        return device.complete();
+      })
+    );
+  })
+  .finally(function () {
+    self.resolveCompleted();
   });
-};
+}
 
-UnitTestFramework.prototype.testReport = function (platform, tests, results) {
+UnitTestFramework.prototype.runTest = function (devices, test) {
+  var self = this;
 
-  logger.info('\n\n-== UNIT TEST RESULTS ==-');
+  // Some device skipped our test.
+  var skipped = false;
 
-  var passed = 0;
-  for (var test in results) {
-    passed += results[test];
-  }
-  var failed = tests.length - passed;
+  logger.debug('#setup: \'%s\'', test);
 
-  logger.info('PLATFORM: %s', platform);
-  logger.info('RESULT: %s', passed === tests.length ? 'PASS' : 'FAIL');
-  logger.info('%d of %d tests completed',
-    Object.keys(results).length, tests.length);
-  logger.info('%d/%d passed (%d failures)',
-    passed, tests.length, failed);
+  return Promise.all(
+    devices.map(function (device) {
+      return device.setupTest(test)
+      .then(function (data) {
+        return {
+          uuid: device.uuid,
+          data: data
+        }
+      });
+    })
+  )
+  .then(function (devicesData) {
+    logger.debug('#setup ok: \'%s\'', test);
+    logger.debug('#run: \'%s\'', test);
 
-  if (failed > 0) {
-    logger.info('\n\n--- Failed tests ---');
-    for (test in results) {
-      if (!results[test]) {
-        logger.warn(test + ' - fail');
-      }
+    return Promise.all(
+      devices.map(function (device) {
+        return device.runTest(test, devicesData, true)
+        .catch(function (error) {
+          if (error.message === 'skipped') {
+            skipped = true;
+            return;
+          }
+          return Promise.reject(error);
+        });
+      })
+    );
+  })
+  .then(function () {
+    logger.debug('#run ok: \'%s\'', test);
+    logger.debug('#teardown: \'%s\'', test);
+
+    return Promise.all(
+      devices.map(function (device) {
+        return device.teardownTest(test);
+      })
+    );
+  })
+  .then(function () {
+    logger.debug('#teardown ok: \'%s\'', test);
+  })
+  .catch(function (error) {
+    logger.error(
+      '#run failed: \'%s\', error: \'%s\', stack: \'%s\'',
+      test, error.toString(), error.stack
+    );
+    return Promise.reject(error);
+  })
+  .then(function () {
+    if (skipped) {
+      return Promise.reject(
+        new Error('skipped')
+      );
     }
-  }
+  });
+}
 
-  logger.info('\n\n-== END ==-');
-};
+UnitTestFramework.prototype._sync = function (deviceData, content) {
+  logger.debug('#sync');
+
+  var isContentTheSame = this._syncDevicesData.every(function (data) {
+    if (data.content) {
+      return data.content === content;
+    } else {
+      return true;
+    }
+  });
+  assert(
+    isContentTheSame,
+    '\'content\' should be the same between all devices'
+  );
+
+  assert(
+    !deviceData.content,
+    '\'content\' should be unique'
+  );
+  deviceData.content = content;
+
+  var isFinished = this._syncDevicesData.every(function (data) {
+    return data.content;
+  });
+  if (isFinished) {
+    logger.debug('#sync ok');
+
+    var promises = this._syncDevicesData.map(function (data) {
+      delete data.content;
+      return data.device.syncFinished(content);
+    });
+    Promise.all(promises)
+    .catch(function (error) {
+      logger.error(
+        '#sync failed: error: \'%s\', stack: \'%s\'',
+        error.toString(), error.stack
+      );
+      return Promise.reject(error);
+    })
+  }
+}
+
+UnitTestFramework.prototype.bindSync = function (devices) {
+  var self = this;
+  this._syncDevicesData = devices.map(function (device) {
+    return { device: device };
+  });
+  this._syncDevicesData.forEach(function (data) {
+    data.handler = self._sync.bind(self, data);
+    data.device.on('sync', data.handler);
+  });
+}
+
+UnitTestFramework.prototype.unbindSync = function (devices) {
+  var self = this;
+
+  var syncDevices = this._syncDevicesData.map(function (data) {
+    return data.device;
+  });
+  asserts.arrayEquals(devices, syncDevices);
+
+  this._syncDevicesData.forEach(function (data) {
+    asserts.exists(data.device);
+    asserts.exists(data.handler);
+    data.device.removeListener('sync', data.handler);
+  });
+  delete this._syncDevicesData;
+}
 
 module.exports = UnitTestFramework;

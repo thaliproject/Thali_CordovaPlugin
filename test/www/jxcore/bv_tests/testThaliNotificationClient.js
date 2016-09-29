@@ -6,6 +6,8 @@ var sinon = require('sinon');
 var Promise = require('lie');
 var http = require('http');
 var httpTester = require('../lib/httpTester.js');
+var Platform = require('thali/NextGeneration/utils/platform');
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 
 var ThaliPeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
@@ -13,6 +15,8 @@ var ThaliNotificationClient =
   require('thali/NextGeneration/notification/thaliNotificationClient');
 var ThaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
+var ThaliNotificationAction =
+  require('thali/NextGeneration/notification/thaliNotificationAction');
 
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
@@ -45,7 +49,9 @@ var GlobalVariables = function () {
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
 
   this.peerPoolInterface = new ThaliPeerPoolDefault();
+  this.peerPoolInterface.start();
   this.peerPoolInterfaceStub = new ThaliPeerPoolDefault();
+  this.peerPoolInterfaceStub.start();
 
   this.TCPEvent = {
     peerIdentifier: 'id124',
@@ -225,10 +231,11 @@ test('Received beacons with no values for us', function (t) {
     action.start(keepAliveAgent).then(function () {
       setImmediate(function () {
         var entry =
-          notificationClient.peerDictionary.get(globals.TCPEvent.peerIdentifier);
+          notificationClient.peerDictionary
+            .get(globals.TCPEvent.peerIdentifier);
         t.ok(entry, 'entry exists');
-        t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED, 'entry ' +
-          'is resolved');
+        t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED,
+                  'entry is resolved');
         notificationClient.stop();
         t.end();
       });
@@ -328,6 +335,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
   // Action is getting resolved ok
 
   var peerPool = new ThaliPeerPoolDefault();
+  peerPool.start();
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
@@ -374,31 +382,47 @@ test('Action fails because of a bad hostname.', function (t) {
   // Connection is tried RETRY_TIMEOUTS.length times
 
   // Make timeouts shorter (kill will return values to original)
-  ThaliNotificationClient.RETRY_TIMEOUTS =
-    [100, 300, 600];
+  var retryTimeouts = [100, 300, 600];
+  ThaliNotificationClient.RETRY_TIMEOUTS = retryTimeouts;
 
   var requestCount = 0;
   var failCount = 0;
 
-  // Simulates how peer pool runs actions
-  var enqueue = function (action) {
-    requestCount++;
-    var keepAliveAgent = new http.Agent({ keepAlive: true });
-    action.start(keepAliveAgent).then( function () {
-      t.fail('This action should fail always.');
-      t.end();
-    }).catch( function ( ) {
-      failCount++;
-    });
+  var testResolutionEvent = function (peerId, resolution) {
+    t.equal(
+      resolution,
+      ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
+      'action should be resolved with NETWORK_PROBLEM error'
+    );
   };
 
-  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+  // Simulates how peer pool runs actions
+  var enqueueStub = sinon.stub(
+    globals.peerPoolInterface,
+    'enqueue',
+    function (action) {
+      requestCount++;
+      var keepAliveAgent = new http.Agent({ keepAlive: true });
+      action.eventEmitter.on(
+        ThaliNotificationAction.Events.Resolved,
+        testResolutionEvent
+      );
+      action.start(keepAliveAgent).then(function () {
+        t.fail('This action should fail always.');
+        finishTest(true);
+      }).catch(function () {
+        failCount++;
+      }).then(function () {
+        if (requestCount - 1 === retryTimeouts.length) {
+          finishTest();
+        }
+      });
+    }
+  );
 
   var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterface,
       globals.targetDeviceKeyExchangeObjects[0]);
-
-  notificationClient.start([]);
 
   var TCPEvent = {
     peerIdentifier: 'id123',
@@ -408,18 +432,35 @@ test('Action fails because of a bad hostname.', function (t) {
     suggestedTCPTimeout: 10000
   };
 
+  var finishTest = function (skipChecks) {
+    if (!skipChecks) {
+      t.equals(
+        requestCount - 1,
+        retryTimeouts.length,
+        'correct number of requests'
+      );
+      t.equals(
+        failCount - 1,
+        retryTimeouts.length,
+        'correct number of failures'
+      );
+      var entry = notificationClient.peerDictionary.get('id123');
+      t.equals(
+        entry.peerState,
+        ThaliPeerDictionary.peerState.RESOLVED,
+        'correct final peer state'
+      );
+    }
+    enqueueStub.restore();
+    notificationClient.stop();
+    t.end();
+  };
+
+  notificationClient.start([]);
+
   // New peer with TCP connection
   notificationClient._peerAvailabilityChanged(TCPEvent);
 
-  // Waits 5 seconds. And checks results
-  setTimeout( function () {
-    t.equals(requestCount-1, ThaliNotificationClient.RETRY_TIMEOUTS.length);
-    t.equals(failCount-1, ThaliNotificationClient.RETRY_TIMEOUTS.length);
-    var entry = notificationClient.peerDictionary.get('id123');
-    t.equals(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED);
-    notificationClient.stop();
-    t.end();
-  }, 5000);
 });
 
 test('hostaddress is removed when the action is running. ', function (t) {

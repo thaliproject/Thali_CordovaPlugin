@@ -2,18 +2,19 @@
 
 var Promise = require('lie');
 var util = require('util');
+var path = require('path');
 var ThaliPeerAction = require('../thaliPeerPool/thaliPeerAction');
 var actionState = ThaliPeerAction.actionState;
 var assert = require('assert');
 var thaliConfig = require('../thaliConfig');
-var logger = require('../../thaliLogger')('thaliReplicationPeerAction');
+var logger = require('../../ThaliLogger')('thaliReplicationPeerAction');
 var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
+var Utils = require('../utils/common.js');
 
 /** @module thaliReplicationPeerAction */
 
-// jscs:disable maximumLineLength
 /**
  * @classdesc Manages replicating information with a peer we have discovered
  * via notifications.
@@ -26,13 +27,12 @@ var RefreshTimerManager = require('./utilities').RefreshTimerManager;
  * use.
  * @param {string} dbName The name of the DB we will use both for local use as
  * well as remote use. Note that we will get the name for the remote database by
- * taking dbName and appending it to http://[hostAddress]:[portNumber] / +
- * thaliConfig.BASE_DB_PATH + / [name] where hostAddress and portNumber are from
- * the peerAdvertisesDataForUs argument.
+ * taking dbName and appending it to http://[hostAddress]:[portNumber]/[BASE_DB_PATH]/
+ * [name] where hostAddress and portNumber are from the peerAdvertisesDataForUs
+ * argument.
  * @param {Buffer} ourPublicKey The buffer containing our ECDH public key
  * @constructor
  */
-// jscs:enable maximumLineLength
 function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
                                     PouchDB,
                                     dbName,
@@ -58,9 +58,10 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
   this._ourPublicKey = ourPublicKey;
   this._localSeqManager = null;
   this._cancelReplication = null;
-  this._resolveStart = null;
-  this._rejectStart = null;
+  this._resolve = null;
+  this._reject = null;
   this._refreshTimerManager = null;
+  this._completed = false;
 }
 
 util.inherits(ThaliReplicationPeerAction, ThaliPeerAction);
@@ -112,46 +113,12 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
   }
   self._refreshTimerManager = new RefreshTimerManager(
     ThaliReplicationPeerAction.maxIdlePeriodSeconds * 1000,
-    function () {
+    function() {
       self._complete([new Error('No activity time out')]);
     });
   self._refreshTimerManager.start();
 };
 
-/**
- * @param {Array.<Error>} errorArray
- * @private
- */
-ThaliReplicationPeerAction.prototype._complete =
-  function (errorArray) {
-    if (this.getActionState() === actionState.KILLED) {
-      return;
-    }
-    ThaliReplicationPeerAction.super_.prototype.kill.call(this);
-    this._refreshTimerManager && this._refreshTimerManager.stop();
-    this._refreshTimerManager = null;
-    this._cancelReplication && this._cancelReplication.cancel();
-    this._cancelReplication = null;
-    this._localSeqManager && this._localSeqManager.stop();
-    this._localSeqManager = null;
-    if (!errorArray || errorArray.length === 0) {
-      return this._resolveStart();
-    }
-    for (var i = 0; i < errorArray.length; ++i) {
-      if (errorArray[i].message === 'connect ECONNREFUSED') {
-        return this._rejectStart(
-          new Error('Could not establish TCP connection'));
-      }
-      if (errorArray[i].message === 'socket hang up') {
-        return this._rejectStart(
-          new Error(
-            'Could establish TCP connection but couldn\'t keep it running'));
-      }
-    }
-    this._rejectStart(errorArray[0]);
-  };
-
-// jscs:disable maximumLineLength
 /**
  * When start is called we will start a replication with the remote peer using
  * the settings specified below. We will need to create the URL using the
@@ -211,9 +178,9 @@ ThaliReplicationPeerAction.prototype._complete =
  * the PSK related settings are specified.
  * @returns {Promise<?Error>}
  */
-// jscs:enable maximumLineLength
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   var self = this;
+  this._completed = false;
 
   return ThaliReplicationPeerAction.super_.prototype.start
     .call(this, httpAgentPool)
@@ -249,8 +216,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
       it seems to work.
        */
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
-        ':' + self._peerAdvertisesDataForUs.portNumber +
-        thaliConfig.BASE_DB_PATH +'/' + self._dbName;
+        ':' + self._peerAdvertisesDataForUs.portNumber + path.join(thaliConfig.BASE_DB_PATH, self._dbName);
       var ajaxOptions = {
         ajax : {
           agentClass: ForeverAgent.SSL,
@@ -273,41 +239,55 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
       self._localSeqManager = new LocalSeqManager(
         ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds,
         remoteDB, self._ourPublicKey);
-      return new Promise(function (resolve, reject) {
-        self._resolveStart = resolve;
-        self._rejectStart = reject;
+      self._replicationPromise = new Promise(function (resolve, reject) {
+        self._resolve = resolve;
+        self._reject = reject;
         self._replicationTimer();
         self._cancelReplication = remoteDB.replicate.to(self._dbName, {
           live: true
-        }).on('paused', function (err) {
-            logger.debug('Got paused with ' + err);
-          })
-          .on('active', function () {
-            logger.debug('Replication resumed');
-          })
-          .on('denied', function (err) {
-            logger.warn('We got denied on a PouchDB access, this really ' +
-              'should not happen - ' + err);
-          })
-          .on('complete', function (info) {
-            self._complete(info.errors);
-          })
-          .on('error', function (err) {
-            logger.debug('Got error on replication - ' + err);
-            self._complete([err]);
-          })
-          .on('change', function (info) {
-            self._replicationTimer();
-            // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
-            self._localSeqManager
-              .update(info.last_seq)
-              .catch(function (err) {
-                logger.debug('Got error in update, waiting for main loop to ' +
-                  'detect and handle - ' + err);
-              });
-            // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
-          });
+        })
+        .on('paused', function (err) {
+          logger.debug(
+            'Got paused with - ',
+            Utils.serializePouchError(err)
+          );
+        })
+        .on('active', function () {
+          logger.debug('Replication resumed');
+        })
+        .on('denied', function (err) {
+          logger.warn(
+            'We got denied on a PouchDB access, this really should ' +
+            'not happen - ',
+            Utils.serializePouchError(err)
+          );
+        })
+        .on('complete', function (info) {
+          self._complete(info.errors);
+        })
+        .on('error', function (err) {
+          logger.debug(
+            'Got error on replication - ',
+            Utils.serializePouchError(err)
+          );
+          self._complete([err]);
+        })
+        .on('change', function (info) {
+          self._replicationTimer();
+          // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+          self._localSeqManager
+            .update(info.last_seq)
+            .catch(function (err) {
+              logger.debug(
+                'Got error in update, waiting for main loop to ' +
+                'detect and handle - ',
+                Utils.serializePouchError(err)
+              );
+            });
+          // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+        });
       });
+      return self._replicationPromise;
     });
 };
 
@@ -317,7 +297,83 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
  *
  */
 ThaliReplicationPeerAction.prototype.kill = function () {
-  this._complete();
+  if (this.getActionState() === actionState.KILLED) {
+    return;
+  }
+  ThaliReplicationPeerAction.super_.prototype.kill.call(this);
+
+  if (this._refreshTimerManager) {
+    this._refreshTimerManager.stop();
+    this._refreshTimerManager = null;
+  }
+  if (this._cancelReplication) {
+    this._cancelReplication.cancel();
+  }
+  if (this._localSeqManager) {
+    this._localSeqManager.stop();
+  }
 };
+
+/**
+ * @param {Array.<Error>} errors
+ * @private
+ */
+ThaliReplicationPeerAction.prototype._complete =
+  function (errors) {
+    var self = this;
+    if (this._completed) {
+      return;
+    }
+    this._completed = true;
+
+    this.kill();
+
+    assert(this._resolve, 'resolve should exist');
+    assert(this._reject, 'reject should exist');
+
+    if (!errors || errors.length === 0) {
+      this._resolve();
+    } else {
+      var isErrorResolved = errors.some(function (error) {
+        switch (error.code) {
+          case 'ECONNREFUSED': {
+            self._reject(
+              new Error('Could not establish TCP connection')
+            );
+            return true;
+          }
+          case 'ECONNRESET': {
+            self._reject(
+              new Error('Could establish TCP connection but couldn\'t keep it running')
+            );
+            return true;
+          }
+        }
+        return false;
+      });
+      if (!isErrorResolved) {
+        return this._reject(errors[0]);
+      }
+    }
+
+    this._resolve = null;
+    this._reject  = null;
+  };
+
+ThaliReplicationPeerAction.prototype.waitUntilKilled = function () {
+  // We have just killed all requests.
+  // We don't care if any request will end with an error.
+
+  var promises = [];
+  if (this._replicationPromise) {
+    promises.push(
+      this._replicationPromise.catch(function () {})
+    );
+  }
+  if (this._localSeqManager) {
+    promises.push(this._localSeqManager.waitUntilStopped());
+  }
+  return Promise.all(promises);
+}
 
 module.exports = ThaliReplicationPeerAction;

@@ -376,8 +376,9 @@ module.exports = function (callback, appRootDirectory) {
             // Cordova hook depends on external node modules that need to be
             // installed.
             console.log('Running jx npm install in: ' + appScriptsFolder);
-            return childProcessExecPromise('jx npm install --autoremove "*.gz"',
-                                           appScriptsFolder);
+            return childProcessExecPromise(
+              'jx npm install --no-optional --autoremove "*.gz"',
+               appScriptsFolder);
           }).then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
           });

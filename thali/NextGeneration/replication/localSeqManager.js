@@ -1,6 +1,6 @@
 'use strict';
 
-var logger = require('../../thaliLogger')('localSeqManager');
+var logger = require('../../ThaliLogger')('localSeqManager');
 var Promise = require('lie');
 var assert = require('assert');
 var urlSafeBase64 = require('urlsafe-base64');
@@ -56,7 +56,7 @@ function LocalSeqManager(maximumUpdateInterval,
 LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
   var self = this;
 
-  if (self._stopCalled) {
+  if (this._stopCalled) {
     return Promise.reject(new Error('Stop Called'));
   }
 
@@ -86,10 +86,10 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
         return Promise.reject(error);
       }
       return self._remotePouchDB.put({
-          _id: self._localId,
-          _rev: rev,
-          lastSyncedSequenceNumber: seq
-        });
+        _id: self._localId,
+        _rev: rev,
+        lastSyncedSequenceNumber: seq
+      });
     })
     .then(function (putResponse) {
       self._seqDocRev = putResponse.rev;
@@ -119,6 +119,10 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
  */
 LocalSeqManager.prototype.update = function (seq, immediate) {
   var self = this;
+
+  if (this._stopCalled) {
+    return Promise.reject(new Error('Stop Called'));
+  }
 
   function cancelTimer(reject) {
     clearTimeout(self._cancelTimeoutToken);
@@ -152,10 +156,6 @@ LocalSeqManager.prototype.update = function (seq, immediate) {
     });
     return self._blockedUpdateRequest ? self._blockedUpdateRequest :
             self._currentUpdateRequest;
-  }
-
-  if (self._stopCalled) {
-    return Promise.reject(new Error('Stop Called'));
   }
 
   if (seq <= self._nextSeqValueToSend) {
@@ -208,6 +208,36 @@ LocalSeqManager.prototype.update = function (seq, immediate) {
 LocalSeqManager.prototype.stop = function () {
   this._stopCalled = true;
   clearTimeout(this._cancelTimeoutToken);
+  if (this._timerReject) {
+    this._timerReject(new Error('Timer Cancelled'));
+  }
 };
+
+LocalSeqManager.prototype.waitUntilStopped = function () {
+  // We have just killed all requests.
+  // We don't care if any request will end with an error.
+
+  var promises = [];
+  if (this._blockedUpdateRequest) {
+    promises.push(
+      this._blockedUpdateRequest
+      .catch(function () {})
+    );
+  } else if (this._currentUpdateRequest) {
+    promises.push(
+      this._currentUpdateRequest
+      .catch(function () {})
+    );
+  }
+
+  if (this._timerPromise) {
+    promises.push(
+      this._timerPromise
+      .catch(function () {})
+    );
+  }
+
+  return Promise.all(promises);
+}
 
 module.exports = LocalSeqManager;

@@ -1,5 +1,12 @@
 'use strict';
 
+// Issue #419
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+if (global.NETWORK_TYPE === ThaliMobile.networkTypes.NATIVE) {
+  return;
+}
+
+var platform = require('thali/NextGeneration/utils/platform');
 var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
@@ -9,7 +16,7 @@ var nodessdp = require('node-ssdp');
 var express = require('express');
 var https = require('https');
 var net = require('net');
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 var sinon = require('sinon');
 var randomstring = require('randomstring');
 
@@ -465,7 +472,7 @@ test('does not get peer changes from self', function (t) {
 
 // From here onwards, tests only work on mocked up desktop
 // environment where network changes can be simulated.
-if (jxcore.utils.OSInfo().isMobile) {
+if (platform.isMobile) {
   return;
 }
 

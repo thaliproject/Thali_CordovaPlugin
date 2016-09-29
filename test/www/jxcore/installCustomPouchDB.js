@@ -250,14 +250,15 @@ function installAll() {
   return getNpmRegistryUrl()
   .then(function (foundRegistryUrl) {
     registryUrl = foundRegistryUrl;
-    var pouchDBNodeVersion = getPackageJsonVersion(pouchDBNodePackageName);
-    return versionExists(pouchDBNodePackageName, pouchDBNodeVersion,
-                         registryUrl);
-  })
-  .then(function (pouchDBVersionExists) {
-    if (!pouchDBVersionExists) {
-      promises.push(installNodePouchDB());
-    }
+    // Uncomment this code to build our custom version of PouchDB
+    //   var pouchDBNodeVersion = getPackageJsonVersion(pouchDBNodePackageName);
+    //   return versionExists(pouchDBNodePackageName, pouchDBNodeVersion,
+    //                        registryUrl);
+    // })
+    // .then(function (pouchDBVersionExists) {
+    //   if (!pouchDBVersionExists) {
+    //     promises.push(installNodePouchDB());
+    //   }
     var expressPouchDBVersion =
       getPackageJsonVersion(expressPouchDBPackageName);
     return versionExists(expressPouchDBPackageName, expressPouchDBVersion,

@@ -27,19 +27,28 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    if (localSeqManager) {
-      localSeqManager.stop();
-      localSeqManager = null;
-    }
-    (testCloseAllServer ? testCloseAllServer.closeAllPromise() :
-                         Promise.resolve())
-      .catch(function (err) {
-        t.fail('Got error in teardown ' + JSON.stringify(err));
-      })
-      .then(function () {
+    Promise.resolve()
+    .then(function () {
+      if (localSeqManager) {
+        localSeqManager.stop();
+        var promise = localSeqManager.waitUntilStopped();
+        localSeqManager = null;
+        return promise;
+      }
+    })
+    .then(function () {
+      if (testCloseAllServer) {
+        var promise = testCloseAllServer.closeAllPromise();
         testCloseAllServer = null;
-        t.end();
-      });
+        return promise;
+      }
+    })
+    .catch(function (err) {
+      t.fail('Got error in teardown ' + JSON.stringify(err));
+    })
+    .then(function () {
+      t.end();
+    });
   }
 });
 
@@ -155,6 +164,9 @@ test('#_doImmediateSeqUpdate - doc exists, need to get rev and update',
       localSeqManager._doImmediateSeqUpdate(lastSyncedSequenceNumber)
         .then(function () {
           localSeqManager.stop();
+          return localSeqManager.waitUntilStopped();
+        })
+        .then(function () {
           localSeqManager =
             new LocalSeqManager(100, remotePouchDB, devicePublicKey);
           lastSyncedSequenceNumber = 101;
@@ -243,6 +255,9 @@ test('#_doImmediateSeqUpdate - rev got changed under us', function (t) {
       })
       .then(function () {
         sneakyLocalSeqManager.stop();
+        return sneakyLocalSeqManager.waitUntilStopped();
+      })
+      .then(function () {
         t.end();
       });
   });
@@ -254,16 +269,19 @@ test('#_doImmediateSeqUpdate - fail if stop is called', function (t) {
     localSeqManager =
       new LocalSeqManager(100, remotePouchDB, devicePublicKey);
     localSeqManager.stop();
-    localSeqManager._doImmediateSeqUpdate(23)
-      .then(function () {
-        t.fail('We should have gotten an error because we are stopped.');
-      })
-      .catch(function (err) {
-        t.equal(err.message, 'Stop Called', 'confirm stop caused failure');
-      })
-      .then(function () {
-        t.end();
-      });
+    localSeqManager.waitUntilStopped()
+    .then(function () {
+      return localSeqManager._doImmediateSeqUpdate(23);
+    })
+    .then(function () {
+      t.fail('We should have gotten an error because we are stopped.');
+    })
+    .catch(function (err) {
+      t.equal(err.message, 'Stop Called', 'confirm stop caused failure');
+    })
+    .then(function () {
+      t.end();
+    });
   });
 });
 
@@ -288,7 +306,10 @@ test('#_doImmediateSeqUpdate - stop after get but before put fails right',
     }, function (app) {
       app.use(function (req, res, next) {
         localSeqManager.stop();
-        next();
+        localSeqManager.waitUntilStopped()
+        .then(function () {
+          next();
+        });
       });
     });
   });
@@ -299,23 +320,26 @@ test('#update - fail if stop is called', function (t) {
     localSeqManager =
       new LocalSeqManager(100, remotePouchDB, devicePublicKey);
     localSeqManager.stop();
-    localSeqManager.update(100, true)
-      .then(function () {
-        t.fail('We should have failed due to stop');
-      })
-      .catch(function (err) {
-        t.equal(err.message, 'Stop Called', 'failed due to stop');
-        return localSeqManager.update(200, false);
-      })
-      .then(function () {
-        t.fail('We should have failed due to stop');
-      })
-      .catch(function (err) {
-        t.equal(err.message, 'Stop Called', 'failed due to stop');
-      })
-      .then(function () {
-        t.end();
-      });
+    localSeqManager.waitUntilStopped()
+    .then(function () {
+      return localSeqManager.update(100, true);
+    })
+    .then(function () {
+      t.fail('We should have failed due to stop');
+    })
+    .catch(function (err) {
+      t.equal(err.message, 'Stop Called', 'failed due to stop');
+      return localSeqManager.update(200, false);
+    })
+    .then(function () {
+      t.fail('We should have failed due to stop');
+    })
+    .catch(function (err) {
+      t.equal(err.message, 'Stop Called', 'failed due to stop');
+    })
+    .then(function () {
+      t.end();
+    });
   });
 });
 

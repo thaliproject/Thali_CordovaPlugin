@@ -4,7 +4,7 @@ var tape = require('../lib/thaliTape');
 var net = require('net');
 var crypto = require('crypto');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var testUtils = require('../lib/testUtils');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var https = require('https');
@@ -12,6 +12,8 @@ var httpTester = require('../lib/httpTester');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
+var Platform = require('thali/NextGeneration/utils/platform');
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey = devicePublicPrivateKey.generateKeys();
@@ -29,16 +31,26 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    thaliReplicationPeerAction && thaliReplicationPeerAction.kill();
-    (testCloseAllServer ? testCloseAllServer.closeAllPromise() :
-      Promise.resolve())
-      .catch(function (err) {
-        t.fail('Got error in teardown ' + err);
-      })
-      .then(function () {
+    Promise.resolve()
+    .then(function () {
+      if (thaliReplicationPeerAction) {
+        thaliReplicationPeerAction.kill();
+        return thaliReplicationPeerAction.waitUntilKilled();
+      }
+    })
+    .then(function () {
+      if (testCloseAllServer) {
+        var promise = testCloseAllServer.closeAllPromise();
         testCloseAllServer = null;
-        t.end();
-      });
+        return promise;
+      }
+    })
+    .catch(function (err) {
+      t.fail('Got error in teardown ' + err);
+    })
+    .then(function () {
+      t.end();
+    });
   }
 });
 
@@ -186,8 +198,14 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
     }).on('complete', function () {
       // Give sequence updater time to run before killing everything
       setTimeout(function () {
-        thaliPeerReplicationAction && thaliPeerReplicationAction.kill();
-        resolve();
+        Promise.resolve()
+        .then(function () {
+          if (thaliPeerReplicationAction) {
+            thaliPeerReplicationAction.kill();
+            return thaliPeerReplicationAction.waitUntilKilled();
+          }
+        })
+        .then(resolve);
       }, ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds);
     }).on ('error', function (err) {
       reject('got error ' + err);
@@ -195,54 +213,61 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
   });
 }
 
-test('Make sure docs replicate', function (t) {
-  testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
-                                                       remotePouchDB) {
-    var thaliReplicationPeerAction = null;
-    var DifferentDirectoryPouch =
-      testUtils.getPouchDBFactoryInRandomDirectory();
-    var localPouchDB = new DifferentDirectoryPouch(randomDBName);
-    createDocs(remotePouchDB, 10)
-      .then(function (docs) {
-        var notificationForUs = {
-          keyId: new Buffer('abcdefg'),
-          portNumber: serverPort,
-          hostAddress: '127.0.0.1',
-          pskIdentifyField: pskId,
-          psk: pskKey,
-          suggestedTCPTimeout: 10000,
-          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
-        };
-        var promises = [];
-        thaliReplicationPeerAction =
-          new ThaliReplicationPeerAction(notificationForUs,
-            DifferentDirectoryPouch, randomDBName,
-            devicePublicKey);
-        promises.push(thaliReplicationPeerAction.start(httpAgentPool));
-        promises.push(matchDocsInChanges(localPouchDB, docs,
-                      thaliReplicationPeerAction));
-        return Promise.all(promises);
-      })
-      .then(function () {
-        return remotePouchDB.info();
-      })
-      .then(function (info) {
-        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
-          // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
-          info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
-        // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
-      })
-      .then(function () {
-        t.pass('All tests passed!');
-      })
-      .catch(function (err) {
-        t.fail('failed with ' + err);
-      })
-      .then(function () {
-        t.end();
-      });
+test('Make sure docs replicate',
+  function () {
+    // issue #1153
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI &&
+      Platform.isAndroid;
+  },
+  function (t) {
+    testCloseAllServer = testUtils.setUpServer(function (serverPort,
+                                                         randomDBName,
+                                                         remotePouchDB) {
+      var thaliReplicationPeerAction = null;
+      var DifferentDirectoryPouch =
+        testUtils.getPouchDBFactoryInRandomDirectory();
+      var localPouchDB = new DifferentDirectoryPouch(randomDBName);
+      createDocs(remotePouchDB, 10)
+     .then(function (docs) {
+       var notificationForUs = {
+         keyId: new Buffer('abcdefg'),
+         portNumber: serverPort,
+         hostAddress: '127.0.0.1',
+         pskIdentifyField: pskId,
+         psk: pskKey,
+         suggestedTCPTimeout: 10000,
+         connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+       };
+       var promises = [];
+       thaliReplicationPeerAction =
+         new ThaliReplicationPeerAction(notificationForUs,
+           DifferentDirectoryPouch, randomDBName,
+           devicePublicKey);
+       promises.push(thaliReplicationPeerAction.start(httpAgentPool));
+       promises.push(matchDocsInChanges(localPouchDB, docs,
+                     thaliReplicationPeerAction));
+       return Promise.all(promises);
+     })
+     .then(function () {
+       return remotePouchDB.info();
+     })
+     .then(function (info) {
+       return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+         // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+         info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
+       // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+     })
+     .then(function () {
+       t.pass('All tests passed!');
+     })
+     .catch(function (err) {
+       t.fail('failed with ' + err);
+     })
+     .then(function () {
+       t.end();
+     });
+    });
   });
-});
 
 test('Do nothing and make sure we time out', function (t) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName)
